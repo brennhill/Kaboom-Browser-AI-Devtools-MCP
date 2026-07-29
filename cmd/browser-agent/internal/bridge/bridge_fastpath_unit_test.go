@@ -210,7 +210,7 @@ func parseFramedJSONResponse(t *testing.T, output string) mcp.JSONRPCResponse {
 func TestBridgeFastPathCoreMethods(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
 	resetFastPathResourceReadCounters()
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,`,
 		`{"jsonrpc":"2.0","id":2,"method":"initialize","params":{}}`,
@@ -222,7 +222,7 @@ func TestBridgeFastPathCoreMethods(t *testing.T) {
 	}, "\n") + "\n"
 
 	output := captureBridgeIO(t, input, func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 
 	responses := parseJSONLines(t, output)
@@ -291,11 +291,11 @@ func TestBridgeFastPathCoreMethods(t *testing.T) {
 
 func TestBridgeFastPath_ContentLengthInputProducesContentLengthOutput(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := contentLengthFrame(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)
 
 	output := captureBridgeIO(t, input, func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 
 	resp := parseFramedJSONResponse(t, output)
@@ -314,14 +314,14 @@ func TestBridgeFastPath_ContentLengthInputProducesContentLengthOutput(t *testing
 func TestBridgeFastPathResourcesReadCanonicalizesPlaybookAliases(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
 	resetFastPathResourceReadCounters()
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"kaboom://playbook/security"}}`,
 		`{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"kaboom://playbook/security_audit/quick"}}`,
 	}, "\n") + "\n"
 
 	output := captureBridgeIO(t, input, func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 
 	responses := parseJSONLines(t, output)
@@ -355,14 +355,14 @@ func TestBridgeFastPathResourcesReadCanonicalizesPlaybookAliases(t *testing.T) {
 func TestBridgeFastPathResourcesReadFailureTelemetry(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
 	resetFastPathResourceReadCounters()
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"kaboom://playbook/nonexistent/quick"}}`,
 		`{"jsonrpc":"2.0","id":2,"method":"resources/read","params":[]}`,
 	}, "\n") + "\n"
 
 	output := captureBridgeIO(t, input, func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 	responses := parseJSONLines(t, output)
 	if len(responses) != 2 {
@@ -386,14 +386,14 @@ func TestBridgeFastPathResourcesReadTelemetryPersistsToStateLogs(t *testing.T) {
 	resetFastPathResourceReadCounters()
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"kaboom://capabilities"}}`,
 		`{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"kaboom://playbook/nonexistent/quick"}}`,
 	}, "\n") + "\n"
 
 	_ = captureBridgeIO(t, input, func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 
 	path, err := FastPathResourceReadLogPath()
@@ -437,7 +437,7 @@ func TestBridgeFastPathResourcesReadTelemetry(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	resetFastPathCounters()
 
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,
 		`{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"kaboom://capabilities"}}`,
@@ -445,7 +445,7 @@ func TestBridgeFastPathResourcesReadTelemetry(t *testing.T) {
 	}, "\n") + "\n"
 
 	output := captureBridgeIO(t, input, func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 
 	responses := parseJSONLines(t, output)
@@ -480,14 +480,14 @@ func TestBridgeFastPathResourcesReadTelemetry(t *testing.T) {
 
 func TestBridgeFastPathFramedInitializeAndToolsList(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	initReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"codex","version":"1"}}}`
 	toolsReq := `{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`
 	input := contentLengthFrame(initReq) + contentLengthFrame(toolsReq)
 
 	setStderrSink(io.Discard)
 	stdout, stderr := captureBridgeIOWithStderr(t, input, func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 	setStderrSink(os.Stderr)
 
@@ -512,14 +512,14 @@ func TestBridgeFastPathFramedInitializeAndToolsList(t *testing.T) {
 
 func TestBridgeFastPathFramedInitializeAndToolsList_ContentTypeFirstHeaders(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	initReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"codex","version":"1"}}}`
 	toolsReq := `{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`
 	input := contentTypeFirstFrame(initReq) + contentTypeFirstFrame(toolsReq)
 
 	setStderrSink(io.Discard)
 	stdout, stderr := captureBridgeIOWithStderr(t, input, func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 	setStderrSink(os.Stderr)
 
@@ -544,9 +544,9 @@ func TestBridgeFastPathFramedInitializeAndToolsList_ContentTypeFirstHeaders(t *t
 
 func TestBridgeFastPathNotificationWithoutIDHasNoResponse(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	output := captureBridgeIO(t, `{"jsonrpc":"2.0","method":"ping","params":{}}`+"\n", func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 
 	responses := parseJSONLines(t, output)
@@ -557,9 +557,9 @@ func TestBridgeFastPathNotificationWithoutIDHasNoResponse(t *testing.T) {
 
 func TestBridgeFastPathNullIDReturnsInvalidRequest(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	output := captureBridgeIO(t, `{"jsonrpc":"2.0","id":null,"method":"ping","params":{}}`+"\n", func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 
 	responses := parseJSONLines(t, output)
@@ -576,7 +576,7 @@ func TestBridgeFastPathNullIDReturnsInvalidRequest(t *testing.T) {
 
 func TestBridgeFastPathFailedDaemonMessage(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		failed:   true,
 		err:      "bind: address already in use",
 		readyCh:  make(chan struct{}),
@@ -584,7 +584,7 @@ func TestBridgeFastPathFailedDaemonMessage(t *testing.T) {
 	}
 
 	output := captureBridgeIO(t, `{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"observe","arguments":{"what":"errors"}}}`+"\n", func() {
-		StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
+		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 	responses := parseJSONLines(t, output)
 	if len(responses) != 1 {
@@ -626,17 +626,17 @@ func TestBridgeServerHealthHelpers(t *testing.T) {
 		_ = srv.Close()
 	})
 
-	if !isServerRunning(port) {
-		t.Fatalf("isServerRunning(%d) = false, want true", port)
+	if !testRunner.IsServerRunning(port) {
+		t.Fatalf("testRunner.IsServerRunning(%d) = false, want true", port)
 	}
-	if !waitForServer(port, 750*time.Millisecond) {
-		t.Fatalf("waitForServer(%d) = false, want true", port)
+	if !testRunner.WaitForServer(port, 750*time.Millisecond) {
+		t.Fatalf("testRunner.WaitForServer(%d) = false, want true", port)
 	}
 
 	_ = srv.Close()
 	time.Sleep(50 * time.Millisecond)
-	if isServerRunning(port) {
-		t.Fatalf("isServerRunning(%d) = true after shutdown, want false", port)
+	if testRunner.IsServerRunning(port) {
+		t.Fatalf("testRunner.IsServerRunning(%d) = true after shutdown, want false", port)
 	}
 }
 
@@ -646,7 +646,7 @@ func TestCheckDaemonStatus_HealsReadyFlagFromHealth(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, `{"status":"ok","name":"`+deps.MCPServerName+`","version":"1.0.0"}`)
+		_, _ = io.WriteString(w, `{"status":"ok","name":"`+testRunner.identity.ServerName+`","version":"1.0.0"}`)
 	})
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -660,7 +660,7 @@ func TestCheckDaemonStatus_HealsReadyFlagFromHealth(t *testing.T) {
 		_ = srv.Close()
 	})
 
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		port:     port,
 		ready:    false,
 		failed:   true,
@@ -689,15 +689,15 @@ func TestCheckDaemonStatus_HealsReadyFlagFromHealth(t *testing.T) {
 }
 
 func TestRunningServerVersionCompatible(t *testing.T) {
-	oldVersion := deps.Version
-	deps.Version = "9.9.9"
-	t.Cleanup(func() { deps.Version = oldVersion })
+	oldVersion := testRunner.identity.Version
+	testRunner.identity.Version = "9.9.9"
+	t.Cleanup(func() { testRunner.identity.Version = oldVersion })
 	healthVersion := "9.9.9"
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, `{"status":"ok","name":"`+deps.MCPServerName+`","version":"`+healthVersion+`"}`)
+		_, _ = io.WriteString(w, `{"status":"ok","name":"`+testRunner.identity.ServerName+`","version":"`+healthVersion+`"}`)
 	})
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -711,15 +711,15 @@ func TestRunningServerVersionCompatible(t *testing.T) {
 		_ = srv.Close()
 	})
 
-	compatible, gotVersion, gotService := runningServerVersionCompatible(port)
-	if !compatible || gotVersion != "9.9.9" || gotService != deps.MCPServerName {
-		t.Fatalf("runningServerVersionCompatible() = (%v, %q, %q), want (true, %q, %q)", compatible, gotVersion, gotService, "9.9.9", deps.MCPServerName)
+	compatible, gotVersion, gotService := testRunner.runningServerVersionCompatible(port)
+	if !compatible || gotVersion != "9.9.9" || gotService != testRunner.identity.ServerName {
+		t.Fatalf("testRunner.runningServerVersionCompatible() = (%v, %q, %q), want (true, %q, %q)", compatible, gotVersion, gotService, "9.9.9", testRunner.identity.ServerName)
 	}
 
 	healthVersion = "1.0.0"
-	compatible, gotVersion, gotService = runningServerVersionCompatible(port)
-	if compatible || gotVersion != "1.0.0" || gotService != deps.MCPServerName {
-		t.Fatalf("runningServerVersionCompatible() = (%v, %q, %q), want (false, %q, %q)", compatible, gotVersion, gotService, "1.0.0", deps.MCPServerName)
+	compatible, gotVersion, gotService = testRunner.runningServerVersionCompatible(port)
+	if compatible || gotVersion != "1.0.0" || gotService != testRunner.identity.ServerName {
+		t.Fatalf("testRunner.runningServerVersionCompatible() = (%v, %q, %q), want (false, %q, %q)", compatible, gotVersion, gotService, "1.0.0", testRunner.identity.ServerName)
 	}
 }
 

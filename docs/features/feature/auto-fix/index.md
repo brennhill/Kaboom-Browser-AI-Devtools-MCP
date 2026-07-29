@@ -23,6 +23,7 @@ code_paths:
   - src/popup/tabs/tab-tracking-api.ts
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
+  - src/background/message-routing/utility-handler.ts
   - src/types/runtime-messages.ts
 test_paths:
   - cmd/browser-agent/lint_hardening_test.go
@@ -33,6 +34,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/intent_store_test.go
   - tests/extension/reliability/request-audit.test.js
   - tests/extension/content/message-handlers.test.js
+  - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/popup-shell/popup-audit-button.test.js
   - tests/extension/popup-shell/popup-tab-tracking-sync.test.js
   - tests/extension/ui-controls/tracked-hover-launcher.test.js

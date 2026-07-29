@@ -2769,6 +2769,7 @@ function createConnectionTracker(id, url) {
     _sampleCounter: 0,
     _messageRate: 0,
     _messageTimestamps: [],
+    _messageTimestampHead: 0,
     _schemaKeys: [],
     _schemaVariants: /* @__PURE__ */ new Map(),
     _schemaConsistent: true,
@@ -2778,7 +2779,7 @@ function createConnectionTracker(id, url) {
       outgoing: { count: 0, bytes: 0, lastPreview: null, lastAt: null }
     },
     /**
-     * Record a message for stats and schema detection
+     * Record bounded message statistics before making the sampling decision.
      *
      * WEBSOCKET PAYLOAD SCHEMA INFERENCE LOGIC:
      *
@@ -2828,7 +2829,7 @@ function createConnectionTracker(id, url) {
      *   helping users understand payload patterns without logging every message.
      *
      * MESSAGE RATE TRACKING:
-     *   Maintains _messageTimestamps for the last 5 seconds (sliding window). This powers
+     *   Maintains an indexed queue for the last 5 seconds (sliding window). This powers
      *   shouldSample() which implements adaptive sampling: high-frequency connections
      *   (>200 msg/s) sample at 1-in-100; low-frequency (<2 msg/s) capture all messages.
      *   This ensures detailed visibility on slow links without bloating on high-volume.
@@ -2845,7 +2846,18 @@ function createConnectionTracker(id, url) {
       }
       this._messageTimestamps.push(now);
       const cutoff = now - 5e3;
-      this._messageTimestamps = this._messageTimestamps.filter((t) => t >= cutoff);
+      while (this._messageTimestampHead < this._messageTimestamps.length && (this._messageTimestamps[this._messageTimestampHead] ?? now) < cutoff) {
+        this._messageTimestampHead++;
+      }
+      if (this._messageTimestampHead >= 1024 && this._messageTimestampHead * 2 >= this._messageTimestamps.length) {
+        this._messageTimestamps = this._messageTimestamps.slice(this._messageTimestampHead);
+        this._messageTimestampHead = 0;
+      }
+    },
+    /**
+     * Enrich a sampled message after the application callback has returned.
+     */
+    recordSampledMessage(direction, data) {
       if (direction === "incoming" && data && typeof data === "string" && this._schemaKeys.length < 5) {
         try {
           const parsed = JSON.parse(data);
@@ -2923,14 +2935,15 @@ function createConnectionTracker(id, url) {
      * Get the current message rate (messages per second)
      */
     getMessageRate() {
-      if (this._messageTimestamps.length < 2)
-        return this._messageTimestamps.length;
+      const activeCount = this._messageTimestamps.length - this._messageTimestampHead;
+      if (activeCount < 2)
+        return activeCount;
       const lastTime = this._messageTimestamps[this._messageTimestamps.length - 1];
-      const firstTime = this._messageTimestamps[0];
+      const firstTime = this._messageTimestamps[this._messageTimestampHead];
       if (lastTime === void 0 || firstTime === void 0)
-        return this._messageTimestamps.length;
+        return activeCount;
       const window2 = (lastTime - firstTime) / 1e3;
-      return window2 > 0 ? this._messageTimestamps.length / window2 : this._messageTimestamps.length;
+      return window2 > 0 ? activeCount / window2 : activeCount;
     },
     /**
      * Set the message rate manually (for testing)
@@ -3000,7 +3013,8 @@ function postLifecycleEvent(event, connectionId, urlString, extra) {
     }
   }, window.location.origin);
 }
-function postMessageEvent(connectionId, urlString, direction, data) {
+function postMessageEvent(connectionId, urlString, direction, data, tracker) {
+  tracker.recordSampledMessage(direction, data);
   const size = getSize(data);
   const formatted = formatPayload(data);
   const { data: truncatedData, truncated } = truncateWsMessage(formatted);
@@ -3026,7 +3040,7 @@ function attachMessageCapture(ws, connectionId, urlString, tracker) {
     tracker.recordMessage("incoming", event.data);
     if (!tracker.shouldSample("incoming"))
       return;
-    postMessageEvent(connectionId, urlString, "incoming", event.data);
+    queueMicrotask(() => postMessageEvent(connectionId, urlString, "incoming", event.data, tracker));
   });
   const originalSend = ws.send.bind(ws);
   ws.send = function(data) {
@@ -3034,7 +3048,7 @@ function attachMessageCapture(ws, connectionId, urlString, tracker) {
       tracker.recordMessage("outgoing", data);
     }
     if (webSocketCaptureEnabled && tracker.shouldSample("outgoing")) {
-      postMessageEvent(connectionId, urlString, "outgoing", data);
+      queueMicrotask(() => postMessageEvent(connectionId, urlString, "outgoing", data, tracker));
     }
     return originalSend(data);
   };

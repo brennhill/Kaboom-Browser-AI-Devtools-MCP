@@ -23,6 +23,7 @@ import { join } from 'node:path'
 const ROOT = new URL('../../../', import.meta.url).pathname
 const BACKGROUND_SRC_DIR = join(ROOT, 'src/background')
 const BACKGROUND_SRC_ENTRY = join(ROOT, 'src/background.ts')
+const BACKGROUND_INDEX = join(ROOT, 'src/background/index.ts')
 const BACKGROUND_OUT_DIR = join(ROOT, 'extension/background')
 const BACKGROUND_OUT_ENTRY = join(ROOT, 'extension/background.js')
 
@@ -98,5 +99,16 @@ describe('service worker dynamic import contract', () => {
       [],
       `Dynamic import survived into compiled service worker output (breaks at runtime):\n${violations.join('\n')}`
     )
+  })
+
+  test('background entry module does not re-export feature owners', () => {
+    const source = readFileSync(BACKGROUND_INDEX, 'utf8')
+    for (const obsoleteExport of ['DEFAULT_SERVER_URL', 'DebugCategory', 'handlePendingQuery', 'handlePilotCommand']) {
+      assert.doesNotMatch(
+        source,
+        new RegExp(`export(?:\\s+const|\\s*\\{)[^\\n]*\\b${obsoleteExport}\\b`),
+        `${obsoleteExport} must be imported from its canonical owner`
+      )
+    }
   })
 })

@@ -150,10 +150,12 @@ describe('Bug #5: Async Execute Command Await', () => {
 
     bgModule = {
       ...(await import('../../../extension/background/index.js')),
-      ...(await import('../../../extension/background/state.js')),
+      ...(await import('../../../extension/background/pending-queries.js')),
+      ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
+      ...(await import('../../../extension/background/runtime-state/startup-state.js')),
       ...(await import('../../../extension/background/caches/snapshots.js'))
     }
-    ;({ _resetPilotCacheForTesting: resetPilotCacheForTesting } = await import('../../../extension/background/state.js'))
+    ;({ resetPilotCacheForTesting } = await import('../../../extension/background/runtime-state/pilot-state.js'))
     bgModule.markInitComplete()
     resetPilotCacheForTesting(true)
   })
@@ -311,7 +313,9 @@ describe('Bug #5: Async Browser Action Await (regression test)', () => {
     )
     bgModule = {
       ...(await import('../../../extension/background/index.js')),
-      ...(await import('../../../extension/background/state.js'))
+      ...(await import('../../../extension/background/pending-queries.js')),
+      ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
+      ...(await import('../../../extension/background/runtime-state/startup-state.js'))
     }
     bgModule.markInitComplete()
     // Enable pilot cache so browser_action paths don't short-circuit
@@ -377,7 +381,9 @@ describe('Bug #5: Extension Stability Under Load', () => {
     )
     bgModule = {
       ...(await import('../../../extension/background/index.js')),
-      ...(await import('../../../extension/background/state.js'))
+      ...(await import('../../../extension/background/pending-queries.js')),
+      ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
+      ...(await import('../../../extension/background/runtime-state/startup-state.js'))
     }
     bgModule.markInitComplete()
     // Enable pilot cache so execute/browser_action paths don't short-circuit
@@ -479,7 +485,9 @@ describe('Bug #5: Error Handling Robustness', () => {
     )
     bgModule = {
       ...(await import('../../../extension/background/index.js')),
-      ...(await import('../../../extension/background/state.js'))
+      ...(await import('../../../extension/background/pending-queries.js')),
+      ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
+      ...(await import('../../../extension/background/runtime-state/startup-state.js'))
     }
     bgModule.markInitComplete()
     // Enable pilot cache so execute paths don't short-circuit

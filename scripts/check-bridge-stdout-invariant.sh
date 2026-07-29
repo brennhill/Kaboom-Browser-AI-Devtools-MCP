@@ -36,8 +36,8 @@ for file in "${TARGET_FILES[@]}"; do
 done
 rm -f /tmp/kaboom-stdout-invariant.tmp
 
-if ! rg -n 'bridge\.EnsureIOIsolation\(config\.logFile\)' cmd/browser-agent/config.go >/dev/null 2>&1; then
-  echo "INVARIANT VIOLATION: bridge mode must initialize IO isolation in config.go"
+if ! rg -n 'bridgeRunner\.EnsureIOIsolation\(config\.logFile\)' cmd/browser-agent/config.go >/dev/null 2>&1; then
+  echo "INVARIANT VIOLATION: bridge mode must initialize IO isolation through its constructed runner in config.go"
   VIOLATIONS=1
 fi
 

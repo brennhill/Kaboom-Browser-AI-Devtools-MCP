@@ -37,12 +37,12 @@ const BridgeWrapperLogFileName = stdioisolate.WrapperLogFileName
 func ActiveMCPTransportWriter() *os.File { return stdioisolate.ActiveMCPTransportWriter() }
 
 // EnsureIOIsolation configures bridge mode so stdout/stderr noise cannot
-// corrupt MCP JSON-RPC framing on stdout. The host's diagnostic seams are
-// resolved from deps here, at call time, so a test that swaps deps still wins.
-func EnsureIOIsolation(logFileHint string) error {
+// corrupt MCP JSON-RPC framing on stdout. Diagnostic seams come from this
+// runner's transport owner.
+func (r *Runner) EnsureIOIsolation(logFileHint string) error {
 	return stdioisolate.Ensure(logFileHint,
-		func(w io.Writer) { deps.SetStderrSink(w) },
-		func(format string, args ...any) { deps.Stderrf(format, args...) },
+		func(w io.Writer) { r.transport.SetStderr(w) },
+		func(format string, args ...any) { r.transport.Stderrf(format, args...) },
 	)
 }
 
@@ -70,7 +70,7 @@ func (s *daemonState) buildDaemonCmd() (*exec.Cmd, error) {
 		args = append(args, "--max-entries", fmt.Sprintf("%d", s.maxEntries))
 	}
 	cmd := exec.Command(exe, args...) // #nosec G702 -- exe is our own binary path from os.Executable with fixed flags // nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command, go_subproc_rule-subproc -- bridge spawns own daemon
-	cmd.Args[0] = deps.DaemonProcessArgv0(exe)
+	cmd.Args[0] = s.runner.lifecycle.ProcessArgv0(exe)
 	// Detach the daemon's standard streams. nil => os/exec connects the fd to
 	// os.DevNull (/dev/null). We must NOT use io.Discard here: os/exec routes any
 	// non-*os.File writer through an OS pipe whose read-end lives in THIS bridge
@@ -94,20 +94,20 @@ func isConnectionError(err error) bool {
 
 // FlushStdout syncs stdout and logs any errors (best-effort)
 func FlushStdout() {
-	deps.SyncStdoutBestEffort()
+	SyncStdoutBestEffort()
 }
 
 // StdioToHTTPFast forwards JSON-RPC with fast-start: responds to initialize/tools/list
 // immediately while daemon starts in background. Only blocks on tools/call.
 // #lizard forgives
-func StdioToHTTPFast(endpoint string, state *daemonState, port int) {
+func (r *Runner) StdioToHTTPFast(endpoint string, state *daemonState, port int) {
 	reader := bufio.NewReaderSize(os.Stdin, 64*1024)
 
 	client := &http.Client{} // per-request timeouts via context
 
 	// Start push relay goroutine to poll daemon inbox and relay to Claude via stdio.
 	pushRelayDone := make(chan struct{})
-	startBridgePushRelay(client, endpoint, pushRelayDone)
+	r.startBridgePushRelay(client, endpoint, pushRelayDone)
 
 	var wg sync.WaitGroup
 	responseSent := make(chan bool, 1)
@@ -121,12 +121,12 @@ func StdioToHTTPFast(endpoint string, state *daemonState, port int) {
 
 	var readErr error
 	for {
-		line, framing, err := readMCPStdioMessage(reader)
+		line, framing, err := r.readMCPStdioMessage(reader)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			deps.Debugf("stdin read error: %v", err)
+			r.transport.Debugf("stdin read error: %v", err)
 			readErr = err
 			break
 		}
@@ -143,28 +143,28 @@ func StdioToHTTPFast(endpoint string, state *daemonState, port int) {
 		var req mcp.JSONRPCRequest
 		if err := json.Unmarshal(line, &req); err != nil {
 			stats.parseErrors++
-			sendBridgeParseError(line, err, framing)
+			r.sendBridgeParseError(line, err, framing)
 			signalResponseSent()
 			continue
 		}
 		if req.HasInvalidID() {
 			stats.invalidIDs++
-			sendBridgeError(nil, -32600, "Invalid Request: id must be string or number when present", framing)
+			r.sendBridgeError(nil, -32600, "Invalid Request: id must be string or number when present", framing)
 			signalResponseSent()
 			continue
 		}
-		deps.Debugf("request method=%s id=%v", req.Method, req.ID)
+		r.transport.Debugf("request method=%s id=%v", req.Method, req.ID)
 		stats.lastMethod = req.Method
 
 		// FAST PATH: Handle initialize and tools/list directly (no daemon needed)
-		if handleFastPath(req, toolsList, framing) {
+		if r.handleFastPath(req, toolsList, framing) {
 			stats.fastPath++
 			signalResponseSent()
 			continue
 		}
 
 		// RESTART FAST PATH: configure(action="restart") handled in bridge, not daemon
-		if handleBridgeRestart(req, state, port, framing) {
+		if r.handleBridgeRestart(req, state, port, framing) {
 			stats.fastPath++
 			signalResponseSent()
 			continue
@@ -189,7 +189,7 @@ func StdioToHTTPFast(endpoint string, state *daemonState, port int) {
 				shouldForward = false
 			}
 			if !shouldForward {
-				handleDaemonNotReady(req, status, signalResponseSent, framing)
+				r.handleDaemonNotReady(req, status, signalResponseSent, framing)
 				continue
 			}
 		}
@@ -201,12 +201,12 @@ func StdioToHTTPFast(endpoint string, state *daemonState, port int) {
 		wg.Add(1)
 		util.SafeGo(func() {
 			defer wg.Done()
-			bridgeForwardRequest(client, endpoint, reqCopy, lineCopy, timeout, state, signalResponseSent, framing)
+			r.bridgeForwardRequest(client, endpoint, reqCopy, lineCopy, timeout, state, signalResponseSent, framing)
 		})
 	}
 
 	close(pushRelayDone)
-	bridgeShutdown(&wg, readErr, responseSent, stats)
+	r.bridgeShutdown(&wg, readErr, responseSent, stats)
 }
 
 // bridgeDoHTTP delegates to internal/bridge for HTTP forwarding.
@@ -217,7 +217,7 @@ func bridgeDoHTTP(ctx context.Context, client *http.Client, endpoint string, lin
 // bridgeForwardRequest forwards a JSON-RPC request to the HTTP server and writes the response.
 // If state is non-nil and the daemon is unreachable, attempts a single respawn + retry.
 // #lizard forgives
-func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCRequest, line []byte, timeout time.Duration, state *daemonState, signal func(), framing internbridge.StdioFraming) {
+func (r *Runner) bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCRequest, line []byte, timeout time.Duration, state *daemonState, signal func(), framing internbridge.StdioFraming) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	activeCancel := cancel
 	fallbackUsed := false
@@ -239,7 +239,7 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 		telemetry.AppError("bridge_connection_error", nil)
 		message := "Server connection error: " + err.Error()
 		if req.Method == "tools/call" {
-			sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
+			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
 				ErrorCode:    "bridge_connection_error",
 				Subsystem:    "bridge_http_forwarder",
 				Reason:       "http_forward_failed",
@@ -249,18 +249,18 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 				Detail:       err.Error(),
 			})
 		} else {
-			sendBridgeError(req.ID, -32603, message, framing)
+			r.sendBridgeError(req.ID, -32603, message, framing)
 		}
 		signal()
 		return
 	}
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, deps.MaxPostBodySize))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, r.transport.MaxBodySize))
 	_ = resp.Body.Close() //nolint:errcheck // best-effort cleanup
 	if err != nil {
 		message := "Failed to read response: " + err.Error()
 		if req.Method == "tools/call" {
-			sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
+			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
 				ErrorCode:    "bridge_response_read_error",
 				Subsystem:    "bridge_http_forwarder",
 				Reason:       "response_read_failed",
@@ -270,7 +270,7 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 				Detail:       err.Error(),
 			})
 		} else {
-			sendBridgeError(req.ID, -32603, message, framing)
+			r.sendBridgeError(req.ID, -32603, message, framing)
 		}
 		signal()
 		return
@@ -280,7 +280,7 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 		if req.HasID() {
 			message := "Server returned no content for request with an id"
 			if req.Method == "tools/call" {
-				sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
+				r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
 					ErrorCode:    "bridge_unexpected_no_content",
 					Subsystem:    "bridge_http_forwarder",
 					Reason:       "unexpected_no_content",
@@ -289,7 +289,7 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 					FallbackUsed: fallbackUsed,
 				})
 			} else {
-				sendBridgeError(req.ID, -32603, message, framing)
+				r.sendBridgeError(req.ID, -32603, message, framing)
 			}
 		}
 		signal()
@@ -304,7 +304,7 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 			if retryable {
 				retryAfter = 1000
 			}
-			sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
+			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
 				ErrorCode:    "bridge_http_status_error",
 				Subsystem:    "bridge_http_forwarder",
 				Reason:       "http_status_error",
@@ -314,7 +314,7 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 				Detail:       fmt.Sprintf("status_code=%d", resp.StatusCode),
 			})
 		} else {
-			sendBridgeError(req.ID, -32603, message, framing)
+			r.sendBridgeError(req.ID, -32603, message, framing)
 		}
 		signal()
 		return
@@ -323,7 +323,7 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 	if req.HasID() && len(bytes.TrimSpace(body)) == 0 {
 		message := "Server returned an empty body for request with an id"
 		if req.Method == "tools/call" {
-			sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
+			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
 				ErrorCode:    "bridge_empty_response",
 				Subsystem:    "bridge_http_forwarder",
 				Reason:       "empty_response",
@@ -332,7 +332,7 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 				FallbackUsed: fallbackUsed,
 			})
 		} else {
-			sendBridgeError(req.ID, -32603, message, framing)
+			r.sendBridgeError(req.ID, -32603, message, framing)
 		}
 		signal()
 		return
@@ -341,7 +341,7 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 	if req.HasID() && !json.Valid(body) {
 		message := "Server returned invalid JSON response"
 		if req.Method == "tools/call" {
-			sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
+			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
 				ErrorCode:    "bridge_invalid_response",
 				Subsystem:    "bridge_http_forwarder",
 				Reason:       "invalid_json_response",
@@ -350,12 +350,12 @@ func bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCR
 				FallbackUsed: fallbackUsed,
 			})
 		} else {
-			sendBridgeError(req.ID, -32603, message, framing)
+			r.sendBridgeError(req.ID, -32603, message, framing)
 		}
 		signal()
 		return
 	}
 
-	deps.WriteMCPPayload(body, framing)
+	r.transport.Write(body, framing)
 	signal()
 }

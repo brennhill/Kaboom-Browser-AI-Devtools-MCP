@@ -1,1 +1,1 @@
-{"version":3,"file":"ui-utils.d.ts","sourceRoot":"","sources":["../../../src/popup/shell/ui-utils.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAEH;;;GAGG;AAEH;;GAEG;AACH,wBAAgB,cAAc,CAAC,KAAK,EAAE,MAAM,GAAG,MAAM,CAMpD;AAKD,OAAO,EAAE,aAAa,EAAE,MAAM,gCAAgC,CAAA"}
+{"version":3,"file":"ui-utils.d.ts","sourceRoot":"","sources":["../../../src/popup/shell/ui-utils.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAEH;;;GAGG;AAEH;;GAEG;AACH,wBAAgB,cAAc,CAAC,KAAK,EAAE,MAAM,GAAG,MAAM,CAMpD"}

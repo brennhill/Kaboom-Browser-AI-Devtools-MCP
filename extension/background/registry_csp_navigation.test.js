@@ -131,7 +131,7 @@ globalThis.chrome = {
 globalThis.fetch = async () => ({ ok: true, json: async () => ({}) })
 
 const { handlePendingQuery } = await import('./pending-queries.js')
-const { markInitComplete } = await import('./state.js')
+const { markInitComplete } = await import('./runtime-state/startup-state.js')
 
 beforeEach(() => {
   resetHarness()

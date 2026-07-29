@@ -9,6 +9,7 @@
 // each wired to the shared circuit breaker and connection-status tracking.
 
 import type {
+  ConnectionStatus,
   LogEntry,
   WebSocketEvent,
   NetworkBodyPayload,
@@ -33,17 +34,7 @@ import { checkContextAnnotations } from '../caches/snapshots.js'
 // =============================================================================
 
 /** Mutable connection status passed in from the state owner */
-export interface ConnectionStatusRef {
-  connected: boolean
-  entries: number
-  maxEntries: number
-  errorCount: number
-  logFile: string
-  logFileSize?: number
-  serverVersion?: string
-  extensionVersion?: string
-  versionMismatch?: boolean
-}
+export type ConnectionStatusRef = Pick<ConnectionStatus, keyof ConnectionStatus>
 
 type DebugLogFn = (category: string, message: string, data?: unknown) => void
 

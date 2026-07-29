@@ -92,7 +92,7 @@ func bridgeStartupLockPath(port int) (string, error) {
 	return statecfg.InRoot("run", fmt.Sprintf("bridge-startup-%d.lock.json", port))
 }
 
-func tryAcquireBridgeStartupLock(port int) (*bridgeStartupLock, bool, error) {
+func (r *Runner) tryAcquireBridgeStartupLock(port int) (*bridgeStartupLock, bool, error) {
 	path, err := bridgeStartupLockPath(port)
 	if err != nil {
 		return nil, false, err
@@ -105,7 +105,7 @@ func tryAcquireBridgeStartupLock(port int) (*bridgeStartupLock, bool, error) {
 	record := bridgeStartupLockRecord{
 		PID:       os.Getpid(),
 		Port:      port,
-		Version:   deps.Version,
+		Version:   r.identity.Version,
 		CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
 	}
 	payload, err := json.Marshal(record)
@@ -160,7 +160,7 @@ func readBridgeStartupLockRecord(path string) (*bridgeStartupLockRecord, error) 
 	return &rec, nil
 }
 
-func clearStaleBridgeStartupLock(port int, staleAfter time.Duration) bool {
+func (r *Runner) clearStaleBridgeStartupLock(port int, staleAfter time.Duration) bool {
 	path, err := bridgeStartupLockPath(port)
 	if err != nil {
 		return false
@@ -174,7 +174,7 @@ func clearStaleBridgeStartupLock(port int, staleAfter time.Duration) bool {
 		return false
 	}
 
-	if rec.PID <= 0 || !deps.IsProcessAlive(rec.PID) {
+	if rec.PID <= 0 || !r.lifecycle.IsProcessAlive(rec.PID) {
 		_ = os.Remove(path) //nolint:errcheck // best-effort stale lock cleanup
 		return true
 	}
@@ -198,17 +198,12 @@ func parseBridgeStartupLockTime(raw string) (time.Time, error) {
 	return time.Parse(time.RFC3339, raw)
 }
 
-// isServerRunning delegates to internal/bridge for health check.
-func isServerRunning(port int) bool {
+// IsServerRunning checks the daemon health endpoint.
+func (r *Runner) IsServerRunning(port int) bool {
 	return internbridge.IsServerRunning(port)
 }
 
-// IsServerRunning is an exported wrapper for external callers.
-func IsServerRunning(port int) bool {
-	return isServerRunning(port)
-}
-
-func runningServerVersionCompatible(port int) (bool, string, string) {
+func (r *Runner) runningServerVersionCompatible(port int) (bool, string, string) {
 	client := &http.Client{Timeout: 500 * time.Millisecond}
 	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port)) // #nosec G704 -- localhost-only health probe
 	if err != nil {
@@ -230,7 +225,7 @@ func runningServerVersionCompatible(port int) (bool, string, string) {
 	}
 
 	serviceName := meta.serviceName()
-	if serviceName != deps.MCPServerName {
+	if serviceName != r.identity.ServerName {
 		return false, strings.TrimSpace(meta.Version), serviceName
 	}
 
@@ -238,17 +233,12 @@ func runningServerVersionCompatible(port int) (bool, string, string) {
 	if runningVersion == "" {
 		return false, "<missing>", serviceName
 	}
-	return versionsMatch(runningVersion, deps.Version), runningVersion, serviceName
+	return versionsMatch(runningVersion, r.identity.Version), runningVersion, serviceName
 }
 
-// waitForServer delegates to internal/bridge for server startup wait.
-func waitForServer(port int, timeout time.Duration) bool {
+// WaitForServer waits until the daemon health endpoint responds.
+func (r *Runner) WaitForServer(port int, timeout time.Duration) bool {
 	return internbridge.WaitForServer(port, timeout)
-}
-
-// WaitForServer is an exported wrapper for external callers.
-func WaitForServer(port int, timeout time.Duration) bool {
-	return waitForServer(port, timeout)
 }
 
 func daemonStartupSuggestion(failErr string, port int) string {
@@ -277,7 +267,7 @@ func DaemonFailureErr(state *daemonState) string {
 func healDaemonReadyStateIfRunning(state *daemonState, isReady bool, isFailed bool) bool {
 	// Only run this check when daemon state has a concrete port (state.port > 0)
 	// to avoid test and fast-path false positives from unrelated local daemons.
-	if state.port <= 0 || !isServerRunning(state.port) {
+	if state.port <= 0 || !state.runner.IsServerRunning(state.port) {
 		return false
 	}
 	// Heal stale bridge state: daemon is up but local ready flag drifted.
@@ -326,7 +316,7 @@ func checkDaemonStatus(state *daemonState, req mcp.JSONRPCRequest, port int) str
 		}
 
 		// Grace period elapsed: re-check daemon health once before returning startup retry.
-		if state.port > 0 && isServerRunning(state.port) {
+		if state.port > 0 && state.runner.IsServerRunning(state.port) {
 			state.markReady()
 			return ""
 		}
@@ -338,11 +328,11 @@ func checkDaemonStatus(state *daemonState, req mcp.JSONRPCRequest, port int) str
 // RunMode bridges stdio (from MCP client) to HTTP (to persistent server)
 // Uses fast-start: responds to initialize/tools/list immediately while spawning daemon async.
 // #lizard forgives
-func RunMode(port int, logFile string, maxEntries int) {
+func (r *Runner) RunMode(port int, logFile string, maxEntries int) {
 	serverURL := fmt.Sprintf("http://127.0.0.1:%d", port)
 
 	// Track daemon state with proper failure handling
-	state := &daemonState{
+	state := &daemonState{runner: r,
 		readyCh:    make(chan struct{}),
 		failedCh:   make(chan struct{}),
 		port:       port,
@@ -353,7 +343,7 @@ func RunMode(port int, logFile string, maxEntries int) {
 	shouldSpawn := true
 
 	// Phase 1: Check if a compatible server is already running.
-	if tryConnectToExisting(state, port) {
+	if r.tryConnectToExisting(state, port) {
 		shouldSpawn = false
 	}
 
@@ -364,60 +354,60 @@ func RunMode(port int, logFile string, maxEntries int) {
 	// must begin immediately so initialize/tools/list fast-path responses are not
 	// delayed during cold start.
 	if shouldSpawn {
-		startDaemonSpawnCoordinator(state, port)
+		r.startDaemonSpawnCoordinator(state, port)
 	}
 
 	// Bridge stdio <-> HTTP with fast-start support
-	StdioToHTTPFast(serverURL+"/mcp", state, port)
+	r.StdioToHTTPFast(serverURL+"/mcp", state, port)
 }
 
 // startDaemonSpawnCoordinator runs peer-wait/spawn policy asynchronously so MCP
 // stdio handling can start immediately.
-func startDaemonSpawnCoordinator(state *daemonState, port int) {
+func (r *Runner) startDaemonSpawnCoordinator(state *daemonState, port int) {
 	util.SafeGo(func() {
-		if coordinateDaemonStartup(state, port) {
+		if r.coordinateDaemonStartup(state, port) {
 			return
 		}
 		spawnDaemonAsync(state)
 	})
 }
 
-func coordinateDaemonStartup(state *daemonState, port int) bool {
-	lock, acquired, err := tryAcquireBridgeStartupLock(port)
+func (r *Runner) coordinateDaemonStartup(state *daemonState, port int) bool {
+	lock, acquired, err := r.tryAcquireBridgeStartupLock(port)
 	if err != nil {
 		// Coordination failed (state dir/lock issue). Fall back to local spawn.
 		return false
 	}
 	if acquired {
-		startAsStartupLeader(state, port, lock)
+		r.startAsStartupLeader(state, port, lock)
 		return true
 	}
 
 	// Another bridge owns startup leadership. Give it time to bring the daemon up.
-	if waitForPeerDaemon(state, port) {
+	if r.waitForPeerDaemon(state, port) {
 		return true
 	}
 
 	// Leader appears stalled. Reclaim stale/dead lock and try to take over.
-	_ = clearStaleBridgeStartupLock(port, daemonStartupLockStaleAfter)
-	lock, acquired, err = tryAcquireBridgeStartupLock(port)
+	_ = r.clearStaleBridgeStartupLock(port, daemonStartupLockStaleAfter)
+	lock, acquired, err = r.tryAcquireBridgeStartupLock(port)
 	if err != nil {
 		return false
 	}
 	if acquired {
-		startAsStartupLeader(state, port, lock)
+		r.startAsStartupLeader(state, port, lock)
 		return true
 	}
 
 	// Last short wait in case leader just completed while lock handoff converges.
-	return waitForPeerDaemonWithin(state, port, daemonPeerFallbackWaitTimeout)
+	return r.waitForPeerDaemonWithin(state, port, daemonPeerFallbackWaitTimeout)
 }
 
-func startAsStartupLeader(state *daemonState, port int, lock *bridgeStartupLock) {
+func (r *Runner) startAsStartupLeader(state *daemonState, port int, lock *bridgeStartupLock) {
 	if lock != nil {
 		defer lock.release()
 	}
-	if tryConnectToExisting(state, port) {
+	if r.tryConnectToExisting(state, port) {
 		return
 	}
 	spawnDaemonAsync(state)
@@ -425,7 +415,7 @@ func startAsStartupLeader(state *daemonState, port int, lock *bridgeStartupLock)
 	if ready, failed := waitForDaemonReadinessSignal(state, daemonStartupReadyTimeout+daemonPeerPollInterval); ready || failed {
 		return
 	}
-	if isServerRunning(state.port) {
+	if r.IsServerRunning(state.port) {
 		state.markReady()
 	}
 }
@@ -433,18 +423,18 @@ func startAsStartupLeader(state *daemonState, port int, lock *bridgeStartupLock)
 // tryConnectToExisting checks for a running server and validates compatibility.
 // Returns true if connected (markReady), or fatally blocked (markFailed) — no point retrying.
 // Returns false if no server is running or the port was freed for a new spawn.
-func tryConnectToExisting(state *daemonState, port int) bool {
-	if !isServerRunning(port) {
+func (r *Runner) tryConnectToExisting(state *daemonState, port int) bool {
+	if !r.IsServerRunning(port) {
 		return false
 	}
-	compatible, runningVersion, serviceName := runningServerVersionCompatible(port)
+	compatible, runningVersion, serviceName := r.runningServerVersionCompatible(port)
 	if compatible {
 		state.markReady()
 		return true
 	}
-	if serviceName == deps.MCPServerName {
+	if serviceName == r.identity.ServerName {
 		// Version mismatch — stop old server, let caller spawn new one.
-		if !deps.StopServerForUpgrade(port) {
+		if !r.lifecycle.StopServerForUpgrade(port) {
 			state.markFailed(fmt.Sprintf("found running daemon version %s but could not recycle it", runningVersion))
 			return true // fatally blocked, don't retry/spawn
 		}
@@ -461,17 +451,17 @@ func tryConnectToExisting(state *daemonState, port int) bool {
 
 // waitForPeerDaemon retries connecting to a server that another bridge may be spawning.
 // Returns true if a compatible server appeared before the follower wait budget expires.
-func waitForPeerDaemon(state *daemonState, port int) bool {
-	return waitForPeerDaemonWithin(state, port, daemonPeerWaitTimeout)
+func (r *Runner) waitForPeerDaemon(state *daemonState, port int) bool {
+	return r.waitForPeerDaemonWithin(state, port, daemonPeerWaitTimeout)
 }
 
-func waitForPeerDaemonWithin(state *daemonState, port int, timeout time.Duration) bool {
+func (r *Runner) waitForPeerDaemonWithin(state *daemonState, port int, timeout time.Duration) bool {
 	if timeout <= 0 {
-		return tryConnectToExisting(state, port)
+		return r.tryConnectToExisting(state, port)
 	}
 	deadline := time.Now().Add(timeout)
 	for {
-		if tryConnectToExisting(state, port) {
+		if r.tryConnectToExisting(state, port) {
 			return true
 		}
 		remaining := time.Until(deadline)

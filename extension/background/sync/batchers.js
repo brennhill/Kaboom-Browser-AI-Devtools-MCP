@@ -71,6 +71,7 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
     }
     let pending = [];
     let timeoutId = null;
+    let flushPromise = null;
     function requeueEntries(entries) {
         pending = entries.concat(pending).slice(0, MAX_PENDING_BUFFER);
     }
@@ -88,20 +89,29 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
             try {
                 await attemptSend(entries);
                 localConnectionStatus.connected = true;
-                return;
+                return true;
             }
             catch {
                 localConnectionStatus.connected = false;
                 if (cb.getState() === 'open') {
                     requeueEntries(entries);
-                    return;
+                    return false;
                 }
             }
         }
+        requeueEntries(entries);
+        return false;
     }
-    async function flushWithCircuitBreaker() {
+    async function runFlushChain() {
+        while (pending.length > 0) {
+            const shouldContinue = await flushPendingOnce();
+            if (!shouldContinue)
+                return;
+        }
+    }
+    async function flushPendingOnce() {
         if (pending.length === 0)
-            return;
+            return false;
         const entries = pending;
         pending = [];
         if (timeoutId) {
@@ -110,20 +120,29 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
         }
         if (cb.getState() === 'open') {
             requeueEntries(entries);
-            return;
+            return false;
         }
         try {
             await attemptSend(entries);
             localConnectionStatus.connected = true;
+            return true;
         }
         catch {
             localConnectionStatus.connected = false;
             if (cb.getState() === 'open') {
                 requeueEntries(entries);
-                return;
+                return false;
             }
-            await retryWithBackoff(entries);
+            return await retryWithBackoff(entries);
         }
+    }
+    function flushWithCircuitBreaker() {
+        if (flushPromise)
+            return flushPromise;
+        flushPromise = runFlushChain().finally(() => {
+            flushPromise = null;
+        });
+        return flushPromise;
     }
     const scheduleFlush = () => {
         if (timeoutId)

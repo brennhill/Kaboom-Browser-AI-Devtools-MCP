@@ -4,8 +4,9 @@ feature_id: feature-bridge-restart
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-29
 code_paths:
+  - cmd/browser-agent/internal/bridge/runner.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
@@ -20,6 +21,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - internal/schema/configure/tool.go
 test_paths:
+  - cmd/browser-agent/internal/bridge/runner_isolation_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/bridge_test.go
   - cmd/browser-agent/bridge_startup_contention_test.go

@@ -8,10 +8,15 @@
  * Uses async/await for cleaner control flow (replaces callback nesting).
  */
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js';
+import { DEFAULT_SERVER_URL } from '../lib/constants.js';
 import { syncTerminalPanelAvailability } from './ui/side-panel-availability.js';
 import { watchTerminalPanelState } from './ui/terminal-panel.js';
-import { debugLog, DebugCategory, setDebugMode, resetSyncClientConnection, sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatcher, networkBodyBatcher, perfBatcher, handleLogMessage, handleClearLogs, checkConnectionAndUpdate, exportDebugLog, clearDebugLog, DEFAULT_SERVER_URL } from './index.js';
-import { getServerUrl, getConnectionStatus, isDebugMode, isScreenshotOnError, getCurrentLogLevel, isAiWebPilotEnabled, isAiWebPilotCacheInitialized, getPilotInitCallback, markInitComplete, setServerUrl, setCurrentLogLevel, setScreenshotOnError, setAiWebPilotEnabledCache, setAiWebPilotCacheInitialized, setPilotInitCallback } from './state.js';
+import { DebugCategory } from './debug.js';
+import { debugLog, setDebugMode, resetSyncClientConnection, sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatcher, networkBodyBatcher, perfBatcher, handleLogMessage, handleClearLogs, checkConnectionAndUpdate, exportDebugLog, clearDebugLog } from './index.js';
+import { getServerUrl, isDebugMode, isScreenshotOnError, getCurrentLogLevel, setServerUrl, setCurrentLogLevel, setScreenshotOnError } from './runtime-state/settings-state.js';
+import { getConnectionStatus } from './runtime-state/connection-state.js';
+import { isAiWebPilotEnabled, isAiWebPilotCacheInitialized, getPilotInitCallback, setAiWebPilotEnabledCache, setAiWebPilotCacheInitialized, setPilotInitCallback } from './runtime-state/pilot-state.js';
+import { markInitComplete } from './runtime-state/startup-state.js';
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getMemoryPressureState, isNetworkBodyCaptureDisabled, clearScreenshotTimestamps } from './caches/cache-limits.js';
 import { flushErrorGroups, cleanupStaleErrorGroups } from './caches/error-groups.js';
 import { getContextWarning } from './caches/snapshots.js';
@@ -21,12 +26,12 @@ import { installContextMenus } from './ui/context-menus.js';
 import { saveSetting, forwardToAllContentScripts, getActiveTab, sendTabToast, loadDebugModeState, loadAiWebPilotState, loadSavedSettings } from './ui/tab-state.js';
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js';
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js';
-import { installMessageListener, broadcastTrackingState } from './message-handlers.js';
+import { installMessageListener, broadcastTrackingState, createTelemetryMessageHandler, createStatusMessageHandler, createSettingsMessageHandler, createPilotMessageHandler, createCaptureMessageHandler, createUtilityMessageHandler } from './message-handlers.js';
 import { captureScreenshot } from './sync/screenshot.js';
 import { updateBadge } from './sync/server.js';
 import { getLocal, setLocal } from '../lib/storage/local.js';
 import { markStateVersion, setSessionAccessLevel, wasServiceWorkerRestarted } from '../lib/storage/session.js';
-import { loadServerInstallId } from './sync/sync-client.js';
+import { loadServerInstallId } from './sync/install-identity.js';
 /**
  * Initialize the extension on startup
  * Handles state recovery after service worker restart, loads settings, installs listeners.
@@ -143,69 +148,74 @@ async function initializeExtensionAsync() {
             }
         });
         // ============= STEP 7: Install message handler =============
-        // #lizard forgives
-        const deps = {
-            getServerUrl: () => getServerUrl(),
-            getConnectionStatus: () => getConnectionStatus(),
-            getDebugMode: () => isDebugMode(),
-            getScreenshotOnError: () => isScreenshotOnError(),
-            getSourceMapEnabled: () => isSourceMapEnabled(),
-            getCurrentLogLevel: () => getCurrentLogLevel(),
-            getContextWarning,
-            getCircuitBreakerState: () => sharedServerCircuitBreaker.getState(),
-            getMemoryPressureState,
-            getAiWebPilotEnabled: () => isAiWebPilotEnabled(),
-            isNetworkBodyCaptureDisabled,
-            setServerUrl: (url) => {
-                setServerUrl(url || DEFAULT_SERVER_URL);
-            },
-            setCurrentLogLevel: (level) => {
-                setCurrentLogLevel(level);
-            },
-            setScreenshotOnError: (enabled) => {
-                setScreenshotOnError(enabled);
-            },
-            setSourceMapEnabled: (enabled) => {
-                setSourceMapEnabled(enabled);
-            },
-            setDebugMode: (enabled) => {
-                setDebugMode(enabled);
-            },
-            setAiWebPilotEnabled: (enabled, callback) => {
-                setLocal('aiWebPilotEnabled', enabled)
-                    .then(() => {
-                    setAiWebPilotEnabledCache(enabled);
-                    // Reset connection when enabling to allow immediate reconnection
-                    if (enabled) {
-                        resetSyncClientConnection();
-                        console.log(`${KABOOM_LOG_PREFIX} Sync client reset due to AI Web Pilot enabled (direct)`);
-                    }
-                    if (callback)
-                        callback();
-                })
-                    .catch((err) => {
-                    console.error(`${KABOOM_LOG_PREFIX} Failed to save aiWebPilotEnabled:`, err);
-                    if (callback)
-                        callback();
-                });
-            },
-            addToLogBatcher: (entry) => logBatcher.add(entry),
-            addToWsBatcher: (event) => wsBatcher.add(event),
-            addToEnhancedActionBatcher: (action) => enhancedActionBatcher.add(action),
-            addToNetworkBodyBatcher: (body) => networkBodyBatcher.add(body),
-            addToPerfBatcher: (snapshot) => perfBatcher.add(snapshot),
-            handleLogMessage,
-            handleClearLogs,
-            captureScreenshot: (tabId, relatedErrorId) => captureScreenshot(tabId, getServerUrl(), relatedErrorId, canTakeScreenshot, recordScreenshot, debugLog),
-            checkConnectionAndUpdate,
-            clearSourceMapCache,
-            debugLog,
-            exportDebugLog,
-            clearDebugLog,
-            saveSetting,
-            forwardToAllContentScripts: (msg) => forwardToAllContentScripts(msg, debugLog)
+        const setPilotEnabled = (enabled, callback) => {
+            setLocal('aiWebPilotEnabled', enabled)
+                .then(() => {
+                setAiWebPilotEnabledCache(enabled);
+                // Reset connection when enabling to allow immediate reconnection
+                if (enabled) {
+                    resetSyncClientConnection();
+                    console.log(`${KABOOM_LOG_PREFIX} Sync client reset due to AI Web Pilot enabled (direct)`);
+                }
+                if (callback)
+                    callback();
+            })
+                .catch((err) => {
+                console.error(`${KABOOM_LOG_PREFIX} Failed to save aiWebPilotEnabled:`, err);
+                if (callback)
+                    callback();
+            });
         };
-        installMessageListener(deps);
+        installMessageListener({
+            debugLog,
+            handlers: [
+                createTelemetryMessageHandler({
+                    addLog: (entry) => logBatcher.add(entry),
+                    addWebSocket: (event) => wsBatcher.add(event),
+                    addEnhancedAction: (action) => enhancedActionBatcher.add(action),
+                    addNetworkBody: (body) => networkBodyBatcher.add(body),
+                    addPerformance: (snapshot) => perfBatcher.add(snapshot),
+                    handleLog: handleLogMessage,
+                    isNetworkBodyCaptureDisabled,
+                    debugLog
+                }),
+                createStatusMessageHandler({
+                    getConnectionStatus,
+                    getServerUrl,
+                    getScreenshotOnError: isScreenshotOnError,
+                    getSourceMapEnabled: isSourceMapEnabled,
+                    getDebugMode: isDebugMode,
+                    getContextWarning,
+                    getCircuitBreakerState: () => sharedServerCircuitBreaker.getState(),
+                    getMemoryPressureState,
+                    clearLogs: handleClearLogs,
+                    exportDebugLog,
+                    clearDebugLog,
+                    debugLog
+                }),
+                createSettingsMessageHandler({
+                    getServerUrl,
+                    setServerUrl,
+                    setLogLevel: setCurrentLogLevel,
+                    setScreenshotOnError,
+                    setSourceMapEnabled,
+                    setDebugMode,
+                    clearSourceMapCache,
+                    saveSetting,
+                    forwardToContentScripts: (message) => forwardToAllContentScripts(message, debugLog),
+                    checkConnection: checkConnectionAndUpdate,
+                    debugLog
+                }),
+                createPilotMessageHandler({ isEnabled: isAiWebPilotEnabled, setEnabled: setPilotEnabled }),
+                createCaptureMessageHandler({
+                    getServerUrl,
+                    captureScreenshot: (tabId, relatedErrorId) => captureScreenshot(tabId, getServerUrl(), relatedErrorId, canTakeScreenshot, recordScreenshot, debugLog),
+                    addLog: (entry) => logBatcher.add(entry),
+                    debugLog
+                }),
+                createUtilityMessageHandler({ getServerUrl })
+            ]
+        });
         // ============= STEP 8: Setup Chrome alarms =============
         setupChromeAlarms();
         installAlarmListener({

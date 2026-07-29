@@ -37,6 +37,9 @@ func (ls *Store) AddEntries(newEntries []types.LogEntry) int {
 // trimmed to maxEntries here; the file is compacted separately by the async
 // worker (see maybeCompactLogFile) so steady-state ingest stays append-only.
 func (ls *Store) addEntriesInMemory(newEntries []types.LogEntry) (appendOnly []types.LogEntry, cb func([]types.LogEntry)) {
+	appendOnly = make([]types.LogEntry, len(newEntries))
+	copy(appendOnly, newEntries)
+
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 
@@ -49,24 +52,11 @@ func (ls *Store) addEntriesInMemory(newEntries []types.LogEntry) (appendOnly []t
 	}
 
 	now := time.Now()
-	for range newEntries {
-		ls.logAddedAt = append(ls.logAddedAt, now)
-	}
-	ls.entries = append(ls.entries, newEntries...)
-
-	// Trim the in-memory window — copy to new slice to allow GC of evicted entries
-	if len(ls.entries) > ls.maxEntries {
-		kept := make([]types.LogEntry, ls.maxEntries)
-		copy(kept, ls.entries[len(ls.entries)-ls.maxEntries:])
-		ls.entries = kept
-		keptAt := make([]time.Time, ls.maxEntries)
-		copy(keptAt, ls.logAddedAt[len(ls.logAddedAt)-ls.maxEntries:])
-		ls.logAddedAt = keptAt
+	for _, entry := range newEntries {
+		ls.window.append(entry, now)
 	}
 
 	// Snapshot new entries for file I/O outside the lock
-	appendOnly = make([]types.LogEntry, len(newEntries))
-	copy(appendOnly, newEntries)
 	cb = ls.onEntries
 	return appendOnly, cb
 }
@@ -232,8 +222,7 @@ func (ls *Store) ClearEntries() {
 func (ls *Store) clearEntriesInMemory() {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
-	ls.entries = nil
-	ls.logAddedAt = nil
+	ls.window.clear()
 	ls.clearGen.Add(1)
 }
 

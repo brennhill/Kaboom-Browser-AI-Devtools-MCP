@@ -28,8 +28,8 @@ func TestRecordFastPathEvent_WritesTelemetryLog(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	resetFastPathCounters()
 
-	RecordFastPathEvent("tools/call", true, 0)
-	RecordFastPathEvent("tools/call", false, -32000)
+	testRunner.RecordFastPathEvent("tools/call", true, 0)
+	testRunner.RecordFastPathEvent("tools/call", false, -32000)
 
 	path, err := FastPathTelemetryLogPath()
 	if err != nil {
@@ -51,10 +51,10 @@ func TestResetFastPathCounters_ResetsSuccessCount(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	resetFastPathCounters()
 
-	RecordFastPathEvent("tools/call", true, 0)
-	RecordFastPathEvent("tools/call", true, 0)
+	testRunner.RecordFastPathEvent("tools/call", true, 0)
+	testRunner.RecordFastPathEvent("tools/call", true, 0)
 	ResetFastPathCounters()
-	RecordFastPathEvent("tools/call", true, 0)
+	testRunner.RecordFastPathEvent("tools/call", true, 0)
 
 	path, err := FastPathTelemetryLogPath()
 	if err != nil {
@@ -83,8 +83,8 @@ func TestRecordFastPathResourceRead_CountersAndLog(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	resetFastPathResourceReadCounters()
 
-	RecordFastPathResourceRead("kaboom://capabilities", true, 0)
-	RecordFastPathResourceRead("kaboom://capabilities", false, 404)
+	testRunner.RecordFastPathResourceRead("kaboom://capabilities", true, 0)
+	testRunner.RecordFastPathResourceRead("kaboom://capabilities", false, 404)
 
 	success, failure := SnapshotFastPathResourceReadCounters()
 	if success != 1 || failure != 1 {
@@ -153,7 +153,7 @@ func TestRelayPendingPushEvents_RelaysEvents(t *testing.T) {
 
 	client := &http.Client{}
 	output := captureBridgeIO(t, "", func() {
-		relayPendingPushEvents(client, srv.URL)
+		testRunner.relayPendingPushEvents(client, srv.URL)
 	})
 	if !strings.Contains(output, "sampling/createMessage") {
 		t.Fatalf("expected sampling/createMessage in relayed output, got: %q", output)
@@ -192,7 +192,7 @@ func TestRelayPendingPushEvents_NoOutputCases(t *testing.T) {
 
 			client := &http.Client{}
 			output := captureBridgeIO(t, "", func() {
-				relayPendingPushEvents(client, srv.URL)
+				testRunner.relayPendingPushEvents(client, srv.URL)
 			})
 			if strings.TrimSpace(output) != "" {
 				t.Fatalf("expected no relayed output, got: %q", output)
@@ -208,7 +208,7 @@ func TestRelayPendingPushEvents_UnreachableEndpoint(t *testing.T) {
 
 	client := &http.Client{Timeout: time.Second}
 	output := captureBridgeIO(t, "", func() {
-		relayPendingPushEvents(client, endpoint)
+		testRunner.relayPendingPushEvents(client, endpoint)
 	})
 	if strings.TrimSpace(output) != "" {
 		t.Fatalf("expected no output for unreachable endpoint, got: %q", output)
@@ -300,8 +300,8 @@ func TestParseBridgeStartupLockTime(t *testing.T) {
 
 func TestClearStaleBridgeStartupLock_NoRecord(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	if removed := clearStaleBridgeStartupLock(7903, time.Minute); removed {
-		t.Fatal("clearStaleBridgeStartupLock() = true, want false when no lock exists")
+	if removed := testRunner.clearStaleBridgeStartupLock(7903, time.Minute); removed {
+		t.Fatal("testRunner.clearStaleBridgeStartupLock() = true, want false when no lock exists")
 	}
 }
 
@@ -313,8 +313,8 @@ func TestClearStaleBridgeStartupLock_RemovesExpiredLiveOwner(t *testing.T) {
 		Port:      port,
 		CreatedAt: time.Now().Add(-time.Hour).UTC().Format(time.RFC3339Nano),
 	})
-	if removed := clearStaleBridgeStartupLock(port, time.Second); !removed {
-		t.Fatal("clearStaleBridgeStartupLock() = false, want true for expired lock")
+	if removed := testRunner.clearStaleBridgeStartupLock(port, time.Second); !removed {
+		t.Fatal("testRunner.clearStaleBridgeStartupLock() = false, want true for expired lock")
 	}
 }
 
@@ -331,8 +331,8 @@ func TestClearStaleBridgeStartupLock_RemovesMalformedRecord(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{corrupt"), 0o600); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	if removed := clearStaleBridgeStartupLock(port, time.Minute); !removed {
-		t.Fatal("clearStaleBridgeStartupLock() = false, want true for malformed record")
+	if removed := testRunner.clearStaleBridgeStartupLock(port, time.Minute); !removed {
+		t.Fatal("testRunner.clearStaleBridgeStartupLock() = false, want true for malformed record")
 	}
 	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
 		t.Fatalf("malformed lock should be removed, stat err = %v", statErr)
@@ -347,8 +347,8 @@ func TestClearStaleBridgeStartupLock_RemovesInvalidCreatedAt(t *testing.T) {
 		Port:      port,
 		CreatedAt: "not-a-real-time",
 	})
-	if removed := clearStaleBridgeStartupLock(port, time.Minute); !removed {
-		t.Fatal("clearStaleBridgeStartupLock() = false, want true for invalid created_at")
+	if removed := testRunner.clearStaleBridgeStartupLock(port, time.Minute); !removed {
+		t.Fatal("testRunner.clearStaleBridgeStartupLock() = false, want true for invalid created_at")
 	}
 }
 
@@ -419,13 +419,13 @@ func TestDaemonStartupSuggestion(t *testing.T) {
 // --- runningServerVersionCompatible error/edge paths ---
 
 func TestRunningServerVersionCompatible_ErrorPaths(t *testing.T) {
-	oldVersion := deps.Version
-	deps.Version = "9.9.9"
-	t.Cleanup(func() { deps.Version = oldVersion })
+	oldVersion := testRunner.identity.Version
+	testRunner.identity.Version = "9.9.9"
+	t.Cleanup(func() { testRunner.identity.Version = oldVersion })
 
 	// Connection error: nothing is listening.
 	unusedPort := freeLocalPort(t)
-	if ok, v, s := runningServerVersionCompatible(unusedPort); ok || v != "" || s != "" {
+	if ok, v, s := testRunner.runningServerVersionCompatible(unusedPort); ok || v != "" || s != "" {
 		t.Fatalf("connection error case = (%v, %q, %q), want (false, \"\", \"\")", ok, v, s)
 	}
 
@@ -457,22 +457,22 @@ func TestRunningServerVersionCompatible_ErrorPaths(t *testing.T) {
 	t.Cleanup(func() { _ = srv.Close() })
 
 	mode = "status500"
-	if ok, v, s := runningServerVersionCompatible(port); ok || v != "" || s != "" {
+	if ok, v, s := testRunner.runningServerVersionCompatible(port); ok || v != "" || s != "" {
 		t.Fatalf("status500 case = (%v, %q, %q), want (false, \"\", \"\")", ok, v, s)
 	}
 
 	mode = "nonkaboom"
-	if ok, v, s := runningServerVersionCompatible(port); ok || v != "1.2.3" || s != "some-other-service" {
+	if ok, v, s := testRunner.runningServerVersionCompatible(port); ok || v != "1.2.3" || s != "some-other-service" {
 		t.Fatalf("nonkaboom case = (%v, %q, %q), want (false, \"1.2.3\", \"some-other-service\")", ok, v, s)
 	}
 
 	mode = "missingversion"
-	if ok, v, s := runningServerVersionCompatible(port); ok || v != "<missing>" || s != "kaboom" {
+	if ok, v, s := testRunner.runningServerVersionCompatible(port); ok || v != "<missing>" || s != "kaboom" {
 		t.Fatalf("missingversion case = (%v, %q, %q), want (false, \"<missing>\", \"kaboom\")", ok, v, s)
 	}
 
 	mode = "match"
-	if ok, v, s := runningServerVersionCompatible(port); !ok || v != "9.9.9" || s != "kaboom" {
+	if ok, v, s := testRunner.runningServerVersionCompatible(port); !ok || v != "9.9.9" || s != "kaboom" {
 		t.Fatalf("match case = (%v, %q, %q), want (true, \"9.9.9\", \"kaboom\")", ok, v, s)
 	}
 }
@@ -480,7 +480,7 @@ func TestRunningServerVersionCompatible_ErrorPaths(t *testing.T) {
 // --- checkDaemonStatus failed branch + respawn without a valid port ---
 
 func TestCheckDaemonStatus_FailedStateReturnsSuggestion(t *testing.T) {
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	state.markFailed("bind: address already in use")
 
 	status := checkDaemonStatus(state, mcp.JSONRPCRequest{Method: "tools/call"}, 7890)
@@ -493,7 +493,7 @@ func TestCheckDaemonStatus_FailedStateReturnsSuggestion(t *testing.T) {
 }
 
 func TestCheckDaemonStatus_NonDaemonMethodReturnsMethodNotFound(t *testing.T) {
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	if status := checkDaemonStatus(state, mcp.JSONRPCRequest{Method: "some/other"}, 7890); status != "method_not_found" {
 		t.Fatalf("status = %q, want method_not_found", status)
 	}
@@ -502,7 +502,7 @@ func TestCheckDaemonStatus_NonDaemonMethodReturnsMethodNotFound(t *testing.T) {
 // --- respawnIfNeeded peer-wait paths (deterministic via pre-closed channels) ---
 
 func TestRespawnIfNeeded_WaitForPeerReadySignal(t *testing.T) {
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	close(state.readyCh) // simulate a concurrent respawn leader signaling ready
 	if !state.respawnIfNeeded() {
 		t.Fatal("respawnIfNeeded() = false, want true when peer readyCh is closed")
@@ -510,7 +510,7 @@ func TestRespawnIfNeeded_WaitForPeerReadySignal(t *testing.T) {
 }
 
 func TestRespawnIfNeeded_WaitForPeerFailedSignal(t *testing.T) {
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	close(state.failedCh) // simulate a concurrent respawn leader signaling failure
 	if state.respawnIfNeeded() {
 		t.Fatal("respawnIfNeeded() = true, want false when peer failedCh is closed")
@@ -518,7 +518,7 @@ func TestRespawnIfNeeded_WaitForPeerFailedSignal(t *testing.T) {
 }
 
 func TestRespawnIfNeeded_InvalidPortMarksFailed(t *testing.T) {
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	state.markFailed("prior failure") // failed state so planRespawnAttempt does not wait for a peer
 	if state.respawnIfNeeded() {
 		t.Fatal("respawnIfNeeded() = true, want false for invalid (zero) port")
@@ -564,9 +564,9 @@ func TestHandleBridgeRestart_NonRestartReturnsFalse(t *testing.T) {
 		Method: "tools/call",
 		Params: json.RawMessage(`{"name":"observe","arguments":{"what":"errors"}}`),
 	}
-	state := &daemonState{readyCh: make(chan struct{}), failedCh: make(chan struct{})}
-	if handleBridgeRestart(req, state, 7890, internbridge.StdioFramingLine) {
-		t.Fatal("handleBridgeRestart() = true, want false for non-restart request")
+	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
+	if testRunner.handleBridgeRestart(req, state, 7890, internbridge.StdioFramingLine) {
+		t.Fatal("testRunner.handleBridgeRestart() = true, want false for non-restart request")
 	}
 }
 

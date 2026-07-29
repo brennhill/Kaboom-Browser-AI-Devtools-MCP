@@ -14,12 +14,12 @@ import (
 
 func TestBridge_SpawnsDaemonWhenNoneRunning(t *testing.T) {
 	unusedPort := 19876
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 		port:     unusedPort,
 	}
-	connected := tryConnectToExisting(state, unusedPort)
+	connected := testRunner.tryConnectToExisting(state, unusedPort)
 	if connected {
 		t.Fatal("tryConnectToExisting should return false when no server is running")
 	}
@@ -29,19 +29,19 @@ func TestBridge_SpawnsDaemonWhenNoneRunning(t *testing.T) {
 }
 
 func TestBridge_SkipsSpawnWhenDaemonAlreadyRunning(t *testing.T) {
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 		port:     0,
 	}
-	result := tryConnectToExisting(state, 0)
+	result := testRunner.tryConnectToExisting(state, 0)
 	if result {
 		t.Fatal("should return false with port 0 (no server)")
 	}
 }
 
 func TestDaemonState_RespawnResetsClearFailure(t *testing.T) {
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 		port:     19877,
@@ -70,7 +70,7 @@ func TestDaemonState_RespawnResetsClearFailure(t *testing.T) {
 }
 
 func TestCheckDaemonStatus_ReturnsStartingDuringSpawn(t *testing.T) {
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 		port:     19878,
@@ -86,7 +86,7 @@ func TestCheckDaemonStatus_ReturnsStartingDuringSpawn(t *testing.T) {
 }
 
 func TestCheckDaemonStatus_ReadyReturnsEmpty(t *testing.T) {
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 		port:     0,
@@ -101,7 +101,7 @@ func TestCheckDaemonStatus_ReadyReturnsEmpty(t *testing.T) {
 
 func TestFastPath_InitializeDoesNotRequireDaemon(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", Method: "initialize", ID: float64(1)}
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 		port:     19879,
@@ -115,7 +115,7 @@ func TestFastPath_InitializeDoesNotRequireDaemon(t *testing.T) {
 func TestFastPath_ToolsListDoesNotRequireDaemon(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", Method: "tools/list", ID: float64(1)}
 	toolsList := schema.AllTools()
-	handled := handleFastPath(req, toolsList, 0)
+	handled := testRunner.handleFastPath(req, toolsList, 0)
 	if !handled {
 		t.Fatal("tools/list should be handled by fast-path without daemon")
 	}

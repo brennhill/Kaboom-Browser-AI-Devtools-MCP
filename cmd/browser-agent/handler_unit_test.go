@@ -343,7 +343,7 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 		JSONRPC: "2.0",
 		ID:      63,
 		Method:  "resources/read",
-		Params:  json.RawMessage(`{"uri":"kaboom://playbook/security_audit/quick"}`),
+		Params:  json.RawMessage(`{"uri":"kaboom://playbook/security/quick"}`),
 	})
 	if readAliasedPlaybook == nil || readAliasedPlaybook.Error != nil {
 		t.Fatalf("resources/read aliased playbook response = %+v, want success", readAliasedPlaybook)

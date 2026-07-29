@@ -43,12 +43,12 @@ func TestBridgeLaunchFingerprint(t *testing.T) {
 	})
 	getBridgeExecutablePath = func() (string, error) { return exePath, nil }
 
-	fingerprint := LaunchFingerprint()
+	fingerprint := testRunner.LaunchFingerprint()
 	if got := fingerprint["binary_path"]; got != exePath {
 		t.Fatalf("binary_path = %v, want %s", got, exePath)
 	}
-	if got := fingerprint["binary_version"]; got != deps.Version {
-		t.Fatalf("binary_version = %v, want %s", got, deps.Version)
+	if got := fingerprint["binary_version"]; got != testRunner.identity.Version {
+		t.Fatalf("binary_version = %v, want %s", got, testRunner.identity.Version)
 	}
 	if got := fingerprint["binary_build_id"]; got != "test-build-id" {
 		t.Fatalf("binary_build_id = %v, want test-build-id", got)
@@ -77,7 +77,7 @@ func TestBridgeLaunchFingerprint_PathError(t *testing.T) {
 	})
 	getBridgeExecutablePath = func() (string, error) { return "", errors.New("boom") }
 
-	fingerprint := LaunchFingerprint()
+	fingerprint := testRunner.LaunchFingerprint()
 	if got := fingerprint["binary_path"]; got != "" {
 		t.Fatalf("binary_path = %v, want empty", got)
 	}

@@ -21,17 +21,17 @@ func TestBridgeStartupLock_SingleLeaderElection(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	port := 7890
 
-	lockA, acquired, err := tryAcquireBridgeStartupLock(port)
+	lockA, acquired, err := testRunner.tryAcquireBridgeStartupLock(port)
 	if err != nil {
-		t.Fatalf("tryAcquireBridgeStartupLock() error = %v", err)
+		t.Fatalf("testRunner.tryAcquireBridgeStartupLock() error = %v", err)
 	}
 	if !acquired || lockA == nil {
 		t.Fatal("first lock acquisition should succeed")
 	}
 
-	lockB, acquired, err := tryAcquireBridgeStartupLock(port)
+	lockB, acquired, err := testRunner.tryAcquireBridgeStartupLock(port)
 	if err != nil {
-		t.Fatalf("second tryAcquireBridgeStartupLock() error = %v", err)
+		t.Fatalf("second testRunner.tryAcquireBridgeStartupLock() error = %v", err)
 	}
 	if acquired || lockB != nil {
 		t.Fatal("second lock acquisition should not succeed while first leader holds lock")
@@ -39,9 +39,9 @@ func TestBridgeStartupLock_SingleLeaderElection(t *testing.T) {
 
 	lockA.release()
 
-	lockC, acquired, err := tryAcquireBridgeStartupLock(port)
+	lockC, acquired, err := testRunner.tryAcquireBridgeStartupLock(port)
 	if err != nil {
-		t.Fatalf("third tryAcquireBridgeStartupLock() error = %v", err)
+		t.Fatalf("third testRunner.tryAcquireBridgeStartupLock() error = %v", err)
 	}
 	if !acquired || lockC == nil {
 		t.Fatal("third lock acquisition should succeed after release")
@@ -58,8 +58,8 @@ func TestClearStaleBridgeStartupLock_RemovesDeadOwner(t *testing.T) {
 		CreatedAt: time.Now().Add(-time.Minute).UTC().Format(time.RFC3339Nano),
 	})
 
-	if removed := clearStaleBridgeStartupLock(port, daemonStartupLockStaleAfter); !removed {
-		t.Fatal("clearStaleBridgeStartupLock() = false, want true for dead owner")
+	if removed := testRunner.clearStaleBridgeStartupLock(port, daemonStartupLockStaleAfter); !removed {
+		t.Fatal("testRunner.clearStaleBridgeStartupLock() = false, want true for dead owner")
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("lock file should be removed, stat err = %v", err)
@@ -75,8 +75,8 @@ func TestClearStaleBridgeStartupLock_PreservesRecentLiveOwner(t *testing.T) {
 		CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
 	})
 
-	if removed := clearStaleBridgeStartupLock(port, time.Minute); removed {
-		t.Fatal("clearStaleBridgeStartupLock() = true, want false for recent live owner")
+	if removed := testRunner.clearStaleBridgeStartupLock(port, time.Minute); removed {
+		t.Fatal("testRunner.clearStaleBridgeStartupLock() = true, want false for recent live owner")
 	}
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("lock file should remain, stat err = %v", err)
@@ -114,8 +114,8 @@ func portOfURL(t *testing.T, rawURL string) int {
 }
 
 func TestIsServerRunning_NotListening(t *testing.T) {
-	if IsServerRunning(59991) {
-		t.Fatal("IsServerRunning(59991) = true, want false (nothing listening)")
+	if testRunner.IsServerRunning(59991) {
+		t.Fatal("testRunner.IsServerRunning(59991) = true, want false (nothing listening)")
 	}
 }
 
@@ -129,7 +129,7 @@ func TestDaemonStartupSuggestion_Branches(t *testing.T) {
 }
 
 func TestRunningServerVersionCompatible_DeadPort(t *testing.T) {
-	if ok, _, _ := runningServerVersionCompatible(59992); ok {
+	if ok, _, _ := testRunner.runningServerVersionCompatible(59992); ok {
 		t.Fatal("expected not-compatible for a dead port")
 	}
 }
@@ -139,7 +139,7 @@ func TestRunningServerVersionCompatible_Non200(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
-	if ok, _, _ := runningServerVersionCompatible(portOfURL(t, srv.URL)); ok {
+	if ok, _, _ := testRunner.runningServerVersionCompatible(portOfURL(t, srv.URL)); ok {
 		t.Fatal("expected not-compatible for non-200 /health")
 	}
 }
@@ -147,9 +147,9 @@ func TestRunningServerVersionCompatible_Non200(t *testing.T) {
 func TestRunningServerVersionCompatible_HealthServed(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"name":"` + deps.MCPServerName + `","version":"0.8.4"}`))
+		_, _ = w.Write([]byte(`{"name":"` + testRunner.identity.ServerName + `","version":"0.8.4"}`))
 	}))
 	defer srv.Close()
 	// Exercises the read-body, health metadata, and service/version compatibility path.
-	_, _, _ = runningServerVersionCompatible(portOfURL(t, srv.URL))
+	_, _, _ = testRunner.runningServerVersionCompatible(portOfURL(t, srv.URL))
 }

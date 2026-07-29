@@ -94,7 +94,8 @@
     TERMINAL_WORKSPACE_GROUP_ID: "kaboom_terminal_workspace_group_id",
     TERMINAL_WORKSPACE_MAIN_TAB_ID: "kaboom_terminal_workspace_main_tab_id",
     CLOAKED_DOMAINS: "kaboom_cloaked_domains",
-    ERROR_GROUPS: "kaboom_error_groups"
+    ERROR_GROUPS: "kaboom_error_groups",
+    SERVER_INSTALL_ID: "kaboom_server_install_id"
   };
   var TERMINAL_PANEL_FALLBACK_HINT = 'Right-click the page and choose "Open Kaboom Terminal", or assign a shortcut at chrome://extensions/shortcuts.';
   var TERMINAL_PANEL_STALE_CONTEXT_HINT = "The Kaboom extension was reloaded, so this page is running an old copy of it. Reload this page to reconnect.";

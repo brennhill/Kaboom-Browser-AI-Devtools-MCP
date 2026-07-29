@@ -37,7 +37,7 @@ function getExtensionVersion() {
 // #lizard forgives
 export function startSyncClient(deps) {
     if (syncClient) {
-        // Already running, nothing to do
+        syncClient.setServerUrl(deps.getServerUrl());
         return;
     }
     syncClient = createSyncClient(deps.getServerUrl(), deps.getExtSessionId(), {
@@ -148,8 +148,8 @@ export function startSyncClient(deps) {
             }));
         },
         // Clear extension logs after sending
-        clearExtensionLogs: () => {
-            deps.clearExtensionLogQueue();
+        acknowledgeExtensionLogs: (sentCount) => {
+            deps.acknowledgeExtensionLogQueue(sentCount);
         },
         // Debug logging
         debugLog: (category, message, data) => {
@@ -165,6 +165,7 @@ export function startSyncClient(deps) {
 export function stopSyncClient(debugLog) {
     if (syncClient) {
         syncClient.stop();
+        syncClient = null;
         debugLog(DebugCategory.CONNECTION, 'Sync client stopped');
     }
 }

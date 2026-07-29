@@ -53,7 +53,7 @@ export function createMockCallbacks(overrides = {}) {
       })
     ),
     getExtensionLogs: mock.fn(() => []),
-    clearExtensionLogs: mock.fn(),
+    acknowledgeExtensionLogs: mock.fn(),
     debugLog: mock.fn(),
     ...overrides
   }

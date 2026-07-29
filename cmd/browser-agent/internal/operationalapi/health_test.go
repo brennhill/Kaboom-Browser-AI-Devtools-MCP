@@ -19,8 +19,9 @@ import (
 func TestHandleHealthIncludesBridgeFastPathCounters(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	bridge.ResetFastPathResourceReadCounters()
-	bridge.RecordFastPathResourceRead("kaboom://capabilities", true, 0)
-	bridge.RecordFastPathResourceRead("kaboom://playbook/nonexistent/quick", false, -32002)
+	runner := bridge.NewRunner(bridge.Identity{Version: "test"}, bridge.Transport{}, bridge.Protocol{}, bridge.Lifecycle{})
+	runner.RecordFastPathResourceRead("kaboom://capabilities", true, 0)
+	runner.RecordFastPathResourceRead("kaboom://playbook/nonexistent/quick", false, -32002)
 
 	handler := New(Options{
 		Logs: logstore.New(logstore.Config{

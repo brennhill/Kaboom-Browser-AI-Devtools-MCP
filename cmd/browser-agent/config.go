@@ -253,7 +253,7 @@ func handleEarlyExitModes(flags *parsedFlags) {
 		os.Exit(0)
 	}
 	if *flags.stopMode {
-		procctl.Stop(*flags.port, bridge.IsServerRunning)
+		procctl.Stop(*flags.port, bridgeRunner.IsServerRunning)
 		os.Exit(0)
 	}
 	if *flags.installMode {
@@ -349,11 +349,11 @@ func dispatchMode(server *Server, config *serverConfig) {
 			os.Exit(1)
 		}
 	case modeBridge:
-		if err := bridge.EnsureIOIsolation(config.logFile); err != nil {
+		if err := bridgeRunner.EnsureIOIsolation(config.logFile); err != nil {
 			bridge.SendStartupError("Bridge stdio isolation failed: " + err.Error())
 			os.Exit(1)
 		}
-		server.logLifecycle("bridge_mode_start", config.port, bridge.LaunchFingerprint())
+		server.logLifecycle("bridge_mode_start", config.port, bridgeRunner.LaunchFingerprint())
 		if config.bridgeMode {
 			diag.Println("[Kaboom] Starting in bridge mode (stdio -> HTTP)")
 		} else if isTTY && mcpConfigPath != "" {
@@ -365,8 +365,8 @@ func dispatchMode(server *Server, config *serverConfig) {
 			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDOUT")
 			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDERR")
 		}
-		bridge.RunMode(config.port, config.logFile, config.maxEntries)
+		bridgeRunner.RunMode(config.port, config.logFile, config.maxEntries)
 	default:
-		bridge.RunMode(config.port, config.logFile, config.maxEntries)
+		bridgeRunner.RunMode(config.port, config.logFile, config.maxEntries)
 	}
 }

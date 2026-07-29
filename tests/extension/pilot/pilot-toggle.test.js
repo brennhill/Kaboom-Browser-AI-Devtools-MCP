@@ -120,8 +120,8 @@ const createMockElement = (id) => ({
 let mockDocument
 
 async function resetPilotCacheForTesting(value) {
-  const { _resetPilotCacheForTesting } = await import('../../../extension/background/state.js')
-  _resetPilotCacheForTesting(value)
+  const { resetPilotCacheForTesting } = await import('../../../extension/background/runtime-state/pilot-state.js')
+  resetPilotCacheForTesting(value)
 }
 
 describe('AI Web Pilot Toggle Default State', () => {
@@ -134,7 +134,7 @@ describe('AI Web Pilot Toggle Default State', () => {
   })
 
   test('toggle should default to true (enabled) when no saved value', async () => {
-    const { applyAiWebPilotToggle } = await import('../../../extension/popup.js')
+    const { applyAiWebPilotToggle } = await import('../../../extension/popup/ai-web-pilot.js')
     applyAiWebPilotToggle(undefined)
 
     const toggle = mockDocument.getElementById('aiWebPilotEnabled')
@@ -142,7 +142,7 @@ describe('AI Web Pilot Toggle Default State', () => {
   })
 
   test('toggle should apply the value from the popup batched storage read', async () => {
-    const { applyAiWebPilotToggle } = await import('../../../extension/popup.js')
+    const { applyAiWebPilotToggle } = await import('../../../extension/popup/ai-web-pilot.js')
     applyAiWebPilotToggle(false)
 
     const toggle = mockDocument.getElementById('aiWebPilotEnabled')
@@ -166,7 +166,7 @@ describe('AI Web Pilot Toggle Persistence (Message-Based)', () => {
   test('should send message to background when toggled on (not write storage directly)', async () => {
     // CRITICAL ARCHITECTURE: popup.js NEVER writes to storage directly.
     // It ONLY sends messages to background.js, which is the single writer.
-    const { handleAiWebPilotToggle } = await import('../../../extension/popup.js')
+    const { handleAiWebPilotToggle } = await import('../../../extension/popup/ai-web-pilot.js')
 
     await handleAiWebPilotToggle(true)
 
@@ -181,7 +181,7 @@ describe('AI Web Pilot Toggle Persistence (Message-Based)', () => {
   })
 
   test('should send message to background when toggled off (not write storage directly)', async () => {
-    const { handleAiWebPilotToggle } = await import('../../../extension/popup.js')
+    const { handleAiWebPilotToggle } = await import('../../../extension/popup/ai-web-pilot.js')
 
     await handleAiWebPilotToggle(false)
 
@@ -207,7 +207,7 @@ describe('AI Web Pilot Command Gating', () => {
       callback({ aiWebPilotEnabled: false })
     })
 
-    const { isAiWebPilotEnabled } = await import('../../../extension/background/state.js')
+    const { isAiWebPilotEnabled } = await import('../../../extension/background/runtime-state/pilot-state.js')
     await resetPilotCacheForTesting(false)
     const enabled = await isAiWebPilotEnabled()
     assert.strictEqual(enabled, false, 'Should return false when toggle is off')
@@ -218,7 +218,7 @@ describe('AI Web Pilot Command Gating', () => {
       callback({}) // No value set
     })
 
-    const { isAiWebPilotEnabled } = await import('../../../extension/background/state.js')
+    const { isAiWebPilotEnabled } = await import('../../../extension/background/runtime-state/pilot-state.js')
     await resetPilotCacheForTesting(false)
     const enabled = await isAiWebPilotEnabled()
     assert.strictEqual(enabled, false, 'Should return false when toggle is undefined')
@@ -229,7 +229,7 @@ describe('AI Web Pilot Command Gating', () => {
       callback({ aiWebPilotEnabled: true })
     })
 
-    const { isAiWebPilotEnabled } = await import('../../../extension/background/state.js')
+    const { isAiWebPilotEnabled } = await import('../../../extension/background/runtime-state/pilot-state.js')
     // Reset module-level cache (persists across Node.js cached imports)
     await resetPilotCacheForTesting(true)
 
@@ -393,7 +393,7 @@ describe('AI Web Pilot Single Source of Truth Architecture', () => {
   test('background should write to all 3 storage areas when receiving toggle message', async () => {
     // CRITICAL ARCHITECTURE: Only background.js writes to storage.
     // When popup sends setAiWebPilotEnabled, background receives and writes atomically.
-    const { handleAiWebPilotToggle } = await import('../../../extension/popup.js')
+    const { handleAiWebPilotToggle } = await import('../../../extension/popup/ai-web-pilot.js')
 
     await handleAiWebPilotToggle(true)
 
@@ -406,7 +406,7 @@ describe('AI Web Pilot Single Source of Truth Architecture', () => {
   })
 
   test('handleAiWebPilotToggle should send immediate message to background', async () => {
-    const { handleAiWebPilotToggle } = await import('../../../extension/popup.js')
+    const { handleAiWebPilotToggle } = await import('../../../extension/popup/ai-web-pilot.js')
 
     await handleAiWebPilotToggle(true)
 
@@ -419,7 +419,7 @@ describe('AI Web Pilot Single Source of Truth Architecture', () => {
   })
 
   test('background should receive setAiWebPilotEnabled message and update cache', async () => {
-    const { isAiWebPilotEnabled } = await import('../../../extension/background/state.js')
+    const { isAiWebPilotEnabled } = await import('../../../extension/background/runtime-state/pilot-state.js')
     await resetPilotCacheForTesting(false)
 
     // Verify cache starts as false
@@ -432,7 +432,7 @@ describe('AI Web Pilot Single Source of Truth Architecture', () => {
 
   test('background should broadcast pilotStatusChanged confirmation', async () => {
     // This test verifies that after a toggle, the popup sends the message
-    const { handleAiWebPilotToggle } = await import('../../../extension/popup.js')
+    const { handleAiWebPilotToggle } = await import('../../../extension/popup/ai-web-pilot.js')
 
     mockChrome.runtime.sendMessage.mock.resetCalls()
     await handleAiWebPilotToggle(true)

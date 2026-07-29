@@ -65,6 +65,31 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
     mock.reset()
   })
 
+  test('serializes flushes and sends arrivals during an in-flight request once afterward', async () => {
+    let releaseFirst
+    const first = new Promise((resolve) => {
+      releaseFirst = resolve
+    })
+    const sent = []
+    const sendFn = mock.fn(async (entries) => {
+      sent.push(entries)
+      if (sent.length === 1) await first
+    })
+    const { batcher } = createBatcherWithCircuitBreaker(sendFn, {
+      debounceMs: 60000,
+      maxBatchSize: 1,
+      retryBudget: 1
+    })
+
+    batcher.add({ id: 1 })
+    batcher.add({ id: 2 })
+    assert.strictEqual(sendFn.mock.calls.length, 1)
+    releaseFirst()
+    await batcher.flush()
+
+    assert.deepStrictEqual(sent, [[{ id: 1 }], [{ id: 2 }]])
+  })
+
   // Spec scenario 13: Single 429 -> backoff 100ms before next attempt
   test('13: Single 429 triggers 100ms backoff before next attempt', async () => {
     const sendFn = mock.fn(() => {
@@ -341,8 +366,8 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
     assert.ok(pending.length >= 3, `Expected at least 3 pending items, got ${pending.length}`)
   })
 
-  // Spec scenario 23: Retry budget of 3 per batch -> after 3 failures, batch is abandoned
-  test('23: Retry budget of 3 - batch abandoned after 3 attempts', async () => {
+  // Spec scenario 23: Retry budget of 3 per batch -> after 3 failures, batch is retained
+  test('23: Retry budget of 3 - batch retained after 3 attempts', async () => {
     const sendFn = mock.fn(() => Promise.reject(new Error('Server error: 429')))
 
     const { batcher } = createBatcherWithCircuitBreaker(sendFn, {
@@ -352,16 +377,16 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
       maxFailures: 10 // High so circuit doesn't open during this test
     })
 
-    // Add a batch and flush - should retry up to 3 times then abandon
+    // Add a batch and flush - should retry up to 3 times, then retain it for recovery.
     batcher.add({ type: 'log', message: 'retry-test' })
     await batcher.flush()
 
     // The sendFn should have been called exactly 3 times (initial + 2 retries = 3 total)
     assert.strictEqual(sendFn.mock.calls.length, 3)
 
-    // After abandoning, the pending buffer should be empty (batch was dropped)
+    // Retry exhaustion must not lose telemetry.
     const pending = batcher.getPending()
-    assert.strictEqual(pending.length, 0)
+    assert.deepStrictEqual(pending, [{ type: 'log', message: 'retry-test' }])
   })
 })
 

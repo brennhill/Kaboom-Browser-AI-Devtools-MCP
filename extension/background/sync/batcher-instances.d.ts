@@ -3,21 +3,11 @@
  * Why: Isolates batcher wiring from business logic in index.ts to keep module initialization explicit.
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
-import type { LogEntry, WebSocketEvent, NetworkBodyPayload, EnhancedAction, PerformanceSnapshot } from '../../types/index.js';
+import type { ConnectionStatus, LogEntry, WebSocketEvent, NetworkBodyPayload, EnhancedAction, PerformanceSnapshot } from '../../types/index.js';
 import { type BatcherWithCircuitBreaker, type Batcher } from './batchers.js';
 import type { CircuitBreaker } from './circuit-breaker.js';
 /** Mutable connection status passed in from the state owner */
-export interface ConnectionStatusRef {
-    connected: boolean;
-    entries: number;
-    maxEntries: number;
-    errorCount: number;
-    logFile: string;
-    logFileSize?: number;
-    serverVersion?: string;
-    extensionVersion?: string;
-    versionMismatch?: boolean;
-}
+export type ConnectionStatusRef = Pick<ConnectionStatus, keyof ConnectionStatus>;
 type DebugLogFn = (category: string, message: string, data?: unknown) => void;
 /** Dependencies injected by index.ts to avoid circular imports */
 export interface BatcherDeps {

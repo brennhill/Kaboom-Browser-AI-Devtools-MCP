@@ -33,17 +33,6 @@ import { applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
 import { initPopupLogoMotion } from './popup/shell/logo-motion.js'
 import { applyWebSocketMode, handleWebSocketModeChange, handleClearLogs, resetClearConfirm } from './popup/settings.js'
 
-// Re-export for testing
-export { resetClearConfirm, handleClearLogs }
-export { updateConnectionStatus }
-export { FEATURE_TOGGLES, applyFeatureToggles } from './popup/feature-toggles.js'
-export { handleFeatureToggle } from './popup/feature-toggles.js'
-export { handleAiWebPilotToggle, applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
-export { initTrackPageButton, handleTrackPageClick } from './popup/tabs/tab-tracking.js'
-export { handleWebSocketModeChange } from './popup/settings.js'
-export { applyWebSocketMode } from './popup/settings.js'
-export { isInternalUrl } from './popup/shell/ui-utils.js'
-
 // Apply theme early to prevent flash of unstyled content (moved from inline script for CSP compliance).
 void getLocal('theme').then((value) => {
   if (value === 'light') document.body.classList.add('light-theme')

@@ -10,7 +10,7 @@ import (
 )
 
 // closedLoopbackPort returns a loopback port with nothing listening, so
-// isServerRunning(port) is deterministically false (connection refused).
+// testRunner.IsServerRunning(port) is deterministically false (connection refused).
 func closedLoopbackPort(t *testing.T) int {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -43,7 +43,7 @@ func TestRespawnIfNeeded_ThrottlesRapidSpawns(t *testing.T) {
 	}
 
 	port := closedLoopbackPort(t)
-	s := &daemonState{
+	s := &daemonState{runner: testRunner,
 		port:     port,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
@@ -80,7 +80,7 @@ func TestRespawnIfNeeded_ThrottlesRapidSpawns(t *testing.T) {
 // TestReserveRespawnSlot_BackoffEscalatesAndCools unit-tests the throttle gate:
 // escalating (capped) interval under a storm, reset after a cool-down gap.
 func TestReserveRespawnSlot_BackoffEscalatesAndCools(t *testing.T) {
-	s := &daemonState{}
+	s := &daemonState{runner: testRunner}
 	base := time.Unix(1_700_000_000, 0)
 
 	// First reservation always granted (immediate respawn after a death).

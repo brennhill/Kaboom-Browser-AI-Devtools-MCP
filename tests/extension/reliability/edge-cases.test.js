@@ -98,6 +98,7 @@ describe('Edge Cases: WebSocket Reconnection', () => {
     // Message before open (edge case in some implementations)
     ws._emit('message', { data: '{"type":"early"}' })
     ws._emit('open', {})
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvents = calls.filter((c) => {
@@ -283,6 +284,7 @@ describe('Edge Cases: Concurrent Operations', () => {
 
     // Send messages on all connections
     connections.forEach((ws, i) => ws.send(`{"id":${i}}`))
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const openEvents = calls.filter((c) => {
@@ -313,6 +315,7 @@ describe('Edge Cases: Concurrent Operations', () => {
     for (let i = 0; i < 100; i++) {
       ws.send(`{"msg":${i}}`)
     }
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvents = calls.filter((c) => {
@@ -467,6 +470,7 @@ describe('Edge Cases: Message Edge Cases', () => {
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
     ws._emit('open', {})
     ws.send('')
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvents = calls.filter((c) => {
@@ -492,6 +496,7 @@ describe('Edge Cases: Message Edge Cases', () => {
       unicode: '\u0000\u001F\u007F'
     })
     ws.send(specialMsg)
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvents = calls.filter((c) => {
@@ -515,6 +520,7 @@ describe('Edge Cases: Message Edge Cases', () => {
     ws.send('{invalid json')
     ws.send('{"valid": "json"}')
     ws.send('another invalid')
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvents = calls.filter((c) => {
@@ -537,6 +543,7 @@ describe('Edge Cases: Message Edge Cases', () => {
     // Send message larger than 4KB limit
     const hugeMessage = 'x'.repeat(10000)
     ws.send(hugeMessage)
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvents = calls.filter((c) => {

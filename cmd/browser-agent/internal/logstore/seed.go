@@ -22,10 +22,7 @@ import (
 func (ls *Store) SeedEntries(entries []types.LogEntry, addedAt []time.Time) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
-	ls.entries = append(ls.entries, entries...)
-	if addedAt != nil {
-		ls.logAddedAt = append(ls.logAddedAt, addedAt...)
-	}
+	ls.window.seed(entries, addedAt)
 }
 
 // SeedTotalAdded bumps the monotonic total-added counter by n.

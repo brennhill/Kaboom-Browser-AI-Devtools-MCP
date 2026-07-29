@@ -141,7 +141,7 @@ describe('SyncClient — Capture overrides', () => {
   })
 })
 
-describe('SyncClient — Extension logs clearing', () => {
+describe('SyncClient — Extension log acknowledgement', () => {
   let client
   let callbacks
 
@@ -154,7 +154,7 @@ describe('SyncClient — Extension logs clearing', () => {
     client.stop()
   })
 
-  test('should clear extension logs after successful sync with logs', async () => {
+  test('should acknowledge only extension logs included in a successful sync', async () => {
     callbacks.getExtensionLogs = mock.fn(() => [{ timestamp: 'now', level: 'info', message: 'x', source: 'bg', category: 'sync' }])
     installFetchMock(makeSyncResponse({ next_poll_ms: 60000 }))
 
@@ -162,7 +162,8 @@ describe('SyncClient — Extension logs clearing', () => {
     client.start()
     await tick(50)
 
-    assert.strictEqual(callbacks.clearExtensionLogs.mock.calls.length, 1)
+    assert.strictEqual(callbacks.acknowledgeExtensionLogs.mock.calls.length, 1)
+    assert.strictEqual(callbacks.acknowledgeExtensionLogs.mock.calls[0].arguments[0], 1)
   })
 
   test('should NOT clear extension logs when none were sent', async () => {
@@ -173,7 +174,7 @@ describe('SyncClient — Extension logs clearing', () => {
     client.start()
     await tick(50)
 
-    assert.strictEqual(callbacks.clearExtensionLogs.mock.calls.length, 0)
+    assert.strictEqual(callbacks.acknowledgeExtensionLogs.mock.calls.length, 0)
   })
 })
 
@@ -207,7 +208,7 @@ describe('SyncClient — Error recovery', () => {
     client.start()
 
     // Wait for failures + recovery
-    await tick(2200)
+    await tick(4000)
 
     assert.strictEqual(client.isConnected(), true)
     assert.strictEqual(client.getState().consecutiveFailures, 0)

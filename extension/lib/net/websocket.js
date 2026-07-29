@@ -27,7 +27,8 @@ function postLifecycleEvent(event, connectionId, urlString, extra) {
     }, window.location.origin);
 }
 /** Post a WebSocket message event */
-function postMessageEvent(connectionId, urlString, direction, data) {
+function postMessageEvent(connectionId, urlString, direction, data, tracker) {
+    tracker.recordSampledMessage(direction, data);
     const size = getSize(data);
     const formatted = formatPayload(data);
     const { data: truncatedData, truncated } = truncateWsMessage(formatted);
@@ -54,7 +55,7 @@ function attachMessageCapture(ws, connectionId, urlString, tracker) {
         tracker.recordMessage('incoming', event.data);
         if (!tracker.shouldSample('incoming'))
             return;
-        postMessageEvent(connectionId, urlString, 'incoming', event.data);
+        queueMicrotask(() => postMessageEvent(connectionId, urlString, 'incoming', event.data, tracker));
     });
     const originalSend = ws.send.bind(ws);
     // Match the native WebSocket.send parameter type exactly so the wrapper stays a
@@ -65,7 +66,7 @@ function attachMessageCapture(ws, connectionId, urlString, tracker) {
             tracker.recordMessage('outgoing', data);
         }
         if (webSocketCaptureEnabled && tracker.shouldSample('outgoing')) {
-            postMessageEvent(connectionId, urlString, 'outgoing', data);
+            queueMicrotask(() => postMessageEvent(connectionId, urlString, 'outgoing', data, tracker));
         }
         return originalSend(data);
     };

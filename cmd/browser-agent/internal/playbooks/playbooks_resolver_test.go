@@ -1,5 +1,5 @@
 // playbooks_resolver_test.go -- Tests for URI resolution, capability normalization,
-// playbook-key resolution, and interact-failure playbook lookup. Pure logic; no I/O.
+// playbook-key resolution, and strict rejection of noncanonical names. Pure logic; no I/O.
 
 package playbooks
 
@@ -13,16 +13,16 @@ func TestCanonicalPlaybookCapability(t *testing.T) {
 		want string
 	}{
 		{"performance canonical", "performance", "performance"},
-		{"performance alias", "performance_analysis", "performance"},
+		{"performance alias rejected", "performance_analysis", ""},
 		{"accessibility canonical", "accessibility", "accessibility"},
-		{"accessibility alias", "accessibility_audit", "accessibility"},
+		{"accessibility alias rejected", "accessibility_audit", ""},
 		{"security canonical", "security", "security"},
-		{"security alias", "security_audit", "security"},
+		{"security alias rejected", "security_audit", ""},
 		{"automation canonical", "automation", "automation"},
-		{"automation alias browser", "browser_automation", "automation"},
-		{"automation alias interact", "interact", "automation"},
+		{"automation alias browser rejected", "browser_automation", ""},
+		{"automation alias interact rejected", "interact", ""},
 		{"uppercase trimmed", "  PERFORMANCE  ", "performance"},
-		{"mixed case alias", "Security_Audit", "security"},
+		{"mixed case alias rejected", "Security_Audit", ""},
 		{"unknown", "banana", ""},
 		{"empty", "", ""},
 		{"whitespace only", "   ", ""},
@@ -44,9 +44,9 @@ func TestResolvePlaybookKey(t *testing.T) {
 		want string
 	}{
 		{"bare capability defaults to quick", "performance", "performance/quick"},
-		{"bare alias defaults to quick", "interact", "automation/quick"},
+		{"bare alias rejected", "interact", ""},
 		{"capability and level", "security/full", "security/full"},
-		{"alias and level", "browser_automation/full", "automation/full"},
+		{"alias and level rejected", "browser_automation/full", ""},
 		{"leading and trailing slashes trimmed", "/accessibility/quick/", "accessibility/quick"},
 		{"uppercase normalized", "PERFORMANCE/QUICK", "performance/quick"},
 		{"unknown bare capability", "banana", ""},
@@ -80,7 +80,7 @@ func TestResolveResourceContent(t *testing.T) {
 		{"quickstart", "kaboom://quickstart", "kaboom://quickstart", true, QuickstartContent},
 		{"playbook bare capability", "kaboom://playbook/performance", "kaboom://playbook/performance/quick", true, Playbooks["performance/quick"]},
 		{"playbook explicit level", "kaboom://playbook/security/full", "kaboom://playbook/security/full", true, Playbooks["security/full"]},
-		{"playbook alias", "kaboom://playbook/interact", "kaboom://playbook/automation/quick", true, Playbooks["automation/quick"]},
+		{"playbook alias rejected", "kaboom://playbook/interact", "", false, ""},
 		{"playbook unknown", "kaboom://playbook/banana", "", false, ""},
 		{"demo valid", "kaboom://demo/ws", "kaboom://demo/ws", true, DemoScripts["ws"]},
 		{"demo unknown", "kaboom://demo/nope", "", false, ""},

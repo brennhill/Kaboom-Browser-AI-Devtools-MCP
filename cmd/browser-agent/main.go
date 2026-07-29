@@ -44,7 +44,8 @@ var releaseChecker = versioncheck.New(versioncheck.Options{
 
 // daemonProcessArgv0 binds the build-time version to the process-title builder in
 // internal/procctl. It lives beside `version` because that is the only reason it
-// exists — bridge.Deps and cli.Deps both take a plain func(string) string.
+// exists — the bridge lifecycle collaborator and CLI config both take a plain
+// func(string) string.
 func daemonProcessArgv0(exePath string) string {
 	return procctl.Argv0ForVersion(exePath, version)
 }
@@ -53,9 +54,9 @@ func cliRuntimeConfig() cli.RuntimeConfig {
 	return cli.RuntimeConfig{
 		DefaultPort: defaultPort, MaxPostBodySize: maxPostBodySize,
 		DiagnosticOutput: diag.Sink(),
-		IsServerRunning:  bridge.IsServerRunning,
+		IsServerRunning:  bridgeRunner.IsServerRunning,
 		WaitForServer: func(port int, timeout time.Duration) bool {
-			return bridge.WaitForServer(port, timeout)
+			return bridgeRunner.WaitForServer(port, timeout)
 		},
 		DaemonProcessArgv0: daemonProcessArgv0,
 	}
@@ -66,33 +67,40 @@ func init() {
 	if telemetry.Version == "dev" {
 		telemetry.Version = version
 	}
+	bridgeRunner = buildBridgeRunner()
 }
 
-func initBridge() {
+var bridgeRunner *bridge.Runner
+
+func buildBridgeRunner() *bridge.Runner {
 	debugLogger := diag.NewDebugFileFromEnv()
-	bridge.Init(bridge.Deps{
-		Version: version, MaxPostBodySize: maxPostBodySize,
-		MCPServerName:      identity.MCPServerName,
-		ServerInstructions: serverInstructions,
-		Stderrf:            diag.Printf, Debugf: debugLogger.Printf,
-		WriteMCPPayload: bridge.WriteMCPPayload, SyncStdoutBestEffort: bridge.SyncStdoutBestEffort,
-		SetStderrSink:    diag.SetSink,
-		GetBridgeFraming: bridge.PushRuntime.Framing, StoreBridgeFraming: bridge.PushRuntime.StoreFraming,
-		SetPushClientCapabilities: func(capabilities push.ClientCapabilities) {
-			bridge.PushRuntime.SetCapabilities(capabilities)
-			if capabilities.ClientName != "" {
-				telemetry.SetLLMName(capabilities.ClientName)
-			}
+	return bridge.NewRunner(
+		bridge.Identity{Version: version, ServerName: identity.MCPServerName, ServerInstructions: serverInstructions},
+		bridge.Transport{
+			MaxBodySize: maxPostBodySize, Stderrf: diag.Printf, Debugf: debugLogger.Printf,
+			Write: bridge.WriteMCPPayload, Sync: bridge.SyncStdoutBestEffort, SetStderr: diag.SetSink,
 		},
-		ExtractClientCapabilities: pushapi.ExtractClientCapabilities,
-		NegotiateProtocolVersion:  mcp.NegotiateProtocolVersion,
-		MCPResources:              playbooks.Resources, MCPResourceTemplates: playbooks.ResourceTemplates,
-		ResolveResourceContent: playbooks.ResolveResourceContent,
-		DaemonProcessArgv0:     daemonProcessArgv0, StopServerForUpgrade: stopServerForUpgrade,
-		FindProcessOnPort: procctl.FindProcessOnPort, IsProcessAlive: procctl.IsProcessAlive,
-		AppendExitDiagnostic: exitDiagnostics.Append,
-	})
+		bridge.Protocol{
+			GetFraming: bridge.PushRuntime.Framing, StoreFraming: bridge.PushRuntime.StoreFraming,
+			SetCapabilities: func(capabilities push.ClientCapabilities) {
+				bridge.PushRuntime.SetCapabilities(capabilities)
+				if capabilities.ClientName != "" {
+					telemetry.SetLLMName(capabilities.ClientName)
+				}
+			},
+			ExtractCapabilities: pushapi.ExtractClientCapabilities, NegotiateVersion: mcp.NegotiateProtocolVersion,
+			Resources: playbooks.Resources, ResourceTemplates: playbooks.ResourceTemplates,
+			ResolveResource: playbooks.ResolveResourceContent,
+		},
+		bridge.Lifecycle{
+			ProcessArgv0: daemonProcessArgv0, StopServerForUpgrade: stopServerForUpgrade,
+			FindProcessOnPort: procctl.FindProcessOnPort, IsProcessAlive: procctl.IsProcessAlive,
+			AppendExitDiagnostic: exitDiagnostics.Append,
+		},
+	)
 }
+
+func initBridge() { bridgeRunner = buildBridgeRunner() }
 
 // startTime tracks when the server started for uptime calculation
 var startTime = time.Now()

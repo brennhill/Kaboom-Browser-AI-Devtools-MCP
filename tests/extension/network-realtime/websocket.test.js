@@ -136,6 +136,7 @@ describe('WebSocket Interception', () => {
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
     ws._emit('open', {})
     ws._emit('message', { data: '{"type":"chat"}' })
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvent = calls.find(
@@ -230,6 +231,7 @@ describe('WebSocket Interception', () => {
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
     ws._emit('open', {})
     ws._emit('message', { data: '{"type":"chat","msg":"hello"}' })
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvent = calls.find((c) => {
@@ -254,6 +256,7 @@ describe('WebSocket Interception', () => {
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
     ws._emit('open', {})
     ws.send('{"type":"ping"}')
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvent = calls.find((c) => {
@@ -337,6 +340,7 @@ describe('WebSocket Interception', () => {
 
     const largeData = 'x'.repeat(5000)
     ws._emit('message', { data: largeData })
+    await Promise.resolve()
 
     const calls = globalThis.window.postMessage.mock.calls
     const msgEvent = calls.find((c) => {
@@ -346,6 +350,30 @@ describe('WebSocket Interception', () => {
 
     assert.ok(msgEvent.arguments[0].payload.data.length <= 4096, 'Expected data truncated to 4KB')
     assert.strictEqual(msgEvent.arguments[0].payload.truncated, true)
+
+    uninstallWebSocketCapture()
+  })
+
+  test('defers sampled payload formatting and posting beyond the application callback', async () => {
+    const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
+      await import('../../../extension/lib/net/websocket.js')
+    setWebSocketCaptureMode('messages')
+    installWebSocketCapture()
+
+    const ws = new globalThis.window.WebSocket('wss://example.com/ws')
+    ws._emit('message', { data: '{"type":"deferred"}' })
+
+    const synchronousMessage = globalThis.window.postMessage.mock.calls.find(
+      (c) => c.arguments[0].type === 'kaboom_ws' && c.arguments[0].payload.event === 'message'
+    )
+    assert.strictEqual(synchronousMessage, undefined, 'message payload work must not run in the native callback')
+
+    await Promise.resolve()
+    const deferredMessage = globalThis.window.postMessage.mock.calls.find(
+      (c) => c.arguments[0].type === 'kaboom_ws' && c.arguments[0].payload.event === 'message'
+    )
+    assert.ok(deferredMessage, 'sampled payload should retain its wire event')
+    assert.strictEqual(deferredMessage.arguments[0].payload.data, '{"type":"deferred"}')
 
     uninstallWebSocketCapture()
   })
@@ -500,7 +528,7 @@ describe('Schema Detection', () => {
 
     // Feed 5 consistent JSON messages
     for (let i = 0; i < 5; i++) {
-      tracker.recordMessage('incoming', JSON.stringify({ sym: 'AAPL', price: 185 + i, vol: 1000 }))
+      tracker.recordSampledMessage('incoming', JSON.stringify({ sym: 'AAPL', price: 185 + i, vol: 1000 }))
     }
 
     const schema = tracker.getSchema()
@@ -514,11 +542,11 @@ describe('Schema Detection', () => {
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
     // Feed mixed JSON messages
-    tracker.recordMessage('incoming', JSON.stringify({ type: 'message', text: 'hello' }))
-    tracker.recordMessage('incoming', JSON.stringify({ type: 'message', text: 'world' }))
-    tracker.recordMessage('incoming', JSON.stringify({ type: 'typing', user: 'alice' }))
-    tracker.recordMessage('incoming', JSON.stringify({ type: 'presence', status: 'online' }))
-    tracker.recordMessage('incoming', JSON.stringify({ type: 'message', text: 'again' }))
+    tracker.recordSampledMessage('incoming', JSON.stringify({ type: 'message', text: 'hello' }))
+    tracker.recordSampledMessage('incoming', JSON.stringify({ type: 'message', text: 'world' }))
+    tracker.recordSampledMessage('incoming', JSON.stringify({ type: 'typing', user: 'alice' }))
+    tracker.recordSampledMessage('incoming', JSON.stringify({ type: 'presence', status: 'online' }))
+    tracker.recordSampledMessage('incoming', JSON.stringify({ type: 'message', text: 'again' }))
 
     const schema = tracker.getSchema()
     assert.strictEqual(schema.consistent, false)
@@ -532,7 +560,7 @@ describe('Schema Detection', () => {
 
     // Establish schema
     for (let i = 0; i < 5; i++) {
-      tracker.recordMessage('incoming', JSON.stringify({ sym: 'AAPL', price: 185 }))
+      tracker.recordSampledMessage('incoming', JSON.stringify({ sym: 'AAPL', price: 185 }))
     }
 
     // This message has different keys - should be logged
@@ -560,13 +588,13 @@ describe('Schema Detection', () => {
 
     // Simulate many messages with known variants
     for (let i = 0; i < 89; i++) {
-      tracker.recordMessage('incoming', JSON.stringify({ type: 'message', user: 'u', text: 't' }))
+      tracker.recordSampledMessage('incoming', JSON.stringify({ type: 'message', user: 'u', text: 't' }))
     }
     for (let i = 0; i < 8; i++) {
-      tracker.recordMessage('incoming', JSON.stringify({ type: 'typing', user: 'u' }))
+      tracker.recordSampledMessage('incoming', JSON.stringify({ type: 'typing', user: 'u' }))
     }
     for (let i = 0; i < 3; i++) {
-      tracker.recordMessage('incoming', JSON.stringify({ type: 'presence', status: 'on' }))
+      tracker.recordSampledMessage('incoming', JSON.stringify({ type: 'presence', status: 'on' }))
     }
 
     const schema = tracker.getSchema()

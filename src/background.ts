@@ -7,7 +7,7 @@
  */
 
 import { initializeExtension } from './background/init.js'
-import { EXTENSION_SESSION_ID } from './background/state.js'
+import { EXTENSION_SESSION_ID } from './background/runtime-state/startup-state.js'
 
 if (typeof (globalThis as Record<string, unknown>).process === 'undefined') {
   const moduleLoadTime = performance.now()

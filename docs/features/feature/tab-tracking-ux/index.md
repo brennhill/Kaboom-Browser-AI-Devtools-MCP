@@ -24,6 +24,8 @@ code_paths:
   - extension/popup.html
   - extension/popup.css
   - src/background/message-handlers.ts
+  - src/background/message-routing/pilot-handler.ts
+  - src/background/runtime-state/pilot-state.ts
   - src/background/event-listeners.ts
   - src/background/init.ts
   - src/background/ui/tab-state.ts
@@ -31,6 +33,7 @@ code_paths:
   - src/background/ui/context-menus.ts
   - src/background/recording/listeners.ts
 test_paths:
+  - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/branding/brand-metadata.test.js
   - tests/extension/popup-shell/popup-audit-button.test.js
   - tests/extension/popup-shell/popup-tab-tracking-branding.test.js

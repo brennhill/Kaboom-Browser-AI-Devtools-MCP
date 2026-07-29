@@ -97,7 +97,7 @@ describe('popup tab tracking sync', () => {
   })
 
   test('tracks storage trackedTabId changes while popup is open', async () => {
-    const { initTrackPageButton } = await import('../../../extension/popup.js')
+    const { initTrackPageButton } = await import('../../../extension/popup/tabs/tab-tracking.js')
     await initTrackPageButton()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -135,7 +135,7 @@ describe('popup tab tracking sync', () => {
     }
     trackedTabExists = false
 
-    const { initTrackPageButton } = await import('../../../extension/popup.js')
+    const { initTrackPageButton } = await import('../../../extension/popup/tabs/tab-tracking.js')
     initTrackPageButton()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -157,7 +157,7 @@ describe('popup tab tracking sync', () => {
       trackedTabTitle: 'Active Tab'
     }
 
-    const { initTrackPageButton } = await import('../../../extension/popup.js')
+    const { initTrackPageButton } = await import('../../../extension/popup/tabs/tab-tracking.js')
     initTrackPageButton()
     await new Promise((resolve) => setTimeout(resolve, 0))
 

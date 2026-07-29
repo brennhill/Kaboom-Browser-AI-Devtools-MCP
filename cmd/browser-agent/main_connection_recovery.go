@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/nativeinstall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
@@ -97,12 +96,12 @@ func tryShutdownViaHTTP(port int) bool {
 func waitForPortRelease(port int, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if !bridge.IsServerRunning(port) {
+		if !bridgeRunner.IsServerRunning(port) {
 			return true
 		}
 		time.Sleep(recoveryPortPollInterval)
 	}
-	return !bridge.IsServerRunning(port)
+	return !bridgeRunner.IsServerRunning(port)
 }
 
 func terminatePIDQuiet(pid int, force bool) {
@@ -139,7 +138,7 @@ var (
 	// daemonIsProcessAlive reports whether a PID is still running.
 	daemonIsProcessAlive = procctl.IsProcessAlive
 	// daemonIsServerRunning reports whether something is accepting on a port.
-	daemonIsServerRunning = bridge.IsServerRunning
+	daemonIsServerRunning = bridgeRunner.IsServerRunning
 	// daemonTryShutdown asks the daemon on a port to shut down over HTTP.
 	daemonTryShutdown = tryShutdownViaHTTP
 	// daemonWaitForPortRelease blocks until a port is free or the timeout elapses.

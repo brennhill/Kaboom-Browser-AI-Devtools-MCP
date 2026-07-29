@@ -6,14 +6,14 @@
 // interact.ts — Command handlers for the interact MCP tool.
 // Handles: subtitle, highlight, browser_action, dom_action, upload,
 //          execute, screen_recording_start, screen_recording_stop, state_*.
-import { isAiWebPilotEnabled } from '../state.js';
+import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js';
 import { executeDOMAction } from '../dom/dom-dispatch.js';
 import { executeCDPAction } from '../dom/cdp/cdp-dispatch.js';
 import { executeUpload } from '../exec/upload-handler.js';
 import { startRecording, stopRecording } from '../recording/index.js';
 import { executeWithWorldRouting } from '../exec/query-execution.js';
 import { handleBrowserAction, handleAsyncBrowserAction, handleAsyncExecuteCommand } from '../exec/browser-actions.js';
-import { saveStateSnapshot, loadStateSnapshot, listStateSnapshots, deleteStateSnapshot } from '../message-handlers.js';
+import { saveStateSnapshot, loadStateSnapshot, listStateSnapshots, deleteStateSnapshot } from '../state-snapshots.js';
 import { registerCommand } from './registry.js';
 import { requireAiWebPilot, isContentScriptUnreachableError } from './helpers.js';
 import { errorMessage } from '../../lib/error-utils.js';

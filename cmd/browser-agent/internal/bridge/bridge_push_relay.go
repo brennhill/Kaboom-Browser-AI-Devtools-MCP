@@ -24,7 +24,7 @@ const (
 // startBridgePushRelay starts a goroutine that polls the daemon's /push/drain endpoint
 // and relays events to Claude Code via MCP sampling/createMessage or notifications.
 // Stops when the done channel is closed (bridge shutdown).
-func startBridgePushRelay(client *http.Client, endpoint string, done <-chan struct{}) {
+func (r *Runner) startBridgePushRelay(client *http.Client, endpoint string, done <-chan struct{}) {
 	go func() { // lint:allow-bare-goroutine — lifecycle-tied to done channel
 		ticker := time.NewTicker(pushRelayPollInterval)
 		defer ticker.Stop()
@@ -34,14 +34,14 @@ func startBridgePushRelay(client *http.Client, endpoint string, done <-chan stru
 			case <-done:
 				return
 			case <-ticker.C:
-				relayPendingPushEvents(client, endpoint)
+				r.relayPendingPushEvents(client, endpoint)
 			}
 		}
 	}()
 }
 
 // relayPendingPushEvents fetches and relays any pending push events from the daemon.
-func relayPendingPushEvents(client *http.Client, endpoint string) {
+func (r *Runner) relayPendingPushEvents(client *http.Client, endpoint string) {
 	ctx, cancel := context.WithTimeout(context.Background(), pushRelayPollTimeout)
 	defer cancel()
 
@@ -68,21 +68,21 @@ func relayPendingPushEvents(client *http.Client, endpoint string) {
 		return
 	}
 
-	framing := deps.GetBridgeFraming()
+	framing := r.protocol.GetFraming()
 	for i := range drain.Events {
-		relayPushEvent(drain.Events[i], framing)
+		r.relayPushEvent(drain.Events[i], framing)
 	}
 }
 
 // relayPushEvent sends a single push event to Claude via MCP sampling/createMessage.
-func relayPushEvent(ev push.PushEvent, framing internbridge.StdioFraming) {
+func (r *Runner) relayPushEvent(ev push.PushEvent, framing internbridge.StdioFraming) {
 	samplingReq := push.BuildSamplingRequest(ev)
 	payload, err := json.Marshal(samplingReq)
 	if err != nil {
 		return
 	}
-	deps.WriteMCPPayload(payload, framing)
-	deps.Debugf("push relay: sent %s event (page=%s)", ev.Type, ev.PageURL)
+	r.transport.Write(payload, framing)
+	r.transport.Debugf("push relay: sent %s event (page=%s)", ev.Type, ev.PageURL)
 }
 
 // BuildPushNotification creates a lightweight MCP notification for a push event.

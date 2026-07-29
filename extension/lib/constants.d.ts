@@ -126,6 +126,7 @@ export declare const StorageKey: {
     readonly TERMINAL_WORKSPACE_MAIN_TAB_ID: "kaboom_terminal_workspace_main_tab_id";
     readonly CLOAKED_DOMAINS: "kaboom_cloaked_domains";
     readonly ERROR_GROUPS: "kaboom_error_groups";
+    readonly SERVER_INSTALL_ID: "kaboom_server_install_id";
 };
 /**
  * What to tell a user when the in-page Terminal button could not open the panel.

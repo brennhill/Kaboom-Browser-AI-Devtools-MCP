@@ -7,7 +7,8 @@
 // Owns the sync client instance and provides start/stop/reset operations.
 // Dependencies are injected to avoid circular imports with index.ts.
 
-import type { PendingQuery } from '../../types/index.js'
+import type { PendingQuery, ConnectionStatus } from '../../types/index.js'
+import type { ExtensionLogQueueEntry } from '../runtime-state/log-queue.js'
 import { createSyncClient, type SyncClient, type SyncCommand, type SyncSettings } from './sync-client.js'
 import { getLastCSPStatus } from '../exec/browser-actions.js'
 import { DebugCategory } from '../debug.js'
@@ -24,27 +25,21 @@ import { errorMessage } from '../../lib/error-utils.js'
 type DebugLogFn = (category: string, message: string, data?: unknown) => void
 
 /** Mutable connection status (same shape as index.ts) */
-export interface SyncConnectionStatusRef {
-  connected: boolean
-  entries: number
-  maxEntries: number
-  errorCount: number
-  logFile: string
-  logFileSize?: number
-  serverVersion?: string
-  extensionVersion?: string
-  versionMismatch?: boolean
-}
-
-/** Extension log queue entry */
-export interface ExtensionLogEntry {
-  timestamp: string
-  level: string
-  message: string
-  source: string
-  category: string
-  data?: unknown
-}
+export type SyncConnectionStatusRef = Pick<
+  ConnectionStatus,
+  | 'connected'
+  | 'entries'
+  | 'maxEntries'
+  | 'errorCount'
+  | 'logFile'
+  | 'logFileSize'
+  | 'serverVersion'
+  | 'extensionVersion'
+  | 'versionMismatch'
+  | 'securityMode'
+  | 'productionParity'
+  | 'insecureRewritesApplied'
+>
 
 /** Dependencies injected by index.ts to avoid circular imports */
 export interface SyncManagerDeps {
@@ -54,8 +49,8 @@ export interface SyncManagerDeps {
   setConnectionStatus: (patch: Partial<SyncConnectionStatusRef>) => void
   getAiControlled: () => boolean
   getAiWebPilotEnabledCache: () => boolean
-  getExtensionLogQueue: () => ExtensionLogEntry[]
-  clearExtensionLogQueue: () => void
+  getExtensionLogQueue: () => ExtensionLogQueueEntry[]
+  acknowledgeExtensionLogQueue: (sentCount: number) => void
   applyCaptureOverrides: (overrides: Record<string, string>) => void
   debugLog: DebugLogFn
 }
@@ -92,7 +87,7 @@ function getExtensionVersion(): string {
 // #lizard forgives
 export function startSyncClient(deps: SyncManagerDeps): void {
   if (syncClient) {
-    // Already running, nothing to do
+    syncClient.setServerUrl(deps.getServerUrl())
     return
   }
 
@@ -212,8 +207,8 @@ export function startSyncClient(deps: SyncManagerDeps): void {
       },
 
       // Clear extension logs after sending
-      clearExtensionLogs: () => {
-        deps.clearExtensionLogQueue()
+      acknowledgeExtensionLogs: (sentCount: number) => {
+        deps.acknowledgeExtensionLogQueue(sentCount)
       },
 
       // Debug logging
@@ -234,6 +229,7 @@ export function startSyncClient(deps: SyncManagerDeps): void {
 export function stopSyncClient(debugLog: DebugLogFn): void {
   if (syncClient) {
     syncClient.stop()
+    syncClient = null
     debugLog(DebugCategory.CONNECTION, 'Sync client stopped')
   }
 }

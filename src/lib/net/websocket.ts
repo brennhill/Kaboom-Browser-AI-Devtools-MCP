@@ -90,8 +90,10 @@ function postMessageEvent(
   connectionId: string,
   urlString: string,
   direction: 'incoming' | 'outgoing',
-  data: WebSocketMessageData
+  data: WebSocketMessageData,
+  tracker: ConnectionTracker
 ): void {
+  tracker.recordSampledMessage(direction, data)
   const size = getSize(data)
   const formatted = formatPayload(data)
   const { data: truncatedData, truncated } = truncateWsMessage(formatted)
@@ -126,7 +128,7 @@ function attachMessageCapture(
     if (!webSocketCaptureEnabled) return
     tracker.recordMessage('incoming', event.data)
     if (!tracker.shouldSample('incoming')) return
-    postMessageEvent(connectionId, urlString, 'incoming', event.data)
+    queueMicrotask(() => postMessageEvent(connectionId, urlString, 'incoming', event.data, tracker))
   })
 
   const originalSend = ws.send.bind(ws)
@@ -138,7 +140,7 @@ function attachMessageCapture(
       tracker.recordMessage('outgoing', data as WebSocketMessageData)
     }
     if (webSocketCaptureEnabled && tracker.shouldSample('outgoing')) {
-      postMessageEvent(connectionId, urlString, 'outgoing', data as WebSocketMessageData)
+      queueMicrotask(() => postMessageEvent(connectionId, urlString, 'outgoing', data as WebSocketMessageData, tracker))
     }
     return originalSend(data)
   }

@@ -7,7 +7,7 @@
  * @fileoverview Tab Tracking Module for Popup
  * Manages the "Track This Tab" button and tracking status
  */
-import { isInternalUrl } from '../shell/ui-utils.js';
+import { isInternalUrl } from '../../lib/tabs/internal-url.js';
 import { StorageKey } from '../../lib/constants.js';
 import { onStorageChanged } from '../../lib/storage/changes.js';
 import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';

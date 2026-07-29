@@ -17,7 +17,8 @@ import assert from 'node:assert'
 const mockSyncClientInstance = {
   start: mock.fn(),
   stop: mock.fn(),
-  resetConnection: mock.fn()
+  resetConnection: mock.fn(),
+  setServerUrl: mock.fn()
 }
 
 const mockCreateSyncClient = mock.fn(() => mockSyncClientInstance)
@@ -109,7 +110,7 @@ function createMockDeps(overrides = {}) {
     getAiControlled: mock.fn(() => false),
     getAiWebPilotEnabledCache: mock.fn(() => false),
     getExtensionLogQueue: mock.fn(() => []),
-    clearExtensionLogQueue: mock.fn(),
+    acknowledgeExtensionLogQueue: mock.fn(),
     applyCaptureOverrides: mock.fn(),
     debugLog: mock.fn(),
     ...overrides
@@ -142,6 +143,7 @@ describe('startSyncClient', () => {
     mockSyncClientInstance.start.mock.resetCalls()
     mockSyncClientInstance.stop.mock.resetCalls()
     mockSyncClientInstance.resetConnection.mock.resetCalls()
+    mockSyncClientInstance.setServerUrl.mock.resetCalls()
   })
 
   test('creates and starts a sync client', async () => {
@@ -209,5 +211,39 @@ describe('resetSyncClientConnection', () => {
 
     assert.strictEqual(mockSyncClientInstance.resetConnection.mock.calls.length, 0)
     assert.strictEqual(debugLog.mock.calls.length, 0)
+  })
+})
+
+describe('stopSyncClient', () => {
+  beforeEach(() => {
+    mockCreateSyncClient.mock.resetCalls()
+    mockSyncClientInstance.start.mock.resetCalls()
+    mockSyncClientInstance.stop.mock.resetCalls()
+    mockSyncClientInstance.resetConnection.mock.resetCalls()
+    mockSyncClientInstance.setServerUrl.mock.resetCalls()
+  })
+
+  test('stopped client can be started again in the same worker lifetime', async () => {
+    const { startSyncClient, stopSyncClient } = await freshImport()
+    const deps = createMockDeps()
+
+    startSyncClient(deps)
+    stopSyncClient(deps.debugLog)
+    startSyncClient(deps)
+
+    assert.strictEqual(mockCreateSyncClient.mock.calls.length, 2)
+    assert.strictEqual(mockSyncClientInstance.stop.mock.calls.length, 1)
+    assert.strictEqual(mockSyncClientInstance.start.mock.calls.length, 2)
+  })
+
+  test('repeated start delegates URL changes without an unconditional reset', async () => {
+    const { startSyncClient } = await freshImport()
+    const deps = createMockDeps()
+    startSyncClient(deps)
+    deps.getServerUrl = mock.fn(() => 'http://localhost:9999')
+    startSyncClient(deps)
+
+    assert.strictEqual(mockSyncClientInstance.setServerUrl.mock.calls[0].arguments[0], 'http://localhost:9999')
+    assert.strictEqual(mockSyncClientInstance.resetConnection.mock.calls.length, 0)
   })
 })

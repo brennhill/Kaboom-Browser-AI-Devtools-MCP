@@ -95,6 +95,7 @@ test_paths:
   - internal/diag/output_test.go
   - internal/diag/debug_file_test.go
   - cmd/browser-agent/internal/playbooks/resource_catalog_test.go
+  - cmd/browser-agent/internal/playbooks/playbooks_resolver_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/mcp_protocol_test.go
   - cmd/browser-agent/mcp_initialize_test.go
@@ -129,7 +130,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_detach_contract_test.go
   - cmd/browser-agent/internal/bridge/bridge_context_contract_test.go
   - cmd/browser-agent/internal/bridge/health_metadata_test.go
-  - cmd/browser-agent/internal/bridge/bridge_deps_isolation_test.go
+  - cmd/browser-agent/internal/bridge/runner_isolation_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go

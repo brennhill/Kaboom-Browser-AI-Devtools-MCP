@@ -2,7 +2,7 @@
  * Purpose: Map-based command registry and dispatch loop that replaces the monolithic if-chain for routing pending queries to handlers.
  * Why: Extensible design lets new command modules register themselves without modifying central dispatch.
  */
-import { initReady } from '../state.js';
+import { initReady } from '../runtime-state/startup-state.js';
 import { DebugCategory } from '../debug.js';
 import { errorMessage } from '../../lib/error-utils.js';
 import { debugLog, sendResult, sendAsyncResult, requiresTargetTab, resolveTargetTab, parseQueryParamsObject, withTargetContext, actionToast, isRestrictedUrl, isBrowserEscapeAction } from './helpers.js';

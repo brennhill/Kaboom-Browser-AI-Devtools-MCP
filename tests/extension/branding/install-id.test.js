@@ -42,7 +42,7 @@ let mod
 
 async function loadModule() {
   if (!mod) {
-    mod = await import('../../../extension/background/sync/sync-client.js')
+    mod = await import('../../../extension/background/sync/install-identity.js')
   }
   return mod
 }

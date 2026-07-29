@@ -61,7 +61,8 @@ const mockChrome = {
 globalThis.chrome = mockChrome
 
 // Import directly from the implementation file (not through barrel export)
-import { setDebugMode, exportDebugLog, debugLog, clearDebugLog, DebugCategory } from './index.js'
+import { setDebugMode, exportDebugLog, debugLog, clearDebugLog } from './index.js'
+import { DebugCategory } from './debug.js'
 
 describe('Debug Mode', () => {
   beforeEach(() => {

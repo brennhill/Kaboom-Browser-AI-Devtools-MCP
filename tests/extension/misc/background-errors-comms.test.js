@@ -8,6 +8,8 @@
 import { test, describe, mock, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { MANIFEST_VERSION } from '../shared/helpers.js'
+import { DebugCategory } from '../../../extension/background/debug.js'
+import { composeBackgroundHandlers } from '../shared/background-message-router.js'
 
 // Mock Chrome APIs
 const mockChrome = {
@@ -136,7 +138,7 @@ function getInstalledMessageHandler(depsOverrides = {}) {
     ...depsOverrides
   }
 
-  installMessageListener(baseDeps)
+  installMessageListener({ debugLog: baseDeps.debugLog, handlers: composeBackgroundHandlers(baseDeps) })
 
   // The real handler was registered via chrome.runtime.onMessage.addListener
   const calls = mockChrome.runtime.onMessage.addListener.mock.calls
@@ -429,7 +431,7 @@ describe('captureScreenshot', () => {
 
 describe('Debug Logging', () => {
   test('should log debug entries', async () => {
-    const { debugLog, getDebugLog, clearDebugLog, DebugCategory } = await import('../../../extension/background/index.js')
+    const { debugLog, getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
 
     // Clear any existing entries
     clearDebugLog()
@@ -454,7 +456,7 @@ describe('Debug Logging', () => {
   })
 
   test('should clear debug log', async () => {
-    const { debugLog, getDebugLog, clearDebugLog, DebugCategory } = await import('../../../extension/background/index.js')
+    const { debugLog, getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
 
     // Add an entry
     debugLog(DebugCategory.ERROR, 'Error test')
@@ -470,7 +472,7 @@ describe('Debug Logging', () => {
   })
 
   test('should export debug log as JSON', async () => {
-    const { debugLog, exportDebugLog, clearDebugLog, DebugCategory } = await import('../../../extension/background/index.js')
+    const { debugLog, exportDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
 
     clearDebugLog()
     debugLog(DebugCategory.CAPTURE, 'Capture test')
@@ -494,7 +496,7 @@ describe('Debug Logging', () => {
   // NOTE: setDebugMode test moved to co-located test file: extension/background/index.test.js
 
   test('should limit debug log buffer size', async () => {
-    const { debugLog, getDebugLog, clearDebugLog, DebugCategory } = await import('../../../extension/background/index.js')
+    const { debugLog, getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
 
     clearDebugLog()
 
@@ -509,17 +511,20 @@ describe('Debug Logging', () => {
   })
 
   test('should queue debug logs even while disconnected for later sync flush', async () => {
-    const { debugLog, DebugCategory } = await import('../../../extension/background/index.js')
-    const { clearExtensionLogQueue, getExtensionLogQueue, setConnectionStatus } = await import(
-      '../../../extension/background/state.js'
+    const { debugLog } = await import('../../../extension/background/index.js')
+    const { clearExtensionLogsForTesting, getExtensionLogQueueSnapshot } = await import(
+      '../../../extension/background/runtime-state/log-queue.js'
+    )
+    const { setConnectionStatus } = await import(
+      '../../../extension/background/runtime-state/connection-state.js'
     )
 
-    clearExtensionLogQueue()
+    clearExtensionLogsForTesting()
     setConnectionStatus({ connected: false })
 
     debugLog(DebugCategory.CONNECTION, 'Sync failed, retrying', { attempt: 1 })
 
-    const queued = getExtensionLogQueue()
+    const queued = getExtensionLogQueueSnapshot()
     assert.ok(
       queued.some((entry) => entry.message === 'Sync failed, retrying'),
       'Expected disconnected debug logs to remain queued for next successful sync'

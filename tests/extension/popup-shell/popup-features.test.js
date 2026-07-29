@@ -79,12 +79,12 @@ const createMockElement = (id) => ({
 
 let mockDocument
 
-test('popup exposes only batched-read apply functions for feature settings', async () => {
+test('popup lifecycle entry point does not re-export feature implementations', async () => {
   const popup = await import('../../../extension/popup.js')
   assert.strictEqual(popup.initFeatureToggles, undefined)
   assert.strictEqual(popup.initWebSocketModeSelector, undefined)
-  assert.strictEqual(typeof popup.applyFeatureToggles, 'function')
-  assert.strictEqual(typeof popup.applyWebSocketMode, 'function')
+  assert.strictEqual(popup.applyFeatureToggles, undefined)
+  assert.strictEqual(popup.applyWebSocketMode, undefined)
 })
 
 describe('WebSocket Toggle', () => {
@@ -124,7 +124,7 @@ describe('WebSocket Toggle', () => {
   })
 
   test('should send message to background when WebSocket toggled', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('webSocketCaptureEnabled', 'set_web_socket_capture_enabled', true)
 
@@ -136,7 +136,7 @@ describe('WebSocket Toggle', () => {
   })
 
   test('should send mode change message to background', async () => {
-    const { handleWebSocketModeChange } = await import('../../../extension/popup.js')
+    const { handleWebSocketModeChange } = await import('../../../extension/popup/settings.js')
 
     handleWebSocketModeChange('high')
 
@@ -185,7 +185,7 @@ describe('Debug Logging', () => {
   })
 
   test('should toggle debug mode and send message to background', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('debugMode', 'set_debug_mode', true)
 
@@ -213,7 +213,7 @@ describe('Health Indicators', () => {
 
   describe('Circuit Breaker Status', () => {
     test('should hide circuit breaker indicator when state is "closed"', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: true,
@@ -227,7 +227,7 @@ describe('Health Indicators', () => {
     })
 
     test('should display circuit breaker "open" with error styling', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: true,
@@ -243,7 +243,7 @@ describe('Health Indicators', () => {
     })
 
     test('should display circuit breaker "half-open" with warning styling', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: true,
@@ -261,7 +261,7 @@ describe('Health Indicators', () => {
 
   describe('Memory Pressure Status', () => {
     test('should hide memory pressure indicator when level is "normal"', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: true,
@@ -275,7 +275,7 @@ describe('Health Indicators', () => {
     })
 
     test('should display memory pressure "soft" with warning styling', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: true,
@@ -291,7 +291,7 @@ describe('Health Indicators', () => {
     })
 
     test('should display memory pressure "hard" with error styling', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: true,
@@ -309,7 +309,7 @@ describe('Health Indicators', () => {
 
   describe('Section Visibility', () => {
     test('should hide health section when all indicators are healthy', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: true,
@@ -323,7 +323,7 @@ describe('Health Indicators', () => {
     })
 
     test('should show health section when circuit breaker is unhealthy', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: true,
@@ -337,7 +337,7 @@ describe('Health Indicators', () => {
     })
 
     test('should show health section when memory pressure is elevated', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: true,
@@ -351,7 +351,7 @@ describe('Health Indicators', () => {
     })
 
     test('should hide health indicators when disconnected', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       updateConnectionStatus({
         connected: false,
@@ -365,7 +365,7 @@ describe('Health Indicators', () => {
     })
 
     test('should handle missing health data gracefully', async () => {
-      const { updateConnectionStatus } = await import('../../../extension/popup.js')
+      const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
       // No circuitBreakerState or memoryPressure in status
       assert.doesNotThrow(() => {

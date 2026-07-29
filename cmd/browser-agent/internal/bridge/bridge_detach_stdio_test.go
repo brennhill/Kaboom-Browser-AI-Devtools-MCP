@@ -22,12 +22,12 @@ import (
 // A genuinely detached daemon must have nil (=> os/exec connects fd to /dev/null,
 // which never breaks) or an *os.File for both streams.
 func TestBuildDaemonCmdDetachesStdio(t *testing.T) {
-	// NB: do NOT call initTestDeps here — it replaces the package-global deps
-	// installed by TestMain (and never restores it), which would clobber deps for
+	// NB: do NOT call initTestDeps here — it replaces the shared test runner
+	// installed by TestMain, which would clobber its transport hooks for
 	// every test that runs after this one (the FastPath tests break with the stub's
 	// 2024-11-05 protocol / broken Content-Length writer). TestMain already provides
 	// DaemonProcessArgv0, which is all buildDaemonCmd needs.
-	s := &daemonState{port: 7890}
+	s := &daemonState{runner: testRunner, port: 7890}
 	cmd, err := s.buildDaemonCmd()
 	if err != nil {
 		t.Fatalf("buildDaemonCmd: %v", err)

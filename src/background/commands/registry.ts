@@ -8,7 +8,7 @@
 
 import type { PendingQuery } from '../../types/index.js'
 import type { SyncClient } from '../sync/sync-client.js'
-import { initReady } from '../state.js'
+import { initReady } from '../runtime-state/startup-state.js'
 import { DebugCategory } from '../debug.js'
 import type { SendAsyncResultFn, QueryParamsObject, TargetResolution } from './helpers.js'
 import { errorMessage } from '../../lib/error-utils.js'

@@ -15,7 +15,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -39,7 +38,7 @@ func TestCleanupStalePIDFile_AliveUnrelatedProcessDoesNotBlock(t *testing.T) {
 	t.Setenv(state.StateDirEnv, stateRoot)
 
 	port := freePortForTest(t)
-	if bridge.IsServerRunning(port) {
+	if bridgeRunner.IsServerRunning(port) {
 		t.Fatalf("test precondition failed: port %d unexpectedly in use", port)
 	}
 

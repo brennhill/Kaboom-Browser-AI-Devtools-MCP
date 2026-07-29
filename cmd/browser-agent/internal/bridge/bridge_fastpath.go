@@ -29,28 +29,28 @@ var fastPathResponses = map[string]string{
 }
 
 // sendFastResponse marshals and sends a JSON-RPC response for the fast path.
-func sendFastResponse(id any, result json.RawMessage, framing internbridge.StdioFraming) {
+func (r *Runner) sendFastResponse(id any, result json.RawMessage, framing internbridge.StdioFraming) {
 	resp := mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: id, Result: result}
 	// Error impossible: simple struct with no circular refs or unsupported types
 	respJSON, _ := json.Marshal(resp)
-	deps.WriteMCPPayload(respJSON, framing)
+	r.transport.Write(respJSON, framing)
 }
 
-func sendFastError(id any, code int, message string, framing internbridge.StdioFraming) {
+func (r *Runner) sendFastError(id any, code int, message string, framing internbridge.StdioFraming) {
 	resp := mcp.JSONRPCResponse{
 		JSONRPC: mcp.JSONRPCVersion,
 		ID:      id,
 		Error:   &mcp.JSONRPCError{Code: code, Message: message},
 	}
 	respJSON, _ := json.Marshal(resp)
-	deps.WriteMCPPayload(respJSON, framing)
+	r.transport.Write(respJSON, framing)
 }
 
 // handleFastPath handles MCP methods that don't require the daemon.
 // Returns true if the method was handled.
-func handleFastPath(req mcp.JSONRPCRequest, toolsList []mcp.MCPTool, framing internbridge.StdioFraming) bool {
+func (r *Runner) handleFastPath(req mcp.JSONRPCRequest, toolsList []mcp.MCPTool, framing internbridge.StdioFraming) bool {
 	if req.HasInvalidID() {
-		sendBridgeError(nil, -32600, "Invalid Request: id must be string or number when present", framing)
+		r.sendBridgeError(nil, -32600, "Invalid Request: id must be string or number when present", framing)
 		return true
 	}
 
@@ -62,26 +62,26 @@ func handleFastPath(req mcp.JSONRPCRequest, toolsList []mcp.MCPTool, framing int
 	switch req.Method {
 	case "initialize":
 		// Extract client capabilities for push delivery pipeline
-		caps := deps.ExtractClientCapabilities(req.Params)
-		deps.SetPushClientCapabilities(caps)
-		deps.StoreBridgeFraming(framing)
+		caps := r.protocol.ExtractCapabilities(req.Params)
+		r.protocol.SetCapabilities(caps)
+		r.protocol.StoreFraming(framing)
 
 		result := map[string]any{
-			"protocolVersion": deps.NegotiateProtocolVersion(req.Params),
-			"serverInfo":      map[string]any{"name": deps.MCPServerName, "version": deps.Version},
+			"protocolVersion": r.protocol.NegotiateVersion(req.Params),
+			"serverInfo":      map[string]any{"name": r.identity.ServerName, "version": r.identity.Version},
 			"capabilities":    map[string]any{"tools": map[string]any{}, "resources": map[string]any{}},
-			"instructions":    deps.ServerInstructions,
+			"instructions":    r.identity.ServerInstructions,
 		}
 		// Error impossible: map contains only primitive types and nested maps
 		resultJSON, _ := json.Marshal(result)
-		sendFastResponse(req.ID, resultJSON, framing)
-		recordFastPathEvent(req.Method, true, 0)
+		r.sendFastResponse(req.ID, resultJSON, framing)
+		r.recordFastPathEvent(req.Method, true, 0)
 		return true
 
 	case "initialized":
 		if req.HasID() {
-			sendFastResponse(req.ID, json.RawMessage(`{}`), framing)
-			recordFastPathEvent(req.Method, true, 0)
+			r.sendFastResponse(req.ID, json.RawMessage(`{}`), framing)
+			r.recordFastPathEvent(req.Method, true, 0)
 		}
 		return true
 
@@ -89,39 +89,39 @@ func handleFastPath(req mcp.JSONRPCRequest, toolsList []mcp.MCPTool, framing int
 		result := map[string]any{"tools": toolsList}
 		// Error impossible: map contains only serializable tool definitions
 		resultJSON, _ := json.Marshal(result)
-		sendFastResponse(req.ID, resultJSON, framing)
-		recordFastPathEvent(req.Method, true, 0)
+		r.sendFastResponse(req.ID, resultJSON, framing)
+		r.recordFastPathEvent(req.Method, true, 0)
 		return true
 
 	case "resources/list":
-		result := mcp.MCPResourcesListResult{Resources: deps.MCPResources()}
+		result := mcp.MCPResourcesListResult{Resources: r.protocol.Resources()}
 		resultJSON, _ := json.Marshal(result)
-		sendFastResponse(req.ID, resultJSON, framing)
+		r.sendFastResponse(req.ID, resultJSON, framing)
 		return true
 	case "resources/templates/list":
-		result := mcp.MCPResourceTemplatesListResult{ResourceTemplates: deps.MCPResourceTemplates()}
+		result := mcp.MCPResourceTemplatesListResult{ResourceTemplates: r.protocol.ResourceTemplates()}
 		resultJSON, _ := json.Marshal(result)
-		sendFastResponse(req.ID, resultJSON, framing)
+		r.sendFastResponse(req.ID, resultJSON, framing)
 		return true
 	case "resources/read":
 		var params struct {
 			URI string `json:"uri"`
 		}
 		if err := json.Unmarshal(req.Params, &params); err != nil {
-			recordFastPathResourceRead("", false, -32602)
-			recordFastPathEvent(req.Method, false, -32602)
-			sendFastError(req.ID, -32602, "Invalid params: "+err.Error(), framing)
+			r.recordFastPathResourceRead("", false, -32602)
+			r.recordFastPathEvent(req.Method, false, -32602)
+			r.sendFastError(req.ID, -32602, "Invalid params: "+err.Error(), framing)
 			return true
 		}
-		canonicalURI, text, ok := deps.ResolveResourceContent(params.URI)
+		canonicalURI, text, ok := r.protocol.ResolveResource(params.URI)
 		if !ok {
-			recordFastPathResourceRead(params.URI, false, -32002)
-			recordFastPathEvent(req.Method, false, -32002)
-			sendFastError(req.ID, -32002, "Resource not found: "+params.URI, framing)
+			r.recordFastPathResourceRead(params.URI, false, -32002)
+			r.recordFastPathEvent(req.Method, false, -32002)
+			r.sendFastError(req.ID, -32002, "Resource not found: "+params.URI, framing)
 			return true
 		}
-		recordFastPathResourceRead(params.URI, true, 0)
-		recordFastPathEvent(req.Method, true, 0)
+		r.recordFastPathResourceRead(params.URI, true, 0)
+		r.recordFastPathEvent(req.Method, true, 0)
 		result := map[string]any{
 			"contents": []map[string]any{
 				{
@@ -132,13 +132,13 @@ func handleFastPath(req mcp.JSONRPCRequest, toolsList []mcp.MCPTool, framing int
 			},
 		}
 		resultJSON, _ := json.Marshal(result)
-		sendFastResponse(req.ID, resultJSON, framing)
+		r.sendFastResponse(req.ID, resultJSON, framing)
 		return true
 	}
 
 	if staticResult, ok := fastPathResponses[req.Method]; ok {
-		sendFastResponse(req.ID, json.RawMessage(staticResult), framing)
-		recordFastPathEvent(req.Method, true, 0)
+		r.sendFastResponse(req.ID, json.RawMessage(staticResult), framing)
+		r.recordFastPathEvent(req.Method, true, 0)
 		return true
 	}
 
@@ -162,11 +162,11 @@ func ResetFastPathResourceReadCounters() {
 }
 
 // RecordFastPathResourceRead is an exported wrapper for external callers.
-func RecordFastPathResourceRead(uri string, success bool, errorCode int) {
-	recordFastPathResourceRead(uri, success, errorCode)
+func (r *Runner) RecordFastPathResourceRead(uri string, success bool, errorCode int) {
+	r.recordFastPathResourceRead(uri, success, errorCode)
 }
 
-func recordFastPathResourceRead(uri string, success bool, errorCode int) {
+func (r *Runner) recordFastPathResourceRead(uri string, success bool, errorCode int) {
 	fastPathResourceReadCounters.mu.Lock()
 	defer fastPathResourceReadCounters.mu.Unlock()
 	if success {
@@ -174,7 +174,7 @@ func recordFastPathResourceRead(uri string, success bool, errorCode int) {
 	} else {
 		fastPathResourceReadCounters.failure++
 	}
-	appendFastPathResourceReadTelemetry(uri, success, errorCode, fastPathResourceReadCounters.success, fastPathResourceReadCounters.failure)
+	r.appendFastPathResourceReadTelemetry(uri, success, errorCode, fastPathResourceReadCounters.success, fastPathResourceReadCounters.failure)
 }
 
 // SnapshotFastPathResourceReadCounters returns the current success/failure counts.
@@ -189,7 +189,7 @@ func FastPathResourceReadLogPath() (string, error) {
 	return statecfg.InRoot("logs", "bridge-fastpath-resource-read.jsonl")
 }
 
-func appendFastPathResourceReadTelemetry(uri string, success bool, errorCode int, successCount int64, failureCount int64) {
+func (r *Runner) appendFastPathResourceReadTelemetry(uri string, success bool, errorCode int, successCount int64, failureCount int64) {
 	path, err := FastPathResourceReadLogPath()
 	if err != nil {
 		return
@@ -206,7 +206,7 @@ func appendFastPathResourceReadTelemetry(uri string, success bool, errorCode int
 		"success_count":  successCount,
 		"failure_count":  failureCount,
 		"pid":            os.Getpid(),
-		"bridge_version": deps.Version,
+		"bridge_version": r.identity.Version,
 	}
 	line, marshalErr := json.Marshal(entry)
 	if marshalErr != nil {
@@ -244,11 +244,11 @@ func FastPathTelemetryLogPath() (string, error) {
 }
 
 // RecordFastPathEvent is an exported wrapper for external callers.
-func RecordFastPathEvent(method string, success bool, errorCode int) {
-	recordFastPathEvent(method, success, errorCode)
+func (r *Runner) RecordFastPathEvent(method string, success bool, errorCode int) {
+	r.recordFastPathEvent(method, success, errorCode)
 }
 
-func recordFastPathEvent(method string, success bool, errorCode int) {
+func (r *Runner) recordFastPathEvent(method string, success bool, errorCode int) {
 	successCount, failureCount := func() (int, int) {
 		fastPathCounters.mu.Lock()
 		defer fastPathCounters.mu.Unlock()
@@ -277,7 +277,7 @@ func recordFastPathEvent(method string, success bool, errorCode int) {
 		"success_count": successCount,
 		"failure_count": failureCount,
 		"pid":           os.Getpid(),
-		"version":       deps.Version,
+		"version":       r.identity.Version,
 	}
 	payload, err := json.Marshal(event)
 	if err != nil {

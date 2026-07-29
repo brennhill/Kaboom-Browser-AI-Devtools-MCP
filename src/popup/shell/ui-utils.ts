@@ -19,8 +19,3 @@ export function formatFileSize(bytes: number): string {
   const value = bytes / Math.pow(1024, i)
   return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[i]}`
 }
-
-// Canonical internal-URL predicate lives in lib/internal-url so the popup, the
-// background, and the shared tracking core cannot drift. Re-exported here to keep
-// existing popup importers working.
-export { isInternalUrl } from '../../lib/tabs/internal-url.js'

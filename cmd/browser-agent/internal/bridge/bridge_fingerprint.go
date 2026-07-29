@@ -19,9 +19,9 @@ var getBridgeExecutablePath = os.Executable
 
 // LaunchFingerprint returns immutable diagnostics that identify the exact
 // binary image used for this bridge process.
-func LaunchFingerprint() map[string]any {
+func (r *Runner) LaunchFingerprint() map[string]any {
 	fingerprint := map[string]any{
-		"binary_version":  deps.Version,
+		"binary_version":  r.identity.Version,
 		"binary_path":     "",
 		"binary_build_id": "unknown",
 		"binary_sha256":   "unknown",

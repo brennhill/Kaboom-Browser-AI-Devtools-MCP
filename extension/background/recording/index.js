@@ -5,7 +5,7 @@
 // recording.ts — Recording lifecycle management (start/stop) and state.
 // Delegates tab capture / offscreen plumbing to recording-capture.ts and
 // chrome runtime listener registration to recording-listeners.ts.
-import { getServerUrl } from '../state.js';
+import { getServerUrl } from '../runtime-state/settings-state.js';
 import { pingContentScript, waitForTabLoad, getActiveTab, sendTabToast } from '../ui/tab-state.js';
 import { scaleTimeout } from '../../lib/timeouts.js';
 import { StorageKey } from '../../lib/constants.js';

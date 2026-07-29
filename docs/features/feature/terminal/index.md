@@ -38,6 +38,7 @@ code_paths:
   - src/background/ui/terminal-panel.ts
   - src/background/ui/side-panel-availability.ts
   - src/background/message-handlers.ts
+  - src/background/message-routing/utility-handler.ts
   - src/types/runtime-messages.ts
   - src/sidepanel.ts
   - internal/pty/manager.go
@@ -78,6 +79,7 @@ test_paths:
   - tests/extension/ui-controls/tracked-hover-launcher.test.js
   - tests/extension/terminal-panel/terminal-panel-bridge.test.js
   - tests/extension/content/message-handlers.test.js
+  - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/terminal-panel/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/terminal-panel/terminal-panel-presence.test.js
   - tests/extension/terminal-session/terminal-session-stop.test.js

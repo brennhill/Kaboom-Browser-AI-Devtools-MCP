@@ -48,12 +48,14 @@ export interface ConnectionTracker {
     _sampleCounter: number;
     _messageRate: number;
     _messageTimestamps: number[];
+    _messageTimestampHead: number;
     _schemaKeys: string[];
     _schemaVariants: Map<string, number>;
     _schemaConsistent: boolean;
     _schemaDetected: boolean;
     stats: ConnectionStats;
     recordMessage(direction: MessageDirection, data: WebSocketMessageData | null): void;
+    recordSampledMessage(direction: MessageDirection, data: WebSocketMessageData | null): void;
     shouldSample(direction: MessageDirection): boolean;
     shouldLogLifecycle(): boolean;
     getSamplingInfo(): SamplingInfo;

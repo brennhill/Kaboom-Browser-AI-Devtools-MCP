@@ -30,7 +30,7 @@ func TestSendBridgeError(t *testing.T) {
 	origStdout := os.Stdout
 	os.Stdout = w
 
-	sendBridgeError(42, -32603, "test error message", bridge.StdioFramingLine)
+	testRunner.sendBridgeError(42, -32603, "test error message", bridge.StdioFramingLine)
 
 	os.Stdout = origStdout
 	_ = w.Close()
@@ -68,7 +68,7 @@ func TestSendToolError(t *testing.T) {
 	origStdout := os.Stdout
 	os.Stdout = w
 
-	sendToolErrorWithOptions("req-1", "Server is starting up. Please retry.", bridge.StdioFramingLine, bridgeToolErrorOptions{})
+	testRunner.sendToolErrorWithOptions("req-1", "Server is starting up. Please retry.", bridge.StdioFramingLine, bridgeToolErrorOptions{})
 
 	os.Stdout = origStdout
 	_ = w.Close()
@@ -129,7 +129,7 @@ func TestHandleDaemonNotReady_StartingIncludesStructuredRetryEnvelope(t *testing
 	// Do not run in parallel; test redirects process stdio.
 	output := captureBridgeIO(t, "", func() {
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: "req-1", Method: "tools/call"}
-		handleDaemonNotReady(req, "starting", func() {}, bridge.StdioFramingLine)
+		testRunner.handleDaemonNotReady(req, "starting", func() {}, bridge.StdioFramingLine)
 	})
 
 	responses := parseJSONLines(t, output)
@@ -186,7 +186,7 @@ func TestBridgeForwardRequest_ToolsCallConnectionErrorReturnsSoftErrorEnvelope(t
 	line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}`)
 
 	go func() {
-		bridgeForwardRequest(&http.Client{}, "http://127.0.0.1:1/mcp", req, line, 300*time.Millisecond, nil, signal, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(&http.Client{}, "http://127.0.0.1:1/mcp", req, line, 300*time.Millisecond, nil, signal, bridge.StdioFramingLine)
 	}()
 
 	wg.Wait()
@@ -240,7 +240,7 @@ func TestBridgeForwardRequest_ToolsCallNoContentReturnsSoftErrorEnvelope(t *test
 	output := captureBridgeIO(t, "", func() {
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
 		line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}`)
-		bridgeForwardRequest(client, "http://unit.test/mcp", req, line, time.Second, nil, func() {}, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(client, "http://unit.test/mcp", req, line, time.Second, nil, func() {}, bridge.StdioFramingLine)
 	})
 
 	var resp mcp.JSONRPCResponse
@@ -274,7 +274,7 @@ func TestBridgeForwardRequest_ToolsCallEmptyBodyReturnsSoftErrorEnvelope(t *test
 	output := captureBridgeIO(t, "", func() {
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
 		line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}`)
-		bridgeForwardRequest(client, "http://unit.test/mcp", req, line, time.Second, nil, func() {}, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(client, "http://unit.test/mcp", req, line, time.Second, nil, func() {}, bridge.StdioFramingLine)
 	})
 
 	var resp mcp.JSONRPCResponse
@@ -308,7 +308,7 @@ func TestBridgeForwardRequest_ToolsCallInvalidJSONBodyReturnsSoftErrorEnvelope(t
 	output := captureBridgeIO(t, "", func() {
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
 		line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}`)
-		bridgeForwardRequest(client, "http://unit.test/mcp", req, line, time.Second, nil, func() {}, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(client, "http://unit.test/mcp", req, line, time.Second, nil, func() {}, bridge.StdioFramingLine)
 	})
 
 	var resp mcp.JSONRPCResponse
@@ -418,7 +418,7 @@ func TestBridgeForwardRequest_LargeBodyRead(t *testing.T) {
 	line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"configure","arguments":{"what":"health"}}}`)
 
 	go func() {
-		bridgeForwardRequest(&http.Client{}, srv.URL, req, line, 5*time.Second, nil, signal, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(&http.Client{}, srv.URL, req, line, 5*time.Second, nil, signal, bridge.StdioFramingLine)
 	}()
 
 	wg.Wait()
@@ -450,7 +450,7 @@ func TestBridgeForwardRequest_LargeBodyRead(t *testing.T) {
 }
 
 func TestDaemonStateMarkFailedAndReadyAreIdempotent(t *testing.T) {
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}
@@ -501,7 +501,7 @@ func TestCheckDaemonStatus_StartupGraceWaitsForReadySignal(t *testing.T) {
 	daemonStartupGracePeriod = 120 * time.Millisecond
 	defer func() { daemonStartupGracePeriod = oldGrace }()
 
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}
@@ -522,7 +522,7 @@ func TestCheckDaemonStatus_StartupGraceTimeoutReturnsStarting(t *testing.T) {
 	daemonStartupGracePeriod = 60 * time.Millisecond
 	defer func() { daemonStartupGracePeriod = oldGrace }()
 
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}

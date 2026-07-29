@@ -10,8 +10,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 )
 
 // ⚠️ CRITICAL MCP PROTOCOL COMPLIANCE TESTS - DO NOT MODIFY WITHOUT PRINCIPAL REVIEW
@@ -55,7 +53,7 @@ func TestMCPProtocol_InitializeResponse(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -125,7 +123,7 @@ func TestMCPProtocol_ToolsListStructure(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 

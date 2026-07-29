@@ -12,9 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"time"
+
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 )
 
@@ -60,7 +61,7 @@ func TestMCPProtocol_ResponseNewlines(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -140,7 +141,7 @@ func TestMCPProtocol_NotificationNoResponse(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -203,7 +204,7 @@ func TestMCPProtocol_JSONRPCStructure(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -300,7 +301,7 @@ func TestMCPProtocol_IDNeverNull(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -381,7 +382,7 @@ func TestMCPProtocol_ErrorCodes(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 

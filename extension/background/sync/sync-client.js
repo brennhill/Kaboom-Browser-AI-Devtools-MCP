@@ -6,36 +6,7 @@ import { errorMessage } from '../../lib/error-utils.js';
 import { fetchWithTimeout } from '../../lib/timeout-utils.js';
 import { buildDaemonJSONRequestInit } from '../../lib/daemon-http.js';
 import { drainUIFeatures, restoreUIFeatures } from '../ui/ui-usage-tracker.js';
-// =============================================================================
-// SERVER INSTALL ID — single source of truth for all analytics
-// =============================================================================
-const INSTALL_ID_STORAGE_KEY = 'kaboom_server_install_id';
-/** Server's install ID, populated on first successful sync or from storage. */
-let serverInstallId;
-/** Returns the server's install ID, or undefined if not yet received. */
-export function getServerInstallId() {
-    return serverInstallId;
-}
-/** Load persisted install ID from storage (call once on startup). */
-export async function loadServerInstallId() {
-    if (typeof chrome === 'undefined' || !chrome.storage?.local)
-        return;
-    try {
-        const result = await chrome.storage.local.get(INSTALL_ID_STORAGE_KEY);
-        const stored = result[INSTALL_ID_STORAGE_KEY];
-        if (stored && !serverInstallId) {
-            serverInstallId = stored;
-        }
-    }
-    catch {
-        /* best-effort */
-    }
-}
-function persistInstallId(id) {
-    if (typeof chrome === 'undefined' || !chrome.storage?.local)
-        return;
-    chrome.storage.local.set({ [INSTALL_ID_STORAGE_KEY]: id }).catch(() => { });
-}
+import { getServerInstallId, updateServerInstallId } from './install-identity.js';
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -131,7 +102,10 @@ export class SyncClient {
     }
     /** Update server URL */
     setServerUrl(url) {
+        if (url === this.serverUrl)
+            return;
         this.serverUrl = url;
+        this.resetConnection();
     }
     /** Optional progress updates for long-running commands */
     updateCommandProgress(commandId, progressPct, status = 'running') {
@@ -208,9 +182,8 @@ export class SyncClient {
             // Success - update state
             this.onSuccess();
             // Store server install ID for use as the single analytics identifier.
-            if (data.install_id && data.install_id !== serverInstallId) {
-                serverInstallId = data.install_id;
-                persistInstallId(data.install_id);
+            if (data.install_id && data.install_id !== getServerInstallId()) {
+                updateServerInstallId(data.install_id);
             }
             // Check for version mismatch (compare major.minor only, ignore patch)
             if (data.server_version && this.extensionVersion && this.callbacks.onVersionMismatch) {
@@ -222,7 +195,7 @@ export class SyncClient {
             }
             // Clear sent logs and results
             if (logs.length > 0) {
-                this.callbacks.clearExtensionLogs();
+                this.callbacks.acknowledgeExtensionLogs(logs.length);
             }
             if (resultsSentCount > 0) {
                 this.pendingResults = this.pendingResults.slice(resultsSentCount);
@@ -276,7 +249,6 @@ export class SyncClient {
             }
         }
         catch (err) {
-            // Failure - just retry after 1 second (no exponential backoff needed)
             this.syncing = false;
             this.flushRequested = false;
             this.onFailure();
@@ -284,8 +256,9 @@ export class SyncClient {
             if (features) {
                 restoreUIFeatures(features);
             }
-            this.log('Sync failed, retrying', { error: errorMessage(err) });
-            this.scheduleNextSync(BASE_POLL_MS);
+            const retryMs = this.retryDelayMs();
+            this.log('Sync failed, retrying', { error: errorMessage(err), retryMs });
+            this.scheduleNextSync(retryMs);
         }
     }
     onSuccess() {
@@ -313,6 +286,12 @@ export class SyncClient {
             this.log('Disconnected');
             this.callbacks.onConnectionChange(false);
         }
+    }
+    retryDelayMs() {
+        const exponent = Math.min(Math.max(this.state.consecutiveFailures - 1, 0), 5);
+        const capped = Math.min(BASE_POLL_MS * 2 ** exponent, 30000);
+        const jitter = 0.75 + Math.random() * 0.5;
+        return Math.round(capped * jitter);
     }
     log(message, data) {
         if (this.callbacks.debugLog) {

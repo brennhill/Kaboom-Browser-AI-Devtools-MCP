@@ -122,6 +122,7 @@ describe('SyncClient — Connection state transitions', () => {
 
   beforeEach(() => {
     mock.reset()
+    mock.method(Math, 'random', () => 0.5)
     callbacks = createMockCallbacks()
   })
 
@@ -222,7 +223,7 @@ describe('SyncClient — Connection state transitions', () => {
   })
 
   test('should reset consecutiveFailures on success', async () => {
-    // Fail twice, then succeed. Each failure retries after BASE_POLL_MS (1000ms).
+    // Fail twice, then succeed. Exponential retry waits 1s, then 2s.
     let callCount = 0
     globalThis.fetch = mock.fn(() => {
       callCount++
@@ -238,8 +239,8 @@ describe('SyncClient — Connection state transitions', () => {
     client = new SyncClient('http://localhost:7777', 'sess-1', callbacks)
     client.start()
 
-    // Wait for: immediate first call (fail ~0ms), retry at ~1000ms (fail), retry at ~2000ms (success)
-    await tick(2200)
+    // Wait for: immediate first call, retry at ~1000ms, recovery at ~3000ms.
+    await tick(3200)
 
     const state = client.getState()
     assert.strictEqual(state.connected, true)
@@ -253,6 +254,7 @@ describe('SyncClient — Retry on failure', () => {
 
   beforeEach(() => {
     mock.reset()
+    mock.method(Math, 'random', () => 0.5)
     callbacks = createMockCallbacks()
   })
 

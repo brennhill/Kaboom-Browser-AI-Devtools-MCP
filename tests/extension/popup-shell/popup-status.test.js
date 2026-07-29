@@ -89,7 +89,7 @@ describe('Popup State Display', () => {
   })
 
   test('should display connected status when server is up', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: true,
@@ -106,7 +106,7 @@ describe('Popup State Display', () => {
   })
 
   test('should display offline status when server is down', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: false,
@@ -120,7 +120,7 @@ describe('Popup State Display', () => {
   })
 
   test('should show error message when disconnected', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: false,
@@ -132,7 +132,7 @@ describe('Popup State Display', () => {
   })
 
   test('should render offline when daemon is reachable but heartbeat is missing', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: false,
@@ -147,7 +147,7 @@ describe('Popup State Display', () => {
   })
 
   test('should show insecure debug warning when security mode is insecure_proxy', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: true,
@@ -191,12 +191,12 @@ describe('Clear Logs Button', () => {
       callback([{ id: 1, url: 'http://localhost:3000' }])
     )
     // Reset confirmation state between tests
-    const { resetClearConfirm } = await import('../../../extension/popup.js')
+    const { resetClearConfirm } = await import('../../../extension/popup/settings.js')
     resetClearConfirm()
   })
 
   test('should require confirmation before clearing', async () => {
-    const { handleClearLogs } = await import('../../../extension/popup.js')
+    const { handleClearLogs } = await import('../../../extension/popup/settings.js')
 
     // First click: shows confirmation prompt
     await handleClearLogs()
@@ -209,7 +209,7 @@ describe('Clear Logs Button', () => {
   })
 
   test('should send clearLogs message on second click', async () => {
-    const { handleClearLogs } = await import('../../../extension/popup.js')
+    const { handleClearLogs } = await import('../../../extension/popup/settings.js')
 
     // First click: confirmation
     await handleClearLogs()
@@ -226,7 +226,7 @@ describe('Clear Logs Button', () => {
       }
     })
 
-    const { handleClearLogs } = await import('../../../extension/popup.js')
+    const { handleClearLogs } = await import('../../../extension/popup/settings.js')
 
     // First click: confirmation, second click: clear
     await handleClearLogs()
@@ -249,7 +249,7 @@ describe('Clear Logs Button', () => {
       }
     })
 
-    const { handleClearLogs } = await import('../../../extension/popup.js')
+    const { handleClearLogs } = await import('../../../extension/popup/settings.js')
 
     const clearBtn = mockDocument.getElementById('clear-btn')
 
@@ -275,7 +275,7 @@ describe('Clear Logs Button', () => {
       }
     })
 
-    const { handleClearLogs } = await import('../../../extension/popup.js')
+    const { handleClearLogs } = await import('../../../extension/popup/settings.js')
 
     // First click: confirmation, second click: clear
     await handleClearLogs()
@@ -364,7 +364,7 @@ describe('Context Annotation Warning', () => {
   })
 
   test('should show context warning when status has contextWarning', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: true,
@@ -381,7 +381,7 @@ describe('Context Annotation Warning', () => {
   })
 
   test('should populate warning text with size and count info', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: true,
@@ -399,7 +399,7 @@ describe('Context Annotation Warning', () => {
   })
 
   test('should hide context warning when contextWarning is null', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: true,
@@ -412,7 +412,7 @@ describe('Context Annotation Warning', () => {
   })
 
   test('should hide context warning when contextWarning is undefined', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: true,
@@ -424,7 +424,7 @@ describe('Context Annotation Warning', () => {
   })
 
   test('should hide context warning when disconnected even if warning exists', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: false,
@@ -487,7 +487,7 @@ describe('Server URL Display', () => {
   })
 
   test('should display server URL', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: true,
@@ -499,7 +499,7 @@ describe('Server URL Display', () => {
   })
 
   test('should display log file path when connected', async () => {
-    const { updateConnectionStatus } = await import('../../../extension/popup.js')
+    const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
       connected: true,

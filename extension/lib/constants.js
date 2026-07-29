@@ -189,7 +189,8 @@ export const StorageKey = {
     TERMINAL_WORKSPACE_GROUP_ID: 'kaboom_terminal_workspace_group_id',
     TERMINAL_WORKSPACE_MAIN_TAB_ID: 'kaboom_terminal_workspace_main_tab_id',
     CLOAKED_DOMAINS: 'kaboom_cloaked_domains',
-    ERROR_GROUPS: 'kaboom_error_groups'
+    ERROR_GROUPS: 'kaboom_error_groups',
+    SERVER_INSTALL_ID: 'kaboom_server_install_id'
 };
 /**
  * What to tell a user when the in-page Terminal button could not open the panel.

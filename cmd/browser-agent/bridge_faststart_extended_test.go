@@ -32,9 +32,9 @@ func TestFastStart_ClientCompatibilityMatrix(t *testing.T) {
 		playbookURI string
 	}{
 		{name: "claude_code", clientName: "claude-code", clientVer: "1.0", playbookURI: "kaboom://playbook/performance"},
-		{name: "cursor", clientName: "cursor", clientVer: "1.0", playbookURI: "kaboom://playbook/performance_analysis/quick"},
-		{name: "windsurf", clientName: "windsurf", clientVer: "1.0", playbookURI: "kaboom://playbook/accessibility_audit/quick"},
-		{name: "continue", clientName: "continue", clientVer: "1.0", playbookURI: "kaboom://playbook/security_audit/quick"},
+		{name: "cursor", clientName: "cursor", clientVer: "1.0", playbookURI: "kaboom://playbook/performance/quick"},
+		{name: "windsurf", clientName: "windsurf", clientVer: "1.0", playbookURI: "kaboom://playbook/accessibility/quick"},
+		{name: "continue", clientName: "continue", clientVer: "1.0", playbookURI: "kaboom://playbook/security/quick"},
 	}
 
 	for _, tc := range clients {
@@ -134,7 +134,7 @@ func TestFastStart_ResourceWorkflowSoak(t *testing.T) {
 			t.Fatalf("iteration %d capabilities error: %+v", i, capResp.Error)
 		}
 
-		writeJSONRPCLine(t, stdin, fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"resources/read","params":{"uri":"kaboom://playbook/security_audit/quick"}}`, baseID+1))
+		writeJSONRPCLine(t, stdin, fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"resources/read","params":{"uri":"kaboom://playbook/security/quick"}}`, baseID+1))
 		playbookResp := readJSONRPCLine(t, reader, 1*time.Second)
 		if playbookResp.Error != nil {
 			t.Fatalf("iteration %d playbook error: %+v", i, playbookResp.Error)

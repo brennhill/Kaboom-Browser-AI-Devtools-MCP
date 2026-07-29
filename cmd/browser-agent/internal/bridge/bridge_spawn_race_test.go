@@ -16,7 +16,7 @@ import (
 // --- tryConnectToExisting tests ---
 
 func TestTryConnectToExisting_NoServer(t *testing.T) {
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}
@@ -28,9 +28,9 @@ func TestTryConnectToExisting_NoServer(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 	_ = ln.Close()
 
-	got := tryConnectToExisting(state, port)
+	got := testRunner.tryConnectToExisting(state, port)
 	if got {
-		t.Fatal("tryConnectToExisting() = true, want false when no server running")
+		t.Fatal("testRunner.tryConnectToExisting() = true, want false when no server running")
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
@@ -43,16 +43,16 @@ func TestTryConnectToExisting_NoServer(t *testing.T) {
 }
 
 func TestTryConnectToExisting_CompatibleServer(t *testing.T) {
-	ln, port := startHealthServer(t, http.StatusOK, healthJSON(deps.Version, "kaboom"))
+	ln, port := startHealthServer(t, http.StatusOK, healthJSON(testRunner.identity.Version, "kaboom"))
 	defer ln.Close()
 
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}
-	got := tryConnectToExisting(state, port)
+	got := testRunner.tryConnectToExisting(state, port)
 	if !got {
-		t.Fatal("tryConnectToExisting() = false, want true for compatible server")
+		t.Fatal("testRunner.tryConnectToExisting() = false, want true for compatible server")
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
@@ -65,13 +65,13 @@ func TestTryConnectToExisting_NonKaboomService(t *testing.T) {
 	ln, port := startHealthServer(t, http.StatusOK, healthJSON("1.0.0", "some-other-service"))
 	defer ln.Close()
 
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}
-	got := tryConnectToExisting(state, port)
+	got := testRunner.tryConnectToExisting(state, port)
 	if !got {
-		t.Fatal("tryConnectToExisting() = false, want true (fatally blocked)")
+		t.Fatal("testRunner.tryConnectToExisting() = false, want true (fatally blocked)")
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
@@ -87,15 +87,15 @@ func TestTryConnectToExisting_NonKaboomService(t *testing.T) {
 }
 
 func TestTryConnectToExisting_RejectsLegacyKaboomIdentity(t *testing.T) {
-	ln, port := startHealthServer(t, http.StatusOK, healthJSON(deps.Version, "gasoline"))
+	ln, port := startHealthServer(t, http.StatusOK, healthJSON(testRunner.identity.Version, "gasoline"))
 	defer ln.Close()
 
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}
-	if got := tryConnectToExisting(state, port); !got {
-		t.Fatal("tryConnectToExisting() = false, want legacy identity to block the occupied port")
+	if got := testRunner.tryConnectToExisting(state, port); !got {
+		t.Fatal("testRunner.tryConnectToExisting() = false, want legacy identity to block the occupied port")
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
@@ -121,19 +121,19 @@ func TestWaitForPeerDaemon_ServerAppearsOnFirstRetry(t *testing.T) {
 	// Launch server after 200ms.
 	go func() {
 		time.Sleep(200 * time.Millisecond)
-		startHealthServerOnPort(t, port, http.StatusOK, healthJSON(deps.Version, "kaboom"))
+		startHealthServerOnPort(t, port, http.StatusOK, healthJSON(testRunner.identity.Version, "kaboom"))
 	}()
 
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}
 	start := time.Now()
-	got := waitForPeerDaemon(state, port)
+	got := testRunner.waitForPeerDaemon(state, port)
 	elapsed := time.Since(start)
 
 	if !got {
-		t.Fatal("waitForPeerDaemon() = false, want true when server appears during retry")
+		t.Fatal("testRunner.waitForPeerDaemon() = false, want true when server appears during retry")
 	}
 	// Polling should wait long enough for the delayed server to come online.
 	if elapsed < 150*time.Millisecond {
@@ -152,16 +152,16 @@ func TestWaitForPeerDaemon_NoServerReturnsQuickly(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 	_ = ln.Close()
 
-	state := &daemonState{
+	state := &daemonState{runner: testRunner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}
 	start := time.Now()
-	got := waitForPeerDaemon(state, port)
+	got := testRunner.waitForPeerDaemon(state, port)
 	elapsed := time.Since(start)
 
 	if got {
-		t.Fatal("waitForPeerDaemon() = true, want false when no server ever appears")
+		t.Fatal("testRunner.waitForPeerDaemon() = true, want false when no server ever appears")
 	}
 	if elapsed < daemonPeerWaitTimeout-daemonPeerPollInterval {
 		t.Fatalf("elapsed = %v, want >= %s", elapsed, daemonPeerWaitTimeout-daemonPeerPollInterval)
@@ -194,7 +194,7 @@ func TestRunBridgeModeWithExistingServer_StillWorks(t *testing.T) {
 	defer func() { _ = srv.Close() }()
 
 	output := captureBridgeIO(t, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`+"\n", func() {
-		RunMode(port, "", 0)
+		testRunner.RunMode(port, "", 0)
 	})
 	if !strings.Contains(output, `"protocolVersion"`) {
 		t.Fatalf("RunMode output missing initialize response: %q", output)

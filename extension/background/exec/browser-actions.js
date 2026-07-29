@@ -4,7 +4,7 @@
  */
 import { waitForTabLoad, pingContentScript, getActiveTab } from '../ui/tab-state.js';
 import { debugLog } from '../index.js';
-import { isAiWebPilotEnabled } from '../state.js';
+import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js';
 import { DebugCategory } from '../debug.js';
 import { broadcastTrackingState } from '../message-handlers.js';
 import { executeWithWorldRouting, probeCSPStatus } from './query-execution.js';

@@ -114,15 +114,15 @@ type bridgeSessionStats struct {
 }
 
 // readMCPStdioMessage delegates to internal/bridge for stdio message parsing.
-func readMCPStdioMessage(reader *bufio.Reader) ([]byte, internbridge.StdioFraming, error) {
-	return internbridge.ReadStdioMessageWithMode(reader, int(deps.MaxPostBodySize))
+func (r *Runner) readMCPStdioMessage(reader *bufio.Reader) ([]byte, internbridge.StdioFraming, error) {
+	return internbridge.ReadStdioMessageWithMode(reader, int(r.transport.MaxBodySize))
 }
 
 // bridgeShutdown waits for in-flight requests and performs clean shutdown.
-func bridgeShutdown(wg *sync.WaitGroup, readErr error, responseSent chan bool, stats *bridgeSessionStats) {
+func (r *Runner) bridgeShutdown(wg *sync.WaitGroup, readErr error, responseSent chan bool, stats *bridgeSessionStats) {
 	wg.Wait()
 	if readErr != nil && !errors.Is(readErr, io.EOF) {
-		deps.Stderrf("[kaboom-bridge] ERROR: stdin read error: %v\n", readErr)
+		r.transport.Stderrf("[kaboom-bridge] ERROR: stdin read error: %v\n", readErr)
 	}
 
 	select {
@@ -131,7 +131,7 @@ func bridgeShutdown(wg *sync.WaitGroup, readErr error, responseSent chan bool, s
 	}
 	close(responseSent)
 
-	FlushStdout()
+	r.transport.Sync()
 	time.Sleep(bridgeShutdownFlushDelay)
 
 	if stats != nil {
@@ -161,7 +161,7 @@ func bridgeShutdown(wg *sync.WaitGroup, readErr error, responseSent chan bool, s
 		if readErr != nil && !errors.Is(readErr, io.EOF) {
 			extra["read_error"] = readErr.Error()
 		}
-		_ = deps.AppendExitDiagnostic("bridge_exit", extra)
+		_ = r.lifecycle.AppendExitDiagnostic("bridge_exit", extra)
 	}
 }
 
@@ -177,12 +177,12 @@ type bridgeToolErrorOptions struct {
 }
 
 // handleDaemonNotReady sends appropriate error responses when the daemon is not available.
-func handleDaemonNotReady(req mcp.JSONRPCRequest, status string, signal func(), framing internbridge.StdioFraming) {
+func (r *Runner) handleDaemonNotReady(req mcp.JSONRPCRequest, status string, signal func(), framing internbridge.StdioFraming) {
 	switch status {
 	case "method_not_found":
-		sendBridgeError(req.ID, -32601, "Method not found: "+req.Method, framing)
+		r.sendBridgeError(req.ID, -32601, "Method not found: "+req.Method, framing)
 	case "starting":
-		sendToolErrorWithOptions(req.ID, "Server is starting up. Please retry this tool call in 2 seconds.", framing, bridgeToolErrorOptions{
+		r.sendToolErrorWithOptions(req.ID, "Server is starting up. Please retry this tool call in 2 seconds.", framing, bridgeToolErrorOptions{
 			ErrorCode:    "daemon_starting",
 			Subsystem:    "bridge_startup",
 			Reason:       "daemon_starting",
@@ -190,7 +190,7 @@ func handleDaemonNotReady(req mcp.JSONRPCRequest, status string, signal func(), 
 			RetryAfterMs: 2000,
 		})
 	default:
-		sendToolErrorWithOptions(req.ID, status, framing, bridgeToolErrorOptions{
+		r.sendToolErrorWithOptions(req.ID, status, framing, bridgeToolErrorOptions{
 			ErrorCode:    "daemon_not_ready",
 			Subsystem:    "bridge_startup",
 			Reason:       "daemon_not_ready",
@@ -202,7 +202,7 @@ func handleDaemonNotReady(req mcp.JSONRPCRequest, status string, signal func(), 
 }
 
 // sendBridgeParseError sends a JSON-RPC parse error (id must be null per spec).
-func sendBridgeParseError(_ []byte, err error, framing internbridge.StdioFraming) {
+func (r *Runner) sendBridgeParseError(_ []byte, err error, framing internbridge.StdioFraming) {
 	errResp := mcp.JSONRPCResponse{
 		JSONRPC: mcp.JSONRPCVersion,
 		ID:      nil, // JSON-RPC: parse errors must have null id
@@ -210,11 +210,11 @@ func sendBridgeParseError(_ []byte, err error, framing internbridge.StdioFraming
 	}
 	// Error impossible: simple struct with no circular refs or unsupported types
 	respJSON, _ := json.Marshal(errResp)
-	deps.WriteMCPPayload(respJSON, framing)
+	r.transport.Write(respJSON, framing)
 }
 
 // sendBridgeError sends a JSON-RPC error response to stdout.
-func sendBridgeError(id any, code int, message string, framing internbridge.StdioFraming) {
+func (r *Runner) sendBridgeError(id any, code int, message string, framing internbridge.StdioFraming) {
 	errResp := mcp.JSONRPCResponse{
 		JSONRPC: mcp.JSONRPCVersion,
 		ID:      id,
@@ -225,10 +225,10 @@ func sendBridgeError(id any, code int, message string, framing internbridge.Stdi
 	}
 	// Error impossible: simple struct with no circular refs or unsupported types
 	respJSON, _ := json.Marshal(errResp)
-	deps.WriteMCPPayload(respJSON, framing)
+	r.transport.Write(respJSON, framing)
 }
 
-func sendToolErrorWithOptions(id any, message string, framing internbridge.StdioFraming, opts bridgeToolErrorOptions) {
+func (r *Runner) sendToolErrorWithOptions(id any, message string, framing internbridge.StdioFraming, opts bridgeToolErrorOptions) {
 	errorCode := opts.ErrorCode
 	if errorCode == "" {
 		errorCode = "bridge_tool_error"
@@ -274,7 +274,7 @@ func sendToolErrorWithOptions(id any, message string, framing internbridge.Stdio
 	}
 	// Error impossible: simple struct with no circular refs or unsupported types
 	respJSON, _ := json.Marshal(resp)
-	deps.WriteMCPPayload(respJSON, framing)
+	r.transport.Write(respJSON, framing)
 }
 
 func bridgeRequestIDString(id any) string {
@@ -323,8 +323,8 @@ func ExtractToolAction(req mcp.JSONRPCRequest) (toolName, action string) {
 // forceKillOnPort sends SIGCONT then SIGKILL to any process on the given port.
 // This handles edge cases where the daemon is frozen (SIGSTOP) and can't process
 // SIGTERM from stopServerForUpgrade's normal escalation path.
-func forceKillOnPort(port int) {
-	pids, err := deps.FindProcessOnPort(port)
+func (r *Runner) forceKillOnPort(port int) {
+	pids, err := r.lifecycle.FindProcessOnPort(port)
 	if err != nil {
 		return
 	}
@@ -345,18 +345,18 @@ func forceKillOnPort(port int) {
 // handleBridgeRestart handles configure(action="restart") in the bridge layer.
 // This is a fast path that works even when the daemon is unresponsive.
 // Returns true if the request was handled.
-func handleBridgeRestart(req mcp.JSONRPCRequest, state *daemonState, port int, framing internbridge.StdioFraming) bool {
+func (r *Runner) handleBridgeRestart(req mcp.JSONRPCRequest, state *daemonState, port int, framing internbridge.StdioFraming) bool {
 	tool, action := ExtractToolAction(req)
 	if tool != "configure" || action != "restart" {
 		return false
 	}
 
-	deps.Stderrf("[Kaboom] bridge restart requested, stopping daemon on port %d\n", port)
+	r.transport.Stderrf("[Kaboom] bridge restart requested, stopping daemon on port %d\n", port)
 
 	// Kill the daemon (3-layer: HTTP -> PID -> lsof).
 	// First send SIGCONT to unfreeze any SIGSTOP'd process so signals can be delivered.
-	forceKillOnPort(port)
-	stopped := deps.StopServerForUpgrade(port)
+	r.forceKillOnPort(port)
+	stopped := r.lifecycle.StopServerForUpgrade(port)
 
 	// Reset bridge state for fresh spawn.
 	readyCh, failedCh := func() (chan struct{}, chan struct{}) {
@@ -378,16 +378,16 @@ func handleBridgeRestart(req mcp.JSONRPCRequest, state *daemonState, port int, f
 	case <-readyCh:
 		status = "ok"
 		message = "Daemon restarted successfully"
-		deps.Stderrf("[Kaboom] daemon restarted successfully on port %d\n", port)
+		r.transport.Stderrf("[Kaboom] daemon restarted successfully on port %d\n", port)
 	case <-failedCh:
 		errMsg := DaemonFailureErr(state)
 		status = "error"
 		message = "Daemon restart failed: " + errMsg
-		deps.Stderrf("[Kaboom] daemon restart failed: %s\n", errMsg)
+		r.transport.Stderrf("[Kaboom] daemon restart failed: %s\n", errMsg)
 	case <-time.After(restartGracePeriod):
 		status = "error"
 		message = "Daemon restart timed out after 6s"
-		deps.Stderrf("[Kaboom] daemon restart timed out\n")
+		r.transport.Stderrf("[Kaboom] daemon restart timed out\n")
 	}
 
 	result := map[string]any{
@@ -406,6 +406,6 @@ func handleBridgeRestart(req mcp.JSONRPCRequest, state *daemonState, port int, f
 		toolResult["isError"] = true
 	}
 	toolResultJSON, _ := json.Marshal(toolResult)
-	sendFastResponse(req.ID, toolResultJSON, framing)
+	r.sendFastResponse(req.ID, toolResultJSON, framing)
 	return true
 }

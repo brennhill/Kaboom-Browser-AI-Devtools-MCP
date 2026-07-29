@@ -8,8 +8,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 )
 
 func TestCLIEarlyExitModes(t *testing.T) {
@@ -86,7 +84,7 @@ func TestCLIExplicitStateAndUploadConfiguration(t *testing.T) {
 			})
 			deadline := time.Now().Add(5 * time.Second)
 			for time.Now().Before(deadline) {
-				if bridge.IsServerRunning(port) {
+				if bridgeRunner.IsServerRunning(port) {
 					return
 				}
 				time.Sleep(25 * time.Millisecond)

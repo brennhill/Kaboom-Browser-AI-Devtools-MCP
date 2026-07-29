@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 )
 
 func TestRunBridgeModeWithExistingServer(t *testing.T) {
@@ -35,7 +33,7 @@ func TestRunBridgeModeWithExistingServer(t *testing.T) {
 
 	output := captureStdout(t, func() {
 		withTestStdin(t, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`+"\n", func() {
-			bridge.RunMode(port, "", 0)
+			bridgeRunner.RunMode(port, "", 0)
 		})
 	})
 	if !strings.Contains(output, `"protocolVersion":"2025-06-18"`) {

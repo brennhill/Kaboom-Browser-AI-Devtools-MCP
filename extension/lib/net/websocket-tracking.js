@@ -106,6 +106,7 @@ export function createConnectionTracker(id, url) {
         _sampleCounter: 0,
         _messageRate: 0,
         _messageTimestamps: [],
+        _messageTimestampHead: 0,
         _schemaKeys: [],
         _schemaVariants: new Map(),
         _schemaConsistent: true,
@@ -115,7 +116,7 @@ export function createConnectionTracker(id, url) {
             outgoing: { count: 0, bytes: 0, lastPreview: null, lastAt: null }
         },
         /**
-         * Record a message for stats and schema detection
+         * Record bounded message statistics before making the sampling decision.
          *
          * WEBSOCKET PAYLOAD SCHEMA INFERENCE LOGIC:
          *
@@ -165,7 +166,7 @@ export function createConnectionTracker(id, url) {
          *   helping users understand payload patterns without logging every message.
          *
          * MESSAGE RATE TRACKING:
-         *   Maintains _messageTimestamps for the last 5 seconds (sliding window). This powers
+         *   Maintains an indexed queue for the last 5 seconds (sliding window). This powers
          *   shouldSample() which implements adaptive sampling: high-frequency connections
          *   (>200 msg/s) sample at 1-in-100; low-frequency (<2 msg/s) capture all messages.
          *   This ensures detailed visibility on slow links without bloating on high-volume.
@@ -180,12 +181,25 @@ export function createConnectionTracker(id, url) {
             if (data && typeof data === 'string') {
                 this.stats[direction].lastPreview = data.length > WS_PREVIEW_LIMIT ? data.slice(0, WS_PREVIEW_LIMIT) : data;
             }
-            // Track timestamps for rate calculation
+            // Advance an indexed queue instead of filtering/copying the entire window.
             this._messageTimestamps.push(now);
-            // Keep only last 5 seconds
             const cutoff = now - 5000;
-            this._messageTimestamps = this._messageTimestamps.filter((t) => t >= cutoff);
-            // Schema detection from first 5 incoming JSON messages
+            while (this._messageTimestampHead < this._messageTimestamps.length &&
+                (this._messageTimestamps[this._messageTimestampHead] ?? now) < cutoff) {
+                this._messageTimestampHead++;
+            }
+            // Compact occasionally so long-lived connections remain memory bounded.
+            // Each timestamp is copied at most once, keeping total accounting amortized O(1).
+            if (this._messageTimestampHead >= 1024 && this._messageTimestampHead * 2 >= this._messageTimestamps.length) {
+                this._messageTimestamps = this._messageTimestamps.slice(this._messageTimestampHead);
+                this._messageTimestampHead = 0;
+            }
+        },
+        /**
+         * Enrich a sampled message after the application callback has returned.
+         */
+        recordSampledMessage(direction, data) {
+            // Schema detection from first 5 sampled incoming JSON messages
             if (direction === 'incoming' && data && typeof data === 'string' && this._schemaKeys.length < 5) {
                 try {
                     const parsed = JSON.parse(data);
@@ -275,14 +289,15 @@ export function createConnectionTracker(id, url) {
          * Get the current message rate (messages per second)
          */
         getMessageRate() {
-            if (this._messageTimestamps.length < 2)
-                return this._messageTimestamps.length;
+            const activeCount = this._messageTimestamps.length - this._messageTimestampHead;
+            if (activeCount < 2)
+                return activeCount;
             const lastTime = this._messageTimestamps[this._messageTimestamps.length - 1];
-            const firstTime = this._messageTimestamps[0];
+            const firstTime = this._messageTimestamps[this._messageTimestampHead];
             if (lastTime === undefined || firstTime === undefined)
-                return this._messageTimestamps.length;
+                return activeCount;
             const window = (lastTime - firstTime) / 1000;
-            return window > 0 ? this._messageTimestamps.length / window : this._messageTimestamps.length;
+            return window > 0 ? activeCount / window : activeCount;
         },
         /**
          * Set the message rate manually (for testing)

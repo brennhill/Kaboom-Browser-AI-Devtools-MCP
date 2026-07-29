@@ -15,6 +15,7 @@ import (
 // Supports respawning: if the daemon dies mid-session, the bridge detects
 // connection errors and re-launches the daemon transparently.
 type daemonState struct {
+	runner    *Runner
 	ready     bool
 	failed    bool
 	err       string
@@ -102,9 +103,9 @@ func performDaemonRespawn(s *daemonState) bool {
 		s.markFailed("Failed to start daemon: " + err.Error())
 		return false
 	}
-	if waitForServer(s.port, daemonStartupReadyTimeout) {
+	if s.runner.WaitForServer(s.port, daemonStartupReadyTimeout) {
 		s.markReady()
-		deps.Stderrf("[Kaboom] daemon respawned successfully on port %d\n", s.port)
+		s.runner.transport.Stderrf("[Kaboom] daemon respawned successfully on port %d\n", s.port)
 		return true
 	}
 	s.markFailed(fmt.Sprintf("Daemon respawned but not responding on port %d after %s", s.port, daemonStartupReadyTimeout))
@@ -182,7 +183,7 @@ func (s *daemonState) planRespawnAttempt() respawnPlan {
 	defer s.mu.Unlock()
 
 	// Already responsive? Quick health check to confirm.
-	if s.ready && isServerRunning(s.port) {
+	if s.ready && s.runner.IsServerRunning(s.port) {
 		return respawnPlan{alreadyReady: true}
 	}
 
@@ -278,7 +279,7 @@ func (s *daemonState) respawnIfNeeded() bool {
 	// never silently drop the request. If a prior spawn actually did come up while
 	// we were being throttled, adopt it as ready instead of reporting failure.
 	if !s.reserveRespawnSlot(bridgeNow()) {
-		if isServerRunning(s.port) {
+		if s.runner.IsServerRunning(s.port) {
 			s.markReady()
 			return true
 		}
@@ -286,7 +287,7 @@ func (s *daemonState) respawnIfNeeded() bool {
 		return false
 	}
 
-	deps.Stderrf("[Kaboom] daemon not responding, respawning on port %d\n", s.port)
+	s.runner.transport.Stderrf("[Kaboom] daemon not responding, respawning on port %d\n", s.port)
 	return respawnSpawnFn(s)
 }
 
@@ -306,7 +307,7 @@ func spawnDaemonAsync(state *daemonState) {
 		}
 
 		// Wait for server to be ready (bounded startup budget).
-		if waitForServer(state.port, daemonStartupReadyTimeout) {
+		if state.runner.WaitForServer(state.port, daemonStartupReadyTimeout) {
 			state.markReady()
 		} else {
 			telemetry.AppError("bridge_spawn_timeout", nil)

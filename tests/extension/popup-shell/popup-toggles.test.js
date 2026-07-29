@@ -91,7 +91,7 @@ describe('Network Body Capture Toggle', () => {
   })
 
   test('should include network body capture in FEATURE_TOGGLES', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const toggle = FEATURE_TOGGLES.find((t) => t.id === 'toggle-network-body-capture')
     assert.ok(toggle, 'Network body capture toggle should exist in FEATURE_TOGGLES')
@@ -101,7 +101,7 @@ describe('Network Body Capture Toggle', () => {
   })
 
   test('should send setNetworkBodyCaptureEnabled message when toggled', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('networkBodyCaptureEnabled', 'set_network_body_capture_enabled', false)
 
@@ -113,7 +113,7 @@ describe('Network Body Capture Toggle', () => {
   })
 
   test('should send message when network body capture toggled', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('networkBodyCaptureEnabled', 'set_network_body_capture_enabled', true)
 
@@ -139,7 +139,7 @@ describe('Network Waterfall Toggle', () => {
   })
 
   test('should include network waterfall in FEATURE_TOGGLES', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const toggle = FEATURE_TOGGLES.find((t) => t.id === 'toggle-network-waterfall')
     assert.ok(toggle, 'Network waterfall toggle should exist in FEATURE_TOGGLES')
@@ -171,7 +171,7 @@ describe('Network Waterfall Toggle', () => {
   })
 
   test('should send setNetworkWaterfallEnabled message when toggled on', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('networkWaterfallEnabled', 'set_network_waterfall_enabled', true)
 
@@ -183,7 +183,7 @@ describe('Network Waterfall Toggle', () => {
   })
 
   test('should send setNetworkWaterfallEnabled message when toggled off', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('networkWaterfallEnabled', 'set_network_waterfall_enabled', false)
 
@@ -209,7 +209,7 @@ describe('Performance Marks Toggle', () => {
   })
 
   test('should include performance marks in FEATURE_TOGGLES', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const toggle = FEATURE_TOGGLES.find((t) => t.id === 'toggle-performance-marks')
     assert.ok(toggle, 'Performance marks toggle should exist in FEATURE_TOGGLES')
@@ -241,7 +241,7 @@ describe('Performance Marks Toggle', () => {
   })
 
   test('should send setPerformanceMarksEnabled message when toggled on', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('performanceMarksEnabled', 'set_performance_marks_enabled', true)
 
@@ -253,7 +253,7 @@ describe('Performance Marks Toggle', () => {
   })
 
   test('should send setPerformanceMarksEnabled message when toggled off', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('performanceMarksEnabled', 'set_performance_marks_enabled', false)
 
@@ -279,7 +279,7 @@ describe('Action Replay Toggle', () => {
   })
 
   test('should include action replay in FEATURE_TOGGLES', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const toggle = FEATURE_TOGGLES.find((t) => t.id === 'toggle-action-replay')
     assert.ok(toggle, 'Action replay toggle should exist in FEATURE_TOGGLES')
@@ -311,7 +311,7 @@ describe('Action Replay Toggle', () => {
   })
 
   test('should send setActionReplayEnabled message when toggled on', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('actionReplayEnabled', 'set_action_replay_enabled', true)
 
@@ -323,7 +323,7 @@ describe('Action Replay Toggle', () => {
   })
 
   test('should send setActionReplayEnabled message when toggled off', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('actionReplayEnabled', 'set_action_replay_enabled', false)
 
@@ -349,7 +349,7 @@ describe('Screenshot on Error Toggle', () => {
   })
 
   test('should include screenshot in FEATURE_TOGGLES', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const toggle = FEATURE_TOGGLES.find((t) => t.id === 'toggle-screenshot')
     assert.ok(toggle, 'Screenshot toggle should exist in FEATURE_TOGGLES')
@@ -381,7 +381,7 @@ describe('Screenshot on Error Toggle', () => {
   })
 
   test('should send setScreenshotOnError message when toggled on', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('screenshotOnError', 'set_screenshot_on_error', true)
 
@@ -393,7 +393,7 @@ describe('Screenshot on Error Toggle', () => {
   })
 
   test('should send setScreenshotOnError message when toggled off', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('screenshotOnError', 'set_screenshot_on_error', false)
 
@@ -419,7 +419,7 @@ describe('Source Maps Toggle', () => {
   })
 
   test('should include source maps in FEATURE_TOGGLES', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const toggle = FEATURE_TOGGLES.find((t) => t.id === 'toggle-source-maps')
     assert.ok(toggle, 'Source maps toggle should exist in FEATURE_TOGGLES')
@@ -451,7 +451,7 @@ describe('Source Maps Toggle', () => {
   })
 
   test('should send setSourceMapEnabled message when toggled on', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('sourceMapEnabled', 'set_source_map_enabled', true)
 
@@ -463,7 +463,7 @@ describe('Source Maps Toggle', () => {
   })
 
   test('should send setSourceMapEnabled message when toggled off', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('sourceMapEnabled', 'set_source_map_enabled', false)
 
@@ -489,7 +489,7 @@ describe('Action Toasts Toggle', () => {
   })
 
   test('should include action toasts in FEATURE_TOGGLES', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const toggle = FEATURE_TOGGLES.find((t) => t.id === 'toggle-action-toasts')
     assert.ok(toggle, 'Action toasts toggle should exist in FEATURE_TOGGLES')
@@ -521,7 +521,7 @@ describe('Action Toasts Toggle', () => {
   })
 
   test('should send setActionToastsEnabled message when toggled on', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('actionToastsEnabled', 'set_action_toasts_enabled', true)
 
@@ -533,7 +533,7 @@ describe('Action Toasts Toggle', () => {
   })
 
   test('should send setActionToastsEnabled message when toggled off', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('actionToastsEnabled', 'set_action_toasts_enabled', false)
 
@@ -559,7 +559,7 @@ describe('Subtitles Toggle', () => {
   })
 
   test('should include subtitles in FEATURE_TOGGLES', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const toggle = FEATURE_TOGGLES.find((t) => t.id === 'toggle-subtitles')
     assert.ok(toggle, 'Subtitles toggle should exist in FEATURE_TOGGLES')
@@ -591,7 +591,7 @@ describe('Subtitles Toggle', () => {
   })
 
   test('should send setSubtitlesEnabled message when toggled on', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('subtitlesEnabled', 'set_subtitles_enabled', true)
 
@@ -603,7 +603,7 @@ describe('Subtitles Toggle', () => {
   })
 
   test('should send setSubtitlesEnabled message when toggled off', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('subtitlesEnabled', 'set_subtitles_enabled', false)
 
@@ -617,13 +617,13 @@ describe('Subtitles Toggle', () => {
 
 describe('FEATURE_TOGGLES Completeness', () => {
   test('should have exactly 9 feature toggles', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     assert.strictEqual(FEATURE_TOGGLES.length, 9, 'Should have 9 feature toggles')
   })
 
   test('all toggles should have required fields', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     for (const toggle of FEATURE_TOGGLES) {
       assert.ok(toggle.id, `Toggle missing id`)
@@ -634,7 +634,7 @@ describe('FEATURE_TOGGLES Completeness', () => {
   })
 
   test('all toggle IDs should be unique', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const ids = FEATURE_TOGGLES.map((t) => t.id)
     const uniqueIds = new Set(ids)
@@ -642,7 +642,7 @@ describe('FEATURE_TOGGLES Completeness', () => {
   })
 
   test('all storage keys should be unique', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const keys = FEATURE_TOGGLES.map((t) => t.storageKey)
     const uniqueKeys = new Set(keys)

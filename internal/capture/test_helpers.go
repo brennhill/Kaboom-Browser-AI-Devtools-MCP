@@ -19,7 +19,7 @@ func (s *TelemetryStore) AddNetworkBodiesForTest(bodies []types.NetworkBody) {
 
 	now := time.Now()
 	for _, body := range bodies {
-		s.buffers.networkBodies = append(s.buffers.networkBodies, networkBodyEntry{
+		s.buffers.networkBodies.push(networkBodyEntry{
 			Body:    body,
 			AddedAt: now,
 		})
@@ -37,7 +37,7 @@ func (s *TelemetryStore) AddWebSocketEventsForTest(events []types.WebSocketEvent
 
 	now := time.Now()
 	for _, event := range events {
-		s.buffers.wsEvents = append(s.buffers.wsEvents, wsEventEntry{
+		s.buffers.wsEvents.push(wsEventEntry{
 			Event:   event,
 			AddedAt: now,
 		})
@@ -52,7 +52,7 @@ func (s *TelemetryStore) AddEnhancedActionsForTest(actions []types.EnhancedActio
 
 	now := time.Now()
 	for _, action := range actions {
-		s.buffers.enhancedActions = append(s.buffers.enhancedActions, enhancedActionEntry{
+		s.buffers.enhancedActions.push(enhancedActionEntry{
 			Action:  action,
 			AddedAt: now,
 		})
@@ -98,7 +98,7 @@ func (s *TelemetryStore) AddExtraWSEventsForTest(count int) {
 
 	now := time.Now()
 	for i := 0; i < count; i++ {
-		s.buffers.wsEvents = append(s.buffers.wsEvents, wsEventEntry{
+		s.buffers.wsEvents.push(wsEventEntry{
 			Event: types.WebSocketEvent{
 				Event: "message",
 				Data:  "extra-event",
@@ -114,7 +114,7 @@ func (s *TelemetryStore) AddExtraWSEventsForTest(count int) {
 func (s *TelemetryStore) GetWSLengthsForTest() (events int, addedAt int, memoryTotal int64) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	n := len(s.buffers.wsEvents)
+	n := s.buffers.wsEvents.len()
 	return n, n, s.buffers.wsMemoryTotal
 }
 

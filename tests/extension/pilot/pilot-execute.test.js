@@ -10,8 +10,8 @@ import assert from 'node:assert'
 import { MANIFEST_VERSION } from '../shared/helpers.js'
 
 async function resetPilotCacheForTesting(value) {
-  const { _resetPilotCacheForTesting } = await import('../../../extension/background/state.js')
-  _resetPilotCacheForTesting(value)
+  const { resetPilotCacheForTesting } = await import('../../../extension/background/runtime-state/pilot-state.js')
+  resetPilotCacheForTesting(value)
 }
 
 // Mock Chrome APIs

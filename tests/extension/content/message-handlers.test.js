@@ -9,12 +9,11 @@ import assert from 'node:assert'
 import { MANIFEST_VERSION as _MANIFEST_VERSION } from '../shared/helpers.js'
 
 const {
-  installMessageListener,
-  saveStateSnapshot,
-  loadStateSnapshot,
-  listStateSnapshots,
-  deleteStateSnapshot
+  installMessageListener
 } = await import('../../../extension/background/message-handlers.js')
+const { saveStateSnapshot, loadStateSnapshot, listStateSnapshots, deleteStateSnapshot } =
+  await import('../../../extension/background/state-snapshots.js')
+const { composeBackgroundHandlers } = await import('../shared/background-message-router.js')
 
 /**
  * Helper: installs the message listener and returns the raw handler function.
@@ -59,7 +58,7 @@ function getInstalledHandler(depsOverrides = {}) {
     ...depsOverrides
   }
 
-  installMessageListener(defaultDeps)
+  installMessageListener({ debugLog: defaultDeps.debugLog, handlers: composeBackgroundHandlers(defaultDeps) })
   chrome.runtime.onMessage = origOnMessage
 
   const handler = addListenerFn.mock.calls[0].arguments[0]

@@ -24,6 +24,7 @@ func (ls *Store) LoadEntries() error {
 
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024) // Allow up to 10MB per line (screenshots can be large)
+	lineCount := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {
@@ -34,25 +35,14 @@ func (ls *Store) LoadEntries() error {
 		if err := json.Unmarshal([]byte(line), &entry); err != nil {
 			continue // Skip malformed lines
 		}
-		ls.entries = append(ls.entries, entry)
+		lineCount++
+		ls.window.append(entry, time.Time{})
 	}
 
 	// Seed the file entry count for compaction hysteresis: if the file already
 	// holds more than compactionFactor*maxEntries entries, the async worker
 	// compacts it after the next append.
-	ls.fileEntryCount.Store(int64(len(ls.entries)))
-
-	// Initialize logAddedAt for loaded entries (we don't have actual add times,
-	// but the slice must have the same length as entries for rotation to work)
-	ls.logAddedAt = make([]time.Time, len(ls.entries))
-
-	// Bound entries (file may have more from append-only writes between rotations)
-	if len(ls.entries) > ls.maxEntries {
-		kept := make([]types.LogEntry, ls.maxEntries)
-		copy(kept, ls.entries[len(ls.entries)-ls.maxEntries:])
-		ls.entries = kept
-		ls.logAddedAt = make([]time.Time, ls.maxEntries)
-	}
+	ls.fileEntryCount.Store(int64(lineCount))
 
 	return scanner.Err()
 }

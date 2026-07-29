@@ -39,7 +39,7 @@ mock.module('../../../extension/background/index.js', {
   }
 })
 
-mock.module('../../../extension/background/state.js', {
+mock.module('../../../extension/background/runtime-state/settings-state.js', {
   namedExports: {
     getServerUrl: () => 'http://localhost:7890'
   }

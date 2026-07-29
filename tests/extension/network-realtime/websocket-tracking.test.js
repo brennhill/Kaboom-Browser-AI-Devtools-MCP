@@ -18,6 +18,11 @@ import {
   resetCaptureModeForTesting
 } from '../../../extension/lib/net/websocket-tracking.js'
 
+function recordSampledIncoming(tracker, data) {
+  tracker.recordMessage('incoming', data)
+  tracker.recordSampledMessage('incoming', data)
+}
+
 // =============================================================================
 // getSize()
 // =============================================================================
@@ -282,6 +287,22 @@ describe('ConnectionTracker adaptive sampling', () => {
     for (let i = 0; i < 10; i++) t.recordMessage('incoming', 'x')
     assert.ok(t.getMessageRate() > 0, 'Expected positive rate after messages')
   })
+
+  it('keeps sustained frame accounting amortized O(1) and within the 0.1ms budget', () => {
+    const t = createConnectionTracker('c1', 'wss://example.com')
+    const originalNow = Date.now
+    let now = 1_000_000
+    Date.now = () => now++
+    try {
+      const started = process.hrtime.bigint()
+      for (let i = 0; i < 100_000; i++) t.recordMessage('incoming', 'x')
+      const elapsedMs = Number(process.hrtime.bigint() - started) / 1_000_000
+      assert.ok(elapsedMs / 100_000 < 0.1, `Expected <0.1ms/frame, got ${elapsedMs / 100_000}ms`)
+      assert.ok(t._messageTimestamps.length < 11_000, 'expired timestamps should be compacted instead of growing forever')
+    } finally {
+      Date.now = originalNow
+    }
+  })
 })
 
 // =============================================================================
@@ -299,17 +320,25 @@ describe('ConnectionTracker schema detection', () => {
   it('detects consistent schema from 5 identical-shape messages', () => {
     const t = createConnectionTracker('c1', 'wss://example.com')
     for (let i = 0; i < 5; i++) {
-      t.recordMessage('incoming', JSON.stringify({ sym: 'AAPL', price: 100 + i }))
+      recordSampledIncoming(t, JSON.stringify({ sym: 'AAPL', price: 100 + i }))
     }
     const schema = t.getSchema()
     assert.deepStrictEqual(schema.detectedKeys, ['price', 'sym'])
     assert.strictEqual(schema.consistent, true)
   })
 
+  it('does not parse schema until a frame has passed sampling', () => {
+    const t = createConnectionTracker('c1', 'wss://example.com')
+    t.recordMessage('incoming', '{"expensive":true}')
+    assert.strictEqual(t.getSchema().detectedKeys, null)
+    t.recordSampledMessage('incoming', '{"expensive":true}')
+    assert.deepStrictEqual(t.getSchema().detectedKeys, ['expensive'])
+  })
+
   it('detects inconsistent schema from mixed-shape messages', () => {
     const t = createConnectionTracker('c1', 'wss://example.com')
-    t.recordMessage('incoming', JSON.stringify({ type: 'msg', text: 'hi' }))
-    t.recordMessage('incoming', JSON.stringify({ type: 'err', code: 500 }))
+    recordSampledIncoming(t, JSON.stringify({ type: 'msg', text: 'hi' }))
+    recordSampledIncoming(t, JSON.stringify({ type: 'err', code: 500 }))
     const schema = t.getSchema()
     assert.strictEqual(schema.consistent, false)
   })
@@ -343,11 +372,11 @@ describe('ConnectionTracker schema detection', () => {
     const t = createConnectionTracker('c1', 'wss://example.com')
     // Bootstrap with consistent messages
     for (let i = 0; i < 5; i++) {
-      t.recordMessage('incoming', JSON.stringify({ type: 'msg', text: 'hi' }))
+      recordSampledIncoming(t, JSON.stringify({ type: 'msg', text: 'hi' }))
     }
     // Post-bootstrap variant
     for (let i = 0; i < 3; i++) {
-      t.recordMessage('incoming', JSON.stringify({ type: 'err', code: 500 }))
+      recordSampledIncoming(t, JSON.stringify({ type: 'err', code: 500 }))
     }
     const schema = t.getSchema()
     assert.ok(schema.variants, 'Expected variants to be tracked')
@@ -362,7 +391,7 @@ describe('ConnectionTracker schema detection', () => {
   it('isSchemaChange returns true for new key set after detection', () => {
     const t = createConnectionTracker('c1', 'wss://example.com')
     for (let i = 0; i < 5; i++) {
-      t.recordMessage('incoming', JSON.stringify({ sym: 'AAPL', price: 100 }))
+      recordSampledIncoming(t, JSON.stringify({ sym: 'AAPL', price: 100 }))
     }
     assert.strictEqual(t.isSchemaChange(JSON.stringify({ error: 'rate_limit', code: 429 })), true)
   })
@@ -370,7 +399,7 @@ describe('ConnectionTracker schema detection', () => {
   it('isSchemaChange returns false for known key set', () => {
     const t = createConnectionTracker('c1', 'wss://example.com')
     for (let i = 0; i < 5; i++) {
-      t.recordMessage('incoming', JSON.stringify({ sym: 'AAPL', price: 100 }))
+      recordSampledIncoming(t, JSON.stringify({ sym: 'AAPL', price: 100 }))
     }
     assert.strictEqual(t.isSchemaChange(JSON.stringify({ sym: 'GOOG', price: 200 })), false)
   })
@@ -378,7 +407,7 @@ describe('ConnectionTracker schema detection', () => {
   it('isSchemaChange returns false for non-JSON data', () => {
     const t = createConnectionTracker('c1', 'wss://example.com')
     for (let i = 0; i < 5; i++) {
-      t.recordMessage('incoming', JSON.stringify({ sym: 'AAPL', price: 100 }))
+      recordSampledIncoming(t, JSON.stringify({ sym: 'AAPL', price: 100 }))
     }
     assert.strictEqual(t.isSchemaChange('not json'), false)
   })
@@ -386,7 +415,7 @@ describe('ConnectionTracker schema detection', () => {
   it('isSchemaChange returns false for null', () => {
     const t = createConnectionTracker('c1', 'wss://example.com')
     for (let i = 0; i < 5; i++) {
-      t.recordMessage('incoming', JSON.stringify({ sym: 'AAPL', price: 100 }))
+      recordSampledIncoming(t, JSON.stringify({ sym: 'AAPL', price: 100 }))
     }
     assert.strictEqual(t.isSchemaChange(null), false)
   })

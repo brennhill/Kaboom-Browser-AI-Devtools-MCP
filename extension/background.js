@@ -6,7 +6,7 @@
  * Docs: docs/features/feature/observe/index.md
  */
 import { initializeExtension } from './background/init.js';
-import { EXTENSION_SESSION_ID } from './background/state.js';
+import { EXTENSION_SESSION_ID } from './background/runtime-state/startup-state.js';
 if (typeof globalThis.process === 'undefined') {
     const moduleLoadTime = performance.now();
     console.log(`[DIAGNOSTIC] Module load start at ${moduleLoadTime.toFixed(2)}ms (${new Date().toISOString()})`);

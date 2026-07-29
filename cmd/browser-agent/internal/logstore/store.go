@@ -38,14 +38,105 @@ type Config struct {
 	ChanSize int
 }
 
+type entryWindow struct {
+	entries   []types.LogEntry
+	addedAt   []time.Time
+	head      int
+	size      int
+	addedSize int
+}
+
+func newEntryWindow(capacity int) entryWindow {
+	if capacity < 0 {
+		capacity = 0
+	}
+	return entryWindow{
+		entries: make([]types.LogEntry, capacity),
+		addedAt: make([]time.Time, capacity),
+	}
+}
+
+func (w *entryWindow) len() int { return w.size }
+
+func (w *entryWindow) append(entry types.LogEntry, addedAt time.Time) {
+	if len(w.entries) == 0 {
+		return
+	}
+	index := (w.head + w.size) % len(w.entries)
+	if w.size == len(w.entries) {
+		index = w.head
+		w.head = (w.head + 1) % len(w.entries)
+	} else {
+		w.size++
+	}
+	w.entries[index] = entry
+	w.addedAt[index] = addedAt
+	w.addedSize = w.size
+}
+
+func (w *entryWindow) clear() {
+	for i := range w.entries {
+		w.entries[i] = nil
+		w.addedAt[i] = time.Time{}
+	}
+	w.head = 0
+	w.size = 0
+	w.addedSize = 0
+}
+
+func (w *entryWindow) snapshot() ([]types.LogEntry, []time.Time) {
+	entries := make([]types.LogEntry, w.size)
+	addedAt := make([]time.Time, w.addedSize)
+	for i := 0; i < w.size; i++ {
+		index := (w.head + i) % len(w.entries)
+		entries[i] = w.entries[index]
+		if i < w.addedSize {
+			addedAt[i] = w.addedAt[index]
+		}
+	}
+	return entries, addedAt
+}
+
+func (w *entryWindow) last() (types.LogEntry, bool) {
+	if w.size == 0 {
+		return nil, false
+	}
+	return w.entries[(w.head+w.size-1)%len(w.entries)], true
+}
+
+func (w *entryWindow) seed(entries []types.LogEntry, addedAt []time.Time) {
+	existing, existingAt := w.snapshot()
+	capacity := len(w.entries)
+	if needed := len(existing) + len(entries); capacity < needed {
+		capacity = needed
+	}
+	*w = newEntryWindow(capacity)
+	for i, entry := range existing {
+		var timestamp time.Time
+		if i < len(existingAt) {
+			timestamp = existingAt[i]
+		}
+		w.append(entry, timestamp)
+	}
+	w.addedSize = len(existingAt)
+	for i, entry := range entries {
+		index := (w.head + w.size) % len(w.entries)
+		w.entries[index] = entry
+		w.size++
+		if addedAt != nil && i < len(addedAt) {
+			w.addedAt[index] = addedAt[i]
+			w.addedSize++
+		}
+	}
+}
+
 // Store holds log entry state, TTL rotation, and async file I/O pipeline.
 type Store struct {
 	logFile     string
 	maxEntries  int
 	maxFileSize int64 // max log file size in bytes before rotation (0 = disabled)
 
-	entries         []types.LogEntry
-	logAddedAt      []time.Time // parallel slice: when each entry was added
+	window          entryWindow
 	mu              sync.RWMutex
 	logTotalAdded   int64                  // monotonic counter of total entries ever added
 	errorTotalAdded int64                  // monotonic counter of error-level entries ever added
@@ -93,7 +184,7 @@ func New(cfg Config) *Store {
 		logFile:       cfg.LogFile,
 		maxEntries:    cfg.MaxEntries,
 		maxFileSize:   DefaultMaxFileSize,
-		entries:       make([]types.LogEntry, 0),
+		window:        newEntryWindow(cfg.MaxEntries),
 		telemetryMode: cfg.TelemetryMode,
 		logChan:       make(chan []types.LogEntry, chanSize),
 		logDone:       make(chan struct{}),

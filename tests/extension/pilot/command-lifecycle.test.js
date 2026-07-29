@@ -42,7 +42,7 @@ async function setupHarness() {
   })
   globalThis.fetch = mock.fn(() => Promise.resolve({ ok: true, json: async () => ({}) }))
 
-  const state = await import('../../../extension/background/state.js')
+  const state = await import('../../../extension/background/runtime-state/startup-state.js')
   state.markInitComplete()
 
   const registry = await import('../../../extension/background/commands/registry.js')

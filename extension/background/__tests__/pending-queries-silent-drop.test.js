@@ -60,7 +60,7 @@ globalThis.fetch = mock.fn(() => Promise.resolve({ ok: true, json: () => Promise
 // ============================================
 
 const { handlePendingQuery } = await import('../pending-queries.js')
-const { markInitComplete } = await import('../state.js')
+const { markInitComplete } = await import('../runtime-state/startup-state.js')
 
 // ============================================
 // Mock SyncClient

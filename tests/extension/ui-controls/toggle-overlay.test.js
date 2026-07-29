@@ -14,6 +14,7 @@
 import { test, describe, mock, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { MANIFEST_VERSION } from '../shared/helpers.js'
+import { composeBackgroundHandlers } from '../shared/background-message-router.js'
 
 // =============================================================================
 // MOCK SETUP
@@ -242,7 +243,7 @@ describe('Action Toasts Toggle', () => {
 
   test('popup sends correct message type when toggling', async () => {
     // Test the popup side: handleFeatureToggle sends the right message
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('actionToastsEnabled', 'set_action_toasts_enabled', false)
 
@@ -260,7 +261,7 @@ describe('Action Toasts Toggle', () => {
     }
 
     const { installMessageListener } = await import('../../../extension/background/message-handlers.js')
-    installMessageListener(mockDeps)
+    installMessageListener({ debugLog: mockDeps.debugLog, handlers: composeBackgroundHandlers(mockDeps) })
 
     // Get the installed message handler
     const bgHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0]?.arguments[0]
@@ -383,7 +384,7 @@ describe('Subtitles Toggle', () => {
   })
 
   test('popup sends correct message type for subtitles toggle', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     handleFeatureToggle('subtitlesEnabled', 'set_subtitles_enabled', true)
 
@@ -400,7 +401,7 @@ describe('Subtitles Toggle', () => {
     }
 
     const { installMessageListener } = await import('../../../extension/background/message-handlers.js')
-    installMessageListener(mockDeps)
+    installMessageListener({ debugLog: mockDeps.debugLog, handlers: composeBackgroundHandlers(mockDeps) })
 
     const bgHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0]?.arguments[0]
     const sendResponse = mock.fn()

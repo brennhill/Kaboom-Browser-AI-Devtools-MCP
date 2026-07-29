@@ -175,16 +175,12 @@ func TestMCPProtocol_BridgeCodeVerification(t *testing.T) {
 	// CRITICAL: forwarding must go through writeMCPPayload so stdout framing stays
 	// consistent (line-delimited vs Content-Length) and writes remain serialized.
 	//
-	// Matched case-insensitively on the call rather than on a bare `cmbridge.WriteMCPPayload(`:
-	// the bridge extraction moved this behind a Deps struct, so the call site is now
-	// `deps.WriteMCPPayload(body, framing)`. The invariant is unchanged — the body
-	// must reach the framing-aware serialized writer — and this still fails if the
-	// body is written any other way.
-	if !strings.Contains(source, "WriteMCPPayload(body, framing)") &&
-		!strings.Contains(source, "cmbridge.WriteMCPPayload(body, framing)") {
-		t.Error("CRITICAL: bridge.go must forward HTTP bodies via WriteMCPPayload(body, framing)")
+	// The constructed runner's transport collaborator is the only forwarding
+	// seam; the composition root binds it to the serialized framing-aware writer.
+	if !strings.Contains(source, "r.transport.Write(body, framing)") {
+		t.Error("CRITICAL: bridge.go must forward HTTP bodies via the runner transport")
 	} else {
-		t.Log("bridge.go forwards HTTP bodies via WriteMCPPayload")
+		t.Log("bridge.go forwards HTTP bodies via the runner transport")
 	}
 
 	// Verify no fmt.Println(string(body)) pattern

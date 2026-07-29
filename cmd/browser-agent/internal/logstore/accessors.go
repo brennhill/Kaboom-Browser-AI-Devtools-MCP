@@ -20,7 +20,7 @@ func (ls *Store) DropCount() int64 {
 func (ls *Store) EntryCount() int {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
-	return len(ls.entries)
+	return ls.window.len()
 }
 
 // ErrorTotalAdded returns the total number of error-level log entries ever added.
@@ -55,9 +55,8 @@ func (ls *Store) SetTelemetryMode(mode string) {
 func (ls *Store) Entries() []types.LogEntry {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
-	result := make([]types.LogEntry, len(ls.entries))
-	copy(result, ls.entries)
-	return result
+	entries, _ := ls.window.snapshot()
+	return entries
 }
 
 // EntriesWithAddedAt returns copies of the entry window and its parallel
@@ -65,21 +64,14 @@ func (ls *Store) Entries() []types.LogEntry {
 func (ls *Store) EntriesWithAddedAt() ([]types.LogEntry, []time.Time) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
-	entries := make([]types.LogEntry, len(ls.entries))
-	copy(entries, ls.entries)
-	addedAt := make([]time.Time, len(ls.logAddedAt))
-	copy(addedAt, ls.logAddedAt)
-	return entries, addedAt
+	return ls.window.snapshot()
 }
 
 // LastEntry returns the most recent entry, or ok=false when the window is empty.
 func (ls *Store) LastEntry() (types.LogEntry, bool) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
-	if len(ls.entries) == 0 {
-		return nil, false
-	}
-	return ls.entries[len(ls.entries)-1], true
+	return ls.window.last()
 }
 
 // LogFile returns the configured log file path ("" = persistence disabled).

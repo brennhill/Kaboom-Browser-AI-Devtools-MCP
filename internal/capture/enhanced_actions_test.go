@@ -286,11 +286,10 @@ func TestNewAddEnhancedActions_AppendAfterDirectBufferSet(t *testing.T) {
 	// Pre-populate buffer with entries using entry wrapper structs
 	now := time.Now()
 	c.telemetry.mu.Lock()
-	c.telemetry.buffers.enhancedActions = []enhancedActionEntry{
-		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
-		{Action: types.EnhancedAction{Type: "type"}, AddedAt: now},
-		{Action: types.EnhancedAction{Type: "navigate"}, AddedAt: now},
-	}
+	c.telemetry.buffers.enhancedActions = newBoundedRing[enhancedActionEntry](MaxEnhancedActions)
+	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
+	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "type"}, AddedAt: now})
+	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "navigate"}, AddedAt: now})
 	c.telemetry.mu.Unlock()
 
 	// Adding appends to existing entries

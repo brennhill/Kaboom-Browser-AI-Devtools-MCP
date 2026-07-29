@@ -1,20 +1,20 @@
 // playbooks_resolver.go — Resolves playbook/demo resource URIs to canonical URIs and markdown content.
-// Why: Isolates URI parsing and alias normalization from large static documentation payloads.
+// Why: Isolates strict URI parsing from large static documentation payloads.
 
 package playbooks
 
 import "strings"
 
-// CanonicalPlaybookCapability normalizes capability aliases to canonical playbook keys.
+// CanonicalPlaybookCapability validates a canonical capability name.
 func CanonicalPlaybookCapability(capability string) string {
 	switch strings.ToLower(strings.TrimSpace(capability)) {
-	case "performance", "performance_analysis":
+	case "performance":
 		return "performance"
-	case "accessibility", "accessibility_audit":
+	case "accessibility":
 		return "accessibility"
-	case "security", "security_audit":
+	case "security":
 		return "security"
-	case "automation", "browser_automation", "interact":
+	case "automation":
 		return "automation"
 	default:
 		return ""

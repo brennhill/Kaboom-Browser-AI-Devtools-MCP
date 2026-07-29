@@ -110,7 +110,7 @@ describe('SyncClient pendingResults retention', () => {
       onConnectionChange: () => {},
       getSettings: async () => defaultSettings,
       getExtensionLogs: () => [],
-      clearExtensionLogs: () => {}
+      acknowledgeExtensionLogs: () => {}
     })
 
     try {

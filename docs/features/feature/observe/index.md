@@ -49,6 +49,8 @@ code_paths:
   - src/inject.ts
   - src/inject/observers.ts
   - src/lib/net/network.ts
+  - src/lib/net/websocket.ts
+  - src/lib/net/websocket-tracking.ts
 test_paths:
   - internal/tools/observe/correlation_test.go
   - internal/tools/observe/logs_edge_test.go
@@ -88,6 +90,8 @@ test_paths:
   - tests/extension/network-http/network-bodies.test.js
   - tests/extension/network-http/network-body-e2e-fixture.js
   - tests/extension/network-http/network-body-e2e.test.js
+  - tests/extension/network-realtime/websocket.test.js
+  - tests/extension/network-realtime/websocket-tracking.test.js
   - tests/extension/content/content.test.js
   - tests/extension/branding/runtime-log-branding.test.js
   - tests/extension/misc/background-errors-comms.test.js

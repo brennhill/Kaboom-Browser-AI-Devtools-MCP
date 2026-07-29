@@ -7,7 +7,7 @@ import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert'
 
 const { handlePendingQuery } = await import('./pending-queries.js')
-const { markInitComplete } = await import('./state.js')
+const { markInitComplete } = await import('./runtime-state/startup-state.js')
 
 let executeScriptCalls = []
 let executeScriptReturn = []

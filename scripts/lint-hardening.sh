@@ -354,7 +354,7 @@ bold "12. Checking bridge dispatch signal() coverage..."
 BRIDGE_FILE="cmd/browser-agent/internal/bridge/bridge.go"
 if [ -f "$BRIDGE_FILE" ]; then
   BRIDGE_SIGNAL_ISSUES=""
-  FUNC_START=$(grep -n 'func bridgeForwardRequest' "$BRIDGE_FILE" | head -1 | cut -d: -f1)
+  FUNC_START=$(grep -nE 'func (\([^)]*\) )?bridgeForwardRequest' "$BRIDGE_FILE" | head -1 | cut -d: -f1)
   if [ -n "$FUNC_START" ]; then
     FUNC_END=$(awk -v start="$FUNC_START" 'NR>=start { if (/^}/) { print NR; exit } }' "$BRIDGE_FILE")
     if [ -n "$FUNC_END" ]; then

@@ -11,9 +11,15 @@ code_paths:
   - src/popup/feature-toggles.ts
   - src/popup/settings.ts
   - src/popup/shell/status-display.ts
+  - src/popup/shell/ui-utils.ts
   - src/popup/shell/logo-motion.ts
+  - src/popup/tabs/tab-tracking.ts
   - src/options.ts
   - src/background/sync/version-check.ts
+  - src/background/message-handlers.ts
+  - src/background/message-routing/
+  - src/background/runtime-state/
+  - src/background/state-snapshots.ts
   - src/lib/daemon-http.ts
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - extension/popup.html
@@ -27,11 +33,16 @@ test_paths:
   - tests/extension/ui-controls/toggle-feature.test.js
   - tests/extension/branding/logo-motion.test.js
   - tests/extension/popup-shell/popup-status.test.js
+  - tests/extension/popup-shell/popup-tab-tracking-sync.test.js
+  - tests/extension/pilot/pilot-toggle.test.js
   - tests/extension/branding/version-check-branding.test.js
   - tests/extension/sync/sync-client-commands.test.js
   - tests/extension/sync/sync-client-fixture.js
   - tests/extension/sync/sync-client-resilience.test.js
   - tests/extension/sync/sync-client.test.js
+  - tests/extension/contracts/background-boundaries.test.js
+  - tests/extension/content/message-handlers.test.js
+  - tests/extension/content/message-handlers-edge.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -74,3 +85,8 @@ last_verified_date: 2026-03-28
 - `src/options.ts` uses shared daemon request/header helpers for health checks and active-codebase config sync.
 - `src/background/sync/version-check.ts` keeps the update badge/title and release download target aligned with Kaboom branding and the canonical Kaboom repo slug.
 - `src/lib/daemon-http.ts` defines the canonical extension-client header and JSON request init contract.
+- `src/background/message-handlers.ts` validates sender trust and delegates to typed,
+  feature-owned handlers under `message-routing/`; each handler receives only its
+  change-coupled dependencies.
+- `src/background/runtime-state/` separates connection, settings, pilot, startup,
+  and diagnostic queue lifecycles. Queue consumers receive defensive snapshots.

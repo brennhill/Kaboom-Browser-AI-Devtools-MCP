@@ -95,7 +95,8 @@
     TERMINAL_WORKSPACE_GROUP_ID: "kaboom_terminal_workspace_group_id",
     TERMINAL_WORKSPACE_MAIN_TAB_ID: "kaboom_terminal_workspace_main_tab_id",
     CLOAKED_DOMAINS: "kaboom_cloaked_domains",
-    ERROR_GROUPS: "kaboom_error_groups"
+    ERROR_GROUPS: "kaboom_error_groups",
+    SERVER_INSTALL_ID: "kaboom_server_install_id"
   };
 
   // extension/lib/brand.js
@@ -217,14 +218,6 @@
     if (!storage?.session)
       return;
     await writeStorage(storage.session.set.bind(storage.session), { [key]: value });
-  }
-
-  // extension/lib/tabs/internal-url.js
-  function isInternalUrl(url) {
-    if (!url)
-      return true;
-    const internalPrefixes = ["chrome://", "chrome-extension://", "about:", "edge://", "brave://", "devtools://"];
-    return internalPrefixes.some((prefix) => url.startsWith(prefix));
   }
 
   // extension/popup/shell/ui-utils.js
@@ -1174,6 +1167,14 @@
     }
   }
 
+  // extension/lib/tabs/internal-url.js
+  function isInternalUrl(url) {
+    if (!url)
+      return true;
+    const internalPrefixes = ["chrome://", "chrome-extension://", "about:", "edge://", "brave://", "devtools://"];
+    return internalPrefixes.some((prefix) => url.startsWith(prefix));
+  }
+
   // extension/lib/tabs/tracked-tab-storage.js
   var TRACKED_TAB_STORAGE_KEYS = [
     StorageKey.TRACKED_TAB_ID,
@@ -1508,9 +1509,6 @@
       void handleTrackPageClick(showInternalPageState, showCloakedState, showTrackingState, showIdleState);
     });
   }
-  async function handleTrackPageClick2() {
-    return handleTrackPageClick(showInternalPageState, showCloakedState, showTrackingState, showIdleState);
-  }
 
   // extension/popup/ai-web-pilot.js
   function applyAiWebPilotToggle(value) {
@@ -1555,13 +1553,6 @@
   }
   var clearConfirmPending = false;
   var clearConfirmTimer = null;
-  function resetClearConfirm() {
-    clearConfirmPending = false;
-    if (clearConfirmTimer) {
-      clearTimeout(clearConfirmTimer);
-      clearConfirmTimer = null;
-    }
-  }
   async function handleClearLogs() {
     const clearBtn = document.getElementById("clear-btn");
     const entriesEl = document.getElementById("entries-count");

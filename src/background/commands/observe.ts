@@ -7,7 +7,7 @@
 // Handles: screenshot, waterfall, page_info, tabs.
 
 import { debugLog } from '../index.js'
-import { getServerUrl } from '../state.js'
+import { getServerUrl } from '../runtime-state/settings-state.js'
 import { DebugCategory } from '../debug.js'
 import { recordScreenshot } from '../caches/cache-limits.js'
 import { domPrimitiveListInteractive } from '../dom/primitives/dom-primitives-list-interactive.js'

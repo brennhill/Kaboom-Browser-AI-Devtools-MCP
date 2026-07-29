@@ -3,7 +3,11 @@
  * Why: Central export point that delegates to specialized modules while owning cross-cutting concerns.
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
-import { getServerUrl, getConnectionStatus, getExtensionLogQueue, pushExtensionLog, capExtensionLogs, getCurrentLogLevel, isScreenshotOnError, _setDebugModeRaw, setConnectionStatus, setConnectionCheckRunning, clearExtensionLogQueue, EXTENSION_SESSION_ID, isAiControlled, isAiWebPilotEnabled, isConnectionCheckRunning as isConnectionCheckRunningFlag, isDebugMode, applyCaptureOverrides } from './state.js';
+import { getConnectionStatus, setConnectionStatus, setConnectionCheckRunning, isConnectionCheckRunning as isConnectionCheckRunningFlag, applyConnectionOverrides } from './runtime-state/connection-state.js';
+import { getServerUrl, getCurrentLogLevel, isScreenshotOnError, setDebugModeRaw, isAiControlled, isDebugMode, applySettingOverrides } from './runtime-state/settings-state.js';
+import { isAiWebPilotEnabled } from './runtime-state/pilot-state.js';
+import { getExtensionLogQueueSnapshot, pushExtensionLog, capExtensionLogs, acknowledgeExtensionLogQueue } from './runtime-state/log-queue.js';
+import { EXTENSION_SESSION_ID } from './runtime-state/startup-state.js';
 import { addDebugLogEntry, getDebugLog as getDebugLogEntries, clearDebugLog as clearDebugLogEntries } from './caches/debug-log.js';
 import { isSourceMapEnabled, canTakeScreenshot, recordScreenshot } from './caches/cache-limits.js';
 import { processErrorGroup } from './caches/error-groups.js';
@@ -15,20 +19,14 @@ import { captureScreenshot } from './sync/screenshot.js';
 import { updateBadge, checkServerHealth } from './sync/server.js';
 import { DebugCategory } from './debug.js';
 import { getRequestHeaders } from './sync/server.js';
-import { handlePendingQuery as handlePendingQueryImpl } from './pending-queries.js';
-import { handlePilotCommand as handlePilotCommandImpl } from './commands/interact.js';
 import { updateVersionFromHealth } from './sync/version-check.js';
 import { createBatcherInstances } from './sync/batcher-instances.js';
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { errorMessage, isNoReceiverError } from '../lib/error-utils.js';
 import { startSyncClient as startSyncClientImpl, resetSyncClientConnection as resetSyncClientConnectionImpl } from './sync/sync-manager.js';
-// Re-export for consumers that already import from here
-export { DEFAULT_SERVER_URL } from '../lib/constants.js';
 // =============================================================================
 // DEBUG LOGGING
 // =============================================================================
-// Re-export DebugCategory from debug module (to avoid circular dependencies)
-export { DebugCategory } from './debug.js';
 /**
  * Log a diagnostic message only when debug mode is enabled
  */
@@ -108,7 +106,7 @@ export function exportDebugLog() {
  * Set debug mode enabled/disabled
  */
 export function setDebugMode(enabled) {
-    _setDebugModeRaw(enabled);
+    setDebugModeRaw(enabled);
     debugLog(DebugCategory.SETTINGS, `Debug mode ${enabled ? 'enabled' : 'disabled'}`);
 }
 // =============================================================================
@@ -325,9 +323,12 @@ const syncManagerDeps = {
     },
     getAiControlled: () => isAiControlled(),
     getAiWebPilotEnabledCache: () => isAiWebPilotEnabled(),
-    getExtensionLogQueue: () => getExtensionLogQueue(),
-    clearExtensionLogQueue: () => clearExtensionLogQueue(),
-    applyCaptureOverrides,
+    getExtensionLogQueue: () => getExtensionLogQueueSnapshot(),
+    acknowledgeExtensionLogQueue: (sentCount) => acknowledgeExtensionLogQueue(sentCount),
+    applyCaptureOverrides: (overrides) => {
+        applySettingOverrides(overrides);
+        applyConnectionOverrides(overrides);
+    },
     debugLog
 };
 /**
@@ -336,7 +337,4 @@ const syncManagerDeps = {
 export function resetSyncClientConnection() {
     resetSyncClientConnectionImpl(debugLog);
 }
-// Re-export statically imported functions (Service Workers don't support dynamic import())
-export const handlePendingQuery = handlePendingQueryImpl;
-export const handlePilotCommand = handlePilotCommandImpl;
 //# sourceMappingURL=index.js.map

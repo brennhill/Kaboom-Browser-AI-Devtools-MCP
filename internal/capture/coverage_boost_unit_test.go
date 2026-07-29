@@ -119,10 +119,9 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 
 	c.telemetry.mu.Lock()
 	now := time.Now()
-	c.telemetry.buffers.enhancedActions = []enhancedActionEntry{
-		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
-		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
-	}
+	c.telemetry.buffers.enhancedActions = newBoundedRing[enhancedActionEntry](MaxEnhancedActions)
+	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
+	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
 	c.extension.state.activeTestIDs["test-1"] = true
 	c.telemetry.mu.Unlock()
 
@@ -155,10 +154,9 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 
 	now := time.Now()
 	c.telemetry.mu.Lock()
-	c.telemetry.buffers.networkBodies = []networkBodyEntry{
-		{Body: types.NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now},
-		{Body: types.NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now},
-	}
+	c.telemetry.buffers.networkBodies = newBoundedRing[networkBodyEntry](MaxNetworkBodies)
+	c.telemetry.buffers.networkBodies.push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now})
+	c.telemetry.buffers.networkBodies.push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now})
 	c.extension.state.activeTestIDs["tid"] = true
 	c.telemetry.mu.Unlock()
 

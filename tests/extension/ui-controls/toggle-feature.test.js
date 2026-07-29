@@ -12,6 +12,7 @@
 import { test, describe, mock, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { applyFeatureTogglesFromMockStorage, MANIFEST_VERSION } from '../shared/helpers.js'
+import { composeBackgroundHandlers } from '../shared/background-message-router.js'
 
 // =============================================================================
 // MOCK SETUP
@@ -111,7 +112,7 @@ describe('Feature Toggle Defaults and Persistence', () => {
   })
 
   test('FEATURE_TOGGLES contains all 9 expected toggles', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const expectedIds = [
       'toggle-websocket',
@@ -135,7 +136,7 @@ describe('Feature Toggle Defaults and Persistence', () => {
   })
 
   test('all toggles default to true', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     for (const toggle of FEATURE_TOGGLES) {
       assert.strictEqual(toggle.default, true, `Toggle ${toggle.id} should default to true`)
@@ -160,7 +161,7 @@ describe('Feature Toggle Defaults and Persistence', () => {
     await applyFeatureTogglesFromMockStorage()
 
     // Each checkbox should be set to false
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
     for (const toggle of FEATURE_TOGGLES) {
       const el = mockDocument.getElementById(toggle.id)
       assert.strictEqual(el.checked, false, `Toggle ${toggle.id} should load saved disabled state`)
@@ -172,7 +173,7 @@ describe('Feature Toggle Defaults and Persistence', () => {
 
     await applyFeatureTogglesFromMockStorage()
 
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
     for (const toggle of FEATURE_TOGGLES) {
       const el = mockDocument.getElementById(toggle.id)
       assert.strictEqual(el.checked, true, `Toggle ${toggle.id} should default to checked when no saved state`)
@@ -184,7 +185,7 @@ describe('Feature Toggle Defaults and Persistence', () => {
 
     await applyFeatureTogglesFromMockStorage()
 
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
     for (const toggle of FEATURE_TOGGLES) {
       const el = mockDocument.getElementById(toggle.id)
       const changeListeners = el.addEventListener.mock.calls.filter((c) => c.arguments[0] === 'change')
@@ -193,7 +194,7 @@ describe('Feature Toggle Defaults and Persistence', () => {
   })
 
   test('each toggle sends message via runtime.sendMessage (not storage)', async () => {
-    const { handleFeatureToggle, FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle, FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     for (const toggle of FEATURE_TOGGLES) {
       mockChrome.runtime.sendMessage.mock.resetCalls()
@@ -226,7 +227,7 @@ describe('Source Maps Toggle', () => {
   })
 
   test('toggle in FEATURE_TOGGLES has correct config', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const sourceMapToggle = FEATURE_TOGGLES.find((t) => t.id === 'toggle-source-maps')
     assert.ok(sourceMapToggle, 'Source maps toggle should exist')
@@ -245,7 +246,7 @@ describe('Source Maps Toggle', () => {
     }
 
     const { installMessageListener } = await import('../../../extension/background/message-handlers.js')
-    installMessageListener(mockDeps)
+    installMessageListener({ debugLog: mockDeps.debugLog, handlers: composeBackgroundHandlers(mockDeps) })
 
     const bgHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0]?.arguments[0]
     const sendResponse = mock.fn()
@@ -274,7 +275,7 @@ describe('Source Maps Toggle', () => {
     }
 
     const { installMessageListener } = await import('../../../extension/background/message-handlers.js')
-    installMessageListener(mockDeps)
+    installMessageListener({ debugLog: mockDeps.debugLog, handlers: composeBackgroundHandlers(mockDeps) })
 
     const bgHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0]?.arguments[0]
     const sendResponse = mock.fn()
@@ -529,7 +530,7 @@ describe('Background Toggle Routing', () => {
 
   async function installAndGetHandler() {
     const { installMessageListener } = await import('../../../extension/background/message-handlers.js')
-    installMessageListener(mockDeps)
+    installMessageListener({ debugLog: mockDeps.debugLog, handlers: composeBackgroundHandlers(mockDeps) })
     return mockChrome.runtime.onMessage.addListener.mock.calls[0]?.arguments[0]
   }
 
@@ -682,7 +683,7 @@ describe('Rapid Toggle Switching', () => {
   })
 
   test('rapid popup message sends do not duplicate', async () => {
-    const { handleFeatureToggle } = await import('../../../extension/popup.js')
+    const { handleFeatureToggle } = await import('../../../extension/popup/feature-toggles.js')
 
     // Rapidly toggle 20 times
     for (let i = 0; i < 20; i++) {
@@ -708,7 +709,7 @@ describe('Feature Toggle Config Integrity', () => {
   })
 
   test('each toggle has unique id', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const ids = FEATURE_TOGGLES.map((t) => t.id)
     const uniqueIds = new Set(ids)
@@ -716,7 +717,7 @@ describe('Feature Toggle Config Integrity', () => {
   })
 
   test('each toggle has unique storageKey', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const keys = FEATURE_TOGGLES.map((t) => t.storageKey)
     const uniqueKeys = new Set(keys)
@@ -724,7 +725,7 @@ describe('Feature Toggle Config Integrity', () => {
   })
 
   test('each toggle has unique messageType', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     const types = FEATURE_TOGGLES.map((t) => t.messageType)
     const uniqueTypes = new Set(types)
@@ -732,7 +733,7 @@ describe('Feature Toggle Config Integrity', () => {
   })
 
   test('storageKey and messageType follow naming convention', async () => {
-    const { FEATURE_TOGGLES } = await import('../../../extension/popup.js')
+    const { FEATURE_TOGGLES } = await import('../../../extension/popup/feature-toggles.js')
 
     for (const toggle of FEATURE_TOGGLES) {
       // storageKey should be camelCase

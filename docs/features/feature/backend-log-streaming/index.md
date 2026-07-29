@@ -40,6 +40,9 @@ code_paths:
   - src/background/sync/screenshot.ts
   - src/background/index.ts
   - src/background/init.ts
+  - src/background/message-handlers.ts
+  - src/background/message-routing/
+  - src/background/runtime-state/
   - src/background/caches/cache-limits.ts
   - src/background/caches/error-groups.ts
   - src/background/caches/snapshots.ts
@@ -48,6 +51,7 @@ code_paths:
   - src/background/sync/batcher-instances.ts
   - src/background/sync/sync-manager.ts
   - src/background/sync/sync-client.ts
+  - src/background/sync/install-identity.ts
   - src/lib/daemon-http.ts
   - src/lib/net/network.ts
   - src/lib/net/websocket.ts
@@ -55,6 +59,8 @@ code_paths:
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
+  - tests/extension/contracts/background-boundaries.test.js
+  - tests/extension/contracts/no-dynamic-import-background.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_network_recording_test.go
   - cmd/browser-agent/tools_configure_network_recording_handler_test.go
@@ -75,6 +81,8 @@ test_paths:
   - internal/capture/client_registry_owner_test.go
   - internal/capture/extension_state_test_helpers_test.go
   - internal/capture/buffer_clear_test.go
+  - internal/capture/bounded_ring_test.go
+  - internal/capture/capture_bench_test.go
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
   - internal/capture/http_handlers_owner_test.go
@@ -88,6 +96,7 @@ test_paths:
   - tests/extension/sync/sync-client-fixture.js
   - tests/extension/sync/sync-client-resilience.test.js
   - tests/extension/sync/sync-client.test.js
+  - tests/extension/branding/install-id.test.js
   - tests/extension/reliability/server.test.js
   - tests/extension/sync/background-batching.test.js
   - tests/extension/sync/batcher-instances.test.js
@@ -169,6 +178,9 @@ Browser resource timings likewise live in an independently synchronized
 snapshots, and clearing. All ingestion and analysis callers use
 `Capture.Telemetry().NetworkWaterfall()`; the former capture-level access,
 add/get facades, and raw waterfall buffer are deleted.
+Waterfall timings, WebSocket events, network bodies, and enhanced actions use
+fixed-capacity circular storage so steady-state eviction overwrites and releases
+the oldest slot without allocating or copying the retained window.
 Network bodies, WebSocket events and connection state, enhanced actions,
 navigation callbacks, and the waterfall owner now form one independently
 synchronized `TelemetryStore` returned by `Capture.Telemetry()`. Its consumers

@@ -10,10 +10,6 @@
  * to batcher-instances.ts and sync client lifecycle to sync-manager.ts.
  */
 import type { LogEntry, ChromeMessageSender } from '../types/index.js';
-import { handlePendingQuery as handlePendingQueryImpl } from './pending-queries.js';
-import { handlePilotCommand as handlePilotCommandImpl } from './commands/interact.js';
-export { DEFAULT_SERVER_URL } from '../lib/constants.js';
-export { DebugCategory } from './debug.js';
 /**
  * Log a debug message (only when debug mode is enabled)
  */
@@ -54,6 +50,4 @@ export declare function checkConnectionAndUpdate(): Promise<void>;
  * Reset sync client connection (call when user enables pilot/tracking)
  */
 export declare function resetSyncClientConnection(): void;
-export declare const handlePendingQuery: typeof handlePendingQueryImpl;
-export declare const handlePilotCommand: typeof handlePilotCommandImpl;
 //# sourceMappingURL=index.d.ts.map

@@ -129,12 +129,13 @@ export function createBatcherWithCircuitBreaker<T>(
 
   let pending: T[] = []
   let timeoutId: TimeoutId | null = null
+  let flushPromise: Promise<void> | null = null
 
   function requeueEntries(entries: T[]): void {
     pending = entries.concat(pending).slice(0, MAX_PENDING_BUFFER)
   }
 
-  async function retryWithBackoff(entries: T[]): Promise<void> {
+  async function retryWithBackoff(entries: T[]): Promise<boolean> {
     let retriesLeft = retryBudget - 1
     while (retriesLeft > 0) {
       retriesLeft--
@@ -150,19 +151,28 @@ export function createBatcherWithCircuitBreaker<T>(
       try {
         await attemptSend(entries)
         localConnectionStatus.connected = true
-        return
+        return true
       } catch {
         localConnectionStatus.connected = false
         if (cb.getState() === 'open') {
           requeueEntries(entries)
-          return
+          return false
         }
       }
     }
+    requeueEntries(entries)
+    return false
   }
 
-  async function flushWithCircuitBreaker(): Promise<void> {
-    if (pending.length === 0) return
+  async function runFlushChain(): Promise<void> {
+    while (pending.length > 0) {
+      const shouldContinue = await flushPendingOnce()
+      if (!shouldContinue) return
+    }
+  }
+
+  async function flushPendingOnce(): Promise<boolean> {
+    if (pending.length === 0) return false
 
     const entries = pending
     pending = []
@@ -173,20 +183,29 @@ export function createBatcherWithCircuitBreaker<T>(
     }
     if (cb.getState() === 'open') {
       requeueEntries(entries)
-      return
+      return false
     }
 
     try {
       await attemptSend(entries)
       localConnectionStatus.connected = true
+      return true
     } catch {
       localConnectionStatus.connected = false
       if (cb.getState() === 'open') {
         requeueEntries(entries)
-        return
+        return false
       }
-      await retryWithBackoff(entries)
+      return await retryWithBackoff(entries)
     }
+  }
+
+  function flushWithCircuitBreaker(): Promise<void> {
+    if (flushPromise) return flushPromise
+    flushPromise = runFlushChain().finally(() => {
+      flushPromise = null
+    })
+    return flushPromise
   }
 
   const scheduleFlush = (): void => {

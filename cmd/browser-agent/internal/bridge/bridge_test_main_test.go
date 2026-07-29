@@ -1,4 +1,4 @@
-// bridge_test_main_test.go -- TestMain for bridge package tests.
+// bridge_test_main_test.go — Shared constructed bridge runner for package tests.
 package bridge
 
 import (
@@ -13,70 +13,63 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 
-func TestMain(m *testing.M) {
-	Init(Deps{
-		Version:            "0.0.0-test",
-		MaxPostBodySize:    10 * 1024 * 1024,
-		MCPServerName:      "kaboom",
-		ServerInstructions: "test instructions",
-		Stderrf:            func(format string, args ...any) { fmt.Fprintf(os.Stderr, format, args...) },
-		Debugf:             func(format string, args ...any) {},
-		WriteMCPPayload: func(payload []byte, framing internbridge.StdioFraming) {
-			out := ActiveMCPTransportWriter()
-			if framing == internbridge.StdioFramingContentLength {
-				_, _ = fmt.Fprintf(out, "Content-Length: %d\r\nContent-Type: application/json\r\n\r\n%s", len(payload), payload)
-			} else {
-				_, _ = out.Write(payload)
-				_, _ = out.Write([]byte("\n"))
-			}
-		},
-		SyncStdoutBestEffort:      func() {},
-		SetStderrSink:             func(w io.Writer) {},
-		GetBridgeFraming:          func() internbridge.StdioFraming { return internbridge.StdioFramingLine },
-		StoreBridgeFraming:        func(f internbridge.StdioFraming) {},
-		SetPushClientCapabilities: func(caps push.ClientCapabilities) {},
-		ExtractClientCapabilities: func(rawParams json.RawMessage) push.ClientCapabilities {
-			return push.ClientCapabilities{}
-		},
-		NegotiateProtocolVersion: func(rawParams json.RawMessage) string { return "2025-06-18" },
-		MCPResources: func() []mcp.MCPResource {
-			return []mcp.MCPResource{
-				{URI: "kaboom://capabilities", Name: "capabilities", MimeType: "text/markdown"},
-			}
-		},
-		MCPResourceTemplates: func() []any { return nil },
-		ResolveResourceContent: func(uri string) (string, string, bool) {
-			if uri == "kaboom://capabilities" {
-				return "kaboom://capabilities", "# Capabilities\nTest content", true
-			}
-			// Handle known playbook URIs and aliases
-			knownPlaybooks := map[string]string{
-				"kaboom://playbook/security":             "kaboom://playbook/security/quick",
-				"kaboom://playbook/security/quick":       "kaboom://playbook/security/quick",
-				"kaboom://playbook/security_audit/quick": "kaboom://playbook/security/quick",
-			}
-			if canonical, ok := knownPlaybooks[uri]; ok {
-				return canonical, "# Playbook\nTest playbook content", true
-			}
-			return "", "", false
-		},
-		DaemonProcessArgv0:   func(exePath string) string { return exePath },
-		StopServerForUpgrade: func(port int) bool { return false },
-		FindProcessOnPort:    func(port int) ([]int, error) { return nil, nil },
-		IsProcessAlive: func(pid int) bool {
-			if pid <= 0 {
-				return false
-			}
-			// On Unix, FindProcess always succeeds. Use kill -0 to check.
-			p, err := os.FindProcess(pid)
-			if err != nil {
-				return false
-			}
-			// Signal(syscall.Signal(0)) checks existence without killing.
-			return p.Signal(nil) == nil || pid == os.Getpid()
-		},
-		AppendExitDiagnostic: func(event string, extra map[string]any) string { return "" },
-	})
+var testRunner *Runner
 
+func newTestRunner() *Runner {
+	return NewRunner(
+		Identity{Version: "0.0.0-test", ServerName: "kaboom", ServerInstructions: "test instructions"},
+		Transport{
+			MaxBodySize: 10 * 1024 * 1024,
+			Stderrf:     func(format string, args ...any) { _, _ = fmt.Fprintf(os.Stderr, format, args...) },
+			Debugf:      func(string, ...any) {},
+			Write: func(payload []byte, framing internbridge.StdioFraming) {
+				out := ActiveMCPTransportWriter()
+				if framing == internbridge.StdioFramingContentLength {
+					_, _ = fmt.Fprintf(out, "Content-Length: %d\r\nContent-Type: application/json\r\n\r\n%s", len(payload), payload)
+				} else {
+					_, _ = out.Write(append(payload, '\n'))
+				}
+			},
+			Sync: func() {}, SetStderr: func(io.Writer) {},
+		},
+		Protocol{
+			GetFraming:          func() internbridge.StdioFraming { return internbridge.StdioFramingLine },
+			StoreFraming:        func(internbridge.StdioFraming) {},
+			SetCapabilities:     func(push.ClientCapabilities) {},
+			ExtractCapabilities: func(json.RawMessage) push.ClientCapabilities { return push.ClientCapabilities{} },
+			NegotiateVersion:    func(json.RawMessage) string { return "2025-06-18" },
+			Resources: func() []mcp.MCPResource {
+				return []mcp.MCPResource{{URI: "kaboom://capabilities", Name: "capabilities", MimeType: "text/markdown"}}
+			},
+			ResourceTemplates: func() []any { return nil },
+			ResolveResource: func(uri string) (string, string, bool) {
+				known := map[string]string{
+					"kaboom://capabilities":                  "# Capabilities\nTest content",
+					"kaboom://playbook/security":             "# Playbook\nTest playbook content",
+					"kaboom://playbook/security/quick":       "# Playbook\nTest playbook content",
+					"kaboom://playbook/security_audit/quick": "# Playbook\nTest playbook content",
+				}
+				text, ok := known[uri]
+				if !ok {
+					return "", "", false
+				}
+				if uri != "kaboom://capabilities" {
+					return "kaboom://playbook/security/quick", text, true
+				}
+				return uri, text, true
+			},
+		},
+		Lifecycle{
+			ProcessArgv0:         func(path string) string { return path },
+			StopServerForUpgrade: func(int) bool { return false },
+			FindProcessOnPort:    func(int) ([]int, error) { return nil, nil },
+			IsProcessAlive:       func(pid int) bool { return pid == os.Getpid() },
+			AppendExitDiagnostic: func(string, map[string]any) string { return "" },
+		},
+	)
+}
+
+func TestMain(m *testing.M) {
+	testRunner = newTestRunner()
 	os.Exit(m.Run())
 }
