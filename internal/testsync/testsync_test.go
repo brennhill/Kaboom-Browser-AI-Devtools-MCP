@@ -77,3 +77,10 @@ func TestEventuallyGoroutinesWaitsForTeardown(t *testing.T) {
 
 	EventuallyGoroutines(t, baseline+1, "spawned goroutines to exit")
 }
+
+func TestSettledGoroutinesReturnsStablePositiveCount(t *testing.T) {
+	got := SettledGoroutines()
+	if got < 1 {
+		t.Fatalf("SettledGoroutines() = %d, want a positive runtime count", got)
+	}
+}

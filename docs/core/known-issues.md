@@ -51,10 +51,12 @@ being fully exercised.
 
 The repaired aggregate runner now forces an uncached cross-package pass,
 captures normally exiting black-box binaries in isolated per-process
-directories, and merges identical blocks by maximum count. This removed the
-cache-order undercount and the subprocess metadata race. Behavior-focused tests
-then brought the trustworthy aggregate result to **89.0%**, satisfying the
-unchanged release gate without exclusions or threshold changes.
+directories, and projects all profiles onto the canonical source-block topology
+before merging counts. This removed the cache-order undercount, the subprocess
+metadata race, and phantom uncovered blocks caused by instrumentation with
+different end columns. Behavior-focused tests then brought the trustworthy
+aggregate result above **90.0%**, satisfying the unchanged release gate without
+exclusions or threshold changes.
 
 `observe.AnalyzeErrors` reads **0.0%** in a plain `go test ./internal/...` run
 and **100%** when measured correctly:

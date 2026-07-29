@@ -11,8 +11,9 @@ if (!outputPath || inputPaths.length === 0) {
 
 let mode = '';
 const blocks = new Map();
+const canonicalByStart = new Map();
 
-for (const inputPath of inputPaths) {
+for (const [inputIndex, inputPath] of inputPaths.entries()) {
   const lines = (await readFile(inputPath, 'utf8')).trim().split('\n');
   const inputMode = lines.shift()?.replace(/^mode:\s*/, '');
   if (!inputMode) {
@@ -32,9 +33,26 @@ for (const inputPath of inputPaths) {
     const [, span, statements, countText] = match;
     const key = `${span} ${statements}`;
     const count = Number(countText);
-    const previous = blocks.get(key);
-    if (previous === undefined || count > previous) {
-      blocks.set(key, count);
+    if (inputIndex === 0) {
+      const start = span.replace(/,[^,]+$/, '');
+      const startKey = `${start} ${statements}`;
+      const canonicalKey = canonicalByStart.get(startKey) ?? key;
+      const previous = blocks.get(canonicalKey);
+      if (previous === undefined || count > previous) {
+        blocks.set(canonicalKey, count);
+      }
+      canonicalByStart.set(startKey, canonicalKey);
+      continue;
+    }
+
+    const canonicalKey = blocks.has(key)
+      ? key
+      : canonicalByStart.get(`${span.replace(/,[^,]+$/, '')} ${statements}`);
+    if (canonicalKey !== undefined) {
+      const previous = blocks.get(canonicalKey);
+      if (previous === undefined || count > previous) {
+        blocks.set(canonicalKey, count);
+      }
     }
   }
 }

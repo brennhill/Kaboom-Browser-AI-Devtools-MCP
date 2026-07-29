@@ -35,6 +35,8 @@ type binaryWatcherConfig struct {
 	versionCheckTimeout   time.Duration
 	verifyVersion         binaryVersionVerifier
 	now                   func() time.Time
+	ticks                 <-chan time.Time
+	after                 func(time.Duration) <-chan time.Time
 }
 
 func normalizedBinaryWatcherConfig(cfg binaryWatcherConfig) binaryWatcherConfig {
@@ -55,6 +57,9 @@ func normalizedBinaryWatcherConfig(cfg binaryWatcherConfig) binaryWatcherConfig 
 	}
 	if cfg.now == nil {
 		cfg.now = time.Now
+	}
+	if cfg.after == nil {
+		cfg.after = time.After
 	}
 	return cfg
 }
@@ -248,12 +253,17 @@ func startBinaryWatcherWithConfig(
 			return
 		}
 
-		ticker := time.NewTicker(cfg.watchInterval)
-		defer ticker.Stop()
+		ticks := cfg.ticks
+		var ticker *time.Ticker
+		if ticks == nil {
+			ticker = time.NewTicker(cfg.watchInterval)
+			ticks = ticker.C
+			defer ticker.Stop()
+		}
 
 		for {
 			select {
-			case <-ticker.C:
+			case <-ticks:
 				changed, err := state.binaryChanged()
 				if err != nil || !changed {
 					continue
@@ -268,7 +278,7 @@ func startBinaryWatcherWithConfig(
 
 				// Grace period before shutdown
 				select {
-				case <-time.After(cfg.upgradeGracePeriod):
+				case <-cfg.after(cfg.upgradeGracePeriod):
 					triggerShutdown()
 					return
 				case <-ctx.Done():

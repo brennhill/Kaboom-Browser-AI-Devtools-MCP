@@ -56,3 +56,6 @@ route, and generated TypeScript contracts come directly from
 `cmd/browser-agent/openapi.json`.
 Operational health handlers consume the canonical `capture.HealthReader`;
 `Capture` no longer exposes a health forwarding method.
+Binary-upgrade polling and grace-period waits accept controlled channels in
+tests, so upgrade detection is verified without wall-clock sleeps while
+production continues to use real tickers and timers.

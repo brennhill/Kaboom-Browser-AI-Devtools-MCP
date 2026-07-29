@@ -245,26 +245,25 @@ func TestStartBinaryWatcher_DetectsUpgrade(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var upgradeMu sync.Mutex
-	var upgradeVersion string
-	var shutdownCalled bool
+	ticks := make(chan time.Time, 1)
+	grace := make(chan time.Time, 1)
+	upgraded := make(chan string, 1)
+	shutdown := make(chan struct{}, 1)
 
 	s := startBinaryWatcherWithConfig(ctx, "0.7.5",
 		func(newVer string) {
-			upgradeMu.Lock()
-			upgradeVersion = newVer
-			upgradeMu.Unlock()
+			upgraded <- newVer
 		},
 		func() {
-			upgradeMu.Lock()
-			shutdownCalled = true
-			upgradeMu.Unlock()
+			shutdown <- struct{}{}
 		},
 		binaryWatcherConfig{
 			resolveExecutablePath: func() (string, error) { return tmp, nil },
-			watchInterval:         50 * time.Millisecond,
 			upgradeGracePeriod:    50 * time.Millisecond,
 			versionCheckTimeout:   testVersionCheckTimeout,
+			verifyVersion:         func(string, time.Duration) (string, error) { return "0.8.0", nil },
+			ticks:                 ticks,
+			after:                 func(time.Duration) <-chan time.Time { return grace },
 		},
 	)
 	if s == nil {
@@ -299,27 +298,21 @@ func TestStartBinaryWatcher_DetectsUpgrade(t *testing.T) {
 		t.Fatalf("failed to bump binary mtime: %v", err)
 	}
 
-	// Wait for detection + version verification + grace period with polling
-	// instead of fixed sleeps to reduce flake under variable CI load.
-	deadline := time.Now().Add(12 * time.Second)
-	var gotVer string
-	var gotShutdown bool
-	for time.Now().Before(deadline) {
-		upgradeMu.Lock()
-		gotVer = upgradeVersion
-		gotShutdown = shutdownCalled
-		upgradeMu.Unlock()
-		if gotVer == "0.8.0" && gotShutdown {
-			break
+	ticks <- time.Now()
+	select {
+	case gotVer := <-upgraded:
+		if gotVer != "0.8.0" {
+			t.Fatalf("expected upgrade to 0.8.0, got %q", gotVer)
 		}
-		time.Sleep(25 * time.Millisecond)
+	case <-time.After(2 * time.Second):
+		t.Fatal("watcher did not report the injected upgrade")
 	}
 
-	if gotVer != "0.8.0" {
-		t.Fatalf("expected upgrade to 0.8.0, got %q", gotVer)
-	}
-	if !gotShutdown {
-		t.Fatal("expected shutdown to be triggered after grace period")
+	grace <- time.Now()
+	select {
+	case <-shutdown:
+	case <-time.After(2 * time.Second):
+		t.Fatal("watcher did not trigger shutdown after grace period")
 	}
 }
 

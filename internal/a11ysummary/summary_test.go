@@ -1,7 +1,10 @@
 // summary_test.go — Canonical accessibility summary contract tests.
 package a11ysummary
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestBuildSummary_ExposesCanonicalKeysOnly(t *testing.T) {
 	t.Parallel()
@@ -84,6 +87,64 @@ func TestEnsureAuditSummary_RebuildsInvalidSummaryType(t *testing.T) {
 		t.Fatalf("violations = %v, want 3", summary["violations"])
 	}
 	assertNoLegacyCounts(t, summary)
+}
+
+func TestEnsureAuditSummary_NormalizesEverySupportedNumericWireType(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		value any
+		want  int
+	}{
+		{"int", int(1), 1},
+		{"int8", int8(2), 2},
+		{"int16", int16(3), 3},
+		{"int32", int32(4), 4},
+		{"int64", int64(5), 5},
+		{"uint", uint(6), 6},
+		{"uint8", uint8(7), 7},
+		{"uint16", uint16(8), 8},
+		{"uint32", uint32(9), 9},
+		{"uint64", uint64(10), 10},
+		{"float32", float32(11), 11},
+		{"float64", float64(12), 12},
+		{"json_number", json.Number("13"), 13},
+		{"numeric_string", "14", 14},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			audit := map[string]any{"summary": map[string]any{"violations": tc.value}}
+			EnsureAuditSummary(audit)
+			if got := requireSummary(t, audit)["violations"]; got != tc.want {
+				t.Fatalf("violations = %v, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestEnsureAuditSummary_FallsBackForMalformedCountsAndArrays(t *testing.T) {
+	t.Parallel()
+	audit := map[string]any{
+		"violations": "not-an-array",
+		"passes":     []any{1, 2},
+		"summary": map[string]any{
+			"violations":   json.Number("invalid"),
+			"passes":       "invalid",
+			"incomplete":   struct{}{},
+			"inapplicable": nil,
+		},
+	}
+	EnsureAuditSummary(audit)
+	summary := requireSummary(t, audit)
+	if summary["violations"] != 0 || summary["passes"] != 2 ||
+		summary["incomplete"] != 0 || summary["inapplicable"] != 0 {
+		t.Fatalf("fallback summary = %#v", summary)
+	}
+}
+
+func TestEnsureAuditSummary_NilInputIsNoop(t *testing.T) {
+	t.Parallel()
+	EnsureAuditSummary(nil)
 }
 
 func requireSummary(t *testing.T, audit map[string]any) map[string]any {

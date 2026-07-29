@@ -121,6 +121,7 @@ test_paths:
   - cmd/browser-agent/openapi_branding_test.go
   - cmd/browser-agent/internal/operationalapi/debug_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go
+  - cmd/browser-agent/internal/operationalapi/coverage_contract_test.go
   - cmd/browser-agent/internal/dashboard/handler_test.go
   - cmd/browser-agent/internal/exitdiag/recorder_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go

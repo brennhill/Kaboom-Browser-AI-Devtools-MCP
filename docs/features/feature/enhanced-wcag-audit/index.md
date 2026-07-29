@@ -4,7 +4,7 @@ feature_id: feature-enhanced-wcag-audit
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - internal/a11ysummary/summary.go
   - internal/tools/observe/page_state.go
@@ -42,4 +42,7 @@ last_verified_date: 2026-03-05
 
 Accessibility summaries use one canonical count contract: `violations`,
 `passes`, `incomplete`, and `inapplicable`. Legacy `*_count` compatibility
-fields are neither accepted nor emitted.
+fields are neither accepted nor emitted. Numeric counts are normalized from
+every JSON-compatible integer and floating representation, including
+`json.Number` and numeric strings; malformed values fall back to the canonical
+top-level audit arrays.

@@ -26,6 +26,7 @@ code_paths:
   - scripts/test-js-sharded.sh
   - scripts/build/run-go-coverage.sh
   - scripts/build/merge-go-coverage.mjs
+  - internal/testsync/testsync.go
   - package.json
   - .github/workflows/ci.yml
 test_paths:
@@ -42,6 +43,7 @@ test_paths:
   - scripts/check-file-length.test.mjs
   - scripts/check-folder-size.test.mjs
   - scripts/tests/contracts/go-coverage-profile.test.mjs
+  - internal/testsync/testsync_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/test-install-hooks-only.sh
   - scripts/docs/features/check-feature-paths.test.mjs
@@ -74,9 +76,11 @@ filters through one shared source-walk boundary so detection and discovery
 cannot drift.
 
 `make test-cover` performs one uncached, cross-package Go run and also captures
-normally exiting black-box CLI binaries. Coverage blocks are merged by maximum
-execution count, so cross-package behavior is retained without counting the
-same statement more than once.
+normally exiting black-box CLI binaries. The package profile supplies the
+canonical block topology; differently shaped copies emitted by other test
+binaries are projected onto that topology and merged by maximum execution
+count. Cross-package behavior is therefore retained without adding phantom
+denominator blocks for the same source statement.
 
 ## Architecture
 
