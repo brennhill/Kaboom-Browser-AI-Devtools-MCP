@@ -1,6 +1,8 @@
 # Kaboom Build Makefile
 
-VERSION := $(shell cat VERSION)
+# Recursive on purpose: a combined `make bump-version ... build` invocation must
+# read VERSION after the bump target, not freeze the old value while parsing.
+VERSION = $(shell cat VERSION)
 BINARY_NAME := kaboom-agentic-browser
 HOOKS_BINARY_NAME := kaboom-hooks
 BUILD_DIR := dist
@@ -22,7 +24,7 @@ PLATFORMS := \
 	dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
 	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-ts-json-casing ci \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench ci-fuzz \
-	release-check install-hooks bench-baseline sync-version \
+	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
 	verify-llm check-folder-size check-structure check-dormant-tests folder-baseline-update \
@@ -52,7 +54,7 @@ generate-dom-primitives:
 	@node scripts/build/generate-dom-primitives.js
 
 # Compile TypeScript to JavaScript (REQUIRED before tests)
-compile-ts: generate-wire-types generate-dom-primitives
+compile-ts: validate-versions generate-wire-types generate-dom-primitives
 	@echo "=== Compiling TypeScript ==="
 	@npx tsc
 	@if [ ! -f extension/background/index.js ]; then \
@@ -189,6 +191,9 @@ validate-deps-versions:
 	@node npm/kaboom-agentic-browser/lib/validate-versions.js
 
 build: $(PLATFORMS)
+
+# Every platform build validates independently, including direct and parallel builds.
+$(PLATFORMS): validate-versions
 
 darwin-amd64:
 	@mkdir -p $(BUILD_DIR)
@@ -481,55 +486,18 @@ test-upgrade-guards:
 release-gate: quality-gate test-upgrade-guards
 	@echo "✅ release-gate passed"
 
-# Update all version references to match VERSION (single source of truth)
+# Set VERSION and every canonical release target in one validated transaction.
+bump-version:
+	@if [ -z "$(NEW_VERSION)" ]; then echo "Usage: make bump-version NEW_VERSION=X.Y.Z"; exit 1; fi
+	@node scripts/release/version/version-sync.mjs "$(NEW_VERSION)"
+
+# Repair canonical targets from VERSION without changing VERSION.
 sync-version:
-	@echo "Syncing version to $(VERSION)..."
-	@# JSON "version" fields. These files hold exactly one "version" (their own),
-	@# so a blanket match is safe. package-lock.json is handled structurally below
-	@# because it also carries dependency "version" fields that must NOT change.
-	@perl -pi -e 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "$(VERSION)"/g' \
-			package.json \
-			extension/manifest.json extension/package.json server/package.json \
-			npm/kaboom-agentic-browser/package.json npm/darwin-x64/package.json \
-			npm/darwin-arm64/package.json npm/linux-x64/package.json \
-			npm/linux-arm64/package.json npm/win32-x64/package.json \
-			packages/kaboom-ci/package.json packages/kaboom-playwright/package.json \
-			$(CMD_DIR)/testdata/mcp-initialize.golden.json
-	@# root package-lock.json: update ONLY the package's own version (top-level and
-	@# packages[""]) — never the nested dependency versions. Structural JSON edit
-	@# preserves npm's 2-space + trailing-newline formatting (zero-dep node built-ins).
-	@node -e 'const fs=require("fs"),f="package-lock.json",j=JSON.parse(fs.readFileSync(f,"utf8"));j.version="$(VERSION)";if(j.packages&&j.packages[""])j.packages[""].version="$(VERSION)";fs.writeFileSync(f,JSON.stringify(j,null,2)+"\n")'
-	@# NPM optionalDependencies versions. NOTE: the "@" MUST be escaped (\@) — an
-	@# unescaped @brennhill is parsed by perl as array interpolation and silently
-	@# empties the pattern, so the substitution no-ops. Same for \@anthropic below.
-	@perl -pi -e 's/("\@brennhill\/kaboom-[^"]+": ")[0-9]+\.[0-9]+\.[0-9]+(")/$${1}$(VERSION)$$2/g' \
-		npm/kaboom-agentic-browser/package.json
-	@# kaboom-playwright pins @anthropic/kaboom-ci to the release version.
-	@perl -pi -e 's/("\@anthropic\/kaboom-ci": ")[0-9]+\.[0-9]+\.[0-9]+(")/$${1}$(VERSION)$$2/g' \
-		packages/kaboom-playwright/package.json
-	@# PyPI sync removed: pypi/ packaging tree no longer exists in this repo.
-	@# JS version strings. (Legacy tests/extension/{popup,background}.test.js were
-	@# removed; the current extension version flows through esbuild's
-	@# __KABOOM_VERSION__ define at bundle time, so no test-file edit is needed.)
-	@perl -pi -e "s/version: '[0-9]+\.[0-9]+\.[0-9]+'/version: '$(VERSION)'/g" \
-		extension/inject.js
-	@perl -pi -e "s/VERSION = '[0-9]+\.[0-9]+\.[0-9]+'/VERSION = '$(VERSION)'/g" \
-		server/scripts/install.js
-	@# Go version fallback (both binaries)
-	@perl -pi -e 's/var version = "[0-9]+\.[0-9]+\.[0-9]+"/var version = "$(VERSION)"/' \
-		$(CMD_DIR)/main.go cmd/hooks/main.go
-	@# Shell wrapper version
-	@perl -pi -e 's/KABOOM_VERSION="[0-9]+\.[0-9]+\.[0-9]+"/KABOOM_VERSION="$(VERSION)"/' \
-		npm/kaboom-agentic-browser/bin/kaboom-agentic-browser
-	@# README badge and benchmark
-	@perl -pi -e 's/version-[0-9]+\.[0-9]+\.[0-9]+-green/version-$(VERSION)-green/' README.md
-	@perl -pi -e 's/\(v[0-9]+\.[0-9]+\.[0-9]+\)/(v$(VERSION))/' README.md
-	@# Docs and benchmarks
-	@perl -pi -e 's/Kaboom v[0-9]+\.[0-9]+\.[0-9]+/Kaboom v$(VERSION)/g' docs/getting-started.md
-	@perl -pi -e 's/\[kaboom\] v[0-9]+\.[0-9]+\.[0-9]+/[Kaboom] v$(VERSION)/g' docs/getting-started.md
-	@perl -pi -e 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "$(VERSION)"/g' docs/har-export.md
-	@perl -pi -e 's/\*\*Version:\*\* [0-9]+\.[0-9]+\.[0-9]+/**Version:** $(VERSION)/' docs/benchmarks/latest-benchmark.md
-	@echo "All files synced to $(VERSION)"
+	@node scripts/release/version/version-sync.mjs --sync
+
+# Fail closed when any canonical target differs from VERSION.
+validate-versions:
+	@node scripts/release/version/version-sync.mjs --check
 
 context-size:
 	@echo "=== Claude Code Initial Context Size ==="

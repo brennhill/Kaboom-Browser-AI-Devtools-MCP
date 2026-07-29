@@ -183,8 +183,8 @@ workflow (`workflow_dispatch`, run it **from the STABLE branch**):
 
 1. Actions → **Cut Release** → *Run workflow* → set **`version`** (e.g. `0.8.7`),
    leave **`dry_run`** unchecked (or check it for a no-mutation preview).
-2. It does everything: bump `VERSION` → `make sync-version` → `make compile-ts` →
-   `validate-versions.sh` → wire-drift gate → `go test -short` → `npm run test:ext`
+2. It does everything: transactional version bump → `make compile-ts` →
+   `make validate-versions` → wire-drift gate → `go test -short` → `npm run test:ext`
    → commit + push `STABLE` + tag `v<version>` → build 5 platforms → publish npm
    (platform + aggregate) → GitHub Release.
 
@@ -216,31 +216,33 @@ make build
 
 ### 2. Version Bump
 
-Version is single-sourced from the `VERSION` file. `make sync-version`
-propagates it to the version-bearing files; `scripts/validate-versions.sh` is
-the CI gate.
+Version is single-sourced from `VERSION`, and one implementation owns every
+mutation and check: `scripts/release/version/version-sync.mjs`.
 
 ```bash
-# 1. Set the single source of truth
-echo -n "0.8.6" > VERSION
+# 1. Atomically set VERSION and every canonical target
+make bump-version NEW_VERSION=0.9.1
 
-# 2. Propagate to all package.json / Go / bundle / README locations
-make sync-version
-
-# 3. Regenerate the extension bundle (embeds VERSION via esbuild define)
+# 2. Regenerate the extension bundle (embeds VERSION via esbuild define)
 make compile-ts
 
-# 4. Validate — this is the required "Version Consistency" CI check
-bash scripts/validate-versions.sh
+# 3. Validate — this is the required "Version Consistency" CI check
+make validate-versions
 ```
 
 **If validation fails, STOP. Do not proceed with release.**
 
-`validate-versions.sh` checks all version locations match `VERSION`, including:
+`make bump-version` preflights every target before writing, stages all new
+contents, and rolls back committed files if a write fails. `make sync-version`
+is the repair command: it leaves `VERSION` unchanged and synchronizes the same
+inventory. `make validate-versions` checks that inventory without writing.
+
+Canonical targets include:
 
 | File | Field |
 |------|------|
 | `package.json` (root) | `"version"` |
+| `package-lock.json` | root package versions only; dependency versions are preserved |
 | `cmd/browser-agent/main.go`, `cmd/hooks/main.go` | `version` constant |
 | `extension/manifest.json`, `extension/package.json` | `"version"` |
 | `server/package.json` | `"version"` |
@@ -248,13 +250,12 @@ bash scripts/validate-versions.sh
 | `npm/{darwin-arm64,darwin-x64,linux-arm64,linux-x64,win32-x64}/package.json` | `"version"` |
 | `packages/kaboom-ci/package.json`, `packages/kaboom-playwright/package.json` | `"version"` (+ `@anthropic/kaboom-ci` pin) |
 | `README.md` | version badge + prose |
-| `cmd/browser-agent/testdata/mcp-initialize.golden.json` | `"VERSION"` placeholder (stays literal) |
+| `claude_skill/kaboom/SKILL.md` | distributed skill metadata |
 
 > **`optionalDependencies`:** the five `@brennhill/kaboom-agentic-browser-*`
 > entries in `npm/kaboom-agentic-browser/package.json` MUST equal the wrapper
-> version, or npx installs old binaries. `make sync-version` now covers these plus
-> the root `package.json`, `package-lock.json` (own version only), and
-> `packages/kaboom-*` — so `validate-versions.sh` passes with no manual edits.
+> version, or npx installs old binaries. They are updated and checked by the same
+> canonical transaction as the package version.
 
 Commit the bump to a `release/<version>` branch and merge it to `STABLE` via PR.
 

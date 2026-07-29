@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - internal/configdiscovery/mcp.go
   - cmd/browser-agent/main.go
@@ -21,6 +21,10 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/tutorial/snippets.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/playbooks.go
   - Makefile
+  - scripts/release/version/version-sync.mjs
+  - .github/workflows/validate-versions.yml
+  - .github/workflows/cut-release.yml
+  - .github/workflows/release.yml
   - scripts/release/build-crx.js
   - cmd/browser-agent/internal/nativeinstall/installer.go
   - npm/kaboom-agentic-browser/lib/extension.js
@@ -97,6 +101,8 @@ test_paths:
   - tests/cli/install-script-safety.test.cjs
   - tests/cli/operator-script-branding.test.cjs
   - scripts/release/canonical-installer-scripts.test.mjs
+  - scripts/release/version/version-sync.test.mjs
+  - tests/extension/tooling-contracts.test.js
   - cmd/browser-agent/internal/cli/cli_test.go
   - cmd/browser-agent/internal/cli/cli_coverage_extra_test.go
 last_verified_version: 0.8.1
@@ -112,6 +118,7 @@ last_verified_date: 2026-03-28
 - Mode/Action: cli
 - Location: `docs/features/feature/enhanced-cli-config`
 - `cmd/browser-agent/config.go` owns both flag parsing and the runtime mode policy those flags drive.
+- `VERSION` is the only human-edited release version. `make bump-version NEW_VERSION=X.Y.Z`, `make sync-version`, and `make validate-versions` all delegate to one explicit transactional implementation.
 
 ## Specs
 

@@ -80,7 +80,7 @@ jobs:
             echo ""
             echo "To fix:"
             echo "  1. Update VERSION file to $TAG_VERSION"
-            echo "  2. Run: node scripts/release/bump-version.js $TAG_VERSION"
+            echo "  2. Run: make bump-version NEW_VERSION=$TAG_VERSION"
             echo "  3. Commit and push"
             echo "  4. Delete and recreate tag: git tag -d v$TAG_VERSION && git tag v$TAG_VERSION && git push origin v$TAG_VERSION"
             exit 1

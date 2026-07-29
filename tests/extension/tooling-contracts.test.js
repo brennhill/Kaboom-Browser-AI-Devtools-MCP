@@ -29,18 +29,22 @@ describe('Tooling contracts', () => {
     )
   })
 
-  test('validate-versions should use VERSION file as source of truth (not brittle Makefile parsing)', () => {
-    const script = readFileSync('scripts/validate-versions.sh', 'utf8')
+  test('version tooling has one explicit, transactional source-of-truth implementation', () => {
+    const script = readFileSync('scripts/release/version/version-sync.mjs', 'utf8')
+    const makefile = readFileSync('Makefile', 'utf8')
+    assert.match(script, /'VERSION'/, 'the synchronizer must inventory VERSION')
+    assert.match(script, /writeTransaction/, 'version writes must use the transactional path')
+    assert.match(makefile, /version-sync\.mjs "\$\(NEW_VERSION\)"/)
+    assert.match(makefile, /version-sync\.mjs --sync/)
+    assert.match(makefile, /version-sync\.mjs --check/)
+    assert.match(makefile, /^compile-ts: validate-versions /m)
+    assert.match(makefile, /^\$\(PLATFORMS\): validate-versions$/m)
     assert.match(
-      script,
-      /VERSION=\$\(tr -d '\[:space:\]' < VERSION\)/,
-      'validate-versions should read semver from VERSION file'
+      makefile,
+      /^VERSION = \$\(shell cat VERSION\)$/m,
+      'Make must read VERSION lazily so bump-version + build cannot embed the old value'
     )
-    assert.doesNotMatch(
-      script,
-      /grep "\^VERSION :=" Makefile \| awk '\{print \$3\}'/,
-      'validate-versions must not parse VERSION from Makefile token position'
-    )
+    assert.doesNotMatch(makefile, /perl -pi.*version/, 'Make must not contain a second version rewriter')
   })
 
   test('validate-architecture should enforce /sync handler instead of removed legacy handlers', () => {
@@ -76,23 +80,19 @@ describe('Tooling contracts', () => {
     )
   })
 
-  test('validate-versions should use file-specific checks for dynamic and placeholder version files', () => {
-    const script = readFileSync('scripts/validate-versions.sh', 'utf8')
-    assert.match(
-      script,
-      /server\/scripts\/install\.js uses package\.json version source/,
-      'validate-versions should special-case install.js dynamic version sourcing'
-    )
-    assert.match(
-      script,
-      /mcp-initialize\.golden\.json uses VERSION placeholder/,
-      'validate-versions should special-case VERSION placeholders in golden files'
-    )
-    assert.match(
-      script,
-      /export_sarif_types\.go uses build-time injected version fallback/,
-      'validate-versions should special-case build-time injected version vars'
-    )
+  test('canonical version inventory includes shipped packages, binaries, README, and skill metadata', () => {
+    const script = readFileSync('scripts/release/version/version-sync.mjs', 'utf8')
+    for (const target of [
+      'extension/manifest.json',
+      'npm/kaboom-agentic-browser/package.json',
+      'packages/kaboom-playwright/package.json',
+      'cmd/browser-agent/main.go',
+      'cmd/hooks/main.go',
+      'README.md',
+      'claude_skill/kaboom/SKILL.md'
+    ]) {
+      assert.ok(script.includes(target), `missing version target ${target}`)
+    }
   })
 
   test('ts runtime contracts should use kaboom headers and storage keys', () => {

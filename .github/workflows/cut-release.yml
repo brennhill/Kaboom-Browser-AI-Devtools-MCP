@@ -89,13 +89,12 @@ jobs:
         env:
           TARGET: ${{ inputs.version }}
         run: |
-          printf '%s' "$TARGET" > VERSION
-          make sync-version
+          node scripts/release/version/version-sync.mjs "$TARGET"
           make compile-ts
           echo "version=$TARGET" >> "$GITHUB_OUTPUT"
 
       - name: Validate version consistency (fail closed)
-        run: bash scripts/validate-versions.sh
+        run: node scripts/release/version/version-sync.mjs --check
 
       - name: Wire drift gate (Go <-> TS payload contracts)
         run: |

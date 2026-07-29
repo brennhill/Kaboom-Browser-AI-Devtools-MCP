@@ -35,7 +35,7 @@
 
 ## 📦 Latest Release
 
-Current version: **v0.8.6** — Structured telemetry, session analytics, KaBOOM! branding, and contract-compliant metrics reporting.
+Current version: **v0.9.0** — Structured telemetry, session analytics, KaBOOM! branding, and contract-compliant metrics reporting.
 
 **macOS / Linux:**
 ```bash
