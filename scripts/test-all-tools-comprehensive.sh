@@ -139,6 +139,12 @@ CONNECTED_UAT_PORT="${KABOOM_UAT_CONNECTED_PORT:-7890}"
 OFFLINE_CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 20 25 26 28"
 CONNECTED_CAT_IDS="14 15 16 18 19 23 24"
 
+# shellcheck source=tests/framework/uat-user-state.sh
+source "$TESTS_DIR/framework/uat-user-state.sh"
+if [ "$SUITE" = "connected" ] || [ "$SUITE" = "all" ]; then
+    uat_snapshot_user_state "$CONNECTED_UAT_PORT" "$WRAPPER"
+fi
+
 case "$SUITE" in
     offline) CAT_IDS="$OFFLINE_CAT_IDS" ;;
     connected) CAT_IDS="$CONNECTED_CAT_IDS" ;;
@@ -151,7 +157,7 @@ preflight_connected_extension() {
     local ext_connected=""
     local ext_last_seen=""
 
-    lsof -ti :"$CONNECTED_UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    lsof -tiTCP:"$CONNECTED_UAT_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
     sleep 0.3
     echo "Pre-flight: checking extension connectivity..."
     (cd "$PROJECT_ROOT" && "$WRAPPER" --daemon --port "$CONNECTED_UAT_PORT" >/dev/null 2>&1) &
@@ -169,7 +175,7 @@ preflight_connected_extension() {
     ext_connected="$(echo "$preflight_health" | jq -r '.capture.extension_connected // false' 2>/dev/null)"
     ext_last_seen="$(echo "$preflight_health" | jq -r '.capture.extension_last_seen // "never"' 2>/dev/null)"
     kill "$preflight_pid" 2>/dev/null || true
-    lsof -ti :"$CONNECTED_UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    lsof -tiTCP:"$CONNECTED_UAT_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
     wait "$preflight_pid" 2>/dev/null || true
 
     if [ "$ext_connected" != "true" ]; then
@@ -180,19 +186,29 @@ preflight_connected_extension() {
     echo "Pre-flight: extension connected (last seen: $ext_last_seen)"
 }
 
-# Safety-net trap: kill daemons on all ports if runner exits abnormally
+# Safety-net trap: clean only suite-owned ports, then restore user state.
 _uat_cleanup() {
-    for _base_port in "$OFFLINE_UAT_PORT" "$CONNECTED_UAT_PORT"; do
-        lsof -ti :"$_base_port" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    local _cleanup_ports=""
+    case "$SUITE" in
+        offline) _cleanup_ports="$OFFLINE_UAT_PORT" ;;
+        connected) _cleanup_ports="$CONNECTED_UAT_PORT" ;;
+        all) _cleanup_ports="$OFFLINE_UAT_PORT $CONNECTED_UAT_PORT" ;;
+    esac
+    for _base_port in $_cleanup_ports; do
+        lsof -tiTCP:"$_base_port" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
         for _p in $((_base_port + 100)) $((_base_port + 101)) $((_base_port + 102)); do
-            lsof -ti :"$_p" 2>/dev/null | xargs kill -9 2>/dev/null || true
+            lsof -tiTCP:"$_p" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
         done
     done
     if [ -f "$SCRIPT_DIR/cleanup-test-daemons.sh" ]; then
         bash "$SCRIPT_DIR/cleanup-test-daemons.sh" --quiet >/dev/null 2>&1 || true
     fi
+    uat_restore_user_state
 }
 trap _uat_cleanup EXIT
+trap 'uat_exit_for_signal INT' INT
+trap 'uat_exit_for_signal TERM' TERM
+trap 'uat_exit_for_signal HUP' HUP
 
 # ── Run Categories ────────────────────────────────────────
 category_timeout() {
@@ -229,7 +245,7 @@ run_suite() {
     local category_count
     category_count="$(echo "$suite_cat_ids" | wc -w | tr -d ' ')"
 
-    lsof -ti :"$uat_port" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    lsof -tiTCP:"$uat_port" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
     sleep 0.5
     echo "Running $category_count $suite_name categories sequentially on port $uat_port..."
     echo ""
@@ -351,10 +367,6 @@ else
 fi
 
 echo ""
-
-# ── Cleanup ───────────────────────────────────────────────
-# Kill any remaining daemon on the shared port (trap also handles abnormal exit)
-lsof -ti :"$UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
 
 if [ "${KABOOM_KEEP_RESULTS:-0}" = "1" ]; then
     echo "Results kept at: $RESULTS_DIR"

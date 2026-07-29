@@ -19,7 +19,7 @@ TEMP_DIR="$(cd "$TEMP_DIR" && pwd -P)"
 _cat24_cleanup() {
     # Kill upload servers on any port we might have used
     for _p in $((PORT + 100)) $((PORT + 101)) $((PORT + 102)); do
-        lsof -ti :"$_p" 2>/dev/null | xargs kill -9 2>/dev/null || true
+        lsof -tiTCP:"$_p" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
     done
 }
 trap '_cat24_cleanup; framework_cleanup' EXIT INT TERM

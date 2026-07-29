@@ -49,7 +49,7 @@ kill_test_ports() {
 
   for port in $(seq "$start" "$end"); do
     local pids
-    pids="$(lsof -ti :"$port" 2>/dev/null || true)"
+    pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
     [[ -z "$pids" ]] && continue
     while IFS= read -r pid; do
       [[ -z "$pid" ]] && continue
@@ -60,7 +60,7 @@ kill_test_ports() {
       kill -TERM "$pid" 2>/dev/null || true
     done <<< "$pids"
     sleep 0.05
-    pids="$(lsof -ti :"$port" 2>/dev/null || true)"
+    pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
     [[ -z "$pids" ]] && continue
     while IFS= read -r pid; do
       [[ -z "$pid" ]] && continue

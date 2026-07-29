@@ -45,8 +45,8 @@ framework_cleanup() {
     if [ -n "${PORT:-}" ] && [ -n "${WRAPPER:-}" ]; then
         kill_server || true
     elif [ -n "${PORT:-}" ]; then
-        lsof -ti :"$PORT" 2>/dev/null | xargs kill 2>/dev/null || true
-        lsof -ti :"$PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
+        lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
+        lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
     fi
 
     # Always clean temporary artifacts.
@@ -397,9 +397,9 @@ kill_server() {
         sleep 0.1
     fi
     # Kill by port (e.g., if daemon was pre-existing)
-    lsof -ti :"$PORT" 2>/dev/null | xargs kill 2>/dev/null || true
+    lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
     sleep 0.2
-    lsof -ti :"$PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
     # Also clean up via PID file — catches zombie daemons that are alive
     # but no longer listening on the port
     "$WRAPPER" --stop --port "$PORT" >/dev/null 2>&1 || true
@@ -481,7 +481,7 @@ finish_category() {
     # Kill our daemon (tracked PID + port fallback)
     kill_server
     # Safety net: also kill by port in case DAEMON_PID was stale
-    lsof -ti :"$PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
 
     # Clean up temp
     local elapsed

@@ -23,7 +23,7 @@ run_test_6_1() {
     sleep 0.5
 
     # Verify port is actually free
-    if lsof -ti :"$PORT" >/dev/null 2>&1; then
+    if lsof -tiTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
         fail "Port $PORT still occupied after kill_server. Cannot test cold start."
         return
     fi
@@ -137,7 +137,7 @@ run_test_6_3() {
     sleep 1
 
     # Verify port is freed
-    if lsof -ti :"$PORT" >/dev/null 2>&1; then
+    if lsof -tiTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
         fail "Port $PORT still occupied after --stop. Server did not shut down."
         return
     fi

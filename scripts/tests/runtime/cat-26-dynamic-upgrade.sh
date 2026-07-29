@@ -27,9 +27,9 @@ build_version() {
 
 # Kill any leftover on the upgrade test port
 cleanup_upgrade_test() {
-    lsof -ti :"$UPGRADE_PORT" 2>/dev/null | xargs kill 2>/dev/null || true
+    lsof -tiTCP:"$UPGRADE_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
     sleep 0.5
-    lsof -ti :"$UPGRADE_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    lsof -tiTCP:"$UPGRADE_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
 }
 
 # ── Test 26.1: Upgrade detection appears in /health ─────────

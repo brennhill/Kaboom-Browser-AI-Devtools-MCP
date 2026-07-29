@@ -17,7 +17,9 @@ code_paths:
   - scripts/test-new-uat.sh
   - scripts/uat-result-lib.sh
   - scripts/tests/framework/framework.sh
+  - scripts/tests/framework/uat-user-state.sh
   - scripts/test-all-tools-comprehensive.sh
+  - scripts/cleanup-test-daemons.sh
   - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/testpages/http.go
   - cmd/browser-agent/internal/testpages/websocket.go
@@ -92,6 +94,11 @@ last_verified_date: 2026-03-05
 - Split UAT orchestration + integrity checks: `scripts/test-all-split.sh`, `scripts/test-original-uat.sh`, `scripts/test-new-uat.sh`
 - Shared UAT result parsing: `scripts/uat-result-lib.sh`
 - Category daemon lifecycle and result-file contract: `scripts/tests/framework/framework.sh`
+- User-state guard: `scripts/tests/framework/uat-user-state.sh` snapshots the
+  prior daemon executable, LaunchAgent lifecycle, version, and tracked tab
+  before connected UAT, then restores them idempotently on completion or signal.
+  Port cleanup is listener-only, so browser processes connected to the daemon
+  are never mistaken for port owners or terminated.
 - Comprehensive UAT has explicit `offline`, `connected`, and `all` suites.
   Offline contracts use an isolated daemon port; connected-browser categories
   run sequentially on the extension's configured port after connectivity
