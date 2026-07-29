@@ -51,6 +51,8 @@ code_paths:
 test_paths:
   - tests/extension/terminal-reconnect/terminal-html-liveness.test.js
   - cmd/browser-agent/internal/terminal/relay_rebind_test.go
+  - cmd/browser-agent/internal/terminal/relay_test.go
+  - cmd/browser-agent/internal/terminal/fakes_test.go
   - cmd/browser-agent/internal/terminal/spawn_retry_test.go
   - cmd/browser-agent/internal/terminal/sandbox_error_test.go
   - cmd/browser-agent/internal/terminal/handlers_start_decisions_test.go

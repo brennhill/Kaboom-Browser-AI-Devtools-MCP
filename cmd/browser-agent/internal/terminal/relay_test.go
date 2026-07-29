@@ -53,7 +53,7 @@ func TestMap_EmptyOperations(t *testing.T) {
 	if m.WriteToFirst([]byte("data")) {
 		t.Fatal("WriteToFirst on empty map should return false")
 	}
-	m.CloseAll() // must not panic
+	m.CloseAll()        // must not panic
 	m.Remove("missing") // must not panic
 }
 

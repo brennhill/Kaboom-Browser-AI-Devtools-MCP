@@ -10,6 +10,8 @@ code_paths:
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/internal/cli/cli_output.go
+  - cmd/browser-agent/internal/cli/cli_tool_parsers_generate_configure.go
+  - cmd/browser-agent/internal/cli/cli_tool_parsers_interact.go
   - cmd/browser-agent/internal/health/doctor.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -54,6 +56,9 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/codex-config.js
   - docs/mcp-install-guide.md
 test_paths:
+  - cmd/browser-agent/internal/cli/cli_commands_test.go
+  - cmd/browser-agent/internal/cli/cli_coverage_extra_test.go
+  - cmd/browser-agent/internal/cli/cli_test.go
   - cmd/browser-agent/internal/nativeinstall/installer_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
