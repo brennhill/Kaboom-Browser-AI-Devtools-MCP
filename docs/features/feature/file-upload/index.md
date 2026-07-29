@@ -62,6 +62,9 @@ last_verified_date: 2026-03-05
 Upload is security-first: path validation and policy checks must pass before any OS-level dialog automation runs.
 The local Stage 3 upload fixture accepts both fixed-length and chunked multipart
 requests so its CSRF verification matches the streaming production client.
+Permission-path integration coverage uses a local SSRF-enabled form target and
+asserts that no request arrives, keeping the regression independent of external
+DNS while exercising production URL validation.
 Multipart writer panics are recovered at the goroutine boundary and returned
 through the existing writer-error channel, so callers receive a failed
 submission instead of a process crash or silent partial request.

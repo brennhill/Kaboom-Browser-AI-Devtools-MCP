@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -513,6 +514,14 @@ func TestUploadInteg_HTTP_OSAutomation_SuccessPath(t *testing.T) {
 // ============================================
 
 func TestUploadInteg_FormSubmit_FilePermissionDenied(t *testing.T) {
+	allowTestSSRF(t)
+	var submitted atomic.Bool
+	formTarget := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		submitted.Store(true)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer formTarget.Close()
+
 	dir := t.TempDir()
 	path := filepath.Join(dir, "noperm.txt")
 	if err := os.WriteFile(path, []byte("data"), 0o000); err != nil {
@@ -522,7 +531,7 @@ func TestUploadInteg_FormSubmit_FilePermissionDenied(t *testing.T) {
 
 	sec := testUploadSecurity(t)
 	resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
-		FormAction:    "https://example.com/upload",
+		FormAction:    formTarget.URL + "/upload",
 		FileInputName: "file",
 		FilePath:      path,
 	}, sec)
@@ -535,5 +544,8 @@ func TestUploadInteg_FormSubmit_FilePermissionDenied(t *testing.T) {
 	if !strings.Contains(strings.ToLower(resp.Error), "open") &&
 		!strings.Contains(strings.ToLower(resp.Error), "permission") {
 		t.Errorf("error should mention open/permission failure, got: %s", resp.Error)
+	}
+	if submitted.Load() {
+		t.Error("unreadable file should fail before the form target receives a request")
 	}
 }
