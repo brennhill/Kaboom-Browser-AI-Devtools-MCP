@@ -136,6 +136,26 @@ test('install-bundled-skills.sh markers match the real bundled manifest versions
   }
 })
 
+test('install-bundled-skills.sh keeps Codex YAML frontmatter first', () => {
+  if (process.platform === 'win32') return
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-sh-codex-'))
+  try {
+    const codexRoot = path.join(tmp, 'codex-skills')
+    const res = runSkillsScript({
+      KABOOM_CODEX_SKILLS_DIR: codexRoot,
+      KABOOM_SKILL_TARGETS: 'codex',
+      KABOOM_SKILL_SCOPE: 'global',
+    })
+    assert.equal(res.status, 0, `script failed:\nstdout: ${res.stdout}\nstderr: ${res.stderr}`)
+
+    const content = fs.readFileSync(path.join(codexRoot, 'debug', 'SKILL.md'), 'utf8')
+    assert.match(content, /^---\n/, 'Codex requires YAML frontmatter on the first line')
+    assert.match(content, /\n<!-- kaboom-managed-skill id:debug version:\d+ -->\n/)
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
 test('installer stamps the install epoch next to the binary (latest-install-wins tiebreaker)', () => {
   const installSh = fs.readFileSync(path.join(REPO_ROOT, 'scripts/install.sh'), 'utf8')
   // A per-install epoch stamp gives the daemon's single-instance takeover a

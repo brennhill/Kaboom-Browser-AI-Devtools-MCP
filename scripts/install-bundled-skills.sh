@@ -130,10 +130,21 @@ install_skill() {
 
   local tmp_file
   tmp_file="$(mktemp)"
-  {
-    printf "%s id:%s version:%s -->\n" "$MARKER" "$skill_id" "$version"
-    cat "$src_file"
-  } >"$tmp_file"
+  local managed_marker="$MARKER id:$skill_id version:$version -->"
+  if [ "$agent" = "codex" ] && [ "$(head -n 1 "$src_file")" = "---" ]; then
+    awk -v marker="$managed_marker" '
+      { print }
+      NR > 1 && $0 == "---" && !inserted {
+        print marker
+        inserted = 1
+      }
+    ' "$src_file" >"$tmp_file"
+  else
+    {
+      printf "%s\n" "$managed_marker"
+      cat "$src_file"
+    } >"$tmp_file"
+  fi
 
   if [ -f "$dest" ]; then
     if cmp -s "$tmp_file" "$dest"; then

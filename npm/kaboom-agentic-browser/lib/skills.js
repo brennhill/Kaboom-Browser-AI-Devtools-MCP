@@ -407,8 +407,17 @@ async function loadSkillCatalog(options = {}) {
   }
 }
 
-function buildManagedContent(skillId, version, body) {
-  return `${MANAGED_MARKER} id:${skillId} version:${version} -->\n${body}`;
+function buildManagedContent(agent, skillId, version, body) {
+  const marker = `${MANAGED_MARKER} id:${skillId} version:${version} -->`;
+  if (agent !== 'codex' || !body.startsWith('---\n')) {
+    return `${marker}\n${body}`;
+  }
+  const frontmatterEnd = body.indexOf('\n---\n', 4);
+  if (frontmatterEnd < 0) {
+    return `${marker}\n${body}`;
+  }
+  const insertionPoint = frontmatterEnd + '\n---'.length;
+  return `${body.slice(0, insertionPoint)}\n${marker}${body.slice(insertionPoint)}`;
 }
 
 function isManagedSkillContent(content) {
@@ -485,7 +494,10 @@ function removeManagedSkillFile(agent, rootDir, skillId, options = {}) {
 
 function isManagedSkillFileStart(content) {
   const text = String(content || '');
-  return text.startsWith(MANAGED_MARKER);
+  if (text.startsWith(MANAGED_MARKER)) return true;
+  if (!text.startsWith('---\n')) return false;
+  const frontmatterEnd = text.indexOf('\n---\n', 4);
+  return frontmatterEnd >= 0 && text.startsWith(MANAGED_MARKER, frontmatterEnd + 5);
 }
 
 /**
@@ -644,7 +656,7 @@ async function installBundledSkills(options = {}) {
         continue;
       }
       for (const skill of bundledSkills) {
-        const content = buildManagedContent(skill.id, skill.version, skill.body);
+        const content = buildManagedContent(agent, skill.id, skill.version, skill.body);
         const filePath = skillFilePath(agent, rootDir, skill.id);
         const writeResult = safeWriteManagedFile(filePath, content);
         results.push({ agent, rootDir, skill: skill.id, ...writeResult });

@@ -159,6 +159,9 @@ OpenAPI contract.
   locations. They contain no historical-brand cleanup or alternate config-key
   branches; the authored installer scripts are regression-checked below 800
   lines.
+- Managed Codex skills keep YAML frontmatter as the first document block; the
+  Kaboom ownership/version marker is inserted immediately after frontmatter so
+  Codex validation and safe managed cleanup both recognize the installed file.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
 - Native `--install` has the same Codex support as the npm entry point.
   `--install codex` selects Codex explicitly; unknown positional targets fail

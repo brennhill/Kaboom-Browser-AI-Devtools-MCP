@@ -64,9 +64,31 @@ function makeSkillsFixture(tmp) {
     JSON.stringify({ skills: [{ id: 'demo', version: 3 }] }),
     'utf8'
   );
-  fs.writeFileSync(path.join(skillsDir, 'demo', 'SKILL.md'), '# Demo\nbody\n', 'utf8');
+  fs.writeFileSync(
+    path.join(skillsDir, 'demo', 'SKILL.md'),
+    '---\nname: demo\ndescription: Demo skill.\n---\n# Demo\nbody\n',
+    'utf8'
+  );
   return skillsDir;
 }
+
+test('installBundledSkills preserves Codex frontmatter as the first document block', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-codex-frontmatter-'));
+  try {
+    const codexRoot = path.join(tmp, 'codex-skills');
+    const skillsDir = makeSkillsFixture(tmp);
+    const result = await withEnv({ KABOOM_CODEX_SKILLS_DIR: codexRoot }, () =>
+      installBundledSkills({ agents: ['codex'], scope: 'global', skillsDir })
+    );
+
+    assert.equal(result.summary.created, 1);
+    const content = fs.readFileSync(path.join(codexRoot, 'demo', 'SKILL.md'), 'utf8');
+    assert.match(content, /^---\nname: demo\ndescription: Demo skill\.\n---\n/);
+    assert.match(content, /\n<!-- kaboom-managed-skill id:demo version:3 -->\n# Demo/);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
 
 // --- isAgentRootInstallable (regression: postinstall fabricated ~/.gemini etc.) ---
 
