@@ -64,6 +64,24 @@ describe('Extension Integration', () => {
     )
   })
 
+  test('background/index.js does not expose internal circuit-breaker batchers', () => {
+    const indexPath = path.join(EXTENSION_DIR, 'background/index.js')
+    const content = fs.readFileSync(indexPath, 'utf8')
+
+    for (const name of [
+      'logBatcherWithCB',
+      'enhancedActionBatcherWithCB',
+      'networkBodyBatcherWithCB',
+      'perfBatcherWithCB'
+    ]) {
+      assert.doesNotMatch(
+        content,
+        new RegExp(`export const ${name}\\b`),
+        `${name} is an internal factory detail, not a background entry-point API`
+      )
+    }
+  })
+
   test('TypeScript source is not newer than compiled output', () => {
     const indexPath = path.join(EXTENSION_DIR, 'background/index.js')
     const srcDir = path.join(__dirname, '../../../src')

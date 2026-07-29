@@ -92,6 +92,7 @@ test_paths:
   - tests/extension/sync/background-batching.test.js
   - tests/extension/sync/batcher-instances.test.js
   - tests/extension/sync/sync-manager.test.js
+  - tests/extension/misc/integration.test.cjs
   - tests/extension/capture/observe-screenshot.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
   - tests/extension/network-http/network-bodies-fixture.js
@@ -147,6 +148,9 @@ Dead exported capture methods for extension-version reads, lifecycle
 unsubscription, settings-cache writes, and extension-log-only clearing have
 also been removed. Startup settings loading and atomic `ClearAll` remain the
 canonical behaviors.
+The background entry point exports only the batchers consumed by extension
+startup. Circuit-breaker wrapper instances remain owned by the canonical
+batcher factory and are not re-exported as an unused public surface.
 Count, timestamp, and buffer-memory accessors used only by capture tests are
 gone as well. Behavioral tests now count canonical detached snapshots, while
 package-internal buffer tests inspect the owning `BufferStore` invariants

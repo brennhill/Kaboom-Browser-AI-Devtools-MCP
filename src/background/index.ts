@@ -201,15 +201,11 @@ const _batchers = createBatcherInstances(
   sharedServerCircuitBreaker
 )
 
-export const logBatcherWithCB = _batchers.logBatcherWithCB
 export const logBatcher = _batchers.logBatcher
 const wsBatcherWithCB = _batchers.wsBatcherWithCB
 export const wsBatcher = _batchers.wsBatcher
-export const enhancedActionBatcherWithCB = _batchers.enhancedActionBatcherWithCB
 export const enhancedActionBatcher = _batchers.enhancedActionBatcher
-export const networkBodyBatcherWithCB = _batchers.networkBodyBatcherWithCB
 export const networkBodyBatcher = _batchers.networkBodyBatcher
-export const perfBatcherWithCB = _batchers.perfBatcherWithCB
 export const perfBatcher = _batchers.perfBatcher
 
 // =============================================================================
