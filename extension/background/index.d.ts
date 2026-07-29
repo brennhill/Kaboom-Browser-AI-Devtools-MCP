@@ -35,14 +35,10 @@ export declare function exportDebugLog(): string;
  */
 export declare function setDebugMode(enabled: boolean): void;
 export declare const sharedServerCircuitBreaker: import("./sync/circuit-breaker.js").CircuitBreaker;
-export declare const logBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<LogEntry>;
 export declare const logBatcher: import("./sync/batchers.js").Batcher<LogEntry>;
 export declare const wsBatcher: import("./sync/batchers.js").Batcher<import("../types/index.js").WireWebSocketEvent>;
-export declare const enhancedActionBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<import("../types/index.js").WireEnhancedAction>;
 export declare const enhancedActionBatcher: import("./sync/batchers.js").Batcher<import("../types/index.js").WireEnhancedAction>;
-export declare const networkBodyBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<import("../types/index.js").WireNetworkBody>;
 export declare const networkBodyBatcher: import("./sync/batchers.js").Batcher<import("../types/index.js").WireNetworkBody>;
-export declare const perfBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<import("../types/index.js").WirePerformanceSnapshot>;
 export declare const perfBatcher: import("./sync/batchers.js").Batcher<import("../types/index.js").WirePerformanceSnapshot>;
 export declare function handleLogMessage(payload: LogEntry, sender: ChromeMessageSender, tabId?: number): Promise<void>;
 export declare function handleClearLogs(): Promise<{
