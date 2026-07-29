@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
@@ -38,10 +39,9 @@ func HandleFormSubmit(req FormSubmitRequest, sec *uploadsec.Security) StageRespo
 }
 
 func ExecuteFormSubmit(ctx context.Context, req FormSubmitRequest, file *os.File, info os.FileInfo, writer *multipart.Writer, pr *io.PipeReader, pw *io.PipeWriter, start time.Time) StageResponse {
-	writeErrCh := make(chan error, 1)
-	go func() { // lint:allow-bare-goroutine — short-lived pipe writer, error captured via channel
-		writeErrCh <- StreamMultipartForm(pw, writer, req, file)
-	}()
+	writeErrCh := runFormWriter(func() error {
+		return StreamMultipartForm(pw, writer, req, file)
+	})
 
 	httpReq, err := http.NewRequestWithContext(ctx, req.Method, req.FormAction, pr)
 	if err != nil {
@@ -84,6 +84,19 @@ func ExecuteFormSubmit(ctx context.Context, req FormSubmitRequest, file *os.File
 		FileName:      filepath.Base(req.FilePath),
 		FileSizeBytes: info.Size(), DurationMs: time.Since(start).Milliseconds(),
 	}
+}
+
+func runFormWriter(write func() error) <-chan error {
+	result := make(chan error, 1)
+	go func() { // lint:allow-bare-goroutine — panic must become the caller-visible writer error
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				result <- fmt.Errorf("multipart writer panic: %v\n%s", recovered, debug.Stack())
+			}
+		}()
+		result <- write()
+	}()
+	return result
 }
 
 func HandleFormSubmitCtx(ctx context.Context, req FormSubmitRequest, sec *uploadsec.Security) StageResponse {

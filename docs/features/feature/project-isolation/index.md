@@ -7,10 +7,12 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - internal/state/paths.go
+  - internal/persistence/persistence_store.go
 test_paths:
   - internal/state/paths_test.go
   - internal/state/paths_coverage_test.go
   - internal/state/no_facade_test.go
+  - internal/persistence/persistence_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -41,3 +43,6 @@ last_verified_date: 2026-03-05
 Shared runtime state resolves through `internal/state` and honors
 `KABOOM_STATE_DIR` as its explicit isolation boundary. The package exposes only
 canonical paths; callers do not read, migrate, or delete historical locations.
+Persistence's asynchronous flush runs through the shared panic-contained
+goroutine launcher, keeping a background storage failure from terminating the
+daemon.

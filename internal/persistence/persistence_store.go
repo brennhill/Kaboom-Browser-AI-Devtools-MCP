@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 func NewSessionStore(projectPath string) (*SessionStore, error) {
@@ -56,7 +57,7 @@ func newSessionStoreInDir(projectPath, projectDir string, flushInterval time.Dur
 		return nil, fmt.Errorf("failed to load meta: %w", err)
 	}
 
-	go s.backgroundFlush()
+	util.SafeGo(s.backgroundFlush)
 	return s, nil
 }
 

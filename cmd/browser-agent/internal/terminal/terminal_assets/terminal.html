@@ -515,6 +515,7 @@
 
       // Listen for parent frame commands
       window.addEventListener('message', function(event) {
+        if (event.source !== window.parent) return;
         if (!event.data || event.data.target !== 'kaboom-terminal') return;
         switch (event.data.command) {
           case 'focus':

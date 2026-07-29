@@ -117,6 +117,15 @@ describe('terminal.html half-open socket detection', () => {
     assert.match(html, /notifyParent\('execution_provider_detected'/)
   })
 
+  test('accepts terminal commands only from the actual parent frame', () => {
+    assert.match(html, /event\.source !== window\.parent/)
+    assert.ok(
+      html.indexOf('event.source !== window.parent') <
+        html.indexOf("event.data.target !== 'kaboom-terminal'"),
+      'source validation must happen before command dispatch'
+    )
+  })
+
   test('a socket silent past the threshold is force-closed and recovery starts', () => {
     const h = runTerminalPage()
     openSocket(h)
