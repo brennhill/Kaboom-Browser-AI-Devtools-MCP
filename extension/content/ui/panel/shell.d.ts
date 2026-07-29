@@ -20,6 +20,7 @@ export interface ShellDeps {
     onClose(): void;
     createRootFolderBar(): HTMLDivElement;
     setStatusDot(el: HTMLSpanElement): void;
+    setProviderBadge(el: HTMLSpanElement): void;
     setMinimizeButton(el: HTMLButtonElement): void;
     setTerminalShell(el: HTMLDivElement): void;
     setTerminalBody(el: HTMLDivElement): void;

@@ -6,8 +6,16 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-29
 code_paths:
+  - src/content/draw-mode/lifecycle-overlay.js
+  - src/content/draw-mode/input-rendering.js
+  - src/content/draw-mode/element-capture.js
+  - src/content/draw-mode/element-analysis.js
+  - src/content/draw-mode/persistence-submission.js
+  - src/content/draw-mode/geometry-context.js
+  - scripts/build/generate-draw-mode.js
   - extension/content/draw-mode.js
 test_paths:
+  - tests/extension/draw-mode/draw-mode-generation.test.js
   - tests/extension/draw-mode/draw-mode.test.js
   - tests/extension/draw-mode/draw-mode-drawing.test.js
 last_verified_version: 0.7.12

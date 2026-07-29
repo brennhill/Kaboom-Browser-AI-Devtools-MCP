@@ -14,6 +14,11 @@ UAT_PRIOR_TRACKED_TAB_ID=""
 UAT_PRIOR_TRACKED_TAB_URL=""
 UAT_USER_DAEMON_PORT=""
 UAT_USER_WRAPPER=""
+UAT_CONNECTED_READINESS_REASON=""
+UAT_CONNECTED_READY_ATTEMPTS="${UAT_CONNECTED_READY_ATTEMPTS:-100}"
+UAT_DISPOSABLE_TAB_ID=""
+UAT_DISPOSABLE_TAB_URL=""
+UAT_DISPOSABLE_TAB_CLOSED=0
 
 uat_find_port_pid() {
     lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null | head -n 1
@@ -58,6 +63,141 @@ uat_capture_tracked_tab() {
         | fromjson
         | (.tabs[]? | select(.tracked == true) | [.id, .url] | @tsv)
     ' 2>/dev/null | head -n 1
+}
+
+uat_connected_health_payload() {
+    curl -s --max-time 1 "http://127.0.0.1:$1/health" 2>/dev/null
+}
+
+uat_connected_tracked_tab() {
+    uat_capture_tracked_tab "$1" "$2"
+}
+
+uat_check_connected_readiness() {
+    local port="$1"
+    local wrapper="$2"
+    local health=""
+    local connected=""
+    local last_seen=""
+    local tracked=""
+
+    health="$(uat_connected_health_payload "$port")"
+    if [ -z "$health" ]; then
+        UAT_CONNECTED_READINESS_REASON="daemon health unavailable on port $port"
+        return 1
+    fi
+
+    connected="$(printf '%s' "$health" |
+        jq -r '.capture.extension_connected // false' 2>/dev/null)"
+    if [ "$connected" != "true" ]; then
+        last_seen="$(printf '%s' "$health" |
+            jq -r '.capture.extension_last_seen // "never"' 2>/dev/null)"
+        UAT_CONNECTED_READINESS_REASON="extension not connected on port $port (last seen: $last_seen)"
+        return 1
+    fi
+
+    tracked="$(uat_connected_tracked_tab "$port" "$wrapper")"
+    if [ -z "$tracked" ]; then
+        UAT_CONNECTED_READINESS_REASON="no tracked browser tab on port $port"
+        return 1
+    fi
+
+    UAT_CONNECTED_READINESS_REASON="ready"
+    return 0
+}
+
+uat_readiness_sleep() {
+    sleep 0.1
+}
+
+uat_wait_for_connected_browser() {
+    local port="$1"
+    local wrapper="$2"
+    local attempt=0
+
+    while [ "$attempt" -lt "$UAT_CONNECTED_READY_ATTEMPTS" ]; do
+        if uat_check_connected_readiness "$port" "$wrapper"; then
+            return 0
+        fi
+        attempt=$((attempt + 1))
+        [ "$attempt" -lt "$UAT_CONNECTED_READY_ATTEMPTS" ] && uat_readiness_sleep
+    done
+
+    echo "Connected UAT readiness timed out: $UAT_CONNECTED_READINESS_REASON" >&2
+    return 1
+}
+
+uat_new_tab_id() {
+    printf '%s' "$1" | jq -r '
+        [
+            (.. | objects | select(.action? == "new_tab") | .tab_id?),
+            (
+                .result.content[]?.text
+                | split("\n")[]
+                | fromjson?
+                | .. | objects
+                | select(.action? == "new_tab")
+                | .tab_id?
+            )
+        ]
+        | map(select(type == "number" and . > 0))
+        | first // empty
+    ' 2>/dev/null
+}
+
+uat_wait_for_disposable_tracking() {
+    local attempt=0
+    local tracked=""
+    while [ "$attempt" -lt "$UAT_CONNECTED_READY_ATTEMPTS" ]; do
+        tracked="$(uat_connected_tracked_tab "$UAT_USER_DAEMON_PORT" "$UAT_USER_WRAPPER")"
+        if [ "$(printf '%s' "$tracked" | cut -f1)" = "$UAT_DISPOSABLE_TAB_ID" ]; then
+            return 0
+        fi
+        attempt=$((attempt + 1))
+        [ "$attempt" -lt "$UAT_CONNECTED_READY_ATTEMPTS" ] && uat_readiness_sleep
+    done
+    return 1
+}
+
+uat_create_disposable_tab() {
+    local port="$1"
+    local wrapper="$2"
+    local response=""
+
+    UAT_USER_DAEMON_PORT="$port"
+    UAT_USER_WRAPPER="$wrapper"
+    UAT_DISPOSABLE_TAB_URL="${KABOOM_UAT_TEST_URL:-http://127.0.0.1:${port}/tests/interact.html}"
+    response="$(uat_call_tool "$wrapper" "$port" "interact" \
+        '{"what":"new_tab","url":'"$(printf '%s' "$UAT_DISPOSABLE_TAB_URL" | jq -Rs .)"'}')"
+    UAT_DISPOSABLE_TAB_ID="$(uat_new_tab_id "$response")"
+    if [ -z "$UAT_DISPOSABLE_TAB_ID" ]; then
+        echo "Failed to create disposable UAT tab: no created tab_id in response" >&2
+        return 1
+    fi
+    if ! uat_wait_for_disposable_tracking; then
+        echo "Failed to track disposable UAT tab $UAT_DISPOSABLE_TAB_ID" >&2
+        return 1
+    fi
+}
+
+uat_ensure_cleanup_daemon() {
+    if [ -n "$(uat_connected_health_payload "$UAT_USER_DAEMON_PORT")" ]; then
+        return 0
+    fi
+    [ -x "$UAT_USER_WRAPPER" ] || return 1
+    nohup "$UAT_USER_WRAPPER" --daemon --port "$UAT_USER_DAEMON_PORT" \
+        >/dev/null 2>&1 < /dev/null &
+    uat_wait_for_daemon "$UAT_USER_DAEMON_PORT"
+}
+
+uat_close_disposable_tab() {
+    [ -n "$UAT_DISPOSABLE_TAB_ID" ] || return 0
+    [ "$UAT_DISPOSABLE_TAB_CLOSED" = "0" ] || return 0
+    uat_ensure_cleanup_daemon || return 1
+    uat_wait_for_extension "$UAT_USER_DAEMON_PORT" || return 1
+    uat_call_tool "$UAT_USER_WRAPPER" "$UAT_USER_DAEMON_PORT" "interact" \
+        '{"what":"close_tab","tab_id":'"$UAT_DISPOSABLE_TAB_ID"'}' >/dev/null || return 1
+    UAT_DISPOSABLE_TAB_CLOSED=1
 }
 
 uat_snapshot_user_state() {
@@ -160,6 +300,8 @@ uat_restore_user_state() {
     [ "$UAT_USER_STATE_RESTORED" = "0" ] || return 0
     UAT_USER_STATE_RESTORED=1
 
+    uat_close_disposable_tab ||
+        echo "WARNING: failed to close disposable UAT tab $UAT_DISPOSABLE_TAB_ID" >&2
     uat_stop_port "$UAT_USER_DAEMON_PORT"
     if [ "$UAT_PRIOR_LAUNCHAGENT_REGISTERED" = "1" ] &&
         [ "$UAT_PRIOR_LAUNCHAGENT_RUNNING" = "0" ]; then

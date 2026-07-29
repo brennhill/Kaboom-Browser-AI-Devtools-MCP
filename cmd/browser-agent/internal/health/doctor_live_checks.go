@@ -4,13 +4,24 @@
 package health
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
+
+var doctorLookPath = exec.LookPath
+
+var doctorCommandOutput = func(timeout time.Duration, name string, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return exec.CommandContext(ctx, name, args...).CombinedOutput()
+}
 
 // DoctorCheck represents a single diagnostic check result.
 type DoctorCheck struct {
@@ -48,7 +59,7 @@ func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Capture, ver string) {
 
 // RunDoctorChecks runs all live diagnostic checks against the capture instance.
 func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
-	checks := make([]DoctorCheck, 0, 9)
+	checks := make([]DoctorCheck, 0, 11)
 	snap := capture.NewHealthReader(cap).Snapshot()
 
 	// 1. Extension connectivity.
@@ -160,6 +171,68 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 		cmdExecCheck.Fix = "Inspect observe(what:\"failed_commands\") for recent expiry/timeout/error events and verify extension polling (/sync). If degradation persists, reload the extension or run configure(action:\"restart\")."
 	}
 	checks = append(checks, cmdExecCheck)
+	checks = append(checks, runAIAuthDoctorCheck("claude"), runAIAuthDoctorCheck("codex"))
 
 	return checks
+}
+
+func runAIAuthDoctorCheck(tool string) DoctorCheck {
+	name := tool + "_auth"
+	displayName := strings.ToUpper(tool[:1]) + tool[1:]
+	if _, err := doctorLookPath(tool); err != nil {
+		return DoctorCheck{
+			Name: name, Status: "pass",
+			Detail: displayName + " CLI is not installed (optional)",
+		}
+	}
+
+	args := []string{"auth", "status"}
+	if tool == "codex" {
+		args = []string{"login", "status"}
+	}
+	output, err := doctorCommandOutput(2*time.Second, tool, args...)
+	normalized := strings.ToLower(string(output))
+	compact := strings.NewReplacer(" ", "", "\n", "", "\t", "").Replace(normalized)
+	if strings.Contains(normalized, "keychain") {
+		return DoctorCheck{
+			Name: name, Status: "fail",
+			Detail: displayName + " authentication failed because the local keychain is unavailable",
+			Fix:    "Repair or reset the login keychain, then sign in to " + displayName + " again.",
+		}
+	}
+	if strings.Contains(normalized, "api key") ||
+		strings.Contains(normalized, "access token") ||
+		strings.Contains(compact, `"authmethod":"apikey"`) {
+		return DoctorCheck{
+			Name: name, Status: "warn",
+			Detail: displayName + " is authenticated with API billing rather than a subscription",
+			Fix:    "Sign out and sign in with your subscription account, or explicitly confirm API billing in the terminal.",
+		}
+	}
+	if tool == "claude" &&
+		strings.Contains(compact, `"loggedin":true`) &&
+		strings.Contains(compact, `"authmethod":"claude.ai"`) {
+		return DoctorCheck{
+			Name: name, Status: "pass",
+			Detail: "Claude subscription authentication is active",
+		}
+	}
+	if tool == "codex" && strings.Contains(normalized, "logged in using chatgpt") {
+		return DoctorCheck{
+			Name: name, Status: "pass",
+			Detail: "Codex ChatGPT subscription authentication is active",
+		}
+	}
+	if err != nil || strings.Contains(normalized, "not logged in") {
+		return DoctorCheck{
+			Name: name, Status: "warn",
+			Detail: displayName + " is not authenticated",
+			Fix:    "Open the Kaboom terminal and sign in to " + displayName + " with your subscription account.",
+		}
+	}
+	return DoctorCheck{
+		Name: name, Status: "warn",
+		Detail: displayName + " authentication provider could not be determined",
+		Fix:    "Run " + tool + " authentication status manually before starting a billed session.",
+	}
 }

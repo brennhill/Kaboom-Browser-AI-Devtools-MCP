@@ -11,6 +11,7 @@ import { persist } from './lib/storage/io.js';
 import { getLocal, getLocals } from './lib/storage/local.js';
 import { getSession, setSession } from './lib/storage/session.js';
 import { updateConnectionStatus } from './popup/shell/status-display.js';
+import { refreshSystemDoctor } from './popup/system-doctor.js';
 import { setupRecordingUI } from './popup/recording/recording.js';
 import { setupDrawModeButton } from './popup/draw-mode.js';
 import { setupActionRecordingUI } from './popup/recording/action-recording.js';
@@ -115,6 +116,12 @@ function requestTrackedHoverLauncherReshow() {
 function cacheStatus(status) {
     persist(setSession(StorageKey.POPUP_LAST_STATUS, status), 'popup-last-status');
 }
+function renderPopupStatus(status, shouldCache = true) {
+    updateConnectionStatus(status);
+    if (shouldCache)
+        cacheStatus(status);
+    void refreshSystemDoctor(status);
+}
 /**
  * Initialize the popup.
  *
@@ -146,8 +153,7 @@ export function initPopup() {
     // Listen for status updates
     chrome.runtime.onMessage.addListener((message) => {
         if (message.type === 'status_update' && message.status) {
-            updateConnectionStatus(message.status);
-            cacheStatus(message.status);
+            renderPopupStatus(message.status);
         }
     });
     // Listen for storage changes (e.g., tracked tab URL updates)
@@ -164,13 +170,13 @@ export function initPopup() {
     void getSession(StorageKey.POPUP_LAST_STATUS).then((value) => {
         const cached = value;
         if (cached)
-            updateConnectionStatus(cached);
+            renderPopupStatus(cached, false);
     });
     // ── Fresh status: request from background (async IPC) ────────────────
     try {
         chrome.runtime.sendMessage({ type: 'get_status' }, (status) => {
             if (chrome.runtime.lastError) {
-                updateConnectionStatus({
+                renderPopupStatus({
                     connected: false,
                     entries: 0,
                     maxEntries: DEFAULT_MAX_ENTRIES,
@@ -181,13 +187,12 @@ export function initPopup() {
                 return;
             }
             if (status) {
-                updateConnectionStatus(status);
-                cacheStatus(status);
+                renderPopupStatus(status);
             }
         });
     }
     catch {
-        updateConnectionStatus({
+        renderPopupStatus({
             connected: false,
             entries: 0,
             maxEntries: DEFAULT_MAX_ENTRIES,

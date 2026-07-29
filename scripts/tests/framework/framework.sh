@@ -6,6 +6,8 @@ set -eo pipefail
 
 FRAMEWORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEST_DAEMON_CLEANER="$FRAMEWORK_DIR/../../cleanup-test-daemons.sh"
+# shellcheck source=uat-user-state.sh
+source "$FRAMEWORK_DIR/uat-user-state.sh"
 
 # ── Timeout Compatibility ──────────────────────────────────
 # macOS doesn't ship with `timeout`. Use gtimeout from coreutils if available.
@@ -426,6 +428,15 @@ wait_for_health() {
     return 1
 }
 
+wait_for_required_connected_browser() {
+    [ "${KABOOM_UAT_REQUIRE_CONNECTED:-0}" = "1" ] || return 0
+    if ! uat_wait_for_connected_browser "$PORT" "$WRAPPER"; then
+        echo "WARNING: connected browser readiness failed: $UAT_CONNECTED_READINESS_REASON" >&2
+        return 1
+    fi
+    echo "  Connected browser ready: extension heartbeat and tracked tab available"
+}
+
 start_daemon() {
     # Kill any existing daemon first to prevent PID leaks
     kill_server
@@ -442,6 +453,7 @@ start_daemon() {
         echo "WARNING: daemon on port $PORT not healthy after startup (PID $DAEMON_PID)" >&2
         return 1
     fi
+    wait_for_required_connected_browser || return 1
     # Print daemon version to catch stale binary issues
     local daemon_ver
     daemon_ver="$(curl -s --connect-timeout 3 "http://127.0.0.1:${PORT}/health" 2>/dev/null | jq -r '.version // "unknown"' 2>/dev/null || echo "unknown")"
@@ -464,6 +476,7 @@ start_daemon_with_flags() {
         echo "WARNING: daemon on port $PORT not healthy after startup (PID $DAEMON_PID)" >&2
         return 1
     fi
+    wait_for_required_connected_browser || return 1
     # Print daemon version to catch stale binary issues
     local daemon_ver
     daemon_ver="$(curl -s --connect-timeout 3 "http://127.0.0.1:${PORT}/health" 2>/dev/null | jq -r '.version // "unknown"' 2>/dev/null || echo "unknown")"

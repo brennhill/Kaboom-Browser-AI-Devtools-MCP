@@ -7,6 +7,7 @@
 export declare const WIDGET_ID = "kaboom-terminal-widget";
 export declare const IFRAME_ID = "kaboom-terminal-iframe";
 export declare const HEADER_ID = "kaboom-terminal-header";
+export declare const TERMINAL_PROVIDER_BADGE_ID = "kaboom-terminal-provider-badge";
 export declare const TERMINAL_BODY_ID = "kaboom-terminal-body";
 export declare const DISCONNECT_TERMINAL_BUTTON_ID = "kaboom-terminal-disconnect-button";
 export declare const ANNOTATE_TERMINAL_BUTTON_ID = "kaboom-terminal-annotate-button";

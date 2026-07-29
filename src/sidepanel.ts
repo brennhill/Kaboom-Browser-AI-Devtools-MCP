@@ -51,6 +51,10 @@ import {
 } from './content/ui/terminal-panel-states.js'
 import { createPanelShell as buildPanelShell } from './content/ui/panel/shell.js'
 import {
+  updateConnectionIndicator,
+  updateExecutionProviderBadge
+} from './content/ui/panel/status-indicators.js'
+import {
   notifyIframe,
   resetWriteGuardState,
   shouldDeferQueuedWrite,
@@ -77,6 +81,7 @@ interface PanelUi {
   terminalShellEl: HTMLDivElement | null
   terminalBodyEl: HTMLDivElement | null
   statusDotEl: HTMLSpanElement | null
+  providerBadgeEl: HTMLSpanElement | null
   minimizeButtonEl: HTMLButtonElement | null
   runtimeListenerInstalled: boolean
   storageListenerInstalled: boolean
@@ -101,6 +106,7 @@ function freshPanelUi(): PanelUi {
     terminalShellEl: null,
     terminalBodyEl: null,
     statusDotEl: null,
+    providerBadgeEl: null,
     minimizeButtonEl: null,
     runtimeListenerInstalled: false,
     storageListenerInstalled: false,
@@ -134,7 +140,6 @@ function exhaustionRecoveryCeilingReached(): boolean {
 function resetExhaustionRecovery(): void {
   panel.reconnectRecoveryAt = []
 }
-
 const panel = freshPanelUi()
 
 /**
@@ -155,7 +160,6 @@ function setPanelVisible(visible: boolean): void {
   panel.rootEl.style.opacity = visible ? '1' : '0'
   panel.rootEl.style.pointerEvents = visible ? 'auto' : 'none'
 }
-
 // The terminal is a full-height side panel; there is no collapse-in-place state
 // (the old MINIMIZED_WIDGET_HEIGHT was leftover from the in-page-widget era and
 // was never actually applied \u2014 every caller passed `visible: true`). The body is
@@ -168,7 +172,6 @@ function showTerminalBody(): void {
   panel.terminalShellEl.style.minHeight = '0'
   panel.terminalShellEl.style.flex = '1 1 auto'
 }
-
 /**
  * Show the recoverable no-session state in the terminal body.
  */
@@ -268,21 +271,6 @@ function showSandboxError(
   surfaceTerminalStartFailure(panel.terminalBodyEl, message, instruction, command)
 }
 
-function updateStatusDot(dotState: 'connected' | 'disconnected' | 'exited'): void {
-  if (!panel.statusDotEl) return
-  switch (dotState) {
-    case 'connected':
-      panel.statusDotEl.style.background = '#9ece6a'
-      break
-    case 'disconnected':
-      panel.statusDotEl.style.background = '#e0af68'
-      break
-    case 'exited':
-      panel.statusDotEl.style.background = '#f7768e'
-      break
-  }
-}
-
 function handleIframeMessage(event: MessageEvent): void {
   if (!event.data || event.data.source !== 'kaboom-terminal') return
   try {
@@ -296,7 +284,7 @@ function handleIframeMessage(event: MessageEvent): void {
       // Trail for diagnosing "can't type": these WS transitions are where the
       // terminal loses input when the daemon terminal-server (port+1) blinks.
       console.log('[KaBOOM! terminal] ws connected')
-      updateStatusDot('connected')
+      updateConnectionIndicator(panel.statusDotEl, 'connected')
       state.terminalConnected = true
       // A real connection clears the flap budget so an unrelated future outage
       // gets its own full recovery allowance (E-i).
@@ -307,7 +295,7 @@ function handleIframeMessage(event: MessageEvent): void {
       break
     case 'disconnected':
       console.log('[KaBOOM! terminal] ws disconnected (input paused; writes will queue)')
-      updateStatusDot('disconnected')
+      updateConnectionIndicator(panel.statusDotEl, 'disconnected')
       state.terminalConnected = false
       state.terminalFocused = false
       break
@@ -316,7 +304,7 @@ function handleIframeMessage(event: MessageEvent): void {
       // a full daemon restart. Recover instead of sitting on a permanent silent
       // disconnect: revalidate and rebuild into a fresh session (or the recoverable
       // no-session state). redrawTerminal owns that validate-then-rebuild logic.
-      updateStatusDot('disconnected')
+      updateConnectionIndicator(panel.statusDotEl, 'disconnected')
       state.terminalConnected = false
       state.terminalFocused = false
       if (exhaustionRecoveryCeilingReached()) {
@@ -335,7 +323,7 @@ function handleIframeMessage(event: MessageEvent): void {
       break
     case 'exited':
       console.log('[KaBOOM! terminal] session exited (write-guard reset)')
-      updateStatusDot('exited')
+      updateConnectionIndicator(panel.statusDotEl, 'exited')
       state.terminalConnected = false
       state.terminalFocused = false
       resetWriteGuardState()
@@ -343,6 +331,16 @@ function handleIframeMessage(event: MessageEvent): void {
     case 'api_billing_detected':
       showAPIBillingWarning()
       break
+    case 'execution_provider_detected': {
+      const providerData = event.data.data as { provider?: string; tool?: string } | undefined
+      updateExecutionProviderBadge(
+        panel.providerBadgeEl,
+        providerData?.provider ?? 'unknown',
+        providerData?.tool ?? 'other',
+        showAPIBillingWarning
+      )
+      break
+    }
     case 'focus':
       state.terminalFocused = Boolean((event.data.data as { focused?: boolean } | undefined)?.focused)
       if (state.terminalFocused) {
@@ -389,6 +387,9 @@ function createPanelShell(token: string): HTMLDivElement {
     setStatusDot: (el) => {
       panel.statusDotEl = el
     },
+    setProviderBadge: (el) => {
+      panel.providerBadgeEl = el
+    },
     setMinimizeButton: (el) => {
       panel.minimizeButtonEl = el
     },
@@ -426,6 +427,7 @@ function unmountPanel(): void {
   panel.terminalShellEl = null
   panel.terminalBodyEl = null
   panel.statusDotEl = null
+  panel.providerBadgeEl = null
   panel.minimizeButtonEl = null
   panel.rootFolderBar = null
   state.widgetEl = null

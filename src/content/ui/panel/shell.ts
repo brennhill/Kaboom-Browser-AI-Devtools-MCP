@@ -22,6 +22,7 @@ import {
   REDRAW_TERMINAL_BUTTON_ID,
   MINIMIZE_TERMINAL_BUTTON_ID,
   WIDGET_ID,
+  TERMINAL_PROVIDER_BADGE_ID,
   getTerminalServerUrl
 } from '../terminal-widget-types.js'
 
@@ -34,6 +35,7 @@ export interface ShellDeps {
   onClose(): void
   createRootFolderBar(): HTMLDivElement
   setStatusDot(el: HTMLSpanElement): void
+  setProviderBadge(el: HTMLSpanElement): void
   setMinimizeButton(el: HTMLButtonElement): void
   setTerminalShell(el: HTMLDivElement): void
   setTerminalBody(el: HTMLDivElement): void
@@ -119,6 +121,19 @@ function createTerminalHeader(deps: ShellDeps): HTMLDivElement {
     userSelect: 'none'
   })
 
+  const providerBadge = document.createElement('span')
+  providerBadge.id = TERMINAL_PROVIDER_BADGE_ID
+  providerBadge.textContent = 'Provider · Detecting'
+  providerBadge.title = 'Checking whether this terminal uses a subscription or API billing'
+  Object.assign(providerBadge.style, {
+    color: '#787c99',
+    fontSize: '10px',
+    border: '1px solid #414868',
+    borderRadius: '999px',
+    padding: '2px 6px',
+    whiteSpace: 'nowrap'
+  })
+
   const spacer = document.createElement('div')
   spacer.style.flex = '1'
 
@@ -165,6 +180,7 @@ function createTerminalHeader(deps: ShellDeps): HTMLDivElement {
 
   header.appendChild(statusDot)
   header.appendChild(titleSpan)
+  header.appendChild(providerBadge)
   header.appendChild(disconnectButton)
   header.appendChild(spacer)
   header.appendChild(annotateButton)
@@ -174,6 +190,7 @@ function createTerminalHeader(deps: ShellDeps): HTMLDivElement {
   header.appendChild(closeButton)
 
   deps.setStatusDot(statusDot)
+  deps.setProviderBadge(providerBadge)
   deps.setMinimizeButton(minimizeButton)
   return header
 }

@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-29
 code_paths:
+  - src/popup/system-doctor.ts
   - src/popup.ts
   - src/popup/feature-toggles.ts
   - src/popup/settings.ts
@@ -14,10 +15,13 @@ code_paths:
   - src/options.ts
   - src/background/sync/version-check.ts
   - src/lib/daemon-http.ts
+  - cmd/browser-agent/internal/health/doctor_live_checks.go
   - extension/popup.html
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - tests/extension/system-doctor/system-doctor-ui.test.js
+  - cmd/browser-agent/internal/health/health_coverage_test.go
   - tests/extension/popup-shell/popup-features.test.js
   - tests/extension/popup-shell/popup-toggles.test.js
   - tests/extension/ui-controls/toggle-feature.test.js
@@ -42,6 +46,10 @@ last_verified_date: 2026-03-28
 - Location: `docs/features/feature/browser-extension-enhancement`
 - The popup header now uses the restored Kaboom flame icon consistently and does not swap assets on hover.
 - Popup connection status is heartbeat-based: `Connected` only appears after the daemon reports a live extension heartbeat.
+- The popup System Doctor renders the daemon's canonical readiness checks,
+  including redacted local Claude/Codex authentication classification,
+  subscription-versus-API provider status, keychain failures, version state,
+  extension connectivity, and tracked-tab readiness.
 
 ## Specs
 

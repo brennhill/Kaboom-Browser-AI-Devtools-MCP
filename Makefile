@@ -53,8 +53,11 @@ generate-wire-types:
 generate-dom-primitives:
 	@node scripts/build/generate-dom-primitives.js
 
+generate-draw-mode:
+	@node scripts/build/generate-draw-mode.js
+
 # Compile TypeScript to JavaScript (REQUIRED before tests)
-compile-ts: validate-versions generate-wire-types generate-dom-primitives
+compile-ts: validate-versions generate-wire-types generate-dom-primitives generate-draw-mode
 	@echo "=== Compiling TypeScript ==="
 	@npx tsc
 	@if [ ! -f extension/background/index.js ]; then \

@@ -103,8 +103,14 @@ last_verified_date: 2026-03-05
   are never mistaken for port owners or terminated.
 - Comprehensive UAT has explicit `offline`, `connected`, and `all` suites.
   Offline contracts use an isolated daemon port; connected-browser categories
-  run sequentially on the extension's configured port after connectivity
-  preflight. Run either boundary with `--suite offline|connected`.
+  run sequentially on the extension's configured port. The connected preflight
+  and every category daemon start use the same bounded readiness barrier for
+  daemon health, extension heartbeat, and a tracked browser tab, so startup
+  races cannot be misreported as feature skips. Run either boundary with
+  `--suite offline|connected`.
+- Connected UAT opens and tracks a dedicated local test-harness tab rather than
+  navigating the user's tab. Cleanup closes that tab before restoring the
+  exact prior daemon and tracked-tab state, including signal-driven exits.
 - UAT category suites: `scripts/tests/cat-*.sh`
 - HTTP fixtures and embedded test pages: `cmd/browser-agent/internal/testpages/http.go`
 - WebSocket harness: `cmd/browser-agent/internal/testpages/websocket.go`

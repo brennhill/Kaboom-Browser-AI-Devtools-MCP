@@ -111,6 +111,35 @@ describe('terminal side panel host', () => {
     assert.ok(guidance)
   })
 
+  test('terminal header persistently shows the detected execution provider', async () => {
+    sidepanelState.fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        return Promise.resolve(makeResponse(200, {
+          session_id: 'session-provider',
+          token: 'token-provider',
+          pid: 998
+        }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../../extension/sidepanel.js?v=${++sidepanelState.importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+    dispatchWindowEvent('message', {
+      origin: 'http://localhost:7891',
+      data: {
+        source: 'kaboom-terminal',
+        event: 'execution_provider_detected',
+        data: { provider: 'subscription', tool: 'codex' }
+      }
+    })
+
+    const badge = getElementById('kaboom-terminal-provider-badge')
+    assert.ok(badge)
+    assert.strictEqual(badge.textContent, 'Codex · Subscription')
+    assert.match(badge.title, /ChatGPT subscription/)
+  })
+
   test('daemon-unavailable fallback uses Kaboom copy', async () => {
     sidepanelState.fetchHandler = ({ url }) => {
       if (url.endsWith('/terminal/start')) {

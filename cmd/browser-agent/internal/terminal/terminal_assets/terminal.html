@@ -167,19 +167,30 @@
       var outputDecoder = new TextDecoder();
       var billingScanTail = '';
       var apiBillingReported = false;
+      var executionProviderReported = false;
 
       // Claude can retain a Console/API identity even when no API key is present
       // in the shell. Its own status line is therefore the authoritative fallback
       // signal. Keep only a short, ANSI-free tail; no terminal content is sent.
-      function detectAPIBilling(bytes) {
-        if (apiBillingReported) return;
+      function detectExecutionSignals(bytes) {
         var text = outputDecoder.decode(bytes, { stream: true });
         var plain = (billingScanTail + text)
           .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
         billingScanTail = plain.slice(-256);
-        if (plain.indexOf('API Usage Billing') === -1) return;
-        apiBillingReported = true;
-        notifyParent('api_billing_detected', {});
+        if (!executionProviderReported) {
+          var providerMatch = plain.match(/KABOOM_EXECUTION_PROVIDER=(subscription|api|unknown):(claude|codex|other)/);
+          if (providerMatch) {
+            executionProviderReported = true;
+            notifyParent('execution_provider_detected', {
+              provider: providerMatch[1],
+              tool: providerMatch[2]
+            });
+          }
+        }
+        if (!apiBillingReported && plain.indexOf('API Usage Billing') !== -1) {
+          apiBillingReported = true;
+          notifyParent('api_billing_detected', {});
+        }
       }
 
       function notifyFocusState(focused) {
@@ -251,7 +262,7 @@
           if (event.data instanceof ArrayBuffer) {
             // Binary frame: terminal output
             var outputBytes = new Uint8Array(event.data);
-            detectAPIBilling(outputBytes);
+            detectExecutionSignals(outputBytes);
             term.write(outputBytes);
           } else {
             // Text frame: control message

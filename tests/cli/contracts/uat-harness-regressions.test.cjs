@@ -66,6 +66,8 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(runner, /OFFLINE_UAT_PORT=.*17890/)
     assert.match(runner, /CONNECTED_UAT_PORT=.*7890/)
     assert.match(runner, /preflight_connected_extension/)
+    assert.match(runner, /KABOOM_UAT_REQUIRE_CONNECTED=1/)
+    assert.match(runner, /uat_wait_for_connected_browser/)
     assert.match(runner, /source "\$TESTS_DIR\/framework\/uat-user-state\.sh"/)
     assert.match(runner, /uat_snapshot_user_state "\$CONNECTED_UAT_PORT" "\$WRAPPER"/)
     assert.match(runner, /trap 'uat_exit_for_signal TERM' TERM/)
@@ -74,6 +76,112 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(runner, /Running .* categories sequentially/)
     assert.doesNotMatch(runner, /Running \d+ parallel groups/)
     assert.doesNotMatch(runner, /PORT_GROUP\d+=/)
+  })
+
+  test('connected readiness distinguishes daemon, extension, and tracked-tab prerequisites', () => {
+    const output = userStateCall(`
+      uat_connected_health_payload() { printf '%s\\n' "$UAT_TEST_HEALTH"; }
+      uat_connected_tracked_tab() { printf '%s\\n' "$UAT_TEST_TAB"; }
+
+      UAT_TEST_HEALTH=''
+      UAT_TEST_TAB=''
+      uat_check_connected_readiness 7890 /test/wrapper || true
+      printf 'daemon=%s\\n' "$UAT_CONNECTED_READINESS_REASON"
+
+      UAT_TEST_HEALTH='{"capture":{"extension_connected":false,"extension_last_seen":"never"}}'
+      uat_check_connected_readiness 7890 /test/wrapper || true
+      printf 'extension=%s\\n' "$UAT_CONNECTED_READINESS_REASON"
+
+      UAT_TEST_HEALTH='{"capture":{"extension_connected":true}}'
+      uat_check_connected_readiness 7890 /test/wrapper || true
+      printf 'tab=%s\\n' "$UAT_CONNECTED_READINESS_REASON"
+
+      UAT_TEST_TAB='73\thttps://test.example/'
+      uat_check_connected_readiness 7890 /test/wrapper
+      printf 'ready=%s\\n' "$UAT_CONNECTED_READINESS_REASON"
+    `)
+
+    assert.equal(
+      output,
+      [
+        'daemon=daemon health unavailable on port 7890',
+        'extension=extension not connected on port 7890 (last seen: never)',
+        'tab=no tracked browser tab on port 7890',
+        'ready=ready'
+      ].join('\n')
+    )
+  })
+
+  test('connected readiness retries boundedly until all prerequisites become available', () => {
+    const output = userStateCall(`
+      readiness_dir="$(mktemp -d)"
+      uat_connected_health_payload() {
+        count="$(cat "$readiness_dir/health" 2>/dev/null || echo 0)"
+        count=$((count + 1))
+        printf '%s' "$count" > "$readiness_dir/health"
+        if [ "$count" -lt 2 ]; then
+          return
+        fi
+        printf '%s\\n' '{"capture":{"extension_connected":true}}'
+      }
+      uat_connected_tracked_tab() {
+        count="$(cat "$readiness_dir/tab" 2>/dev/null || echo 0)"
+        count=$((count + 1))
+        printf '%s' "$count" > "$readiness_dir/tab"
+        if [ "$count" -ge 2 ]; then
+          printf '%s\\n' '81\thttps://ready.example/'
+        fi
+      }
+      uat_readiness_sleep() { :; }
+      UAT_CONNECTED_READY_ATTEMPTS=4
+      uat_wait_for_connected_browser 7890 /test/wrapper
+      printf 'health=%s tab=%s\\n' "$(cat "$readiness_dir/health")" "$(cat "$readiness_dir/tab")"
+      rm -rf "$readiness_dir"
+    `)
+
+    assert.equal(output, 'health=3 tab=2')
+  })
+
+  test('connected UAT creates, tracks, and closes a dedicated browser tab', () => {
+    const output = userStateCall(`
+      uat_call_tool() {
+        case "$3" in
+          interact)
+            if printf '%s' "$4" | grep -q '"what":"new_tab"'; then
+              printf '%s\\n' '{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"Command completed\\n{\\"action\\":\\"new_tab\\",\\"tab_id\\":222}"}]}}'
+            else
+              printf 'close:%s\\n' "$4" > "$close_log"
+            fi
+            ;;
+        esac
+      }
+      uat_wait_for_extension() { return 0; }
+      uat_wait_for_disposable_tracking() { return 0; }
+      close_log="$(mktemp)"
+
+      uat_create_disposable_tab 7890 /test/wrapper
+      printf 'created=%s url=%s\\n' "$UAT_DISPOSABLE_TAB_ID" "$UAT_DISPOSABLE_TAB_URL"
+      uat_close_disposable_tab
+      cat "$close_log"
+      rm -f "$close_log"
+      printf 'closed=%s\\n' "$UAT_DISPOSABLE_TAB_CLOSED"
+    `)
+
+    assert.match(output, /^created=222 url=http:\/\/127\.0\.0\.1:7890\/tests\/interact\.html$/m)
+    assert.match(output, /close:\{"what":"close_tab","tab_id":222\}/)
+    assert.match(output, /closed=1/)
+  })
+
+  test('user restoration closes the disposable tab before replacing the suite daemon', () => {
+    const output = userStateCall(`
+      UAT_USER_STATE_SNAPSHOTTED=1
+      UAT_DISPOSABLE_TAB_ID=222
+      uat_close_disposable_tab() { echo close-test-tab; UAT_DISPOSABLE_TAB_CLOSED=1; }
+      uat_stop_port() { echo stop-suite-daemon; }
+      uat_restore_user_state
+    `)
+
+    assert.equal(output, ['close-test-tab', 'stop-suite-daemon'].join('\n'))
   })
 
   test('category discovery follows feature-family directories', () => {

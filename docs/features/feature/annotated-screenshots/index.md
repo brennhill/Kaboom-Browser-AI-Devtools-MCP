@@ -6,6 +6,13 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-29
 code_paths:
+  - src/content/draw-mode/lifecycle-overlay.js
+  - src/content/draw-mode/input-rendering.js
+  - src/content/draw-mode/element-capture.js
+  - src/content/draw-mode/element-analysis.js
+  - src/content/draw-mode/persistence-submission.js
+  - src/content/draw-mode/geometry-context.js
+  - scripts/build/generate-draw-mode.js
   - extension/content/draw-mode.js
   - internal/annotation/store.go
   - internal/annotation/store_results.go
@@ -28,6 +35,7 @@ code_paths:
   - scripts/smoke-test.sh
   - package.json
 test_paths:
+  - tests/extension/draw-mode/draw-mode-generation.test.js
   - tests/extension/draw-mode/draw-mode-drawing.test.js
   - tests/extension/draw-mode/draw-mode-enrichment.test.js
   - tests/extension/draw-mode/draw-mode-fixture.js
@@ -79,7 +87,11 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 ### Extension (DOM capture)
-- `extension/content/draw-mode.js` — `buildElementDetail()`, `detectCSSFramework()`, `collectSelectorCandidates()`, parent_context, siblings, `js_framework`, `component`
+- `src/content/draw-mode/` is the canonical change-coupled implementation:
+  lifecycle/overlay, input/rendering, DOM capture, element analysis,
+  persistence/submission, and geometry/context. `scripts/build/generate-draw-mode.js`
+  assembles the MV3-loadable `extension/content/draw-mode.js` artifact and
+  `--check` fails on drift.
 
 ### Go (store + handler)
 - `internal/annotation/store.go` — `Detail` struct with ParentContext, Siblings, CSSFramework fields; session TTL = 2 hours

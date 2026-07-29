@@ -153,39 +153,36 @@ case "$SUITE" in
     all) CAT_IDS="$OFFLINE_CAT_IDS $CONNECTED_CAT_IDS" ;;
 esac
 
+stop_preflight_daemon() {
+    kill "$1" 2>/dev/null || true
+    lsof -tiTCP:"$CONNECTED_UAT_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
+    wait "$1" 2>/dev/null || true
+}
+
 preflight_connected_extension() {
     local preflight_pid=""
-    local preflight_health=""
-    local ext_connected=""
-    local ext_last_seen=""
 
     lsof -tiTCP:"$CONNECTED_UAT_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
     sleep 0.3
-    echo "Pre-flight: checking extension connectivity..."
+    echo "Pre-flight: waiting for daemon, extension, and tracked tab..."
     (cd "$PROJECT_ROOT" && "$WRAPPER" --daemon --port "$CONNECTED_UAT_PORT" >/dev/null 2>&1) &
     preflight_pid="$!"
 
-    for _pf_i in $(seq 1 30); do
-        if curl -s --connect-timeout 1 "http://localhost:${CONNECTED_UAT_PORT}/health" >/dev/null 2>&1; then
-            break
-        fi
-        sleep 0.1
-    done
-    sleep 3
+    uat_wait_for_connected_browser "$CONNECTED_UAT_PORT" "$WRAPPER"
+    local readiness_status="$?"
 
-    preflight_health="$(curl -s --max-time 5 "http://localhost:${CONNECTED_UAT_PORT}/health" 2>/dev/null)"
-    ext_connected="$(echo "$preflight_health" | jq -r '.capture.extension_connected // false' 2>/dev/null)"
-    ext_last_seen="$(echo "$preflight_health" | jq -r '.capture.extension_last_seen // "never"' 2>/dev/null)"
-    kill "$preflight_pid" 2>/dev/null || true
-    lsof -tiTCP:"$CONNECTED_UAT_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
-    wait "$preflight_pid" 2>/dev/null || true
-
-    if [ "$ext_connected" != "true" ]; then
-        echo "FATAL: connected suite requires the Kaboom extension on port $CONNECTED_UAT_PORT." >&2
-        echo "Extension last seen: $ext_last_seen" >&2
+    if [ "$readiness_status" -ne 0 ]; then
+        echo "FATAL: connected suite prerequisite failed: $UAT_CONNECTED_READINESS_REASON" >&2
+        stop_preflight_daemon "$preflight_pid"
         return 1
     fi
-    echo "Pre-flight: extension connected (last seen: $ext_last_seen)"
+    if ! uat_create_disposable_tab "$CONNECTED_UAT_PORT" "$WRAPPER"; then
+        echo "FATAL: connected suite could not create its disposable browser tab." >&2
+        stop_preflight_daemon "$preflight_pid"
+        return 1
+    fi
+    stop_preflight_daemon "$preflight_pid"
+    echo "Pre-flight: connected browser ready on disposable tab $UAT_DISPOSABLE_TAB_ID."
 }
 
 # Safety-net trap: clean only suite-owned ports, then restore user state.
@@ -261,6 +258,7 @@ if [ "$SUITE" = "offline" ] || [ "$SUITE" = "all" ]; then
     run_suite "offline-contract" "$OFFLINE_UAT_PORT" "$OFFLINE_CAT_IDS"
 fi
 if [ "$SUITE" = "connected" ] || [ "$SUITE" = "all" ]; then
+    export KABOOM_UAT_REQUIRE_CONNECTED=1
     preflight_connected_extension || exit 1
     run_suite "connected-browser" "$CONNECTED_UAT_PORT" "$CONNECTED_CAT_IDS"
 fi

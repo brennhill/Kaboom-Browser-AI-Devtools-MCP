@@ -1,3 +1,9 @@
+// GENERATED FILE — DO NOT EDIT.
+// Canonical sources: src/content/draw-mode/*.js
+// Generator: scripts/build/generate-draw-mode.js
+
+// lifecycle-overlay.js — Lifecycle, public API, and overlay ownership.
+/* eslint-disable no-unused-vars, no-undef */
 /**
  * @fileoverview Draw Mode — Full-viewport annotation overlay.
  * Lets users draw rectangles and attach text feedback on web pages.
@@ -340,6 +346,8 @@ function removeStyles() {
 // EVENT HANDLERS
 // ============================================================================
 
+// input-rendering.js — Pointer and keyboard input, canvas rendering, and annotation text entry.
+/* eslint-disable no-unused-vars, no-undef */
 function onMouseDown(e) {
   if (textInput) return // Don't start new rect while typing
   if (e.button !== 0) return // Left click only
@@ -719,6 +727,8 @@ function cancelTextInput() {
  */
 const MAX_CAPTURED_ELEMENTS = 15
 
+// element-capture.js — DOM capture, element summaries, style detail, and framework detection.
+/* eslint-disable no-unused-vars, no-undef */
 function captureElementsUnderRect(rect) {
   if (!overlay) return { summary: '', detail: {} }
 
@@ -1223,6 +1233,9 @@ function detectCSSFramework(el) {
  * @param {CSSStyleDeclaration} computed
  * @returns {string[]}
  */
+
+// element-analysis.js — Accessibility, selector, CSS-rule, and component-source analysis.
+/* eslint-disable no-unused-vars, no-undef */
 function runA11yChecks(el, computed) {
   const flags = []
   if (!el || !el.tagName) return flags
@@ -1633,6 +1646,8 @@ const MAX_PERSISTED_ANNOTATIONS = 50
 // permanently on the first failure to avoid noisy console errors.
 let storageAvailable = (typeof chrome !== 'undefined' && !!chrome.storage?.session)
 
+// persistence-submission.js — Annotation persistence, cancellation, submission, and result delivery.
+/* eslint-disable no-unused-vars, no-undef */
 function persistAnnotations() {
   if (saveTimeout) clearTimeout(saveTimeout)
   saveTimeout = setTimeout(() => {
@@ -1898,6 +1913,8 @@ function submitActiveTextInputBeforeExit() {
 // UTILITY
 // ============================================================================
 
+// geometry-context.js — Coordinate transforms, action trails, and surrounding UI context.
+/* eslint-disable no-unused-vars, no-undef, no-useless-assignment */
 function normalizeRect(x1, y1, x2, y2) {
   return {
     x: Math.min(x1, x2),

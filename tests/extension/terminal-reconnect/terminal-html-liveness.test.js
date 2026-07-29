@@ -112,6 +112,11 @@ describe('terminal.html half-open socket detection', () => {
     assert.match(html, /notifyParent\('api_billing_detected'/)
   })
 
+  test('reports the shell-classified execution provider to the parent UI', () => {
+    assert.match(html, /KABOOM_EXECUTION_PROVIDER=/)
+    assert.match(html, /notifyParent\('execution_provider_detected'/)
+  })
+
   test('a socket silent past the threshold is force-closed and recovery starts', () => {
     const h = runTerminalPage()
     openSocket(h)

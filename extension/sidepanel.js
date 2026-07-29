@@ -13,6 +13,7 @@ import { startPageAnnotation, closeBrowserSidePanel } from './content/ui/panel/h
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js';
 import { renderNoSessionState, renderStartPending, showAPIBillingWarning, surfaceTerminalStartFailure } from './content/ui/terminal-panel-states.js';
 import { createPanelShell as buildPanelShell } from './content/ui/panel/shell.js';
+import { updateConnectionIndicator, updateExecutionProviderBadge } from './content/ui/panel/status-indicators.js';
 import { notifyIframe, resetWriteGuardState, shouldDeferQueuedWrite, maybeShowQueuedWriteToast, scheduleQueuedWriteFlush, scheduleQueuedSubmit, enqueueBoundedWrite } from './content/ui/terminal-write-guard.js';
 function freshPanelUi() {
     return {
@@ -20,6 +21,7 @@ function freshPanelUi() {
         terminalShellEl: null,
         terminalBodyEl: null,
         statusDotEl: null,
+        providerBadgeEl: null,
         minimizeButtonEl: null,
         runtimeListenerInstalled: false,
         storageListenerInstalled: false,
@@ -171,21 +173,6 @@ function showSandboxError(message, instruction, command, kind) {
     panel.pendingSandboxError = { message, instruction, command };
     surfaceTerminalStartFailure(panel.terminalBodyEl, message, instruction, command);
 }
-function updateStatusDot(dotState) {
-    if (!panel.statusDotEl)
-        return;
-    switch (dotState) {
-        case 'connected':
-            panel.statusDotEl.style.background = '#9ece6a';
-            break;
-        case 'disconnected':
-            panel.statusDotEl.style.background = '#e0af68';
-            break;
-        case 'exited':
-            panel.statusDotEl.style.background = '#f7768e';
-            break;
-    }
-}
 function handleIframeMessage(event) {
     if (!event.data || event.data.source !== 'kaboom-terminal')
         return;
@@ -202,7 +189,7 @@ function handleIframeMessage(event) {
             // Trail for diagnosing "can't type": these WS transitions are where the
             // terminal loses input when the daemon terminal-server (port+1) blinks.
             console.log('[KaBOOM! terminal] ws connected');
-            updateStatusDot('connected');
+            updateConnectionIndicator(panel.statusDotEl, 'connected');
             state.terminalConnected = true;
             // A real connection clears the flap budget so an unrelated future outage
             // gets its own full recovery allowance (E-i).
@@ -213,7 +200,7 @@ function handleIframeMessage(event) {
             break;
         case 'disconnected':
             console.log('[KaBOOM! terminal] ws disconnected (input paused; writes will queue)');
-            updateStatusDot('disconnected');
+            updateConnectionIndicator(panel.statusDotEl, 'disconnected');
             state.terminalConnected = false;
             state.terminalFocused = false;
             break;
@@ -222,7 +209,7 @@ function handleIframeMessage(event) {
             // a full daemon restart. Recover instead of sitting on a permanent silent
             // disconnect: revalidate and rebuild into a fresh session (or the recoverable
             // no-session state). redrawTerminal owns that validate-then-rebuild logic.
-            updateStatusDot('disconnected');
+            updateConnectionIndicator(panel.statusDotEl, 'disconnected');
             state.terminalConnected = false;
             state.terminalFocused = false;
             if (exhaustionRecoveryCeilingReached()) {
@@ -241,7 +228,7 @@ function handleIframeMessage(event) {
             break;
         case 'exited':
             console.log('[KaBOOM! terminal] session exited (write-guard reset)');
-            updateStatusDot('exited');
+            updateConnectionIndicator(panel.statusDotEl, 'exited');
             state.terminalConnected = false;
             state.terminalFocused = false;
             resetWriteGuardState();
@@ -249,6 +236,11 @@ function handleIframeMessage(event) {
         case 'api_billing_detected':
             showAPIBillingWarning();
             break;
+        case 'execution_provider_detected': {
+            const providerData = event.data.data;
+            updateExecutionProviderBadge(panel.providerBadgeEl, providerData?.provider ?? 'unknown', providerData?.tool ?? 'other', showAPIBillingWarning);
+            break;
+        }
         case 'focus':
             state.terminalFocused = Boolean(event.data.data?.focused);
             if (state.terminalFocused) {
@@ -295,6 +287,9 @@ function createPanelShell(token) {
         setStatusDot: (el) => {
             panel.statusDotEl = el;
         },
+        setProviderBadge: (el) => {
+            panel.providerBadgeEl = el;
+        },
         setMinimizeButton: (el) => {
             panel.minimizeButtonEl = el;
         },
@@ -332,6 +327,7 @@ function unmountPanel() {
     panel.terminalShellEl = null;
     panel.terminalBodyEl = null;
     panel.statusDotEl = null;
+    panel.providerBadgeEl = null;
     panel.minimizeButtonEl = null;
     panel.rootFolderBar = null;
     state.widgetEl = null;

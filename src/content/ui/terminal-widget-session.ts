@@ -101,14 +101,34 @@ export function buildAIInitCommand(aiCommand: string): string {
     'AWS_BEARER_TOKEN_BEDROCK'
   ]
   const presenceCheck = billingOverrides.map((name) => `\${${name}:-}`).join('')
-  const warning =
-    '\\033[1;33m⚠ API billing credentials detected. This AI tool may charge API usage instead of using your subscription.\\033[0m\\n'
   const firstCommand = aiCommand.trimStart().split(/\s+/, 1)[0] ?? ''
   const isCodex = /(^|\/)codex$/.test(firstCommand)
-  const savedCodexAuthCheck = isCodex
-    ? ` codex_auth_status="$(codex login status 2>&1)"; case "$codex_auth_status" in *"API key"*|*"access token"*) kaboom_api_billing=1;; esac;`
-    : ''
-  return `kaboom_api_billing=0; if [ -n "${presenceCheck}" ]; then kaboom_api_billing=1; fi;${savedCodexAuthCheck} if [ "$kaboom_api_billing" = 1 ]; then printf '${warning}'; fi; unset kaboom_api_billing codex_auth_status; ${aiCommand}`
+  const isClaude = /(^|\/)claude$/.test(firstCommand)
+  const tool = isCodex ? 'codex' : isClaude ? 'claude' : 'other'
+  const authCheck = isCodex
+    ? ` codex_auth_status="$(codex login status 2>&1)"; case "$codex_auth_status" in *"Logged in using ChatGPT"*) kaboom_execution_provider=subscription;; *"API key"*|*"access token"*) kaboom_execution_provider=api;; esac;`
+    : isClaude
+      ? ` claude_auth_status="$(claude auth status 2>&1)"; case "$claude_auth_status" in *'"authMethod": "claude.ai"'*|*'"authMethod":"claude.ai"'*) kaboom_execution_provider=subscription;; *'"authMethod"'*) kaboom_execution_provider=api;; esac;`
+      : ''
+  const providerMarkers =
+    ` case "$kaboom_execution_provider" in` +
+    ` api) printf '\\033]1337;KABOOM_EXECUTION_PROVIDER=api:${tool}\\007';;` +
+    ` subscription) printf '\\033]1337;KABOOM_EXECUTION_PROVIDER=subscription:${tool}\\007';;` +
+    ` *) printf '\\033]1337;KABOOM_EXECUTION_PROVIDER=unknown:${tool}\\007';; esac;`
+  const apiPrompt =
+    ` if [ "$kaboom_execution_provider" = api ]; then` +
+    ` printf '\\033[1;33m⚠ API billing credentials detected. This will not use your subscription.\\033[0m\\nContinue with API billing? [y/N] ';` +
+    ` read -r kaboom_api_confirm; case "$kaboom_api_confirm" in y|Y|yes|YES) ${aiCommand};; *) printf 'API launch cancelled.\\n';; esac;` +
+    ` else ${aiCommand}; fi;`
+  return (
+    `kaboom_execution_provider=unknown;` +
+    ` if [ -n "${presenceCheck}" ]; then kaboom_execution_provider=api; fi;` +
+    authCheck +
+    ` if [ -n "${presenceCheck}" ]; then kaboom_execution_provider=api; fi;` +
+    providerMarkers +
+    apiPrompt +
+    ` unset kaboom_execution_provider kaboom_api_confirm claude_auth_status codex_auth_status`
+  )
 }
 
 export async function getTerminalDevRoot(): Promise<string> {

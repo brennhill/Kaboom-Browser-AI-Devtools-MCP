@@ -17,6 +17,7 @@ type HealthResponse = components['schemas']['HealthResponse']
 export const WIDGET_ID = 'kaboom-terminal-widget'
 export const IFRAME_ID = 'kaboom-terminal-iframe'
 export const HEADER_ID = 'kaboom-terminal-header'
+export const TERMINAL_PROVIDER_BADGE_ID = 'kaboom-terminal-provider-badge'
 export const TERMINAL_BODY_ID = 'kaboom-terminal-body'
 export const DISCONNECT_TERMINAL_BUTTON_ID = 'kaboom-terminal-disconnect-button'
 export const ANNOTATE_TERMINAL_BUTTON_ID = 'kaboom-terminal-annotate-button'

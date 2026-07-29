@@ -6,6 +6,7 @@ package health
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http/httptest"
 	"os"
@@ -638,6 +639,52 @@ func TestHandleDoctorHTTP_Degraded(t *testing.T) {
 	}
 	if body.Status != "degraded" {
 		t.Errorf("status: want degraded, got %s", body.Status)
+	}
+}
+
+func TestAIAuthDoctorCheckClassifiesSubscriptionAndAPIBilling(t *testing.T) {
+	originalLookPath := doctorLookPath
+	originalOutput := doctorCommandOutput
+	t.Cleanup(func() {
+		doctorLookPath = originalLookPath
+		doctorCommandOutput = originalOutput
+	})
+	doctorLookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
+	doctorCommandOutput = func(_ time.Duration, name string, _ ...string) ([]byte, error) {
+		if name == "claude" {
+			return []byte(`{"loggedIn":true,"authMethod":"claude.ai","subscriptionType":"max"}`), nil
+		}
+		return []byte("Logged in using an API key"), nil
+	}
+
+	claude := runAIAuthDoctorCheck("claude")
+	if claude.Status != "pass" || !strings.Contains(claude.Detail, "subscription") {
+		t.Fatalf("Claude check = %+v, want subscription pass", claude)
+	}
+	codex := runAIAuthDoctorCheck("codex")
+	if codex.Status != "warn" || !strings.Contains(codex.Detail, "API billing") {
+		t.Fatalf("Codex check = %+v, want API billing warning", codex)
+	}
+}
+
+func TestAIAuthDoctorCheckSurfacesKeychainFailureWithoutAccountData(t *testing.T) {
+	originalLookPath := doctorLookPath
+	originalOutput := doctorCommandOutput
+	t.Cleanup(func() {
+		doctorLookPath = originalLookPath
+		doctorCommandOutput = originalOutput
+	})
+	doctorLookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
+	doctorCommandOutput = func(_ time.Duration, _ string, _ ...string) ([]byte, error) {
+		return []byte(`Keychain Not Found: cannot store "private-user@example.com"`), errors.New("exit 1")
+	}
+
+	check := runAIAuthDoctorCheck("claude")
+	if check.Status != "fail" || !strings.Contains(strings.ToLower(check.Detail), "keychain") {
+		t.Fatalf("check = %+v, want keychain failure", check)
+	}
+	if strings.Contains(check.Detail, "private-user") {
+		t.Fatalf("doctor detail leaked account identifier: %q", check.Detail)
 	}
 }
 

@@ -11,7 +11,7 @@
  * return value.
  * Docs: docs/features/feature/terminal/index.md
  */
-import { IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, ANNOTATE_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, WIDGET_ID, getTerminalServerUrl } from '../terminal-widget-types.js';
+import { IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, ANNOTATE_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, WIDGET_ID, TERMINAL_PROVIDER_BADGE_ID, getTerminalServerUrl } from '../terminal-widget-types.js';
 /**
  * Build one 24×24 icon button for the terminal header. All four header controls
  * (disconnect / redraw / minimize / close) share the same box, hover affordance,
@@ -79,6 +79,18 @@ function createTerminalHeader(deps) {
         whiteSpace: 'nowrap',
         userSelect: 'none'
     });
+    const providerBadge = document.createElement('span');
+    providerBadge.id = TERMINAL_PROVIDER_BADGE_ID;
+    providerBadge.textContent = 'Provider · Detecting';
+    providerBadge.title = 'Checking whether this terminal uses a subscription or API billing';
+    Object.assign(providerBadge.style, {
+        color: '#787c99',
+        fontSize: '10px',
+        border: '1px solid #414868',
+        borderRadius: '999px',
+        padding: '2px 6px',
+        whiteSpace: 'nowrap'
+    });
     const spacer = document.createElement('div');
     spacer.style.flex = '1';
     const disconnectButton = createTerminalHeaderButton({
@@ -119,6 +131,7 @@ function createTerminalHeader(deps) {
     });
     header.appendChild(statusDot);
     header.appendChild(titleSpan);
+    header.appendChild(providerBadge);
     header.appendChild(disconnectButton);
     header.appendChild(spacer);
     header.appendChild(annotateButton);
@@ -127,6 +140,7 @@ function createTerminalHeader(deps) {
     // Rightmost, where every other close control on the platform lives.
     header.appendChild(closeButton);
     deps.setStatusDot(statusDot);
+    deps.setProviderBadge(providerBadge);
     deps.setMinimizeButton(minimizeButton);
     return header;
 }
