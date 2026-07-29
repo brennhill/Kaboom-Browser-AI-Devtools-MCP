@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func process() {\n\tdata, _ := os.ReadFile(path)\n\tos.WriteFile(out, data, 0644)\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func process() {\n\tdata, _ := os.ReadFile(path)\n\tos.WriteFile(out, data, 0644)\n}"
+    }
   },
   "expect": {
     "has_output": true,

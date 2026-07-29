@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func HandleUser(w http.ResponseWriter, r *http.Request) {"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func HandleUser(w http.ResponseWriter, r *http.Request) {"
+    }
   },
   "expect": {
     "has_output": true,

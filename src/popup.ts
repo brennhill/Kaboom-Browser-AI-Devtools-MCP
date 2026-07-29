@@ -31,12 +31,7 @@ import { FEATURE_TOGGLES as TOGGLE_DEFS, applyFeatureToggles } from './popup/fea
 import { initTrackPageButton } from './popup/tabs/tab-tracking.js'
 import { applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
 import { initPopupLogoMotion } from './popup/shell/logo-motion.js'
-import {
-  applyWebSocketMode,
-  handleWebSocketModeChange,
-  handleClearLogs,
-  resetClearConfirm
-} from './popup/settings.js'
+import { applyWebSocketMode, handleWebSocketModeChange, handleClearLogs, resetClearConfirm } from './popup/settings.js'
 
 // Re-export for testing
 export { resetClearConfirm, handleClearLogs }
@@ -229,11 +224,7 @@ export function initPopup(): void {
 
   // ── Batched storage read: one call for ALL toggle/setting keys ────────
   const toggleKeys = TOGGLE_DEFS.map((t) => t.storageKey)
-  const allKeys = [
-    ...toggleKeys,
-    StorageKey.WEBSOCKET_CAPTURE_MODE,
-    StorageKey.AI_WEB_PILOT_ENABLED
-  ]
+  const allKeys = [...toggleKeys, StorageKey.WEBSOCKET_CAPTURE_MODE, StorageKey.AI_WEB_PILOT_ENABLED]
 
   void getLocals(allKeys).then((result) => {
     // Apply feature toggles (9 checkboxes)

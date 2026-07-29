@@ -13,12 +13,7 @@
  * Passed to chrome.scripting.executeScript({ func: domPrimitiveWaitForStable }).
  * MUST NOT reference any module-level variables.
  */
-export function domPrimitiveWaitForStable(
-  options?: {
-    stability_ms?: number
-    timeout_ms?: number
-  }
-): Promise<{
+export function domPrimitiveWaitForStable(options?: { stability_ms?: number; timeout_ms?: number }): Promise<{
   success: boolean
   action: string
   selector: string
@@ -28,10 +23,8 @@ export function domPrimitiveWaitForStable(
   mutations_observed?: number
   stability_ms?: number
 }> {
-  const stabilityMs = typeof options?.stability_ms === 'number' && options.stability_ms > 0
-    ? options.stability_ms : 500
-  const maxTimeout = typeof options?.timeout_ms === 'number' && options.timeout_ms > 0
-    ? options.timeout_ms : 5000
+  const stabilityMs = typeof options?.stability_ms === 'number' && options.stability_ms > 0 ? options.stability_ms : 500
+  const maxTimeout = typeof options?.timeout_ms === 'number' && options.timeout_ms > 0 ? options.timeout_ms : 5000
 
   return new Promise((resolve) => {
     let mutationCount = 0
@@ -96,11 +89,7 @@ export function domPrimitiveWaitForStable(
  * Passed to chrome.scripting.executeScript({ func: domPrimitiveActionDiff }).
  * MUST NOT reference any module-level variables.
  */
-export function domPrimitiveActionDiff(
-  options?: {
-    timeout_ms?: number
-  }
-): Promise<{
+export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promise<{
   success: boolean
   action: string
   selector: string
@@ -118,8 +107,7 @@ export function domPrimitiveActionDiff(
     network_requests: number
   }
 }> {
-  const timeoutMs = typeof options?.timeout_ms === 'number' && options.timeout_ms > 0
-    ? options.timeout_ms : 3000
+  const timeoutMs = typeof options?.timeout_ms === 'number' && options.timeout_ms > 0 ? options.timeout_ms : 3000
   const settleMs = 500
 
   return new Promise((resolve) => {
@@ -137,14 +125,21 @@ export function domPrimitiveActionDiff(
           const el = matches[i]!
           textSnapshots.set(el, (el.textContent || '').trim().slice(0, 200))
         }
-      } catch { /* ignore invalid selectors */ }
+      } catch {
+        /* ignore invalid selectors */
+      }
     }
 
     // Track overlays that exist before the action
     const beforeOverlays = new Set<Element>()
     const overlaySelectors = [
-      '[role="dialog"]', '[role="alertdialog"]', '[aria-modal="true"]', 'dialog[open]',
-      '.modal.show', '.modal.in', '.modal.is-active'
+      '[role="dialog"]',
+      '[role="alertdialog"]',
+      '[aria-modal="true"]',
+      'dialog[open]',
+      '.modal.show',
+      '.modal.in',
+      '.modal.is-active'
     ]
     for (const oSel of overlaySelectors) {
       try {
@@ -152,7 +147,9 @@ export function domPrimitiveActionDiff(
         for (let i = 0; i < matches.length; i++) {
           beforeOverlays.add(matches[i]!)
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     let elementsAdded = 0
@@ -170,7 +167,9 @@ export function domPrimitiveActionDiff(
           networkRequests += list.getEntries().length
         })
         perfObserver.observe({ entryTypes: ['resource'] })
-      } catch { /* PerformanceObserver not available */ }
+      } catch {
+        /* PerformanceObserver not available */
+      }
     }
 
     const observer = new MutationObserver((records) => {
@@ -223,7 +222,11 @@ export function domPrimitiveActionDiff(
     // Helper: check if element matches any selector from a list
     function matchesAnySelectorSafe(el: Element, sels: string[]): boolean {
       for (const sel of sels) {
-        try { if (typeof el.matches === 'function' && el.matches(sel)) return true } catch { /* ignore */ }
+        try {
+          if (typeof el.matches === 'function' && el.matches(sel)) return true
+        } catch {
+          /* ignore */
+        }
       }
       return false
     }
@@ -257,14 +260,21 @@ export function domPrimitiveActionDiff(
     function classifyAndResolve(): void {
       observer.disconnect()
       if (perfObserver) {
-        try { perfObserver.disconnect() } catch { /* ignore */ }
+        try {
+          perfObserver.disconnect()
+        } catch {
+          /* ignore */
+        }
       }
 
       const urlChanged = location.href !== beforeURL
       const titleChanged = document.title !== beforeTitle
 
       // Detect overlays opened/closed
-      interface OverlayEntry { selector: string; text: string }
+      interface OverlayEntry {
+        selector: string
+        text: string
+      }
       const overlaysOpened: OverlayEntry[] = []
       const overlaysClosed: OverlayEntry[] = []
 
@@ -275,7 +285,9 @@ export function domPrimitiveActionDiff(
           for (let i = 0; i < matches.length; i++) {
             afterOverlays.add(matches[i]!)
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       for (const added of addedNodes) {
         if (isOverlayElement(added)) afterOverlays.add(added)
@@ -286,7 +298,9 @@ export function domPrimitiveActionDiff(
               afterOverlays.add(children[i]!)
             }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
 
       for (const el of afterOverlays) {
@@ -307,12 +321,23 @@ export function domPrimitiveActionDiff(
       }
 
       // Detect toasts / notifications
-      interface ToastEntry { text: string; type: string }
+      interface ToastEntry {
+        text: string
+        type: string
+      }
       const toasts: ToastEntry[] = []
       const toastSelectors = [
-        '[role="alert"]', '[role="status"]', '[aria-live="polite"]', '[aria-live="assertive"]',
-        '.toast', '.snackbar', '.notification', '.alert',
-        '[class*="toast"]', '[class*="snackbar"]', '[class*="notification"]'
+        '[role="alert"]',
+        '[role="status"]',
+        '[aria-live="polite"]',
+        '[aria-live="assertive"]',
+        '.toast',
+        '.snackbar',
+        '.notification',
+        '.alert',
+        '[class*="toast"]',
+        '[class*="snackbar"]',
+        '[class*="notification"]'
       ]
       for (const added of addedNodes) {
         if (matchesAnySelectorSafe(added, toastSelectors)) {
@@ -332,14 +357,22 @@ export function domPrimitiveActionDiff(
               }
             }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
 
       // Detect form errors
       const formErrors: string[] = []
       const errorSelectors = [
-        '.error', '.invalid', '.field-error', '.form-error', '.validation-error',
-        '[aria-invalid="true"]', '.has-error', '.is-invalid'
+        '.error',
+        '.invalid',
+        '.field-error',
+        '.form-error',
+        '.validation-error',
+        '[aria-invalid="true"]',
+        '.has-error',
+        '.is-invalid'
       ]
       for (const added of addedNodes) {
         if (matchesAnySelectorSafe(added, errorSelectors)) {
@@ -354,14 +387,21 @@ export function domPrimitiveActionDiff(
               if (text && !formErrors.includes(text)) formErrors.push(text)
             }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
 
       // Detect loading indicators
       const loadingIndicators: string[] = []
       const loadingSelectors = [
-        '.spinner', '.loading', '.skeleton', '[aria-busy="true"]',
-        '[class*="spinner"]', '[class*="loading"]', '[class*="skeleton"]'
+        '.spinner',
+        '.loading',
+        '.skeleton',
+        '[aria-busy="true"]',
+        '[class*="spinner"]',
+        '[class*="loading"]',
+        '[class*="skeleton"]'
       ]
       for (const added of addedNodes) {
         if (matchesAnySelectorSafe(added, loadingSelectors)) {
@@ -370,7 +410,11 @@ export function domPrimitiveActionDiff(
       }
 
       // Detect text changes
-      interface TextChangeEntry { selector: string; from: string; to: string }
+      interface TextChangeEntry {
+        selector: string
+        from: string
+        to: string
+      }
       const textChanges: TextChangeEntry[] = []
       for (const [el, oldText] of textSnapshots) {
         if (!document.contains(el)) continue

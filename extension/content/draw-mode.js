@@ -475,7 +475,10 @@ function onResize() {
 }
 
 function onScroll() {
-  recordRecentAction('scroll', document.activeElement, { scroll_x: Math.round(window.scrollX || 0), scroll_y: Math.round(window.scrollY || 0) })
+  recordRecentAction('scroll', document.activeElement, {
+    scroll_x: Math.round(window.scrollX || 0),
+    scroll_y: Math.round(window.scrollY || 0)
+  })
   if (!canvas) return
   renderAnnotations()
 }
@@ -1276,18 +1279,22 @@ function detectCSSFramework(el) {
     if (classes.length === 0) return ''
 
     // Tailwind: utility class patterns (require at least 1 dash-pattern for confidence)
-    const tailwindSpecific = /^(p-\d|m-\d|px-\d|py-\d|mx-\d|my-\d|pt-\d|pb-\d|pl-\d|pr-\d|mt-\d|mb-\d|ml-\d|mr-\d|text-(xs|sm|base|lg|xl|2xl|3xl)|font-(thin|light|normal|medium|semibold|bold)|bg-[a-z]+-\d{2,3}|w-\d|h-\d|gap-\d|space-[xy]-\d|max-w-[\w-]+|min-w-[\w-]+|max-h-[\w-]+|min-h-[\w-]+|justify-[\w-]+|items-[\w-]+|self-[\w-]+|z-\d|opacity-[\w]+|duration-[\w]+|ease-[\w-]+|translate-[\w-]+|scale-[\w-]+|rotate-[\w-]+|skew-[\w-]+|origin-[\w-]+|delay-[\w]+)$/
+    const tailwindSpecific =
+      /^(p-\d|m-\d|px-\d|py-\d|mx-\d|my-\d|pt-\d|pb-\d|pl-\d|pr-\d|mt-\d|mb-\d|ml-\d|mr-\d|text-(xs|sm|base|lg|xl|2xl|3xl)|font-(thin|light|normal|medium|semibold|bold)|bg-[a-z]+-\d{2,3}|w-\d|h-\d|gap-\d|space-[xy]-\d|max-w-[\w-]+|min-w-[\w-]+|max-h-[\w-]+|min-h-[\w-]+|justify-[\w-]+|items-[\w-]+|self-[\w-]+|z-\d|opacity-[\w]+|duration-[\w]+|ease-[\w-]+|translate-[\w-]+|scale-[\w-]+|rotate-[\w-]+|skew-[\w-]+|origin-[\w-]+|delay-[\w]+)$/
     const tailwindGeneric = /^(flex|grid|block|inline|hidden|rounded|border|shadow|overflow-|transition)$/
     let tailwindHits = 0
     let tailwindSpecificHits = 0
     for (const cls of classes) {
-      if (tailwindSpecific.test(cls)) { tailwindHits++; tailwindSpecificHits++ }
-      else if (tailwindGeneric.test(cls)) tailwindHits++
+      if (tailwindSpecific.test(cls)) {
+        tailwindHits++
+        tailwindSpecificHits++
+      } else if (tailwindGeneric.test(cls)) tailwindHits++
     }
     if (tailwindHits >= 3 && tailwindSpecificHits >= 1) return 'tailwind'
 
     // Bootstrap: component/grid patterns
-    const bootstrapPatterns = /^(col-(xs|sm|md|lg|xl)-\d+|col-\d+|btn-[a-z]+|form-control|form-group|form-check|input-group|card|container|row|navbar|nav-[a-z]+|modal|badge|alert|dropdown|table|pagination)$/
+    const bootstrapPatterns =
+      /^(col-(xs|sm|md|lg|xl)-\d+|col-\d+|btn-[a-z]+|form-control|form-group|form-check|input-group|card|container|row|navbar|nav-[a-z]+|modal|badge|alert|dropdown|table|pagination)$/
     let bootstrapHits = 0
     for (const cls of classes) {
       if (bootstrapPatterns.test(cls)) bootstrapHits++
@@ -1734,7 +1741,7 @@ const MAX_PERSISTED_ANNOTATIONS = 50
 // In web_accessible_resource contexts the API object exists but every call throws
 // "Access to storage is not allowed from this context". We disable persistence
 // permanently on the first failure to avoid noisy console errors.
-let storageAvailable = (typeof chrome !== 'undefined' && !!chrome.storage?.session)
+let storageAvailable = typeof chrome !== 'undefined' && !!chrome.storage?.session
 
 // persistence-submission.js — Annotation persistence, cancellation, submission, and result delivery.
 /* eslint-disable no-unused-vars, no-undef */
@@ -1886,13 +1893,15 @@ export function deactivateAndSendResults() {
       // `window` event target is shared with the page.
       const emitAnnotationsReady = (nonce) => {
         try {
-          window.dispatchEvent(new CustomEvent('kaboom-annotations-ready', {
-            detail: {
-              annotations: result.annotations,
-              page_url: pageUrl,
-              nonce: nonce || ''
-            }
-          }))
+          window.dispatchEvent(
+            new CustomEvent('kaboom-annotations-ready', {
+              detail: {
+                annotations: result.annotations,
+                page_url: pageUrl,
+                nonce: nonce || ''
+              }
+            })
+          )
         } catch {
           // CustomEvent dispatch failed — non-critical
         }

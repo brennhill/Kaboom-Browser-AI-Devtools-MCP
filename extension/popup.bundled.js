@@ -1202,10 +1202,7 @@
   }
 
   // extension/lib/tabs/cloaked-domains.js
-  var BUILTIN_CLOAKED = [
-    "cloudflare.com",
-    "dash.cloudflare.com"
-  ];
+  var BUILTIN_CLOAKED = ["cloudflare.com", "dash.cloudflare.com"];
   function matchesDomain(hostname, domain) {
     return hostname === domain || hostname.endsWith("." + domain);
   }
@@ -1738,11 +1735,7 @@
       });
     }
     const toggleKeys = FEATURE_TOGGLES.map((t) => t.storageKey);
-    const allKeys = [
-      ...toggleKeys,
-      StorageKey.WEBSOCKET_CAPTURE_MODE,
-      StorageKey.AI_WEB_PILOT_ENABLED
-    ];
+    const allKeys = [...toggleKeys, StorageKey.WEBSOCKET_CAPTURE_MODE, StorageKey.AI_WEB_PILOT_ENABLED];
     void getLocals(allKeys).then((result) => {
       applyFeatureToggles(result);
       applyWebSocketMode(result[StorageKey.WEBSOCKET_CAPTURE_MODE]);

@@ -16,11 +16,7 @@ import type {
   PerformanceSnapshot
 } from '../../types/index.js'
 
-import {
-  createBatcherWithCircuitBreaker,
-  type BatcherWithCircuitBreaker,
-  type Batcher
-} from './batchers.js'
+import { createBatcherWithCircuitBreaker, type BatcherWithCircuitBreaker, type Batcher } from './batchers.js'
 import type { CircuitBreaker } from './circuit-breaker.js'
 import {
   updateBadge,

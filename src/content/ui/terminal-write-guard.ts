@@ -136,12 +136,7 @@ function guardGaveUpAfterMaxWait(nowMs: number): boolean {
   if (nowMs - state.guardBlockedSince < TERMINAL_GUARD_MAX_WAIT_MS) return false
   const dropped = state.queuedWrites.length + (state.queuedWriteInFlight ? 1 : 0)
   const noun = dropped === 1 ? 'action' : 'actions'
-  showActionToast(
-    `terminal not reachable — dropped ${dropped} queued ${noun}`,
-    'Terminal write gave up',
-    'error',
-    4000
-  )
+  showActionToast(`terminal not reachable — dropped ${dropped} queued ${noun}`, 'Terminal write gave up', 'error', 4000)
   resetWriteGuardState()
   return true
 }

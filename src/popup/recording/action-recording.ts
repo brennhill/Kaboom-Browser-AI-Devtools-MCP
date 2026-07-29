@@ -227,12 +227,14 @@ export function setupActionRecordingUI(): void {
   // confirming with the daemon that the recording actually survived (F5). A
   // daemon restart would otherwise resurrect a phantom "recording" here.
   void getLocal(StorageKey.ACTION_RECORDING).then(async (value: unknown) => {
-    const saved = value as {
-      active?: boolean
-      recordingId?: string
-      startTime?: number
-      daemonPid?: number | null
-    } | undefined
+    const saved = value as
+      | {
+          active?: boolean
+          recordingId?: string
+          startTime?: number
+          daemonPid?: number | null
+        }
+      | undefined
     if (!saved?.active || !saved.recordingId) return
 
     if (!(await isActionRecordingStillLive(saved.daemonPid))) {

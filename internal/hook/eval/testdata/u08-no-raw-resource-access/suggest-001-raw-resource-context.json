@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/session_store.go", "new_string": "if err := os.WriteFile(path, data, 0644); err != nil {\n\treturn err\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/session_store.go",
+      "new_string": "if err := os.WriteFile(path, data, 0644); err != nil {\n\treturn err\n}"
+    }
   },
   "expect": {
     "has_output": true,

@@ -148,13 +148,15 @@ export function deactivateAndSendResults() {
       // `window` event target is shared with the page.
       const emitAnnotationsReady = (nonce) => {
         try {
-          window.dispatchEvent(new CustomEvent('kaboom-annotations-ready', {
-            detail: {
-              annotations: result.annotations,
-              page_url: pageUrl,
-              nonce: nonce || ''
-            }
-          }))
+          window.dispatchEvent(
+            new CustomEvent('kaboom-annotations-ready', {
+              detail: {
+                annotations: result.annotations,
+                page_url: pageUrl,
+                nonce: nonce || ''
+              }
+            })
+          )
         } catch {
           // CustomEvent dispatch failed — non-critical
         }

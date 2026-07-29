@@ -230,11 +230,7 @@ function pickerFailureMessage(reason: TerminalDirsFailure): string {
  * Navigation reuses the same element rather than opening a dialog: the panel is
  * narrow, and a modal over a terminal hides the thing being configured.
  */
-async function openPicker(
-  picker: HTMLDivElement,
-  path: string,
-  onChoose: (path: string) => void
-): Promise<void> {
+async function openPicker(picker: HTMLDivElement, path: string, onChoose: (path: string) => void): Promise<void> {
   picker.replaceChildren(pickerRow('Loading…', '#787c99'))
 
   const result = await listTerminalDirs(path)

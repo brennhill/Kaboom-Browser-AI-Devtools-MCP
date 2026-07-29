@@ -4,7 +4,7 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "EVAL_OVERSIZED_FILE", "new_string": "// additional test"}
+    "tool_input": { "file_path": "EVAL_OVERSIZED_FILE", "new_string": "// additional test" }
   },
   "expect": {
     "has_output": true,

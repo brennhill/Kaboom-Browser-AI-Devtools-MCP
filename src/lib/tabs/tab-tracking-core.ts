@@ -67,10 +67,7 @@ export async function trackTab(tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 'title'
  * — the popup messages the background, the background stops the handler directly,
  * because a runtime message does not self-deliver inside the service worker.
  */
-export async function untrackTab(
-  prevTabId: number | undefined,
-  onStopped?: () => void | Promise<void>
-): Promise<void> {
+export async function untrackTab(prevTabId: number | undefined, onStopped?: () => void | Promise<void>): Promise<void> {
   await clearTrackedTab()
   if (onStopped) await onStopped()
   if (typeof prevTabId === 'number') notifyTrackingState(prevTabId, false)

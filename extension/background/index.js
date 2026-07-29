@@ -89,7 +89,8 @@ export function clearDebugLog() {
  * Export debug log as JSON string
  */
 export function exportDebugLog() {
-    return JSON.stringify(// WIRE-OK: local debug export, not sent to server
+    return JSON.stringify(
+    // WIRE-OK: local debug export, not sent to server
     {
         exportedAt: new Date().toISOString(),
         version: typeof chrome !== 'undefined' ? chrome.runtime.getManifest().version : 'test',

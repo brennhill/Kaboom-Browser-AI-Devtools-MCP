@@ -19,14 +19,7 @@ const TS_FILE = 'src/background/sync/sync-client.ts'
 
 // Sync types that must stay aligned between Go and TS.
 // Only types that cross the wire (sent/received over HTTP) are checked.
-const SYNC_TYPES = [
-  'SyncRequest',
-  'SyncResponse',
-  'SyncSettings',
-  'SyncCommand',
-  'SyncCommandResult',
-  'SyncInProgress'
-]
+const SYNC_TYPES = ['SyncRequest', 'SyncResponse', 'SyncSettings', 'SyncCommand', 'SyncCommandResult', 'SyncInProgress']
 
 /**
  * Intentional optionality overrides. Keys are "TypeName.json_field".
@@ -143,9 +136,7 @@ function compareType(goStruct, tsInterface) {
     // Go optional (omitempty/pointer/slice/map) should be TS optional (?)
     // Go required should be TS required
     if (goField.optional && !tsField.optional) {
-      errors.push(
-        `${typeName}.${tag}: Go is optional (omitempty/pointer) but TS declares it required`
-      )
+      errors.push(`${typeName}.${tag}: Go is optional (omitempty/pointer) but TS declares it required`)
     }
     if (!goField.optional && tsField.optional) {
       const overrideKey = `${typeName}.${tag}`

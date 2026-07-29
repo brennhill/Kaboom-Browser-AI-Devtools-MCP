@@ -185,10 +185,7 @@ export function isCDPEscalatable(action) {
  * because CDP input targets the main frame by coordinate only.
  */
 export function shouldEscalateToCDP(action, params) {
-    return (isCDPEscalatable(action) &&
-        params.dispatch !== 'dom' &&
-        !params.frame &&
-        params.nth === undefined);
+    return isCDPEscalatable(action) && params.dispatch !== 'dom' && !params.frame && params.nth === undefined;
 }
 /**
  * Build an in-page JS expression that reconciles a controlled-input framework's

@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "var activeConnections = make(map[string]*Connection)\n\nfunc AddConnection(id string, c *Connection) {\n\tactiveConnections[id] = c\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "var activeConnections = make(map[string]*Connection)\n\nfunc AddConnection(id string, c *Connection) {\n\tactiveConnections[id] = c\n}"
+    }
   },
   "expect": {
     "has_output": true,

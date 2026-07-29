@@ -106,8 +106,7 @@ export const TERMINAL_GUARD_RECOVERY_GRACE_MS = 10000
 // iframe even reported `reconnect_exhausted` at ~45s, so the queue was thrown away
 // before the recovery it was waiting for could begin — the queue could never
 // survive the outage it exists for.
-export const TERMINAL_GUARD_MAX_WAIT_MS =
-  terminalReconnectExhaustionMs() + TERMINAL_GUARD_RECOVERY_GRACE_MS
+export const TERMINAL_GUARD_MAX_WAIT_MS = terminalReconnectExhaustionMs() + TERMINAL_GUARD_RECOVERY_GRACE_MS
 
 // ---------------------------------------------------------------------------
 // Types

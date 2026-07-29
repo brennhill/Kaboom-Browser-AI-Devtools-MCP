@@ -3,14 +3,19 @@
   "hook": "session-track",
   "session_state": {
     "touches": [
-      {"t": "2026-03-07T14:00:00Z", "tool": "Read", "file": "/project/internal/hook/protocol.go", "action": "read"},
-      {"t": "2026-03-07T14:01:00Z", "tool": "Read", "file": "/project/internal/hook/quality_gate.go", "action": "read"},
-      {"t": "2026-03-07T14:02:00Z", "tool": "Bash", "file": "", "action": "bash", "summary": "go test ./..."}
+      { "t": "2026-03-07T14:00:00Z", "tool": "Read", "file": "/project/internal/hook/protocol.go", "action": "read" },
+      {
+        "t": "2026-03-07T14:01:00Z",
+        "tool": "Read",
+        "file": "/project/internal/hook/quality_gate.go",
+        "action": "read"
+      },
+      { "t": "2026-03-07T14:02:00Z", "tool": "Bash", "file": "", "action": "bash", "summary": "go test ./..." }
     ]
   },
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "/project/internal/hook/protocol.go", "new_string": "func HandleUser() {}"}
+    "tool_input": { "file_path": "/project/internal/hook/protocol.go", "new_string": "func HandleUser() {}" }
   },
   "expect": {
     "has_output": true,

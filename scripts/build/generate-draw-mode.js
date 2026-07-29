@@ -27,11 +27,7 @@ function normalize(value) {
   return value.replace(/\r\n/g, '\n').trimEnd() + '\n'
 }
 
-const generated =
-  banner +
-  partials
-    .map((name) => normalize(readFileSync(join(sourceDir, name), 'utf8')))
-    .join('\n')
+const generated = banner + partials.map((name) => normalize(readFileSync(join(sourceDir, name), 'utf8'))).join('\n')
 
 if (checkOnly) {
   let current = ''

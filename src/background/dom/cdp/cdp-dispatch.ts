@@ -212,8 +212,7 @@ function mapCDPError(err: unknown): string {
 // only landed in Node 21), and an unguarded module-scope read makes importing
 // this module throw ReferenceError there — taking down every test that touches
 // it. The service worker always has navigator, so behavior is unchanged.
-const SELECT_ALL_MODIFIER =
-  typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '') ? 4 : 2
+const SELECT_ALL_MODIFIER = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '') ? 4 : 2
 
 /** Actions that auto-escalate to CDP. */
 const CDP_ESCALATABLE = new Set(['click', 'type', 'key_press'])
@@ -234,12 +233,7 @@ export function isCDPEscalatable(action: string): boolean {
  * because CDP input targets the main frame by coordinate only.
  */
 export function shouldEscalateToCDP(action: string, params: DOMActionParams): boolean {
-  return (
-    isCDPEscalatable(action) &&
-    params.dispatch !== 'dom' &&
-    !params.frame &&
-    params.nth === undefined
-  )
+  return isCDPEscalatable(action) && params.dispatch !== 'dom' && !params.frame && params.nth === undefined
 }
 
 /**

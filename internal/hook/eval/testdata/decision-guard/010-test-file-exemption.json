@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol_test.go", "new_string": "func TestDebug(t *testing.T) {\n\tfmt.Println(\"debug output\")\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol_test.go",
+      "new_string": "func TestDebug(t *testing.T) {\n\tfmt.Println(\"debug output\")\n}"
+    }
   },
   "expect": {
     "has_output": false,

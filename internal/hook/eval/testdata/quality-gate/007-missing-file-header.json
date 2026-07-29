@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Write",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "content": "package hook\n\nimport \"fmt\"\n\nfunc DoStuff() {\n\tfmt.Println(\"hello\")\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "content": "package hook\n\nimport \"fmt\"\n\nfunc DoStuff() {\n\tfmt.Println(\"hello\")\n}"
+    }
   },
   "expect": {
     "has_output": true,

@@ -37,7 +37,9 @@ export async function loadServerInstallId(): Promise<void> {
     if (stored && !serverInstallId) {
       serverInstallId = stored
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 }
 
 function persistInstallId(id: string): void {

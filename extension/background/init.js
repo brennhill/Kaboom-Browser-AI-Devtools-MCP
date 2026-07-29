@@ -172,7 +172,8 @@ async function initializeExtensionAsync() {
                 setDebugMode(enabled);
             },
             setAiWebPilotEnabled: (enabled, callback) => {
-                setLocal('aiWebPilotEnabled', enabled).then(() => {
+                setLocal('aiWebPilotEnabled', enabled)
+                    .then(() => {
                     setAiWebPilotEnabledCache(enabled);
                     // Reset connection when enabling to allow immediate reconnection
                     if (enabled) {
@@ -181,7 +182,8 @@ async function initializeExtensionAsync() {
                     }
                     if (callback)
                         callback();
-                }).catch((err) => {
+                })
+                    .catch((err) => {
                     console.error(`${KABOOM_LOG_PREFIX} Failed to save aiWebPilotEnabled:`, err);
                     if (callback)
                         callback();

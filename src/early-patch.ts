@@ -231,8 +231,7 @@
 
     XMLHttpRequest.prototype.send = function (body?: Document | XMLHttpRequestBodyInit | null) {
       const xhrUrl: string = (this as XMLHttpRequest & { __kaboomEarlyUrl?: string }).__kaboomEarlyUrl || ''
-      const xhrMethod: string =
-        (this as XMLHttpRequest & { __kaboomEarlyMethod?: string }).__kaboomEarlyMethod || 'GET'
+      const xhrMethod: string = (this as XMLHttpRequest & { __kaboomEarlyMethod?: string }).__kaboomEarlyMethod || 'GET'
 
       this.addEventListener('load', function (this: XMLHttpRequest) {
         try {

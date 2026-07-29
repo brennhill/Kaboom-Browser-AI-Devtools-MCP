@@ -14,4 +14,3 @@ const versionRaw = loadVersionFromRepoRoot().replace(/^v/i, '')
 export const siteVersion = versionRaw
 export const siteVersionLabel = `v${versionRaw}`
 export const siteReleaseChannel = 'latest'
-

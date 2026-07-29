@@ -38,23 +38,14 @@ import {
   getDebugLog as getDebugLogEntries,
   clearDebugLog as clearDebugLogEntries
 } from './caches/debug-log.js'
-import {
-  isSourceMapEnabled,
-  canTakeScreenshot,
-  recordScreenshot
-} from './caches/cache-limits.js'
+import { isSourceMapEnabled, canTakeScreenshot, recordScreenshot } from './caches/cache-limits.js'
 import { processErrorGroup } from './caches/error-groups.js'
 import { resolveStackTrace } from './caches/snapshots.js'
-import {
-  createCircuitBreaker
-} from './sync/circuit-breaker.js'
+import { createCircuitBreaker } from './sync/circuit-breaker.js'
 import { RATE_LIMIT_CONFIG } from './sync/batchers.js'
 import { shouldCaptureLog, formatLogEntry } from './sync/log-processing.js'
 import { captureScreenshot } from './sync/screenshot.js'
-import {
-  updateBadge,
-  checkServerHealth
-} from './sync/server.js'
+import { updateBadge, checkServerHealth } from './sync/server.js'
 import { getTrackedTabInfo } from './ui/tab-state.js'
 import { DebugCategory } from './debug.js'
 import { getRequestHeaders } from './sync/server.js'
@@ -145,7 +136,8 @@ export function clearDebugLog(): void {
  * Export debug log as JSON string
  */
 export function exportDebugLog(): string {
-  return JSON.stringify( // WIRE-OK: local debug export, not sent to server
+  return JSON.stringify(
+    // WIRE-OK: local debug export, not sent to server
     {
       exportedAt: new Date().toISOString(),
       version: typeof chrome !== 'undefined' ? chrome.runtime.getManifest().version : 'test',

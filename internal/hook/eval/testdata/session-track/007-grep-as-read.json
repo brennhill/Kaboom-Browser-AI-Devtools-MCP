@@ -3,12 +3,18 @@
   "hook": "session-track",
   "session_state": {
     "touches": [
-      {"t": "2026-03-07T14:00:00Z", "tool": "Bash", "file": "", "action": "bash", "summary": "grep -n 'WriteOutput' /project/internal/hook/protocol.go"}
+      {
+        "t": "2026-03-07T14:00:00Z",
+        "tool": "Bash",
+        "file": "",
+        "action": "bash",
+        "summary": "grep -n 'WriteOutput' /project/internal/hook/protocol.go"
+      }
     ]
   },
   "input": {
     "tool_name": "Read",
-    "tool_input": {"file_path": "/project/internal/hook/protocol.go"}
+    "tool_input": { "file_path": "/project/internal/hook/protocol.go" }
   },
   "expect": {
     "has_output": true,

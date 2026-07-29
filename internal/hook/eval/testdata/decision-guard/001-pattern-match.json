@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "require (\n\t\"github.com/some/dep\" v1.0.0\n)"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "require (\n\t\"github.com/some/dep\" v1.0.0\n)"
+    }
   },
   "expect": {
     "has_output": true,

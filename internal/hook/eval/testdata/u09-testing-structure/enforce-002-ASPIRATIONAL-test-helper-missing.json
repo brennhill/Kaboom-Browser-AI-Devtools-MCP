@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/quality_gate_test.go", "new_string": "func assertNoError(t *testing.T, err error) {\n\tif err != nil {\n\t\tt.Fatalf(\"unexpected error: %v\", err)\n\t}\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/quality_gate_test.go",
+      "new_string": "func assertNoError(t *testing.T, err error) {\n\tif err != nil {\n\t\tt.Fatalf(\"unexpected error: %v\", err)\n\t}\n}"
+    }
   },
   "expect": {
     "has_output": true,

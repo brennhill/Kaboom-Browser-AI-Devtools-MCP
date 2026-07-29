@@ -12,10 +12,8 @@
  * MUST NOT reference any module-level variables.
  */
 export function domPrimitiveWaitForStable(options) {
-    const stabilityMs = typeof options?.stability_ms === 'number' && options.stability_ms > 0
-        ? options.stability_ms : 500;
-    const maxTimeout = typeof options?.timeout_ms === 'number' && options.timeout_ms > 0
-        ? options.timeout_ms : 5000;
+    const stabilityMs = typeof options?.stability_ms === 'number' && options.stability_ms > 0 ? options.stability_ms : 500;
+    const maxTimeout = typeof options?.timeout_ms === 'number' && options.timeout_ms > 0 ? options.timeout_ms : 5000;
     return new Promise((resolve) => {
         let mutationCount = 0;
         let lastMutationTime = performance.now();
@@ -72,8 +70,7 @@ export function domPrimitiveWaitForStable(options) {
  * MUST NOT reference any module-level variables.
  */
 export function domPrimitiveActionDiff(options) {
-    const timeoutMs = typeof options?.timeout_ms === 'number' && options.timeout_ms > 0
-        ? options.timeout_ms : 3000;
+    const timeoutMs = typeof options?.timeout_ms === 'number' && options.timeout_ms > 0 ? options.timeout_ms : 3000;
     const settleMs = 500;
     return new Promise((resolve) => {
         // Snapshot "before" state
@@ -90,13 +87,20 @@ export function domPrimitiveActionDiff(options) {
                     textSnapshots.set(el, (el.textContent || '').trim().slice(0, 200));
                 }
             }
-            catch { /* ignore invalid selectors */ }
+            catch {
+                /* ignore invalid selectors */
+            }
         }
         // Track overlays that exist before the action
         const beforeOverlays = new Set();
         const overlaySelectors = [
-            '[role="dialog"]', '[role="alertdialog"]', '[aria-modal="true"]', 'dialog[open]',
-            '.modal.show', '.modal.in', '.modal.is-active'
+            '[role="dialog"]',
+            '[role="alertdialog"]',
+            '[aria-modal="true"]',
+            'dialog[open]',
+            '.modal.show',
+            '.modal.in',
+            '.modal.is-active'
         ];
         for (const oSel of overlaySelectors) {
             try {
@@ -105,7 +109,9 @@ export function domPrimitiveActionDiff(options) {
                     beforeOverlays.add(matches[i]);
                 }
             }
-            catch { /* ignore */ }
+            catch {
+                /* ignore */
+            }
         }
         let elementsAdded = 0;
         let elementsRemoved = 0;
@@ -122,7 +128,9 @@ export function domPrimitiveActionDiff(options) {
                 });
                 perfObserver.observe({ entryTypes: ['resource'] });
             }
-            catch { /* PerformanceObserver not available */ }
+            catch {
+                /* PerformanceObserver not available */
+            }
         }
         const observer = new MutationObserver((records) => {
             lastMutationTime = performance.now();
@@ -181,7 +189,9 @@ export function domPrimitiveActionDiff(options) {
                     if (typeof el.matches === 'function' && el.matches(sel))
                         return true;
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
             return false;
         }
@@ -223,7 +233,9 @@ export function domPrimitiveActionDiff(options) {
                 try {
                     perfObserver.disconnect();
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
             const urlChanged = location.href !== beforeURL;
             const titleChanged = document.title !== beforeTitle;
@@ -237,7 +249,9 @@ export function domPrimitiveActionDiff(options) {
                         afterOverlays.add(matches[i]);
                     }
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
             for (const added of addedNodes) {
                 if (isOverlayElement(added))
@@ -250,7 +264,9 @@ export function domPrimitiveActionDiff(options) {
                         }
                     }
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
             for (const el of afterOverlays) {
                 if (!beforeOverlays.has(el)) {
@@ -270,9 +286,17 @@ export function domPrimitiveActionDiff(options) {
             }
             const toasts = [];
             const toastSelectors = [
-                '[role="alert"]', '[role="status"]', '[aria-live="polite"]', '[aria-live="assertive"]',
-                '.toast', '.snackbar', '.notification', '.alert',
-                '[class*="toast"]', '[class*="snackbar"]', '[class*="notification"]'
+                '[role="alert"]',
+                '[role="status"]',
+                '[aria-live="polite"]',
+                '[aria-live="assertive"]',
+                '.toast',
+                '.snackbar',
+                '.notification',
+                '.alert',
+                '[class*="toast"]',
+                '[class*="snackbar"]',
+                '[class*="notification"]'
             ];
             for (const added of addedNodes) {
                 if (matchesAnySelectorSafe(added, toastSelectors)) {
@@ -293,13 +317,21 @@ export function domPrimitiveActionDiff(options) {
                         }
                     }
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
             // Detect form errors
             const formErrors = [];
             const errorSelectors = [
-                '.error', '.invalid', '.field-error', '.form-error', '.validation-error',
-                '[aria-invalid="true"]', '.has-error', '.is-invalid'
+                '.error',
+                '.invalid',
+                '.field-error',
+                '.form-error',
+                '.validation-error',
+                '[aria-invalid="true"]',
+                '.has-error',
+                '.is-invalid'
             ];
             for (const added of addedNodes) {
                 if (matchesAnySelectorSafe(added, errorSelectors)) {
@@ -317,13 +349,20 @@ export function domPrimitiveActionDiff(options) {
                         }
                     }
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
             // Detect loading indicators
             const loadingIndicators = [];
             const loadingSelectors = [
-                '.spinner', '.loading', '.skeleton', '[aria-busy="true"]',
-                '[class*="spinner"]', '[class*="loading"]', '[class*="skeleton"]'
+                '.spinner',
+                '.loading',
+                '.skeleton',
+                '[aria-busy="true"]',
+                '[class*="spinner"]',
+                '[class*="loading"]',
+                '[class*="skeleton"]'
             ];
             for (const added of addedNodes) {
                 if (matchesAnySelectorSafe(added, loadingSelectors)) {

@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/session_store.go", "new_string": "resp, err := http.Get(\"https://api.example.com/data\")\ndefer resp.Body.Close()"}
+    "tool_input": {
+      "file_path": "internal/hook/session_store.go",
+      "new_string": "resp, err := http.Get(\"https://api.example.com/data\")\ndefer resp.Body.Close()"
+    }
   },
   "expect": {
     "has_output": true,

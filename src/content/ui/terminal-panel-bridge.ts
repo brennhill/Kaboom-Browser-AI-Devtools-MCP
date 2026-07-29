@@ -5,11 +5,7 @@
  * Docs: docs/features/feature/terminal/index.md
  */
 
-import {
-  StorageKey,
-  TERMINAL_PANEL_FALLBACK_HINT,
-  TERMINAL_PANEL_STALE_CONTEXT_HINT
-} from '../../lib/constants.js'
+import { StorageKey, TERMINAL_PANEL_FALLBACK_HINT, TERMINAL_PANEL_STALE_CONTEXT_HINT } from '../../lib/constants.js'
 import { onStorageChanged } from '../../lib/storage/changes.js'
 import { getSession } from '../../lib/storage/session.js'
 import { showActionToast } from './toast.js'
@@ -118,12 +114,7 @@ function reportPanelOpenFailure(reason: string): void {
   // add noise to advice the user can act on directly.
   console.error(`[KaBOOM!] Terminal side panel did not open: ${reason} ${hint}`)
   try {
-    showActionToast(
-      'Terminal side panel did not open',
-      stale ? hint : `${reason} ${hint}`,
-      'error',
-      8000
-    )
+    showActionToast('Terminal side panel did not open', stale ? hint : `${reason} ${hint}`, 'error', 8000)
   } catch {
     // Toast is best-effort; the console error above is the durable signal.
   }

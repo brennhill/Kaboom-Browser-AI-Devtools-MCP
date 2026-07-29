@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func getLimit(cfg map[string]int) int {\n\tv, ok := cfg[\"limit\"]\n\tif !ok {\n\t\treturn 100\n\t}\n\treturn v\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func getLimit(cfg map[string]int) int {\n\tv, ok := cfg[\"limit\"]\n\tif !ok {\n\t\treturn 100\n\t}\n\treturn v\n}"
+    }
   },
   "expect": {
     "has_output": true,

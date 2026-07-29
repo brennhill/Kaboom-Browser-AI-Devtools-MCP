@@ -155,8 +155,7 @@ export function initRuntimeMessageListener(): void {
         .catch((e: Error) => sr({ error: e.message }))
       return true
     },
-    kaboom_execute_js: (msg, sr) =>
-      handleExecuteJs((msg.params as { script?: string; timeout_ms?: number }) || {}, sr),
+    kaboom_execute_js: (msg, sr) => handleExecuteJs((msg.params as { script?: string; timeout_ms?: number }) || {}, sr),
     kaboom_execute_query: (msg, sr) => handleExecuteQuery((msg.params || {}) as Record<string, unknown>, sr),
     a11y_query: (msg, sr) => handleA11yQuery((msg.params || {}) as Record<string, unknown>, sr),
     dom_query: (msg, sr) => handleDomQuery((msg.params || {}) as Record<string, unknown>, sr),

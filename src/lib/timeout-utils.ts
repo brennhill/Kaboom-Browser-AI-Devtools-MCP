@@ -242,11 +242,7 @@ async function retryWithBackoff<T>(
  * @param timeoutMs Timeout in milliseconds before aborting
  * @returns The fetch Response
  */
-export async function fetchWithTimeout(
-  url: string,
-  options: RequestInit,
-  timeoutMs: number
-): Promise<Response> {
+export async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), timeoutMs)
   try {

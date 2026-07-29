@@ -50,7 +50,10 @@ const ACTION_FAMILIES = {
   read: ['get_text', 'get_value', 'get_attribute', 'wait_for', 'wait_for_text', 'wait_for_absent']
 }
 
-const GENERATED_BANNER = (family, source) => `// @ts-nocheck -- generated JavaScript is type-checked before transformation.
+const GENERATED_BANNER = (
+  family,
+  source
+) => `// @ts-nocheck -- generated JavaScript is type-checked before transformation.
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
 // Source: ${source} + partials/
 // Action family: ${family}
@@ -119,15 +122,18 @@ function buildOutput(templateContent, family, actions) {
     `export function ${exportName}(action: string, selector: string, options: DOMPrimitiveOptions): DOMResult | Promise<DOMResult>`
   )
   const typeImport = "import type { DOMPrimitiveOptions, DOMResult } from '../dom-types.js'\n\n"
-  return GENERATED_BANNER(family, 'scripts/templates/dom-primitives.ts.tpl') +
-    typeImport + normalize(typedExport).trimEnd() + GENERATED_END
+  return (
+    GENERATED_BANNER(family, 'scripts/templates/dom-primitives.ts.tpl') +
+    typeImport +
+    normalize(typedExport).trimEnd() +
+    GENERATED_END
+  )
 }
 
 function buildStandaloneOutput(templatePath, family) {
   const templateContent = fs.readFileSync(templatePath, 'utf8')
   const source = path.relative(ROOT, templatePath).split(path.sep).join('/')
-  return GENERATED_BANNER(family, source) +
-    normalize(resolveIncludes(templateContent)).trimEnd() + GENERATED_END
+  return GENERATED_BANNER(family, source) + normalize(resolveIncludes(templateContent)).trimEnd() + GENERATED_END
 }
 
 function main() {
@@ -151,7 +157,11 @@ function main() {
     const outputPath = path.join(OUTPUT_DIR, `dom-primitives-${family}.ts`)
     const generatedContent = buildStandaloneOutput(templatePath, family)
     const existingContent = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : ''
-    outputs.push({ outputPath, generatedContent, isDrifted: normalize(existingContent) !== normalize(generatedContent) })
+    outputs.push({
+      outputPath,
+      generatedContent,
+      isDrifted: normalize(existingContent) !== normalize(generatedContent)
+    })
   }
   const isDrifted = outputs.some((output) => output.isDrifted)
 

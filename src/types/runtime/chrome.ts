@@ -63,9 +63,7 @@ export interface ChromeSessionStorage {
   remove(keys: string | string[], callback: () => void): void
   clear(): Promise<void>
   clear(callback: () => void): void
-  setAccessLevel?(options: {
-    accessLevel: 'TRUSTED_CONTEXTS' | 'TRUSTED_AND_UNTRUSTED_CONTEXTS'
-  }): Promise<void>
+  setAccessLevel?(options: { accessLevel: 'TRUSTED_CONTEXTS' | 'TRUSTED_AND_UNTRUSTED_CONTEXTS' }): Promise<void>
 }
 
 /**

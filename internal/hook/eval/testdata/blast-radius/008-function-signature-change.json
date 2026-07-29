@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func WriteOutput(w io.Writer, context string, format string) error {\n\treturn nil\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func WriteOutput(w io.Writer, context string, format string) error {\n\treturn nil\n}"
+    }
   },
   "expect": {
     "has_output": true,

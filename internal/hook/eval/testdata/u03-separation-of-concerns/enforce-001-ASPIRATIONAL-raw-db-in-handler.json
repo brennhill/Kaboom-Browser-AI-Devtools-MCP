@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/server/main_response.go", "new_string": "rows, err := db.Query(\"SELECT * FROM sessions WHERE id = ?\", id)"}
+    "tool_input": {
+      "file_path": "internal/server/main_response.go",
+      "new_string": "rows, err := db.Query(\"SELECT * FROM sessions WHERE id = ?\", id)"
+    }
   },
   "expect": {
     "has_output": true,

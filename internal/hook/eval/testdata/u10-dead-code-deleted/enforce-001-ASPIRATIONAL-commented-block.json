@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "// func oldHandler(w http.ResponseWriter, r *http.Request) {\n//\tw.WriteHeader(200)\n//\tw.Write([]byte(\"ok\"))\n//\tlog.Printf(\"handled\")\n// }"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "// func oldHandler(w http.ResponseWriter, r *http.Request) {\n//\tw.WriteHeader(200)\n//\tw.Write([]byte(\"ok\"))\n//\tlog.Printf(\"handled\")\n// }"
+    }
   },
   "expect": {
     "has_output": true,

@@ -4,7 +4,7 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func small() {}"}
+    "tool_input": { "file_path": "internal/hook/protocol.go", "new_string": "func small() {}" }
   },
   "expect": {
     "has_output": true,

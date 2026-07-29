@@ -331,7 +331,6 @@ async function getTabWithRetry(tabId: number, retry = false): Promise<chrome.tab
   }
 }
 
-
 function buildMissingTargetError(
   queryType: string,
   useActiveTab: boolean,

@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/server/main_response.go", "new_string": "resp, err := http.Get(\"https://api.example.com/status\")\nif err != nil {\n\treturn err\n}"}
+    "tool_input": {
+      "file_path": "internal/server/main_response.go",
+      "new_string": "resp, err := http.Get(\"https://api.example.com/status\")\nif err != nil {\n\treturn err\n}"
+    }
   },
   "expect": {
     "has_output": true,

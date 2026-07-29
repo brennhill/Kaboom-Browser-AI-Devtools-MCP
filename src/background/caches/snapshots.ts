@@ -322,7 +322,6 @@ function cacheNullAndReturn(scriptUrl: string): null {
   return null
 }
 
-
 function parseInlineSourceMap(dataUrl: string, scriptUrl: string, debugLogFn?: DebugLogFn): ParsedSourceMap | null {
   const base64Match = dataUrl.match(/^data:application\/json;base64,(.+)$/)
   if (!base64Match || !base64Match[1]) return cacheNullAndReturn(scriptUrl)

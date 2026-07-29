@@ -6,11 +6,7 @@ import { domPrimitiveListInteractive } from '../dom/primitives/dom-primitives-li
 import { domPrimitiveNavDiscovery } from '../dom/primitives/dom-primitives-nav-discovery.js'
 import { readableFallbackScript } from '../exec/content-fallback-scripts.js'
 import { registerCommand } from './registry.js'
-import {
-  collectCommandElements,
-  commandPageMetadata,
-  selectCommandElements
-} from './results/element-results.js'
+import { collectCommandElements, commandPageMetadata, selectCommandElements } from './results/element-results.js'
 import { errorMessage } from '../../lib/error-utils.js'
 
 // =============================================================================
@@ -88,10 +84,7 @@ registerCommand('explore_page', async (ctx) => {
     ])
 
     // Process interactive elements (capped at 100)
-    const { elements: cappedElements, firstError: interactiveError } = collectCommandElements(
-      interactiveResults,
-      100
-    )
+    const { elements: cappedElements, firstError: interactiveError } = collectCommandElements(interactiveResults, 100)
     const finalElements = selectCommandElements(cappedElements, ctx.params)
 
     // Process readable content

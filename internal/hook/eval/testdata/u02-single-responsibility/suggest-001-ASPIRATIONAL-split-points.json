@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/blast_radius.go", "new_string": "// adding more code to an already large file"}
+    "tool_input": {
+      "file_path": "internal/hook/blast_radius.go",
+      "new_string": "// adding more code to an already large file"
+    }
   },
   "expect": {
     "has_output": true,

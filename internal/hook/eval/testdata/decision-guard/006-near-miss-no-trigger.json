@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "// This module does not require any external dependencies"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "// This module does not require any external dependencies"
+    }
   },
   "expect": {
     "has_output": false,

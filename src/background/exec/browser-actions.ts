@@ -36,8 +36,14 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(message)), timeoutMs)
     promise.then(
-      (value) => { clearTimeout(timer); resolve(value) },
-      (err) => { clearTimeout(timer); reject(err as Error) }
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (err) => {
+        clearTimeout(timer)
+        reject(err as Error)
+      }
     )
   })
 }
@@ -362,11 +368,18 @@ export async function handleAsyncExecuteCommand(
   const startTime = Date.now()
 
   if (!isAiWebPilotEnabled()) {
-    sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', {
-      success: false,
-      error: 'ai_web_pilot_disabled',
-      message: 'AI Web Pilot is not enabled'
-    }, 'ai_web_pilot_disabled')
+    sendAsyncResult(
+      syncClient,
+      query.id,
+      query.correlation_id!,
+      'error',
+      {
+        success: false,
+        error: 'ai_web_pilot_disabled',
+        message: 'AI Web Pilot is not enabled'
+      },
+      'ai_web_pilot_disabled'
+    )
     return
   }
 

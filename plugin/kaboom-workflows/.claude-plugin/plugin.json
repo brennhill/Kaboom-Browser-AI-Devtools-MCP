@@ -10,7 +10,5 @@
     "commands/record-workflow.md",
     "commands/interactive-dev.md"
   ],
-  "skills": [
-    "skills/kaboom-connection-guard/SKILL.md"
-  ]
+  "skills": ["skills/kaboom-connection-guard/SKILL.md"]
 }

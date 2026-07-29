@@ -47,11 +47,13 @@ function loadActiveCodebaseFromDaemon(serverUrl) {
     fetch(`${serverUrl}/config/active-codebase`, {
         signal: AbortSignal.timeout(3000),
         headers: buildDaemonHeaders({ contentType: null })
-    }).then(resp => {
+    })
+        .then((resp) => {
         if (!resp.ok)
             return;
         return resp.json();
-    }).then(data => {
+    })
+        .then((data) => {
         if (!data?.active_codebase)
             return;
         const devRootInput = document.getElementById('terminal-dev-root');
@@ -59,7 +61,8 @@ function loadActiveCodebaseFromDaemon(serverUrl) {
         if (devRootInput && !devRootInput.value.trim()) {
             devRootInput.value = data.active_codebase;
         }
-    }).catch(() => {
+    })
+        .catch(() => {
         // Daemon unreachable — ignore
     });
 }
@@ -67,7 +70,7 @@ function loadActiveCodebaseFromDaemon(serverUrl) {
  * Load saved options
  */
 export async function loadOptions() {
-    const result = await getLocals([
+    const result = (await getLocals([
         StorageKey.SERVER_URL,
         StorageKey.SCREENSHOT_ON_ERROR,
         StorageKey.SOURCE_MAP_ENABLED,
@@ -76,7 +79,7 @@ export async function loadOptions() {
         StorageKey.THEME,
         StorageKey.TERMINAL_AI_COMMAND,
         StorageKey.TERMINAL_DEV_ROOT
-    ]);
+    ]));
     // Set server URL
     const serverUrlInput = document.getElementById('server-url-input');
     if (serverUrlInput) {
@@ -156,7 +159,8 @@ export function saveOptions() {
         theme,
         [StorageKey.TERMINAL_AI_COMMAND]: terminalAICommand,
         [StorageKey.TERMINAL_DEV_ROOT]: terminalDevRoot
-    }).then(() => {
+    })
+        .then(() => {
         // Show saved message
         const message = document.getElementById('saved-message');
         message?.classList.add('show');
@@ -174,7 +178,8 @@ export function saveOptions() {
         setTimeout(() => {
             message?.classList.remove('show');
         }, 2000);
-    }).catch((err) => {
+    })
+        .catch((err) => {
         // The persist rejected (e.g. storage over quota). Surface it instead of
         // silently doing nothing, and absorb the rejection so the click handler that
         // discards this promise does not leak an unhandled rejection (rule 25).

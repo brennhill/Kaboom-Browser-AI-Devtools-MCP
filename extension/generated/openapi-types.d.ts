@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 export interface paths {
-    "/debug/usage": {
+    '/debug/usage': {
         parameters: {
             query?: never;
             header?: never;
@@ -14,7 +14,7 @@ export interface paths {
          * Tool usage counters
          * @description Returns per-tool invocation counts for diagnostics. Debug-only endpoint.
          */
-        get: operations["getDebugUsage"];
+        get: operations['getDebugUsage'];
         put?: never;
         post?: never;
         delete?: never;
@@ -23,7 +23,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/debug/beacon-flush": {
+    '/debug/beacon-flush': {
         parameters: {
             query?: never;
             header?: never;
@@ -36,14 +36,14 @@ export interface paths {
          * Flush telemetry beacon buffer
          * @description Forces a flush of the buffered telemetry beacon payload and returns it. Debug-only endpoint.
          */
-        post: operations["postDebugBeaconFlush"];
+        post: operations['postDebugBeaconFlush'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/": {
+    '/': {
         parameters: {
             query?: never;
             header?: never;
@@ -54,7 +54,7 @@ export interface paths {
          * API discovery
          * @description Returns the server name, version, and links to key endpoints (/health, /logs). Serves as a lightweight discovery mechanism for MCP clients connecting to the server for the first time. Always returns 200 with a static JSON payload.
          */
-        get: operations["getRoot"];
+        get: operations['getRoot'];
         put?: never;
         post?: never;
         delete?: never;
@@ -63,7 +63,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/health": {
+    '/health': {
         parameters: {
             query?: never;
             header?: never;
@@ -74,7 +74,7 @@ export interface paths {
          * Health check
          * @description Returns server health status including version, log buffer stats, and capture availability. Used by MCP clients and monitoring tools to verify the server is running and the Chrome extension is connected. The capture.available field indicates whether the extension WebSocket is active.
          */
-        get: operations["getHealth"];
+        get: operations['getHealth'];
         put?: never;
         post?: never;
         delete?: never;
@@ -83,7 +83,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/doctor": {
+    '/doctor': {
         parameters: {
             query?: never;
             header?: never;
@@ -94,7 +94,7 @@ export interface paths {
          * Doctor preflight
          * @description Runs aggregated readiness checks for extension connectivity, pilot state, tracked tab, circuit breaker, queue pressure, and recent failure signals. Used by setup and diagnostics to determine whether interact actions are likely to succeed.
          */
-        get: operations["getDoctor"];
+        get: operations['getDoctor'];
         put?: never;
         post?: never;
         delete?: never;
@@ -103,7 +103,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/diagnostics": {
+    '/diagnostics': {
         parameters: {
             query?: never;
             header?: never;
@@ -114,7 +114,7 @@ export interface paths {
          * Diagnostic report
          * @description Returns comprehensive diagnostic information for bug reports and troubleshooting. Includes system info (OS, arch, Go version, goroutine count), buffer counts across all ring buffers, extension connection state, and circuit breaker status. Output is designed to be copy-pasted into GitHub issues.
          */
-        get: operations["getDiagnostics"];
+        get: operations['getDiagnostics'];
         put?: never;
         post?: never;
         delete?: never;
@@ -123,7 +123,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/shutdown": {
+    '/shutdown': {
         parameters: {
             query?: never;
             header?: never;
@@ -136,14 +136,14 @@ export interface paths {
          * Graceful shutdown
          * @description Initiates graceful server shutdown. Sends the JSON response first, then triggers SIGTERM after a short delay to allow the response to flush. Used by the CLI's stop command and the dashboard UI. The server closes all WebSocket connections and flushes pending writes before exiting.
          */
-        post: operations["postShutdown"];
+        post: operations['postShutdown'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/openapi.json": {
+    '/openapi.json': {
         parameters: {
             query?: never;
             header?: never;
@@ -154,7 +154,7 @@ export interface paths {
          * OpenAPI specification
          * @description Serves this OpenAPI 3.1.0 specification as JSON. The spec is embedded into the Go binary at compile time via go:embed and served as-is. Used by API documentation tools, SDK generators, and the /docs page.
          */
-        get: operations["getOpenAPI"];
+        get: operations['getOpenAPI'];
         put?: never;
         post?: never;
         delete?: never;
@@ -163,7 +163,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/mcp": {
+    '/mcp': {
         parameters: {
             query?: never;
             header?: never;
@@ -176,14 +176,14 @@ export interface paths {
          * MCP JSON-RPC bridge
          * @description HTTP bridge for the MCP protocol. Accepts JSON-RPC 2.0 requests and routes them to the same tool handlers used by the stdio MCP transport. Supports methods: observe, generate, configure, interact, and analyze. This endpoint enables non-stdio MCP clients (dashboards, web UIs, REST wrappers) to call MCP tools over HTTP.
          */
-        post: operations["postMcp"];
+        post: operations['postMcp'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/token-savings": {
+    '/api/token-savings': {
         parameters: {
             query?: never;
             header?: never;
@@ -196,14 +196,14 @@ export interface paths {
          * Record token savings from hook compression
          * @description Records token savings metrics from the kaboom-hooks compress-output hook. The hook POSTs category, tokens_before, and tokens_after after compressing verbose test/build output. Stats are tracked per-session and persisted to lifetime totals.
          */
-        post: operations["postTokenSavings"];
+        post: operations['postTokenSavings'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/status": {
+    '/api/status': {
         parameters: {
             query?: never;
             header?: never;
@@ -214,7 +214,7 @@ export interface paths {
          * Dashboard status feed
          * @description Returns aggregated server status for the built-in dashboard UI. Includes version, uptime, PID, platform, extension connection state, pilot toggle, buffer fill levels with capacities, recent command history, and optional audit metrics. Polled by the dashboard at regular intervals to keep the UI current.
          */
-        get: operations["getApiStatus"];
+        get: operations['getApiStatus'];
         put?: never;
         post?: never;
         delete?: never;
@@ -223,7 +223,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/config/active-codebase": {
+    '/config/active-codebase': {
         parameters: {
             query?: never;
             header?: never;
@@ -234,12 +234,12 @@ export interface paths {
          * Get active codebase path
          * @description Returns the active codebase path used as the default terminal working directory. The extension reads this to know which project directory the terminal should open in.
          */
-        get: operations["getActiveCodebase"];
+        get: operations['getActiveCodebase'];
         /**
          * Set active codebase path
          * @description Sets the active codebase path used as the default terminal working directory. The extension writes this when the user selects a project.
          */
-        put: operations["setActiveCodebase"];
+        put: operations['setActiveCodebase'];
         post?: never;
         delete?: never;
         options?: never;
@@ -247,7 +247,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/logs.html": {
+    '/logs.html': {
         parameters: {
             query?: never;
             header?: never;
@@ -258,7 +258,7 @@ export interface paths {
          * HTML log viewer
          * @description Serves the embedded HTML log viewer page. Provides a browser-based UI for viewing captured console logs with filtering and search. The HTML is embedded into the Go binary at compile time via go:embed.
          */
-        get: operations["getLogsHtml"];
+        get: operations['getLogsHtml'];
         put?: never;
         post?: never;
         delete?: never;
@@ -267,7 +267,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/setup": {
+    '/setup': {
         parameters: {
             query?: never;
             header?: never;
@@ -278,7 +278,7 @@ export interface paths {
          * Setup page
          * @description Serves the embedded setup page with installation instructions and configuration guidance. Provides step-by-step instructions for connecting the Chrome extension, configuring MCP clients, and verifying the setup. The HTML is embedded into the Go binary at compile time via go:embed.
          */
-        get: operations["getSetup"];
+        get: operations['getSetup'];
         put?: never;
         post?: never;
         delete?: never;
@@ -287,7 +287,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/docs": {
+    '/docs': {
         parameters: {
             query?: never;
             header?: never;
@@ -298,7 +298,7 @@ export interface paths {
          * Documentation page
          * @description Serves the embedded documentation page with API reference and usage guides. Renders the OpenAPI spec in a human-readable format with interactive examples. The HTML is embedded into the Go binary at compile time via go:embed.
          */
-        get: operations["getDocs"];
+        get: operations['getDocs'];
         put?: never;
         post?: never;
         delete?: never;
@@ -307,7 +307,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/logs": {
+    '/logs': {
         parameters: {
             query?: never;
             header?: never;
@@ -320,18 +320,18 @@ export interface paths {
          * Ingest log entries
          * @description Ingests console log entries from the Chrome extension. The extension's content script intercepts console.log/warn/error calls and batches them for periodic submission. Entries are stored in a ring buffer (FIFO eviction) and read by MCP clients via observe(what: 'logs'). Each entry includes level, arguments, timestamp, and source URL.
          */
-        post: operations["postLogs"];
+        post: operations['postLogs'];
         /**
          * Clear log buffer
          * @description Clears all buffered log entries from the ring buffer. Used to reset state between test runs or when the buffer contains stale data. Does not affect the on-disk log file.
          */
-        delete: operations["deleteLogs"];
+        delete: operations['deleteLogs'];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/network-waterfall": {
+    '/network-waterfall': {
         parameters: {
             query?: never;
             header?: never;
@@ -344,14 +344,14 @@ export interface paths {
          * Ingest waterfall entries
          * @description Ingests network request waterfall entries (URL, status, timing) from the Chrome extension. The extension's network interceptor batches PerformanceResourceTiming entries and POSTs them periodically. Data is stored in a ring buffer (capacity 1000, FIFO eviction) and read by MCP clients via observe(what: 'network_waterfall'). Server-side analysis flags suspicious TLDs, non-standard ports, and mixed content.
          */
-        post: operations["postNetworkWaterfall"];
+        post: operations['postNetworkWaterfall'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/network-bodies": {
+    '/network-bodies': {
         parameters: {
             query?: never;
             header?: never;
@@ -364,14 +364,14 @@ export interface paths {
          * Ingest network bodies
          * @description Ingests network request and response bodies captured by the Chrome extension's fetch() interceptor. Bodies are stored in a ring buffer and paired with waterfall entries by URL. Binary response bodies are detected and labeled rather than stored. MCP clients read bodies via observe(what: 'network_bodies').
          */
-        post: operations["postNetworkBodies"];
+        post: operations['postNetworkBodies'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/websocket-events": {
+    '/websocket-events': {
         parameters: {
             query?: never;
             header?: never;
@@ -384,14 +384,14 @@ export interface paths {
          * Ingest WebSocket events
          * @description Ingests WebSocket lifecycle and message events from the Chrome extension. Captures open, message (incoming/outgoing), close, and error events with connection IDs for correlation. High-throughput connections are automatically sampled to prevent buffer flooding. Data is read by MCP clients via observe(what: 'websocket_events').
          */
-        post: operations["postWebSocketEvents"];
+        post: operations['postWebSocketEvents'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/telemetry": {
+    '/telemetry': {
         parameters: {
             query?: never;
             header?: never;
@@ -402,7 +402,7 @@ export interface paths {
          * Read telemetry buffers
          * @description Unified read endpoint for all telemetry buffers. Replaces individual GET endpoints on /logs, /network-waterfall, /network-bodies, /websocket-events, /enhanced-actions, /performance-snapshots. Returns the most recent N entries from the specified buffer type. This is the primary endpoint MCP clients use to read captured telemetry data.
          */
-        get: operations["getTelemetry"];
+        get: operations['getTelemetry'];
         put?: never;
         post?: never;
         delete?: never;
@@ -411,7 +411,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/websocket-status": {
+    '/websocket-status': {
         parameters: {
             query?: never;
             header?: never;
@@ -422,7 +422,7 @@ export interface paths {
          * Get WebSocket connection status
          * @description Returns active and recently-closed WebSocket connections with message rates and sampling info. Used by MCP clients via observe(what: 'websocket_status') to understand which WebSocket connections are active on the page, their throughput, and whether sampling is being applied to high-volume connections.
          */
-        get: operations["getWebSocketStatus"];
+        get: operations['getWebSocketStatus'];
         put?: never;
         post?: never;
         delete?: never;
@@ -431,7 +431,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/enhanced-actions": {
+    '/enhanced-actions': {
         parameters: {
             query?: never;
             header?: never;
@@ -444,14 +444,14 @@ export interface paths {
          * Ingest user actions
          * @description Ingests user interaction events (clicks, inputs, navigations, scrolls) from the Chrome extension. The extension's action tracker records DOM interactions with CSS selectors and values, enabling reproduction script generation and action replay. Data is stored in a ring buffer and read by MCP clients via observe(what: 'actions').
          */
-        post: operations["postEnhancedActions"];
+        post: operations['postEnhancedActions'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/performance-snapshots": {
+    '/performance-snapshots': {
         parameters: {
             query?: never;
             header?: never;
@@ -464,14 +464,14 @@ export interface paths {
          * Ingest performance snapshots
          * @description Ingests Web Vitals performance snapshots (FCP, LCP, CLS, TTFB) from the Chrome extension. The extension captures Core Web Vitals using the web-vitals library and submits them on page load and navigation events. MCP clients read snapshots via observe(what: 'vitals') and compare them over time to detect performance regressions.
          */
-        post: operations["postPerformanceSnapshots"];
+        post: operations['postPerformanceSnapshots'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/query-result": {
+    '/query-result': {
         parameters: {
             query?: never;
             header?: never;
@@ -484,14 +484,14 @@ export interface paths {
          * Submit query result
          * @description Unified endpoint for the extension to submit results of any async query or command. Replaces the legacy separate endpoints (dom-result, a11y-result, state-result, execute-result, highlight-result). The MCP server creates a PendingQuery, delivers it to the extension via /sync, and waits for the result to arrive here. The correlation_id links the result back to the original MCP tool call.
          */
-        post: operations["postQueryResult"];
+        post: operations['postQueryResult'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/screenshots": {
+    '/screenshots': {
         parameters: {
             query?: never;
             header?: never;
@@ -504,14 +504,14 @@ export interface paths {
          * Save screenshot
          * @description Saves a screenshot JPEG from the Chrome extension. The extension captures the visible tab using chrome.tabs.captureVisibleTab() and sends the base64 data URL. Screenshots are saved to the kaboom data directory and can be linked to specific MCP tool invocations via correlation_id. Rate limited to 1 screenshot per second per client to prevent disk flooding.
          */
-        post: operations["postScreenshot"];
+        post: operations['postScreenshot'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/recordings/save": {
+    '/recordings/save': {
         parameters: {
             query?: never;
             header?: never;
@@ -524,14 +524,14 @@ export interface paths {
          * Save video recording
          * @description Saves a tab video recording from the Chrome extension's offscreen document. The extension uses chrome.tabCapture to record the visible tab as WebM video, optionally with audio (tab audio, microphone, or both). Accepts multipart form data with the video blob and a metadata JSON string. Recordings are saved to the kaboom data directory.
          */
-        post: operations["postRecordingSave"];
+        post: operations['postRecordingSave'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/clients": {
+    '/clients': {
         parameters: {
             query?: never;
             header?: never;
@@ -542,20 +542,20 @@ export interface paths {
          * List MCP clients
          * @description Lists all registered MCP clients with their working directories and last activity timestamps. MCP clients register on first connection and are tracked for multi-client coordination. The extension uses this to show connected clients in its popup UI.
          */
-        get: operations["getClients"];
+        get: operations['getClients'];
         put?: never;
         /**
          * Register MCP client
          * @description Registers a new MCP client with its working directory. Returns a client ID that should be included in subsequent requests via the X-Kaboom-Client header. Each client gets its own activity tracking and can be independently managed.
          */
-        post: operations["postClients"];
+        post: operations['postClients'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/clients/{id}": {
+    '/clients/{id}': {
         parameters: {
             query?: never;
             header?: never;
@@ -566,20 +566,20 @@ export interface paths {
          * Get client details
          * @description Returns the registration details for a specific MCP client by ID. Includes the client's working directory, creation time, and last activity timestamp.
          */
-        get: operations["getClient"];
+        get: operations['getClient'];
         put?: never;
         post?: never;
         /**
          * Unregister client
          * @description Removes an MCP client from the registry. The client's pending queries are cancelled and its activity tracking is deleted. Used when an MCP client session ends cleanly.
          */
-        delete: operations["deleteClient"];
+        delete: operations['deleteClient'];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/sync": {
+    '/sync': {
         parameters: {
             query?: never;
             header?: never;
@@ -592,14 +592,14 @@ export interface paths {
          * Extension sync
          * @description Unified bidirectional sync endpoint between the server and Chrome extension. Replaces separate polling for pending-queries, settings, extension-logs, and extension-status. In a single round-trip, the extension sends its current state (settings, logs, command results) and receives pending commands, capture overrides, and timing for the next poll. This is the primary communication channel between server and extension.
          */
-        post: operations["postSync"];
+        post: operations['postSync'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/snapshot": {
+    '/snapshot': {
         parameters: {
             query?: never;
             header?: never;
@@ -610,7 +610,7 @@ export interface paths {
          * Get capture snapshot
          * @description Returns an aggregated snapshot of all capture buffers for CI/testing integration. Includes logs, network bodies, WebSocket events, enhanced actions, and computed stats (error counts, warning counts, network failures). Supports filtering by timestamp (since parameter) and tagging with a test_id for correlation with test boundaries.
          */
-        get: operations["getSnapshot"];
+        get: operations['getSnapshot'];
         put?: never;
         post?: never;
         delete?: never;
@@ -619,7 +619,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/clear": {
+    '/clear': {
         parameters: {
             query?: never;
             header?: never;
@@ -632,14 +632,14 @@ export interface paths {
          * Clear all buffers
          * @description Atomically resets all capture buffers (logs, network waterfall, network bodies, WebSocket events, enhanced actions, performance snapshots). Returns the total number of entries removed. Used between test runs in CI pipelines to ensure clean state, and by the MCP configure(action: 'clear') tool.
          */
-        post: operations["postClear"];
+        post: operations['postClear'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/test-boundary": {
+    '/test-boundary': {
         parameters: {
             query?: never;
             header?: never;
@@ -652,14 +652,14 @@ export interface paths {
          * Mark test boundary
          * @description Marks the start or end of a test for correlation. While a test boundary is active, all ingested telemetry entries are tagged with the test_id, enabling per-test filtering in snapshots. Used by CI pipelines and the MCP configure(action: 'test_boundary_start/end') tool to isolate telemetry to individual test cases.
          */
-        post: operations["postTestBoundary"];
+        post: operations['postTestBoundary'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/draw-mode/complete": {
+    '/draw-mode/complete': {
         parameters: {
             query?: never;
             header?: never;
@@ -672,14 +672,14 @@ export interface paths {
          * Complete draw mode session
          * @description Receives annotation data and a screenshot from the extension when the user finishes a draw mode session. The user draws rectangles on the page and types feedback, then presses Escape to complete. The extension captures the annotated screenshot, DOM element details for each annotation, and sends them here. Annotations are stored per-session and retrievable via analyze(what: 'annotations').
          */
-        post: operations["postDrawModeComplete"];
+        post: operations['postDrawModeComplete'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/push/screenshot": {
+    '/push/screenshot': {
         parameters: {
             query?: never;
             header?: never;
@@ -692,14 +692,14 @@ export interface paths {
          * Push screenshot notification
          * @description Accepts extension push events for screenshots and forwards them through the server push pipeline to connected MCP clients.
          */
-        post: operations["postPushScreenshot"];
+        post: operations['postPushScreenshot'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/push/message": {
+    '/push/message': {
         parameters: {
             query?: never;
             header?: never;
@@ -712,14 +712,14 @@ export interface paths {
          * Push text notification
          * @description Accepts extension push message events and routes them to connected MCP clients via the server push inbox.
          */
-        post: operations["postPushMessage"];
+        post: operations['postPushMessage'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/push/capabilities": {
+    '/push/capabilities': {
         parameters: {
             query?: never;
             header?: never;
@@ -730,7 +730,7 @@ export interface paths {
          * Get push capabilities
          * @description Returns the server push capability snapshot used by the extension to decide which push channels can be delivered.
          */
-        get: operations["getPushCapabilities"];
+        get: operations['getPushCapabilities'];
         put?: never;
         post?: never;
         delete?: never;
@@ -739,7 +739,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/push/drain": {
+    '/push/drain': {
         parameters: {
             query?: never;
             header?: never;
@@ -750,7 +750,7 @@ export interface paths {
          * Drain push events
          * @description Returns and clears all queued push events. Used internally by the bridge process to relay push notifications to the MCP client.
          */
-        get: operations["drainPushEvents"];
+        get: operations['drainPushEvents'];
         put?: never;
         post?: never;
         delete?: never;
@@ -759,7 +759,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/tests/": {
+    '/tests/': {
         parameters: {
             query?: never;
             header?: never;
@@ -770,7 +770,7 @@ export interface paths {
          * Serve embedded test pages
          * @description Serves deterministic embedded test harness pages under /tests/ for smoke testing and browser behavior validation.
          */
-        get: operations["getTestsPages"];
+        get: operations['getTestsPages'];
         put?: never;
         post?: never;
         delete?: never;
@@ -779,7 +779,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/tests/ws": {
+    '/tests/ws': {
         parameters: {
             query?: never;
             header?: never;
@@ -790,7 +790,7 @@ export interface paths {
          * WebSocket echo test endpoint
          * @description Upgrades to a WebSocket echo server used by the test harness for deterministic websocket behavior checks.
          */
-        get: operations["getTestsWebSocket"];
+        get: operations['getTestsWebSocket'];
         put?: never;
         post?: never;
         delete?: never;
@@ -799,7 +799,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/recordings/storage": {
+    '/recordings/storage': {
         parameters: {
             query?: never;
             header?: never;
@@ -810,24 +810,24 @@ export interface paths {
          * Get recording storage info
          * @description Returns disk usage information for saved video recordings. Lists all recordings with their file sizes, durations, and paths. Used by MCP clients via observe(what: 'saved_videos') and the dashboard to display storage consumption.
          */
-        get: operations["getRecordingStorage"];
+        get: operations['getRecordingStorage'];
         put?: never;
         /**
          * Recalculate recording storage
          * @description Triggers a full recalculation of storage usage for all saved recordings. Walks the recordings directory, recomputes file sizes, and updates the storage index. Used after manual file operations or to recover from index drift.
          */
-        post: operations["postRecordingStorage"];
+        post: operations['postRecordingStorage'];
         /**
          * Delete recording
          * @description Deletes a specific video recording by ID. Removes the WebM file from disk and updates the storage index. The recording_id corresponds to the name field in VideoRecordingMetadata.
          */
-        delete: operations["deleteRecordingStorage"];
+        delete: operations['deleteRecordingStorage'];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/recordings/reveal": {
+    '/recordings/reveal': {
         parameters: {
             query?: never;
             header?: never;
@@ -840,14 +840,14 @@ export interface paths {
          * Reveal recording in file manager
          * @description Opens the recording file location in the system file manager (Finder on macOS, Explorer on Windows, xdg-open on Linux). Used by MCP clients and the dashboard to let users access recorded video files directly.
          */
-        post: operations["postRecordingReveal"];
+        post: operations['postRecordingReveal'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/file/read": {
+    '/api/file/read': {
         parameters: {
             query?: never;
             header?: never;
@@ -860,14 +860,14 @@ export interface paths {
          * Read file for upload
          * @description Reads a local file and returns its contents as base64 for upload automation (Stage 1). Always available without the --enable-os-upload-automation flag. Validates file existence, computes MIME type from extension, and enforces size limits. Used by the MCP interact(action: 'upload') tool as the first step in the multi-stage upload pipeline.
          */
-        post: operations["postFileRead"];
+        post: operations['postFileRead'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/file/dialog/inject": {
+    '/api/file/dialog/inject': {
         parameters: {
             query?: never;
             header?: never;
@@ -880,14 +880,14 @@ export interface paths {
          * Inject file into dialog
          * @description Injects a file path into a native file dialog using Chrome DevTools Protocol (Stage 2). Always available without the --enable-os-upload-automation flag. Intercepts the file chooser dialog opened by an <input type='file'> element and programmatically sets the file. Requires the browser PID to identify the correct Chrome instance.
          */
-        post: operations["postFileDialogInject"];
+        post: operations['postFileDialogInject'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/form/submit": {
+    '/api/form/submit': {
         parameters: {
             query?: never;
             header?: never;
@@ -900,14 +900,14 @@ export interface paths {
          * Submit form with file
          * @description Submits an HTML form with a file upload via server-side multipart POST (Stage 3). Always available without the --enable-os-upload-automation flag. Constructs a multipart/form-data request with the specified file and form fields, including optional CSRF token and cookies. Used when CDP file dialog injection (Stage 2) is not possible.
          */
-        post: operations["postFormSubmit"];
+        post: operations['postFormSubmit'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/os-automation/inject": {
+    '/api/os-automation/inject': {
         parameters: {
             query?: never;
             header?: never;
@@ -920,14 +920,14 @@ export interface paths {
          * OS-level file dialog injection
          * @description Uses OS-level automation (AppleScript on macOS, xdotool on Linux) to inject a file path into a native file dialog (Stage 4). Requires the --enable-os-upload-automation flag. This is the fallback stage when CDP injection (Stage 2) fails, typically for non-standard file dialogs. Supports retry logic for timing-sensitive dialog interactions.
          */
-        post: operations["postOSAutomationInject"];
+        post: operations['postOSAutomationInject'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/os-automation/dismiss": {
+    '/api/os-automation/dismiss': {
         parameters: {
             query?: never;
             header?: never;
@@ -940,14 +940,14 @@ export interface paths {
          * Dismiss native file dialog
          * @description Sends Escape key via OS automation to close a dangling native file dialog after a failed upload automation attempt (Stage 4 cleanup). Requires --enable-os-upload-automation flag. Prevents orphaned dialog windows from blocking the browser after upload failures.
          */
-        post: operations["postOSAutomationDismiss"];
+        post: operations['postOSAutomationDismiss'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/insecure-proxy": {
+    '/insecure-proxy': {
         parameters: {
             query?: never;
             header?: never;
@@ -958,7 +958,7 @@ export interface paths {
          * Insecure proxy (altered environment)
          * @description Last-resort altered-environment debugging proxy for CSP-locked pages. Only available when security_mode is insecure_proxy. Fetches a target URL and strips CSP response headers; output is not production parity.
          */
-        get: operations["getInsecureProxy"];
+        get: operations['getInsecureProxy'];
         put?: never;
         post?: never;
         delete?: never;
@@ -1118,7 +1118,7 @@ export interface components {
              * @description Whether to start or end the test boundary
              * @enum {string}
              */
-            action: "start" | "end";
+            action: 'start' | 'end';
         };
         /** @description Confirmation that a test boundary was set, with the server timestamp for synchronization. */
         TestBoundaryResponse: {
@@ -1327,14 +1327,14 @@ export interface components {
              * @description JSON-RPC protocol version (must be '2.0')
              * @enum {string}
              */
-            jsonrpc: "2.0";
+            jsonrpc: '2.0';
             /** @description Request ID for response correlation */
             id?: string | number;
             /**
              * @description MCP tool name to invoke
              * @enum {string}
              */
-            method: "observe" | "generate" | "configure" | "interact" | "analyze";
+            method: 'observe' | 'generate' | 'configure' | 'interact' | 'analyze';
             /** @description Tool-specific parameters (same as MCP tool input schema) */
             params?: Record<string, never>;
         };
@@ -1344,7 +1344,7 @@ export interface components {
              * @description JSON-RPC protocol version (always '2.0')
              * @enum {string}
              */
-            jsonrpc?: "2.0";
+            jsonrpc?: '2.0';
             /** @description Echo of the request ID */
             id?: string | number;
             /** @description Tool result on success (absent on error) */
@@ -1363,7 +1363,7 @@ export interface components {
              * @description Console log level
              * @enum {string}
              */
-            level: "error" | "warn" | "info" | "debug" | "log";
+            level: 'error' | 'warn' | 'info' | 'debug' | 'log';
             /** @description Serialized console arguments (strings, objects, arrays) */
             args?: unknown;
             /**
@@ -1408,12 +1408,12 @@ export interface components {
              * @description Event type
              * @enum {string}
              */
-            event?: "open" | "message" | "close" | "error";
+            event?: 'open' | 'message' | 'close' | 'error';
             /**
              * @description Message direction (only present for 'message' events)
              * @enum {string}
              */
-            direction?: "incoming" | "outgoing";
+            direction?: 'incoming' | 'outgoing';
             /** @description Message payload (truncated if over size limit) */
             data?: string;
             /**
@@ -1487,7 +1487,7 @@ export interface components {
              * @description Command type that determines which extension handler processes this query
              * @enum {string}
              */
-            type?: "dom" | "a11y" | "execute" | "highlight" | "state" | "screen_recording_start" | "screen_recording_stop" | "browser_action" | "page_info" | "tabs" | "subtitle" | "screenshot" | "dom_action" | "state_capture";
+            type?: 'dom' | 'a11y' | 'execute' | 'highlight' | 'state' | 'screen_recording_start' | 'screen_recording_stop' | 'browser_action' | 'page_info' | 'tabs' | 'subtitle' | 'screenshot' | 'dom_action' | 'state_capture';
             /** @description Command-specific parameters passed to the extension handler */
             params?: Record<string, never>;
             /** @description Links this query to the originating MCP tool call for result routing */
@@ -1512,7 +1512,7 @@ export interface components {
              * @description Execution outcome
              * @enum {string}
              */
-            status?: "complete" | "error" | "timeout";
+            status?: 'complete' | 'error' | 'timeout';
             /** @description Command result data on success (shape depends on command type) */
             result?: unknown;
             /** @description Error message when status is 'error' */
@@ -1557,7 +1557,7 @@ export interface components {
              * @description Audio source: tab audio, microphone, or both
              * @enum {string}
              */
-            audio_mode?: "tab" | "mic" | "both";
+            audio_mode?: 'tab' | 'mic' | 'both';
             /** @description Whether the recording was truncated due to size or duration limits */
             truncated?: boolean;
         };
@@ -1622,14 +1622,14 @@ export interface components {
                 context?: string;
             }[];
             /** @description Results from async commands the extension has executed since last sync */
-            command_results?: components["schemas"]["SyncCommandResult"][];
+            command_results?: components['schemas']['SyncCommandResult'][];
         };
         /** @description Server-to-extension sync response. Delivers pending commands, capture overrides, and timing for the next poll. This is the downstream half of the bidirectional sync protocol. */
         SyncResponse: {
             /** @description Acknowledgement that the sync request was processed */
             ack?: boolean;
             /** @description Pending commands for the extension to execute (DOM queries, screenshots, browser actions) */
-            commands?: components["schemas"]["PendingQuery"][];
+            commands?: components['schemas']['PendingQuery'][];
             /** @description Suggested delay before next sync poll in milliseconds (adaptive based on activity) */
             next_poll_ms?: number;
             /**
@@ -1652,13 +1652,13 @@ export interface components {
             /** @description Test boundary label if provided in the request */
             test_id?: string;
             /** @description Console log entries captured during the snapshot window */
-            logs?: components["schemas"]["LogEntry"][];
+            logs?: components['schemas']['LogEntry'][];
             /** @description WebSocket events captured during the snapshot window */
-            websocket_events?: components["schemas"]["WebSocketEvent"][];
+            websocket_events?: components['schemas']['WebSocketEvent'][];
             /** @description Network request/response bodies captured during the snapshot window */
-            network_bodies?: components["schemas"]["NetworkBody"][];
+            network_bodies?: components['schemas']['NetworkBody'][];
             /** @description User interaction events captured during the snapshot window */
-            enhanced_actions?: components["schemas"]["EnhancedAction"][];
+            enhanced_actions?: components['schemas']['EnhancedAction'][];
             /** @description Computed statistics across all captured telemetry */
             stats?: {
                 /** @description Total log entries in the snapshot */
@@ -1726,7 +1726,7 @@ export interface components {
              * @description Execution outcome
              * @enum {string}
              */
-            status: "complete" | "error" | "timeout";
+            status: 'complete' | 'error' | 'timeout';
             /** @description Command result data on success */
             result?: unknown;
             /** @description Error message when status is 'error' */
@@ -1777,7 +1777,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    'application/json': Record<string, never>;
                 };
             };
         };
@@ -1797,7 +1797,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    'application/json': Record<string, never>;
                 };
             };
         };
@@ -1817,7 +1817,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DiscoveryResponse"];
+                    'application/json': components['schemas']['DiscoveryResponse'];
                 };
             };
         };
@@ -1837,7 +1837,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HealthResponse"];
+                    'application/json': components['schemas']['HealthResponse'];
                 };
             };
         };
@@ -1857,12 +1857,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         /**
                          * @description Overall readiness status computed from all checks
                          * @enum {string}
                          */
-                        status: "healthy" | "degraded" | "unhealthy";
+                        status: 'healthy' | 'degraded' | 'unhealthy';
                         /** @description True when interact flows are expected to succeed without warnings */
                         ready_for_interaction: boolean;
                         /** @description Server version */
@@ -1872,7 +1872,7 @@ export interface operations {
                             /** @description Check identifier */
                             name: string;
                             /** @enum {string} */
-                            status: "pass" | "warn" | "fail";
+                            status: 'pass' | 'warn' | 'fail';
                             /** @description Human-readable check detail */
                             detail: string;
                             /** @description Suggested remediation when status is warn/fail */
@@ -1898,7 +1898,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DiagnosticsResponse"];
+                    'application/json': components['schemas']['DiagnosticsResponse'];
                 };
             };
         };
@@ -1918,7 +1918,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         /**
                          * @description Always 'shutting_down'
                          * @example shutting_down
@@ -1949,7 +1949,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    'application/json': Record<string, never>;
                 };
             };
         };
@@ -1963,7 +1963,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["JsonRpcRequest"];
+                'application/json': components['schemas']['JsonRpcRequest'];
             };
         };
         responses: {
@@ -1973,7 +1973,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JsonRpcResponse"];
+                    'application/json': components['schemas']['JsonRpcResponse'];
                 };
             };
         };
@@ -1987,7 +1987,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Compression category (e.g. test_output, build_output, generic_truncation) */
                     category: string;
                     /** @description Estimated token count before compression */
@@ -2036,7 +2036,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DashboardStatus"];
+                    'application/json': components['schemas']['DashboardStatus'];
                 };
             };
         };
@@ -2056,7 +2056,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         /** @description Absolute path to the active codebase directory */
                         active_codebase?: string;
                     };
@@ -2073,7 +2073,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Absolute path to set as active codebase */
                     path: string;
                 };
@@ -2086,7 +2086,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         status?: string;
                         active_codebase?: string;
                     };
@@ -2109,7 +2109,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/html": string;
+                    'text/html': string;
                 };
             };
         };
@@ -2129,7 +2129,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/html": string;
+                    'text/html': string;
                 };
             };
         };
@@ -2149,7 +2149,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/html": string;
+                    'text/html': string;
                 };
             };
         };
@@ -2163,9 +2163,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Array of console log entries to ingest */
-                    entries: components["schemas"]["LogEntry"][];
+                    entries: components['schemas']['LogEntry'][];
                 };
             };
         };
@@ -2176,7 +2176,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LogIngestResponse"];
+                    'application/json': components['schemas']['LogIngestResponse'];
                 };
             };
         };
@@ -2196,7 +2196,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         /**
                          * @description Always true on success
                          * @example true
@@ -2216,11 +2216,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description URL of the page that generated these network requests */
                     page_url?: string;
                     /** @description Array of network waterfall timing entries */
-                    entries?: components["schemas"]["WaterfallEntry"][];
+                    entries?: components['schemas']['WaterfallEntry'][];
                 };
             };
         };
@@ -2231,7 +2231,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IngestResponse"];
+                    'application/json': components['schemas']['IngestResponse'];
                 };
             };
         };
@@ -2245,9 +2245,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Array of captured request/response body pairs */
-                    bodies?: components["schemas"]["NetworkBody"][];
+                    bodies?: components['schemas']['NetworkBody'][];
                 };
             };
         };
@@ -2258,7 +2258,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IngestResponse"];
+                    'application/json': components['schemas']['IngestResponse'];
                 };
             };
         };
@@ -2272,9 +2272,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Array of WebSocket events to record */
-                    events?: components["schemas"]["WebSocketEvent"][];
+                    events?: components['schemas']['WebSocketEvent'][];
                 };
             };
         };
@@ -2292,7 +2292,7 @@ export interface operations {
         parameters: {
             query: {
                 /** @description Which telemetry buffer to read. Each maps to a ring buffer maintained by the capture subsystem. */
-                type: "logs" | "network_waterfall" | "network_bodies" | "websocket_events" | "actions" | "performance_snapshots" | "extension_logs" | "websocket_status";
+                type: 'logs' | 'network_waterfall' | 'network_bodies' | 'websocket_events' | 'actions' | 'performance_snapshots' | 'extension_logs' | 'websocket_status';
                 /** @description Maximum entries to return. Returns the most recent N entries. Defaults to the full buffer if omitted. */
                 limit?: number;
             };
@@ -2308,7 +2308,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TelemetryResponse"];
+                    'application/json': components['schemas']['TelemetryResponse'];
                 };
             };
             /** @description Missing or invalid type parameter */
@@ -2335,7 +2335,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WebSocketStatusResponse"];
+                    'application/json': components['schemas']['WebSocketStatusResponse'];
                 };
             };
         };
@@ -2349,9 +2349,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Array of user interaction events to record */
-                    actions?: components["schemas"]["EnhancedAction"][];
+                    actions?: components['schemas']['EnhancedAction'][];
                 };
             };
         };
@@ -2362,7 +2362,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IngestResponse"];
+                    'application/json': components['schemas']['IngestResponse'];
                 };
             };
         };
@@ -2376,9 +2376,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Array of Web Vitals snapshots to record */
-                    snapshots?: components["schemas"]["PerformanceSnapshot"][];
+                    snapshots?: components['schemas']['PerformanceSnapshot'][];
                 };
             };
         };
@@ -2389,7 +2389,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IngestResponse"];
+                    'application/json': components['schemas']['IngestResponse'];
                 };
             };
         };
@@ -2403,7 +2403,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AsyncCommandResult"];
+                'application/json': components['schemas']['AsyncCommandResult'];
             };
         };
         responses: {
@@ -2413,7 +2413,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StatusOk"];
+                    'application/json': components['schemas']['StatusOk'];
                 };
             };
         };
@@ -2427,7 +2427,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ScreenshotRequest"];
+                'application/json': components['schemas']['ScreenshotRequest'];
             };
         };
         responses: {
@@ -2437,7 +2437,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScreenshotSavedResponse"];
+                    'application/json': components['schemas']['ScreenshotSavedResponse'];
                 };
             };
             /** @description Rate limited — max 1 screenshot per second per client */
@@ -2458,7 +2458,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": {
+                'multipart/form-data': {
                     /**
                      * Format: binary
                      * @description WebM video file blob
@@ -2478,7 +2478,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecordingSavedResponse"];
+                    'application/json': components['schemas']['RecordingSavedResponse'];
                 };
             };
         };
@@ -2498,9 +2498,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         /** @description Array of registered client records */
-                        clients?: components["schemas"]["ClientRegistration"][];
+                        clients?: components['schemas']['ClientRegistration'][];
                         /** @description Total number of registered clients */
                         count?: number;
                     };
@@ -2517,7 +2517,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Absolute path to the client's working directory */
                     cwd: string;
                 };
@@ -2530,8 +2530,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        result?: components["schemas"]["ClientRegistration"];
+                    'application/json': {
+                        result?: components['schemas']['ClientRegistration'];
                     };
                 };
             };
@@ -2555,7 +2555,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ClientRegistration"];
+                    'application/json': components['schemas']['ClientRegistration'];
                 };
             };
             /** @description Client ID not found in registry */
@@ -2585,7 +2585,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         /**
                          * @description Always true on success
                          * @example true
@@ -2605,7 +2605,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SyncRequest"];
+                'application/json': components['schemas']['SyncRequest'];
             };
         };
         responses: {
@@ -2615,7 +2615,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SyncResponse"];
+                    'application/json': components['schemas']['SyncResponse'];
                 };
             };
         };
@@ -2640,7 +2640,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SnapshotResponse"];
+                    'application/json': components['schemas']['SnapshotResponse'];
                 };
             };
         };
@@ -2660,7 +2660,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         /**
                          * @description Always true on success
                          * @example true
@@ -2682,7 +2682,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TestBoundaryRequest"];
+                'application/json': components['schemas']['TestBoundaryRequest'];
             };
         };
         responses: {
@@ -2692,7 +2692,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TestBoundaryResponse"];
+                    'application/json': components['schemas']['TestBoundaryResponse'];
                 };
             };
         };
@@ -2706,7 +2706,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DrawModeCompleteRequest"];
+                'application/json': components['schemas']['DrawModeCompleteRequest'];
             };
         };
         responses: {
@@ -2716,7 +2716,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DrawModeCompleteResponse"];
+                    'application/json': components['schemas']['DrawModeCompleteResponse'];
                 };
             };
         };
@@ -2730,7 +2730,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                'application/json': Record<string, never>;
             };
         };
         responses: {
@@ -2740,7 +2740,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StatusOk"];
+                    'application/json': components['schemas']['StatusOk'];
                 };
             };
         };
@@ -2754,7 +2754,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                'application/json': Record<string, never>;
             };
         };
         responses: {
@@ -2764,7 +2764,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StatusOk"];
+                    'application/json': components['schemas']['StatusOk'];
                 };
             };
         };
@@ -2784,7 +2784,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    'application/json': Record<string, never>;
                 };
             };
         };
@@ -2804,7 +2804,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         events?: Record<string, never>[];
                         count?: number;
                     };
@@ -2827,7 +2827,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/html": string;
+                    'text/html': string;
                 };
             };
         };
@@ -2872,7 +2872,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    'application/json': Record<string, never>;
                 };
             };
         };
@@ -2925,7 +2925,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Absolute path to the recording file to reveal */
                     path: string;
                 };
@@ -2938,7 +2938,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         /**
                          * @description Always 'revealed' on success
                          * @example revealed
@@ -2960,7 +2960,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Absolute path to the file to read */
                     file_path: string;
                 };
@@ -2973,7 +2973,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["FileReadResponse"];
+                    'application/json': components['schemas']['FileReadResponse'];
                 };
             };
         };
@@ -2987,7 +2987,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Absolute path to the file to inject */
                     file_path: string;
                     /** @description Chrome browser process ID for DevTools connection */
@@ -3002,7 +3002,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
+                    'application/json': components['schemas']['UploadStageResponse'];
                 };
             };
         };
@@ -3016,7 +3016,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["FormSubmitRequest"];
+                'application/json': components['schemas']['FormSubmitRequest'];
             };
         };
         responses: {
@@ -3026,7 +3026,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
+                    'application/json': components['schemas']['UploadStageResponse'];
                 };
             };
         };
@@ -3040,7 +3040,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                'application/json': {
                     /** @description Absolute path to the file to inject */
                     file_path: string;
                     /** @description Chrome browser process ID */
@@ -3057,7 +3057,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
+                    'application/json': components['schemas']['UploadStageResponse'];
                 };
             };
         };
@@ -3077,7 +3077,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
+                    'application/json': components['schemas']['UploadStageResponse'];
                 };
             };
             /** @description OS automation is disabled (--enable-os-upload-automation flag not set) */
@@ -3086,7 +3086,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
+                    'application/json': components['schemas']['UploadStageResponse'];
                 };
             };
         };
@@ -3109,8 +3109,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/html": string;
-                    "application/json": Record<string, never>;
+                    'text/html': string;
+                    'application/json': Record<string, never>;
                 };
             };
             /** @description Missing or invalid target URL. */
@@ -3119,7 +3119,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         error: string;
                     };
                 };
@@ -3130,7 +3130,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         error: string;
                     };
                 };
@@ -3141,7 +3141,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
+                    'application/json': {
                         error: string;
                     };
                 };

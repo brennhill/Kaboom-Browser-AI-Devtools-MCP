@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "var instance *Manager\nvar once sync.Once\n\nfunc GetManager() *Manager {\n\tonce.Do(func() { instance = &Manager{} })\n\treturn instance\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "var instance *Manager\nvar once sync.Once\n\nfunc GetManager() *Manager {\n\tonce.Do(func() { instance = &Manager{} })\n\treturn instance\n}"
+    }
   },
   "expect": {
     "has_output": true,

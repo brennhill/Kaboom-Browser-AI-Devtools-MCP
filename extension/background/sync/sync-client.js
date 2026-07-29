@@ -27,7 +27,9 @@ export async function loadServerInstallId() {
             serverInstallId = stored;
         }
     }
-    catch { /* best-effort */ }
+    catch {
+        /* best-effort */
+    }
 }
 function persistInstallId(id) {
     if (typeof chrome === 'undefined' || !chrome.storage?.local)

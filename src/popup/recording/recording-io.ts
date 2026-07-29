@@ -39,7 +39,10 @@ export function sendRecordingGestureDecision(type: 'recording_gesture_granted' |
 
 function showMicPermissionPrompt(saveInfoEl: HTMLElement, audioMode: string): void {
   chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
-    persist(setLocal(StorageKey.PENDING_MIC_RECORDING, { audioMode, returnTabId: activeTabs[0]?.id }), 'pending-mic-recording')
+    persist(
+      setLocal(StorageKey.PENDING_MIC_RECORDING, { audioMode, returnTabId: activeTabs[0]?.id }),
+      'pending-mic-recording'
+    )
   })
   saveInfoEl.innerHTML =
     'Microphone access needed. <a href="#" id="grant-mic-link" style="color: #58a6ff; text-decoration: underline; cursor: pointer">Grant access</a>'
@@ -133,7 +136,10 @@ export function handleStopClick(
   els: RecordingElements,
   state: RecordingState,
   showIdle: ShowIdleFn,
-  showSaveResult: (saveInfoEl: HTMLElement | null, resp: { status?: string; name?: string; path?: string; error?: string } | undefined) => void
+  showSaveResult: (
+    saveInfoEl: HTMLElement | null,
+    resp: { status?: string; name?: string; path?: string; error?: string } | undefined
+  ) => void
 ): void {
   els.row.classList.remove('is-recording')
   els.label.textContent = 'Saving...'

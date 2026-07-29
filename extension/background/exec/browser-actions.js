@@ -25,7 +25,13 @@ const ASYNC_BROWSER_ACTION_TIMEOUT_MS = ASYNC_COMMAND_TIMEOUT_MS;
 function withTimeout(promise, timeoutMs, message) {
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
-        promise.then((value) => { clearTimeout(timer); resolve(value); }, (err) => { clearTimeout(timer); reject(err); });
+        promise.then((value) => {
+            clearTimeout(timer);
+            resolve(value);
+        }, (err) => {
+            clearTimeout(timer);
+            reject(err);
+        });
     });
 }
 /** Cached CSP status from the most recent navigation */

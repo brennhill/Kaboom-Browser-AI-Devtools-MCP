@@ -141,7 +141,14 @@ export async function sendPerformanceSnapshotsToServer(
   snapshots: PerformanceSnapshot[],
   debugLogFn?: (category: string, message: string, data?: unknown) => void
 ): Promise<void> {
-  await sendTelemetryBatch(serverUrl, '/performance-snapshots', 'snapshots', snapshots, 'performance snapshots', debugLogFn)
+  await sendTelemetryBatch(
+    serverUrl,
+    '/performance-snapshots',
+    'snapshots',
+    snapshots,
+    'performance snapshots',
+    debugLogFn
+  )
 }
 
 /**
@@ -215,4 +222,3 @@ export function updateBadge(status: ConnectionStatus): void {
     })
   }
 }
-

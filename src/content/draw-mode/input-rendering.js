@@ -62,7 +62,10 @@ function onResize() {
 }
 
 function onScroll() {
-  recordRecentAction('scroll', document.activeElement, { scroll_x: Math.round(window.scrollX || 0), scroll_y: Math.round(window.scrollY || 0) })
+  recordRecentAction('scroll', document.activeElement, {
+    scroll_x: Math.round(window.scrollX || 0),
+    scroll_y: Math.round(window.scrollY || 0)
+  })
   if (!canvas) return
   renderAnnotations()
 }

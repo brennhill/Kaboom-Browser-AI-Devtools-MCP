@@ -400,7 +400,19 @@ export function domPrimitiveListInteractive(scopeSelector, options) {
     // Catches framework-bound click handlers (React onClick, Vue @click, etc.)
     // that render as plain divs/spans with no semantic interactive attributes.
     if (rawEntries.length < 100) {
-        const cursorPointerTags = new Set(['div', 'span', 'li', 'td', 'p', 'img', 'svg', 'label', 'figure', 'section', 'article']);
+        const cursorPointerTags = new Set([
+            'div',
+            'span',
+            'li',
+            'td',
+            'p',
+            'img',
+            'svg',
+            'label',
+            'figure',
+            'section',
+            'article'
+        ]);
         const candidates = scopeRoot.querySelectorAll('*');
         let checked = 0;
         const maxCheck = 500; // Budget: don't scan more than 500 elements for cursor style

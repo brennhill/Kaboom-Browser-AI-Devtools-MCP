@@ -21,13 +21,19 @@ const rootDir = path.resolve(__dirname, '..', '..')
 
 // Keys exempt from snake_case requirement (external protocol fields)
 const ALLOWED_KEYS = new Set([
-  'jsonrpc',    // JSON-RPC 2.0 spec
-  'id',         // JSON-RPC 2.0 spec
-  'method',     // JSON-RPC 2.0 spec
-  'params',     // JSON-RPC 2.0 spec
-  'result',     // JSON-RPC 2.0 spec
-  'error',      // JSON-RPC 2.0 spec
-  'o', 'oy', 'ox', 'h', 'n', 'x', 'w',  // Compact style property shorthands
+  'jsonrpc', // JSON-RPC 2.0 spec
+  'id', // JSON-RPC 2.0 spec
+  'method', // JSON-RPC 2.0 spec
+  'params', // JSON-RPC 2.0 spec
+  'result', // JSON-RPC 2.0 spec
+  'error', // JSON-RPC 2.0 spec
+  'o',
+  'oy',
+  'ox',
+  'h',
+  'n',
+  'x',
+  'w' // Compact style property shorthands
 ])
 
 // Pattern: camelCase = lowercase letter immediately followed by uppercase letter
@@ -76,12 +82,23 @@ function extractTopLevelKeys(block) {
   let i = 0
   while (i < block.length) {
     const ch = block[i]
-    if (ch === '{' || ch === '[') { depth++; i++; continue }
-    if (ch === '}' || ch === ']') { depth--; i++; continue }
-    if (depth > 0) { i++; continue }
+    if (ch === '{' || ch === '[') {
+      depth++
+      i++
+      continue
+    }
+    if (ch === '}' || ch === ']') {
+      depth--
+      i++
+      continue
+    }
+    if (depth > 0) {
+      i++
+      continue
+    }
 
     // Skip string literals
-    if (ch === '\'' || ch === '"' || ch === '`') {
+    if (ch === "'" || ch === '"' || ch === '`') {
       i++
       while (i < block.length && block[i] !== ch) {
         if (block[i] === '\\') i++ // skip escaped char

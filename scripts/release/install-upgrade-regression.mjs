@@ -245,9 +245,7 @@ async function main() {
   // rejects $HOME/kaboom-upload-dir because EvalSymlinks(dir) != dir, and the daemon
   // never serves /health. A real user's HOME has no symlinked ancestors, so this only
   // affects the temp-dir test environment.
-  const tmpRoot = fs.realpathSync(
-    fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-'))
-  )
+  const tmpRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-')))
   const homeDir = path.join(tmpRoot, 'home')
   const binDir = path.join(tmpRoot, 'bin')
   fs.mkdirSync(homeDir, { recursive: true })

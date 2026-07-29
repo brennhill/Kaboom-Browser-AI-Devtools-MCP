@@ -455,13 +455,7 @@ export function handleFormStateQuery(
   params: string | Record<string, unknown>,
   sendResponse: (result: unknown) => void
 ): boolean {
-  return forwardInjectQuery(
-    'kaboom_form_state_query',
-    'kaboom_form_state_response',
-    'Form state',
-    params,
-    sendResponse
-  )
+  return forwardInjectQuery('kaboom_form_state_query', 'kaboom_form_state_response', 'Form state', params, sendResponse)
 }
 
 export function handleDataTableQuery(

@@ -26,6 +26,7 @@ code_paths:
   - scripts/test-js-sharded.sh
   - scripts/build/run-go-coverage.sh
   - scripts/build/merge-go-coverage.mjs
+  - .prettierignore
   - internal/testsync/testsync.go
   - package.json
   - .github/workflows/ci.yml
@@ -74,6 +75,11 @@ Automated code quality enforcement that catches architectural drift, duplicate c
 Convention scanning applies extension, generated-file, size, and directory
 filters through one shared source-walk boundary so detection and discovery
 cannot drift.
+
+Prettier checks authored source and configuration while excluding the three
+minified action-family DOM primitives whose canonical representation is owned
+by `generate-dom-primitives.js`; generator drift checks validate those files
+instead.
 
 `make test-cover` performs one uncached, cross-package Go run and also captures
 normally exiting black-box CLI binaries. The package profile supplies the

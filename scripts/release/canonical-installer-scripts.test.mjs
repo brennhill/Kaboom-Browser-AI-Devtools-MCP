@@ -15,7 +15,7 @@ const scripts = [
   'scripts/install.sh',
   'scripts/rebuild.sh',
   'scripts/uninstall.ps1',
-  'scripts/uninstall.sh',
+  'scripts/uninstall.sh'
 ]
 
 test('platform scripts use only canonical Kaboom identities', () => {

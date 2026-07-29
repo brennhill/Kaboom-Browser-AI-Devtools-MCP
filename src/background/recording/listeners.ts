@@ -150,13 +150,7 @@ export function installRecordingListeners(deps: RecordingListenerDeps): void {
       const value = await getLocal(StorageKey.PENDING_MIC_RECORDING)
       const pending = value as { returnTabId?: number } | undefined
       const returnTabId = pending?.returnTabId
-      console.log(
-        LOG,
-        'Pending mic recording intent:',
-        pending,
-        'returnTabId:',
-        returnTabId
-      )
+      console.log(LOG, 'Pending mic recording intent:', pending, 'returnTabId:', returnTabId)
 
       // Close the permission tab
       if (sender.tab?.id) {

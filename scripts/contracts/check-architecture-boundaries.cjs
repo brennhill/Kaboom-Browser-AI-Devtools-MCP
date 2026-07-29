@@ -19,10 +19,13 @@ function sourceFiles(directory) {
 }
 
 function exportCount(source) {
-  return source.split('\n').filter((line) =>
-    /^export\s+(?:declare\s+)?(?:async\s+)?(?:function|class|const|let|var|type|interface|enum)\b/.test(line) ||
-    /^export\s*\{/.test(line)
-  ).length
+  return source
+    .split('\n')
+    .filter(
+      (line) =>
+        /^export\s+(?:declare\s+)?(?:async\s+)?(?:function|class|const|let|var|type|interface|enum)\b/.test(line) ||
+        /^export\s*\{/.test(line)
+    ).length
 }
 
 function importedFeature(specifier, file) {

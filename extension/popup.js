@@ -192,11 +192,7 @@ export function initPopup() {
     }
     // ── Batched storage read: one call for ALL toggle/setting keys ────────
     const toggleKeys = TOGGLE_DEFS.map((t) => t.storageKey);
-    const allKeys = [
-        ...toggleKeys,
-        StorageKey.WEBSOCKET_CAPTURE_MODE,
-        StorageKey.AI_WEB_PILOT_ENABLED
-    ];
+    const allKeys = [...toggleKeys, StorageKey.WEBSOCKET_CAPTURE_MODE, StorageKey.AI_WEB_PILOT_ENABLED];
     void getLocals(allKeys).then((result) => {
         // Apply feature toggles (9 checkboxes)
         applyFeatureToggles(result);

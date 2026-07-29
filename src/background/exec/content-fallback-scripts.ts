@@ -34,7 +34,15 @@ const MARKDOWN_MAIN_SELECTORS = [
   '.article-content'
 ]
 
-const PAGE_SUMMARY_MAIN_SELECTORS = ['main', 'article', '[role="main"]', '#main', '.main', '.post-content', '.entry-content']
+const PAGE_SUMMARY_MAIN_SELECTORS = [
+  'main',
+  'article',
+  '[role="main"]',
+  '#main',
+  '.main',
+  '.post-content',
+  '.entry-content'
+]
 
 const COMMON_REMOVE_SELECTORS = [
   'nav',

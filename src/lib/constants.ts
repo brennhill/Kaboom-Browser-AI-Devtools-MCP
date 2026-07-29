@@ -240,8 +240,7 @@ export const TERMINAL_PANEL_FALLBACK_HINT =
  * right-clicking instead of pressing reload.
  */
 export const TERMINAL_PANEL_STALE_CONTEXT_HINT =
-  'The Kaboom extension was reloaded, so this page is running an old copy of it. ' +
-  'Reload this page to reconnect.'
+  'The Kaboom extension was reloaded, so this page is running an old copy of it. ' + 'Reload this page to reconnect.'
 
 /**
  * Port the side panel document opens to the background while it is alive.

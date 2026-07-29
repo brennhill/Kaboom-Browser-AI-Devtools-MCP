@@ -25,7 +25,7 @@ function runGate(root) {
   return spawnSync('bash', [SCRIPT], {
     cwd: root,
     env: { ...process.env, CHECK_FILE_LENGTH_ROOT: root },
-    encoding: 'utf8',
+    encoding: 'utf8'
   })
 }
 
@@ -37,7 +37,7 @@ test('rejects oversized authored JavaScript and test files', async () => {
   const root = await createRoot({
     'src/large.js': 801,
     'tests/large.test.js': 801,
-    'src/within-limit.ts': 800,
+    'src/within-limit.ts': 800
   })
 
   const result = runGate(root)
@@ -56,7 +56,7 @@ test('ignores generated, compiled, bundled, vendored, and dependency output', as
     'dist/output.js': 801,
     'vendor/library.go': 801,
     'node_modules/library/index.js': 801,
-    'src/small.js': 12,
+    'src/small.js': 12
   })
 
   const result = runGate(root)
@@ -67,12 +67,9 @@ test('ignores generated, compiled, bundled, vendored, and dependency output', as
 
 test('does not permit source-level waivers for oversized authored files', async () => {
   const root = await createRoot({
-    'src/waived.go': 801,
+    'src/waived.go': 801
   })
-  await writeFile(
-    path.join(root, 'src/waived.go'),
-    `// nolint:filelength - legacy waiver\n${'line\n'.repeat(800)}`,
-  )
+  await writeFile(path.join(root, 'src/waived.go'), `// nolint:filelength - legacy waiver\n${'line\n'.repeat(800)}`)
 
   const result = runGate(root)
 

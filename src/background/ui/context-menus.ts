@@ -62,7 +62,10 @@ async function refreshDynamicContextMenuTitles(
   const drawModeActive = await isDrawModeActive(tabId)
 
   await Promise.all([
-    updateContextMenuTitle(MENU_ID_CONTROL, trackedTabId && tabId === trackedTabId ? RELEASE_CONTROL_TITLE : CONTROL_TAB_TITLE),
+    updateContextMenuTitle(
+      MENU_ID_CONTROL,
+      trackedTabId && tabId === trackedTabId ? RELEASE_CONTROL_TITLE : CONTROL_TAB_TITLE
+    ),
     updateContextMenuTitle(MENU_ID_ANNOTATE, drawModeActive ? ANNOTATE_STOP_TITLE : ANNOTATE_START_TITLE),
     updateContextMenuTitle(MENU_ID_RECORD, recordingHandlers.isRecording() ? RECORD_STOP_TITLE : RECORD_START_TITLE),
     updateContextMenuTitle(

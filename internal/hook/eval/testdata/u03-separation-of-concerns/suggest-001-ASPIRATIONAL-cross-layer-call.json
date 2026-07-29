@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "import \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc leaky() {\n\tcap := capture.NewCapture(nil, nil)\n\tcap.DrainBuffer()\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "import \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc leaky() {\n\tcap := capture.NewCapture(nil, nil)\n\tcap.DrainBuffer()\n}"
+    }
   },
   "expect": {
     "has_output": true,

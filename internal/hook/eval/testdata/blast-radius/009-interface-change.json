@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "type HookResult interface {\n\tFormatContext() string\n\tValidate() error\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "type HookResult interface {\n\tFormatContext() string\n\tValidate() error\n}"
+    }
   },
   "expect": {
     "has_output": true,

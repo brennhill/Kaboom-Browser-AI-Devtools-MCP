@@ -31,9 +31,7 @@ const DEFAULT_CLIENT_NAME = 'kaboom-extension';
  */
 export function buildDaemonHeaders(options = {}) {
     const { clientName = DEFAULT_CLIENT_NAME, extensionVersion, contentType = 'application/json', additionalHeaders = {} } = options;
-    const normalizedVersion = typeof extensionVersion === 'string' && extensionVersion.trim().length > 0
-        ? extensionVersion.trim()
-        : '';
+    const normalizedVersion = typeof extensionVersion === 'string' && extensionVersion.trim().length > 0 ? extensionVersion.trim() : '';
     const headers = {
         'X-Kaboom-Client': normalizedVersion ? `${clientName}/${normalizedVersion}` : clientName
     };

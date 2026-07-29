@@ -79,7 +79,7 @@ const ACTION_METADATA = {
     open_composer: { readonly: false, mutating: false },
     submit_active_composer: { readonly: false, mutating: false },
     confirm_top_dialog: { readonly: false, mutating: false },
-    dismiss_top_overlay: { readonly: false, mutating: false },
+    dismiss_top_overlay: { readonly: false, mutating: false }
 };
 /** Returns true if the action only reads page state (no DOM mutation, no side effects worth toasting). */
 export function isReadOnlyAction(action) {

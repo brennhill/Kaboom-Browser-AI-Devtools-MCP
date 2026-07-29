@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func godFunction() {\n\ta := 1\n\tb := 2\n\tc := 3\n\td := 4\n\te := 5\n\tf := 6\n\tg := 7\n\th := 8\n\ti := 9\n\tj := 10\n\tk := 11\n\tl := 12\n\tm := 13\n\tn := 14\n\to := 15\n\tp := 16\n\tq := 17\n\tr := 18\n\ts := 19\n\tt := 20\n\tu := 21\n\tv := 22\n\tw := 23\n\tx := 24\n\ty := 25\n\tz := 26\n\taa := 27\n\tbb := 28\n\tcc := 29\n\tdd := 30\n\tee := 31\n\tff := 32\n\tgg := 33\n\thh := 34\n\tii := 35\n\tjj := 36\n\tkk := 37\n\tll := 38\n\tmm := 39\n\tnn := 40\n\too := 41\n\tpp := 42\n\tqq := 43\n\trr := 44\n\tss := 45\n\ttt := 46\n\tuu := 47\n\tvv := 48\n\tww := 49\n\txx := 50\n\tyy := 51\n\tzz := 52\n\taaa := 53\n\tbbb := 54\n\tccc := 55\n\tddd := 56\n\teee := 57\n\tfff := 58\n\tggg := 59\n\t_ = a + b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + q + r + s + t + u + v + w + x + y + z + aa + bb + cc + dd + ee + ff + gg + hh + ii + jj + kk + ll + mm + nn + oo + pp + qq + rr + ss + tt + uu + vv + ww + xx + yy + zz + aaa + bbb + ccc + ddd + eee + fff + ggg\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func godFunction() {\n\ta := 1\n\tb := 2\n\tc := 3\n\td := 4\n\te := 5\n\tf := 6\n\tg := 7\n\th := 8\n\ti := 9\n\tj := 10\n\tk := 11\n\tl := 12\n\tm := 13\n\tn := 14\n\to := 15\n\tp := 16\n\tq := 17\n\tr := 18\n\ts := 19\n\tt := 20\n\tu := 21\n\tv := 22\n\tw := 23\n\tx := 24\n\ty := 25\n\tz := 26\n\taa := 27\n\tbb := 28\n\tcc := 29\n\tdd := 30\n\tee := 31\n\tff := 32\n\tgg := 33\n\thh := 34\n\tii := 35\n\tjj := 36\n\tkk := 37\n\tll := 38\n\tmm := 39\n\tnn := 40\n\too := 41\n\tpp := 42\n\tqq := 43\n\trr := 44\n\tss := 45\n\ttt := 46\n\tuu := 47\n\tvv := 48\n\tww := 49\n\txx := 50\n\tyy := 51\n\tzz := 52\n\taaa := 53\n\tbbb := 54\n\tccc := 55\n\tddd := 56\n\teee := 57\n\tfff := 58\n\tggg := 59\n\t_ = a + b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + q + r + s + t + u + v + w + x + y + z + aa + bb + cc + dd + ee + ff + gg + hh + ii + jj + kk + ll + mm + nn + oo + pp + qq + rr + ss + tt + uu + vv + ww + xx + yy + zz + aaa + bbb + ccc + ddd + eee + fff + ggg\n}"
+    }
   },
   "expect": {
     "has_output": true,

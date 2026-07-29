@@ -16,16 +16,8 @@ const repoRoot = path.join(__dirname, '..', '..')
 test('upgrade regression script validates health service identity', () => {
   const source = fs.readFileSync(scriptPath, 'utf8')
   assert.match(source, /service-name/, 'expected service-name validation in health checks')
-  assert.match(
-    source,
-    /kaboom-browser-devtools/i,
-    'expected service identity check to enforce kaboom-browser-devtools'
-  )
-  assert.match(
-    source,
-    /KABOOM_TELEMETRY:\s*'off'/,
-    'upgrade regression daemons must not emit production telemetry'
-  )
+  assert.match(source, /kaboom-browser-devtools/i, 'expected service identity check to enforce kaboom-browser-devtools')
+  assert.match(source, /KABOOM_TELEMETRY:\s*'off'/, 'upgrade regression daemons must not emit production telemetry')
 })
 
 test('shell installer uses Kaboom canonical binaries and install roots', () => {
@@ -63,9 +55,7 @@ test('shell installer skips extension and daemon for hooks-only', () => {
 })
 
 test('npm wrapper exposes only Kaboom commands', () => {
-  const pkg = JSON.parse(
-    fs.readFileSync(path.join(repoRoot, 'npm', 'kaboom-agentic-browser', 'package.json'), 'utf8')
-  )
+  const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'npm', 'kaboom-agentic-browser', 'package.json'), 'utf8'))
   assert.equal(pkg.bin?.['kaboom-agentic-browser'], 'bin/kaboom-agentic-browser')
   assert.equal(pkg.bin?.['kaboom-hooks'], 'bin/kaboom-hooks')
   assert.equal(pkg.bin?.['gasoline-agentic-devtools'], undefined)

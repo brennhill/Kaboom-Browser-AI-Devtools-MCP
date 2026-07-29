@@ -78,24 +78,27 @@ export async function handleClearLogs(): Promise<{ success?: boolean; error?: st
   }
 
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: 'clear_logs' }, (response: { success?: boolean; error?: string } | undefined) => {
-      if (clearBtn) {
-        clearBtn.disabled = false
-        clearBtn.textContent = 'Clear Logs'
-      }
-
-      if (response?.success) {
-        if (entriesEl) {
-          entriesEl.textContent = '0 / 1000'
+    chrome.runtime.sendMessage(
+      { type: 'clear_logs' },
+      (response: { success?: boolean; error?: string } | undefined) => {
+        if (clearBtn) {
+          clearBtn.disabled = false
+          clearBtn.textContent = 'Clear Logs'
         }
-      } else if (response?.error) {
-        const errorEl = document.getElementById('error-message')
-        if (errorEl) {
-          errorEl.textContent = response.error
-        }
-      }
 
-      resolve(response || null)
-    })
+        if (response?.success) {
+          if (entriesEl) {
+            entriesEl.textContent = '0 / 1000'
+          }
+        } else if (response?.error) {
+          const errorEl = document.getElementById('error-message')
+          if (errorEl) {
+            errorEl.textContent = response.error
+          }
+        }
+
+        resolve(response || null)
+      }
+    )
   })
 }

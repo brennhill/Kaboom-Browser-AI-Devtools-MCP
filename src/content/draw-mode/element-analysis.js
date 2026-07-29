@@ -408,4 +408,4 @@ const MAX_PERSISTED_ANNOTATIONS = 50
 // In web_accessible_resource contexts the API object exists but every call throws
 // "Access to storage is not allowed from this context". We disable persistence
 // permanently on the first failure to avoid noisy console errors.
-let storageAvailable = (typeof chrome !== 'undefined' && !!chrome.storage?.session)
+let storageAvailable = typeof chrome !== 'undefined' && !!chrome.storage?.session

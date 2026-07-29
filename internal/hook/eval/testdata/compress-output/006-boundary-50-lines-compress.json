@@ -3,7 +3,7 @@
   "hook": "compress-output",
   "input": {
     "tool_name": "Bash",
-    "tool_input": {"command": "go test ./..."},
+    "tool_input": { "command": "go test ./..." },
     "tool_response": "=== RUN   Test1\n--- PASS: Test1 (0.01s)\n=== RUN   Test2\n--- PASS: Test2 (0.01s)\n=== RUN   Test3\n--- PASS: Test3 (0.01s)\n=== RUN   Test4\n--- PASS: Test4 (0.01s)\n=== RUN   Test5\n--- PASS: Test5 (0.01s)\n=== RUN   Test6\n--- PASS: Test6 (0.01s)\n=== RUN   Test7\n--- PASS: Test7 (0.01s)\n=== RUN   Test8\n--- PASS: Test8 (0.01s)\n=== RUN   Test9\n--- PASS: Test9 (0.01s)\n=== RUN   Test10\n--- PASS: Test10 (0.01s)\n=== RUN   Test11\n--- PASS: Test11 (0.01s)\n=== RUN   Test12\n--- PASS: Test12 (0.01s)\n=== RUN   Test13\n--- PASS: Test13 (0.01s)\n=== RUN   Test14\n--- PASS: Test14 (0.01s)\n=== RUN   Test15\n--- PASS: Test15 (0.01s)\n=== RUN   Test16\n--- PASS: Test16 (0.01s)\n=== RUN   Test17\n--- PASS: Test17 (0.01s)\n=== RUN   Test18\n--- PASS: Test18 (0.01s)\n=== RUN   Test19\n--- PASS: Test19 (0.01s)\n=== RUN   Test20\n--- PASS: Test20 (0.01s)\n=== RUN   Test21\n--- PASS: Test21 (0.01s)\n=== RUN   Test22\n--- PASS: Test22 (0.01s)\n=== RUN   Test23\n--- PASS: Test23 (0.01s)\n=== RUN   Test24\n--- PASS: Test24 (0.01s)\nok \tgithub.com/example/pkg\t0.3s\n"
   },
   "expect": {

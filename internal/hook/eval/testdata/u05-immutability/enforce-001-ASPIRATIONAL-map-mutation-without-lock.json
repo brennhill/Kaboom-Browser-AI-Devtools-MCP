@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "var cache = map[string][]byte{}\n\nfunc Set(key string, val []byte) {\n\tcache[key] = val\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "var cache = map[string][]byte{}\n\nfunc Set(key string, val []byte) {\n\tcache[key] = val\n}"
+    }
   },
   "expect": {
     "has_output": true,

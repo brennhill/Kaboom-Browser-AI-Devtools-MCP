@@ -34,7 +34,10 @@ dependencies = [
   const result = normalizeMainPyprojectContent(input)
   assert.equal(result.changed, true)
   assert.match(result.content, /\[project\][\s\S]*dependencies = \[/)
-  assert.match(result.content, /\[project\.scripts\]\nkaboom-agentic-browser = "kaboom_agentic_browser\.__main__:main"\n?$/)
+  assert.match(
+    result.content,
+    /\[project\.scripts\]\nkaboom-agentic-browser = "kaboom_agentic_browser\.__main__:main"\n?$/
+  )
   assert.equal(
     result.content.match(/dependencies = \[/g)?.length ?? 0,
     1,

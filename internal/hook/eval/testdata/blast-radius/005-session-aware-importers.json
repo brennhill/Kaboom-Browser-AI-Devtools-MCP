@@ -4,12 +4,15 @@
   "project_root": "REPO_ROOT",
   "session_state": {
     "touches": [
-      {"t": "2026-03-07T14:00:00Z", "tool": "Read", "file": "REPO_ROOT/cmd/hooks/main.go", "action": "read"}
+      { "t": "2026-03-07T14:00:00Z", "tool": "Read", "file": "REPO_ROOT/cmd/hooks/main.go", "action": "read" }
     ]
   },
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func WriteOutput(w io.Writer, context string) error {\n\treturn nil\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func WriteOutput(w io.Writer, context string) error {\n\treturn nil\n}"
+    }
   },
   "expect": {
     "has_output": true,

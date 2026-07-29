@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func DeprecatedLegacyHelper(s string) string {\n\treturn strings.ToUpper(s)\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func DeprecatedLegacyHelper(s string) string {\n\treturn strings.ToUpper(s)\n}"
+    }
   },
   "expect": {
     "has_output": true,

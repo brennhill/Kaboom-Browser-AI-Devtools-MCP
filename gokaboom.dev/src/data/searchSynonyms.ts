@@ -20,7 +20,10 @@ for (const [canonical, aliases] of Object.entries(SEARCH_SYNONYMS)) {
 }
 
 export function normalizeTag(input: string): string {
-  const raw = input.trim().toLowerCase().replace(/[_\s]+/g, '-')
+  const raw = input
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-')
   return aliasToCanonical.get(raw) ?? raw
 }
 

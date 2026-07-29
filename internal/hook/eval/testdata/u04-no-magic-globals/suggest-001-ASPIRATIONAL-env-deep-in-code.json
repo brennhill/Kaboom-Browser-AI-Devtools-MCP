@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/session_store.go", "new_string": "func getTimeout() time.Duration {\n\tv := os.Getenv(\"SESSION_TIMEOUT\")\n\td, _ := time.ParseDuration(v)\n\treturn d\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/session_store.go",
+      "new_string": "func getTimeout() time.Duration {\n\tv := os.Getenv(\"SESSION_TIMEOUT\")\n\td, _ := time.ParseDuration(v)\n\treturn d\n}"
+    }
   },
   "expect": {
     "has_output": true,

@@ -4,3149 +4,3171 @@
  */
 
 export interface paths {
-    "/debug/usage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Tool usage counters
-         * @description Returns per-tool invocation counts for diagnostics. Debug-only endpoint.
-         */
-        get: operations["getDebugUsage"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/debug/beacon-flush": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Flush telemetry beacon buffer
-         * @description Forces a flush of the buffered telemetry beacon payload and returns it. Debug-only endpoint.
-         */
-        post: operations["postDebugBeaconFlush"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * API discovery
-         * @description Returns the server name, version, and links to key endpoints (/health, /logs). Serves as a lightweight discovery mechanism for MCP clients connecting to the server for the first time. Always returns 200 with a static JSON payload.
-         */
-        get: operations["getRoot"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Health check
-         * @description Returns server health status including version, log buffer stats, and capture availability. Used by MCP clients and monitoring tools to verify the server is running and the Chrome extension is connected. The capture.available field indicates whether the extension WebSocket is active.
-         */
-        get: operations["getHealth"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/doctor": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Doctor preflight
-         * @description Runs aggregated readiness checks for extension connectivity, pilot state, tracked tab, circuit breaker, queue pressure, and recent failure signals. Used by setup and diagnostics to determine whether interact actions are likely to succeed.
-         */
-        get: operations["getDoctor"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/diagnostics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Diagnostic report
-         * @description Returns comprehensive diagnostic information for bug reports and troubleshooting. Includes system info (OS, arch, Go version, goroutine count), buffer counts across all ring buffers, extension connection state, and circuit breaker status. Output is designed to be copy-pasted into GitHub issues.
-         */
-        get: operations["getDiagnostics"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/shutdown": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Graceful shutdown
-         * @description Initiates graceful server shutdown. Sends the JSON response first, then triggers SIGTERM after a short delay to allow the response to flush. Used by the CLI's stop command and the dashboard UI. The server closes all WebSocket connections and flushes pending writes before exiting.
-         */
-        post: operations["postShutdown"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/openapi.json": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * OpenAPI specification
-         * @description Serves this OpenAPI 3.1.0 specification as JSON. The spec is embedded into the Go binary at compile time via go:embed and served as-is. Used by API documentation tools, SDK generators, and the /docs page.
-         */
-        get: operations["getOpenAPI"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/mcp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * MCP JSON-RPC bridge
-         * @description HTTP bridge for the MCP protocol. Accepts JSON-RPC 2.0 requests and routes them to the same tool handlers used by the stdio MCP transport. Supports methods: observe, generate, configure, interact, and analyze. This endpoint enables non-stdio MCP clients (dashboards, web UIs, REST wrappers) to call MCP tools over HTTP.
-         */
-        post: operations["postMcp"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/token-savings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Record token savings from hook compression
-         * @description Records token savings metrics from the kaboom-hooks compress-output hook. The hook POSTs category, tokens_before, and tokens_after after compressing verbose test/build output. Stats are tracked per-session and persisted to lifetime totals.
-         */
-        post: operations["postTokenSavings"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Dashboard status feed
-         * @description Returns aggregated server status for the built-in dashboard UI. Includes version, uptime, PID, platform, extension connection state, pilot toggle, buffer fill levels with capacities, recent command history, and optional audit metrics. Polled by the dashboard at regular intervals to keep the UI current.
-         */
-        get: operations["getApiStatus"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/config/active-codebase": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get active codebase path
-         * @description Returns the active codebase path used as the default terminal working directory. The extension reads this to know which project directory the terminal should open in.
-         */
-        get: operations["getActiveCodebase"];
-        /**
-         * Set active codebase path
-         * @description Sets the active codebase path used as the default terminal working directory. The extension writes this when the user selects a project.
-         */
-        put: operations["setActiveCodebase"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/logs.html": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * HTML log viewer
-         * @description Serves the embedded HTML log viewer page. Provides a browser-based UI for viewing captured console logs with filtering and search. The HTML is embedded into the Go binary at compile time via go:embed.
-         */
-        get: operations["getLogsHtml"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/setup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Setup page
-         * @description Serves the embedded setup page with installation instructions and configuration guidance. Provides step-by-step instructions for connecting the Chrome extension, configuring MCP clients, and verifying the setup. The HTML is embedded into the Go binary at compile time via go:embed.
-         */
-        get: operations["getSetup"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/docs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Documentation page
-         * @description Serves the embedded documentation page with API reference and usage guides. Renders the OpenAPI spec in a human-readable format with interactive examples. The HTML is embedded into the Go binary at compile time via go:embed.
-         */
-        get: operations["getDocs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/logs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ingest log entries
-         * @description Ingests console log entries from the Chrome extension. The extension's content script intercepts console.log/warn/error calls and batches them for periodic submission. Entries are stored in a ring buffer (FIFO eviction) and read by MCP clients via observe(what: 'logs'). Each entry includes level, arguments, timestamp, and source URL.
-         */
-        post: operations["postLogs"];
-        /**
-         * Clear log buffer
-         * @description Clears all buffered log entries from the ring buffer. Used to reset state between test runs or when the buffer contains stale data. Does not affect the on-disk log file.
-         */
-        delete: operations["deleteLogs"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/network-waterfall": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ingest waterfall entries
-         * @description Ingests network request waterfall entries (URL, status, timing) from the Chrome extension. The extension's network interceptor batches PerformanceResourceTiming entries and POSTs them periodically. Data is stored in a ring buffer (capacity 1000, FIFO eviction) and read by MCP clients via observe(what: 'network_waterfall'). Server-side analysis flags suspicious TLDs, non-standard ports, and mixed content.
-         */
-        post: operations["postNetworkWaterfall"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/network-bodies": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ingest network bodies
-         * @description Ingests network request and response bodies captured by the Chrome extension's fetch() interceptor. Bodies are stored in a ring buffer and paired with waterfall entries by URL. Binary response bodies are detected and labeled rather than stored. MCP clients read bodies via observe(what: 'network_bodies').
-         */
-        post: operations["postNetworkBodies"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/websocket-events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ingest WebSocket events
-         * @description Ingests WebSocket lifecycle and message events from the Chrome extension. Captures open, message (incoming/outgoing), close, and error events with connection IDs for correlation. High-throughput connections are automatically sampled to prevent buffer flooding. Data is read by MCP clients via observe(what: 'websocket_events').
-         */
-        post: operations["postWebSocketEvents"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/telemetry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read telemetry buffers
-         * @description Unified read endpoint for all telemetry buffers. Replaces individual GET endpoints on /logs, /network-waterfall, /network-bodies, /websocket-events, /enhanced-actions, /performance-snapshots. Returns the most recent N entries from the specified buffer type. This is the primary endpoint MCP clients use to read captured telemetry data.
-         */
-        get: operations["getTelemetry"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/websocket-status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get WebSocket connection status
-         * @description Returns active and recently-closed WebSocket connections with message rates and sampling info. Used by MCP clients via observe(what: 'websocket_status') to understand which WebSocket connections are active on the page, their throughput, and whether sampling is being applied to high-volume connections.
-         */
-        get: operations["getWebSocketStatus"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/enhanced-actions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ingest user actions
-         * @description Ingests user interaction events (clicks, inputs, navigations, scrolls) from the Chrome extension. The extension's action tracker records DOM interactions with CSS selectors and values, enabling reproduction script generation and action replay. Data is stored in a ring buffer and read by MCP clients via observe(what: 'actions').
-         */
-        post: operations["postEnhancedActions"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/performance-snapshots": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ingest performance snapshots
-         * @description Ingests Web Vitals performance snapshots (FCP, LCP, CLS, TTFB) from the Chrome extension. The extension captures Core Web Vitals using the web-vitals library and submits them on page load and navigation events. MCP clients read snapshots via observe(what: 'vitals') and compare them over time to detect performance regressions.
-         */
-        post: operations["postPerformanceSnapshots"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/query-result": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Submit query result
-         * @description Unified endpoint for the extension to submit results of any async query or command. Replaces the legacy separate endpoints (dom-result, a11y-result, state-result, execute-result, highlight-result). The MCP server creates a PendingQuery, delivers it to the extension via /sync, and waits for the result to arrive here. The correlation_id links the result back to the original MCP tool call.
-         */
-        post: operations["postQueryResult"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/screenshots": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Save screenshot
-         * @description Saves a screenshot JPEG from the Chrome extension. The extension captures the visible tab using chrome.tabs.captureVisibleTab() and sends the base64 data URL. Screenshots are saved to the kaboom data directory and can be linked to specific MCP tool invocations via correlation_id. Rate limited to 1 screenshot per second per client to prevent disk flooding.
-         */
-        post: operations["postScreenshot"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/recordings/save": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Save video recording
-         * @description Saves a tab video recording from the Chrome extension's offscreen document. The extension uses chrome.tabCapture to record the visible tab as WebM video, optionally with audio (tab audio, microphone, or both). Accepts multipart form data with the video blob and a metadata JSON string. Recordings are saved to the kaboom data directory.
-         */
-        post: operations["postRecordingSave"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/clients": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List MCP clients
-         * @description Lists all registered MCP clients with their working directories and last activity timestamps. MCP clients register on first connection and are tracked for multi-client coordination. The extension uses this to show connected clients in its popup UI.
-         */
-        get: operations["getClients"];
-        put?: never;
-        /**
-         * Register MCP client
-         * @description Registers a new MCP client with its working directory. Returns a client ID that should be included in subsequent requests via the X-Kaboom-Client header. Each client gets its own activity tracking and can be independently managed.
-         */
-        post: operations["postClients"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/clients/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get client details
-         * @description Returns the registration details for a specific MCP client by ID. Includes the client's working directory, creation time, and last activity timestamp.
-         */
-        get: operations["getClient"];
-        put?: never;
-        post?: never;
-        /**
-         * Unregister client
-         * @description Removes an MCP client from the registry. The client's pending queries are cancelled and its activity tracking is deleted. Used when an MCP client session ends cleanly.
-         */
-        delete: operations["deleteClient"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sync": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Extension sync
-         * @description Unified bidirectional sync endpoint between the server and Chrome extension. Replaces separate polling for pending-queries, settings, extension-logs, and extension-status. In a single round-trip, the extension sends its current state (settings, logs, command results) and receives pending commands, capture overrides, and timing for the next poll. This is the primary communication channel between server and extension.
-         */
-        post: operations["postSync"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/snapshot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get capture snapshot
-         * @description Returns an aggregated snapshot of all capture buffers for CI/testing integration. Includes logs, network bodies, WebSocket events, enhanced actions, and computed stats (error counts, warning counts, network failures). Supports filtering by timestamp (since parameter) and tagging with a test_id for correlation with test boundaries.
-         */
-        get: operations["getSnapshot"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/clear": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Clear all buffers
-         * @description Atomically resets all capture buffers (logs, network waterfall, network bodies, WebSocket events, enhanced actions, performance snapshots). Returns the total number of entries removed. Used between test runs in CI pipelines to ensure clean state, and by the MCP configure(action: 'clear') tool.
-         */
-        post: operations["postClear"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/test-boundary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Mark test boundary
-         * @description Marks the start or end of a test for correlation. While a test boundary is active, all ingested telemetry entries are tagged with the test_id, enabling per-test filtering in snapshots. Used by CI pipelines and the MCP configure(action: 'test_boundary_start/end') tool to isolate telemetry to individual test cases.
-         */
-        post: operations["postTestBoundary"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/draw-mode/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Complete draw mode session
-         * @description Receives annotation data and a screenshot from the extension when the user finishes a draw mode session. The user draws rectangles on the page and types feedback, then presses Escape to complete. The extension captures the annotated screenshot, DOM element details for each annotation, and sends them here. Annotations are stored per-session and retrievable via analyze(what: 'annotations').
-         */
-        post: operations["postDrawModeComplete"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/push/screenshot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Push screenshot notification
-         * @description Accepts extension push events for screenshots and forwards them through the server push pipeline to connected MCP clients.
-         */
-        post: operations["postPushScreenshot"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/push/message": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Push text notification
-         * @description Accepts extension push message events and routes them to connected MCP clients via the server push inbox.
-         */
-        post: operations["postPushMessage"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/push/capabilities": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get push capabilities
-         * @description Returns the server push capability snapshot used by the extension to decide which push channels can be delivered.
-         */
-        get: operations["getPushCapabilities"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/push/drain": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Drain push events
-         * @description Returns and clears all queued push events. Used internally by the bridge process to relay push notifications to the MCP client.
-         */
-        get: operations["drainPushEvents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tests/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Serve embedded test pages
-         * @description Serves deterministic embedded test harness pages under /tests/ for smoke testing and browser behavior validation.
-         */
-        get: operations["getTestsPages"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tests/ws": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * WebSocket echo test endpoint
-         * @description Upgrades to a WebSocket echo server used by the test harness for deterministic websocket behavior checks.
-         */
-        get: operations["getTestsWebSocket"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/recordings/storage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get recording storage info
-         * @description Returns disk usage information for saved video recordings. Lists all recordings with their file sizes, durations, and paths. Used by MCP clients via observe(what: 'saved_videos') and the dashboard to display storage consumption.
-         */
-        get: operations["getRecordingStorage"];
-        put?: never;
-        /**
-         * Recalculate recording storage
-         * @description Triggers a full recalculation of storage usage for all saved recordings. Walks the recordings directory, recomputes file sizes, and updates the storage index. Used after manual file operations or to recover from index drift.
-         */
-        post: operations["postRecordingStorage"];
-        /**
-         * Delete recording
-         * @description Deletes a specific video recording by ID. Removes the WebM file from disk and updates the storage index. The recording_id corresponds to the name field in VideoRecordingMetadata.
-         */
-        delete: operations["deleteRecordingStorage"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/recordings/reveal": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reveal recording in file manager
-         * @description Opens the recording file location in the system file manager (Finder on macOS, Explorer on Windows, xdg-open on Linux). Used by MCP clients and the dashboard to let users access recorded video files directly.
-         */
-        post: operations["postRecordingReveal"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/file/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Read file for upload
-         * @description Reads a local file and returns its contents as base64 for upload automation (Stage 1). Always available without the --enable-os-upload-automation flag. Validates file existence, computes MIME type from extension, and enforces size limits. Used by the MCP interact(action: 'upload') tool as the first step in the multi-stage upload pipeline.
-         */
-        post: operations["postFileRead"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/file/dialog/inject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Inject file into dialog
-         * @description Injects a file path into a native file dialog using Chrome DevTools Protocol (Stage 2). Always available without the --enable-os-upload-automation flag. Intercepts the file chooser dialog opened by an <input type='file'> element and programmatically sets the file. Requires the browser PID to identify the correct Chrome instance.
-         */
-        post: operations["postFileDialogInject"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/form/submit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Submit form with file
-         * @description Submits an HTML form with a file upload via server-side multipart POST (Stage 3). Always available without the --enable-os-upload-automation flag. Constructs a multipart/form-data request with the specified file and form fields, including optional CSRF token and cookies. Used when CDP file dialog injection (Stage 2) is not possible.
-         */
-        post: operations["postFormSubmit"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/os-automation/inject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * OS-level file dialog injection
-         * @description Uses OS-level automation (AppleScript on macOS, xdotool on Linux) to inject a file path into a native file dialog (Stage 4). Requires the --enable-os-upload-automation flag. This is the fallback stage when CDP injection (Stage 2) fails, typically for non-standard file dialogs. Supports retry logic for timing-sensitive dialog interactions.
-         */
-        post: operations["postOSAutomationInject"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/os-automation/dismiss": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Dismiss native file dialog
-         * @description Sends Escape key via OS automation to close a dangling native file dialog after a failed upload automation attempt (Stage 4 cleanup). Requires --enable-os-upload-automation flag. Prevents orphaned dialog windows from blocking the browser after upload failures.
-         */
-        post: operations["postOSAutomationDismiss"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/insecure-proxy": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Insecure proxy (altered environment)
-         * @description Last-resort altered-environment debugging proxy for CSP-locked pages. Only available when security_mode is insecure_proxy. Fetches a target URL and strips CSP response headers; output is not production parity.
-         */
-        get: operations["getInsecureProxy"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
+  '/debug/usage': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Tool usage counters
+     * @description Returns per-tool invocation counts for diagnostics. Debug-only endpoint.
+     */
+    get: operations['getDebugUsage']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/debug/beacon-flush': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Flush telemetry beacon buffer
+     * @description Forces a flush of the buffered telemetry beacon payload and returns it. Debug-only endpoint.
+     */
+    post: operations['postDebugBeaconFlush']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * API discovery
+     * @description Returns the server name, version, and links to key endpoints (/health, /logs). Serves as a lightweight discovery mechanism for MCP clients connecting to the server for the first time. Always returns 200 with a static JSON payload.
+     */
+    get: operations['getRoot']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/health': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Health check
+     * @description Returns server health status including version, log buffer stats, and capture availability. Used by MCP clients and monitoring tools to verify the server is running and the Chrome extension is connected. The capture.available field indicates whether the extension WebSocket is active.
+     */
+    get: operations['getHealth']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/doctor': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Doctor preflight
+     * @description Runs aggregated readiness checks for extension connectivity, pilot state, tracked tab, circuit breaker, queue pressure, and recent failure signals. Used by setup and diagnostics to determine whether interact actions are likely to succeed.
+     */
+    get: operations['getDoctor']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/diagnostics': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Diagnostic report
+     * @description Returns comprehensive diagnostic information for bug reports and troubleshooting. Includes system info (OS, arch, Go version, goroutine count), buffer counts across all ring buffers, extension connection state, and circuit breaker status. Output is designed to be copy-pasted into GitHub issues.
+     */
+    get: operations['getDiagnostics']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/shutdown': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Graceful shutdown
+     * @description Initiates graceful server shutdown. Sends the JSON response first, then triggers SIGTERM after a short delay to allow the response to flush. Used by the CLI's stop command and the dashboard UI. The server closes all WebSocket connections and flushes pending writes before exiting.
+     */
+    post: operations['postShutdown']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/openapi.json': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * OpenAPI specification
+     * @description Serves this OpenAPI 3.1.0 specification as JSON. The spec is embedded into the Go binary at compile time via go:embed and served as-is. Used by API documentation tools, SDK generators, and the /docs page.
+     */
+    get: operations['getOpenAPI']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/mcp': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * MCP JSON-RPC bridge
+     * @description HTTP bridge for the MCP protocol. Accepts JSON-RPC 2.0 requests and routes them to the same tool handlers used by the stdio MCP transport. Supports methods: observe, generate, configure, interact, and analyze. This endpoint enables non-stdio MCP clients (dashboards, web UIs, REST wrappers) to call MCP tools over HTTP.
+     */
+    post: operations['postMcp']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/token-savings': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Record token savings from hook compression
+     * @description Records token savings metrics from the kaboom-hooks compress-output hook. The hook POSTs category, tokens_before, and tokens_after after compressing verbose test/build output. Stats are tracked per-session and persisted to lifetime totals.
+     */
+    post: operations['postTokenSavings']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/status': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Dashboard status feed
+     * @description Returns aggregated server status for the built-in dashboard UI. Includes version, uptime, PID, platform, extension connection state, pilot toggle, buffer fill levels with capacities, recent command history, and optional audit metrics. Polled by the dashboard at regular intervals to keep the UI current.
+     */
+    get: operations['getApiStatus']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/config/active-codebase': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get active codebase path
+     * @description Returns the active codebase path used as the default terminal working directory. The extension reads this to know which project directory the terminal should open in.
+     */
+    get: operations['getActiveCodebase']
+    /**
+     * Set active codebase path
+     * @description Sets the active codebase path used as the default terminal working directory. The extension writes this when the user selects a project.
+     */
+    put: operations['setActiveCodebase']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/logs.html': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * HTML log viewer
+     * @description Serves the embedded HTML log viewer page. Provides a browser-based UI for viewing captured console logs with filtering and search. The HTML is embedded into the Go binary at compile time via go:embed.
+     */
+    get: operations['getLogsHtml']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/setup': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Setup page
+     * @description Serves the embedded setup page with installation instructions and configuration guidance. Provides step-by-step instructions for connecting the Chrome extension, configuring MCP clients, and verifying the setup. The HTML is embedded into the Go binary at compile time via go:embed.
+     */
+    get: operations['getSetup']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/docs': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Documentation page
+     * @description Serves the embedded documentation page with API reference and usage guides. Renders the OpenAPI spec in a human-readable format with interactive examples. The HTML is embedded into the Go binary at compile time via go:embed.
+     */
+    get: operations['getDocs']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/logs': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Ingest log entries
+     * @description Ingests console log entries from the Chrome extension. The extension's content script intercepts console.log/warn/error calls and batches them for periodic submission. Entries are stored in a ring buffer (FIFO eviction) and read by MCP clients via observe(what: 'logs'). Each entry includes level, arguments, timestamp, and source URL.
+     */
+    post: operations['postLogs']
+    /**
+     * Clear log buffer
+     * @description Clears all buffered log entries from the ring buffer. Used to reset state between test runs or when the buffer contains stale data. Does not affect the on-disk log file.
+     */
+    delete: operations['deleteLogs']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/network-waterfall': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Ingest waterfall entries
+     * @description Ingests network request waterfall entries (URL, status, timing) from the Chrome extension. The extension's network interceptor batches PerformanceResourceTiming entries and POSTs them periodically. Data is stored in a ring buffer (capacity 1000, FIFO eviction) and read by MCP clients via observe(what: 'network_waterfall'). Server-side analysis flags suspicious TLDs, non-standard ports, and mixed content.
+     */
+    post: operations['postNetworkWaterfall']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/network-bodies': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Ingest network bodies
+     * @description Ingests network request and response bodies captured by the Chrome extension's fetch() interceptor. Bodies are stored in a ring buffer and paired with waterfall entries by URL. Binary response bodies are detected and labeled rather than stored. MCP clients read bodies via observe(what: 'network_bodies').
+     */
+    post: operations['postNetworkBodies']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/websocket-events': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Ingest WebSocket events
+     * @description Ingests WebSocket lifecycle and message events from the Chrome extension. Captures open, message (incoming/outgoing), close, and error events with connection IDs for correlation. High-throughput connections are automatically sampled to prevent buffer flooding. Data is read by MCP clients via observe(what: 'websocket_events').
+     */
+    post: operations['postWebSocketEvents']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/telemetry': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Read telemetry buffers
+     * @description Unified read endpoint for all telemetry buffers. Replaces individual GET endpoints on /logs, /network-waterfall, /network-bodies, /websocket-events, /enhanced-actions, /performance-snapshots. Returns the most recent N entries from the specified buffer type. This is the primary endpoint MCP clients use to read captured telemetry data.
+     */
+    get: operations['getTelemetry']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/websocket-status': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get WebSocket connection status
+     * @description Returns active and recently-closed WebSocket connections with message rates and sampling info. Used by MCP clients via observe(what: 'websocket_status') to understand which WebSocket connections are active on the page, their throughput, and whether sampling is being applied to high-volume connections.
+     */
+    get: operations['getWebSocketStatus']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/enhanced-actions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Ingest user actions
+     * @description Ingests user interaction events (clicks, inputs, navigations, scrolls) from the Chrome extension. The extension's action tracker records DOM interactions with CSS selectors and values, enabling reproduction script generation and action replay. Data is stored in a ring buffer and read by MCP clients via observe(what: 'actions').
+     */
+    post: operations['postEnhancedActions']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/performance-snapshots': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Ingest performance snapshots
+     * @description Ingests Web Vitals performance snapshots (FCP, LCP, CLS, TTFB) from the Chrome extension. The extension captures Core Web Vitals using the web-vitals library and submits them on page load and navigation events. MCP clients read snapshots via observe(what: 'vitals') and compare them over time to detect performance regressions.
+     */
+    post: operations['postPerformanceSnapshots']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/query-result': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Submit query result
+     * @description Unified endpoint for the extension to submit results of any async query or command. Replaces the legacy separate endpoints (dom-result, a11y-result, state-result, execute-result, highlight-result). The MCP server creates a PendingQuery, delivers it to the extension via /sync, and waits for the result to arrive here. The correlation_id links the result back to the original MCP tool call.
+     */
+    post: operations['postQueryResult']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/screenshots': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Save screenshot
+     * @description Saves a screenshot JPEG from the Chrome extension. The extension captures the visible tab using chrome.tabs.captureVisibleTab() and sends the base64 data URL. Screenshots are saved to the kaboom data directory and can be linked to specific MCP tool invocations via correlation_id. Rate limited to 1 screenshot per second per client to prevent disk flooding.
+     */
+    post: operations['postScreenshot']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/recordings/save': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Save video recording
+     * @description Saves a tab video recording from the Chrome extension's offscreen document. The extension uses chrome.tabCapture to record the visible tab as WebM video, optionally with audio (tab audio, microphone, or both). Accepts multipart form data with the video blob and a metadata JSON string. Recordings are saved to the kaboom data directory.
+     */
+    post: operations['postRecordingSave']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/clients': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List MCP clients
+     * @description Lists all registered MCP clients with their working directories and last activity timestamps. MCP clients register on first connection and are tracked for multi-client coordination. The extension uses this to show connected clients in its popup UI.
+     */
+    get: operations['getClients']
+    put?: never
+    /**
+     * Register MCP client
+     * @description Registers a new MCP client with its working directory. Returns a client ID that should be included in subsequent requests via the X-Kaboom-Client header. Each client gets its own activity tracking and can be independently managed.
+     */
+    post: operations['postClients']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/clients/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get client details
+     * @description Returns the registration details for a specific MCP client by ID. Includes the client's working directory, creation time, and last activity timestamp.
+     */
+    get: operations['getClient']
+    put?: never
+    post?: never
+    /**
+     * Unregister client
+     * @description Removes an MCP client from the registry. The client's pending queries are cancelled and its activity tracking is deleted. Used when an MCP client session ends cleanly.
+     */
+    delete: operations['deleteClient']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sync': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Extension sync
+     * @description Unified bidirectional sync endpoint between the server and Chrome extension. Replaces separate polling for pending-queries, settings, extension-logs, and extension-status. In a single round-trip, the extension sends its current state (settings, logs, command results) and receives pending commands, capture overrides, and timing for the next poll. This is the primary communication channel between server and extension.
+     */
+    post: operations['postSync']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/snapshot': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get capture snapshot
+     * @description Returns an aggregated snapshot of all capture buffers for CI/testing integration. Includes logs, network bodies, WebSocket events, enhanced actions, and computed stats (error counts, warning counts, network failures). Supports filtering by timestamp (since parameter) and tagging with a test_id for correlation with test boundaries.
+     */
+    get: operations['getSnapshot']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/clear': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Clear all buffers
+     * @description Atomically resets all capture buffers (logs, network waterfall, network bodies, WebSocket events, enhanced actions, performance snapshots). Returns the total number of entries removed. Used between test runs in CI pipelines to ensure clean state, and by the MCP configure(action: 'clear') tool.
+     */
+    post: operations['postClear']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/test-boundary': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Mark test boundary
+     * @description Marks the start or end of a test for correlation. While a test boundary is active, all ingested telemetry entries are tagged with the test_id, enabling per-test filtering in snapshots. Used by CI pipelines and the MCP configure(action: 'test_boundary_start/end') tool to isolate telemetry to individual test cases.
+     */
+    post: operations['postTestBoundary']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/draw-mode/complete': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Complete draw mode session
+     * @description Receives annotation data and a screenshot from the extension when the user finishes a draw mode session. The user draws rectangles on the page and types feedback, then presses Escape to complete. The extension captures the annotated screenshot, DOM element details for each annotation, and sends them here. Annotations are stored per-session and retrievable via analyze(what: 'annotations').
+     */
+    post: operations['postDrawModeComplete']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/push/screenshot': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Push screenshot notification
+     * @description Accepts extension push events for screenshots and forwards them through the server push pipeline to connected MCP clients.
+     */
+    post: operations['postPushScreenshot']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/push/message': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Push text notification
+     * @description Accepts extension push message events and routes them to connected MCP clients via the server push inbox.
+     */
+    post: operations['postPushMessage']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/push/capabilities': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get push capabilities
+     * @description Returns the server push capability snapshot used by the extension to decide which push channels can be delivered.
+     */
+    get: operations['getPushCapabilities']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/push/drain': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Drain push events
+     * @description Returns and clears all queued push events. Used internally by the bridge process to relay push notifications to the MCP client.
+     */
+    get: operations['drainPushEvents']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/tests/': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Serve embedded test pages
+     * @description Serves deterministic embedded test harness pages under /tests/ for smoke testing and browser behavior validation.
+     */
+    get: operations['getTestsPages']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/tests/ws': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * WebSocket echo test endpoint
+     * @description Upgrades to a WebSocket echo server used by the test harness for deterministic websocket behavior checks.
+     */
+    get: operations['getTestsWebSocket']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/recordings/storage': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get recording storage info
+     * @description Returns disk usage information for saved video recordings. Lists all recordings with their file sizes, durations, and paths. Used by MCP clients via observe(what: 'saved_videos') and the dashboard to display storage consumption.
+     */
+    get: operations['getRecordingStorage']
+    put?: never
+    /**
+     * Recalculate recording storage
+     * @description Triggers a full recalculation of storage usage for all saved recordings. Walks the recordings directory, recomputes file sizes, and updates the storage index. Used after manual file operations or to recover from index drift.
+     */
+    post: operations['postRecordingStorage']
+    /**
+     * Delete recording
+     * @description Deletes a specific video recording by ID. Removes the WebM file from disk and updates the storage index. The recording_id corresponds to the name field in VideoRecordingMetadata.
+     */
+    delete: operations['deleteRecordingStorage']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/recordings/reveal': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Reveal recording in file manager
+     * @description Opens the recording file location in the system file manager (Finder on macOS, Explorer on Windows, xdg-open on Linux). Used by MCP clients and the dashboard to let users access recorded video files directly.
+     */
+    post: operations['postRecordingReveal']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/file/read': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Read file for upload
+     * @description Reads a local file and returns its contents as base64 for upload automation (Stage 1). Always available without the --enable-os-upload-automation flag. Validates file existence, computes MIME type from extension, and enforces size limits. Used by the MCP interact(action: 'upload') tool as the first step in the multi-stage upload pipeline.
+     */
+    post: operations['postFileRead']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/file/dialog/inject': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Inject file into dialog
+     * @description Injects a file path into a native file dialog using Chrome DevTools Protocol (Stage 2). Always available without the --enable-os-upload-automation flag. Intercepts the file chooser dialog opened by an <input type='file'> element and programmatically sets the file. Requires the browser PID to identify the correct Chrome instance.
+     */
+    post: operations['postFileDialogInject']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/form/submit': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Submit form with file
+     * @description Submits an HTML form with a file upload via server-side multipart POST (Stage 3). Always available without the --enable-os-upload-automation flag. Constructs a multipart/form-data request with the specified file and form fields, including optional CSRF token and cookies. Used when CDP file dialog injection (Stage 2) is not possible.
+     */
+    post: operations['postFormSubmit']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/os-automation/inject': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * OS-level file dialog injection
+     * @description Uses OS-level automation (AppleScript on macOS, xdotool on Linux) to inject a file path into a native file dialog (Stage 4). Requires the --enable-os-upload-automation flag. This is the fallback stage when CDP injection (Stage 2) fails, typically for non-standard file dialogs. Supports retry logic for timing-sensitive dialog interactions.
+     */
+    post: operations['postOSAutomationInject']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/os-automation/dismiss': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Dismiss native file dialog
+     * @description Sends Escape key via OS automation to close a dangling native file dialog after a failed upload automation attempt (Stage 4 cleanup). Requires --enable-os-upload-automation flag. Prevents orphaned dialog windows from blocking the browser after upload failures.
+     */
+    post: operations['postOSAutomationDismiss']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/insecure-proxy': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Insecure proxy (altered environment)
+     * @description Last-resort altered-environment debugging proxy for CSP-locked pages. Only available when security_mode is insecure_proxy. Fetches a target URL and strips CSP response headers; output is not production parity.
+     */
+    get: operations['getInsecureProxy']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
-export type webhooks = Record<string, never>;
+export type webhooks = Record<string, never>
 export interface components {
-    schemas: {
-        /** @description Standard success response returned by endpoints that have no meaningful payload. Contains a single 'ok' status field. */
-        StatusOk: {
-            /**
-             * @description Always 'ok' on success
-             * @example ok
-             */
-            status?: string;
-        };
-        /** @description Standard response from telemetry ingestion endpoints (network-waterfall, network-bodies, enhanced-actions, performance-snapshots). Confirms the number of entries recorded into the ring buffer. */
-        IngestResponse: {
-            /**
-             * @description Always 'ok' on success
-             * @example ok
-             */
-            status?: string;
-            /** @description Number of entries recorded */
-            count?: number;
-        };
-        /** @description API discovery payload returned by GET /. Provides server identity and links to key endpoints for first-time client bootstrapping. */
-        DiscoveryResponse: {
-            /**
-             * @description Server identifier
-             * @example kaboom
-             */
-            name?: string;
-            /**
-             * @description Server version string
-             * @example 0.7.12
-             */
-            version?: string;
-            /**
-             * @description Link to health check endpoint
-             * @example /health
-             */
-            health?: string;
-            /**
-             * @description Link to log ingestion endpoint
-             * @example /logs
-             */
-            logs?: string;
-        };
-        /** @description Response from POST /logs with counts of received, rejected, and total buffered entries. Rejected entries are malformed or filtered by noise rules. */
-        LogIngestResponse: {
-            /** @description Number of entries received in the request */
-            received?: number;
-            /** @description Number of entries rejected (malformed or filtered) */
-            rejected?: number;
-            /** @description Total entries now in the buffer */
-            entries?: number;
-        };
-        /** @description Unified telemetry read response from GET /telemetry. Returns entries from the requested buffer type with a count. The items array shape depends on the type parameter. */
-        TelemetryResponse: {
-            /** @description Echo of the requested buffer type */
-            type?: string;
-            /** @description Array of telemetry entries (shape depends on type) */
-            items?: unknown[];
-            /** @description Number of entries returned */
-            count?: number;
-        };
-        /** @description Aggregated server status for the built-in dashboard UI. Polled at regular intervals to keep the dashboard current with server state, buffer fill levels, and extension connectivity. */
-        DashboardStatus: {
-            /** @description Server version string */
-            version?: string;
-            /** @description Seconds since server started */
-            uptime_seconds?: number;
-            /** @description Server process ID */
-            pid?: number;
-            /** @description OS and architecture (e.g. 'darwin/arm64') */
-            platform?: string;
-            /** @description Whether the Chrome extension WebSocket is active */
-            extension_connected?: boolean;
-            /** @description Whether AI Web Pilot is enabled in the extension */
-            pilot_enabled?: boolean;
-            /**
-             * Format: date-time
-             * @description RFC3339 timestamp of the extension's last /sync poll
-             */
-            last_poll_at?: string;
-            /** @description Ring buffer fill levels and capacities */
-            buffers?: {
-                /** @description Current console log buffer entries */
-                console_entries?: number;
-                /** @description Console log buffer max capacity */
-                console_capacity?: number;
-                /** @description Current network body buffer entries */
-                network_entries?: number;
-                /** @description Network body buffer max capacity */
-                network_capacity?: number;
-                /** @description Current WebSocket event buffer entries */
-                websocket_entries?: number;
-                /** @description WebSocket event buffer max capacity */
-                websocket_capacity?: number;
-                /** @description Current user action buffer entries */
-                action_entries?: number;
-                /** @description User action buffer max capacity */
-                action_capacity?: number;
-            };
-            /** @description Recent MCP commands from the HTTP debug log */
-            recent_commands?: Record<string, never>[];
-            /** @description Tool health metrics and audit info (present when MCP handler is active) */
-            audit?: Record<string, never>;
-        };
-        /** @description Screenshot upload request from the Chrome extension. Contains the base64 image data and optional correlation metadata for linking to MCP tool invocations. */
-        ScreenshotRequest: {
-            /** @description Base64 data URL (data:image/jpeg;base64,...) */
-            data_url: string;
-            /** @description Page URL where the screenshot was taken */
-            url?: string;
-            /** @description Links this screenshot to an MCP tool invocation */
-            correlation_id?: string;
-            /** @description Pending query ID for on-demand screenshot flow */
-            query_id?: string;
-        };
-        /** @description Confirmation that a screenshot was saved to disk. Returns the generated filename and absolute path for the MCP client to reference. */
-        ScreenshotSavedResponse: {
-            /** @description Generated filename for the saved screenshot */
-            filename?: string;
-            /** @description Absolute file path where the screenshot was saved */
-            path?: string;
-            /** @description Echo of the correlation_id if provided */
-            correlation_id?: string;
-        };
-        /** @description Confirmation that a video recording was saved to disk. Returns the recording name, path, and file size. */
-        RecordingSavedResponse: {
-            /**
-             * @description Always 'saved' on success
-             * @example saved
-             */
-            status?: string;
-            /** @description Recording name from metadata */
-            name?: string;
-            /** @description Absolute file path where the recording was saved */
-            path?: string;
-            /**
-             * Format: int64
-             * @description File size in bytes
-             */
-            size?: number;
-        };
-        /** @description Request to start or end a test boundary for telemetry correlation. While active, all ingested entries are tagged with the test_id. */
-        TestBoundaryRequest: {
-            /** @description Unique identifier for the test run */
-            test_id: string;
-            /**
-             * @description Whether to start or end the test boundary
-             * @enum {string}
-             */
-            action: "start" | "end";
-        };
-        /** @description Confirmation that a test boundary was set, with the server timestamp for synchronization. */
-        TestBoundaryResponse: {
-            /** @description Echo of the test_id */
-            test_id?: string;
-            /** @description Echo of the action (start/end) */
-            action?: string;
-            /**
-             * Format: date-time
-             * @description Server timestamp when the boundary was set
-             */
-            timestamp?: string;
-        };
-        /** @description Annotation data from a completed draw mode session. Contains the annotated screenshot, rectangle annotations with user feedback, and computed DOM element details for each annotated region. */
-        DrawModeCompleteRequest: {
-            /** @description Base64 data URL of the annotated screenshot */
-            screenshot_data_url?: string;
-            /** @description Annotation rectangles with user-typed feedback text */
-            annotations?: Record<string, never>[];
-            /** @description Map of annotation correlation_id to computed DOM element details (tag, classes, styles, dimensions) */
-            element_details?: {
-                [key: string]: Record<string, never>;
-            };
-            /** @description URL of the page where annotations were drawn */
-            page_url?: string;
-            /** @description Chrome tab ID where draw mode was active */
-            tab_id: number;
-            /** @description Named session for multi-page annotation accumulation */
-            annot_session_name?: string;
-        };
-        /** @description Confirmation that draw mode annotations were stored. Includes the screenshot save path and any parse warnings for malformed annotations. */
-        DrawModeCompleteResponse: {
-            /**
-             * @description Always 'stored' on success
-             * @example stored
-             */
-            status?: string;
-            /** @description Number of annotations received */
-            annotation_count?: number;
-            /** @description File path where the annotated screenshot was saved */
-            screenshot?: string;
-            /** @description Parse warnings for malformed or skipped annotations */
-            warnings?: string[];
-        };
-        /** @description Result of reading a local file for upload automation (Stage 1). Contains the file's base64 contents, detected MIME type, and size. On failure, success is false and error contains the reason. */
-        FileReadResponse: {
-            /** @description Whether the file was read successfully */
-            success?: boolean;
-            /** @description Base name of the file */
-            file_name?: string;
-            /**
-             * Format: int64
-             * @description File size in bytes
-             */
-            file_size?: number;
-            /** @description Detected MIME type based on file extension */
-            mime_type?: string;
-            /** @description Base64-encoded file contents */
-            data_base64?: string;
-            /** @description Error message if success is false */
-            error?: string;
-        };
-        /** @description Request to submit an HTML form with a file upload via server-side multipart POST (Stage 3). Includes the form action URL, file details, and optional authentication fields. */
-        FormSubmitRequest: {
-            /** @description URL to submit the form to (action attribute) */
-            form_action: string;
-            /** @description HTTP method (defaults to POST) */
-            method?: string;
-            /** @description Key-value pairs for non-file form fields */
-            fields?: {
-                [key: string]: string;
-            };
-            /** @description Name attribute of the file input field */
-            file_input_name: string;
-            /** @description Absolute path to the file to upload */
-            file_path: string;
-            /** @description CSRF token value to include in the form submission */
-            csrf_token?: string;
-            /** @description Cookie header string for authenticated submissions */
-            cookies?: string;
-        };
-        /** @description Server health status returned by GET /health. Provides version info, log buffer stats, and capture subsystem availability. Used by MCP clients to verify server readiness and extension connectivity. */
-        HealthResponse: {
-            /**
-             * @description Server status ('ok' when healthy)
-             * @example ok
-             */
-            status?: string;
-            /** @description Canonical daemon service name */
-            name?: string;
-            /** @description Server version string */
-            version?: string;
-            /** @description Latest available version from npm registry (if version check is enabled) */
-            available_version?: string;
-            /** @description Detected on-disk daemon upgrade state */
-            upgrade_pending?: {
-                pending?: boolean;
-                new_version?: string;
-                detected_at?: string;
-            };
-            /** @description Console log buffer statistics */
-            logs?: {
-                /** @description Current number of log entries in the ring buffer */
-                entries?: number;
-                /** @description Maximum ring buffer capacity */
-                max_entries?: number;
-                /** @description Path to the on-disk log file */
-                log_file?: string;
-                /**
-                 * Format: int64
-                 * @description Size of the on-disk log file in bytes
-                 */
-                log_file_size?: number;
-                /**
-                 * Format: int64
-                 * @description Total log entries dropped due to buffer overflow (FIFO eviction)
-                 */
-                dropped_count?: number;
-            };
-            /** @description Capture subsystem availability */
-            capture?: {
-                /** @description Whether the Chrome extension WebSocket connection is active */
-                available?: boolean;
-                /** @description Whether AI Web Pilot is enabled in the extension settings */
-                pilot_enabled?: boolean;
-                /** @description Detailed AI Web Pilot state */
-                pilot_state?: string;
-                /** @description Whether the extension has recently synchronized */
-                extension_connected?: boolean;
-                /** @description RFC3339 timestamp of the latest extension synchronization */
-                extension_last_seen?: string;
-                /** @description Opaque extension client identifier */
-                extension_client_id?: string;
-                /** @description Current browser security posture */
-                security_mode?: string;
-                /** @description Whether production-parity security behavior is enabled */
-                production_parity?: boolean;
-                /** @description Number of insecure URL rewrites, or null before measurement */
-                insecure_rewrites?: number | null;
-            };
-            /** @description Bridge fast-path resource-read counters */
-            bridge_fastpath?: {
-                resources_read_success?: number;
-                resources_read_failure?: number;
-            };
-            /** @description Whether the terminal sub-server is available */
-            terminal_available?: boolean;
-            /** @description Terminal sub-server port when available */
-            terminal_port?: number;
-            /** @description Terminal startup failure detail */
-            terminal_error?: string;
-            /** @description Process currently blocking the terminal port */
-            terminal_blocked_by?: {
-                pid?: number;
-                command?: string;
-            };
-        };
-        /** @description Comprehensive diagnostic report for bug reports and troubleshooting. Includes system info, buffer fill levels, and extension state. Designed to be copy-pasted into GitHub issues. */
-        DiagnosticsResponse: {
-            /**
-             * Format: date-time
-             * @description Timestamp when this diagnostic report was generated
-             */
-            generated_at?: string;
-            /** @description Server version string */
-            version?: string;
-            /** @description Seconds since server started */
-            uptime_seconds?: number;
-            /** @description Host system information */
-            system?: {
-                /** @description Operating system (e.g. 'darwin', 'linux', 'windows') */
-                os?: string;
-                /** @description CPU architecture (e.g. 'arm64', 'amd64') */
-                arch?: string;
-                /** @description Go runtime version used to build the server */
-                go_version?: string;
-                /** @description Number of active goroutines */
-                goroutines?: number;
-            };
-            /** @description Console log buffer status */
-            logs?: {
-                /** @description Current entries in the log ring buffer */
-                entries?: number;
-                /** @description Maximum log ring buffer capacity */
-                max_entries?: number;
-                /** @description Path to the on-disk log file */
-                log_file?: string;
-            };
-            /** @description Fill levels for all capture ring buffers */
-            buffers?: {
-                /** @description Current WebSocket event buffer entries */
-                websocket_events?: number;
-                /** @description Current network body buffer entries */
-                network_bodies?: number;
-                /** @description Current user action buffer entries */
-                actions?: number;
-                /** @description Number of queries awaiting extension response */
-                pending_queries?: number;
-                /** @description Number of undelivered query results */
-                query_results?: number;
-            };
-        };
-        /** @description JSON-RPC 2.0 request envelope for the /mcp HTTP bridge. Wraps MCP tool calls (observe, generate, configure, interact, analyze) for HTTP transport. */
-        JsonRpcRequest: {
-            /**
-             * @description JSON-RPC protocol version (must be '2.0')
-             * @enum {string}
-             */
-            jsonrpc: "2.0";
-            /** @description Request ID for response correlation */
-            id?: string | number;
-            /**
-             * @description MCP tool name to invoke
-             * @enum {string}
-             */
-            method: "observe" | "generate" | "configure" | "interact" | "analyze";
-            /** @description Tool-specific parameters (same as MCP tool input schema) */
-            params?: Record<string, never>;
-        };
-        /** @description JSON-RPC 2.0 response envelope from the /mcp HTTP bridge. Contains either a result object or an error object, never both. */
-        JsonRpcResponse: {
-            /**
-             * @description JSON-RPC protocol version (always '2.0')
-             * @enum {string}
-             */
-            jsonrpc?: "2.0";
-            /** @description Echo of the request ID */
-            id?: string | number;
-            /** @description Tool result on success (absent on error) */
-            result?: Record<string, never>;
-            /** @description Error details on failure (absent on success) */
-            error?: {
-                /** @description JSON-RPC error code (-32600 to -32603 for protocol errors) */
-                code?: number;
-                /** @description Human-readable error message */
-                message?: string;
-            };
-        };
-        /** @description Console log entry captured from the browser. Represents a single console.log/warn/error/info/debug call with its arguments and metadata. */
-        LogEntry: {
-            /**
-             * @description Console log level
-             * @enum {string}
-             */
-            level: "error" | "warn" | "info" | "debug" | "log";
-            /** @description Serialized console arguments (strings, objects, arrays) */
-            args?: unknown;
-            /**
-             * Format: date-time
-             * @description Timestamp when the log was captured in the browser
-             */
-            ts?: string;
-            /** @description Page URL where the console call originated */
-            url?: string;
-        };
-        /** @description Network request timing entry derived from PerformanceResourceTiming. Captures URL, HTTP status, and duration for waterfall visualization and performance analysis. */
-        WaterfallEntry: {
-            /** @description Request URL */
-            url?: string;
-            /** @description HTTP response status code */
-            status?: number;
-            /** @description HTTP response status text */
-            statusText?: string;
-            /** @description Total request duration in milliseconds */
-            timing?: number;
-        };
-        /** @description Captured request and response body pair from a fetch() call. The extension intercepts fetch requests and clones response bodies for inspection. Binary content is detected and labeled rather than stored in full. */
-        NetworkBody: {
-            /** @description Request URL */
-            url?: string;
-            /** @description HTTP method (GET, POST, PUT, etc.) */
-            method?: string;
-            /** @description HTTP response status code */
-            status?: number;
-            /** @description Serialized request body (JSON stringified for objects) */
-            request_body?: string;
-            /** @description Serialized response body (truncated if over size limit, labeled if binary) */
-            response_body?: string;
-        };
-        /** @description WebSocket lifecycle or message event. Captures connection open/close, incoming/outgoing messages, and errors. Events are grouped by connection ID for correlation. */
-        WebSocketEvent: {
-            /** @description Connection ID — stable across all events for a single WebSocket connection */
-            id?: string;
-            /** @description WebSocket URL (ws:// or wss://) */
-            url?: string;
-            /**
-             * @description Event type
-             * @enum {string}
-             */
-            event?: "open" | "message" | "close" | "error";
-            /**
-             * @description Message direction (only present for 'message' events)
-             * @enum {string}
-             */
-            direction?: "incoming" | "outgoing";
-            /** @description Message payload (truncated if over size limit) */
-            data?: string;
-            /**
-             * Format: date-time
-             * @description Event timestamp
-             */
-            timestamp?: string;
-            /** @description Message payload size in bytes */
-            size?: number;
-        };
-        /** @description Overview of active and recently-closed WebSocket connections. Includes message rates and sampling info for each connection, used to identify high-throughput connections and sampling behavior. */
-        WebSocketStatusResponse: {
-            /** @description Currently active WebSocket connections */
-            connections?: {
-                /** @description Connection ID */
-                id?: string;
-                /** @description WebSocket URL */
-                url?: string;
-                /** @description Connection state (e.g. 'open') */
-                state?: string;
-                /**
-                 * Format: date-time
-                 * @description When the connection was opened
-                 */
-                opened_at?: string;
-                /** @description Human-readable connection duration */
-                duration?: string;
-                /** @description Messages per second statistics */
-                message_rate?: Record<string, never>;
-                /** @description Sampling configuration if applied to this connection */
-                sampling?: Record<string, never>;
-            }[];
-            /** @description Recently closed WebSocket connections (kept for short-term history) */
-            closed?: Record<string, never>[];
-        };
-        /** @description User interaction event captured from the browser. Records clicks, inputs, navigations, and scrolls with CSS selectors for reproduction script generation and action replay. */
-        EnhancedAction: {
-            /** @description Action type (e.g. 'click', 'input', 'navigate', 'scroll') */
-            action?: string;
-            /** @description CSS selector for the target DOM element */
-            selector?: string;
-            /** @description Value associated with the action (input text, scroll position, URL) */
-            value?: string;
-            /**
-             * Format: date-time
-             * @description When the action occurred
-             */
-            timestamp?: string;
-        };
-        /** @description Core Web Vitals performance snapshot captured from the browser. Contains FCP, LCP, CLS, and TTFB metrics measured by the web-vitals library on page load and navigation events. */
-        PerformanceSnapshot: {
-            /**
-             * Format: date-time
-             * @description When the snapshot was captured
-             */
-            timestamp?: string;
-            /** @description First Contentful Paint in milliseconds */
-            fcp?: number;
-            /** @description Largest Contentful Paint in milliseconds */
-            lcp?: number;
-            /** @description Cumulative Layout Shift score (unitless, lower is better) */
-            cls?: number;
-            /** @description Time to First Byte in milliseconds */
-            ttfb?: number;
-        };
-        /** @description A command queued for execution by the Chrome extension. Created by MCP tool handlers and delivered to the extension via the /sync endpoint. The extension executes the command and returns results via /query-result or the sync response's command_results field. */
-        PendingQuery: {
-            /** @description Unique query ID for matching results to requests */
-            id?: string;
-            /**
-             * @description Command type that determines which extension handler processes this query
-             * @enum {string}
-             */
-            type?: "dom" | "a11y" | "execute" | "highlight" | "state" | "screen_recording_start" | "screen_recording_stop" | "browser_action" | "page_info" | "tabs" | "subtitle" | "screenshot" | "dom_action" | "state_capture";
-            /** @description Command-specific parameters passed to the extension handler */
-            params?: Record<string, never>;
-            /** @description Links this query to the originating MCP tool call for result routing */
-            correlation_id?: string;
-        };
-        /** @description Legacy query result format. Used internally when processing results from the extension. Newer code uses AsyncCommandResult or SyncCommandResult instead. */
-        QueryResult: {
-            /** @description Query ID matching the original PendingQuery */
-            id: string;
-            /** @description Query result data (shape depends on query type) */
-            result?: unknown;
-            /** @description ID of the extension client that produced this result */
-            client_id?: string;
-        };
-        /** @description Result of an async command submitted by the extension via POST /query-result. Contains either a successful result or an error. The id field matches the original PendingQuery, and correlation_id links back to the MCP tool invocation. */
-        AsyncCommandResult: {
-            /** @description Query ID matching the original PendingQuery */
-            id?: string;
-            /** @description Links back to the originating MCP tool call */
-            correlation_id?: string;
-            /**
-             * @description Execution outcome
-             * @enum {string}
-             */
-            status?: "complete" | "error" | "timeout";
-            /** @description Command result data on success (shape depends on command type) */
-            result?: unknown;
-            /** @description Error message when status is 'error' */
-            error?: string;
-            /** @description ID of the extension client that executed this command */
-            client_id?: string;
-        };
-        /** @description Metadata for a saved video recording. Accompanies the WebM video file in the multipart upload to /recordings/save. Describes the recording's source, format, duration, and audio configuration. */
-        VideoRecordingMetadata: {
-            /** @description Unique recording identifier used as the filename stem */
-            name: string;
-            /** @description Human-readable recording name shown in UI */
-            display_name?: string;
-            /**
-             * Format: date-time
-             * @description When the recording was started
-             */
-            created_at?: string;
-            /** @description Recording duration in seconds */
-            duration_seconds?: number;
-            /**
-             * Format: int64
-             * @description Video file size in bytes
-             */
-            size_bytes?: number;
-            /** @description Page URL that was being recorded */
-            url?: string;
-            /** @description Chrome tab ID that was recorded */
-            tab_id?: number;
-            /**
-             * @description Video resolution as WxH
-             * @example 1920x1080
-             */
-            resolution?: string;
-            /** @description Video format (e.g. 'webm') */
-            format?: string;
-            /** @description Frames per second */
-            fps?: number;
-            /** @description Whether the recording includes audio */
-            has_audio?: boolean;
-            /**
-             * @description Audio source: tab audio, microphone, or both
-             * @enum {string}
-             */
-            audio_mode?: "tab" | "mic" | "both";
-            /** @description Whether the recording was truncated due to size or duration limits */
-            truncated?: boolean;
-        };
-        /** @description MCP client registration record. Created when an MCP client connects and registers via POST /clients. Tracks the client's working directory and activity for multi-client coordination. */
-        ClientRegistration: {
-            /** @description Auto-generated unique client ID */
-            id?: string;
-            /** @description Client's working directory (absolute path) */
-            cwd?: string;
-            /**
-             * Format: date-time
-             * @description When the client was first registered
-             */
-            created_at?: string;
-            /**
-             * Format: date-time
-             * @description Timestamp of the client's most recent API call
-             */
-            last_activity?: string;
-        };
-        /** @description Extension-to-server sync payload. The Chrome extension sends its current state on each poll interval. Contains settings, internal logs, and results from async commands. This is the upstream half of the bidirectional sync protocol. */
-        SyncRequest: {
-            /** @description Extension session identifier for reconnection tracking */
-            session_id?: string;
-            /** @description Chrome extension version string */
-            extension_version?: string;
-            /** @description Current extension settings and tracking state */
-            settings?: {
-                /** @description Whether AI Web Pilot is enabled */
-                pilot_enabled?: boolean;
-                /** @description Whether the extension is actively tracking a tab */
-                tracking_enabled?: boolean;
-                /** @description Chrome tab ID being tracked (0 if none) */
-                tracked_tab_id?: number;
-                /** @description URL of the tracked tab */
-                tracked_tab_url?: string;
-                /** @description Title of the tracked tab */
-                tracked_tab_title?: string;
-                /** @description Whether console log capture is enabled */
-                capture_logs?: boolean;
-                /** @description Whether network capture is enabled */
-                capture_network?: boolean;
-                /** @description Whether WebSocket capture is enabled */
-                capture_websocket?: boolean;
-                /** @description Whether user action capture is enabled */
-                capture_actions?: boolean;
-            };
-            /** @description ID of the last command acknowledged by the extension (for delivery tracking) */
-            last_command_ack?: string;
-            /** @description Internal extension debug logs for server-side troubleshooting */
-            extension_logs?: {
-                /**
-                 * Format: date-time
-                 * @description When the log was emitted
-                 */
-                timestamp?: string;
-                /** @description Log level (info, warn, error) */
-                level?: string;
-                /** @description Log message text */
-                message?: string;
-                /** @description Source context (e.g. 'background', 'content-script') */
-                context?: string;
-            }[];
-            /** @description Results from async commands the extension has executed since last sync */
-            command_results?: components["schemas"]["SyncCommandResult"][];
-        };
-        /** @description Server-to-extension sync response. Delivers pending commands, capture overrides, and timing for the next poll. This is the downstream half of the bidirectional sync protocol. */
-        SyncResponse: {
-            /** @description Acknowledgement that the sync request was processed */
-            ack?: boolean;
-            /** @description Pending commands for the extension to execute (DOM queries, screenshots, browser actions) */
-            commands?: components["schemas"]["PendingQuery"][];
-            /** @description Suggested delay before next sync poll in milliseconds (adaptive based on activity) */
-            next_poll_ms?: number;
-            /**
-             * Format: date-time
-             * @description Server timestamp for clock synchronization
-             */
-            server_time?: string;
-            /** @description Server version string for compatibility checks */
-            server_version?: string;
-            /** @description Server-side overrides for extension capture settings */
-            capture_overrides?: Record<string, never>;
-        };
-        /** @description Aggregated capture snapshot for CI/testing integration. Contains all telemetry data across buffers with computed statistics. Used by test frameworks to assert on browser behavior during test runs. */
-        SnapshotResponse: {
-            /**
-             * Format: date-time
-             * @description When the snapshot was generated
-             */
-            timestamp?: string;
-            /** @description Test boundary label if provided in the request */
-            test_id?: string;
-            /** @description Console log entries captured during the snapshot window */
-            logs?: components["schemas"]["LogEntry"][];
-            /** @description WebSocket events captured during the snapshot window */
-            websocket_events?: components["schemas"]["WebSocketEvent"][];
-            /** @description Network request/response bodies captured during the snapshot window */
-            network_bodies?: components["schemas"]["NetworkBody"][];
-            /** @description User interaction events captured during the snapshot window */
-            enhanced_actions?: components["schemas"]["EnhancedAction"][];
-            /** @description Computed statistics across all captured telemetry */
-            stats?: {
-                /** @description Total log entries in the snapshot */
-                total_logs?: number;
-                /** @description Number of error-level logs */
-                error_count?: number;
-                /** @description Number of warning-level logs */
-                warning_count?: number;
-                /** @description Number of failed network requests (status >= 400) */
-                network_failures?: number;
-                /** @description Number of distinct WebSocket connections */
-                ws_connections?: number;
-            };
-        };
-        /** @description Response from file upload automation endpoints (Stages 1-4). Contains success/failure status, the stage that produced the result, and optional progress metrics for large file uploads. On failure, includes escalation_reason and suggestions for the next stage to try. */
-        UploadStageResponse: {
-            /** @description Whether the upload stage completed successfully */
-            success?: boolean;
-            /** @description Upload pipeline stage number (1-4) */
-            stage?: number;
-            /** @description Human-readable status message */
-            status?: string;
-            /** @description Error message on failure */
-            error?: string;
-            /** @description Name of the file being uploaded */
-            file_name?: string;
-            /**
-             * Format: int64
-             * @description File size in bytes
-             */
-            file_size_bytes?: number;
-            /**
-             * Format: int64
-             * @description Stage execution time in milliseconds
-             */
-            duration_ms?: number;
-            /** @description Why this stage failed and the next stage should be tried */
-            escalation_reason?: string;
-            /** @description Suggested next steps or alternative approaches */
-            suggestions?: string[];
-            /**
-             * Format: int64
-             * @description Bytes uploaded so far (for progress tracking)
-             */
-            bytes_sent?: number;
-            /**
-             * Format: int64
-             * @description Total bytes to upload
-             */
-            total_bytes?: number;
-            /** @description Upload progress percentage (0-100) */
-            percent?: number;
-            /** @description Estimated seconds remaining */
-            eta_seconds?: number;
-            /** @description Current upload speed in megabits per second */
-            speed_mbps?: number;
-        };
-        /** @description Result of an async command returned by the extension via the /sync endpoint's command_results field. Structurally identical to AsyncCommandResult but delivered inline with the sync payload instead of via POST /query-result. */
-        SyncCommandResult: {
-            /** @description Query ID matching the original PendingQuery */
-            id: string;
-            /** @description Links back to the originating MCP tool call */
-            correlation_id?: string;
-            /**
-             * @description Execution outcome
-             * @enum {string}
-             */
-            status: "complete" | "error" | "timeout";
-            /** @description Command result data on success */
-            result?: unknown;
-            /** @description Error message when status is 'error' */
-            error?: string;
-        };
-        /** @description Extension connection status snapshot. Represents the Chrome extension's current tracking state as reported in sync payloads. Used internally by the server to track extension connectivity. */
-        ExtensionStatus: {
-            /**
-             * @description Always 'status' for this message type
-             * @example status
-             */
-            type?: string;
-            /** @description Whether tab tracking is active */
-            tracking_enabled?: boolean;
-            /** @description Chrome tab ID being tracked */
-            tracked_tab_id?: number;
-            /** @description URL of the tracked tab */
-            tracked_tab_url?: string;
-            /** @description Whether the extension WebSocket is connected */
-            extension_connected?: boolean;
-            /**
-             * Format: date-time
-             * @description When this status was captured
-             */
-            timestamp?: string;
-        };
-    };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+  schemas: {
+    /** @description Standard success response returned by endpoints that have no meaningful payload. Contains a single 'ok' status field. */
+    StatusOk: {
+      /**
+       * @description Always 'ok' on success
+       * @example ok
+       */
+      status?: string
+    }
+    /** @description Standard response from telemetry ingestion endpoints (network-waterfall, network-bodies, enhanced-actions, performance-snapshots). Confirms the number of entries recorded into the ring buffer. */
+    IngestResponse: {
+      /**
+       * @description Always 'ok' on success
+       * @example ok
+       */
+      status?: string
+      /** @description Number of entries recorded */
+      count?: number
+    }
+    /** @description API discovery payload returned by GET /. Provides server identity and links to key endpoints for first-time client bootstrapping. */
+    DiscoveryResponse: {
+      /**
+       * @description Server identifier
+       * @example kaboom
+       */
+      name?: string
+      /**
+       * @description Server version string
+       * @example 0.7.12
+       */
+      version?: string
+      /**
+       * @description Link to health check endpoint
+       * @example /health
+       */
+      health?: string
+      /**
+       * @description Link to log ingestion endpoint
+       * @example /logs
+       */
+      logs?: string
+    }
+    /** @description Response from POST /logs with counts of received, rejected, and total buffered entries. Rejected entries are malformed or filtered by noise rules. */
+    LogIngestResponse: {
+      /** @description Number of entries received in the request */
+      received?: number
+      /** @description Number of entries rejected (malformed or filtered) */
+      rejected?: number
+      /** @description Total entries now in the buffer */
+      entries?: number
+    }
+    /** @description Unified telemetry read response from GET /telemetry. Returns entries from the requested buffer type with a count. The items array shape depends on the type parameter. */
+    TelemetryResponse: {
+      /** @description Echo of the requested buffer type */
+      type?: string
+      /** @description Array of telemetry entries (shape depends on type) */
+      items?: unknown[]
+      /** @description Number of entries returned */
+      count?: number
+    }
+    /** @description Aggregated server status for the built-in dashboard UI. Polled at regular intervals to keep the dashboard current with server state, buffer fill levels, and extension connectivity. */
+    DashboardStatus: {
+      /** @description Server version string */
+      version?: string
+      /** @description Seconds since server started */
+      uptime_seconds?: number
+      /** @description Server process ID */
+      pid?: number
+      /** @description OS and architecture (e.g. 'darwin/arm64') */
+      platform?: string
+      /** @description Whether the Chrome extension WebSocket is active */
+      extension_connected?: boolean
+      /** @description Whether AI Web Pilot is enabled in the extension */
+      pilot_enabled?: boolean
+      /**
+       * Format: date-time
+       * @description RFC3339 timestamp of the extension's last /sync poll
+       */
+      last_poll_at?: string
+      /** @description Ring buffer fill levels and capacities */
+      buffers?: {
+        /** @description Current console log buffer entries */
+        console_entries?: number
+        /** @description Console log buffer max capacity */
+        console_capacity?: number
+        /** @description Current network body buffer entries */
+        network_entries?: number
+        /** @description Network body buffer max capacity */
+        network_capacity?: number
+        /** @description Current WebSocket event buffer entries */
+        websocket_entries?: number
+        /** @description WebSocket event buffer max capacity */
+        websocket_capacity?: number
+        /** @description Current user action buffer entries */
+        action_entries?: number
+        /** @description User action buffer max capacity */
+        action_capacity?: number
+      }
+      /** @description Recent MCP commands from the HTTP debug log */
+      recent_commands?: Record<string, never>[]
+      /** @description Tool health metrics and audit info (present when MCP handler is active) */
+      audit?: Record<string, never>
+    }
+    /** @description Screenshot upload request from the Chrome extension. Contains the base64 image data and optional correlation metadata for linking to MCP tool invocations. */
+    ScreenshotRequest: {
+      /** @description Base64 data URL (data:image/jpeg;base64,...) */
+      data_url: string
+      /** @description Page URL where the screenshot was taken */
+      url?: string
+      /** @description Links this screenshot to an MCP tool invocation */
+      correlation_id?: string
+      /** @description Pending query ID for on-demand screenshot flow */
+      query_id?: string
+    }
+    /** @description Confirmation that a screenshot was saved to disk. Returns the generated filename and absolute path for the MCP client to reference. */
+    ScreenshotSavedResponse: {
+      /** @description Generated filename for the saved screenshot */
+      filename?: string
+      /** @description Absolute file path where the screenshot was saved */
+      path?: string
+      /** @description Echo of the correlation_id if provided */
+      correlation_id?: string
+    }
+    /** @description Confirmation that a video recording was saved to disk. Returns the recording name, path, and file size. */
+    RecordingSavedResponse: {
+      /**
+       * @description Always 'saved' on success
+       * @example saved
+       */
+      status?: string
+      /** @description Recording name from metadata */
+      name?: string
+      /** @description Absolute file path where the recording was saved */
+      path?: string
+      /**
+       * Format: int64
+       * @description File size in bytes
+       */
+      size?: number
+    }
+    /** @description Request to start or end a test boundary for telemetry correlation. While active, all ingested entries are tagged with the test_id. */
+    TestBoundaryRequest: {
+      /** @description Unique identifier for the test run */
+      test_id: string
+      /**
+       * @description Whether to start or end the test boundary
+       * @enum {string}
+       */
+      action: 'start' | 'end'
+    }
+    /** @description Confirmation that a test boundary was set, with the server timestamp for synchronization. */
+    TestBoundaryResponse: {
+      /** @description Echo of the test_id */
+      test_id?: string
+      /** @description Echo of the action (start/end) */
+      action?: string
+      /**
+       * Format: date-time
+       * @description Server timestamp when the boundary was set
+       */
+      timestamp?: string
+    }
+    /** @description Annotation data from a completed draw mode session. Contains the annotated screenshot, rectangle annotations with user feedback, and computed DOM element details for each annotated region. */
+    DrawModeCompleteRequest: {
+      /** @description Base64 data URL of the annotated screenshot */
+      screenshot_data_url?: string
+      /** @description Annotation rectangles with user-typed feedback text */
+      annotations?: Record<string, never>[]
+      /** @description Map of annotation correlation_id to computed DOM element details (tag, classes, styles, dimensions) */
+      element_details?: {
+        [key: string]: Record<string, never>
+      }
+      /** @description URL of the page where annotations were drawn */
+      page_url?: string
+      /** @description Chrome tab ID where draw mode was active */
+      tab_id: number
+      /** @description Named session for multi-page annotation accumulation */
+      annot_session_name?: string
+    }
+    /** @description Confirmation that draw mode annotations were stored. Includes the screenshot save path and any parse warnings for malformed annotations. */
+    DrawModeCompleteResponse: {
+      /**
+       * @description Always 'stored' on success
+       * @example stored
+       */
+      status?: string
+      /** @description Number of annotations received */
+      annotation_count?: number
+      /** @description File path where the annotated screenshot was saved */
+      screenshot?: string
+      /** @description Parse warnings for malformed or skipped annotations */
+      warnings?: string[]
+    }
+    /** @description Result of reading a local file for upload automation (Stage 1). Contains the file's base64 contents, detected MIME type, and size. On failure, success is false and error contains the reason. */
+    FileReadResponse: {
+      /** @description Whether the file was read successfully */
+      success?: boolean
+      /** @description Base name of the file */
+      file_name?: string
+      /**
+       * Format: int64
+       * @description File size in bytes
+       */
+      file_size?: number
+      /** @description Detected MIME type based on file extension */
+      mime_type?: string
+      /** @description Base64-encoded file contents */
+      data_base64?: string
+      /** @description Error message if success is false */
+      error?: string
+    }
+    /** @description Request to submit an HTML form with a file upload via server-side multipart POST (Stage 3). Includes the form action URL, file details, and optional authentication fields. */
+    FormSubmitRequest: {
+      /** @description URL to submit the form to (action attribute) */
+      form_action: string
+      /** @description HTTP method (defaults to POST) */
+      method?: string
+      /** @description Key-value pairs for non-file form fields */
+      fields?: {
+        [key: string]: string
+      }
+      /** @description Name attribute of the file input field */
+      file_input_name: string
+      /** @description Absolute path to the file to upload */
+      file_path: string
+      /** @description CSRF token value to include in the form submission */
+      csrf_token?: string
+      /** @description Cookie header string for authenticated submissions */
+      cookies?: string
+    }
+    /** @description Server health status returned by GET /health. Provides version info, log buffer stats, and capture subsystem availability. Used by MCP clients to verify server readiness and extension connectivity. */
+    HealthResponse: {
+      /**
+       * @description Server status ('ok' when healthy)
+       * @example ok
+       */
+      status?: string
+      /** @description Canonical daemon service name */
+      name?: string
+      /** @description Server version string */
+      version?: string
+      /** @description Latest available version from npm registry (if version check is enabled) */
+      available_version?: string
+      /** @description Detected on-disk daemon upgrade state */
+      upgrade_pending?: {
+        pending?: boolean
+        new_version?: string
+        detected_at?: string
+      }
+      /** @description Console log buffer statistics */
+      logs?: {
+        /** @description Current number of log entries in the ring buffer */
+        entries?: number
+        /** @description Maximum ring buffer capacity */
+        max_entries?: number
+        /** @description Path to the on-disk log file */
+        log_file?: string
+        /**
+         * Format: int64
+         * @description Size of the on-disk log file in bytes
+         */
+        log_file_size?: number
+        /**
+         * Format: int64
+         * @description Total log entries dropped due to buffer overflow (FIFO eviction)
+         */
+        dropped_count?: number
+      }
+      /** @description Capture subsystem availability */
+      capture?: {
+        /** @description Whether the Chrome extension WebSocket connection is active */
+        available?: boolean
+        /** @description Whether AI Web Pilot is enabled in the extension settings */
+        pilot_enabled?: boolean
+        /** @description Detailed AI Web Pilot state */
+        pilot_state?: string
+        /** @description Whether the extension has recently synchronized */
+        extension_connected?: boolean
+        /** @description RFC3339 timestamp of the latest extension synchronization */
+        extension_last_seen?: string
+        /** @description Opaque extension client identifier */
+        extension_client_id?: string
+        /** @description Current browser security posture */
+        security_mode?: string
+        /** @description Whether production-parity security behavior is enabled */
+        production_parity?: boolean
+        /** @description Number of insecure URL rewrites, or null before measurement */
+        insecure_rewrites?: number | null
+      }
+      /** @description Bridge fast-path resource-read counters */
+      bridge_fastpath?: {
+        resources_read_success?: number
+        resources_read_failure?: number
+      }
+      /** @description Whether the terminal sub-server is available */
+      terminal_available?: boolean
+      /** @description Terminal sub-server port when available */
+      terminal_port?: number
+      /** @description Terminal startup failure detail */
+      terminal_error?: string
+      /** @description Process currently blocking the terminal port */
+      terminal_blocked_by?: {
+        pid?: number
+        command?: string
+      }
+    }
+    /** @description Comprehensive diagnostic report for bug reports and troubleshooting. Includes system info, buffer fill levels, and extension state. Designed to be copy-pasted into GitHub issues. */
+    DiagnosticsResponse: {
+      /**
+       * Format: date-time
+       * @description Timestamp when this diagnostic report was generated
+       */
+      generated_at?: string
+      /** @description Server version string */
+      version?: string
+      /** @description Seconds since server started */
+      uptime_seconds?: number
+      /** @description Host system information */
+      system?: {
+        /** @description Operating system (e.g. 'darwin', 'linux', 'windows') */
+        os?: string
+        /** @description CPU architecture (e.g. 'arm64', 'amd64') */
+        arch?: string
+        /** @description Go runtime version used to build the server */
+        go_version?: string
+        /** @description Number of active goroutines */
+        goroutines?: number
+      }
+      /** @description Console log buffer status */
+      logs?: {
+        /** @description Current entries in the log ring buffer */
+        entries?: number
+        /** @description Maximum log ring buffer capacity */
+        max_entries?: number
+        /** @description Path to the on-disk log file */
+        log_file?: string
+      }
+      /** @description Fill levels for all capture ring buffers */
+      buffers?: {
+        /** @description Current WebSocket event buffer entries */
+        websocket_events?: number
+        /** @description Current network body buffer entries */
+        network_bodies?: number
+        /** @description Current user action buffer entries */
+        actions?: number
+        /** @description Number of queries awaiting extension response */
+        pending_queries?: number
+        /** @description Number of undelivered query results */
+        query_results?: number
+      }
+    }
+    /** @description JSON-RPC 2.0 request envelope for the /mcp HTTP bridge. Wraps MCP tool calls (observe, generate, configure, interact, analyze) for HTTP transport. */
+    JsonRpcRequest: {
+      /**
+       * @description JSON-RPC protocol version (must be '2.0')
+       * @enum {string}
+       */
+      jsonrpc: '2.0'
+      /** @description Request ID for response correlation */
+      id?: string | number
+      /**
+       * @description MCP tool name to invoke
+       * @enum {string}
+       */
+      method: 'observe' | 'generate' | 'configure' | 'interact' | 'analyze'
+      /** @description Tool-specific parameters (same as MCP tool input schema) */
+      params?: Record<string, never>
+    }
+    /** @description JSON-RPC 2.0 response envelope from the /mcp HTTP bridge. Contains either a result object or an error object, never both. */
+    JsonRpcResponse: {
+      /**
+       * @description JSON-RPC protocol version (always '2.0')
+       * @enum {string}
+       */
+      jsonrpc?: '2.0'
+      /** @description Echo of the request ID */
+      id?: string | number
+      /** @description Tool result on success (absent on error) */
+      result?: Record<string, never>
+      /** @description Error details on failure (absent on success) */
+      error?: {
+        /** @description JSON-RPC error code (-32600 to -32603 for protocol errors) */
+        code?: number
+        /** @description Human-readable error message */
+        message?: string
+      }
+    }
+    /** @description Console log entry captured from the browser. Represents a single console.log/warn/error/info/debug call with its arguments and metadata. */
+    LogEntry: {
+      /**
+       * @description Console log level
+       * @enum {string}
+       */
+      level: 'error' | 'warn' | 'info' | 'debug' | 'log'
+      /** @description Serialized console arguments (strings, objects, arrays) */
+      args?: unknown
+      /**
+       * Format: date-time
+       * @description Timestamp when the log was captured in the browser
+       */
+      ts?: string
+      /** @description Page URL where the console call originated */
+      url?: string
+    }
+    /** @description Network request timing entry derived from PerformanceResourceTiming. Captures URL, HTTP status, and duration for waterfall visualization and performance analysis. */
+    WaterfallEntry: {
+      /** @description Request URL */
+      url?: string
+      /** @description HTTP response status code */
+      status?: number
+      /** @description HTTP response status text */
+      statusText?: string
+      /** @description Total request duration in milliseconds */
+      timing?: number
+    }
+    /** @description Captured request and response body pair from a fetch() call. The extension intercepts fetch requests and clones response bodies for inspection. Binary content is detected and labeled rather than stored in full. */
+    NetworkBody: {
+      /** @description Request URL */
+      url?: string
+      /** @description HTTP method (GET, POST, PUT, etc.) */
+      method?: string
+      /** @description HTTP response status code */
+      status?: number
+      /** @description Serialized request body (JSON stringified for objects) */
+      request_body?: string
+      /** @description Serialized response body (truncated if over size limit, labeled if binary) */
+      response_body?: string
+    }
+    /** @description WebSocket lifecycle or message event. Captures connection open/close, incoming/outgoing messages, and errors. Events are grouped by connection ID for correlation. */
+    WebSocketEvent: {
+      /** @description Connection ID — stable across all events for a single WebSocket connection */
+      id?: string
+      /** @description WebSocket URL (ws:// or wss://) */
+      url?: string
+      /**
+       * @description Event type
+       * @enum {string}
+       */
+      event?: 'open' | 'message' | 'close' | 'error'
+      /**
+       * @description Message direction (only present for 'message' events)
+       * @enum {string}
+       */
+      direction?: 'incoming' | 'outgoing'
+      /** @description Message payload (truncated if over size limit) */
+      data?: string
+      /**
+       * Format: date-time
+       * @description Event timestamp
+       */
+      timestamp?: string
+      /** @description Message payload size in bytes */
+      size?: number
+    }
+    /** @description Overview of active and recently-closed WebSocket connections. Includes message rates and sampling info for each connection, used to identify high-throughput connections and sampling behavior. */
+    WebSocketStatusResponse: {
+      /** @description Currently active WebSocket connections */
+      connections?: {
+        /** @description Connection ID */
+        id?: string
+        /** @description WebSocket URL */
+        url?: string
+        /** @description Connection state (e.g. 'open') */
+        state?: string
+        /**
+         * Format: date-time
+         * @description When the connection was opened
+         */
+        opened_at?: string
+        /** @description Human-readable connection duration */
+        duration?: string
+        /** @description Messages per second statistics */
+        message_rate?: Record<string, never>
+        /** @description Sampling configuration if applied to this connection */
+        sampling?: Record<string, never>
+      }[]
+      /** @description Recently closed WebSocket connections (kept for short-term history) */
+      closed?: Record<string, never>[]
+    }
+    /** @description User interaction event captured from the browser. Records clicks, inputs, navigations, and scrolls with CSS selectors for reproduction script generation and action replay. */
+    EnhancedAction: {
+      /** @description Action type (e.g. 'click', 'input', 'navigate', 'scroll') */
+      action?: string
+      /** @description CSS selector for the target DOM element */
+      selector?: string
+      /** @description Value associated with the action (input text, scroll position, URL) */
+      value?: string
+      /**
+       * Format: date-time
+       * @description When the action occurred
+       */
+      timestamp?: string
+    }
+    /** @description Core Web Vitals performance snapshot captured from the browser. Contains FCP, LCP, CLS, and TTFB metrics measured by the web-vitals library on page load and navigation events. */
+    PerformanceSnapshot: {
+      /**
+       * Format: date-time
+       * @description When the snapshot was captured
+       */
+      timestamp?: string
+      /** @description First Contentful Paint in milliseconds */
+      fcp?: number
+      /** @description Largest Contentful Paint in milliseconds */
+      lcp?: number
+      /** @description Cumulative Layout Shift score (unitless, lower is better) */
+      cls?: number
+      /** @description Time to First Byte in milliseconds */
+      ttfb?: number
+    }
+    /** @description A command queued for execution by the Chrome extension. Created by MCP tool handlers and delivered to the extension via the /sync endpoint. The extension executes the command and returns results via /query-result or the sync response's command_results field. */
+    PendingQuery: {
+      /** @description Unique query ID for matching results to requests */
+      id?: string
+      /**
+       * @description Command type that determines which extension handler processes this query
+       * @enum {string}
+       */
+      type?:
+        | 'dom'
+        | 'a11y'
+        | 'execute'
+        | 'highlight'
+        | 'state'
+        | 'screen_recording_start'
+        | 'screen_recording_stop'
+        | 'browser_action'
+        | 'page_info'
+        | 'tabs'
+        | 'subtitle'
+        | 'screenshot'
+        | 'dom_action'
+        | 'state_capture'
+      /** @description Command-specific parameters passed to the extension handler */
+      params?: Record<string, never>
+      /** @description Links this query to the originating MCP tool call for result routing */
+      correlation_id?: string
+    }
+    /** @description Legacy query result format. Used internally when processing results from the extension. Newer code uses AsyncCommandResult or SyncCommandResult instead. */
+    QueryResult: {
+      /** @description Query ID matching the original PendingQuery */
+      id: string
+      /** @description Query result data (shape depends on query type) */
+      result?: unknown
+      /** @description ID of the extension client that produced this result */
+      client_id?: string
+    }
+    /** @description Result of an async command submitted by the extension via POST /query-result. Contains either a successful result or an error. The id field matches the original PendingQuery, and correlation_id links back to the MCP tool invocation. */
+    AsyncCommandResult: {
+      /** @description Query ID matching the original PendingQuery */
+      id?: string
+      /** @description Links back to the originating MCP tool call */
+      correlation_id?: string
+      /**
+       * @description Execution outcome
+       * @enum {string}
+       */
+      status?: 'complete' | 'error' | 'timeout'
+      /** @description Command result data on success (shape depends on command type) */
+      result?: unknown
+      /** @description Error message when status is 'error' */
+      error?: string
+      /** @description ID of the extension client that executed this command */
+      client_id?: string
+    }
+    /** @description Metadata for a saved video recording. Accompanies the WebM video file in the multipart upload to /recordings/save. Describes the recording's source, format, duration, and audio configuration. */
+    VideoRecordingMetadata: {
+      /** @description Unique recording identifier used as the filename stem */
+      name: string
+      /** @description Human-readable recording name shown in UI */
+      display_name?: string
+      /**
+       * Format: date-time
+       * @description When the recording was started
+       */
+      created_at?: string
+      /** @description Recording duration in seconds */
+      duration_seconds?: number
+      /**
+       * Format: int64
+       * @description Video file size in bytes
+       */
+      size_bytes?: number
+      /** @description Page URL that was being recorded */
+      url?: string
+      /** @description Chrome tab ID that was recorded */
+      tab_id?: number
+      /**
+       * @description Video resolution as WxH
+       * @example 1920x1080
+       */
+      resolution?: string
+      /** @description Video format (e.g. 'webm') */
+      format?: string
+      /** @description Frames per second */
+      fps?: number
+      /** @description Whether the recording includes audio */
+      has_audio?: boolean
+      /**
+       * @description Audio source: tab audio, microphone, or both
+       * @enum {string}
+       */
+      audio_mode?: 'tab' | 'mic' | 'both'
+      /** @description Whether the recording was truncated due to size or duration limits */
+      truncated?: boolean
+    }
+    /** @description MCP client registration record. Created when an MCP client connects and registers via POST /clients. Tracks the client's working directory and activity for multi-client coordination. */
+    ClientRegistration: {
+      /** @description Auto-generated unique client ID */
+      id?: string
+      /** @description Client's working directory (absolute path) */
+      cwd?: string
+      /**
+       * Format: date-time
+       * @description When the client was first registered
+       */
+      created_at?: string
+      /**
+       * Format: date-time
+       * @description Timestamp of the client's most recent API call
+       */
+      last_activity?: string
+    }
+    /** @description Extension-to-server sync payload. The Chrome extension sends its current state on each poll interval. Contains settings, internal logs, and results from async commands. This is the upstream half of the bidirectional sync protocol. */
+    SyncRequest: {
+      /** @description Extension session identifier for reconnection tracking */
+      session_id?: string
+      /** @description Chrome extension version string */
+      extension_version?: string
+      /** @description Current extension settings and tracking state */
+      settings?: {
+        /** @description Whether AI Web Pilot is enabled */
+        pilot_enabled?: boolean
+        /** @description Whether the extension is actively tracking a tab */
+        tracking_enabled?: boolean
+        /** @description Chrome tab ID being tracked (0 if none) */
+        tracked_tab_id?: number
+        /** @description URL of the tracked tab */
+        tracked_tab_url?: string
+        /** @description Title of the tracked tab */
+        tracked_tab_title?: string
+        /** @description Whether console log capture is enabled */
+        capture_logs?: boolean
+        /** @description Whether network capture is enabled */
+        capture_network?: boolean
+        /** @description Whether WebSocket capture is enabled */
+        capture_websocket?: boolean
+        /** @description Whether user action capture is enabled */
+        capture_actions?: boolean
+      }
+      /** @description ID of the last command acknowledged by the extension (for delivery tracking) */
+      last_command_ack?: string
+      /** @description Internal extension debug logs for server-side troubleshooting */
+      extension_logs?: {
+        /**
+         * Format: date-time
+         * @description When the log was emitted
+         */
+        timestamp?: string
+        /** @description Log level (info, warn, error) */
+        level?: string
+        /** @description Log message text */
+        message?: string
+        /** @description Source context (e.g. 'background', 'content-script') */
+        context?: string
+      }[]
+      /** @description Results from async commands the extension has executed since last sync */
+      command_results?: components['schemas']['SyncCommandResult'][]
+    }
+    /** @description Server-to-extension sync response. Delivers pending commands, capture overrides, and timing for the next poll. This is the downstream half of the bidirectional sync protocol. */
+    SyncResponse: {
+      /** @description Acknowledgement that the sync request was processed */
+      ack?: boolean
+      /** @description Pending commands for the extension to execute (DOM queries, screenshots, browser actions) */
+      commands?: components['schemas']['PendingQuery'][]
+      /** @description Suggested delay before next sync poll in milliseconds (adaptive based on activity) */
+      next_poll_ms?: number
+      /**
+       * Format: date-time
+       * @description Server timestamp for clock synchronization
+       */
+      server_time?: string
+      /** @description Server version string for compatibility checks */
+      server_version?: string
+      /** @description Server-side overrides for extension capture settings */
+      capture_overrides?: Record<string, never>
+    }
+    /** @description Aggregated capture snapshot for CI/testing integration. Contains all telemetry data across buffers with computed statistics. Used by test frameworks to assert on browser behavior during test runs. */
+    SnapshotResponse: {
+      /**
+       * Format: date-time
+       * @description When the snapshot was generated
+       */
+      timestamp?: string
+      /** @description Test boundary label if provided in the request */
+      test_id?: string
+      /** @description Console log entries captured during the snapshot window */
+      logs?: components['schemas']['LogEntry'][]
+      /** @description WebSocket events captured during the snapshot window */
+      websocket_events?: components['schemas']['WebSocketEvent'][]
+      /** @description Network request/response bodies captured during the snapshot window */
+      network_bodies?: components['schemas']['NetworkBody'][]
+      /** @description User interaction events captured during the snapshot window */
+      enhanced_actions?: components['schemas']['EnhancedAction'][]
+      /** @description Computed statistics across all captured telemetry */
+      stats?: {
+        /** @description Total log entries in the snapshot */
+        total_logs?: number
+        /** @description Number of error-level logs */
+        error_count?: number
+        /** @description Number of warning-level logs */
+        warning_count?: number
+        /** @description Number of failed network requests (status >= 400) */
+        network_failures?: number
+        /** @description Number of distinct WebSocket connections */
+        ws_connections?: number
+      }
+    }
+    /** @description Response from file upload automation endpoints (Stages 1-4). Contains success/failure status, the stage that produced the result, and optional progress metrics for large file uploads. On failure, includes escalation_reason and suggestions for the next stage to try. */
+    UploadStageResponse: {
+      /** @description Whether the upload stage completed successfully */
+      success?: boolean
+      /** @description Upload pipeline stage number (1-4) */
+      stage?: number
+      /** @description Human-readable status message */
+      status?: string
+      /** @description Error message on failure */
+      error?: string
+      /** @description Name of the file being uploaded */
+      file_name?: string
+      /**
+       * Format: int64
+       * @description File size in bytes
+       */
+      file_size_bytes?: number
+      /**
+       * Format: int64
+       * @description Stage execution time in milliseconds
+       */
+      duration_ms?: number
+      /** @description Why this stage failed and the next stage should be tried */
+      escalation_reason?: string
+      /** @description Suggested next steps or alternative approaches */
+      suggestions?: string[]
+      /**
+       * Format: int64
+       * @description Bytes uploaded so far (for progress tracking)
+       */
+      bytes_sent?: number
+      /**
+       * Format: int64
+       * @description Total bytes to upload
+       */
+      total_bytes?: number
+      /** @description Upload progress percentage (0-100) */
+      percent?: number
+      /** @description Estimated seconds remaining */
+      eta_seconds?: number
+      /** @description Current upload speed in megabits per second */
+      speed_mbps?: number
+    }
+    /** @description Result of an async command returned by the extension via the /sync endpoint's command_results field. Structurally identical to AsyncCommandResult but delivered inline with the sync payload instead of via POST /query-result. */
+    SyncCommandResult: {
+      /** @description Query ID matching the original PendingQuery */
+      id: string
+      /** @description Links back to the originating MCP tool call */
+      correlation_id?: string
+      /**
+       * @description Execution outcome
+       * @enum {string}
+       */
+      status: 'complete' | 'error' | 'timeout'
+      /** @description Command result data on success */
+      result?: unknown
+      /** @description Error message when status is 'error' */
+      error?: string
+    }
+    /** @description Extension connection status snapshot. Represents the Chrome extension's current tracking state as reported in sync payloads. Used internally by the server to track extension connectivity. */
+    ExtensionStatus: {
+      /**
+       * @description Always 'status' for this message type
+       * @example status
+       */
+      type?: string
+      /** @description Whether tab tracking is active */
+      tracking_enabled?: boolean
+      /** @description Chrome tab ID being tracked */
+      tracked_tab_id?: number
+      /** @description URL of the tracked tab */
+      tracked_tab_url?: string
+      /** @description Whether the extension WebSocket is connected */
+      extension_connected?: boolean
+      /**
+       * Format: date-time
+       * @description When this status was captured
+       */
+      timestamp?: string
+    }
+  }
+  responses: never
+  parameters: never
+  requestBodies: never
+  headers: never
+  pathItems: never
 }
-export type $defs = Record<string, never>;
+export type $defs = Record<string, never>
 export interface operations {
-    getDebugUsage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Usage counts keyed by tool:action */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-        };
-    };
-    postDebugBeaconFlush: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Flushed beacon payload */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-        };
-    };
-    getRoot: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Server info with endpoint links */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DiscoveryResponse"];
-                };
-            };
-        };
-    };
-    getHealth: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Server health with buffer stats and capture state */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-        };
-    };
-    getDoctor: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Doctor readiness report */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /**
-                         * @description Overall readiness status computed from all checks
-                         * @enum {string}
-                         */
-                        status: "healthy" | "degraded" | "unhealthy";
-                        /** @description True when interact flows are expected to succeed without warnings */
-                        ready_for_interaction: boolean;
-                        /** @description Server version */
-                        version: string;
-                        /** @description Per-check readiness diagnostics */
-                        checks: {
-                            /** @description Check identifier */
-                            name: string;
-                            /** @enum {string} */
-                            status: "pass" | "warn" | "fail";
-                            /** @description Human-readable check detail */
-                            detail: string;
-                            /** @description Suggested remediation when status is warn/fail */
-                            fix?: string;
-                        }[];
-                    };
-                };
-            };
-        };
-    };
-    getDiagnostics: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Full diagnostic data */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DiagnosticsResponse"];
-                };
-            };
-        };
-    };
-    postShutdown: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Shutdown initiated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /**
-                         * @description Always 'shutting_down'
-                         * @example shutting_down
-                         */
-                        status?: string;
-                        /**
-                         * @description Human-readable confirmation
-                         * @example Server shutdown initiated
-                         */
-                        message?: string;
-                    };
-                };
-            };
-        };
-    };
-    getOpenAPI: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OpenAPI 3.1.0 specification document */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-        };
-    };
-    postMcp: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["JsonRpcRequest"];
-            };
-        };
-        responses: {
-            /** @description JSON-RPC 2.0 response with result or error */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JsonRpcResponse"];
-                };
-            };
-        };
-    };
-    postTokenSavings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Compression category (e.g. test_output, build_output, generic_truncation) */
-                    category: string;
-                    /** @description Estimated token count before compression */
-                    tokens_before: number;
-                    /** @description Estimated token count after compression */
-                    tokens_after: number;
-                };
-            };
-        };
-        responses: {
-            /** @description Savings recorded */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Invalid request body */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Method not allowed (only POST accepted) */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    getApiStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Aggregated server status */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DashboardStatus"];
-                };
-            };
-        };
-    };
-    getActiveCodebase: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current active codebase path */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Absolute path to the active codebase directory */
-                        active_codebase?: string;
-                    };
-                };
-            };
-        };
-    };
-    setActiveCodebase: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Absolute path to set as active codebase */
-                    path: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Updated active codebase path */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        status?: string;
-                        active_codebase?: string;
-                    };
-                };
-            };
-        };
-    };
-    getLogsHtml: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description HTML log viewer page */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    getSetup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description HTML setup page */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    getDocs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description HTML documentation page */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    postLogs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Array of console log entries to ingest */
-                    entries: components["schemas"]["LogEntry"][];
-                };
-            };
-        };
-        responses: {
-            /** @description Ingestion result with accepted/rejected counts */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LogIngestResponse"];
-                };
-            };
-        };
-    };
-    deleteLogs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Logs cleared */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /**
-                         * @description Always true on success
-                         * @example true
-                         */
-                        cleared?: boolean;
-                    };
-                };
-            };
-        };
-    };
-    postNetworkWaterfall: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description URL of the page that generated these network requests */
-                    page_url?: string;
-                    /** @description Array of network waterfall timing entries */
-                    entries?: components["schemas"]["WaterfallEntry"][];
-                };
-            };
-        };
-        responses: {
-            /** @description Waterfall entries recorded */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IngestResponse"];
-                };
-            };
-        };
-    };
-    postNetworkBodies: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Array of captured request/response body pairs */
-                    bodies?: components["schemas"]["NetworkBody"][];
-                };
-            };
-        };
-        responses: {
-            /** @description Bodies recorded */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IngestResponse"];
-                };
-            };
-        };
-    };
-    postWebSocketEvents: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Array of WebSocket events to record */
-                    events?: components["schemas"]["WebSocketEvent"][];
-                };
-            };
-        };
-        responses: {
-            /** @description Events recorded */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    getTelemetry: {
-        parameters: {
-            query: {
-                /** @description Which telemetry buffer to read. Each maps to a ring buffer maintained by the capture subsystem. */
-                type: "logs" | "network_waterfall" | "network_bodies" | "websocket_events" | "actions" | "performance_snapshots" | "extension_logs" | "websocket_status";
-                /** @description Maximum entries to return. Returns the most recent N entries. Defaults to the full buffer if omitted. */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Telemetry data from the requested buffer */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TelemetryResponse"];
-                };
-            };
-            /** @description Missing or invalid type parameter */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    getWebSocketStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Active and closed WebSocket connections with throughput stats */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WebSocketStatusResponse"];
-                };
-            };
-        };
-    };
-    postEnhancedActions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Array of user interaction events to record */
-                    actions?: components["schemas"]["EnhancedAction"][];
-                };
-            };
-        };
-        responses: {
-            /** @description Actions recorded */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IngestResponse"];
-                };
-            };
-        };
-    };
-    postPerformanceSnapshots: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Array of Web Vitals snapshots to record */
-                    snapshots?: components["schemas"]["PerformanceSnapshot"][];
-                };
-            };
-        };
-        responses: {
-            /** @description Snapshots recorded */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IngestResponse"];
-                };
-            };
-        };
-    };
-    postQueryResult: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AsyncCommandResult"];
-            };
-        };
-        responses: {
-            /** @description Result accepted and matched to pending query */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StatusOk"];
-                };
-            };
-        };
-    };
-    postScreenshot: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ScreenshotRequest"];
-            };
-        };
-        responses: {
-            /** @description Screenshot saved to disk */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ScreenshotSavedResponse"];
-                };
-            };
-            /** @description Rate limited — max 1 screenshot per second per client */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    postRecordingSave: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /**
-                     * Format: binary
-                     * @description WebM video file blob
-                     */
-                    video: string;
-                    /** @description JSON string conforming to VideoRecordingMetadata schema */
-                    metadata: string;
-                    /** @description Pending query ID to resolve when save completes */
-                    query_id?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Recording saved to disk */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RecordingSavedResponse"];
-                };
-            };
-        };
-    };
-    getClients: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description All registered clients */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Array of registered client records */
-                        clients?: components["schemas"]["ClientRegistration"][];
-                        /** @description Total number of registered clients */
-                        count?: number;
-                    };
-                };
-            };
-        };
-    };
-    postClients: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Absolute path to the client's working directory */
-                    cwd: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Client registered with generated ID */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        result?: components["schemas"]["ClientRegistration"];
-                    };
-                };
-            };
-        };
-    };
-    getClient: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Client registration ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Client registration details */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ClientRegistration"];
-                };
-            };
-            /** @description Client ID not found in registry */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    deleteClient: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Client registration ID to remove */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Client unregistered */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /**
-                         * @description Always true on success
-                         * @example true
-                         */
-                        unregistered?: boolean;
-                    };
-                };
-            };
-        };
-    };
-    postSync: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SyncRequest"];
-            };
-        };
-        responses: {
-            /** @description Sync response with pending commands and server state */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SyncResponse"];
-                };
-            };
-        };
-    };
-    getSnapshot: {
-        parameters: {
-            query?: {
-                /** @description Only include entries after this RFC3339Nano timestamp. Used to get a delta since the last snapshot. */
-                since?: string;
-                /** @description Label for the snapshot, typically matching an active test boundary. */
-                test_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Aggregated capture snapshot with stats */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SnapshotResponse"];
-                };
-            };
-        };
-    };
-    postClear: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description All buffers cleared */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /**
-                         * @description Always true on success
-                         * @example true
-                         */
-                        cleared?: boolean;
-                        /** @description Total entries removed across all buffers */
-                        entries_removed?: number;
-                    };
-                };
-            };
-        };
-    };
-    postTestBoundary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TestBoundaryRequest"];
-            };
-        };
-        responses: {
-            /** @description Boundary set with server timestamp */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TestBoundaryResponse"];
-                };
-            };
-        };
-    };
-    postDrawModeComplete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DrawModeCompleteRequest"];
-            };
-        };
-        responses: {
-            /** @description Annotations stored */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DrawModeCompleteResponse"];
-                };
-            };
-        };
-    };
-    postPushScreenshot: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": Record<string, never>;
-            };
-        };
-        responses: {
-            /** @description Screenshot push event accepted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StatusOk"];
-                };
-            };
-        };
-    };
-    postPushMessage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": Record<string, never>;
-            };
-        };
-        responses: {
-            /** @description Push message accepted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StatusOk"];
-                };
-            };
-        };
-    };
-    getPushCapabilities: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Push capability state */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-        };
-    };
-    drainPushEvents: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Queued push events */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        events?: Record<string, never>[];
-                        count?: number;
-                    };
-                };
-            };
-        };
-    };
-    getTestsPages: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description HTML test page index or static test asset */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    getTestsWebSocket: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Switching Protocols (WebSocket upgrade) */
-            101: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description WebSocket upgrade required */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    getRecordingStorage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Recording storage usage and file list */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-        };
-    };
-    postRecordingStorage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Storage index recalculated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    deleteRecordingStorage: {
-        parameters: {
-            query: {
-                /** @description Recording name/ID to delete */
-                recording_id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Recording file deleted from disk */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    postRecordingReveal: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Absolute path to the recording file to reveal */
-                    path: string;
-                };
-            };
-        };
-        responses: {
-            /** @description File revealed in system file manager */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /**
-                         * @description Always 'revealed' on success
-                         * @example revealed
-                         */
-                        status?: string;
-                        /** @description Echo of the file path that was revealed */
-                        path?: string;
-                    };
-                };
-            };
-        };
-    };
-    postFileRead: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Absolute path to the file to read */
-                    file_path: string;
-                };
-            };
-        };
-        responses: {
-            /** @description File data with base64 contents */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FileReadResponse"];
-                };
-            };
-        };
-    };
-    postFileDialogInject: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Absolute path to the file to inject */
-                    file_path: string;
-                    /** @description Chrome browser process ID for DevTools connection */
-                    browser_pid: number;
-                };
-            };
-        };
-        responses: {
-            /** @description File dialog injection result */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
-                };
-            };
-        };
-    };
-    postFormSubmit: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FormSubmitRequest"];
-            };
-        };
-        responses: {
-            /** @description Form submission result */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
-                };
-            };
-        };
-    };
-    postOSAutomationInject: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Absolute path to the file to inject */
-                    file_path: string;
-                    /** @description Chrome browser process ID */
-                    browser_pid: number;
-                    /** @description Number of retry attempts for dialog detection (default: 3) */
-                    retry_count?: number;
-                };
-            };
-        };
-        responses: {
-            /** @description OS automation injection result */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
-                };
-            };
-        };
-    };
-    postOSAutomationDismiss: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Dialog dismissed successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
-                };
-            };
-            /** @description OS automation is disabled (--enable-os-upload-automation flag not set) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadStageResponse"];
-                };
-            };
-        };
-    };
-    getInsecureProxy: {
-        parameters: {
-            query: {
-                /** @description Absolute http/https URL to fetch through the proxy. */
-                target: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Upstream response body proxied with CSP headers removed. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                    "application/json": Record<string, never>;
-                };
-            };
-            /** @description Missing or invalid target URL. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        error: string;
-                    };
-                };
-            };
-            /** @description Insecure proxy mode is disabled. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        error: string;
-                    };
-                };
-            };
-            /** @description Failed to fetch upstream URL. */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        error: string;
-                    };
-                };
-            };
-        };
-    };
+  getDebugUsage: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Usage counts keyed by tool:action */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+    }
+  }
+  postDebugBeaconFlush: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Flushed beacon payload */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+    }
+  }
+  getRoot: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Server info with endpoint links */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DiscoveryResponse']
+        }
+      }
+    }
+  }
+  getHealth: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Server health with buffer stats and capture state */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HealthResponse']
+        }
+      }
+    }
+  }
+  getDoctor: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Doctor readiness report */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /**
+             * @description Overall readiness status computed from all checks
+             * @enum {string}
+             */
+            status: 'healthy' | 'degraded' | 'unhealthy'
+            /** @description True when interact flows are expected to succeed without warnings */
+            ready_for_interaction: boolean
+            /** @description Server version */
+            version: string
+            /** @description Per-check readiness diagnostics */
+            checks: {
+              /** @description Check identifier */
+              name: string
+              /** @enum {string} */
+              status: 'pass' | 'warn' | 'fail'
+              /** @description Human-readable check detail */
+              detail: string
+              /** @description Suggested remediation when status is warn/fail */
+              fix?: string
+            }[]
+          }
+        }
+      }
+    }
+  }
+  getDiagnostics: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Full diagnostic data */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DiagnosticsResponse']
+        }
+      }
+    }
+  }
+  postShutdown: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Shutdown initiated */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /**
+             * @description Always 'shutting_down'
+             * @example shutting_down
+             */
+            status?: string
+            /**
+             * @description Human-readable confirmation
+             * @example Server shutdown initiated
+             */
+            message?: string
+          }
+        }
+      }
+    }
+  }
+  getOpenAPI: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description OpenAPI 3.1.0 specification document */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+    }
+  }
+  postMcp: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['JsonRpcRequest']
+      }
+    }
+    responses: {
+      /** @description JSON-RPC 2.0 response with result or error */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JsonRpcResponse']
+        }
+      }
+    }
+  }
+  postTokenSavings: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Compression category (e.g. test_output, build_output, generic_truncation) */
+          category: string
+          /** @description Estimated token count before compression */
+          tokens_before: number
+          /** @description Estimated token count after compression */
+          tokens_after: number
+        }
+      }
+    }
+    responses: {
+      /** @description Savings recorded */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Invalid request body */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Method not allowed (only POST accepted) */
+      405: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiStatus: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Aggregated server status */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DashboardStatus']
+        }
+      }
+    }
+  }
+  getActiveCodebase: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Current active codebase path */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /** @description Absolute path to the active codebase directory */
+            active_codebase?: string
+          }
+        }
+      }
+    }
+  }
+  setActiveCodebase: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Absolute path to set as active codebase */
+          path: string
+        }
+      }
+    }
+    responses: {
+      /** @description Updated active codebase path */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            status?: string
+            active_codebase?: string
+          }
+        }
+      }
+    }
+  }
+  getLogsHtml: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description HTML log viewer page */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'text/html': string
+        }
+      }
+    }
+  }
+  getSetup: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description HTML setup page */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'text/html': string
+        }
+      }
+    }
+  }
+  getDocs: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description HTML documentation page */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'text/html': string
+        }
+      }
+    }
+  }
+  postLogs: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Array of console log entries to ingest */
+          entries: components['schemas']['LogEntry'][]
+        }
+      }
+    }
+    responses: {
+      /** @description Ingestion result with accepted/rejected counts */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['LogIngestResponse']
+        }
+      }
+    }
+  }
+  deleteLogs: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Logs cleared */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /**
+             * @description Always true on success
+             * @example true
+             */
+            cleared?: boolean
+          }
+        }
+      }
+    }
+  }
+  postNetworkWaterfall: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description URL of the page that generated these network requests */
+          page_url?: string
+          /** @description Array of network waterfall timing entries */
+          entries?: components['schemas']['WaterfallEntry'][]
+        }
+      }
+    }
+    responses: {
+      /** @description Waterfall entries recorded */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['IngestResponse']
+        }
+      }
+    }
+  }
+  postNetworkBodies: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Array of captured request/response body pairs */
+          bodies?: components['schemas']['NetworkBody'][]
+        }
+      }
+    }
+    responses: {
+      /** @description Bodies recorded */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['IngestResponse']
+        }
+      }
+    }
+  }
+  postWebSocketEvents: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Array of WebSocket events to record */
+          events?: components['schemas']['WebSocketEvent'][]
+        }
+      }
+    }
+    responses: {
+      /** @description Events recorded */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getTelemetry: {
+    parameters: {
+      query: {
+        /** @description Which telemetry buffer to read. Each maps to a ring buffer maintained by the capture subsystem. */
+        type:
+          | 'logs'
+          | 'network_waterfall'
+          | 'network_bodies'
+          | 'websocket_events'
+          | 'actions'
+          | 'performance_snapshots'
+          | 'extension_logs'
+          | 'websocket_status'
+        /** @description Maximum entries to return. Returns the most recent N entries. Defaults to the full buffer if omitted. */
+        limit?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Telemetry data from the requested buffer */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TelemetryResponse']
+        }
+      }
+      /** @description Missing or invalid type parameter */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getWebSocketStatus: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Active and closed WebSocket connections with throughput stats */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WebSocketStatusResponse']
+        }
+      }
+    }
+  }
+  postEnhancedActions: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Array of user interaction events to record */
+          actions?: components['schemas']['EnhancedAction'][]
+        }
+      }
+    }
+    responses: {
+      /** @description Actions recorded */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['IngestResponse']
+        }
+      }
+    }
+  }
+  postPerformanceSnapshots: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Array of Web Vitals snapshots to record */
+          snapshots?: components['schemas']['PerformanceSnapshot'][]
+        }
+      }
+    }
+    responses: {
+      /** @description Snapshots recorded */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['IngestResponse']
+        }
+      }
+    }
+  }
+  postQueryResult: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AsyncCommandResult']
+      }
+    }
+    responses: {
+      /** @description Result accepted and matched to pending query */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['StatusOk']
+        }
+      }
+    }
+  }
+  postScreenshot: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ScreenshotRequest']
+      }
+    }
+    responses: {
+      /** @description Screenshot saved to disk */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ScreenshotSavedResponse']
+        }
+      }
+      /** @description Rate limited — max 1 screenshot per second per client */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postRecordingSave: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'multipart/form-data': {
+          /**
+           * Format: binary
+           * @description WebM video file blob
+           */
+          video: string
+          /** @description JSON string conforming to VideoRecordingMetadata schema */
+          metadata: string
+          /** @description Pending query ID to resolve when save completes */
+          query_id?: string
+        }
+      }
+    }
+    responses: {
+      /** @description Recording saved to disk */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RecordingSavedResponse']
+        }
+      }
+    }
+  }
+  getClients: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description All registered clients */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /** @description Array of registered client records */
+            clients?: components['schemas']['ClientRegistration'][]
+            /** @description Total number of registered clients */
+            count?: number
+          }
+        }
+      }
+    }
+  }
+  postClients: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Absolute path to the client's working directory */
+          cwd: string
+        }
+      }
+    }
+    responses: {
+      /** @description Client registered with generated ID */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            result?: components['schemas']['ClientRegistration']
+          }
+        }
+      }
+    }
+  }
+  getClient: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Client registration ID */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Client registration details */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ClientRegistration']
+        }
+      }
+      /** @description Client ID not found in registry */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  deleteClient: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Client registration ID to remove */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Client unregistered */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /**
+             * @description Always true on success
+             * @example true
+             */
+            unregistered?: boolean
+          }
+        }
+      }
+    }
+  }
+  postSync: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SyncRequest']
+      }
+    }
+    responses: {
+      /** @description Sync response with pending commands and server state */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SyncResponse']
+        }
+      }
+    }
+  }
+  getSnapshot: {
+    parameters: {
+      query?: {
+        /** @description Only include entries after this RFC3339Nano timestamp. Used to get a delta since the last snapshot. */
+        since?: string
+        /** @description Label for the snapshot, typically matching an active test boundary. */
+        test_id?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Aggregated capture snapshot with stats */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SnapshotResponse']
+        }
+      }
+    }
+  }
+  postClear: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description All buffers cleared */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /**
+             * @description Always true on success
+             * @example true
+             */
+            cleared?: boolean
+            /** @description Total entries removed across all buffers */
+            entries_removed?: number
+          }
+        }
+      }
+    }
+  }
+  postTestBoundary: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TestBoundaryRequest']
+      }
+    }
+    responses: {
+      /** @description Boundary set with server timestamp */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TestBoundaryResponse']
+        }
+      }
+    }
+  }
+  postDrawModeComplete: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DrawModeCompleteRequest']
+      }
+    }
+    responses: {
+      /** @description Annotations stored */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DrawModeCompleteResponse']
+        }
+      }
+    }
+  }
+  postPushScreenshot: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': Record<string, never>
+      }
+    }
+    responses: {
+      /** @description Screenshot push event accepted */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['StatusOk']
+        }
+      }
+    }
+  }
+  postPushMessage: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': Record<string, never>
+      }
+    }
+    responses: {
+      /** @description Push message accepted */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['StatusOk']
+        }
+      }
+    }
+  }
+  getPushCapabilities: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Push capability state */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+    }
+  }
+  drainPushEvents: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Queued push events */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            events?: Record<string, never>[]
+            count?: number
+          }
+        }
+      }
+    }
+  }
+  getTestsPages: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description HTML test page index or static test asset */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'text/html': string
+        }
+      }
+    }
+  }
+  getTestsWebSocket: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Switching Protocols (WebSocket upgrade) */
+      101: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description WebSocket upgrade required */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getRecordingStorage: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Recording storage usage and file list */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+    }
+  }
+  postRecordingStorage: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Storage index recalculated */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  deleteRecordingStorage: {
+    parameters: {
+      query: {
+        /** @description Recording name/ID to delete */
+        recording_id: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Recording file deleted from disk */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postRecordingReveal: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Absolute path to the recording file to reveal */
+          path: string
+        }
+      }
+    }
+    responses: {
+      /** @description File revealed in system file manager */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /**
+             * @description Always 'revealed' on success
+             * @example revealed
+             */
+            status?: string
+            /** @description Echo of the file path that was revealed */
+            path?: string
+          }
+        }
+      }
+    }
+  }
+  postFileRead: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Absolute path to the file to read */
+          file_path: string
+        }
+      }
+    }
+    responses: {
+      /** @description File data with base64 contents */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FileReadResponse']
+        }
+      }
+    }
+  }
+  postFileDialogInject: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Absolute path to the file to inject */
+          file_path: string
+          /** @description Chrome browser process ID for DevTools connection */
+          browser_pid: number
+        }
+      }
+    }
+    responses: {
+      /** @description File dialog injection result */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UploadStageResponse']
+        }
+      }
+    }
+  }
+  postFormSubmit: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FormSubmitRequest']
+      }
+    }
+    responses: {
+      /** @description Form submission result */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UploadStageResponse']
+        }
+      }
+    }
+  }
+  postOSAutomationInject: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Absolute path to the file to inject */
+          file_path: string
+          /** @description Chrome browser process ID */
+          browser_pid: number
+          /** @description Number of retry attempts for dialog detection (default: 3) */
+          retry_count?: number
+        }
+      }
+    }
+    responses: {
+      /** @description OS automation injection result */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UploadStageResponse']
+        }
+      }
+    }
+  }
+  postOSAutomationDismiss: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Dialog dismissed successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UploadStageResponse']
+        }
+      }
+      /** @description OS automation is disabled (--enable-os-upload-automation flag not set) */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UploadStageResponse']
+        }
+      }
+    }
+  }
+  getInsecureProxy: {
+    parameters: {
+      query: {
+        /** @description Absolute http/https URL to fetch through the proxy. */
+        target: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Upstream response body proxied with CSP headers removed. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'text/html': string
+          'application/json': Record<string, never>
+        }
+      }
+      /** @description Missing or invalid target URL. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            error: string
+          }
+        }
+      }
+      /** @description Insecure proxy mode is disabled. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            error: string
+          }
+        }
+      }
+      /** @description Failed to fetch upstream URL. */
+      502: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            error: string
+          }
+        }
+      }
+    }
+  }
 }

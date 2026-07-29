@@ -18,11 +18,7 @@
  * properties, then give up. Returns whether the value actually took, so callers
  * can degrade instead of assuming capture is live.
  */
-export function safeAssignGlobal<T extends object, K extends keyof T>(
-  target: T,
-  key: K,
-  value: T[K]
-): boolean {
+export function safeAssignGlobal<T extends object, K extends keyof T>(target: T, key: K, value: T[K]): boolean {
   try {
     // eslint-disable-next-line security/detect-object-injection -- key is a keyof T supplied by our own call sites
     target[key] = value

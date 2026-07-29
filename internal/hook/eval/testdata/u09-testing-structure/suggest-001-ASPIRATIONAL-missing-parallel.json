@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/quality_gate_test.go", "new_string": "func TestNewFeature(t *testing.T) {\n\tresult := process(\"input\")\n\tif result != \"expected\" {\n\t\tt.Errorf(\"got %q\", result)\n\t}\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/quality_gate_test.go",
+      "new_string": "func TestNewFeature(t *testing.T) {\n\tresult := process(\"input\")\n\tif result != \"expected\" {\n\t\tt.Errorf(\"got %q\", result)\n\t}\n}"
+    }
   },
   "expect": {
     "has_output": true,

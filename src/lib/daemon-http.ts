@@ -55,9 +55,8 @@ export function buildDaemonHeaders(options: DaemonHeaderOptions = {}): Record<st
     additionalHeaders = {}
   } = options
 
-  const normalizedVersion = typeof extensionVersion === 'string' && extensionVersion.trim().length > 0
-    ? extensionVersion.trim()
-    : ''
+  const normalizedVersion =
+    typeof extensionVersion === 'string' && extensionVersion.trim().length > 0 ? extensionVersion.trim() : ''
 
   const headers: Record<string, string> = {
     'X-Kaboom-Client': normalizedVersion ? `${clientName}/${normalizedVersion}` : clientName
@@ -79,10 +78,7 @@ export function buildDaemonHeaders(options: DaemonHeaderOptions = {}): Record<st
 /**
  * Build a JSON request init object for daemon endpoints.
  */
-export function buildDaemonJSONRequestInit(
-  payload: unknown,
-  options: DaemonJSONRequestOptions = {}
-): RequestInit {
+export function buildDaemonJSONRequestInit(payload: unknown, options: DaemonJSONRequestOptions = {}): RequestInit {
   const { method = 'POST', signal, ...headerOptions } = options
   return {
     method,
@@ -101,7 +97,8 @@ export async function postDaemonJSON(
   options: PostDaemonJSONOptions = {}
 ): Promise<Response> {
   const { timeoutMs, signal, ...requestOptions } = options
-  const effectiveSignal = signal ||
+  const effectiveSignal =
+    signal ||
     (typeof timeoutMs === 'number' && timeoutMs > 0 && typeof AbortSignal.timeout === 'function'
       ? AbortSignal.timeout(timeoutMs)
       : undefined)

@@ -164,15 +164,19 @@ function syncTrackButtonState(btn) {
                 try {
                     hostname = currentUrl ? new URL(currentUrl).hostname : '';
                 }
-                catch { /* malformed URL */ }
-                isDomainCloaked(hostname).then((cloaked) => {
+                catch {
+                    /* malformed URL */
+                }
+                isDomainCloaked(hostname)
+                    .then((cloaked) => {
                     if (cloaked) {
                         showCloakedState(btn);
                     }
                     else {
                         showIdleState(btn);
                     }
-                }).catch(() => showIdleState(btn));
+                })
+                    .catch(() => showIdleState(btn));
             }
         });
     });

@@ -10,12 +10,7 @@ import { persist } from '../../lib/storage/io.js'
 import { getLocal, setLocal } from '../../lib/storage/local.js'
 import { getSession, removeSessions, setSession } from '../../lib/storage/session.js'
 import { resolveTerminalServerUrl } from '../../lib/terminal-server.js'
-import {
-  state,
-  type TerminalConfig,
-  type TerminalSessionState,
-  type TerminalUIState
-} from './terminal-widget-types.js'
+import { state, type TerminalConfig, type TerminalSessionState, type TerminalUIState } from './terminal-widget-types.js'
 
 /**
  * Why a terminal session failed to start — lets the UI choose the right surface:

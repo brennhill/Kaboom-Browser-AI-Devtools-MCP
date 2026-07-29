@@ -27,8 +27,16 @@ const BASELINE_PATH = path.join(REPO_ROOT, '.folder-size-baseline.json')
 // agent worktrees are not something a human organizes into modules.
 const SOURCE_EXT = new Set(['.go', '.ts', '.tsx', '.js', '.mjs', '.cjs'])
 const EXCLUDED_DIR = new Set([
-  'node_modules', '.git', '.claude', 'dist', 'build', 'vendor',
-  'generated', 'coverage', '.beads', 'testdata'
+  'node_modules',
+  '.git',
+  '.claude',
+  'dist',
+  'build',
+  'vendor',
+  'generated',
+  'coverage',
+  '.beads',
+  'testdata'
 ])
 // Compiled/bundled output and third-party sites are not authored here.
 const EXCLUDED_PREFIX = ['extension/', 'npm/', 'gokaboom.dev/', 'scratchpad/']
@@ -91,7 +99,9 @@ function writeBaseline(counts) {
       {
         _comment:
           'Ratcheting baseline for scripts/check-folder-size.cjs. A folder may never exceed its ' +
-          'recorded count; folders absent here are held to the ' + MAX_FILES + '-file limit. ' +
+          'recorded count; folders absent here are held to the ' +
+          MAX_FILES +
+          '-file limit. ' +
           'Counts may only go DOWN — run `make folder-baseline-update` after reducing one.',
         max_files: MAX_FILES,
         folders

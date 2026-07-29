@@ -3,17 +3,41 @@
   "hook": "session-track",
   "session_state": {
     "touches": [
-      {"t": "2026-03-07T14:00:00Z", "tool": "Read", "file": "/p/handler.go", "action": "read"},
-      {"t": "2026-03-07T14:01:00Z", "tool": "Edit", "file": "/p/handler.go", "action": "edit", "summary": "fix parse"},
-      {"t": "2026-03-07T14:02:00Z", "tool": "Edit", "file": "/p/routes.go", "action": "edit", "summary": "add endpoint"},
-      {"t": "2026-03-07T14:03:00Z", "tool": "Edit", "file": "/p/db.go", "action": "edit", "summary": "add query"},
-      {"t": "2026-03-07T14:04:00Z", "tool": "Edit", "file": "/p/middleware.go", "action": "edit", "summary": "add auth check"},
-      {"t": "2026-03-07T14:05:00Z", "tool": "Edit", "file": "/p/config.go", "action": "edit", "summary": "add config field"}
+      { "t": "2026-03-07T14:00:00Z", "tool": "Read", "file": "/p/handler.go", "action": "read" },
+      {
+        "t": "2026-03-07T14:01:00Z",
+        "tool": "Edit",
+        "file": "/p/handler.go",
+        "action": "edit",
+        "summary": "fix parse"
+      },
+      {
+        "t": "2026-03-07T14:02:00Z",
+        "tool": "Edit",
+        "file": "/p/routes.go",
+        "action": "edit",
+        "summary": "add endpoint"
+      },
+      { "t": "2026-03-07T14:03:00Z", "tool": "Edit", "file": "/p/db.go", "action": "edit", "summary": "add query" },
+      {
+        "t": "2026-03-07T14:04:00Z",
+        "tool": "Edit",
+        "file": "/p/middleware.go",
+        "action": "edit",
+        "summary": "add auth check"
+      },
+      {
+        "t": "2026-03-07T14:05:00Z",
+        "tool": "Edit",
+        "file": "/p/config.go",
+        "action": "edit",
+        "summary": "add config field"
+      }
     ]
   },
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "/p/validate.go", "new_string": "func validateInput() {}"}
+    "tool_input": { "file_path": "/p/validate.go", "new_string": "func validateInput() {}" }
   },
   "expect": {
     "has_output": true,

@@ -30,7 +30,9 @@ function hasMatchedTargetEvidence(result: DOMResult): boolean {
 }
 
 /** Pick the best result from multi-frame executeScript. Prefers main frame, falls back to first success. */
-export function pickFrameResult(results: chrome.scripting.InjectionResult[]): { result: unknown; frameId: number } | null {
+export function pickFrameResult(
+  results: chrome.scripting.InjectionResult[]
+): { result: unknown; frameId: number } | null {
   const mainFrame = results.find((r) => r.frameId === 0)
   if (mainFrame?.result && (mainFrame.result as DOMResult).success) {
     return { result: mainFrame.result, frameId: 0 }

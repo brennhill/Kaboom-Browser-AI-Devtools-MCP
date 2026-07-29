@@ -11,7 +11,13 @@
 import { installPerformanceCapture, uninstallPerformanceCapture } from '../lib/analysis/performance.js'
 import { installPerfObservers } from '../lib/analysis/perf-snapshot.js'
 import { installWebSocketCapture, uninstallWebSocketCapture } from '../lib/net/websocket.js'
-import { wrapFetchWithBodies, wrapXHRWithBodies, unwrapXHR, adoptEarlyBodies, sanitizeHeaders } from '../lib/net/network.js'
+import {
+  wrapFetchWithBodies,
+  wrapXHRWithBodies,
+  unwrapXHR,
+  adoptEarlyBodies,
+  sanitizeHeaders
+} from '../lib/net/network.js'
 import { installConsoleCapture, uninstallConsoleCapture } from '../lib/page/console.js'
 import { safeAssignGlobal } from '../lib/page/safe-global-patch.js'
 import { installExceptionCapture, uninstallExceptionCapture } from '../lib/page/exceptions.js'

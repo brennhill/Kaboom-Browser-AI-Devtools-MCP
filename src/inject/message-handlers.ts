@@ -210,15 +210,13 @@ export function installMessageListener(
       const settingData = data as SettingMessageData
       if (isValidSettingPayload(settingData)) handleSetting(settingData)
     },
-    kaboom_state_command: (data) =>
-      handleStateCommand(data as StateCommandMessageData, captureStateFn, restoreStateFn),
+    kaboom_state_command: (data) => handleStateCommand(data as StateCommandMessageData, captureStateFn, restoreStateFn),
     kaboom_execute_js: (data) => handleExecuteJs(data as ExecuteJsRequestMessageData),
     kaboom_a11y_query: (data) => handleA11yQuery(data as A11yQueryRequestMessageData),
     kaboom_dom_query: (data) => handleDomQuery(data as DomQueryRequestMessageData),
     kaboom_get_waterfall: (data) => handleGetWaterfall(data as GetWaterfallRequestMessageData),
     kaboom_link_health_query: (data) => handleLinkHealthMessage(data as LinkHealthQueryRequestMessageData),
-    kaboom_computed_styles_query: (data) =>
-      handleComputedStylesMessage(data as ComputedStylesQueryRequestMessageData),
+    kaboom_computed_styles_query: (data) => handleComputedStylesMessage(data as ComputedStylesQueryRequestMessageData),
     kaboom_form_discovery_query: (data) => handleFormDiscoveryMessage(data as FormDiscoveryQueryRequestMessageData),
     kaboom_form_state_query: (data) => handleFormStateMessage(data as FormStateQueryRequestMessageData),
     kaboom_data_table_query: (data) => handleDataTableMessage(data as DataTableQueryRequestMessageData),

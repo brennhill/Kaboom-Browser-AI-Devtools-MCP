@@ -9,11 +9,6 @@
     "src/offscreen/recording-worker.ts"
   ],
   "project": ["src/**/*.ts"],
-  "ignore": [
-    "src/types/**/*.ts"
-  ],
-  "ignoreDependencies": [
-    "@anthropic-ai/claude-code",
-    "chrome-types"
-  ]
+  "ignore": ["src/types/**/*.ts"],
+  "ignoreDependencies": ["@anthropic-ai/claude-code", "chrome-types"]
 }

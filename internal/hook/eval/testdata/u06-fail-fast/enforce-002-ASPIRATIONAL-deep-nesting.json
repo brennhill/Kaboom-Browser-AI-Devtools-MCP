@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func process(a, b, c string) error {\n\tif a != \"\" {\n\t\tif b != \"\" {\n\t\t\tif c != \"\" {\n\t\t\t\treturn doWork(a, b, c)\n\t\t\t}\n\t\t}\n\t}\n\treturn nil\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func process(a, b, c string) error {\n\tif a != \"\" {\n\t\tif b != \"\" {\n\t\t\tif c != \"\" {\n\t\t\t\treturn doWork(a, b, c)\n\t\t\t}\n\t\t}\n\t}\n\treturn nil\n}"
+    }
   },
   "expect": {
     "has_output": true,

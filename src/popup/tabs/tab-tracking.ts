@@ -167,33 +167,37 @@ function showIdleState(btn: HTMLButtonElement): void {
 }
 
 function syncTrackButtonState(btn: HTMLButtonElement): void {
-  void readTrackedTab().then(
-    ({ id: trackedTabId, url: trackedTabUrl, title: trackedTabTitle }) => {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs: chrome.tabs.Tab[]) => {
-        const currentUrl = tabs?.[0]?.url
+  void readTrackedTab().then(({ id: trackedTabId, url: trackedTabUrl, title: trackedTabTitle }) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs: chrome.tabs.Tab[]) => {
+      const currentUrl = tabs?.[0]?.url
 
-        if (trackedTabId) {
-          void chrome.tabs.get(trackedTabId).then(
-            () => showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId),
-            () => showStaleState(btn, trackedTabTitle, trackedTabUrl)
-          )
-        } else if (isInternalUrl(currentUrl)) {
-          showInternalPageState(btn)
-        } else {
-          // Check cloaked domains (async)
-          let hostname = ''
-          try { hostname = currentUrl ? new URL(currentUrl).hostname : '' } catch { /* malformed URL */ }
-          isDomainCloaked(hostname).then((cloaked) => {
+      if (trackedTabId) {
+        void chrome.tabs.get(trackedTabId).then(
+          () => showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId),
+          () => showStaleState(btn, trackedTabTitle, trackedTabUrl)
+        )
+      } else if (isInternalUrl(currentUrl)) {
+        showInternalPageState(btn)
+      } else {
+        // Check cloaked domains (async)
+        let hostname = ''
+        try {
+          hostname = currentUrl ? new URL(currentUrl).hostname : ''
+        } catch {
+          /* malformed URL */
+        }
+        isDomainCloaked(hostname)
+          .then((cloaked) => {
             if (cloaked) {
               showCloakedState(btn)
             } else {
               showIdleState(btn)
             }
-          }).catch(() => showIdleState(btn))
-        }
-      })
-    }
-  )
+          })
+          .catch(() => showIdleState(btn))
+      }
+    })
+  })
 }
 
 function installTrackingStorageSync(btn: HTMLButtonElement): void {
@@ -206,7 +210,8 @@ function installTrackingStorageSync(btn: HTMLButtonElement): void {
       !changes[StorageKey.TRACKED_TAB_ID] &&
       !changes[StorageKey.TRACKED_TAB_URL] &&
       !changes[StorageKey.TRACKED_TAB_TITLE]
-    ) return
+    )
+      return
     syncTrackButtonState(btn)
   })
 }

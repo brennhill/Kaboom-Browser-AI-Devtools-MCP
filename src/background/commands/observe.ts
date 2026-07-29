@@ -12,11 +12,7 @@ import { DebugCategory } from '../debug.js'
 import { recordScreenshot } from '../caches/cache-limits.js'
 import { domPrimitiveListInteractive } from '../dom/primitives/dom-primitives-list-interactive.js'
 import { registerCommand } from './registry.js'
-import {
-  collectCommandElements,
-  commandPageMetadata,
-  selectCommandElements
-} from './results/element-results.js'
+import { collectCommandElements, commandPageMetadata, selectCommandElements } from './results/element-results.js'
 import { CDP_VERSION } from '../../lib/constants.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'

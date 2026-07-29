@@ -3,7 +3,7 @@
   "hook": "compress-output",
   "input": {
     "tool_name": "Bash",
-    "tool_input": {"command": "echo hello"},
+    "tool_input": { "command": "echo hello" },
     "tool_response": "hello\n"
   },
   "expect": {

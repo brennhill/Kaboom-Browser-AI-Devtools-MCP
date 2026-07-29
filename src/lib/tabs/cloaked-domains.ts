@@ -9,10 +9,7 @@ import { getLocal } from '../storage/local.js'
  * These are also excluded via manifest exclude_matches, but this list
  * serves as a runtime fallback for subdomains or edge cases.
  */
-const BUILTIN_CLOAKED: readonly string[] = [
-  'cloudflare.com',
-  'dash.cloudflare.com'
-]
+const BUILTIN_CLOAKED: readonly string[] = ['cloudflare.com', 'dash.cloudflare.com']
 
 /**
  * Check if a hostname matches a cloaked domain pattern.

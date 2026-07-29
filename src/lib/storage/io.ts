@@ -12,14 +12,8 @@ export type StorageGetMethod = (
   keys: string | string[],
   callback?: StorageReadCallback
 ) => Promise<StorageReadResult> | void
-export type StorageSetMethod = (
-  items: Record<string, unknown>,
-  callback?: StorageVoidCallback
-) => Promise<void> | void
-export type StorageRemoveMethod = (
-  keys: string | string[],
-  callback?: StorageVoidCallback
-) => Promise<void> | void
+export type StorageSetMethod = (items: Record<string, unknown>, callback?: StorageVoidCallback) => Promise<void> | void
+export type StorageRemoveMethod = (keys: string | string[], callback?: StorageVoidCallback) => Promise<void> | void
 export type StorageAccessLevelMethod = (
   options: { accessLevel: 'TRUSTED_CONTEXTS' | 'TRUSTED_AND_UNTRUSTED_CONTEXTS' },
   callback?: StorageVoidCallback

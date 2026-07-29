@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "src/content/window-message-listener.ts", "new_string": "let result = computeValue();\nconsole.log(result);"}
+    "tool_input": {
+      "file_path": "src/content/window-message-listener.ts",
+      "new_string": "let result = computeValue();\nconsole.log(result);"
+    }
   },
   "expect": {
     "has_output": true,

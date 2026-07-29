@@ -48,9 +48,11 @@ test('rejects oversized public surfaces unless a documented exception budgets th
   assert.equal(rejected.status, 1)
   assert.match(rejected.stderr, /3 exports exceeds public-surface budget 2/)
 
-  const accepted = check(fixture(
-    { 'src/lib/public.ts': source },
-    { export_exceptions: { 'src/lib/public.ts': { max: 3, reason: 'Canonical fixture contract.' } } }
-  ))
+  const accepted = check(
+    fixture(
+      { 'src/lib/public.ts': source },
+      { export_exceptions: { 'src/lib/public.ts': { max: 3, reason: 'Canonical fixture contract.' } } }
+    )
+  )
   assert.equal(accepted.status, 0)
 })

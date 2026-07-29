@@ -37,4 +37,7 @@ pypi/**/*.egg-info/
 pypi/**/build/
 pypi/**/dist/
 scripts/templates/
+src/background/dom/primitives/dom-primitives-form.ts
+src/background/dom/primitives/dom-primitives-pointer.ts
+src/background/dom/primitives/dom-primitives-read.ts
 .golangci.yml

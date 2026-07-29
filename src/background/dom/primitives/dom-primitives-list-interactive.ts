@@ -425,7 +425,8 @@ export function domPrimitiveListInteractive(
       if (visibleOnly && !visible) continue
       if (excludeNav) {
         const lm = findNearestLandmark(el)
-        if (lm && (lm.tag === 'nav' || lm.tag === 'header' || lm.role === 'navigation' || lm.role === 'banner')) continue
+        if (lm && (lm.tag === 'nav' || lm.tag === 'header' || lm.role === 'navigation' || lm.role === 'banner'))
+          continue
       }
 
       const bbox = extractBoundingBox(el)
@@ -476,7 +477,19 @@ export function domPrimitiveListInteractive(
   // Catches framework-bound click handlers (React onClick, Vue @click, etc.)
   // that render as plain divs/spans with no semantic interactive attributes.
   if (rawEntries.length < 100) {
-    const cursorPointerTags = new Set(['div', 'span', 'li', 'td', 'p', 'img', 'svg', 'label', 'figure', 'section', 'article'])
+    const cursorPointerTags = new Set([
+      'div',
+      'span',
+      'li',
+      'td',
+      'p',
+      'img',
+      'svg',
+      'label',
+      'figure',
+      'section',
+      'article'
+    ])
     const candidates = scopeRoot.querySelectorAll('*')
     let checked = 0
     const maxCheck = 500 // Budget: don't scan more than 500 elements for cursor style
@@ -492,7 +505,11 @@ export function domPrimitiveListInteractive(
       if (!htmlEl.offsetParent && htmlEl !== document.body) continue
 
       let cursor: string
-      try { cursor = getComputedStyle(htmlEl).cursor } catch { continue }
+      try {
+        cursor = getComputedStyle(htmlEl).cursor
+      } catch {
+        continue
+      }
       if (cursor !== 'pointer') continue
 
       // Confirmed: cursor:pointer on a non-interactive element
@@ -518,7 +535,8 @@ export function domPrimitiveListInteractive(
 
       if (excludeNav) {
         const lm = findNearestLandmark(el)
-        if (lm && (lm.tag === 'nav' || lm.tag === 'header' || lm.role === 'navigation' || lm.role === 'banner')) continue
+        if (lm && (lm.tag === 'nav' || lm.tag === 'header' || lm.role === 'navigation' || lm.role === 'banner'))
+          continue
       }
 
       const landmark = findNearestLandmark(el)

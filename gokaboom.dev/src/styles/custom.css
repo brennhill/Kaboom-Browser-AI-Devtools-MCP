@@ -739,7 +739,11 @@ site-search kbd {
   place-items: center;
   background:
     radial-gradient(circle at center, color-mix(in srgb, var(--g-surface) 96%, transparent) 49%, transparent 51%),
-    conic-gradient(var(--g-ink) 0 62%, color-mix(in srgb, var(--g-border-strong) 55%, var(--g-border)) 62% 76%, #d9d7d0 76% 100%);
+    conic-gradient(
+      var(--g-ink) 0 62%,
+      color-mix(in srgb, var(--g-border-strong) 55%, var(--g-border)) 62% 76%,
+      #d9d7d0 76% 100%
+    );
   border: 1px solid color-mix(in srgb, var(--g-border-strong) 42%, var(--g-border));
 }
 
@@ -884,7 +888,10 @@ site-search kbd {
   justify-content: space-between;
 }
 
-.gvis-bars-head h4 { margin: 0; font-size: 0.92rem; }
+.gvis-bars-head h4 {
+  margin: 0;
+  font-size: 0.92rem;
+}
 
 .gvis-bars-delta {
   font-size: 1.6rem;
@@ -893,7 +900,10 @@ site-search kbd {
   font-family: var(--g-mono);
 }
 
-.gvis-bars-chart { display: grid; gap: 0.55rem; }
+.gvis-bars-chart {
+  display: grid;
+  gap: 0.55rem;
+}
 
 .gvis-bars-row {
   display: grid;
@@ -903,8 +913,15 @@ site-search kbd {
   font-size: 0.82rem;
 }
 
-.gvis-bars-row span { color: color-mix(in srgb, var(--g-ink-soft) 80%, #000); font-weight: 500; }
-.gvis-bars-row strong { text-align: right; font-family: var(--g-mono); font-size: 0.85rem; }
+.gvis-bars-row span {
+  color: color-mix(in srgb, var(--g-ink-soft) 80%, #000);
+  font-weight: 500;
+}
+.gvis-bars-row strong {
+  text-align: right;
+  font-family: var(--g-mono);
+  font-size: 0.85rem;
+}
 
 .gvis-bars-track {
   height: 22px;
@@ -914,12 +931,24 @@ site-search kbd {
   overflow: hidden;
 }
 
-.gvis-bars-fill { height: 100%; border-radius: 5px; }
-.gvis-bars-fill--0 { background: #5a8a4e; }
-.gvis-bars-fill--1 { background: #8a6a3e; }
-.gvis-bars-fill--2 { background: #4e6a8a; }
+.gvis-bars-fill {
+  height: 100%;
+  border-radius: 5px;
+}
+.gvis-bars-fill--0 {
+  background: #5a8a4e;
+}
+.gvis-bars-fill--1 {
+  background: #8a6a3e;
+}
+.gvis-bars-fill--2 {
+  background: #4e6a8a;
+}
 
-.gvis-bars-urls { display: grid; gap: 0.2rem; }
+.gvis-bars-urls {
+  display: grid;
+  gap: 0.2rem;
+}
 
 .gvis-bars-urls code {
   font-size: 0.72rem;
@@ -944,7 +973,10 @@ site-search kbd {
   justify-content: space-between;
 }
 
-.gvis-kanban-head h4 { margin: 0; font-size: 0.92rem; }
+.gvis-kanban-head h4 {
+  margin: 0;
+  font-size: 0.92rem;
+}
 
 .gvis-kanban-ring {
   width: 48px;
@@ -999,7 +1031,10 @@ site-search kbd {
   letter-spacing: 0.03em;
 }
 
-.gvis-kanban-col-header strong { font-size: 0.85rem; font-family: var(--g-mono); }
+.gvis-kanban-col-header strong {
+  font-size: 0.85rem;
+  font-family: var(--g-mono);
+}
 
 .gvis-kanban-card {
   height: 24px;
@@ -1008,9 +1043,15 @@ site-search kbd {
   border: 1px solid color-mix(in srgb, var(--g-border-strong) 25%, var(--g-border));
 }
 
-.gvis-kanban-col--0 .gvis-kanban-card { border-left: 3px solid #c97e3a; }
-.gvis-kanban-col--1 .gvis-kanban-card { border-left: 3px solid #5a8a4e; }
-.gvis-kanban-col--2 .gvis-kanban-card { border-left: 3px solid #4e6a8a; }
+.gvis-kanban-col--0 .gvis-kanban-card {
+  border-left: 3px solid #c97e3a;
+}
+.gvis-kanban-col--1 .gvis-kanban-card {
+  border-left: 3px solid #5a8a4e;
+}
+.gvis-kanban-col--2 .gvis-kanban-card {
+  border-left: 3px solid #4e6a8a;
+}
 
 /* ── Debugging: Terminal console ── */
 
@@ -1033,10 +1074,20 @@ site-search kbd {
   background: #1e1e22;
 }
 
-.gvis-dot { width: 10px; height: 10px; border-radius: 999px; }
-.gvis-dot--r { background: #e55; }
-.gvis-dot--y { background: #eb5; }
-.gvis-dot--g { background: #5b5; }
+.gvis-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+.gvis-dot--r {
+  background: #e55;
+}
+.gvis-dot--y {
+  background: #eb5;
+}
+.gvis-dot--g {
+  background: #5b5;
+}
 
 .gvis-console-bar code {
   margin-left: auto;
@@ -1074,9 +1125,18 @@ site-search kbd {
   line-height: 1.7;
 }
 
-.gvis-line--err span { color: #ff6b6b; background: rgba(255,80,80,0.12); }
-.gvis-line--net span { color: #ffd76b; background: rgba(255,200,60,0.12); }
-.gvis-line--dom span { color: #6bb3ff; background: rgba(80,160,255,0.12); }
+.gvis-line--err span {
+  color: #ff6b6b;
+  background: rgba(255, 80, 80, 0.12);
+}
+.gvis-line--net span {
+  color: #ffd76b;
+  background: rgba(255, 200, 60, 0.12);
+}
+.gvis-line--dom span {
+  color: #6bb3ff;
+  background: rgba(80, 160, 255, 0.12);
+}
 
 .gvis-console-footer {
   display: flex;
@@ -1087,7 +1147,10 @@ site-search kbd {
   color: #888;
 }
 
-.gvis-console-footer strong { color: #ccc; margin-right: 0.2rem; }
+.gvis-console-footer strong {
+  color: #ccc;
+  margin-right: 0.2rem;
+}
 
 /* ── Demos: Script storyboard ── */
 
@@ -1098,7 +1161,12 @@ site-search kbd {
   height: 100%;
 }
 
-.gvis-sb-track { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+.gvis-sb-track {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
 
 .gvis-sb-step {
   width: 34px;
@@ -1123,7 +1191,7 @@ site-search kbd {
   border-color: #c97e3a;
   background: #fff1cf;
   color: #5f4108;
-  box-shadow: 0 0 0 3px rgba(201,126,58,0.2);
+  box-shadow: 0 0 0 3px rgba(201, 126, 58, 0.2);
 }
 
 .gvis-sb-more {
@@ -1151,7 +1219,12 @@ site-search kbd {
   color: #c97e3a;
 }
 
-.gvis-sb-card p { margin: 0; font-size: 0.88rem; font-weight: 500; line-height: 1.35; }
+.gvis-sb-card p {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
 
 .gvis-sb-subtitle {
   display: flex;
@@ -1174,7 +1247,11 @@ site-search kbd {
   font-weight: 700;
 }
 
-.gvis-sb-progress { display: flex; align-items: center; gap: 0.6rem; }
+.gvis-sb-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
 
 .gvis-sb-bar {
   flex: 1;
@@ -1185,9 +1262,17 @@ site-search kbd {
   overflow: hidden;
 }
 
-.gvis-sb-bar > div { height: 100%; border-radius: 3px; background: #5a8a4e; }
+.gvis-sb-bar > div {
+  height: 100%;
+  border-radius: 3px;
+  background: #5a8a4e;
+}
 
-.gvis-sb-progress > span { font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+.gvis-sb-progress > span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
 
 /* ── Automation: Pipeline flow ── */
 
@@ -1217,7 +1302,10 @@ site-search kbd {
   flex-shrink: 0;
 }
 
-.gvis-pl-node strong { font-size: 1.2rem; font-family: var(--g-mono); }
+.gvis-pl-node strong {
+  font-size: 1.2rem;
+  font-family: var(--g-mono);
+}
 
 .gvis-pl-node span {
   font-size: 0.58rem;
@@ -1230,9 +1318,16 @@ site-search kbd {
   max-width: 60px;
 }
 
-.gvis-pl-node--queued { border-color: #c97e3a; }
-.gvis-pl-node--done { border-color: #5a8a4e; background: color-mix(in srgb, #dff2e6 60%, transparent); }
-.gvis-pl-node--warn { border-color: #d96a5d; }
+.gvis-pl-node--queued {
+  border-color: #c97e3a;
+}
+.gvis-pl-node--done {
+  border-color: #5a8a4e;
+  background: color-mix(in srgb, #dff2e6 60%, transparent);
+}
+.gvis-pl-node--warn {
+  border-color: #d96a5d;
+}
 
 .gvis-pl-arrow {
   width: 28px;
@@ -1268,7 +1363,9 @@ site-search kbd {
   color: color-mix(in srgb, var(--g-ink-soft) 55%, #000);
 }
 
-.gvis-pipeline .gvis-btn { justify-self: center; }
+.gvis-pipeline .gvis-btn {
+  justify-self: center;
+}
 
 .gmodern-solution-panel-body {
   padding: clamp(1.4rem, 3.1vw, 2.45rem);
@@ -1596,7 +1693,9 @@ code:not(pre code) {
   background-color: var(--g-surface) !important;
 }
 
-:root[data-theme='light'] #starlight__search .pagefind-ui__result-title:not(:where(.pagefind-ui__result-nested *)):focus-within,
+:root[data-theme='light']
+  #starlight__search
+  .pagefind-ui__result-title:not(:where(.pagefind-ui__result-nested *)):focus-within,
 :root[data-theme='light'] #starlight__search .pagefind-ui__result-nested:focus-within {
   background-color: var(--g-bg-soft) !important;
 }
@@ -2125,13 +2224,29 @@ code:not(pre code) {
     width: 100%;
   }
 
-  .gvis-bars { max-width: 100%; }
-  .gvis-bars-row { grid-template-columns: 90px 1fr 32px; }
-  .gvis-console { max-height: 320px; }
-  .gvis-pl-node { width: 68px; height: 68px; }
-  .gvis-pl-node strong { font-size: 1rem; }
-  .gvis-pl-node span { font-size: 0.52rem; max-width: 52px; }
-  .gvis-pl-arrow { width: 20px; }
+  .gvis-bars {
+    max-width: 100%;
+  }
+  .gvis-bars-row {
+    grid-template-columns: 90px 1fr 32px;
+  }
+  .gvis-console {
+    max-height: 320px;
+  }
+  .gvis-pl-node {
+    width: 68px;
+    height: 68px;
+  }
+  .gvis-pl-node strong {
+    font-size: 1rem;
+  }
+  .gvis-pl-node span {
+    font-size: 0.52rem;
+    max-width: 52px;
+  }
+  .gvis-pl-arrow {
+    width: 20px;
+  }
 }
 
 @media (min-width: 50rem) {

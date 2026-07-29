@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func BigHandler(w http.ResponseWriter, r *http.Request) {\n\tvar a int\n\tvar b int\n\tvar c int\n\tvar d int\n\tvar e int\n\ta = 1\n\tb = 2\n\tc = 3\n\td = 4\n\te = 5\n\tif a > 0 {\n\t\tb = a + 1\n\t}\n\tif b > 0 {\n\t\tc = b + 1\n\t}\n\tif c > 0 {\n\t\td = c + 1\n\t}\n\tif d > 0 {\n\t\te = d + 1\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\ta += i\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\tb += i\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\tc += i\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\td += i\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\te += i\n\t}\n\tswitch a {\n\tcase 1:\n\t\tb = 10\n\tcase 2:\n\t\tc = 20\n\tcase 3:\n\t\td = 30\n\tcase 4:\n\t\te = 40\n\tdefault:\n\t\ta = 0\n\t}\n\tresult := a + b + c + d + e\n\tw.WriteHeader(200)\n\tresult2 := result * 2\n\tlog.Printf(\"handled request: %d\", result2)\n\tif result2 > 100 {\n\t\tlog.Printf(\"large result\")\n\t}\n\tif result2 < 0 {\n\t\tlog.Printf(\"negative result\")\n\t}\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func BigHandler(w http.ResponseWriter, r *http.Request) {\n\tvar a int\n\tvar b int\n\tvar c int\n\tvar d int\n\tvar e int\n\ta = 1\n\tb = 2\n\tc = 3\n\td = 4\n\te = 5\n\tif a > 0 {\n\t\tb = a + 1\n\t}\n\tif b > 0 {\n\t\tc = b + 1\n\t}\n\tif c > 0 {\n\t\td = c + 1\n\t}\n\tif d > 0 {\n\t\te = d + 1\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\ta += i\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\tb += i\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\tc += i\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\td += i\n\t}\n\tfor i := 0; i < 10; i++ {\n\t\te += i\n\t}\n\tswitch a {\n\tcase 1:\n\t\tb = 10\n\tcase 2:\n\t\tc = 20\n\tcase 3:\n\t\td = 30\n\tcase 4:\n\t\te = 40\n\tdefault:\n\t\ta = 0\n\t}\n\tresult := a + b + c + d + e\n\tw.WriteHeader(200)\n\tresult2 := result * 2\n\tlog.Printf(\"handled request: %d\", result2)\n\tif result2 > 100 {\n\t\tlog.Printf(\"large result\")\n\t}\n\tif result2 < 0 {\n\t\tlog.Printf(\"negative result\")\n\t}\n}"
+    }
   },
   "expect": {
     "has_output": true,

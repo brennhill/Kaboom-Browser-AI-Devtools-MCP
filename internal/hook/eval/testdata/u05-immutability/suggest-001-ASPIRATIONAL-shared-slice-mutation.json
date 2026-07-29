@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func addItem(items []string, item string) {\n\titems = append(items, item)\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func addItem(items []string, item string) {\n\titems = append(items, item)\n}"
+    }
   },
   "expect": {
     "has_output": true,

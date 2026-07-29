@@ -55,7 +55,9 @@ export function verifyPlatformPackage(pkgDir) {
       continue
     }
     if (st.size < MIN_BINARY_BYTES) {
-      problems.push(`${rel}: only ${st.size} bytes (< ${MIN_BINARY_BYTES} minimum — looks like a stub, not a built binary)`)
+      problems.push(
+        `${rel}: only ${st.size} bytes (< ${MIN_BINARY_BYTES} minimum — looks like a stub, not a built binary)`
+      )
     }
   }
 
@@ -73,7 +75,9 @@ function main(argv) {
     const { ok, pkg, checked, problems } = verifyPlatformPackage(target)
     const name = pkg ? `${pkg.name}@${pkg.version}` : target
     if (ok) {
-      console.log(`✅ ${name}: ${checked.length} binar${checked.length === 1 ? 'y' : 'ies'} present (${checked.map((f) => path.basename(f)).join(', ')})`)
+      console.log(
+        `✅ ${name}: ${checked.length} binar${checked.length === 1 ? 'y' : 'ies'} present (${checked.map((f) => path.basename(f)).join(', ')})`
+      )
     } else {
       failed = true
       console.error(`❌ ${name} would publish WITHOUT working binaries:`)

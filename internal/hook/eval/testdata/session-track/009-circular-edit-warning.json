@@ -3,16 +3,22 @@
   "hook": "session-track",
   "session_state": {
     "touches": [
-      {"t": "2026-03-07T14:00:00Z", "tool": "Read", "file": "/p/handler.go", "action": "read"},
-      {"t": "2026-03-07T14:01:00Z", "tool": "Edit", "file": "/p/handler.go", "action": "edit", "summary": "first attempt"},
-      {"t": "2026-03-07T14:02:00Z", "tool": "Read", "file": "/p/routes.go", "action": "read"},
-      {"t": "2026-03-07T14:03:00Z", "tool": "Edit", "file": "/p/routes.go", "action": "edit", "summary": "add route"},
-      {"t": "2026-03-07T14:04:00Z", "tool": "Bash", "file": "", "action": "bash", "summary": "go test ./... FAIL"}
+      { "t": "2026-03-07T14:00:00Z", "tool": "Read", "file": "/p/handler.go", "action": "read" },
+      {
+        "t": "2026-03-07T14:01:00Z",
+        "tool": "Edit",
+        "file": "/p/handler.go",
+        "action": "edit",
+        "summary": "first attempt"
+      },
+      { "t": "2026-03-07T14:02:00Z", "tool": "Read", "file": "/p/routes.go", "action": "read" },
+      { "t": "2026-03-07T14:03:00Z", "tool": "Edit", "file": "/p/routes.go", "action": "edit", "summary": "add route" },
+      { "t": "2026-03-07T14:04:00Z", "tool": "Bash", "file": "", "action": "bash", "summary": "go test ./... FAIL" }
     ]
   },
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "/p/handler.go", "new_string": "func HandleUser() { // second attempt }"}
+    "tool_input": { "file_path": "/p/handler.go", "new_string": "func HandleUser() { // second attempt }" }
   },
   "expect": {
     "has_output": true,

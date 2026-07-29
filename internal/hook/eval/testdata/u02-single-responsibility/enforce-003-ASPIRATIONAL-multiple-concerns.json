@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func HandleRequest(w http.ResponseWriter, r *http.Request) {\n\trows, _ := db.Query(\"SELECT * FROM users\")\n\tjson.NewEncoder(w).Encode(rows)\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func HandleRequest(w http.ResponseWriter, r *http.Request) {\n\trows, _ := db.Query(\"SELECT * FROM users\")\n\tjson.NewEncoder(w).Encode(rows)\n}"
+    }
   },
   "expect": {
     "has_output": true,

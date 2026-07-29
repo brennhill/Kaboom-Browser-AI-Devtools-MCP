@@ -3,12 +3,12 @@
   "hook": "session-track",
   "session_state": {
     "touches": [
-      {"t": "2026-03-07T14:00:00Z", "tool": "Bash", "file": "", "action": "bash", "summary": "cat /p/handlers.go"}
+      { "t": "2026-03-07T14:00:00Z", "tool": "Bash", "file": "", "action": "bash", "summary": "cat /p/handlers.go" }
     ]
   },
   "input": {
     "tool_name": "Read",
-    "tool_input": {"file_path": "/p/handlers.go"}
+    "tool_input": { "file_path": "/p/handlers.go" }
   },
   "expect": {
     "has_output": true,

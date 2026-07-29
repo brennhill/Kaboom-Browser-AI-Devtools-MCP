@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "return errors.New(\"ReadInput: cannot read stdin. Check file descriptor\")"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "return errors.New(\"ReadInput: cannot read stdin. Check file descriptor\")"
+    }
   },
   "expect": {
     "has_output": false,

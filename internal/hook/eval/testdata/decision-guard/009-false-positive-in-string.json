@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "helpText := \"Do not use fmt.Println directly. Use WriteOutput instead.\""}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "helpText := \"Do not use fmt.Println directly. Use WriteOutput instead.\""
+    }
   },
   "expect": {
     "has_output": false,

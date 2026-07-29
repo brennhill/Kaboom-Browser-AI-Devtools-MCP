@@ -63,10 +63,7 @@ bootstrapTheme()
 function syncDevRootToDaemon(serverUrl: string, devRoot: string): void {
   fetch(
     `${serverUrl}/config/active-codebase`,
-    buildDaemonJSONRequestInit(
-      { path: devRoot },
-      { method: 'PUT', signal: AbortSignal.timeout(3000) }
-    )
+    buildDaemonJSONRequestInit({ path: devRoot }, { method: 'PUT', signal: AbortSignal.timeout(3000) })
   ).catch(() => {
     // Best-effort sync — daemon may be offline
   })
@@ -80,26 +77,29 @@ function loadActiveCodebaseFromDaemon(serverUrl: string): void {
   fetch(`${serverUrl}/config/active-codebase`, {
     signal: AbortSignal.timeout(3000),
     headers: buildDaemonHeaders({ contentType: null })
-  }).then(resp => {
-    if (!resp.ok) return
-    return resp.json() as Promise<{ active_codebase?: string }>
-  }).then(data => {
-    if (!data?.active_codebase) return
-    const devRootInput = document.getElementById('terminal-dev-root') as HTMLInputElement | null
-    // Only fill if the input is currently empty (don't overwrite user edits)
-    if (devRootInput && !devRootInput.value.trim()) {
-      devRootInput.value = data.active_codebase
-    }
-  }).catch(() => {
-    // Daemon unreachable — ignore
   })
+    .then((resp) => {
+      if (!resp.ok) return
+      return resp.json() as Promise<{ active_codebase?: string }>
+    })
+    .then((data) => {
+      if (!data?.active_codebase) return
+      const devRootInput = document.getElementById('terminal-dev-root') as HTMLInputElement | null
+      // Only fill if the input is currently empty (don't overwrite user edits)
+      if (devRootInput && !devRootInput.value.trim()) {
+        devRootInput.value = data.active_codebase
+      }
+    })
+    .catch(() => {
+      // Daemon unreachable — ignore
+    })
 }
 
 /**
  * Load saved options
  */
 export async function loadOptions(): Promise<void> {
-  const result = await getLocals([
+  const result = (await getLocals([
     StorageKey.SERVER_URL,
     StorageKey.SCREENSHOT_ON_ERROR,
     StorageKey.SOURCE_MAP_ENABLED,
@@ -108,7 +108,7 @@ export async function loadOptions(): Promise<void> {
     StorageKey.THEME,
     StorageKey.TERMINAL_AI_COMMAND,
     StorageKey.TERMINAL_DEV_ROOT
-  ]) as StorageResult
+  ])) as StorageResult
 
   // Set server URL
   const serverUrlInput = document.getElementById('server-url-input') as HTMLInputElement | null
@@ -205,42 +205,44 @@ export function saveOptions(): Promise<void> {
     theme,
     [StorageKey.TERMINAL_AI_COMMAND]: terminalAICommand,
     [StorageKey.TERMINAL_DEV_ROOT]: terminalDevRoot
-  }).then(() => {
-    // Show saved message
-    const message = document.getElementById('saved-message')
-    message?.classList.add('show')
-
-    // Notify background of changes so it can update its in-memory state
-    chrome.runtime.sendMessage({ type: SettingName.SERVER_URL, url: serverUrl })
-    chrome.runtime.sendMessage({ type: 'set_screenshot_on_error', enabled: screenshotOnError })
-    chrome.runtime.sendMessage({ type: 'set_source_map_enabled', enabled: sourceMapEnabled })
-    chrome.runtime.sendMessage({ type: SettingName.DEFERRAL, enabled: deferralEnabled })
-    chrome.runtime.sendMessage({ type: 'set_debug_mode', enabled: debugMode })
-
-    // Sync terminal dev root to daemon so MCP and terminal use the same CWD
-    if (terminalDevRoot) {
-      syncDevRootToDaemon(serverUrl, terminalDevRoot)
-    }
-
-    // Hide message after 2 seconds
-    setTimeout(() => {
-      message?.classList.remove('show')
-    }, 2000)
-  }).catch((err) => {
-    // The persist rejected (e.g. storage over quota). Surface it instead of
-    // silently doing nothing, and absorb the rejection so the click handler that
-    // discards this promise does not leak an unhandled rejection (rule 25).
-    console.warn(`${KABOOM_LOG_PREFIX} Failed to save options:`, err)
-    const message = document.getElementById('saved-message')
-    if (message) {
-      message.textContent = 'Save failed — try again'
-      message.classList.add('show')
-      setTimeout(() => {
-        message.classList.remove('show')
-        message.textContent = 'Saved!'
-      }, 3000)
-    }
   })
+    .then(() => {
+      // Show saved message
+      const message = document.getElementById('saved-message')
+      message?.classList.add('show')
+
+      // Notify background of changes so it can update its in-memory state
+      chrome.runtime.sendMessage({ type: SettingName.SERVER_URL, url: serverUrl })
+      chrome.runtime.sendMessage({ type: 'set_screenshot_on_error', enabled: screenshotOnError })
+      chrome.runtime.sendMessage({ type: 'set_source_map_enabled', enabled: sourceMapEnabled })
+      chrome.runtime.sendMessage({ type: SettingName.DEFERRAL, enabled: deferralEnabled })
+      chrome.runtime.sendMessage({ type: 'set_debug_mode', enabled: debugMode })
+
+      // Sync terminal dev root to daemon so MCP and terminal use the same CWD
+      if (terminalDevRoot) {
+        syncDevRootToDaemon(serverUrl, terminalDevRoot)
+      }
+
+      // Hide message after 2 seconds
+      setTimeout(() => {
+        message?.classList.remove('show')
+      }, 2000)
+    })
+    .catch((err) => {
+      // The persist rejected (e.g. storage over quota). Surface it instead of
+      // silently doing nothing, and absorb the rejection so the click handler that
+      // discards this promise does not leak an unhandled rejection (rule 25).
+      console.warn(`${KABOOM_LOG_PREFIX} Failed to save options:`, err)
+      const message = document.getElementById('saved-message')
+      if (message) {
+        message.textContent = 'Save failed — try again'
+        message.classList.add('show')
+        setTimeout(() => {
+          message.classList.remove('show')
+          message.textContent = 'Saved!'
+        }, 3000)
+      }
+    })
 }
 
 /**

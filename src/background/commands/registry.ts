@@ -200,7 +200,6 @@ export async function dispatch(query: PendingQuery, syncClient: SyncClient): Pro
   }
   const lifecycle = createDispatchLifecycle(query, syncClient, wrapResult)
 
-
   const handler = handlers.get(queryType)
   if (!handler) {
     debugLog(DebugCategory.CONNECTION, 'Unknown query type', { type: query.type })

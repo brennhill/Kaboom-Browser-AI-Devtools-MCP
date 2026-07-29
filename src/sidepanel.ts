@@ -49,10 +49,7 @@ import {
   surfaceTerminalStartFailure
 } from './content/ui/terminal-panel-states.js'
 import { createPanelShell as buildPanelShell } from './content/ui/panel/shell.js'
-import {
-  updateConnectionIndicator,
-  updateExecutionProviderBadge
-} from './content/ui/panel/status-indicators.js'
+import { updateConnectionIndicator, updateExecutionProviderBadge } from './content/ui/panel/status-indicators.js'
 import {
   notifyIframe,
   resetWriteGuardState,

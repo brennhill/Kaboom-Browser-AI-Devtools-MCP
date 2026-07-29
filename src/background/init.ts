@@ -198,7 +198,9 @@ async function initializeExtensionAsync(): Promise<void> {
           console.log(`${KABOOM_LOG_PREFIX} Sync client reset due to AI Web Pilot enabled`)
         }
         // Broadcast to tracked tab for favicon flicker
-        broadcastTrackingState().catch((err) => console.error(`${KABOOM_LOG_PREFIX} Error broadcasting tracking state:`, err))
+        broadcastTrackingState().catch((err) =>
+          console.error(`${KABOOM_LOG_PREFIX} Error broadcasting tracking state:`, err)
+        )
       },
       onTrackedTabChanged: (newTabId, oldTabId) => {
         // Tracking state is reflected on the next /sync poll — no separate
@@ -254,18 +256,20 @@ async function initializeExtensionAsync(): Promise<void> {
         setDebugMode(enabled)
       },
       setAiWebPilotEnabled: (enabled, callback) => {
-        setLocal('aiWebPilotEnabled', enabled).then(() => {
-          setAiWebPilotEnabledCache(enabled)
-          // Reset connection when enabling to allow immediate reconnection
-          if (enabled) {
-            resetSyncClientConnection()
-            console.log(`${KABOOM_LOG_PREFIX} Sync client reset due to AI Web Pilot enabled (direct)`)
-          }
-          if (callback) callback()
-        }).catch((err: unknown) => {
-          console.error(`${KABOOM_LOG_PREFIX} Failed to save aiWebPilotEnabled:`, err)
-          if (callback) callback()
-        })
+        setLocal('aiWebPilotEnabled', enabled)
+          .then(() => {
+            setAiWebPilotEnabledCache(enabled)
+            // Reset connection when enabling to allow immediate reconnection
+            if (enabled) {
+              resetSyncClientConnection()
+              console.log(`${KABOOM_LOG_PREFIX} Sync client reset due to AI Web Pilot enabled (direct)`)
+            }
+            if (callback) callback()
+          })
+          .catch((err: unknown) => {
+            console.error(`${KABOOM_LOG_PREFIX} Failed to save aiWebPilotEnabled:`, err)
+            if (callback) callback()
+          })
       },
 
       addToLogBatcher: (entry) => logBatcher.add(entry),

@@ -188,9 +188,7 @@ async function createTerminalWorkspaceGroup(tabId) {
     try {
         const groupId = await chrome.tabs.group({ tabIds: [tabId] });
         const color = chrome.tabGroups.Color?.ORANGE;
-        const update = color
-            ? { title: 'KaBOOM!', color, collapsed: false }
-            : { title: 'KaBOOM!', collapsed: false };
+        const update = color ? { title: 'KaBOOM!', color, collapsed: false } : { title: 'KaBOOM!', collapsed: false };
         await chrome.tabGroups.update(groupId, update);
         return groupId;
     }
@@ -340,10 +338,7 @@ export async function setKaboomOverlayVisibility(tabId, visible) {
         await chrome.scripting.executeScript({
             target: { tabId },
             func: (show) => {
-                const ids = [
-                    'kaboom-tracked-hover-launcher',
-                    'kaboom-draw-toolbar'
-                ];
+                const ids = ['kaboom-tracked-hover-launcher', 'kaboom-draw-toolbar'];
                 for (const id of ids) {
                     const el = document.getElementById(id);
                     if (!el)

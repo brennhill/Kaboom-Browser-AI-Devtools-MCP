@@ -3,7 +3,7 @@
   "hook": "compress-output",
   "input": {
     "tool_name": "Bash",
-    "tool_input": {"command": "go test ./..."},
+    "tool_input": { "command": "go test ./..." },
     "tool_response": "=== RUN   TestOne\n--- PASS: TestOne (0.01s)\n=== RUN   TestTwo\n--- PASS: TestTwo (0.02s)\n=== RUN   TestThree\n--- PASS: TestThree (0.01s)\n=== RUN   TestFour\n--- PASS: TestFour (0.03s)\n=== RUN   TestFive\n--- PASS: TestFive (0.01s)\n=== RUN   TestSix\n--- PASS: TestSix (0.01s)\n=== RUN   TestSeven\n--- PASS: TestSeven (0.04s)\n=== RUN   TestEight\n--- PASS: TestEight (0.02s)\n=== RUN   TestNine\n--- PASS: TestNine (0.01s)\n=== RUN   TestTen\n--- PASS: TestTen (0.01s)\n=== RUN   TestEleven\n--- PASS: TestEleven (0.01s)\n=== RUN   TestTwelve\n--- PASS: TestTwelve (0.02s)\n=== RUN   TestThirteen\n--- PASS: TestThirteen (0.01s)\n=== RUN   TestFourteen\n--- PASS: TestFourteen (0.03s)\n=== RUN   TestFifteen\n--- PASS: TestFifteen (0.01s)\n=== RUN   TestSixteen\n--- PASS: TestSixteen (0.01s)\n=== RUN   TestSeventeen\n--- PASS: TestSeventeen (0.04s)\n=== RUN   TestEighteen\n--- PASS: TestEighteen (0.02s)\n=== RUN   TestNineteen\n--- PASS: TestNineteen (0.01s)\n=== RUN   TestTwenty\n--- PASS: TestTwenty (0.01s)\n=== RUN   TestTwentyOne\n--- PASS: TestTwentyOne (0.01s)\n=== RUN   TestTwentyTwo\n--- PASS: TestTwentyTwo (0.02s)\n=== RUN   TestTwentyThree\n--- PASS: TestTwentyThree (0.01s)\n=== RUN   TestTwentyFour\n--- PASS: TestTwentyFour (0.03s)\n=== RUN   TestTwentyFive\n--- PASS: TestTwentyFive (0.01s)\nok \tgithub.com/example/web\t0.5s\n"
   },
   "expect": {

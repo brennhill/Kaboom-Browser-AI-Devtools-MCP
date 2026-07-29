@@ -25,7 +25,7 @@ function runGate(root) {
   return spawnSync(process.execPath, [SCRIPT], {
     cwd: root,
     env: { ...process.env, CHECK_FOLDER_SIZE_ROOT: root },
-    encoding: 'utf8',
+    encoding: 'utf8'
   })
 }
 
@@ -34,9 +34,7 @@ afterEach(async () => {
 })
 
 test('rejects production folders with more than ten source files', async () => {
-  const root = await createRoot(
-    Array.from({ length: 11 }, (_, index) => `src/module-${index + 1}.js`),
-  )
+  const root = await createRoot(Array.from({ length: 11 }, (_, index) => `src/module-${index + 1}.js`))
 
   const result = runGate(root)
 
@@ -47,11 +45,8 @@ test('rejects production folders with more than ten source files', async () => {
 test('does not count test suites or their fixture modules as production files', async () => {
   const root = await createRoot([
     'src/production.js',
-    ...Array.from(
-      { length: 11 },
-      (_, index) => `src/responsibility-${index + 1}-fixture.js`,
-    ),
-    ...Array.from({ length: 11 }, (_, index) => `src/suite-${index + 1}.test.js`),
+    ...Array.from({ length: 11 }, (_, index) => `src/responsibility-${index + 1}-fixture.js`),
+    ...Array.from({ length: 11 }, (_, index) => `src/suite-${index + 1}.test.js`)
   ])
 
   const result = runGate(root)

@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "// NOTE: We avoid fmt.Println here because WriteOutput handles agent detection.\n// See DECISION-003 for rationale."}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "// NOTE: We avoid fmt.Println here because WriteOutput handles agent detection.\n// See DECISION-003 for rationale."
+    }
   },
   "expect": {
     "has_output": false,

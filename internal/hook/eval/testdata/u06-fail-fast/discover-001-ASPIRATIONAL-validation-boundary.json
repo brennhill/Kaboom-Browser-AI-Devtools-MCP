@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "func process(input string) error {\n\treturn nil\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "func process(input string) error {\n\treturn nil\n}"
+    }
   },
   "expect": {
     "has_output": true,

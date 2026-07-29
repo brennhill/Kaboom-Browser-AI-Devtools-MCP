@@ -103,9 +103,7 @@ export async function closeTerminalSidePanel(): Promise<{ success: boolean; erro
  * openTerminalSidePanel() with zero awaits before chrome.sidePanel.open(), so
  * the caller's user gesture survives.
  */
-export function toggleTerminalSidePanel(
-  tabId: number | undefined
-): Promise<{ success: boolean; error?: string }> {
+export function toggleTerminalSidePanel(tabId: number | undefined): Promise<{ success: boolean; error?: string }> {
   if (isTerminalPanelOpenSync()) {
     return closeTerminalSidePanel()
   }
@@ -168,9 +166,7 @@ async function refineTerminalWorkspace(tabId: number | undefined): Promise<void>
  * get a full gesture *and* hand us the tab synchronously, so those paths are the
  * dependable ones — see installTerminalPanelCommandListener.
  */
-export async function openTerminalSidePanel(
-  tabId: number | undefined
-): Promise<{ success: boolean; error?: string }> {
+export async function openTerminalSidePanel(tabId: number | undefined): Promise<{ success: boolean; error?: string }> {
   if (typeof chrome === 'undefined' || !chrome.sidePanel?.open) {
     return { success: false, error: 'side panel unavailable' }
   }

@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/protocol.go", "new_string": "fmt.Println(errors.New(\"bad error message\"))"}
+    "tool_input": {
+      "file_path": "internal/hook/protocol.go",
+      "new_string": "fmt.Println(errors.New(\"bad error message\"))"
+    }
   },
   "expect": {
     "has_output": true,

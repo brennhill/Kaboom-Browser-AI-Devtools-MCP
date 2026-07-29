@@ -22,9 +22,7 @@ interface DoctorReport {
   checks: DoctorCheck[]
 }
 
-type DoctorFetch = (
-  input: string
-) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>
+type DoctorFetch = (input: string) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>
 
 function doctorElements(): {
   host: HTMLElement | null
@@ -95,12 +93,20 @@ export async function refreshSystemDoctor(
   try {
     const response = await fetchImpl(`${status.serverUrl ?? 'http://127.0.0.1:7890'}/doctor`)
     if (!response.ok) {
-      renderMessage('Check failed', `System Doctor returned HTTP ${response.status}. Retry after restarting the daemon.`, 'fail')
+      renderMessage(
+        'Check failed',
+        `System Doctor returned HTTP ${response.status}. Retry after restarting the daemon.`,
+        'fail'
+      )
       return
     }
     const report = await response.json()
     if (!isDoctorReport(report)) {
-      renderMessage('Check failed', 'System Doctor returned an invalid report. Update the daemon and extension.', 'fail')
+      renderMessage(
+        'Check failed',
+        'System Doctor returned an invalid report. Update the daemon and extension.',
+        'fail'
+      )
       return
     }
     renderReport(report)

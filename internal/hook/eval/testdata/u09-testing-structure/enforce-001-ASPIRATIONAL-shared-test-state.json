@@ -4,7 +4,10 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "internal/hook/quality_gate_test.go", "new_string": "var testCounter int\n\nfunc TestA(t *testing.T) {\n\ttestCounter++\n\tif testCounter != 1 { t.Fatal(\"order dependent\") }\n}\n\nfunc TestB(t *testing.T) {\n\ttestCounter++\n\tif testCounter != 2 { t.Fatal(\"order dependent\") }\n}"}
+    "tool_input": {
+      "file_path": "internal/hook/quality_gate_test.go",
+      "new_string": "var testCounter int\n\nfunc TestA(t *testing.T) {\n\ttestCounter++\n\tif testCounter != 1 { t.Fatal(\"order dependent\") }\n}\n\nfunc TestB(t *testing.T) {\n\ttestCounter++\n\tif testCounter != 2 { t.Fatal(\"order dependent\") }\n}"
+    }
   },
   "expect": {
     "has_output": true,
