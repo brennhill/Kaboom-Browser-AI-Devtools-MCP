@@ -22,7 +22,9 @@ function createChromeMock({ trackedTabId = null, drawModeActive = false } = {}) 
     storage: {
       local: {
         get: mock.fn((key) => {
-          if (key === 'trackedTabId') return Promise.resolve({ trackedTabId })
+          if (key === 'trackedTabId' || (Array.isArray(key) && key.includes('trackedTabId'))) {
+            return Promise.resolve({ trackedTabId })
+          }
           return Promise.resolve({})
         })
       }
@@ -100,4 +102,3 @@ describe('context menu dynamic labels', () => {
     assert.ok(updates.some(([id, title]) => id === 'kaboom-action-record' && title === 'Record User Actions'))
   })
 })
-

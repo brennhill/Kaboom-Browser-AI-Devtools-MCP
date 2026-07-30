@@ -153,6 +153,7 @@ describe('Action Toasts Toggle', () => {
 
     const { initRuntimeMessageListener } = await import('../../../extension/content/runtime-message-listener.js')
     initRuntimeMessageListener()
+    await new Promise((resolve) => setImmediate(resolve))
 
     // Send a toast message — should NOT be suppressed
     sendRuntimeMessage({
@@ -176,6 +177,7 @@ describe('Action Toasts Toggle', () => {
 
     const { initRuntimeMessageListener } = await import('../../../extension/content/runtime-message-listener.js')
     initRuntimeMessageListener()
+    await new Promise((resolve) => setImmediate(resolve))
 
     // Reset createElement calls from init
     mockDocument.createElement.mock.resetCalls()
@@ -460,6 +462,7 @@ describe('Overlay Toggle Edge Cases', () => {
 
     const { initRuntimeMessageListener } = await import('../../../extension/content/runtime-message-listener.js')
     initRuntimeMessageListener()
+    await new Promise((resolve) => setImmediate(resolve))
 
     mockDocument.createElement.mock.resetCalls()
 
