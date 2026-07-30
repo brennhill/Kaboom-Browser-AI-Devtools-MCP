@@ -255,6 +255,7 @@ if (typeof window !== 'undefined') {
             const result = highlightElement(selector, duration_ms);
             window.postMessage({
                 type: 'kaboom_highlight_response',
+                _nonce: pageNonce,
                 requestId,
                 result
             }, window.location.origin);

@@ -158,6 +158,12 @@ signatures for duplicate-delivery protection. In-progress commands remain in
 their separate active map until completion. The short terminal window prevents
 a restarted daemon's reused query IDs from being mistaken for stale commands;
 durable event recordings are owned independently by `RecordingManager`.
+Sync reconciliation tolerates partial heartbeat/result batches: an
+acknowledged command that briefly disappears from `in_progress` remains pending
+for a bounded two-second result-delivery grace. A command still absent after
+that grace fails with `extension_lost_command`, preserving fast recovery from a
+genuinely lost extension worker without racing valid subtitle, highlight, or
+DOM-action results already being flushed.
 Aggregate health reads are owned by `capture.HealthReader`; it snapshots the
 independently synchronized telemetry, query, extension, and circuit owners
 without a cross-owner method on `Capture`.

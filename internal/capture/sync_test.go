@@ -275,7 +275,12 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 		t.Fatalf("command status after first miss = %q, want pending", cmd.Status)
 	}
 
-	// Third sync still has no in_progress entry -> command should fail fast.
+	// Move the deterministic reconciliation clock beyond the bounded grace.
+	mutateExtensionStateForTest(cap.Extension(), func(state *ExtensionState) {
+		state.missingInProgressSince[corrID] = time.Now().Add(-missingInProgressGrace)
+	})
+
+	// Third sync still has no in_progress entry after the grace -> fail fast.
 	thirdReqBody := mustMarshalJSON(t, map[string]any{
 		"ext_session_id": "session-1",
 		"in_progress":    []any{},
@@ -294,6 +299,62 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 	}
 	if !strings.Contains(cmd.Error, "extension_lost_command") {
 		t.Fatalf("command error = %q, want extension_lost_command", cmd.Error)
+	}
+}
+
+func TestHandleSync_ImmediateMissingHeartbeatsDoNotFailResultInFlight(t *testing.T) {
+	t.Parallel()
+	cap := NewCapture()
+
+	corrID := "corr-result-in-flight"
+	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+		Type:          "browser_action",
+		Params:        json.RawMessage(`{"action":"highlight","selector":"#target"}`),
+		CorrelationID: corrID,
+	}, queries.AsyncCommandTimeout, "")
+	if queryID == "" {
+		t.Fatal("expected queryID")
+	}
+
+	runSyncRawRequest(t, cap, "POST", []byte(`{"ext_session_id":"session-1","in_progress":[]}`))
+	for i := 0; i < 3; i++ {
+		body := mustMarshalJSON(t, map[string]any{
+			"ext_session_id":   "session-1",
+			"last_command_ack": queryID,
+			"in_progress":      []any{},
+		})
+		response := runSyncRawRequest(t, cap, "POST", body)
+		if response.Code != http.StatusOK {
+			t.Fatalf("heartbeat %d status = %d, want 200", i+1, response.Code)
+		}
+	}
+
+	cmd, found := cap.Queries().GetCommandResult(corrID)
+	if !found {
+		t.Fatal("expected command result after immediate partial heartbeats")
+	}
+	if cmd.Status != "pending" {
+		t.Fatalf("command status = %q, want pending while terminal result is in flight", cmd.Status)
+	}
+
+	terminalBody := mustMarshalJSON(t, map[string]any{
+		"ext_session_id": "session-1",
+		"command_results": []map[string]any{{
+			"id":             queryID,
+			"correlation_id": corrID,
+			"status":         "complete",
+			"result":         map[string]any{"success": true},
+		}},
+		"in_progress": []any{},
+	})
+	terminalResponse := runSyncRawRequest(t, cap, "POST", terminalBody)
+	if terminalResponse.Code != http.StatusOK {
+		t.Fatalf("terminal result status = %d, want 200", terminalResponse.Code)
+	}
+
+	cmd, found = cap.Queries().GetCommandResult(corrID)
+	if !found || cmd.Status != "complete" {
+		t.Fatalf("terminal command = %#v, found=%v; want complete", cmd, found)
 	}
 }
 

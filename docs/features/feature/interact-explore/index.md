@@ -165,6 +165,10 @@ handler modules directly; the injected bundle is not an API surface.
 Every content/inject `window.postMessage` request and response requires the
 current per-page nonce. Missing and mismatched nonces fail closed; there is no
 unauthenticated migration path.
+Highlight responses explicitly echo that authenticated nonce. This lets the
+content listener resolve a valid highlight immediately while continuing to
+reject missing or mismatched response envelopes instead of waiting for the
+command timeout.
 Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
 `interact` screenshot compatibility action has been removed.
 State snapshot handlers accept only the canonical `snapshot_name` parameter;

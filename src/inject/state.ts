@@ -308,6 +308,7 @@ if (typeof window !== 'undefined') {
       window.postMessage(
         {
           type: 'kaboom_highlight_response',
+          _nonce: pageNonce,
           requestId,
           result
         },

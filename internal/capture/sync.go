@@ -261,7 +261,7 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	// Reconcile started commands against extension heartbeat state.
 	// If a command disappears from heartbeat in_progress without a terminal result,
 	// fail it fast instead of waiting for eventual timeout.
-	h.reconcileInProgressCommandState(req.InProgress)
+	h.reconcileInProgressCommandState(req.InProgress, now)
 
 	pendingQueries := h.capture.Queries().GetPendingQueries()
 	if len(pendingQueries) == 0 {
@@ -520,7 +520,9 @@ func commandHasStarted(command *queries.CommandResult) bool {
 	return strings.Contains(command.TraceTimeline, "started")
 }
 
-func (h *SyncHandler) reconcileInProgressCommandState(inProgress []SyncInProgress) {
+const missingInProgressGrace = 2 * time.Second
+
+func (h *SyncHandler) reconcileInProgressCommandState(inProgress []SyncInProgress, now time.Time) {
 	if inProgress == nil {
 		return
 	}
@@ -532,7 +534,7 @@ func (h *SyncHandler) reconcileInProgressCommandState(inProgress []SyncInProgres
 		}
 	}
 	pending := h.capture.Queries().GetPendingCommands()
-	toFail, toFailIDs := h.capture.extension.reconcileMissingCommands(pending, active)
+	toFail, toFailIDs := h.capture.extension.reconcileMissingCommands(pending, active, now)
 
 	for i, correlationID := range toFail {
 		queryID := ""
@@ -558,6 +560,7 @@ func (h *SyncHandler) reconcileInProgressCommandState(inProgress []SyncInProgres
 func (r *ExtensionRuntime) reconcileMissingCommands(
 	pending []*queries.CommandResult,
 	active map[string]struct{},
+	now time.Time,
 ) (toFail []string, toFailIDs []string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -570,22 +573,26 @@ func (r *ExtensionRuntime) reconcileMissingCommands(
 		correlationID := command.CorrelationID
 		pendingCorrelations[correlationID] = struct{}{}
 		if _, ok := active[correlationID]; ok {
-			delete(r.state.missingInProgressByCorr, correlationID)
+			delete(r.state.missingInProgressSince, correlationID)
 			continue
 		}
 		if !commandHasStarted(command) {
 			continue
 		}
-		r.state.missingInProgressByCorr[correlationID]++
-		if r.state.missingInProgressByCorr[correlationID] >= 2 {
+		missingSince, observedMissing := r.state.missingInProgressSince[correlationID]
+		if !observedMissing {
+			r.state.missingInProgressSince[correlationID] = now
+			continue
+		}
+		if now.Sub(missingSince) >= missingInProgressGrace {
 			toFail = append(toFail, correlationID)
 			toFailIDs = append(toFailIDs, command.QueryID)
-			delete(r.state.missingInProgressByCorr, correlationID)
+			delete(r.state.missingInProgressSince, correlationID)
 		}
 	}
-	for correlationID := range r.state.missingInProgressByCorr {
+	for correlationID := range r.state.missingInProgressSince {
 		if _, stillPending := pendingCorrelations[correlationID]; !stillPending {
-			delete(r.state.missingInProgressByCorr, correlationID)
+			delete(r.state.missingInProgressSince, correlationID)
 		}
 	}
 	return toFail, toFailIDs

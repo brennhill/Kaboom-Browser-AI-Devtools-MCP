@@ -4123,6 +4123,7 @@ if (typeof window !== "undefined") {
       const result = highlightElement(selector, duration_ms);
       window.postMessage({
         type: "kaboom_highlight_response",
+        _nonce: pageNonce2,
         requestId,
         result
       }, window.location.origin);
