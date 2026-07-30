@@ -181,7 +181,7 @@ OpenAPI contract.
   instead of silently configuring every JSON client. The native TOML writer
   preserves comments and unrelated tables and atomically replaces only the
   canonical Kaboom server block.
-- Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected, including in the reliability soak gate.
+- Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected, including in the reliability soak gate. Doctor drains accepted asynchronous fast-path telemetry before reading its log so diagnostics and temporary-state cleanup use a stable snapshot.
 - Runtime help uses one canonical configure mode, `tutorial`; the duplicate `examples` mode is rejected.
 - Tutorial context receives its three live browser signals through an explicit
   dependency value composed at startup; it no longer requires ToolHandler to

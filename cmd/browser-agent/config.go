@@ -31,6 +31,9 @@ import (
 type multiFlag []string
 
 func runSetupCheckWithOptions(port int, options setupCheckOptions) bool {
+	// Doctor must inspect a stable snapshot. Fast-path writes are intentionally
+	// asynchronous, so drain accepted records before reading their log.
+	bridge.FlushFastPathTelemetry()
 	return health.RunSetupCheckWithOptions(port, health.SetupCheckOptions{
 		MinSamples: options.minSamples, MaxFailureRatio: options.maxFailureRatio,
 	}, health.SetupDeps{
