@@ -52,6 +52,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
@@ -152,7 +153,8 @@ type ToolHandler struct {
 	toolCatalog *toolcatalog.Catalog
 
 	// Session-level response-mode preference.
-	summaryPrefs *summarypref.Cache
+	summaryPrefs  *summarypref.Cache
+	stateRecovery *statediag.Collector
 
 	// noiseFirstConnectFn overrides the noise auto-detect function for first-connection.
 	// When nil, the canonical noiseautorun detector is used.
@@ -370,9 +372,10 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.healthMetrics = health.NewMetrics()
 	handler.toolCallLimiter = toolresp.NewToolCallLimiter(500, time.Minute)
 	handler.alertBuffer = alertbuf.NewAlertBuffer()
+	handler.stateRecovery = statediag.NewCollector()
 
 	if currentDirectory, err := os.Getwd(); err == nil {
-		if store, storeErr := persistence.NewSessionStore(currentDirectory); storeErr == nil {
+		if store, storeErr := persistence.NewSessionStore(currentDirectory, handler.stateRecovery); storeErr == nil {
 			handler.sessionStoreImpl = store
 		}
 	}
@@ -381,9 +384,9 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 			return nil, nil
 		}
 		return handler.sessionStoreImpl.Load("session", "response_mode")
-	})
+	}, handler.stateRecovery)
 	if handler.sessionStoreImpl != nil {
-		handler.noiseConfig = noise.NewNoiseConfigWithStore(handler.sessionStoreImpl)
+		handler.noiseConfig = noise.NewNoiseConfigWithStore(handler.sessionStoreImpl, handler.stateRecovery)
 	} else {
 		handler.noiseConfig = noise.NewNoiseConfig()
 	}
@@ -576,6 +579,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		Interact:       handler.toolInteract,
 		WaitForCommand: waitForSequenceCommand,
 		RecordAction:   handler.actionRecorder.Record,
+		Diagnostics:    handler.stateRecovery,
 	})
 	handler.configureDispatcher = buildConfigureDispatcher(handler)
 	handler.toolCatalog = buildToolCatalog(handler)

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 type memoryStore map[string][]byte
@@ -15,6 +16,27 @@ type memoryStore map[string][]byte
 func (s memoryStore) Save(namespace, key string, data []byte) error {
 	s[namespace+"/"+key] = append([]byte(nil), data...)
 	return nil
+}
+
+func TestHandlerReportsMalformedSequenceRecovery(t *testing.T) {
+	t.Parallel()
+
+	store := memoryStore{"sequences/broken": []byte(`{"token":"secret"`)}
+	diagnostics := statediag.NewCollector()
+	handler := New(Deps{Store: store, Diagnostics: diagnostics})
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+
+	response := handler.List(req, json.RawMessage(`{}`))
+	if responseIsError(response) || !containsResult(response, `count\":0`) {
+		t.Fatalf("List() response = %s, want empty successful fallback", response.Result)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "saved_sequence_state" || got[0].Fix == "" {
+		t.Fatalf("diagnostics = %#v, want actionable sequence warning", got)
+	}
+	if got[0].Detail == `{"token":"secret"` {
+		t.Fatalf("diagnostic leaked persisted sequence: %#v", got[0])
+	}
 }
 
 func (s memoryStore) Load(namespace, key string) ([]byte, error) {

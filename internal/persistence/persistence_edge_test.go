@@ -170,7 +170,7 @@ func TestSessionStore_GetMetaNil(t *testing.T) {
 	projectPath := t.TempDir()
 	projectDir := filepath.Join(t.TempDir(), "projects", "nil-meta-test")
 
-	store, err := newSessionStoreInDir(projectPath, projectDir, time.Hour)
+	store, err := newSessionStoreInDir(projectPath, projectDir, time.Hour, nil)
 	if err != nil {
 		t.Fatalf("newSessionStoreInDir error = %v", err)
 	}
@@ -282,6 +282,7 @@ func TestSessionStore_SaveLoadCycle(t *testing.T) {
 		t.Errorf("enabled = %v, want true", result["enabled"])
 	}
 }
+
 // ============================================
 // loadJSONFileAs: various inputs
 // ============================================
@@ -290,13 +291,14 @@ func TestLoadJSONFileAs(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
+	store := &SessionStore{}
 
 	// Valid JSON file
 	validPath := filepath.Join(dir, "valid.json")
 	if err := os.WriteFile(validPath, []byte(`{"key":"value"}`), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	result := loadJSONFileAs(validPath)
+	result := store.loadJSONFileAs(validPath, "test_state")
 	if result == nil {
 		t.Fatal("valid JSON should return non-nil map")
 	}
@@ -305,7 +307,7 @@ func TestLoadJSONFileAs(t *testing.T) {
 	}
 
 	// Non-existent file
-	result = loadJSONFileAs(filepath.Join(dir, "missing.json"))
+	result = store.loadJSONFileAs(filepath.Join(dir, "missing.json"), "test_state")
 	if result != nil {
 		t.Error("missing file should return nil")
 	}
@@ -315,7 +317,7 @@ func TestLoadJSONFileAs(t *testing.T) {
 	if err := os.WriteFile(invalidPath, []byte("{bad json"), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	result = loadJSONFileAs(invalidPath)
+	result = store.loadJSONFileAs(invalidPath, "test_state")
 	if result != nil {
 		t.Error("invalid JSON should return nil")
 	}
@@ -325,7 +327,7 @@ func TestLoadJSONFileAs(t *testing.T) {
 	if err := os.WriteFile(arrayPath, []byte(`[1,2,3]`), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	result = loadJSONFileAs(arrayPath)
+	result = store.loadJSONFileAs(arrayPath, "test_state")
 	if result != nil {
 		t.Error("JSON array should return nil (expects object)")
 	}
@@ -380,9 +382,10 @@ func TestLoadErrorHistory_Various(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
+	store := &SessionStore{}
 
 	// Non-existent file
-	result := loadErrorHistory(filepath.Join(dir, "missing.json"))
+	result := store.loadErrorHistory(filepath.Join(dir, "missing.json"))
 	if result != nil {
 		t.Error("missing file should return nil")
 	}
@@ -396,7 +399,7 @@ func TestLoadErrorHistory_Various(t *testing.T) {
 	if err := os.WriteFile(validPath, data, 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	result = loadErrorHistory(validPath)
+	result = store.loadErrorHistory(validPath)
 	if len(result) != 1 || result[0].Fingerprint != "err-1" || result[0].Count != 3 {
 		t.Errorf("valid typed entries: got %+v", result)
 	}
@@ -406,7 +409,7 @@ func TestLoadErrorHistory_Various(t *testing.T) {
 	if err := os.WriteFile(invalidPath, []byte("{bad"), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	result = loadErrorHistory(invalidPath)
+	result = store.loadErrorHistory(invalidPath)
 	if result != nil {
 		t.Error("invalid JSON should return nil")
 	}
@@ -417,7 +420,7 @@ func TestLoadErrorHistory_Various(t *testing.T) {
 	if err := os.WriteFile(genericPath, []byte(genericData), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	result = loadErrorHistory(genericPath)
+	result = store.loadErrorHistory(genericPath)
 	if len(result) != 1 {
 		t.Fatalf("generic fallback should return 1 entry, got %d", len(result))
 	}
@@ -581,14 +584,14 @@ func TestSessionStore_LoadOrCreateMetaExisting(t *testing.T) {
 	// Create store (first session)
 	projectPath := t.TempDir()
 	projectDir := filepath.Join(t.TempDir(), "projects", "existing-meta-test")
-	store1, err := newSessionStoreInDir(projectPath, projectDir, time.Hour)
+	store1, err := newSessionStoreInDir(projectPath, projectDir, time.Hour, nil)
 	if err != nil {
 		t.Fatalf("first store error = %v", err)
 	}
 	store1.Shutdown()
 
 	// Create second store (second session - should increment session count)
-	store2, err := newSessionStoreInDir(projectPath, projectDir, time.Hour)
+	store2, err := newSessionStoreInDir(projectPath, projectDir, time.Hour, nil)
 	if err != nil {
 		t.Fatalf("second store error = %v", err)
 	}

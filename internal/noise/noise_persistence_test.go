@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func newNoiseTestSessionStore(t *testing.T) *persistence.SessionStore {
 	t.Helper()
-	store, err := persistence.NewSessionStoreWithInterval(t.TempDir(), time.Hour)
+	store, err := persistence.NewSessionStoreWithInterval(t.TempDir(), time.Hour, nil)
 	if err != nil {
 		t.Fatalf("NewSessionStoreWithInterval() error = %v", err)
 	}
@@ -27,7 +28,7 @@ func TestNoiseConfigWithStorePersistsAndReloadsUserRules(t *testing.T) {
 	t.Parallel()
 
 	store := newNoiseTestSessionStore(t)
-	nc := NewNoiseConfigWithStore(store)
+	nc := NewNoiseConfigWithStore(store, nil)
 
 	if err := nc.AddRules([]NoiseRule{
 		{
@@ -50,7 +51,7 @@ func TestNoiseConfigWithStorePersistsAndReloadsUserRules(t *testing.T) {
 		t.Fatal("expected rule to match before reload")
 	}
 
-	reloaded := NewNoiseConfigWithStore(store)
+	reloaded := NewNoiseConfigWithStore(store, nil)
 	rules := reloaded.ListRules()
 
 	foundPersistedRule := false
@@ -163,7 +164,7 @@ func TestNoiseConfigWithStoreLoadsValidRulesOnly(t *testing.T) {
 		t.Fatalf("store.Save(noise/rules) error = %v", err)
 	}
 
-	nc := NewNoiseConfigWithStore(store)
+	nc := NewNoiseConfigWithStore(store, nil)
 	rules := nc.ListRules()
 
 	hasKeep := false
@@ -226,15 +227,16 @@ func TestNoiseConfigWithStoreIgnoresCorruptOrUnsupportedData(t *testing.T) {
 			t.Fatalf("store.Save() error = %v", err)
 		}
 
-		nc := NewNoiseConfigWithStore(store)
-		diagnostic, ok := nc.PersistenceDiagnostic()
-		if !ok {
+		diagnostics := statediag.NewCollector()
+		nc := NewNoiseConfigWithStore(store, diagnostics)
+		got := diagnostics.Snapshot()
+		if len(got) != 1 {
 			t.Fatal("corrupt persisted data should retain a Doctor diagnostic")
 		}
-		if diagnostic.Kind != "corrupt_json" {
-			t.Fatalf("diagnostic kind = %q, want corrupt_json", diagnostic.Kind)
+		if got[0].Name != "noise_rule_state" {
+			t.Fatalf("diagnostic name = %q, want noise_rule_state", got[0].Name)
 		}
-		if diagnostic.Fix == "" {
+		if got[0].Fix == "" {
 			t.Fatal("corrupt persisted data should provide remediation")
 		}
 		for _, r := range nc.ListRules() {
@@ -267,10 +269,11 @@ func TestNoiseConfigWithStoreIgnoresCorruptOrUnsupportedData(t *testing.T) {
 			t.Fatalf("store.Save() error = %v", err)
 		}
 
-		nc := NewNoiseConfigWithStore(store)
-		diagnostic, ok := nc.PersistenceDiagnostic()
-		if !ok || diagnostic.Kind != "unsupported_version" {
-			t.Fatalf("unsupported version diagnostic = %#v, %v", diagnostic, ok)
+		diagnostics := statediag.NewCollector()
+		nc := NewNoiseConfigWithStore(store, diagnostics)
+		got := diagnostics.Snapshot()
+		if len(got) != 1 || got[0].Name != "noise_rule_state" {
+			t.Fatalf("unsupported version diagnostic = %#v", got)
 		}
 		for _, r := range nc.ListRules() {
 			if r.ID == "user_1" {

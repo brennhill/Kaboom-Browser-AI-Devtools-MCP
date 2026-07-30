@@ -29,6 +29,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -61,7 +62,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 				h.healthMetrics,
 				h.capture,
 				h.Guards.DiagnosticHintString,
-				noisePersistenceDoctorChecks(h.noiseConfig),
+				recoveryDoctorChecks(h.stateRecovery),
 				req,
 			)
 		},
@@ -200,20 +201,18 @@ func handleConfigureDoctor(
 	})
 }
 
-func noisePersistenceDoctorChecks(config *noise.NoiseConfig) []health.DoctorCheck {
-	if config == nil {
+func recoveryDoctorChecks(diagnostics interface{ Snapshot() []statediag.Diagnostic }) []health.DoctorCheck {
+	if diagnostics == nil {
 		return nil
 	}
-	diagnostic, ok := config.PersistenceDiagnostic()
-	if !ok {
-		return nil
+	snapshot := diagnostics.Snapshot()
+	checks := make([]health.DoctorCheck, 0, len(snapshot))
+	for _, diagnostic := range snapshot {
+		checks = append(checks, health.DoctorCheck{
+			Name: diagnostic.Name, Status: "warn", Detail: diagnostic.Detail, Fix: diagnostic.Fix,
+		})
 	}
-	return []health.DoctorCheck{{
-		Name:   "noise_rule_state",
-		Status: "warn",
-		Detail: diagnostic.Detail,
-		Fix:    diagnostic.Fix,
-	}}
+	return checks
 }
 
 type serverDepsAdapter struct{ s *Server }

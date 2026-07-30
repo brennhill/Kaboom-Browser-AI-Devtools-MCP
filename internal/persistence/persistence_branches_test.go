@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 func TestSessionStoreNewAndGetMetaCopy(t *testing.T) {
@@ -17,7 +19,7 @@ func TestSessionStoreNewAndGetMetaCopy(t *testing.T) {
 	projectPath := t.TempDir()
 	projectDir := filepath.Join(t.TempDir(), "projects", "test")
 
-	store, err := newSessionStoreInDir(projectPath, projectDir, defaultFlushInterval)
+	store, err := newSessionStoreInDir(projectPath, projectDir, defaultFlushInterval, nil)
 	if err != nil {
 		t.Fatalf("NewSessionStore() error = %v", err)
 	}
@@ -35,6 +37,78 @@ func TestSessionStoreNewAndGetMetaCopy(t *testing.T) {
 	fresh := store.GetMeta()
 	if fresh.SessionCount < 1 {
 		t.Fatalf("GetMeta() should return a copy, got SessionCount=%d", fresh.SessionCount)
+	}
+}
+
+func TestSessionStoreRecoversMalformedMetadataAndContext(t *testing.T) {
+	t.Parallel()
+
+	projectPath := t.TempDir()
+	projectDir := filepath.Join(t.TempDir(), "project-state")
+	if err := os.MkdirAll(projectDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, "meta.json"), []byte(`{"secret":`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	diagnostics := statediag.NewCollector()
+	store, err := newSessionStoreInDir(projectPath, projectDir, defaultFlushInterval, diagnostics)
+	if err != nil {
+		t.Fatalf("malformed metadata must not block startup: %v", err)
+	}
+	t.Cleanup(store.Shutdown)
+	if store.GetMeta().SessionCount != 1 {
+		t.Fatalf("metadata fallback = %#v, want fresh session", store.GetMeta())
+	}
+
+	errorDir := filepath.Join(projectDir, "errors")
+	if err := os.MkdirAll(errorDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(errorDir, "history.json"), []byte(`{"token":"secret"`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	context := store.LoadSessionContext()
+	if len(context.ErrorHistory) != 0 {
+		t.Fatalf("error history fallback = %#v, want empty", context.ErrorHistory)
+	}
+
+	got := diagnostics.Snapshot()
+	if len(got) != 2 || got[0].Fix == "" || got[1].Fix == "" {
+		t.Fatalf("recovery diagnostics = %#v, want metadata and error-history warnings", got)
+	}
+	for _, diagnostic := range got {
+		if diagnostic.Detail == `{"token":"secret"` || diagnostic.Detail == `{"secret":` {
+			t.Fatalf("diagnostic leaked raw state: %#v", diagnostic)
+		}
+	}
+}
+
+func TestSessionStoreReportsMalformedExplicitLoad(t *testing.T) {
+	t.Parallel()
+
+	diagnostics := statediag.NewCollector()
+	store, err := newSessionStoreInDir(t.TempDir(), t.TempDir(), defaultFlushInterval, diagnostics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(store.Shutdown)
+	if err := store.Save("session", "broken", []byte(`{"token":"secret"`)); err != nil {
+		t.Fatal(err)
+	}
+	result, err := store.HandleSessionStore(SessionStoreArgs{
+		Action: "load", Namespace: "session", Key: "broken",
+	})
+	if err != nil {
+		t.Fatalf("malformed explicit load should retain a safe response: %v", err)
+	}
+	if string(result) == "" {
+		t.Fatal("malformed explicit load returned no response")
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "stored_session_state" || got[0].Fix == "" {
+		t.Fatalf("diagnostics = %#v, want actionable stored-session warning", got)
 	}
 }
 

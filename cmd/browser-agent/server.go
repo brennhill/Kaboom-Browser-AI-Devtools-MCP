@@ -625,7 +625,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, _ *http.Request) {
 		var extraChecks []health.DoctorCheck
 		if handler, ok := mcpHandler.tools.Executor.(*ToolHandler); ok {
-			extraChecks = noisePersistenceDoctorChecks(handler.noiseConfig)
+			extraChecks = recoveryDoctorChecks(handler.stateRecovery)
 		}
 		health.HandleDoctorHTTP(w, captured, version, extraChecks...)
 	}))

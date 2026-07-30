@@ -11,19 +11,24 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
-func NewSessionStore(projectPath string) (*SessionStore, error) {
-	return NewSessionStoreWithInterval(projectPath, defaultFlushInterval)
+func NewSessionStore(projectPath string, diagnostics statediag.Reporter) (*SessionStore, error) {
+	return NewSessionStoreWithInterval(projectPath, defaultFlushInterval, diagnostics)
 }
 
-func NewSessionStoreWithInterval(projectPath string, flushInterval time.Duration) (*SessionStore, error) {
+func NewSessionStoreWithInterval(
+	projectPath string,
+	flushInterval time.Duration,
+	diagnostics statediag.Reporter,
+) (*SessionStore, error) {
 	absPath, projectDir, err := resolveProjectDir(projectPath)
 	if err != nil {
 		return nil, err
 	}
-	return newSessionStoreInDir(absPath, projectDir, flushInterval)
+	return newSessionStoreInDir(absPath, projectDir, flushInterval, diagnostics)
 }
 
 func resolveProjectDir(projectPath string) (absPath, projectDir string, err error) {
@@ -41,13 +46,18 @@ func resolveProjectDir(projectPath string) (absPath, projectDir string, err erro
 	return absPath, projectDir, nil
 }
 
-func newSessionStoreInDir(projectPath, projectDir string, flushInterval time.Duration) (*SessionStore, error) {
+func newSessionStoreInDir(
+	projectPath, projectDir string,
+	flushInterval time.Duration,
+	diagnostics statediag.Reporter,
+) (*SessionStore, error) {
 	s := &SessionStore{
 		projectPath:   projectPath,
 		projectDir:    projectDir,
 		dirty:         make(map[string][]byte),
 		flushInterval: flushInterval,
 		stopCh:        make(chan struct{}),
+		diagnostics:   diagnostics,
 	}
 
 	if err := os.MkdirAll(projectDir, dirPermissions); err != nil {
@@ -73,6 +83,14 @@ func (s *SessionStore) loadOrCreateMeta() error {
 			LastSession:  now,
 			SessionCount: 1,
 		}
+		if err != nil && !os.IsNotExist(err) {
+			s.reportRecovery(
+				"session_metadata_state",
+				"Project session metadata could not be read; a fresh in-memory session is active.",
+				"Check permissions for the project .kaboom directory, then restart Kaboom.",
+			)
+			return nil
+		}
 		return s.saveMeta()
 	}
 
@@ -86,13 +104,28 @@ func (s *SessionStore) loadOrCreateMeta() error {
 			LastSession:  now,
 			SessionCount: 1,
 		}
-		return s.saveMeta()
+		s.reportRecovery(
+			"session_metadata_state",
+			"Project session metadata was malformed; a fresh session replaced it.",
+			"Restart Kaboom after confirming the project .kaboom directory is writable.",
+		)
+		if saveErr := s.saveMeta(); saveErr != nil {
+			return nil
+		}
+		return nil
 	}
 
 	meta.SessionCount++
 	meta.LastSession = time.Now()
 	s.meta = &meta
 	return s.saveMeta()
+}
+
+func (s *SessionStore) reportRecovery(name, detail, fix string) {
+	if s == nil || s.diagnostics == nil {
+		return
+	}
+	s.diagnostics.Report(statediag.Diagnostic{Name: name, Detail: detail, Fix: fix})
 }
 
 func (s *SessionStore) saveMeta() error {

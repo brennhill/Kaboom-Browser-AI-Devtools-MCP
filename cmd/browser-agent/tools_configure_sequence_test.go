@@ -19,7 +19,7 @@ func newSequenceTestEnv(t *testing.T) *toolTestEnv {
 	t.Helper()
 	env := newToolTestEnv(t)
 	// Replace session store with one backed by t.TempDir for isolation
-	store, err := persistence.NewSessionStore(t.TempDir())
+	store, err := persistence.NewSessionStore(t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("failed to create isolated session store: %v", err)
 	}
@@ -31,6 +31,7 @@ func newSequenceTestEnv(t *testing.T) *toolTestEnv {
 		Interact:       env.handler.toolInteract,
 		WaitForCommand: env.handler.capture.Queries().WaitForCommand,
 		RecordAction:   env.handler.actionRecorder.Record,
+		Diagnostics:    env.handler.stateRecovery,
 	})
 	return env
 }

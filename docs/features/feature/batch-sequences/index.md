@@ -4,7 +4,7 @@ feature_id: feature-batch-sequences
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-30
 code_paths:
   - cmd/browser-agent/internal/replay/contract.go
   - cmd/browser-agent/internal/sequencehandler/handler.go
@@ -54,3 +54,6 @@ the canonical `what` discriminator. Tool composition constructs one
 directly; no ToolHandler forwarding methods or per-request handler factory
 remain. Batch and replay audit entries use the same
 `internal/recording/actionlog.Recorder` as direct interact actions.
+Malformed or unreadable saved sequences are isolated from valid siblings and
+omitted from listings. The handler reports the recovery through System Doctor
+without retaining the saved payload.

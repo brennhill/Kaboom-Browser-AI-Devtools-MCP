@@ -4,7 +4,10 @@ package summarypref
 
 import (
 	"encoding/json"
+	"errors"
 	"sync"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 type Loader func() ([]byte, error)
@@ -14,10 +17,11 @@ type Cache struct {
 	load   Loader
 	value  bool
 	loaded bool
+	report statediag.Reporter
 }
 
-func New(load Loader) *Cache {
-	return &Cache{load: load}
+func New(load Loader, report statediag.Reporter) *Cache {
+	return &Cache{load: load, report: report}
 }
 
 func (c *Cache) Enabled() bool {
@@ -44,17 +48,35 @@ func (c *Cache) Enabled() bool {
 		return false
 	}
 	data, err := c.load()
-	if err != nil || len(data) == 0 {
+	if err != nil {
+		if !errors.Is(err, statediag.ErrAbsent) {
+			c.reportRecovery("Saved response-mode preference could not be read; full responses are active.")
+		}
+		return false
+	}
+	if len(data) == 0 {
 		return false
 	}
 	var pref struct {
 		Summary bool `json:"summary"`
 	}
 	if json.Unmarshal(data, &pref) != nil {
+		c.reportRecovery("Saved response-mode preference was malformed; full responses are active.")
 		return false
 	}
 	c.value = pref.Summary
 	return c.value
+}
+
+func (c *Cache) reportRecovery(detail string) {
+	if c.report == nil {
+		return
+	}
+	c.report.Report(statediag.Diagnostic{
+		Name:   "response_mode_state",
+		Detail: detail,
+		Fix:    "Save the response mode again with configure(what='store', namespace='session', key='response_mode').",
+	})
 }
 
 func (c *Cache) Invalidate() {

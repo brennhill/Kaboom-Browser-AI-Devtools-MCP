@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"sync"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 const (
@@ -32,6 +34,7 @@ type SessionStore struct {
 	flushInterval time.Duration
 	stopCh        chan struct{}
 	stopped       bool
+	diagnostics   statediag.Reporter
 }
 
 type ProjectMeta struct {

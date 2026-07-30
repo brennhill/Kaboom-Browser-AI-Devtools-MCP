@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 type Store interface {
@@ -28,6 +29,7 @@ type Deps struct {
 	Interact       func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
 	WaitForCommand func(string, time.Duration) (*queries.CommandResult, bool)
 	RecordAction   func(string, string, map[string]any)
+	Diagnostics    statediag.Reporter
 }
 
 type Handler struct {
@@ -126,7 +128,15 @@ func (h *Handler) List(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 	for _, key := range keys {
 		data, loadErr := h.deps.Store.Load(toolconfigure.SequenceNamespace, key)
 		var sequence toolconfigure.Sequence
-		if loadErr != nil || json.Unmarshal(data, &sequence) != nil || !hasAllTags(sequence.Tags, params.Tags) {
+		if loadErr != nil {
+			h.reportRecovery("Saved sequence '" + key + "' could not be read; it was omitted.")
+			continue
+		}
+		if json.Unmarshal(data, &sequence) != nil {
+			h.reportRecovery("A saved sequence was malformed and was omitted.")
+			continue
+		}
+		if !hasAllTags(sequence.Tags, params.Tags) {
 			continue
 		}
 		summaries = append(summaries, toolconfigure.SequenceSummary{
@@ -175,10 +185,22 @@ func (h *Handler) load(req mcp.JSONRPCRequest, name string) (*toolconfigure.Sequ
 	}
 	var sequence toolconfigure.Sequence
 	if err := json.Unmarshal(data, &sequence); err != nil {
+		h.reportRecovery("A saved sequence was malformed and could not be loaded.")
 		resp := mcp.Fail(req, mcp.ErrInvalidJSON, "Corrupted sequence data: "+err.Error(), "Delete and re-save the sequence")
 		return nil, &resp
 	}
 	return &sequence, nil
+}
+
+func (h *Handler) reportRecovery(detail string) {
+	if h == nil || h.deps.Diagnostics == nil {
+		return
+	}
+	h.deps.Diagnostics.Report(statediag.Diagnostic{
+		Name:   "saved_sequence_state",
+		Detail: detail,
+		Fix:    "Delete the affected sequence and save it again.",
+	})
 }
 
 func hasAllTags(sequenceTags, requiredTags []string) bool {

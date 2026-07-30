@@ -17,7 +17,7 @@ func newTestSessionStore(t *testing.T) *SessionStore {
 	projectPath := t.TempDir()
 	projectDir := filepath.Join(t.TempDir(), "projects", "test")
 
-	store, err := newSessionStoreInDir(projectPath, projectDir, time.Hour)
+	store, err := newSessionStoreInDir(projectPath, projectDir, time.Hour, nil)
 	if err != nil {
 		t.Fatalf("newSessionStoreInDir() error = %v", err)
 	}

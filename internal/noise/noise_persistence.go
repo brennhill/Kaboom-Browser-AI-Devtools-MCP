@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // loadPersistedRules loads user rules from SessionStore (called during init).
@@ -48,21 +50,21 @@ func (nc *NoiseConfig) readPersistedData() (PersistedNoiseData, bool) {
 	var persisted PersistedNoiseData
 	if err := json.Unmarshal(data, &persisted); err != nil {
 		fmt.Fprintf(os.Stderr, "noise: corrupted persisted rules: %v\n", err)
-		nc.persistenceDiagnostic = &PersistenceDiagnostic{
-			Kind:   "corrupt_json",
+		nc.diagnostics.Report(statediag.Diagnostic{
+			Name:   "noise_rule_state",
 			Detail: "Persisted noise rules were malformed; built-in defaults are active.",
 			Fix:    "Reset noise rules from System Doctor or configure(what='noise_rule', noise_action='reset').",
-		}
+		})
 		return PersistedNoiseData{}, false
 	}
 
 	if persisted.Version != 1 {
 		fmt.Fprintf(os.Stderr, "noise: unsupported persistence version: %d\n", persisted.Version)
-		nc.persistenceDiagnostic = &PersistenceDiagnostic{
-			Kind:   "unsupported_version",
+		nc.diagnostics.Report(statediag.Diagnostic{
+			Name:   "noise_rule_state",
 			Detail: fmt.Sprintf("Persisted noise rules use unsupported version %d; built-in defaults are active.", persisted.Version),
 			Fix:    "Reset noise rules to rewrite them in the current format.",
-		}
+		})
 		return PersistedNoiseData{}, false
 	}
 	return persisted, true

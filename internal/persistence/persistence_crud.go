@@ -5,6 +5,8 @@ package persistence
 import (
 	"fmt"
 	"os"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 func (s *SessionStore) Save(namespace, key string, data []byte) error {
@@ -43,7 +45,10 @@ func (s *SessionStore) Load(namespace, key string) ([]byte, error) {
 
 	data, readErr := os.ReadFile(filePath) // #nosec G304 -- path validated above
 	if readErr != nil {
-		return nil, fmt.Errorf("key not found: %s/%s", namespace, key)
+		if os.IsNotExist(readErr) {
+			return nil, fmt.Errorf("key not found: %w: %s/%s", statediag.ErrAbsent, namespace, key)
+		}
+		return nil, fmt.Errorf("failed to read %s/%s: %w", namespace, key, readErr)
 	}
 	return data, nil
 }

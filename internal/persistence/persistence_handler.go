@@ -54,7 +54,13 @@ func (s *SessionStore) handleLoad(args SessionStoreArgs) (json.RawMessage, error
 		return nil, err
 	}
 	var parsed any
-	_ = json.Unmarshal(data, &parsed)
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		s.reportRecovery(
+			"stored_session_state",
+			"Saved session data was malformed and was returned as an empty value.",
+			"Overwrite or delete the affected configure store entry.",
+		)
+	}
 	// Error impossible: map contains only primitive types and pre-parsed JSON data
 	result, _ := json.Marshal(map[string]any{
 		"namespace": args.Namespace,

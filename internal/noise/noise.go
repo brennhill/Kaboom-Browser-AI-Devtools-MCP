@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // ============================================
@@ -71,13 +72,6 @@ type PersistedNoiseData struct {
 	Statistics NoiseStatistics `json:"statistics,omitempty"`
 }
 
-// PersistenceDiagnostic describes a safe fallback taken while loading user rules.
-type PersistenceDiagnostic struct {
-	Kind   string
-	Detail string
-	Fix    string
-}
-
 // NoiseConfig manages noise filtering rules with dual-mutex concurrency control.
 //
 // LOCK ORDERING INVARIANT (H-5 documented):
@@ -93,24 +87,14 @@ type PersistenceDiagnostic struct {
 // If future code needs both locks simultaneously, it MUST acquire mu first.
 // Violating this ordering will cause deadlock.
 type NoiseConfig struct {
-	mu                    sync.RWMutex
-	rules                 []NoiseRule
-	compiled              []compiledRule
-	statsMu               sync.Mutex // Separate mutex for stats (written during reads).
-	stats                 NoiseStatistics
-	userIDCounter         int
-	store                 *persistence.SessionStore // nil if no persistence
-	persistenceDiagnostic *PersistenceDiagnostic
-}
-
-// PersistenceDiagnostic reports a non-fatal persisted-state recovery.
-func (nc *NoiseConfig) PersistenceDiagnostic() (PersistenceDiagnostic, bool) {
-	nc.mu.RLock()
-	defer nc.mu.RUnlock()
-	if nc.persistenceDiagnostic == nil {
-		return PersistenceDiagnostic{}, false
-	}
-	return *nc.persistenceDiagnostic, true
+	mu            sync.RWMutex
+	rules         []NoiseRule
+	compiled      []compiledRule
+	statsMu       sync.Mutex // Separate mutex for stats (written during reads).
+	stats         NoiseStatistics
+	userIDCounter int
+	store         *persistence.SessionStore // nil if no persistence
+	diagnostics   statediag.Reporter
 }
 
 // NewNoiseConfig creates a new NoiseConfig with built-in rules.
@@ -127,9 +111,10 @@ func NewNoiseConfig() *NoiseConfig {
 }
 
 // NewNoiseConfigWithStore creates a new NoiseConfig with SessionStore persistence.
-func NewNoiseConfigWithStore(store *persistence.SessionStore) *NoiseConfig {
+func NewNoiseConfigWithStore(store *persistence.SessionStore, diagnostics statediag.Reporter) *NoiseConfig {
 	nc := &NoiseConfig{
-		store: store,
+		store:       store,
+		diagnostics: diagnostics,
 		stats: NoiseStatistics{
 			PerRule: make(map[string]int),
 		},

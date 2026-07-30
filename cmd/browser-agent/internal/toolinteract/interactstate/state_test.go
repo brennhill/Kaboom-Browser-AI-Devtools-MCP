@@ -88,7 +88,7 @@ func (f *fake) deps() *Deps {
 
 func newHandler(t *testing.T) (*Handler, *fake) {
 	t.Helper()
-	store, err := persistence.NewSessionStore(t.TempDir())
+	store, err := persistence.NewSessionStore(t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("NewSessionStore() error = %v", err)
 	}
@@ -282,7 +282,7 @@ func TestHandleStateLoad_RestoreStatusBranches(t *testing.T) {
 		{"queued", withState, func(*fake) {}, act.StateRestoreStatusQueued},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			store, err := persistence.NewSessionStore(t.TempDir())
+			store, err := persistence.NewSessionStore(t.TempDir(), nil)
 			if err != nil {
 				t.Fatalf("NewSessionStore() error = %v", err)
 			}
@@ -350,7 +350,7 @@ func TestHandleStateList_ReportsMetadata(t *testing.T) {
 }
 
 func TestHandleStateList_UnparseableSnapshotStillListed(t *testing.T) {
-	store, err := persistence.NewSessionStore(t.TempDir())
+	store, err := persistence.NewSessionStore(t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("NewSessionStore() error = %v", err)
 	}
