@@ -111,25 +111,17 @@ func buildEnvelope(event string) map[string]any {
 	return env
 }
 
-// AppError fires a structured app_error event.
-// Props are merged first so contract fields (error_kind, severity, etc.) always win.
-func AppError(category string, props map[string]string) {
+// AppError fires a structured app_error event from a fixed privacy-bounded schema.
+func AppError(category string) {
 	errorKind, severity, source, retryable := classifyAppError(category)
 
-	// Apply caller props first so contract fields cannot be overwritten.
-	fields := map[string]any{}
-	if props != nil {
-		for k, v := range props {
-			fields[k] = v
-		}
+	fields := map[string]any{
+		"event":      "app_error",
+		"error_kind": errorKind,
+		"error_code": normalizeAppErrorCode(category),
+		"severity":   severity,
+		"source":     source,
 	}
-
-	// Contract fields applied last — always authoritative.
-	fields["event"] = "app_error"
-	fields["error_kind"] = errorKind
-	fields["error_code"] = normalizeAppErrorCode(category)
-	fields["severity"] = severity
-	fields["source"] = source
 	if retryable {
 		fields["retryable"] = true
 	}

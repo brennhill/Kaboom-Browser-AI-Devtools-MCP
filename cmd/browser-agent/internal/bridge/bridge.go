@@ -237,7 +237,7 @@ func (r *Runner) bridgeForwardRequest(client *http.Client, endpoint string, req 
 	}
 	defer activeCancel()
 	if err != nil {
-		telemetry.AppError("bridge_connection_error", nil)
+		telemetry.AppError("bridge_connection_error")
 		message := "Server connection error: " + err.Error()
 		if req.Method == "tools/call" {
 			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{

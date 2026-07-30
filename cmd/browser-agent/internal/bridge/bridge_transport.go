@@ -139,7 +139,7 @@ func (r *Runner) bridgeShutdown(wg *sync.WaitGroup, readErr error, responseSent 
 		// The extra map below (for the exit diagnostic recorder) intentionally includes
 		// more detail because it writes to a local file, not to telemetry.
 		if stats.parseErrors > 0 || stats.methodNotFound > 0 || (readErr != nil && !errors.Is(readErr, io.EOF)) {
-			telemetry.AppError("bridge_exit_error", nil)
+			telemetry.AppError("bridge_exit_error")
 		}
 		reason := "stdin_eof"
 		if readErr != nil && !errors.Is(readErr, io.EOF) {

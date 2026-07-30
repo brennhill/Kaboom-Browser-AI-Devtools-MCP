@@ -108,7 +108,7 @@ globalThis.chrome = mockChrome
 import { handleTrackedTabUrlChange } from './event-listeners.js'
 import { getTrackedTabInfo } from './ui/tracked-tab-state.js'
 
-describe('handleTrackedTabUrlChange — title staleness bug', () => {
+describe('handleTrackedTabUrlChange — cross-origin continuity and title freshness', () => {
   beforeEach(() => {
     // Simulate: user started tracking while reading a news article
     storageData = {
@@ -128,7 +128,7 @@ describe('handleTrackedTabUrlChange — title staleness bug', () => {
     )
   })
 
-  test('updates trackedTabTitle when tracked tab navigates', async () => {
+  test('retains the tracked tab and updates its title across origins', async () => {
     // User's tracked tab navigates from news article to example.com
     handleTrackedTabUrlChange(42, 'https://example.com')
 

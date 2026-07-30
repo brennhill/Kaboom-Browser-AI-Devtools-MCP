@@ -3,7 +3,7 @@ status: active
 scope: issues/blockers
 ai-priority: high
 tags: [known-issues, v0.8.x]
-last-verified: 2026-07-28
+last-verified: 2026-07-30
 canonical: true
 ---
 
@@ -118,16 +118,25 @@ under `extension/` or `tests/`.
 
 ## Runtime (product)
 
-### 7. Extension timeout on first `interact()` — MEDIUM
+### 7. Post-navigation DOM readiness is not correlation-gated — MEDIUM
 
-The content script may not be fully loaded when the first `interact()` command
-arrives after navigation. **Workaround:** retry after 2-3 seconds.
+Revalidated on 2026-07-30. AI-initiated `navigate` now waits for tab load, probes
+the content script, and refreshes once when the probe fails, so the original
+blanket “first interact times out” claim is no longer accurate. The remaining
+gap is narrower: navigation uses fixed delays and the daemon does not require a
+correlation-matched acknowledgement from the newly injected content script
+before dispatching the next DOM command. A command arriving during that window
+can still fail transiently. Tracked as `kaboom-32qf`.
 
-### 8. Tracking loss during cross-origin navigation — MEDIUM
+**Workaround:** retry the failed DOM command after the page finishes loading.
 
-The extension can lose tab tracking state during an AI-initiated cross-origin
-navigation via `interact({what: "navigate"})`. **Workaround:** re-enable
-tracking from the extension popup.
+### 8. Cross-origin navigation tracking loss — FIXED
+
+Revalidated on 2026-07-30. Tracking ownership is retained by stable Chrome tab
+ID while `handleTrackedTabUrlChange` updates the stored URL/title for that same
+tab. Origin changes do not clear `trackedTabId`; only closing the tracked tab
+does. The regression contract covers navigation updates without depending on
+origin equality.
 
 ## Recently fixed
 

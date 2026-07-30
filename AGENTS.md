@@ -13,7 +13,7 @@ Browser extension + MCP server for real-time browser telemetry.
 4. **Compile TS** — Run `make compile-ts` after ANY src/ change
 5. **5 Tools** — observe, generate, configure, interact, analyze
 6. **Performance** — WebSocket < 0.1ms, HTTP < 0.5ms
-7. **Privacy** — All data stays local, no external transmission
+7. **Privacy** — Captured browser/user data stays local. The only external transmission is anonymous product-usage telemetry: random install/session identifiers, version/platform, command identifiers, outcomes, timing, and aggregate counts used to measure installs and product-command usage. Never transmit URLs, prompts, page content, file contents, captured logs/network data, credentials, or personal data. Users can disable it with `KABOOM_TELEMETRY=off`.
 8. **Wire Types** — `wire_*.go` and `wire-*.ts` are the source of truth for HTTP payloads. Changes to either side MUST update the counterpart. Run `make check-wire-drift`
 9. **Docs Cross-Ref (Required)** — EVERY feature and EVERY refactor MUST ship with cross-referenced docs updates (feature `index.md` `code_paths`/`test_paths` + `last_reviewed`)
 

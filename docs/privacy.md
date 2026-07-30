@@ -1,26 +1,37 @@
 ---
 title: "Privacy & Security"
-description: "Kaboom is 100% local. No cloud, no analytics, no telemetry. Logs never leave your machine. Auth headers are automatically stripped."
-keywords: "local only debugging, privacy first developer tools, localhost debugging tool, no telemetry developer tool, secure browser debugging"
+description: "Kaboom keeps captured browser data local and sends only anonymous product-command usage telemetry. Logs never leave your machine. Auth headers are automatically stripped."
+keywords: "local browser debugging, privacy first developer tools, anonymous usage telemetry, localhost debugging tool, secure browser debugging"
 permalink: /privacy/
 header:
   overlay_image: /assets/images/hero-banner.png
   overlay_filter: 0.85
-  excerpt: "Your fuel stays in your tank — 100% local, zero telemetry."
+  excerpt: "Your browser data stays local. Anonymous product usage helps improve Kaboom."
 toc: true
 toc_sticky: true
 status: reference
-last_reviewed: 2026-02-16
+last_reviewed: 2026-07-30
 ---
 
 Kaboom is designed with privacy as a core principle, not an afterthought.
 
-## <i class="fas fa-home"></i> 100% Local
+## <i class="fas fa-home"></i> Browser Data Stays Local
 
 - **Logs never leave your machine** — everything stays on localhost
 - **No cloud services** — no accounts, no sign-ups, no data uploads
-- **No analytics** — zero telemetry, zero tracking
-- **No network calls** — the server binds to `127.0.0.1` only
+- **No browser-data analytics** — URLs, prompts, page content, file contents,
+  captured logs/network data, credentials, and personal data are never sent
+- **Local product server** — browser capture and MCP traffic bind to `127.0.0.1`
+
+## <i class="fas fa-chart-line"></i> Anonymous Product Usage
+
+Kaboom sends a narrow product-usage envelope to `t.gokaboom.dev` so we can
+measure install activity and learn which product commands are used. It contains
+random install/session identifiers, version/platform, command identifiers,
+outcomes, timing, and aggregate counts. It does not contain captured browser or
+user data.
+
+Disable product telemetry with `KABOOM_TELEMETRY=off`.
 
 ## <i class="fas fa-shield-alt"></i> Sensitive Data Protection
 
@@ -53,7 +64,8 @@ The entire codebase is open source under AGPL-3.0:
 4. Your AI tool reads the file via MCP (stdio, not network)
 5. Log rotation removes old entries automatically
 
-At no point does data leave your machine.
+Captured browser and user data never leaves your machine. Only the anonymous
+product-usage envelope described above is transmitted externally.
 
 ## <i class="fas fa-key"></i> Extension Permissions
 

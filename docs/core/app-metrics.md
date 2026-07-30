@@ -6,6 +6,12 @@ This document is the canonical telemetry contract for Kaboom app analytics sent 
 
 Only the event types and fields defined here are part of the analytics contract. Unknown extra fields may be ignored by the ingest service and must not be used for analysis.
 
+This product-usage envelope is the only exception to Kaboom's local-data
+policy. It exists to measure anonymous active installs and product-command
+usage. Producers must never include URLs, prompts, page content, file contents,
+captured logs/network data, credentials, or personal data. Users can suppress
+all delivery with `KABOOM_TELEMETRY=off`.
+
 ## Goals
 
 This contract is designed to support:

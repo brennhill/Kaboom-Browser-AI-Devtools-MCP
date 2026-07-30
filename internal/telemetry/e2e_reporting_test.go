@@ -184,7 +184,7 @@ func TestE2E_AppError_AllCategories(t *testing.T) {
 	for _, tc := range categories {
 		t.Run(tc.category, func(t *testing.T) {
 			received := captureBeacon(t)
-			AppError(tc.category, nil)
+			AppError(tc.category)
 
 			body := waitForEvent(t, received, "app_error")
 			requireEnvelope(t, body, "app_error/"+tc.category)

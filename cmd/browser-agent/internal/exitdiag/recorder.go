@@ -121,7 +121,7 @@ func (r *Recorder) Recover(recovered any) {
 	stack := make([]byte, 4096)
 	stack = stack[:runtime.Stack(stack, false)]
 
-	telemetry.AppError("daemon_panic", nil)
+	telemetry.AppError("daemon_panic")
 	fmt.Fprintln(r.stderr, "\n[Kaboom] FATAL ERROR")
 
 	logFile, err := state.DefaultLogFile()

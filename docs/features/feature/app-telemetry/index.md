@@ -60,6 +60,13 @@ cannot satisfy the canonical install/session identity contract. The generic
 lifecycle event surface is deleted; every emitted event is one of the six
 documented canonical event types.
 
+This is the sole exception to Kaboom's local-data policy. It reports anonymous
+install activity and product-command usage using random install/session
+identifiers plus version/platform, command identifiers, outcomes, timing, and
+aggregate counts. It must never contain URLs, prompts, page or file content,
+captured browser telemetry, credentials, or personal data. Users can disable
+delivery with `KABOOM_TELEMETRY=off`.
+
 `/health` and `/diagnostics` expose payload-free `telemetry_delivery` counters
 for accepted `202` responses, rejected non-`202` responses, network errors,
 drops, suppressions, and the last HTTP status. No event or identity data is

@@ -130,7 +130,7 @@ func TestContract_ToolCallV2Envelope(t *testing.T) {
 // 'detail' field, which is not in the contract and silently dropped by the ingest.
 func TestContract_AppErrorNoDetailField(t *testing.T) {
 	received := captureBeacon(t)
-	AppError("daemon_panic", nil)
+	AppError("daemon_panic")
 
 	body := waitForEvent(t, received, "app_error")
 
@@ -141,6 +141,23 @@ func TestContract_AppErrorNoDetailField(t *testing.T) {
 	for _, field := range []string{"error_kind", "error_code", "severity", "source"} {
 		if _, ok := body[field]; !ok {
 			t.Errorf("missing required app_error field: %s", field)
+		}
+	}
+}
+
+func TestContract_AppErrorUsesFixedPrivacyBoundedSchema(t *testing.T) {
+	received := captureBeacon(t)
+	AppError("daemon_panic")
+
+	body := waitForEvent(t, received, "app_error")
+	allowed := map[string]bool{
+		"event": true, "iid": true, "sid": true, "ts": true, "v": true,
+		"os": true, "channel": true, "llm": true, "error_kind": true,
+		"error_code": true, "severity": true, "source": true, "retryable": true,
+	}
+	for field := range body {
+		if !allowed[field] {
+			t.Errorf("app_error transmitted non-contract field %q", field)
 		}
 	}
 }
@@ -219,7 +236,7 @@ func TestContract_AppErrorCodeNormalization(t *testing.T) {
 func TestContract_AppErrorSendsAllRequiredFields(t *testing.T) {
 	received := captureBeacon(t)
 
-	AppError("bridge_connection_error", nil)
+	AppError("bridge_connection_error")
 
 	body := waitForEvent(t, received, "app_error")
 
@@ -337,7 +354,7 @@ func TestContract_AppErrorSignature(t *testing.T) {
 	received := captureBeacon(t)
 
 	// Call with nil props — should work without extra params.
-	AppError("daemon_panic", nil)
+	AppError("daemon_panic")
 
 	body := waitForEvent(t, received, "app_error")
 	if body["error_code"] != "DAEMON_PANIC" {
@@ -376,19 +393,9 @@ func TestContract_BeaconUsageSummaryHasV2Envelope(t *testing.T) {
 	}
 }
 
-// TestContract_AppErrorPropsCannotOverwriteContractFields verifies that caller-provided
-// props cannot overwrite classified contract fields (error_kind, severity, etc.).
-func TestContract_AppErrorPropsCannotOverwriteContractFields(t *testing.T) {
+func TestContract_AppErrorFieldsComeFromClassification(t *testing.T) {
 	received := captureBeacon(t)
-
-	// Pass props that attempt to overwrite every contract field.
-	AppError("daemon_panic", map[string]string{
-		"error_kind": "attacker",
-		"error_code": "FAKE",
-		"severity":   "warning",
-		"source":     "evil",
-		"event":      "not_app_error",
-	})
+	AppError("daemon_panic")
 
 	body := waitForEvent(t, received, "app_error")
 

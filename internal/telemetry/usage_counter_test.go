@@ -539,7 +539,7 @@ func TestAppError_PayloadStructure(t *testing.T) {
 	overrideEndpoint(srv.URL)
 	defer resetEndpoint()
 
-	AppError("daemon_panic", map[string]string{"extra": "info"})
+	AppError("daemon_panic")
 
 	for {
 		select {
@@ -560,9 +560,6 @@ func TestAppError_PayloadStructure(t *testing.T) {
 				if _, exists := body["detail"]; exists {
 					t.Error("detail field should not be present — not in Counterscale contract")
 				}
-				if body["extra"] != "info" {
-					t.Errorf("extra = %v, want info", body["extra"])
-				}
 				if _, ok := body["iid"].(string); !ok {
 					t.Error("missing iid")
 				}
@@ -578,7 +575,7 @@ func TestAppError_PayloadStructure(t *testing.T) {
 done:
 }
 
-func TestAppError_NilProps(t *testing.T) {
+func TestAppError_UnknownCategory(t *testing.T) {
 	drainSem()
 	received := make(chan map[string]any, 10)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -594,7 +591,7 @@ func TestAppError_NilProps(t *testing.T) {
 	overrideEndpoint(srv.URL)
 	defer resetEndpoint()
 
-	AppError("test_error", nil) // nil props should not panic
+	AppError("test_error")
 
 	for {
 		select {

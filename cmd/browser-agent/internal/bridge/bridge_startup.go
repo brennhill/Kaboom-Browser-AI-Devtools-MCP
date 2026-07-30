@@ -444,7 +444,7 @@ func (r *Runner) tryConnectToExisting(state *daemonState, port int) bool {
 	if serviceName == "" {
 		serviceName = "unknown"
 	}
-	telemetry.AppError("bridge_port_blocked", nil)
+	telemetry.AppError("bridge_port_blocked")
 	state.markFailed(fmt.Sprintf("port %d is occupied by non-kaboom service %q", port, serviceName))
 	return true // fatally blocked
 }

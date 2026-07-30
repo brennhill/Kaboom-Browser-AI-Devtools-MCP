@@ -248,7 +248,7 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if state.wasDisconnected {
-		telemetry.AppError("extension_disconnect", nil)
+		telemetry.AppError("extension_disconnect")
 		h.capture.queryDispatcher.ExpireAllPendingQueries("extension_disconnected")
 		util.SafeGo(func() {
 			h.capture.Lifecycle().Emit(lifecycle.EventExtensionDisconnected, map[string]any{

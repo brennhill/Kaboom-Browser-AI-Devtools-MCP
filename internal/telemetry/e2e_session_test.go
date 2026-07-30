@@ -139,7 +139,7 @@ func TestE2E_OptOut_NoBeaconsSent(t *testing.T) {
 	resetSessionState()
 	tracker := NewUsageTracker()
 	tracker.RecordToolCall("observe:page", 0, false)
-	AppError("daemon_panic", nil)
+	AppError("daemon_panic")
 	BeaconUsageSummary(5, &UsageSnapshot{
 		ToolStats: []ToolStat{{Tool: "observe:page", Family: "observe", Name: "page", Count: 1}},
 	})

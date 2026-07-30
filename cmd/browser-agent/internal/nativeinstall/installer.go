@@ -220,7 +220,7 @@ func runInstaller(forceCleanup func() error, startDaemon func(string), targetArg
 		_, codexDirErr := os.Stat(filepath.Dir(codexPath))
 		if targets.codexOnly || codexDirErr == nil {
 			if err := mergeCodexConfig(codexPath, exe); err != nil {
-				telemetry.AppError("install_config_error", nil)
+				telemetry.AppError("install_config_error")
 				diag.Printf("  ⚠️  Codex: %v\n", err)
 			} else {
 				clientsConfigured++
@@ -240,7 +240,7 @@ func runInstaller(forceCleanup func() error, startDaemon func(string), targetArg
 				}
 
 				if err := mergeJSONConfig(path, cfg.key, exe, cfg.isCustom); err != nil {
-					telemetry.AppError("install_config_error", nil)
+					telemetry.AppError("install_config_error")
 					diag.Printf("  ⚠️  %s: %v\n", cfg.name, err)
 				} else {
 					clientsConfigured++
