@@ -26,10 +26,7 @@ export type ContentReadinessResult =
     }
 
 interface ContentReadinessOptions {
-  readonly probe: (
-    tabId: number,
-    correlationId: string
-  ) => Promise<ContentReadinessAcknowledgement | undefined>
+  readonly probe: (tabId: number, correlationId: string) => Promise<ContentReadinessAcknowledgement | undefined>
   readonly wait: (delayMs: number) => Promise<void>
   readonly delays_ms?: readonly number[]
   readonly onReady?: (tabId: number, correlationId: string, attempts: number) => void

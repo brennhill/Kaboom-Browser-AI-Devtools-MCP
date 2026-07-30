@@ -13,7 +13,6 @@ import type { LogLevelFilter } from './capture/telemetry.js';
 import type { ConnectionStatus } from './runtime/state.js';
 import type { BrowserStateSnapshot, StateAction } from './runtime/state.js';
 import type { GetTrackingStateMessage, TrackingContentReadyMessage, TrackingReadinessProbeMessage, TrackingContinuityChangedMessage } from './runtime/tracking.js';
-export type { GetTrackingStateResponse, TrackingContentReadyMessage, TrackingReadinessProbeMessage, TrackingReadinessProbeResponse, TrackingContinuityChangedMessage, TrackingContinuityPhase, TrackingContinuitySnapshot } from './runtime/tracking.js';
 import type { RuntimeMessageName } from '../lib/constants.js';
 /**
  * Message to get current tab ID
@@ -582,4 +581,5 @@ export interface ExecuteJsResult {
     readonly message?: string;
     readonly stack?: string;
 }
+export {};
 //# sourceMappingURL=runtime-messages.d.ts.map

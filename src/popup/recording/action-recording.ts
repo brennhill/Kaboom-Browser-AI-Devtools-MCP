@@ -247,7 +247,9 @@ export function setupActionRecordingUI(): void {
   } | null>({
     key: StorageKey.ACTION_RECORDING,
     fallback: null,
-    validate: (value): value is {
+    validate: (
+      value
+    ): value is {
       active?: boolean
       recordingId?: string
       startTime?: number

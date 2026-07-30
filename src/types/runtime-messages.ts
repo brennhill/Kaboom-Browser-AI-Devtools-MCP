@@ -22,15 +22,6 @@ import type {
   TrackingReadinessProbeMessage,
   TrackingContinuityChangedMessage
 } from './runtime/tracking.js'
-export type {
-  GetTrackingStateResponse,
-  TrackingContentReadyMessage,
-  TrackingReadinessProbeMessage,
-  TrackingReadinessProbeResponse,
-  TrackingContinuityChangedMessage,
-  TrackingContinuityPhase,
-  TrackingContinuitySnapshot
-} from './runtime/tracking.js'
 import type { DomQueryResult } from './capture/dom.js'
 import type { A11yAuditResult } from './capture/accessibility.js'
 import type { RuntimeMessageName } from '../lib/constants.js'

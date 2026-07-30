@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { resolveDaemonServiceName } from './daemon-health-identity.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -15,9 +16,16 @@ const repoRoot = path.join(__dirname, '..', '..')
 
 test('upgrade regression script validates health service identity', () => {
   const source = fs.readFileSync(scriptPath, 'utf8')
-  assert.match(source, /service-name/, 'expected service-name validation in health checks')
+  assert.match(source, /resolveDaemonServiceName/, 'expected canonical health identity resolution')
   assert.match(source, /kaboom-browser-devtools/i, 'expected service identity check to enforce kaboom-browser-devtools')
   assert.match(source, /KABOOM_TELEMETRY:\s*'off'/, 'upgrade regression daemons must not emit production telemetry')
+})
+
+test('upgrade identity accepts the canonical operational health name', () => {
+  assert.equal(resolveDaemonServiceName({ name: 'kaboom-browser-devtools' }), 'kaboom-browser-devtools')
+  assert.equal(resolveDaemonServiceName({ service_name: 'legacy-snake' }), 'legacy-snake')
+  assert.equal(resolveDaemonServiceName({ 'service-name': 'legacy-dash' }), 'legacy-dash')
+  assert.equal(resolveDaemonServiceName(null), '')
 })
 
 test('shell installer uses Kaboom canonical binaries and install roots', () => {

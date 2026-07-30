@@ -160,17 +160,7 @@ func TestAutoDetectCWD_JSONRoundtripEmpty(t *testing.T) {
 
 func TestDefaultShell_HonorsValidSHELL(t *testing.T) {
 	// Not parallel: mutates process env.
-	// Pick a shell that exists on this host to use as SHELL.
-	var real string
-	for _, c := range []string{"/bin/sh", "/bin/bash", "/bin/zsh"} {
-		if _, err := exec.LookPath(c); err == nil {
-			real = c
-			break
-		}
-	}
-	if real == "" {
-		t.Skip("no standard shell available on host")
-	}
+	real := availableTestShell(t)
 	t.Setenv("SHELL", real)
 	if got := defaultShell(); got != real {
 		t.Fatalf("defaultShell() = %q, want %q (from SHELL)", got, real)
@@ -199,16 +189,28 @@ func TestDefaultShell_EmptySHELL(t *testing.T) {
 }
 
 func TestResolveTerminalCommand_DefaultShellUsesLoginProfile(t *testing.T) {
-	t.Setenv("SHELL", "/bin/zsh")
+	shell := availableTestShell(t)
+	t.Setenv("SHELL", shell)
 
 	cmd, args := resolveTerminalCommand("", nil)
 
-	if cmd != "/bin/zsh" {
-		t.Fatalf("command = %q, want /bin/zsh", cmd)
+	if cmd != shell {
+		t.Fatalf("command = %q, want available SHELL %q", cmd, shell)
 	}
 	if !slices.Equal(args, []string{"-l"}) {
 		t.Fatalf("args = %#v, want login-shell args", args)
 	}
+}
+
+func availableTestShell(t *testing.T) string {
+	t.Helper()
+	for _, candidate := range []string{"/bin/sh", "/bin/bash", "/bin/zsh"} {
+		if _, err := exec.LookPath(candidate); err == nil {
+			return candidate
+		}
+	}
+	t.Skip("no standard shell available on host")
+	return ""
 }
 
 func TestResolveTerminalCommand_ExplicitCommandAndArgsRemainUntouched(t *testing.T) {

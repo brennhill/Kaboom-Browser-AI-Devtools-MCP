@@ -42,7 +42,7 @@ We declare the async queue-and-poll architecture **IMMUTABLE** and enforce it wi
 ### Layer 1: Pre-Commit Hook (Immediate Feedback)
 
 `.git/hooks/pre-commit` blocks commits that:
-- Delete critical files ([queries.go](internal/capture/queries.go), [handlers.go](internal/capture/handlers.go), [tools_core.go](cmd/browser-agent/tools_core.go))
+- Delete canonical queue, sync, observe, interact, or bridge owners
 - Introduce stub implementations
 - Remove required methods
 
@@ -64,11 +64,13 @@ If ANY component is deleted, the test **fails to compile or run**.
 ### Layer 3: Architecture Validation Script (CI Enforcement)
 
 `scripts/validate-architecture.sh` checks:
-- File existence (6 critical files)
-- Method existence (14 required methods)
-- No stub implementations
-- Integration tests pass
-- Constants are correct
+- Canonical post-refactor owner existence across `internal/queries`,
+  `internal/capture`, `internal/toolobserve`, `internal/toolinteract`, and
+  `internal/bridge`
+- Query and command lifecycle method existence
+- Real observe command-store use and absence of empty query stubs
+- Executable integration and no-facade contracts
+- Bounded timeout and queue-capacity constants
 
 **Runs in CI** - PRs cannot merge if validation fails.
 

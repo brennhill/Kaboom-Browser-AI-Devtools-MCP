@@ -12,10 +12,7 @@ import { initReady } from '../runtime-state/startup-state.js'
 import { DebugCategory } from '../debug.js'
 import type { SendAsyncResultFn, QueryParamsObject, TargetResolution } from './helpers.js'
 import { errorMessage } from '../../lib/error-utils.js'
-import {
-  contentReadiness,
-  requiresContentReadiness
-} from '../runtime-state/content-readiness.js'
+import { contentReadiness, requiresContentReadiness } from '../runtime-state/content-readiness.js'
 import {
   debugLog,
   sendResult,

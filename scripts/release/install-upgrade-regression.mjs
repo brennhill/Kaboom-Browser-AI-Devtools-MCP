@@ -5,6 +5,7 @@ import path from 'node:path'
 import net from 'node:net'
 import { fileURLToPath } from 'node:url'
 import { spawn, spawnSync } from 'node:child_process'
+import { resolveDaemonServiceName } from './daemon-health-identity.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -199,24 +200,13 @@ function ensureMcpRoundTrip(binaryPath, port, env) {
   }
 }
 
-function resolveServiceName(health) {
-  if (!health || typeof health !== 'object') {
-    return ''
-  }
-  const dashed = typeof health['service-name'] === 'string' ? health['service-name'].trim() : ''
-  if (dashed) {
-    return dashed
-  }
-  return typeof health.service_name === 'string' ? health.service_name.trim() : ''
-}
-
 async function expectDaemonIdentity(port, expectedVersion, timeoutMs = 20000) {
   const health = await waitForPortHealth(port, timeoutMs)
   if (!health) {
     fail(`daemon on port ${port} did not become healthy`)
   }
 
-  const serviceName = resolveServiceName(health)
+  const serviceName = resolveDaemonServiceName(health)
   if (serviceName.toLowerCase() !== 'kaboom-browser-devtools') {
     fail(
       `daemon service-name mismatch on port ${port}`,

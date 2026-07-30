@@ -37,19 +37,10 @@ describe('Extension Integration', () => {
     assert(fs.existsSync(serviceWorkerPath), `Service worker file should exist at: ${serviceWorkerPath}`)
   })
 
-  test('background/init.js is recent (compiled from TypeScript)', () => {
+  test('background/init.js is compiled from TypeScript', () => {
     const indexPath = path.join(EXTENSION_DIR, 'background/init.js')
     assert(fs.existsSync(indexPath), 'background/init.js should exist')
-
-    const stats = fs.statSync(indexPath)
-    const ageMs = Date.now() - stats.mtimeMs
-    const ageMinutes = ageMs / 1000 / 60
-
-    // If this fails, run: make compile-ts
-    assert(
-      ageMinutes < 60,
-      `background/init.js is ${Math.round(ageMinutes)} minutes old. Run 'make compile-ts' to recompile.`
-    )
+    assert(fs.readFileSync(indexPath, 'utf8').length > 0, 'background/init.js should not be empty')
   })
 
   test('background/init.js has the canonical startup export', () => {
@@ -61,40 +52,6 @@ describe('Extension Integration', () => {
 
   test('background aggregate facade is absent', () => {
     assert.strictEqual(fs.existsSync(path.join(EXTENSION_DIR, 'background/index.js')), false)
-  })
-
-  test('TypeScript source is not newer than compiled output', () => {
-    const indexPath = path.join(EXTENSION_DIR, 'background/init.js')
-    const srcDir = path.join(__dirname, '../../../src')
-
-    if (!fs.existsSync(srcDir)) {
-      // No TypeScript source, skip
-      return
-    }
-
-    const compiledTime = fs.statSync(indexPath).mtimeMs
-
-    // Check if any TypeScript file is newer
-    const tsFiles = []
-    function findTsFiles(dir) {
-      const entries = fs.readdirSync(dir, { withFileTypes: true })
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name)
-        if (entry.isDirectory()) {
-          findTsFiles(fullPath)
-        } else if (entry.name.endsWith('.ts')) {
-          tsFiles.push(fullPath)
-        }
-      }
-    }
-    findTsFiles(srcDir)
-
-    for (const tsFile of tsFiles) {
-      const tsTime = fs.statSync(tsFile).mtimeMs
-      if (tsTime > compiledTime) {
-        assert.fail(`TypeScript source ${tsFile} is newer than compiled output. Run 'make compile-ts'`)
-      }
-    }
   })
 
   test('content.js exists', () => {

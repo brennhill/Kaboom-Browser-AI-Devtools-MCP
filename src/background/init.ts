@@ -304,13 +304,11 @@ async function initializeExtensionAsync(): Promise<void> {
     // ============= STEP 8: Setup Chrome alarms =============
     setupChromeAlarms()
     trackingContinuity.subscribe((snapshot) => {
-      void chrome.runtime
-        .sendMessage({ type: 'tracking_continuity_changed', snapshot })
-        .catch((error: unknown) => {
-          debugLog(DebugCategory.LIFECYCLE, 'Tracking continuity update had no runtime recipient', {
-            error_type: error instanceof Error ? error.name : 'unknown_error'
-          })
+      void chrome.runtime.sendMessage({ type: 'tracking_continuity_changed', snapshot }).catch((error: unknown) => {
+        debugLog(DebugCategory.LIFECYCLE, 'Tracking continuity update had no runtime recipient', {
+          error_type: error instanceof Error ? error.name : 'unknown_error'
         })
+      })
     })
     installAlarmListener({
       onReconnect: checkConnectionAndUpdate,

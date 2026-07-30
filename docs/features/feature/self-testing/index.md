@@ -15,6 +15,7 @@ code_paths:
   - scripts/test-all-split.sh
   - scripts/test-original-uat.sh
   - scripts/test-new-uat.sh
+  - scripts/test-js-sharded.sh
   - scripts/uat-result-lib.sh
   - scripts/tests/framework/framework.sh
   - scripts/tests/framework/uat-artifacts.sh

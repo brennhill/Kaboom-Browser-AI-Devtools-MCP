@@ -88,6 +88,7 @@ done
 # Launch shards in parallel, capture PIDs and temp output files
 PIDS=()
 OUTPUTS=()
+SHARD_FAILED=()
 for i in $(seq 0 $((SHARDS - 1))); do
   files="${SHARD_FILES[$i]}"
   if [[ -z "$files" ]]; then
@@ -102,6 +103,7 @@ for i in $(seq 0 $((SHARDS - 1))); do
   # shellcheck disable=SC2086
   node --experimental-test-module-mocks --test --test-reporter=spec --test-reporter-destination=stdout --test-force-exit --test-timeout="$TIMEOUT" --test-concurrency="$CONCURRENCY" $files > "$outfile" 2>&1 &
   PIDS+=($!)
+  SHARD_FAILED+=(0)
 done
 
 # Wait for all shards
@@ -109,6 +111,7 @@ FAILED=0
 for i in "${!PIDS[@]}"; do
   if ! wait "${PIDS[$i]}"; then
     FAILED=1
+    SHARD_FAILED[$i]=1
   fi
 done
 
@@ -132,12 +135,9 @@ if [[ $TOTAL_FAIL -gt 0 || $FAILED -ne 0 ]]; then
   echo "=== FAILURES ==="
   for i in "${!OUTPUTS[@]}"; do
     outfile="${OUTPUTS[$i]}"
-    if grep -q '✖' "$outfile" 2>/dev/null; then
-      grep -B1 '✖' "$outfile"
-      echo "---"
-    elif [[ $FAILED -ne 0 ]]; then
-      echo "--- shard $i produced no ✖ but a shard exited non-zero; raw tail ---"
-      tail -40 "$outfile"
+    if [[ "${SHARD_FAILED[$i]}" -eq 1 ]]; then
+      echo "--- shard $i exited non-zero; raw tail ---"
+      tail -120 "$outfile"
       echo "---"
     fi
   done

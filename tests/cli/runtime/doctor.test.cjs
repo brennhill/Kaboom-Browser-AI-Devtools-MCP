@@ -54,7 +54,10 @@ test('doctor.runDiagnostics tools have correct structure', async () => {
   for (const tool of report.tools) {
     assert.ok(tool.name, 'Tool should have name')
     if (tool.type === 'file') {
-      assert.ok(tool.path, 'File client should include config path')
+      assert.ok(
+        Object.prototype.hasOwnProperty.call(tool, 'path'),
+        'File client should declare its config path, including null on unsupported platforms'
+      )
     }
     assert.ok(typeof tool.status === 'string', 'Tool should have status')
     assert.ok(Array.isArray(tool.issues), 'Tool should have issues array')

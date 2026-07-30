@@ -8,10 +8,7 @@ import { StorageKey } from '../../lib/constants.js'
 import { persist } from '../../lib/storage/io.js'
 import { getLocals, setLocal } from '../../lib/storage/local.js'
 import { readLocalState } from '../../lib/storage/validated.js'
-import {
-  reportStateRecovery,
-  resolveStateRecovery
-} from '../runtime-state/state-recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js'
 
 export interface SavedSettings {
   serverUrl?: string

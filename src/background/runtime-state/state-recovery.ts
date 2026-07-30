@@ -2,10 +2,7 @@
  * Purpose: Own extension persisted-state recovery diagnostics sent to the daemon.
  * Why: Keeps raw state out of logs while making fallbacks visible in System Doctor.
  */
-import type {
-  StateRecoveryDiagnostic,
-  StateRecoveryLifecycle
-} from '../../types/runtime-messages.js'
+import type { StateRecoveryDiagnostic, StateRecoveryLifecycle } from '../../types/runtime-messages.js'
 import { pushExtensionLog } from './log-queue.js'
 
 export function reportStateRecovery(

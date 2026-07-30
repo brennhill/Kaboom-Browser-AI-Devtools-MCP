@@ -31,13 +31,20 @@ function cleanupTestDir() {
 
 test('canonical client definitions resolve every JSON file-client path', () => {
   const fileClients = config.CLIENT_DEFINITIONS.filter((def) => def.type === 'file' && def.format !== 'toml')
-  const candidates = fileClients.map((def) => config.getClientConfigPath(def))
-  const fileClientCount = fileClients.length
-  assert.strictEqual(candidates.length, fileClientCount, 'Should return one config path per JSON file-based client')
-  assert.ok(candidates.some((p) => p.includes('Claude')), 'Should include Claude Desktop path')
-  assert.ok(candidates.some((p) => p.includes('.cursor')), 'Should include Cursor path')
-  assert.ok(candidates.some((p) => p.includes('.codeium')), 'Should include Windsurf path')
-  assert.ok(candidates.some((p) => p.includes('Code')), 'Should include VS Code path')
+  for (const def of fileClients) {
+    const supportedPlatform = ['darwin', 'linux', 'win32'].find(
+      (platform) => def.configPath[platform] || def.configPath.all
+    )
+    assert.ok(supportedPlatform, `${def.name} should support at least one platform`)
+    assert.ok(
+      config.getClientConfigPath(def, supportedPlatform),
+      `${def.name} should resolve its supported config path`
+    )
+  }
+  assert.match(config.getClientConfigPath(config.getClientById('claude-desktop'), 'darwin'), /Claude/)
+  assert.match(config.getClientConfigPath(config.getClientById('cursor'), 'linux'), /\.cursor/)
+  assert.match(config.getClientConfigPath(config.getClientById('windsurf'), 'linux'), /\.codeium/)
+  assert.match(config.getClientConfigPath(config.getClientById('vscode'), 'linux'), /Code/)
 })
 
 test('canonical client lookup identifies supported tools without path heuristics', () => {

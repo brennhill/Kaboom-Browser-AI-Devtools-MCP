@@ -6,10 +6,7 @@
 import { StorageKey } from '../../lib/constants.js'
 import { setLocal } from '../../lib/storage/local.js'
 import { readLocalState } from '../../lib/storage/validated.js'
-import {
-  reportStateRecovery,
-  resolveStateRecovery
-} from '../runtime-state/state-recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js'
 
 let serverInstallId: string | undefined
 

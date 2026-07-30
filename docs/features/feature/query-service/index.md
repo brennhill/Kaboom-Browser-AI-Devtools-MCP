@@ -34,6 +34,7 @@ code_paths:
   - src/background/orchestration/connection-monitor.ts
   - src/background/orchestration/stream-runtime.ts
   - scripts/contracts/check-architecture-boundaries.cjs
+  - scripts/validate-architecture.sh
 test_paths:
   - internal/mcp/response_test.go
   - internal/queries/dispatcher_test.go
@@ -50,6 +51,7 @@ test_paths:
   - cmd/browser-agent/tools_core_sync_test.go
   - tests/extension/contracts/no-compatibility-facades.test.js
   - scripts/contracts/check-architecture-boundaries.test.cjs
+  - tests/extension/contracts/tooling-contracts.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

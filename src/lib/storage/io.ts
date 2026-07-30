@@ -82,11 +82,17 @@ function runStorageWrite(
 }
 
 export function writeStorage(method: StorageSetMethod, items: Record<string, unknown>): Promise<void> {
-  return reportStorageMutationFailure(runStorageWrite('write', (finish) => method(items, finish)), 'saved')
+  return reportStorageMutationFailure(
+    runStorageWrite('write', (finish) => method(items, finish)),
+    'saved'
+  )
 }
 
 export function removeFromStorage(method: StorageRemoveMethod, keys: string | string[]): Promise<void> {
-  return reportStorageMutationFailure(runStorageWrite('remove', (finish) => method(keys, finish)), 'removed')
+  return reportStorageMutationFailure(
+    runStorageWrite('remove', (finish) => method(keys, finish)),
+    'removed'
+  )
 }
 
 export function setStorageAccessLevel(

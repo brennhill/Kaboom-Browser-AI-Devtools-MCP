@@ -155,11 +155,7 @@ function coerceNonNegativeInt(value: unknown): number | null {
 const HISTORY_FALLBACK_DELAYS_MS = [50, 100, 200, 400, 800, 800, 800, 800] as const
 const HISTORY_API_REJECTION = /Cannot find a (?:next|previous) page in history/i
 
-async function navigateHistory(
-  tabId: number,
-  offset: -1 | 1,
-  correlationId: string
-): Promise<chrome.tabs.Tab> {
+async function navigateHistory(tabId: number, offset: -1 | 1, correlationId: string): Promise<chrome.tabs.Tab> {
   const initialTab = await chrome.tabs.get(tabId)
   try {
     if (offset === -1) await chrome.tabs.goBack(tabId)

@@ -10,10 +10,7 @@ import type {
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import type { MessageHandlerOwner } from './types.js'
-import type {
-  StateRecoveryDiagnostic,
-  StateRecoveryLifecycle
-} from '../../types/runtime-messages.js'
+import type { StateRecoveryDiagnostic, StateRecoveryLifecycle } from '../../types/runtime-messages.js'
 
 export interface StatusHandlerDependencies {
   getConnectionStatus: () => ConnectionStatus
@@ -28,10 +25,7 @@ export interface StatusHandlerDependencies {
   exportDebugLog: () => string
   clearDebugLog: () => void
   debugLog: (category: string, message: string, data?: unknown) => void
-  reportStateRecovery: (
-    diagnostic: StateRecoveryDiagnostic,
-    lifecycle: StateRecoveryLifecycle
-  ) => void
+  reportStateRecovery: (diagnostic: StateRecoveryDiagnostic, lifecycle: StateRecoveryLifecycle) => void
 }
 
 export function createStatusMessageHandler(deps: StatusHandlerDependencies): MessageHandlerOwner {

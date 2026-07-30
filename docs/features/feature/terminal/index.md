@@ -65,6 +65,7 @@ test_paths:
   - tests/extension/terminal-session/terminal-write-guard.test.js
   - cmd/browser-agent/internal/terminal/dirs_test.go
   - cmd/browser-agent/internal/terminal/handlers_test.go
+  - cmd/browser-agent/internal/terminal/handlers_extra_test.go
   - cmd/browser-agent/internal/terminal/ws_panic_test.go
   - cmd/browser-agent/internal/terminal/supervisor/supervisor_test.go
   - tests/extension/terminal-sidepanel/sidepanel-terminal-fixture.js

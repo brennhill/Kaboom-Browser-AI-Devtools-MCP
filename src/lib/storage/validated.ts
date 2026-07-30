@@ -22,10 +22,7 @@ interface ReadStateOptions<T> {
   resolve?: Resolver
 }
 
-async function readValidated<T>(
-  read: (key: string) => Promise<unknown>,
-  options: ReadStateOptions<T>
-): Promise<T> {
+async function readValidated<T>(read: (key: string) => Promise<unknown>, options: ReadStateOptions<T>): Promise<T> {
   const report = options.report ?? reportAcrossContexts
   const resolve = options.resolve ?? resolveAcrossContexts
   try {

@@ -274,10 +274,8 @@ export async function ensureInjectBridgeReady(timeoutMs = 350): Promise<boolean>
 export function initScriptInjection(force = false): void {
   void beginInjection(force).then((ready) => {
     if (!ready) return
-    void chrome.runtime
-      .sendMessage({ type: 'tracking_content_ready', url: window.location.href })
-      .catch(() => {
-        console.warn(`${KABOOM_LOG_PREFIX} tracking readiness acknowledgement was not delivered`)
-      })
+    void chrome.runtime.sendMessage({ type: 'tracking_content_ready', url: window.location.href }).catch(() => {
+      console.warn(`${KABOOM_LOG_PREFIX} tracking readiness acknowledgement was not delivered`)
+    })
   })
 }

@@ -47,6 +47,26 @@ describe('Tooling contracts', () => {
     assert.doesNotMatch(makefile, /perl -pi.*version/, 'Make must not contain a second version rewriter')
   })
 
+  test('JavaScript CI rebuilds TypeScript and rejects generated drift', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
+    assert.match(workflow, /name: Compile TypeScript and reject generated drift[\s\S]*make compile-ts/)
+    assert.match(
+      workflow,
+      /git diff --exit-code -- extension/,
+      'compiled extension drift must fail deterministically instead of comparing checkout mtimes'
+    )
+  })
+
+  test('JavaScript shard reporting identifies only the shards that failed', () => {
+    const runner = readFileSync('scripts/test-js-sharded.sh', 'utf8')
+    assert.match(runner, /SHARD_FAILED/)
+    assert.doesNotMatch(
+      runner,
+      /elif \[\[ \$FAILED -ne 0 \]\]/,
+      'one failing shard must not label every successful shard as nonzero'
+    )
+  })
+
   test('validate-architecture should enforce /sync handler instead of removed legacy handlers', () => {
     const script = readFileSync('scripts/validate-architecture.sh', 'utf8')
     assert.match(script, /HandleSync/, 'validate-architecture should require HandleSync')
@@ -55,6 +75,28 @@ describe('Tooling contracts', () => {
       /HandlePendingQueries|HandleDOMResult|HandleExecuteResult|HandlePilotStatus/,
       'validate-architecture should not require removed legacy handlers'
     )
+  })
+
+  test('validate-architecture follows canonical post-refactor owners', () => {
+    const script = readFileSync('scripts/validate-architecture.sh', 'utf8')
+    for (const currentOwner of [
+      'internal/queries/dispatcher_results.go',
+      'internal/capture/sync.go',
+      'internal/toolobserve/dispatcher.go',
+      'internal/toolinteract/interact_browser.go',
+      'internal/bridge/bridge.go'
+    ]) {
+      assert.ok(script.includes(currentOwner), `missing canonical owner ${currentOwner}`)
+    }
+    for (const deletedSurface of [
+      'internal/capture/query_dispatcher.go',
+      'internal/capture/types.go',
+      'tools_observe.go',
+      'bridge_adapter.go',
+      'toolObserveCommandResult'
+    ]) {
+      assert.ok(!script.includes(deletedSurface), `obsolete architecture surface ${deletedSurface}`)
+    }
   })
 
   test('validate-architecture stub check should not depend on fixed grep context windows', () => {
