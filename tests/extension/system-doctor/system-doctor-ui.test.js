@@ -1,6 +1,10 @@
 // system-doctor-ui.test.js — Popup System Doctor rendering and transport contracts.
 import assert from 'node:assert/strict'
 import { beforeEach, describe, test } from 'node:test'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+const popupHtml = readFileSync(fileURLToPath(new URL('../../../extension/popup.html', import.meta.url)), 'utf8')
 
 const elements = new Map()
 
@@ -26,6 +30,16 @@ function renderedText(node) {
 }
 
 describe('popup System Doctor', () => {
+  test('keeps diagnostics at the bottom with a health plus icon', () => {
+    const doctorIndex = popupHtml.indexOf('id="system-doctor"')
+    const linksIndex = popupHtml.indexOf('class="links"')
+
+    assert.ok(doctorIndex > linksIndex, 'System Doctor should follow all routine popup controls and links')
+    assert.match(popupHtml, /class="system-doctor-icon"[^>]*>\+<\/span>/)
+    assert.match(popupHtml, /<span>System Doctor<\/span>/)
+    assert.doesNotMatch(popupHtml, /🩺/)
+  })
+
   beforeEach(() => {
     elements.clear()
     globalThis.document = {

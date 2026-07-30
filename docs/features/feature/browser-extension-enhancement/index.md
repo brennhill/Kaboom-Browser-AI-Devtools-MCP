@@ -64,7 +64,9 @@ last_verified_date: 2026-03-28
 - Popup connection status is heartbeat-based: `Connected` only appears after the daemon reports a live extension heartbeat.
 - The popup System Doctor renders the daemon's canonical readiness checks,
   treating the absence of a tracked page as a healthy idle state while reserving
-  its attention treatment for actionable faults.
+  its attention treatment for actionable faults. It sits after the routine
+  controls in a compact footer treatment with a health-plus icon, keeping
+  diagnostics available without competing with primary workflows.
   including redacted local Claude/Codex authentication classification,
   subscription-versus-API provider status, keychain failures, version state,
   extension connectivity, and tracked-tab readiness.

@@ -108,15 +108,6 @@
       </p>
     </div>
 
-    <details id="system-doctor" class="section system-doctor">
-      <summary>
-        <span>🩺 System Doctor</span>
-        <span id="system-doctor-overall" class="doctor-overall doctor-warn">Checking…</span>
-      </summary>
-      <p class="doctor-intro">Live daemon, extension, tracked-tab, Pilot, and command-path checks.</p>
-      <div id="system-doctor-checks" class="doctor-checks"></div>
-    </details>
-
     <div class="section" style="margin-top: 12px">
       <div class="section-title">Tab Control</div>
       <div id="track-hero" style="text-align: center; padding: 12px 0">
@@ -431,6 +422,18 @@
         >Help</a
       >
     </div>
+
+    <details id="system-doctor" class="system-doctor">
+      <summary>
+        <span class="system-doctor-label">
+          <span class="system-doctor-icon" aria-hidden="true">+</span>
+          <span>System Doctor</span>
+        </span>
+        <span id="system-doctor-overall" class="doctor-overall doctor-warn">Checking…</span>
+      </summary>
+      <p class="doctor-intro">Live daemon, extension, tracked-tab, Pilot, and command-path checks.</p>
+      <div id="system-doctor-checks" class="doctor-checks"></div>
+    </details>
 
     <script src="popup.bundled.js"></script>
   </body>

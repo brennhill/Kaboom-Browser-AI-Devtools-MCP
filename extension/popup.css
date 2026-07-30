@@ -220,6 +220,86 @@
         text-decoration: underline;
       }
 
+      .system-doctor {
+        margin-top: 14px;
+        border: 1px solid #303030;
+        border-radius: 6px;
+        background: #202020;
+      }
+
+      .system-doctor summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 9px 10px;
+        color: #aaa;
+        font-size: 12px;
+        cursor: pointer;
+        list-style: none;
+      }
+
+      .system-doctor summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .system-doctor-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-weight: 600;
+      }
+
+      .system-doctor-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 17px;
+        height: 17px;
+        border: 1px solid #3fb950;
+        border-radius: 50%;
+        color: #3fb950;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .doctor-overall {
+        color: #888;
+        font-size: 11px;
+      }
+
+      .doctor-pass {
+        color: #3fb950;
+      }
+
+      .doctor-warn {
+        color: #d29922;
+      }
+
+      .doctor-fail {
+        color: #f85149;
+      }
+
+      .doctor-intro,
+      .doctor-checks {
+        margin: 0 10px 10px;
+        color: #888;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .doctor-check {
+        margin-top: 7px;
+        padding-top: 7px;
+        border-top: 1px solid #303030;
+      }
+
+      .doctor-check-fix {
+        margin-top: 3px;
+        color: #aaa;
+      }
+
       .badge {
         display: inline-flex;
         align-items: center;
@@ -750,6 +830,25 @@
 
       body.light-theme .links a {
         color: #0969da;
+      }
+
+      body.light-theme .system-doctor {
+        border-color: #d8dee4;
+        background: #f6f8fa;
+      }
+
+      body.light-theme .system-doctor summary,
+      body.light-theme .doctor-check-fix {
+        color: #57606a;
+      }
+
+      body.light-theme .doctor-intro,
+      body.light-theme .doctor-checks {
+        color: #6e7781;
+      }
+
+      body.light-theme .doctor-check {
+        border-top-color: #d8dee4;
       }
 
       body.light-theme .badge {
