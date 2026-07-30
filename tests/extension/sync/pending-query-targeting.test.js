@@ -104,7 +104,6 @@ describe('pending query targeting', () => {
     )
 
     bgModule = {
-      ...(await import('../../../extension/background/index.js')),
       ...(await import('../../../extension/background/pending-queries.js')),
       ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js'))

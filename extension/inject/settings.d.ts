@@ -2,7 +2,7 @@
  * Purpose: Applies runtime setting changes (network capture, performance marks, WebSocket mode, action replay) and handles state save/load commands in the inject context.
  * Docs: docs/features/feature/state-time-travel/index.md
  */
-import type { BrowserStateSnapshot, StateAction } from '../types/index.js';
+import type { BrowserStateSnapshot, StateAction } from '../types/runtime/state.js';
 /**
  * Valid setting names from content script — imported from canonical constants.
  */

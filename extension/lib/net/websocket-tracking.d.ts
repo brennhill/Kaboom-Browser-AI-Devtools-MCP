@@ -2,7 +2,7 @@
  * Purpose: WebSocket connection statistics, adaptive message sampling, schema inference, and message formatting primitives.
  * Docs: docs/features/feature/observe/index.md
  */
-import type { WebSocketCaptureMode } from '../../types/index.js';
+import type { WebSocketCaptureMode } from '../../types/capture/websocket.js';
 /** WebSocket message data variants */
 export type WebSocketMessageData = string | ArrayBuffer | Blob;
 /** Object with a size property (like Blob) */

@@ -1,7 +1,7 @@
 /**
  * Purpose: Own status, log-clearing, and debug diagnostic messages.
  */
-import type { CircuitBreakerState, ConnectionStatus, ContextWarning, MemoryPressureState } from '../../types/index.js';
+import type { CircuitBreakerState, ConnectionStatus, ContextWarning, MemoryPressureState } from '../../types/runtime/state.js';
 import type { MessageHandlerOwner } from './types.js';
 export interface StatusHandlerDependencies {
     getConnectionStatus: () => ConnectionStatus;

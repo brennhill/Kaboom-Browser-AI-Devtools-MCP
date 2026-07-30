@@ -149,7 +149,6 @@ describe('Bug #5: Async Execute Command Await', () => {
     )
 
     bgModule = {
-      ...(await import('../../../extension/background/index.js')),
       ...(await import('../../../extension/background/pending-queries.js')),
       ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js')),
@@ -312,7 +311,6 @@ describe('Bug #5: Async Browser Action Await (regression test)', () => {
       })
     )
     bgModule = {
-      ...(await import('../../../extension/background/index.js')),
       ...(await import('../../../extension/background/pending-queries.js')),
       ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js'))
@@ -380,7 +378,6 @@ describe('Bug #5: Extension Stability Under Load', () => {
       })
     )
     bgModule = {
-      ...(await import('../../../extension/background/index.js')),
       ...(await import('../../../extension/background/pending-queries.js')),
       ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js'))
@@ -484,7 +481,6 @@ describe('Bug #5: Error Handling Robustness', () => {
       })
     )
     bgModule = {
-      ...(await import('../../../extension/background/index.js')),
       ...(await import('../../../extension/background/pending-queries.js')),
       ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js'))

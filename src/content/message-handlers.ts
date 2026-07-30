@@ -8,16 +8,11 @@
  * Handles messages from background script
  */
 
-import type {
-  ContentMessage,
-  ContentPingResponse,
-  WebSocketCaptureMode,
-  HighlightResponse,
-  WaterfallEntry,
-  StateAction,
-  BrowserStateSnapshot,
-  A11yAuditResult
-} from '../types/index.js'
+import type { ContentMessage, ContentPingResponse, HighlightResponse } from '../types/runtime-messages.js'
+import type { WebSocketCaptureMode } from '../types/capture/websocket.js'
+import type { WireNetworkWaterfallEntry as WaterfallEntry } from '../types/wire/wire-network.js'
+import type { StateAction, BrowserStateSnapshot } from '../types/runtime/state.js'
+import type { A11yAuditResult } from '../types/capture/accessibility.js'
 import type { SettingMessage } from './types.js'
 import {
   registerHighlightRequest,

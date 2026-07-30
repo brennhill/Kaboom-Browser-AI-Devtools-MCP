@@ -16,16 +16,4 @@ export interface PendingRequest {
     readonly method: string;
     readonly startTime: number;
 }
-/**
- * Network body payload — re-exported from wire type (canonical HTTP payload shape).
- * The stale interface previously used camelCase fields (contentType, requestBody, etc.)
- * that didn't match the Go server expectations.
- */
-export type { WireNetworkBody as NetworkBodyPayload } from '../wire/wire-network.js';
-/**
- * Network waterfall entry — re-exported from wire type.
- * The stale interface previously used camelCase fields and a WaterfallPhases sub-object
- * that didn't match the actual runtime data.
- */
-export type { WireNetworkWaterfallEntry as WaterfallEntry } from '../wire/wire-network.js';
 //# sourceMappingURL=network.d.ts.map

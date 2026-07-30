@@ -3,7 +3,8 @@
  * Why: The router owns security and ordering only; change-coupled behavior and dependencies
  * live with each feature handler.
  */
-import type { BackgroundMessage, ChromeMessageSender } from '../types/index.js'
+import type { BackgroundMessage } from '../types/runtime-messages.js'
+import type { ChromeMessageSender } from '../types/runtime/chrome.js'
 import type { MessageHandlerOwner, SendResponse } from './message-routing/types.js'
 
 export interface MessageRouterDependencies {

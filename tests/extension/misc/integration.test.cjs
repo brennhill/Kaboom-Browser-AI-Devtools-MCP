@@ -37,9 +37,9 @@ describe('Extension Integration', () => {
     assert(fs.existsSync(serviceWorkerPath), `Service worker file should exist at: ${serviceWorkerPath}`)
   })
 
-  test('background/index.js is recent (compiled from TypeScript)', () => {
-    const indexPath = path.join(EXTENSION_DIR, 'background/index.js')
-    assert(fs.existsSync(indexPath), 'background/index.js should exist')
+  test('background/init.js is recent (compiled from TypeScript)', () => {
+    const indexPath = path.join(EXTENSION_DIR, 'background/init.js')
+    assert(fs.existsSync(indexPath), 'background/init.js should exist')
 
     const stats = fs.statSync(indexPath)
     const ageMs = Date.now() - stats.mtimeMs
@@ -48,42 +48,23 @@ describe('Extension Integration', () => {
     // If this fails, run: make compile-ts
     assert(
       ageMinutes < 60,
-      `background/index.js is ${Math.round(ageMinutes)} minutes old. Run 'make compile-ts' to recompile.`
+      `background/init.js is ${Math.round(ageMinutes)} minutes old. Run 'make compile-ts' to recompile.`
     )
   })
 
-  test('background/index.js has required exports', () => {
-    const indexPath = path.join(EXTENSION_DIR, 'background/index.js')
+  test('background/init.js has the canonical startup export', () => {
+    const indexPath = path.join(EXTENSION_DIR, 'background/init.js')
     const content = fs.readFileSync(indexPath, 'utf8')
 
-    // Check for critical exports
-    assert(content.includes('export'), 'Should have ES6 exports')
-    assert(
-      content.includes('checkConnectionAndUpdate') || content.includes('initializeExtension'),
-      'Should export initialization functions'
-    )
+    assert(content.includes('initializeExtension'), 'Should export initializeExtension')
   })
 
-  test('background/index.js does not expose internal circuit-breaker batchers', () => {
-    const indexPath = path.join(EXTENSION_DIR, 'background/index.js')
-    const content = fs.readFileSync(indexPath, 'utf8')
-
-    for (const name of [
-      'logBatcherWithCB',
-      'enhancedActionBatcherWithCB',
-      'networkBodyBatcherWithCB',
-      'perfBatcherWithCB'
-    ]) {
-      assert.doesNotMatch(
-        content,
-        new RegExp(`export const ${name}\\b`),
-        `${name} is an internal factory detail, not a background entry-point API`
-      )
-    }
+  test('background aggregate facade is absent', () => {
+    assert.strictEqual(fs.existsSync(path.join(EXTENSION_DIR, 'background/index.js')), false)
   })
 
   test('TypeScript source is not newer than compiled output', () => {
-    const indexPath = path.join(EXTENSION_DIR, 'background/index.js')
+    const indexPath = path.join(EXTENSION_DIR, 'background/init.js')
     const srcDir = path.join(__dirname, '../../../src')
 
     if (!fs.existsSync(srcDir)) {
@@ -143,16 +124,16 @@ describe('Extension Integration', () => {
 })
 
 describe('Focused Module Signatures', () => {
-  test('tab state owns async configuration reads', () => {
-    const tabStatePath = path.join(EXTENSION_DIR, 'background/ui/tab-state.js')
+  test('settings storage owns async configuration reads', () => {
+    const tabStatePath = path.join(EXTENSION_DIR, 'background/ui/settings-storage.js')
     const content = fs.readFileSync(tabStatePath, 'utf8')
 
     assert(content.includes('getAllConfigSettings'), 'Should export getAllConfigSettings')
     assert(content.includes('async function getAllConfigSettings'), 'Configuration reads should be Promise-based')
   })
 
-  test('tab state owns tracked-tab reads', () => {
-    const tabStatePath = path.join(EXTENSION_DIR, 'background/ui/tab-state.js')
+  test('tracked-tab state owns tracked-tab reads', () => {
+    const tabStatePath = path.join(EXTENSION_DIR, 'background/ui/tracked-tab-state.js')
     const content = fs.readFileSync(tabStatePath, 'utf8')
 
     assert(content.includes('getTrackedTabInfo'), 'Should export getTrackedTabInfo')
@@ -160,21 +141,20 @@ describe('Focused Module Signatures', () => {
 })
 
 describe('Module Import Chain', () => {
-  test('background/index.js imports from submodules', () => {
-    const indexPath = path.join(EXTENSION_DIR, 'background/index.js')
+  test('stream runtime imports its focused owners', () => {
+    const indexPath = path.join(EXTENSION_DIR, 'background/orchestration/stream-runtime.js')
     const content = fs.readFileSync(indexPath, 'utf8')
 
     // Should import from modular subcomponents
     const expectedImports = [
-      './sync/circuit-breaker',
-      './sync/batchers',
-      './sync/log-processing',
-      './sync/screenshot',
-      './sync/server',
-      './caches/debug-log',
-      './caches/cache-limits',
-      './caches/error-groups',
-      './caches/snapshots'
+      '../sync/circuit-breaker',
+      '../sync/batchers',
+      '../sync/log-processing',
+      '../sync/screenshot',
+      '../sync/server',
+      '../caches/cache-limits',
+      '../caches/error-groups',
+      '../caches/snapshots'
     ]
 
     for (const importPath of expectedImports) {

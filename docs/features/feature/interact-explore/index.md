@@ -232,6 +232,10 @@ Workflow types and response classification come directly from
 `internal/tools/interact/workflow.go`; browser-agent layers do not maintain
 aliases or pass-through response helpers.
 
+DOM action metadata, selector extraction, execution-world validation, and
+preview truncation are also called directly from `internal/tools/interact`.
+The browser-agent action owners do not retain package-variable delegate aliases.
+
 Evidence capture uses the concrete
 `toolinteract.EvidenceShot` contract directly in runtime wiring and tests; the
 former private/exported type alias and root-package test shim have been deleted.

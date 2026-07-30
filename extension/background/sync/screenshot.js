@@ -3,7 +3,7 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 import { errorMessage } from '../../lib/error-utils.js';
-import { captureVisibleTabSafe } from '../ui/tab-state.js';
+import { captureVisibleTabSafe } from '../ui/tracked-tab-state.js';
 import { getRequestHeaders } from './server.js';
 export async function captureScreenshot(tabId, serverUrl, relatedErrorId, canTakeScreenshot, recordScreenshot, debugLog) {
     const rateCheck = canTakeScreenshot(tabId);

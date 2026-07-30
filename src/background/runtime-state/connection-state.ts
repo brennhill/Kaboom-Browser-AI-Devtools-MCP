@@ -2,7 +2,7 @@
  * Purpose: Own connection lifecycle state for the background worker.
  * Why: Connection checks and health updates change together independently of user settings.
  */
-import type { ConnectionStatus } from '../../types/index.js'
+import type { ConnectionStatus } from '../../types/runtime/state.js'
 
 export type MutableConnectionStatus = { -readonly [Key in keyof ConnectionStatus]: ConnectionStatus[Key] }
 

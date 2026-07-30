@@ -44,7 +44,7 @@ Both operate asynchronously without blocking main functionality.
 - Applied to all API requests (logs, WS events, actions, etc.)
 - 10+ endpoints updated
 
-**`src/background/index.ts`** - Integration
+**`src/background/orchestration/connection-monitor.ts`** - Integration
 - Starts version check in `checkConnectionAndUpdate()`
 - Uses dynamic import to avoid circular dependencies
 - Exports public API for version functions

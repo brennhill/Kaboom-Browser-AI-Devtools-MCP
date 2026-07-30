@@ -8,10 +8,11 @@
  * Chrome runtime messages for background, content, and inject script communication
  */
 import type { LogEntry } from './capture/telemetry.js';
-import type { WebSocketEvent, WebSocketCaptureMode } from './capture/websocket.js';
-import type { NetworkBodyPayload } from './capture/network.js';
-import type { EnhancedAction } from './capture/actions.js';
-import type { PerformanceSnapshot } from './capture/performance.js';
+import type { WebSocketCaptureMode } from './capture/websocket.js';
+import type { WireWebSocketEvent as WebSocketEvent } from './wire/wire-websocket-event.js';
+import type { WireNetworkBody as NetworkBodyPayload } from './wire/wire-network.js';
+import type { WireEnhancedAction as EnhancedAction } from './wire/wire-enhanced-action.js';
+import type { WirePerformanceSnapshot as PerformanceSnapshot } from './wire/wire-performance-snapshot.js';
 import type { LogLevelFilter } from './capture/telemetry.js';
 import type { ConnectionStatus } from './runtime/state.js';
 import type { BrowserStateSnapshot, StateAction } from './runtime/state.js';

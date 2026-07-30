@@ -12,7 +12,7 @@
  */
 
 import { WS_MAX_BODY_SIZE, WS_PREVIEW_LIMIT } from '../constants.js'
-import type { WebSocketCaptureMode } from '../../types/index.js'
+import type { WebSocketCaptureMode } from '../../types/capture/websocket.js'
 
 // =============================================================================
 // TYPE DEFINITIONS

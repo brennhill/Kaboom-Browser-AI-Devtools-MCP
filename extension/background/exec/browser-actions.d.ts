@@ -2,7 +2,7 @@
  * Purpose: Handles browser navigation actions (navigate, refresh, back, forward, tab management) with CSP probing and async timeouts.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import type { PendingQuery } from '../../types/index.js';
+import type { PendingQuery } from '../../types/runtime/queries.js';
 import type { SyncClient } from '../sync/sync-client.js';
 import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js';
 export type BrowserActionResult = {

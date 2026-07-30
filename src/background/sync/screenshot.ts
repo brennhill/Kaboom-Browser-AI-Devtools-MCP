@@ -3,9 +3,9 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 
-import type { LogEntry } from '../../types/index.js'
+import type { LogEntry } from '../../types/capture/telemetry.js'
 import { errorMessage } from '../../lib/error-utils.js'
-import { captureVisibleTabSafe } from '../ui/tab-state.js'
+import { captureVisibleTabSafe } from '../ui/tracked-tab-state.js'
 import { getRequestHeaders } from './server.js'
 
 interface ScreenshotRateCheck {

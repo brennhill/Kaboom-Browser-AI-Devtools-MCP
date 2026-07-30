@@ -2,7 +2,7 @@
  * Purpose: Captures and uploads visible-tab screenshots for background error enrichment.
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
-import type { LogEntry } from '../../types/index.js';
+import type { LogEntry } from '../../types/capture/telemetry.js';
 interface ScreenshotRateCheck {
     allowed: boolean;
     reason?: string;

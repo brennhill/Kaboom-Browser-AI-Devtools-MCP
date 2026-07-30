@@ -15,7 +15,7 @@
  * via chrome.runtime.sendMessage for status queries and log-level changes.
  */
 
-import type { WebSocketCaptureMode } from './types/index.js'
+import type { WebSocketCaptureMode } from './types/capture/websocket.js'
 import type { PopupConnectionStatus, ToggleWarningConfig } from './popup/shell/types.js'
 import type { ShowTrackedHoverLauncherMessage } from './types/runtime-messages.js'
 import { RuntimeMessageName, StorageKey } from './lib/constants.js'

@@ -9,7 +9,7 @@
  * and cleanup of stale error groups.
  */
 
-import type { LogEntry } from '../../types/index.js'
+import type { LogEntry } from '../../types/capture/telemetry.js'
 import { StorageKey } from '../../lib/constants.js'
 import { persist } from '../../lib/storage/io.js'
 import { getSession, setSession } from '../../lib/storage/session.js'

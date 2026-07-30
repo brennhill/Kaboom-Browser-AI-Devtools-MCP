@@ -11,8 +11,6 @@ import { getNetworkWaterfall } from '../lib/net/network.js';
 import { executeJavaScript } from './execute-js.js';
 import { errorMessage } from '../lib/error-utils.js';
 import { isValidSettingPayload, handleSetting, handleStateCommand } from './settings.js';
-// Re-export for barrel (src/inject/index.ts)
-export { executeJavaScript, safeSerializeForExecute } from './execute-js.js';
 /** Read the page nonce set by the content script on the inject script element */
 let pageNonce = '';
 if (typeof document !== 'undefined' && typeof document.querySelector === 'function') {

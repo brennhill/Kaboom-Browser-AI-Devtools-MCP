@@ -2,7 +2,7 @@
  * Purpose: Manages sync client instance lifecycle (start/stop/reset) and wires dependencies to avoid circular imports with index.ts.
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
-import type { ConnectionStatus } from '../../types/index.js';
+import type { ConnectionStatus } from '../../types/runtime/state.js';
 import type { ExtensionLogQueueEntry } from '../runtime-state/log-queue.js';
 type DebugLogFn = (category: string, message: string, data?: unknown) => void;
 /** Mutable connection status (same shape as index.ts) */

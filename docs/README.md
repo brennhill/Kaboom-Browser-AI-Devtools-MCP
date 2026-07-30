@@ -30,7 +30,9 @@ last-verified: 2026-02-17
 - MCP request handling: `cmd/browser-agent/handler.go`
 - Tool schemas: `internal/schema/schema.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
-- Extension background runtime: `src/background/index.ts`
+- Extension startup composition: `src/background/init.ts`
+- Extension connection runtime: `src/background/orchestration/connection-monitor.ts`
+- Extension telemetry runtime: `src/background/orchestration/stream-runtime.ts`
 - Extension sync client: `src/background/sync/sync-client.ts`
 
 ## Notes

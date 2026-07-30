@@ -3,7 +3,7 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 
-import type { LogEntry } from '../../types/index.js'
+import type { LogEntry } from '../../types/capture/telemetry.js'
 
 function truncateArg(arg: unknown, maxSize = 10240): unknown {
   if (arg === null || arg === undefined) return arg

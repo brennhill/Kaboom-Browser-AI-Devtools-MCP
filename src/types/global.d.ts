@@ -5,10 +5,11 @@
  * These types augment the global namespace without requiring explicit imports.
  */
 
-import type { ActionEntry, EnhancedAction, SelectorStrategies } from './capture/actions.js'
+import type { ActionEntry, SelectorStrategies } from './capture/actions.js'
 import type { AiContextData } from './capture/ai-context.js'
-import type { WaterfallEntry } from './capture/network.js'
 import type { PerformanceMark, PerformanceMeasure } from './capture/performance.js'
+import type { WireEnhancedAction as EnhancedAction } from './wire/wire-enhanced-action.js'
+import type { WireNetworkWaterfallEntry as WaterfallEntry } from './wire/wire-network.js'
 
 // =============================================================================
 // KABOOM DEVELOPER API (window.__kaboom)

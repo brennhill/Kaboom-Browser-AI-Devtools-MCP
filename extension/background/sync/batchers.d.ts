@@ -7,7 +7,7 @@
  * @fileoverview Batchers - Batcher creation and circuit breaker integration for
  * debounced batching of server requests.
  */
-import type { MemoryPressureState } from '../../types/index.js';
+import type { MemoryPressureState, CircuitBreakerState, CircuitBreakerStats } from '../../types/runtime/state.js';
 import { type CircuitBreaker } from './circuit-breaker.js';
 /** Rate limit configuration */
 export declare const RATE_LIMIT_CONFIG: {
@@ -27,8 +27,8 @@ export interface Batcher<T> {
 export interface BatcherWithCircuitBreaker<T> {
     batcher: Batcher<T>;
     circuitBreaker: {
-        getState: () => import('./circuit-breaker.js').CircuitBreakerState;
-        getStats: () => import('../../types/index.js').CircuitBreakerStats;
+        getState: () => CircuitBreakerState;
+        getStats: () => CircuitBreakerStats;
         reset: () => void;
     };
     getConnectionStatus: () => {

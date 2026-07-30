@@ -424,7 +424,7 @@ When `analyze({what: "annotations", wait: true})` is called:
 | `cmd/browser-agent/tools_analyze.go` | Add `annotations` and `annotation_detail` cases to what switch | ~15 |
 | `cmd/browser-agent/tools_schema.go` | Register draw mode parameters in interact and analyze schemas | ~20 |
 | `cmd/browser-agent/queries.go` | Add `/draw-mode-result` and `/annotation-detail-result` HTTP handlers | ~30 |
-| `extension/background/index.js` | Initialize draw-mode-handler, register message listeners | ~10 |
+| `extension/background/init.js` | Initialize draw-mode handler and register message listeners | ~10 |
 | `extension/manifest.json` | No new permissions needed (uses existing activeTab + scripting) | ~5 |
 | `extension/popup/popup.js` | Add Draw Mode toggle button and state sync | ~20 |
 | `extension/popup/popup.html` | Add Draw Mode toggle UI element | ~6 |

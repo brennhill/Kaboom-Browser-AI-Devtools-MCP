@@ -8,7 +8,7 @@
  * Features: Simple exponential backoff, binary connection state, self-healing for MV3.
  */
 
-import type { PendingQuery } from '../../types/index.js'
+import type { PendingQuery } from '../../types/runtime/queries.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { fetchWithTimeout } from '../../lib/timeout-utils.js'
 import { buildDaemonJSONRequestInit } from '../../lib/daemon-http.js'

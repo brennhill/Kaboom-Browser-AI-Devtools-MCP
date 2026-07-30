@@ -11,7 +11,7 @@
  * Delegates tracking, sampling, and schema detection to websocket-tracking.ts.
  */
 
-import type { WebSocketCaptureMode } from '../../types/index.js'
+import type { WebSocketCaptureMode } from '../../types/capture/websocket.js'
 
 import {
   type WebSocketMessageData,

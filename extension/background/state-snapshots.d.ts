@@ -1,7 +1,7 @@
 /**
  * Purpose: Persist named browser-state snapshots for interact state actions.
  */
-import type { BrowserStateSnapshot } from '../types/index.js';
+import type { BrowserStateSnapshot } from '../types/runtime/state.js';
 interface StoredStateSnapshot extends BrowserStateSnapshot {
     name: string;
     size_bytes: number;

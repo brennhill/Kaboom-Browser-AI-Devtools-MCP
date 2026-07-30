@@ -38,7 +38,9 @@ code_paths:
   - src/background/sync/batchers.ts
   - src/background/sync/log-processing.ts
   - src/background/sync/screenshot.ts
-  - src/background/index.ts
+  - src/background/debug.ts
+  - src/background/orchestration/connection-monitor.ts
+  - src/background/orchestration/stream-runtime.ts
   - src/background/init.ts
   - src/background/message-handlers.ts
   - src/background/message-routing/

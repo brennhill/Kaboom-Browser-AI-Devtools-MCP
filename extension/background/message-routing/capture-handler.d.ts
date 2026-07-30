@@ -1,7 +1,4 @@
-/**
- * Purpose: Own screenshot and draw-mode runtime message handling.
- */
-import type { LogEntry } from '../../types/index.js';
+import type { LogEntry } from '../../types/capture/telemetry.js';
 import type { MessageHandlerOwner } from './types.js';
 export interface CaptureHandlerDependencies {
     getServerUrl: () => string;

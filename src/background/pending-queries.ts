@@ -6,7 +6,7 @@
 // pending-queries.ts — Thin dispatcher shell.
 // Delegates to command modules registered in commands/.
 
-import type { PendingQuery } from '../types/index.js'
+import type { PendingQuery } from '../types/runtime/queries.js'
 import type { SyncClient } from './sync/sync-client.js'
 import { dispatch } from './commands/registry.js'
 

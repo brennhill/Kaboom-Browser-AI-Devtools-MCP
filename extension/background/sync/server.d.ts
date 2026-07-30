@@ -6,7 +6,12 @@
  * @fileoverview Server Communication - HTTP functions for sending data to
  * the Kaboom server.
  */
-import type { LogEntry, WebSocketEvent, NetworkBodyPayload, EnhancedAction, PerformanceSnapshot, ConnectionStatus } from '../../types/index.js';
+import type { LogEntry } from '../../types/capture/telemetry.js';
+import type { WireWebSocketEvent as WebSocketEvent } from '../../types/wire/wire-websocket-event.js';
+import type { WireNetworkBody as NetworkBodyPayload } from '../../types/wire/wire-network.js';
+import type { WireEnhancedAction as EnhancedAction } from '../../types/wire/wire-enhanced-action.js';
+import type { WirePerformanceSnapshot as PerformanceSnapshot } from '../../types/wire/wire-performance-snapshot.js';
+import type { ConnectionStatus } from '../../types/runtime/state.js';
 import type { components } from '../../generated/openapi-types.js';
 /**
  * Server health response — union of the generated spec shape and the two

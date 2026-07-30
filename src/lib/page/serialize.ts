@@ -12,7 +12,7 @@
  */
 
 import { MAX_STRING_LENGTH, MAX_DEPTH, SENSITIVE_INPUT_TYPES } from '../constants.js'
-import type { JsonValue } from '../../types/index.js'
+import type { JsonValue } from '../../types/utils.js'
 
 // Extended input element interface for type checking
 interface InputLikeElement extends Element {

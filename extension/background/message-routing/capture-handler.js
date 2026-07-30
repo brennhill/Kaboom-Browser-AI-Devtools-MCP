@@ -1,6 +1,6 @@
 import { errorMessage } from '../../lib/error-utils.js';
 import { postDaemonJSON } from '../../lib/daemon-http.js';
-import { setKaboomOverlayVisibility } from '../ui/tab-state.js';
+import { setKaboomOverlayVisibility } from '../ui/content-script-bridge.js';
 import { trackUIFeature } from '../ui/ui-usage-tracker.js';
 function captureActiveTab(sendResponse, deps) {
     if (typeof chrome === 'undefined' || !chrome.tabs) {

@@ -13,10 +13,9 @@ import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js
 import { DEFAULT_SERVER_URL } from '../lib/constants.js'
 import { syncTerminalPanelAvailability } from './ui/side-panel-availability.js'
 import { watchTerminalPanelState } from './ui/terminal-panel.js'
-import { DebugCategory, debugLog } from './debug.js'
+import { setDebugMode, exportDebugLog, clearDebugLog, DebugCategory, debugLog } from './debug.js'
+import { resetSyncClientConnection, checkConnectionAndUpdate } from './orchestration/connection-monitor.js'
 import {
-  setDebugMode,
-  resetSyncClientConnection,
   sharedServerCircuitBreaker,
   logBatcher,
   wsBatcher,
@@ -24,11 +23,8 @@ import {
   networkBodyBatcher,
   perfBatcher,
   handleLogMessage,
-  handleClearLogs,
-  checkConnectionAndUpdate,
-  exportDebugLog,
-  clearDebugLog
-} from './index.js'
+  handleClearLogs
+} from './orchestration/stream-runtime.js'
 import {
   getServerUrl,
   isDebugMode,
@@ -77,15 +73,9 @@ import {
   installScreenRecordingCommandListener
 } from './ui/keyboard-shortcuts.js'
 import { installContextMenus } from './ui/context-menus.js'
-import {
-  saveSetting,
-  forwardToAllContentScripts,
-  getActiveTab,
-  sendTabToast,
-  loadDebugModeState,
-  loadAiWebPilotState,
-  loadSavedSettings
-} from './ui/tab-state.js'
+import { saveSetting, loadDebugModeState, loadAiWebPilotState, loadSavedSettings } from './ui/settings-storage.js'
+import { forwardToAllContentScripts, sendTabToast } from './ui/content-script-bridge.js'
+import { getActiveTab } from './ui/tracked-tab-state.js'
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js'
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js'
 import { installMessageListener } from './message-handlers.js'

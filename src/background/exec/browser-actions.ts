@@ -6,9 +6,10 @@
 // browser-actions.ts — Browser navigation and action handlers.
 // Handles navigate, refresh, back, forward actions with async timeout support.
 
-import type { PendingQuery } from '../../types/index.js'
+import type { PendingQuery } from '../../types/runtime/queries.js'
 import type { SyncClient } from '../sync/sync-client.js'
-import { waitForTabLoad, pingContentScript, getActiveTab } from '../ui/tab-state.js'
+import { waitForTabLoad, getActiveTab } from '../ui/tracked-tab-state.js'
+import { pingContentScript } from '../ui/content-script-bridge.js'
 import { debugLog, DebugCategory } from '../debug.js'
 import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js'
 import { broadcastTrackingState } from '../message-routing/pilot-handler.js'

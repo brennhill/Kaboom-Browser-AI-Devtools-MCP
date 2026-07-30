@@ -265,4 +265,4 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 | `cmd/browser-agent/main.go` | Register /sync route |
 | `src/background/sync.ts` | NEW - Sync client implementation |
 | `src/background/polling.ts` | Remove consolidated polling loops |
-| `src/background/index.ts` | Switch to sync client |
+| `src/background/orchestration/connection-monitor.ts` | Own sync-client lifecycle |

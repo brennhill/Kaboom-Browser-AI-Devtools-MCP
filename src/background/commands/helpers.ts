@@ -5,9 +5,10 @@
 // helpers.ts — Shared infrastructure for command dispatch.
 // Types, result helpers, target resolution, action toast, and constants.
 
-import type { PendingQuery } from '../../types/index.js'
+import type { PendingQuery } from '../../types/runtime/queries.js'
 import type { SyncClient } from '../sync/sync-client.js'
-import { getTrackedTabInfo, clearTrackedTab, getActiveTab } from '../ui/tab-state.js'
+import { getTrackedTabInfo, getActiveTab } from '../ui/tracked-tab-state.js'
+import { clearTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
 import { DebugCategory } from '../debug.js'
 import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'

@@ -1,7 +1,12 @@
 /**
  * Purpose: Own routing for telemetry events emitted by content scripts.
  */
-import type { ChromeMessageSender, EnhancedAction, LogEntry, NetworkBodyPayload, PerformanceSnapshot, WebSocketEvent } from '../../types/index.js';
+import type { ChromeMessageSender } from '../../types/runtime/chrome.js';
+import type { WireEnhancedAction as EnhancedAction } from '../../types/wire/wire-enhanced-action.js';
+import type { LogEntry } from '../../types/capture/telemetry.js';
+import type { WireNetworkBody as NetworkBodyPayload } from '../../types/wire/wire-network.js';
+import type { WirePerformanceSnapshot as PerformanceSnapshot } from '../../types/wire/wire-performance-snapshot.js';
+import type { WireWebSocketEvent as WebSocketEvent } from '../../types/wire/wire-websocket-event.js';
 import type { MessageHandlerOwner } from './types.js';
 export interface TelemetryHandlerDependencies {
     addLog: (entry: LogEntry) => void;

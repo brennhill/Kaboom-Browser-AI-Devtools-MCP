@@ -1,9 +1,9 @@
 {
   "max_exports_per_file": 24,
   "enforce_zero_cycles": true,
-  "forbidden_reexports": {
-    "src/background/message-handlers.ts": ["./message-routing/"]
-  },
+  "forbid_reexports": true,
+  "forbidden_source_files": ["src/types/index.ts", "src/background/index.ts", "src/background/ui/tab-state.ts"],
+  "forbidden_import_suffixes": ["types/index.js", "background/index.js", "background/ui/tab-state.js"],
   "export_exceptions": {
     "src/lib/constants.ts": {
       "max": 64,
@@ -20,10 +20,6 @@
     "src/content/ui/terminal-widget-types.ts": {
       "max": 37,
       "reason": "Canonical terminal state and timing contract."
-    },
-    "src/background/state.ts": {
-      "max": 32,
-      "reason": "Ratcheted legacy state surface; may shrink but cannot grow."
     }
   },
   "forbidden_imports": {

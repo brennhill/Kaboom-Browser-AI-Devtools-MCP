@@ -8,7 +8,7 @@
  * element highlighting for the AI Web Pilot.
  */
 
-import type { BrowserStateSnapshot } from '../types/index.js'
+import type { BrowserStateSnapshot } from '../types/runtime/state.js'
 
 /** Read the page nonce set by the content script on the inject script element */
 let pageNonce = ''

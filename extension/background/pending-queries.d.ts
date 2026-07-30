@@ -2,7 +2,7 @@
  * Purpose: Thin dispatcher shell that delegates pending MCP queries to command modules registered in commands/.
  * Why: Decouples query routing from handler implementations to keep the dispatch table extensible.
  */
-import type { PendingQuery } from '../types/index.js';
+import type { PendingQuery } from '../types/runtime/queries.js';
 import type { SyncClient } from './sync/sync-client.js';
 import './commands/observe.js';
 import './commands/analyze.js';

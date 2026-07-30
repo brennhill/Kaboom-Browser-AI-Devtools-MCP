@@ -12,7 +12,8 @@
  * an LRU source map cache.
  */
 
-import type { StackFrame, SourceSnippet, ParsedSourceMap } from '../../types/index.js'
+import type { StackFrame, SourceSnippet } from '../../types/capture/ai-context.js'
+import type { ParsedSourceMap } from '../../types/capture/sourcemap.js'
 
 import {
   AI_CONTEXT_SNIPPET_LINES,

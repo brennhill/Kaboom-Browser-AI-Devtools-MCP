@@ -2,13 +2,7 @@
  * Purpose: Parses Chrome/Firefox stack traces into structured frames, resolves inline source maps, and extracts code snippets around error lines.
  * Docs: docs/features/feature/error-bundling/index.md
  */
-/**
- * @fileoverview AI context foundation layer.
- * Parses Chrome/Firefox stack traces into structured frames, resolves inline
- * base64 source maps, extracts code snippets around error lines, and manages
- * an LRU source map cache.
- */
-import type { ParsedSourceMap } from '../../types/index.js';
+import type { ParsedSourceMap } from '../../types/capture/sourcemap.js';
 /**
  * Parsed stack frame (internal representation with nullable functionName)
  */

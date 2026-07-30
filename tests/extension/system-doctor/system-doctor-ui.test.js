@@ -37,7 +37,7 @@ describe('popup System Doctor', () => {
     }
   })
 
-  test('fetches the canonical daemon doctor report and renders actionable checks', async () => {
+  test('renders an unattached browser as idle rather than needing attention', async () => {
     const { refreshSystemDoctor } = await import('../../../extension/popup/system-doctor.js')
     const requests = []
     const fetchImpl = async (url) => {
@@ -67,10 +67,38 @@ describe('popup System Doctor', () => {
     )
 
     assert.deepEqual(requests, ['http://127.0.0.1:7890/doctor'])
-    assert.equal(document.getElementById('system-doctor-overall').textContent, 'Needs attention')
+    assert.equal(document.getElementById('system-doctor-overall').textContent, 'Ready when attached')
+    assert.equal(document.getElementById('system-doctor-overall').className, 'doctor-overall doctor-pass')
     const checks = document.getElementById('system-doctor-checks')
     assert.ok(renderedText(checks).includes('Extension connected'))
     assert.ok(renderedText(checks).includes('Click Track This Tab'))
+  })
+
+  test('reserves attention state for actionable doctor warnings', async () => {
+    const { refreshSystemDoctor } = await import('../../../extension/popup/system-doctor.js')
+    await refreshSystemDoctor(
+      { connected: true, serverUrl: 'http://127.0.0.1:7890' },
+      async () => ({
+        ok: true,
+        json: async () => ({
+          status: 'degraded',
+          ready_for_interaction: false,
+          version: '0.9.0',
+          checks: [
+            { name: 'extension_connected', status: 'pass', detail: 'Extension connected' },
+            {
+              name: 'pilot_enabled',
+              status: 'warn',
+              detail: 'Browser control is disabled',
+              fix: 'Enable browser control'
+            }
+          ]
+        })
+      })
+    )
+
+    assert.equal(document.getElementById('system-doctor-overall').textContent, 'Needs attention')
+    assert.equal(document.getElementById('system-doctor-overall').className, 'doctor-overall doctor-warn')
   })
 
   test('shows daemon unavailability without throwing or inventing check results', async () => {

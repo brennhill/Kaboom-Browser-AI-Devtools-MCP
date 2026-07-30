@@ -9,7 +9,9 @@
  * Includes periodic cleanup timer to handle edge cases where pagehide/beforeunload don't fire.
  */
 
-import type { HighlightResponse, ExecuteJsResult, A11yAuditResult, DomQueryResult } from '../types/index.js'
+import type { HighlightResponse, ExecuteJsResult } from '../types/runtime-messages.js'
+import type { A11yAuditResult } from '../types/capture/accessibility.js'
+import type { DomQueryResult } from '../types/capture/dom.js'
 import type { PendingRequestStats } from './types.js'
 
 // Pending highlight response resolvers (keyed by request ID)

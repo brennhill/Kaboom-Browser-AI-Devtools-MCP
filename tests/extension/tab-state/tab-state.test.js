@@ -4,19 +4,22 @@ import assert from 'node:assert'
 
 import {
   pingContentScript,
-  waitForTabLoad,
   forwardToAllContentScripts,
+  sendTabToast
+} from '../../../extension/background/ui/content-script-bridge.js'
+import {
   loadSavedSettings,
   loadAiWebPilotState,
   loadDebugModeState,
   saveSetting,
+  getAllConfigSettings
+} from '../../../extension/background/ui/settings-storage.js'
+import {
+  waitForTabLoad,
   getTrackedTabInfo,
-  setTrackedTab,
-  clearTrackedTab,
-  getAllConfigSettings,
-  getActiveTab,
-  sendTabToast
-} from '../../../extension/background/ui/tab-state.js'
+  getActiveTab
+} from '../../../extension/background/ui/tracked-tab-state.js'
+import { setTrackedTab, clearTrackedTab } from '../../../extension/lib/tabs/tracked-tab-storage.js'
 
 function createChromeMock() {
   return {

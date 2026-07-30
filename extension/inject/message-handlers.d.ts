@@ -7,7 +7,6 @@
  * specialized modules for settings, state management, JavaScript execution,
  * and DOM/accessibility queries.
  */
-import type { BrowserStateSnapshot } from '../types/index.js';
-export { executeJavaScript, safeSerializeForExecute } from './execute-js.js';
+import type { BrowserStateSnapshot } from '../types/runtime/state.js';
 export declare function installMessageListener(captureStateFn: () => BrowserStateSnapshot, restoreStateFn: (state: BrowserStateSnapshot, includeUrl: boolean) => unknown): void;
 //# sourceMappingURL=message-handlers.d.ts.map

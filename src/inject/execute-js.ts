@@ -5,7 +5,7 @@
 
 // execute-js.ts — JavaScript execution sandbox for in-page script evaluation.
 
-import type { ExecuteJsResult } from '../types/index.js'
+import type { ExecuteJsResult } from '../types/runtime-messages.js'
 import { createDeferredPromise } from '../lib/timeout-utils.js'
 
 /**

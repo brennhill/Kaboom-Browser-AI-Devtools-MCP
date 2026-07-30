@@ -89,6 +89,9 @@ const files = sourceFiles(sourceRoot)
 const knownFiles = new Set(files)
 for (const file of files) {
   const relative = path.relative(root, file).split(path.sep).join('/')
+  if (config.forbidden_source_files?.includes(relative)) {
+    violations.push(`${relative}: prohibited aggregate or compatibility surface exists`)
+  }
   const source = fs.readFileSync(file, 'utf8')
   const owner = path.relative(sourceRoot, file).split(path.sep)[0]
   const forbidden = config.forbidden_imports[owner] || []
@@ -96,6 +99,9 @@ for (const file of files) {
   const dependencies = []
   let match
   while ((match = importPattern.exec(source)) !== null) {
+    if (config.forbidden_import_suffixes?.some((suffix) => match[1].endsWith(suffix))) {
+      violations.push(`${relative}: import must target the canonical owner (${match[1]})`)
+    }
     const dependency = resolvedSourceImport(match[1], file, knownFiles)
     if (dependency) dependencies.push(dependency)
     const target = importedFeature(match[1], file)
@@ -105,11 +111,10 @@ for (const file of files) {
   }
   dependencyGraph.set(file, dependencies)
 
-  const forbiddenReexports = config.forbidden_reexports?.[relative] || []
   const reexportPattern = /export\s+(?:type\s+)?(?:\{[^}]*\}|\*)\s+from\s+['"]([^'"]+)['"]/g
   while ((match = reexportPattern.exec(source)) !== null) {
-    if (forbiddenReexports.some((prefix) => match[1].startsWith(prefix))) {
-      violations.push(`${relative}: compatibility re-export is prohibited (${match[1]})`)
+    if (config.forbid_reexports) {
+      violations.push(`${relative}: internal re-export is prohibited (${match[1]})`)
     }
   }
 

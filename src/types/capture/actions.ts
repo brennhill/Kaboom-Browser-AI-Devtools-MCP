@@ -35,10 +35,3 @@ export interface SelectorStrategies {
   readonly xpath?: string
   readonly text?: string
 }
-
-/**
- * Enhanced action — re-exported from wire type (canonical HTTP payload shape).
- * The stale interface previously used camelCase fields (ts, scrollPosition, modifiers)
- * that didn't match the actual runtime data or Go server expectations.
- */
-export type { WireEnhancedAction as EnhancedAction } from '../wire/wire-enhanced-action.js'

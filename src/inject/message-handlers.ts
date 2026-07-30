@@ -11,7 +11,7 @@
  * and DOM/accessibility queries.
  */
 
-import type { BrowserStateSnapshot } from '../types/index.js'
+import type { BrowserStateSnapshot } from '../types/runtime/state.js'
 
 import { executeDOMQuery, runAxeAuditWithTimeout, type DOMQueryParams } from '../lib/analysis/dom-queries.js'
 import { checkLinkHealth } from '../lib/analysis/link-health.js'
@@ -29,9 +29,6 @@ import {
   type SettingMessageData,
   type StateCommandMessageData
 } from './settings.js'
-
-// Re-export for barrel (src/inject/index.ts)
-export { executeJavaScript, safeSerializeForExecute } from './execute-js.js'
 
 /** Read the page nonce set by the content script on the inject script element */
 let pageNonce = ''

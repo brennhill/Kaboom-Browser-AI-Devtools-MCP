@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 func TestResolveIndexToSelector_Empty(t *testing.T) {
@@ -199,7 +200,7 @@ func TestExtractElementList_Direct(t *testing.T) {
 			map[string]any{"index": float64(0), "selector": "#a"},
 		},
 	}
-	elems := extractElementList(data)
+	elems := act.ExtractElementList(data)
 	if len(elems) != 1 {
 		t.Fatalf("expected 1 element, got %d", len(elems))
 	}
@@ -214,7 +215,7 @@ func TestExtractElementList_Nested(t *testing.T) {
 			},
 		},
 	}
-	elems := extractElementList(data)
+	elems := act.ExtractElementList(data)
 	if len(elems) != 1 {
 		t.Fatalf("expected 1 element from nested, got %d", len(elems))
 	}
@@ -223,7 +224,7 @@ func TestExtractElementList_Nested(t *testing.T) {
 func TestExtractElementList_NoElements(t *testing.T) {
 	t.Parallel()
 	data := map[string]any{"foo": "bar"}
-	elems := extractElementList(data)
+	elems := act.ExtractElementList(data)
 	if elems != nil {
 		t.Error("expected nil for data without elements")
 	}

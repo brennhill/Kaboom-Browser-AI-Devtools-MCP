@@ -14,7 +14,9 @@ function fixture(files, overrides = {}) {
     max_exports_per_file: 2,
     export_exceptions: {},
     forbidden_imports: { content: ['background'], background: ['content'] },
-    forbidden_reexports: {},
+    forbidden_source_files: [],
+    forbidden_import_suffixes: [],
+    forbid_reexports: false,
     enforce_zero_cycles: true,
     ...overrides
   }
@@ -76,22 +78,33 @@ test('rejects circular source dependencies and reports every module in the cycle
   assert.match(result.stderr, /src\/background\/exec\/browser-actions\.ts/)
 })
 
-test('rejects compatibility re-exports from configured router modules', () => {
+test('rejects aggregate files and imports that bypass canonical owners', () => {
+  const root = fixture(
+    {
+      'src/types/index.ts': 'export interface HiddenContract { value: string }\n',
+      'src/content/view.ts': "import type { HiddenContract } from '../types/index.js'\nexport const view = 1\n"
+    },
+    {
+      forbidden_source_files: ['src/types/index.ts'],
+      forbidden_import_suffixes: ['types/index.js']
+    }
+  )
+  const result = check(root)
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /prohibited aggregate or compatibility surface/)
+  assert.match(result.stderr, /import must target the canonical owner/)
+})
+
+test('rejects every internal re-export when strict ownership is enabled', () => {
   const result = check(
     fixture(
       {
-        'src/background/message-handlers.ts':
-          "export { createPilotMessageHandler } from './message-routing/pilot-handler.js'\n",
-        'src/background/message-routing/pilot-handler.ts': 'export const createPilotMessageHandler = 1\n'
+        'src/lib/owner.ts': 'export const canonical = 1\n',
+        'src/lib/facade.ts': "export { canonical } from './owner.js'\n"
       },
-      {
-        forbidden_reexports: {
-          'src/background/message-handlers.ts': ['./message-routing/']
-        }
-      }
+      { forbid_reexports: true }
     )
   )
-
   assert.equal(result.status, 1)
-  assert.match(result.stderr, /compatibility re-export/)
+  assert.match(result.stderr, /internal re-export is prohibited/)
 })

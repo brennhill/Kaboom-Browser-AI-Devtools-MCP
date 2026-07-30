@@ -3,7 +3,7 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 
-import type { DebugLogEntry } from '../../types/index.js'
+import type { DebugLogEntry } from '../../types/runtime/debug.js'
 
 const DEBUG_LOG_MAX_ENTRIES = 200
 const debugLogBuffer: DebugLogEntry[] = []

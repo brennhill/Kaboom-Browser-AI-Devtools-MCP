@@ -22,6 +22,12 @@ test('background mutable state is owned by change-coupled modules', () => {
   }
 })
 
+test('aggregate and size-driven background facades stay deleted', () => {
+  for (const obsolete of ['src/background/index.ts', 'src/background/ui/tab-state.ts', 'src/types/index.ts']) {
+    assert.strictEqual(fs.existsSync(obsolete), false, obsolete)
+  }
+})
+
 test('extension log queue only exposes snapshots', async () => {
   const queue = await import('../../../extension/background/runtime-state/log-queue.js')
   queue.clearExtensionLogsForTesting()

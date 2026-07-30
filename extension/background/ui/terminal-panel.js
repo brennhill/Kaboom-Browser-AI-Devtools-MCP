@@ -5,9 +5,8 @@
  * implementation (repo rule 19).
  * Docs: docs/features/feature/terminal/index.md
  */
-import { resolveTerminalWorkspaceTarget } from './tab-state.js';
+import { resolveTerminalWorkspaceTarget } from './terminal-workspace.js';
 import { enableTerminalPanelForTab, SIDE_PANEL_PATH } from './side-panel-availability.js';
-export { syncTerminalPanelAvailability } from './side-panel-availability.js';
 import { TERMINAL_PANEL_PORT, StorageKey } from '../../lib/constants.js';
 import { persist } from '../../lib/storage/io.js';
 import { setSession } from '../../lib/storage/session.js';

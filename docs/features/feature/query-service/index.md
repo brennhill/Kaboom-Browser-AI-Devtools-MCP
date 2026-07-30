@@ -4,7 +4,7 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -19,8 +19,11 @@ code_paths:
   - internal/capture/sync.go
   - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/asyncresult/normalization.go
-  - src/types/index.ts
   - src/types/global.d.ts
+  - src/types/capture/
+  - src/types/runtime/
+  - src/types/wire/
+  - src/types/utils.ts
   - src/types/runtime-messages.ts
   - src/types/runtime/queries.ts
   - src/background/pending-queries.ts
@@ -28,7 +31,9 @@ code_paths:
   - src/background/commands/interact.ts
   - src/background/exec/browser-actions.ts
   - src/background/exec/upload-handler.ts
-  - src/background/index.ts
+  - src/background/orchestration/connection-monitor.ts
+  - src/background/orchestration/stream-runtime.ts
+  - scripts/contracts/check-architecture-boundaries.cjs
 test_paths:
   - internal/mcp/response_test.go
   - internal/queries/dispatcher_test.go
@@ -44,6 +49,7 @@ test_paths:
   - cmd/browser-agent/tools_async_timeout_test.go
   - cmd/browser-agent/tools_core_sync_test.go
   - tests/extension/contracts/no-compatibility-facades.test.js
+  - scripts/contracts/check-architecture-boundaries.test.cjs
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

@@ -106,7 +106,7 @@ globalThis.chrome = mockChrome
 
 // Import after chrome is set up
 import { handleTrackedTabUrlChange } from './event-listeners.js'
-import { getTrackedTabInfo } from './ui/tab-state.js'
+import { getTrackedTabInfo } from './ui/tracked-tab-state.js'
 
 describe('handleTrackedTabUrlChange — title staleness bug', () => {
   beforeEach(() => {

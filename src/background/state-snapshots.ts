@@ -1,7 +1,7 @@
 /**
  * Purpose: Persist named browser-state snapshots for interact state actions.
  */
-import type { BrowserStateSnapshot } from '../types/index.js'
+import type { BrowserStateSnapshot } from '../types/runtime/state.js'
 import { getLocal, setLocal } from '../lib/storage/local.js'
 
 const SNAPSHOT_KEY = 'kaboom_state_snapshots'

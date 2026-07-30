@@ -4,7 +4,7 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - src/lib/brand.ts
   - src/lib/constants.ts
@@ -28,12 +28,16 @@ code_paths:
   - src/background/runtime-state/pilot-state.ts
   - src/background/event-listeners.ts
   - src/background/init.ts
-  - src/background/ui/tab-state.ts
+  - src/background/ui/content-script-bridge.ts
+  - src/background/ui/settings-storage.ts
+  - src/background/ui/tracked-tab-state.ts
+  - src/background/ui/terminal-workspace.ts
   - src/background/ui/keyboard-shortcuts.ts
   - src/background/ui/context-menus.ts
   - src/background/recording/listeners.ts
 test_paths:
   - tests/extension/contracts/background-boundaries.test.js
+  - tests/extension/tab-state/tab-state.test.js
   - tests/extension/branding/brand-metadata.test.js
   - tests/extension/popup-shell/popup-audit-button.test.js
   - tests/extension/popup-shell/popup-tab-tracking-branding.test.js

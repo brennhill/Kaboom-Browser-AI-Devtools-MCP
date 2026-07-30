@@ -226,8 +226,3 @@ export function initTrackPageButton(): void {
     void handleTrackPageClickAPI(showInternalPageState, showCloakedState, showTrackingState, showIdleState)
   })
 }
-
-// Re-export for consumers that import handleTrackPageClick directly
-export async function handleTrackPageClick(): Promise<void> {
-  return handleTrackPageClickAPI(showInternalPageState, showCloakedState, showTrackingState, showIdleState)
-}

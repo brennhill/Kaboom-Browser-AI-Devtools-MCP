@@ -5,7 +5,14 @@
  * @fileoverview Content Script Internal Types
  * Type definitions for internal content script use
  */
-import type { WebSocketCaptureMode, StateAction, BrowserStateSnapshot, PageMessageType, LogEntry, WebSocketEvent, NetworkBodyPayload, EnhancedAction, PerformanceSnapshot } from '../types/index.js';
+import type { WebSocketCaptureMode } from '../types/capture/websocket.js';
+import type { StateAction, BrowserStateSnapshot } from '../types/runtime/state.js';
+import type { PageMessageType } from '../types/runtime-messages.js';
+import type { LogEntry } from '../types/capture/telemetry.js';
+import type { WireWebSocketEvent as WebSocketEvent } from '../types/wire/wire-websocket-event.js';
+import type { WireNetworkBody as NetworkBodyPayload } from '../types/wire/wire-network.js';
+import type { WireEnhancedAction as EnhancedAction } from '../types/wire/wire-enhanced-action.js';
+import type { WirePerformanceSnapshot as PerformanceSnapshot } from '../types/wire/wire-performance-snapshot.js';
 /**
  * Pending request statistics
  */

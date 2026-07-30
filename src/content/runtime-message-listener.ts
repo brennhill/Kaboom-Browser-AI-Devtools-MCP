@@ -10,7 +10,8 @@
  * Handles chrome.runtime messages from background script
  */
 
-import type { ContentMessage, WebSocketCaptureMode } from '../types/index.js'
+import type { ContentMessage } from '../types/runtime-messages.js'
+import type { WebSocketCaptureMode } from '../types/capture/websocket.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { SettingName } from '../lib/constants.js'
 import {

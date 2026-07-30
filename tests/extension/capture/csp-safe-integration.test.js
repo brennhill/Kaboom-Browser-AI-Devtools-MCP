@@ -129,8 +129,9 @@ describe('CSP-safe integration: result tagging', () => {
 
 const mockDebugLog = mock.fn()
 
-mock.module('../../../extension/background/index.js', {
+mock.module('../../../extension/background/debug.js', {
   namedExports: {
+    DebugCategory: { ERROR: 'error', QUERY: 'query' },
     debugLog: mockDebugLog
   }
 })

@@ -33,7 +33,9 @@
  * Manages source map caching with LRU eviction, screenshot rate limiting,
  * and memory pressure monitoring.
  */
-import type { BufferState, MemoryPressureLevel, MemoryPressureState, ParsedSourceMap } from '../../types/index.js';
+import type { BufferState } from '../../types/utils.js';
+import type { MemoryPressureLevel, MemoryPressureState } from '../../types/runtime/state.js';
+import type { ParsedSourceMap } from '../../types/capture/sourcemap.js';
 /** Source map cache size limit */
 export declare const SOURCE_MAP_CACHE_SIZE = 50;
 /** Memory limits */

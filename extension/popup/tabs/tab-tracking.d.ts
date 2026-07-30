@@ -4,5 +4,4 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 export declare function initTrackPageButton(): void;
-export declare function handleTrackPageClick(): Promise<void>;
 //# sourceMappingURL=tab-tracking.d.ts.map

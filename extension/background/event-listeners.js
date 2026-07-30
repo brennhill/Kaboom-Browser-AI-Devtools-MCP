@@ -7,7 +7,7 @@ import { StorageKey } from '../lib/constants.js';
 import { onStorageChanged } from '../lib/storage/changes.js';
 import { persist } from '../lib/storage/io.js';
 import { getLocal, setLocal, setLocals } from '../lib/storage/local.js';
-import { clearTrackedTab as clearTrackedTabState } from './ui/tab-state.js';
+import { clearTrackedTab as clearTrackedTabState } from '../lib/tabs/tracked-tab-storage.js';
 // =============================================================================
 // CONSTANTS - Rate Limiting & DoS Protection
 // =============================================================================

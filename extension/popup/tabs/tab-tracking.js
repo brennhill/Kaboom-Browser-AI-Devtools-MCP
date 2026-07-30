@@ -205,8 +205,4 @@ export function initTrackPageButton() {
         void handleTrackPageClickAPI(showInternalPageState, showCloakedState, showTrackingState, showIdleState);
     });
 }
-// Re-export for consumers that import handleTrackPageClick directly
-export async function handleTrackPageClick() {
-    return handleTrackPageClickAPI(showInternalPageState, showCloakedState, showTrackingState, showIdleState);
-}
 //# sourceMappingURL=tab-tracking.js.map

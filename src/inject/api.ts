@@ -10,15 +10,11 @@
 
 declare const __KABOOM_VERSION__: string
 
-import type {
-  LogEntry,
-  ActionEntry,
-  EnhancedAction,
-  SelectorStrategies,
-  WaterfallEntry,
-  PerformanceMark,
-  PerformanceMeasure
-} from '../types/index.js'
+import type { LogEntry } from '../types/capture/telemetry.js'
+import type { ActionEntry, SelectorStrategies } from '../types/capture/actions.js'
+import type { WireEnhancedAction as EnhancedAction } from '../types/wire/wire-enhanced-action.js'
+import type { WireNetworkWaterfallEntry as WaterfallEntry } from '../types/wire/wire-network.js'
+import type { PerformanceMark, PerformanceMeasure } from '../types/capture/performance.js'
 
 import {
   setContextAnnotation,

@@ -2,6 +2,11 @@
  * Purpose: Defines debug log category constants used across background modules.
  * Why: Standalone module to break circular dependencies between index.ts and its consumers.
  */
+/**
+ * @fileoverview Debug Logging Utilities
+ * Standalone module to avoid circular dependencies.
+ */
+import type { DebugLogEntry } from '../types/runtime/debug.js';
 /** Log categories for debug output */
 export declare const DebugCategory: {
     CONNECTION: "connection";
@@ -14,4 +19,8 @@ export declare const DebugCategory: {
 };
 export type DebugCategoryType = (typeof DebugCategory)[keyof typeof DebugCategory];
 export declare function debugLog(category: string, message: string, data?: unknown): void;
+export declare function getDebugLog(): DebugLogEntry[];
+export declare function clearDebugLog(): void;
+export declare function exportDebugLog(): string;
+export declare function setDebugMode(enabled: boolean): void;
 //# sourceMappingURL=debug.d.ts.map

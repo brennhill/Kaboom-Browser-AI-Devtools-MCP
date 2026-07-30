@@ -7,7 +7,7 @@
  * Wraps the WebSocket constructor to intercept lifecycle events and messages.
  * Delegates tracking, sampling, and schema detection to websocket-tracking.ts.
  */
-import type { WebSocketCaptureMode } from '../../types/index.js';
+import type { WebSocketCaptureMode } from '../../types/capture/websocket.js';
 /**
  * Install WebSocket capture by wrapping the WebSocket constructor.
  * If the early-patch script ran first (world: "MAIN", document_start),

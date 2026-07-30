@@ -8,10 +8,7 @@
  * exponential backoff for protecting server communication.
  */
 
-import type { CircuitBreakerState, CircuitBreakerStats } from '../../types/index.js'
-
-// Re-export types for external use
-export type { CircuitBreakerState, CircuitBreakerStats }
+import type { CircuitBreakerState, CircuitBreakerStats } from '../../types/runtime/state.js'
 
 /** State change callback type */
 export type CircuitBreakerStateChangeCallback = (

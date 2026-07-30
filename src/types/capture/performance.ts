@@ -27,10 +27,3 @@ export interface PerformanceMeasure {
   readonly duration: number
   readonly entryType: 'measure'
 }
-
-/**
- * Performance snapshot — re-exported from wire type (canonical HTTP payload shape).
- * The stale interface previously used camelCase fields (vitals, longTasks, totalSize, etc.)
- * that didn't match the actual runtime data or Go server expectations.
- */
-export type { WirePerformanceSnapshot as PerformanceSnapshot } from '../wire/wire-performance-snapshot.js'

@@ -3,7 +3,7 @@
  * Why: Keep service-worker recovery and session access policy together.
  */
 
-import type { ChromeStorageWithSession } from '../../types/index.js'
+import type { ChromeStorageWithSession } from '../../types/runtime/chrome.js'
 import { readStorage, removeFromStorage, setStorageAccessLevel, writeStorage } from './io.js'
 
 const STATE_VERSION_KEY = 'kaboom_state_version'

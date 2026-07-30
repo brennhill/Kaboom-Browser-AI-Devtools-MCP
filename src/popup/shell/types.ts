@@ -9,7 +9,8 @@
  * Type definitions for popup UI
  */
 
-import type { ConnectionStatus, MemoryPressureState, ContextWarning, WebSocketCaptureMode } from '../../types/index.js'
+import type { ConnectionStatus, MemoryPressureState, ContextWarning } from '../../types/runtime/state.js'
+import type { WebSocketCaptureMode } from '../../types/capture/websocket.js'
 
 /**
  * Extended connection status for popup

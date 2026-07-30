@@ -99,7 +99,7 @@ describe('Tooling contracts', () => {
     const daemonHttp = readFileSync('src/lib/daemon-http.ts', 'utf8')
     const constants = readFileSync('src/lib/constants.ts', 'utf8')
     const options = readFileSync('src/options.ts', 'utf8')
-    const tabState = readFileSync('src/background/ui/tab-state.ts', 'utf8')
+    const terminalWorkspace = readFileSync('src/background/ui/terminal-workspace.ts', 'utf8')
     const storageSession = readFileSync('src/lib/storage/session.ts', 'utf8')
 
     assert.match(daemonHttp, /const DEFAULT_CLIENT_NAME = 'kaboom-extension'/)
@@ -119,9 +119,9 @@ describe('Tooling contracts', () => {
     assert.doesNotMatch(options, /gasoline_terminal_ai_command/)
     assert.doesNotMatch(options, /gasoline_terminal_dev_root/)
 
-    assert.match(tabState, /kaboom_terminal_workspace_group_id\?: number/)
-    assert.match(tabState, /kaboom_terminal_workspace_main_tab_id\?: number/)
-    assert.doesNotMatch(tabState, /gasoline_terminal_workspace_group_id/)
+    assert.match(terminalWorkspace, /kaboom_terminal_workspace_group_id\?: number/)
+    assert.match(terminalWorkspace, /kaboom_terminal_workspace_main_tab_id\?: number/)
+    assert.doesNotMatch(terminalWorkspace, /gasoline_terminal_workspace_group_id/)
 
     assert.match(storageSession, /const STATE_VERSION_KEY = 'kaboom_state_version'/)
     assert.doesNotMatch(storageSession, /gasoline_state_version/)

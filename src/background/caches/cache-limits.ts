@@ -35,7 +35,9 @@
  * and memory pressure monitoring.
  */
 
-import type { BufferState, MemoryPressureLevel, MemoryPressureState, ParsedSourceMap } from '../../types/index.js'
+import type { BufferState } from '../../types/utils.js'
+import type { MemoryPressureLevel, MemoryPressureState } from '../../types/runtime/state.js'
+import type { ParsedSourceMap } from '../../types/capture/sourcemap.js'
 
 // =============================================================================
 // CONSTANTS

@@ -1,7 +1,7 @@
 /**
  * Purpose: Pure stateless serialization utilities -- safe value serialization with circular reference detection, DOM element selector generation, and sensitive input detection.
  */
-import type { JsonValue } from '../../types/index.js';
+import type { JsonValue } from '../../types/utils.js';
 /**
  * Safely serialize a value, handling circular references and special types
  */

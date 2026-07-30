@@ -2,7 +2,7 @@
  * Purpose: Map-based command registry and dispatch loop that replaces the monolithic if-chain for routing pending queries to handlers.
  * Why: Extensible design lets new command modules register themselves without modifying central dispatch.
  */
-import type { PendingQuery } from '../../types/index.js';
+import type { PendingQuery } from '../../types/runtime/queries.js';
 import type { SyncClient } from '../sync/sync-client.js';
 import type { SendAsyncResultFn, QueryParamsObject, TargetResolution } from './helpers.js';
 import { actionToast } from './helpers.js';

@@ -1,10 +1,11 @@
 /**
  * Purpose: Own screenshot and draw-mode runtime message handling.
  */
-import type { DrawModeCompletedMessage, LogEntry } from '../../types/index.js'
+import type { DrawModeCompletedMessage } from '../../types/runtime-messages.js'
+import type { LogEntry } from '../../types/capture/telemetry.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { postDaemonJSON } from '../../lib/daemon-http.js'
-import { setKaboomOverlayVisibility } from '../ui/tab-state.js'
+import { setKaboomOverlayVisibility } from '../ui/content-script-bridge.js'
 import { trackUIFeature } from '../ui/ui-usage-tracker.js'
 import type { MessageHandlerOwner, SendResponse } from './types.js'
 

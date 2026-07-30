@@ -6,7 +6,7 @@
  * @fileoverview State Management - Handles browser state capture/restore and
  * element highlighting for the AI Web Pilot.
  */
-import type { BrowserStateSnapshot } from '../types/index.js';
+import type { BrowserStateSnapshot } from '../types/runtime/state.js';
 /**
  * Highlight result
  */

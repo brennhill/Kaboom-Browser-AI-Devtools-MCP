@@ -8,13 +8,13 @@
  * storage change listeners, and other Chrome extension events.
  */
 
-import type { StorageChange } from '../types/index.js'
+import type { StorageChange } from '../types/runtime/chrome.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { StorageKey } from '../lib/constants.js'
 import { onStorageChanged } from '../lib/storage/changes.js'
 import { persist } from '../lib/storage/io.js'
 import { getLocal, setLocal, setLocals } from '../lib/storage/local.js'
-import { clearTrackedTab as clearTrackedTabState } from './ui/tab-state.js'
+import { clearTrackedTab as clearTrackedTabState } from '../lib/tabs/tracked-tab-storage.js'
 
 // =============================================================================
 // CONSTANTS - Rate Limiting & DoS Protection

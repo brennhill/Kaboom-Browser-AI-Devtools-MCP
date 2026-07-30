@@ -9,7 +9,10 @@
  * Adds flickering animation when AI Pilot is active.
  */
 
-import type { TrackingState } from '../types/index.js'
+interface TrackingState {
+  isTracked: boolean
+  aiPilotEnabled: boolean
+}
 
 /**
  * Original favicon href (to restore when tracking stops)

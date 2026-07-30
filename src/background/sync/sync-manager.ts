@@ -7,14 +7,15 @@
 // Owns the sync client instance and provides start/stop/reset operations.
 // Dependencies are injected to avoid circular imports with index.ts.
 
-import type { PendingQuery, ConnectionStatus } from '../../types/index.js'
+import type { PendingQuery } from '../../types/runtime/queries.js'
+import type { ConnectionStatus } from '../../types/runtime/state.js'
 import type { ExtensionLogQueueEntry } from '../runtime-state/log-queue.js'
 import { createSyncClient, type SyncClient, type SyncCommand, type SyncSettings } from './sync-client.js'
 import { getLastCSPStatus } from '../runtime-state/csp-state.js'
 import { DebugCategory } from '../debug.js'
 import { updateBadge } from './server.js'
 import { isQueryProcessing, addProcessingQuery, removeProcessingQuery } from '../caches/snapshots.js'
-import { getTrackedTabInfo } from '../ui/tab-state.js'
+import { getTrackedTabInfo } from '../ui/tracked-tab-state.js'
 import { handlePendingQuery as handlePendingQueryImpl } from '../pending-queries.js'
 import { errorMessage } from '../../lib/error-utils.js'
 

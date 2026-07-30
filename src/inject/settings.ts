@@ -5,7 +5,8 @@
 
 // settings.ts — Settings dispatch and state command handling for inject context.
 
-import type { BrowserStateSnapshot, StateAction, WebSocketCaptureMode } from '../types/index.js'
+import type { BrowserStateSnapshot, StateAction } from '../types/runtime/state.js'
+import type { WebSocketCaptureMode } from '../types/capture/websocket.js'
 
 import { setNetworkWaterfallEnabled, setNetworkBodyCaptureEnabled, setServerUrl } from '../lib/net/network.js'
 import {

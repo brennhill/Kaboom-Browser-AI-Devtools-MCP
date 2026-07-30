@@ -753,7 +753,7 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 | `cmd/browser-agent/queries.go` | Add handlers for recordings, recording_actions, WebSocket upgrade | ~60 LOC |
 | `cmd/browser-agent/main.go` | Initialize WebSocket router | ~20 LOC |
 | `extension/inject/action-capture.ts` | Extend with recording metadata (selector, x/y, screenshots) | ~30 LOC |
-| `extension/background/index.js` | Initialize recording module | ~15 LOC |
+| `extension/background/init.js` | Initialize recording module | ~15 LOC |
 
 **Total New Code:** ~1,930 LOC (reuses existing action capture infrastructure)
 
@@ -864,4 +864,3 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 2. **QA Plan** — Define test cases (unit + integration + UAT)
 3. **Implementation** — TDD, write failing tests first
 4. **Release** — Tag as v6.0, deploy with existing Kaboom
-

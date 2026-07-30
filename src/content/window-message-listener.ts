@@ -8,7 +8,9 @@
  * Handles window.postMessage events from inject.js
  */
 
-import type { HighlightResponse, ExecuteJsResult, A11yAuditResult, DomQueryResult } from '../types/index.js'
+import type { HighlightResponse, ExecuteJsResult } from '../types/runtime-messages.js'
+import type { A11yAuditResult } from '../types/capture/accessibility.js'
+import type { DomQueryResult } from '../types/capture/dom.js'
 import type { PageMessageEventData, BackgroundMessageFromContent } from './types.js'
 import {
   resolveHighlightRequest,

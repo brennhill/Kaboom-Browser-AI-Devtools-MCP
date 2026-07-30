@@ -373,12 +373,6 @@ func (h *BrowserActions) HandleBrowserActionCloseTabImpl(req mcp.JSONRPCRequest,
 	})
 }
 
-// validWorldValues delegates to the interact package.
-var validWorldValues = act.ValidWorldValues
-
-// truncateToLen delegates to the interact package.
-var truncateToLen = act.TruncateToLen
-
 func (h *BrowserActions) HandleHighlightImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Selector   string `json:"selector"`
@@ -423,7 +417,7 @@ func (h *BrowserActions) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args json.R
 	if params.World == "" {
 		params.World = "auto"
 	}
-	if !validWorldValues[params.World] {
+	if !act.ValidWorldValues[params.World] {
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid 'world' value: "+params.World, "Use 'auto' (default, tries main then isolated), 'main' (page JS access), or 'isolated' (bypasses CSP, DOM only)", mcp.WithParam("world"))
 	}
 
@@ -435,7 +429,7 @@ func (h *BrowserActions) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args json.R
 		tabID(params.TabID).
 		guards(h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking).
 		cspGuard(params.World).
-		recordAction("execute_js", "", map[string]any{"script_preview": truncateToLen(params.Script, 100)}).
+		recordAction("execute_js", "", map[string]any{"script_preview": act.TruncateToLen(params.Script, 100)}).
 		queuedMessage("Command queued").
 		execute(req, args)
 }

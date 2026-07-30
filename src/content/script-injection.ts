@@ -8,7 +8,7 @@
  * Injects capture script into the page context and syncs stored settings
  */
 
-import type { WebSocketCaptureMode } from '../types/index.js'
+import type { WebSocketCaptureMode } from '../types/capture/websocket.js'
 import { SettingName } from '../lib/constants.js'
 import { getLocals } from '../lib/storage/local.js'
 

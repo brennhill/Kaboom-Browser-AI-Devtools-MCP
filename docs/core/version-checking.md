@@ -432,7 +432,7 @@ resetVersionCheck();
 - [src/lib/version.ts](../src/lib/version.ts) - Semver parsing & comparison
 - [src/background/sync/version-check.ts](../src/background/sync/version-check.ts) - Version state management
 - [src/background/sync/server.ts](../src/background/sync/server.ts) - HTTP header injection
-- [src/background/index.ts](../src/background/index.ts) - Integration with `/health` polling
+- [connection-monitor.ts](../src/background/orchestration/connection-monitor.ts) - Integration with `/health` polling
 
 ## Data Flow Summary
 

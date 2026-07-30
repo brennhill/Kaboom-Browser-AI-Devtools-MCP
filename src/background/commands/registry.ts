@@ -6,7 +6,7 @@
 // registry.ts — Command registry and dispatch loop.
 // Replaces the monolithic if-chain in pending-queries.ts with a Map-based registry.
 
-import type { PendingQuery } from '../../types/index.js'
+import type { PendingQuery } from '../../types/runtime/queries.js'
 import type { SyncClient } from '../sync/sync-client.js'
 import { initReady } from '../runtime-state/startup-state.js'
 import { DebugCategory } from '../debug.js'

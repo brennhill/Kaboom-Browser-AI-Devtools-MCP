@@ -9,6 +9,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 var validStorageTypes = map[string]string{
@@ -178,7 +179,7 @@ func (h *StorageActions) queueExecuteScript(
 	if world == "" {
 		world = "auto"
 	}
-	if !validWorldValues[world] {
+	if !act.ValidWorldValues[world] {
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid 'world' value: "+world, "Use 'auto' (default), 'main', or 'isolated'", mcp.WithParam("world"))
 	}
 	if timeoutMs <= 0 {

@@ -50,8 +50,16 @@ function renderMessage(label: string, detail: string, status: 'pass' | 'warn' | 
 function renderReport(report: DoctorReport): void {
   const elements = doctorElements()
   if (!elements.overall || !elements.checks) return
-  elements.overall.textContent = report.ready_for_interaction ? 'Ready' : 'Needs attention'
-  elements.overall.className = `doctor-overall doctor-${report.ready_for_interaction ? 'pass' : 'warn'}`
+  const waitingForAttachment =
+    !report.ready_for_interaction &&
+    report.checks.every((check) => check.status === 'pass' || check.name === 'tracked_tab')
+  const healthy = report.ready_for_interaction || waitingForAttachment
+  elements.overall.textContent = report.ready_for_interaction
+    ? 'Ready'
+    : waitingForAttachment
+      ? 'Ready when attached'
+      : 'Needs attention'
+  elements.overall.className = `doctor-overall doctor-${healthy ? 'pass' : 'warn'}`
   elements.checks.replaceChildren(
     ...report.checks.map((check) => {
       const row = document.createElement('div')

@@ -9,7 +9,7 @@
  * Handles log level, WebSocket mode, and clear logs functionality
  */
 
-import type { WebSocketCaptureMode } from '../types/index.js'
+import type { WebSocketCaptureMode } from '../types/capture/websocket.js'
 import { SettingName, StorageKey } from '../lib/constants.js'
 import { persist } from '../lib/storage/io.js'
 import { setLocal } from '../lib/storage/local.js'

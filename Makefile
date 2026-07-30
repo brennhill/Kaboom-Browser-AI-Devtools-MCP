@@ -63,8 +63,8 @@ generate-draw-mode:
 compile-ts: validate-versions generate-wire-types generate-dom-primitives generate-draw-mode
 	@echo "=== Compiling TypeScript ==="
 	@npx tsc
-	@if [ ! -f extension/background/index.js ]; then \
-		echo "❌ ERROR: TypeScript compilation failed - extension/background/index.js not found"; \
+	@if [ ! -f extension/background/init.js ]; then \
+		echo "❌ ERROR: TypeScript compilation failed - extension/background/init.js not found"; \
 		exit 1; \
 	fi
 	@echo "=== Bundling extension scripts ==="

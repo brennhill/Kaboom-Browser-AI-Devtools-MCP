@@ -6,7 +6,8 @@
 // Delegates tab capture / offscreen plumbing to recording-capture.ts and
 // chrome runtime listener registration to recording-listeners.ts.
 import { getServerUrl } from '../runtime-state/settings-state.js';
-import { pingContentScript, waitForTabLoad, getActiveTab, sendTabToast } from '../ui/tab-state.js';
+import { pingContentScript, sendTabToast } from '../ui/content-script-bridge.js';
+import { waitForTabLoad, getActiveTab } from '../ui/tracked-tab-state.js';
 import { scaleTimeout } from '../../lib/timeouts.js';
 import { StorageKey } from '../../lib/constants.js';
 import { ensureOffscreenDocument, getStreamIdWithRecovery, requestRecordingGesture } from './capture.js';
@@ -18,7 +19,7 @@ import { getLocal, removeLocal, setLocals } from '../../lib/storage/local.js';
 import { delay } from '../../lib/timeout-utils.js';
 import { buildRecordingToastLabel } from './utils.js';
 import { startRecordingBadgeTimer, stopRecordingBadgeTimer } from './badge.js';
-import { setTrackedTab } from '../ui/tab-state.js';
+import { setTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js';
 const defaultState = {
     active: false,

@@ -17,18 +17,6 @@ import (
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
-// domPrimitiveActions delegates to the interact package.
-var domPrimitiveActions = act.DOMPrimitiveActions
-
-// domActionRequiredParams delegates to the interact package.
-var domActionRequiredParams = act.DOMActionRequiredParams
-
-// domActionToReproType delegates to the interact package.
-var domActionToReproType = act.DOMActionToReproType
-
-// parseSelectorForReproduction delegates to the interact package.
-var parseSelectorForReproduction = act.ParseSelectorForReproduction
-
 // normalizeDOMActionArgs rewrites interact args so extension-facing dom_action
 // payloads always carry canonical "action", while preserving user-facing "what".
 func normalizeDOMActionArgs(args json.RawMessage, action string) json.RawMessage {
@@ -287,7 +275,7 @@ func domActionContextOptions(action, selector string) []func(*mcp.StructuredErro
 // ValidateDOMActionParams checks action-specific required parameters.
 // Returns (response, true) if validation failed, or (zero, false) if valid.
 func ValidateDOMActionParams(req mcp.JSONRPCRequest, action, text, value, name string) (mcp.JSONRPCResponse, bool) {
-	rule, ok := domActionRequiredParams[action]
+	rule, ok := act.DOMActionRequiredParams[action]
 	if !ok {
 		return mcp.JSONRPCResponse{}, false
 	}
@@ -383,7 +371,7 @@ func (h *DOMActions) buildElementIndexFromResponse(clientID string, tabID int, g
 	if !ok {
 		return ""
 	}
-	elements := extractElementList(block.data)
+	elements := act.ExtractElementList(block.data)
 	if elements == nil {
 		return ""
 	}
@@ -464,7 +452,7 @@ func truncateListInteractiveResponse(resp mcp.JSONRPCResponse, limit int) mcp.JS
 	if !ok {
 		return resp
 	}
-	elements := extractElementList(block.data)
+	elements := act.ExtractElementList(block.data)
 	if elements == nil || len(elements) <= limit {
 		return resp
 	}
@@ -492,8 +480,6 @@ func setNestedElements(data map[string]any, elements []any) {
 		}
 	}
 }
-
-var extractElementList = act.ExtractElementList
 
 func (h *DOMActions) resolveIndexToSelector(clientID string, tabID int, index int, generation string) (string, bool, bool, string) {
 	if h.elementIndexRegistry == nil {

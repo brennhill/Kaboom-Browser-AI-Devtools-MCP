@@ -1,7 +1,6 @@
 // @ts-nocheck
 /**
- * @fileoverview index.test.js - Tests for debug mode and export functions
- * Co-located with index.js implementation
+ * @fileoverview debug.test.js - Tests for debug mode and export functions.
  */
 
 import { test, describe, mock, beforeEach } from 'node:test'
@@ -60,10 +59,7 @@ const mockChrome = {
 
 globalThis.chrome = mockChrome
 
-// Import directly from the implementation file (not through barrel export)
-import { setDebugMode, exportDebugLog, clearDebugLog } from './index.js'
-import { debugLog } from './debug.js'
-import { DebugCategory } from './debug.js'
+import { setDebugMode, exportDebugLog, clearDebugLog, debugLog, DebugCategory } from './debug.js'
 
 describe('Debug Mode', () => {
   beforeEach(() => {

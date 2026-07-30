@@ -7,7 +7,7 @@ import { getLastCSPStatus } from '../runtime-state/csp-state.js';
 import { DebugCategory } from '../debug.js';
 import { updateBadge } from './server.js';
 import { isQueryProcessing, addProcessingQuery, removeProcessingQuery } from '../caches/snapshots.js';
-import { getTrackedTabInfo } from '../ui/tab-state.js';
+import { getTrackedTabInfo } from '../ui/tracked-tab-state.js';
 import { handlePendingQuery as handlePendingQueryImpl } from '../pending-queries.js';
 import { errorMessage } from '../../lib/error-utils.js';
 // =============================================================================

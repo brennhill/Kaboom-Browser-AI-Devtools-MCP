@@ -106,7 +106,7 @@ describe('executeJavaScript Function', () => {
   })
 
   test('simple expression: 1 + 1 should return { result: 2 }', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     const response = await executeJavaScript('1 + 1')
 
@@ -115,7 +115,7 @@ describe('executeJavaScript Function', () => {
   })
 
   test('access globals: window.location.href should return URL string', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     const response = await executeJavaScript('window.location.href')
 
@@ -125,7 +125,7 @@ describe('executeJavaScript Function', () => {
   })
 
   test('object serialization: { a: 1, b: [2, 3] } should be properly serialized', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     const response = await executeJavaScript('({ a: 1, b: [2, 3] })')
 
@@ -134,7 +134,7 @@ describe('executeJavaScript Function', () => {
   })
 
   test('function return: (() => 42)() should return { result: 42 }', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     const response = await executeJavaScript('(() => 42)()')
 
@@ -143,7 +143,7 @@ describe('executeJavaScript Function', () => {
   })
 
   test('error handling: (() => { throw new Error("test") })() should return error response with stack', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     // Wrap throw in an IIFE since throw is a statement, not an expression
     const response = await executeJavaScript('(() => { throw new Error("test") })()')
@@ -155,7 +155,7 @@ describe('executeJavaScript Function', () => {
   })
 
   test('promise resolution: Promise.resolve(42) should return { result: 42 }', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     const response = await executeJavaScript('Promise.resolve(42)')
 
@@ -164,7 +164,7 @@ describe('executeJavaScript Function', () => {
   })
 
   test('promise rejection: Promise.reject(new Error("fail")) should return error response', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     const response = await executeJavaScript('Promise.reject(new Error("fail"))')
 
@@ -174,7 +174,7 @@ describe('executeJavaScript Function', () => {
   })
 
   test('async promise: new Promise(r => setTimeout(() => r(99), 10)) should resolve', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     const response = await executeJavaScript('new Promise(r => setTimeout(() => r(99), 10))')
 
@@ -199,7 +199,7 @@ describe('executeJavaScript Script Wrapping', () => {
   })
 
   test('IIFE with semicolons should return its value', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     // IIFE bodies contain semicolons but the outer form is a single expression.
     // The return value of the IIFE must be captured.
@@ -210,7 +210,7 @@ describe('executeJavaScript Script Wrapping', () => {
   })
 
   test('try/catch block should execute without SyntaxError', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     // try/catch is a statement, not an expression.
     // Wrapping it as return(try{...}catch{...}) is invalid JS.
@@ -221,7 +221,7 @@ describe('executeJavaScript Script Wrapping', () => {
   })
 
   test('if/else block should execute without SyntaxError', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     const response = await executeJavaScript('if (true) { 1 } else { 2 }')
 
@@ -229,7 +229,7 @@ describe('executeJavaScript Script Wrapping', () => {
   })
 
   test('multi-statement script with trailing expression should return value', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     // Scripts like "var x = 1; x" should ideally return x,
     // but at minimum must not crash.
@@ -240,7 +240,7 @@ describe('executeJavaScript Script Wrapping', () => {
   })
 
   test('arrow IIFE with semicolons should return its value', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     const response = await executeJavaScript('(() => { var a = 1; var b = 2; return a + b; })()')
 
@@ -249,7 +249,7 @@ describe('executeJavaScript Script Wrapping', () => {
   })
 
   test('IIFE returning JSON string should return the string', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     // This is the exact pattern used by the smoke test subtitle check
     const response = await executeJavaScript('(function() { var x = "hello"; return JSON.stringify({text: x}); })()')
@@ -278,21 +278,21 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle null', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const result = safeSerializeForExecute(null)
     assert.strictEqual(result, null)
   })
 
   test('should handle undefined', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const result = safeSerializeForExecute(undefined)
     assert.strictEqual(result, undefined)
   })
 
   test('should handle primitives', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     assert.strictEqual(safeSerializeForExecute('hello'), 'hello')
     assert.strictEqual(safeSerializeForExecute(42), 42)
@@ -301,7 +301,7 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle functions', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const namedFn = function myFunc() {}
     // Note: In modern JS, variables assigned to anonymous functions get the variable name
@@ -314,14 +314,14 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle symbols', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const sym = Symbol('test')
     assert.strictEqual(safeSerializeForExecute(sym), 'Symbol(test)')
   })
 
   test('should handle circular references without crashing', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const obj = { a: 1 }
     obj.self = obj
@@ -333,7 +333,7 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle deeply nested objects with max depth', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     // Create an object 15 levels deep
     let deep = { value: 'bottom' }
@@ -356,7 +356,7 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle arrays (capped at 100 elements)', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const largeArray = Array.from({ length: 150 }, (_, i) => i)
     const result = safeSerializeForExecute(largeArray)
@@ -367,7 +367,7 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle Error objects', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const error = new Error('test error')
     const result = safeSerializeForExecute(error)
@@ -378,7 +378,7 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle Date objects', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const date = new Date('2024-01-15T10:30:00.000Z')
     const result = safeSerializeForExecute(date)
@@ -387,7 +387,7 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle RegExp objects', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const regex = /test\d+/gi
     const result = safeSerializeForExecute(regex)
@@ -396,7 +396,7 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle DOM nodes', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     // Mock a DOM node
     const mockNode = {
@@ -420,7 +420,7 @@ describe('safeSerializeForExecute Function', () => {
   })
 
   test('should handle large objects (capped at 50 keys)', async () => {
-    const { safeSerializeForExecute } = await import('../../../extension/inject/message-handlers.js')
+    const { safeSerializeForExecute } = await import('../../../extension/inject/execute-js.js')
 
     const largeObj = {}
     for (let i = 0; i < 100; i++) {
@@ -456,7 +456,7 @@ describe('Timeout Handling', () => {
   })
 
   test('should timeout for long-running promises', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     // Use a promise that takes longer than the timeout
     const response = await executeJavaScript(
@@ -470,7 +470,7 @@ describe('Timeout Handling', () => {
   })
 
   test('should respect custom timeout_ms parameter', async () => {
-    const { executeJavaScript } = await import('../../../extension/inject/message-handlers.js')
+    const { executeJavaScript } = await import('../../../extension/inject/execute-js.js')
 
     // A quick operation should succeed with a reasonable timeout
     const response = await executeJavaScript('42', 1000)

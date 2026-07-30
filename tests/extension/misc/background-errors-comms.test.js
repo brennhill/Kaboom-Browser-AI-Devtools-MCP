@@ -432,7 +432,7 @@ describe('captureScreenshot', () => {
 describe('Debug Logging', () => {
   test('should log debug entries', async () => {
     const { debugLog } = await import('../../../extension/background/debug.js')
-    const { getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
+    const { getDebugLog, clearDebugLog } = await import('../../../extension/background/debug.js')
 
     // Clear any existing entries
     clearDebugLog()
@@ -458,7 +458,7 @@ describe('Debug Logging', () => {
 
   test('should clear debug log', async () => {
     const { debugLog } = await import('../../../extension/background/debug.js')
-    const { getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
+    const { getDebugLog, clearDebugLog } = await import('../../../extension/background/debug.js')
 
     // Add an entry
     debugLog(DebugCategory.ERROR, 'Error test')
@@ -475,7 +475,7 @@ describe('Debug Logging', () => {
 
   test('should export debug log as JSON', async () => {
     const { debugLog } = await import('../../../extension/background/debug.js')
-    const { exportDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
+    const { exportDebugLog, clearDebugLog } = await import('../../../extension/background/debug.js')
 
     clearDebugLog()
     debugLog(DebugCategory.CAPTURE, 'Capture test')
@@ -496,11 +496,11 @@ describe('Debug Logging', () => {
     assert.strictEqual(typeof captureEntry.ts, 'string')
   })
 
-  // NOTE: setDebugMode test moved to co-located test file: extension/background/index.test.js
+  // NOTE: setDebugMode test lives with the canonical debug owner.
 
   test('should limit debug log buffer size', async () => {
     const { debugLog } = await import('../../../extension/background/debug.js')
-    const { getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
+    const { getDebugLog, clearDebugLog } = await import('../../../extension/background/debug.js')
 
     clearDebugLog()
 

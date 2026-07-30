@@ -1,7 +1,8 @@
 /**
  * Purpose: Shared infrastructure for command dispatch -- result helpers, target tab resolution, action toast, and type aliases.
  */
-import { getTrackedTabInfo, clearTrackedTab, getActiveTab } from '../ui/tab-state.js';
+import { getTrackedTabInfo, getActiveTab } from '../ui/tracked-tab-state.js';
+import { clearTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';
 import { DebugCategory } from '../debug.js';
 import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js';
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';

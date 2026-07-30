@@ -10,7 +10,7 @@
  */
 
 import { MAX_PERFORMANCE_ENTRIES, PERFORMANCE_TIME_WINDOW_MS } from '../constants.js'
-import type { PerformanceMark, PerformanceMeasure } from '../../types/index.js'
+import type { PerformanceMark, PerformanceMeasure } from '../../types/capture/performance.js'
 import { scheduleSnapshotResend } from './perf-snapshot.js'
 
 // Performance Marks state

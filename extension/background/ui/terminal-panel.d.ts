@@ -5,7 +5,6 @@
  * implementation (repo rule 19).
  * Docs: docs/features/feature/terminal/index.md
  */
-export { syncTerminalPanelAvailability } from './side-panel-availability.js';
 export declare function isTerminalPanelOpenSync(): boolean;
 /**
  * Track whether a panel document is alive. Call once during background init.

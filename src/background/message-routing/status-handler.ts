@@ -1,7 +1,12 @@
 /**
  * Purpose: Own status, log-clearing, and debug diagnostic messages.
  */
-import type { CircuitBreakerState, ConnectionStatus, ContextWarning, MemoryPressureState } from '../../types/index.js'
+import type {
+  CircuitBreakerState,
+  ConnectionStatus,
+  ContextWarning,
+  MemoryPressureState
+} from '../../types/runtime/state.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import type { MessageHandlerOwner } from './types.js'

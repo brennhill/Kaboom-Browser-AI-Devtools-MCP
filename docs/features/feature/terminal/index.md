@@ -36,6 +36,7 @@ code_paths:
   - src/content/ui/terminal-write-guard.ts
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/ui/terminal-panel.ts
+  - src/background/ui/terminal-workspace.ts
   - src/background/ui/side-panel-availability.ts
   - src/background/message-handlers.ts
   - src/background/message-routing/utility-handler.ts

@@ -2,7 +2,11 @@
  * Purpose: Exposes the window.__kaboom developer API for programmatic access to capture capabilities, context annotations, and event buffers.
  * Docs: docs/features/feature/custom-event-api/index.md
  */
-import type { LogEntry, ActionEntry, EnhancedAction, SelectorStrategies, WaterfallEntry, PerformanceMark, PerformanceMeasure } from '../types/index.js';
+import type { LogEntry } from '../types/capture/telemetry.js';
+import type { ActionEntry, SelectorStrategies } from '../types/capture/actions.js';
+import type { WireEnhancedAction as EnhancedAction } from '../types/wire/wire-enhanced-action.js';
+import type { WireNetworkWaterfallEntry as WaterfallEntry } from '../types/wire/wire-network.js';
+import type { PerformanceMark, PerformanceMeasure } from '../types/capture/performance.js';
 /**
  * KaboomAPI interface exposed on window.__kaboom
  */

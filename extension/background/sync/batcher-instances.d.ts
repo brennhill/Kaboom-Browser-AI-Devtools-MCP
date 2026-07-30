@@ -3,7 +3,12 @@
  * Why: Isolates batcher wiring from business logic in index.ts to keep module initialization explicit.
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
-import type { ConnectionStatus, LogEntry, WebSocketEvent, NetworkBodyPayload, EnhancedAction, PerformanceSnapshot } from '../../types/index.js';
+import type { ConnectionStatus } from '../../types/runtime/state.js';
+import type { LogEntry } from '../../types/capture/telemetry.js';
+import type { WireWebSocketEvent as WebSocketEvent } from '../../types/wire/wire-websocket-event.js';
+import type { WireNetworkBody as NetworkBodyPayload } from '../../types/wire/wire-network.js';
+import type { WireEnhancedAction as EnhancedAction } from '../../types/wire/wire-enhanced-action.js';
+import type { WirePerformanceSnapshot as PerformanceSnapshot } from '../../types/wire/wire-performance-snapshot.js';
 import { type BatcherWithCircuitBreaker, type Batcher } from './batchers.js';
 import type { CircuitBreaker } from './circuit-breaker.js';
 /** Mutable connection status passed in from the state owner */
