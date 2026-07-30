@@ -103,6 +103,9 @@ last_verified_date: 2026-03-05
 - Connected action coverage classifies every live five-tool action and supports
   `KABOOM_UAT_ACTION=tool/mode` for isolated reproduction without inheriting
   state from unrelated actions.
+- Stateful focused actions prepare their prerequisites before materializing
+  arguments; event-recording stop therefore proves a real start/ID/stop
+  lifecycle instead of using a placeholder identifier.
 - Comprehensive aggregation reports pass/fail/skip counts and fails closed when
   any selected category omits or corrupts its structured result file.
 - `make uat` runs both suite boundaries and emits canonical

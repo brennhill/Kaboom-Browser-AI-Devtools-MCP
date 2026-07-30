@@ -162,6 +162,24 @@ action_args() {
     esac
 }
 
+recording_id_from_response() {
+    extract_content_text "$1" |
+        sed -n 's/.*"recording_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' |
+        head -n 1
+}
+
+ensure_event_recording() {
+    [ -n "${HEALTH_RECORDING_ID:-}" ] && return 0
+
+    local response
+    response="$(call_tool "configure" '{"what":"event_recording_start","name":"connected-action-coverage"}')"
+    HEALTH_RECORDING_ID="$(recording_id_from_response "$response")"
+    if [ -z "$HEALTH_RECORDING_ID" ]; then
+        fail "Event recording start returned no recording_id: $(truncate "$(extract_content_text "$response")")"
+        return 1
+    fi
+}
+
 prepare_action() {
     local action="$1/$2"
     local script=""
@@ -188,6 +206,9 @@ prepare_action() {
             ;;
         interact/fill_form|interact/fill_form_and_submit|analyze/visual_baseline)
             call_tool "interact" '{"what":"navigate","url":'"$(json_string "http://127.0.0.1:${PORT}/tests/interact.html")"'}' >/dev/null
+            ;;
+        configure/event_recording_stop)
+            ensure_event_recording
             ;;
     esac
     [ -z "$script" ] || call_tool "interact" '{"what":"execute_js","script":'"$(json_string "$script")"'}' >/dev/null
@@ -246,8 +267,10 @@ for tool in $TOOLS; do
                 continue
                 ;;
         esac
+        if ! prepare_action "$tool" "$mode"; then
+            continue
+        fi
         args="$(action_args "$tool" "$mode")"
-        prepare_action "$tool" "$mode"
         if [ "$tool/$mode" = "configure/replay_sequence" ]; then
             call_tool "configure" \
                 '{"what":"save_sequence","name":"connected-action-coverage","steps":[{"what":"get_text","selector":"body"}]}' \
@@ -259,7 +282,7 @@ for tool in $TOOLS; do
             HEALTH_EXTRA_TAB_ID="$(uat_new_tab_id "$response")"
         fi
         if [ "$tool/$mode" = "configure/event_recording_start" ]; then
-            HEALTH_RECORDING_ID="$(extract_content_text "$response" | sed -n 's/.*"recording_id"[[:space:]]*:[[:space:]]*"\\([^"]*\\)".*/\\1/p' | head -n 1)"
+            HEALTH_RECORDING_ID="$(recording_id_from_response "$response")"
         fi
         if ! check_valid_jsonrpc "$response"; then
             fail "$tool/$mode returned an invalid JSON-RPC envelope: $(truncate "$response")"
