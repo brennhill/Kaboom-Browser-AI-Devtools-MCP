@@ -16,6 +16,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -48,6 +49,7 @@ type fake struct {
 	recorded    []string
 	redactCalls int
 	noStore     bool
+	diagnostics []statediag.Diagnostic
 }
 
 func newFake() *fake {
@@ -77,13 +79,18 @@ func (f *fake) deps() *Deps {
 			}
 			return mcp.JSONRPCResponse{}, false
 		},
-		DiagnosticHint: func() func(*mcp.StructuredError) { return mcp.WithHint("diag") },
+		DiagnosticHint:   func() func(*mcp.StructuredError) { return mcp.WithHint("diag") },
+		StateDiagnostics: f,
 		Redact: func(m map[string]any) map[string]any {
 			f.redactCalls++
 			m["url"] = "[REDACTED]"
 			return m
 		},
 	}
+}
+
+func (f *fake) Report(diagnostic statediag.Diagnostic) {
+	f.diagnostics = append(f.diagnostics, diagnostic)
 }
 
 func newHandler(t *testing.T) (*Handler, *fake) {
@@ -268,6 +275,19 @@ func TestHandleStateLoad_NotFound(t *testing.T) {
 	}
 }
 
+func TestHandleStateLoad_CorruptSnapshotReportsRecovery(t *testing.T) {
+	h, f := newHandler(t)
+	if err := h.sessionStoreImpl.Save(act.StateNamespace, "corrupt", []byte(`not-json`)); err != nil {
+		t.Fatalf("seed Save() error = %v", err)
+	}
+
+	_ = h.HandleStateLoad(req(), json.RawMessage(`{"snapshot_name":"corrupt"}`))
+
+	if len(f.diagnostics) != 1 || f.diagnostics[0].Name != "page_snapshot_state" {
+		t.Fatalf("diagnostics = %#v, want page_snapshot_state recovery", f.diagnostics)
+	}
+}
+
 func TestHandleStateLoad_RestoreStatusBranches(t *testing.T) {
 	withState := `{"form_values":{"#a":"x"}}`
 	for _, tc := range []struct {
@@ -349,7 +369,7 @@ func TestHandleStateList_ReportsMetadata(t *testing.T) {
 	}
 }
 
-func TestHandleStateList_UnparseableSnapshotStillListed(t *testing.T) {
+func TestHandleStateList_UnparseableSnapshotStillListedAndReported(t *testing.T) {
 	store, err := persistence.NewSessionStore(t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("NewSessionStore() error = %v", err)
@@ -367,6 +387,9 @@ func TestHandleStateList_UnparseableSnapshotStillListed(t *testing.T) {
 	}
 	if entry, _ := states[0].(map[string]any); entry["name"] != "corrupt" {
 		t.Fatalf("entry = %v, want name=corrupt", states[0])
+	}
+	if len(f.diagnostics) != 1 || f.diagnostics[0].Name != "page_snapshot_state" {
+		t.Fatalf("diagnostics = %#v, want page_snapshot_state recovery", f.diagnostics)
 	}
 }
 

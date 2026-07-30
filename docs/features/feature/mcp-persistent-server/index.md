@@ -72,6 +72,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - tests/architecture/user-state-loaders.test.cjs
   - internal/statediag/collector_test.go
   - cmd/browser-agent/cli_modes_subprocess_test.go
   - cmd/browser-agent/main_connection_adapters_test.go

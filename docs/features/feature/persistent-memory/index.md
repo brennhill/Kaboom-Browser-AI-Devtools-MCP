@@ -13,6 +13,7 @@ code_paths:
   - internal/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
 test_paths:
+  - tests/architecture/user-state-loaders.test.cjs
   - internal/persistence/persistence_branches_test.go
   - internal/statediag/collector_test.go
   - cmd/browser-agent/tools_configure_handler_test.go

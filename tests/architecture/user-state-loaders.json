@@ -1,0 +1,108 @@
+{
+  "extension_contract": "tests/extension/state-recovery/state-recovery-contract.test.js",
+  "go_scan_roots": [
+    "internal/persistence",
+    "internal/noise",
+    "internal/recording",
+    "internal/telemetry/install_id.go",
+    "cmd/browser-agent/internal/summarypref",
+    "cmd/browser-agent/internal/sequencehandler",
+    "cmd/browser-agent/internal/toolinteract/interactstate",
+    "cmd/browser-agent/internal/screenrec",
+    "cmd/browser-agent/internal/daemonlife",
+    "cmd/browser-agent/tools_core.go"
+  ],
+  "go_loaders": [
+    {
+      "path": "internal/persistence/persistence_store.go",
+      "owner": "session metadata",
+      "fallback": "rebuild project metadata",
+      "doctor": "session_metadata_state"
+    },
+    {
+      "path": "internal/persistence/persistence_context.go",
+      "owner": "session context",
+      "fallback": "return an empty context or history",
+      "doctor": "session_context_state"
+    },
+    {
+      "path": "internal/persistence/persistence_crud.go",
+      "owner": "stored session values",
+      "fallback": "classify absence and return read failure to the owning loader",
+      "doctor": "owning state diagnostic"
+    },
+    {
+      "path": "internal/persistence/persistence_handler.go",
+      "owner": "explicit configure store loads",
+      "fallback": "return a structured load error",
+      "doctor": "stored_session_state"
+    },
+    {
+      "path": "internal/noise/noise_persistence.go",
+      "owner": "noise rules",
+      "fallback": "activate default noise rules",
+      "doctor": "noise_rules_state"
+    },
+    {
+      "path": "internal/recording/manager_store.go",
+      "owner": "action recordings and replay metadata",
+      "fallback": "isolate invalid entries and preserve valid siblings",
+      "doctor": "recording_state"
+    },
+    {
+      "path": "internal/telemetry/install_id.go",
+      "owner": "anonymous install identity",
+      "fallback": "replace malformed identity atomically or suppress telemetry after I/O failure",
+      "doctor": "install_identity_state"
+    },
+    {
+      "path": "cmd/browser-agent/internal/summarypref/cache.go",
+      "owner": "response-mode preference",
+      "fallback": "use full responses",
+      "doctor": "response_mode_state",
+      "scan": false
+    },
+    {
+      "path": "cmd/browser-agent/internal/sequencehandler/handler.go",
+      "owner": "saved action sequences",
+      "fallback": "skip corrupt sequences and reject corrupt replay",
+      "doctor": "saved_sequence_state"
+    },
+    {
+      "path": "cmd/browser-agent/internal/toolinteract/interactstate/state.go",
+      "owner": "saved page snapshots",
+      "fallback": "do not restore corrupt state and retain its list entry",
+      "doctor": "page_snapshot_state"
+    },
+    {
+      "path": "cmd/browser-agent/internal/screenrec/observe.go",
+      "owner": "saved screen recording metadata",
+      "fallback": "isolate invalid metadata and preserve valid videos",
+      "doctor": "screen_recording_state"
+    },
+    {
+      "path": "cmd/browser-agent/internal/daemonlife/install_epoch.go",
+      "owner": "daemon install epoch",
+      "fallback": "use the current executable timestamp",
+      "doctor": "install_epoch_state"
+    },
+    {
+      "path": "cmd/browser-agent/internal/daemonlife/lock_file.go",
+      "owner": "daemon lock record",
+      "fallback": "remove a malformed lock and continue startup",
+      "doctor": "daemon_lock_state"
+    },
+    {
+      "path": "cmd/browser-agent/internal/daemonlife/startup_throttle.go",
+      "owner": "daemon restart history",
+      "fallback": "reset corrupt restart history",
+      "doctor": "restart_history_state"
+    },
+    {
+      "path": "cmd/browser-agent/tools_core.go",
+      "owner": "state-loader composition root",
+      "fallback": "delegate to the owning loader with the shared diagnostic collector",
+      "doctor": "shared state recovery collector"
+    }
+  ]
+}

@@ -4,13 +4,14 @@ feature_id: feature-state-time-travel
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/recording/actionlog/recorder.go
   - internal/schema/interact/actions.go
+  - internal/statediag/collector.go
   - src/inject/state.ts
 test_paths:
   - cmd/browser-agent/lint_hardening_test.go
@@ -22,6 +23,7 @@ test_paths:
   - internal/schema/interact/schema_test.go
   - tests/extension/pilot/pilot-state.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
+  - tests/architecture/user-state-loaders.test.cjs
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -65,6 +67,9 @@ last_verified_date: 2026-03-05
 - Save, load, and delete audit actions route through the canonical
   `internal/recording/actionlog.Recorder`; the composition root has no parallel
   action-recording methods.
+- Snapshot read and schema failures never restore partial state. They retain a
+  safe list entry and report the redacted `page_snapshot_state` recovery to
+  System Doctor.
 - Canonical public action schemas:
   - `internal/schema/interact/actions.go`
 - Tests:

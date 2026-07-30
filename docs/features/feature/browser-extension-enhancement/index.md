@@ -33,6 +33,7 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - tests/architecture/user-state-loaders.test.cjs
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/system-doctor/system-doctor-ui.test.js
   - cmd/browser-agent/internal/health/health_coverage_test.go

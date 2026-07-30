@@ -20,6 +20,7 @@ code_paths:
   - internal/schema/interact/properties_output_batch.go
   - internal/tools/configure/capabilities/modespecs_interact.go
 test_paths:
+  - tests/architecture/user-state-loaders.test.cjs
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/replay/contract_test.go
   - cmd/browser-agent/internal/sequencehandler/handler_test.go

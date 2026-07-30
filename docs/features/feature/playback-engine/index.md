@@ -29,6 +29,7 @@ code_paths:
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
 test_paths:
+  - tests/architecture/user-state-loaders.test.cjs
   - internal/capture/testhelpers_test.go
   - internal/capture/http_handlers_owner_test.go
   - internal/capture/recording_playback_integration_test.go

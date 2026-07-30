@@ -61,11 +61,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
-// Note: Response helpers, error codes, and validation functions have been moved to:
-// - internal/mcp and internal/toolresp — Canonical response formatting
-// - tools_errors.go — Error codes and structured error handling
-// - tools_validation.go — Parameter validation utilities
-
 // ============================================
 // ToolHandler Definition
 // ============================================
@@ -555,7 +550,8 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		RequireSessionStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
 			return sessionStoreGuard(handler.sessionStoreImpl, req)
 		},
-		DiagnosticHint: handler.Guards.DiagnosticHint,
+		DiagnosticHint:   handler.Guards.DiagnosticHint,
+		StateDiagnostics: handler.stateRecovery,
 		Redact: func(data map[string]any) map[string]any {
 			if handler.redactionEngine == nil {
 				return data

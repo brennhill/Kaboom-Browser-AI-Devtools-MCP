@@ -13,12 +13,14 @@ package interactstate
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -49,6 +51,8 @@ type Deps struct {
 	RequireSessionStore func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool)
 	// DiagnosticHint returns a StructuredError option carrying diagnostic context.
 	DiagnosticHint func() func(*mcp.StructuredError)
+	// StateDiagnostics receives redacted persisted-state recovery reports.
+	StateDiagnostics statediag.Reporter
 	// Redact scrubs sensitive values before a snapshot reaches disk. It must be
 	// total: when no redaction engine is configured the host returns m unchanged.
 	Redact func(m map[string]any) map[string]any
@@ -244,11 +248,15 @@ func (h *Handler) HandleStateLoad(req mcp.JSONRPCRequest, args json.RawMessage) 
 
 	data, err := h.sessionStoreImpl.Load(act.StateNamespace, snapshotName)
 	if err != nil {
+		if !errors.Is(err, statediag.ErrAbsent) {
+			h.reportSnapshotRecovery("A saved page snapshot could not be read; it was not restored.")
+		}
 		return mcp.Fail(req, mcp.ErrNoData, "State not found: "+snapshotName, "Use interact with action='list_states' to see available snapshots", h.deps.DiagnosticHint())
 	}
 
 	var stateData map[string]any
 	if err := json.Unmarshal(data, &stateData); err != nil {
+		h.reportSnapshotRecovery("A saved page snapshot was malformed; it was not restored.")
 		return mcp.Fail(req, mcp.ErrInternal, "Failed to parse state data", "Internal error — state may be corrupted")
 	}
 
@@ -326,10 +334,14 @@ func (h *Handler) buildStateEntry(key string) map[string]any {
 	entry := map[string]any{"name": key}
 	data, err := h.sessionStoreImpl.Load(act.StateNamespace, key)
 	if err != nil {
+		if !errors.Is(err, statediag.ErrAbsent) {
+			h.reportSnapshotRecovery("Saved page snapshot metadata could not be read; the snapshot remains listed by name.")
+		}
 		return entry
 	}
 	var stateData map[string]any
 	if json.Unmarshal(data, &stateData) != nil {
+		h.reportSnapshotRecovery("Saved page snapshot metadata was malformed; the snapshot remains listed by name.")
 		return entry
 	}
 	for _, field := range []string{"url", "title", "saved_at"} {
@@ -338,6 +350,17 @@ func (h *Handler) buildStateEntry(key string) map[string]any {
 		}
 	}
 	return entry
+}
+
+func (h *Handler) reportSnapshotRecovery(detail string) {
+	if h == nil || h.deps == nil || h.deps.StateDiagnostics == nil {
+		return
+	}
+	h.deps.StateDiagnostics.Report(statediag.Diagnostic{
+		Name:   "page_snapshot_state",
+		Detail: detail,
+		Fix:    "Delete and recapture the affected snapshot with interact(action='save_state').",
+	})
 }
 
 // HandleStateDelete removes a saved snapshot.

@@ -14,6 +14,7 @@ code_paths:
   - cmd/browser-agent/internal/operationalapi/handler.go
   - internal/statediag/collector.go
 test_paths:
+  - tests/architecture/user-state-loaders.test.cjs
   - internal/telemetry/beacon_test.go
   - internal/telemetry/contract_compliance_test.go
   - internal/telemetry/e2e_reporting_test.go
