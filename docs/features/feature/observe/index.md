@@ -146,6 +146,9 @@ with the canonical `pending_commands` recovery call.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.
+The `site_menus` composite translates that public `what` contract into the
+canonical internal DOM-command `action` wire field before dispatching
+`list_interactive`; public MCP selectors never leak into extension commands.
 
 Accessibility (`what:"accessibility"`) normalizes `summary` counts to the
 canonical keys `violations`, `passes`, `incomplete`, and `inapplicable`.

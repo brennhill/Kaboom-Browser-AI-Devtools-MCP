@@ -24,7 +24,7 @@ func HandleSiteMenus(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 
 	// Dispatch list_interactive to the extension to get all interactables with bboxes.
 	queryArgs := mcp.SafeMarshal(map[string]any{
-		"what":         "list_interactive",
+		"action":       "list_interactive",
 		"visible_only": true,
 	}, "{}")
 

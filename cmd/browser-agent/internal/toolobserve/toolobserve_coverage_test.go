@@ -282,6 +282,16 @@ func TestHandleSiteMenus_Blocked(t *testing.T) {
 	if d.lastQuery.Type != "dom_action" {
 		t.Errorf("query type: want dom_action, got %s", d.lastQuery.Type)
 	}
+	var params map[string]any
+	if err := json.Unmarshal(d.lastQuery.Params, &params); err != nil {
+		t.Fatalf("query params: %v", err)
+	}
+	if params["action"] != "list_interactive" {
+		t.Fatalf("DOM wire action = %v, want list_interactive", params["action"])
+	}
+	if _, obsolete := params["what"]; obsolete {
+		t.Fatal("DOM wire params must not use the public MCP dispatch key")
+	}
 }
 
 func TestHandleSiteMenus_ErrorResultPassthrough(t *testing.T) {
