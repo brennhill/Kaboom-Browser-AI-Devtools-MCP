@@ -141,6 +141,22 @@ function sendRuntimeMessage(message) {
 // ACTION TOASTS TOGGLE
 // =============================================================================
 
+test('content readiness probe synchronously echoes its correlation ID', async () => {
+  resetMocks()
+  const { initRuntimeMessageListener } = await import('../../../extension/content/runtime-message-listener.js')
+  initRuntimeMessageListener()
+  const sendResponse = mock.fn()
+
+  const keepChannelOpen = runtimeMessageHandler(
+    { type: 'tracking_readiness_probe', correlation_id: 'nav-123' },
+    { id: mockChrome.runtime.id },
+    sendResponse
+  )
+
+  assert.equal(keepChannelOpen, false)
+  assert.deepEqual(sendResponse.mock.calls[0].arguments, [{ ready: true, correlation_id: 'nav-123' }])
+})
+
 describe('Action Toasts Toggle', () => {
   beforeEach(() => {
     mock.reset()

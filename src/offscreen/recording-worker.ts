@@ -368,8 +368,8 @@ function handleStopRecording(truncated: boolean = false): void {
         const body = (await response.json()) as { path?: string }
         savePath = body.path
       } catch {
-        // EXPECTED_ABSENCE: older daemon responses omit the optional path; logging
-        // a successful save without that enhancement would falsely imply data loss.
+        // EXPECTED_ABSENCE: an omitted optional path is normal for older daemon
+        // responses; logging it would misleadingly imply a successful save lost data.
       }
 
       console.log(LOG, 'Recording SAVED', { name, duration, size: blob.size, path: savePath })

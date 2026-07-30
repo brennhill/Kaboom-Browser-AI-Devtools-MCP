@@ -31,6 +31,11 @@ code_paths:
   - src/background/message-routing/pilot-handler.ts
   - src/background/runtime-state/pilot-state.ts
   - src/background/runtime-state/tracking-continuity.ts
+  - src/background/runtime-state/content-readiness.ts
+  - src/background/runtime-state/state-recovery.ts
+  - src/background/commands/registry.ts
+  - src/background/exec/browser-actions.ts
+  - src/content/runtime-message-listener.ts
   - src/background/event-listeners.ts
   - src/background/init.ts
   - src/background/ui/content-script-bridge.ts
@@ -62,6 +67,9 @@ test_paths:
   - tests/extension/terminal-sidepanel/sidepanel-terminal.test.js
   - tests/extension/tab-state/tab-tracking-core.test.js
   - tests/extension/tab-state/tracking-continuity.test.js
+  - tests/extension/tab-state/content-readiness.test.js
+  - tests/extension/ui-controls/toggle-overlay.test.js
+  - tests/architecture/async-failure-evidence.test.cjs
   - tests/extension/injection/script-injection-ready.test.js
   - tests/extension/shared/background-message-router.js
   - extension/background/event-listeners.test.js
@@ -102,6 +110,12 @@ last_verified_date: 2026-04-03
   failure retain one stable tab ID until that tab is explicitly closed or
   untracked. The popup renders transitional progress instead of briefly
   reporting that capture is disabled.
+- Document-changing browser actions create a correlation-scoped readiness
+  transition. The first subsequent content command uses bounded deterministic
+  backoff and proceeds only after the newly injected content script echoes that
+  exact correlation ID. Stale acknowledgements cannot release newer
+  navigations; final failures remain visible in System Doctor without exposing
+  page data.
 
 ## Specs
 

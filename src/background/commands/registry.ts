@@ -13,6 +13,10 @@ import { DebugCategory } from '../debug.js'
 import type { SendAsyncResultFn, QueryParamsObject, TargetResolution } from './helpers.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import {
+  contentReadiness,
+  requiresContentReadiness
+} from '../runtime-state/content-readiness.js'
+import {
   debugLog,
   sendResult,
   sendAsyncResult,
@@ -259,6 +263,26 @@ export async function dispatch(query: PendingQuery, syncClient: SyncClient): Pro
     }
     lifecycle.sendError(payload, payload.error)
     return
+  }
+
+  if (requiresContentReadiness(query.type) && contentReadiness.hasPending(tabId)) {
+    const readiness = await contentReadiness.waitUntilReady(tabId)
+    if (!readiness.ready) {
+      lifecycle.sendError(
+        {
+          success: false,
+          error: readiness.error,
+          message:
+            readiness.error === 'content_readiness_timeout'
+              ? 'The page loaded, but its content script did not acknowledge readiness.'
+              : 'A newer navigation superseded this command readiness check.',
+          correlation_id: readiness.correlation_id,
+          retryable: true
+        },
+        readiness.error
+      )
+      return
+    }
   }
 
   const ctx: CommandContext = {

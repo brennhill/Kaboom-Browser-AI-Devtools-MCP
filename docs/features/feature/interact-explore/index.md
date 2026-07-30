@@ -40,6 +40,8 @@ code_paths:
   - src/background/commands/interact-explore.ts
   - src/background/exec/browser-actions.ts
   - src/background/runtime-state/csp-state.ts
+  - src/background/runtime-state/content-readiness.ts
+  - src/background/commands/registry.ts
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/dom/dom-dispatch.ts
   - src/background/exec/frame-targeting.ts
@@ -143,6 +145,8 @@ test_paths:
   - tests/extension/pilot/pilot-toggle.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
   - tests/extension/content/content-message-correlation.test.js
+  - tests/extension/tab-state/content-readiness.test.js
+  - tests/architecture/async-failure-evidence.test.cjs
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -213,6 +217,11 @@ action-family handlers differ. These generated modules are the documented
 `selectCommandElements`, `collectCommandElements`, and `commandPageMetadata`
 are grouped in the pure `commands/results` module and shared directly by
 `observe` and `interact-explore`.
+
+After a document-changing browser action, content-dependent interaction is
+gated on a correlation-matched acknowledgement from the newly injected content
+script. The bounded retry schedule replaces fixed navigation sleeps; a final
+failure is retryable and retained by System Doctor.
 
 `get_text` supports `structured:true` for hierarchical extraction (for example accordion/list sections), and this option must be forwarded through DOM dispatch into extension primitives.
 

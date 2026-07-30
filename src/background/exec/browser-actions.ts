@@ -9,7 +9,6 @@
 import type { PendingQuery } from '../../types/runtime/queries.js'
 import type { SyncClient } from '../sync/sync-client.js'
 import { waitForTabLoad, getActiveTab } from '../ui/tracked-tab-state.js'
-import { pingContentScript } from '../ui/content-script-bridge.js'
 import { debugLog, DebugCategory } from '../debug.js'
 import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js'
 import { broadcastTrackingState } from '../message-routing/pilot-handler.js'
@@ -20,7 +19,7 @@ import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js'
 import { persistTrackedTab } from '../commands/helpers.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { focusTabAndWindow } from '../../lib/tabs/tab-focus.js'
-import { delay } from '../../lib/timeout-utils.js'
+import { contentReadiness } from '../runtime-state/content-readiness.js'
 
 // =============================================================================
 // TIMEOUT CONFIGURATION
@@ -100,25 +99,8 @@ async function handleNavigateAction(
   actionToast(tabId, reason || 'navigate', reason ? undefined : url, 'trying', 10000)
   await chrome.tabs.update(tabId, { url })
   await waitForTabLoad(tabId)
-  await delay(500)
 
   const tab = await chrome.tabs.get(tabId)
-
-  if (await pingContentScript(tabId)) {
-    broadcastTrackingState().catch(() => {
-      debugLog(DebugCategory.CAPTURE, 'Tracking broadcast failed after navigation')
-    })
-    actionToast(tabId, reason || 'navigate', reason ? undefined : url, 'success')
-    return enrichWithCSP(tabId, {
-      success: true,
-      action: 'navigate',
-      url,
-      final_url: tab.url,
-      title: tab.title,
-      content_script_status: 'loaded',
-      message: 'Content script ready'
-    })
-  }
 
   if (tab.url?.startsWith('file://')) {
     return {
@@ -132,36 +114,15 @@ async function handleNavigateAction(
     }
   }
 
-  debugLog(DebugCategory.CAPTURE, 'Content script not loaded after navigate, refreshing', { tabId, url })
-  await chrome.tabs.reload(tabId)
-  await waitForTabLoad(tabId)
-  await delay(1000)
-
-  const reloadedTab = await chrome.tabs.get(tabId)
-
-  if (await pingContentScript(tabId)) {
-    broadcastTrackingState().catch(() => {
-      debugLog(DebugCategory.CAPTURE, 'Tracking broadcast failed after navigation reload')
-    })
-    return enrichWithCSP(tabId, {
-      success: true,
-      action: 'navigate',
-      url,
-      final_url: reloadedTab.url,
-      title: reloadedTab.title,
-      content_script_status: 'refreshed',
-      message: 'Page refreshed to load content script'
-    })
-  }
-
+  actionToast(tabId, reason || 'navigate', reason ? undefined : url, 'success')
   return enrichWithCSP(tabId, {
     success: true,
     action: 'navigate',
     url,
-    final_url: reloadedTab.url,
-    title: reloadedTab.title,
-    content_script_status: 'failed',
-    message: 'Navigation complete but content script could not be loaded. AI Web Pilot tools may not work.'
+    final_url: tab.url,
+    title: tab.title,
+    content_script_status: 'pending',
+    message: 'Navigation complete; content readiness will be verified before the next page command.'
   })
 }
 
@@ -205,7 +166,8 @@ export async function handleBrowserAction(
     tab_index?: number
     new_tab?: boolean
   },
-  actionToast: ActionToastFn
+  actionToast: ActionToastFn,
+  correlationId: string
 ): Promise<BrowserActionResult> {
   const { url, reason } = params || {}
   const action =
@@ -219,9 +181,11 @@ export async function handleBrowserAction(
     return { success: false, error: 'ai_web_pilot_disabled', message: 'AI Web Pilot is not enabled' }
   }
 
+  const changesDocument = action === 'refresh' || action === 'navigate' || action === 'back' || action === 'forward'
   try {
     switch (action) {
       case 'refresh': {
+        contentReadiness.begin(tabId, correlationId)
         actionToast(tabId, reason || 'refresh', reason ? undefined : 'reloading page', 'trying', 10000)
         await chrome.tabs.reload(tabId)
         await waitForTabLoad(tabId)
@@ -239,8 +203,10 @@ export async function handleBrowserAction(
         if (params?.new_tab) {
           return handleNewTabAction(tabId, url, actionToast, reason || 'navigate')
         }
+        contentReadiness.begin(tabId, correlationId)
         return handleNavigateAction(tabId, url, actionToast, reason)
       case 'back': {
+        contentReadiness.begin(tabId, correlationId)
         actionToast(tabId, reason || 'back', reason ? undefined : 'going back', 'trying', 10000)
         await chrome.tabs.goBack(tabId)
         await waitForTabLoad(tabId)
@@ -249,6 +215,7 @@ export async function handleBrowserAction(
         return { success: true, action: 'back', url: backTab.url, title: backTab.title }
       }
       case 'forward': {
+        contentReadiness.begin(tabId, correlationId)
         actionToast(tabId, reason || 'forward', reason ? undefined : 'going forward', 'trying', 10000)
         await chrome.tabs.goForward(tabId)
         await waitForTabLoad(tabId)
@@ -348,6 +315,7 @@ export async function handleBrowserAction(
         return { success: false, error: 'unknown_action', message: `Unknown action: ${action}` }
     }
   } catch (err) {
+    if (changesDocument) contentReadiness.cancel(tabId, correlationId)
     return { success: false, error: 'browser_action_failed', message: errorMessage(err) }
   }
 }
@@ -479,7 +447,7 @@ export async function handleAsyncBrowserAction(
 ): Promise<void> {
   const startTime = Date.now()
 
-  const executionPromise = handleBrowserAction(tabId, params, actionToast)
+  const executionPromise = handleBrowserAction(tabId, params, actionToast, query.correlation_id || query.id)
     .then((result) => {
       return result
     })

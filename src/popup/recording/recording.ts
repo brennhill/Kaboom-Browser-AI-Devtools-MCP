@@ -395,8 +395,8 @@ export function setupRecordingUI(): void {
             duration_ms: 1
           })
           .catch(() => {
-            // EXPECTED_ABSENCE: closing the popup or active tab can remove the
-            // toast recipient; logging would misrepresent a successful mic reset.
+            // EXPECTED_ABSENCE: a missing toast recipient is normal after the popup
+            // or tab closes; logging it would misleadingly mark a successful reset failed.
           })
       }
     })

@@ -68,7 +68,7 @@ registerCommand('browser_action', async (ctx) => {
   if (ctx.query.correlation_id) {
     await handleAsyncBrowserAction(ctx.query, ctx.tabId, params, ctx.syncClient, ctx.sendAsyncResult, ctx.actionToast)
   } else {
-    const result = await handleBrowserAction(ctx.tabId, params, ctx.actionToast)
+    const result = await handleBrowserAction(ctx.tabId, params, ctx.actionToast, ctx.query.id)
     ctx.sendResult(result)
   }
 })

@@ -30,7 +30,7 @@ export declare function handleBrowserAction(tabId: number, params: {
     tab_id?: number;
     tab_index?: number;
     new_tab?: boolean;
-}, actionToast: ActionToastFn): Promise<BrowserActionResult>;
+}, actionToast: ActionToastFn, correlationId: string): Promise<BrowserActionResult>;
 export declare function handleAsyncExecuteCommand(query: PendingQuery, tabId: number, world: string, syncClient: SyncClient, sendAsyncResult: SendAsyncResultFn, actionToast: ActionToastFn): Promise<void>;
 export declare function handleAsyncBrowserAction(query: PendingQuery, tabId: number, params: {
     action?: string;

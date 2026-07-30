@@ -28,8 +28,8 @@ export async function broadcastTrackingState(untrackedTabId) {
                 state: { isTracked: false, aiPilotEnabled: false }
             })
                 .catch(() => {
-                // EXPECTED_ABSENCE: an untracked or closed tab need not retain a content
-                // recipient; logging the cleanup miss would imply tracking is unhealthy.
+                // EXPECTED_ABSENCE: a missing recipient is normal for an untracked or
+                // closed tab; logging it would misleadingly imply tracking is unhealthy.
             });
         }
     }

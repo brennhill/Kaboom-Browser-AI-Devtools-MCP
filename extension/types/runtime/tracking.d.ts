@@ -25,6 +25,14 @@ export interface TrackingContentReadyMessage {
     readonly type: 'tracking_content_ready';
     readonly url: string;
 }
+export interface TrackingReadinessProbeMessage {
+    readonly type: 'tracking_readiness_probe';
+    readonly correlation_id: string;
+}
+export interface TrackingReadinessProbeResponse {
+    readonly ready: true;
+    readonly correlation_id: string;
+}
 export interface TrackingContinuityChangedMessage {
     readonly type: 'tracking_continuity_changed';
     readonly snapshot: TrackingContinuitySnapshot;

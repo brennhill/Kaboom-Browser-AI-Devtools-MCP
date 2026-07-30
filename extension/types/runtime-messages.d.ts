@@ -12,8 +12,8 @@ import type { WirePerformanceSnapshot as PerformanceSnapshot } from './wire/wire
 import type { LogLevelFilter } from './capture/telemetry.js';
 import type { ConnectionStatus } from './runtime/state.js';
 import type { BrowserStateSnapshot, StateAction } from './runtime/state.js';
-import type { GetTrackingStateMessage, TrackingContentReadyMessage, TrackingContinuityChangedMessage } from './runtime/tracking.js';
-export type { GetTrackingStateResponse, TrackingContentReadyMessage, TrackingContinuityChangedMessage, TrackingContinuityPhase, TrackingContinuitySnapshot } from './runtime/tracking.js';
+import type { GetTrackingStateMessage, TrackingContentReadyMessage, TrackingReadinessProbeMessage, TrackingContinuityChangedMessage } from './runtime/tracking.js';
+export type { GetTrackingStateResponse, TrackingContentReadyMessage, TrackingReadinessProbeMessage, TrackingReadinessProbeResponse, TrackingContinuityChangedMessage, TrackingContinuityPhase, TrackingContinuitySnapshot } from './runtime/tracking.js';
 import type { RuntimeMessageName } from '../lib/constants.js';
 /**
  * Message to get current tab ID
@@ -493,7 +493,7 @@ export interface ShowTrackedHoverLauncherMessage {
 /**
  * Union of all content-script-bound messages
  */
-export type ContentMessage = ContentPingMessage | HighlightMessage | ExecuteJsMessage | ExecuteQueryMessage | DomQueryMessage | A11yQueryMessage | GetNetworkWaterfallMessage | LinkHealthMessage | ComputedStylesQueryMessage | FormDiscoveryQueryMessage | FormStateQueryMessage | DataTableQueryMessage | ManageStateMessage | ActionToastMessage | SubtitleMessage | RecordingWatermarkMessage | ShowTrackedHoverLauncherMessage | DrawModeStartMessage | DrawModeStopMessage | GetAnnotationsMessage | TrackingStateChangedMessage | ToggleChatMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | SetServerUrlMessage;
+export type ContentMessage = ContentPingMessage | TrackingReadinessProbeMessage | HighlightMessage | ExecuteJsMessage | ExecuteQueryMessage | DomQueryMessage | A11yQueryMessage | GetNetworkWaterfallMessage | LinkHealthMessage | ComputedStylesQueryMessage | FormDiscoveryQueryMessage | FormStateQueryMessage | DataTableQueryMessage | ManageStateMessage | ActionToastMessage | SubtitleMessage | RecordingWatermarkMessage | ShowTrackedHoverLauncherMessage | DrawModeStartMessage | DrawModeStopMessage | GetAnnotationsMessage | TrackingStateChangedMessage | ToggleChatMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | SetServerUrlMessage;
 /**
  * Page to content script messages (postMessage types)
  */

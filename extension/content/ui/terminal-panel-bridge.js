@@ -206,8 +206,8 @@ function sendTerminalWrite(text, allowRetry) {
             return;
         if (allowRetry) {
             if (attemptGeneration !== writeGeneration) {
-                // EXPECTED_ABSENCE: teardown superseded this in-flight response; logging
-                // it would falsely attribute an old panel's miss to the fresh session.
+                // EXPECTED_ABSENCE: discarding a teardown-superseded response is normal;
+                // logging it would misleadingly attribute an old miss to the fresh session.
                 return;
             }
             // Possibly the panel's boot window — retry once before concluding it is gone.
@@ -221,8 +221,8 @@ function sendTerminalWrite(text, allowRetry) {
         // reconcile — an ambiguous transport error is not proof the panel is gone.
         if (allowRetry) {
             if (attemptGeneration !== writeGeneration) {
-                // EXPECTED_ABSENCE: teardown superseded this transport result; logging
-                // it would misdiagnose a deliberately discarded old-session retry.
+                // EXPECTED_ABSENCE: discarding a teardown-superseded result is normal;
+                // logging it would misleadingly diagnose an intentionally stale retry.
                 return;
             }
             scheduleWriteRetry(text);
@@ -242,8 +242,8 @@ function scheduleWriteRetry(text) {
     const generation = writeGeneration;
     writeRetryTimer = setTimeout(() => {
         writeRetryTimer = null;
-        // EXPECTED_ABSENCE: reset/teardown or a newer send makes this timer stale;
-        // logging its cancellation would misdiagnose intentional session isolation.
+        // EXPECTED_ABSENCE: stale timer cancellation is normal after reset or a newer
+        // send; logging it would misleadingly diagnose intentional session isolation.
         if (generation !== writeGeneration || !panelVisible)
             return;
         sendTerminalWrite(text, false);

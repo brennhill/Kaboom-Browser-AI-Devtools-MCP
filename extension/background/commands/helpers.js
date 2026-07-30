@@ -128,8 +128,8 @@ export function actionToast(tabId, action, detail, state = 'success', durationMs
         duration_ms: durationMs
     })
         .catch(() => {
-        // EXPECTED_ABSENCE: action toasts are optional and their content-script
-        // recipient can be between documents; logging would duplicate action status.
+        // EXPECTED_ABSENCE: missing optional toast recipients is normal between
+        // documents; logging it would misleadingly duplicate command status.
     });
 }
 // =============================================================================

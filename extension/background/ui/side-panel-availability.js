@@ -64,13 +64,13 @@ export function enableTerminalPanelForTab(tabId) {
     try {
         const pending = chrome.sidePanel.setOptions({ tabId, path: SIDE_PANEL_PATH, enabled: true });
         void Promise.resolve(pending).catch(() => {
-            // EXPECTED_ABSENCE: the authoritative open() path reports this failure;
-            // logging this preparatory miss would duplicate it without new evidence.
+            // EXPECTED_ABSENCE: a preparatory miss is normal because open() performs
+            // the authoritative check; logging it would misleadingly duplicate failure evidence.
         });
     }
     catch {
-        // EXPECTED_ABSENCE: never block the open attempt here; open() reports the
-        // authoritative failure, so another log would be duplicate evidence.
+        // EXPECTED_ABSENCE: this preparatory miss is normal because open() reports
+        // the authoritative failure; logging it would misleadingly duplicate evidence.
     }
 }
 //# sourceMappingURL=side-panel-availability.js.map

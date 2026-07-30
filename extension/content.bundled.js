@@ -2172,6 +2172,10 @@
       }
       if (message.type === "kaboom_ping")
         return handlePing(sendResponse);
+      if (message.type === "tracking_readiness_probe") {
+        sendResponse({ ready: true, correlation_id: message.correlation_id });
+        return false;
+      }
       const syncHandler = syncHandlers[message.type];
       if (syncHandler) {
         syncHandler(message);

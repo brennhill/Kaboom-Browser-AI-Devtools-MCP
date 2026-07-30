@@ -19,11 +19,14 @@ import type { BrowserStateSnapshot, StateAction } from './runtime/state.js'
 import type {
   GetTrackingStateMessage,
   TrackingContentReadyMessage,
+  TrackingReadinessProbeMessage,
   TrackingContinuityChangedMessage
 } from './runtime/tracking.js'
 export type {
   GetTrackingStateResponse,
   TrackingContentReadyMessage,
+  TrackingReadinessProbeMessage,
+  TrackingReadinessProbeResponse,
   TrackingContinuityChangedMessage,
   TrackingContinuityPhase,
   TrackingContinuitySnapshot
@@ -46,7 +49,6 @@ export interface GetTabIdMessage {
 export interface GetTabIdResponse {
   readonly tabId?: number
 }
-
 /**
  * WebSocket event message from content script
  */
@@ -55,7 +57,6 @@ export interface WsEventMessage {
   readonly payload: WebSocketEvent
   readonly tabId?: number
 }
-
 /**
  * Enhanced action message from content script
  */
@@ -633,6 +634,7 @@ export interface ShowTrackedHoverLauncherMessage {
  */
 export type ContentMessage =
   | ContentPingMessage
+  | TrackingReadinessProbeMessage
   | HighlightMessage
   | ExecuteJsMessage
   | ExecuteQueryMessage

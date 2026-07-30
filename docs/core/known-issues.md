@@ -118,17 +118,16 @@ under `extension/` or `tests/`.
 
 ## Runtime (product)
 
-### 7. Post-navigation DOM readiness is not correlation-gated — MEDIUM
+### 7. Post-navigation DOM readiness is correlation-gated — FIXED
 
-Revalidated on 2026-07-30. AI-initiated `navigate` now waits for tab load, probes
-the content script, and refreshes once when the probe fails, so the original
-blanket “first interact times out” claim is no longer accurate. The remaining
-gap is narrower: navigation uses fixed delays and the daemon does not require a
-correlation-matched acknowledgement from the newly injected content script
-before dispatching the next DOM command. A command arriving during that window
-can still fail transiently. Tracked as `kaboom-32qf`.
-
-**Workaround:** retry the failed DOM command after the page finishes loading.
+Fixed on 2026-07-30. Document-changing browser actions now create a
+correlation-scoped readiness transition. The first subsequent content command
+waits through bounded deterministic backoff and proceeds only when the newly
+injected content script echoes the exact correlation ID. Fixed navigation
+sleeps and the automatic reload workaround were removed. Stale acknowledgements
+cannot release a newer navigation, and final failures are retryable and retained
+in System Doctor. Covered by
+`tests/extension/tab-state/content-readiness.test.js`.
 
 ### 8. Cross-origin navigation tracking loss — FIXED
 
