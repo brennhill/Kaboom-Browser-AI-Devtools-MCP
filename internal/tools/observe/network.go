@@ -174,6 +174,7 @@ func GetWSEvents(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 }
 
 const wsStatusSummarySampleLimit = 10
+const waterfallRefreshTimeoutDefault = 5 * time.Second
 
 // GetNetworkWaterfall returns network waterfall entries from the performance API.
 
@@ -216,6 +217,10 @@ func GetNetworkWaterfall(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage
 
 func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 	cap := deps.Capture
+	refreshTimeout := deps.WaterfallRefreshTimeout
+	if refreshTimeout <= 0 {
+		refreshTimeout = waterfallRefreshTimeoutDefault
+	}
 	allEntries := cap.Telemetry().NetworkWaterfall().Entries()
 	if len(allEntries) > 0 && time.Since(allEntries[len(allEntries)-1].Timestamp) < 1*time.Second {
 		return allEntries
@@ -226,14 +231,14 @@ func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 			Type:   "waterfall",
 			Params: json.RawMessage(`{}`),
 		},
-		5*time.Second,
+		refreshTimeout,
 		"",
 	)
 	if qerr != nil {
 		return allEntries
 	}
 
-	result, err := cap.Queries().WaitForResult(queryID, 5*time.Second)
+	result, err := cap.Queries().WaitForResult(queryID, refreshTimeout)
 	if err != nil || result == nil {
 		return allEntries
 	}

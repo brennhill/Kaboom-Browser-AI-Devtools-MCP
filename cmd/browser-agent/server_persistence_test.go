@@ -24,6 +24,8 @@
 //
 // Run: go test ./cmd/browser-agent -run "TestServerPersistence" -v
 
+//go:build integration
+
 package main
 
 import (

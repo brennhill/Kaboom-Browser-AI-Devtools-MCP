@@ -91,7 +91,7 @@ func TestApplyJitter_PositiveMaxMs_ReturnsValueInRange(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	maxMs := 50
+	maxMs := 2
 	h.interactRuntime.SetJitter(maxMs)
 
 	// Run multiple iterations to gain confidence the value stays in range.
@@ -117,17 +117,18 @@ func TestApplyJitter_UsesConfiguredJitter(t *testing.T) {
 	}
 
 	// Set jitter via the configure path.
-	resp := callConfigureRaw(h, `{"what":"action_jitter","action_jitter_ms":100}`)
+	resp := callConfigureRaw(h, `{"what":"action_jitter","action_jitter_ms":2}`)
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("configure action_jitter failed: %s", firstText(result))
 	}
 
-	// Now applyJitter should return values in [0, 100).
+	// Use a production-valid but tiny range so this unit contract validates the
+	// configured bound without accumulating randomized wall-clock sleeps.
 	for i := 0; i < 50; i++ {
 		got := h.interactRuntime.ApplyJitter("click")
-		if got < 0 || got >= 100 {
-			t.Fatalf("applyJitter after configure iteration %d = %d, want [0, 100)", i, got)
+		if got < 0 || got >= 2 {
+			t.Fatalf("applyJitter after configure iteration %d = %d, want [0, 2)", i, got)
 		}
 	}
 }

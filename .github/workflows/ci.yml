@@ -154,15 +154,11 @@ jobs:
         run: |
           golangci-lint run --enable-only depguard ./cmd/browser-agent/... ./internal/...
 
+      - name: Hardening lint
+        run: make lint-hardening
+
       - name: Go tests with race detection
         run: go test -race -v ./cmd/browser-agent/... ./internal/...
-
-      - name: Reliability soak gate (bridge fast-start)
-        run: |
-          STATE_DIR="$(mktemp -d)"
-          echo "Using state dir: ${STATE_DIR}"
-          KABOOM_STATE_DIR="${STATE_DIR}" go test -race ./cmd/browser-agent -run TestFastStart_ResourceWorkflowSoak -count=3 -timeout=12m
-          go run ./cmd/browser-agent --doctor --state-dir "${STATE_DIR}" --fastpath-min-samples 100 --fastpath-max-failure-ratio 0.02
 
       - name: Go test coverage (70% minimum)
         run: |
@@ -186,6 +182,26 @@ jobs:
             exit 1
           fi
           echo "OK: Zero external dependencies verified"
+
+  go-integration:
+    name: Go Integration Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
+        with:
+          go-version: "1.24"
+
+      - name: Binary lifecycle and transport integration tests
+        run: scripts/build/run-go-integration.sh -race -count=1
+
+      - name: Reliability soak gate (bridge fast-start)
+        run: |
+          STATE_DIR="$(mktemp -d)"
+          echo "Using state dir: ${STATE_DIR}"
+          KABOOM_STATE_DIR="${STATE_DIR}" go test -race -tags=integration ./cmd/browser-agent -run TestFastStart_ResourceWorkflowSoak -count=3 -timeout=12m
+          go run ./cmd/browser-agent --doctor --state-dir "${STATE_DIR}" --fastpath-min-samples 100 --fastpath-max-failure-ratio 0.02
 
   javascript:
     name: JavaScript Checks

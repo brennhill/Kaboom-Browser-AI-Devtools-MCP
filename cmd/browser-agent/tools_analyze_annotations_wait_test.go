@@ -116,7 +116,7 @@ func TestToolGetAnnotations_WaitTrue_WaiterCompletedOnStore(t *testing.T) {
 
 	// Call with background=false — returns correlation_id after the bounded wait.
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what": "annotations", "background":false}`)
+	args := json.RawMessage(`{"what": "annotations", "background":false,"timeout_ms":10}`)
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)

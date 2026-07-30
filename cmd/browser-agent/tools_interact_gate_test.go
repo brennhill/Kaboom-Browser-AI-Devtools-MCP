@@ -243,7 +243,6 @@ func TestNavigate_ExtDisconnected_FastFail(t *testing.T) {
 func TestExecuteJS_CSP_MainWorld_FastFail(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.enablePilot(t)
 	env.simulateConnection(t)
 	env.simulateTabTracking(t)
 	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
@@ -261,7 +260,6 @@ func TestExecuteJS_CSP_MainWorld_FastFail(t *testing.T) {
 func TestExecuteJS_CSP_AutoWorld_PassesThrough(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.enablePilot(t)
 	env.simulateConnection(t)
 	env.simulateTabTracking(t)
 	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
@@ -431,6 +429,8 @@ func TestSaveState_NoTabTracking_NoGate(t *testing.T) {
 	// No tab tracking — save_state should NOT be blocked by tab tracking gate.
 	// It may fail for other reasons (e.g. session store not initialized) but that is
 	// unrelated to the gate — the important thing is that it is NOT a tab tracking error.
+	// Pilot remains disabled so this gate-only test does not wait for a browser
+	// state capture; capture behavior has focused tests behind an injected seam.
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"save_state","snapshot_name":"test-state","sync":false}`)

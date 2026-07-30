@@ -15,6 +15,8 @@
 //
 // DO NOT skip these tests before release.
 
+//go:build integration
+
 package main
 
 import (

@@ -39,6 +39,20 @@ cd "$(dirname "$0")/.."
 # Format: one path per line. Keep the reason on the line above.
 DORMANT_ALLOWLIST=$(
   cat <<'EOF'
+# Real-binary lifecycle tests run on every CI invocation in the named
+# "Go Integration Checks" job; excluding them from repeated unit/coverage
+# passes prevents load-sensitive daemon overlap without making them dormant.
+cmd/browser-agent/bridge_faststart_extended_test.go
+cmd/browser-agent/bridge_faststart_test.go
+cmd/browser-agent/bridge_startup_contention_test.go
+cmd/browser-agent/cli_modes_subprocess_test.go
+cmd/browser-agent/integration_test.go
+cmd/browser-agent/mcp_initialize_test.go
+cmd/browser-agent/mcp_protocol_test.go
+cmd/browser-agent/server_persistence_test.go
+cmd/browser-agent/server_reliability_integration_test.go
+cmd/browser-agent/server_reliability_test.go
+cmd/browser-agent/stdio_silence_test.go
 EOF
 )
 

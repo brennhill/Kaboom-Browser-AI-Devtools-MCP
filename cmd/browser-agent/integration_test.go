@@ -1,6 +1,8 @@
 // Purpose: Integration tests for browser-agent end-to-end flows.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
+//go:build integration
+
 // integration_test.go — Server startup and MCP API completeness tests.
 //
 // ⚠️ RELEASE GATE 8: MCP COMMAND COMPLETENESS

@@ -54,7 +54,7 @@ func TestToolsConfigureClear_AllBuffers_ClearsAnnotationState(t *testing.T) {
 		t.Fatalf("clear all should succeed, got: %s", firstText(clearResult))
 	}
 
-	anonResp := callAnalyzeRaw(h, `{"what":"annotations"}`)
+	anonResp := callAnalyzeRaw(h, `{"what":"annotations","background":true}`)
 	anonResult := parseToolResult(t, anonResp)
 	if anonResult.IsError {
 		t.Fatalf("analyze annotations should not error after clear, got: %s", firstText(anonResult))
@@ -64,7 +64,7 @@ func TestToolsConfigureClear_AllBuffers_ClearsAnnotationState(t *testing.T) {
 		t.Fatalf("anonymous annotations count after clear = %d, want 0", got)
 	}
 
-	namedResp := callAnalyzeRaw(h, `{"what":"annotations","annot_session":"qa-review"}`)
+	namedResp := callAnalyzeRaw(h, `{"what":"annotations","annot_session":"qa-review","background":true}`)
 	namedResult := parseToolResult(t, namedResp)
 	if namedResult.IsError {
 		t.Fatalf("analyze named annotations should not error after clear, got: %s", firstText(namedResult))

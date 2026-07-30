@@ -1,6 +1,8 @@
 // Purpose: Tests for bridge fast-start initialization responsiveness.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
+//go:build integration
+
 // bridge_faststart_test.go — Tests for MCP fast-start behavior.
 // Verifies that initialize and tools/list respond immediately without waiting for daemon.
 package main

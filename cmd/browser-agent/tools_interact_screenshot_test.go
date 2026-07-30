@@ -5,7 +5,6 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,23 +17,17 @@ import (
 func TestInteract_IncludeScreenshot_Schema(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
-	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
-	env.capture.Extension().SimulateExtensionConnectForTest()
-
-	// Send a click action with include_screenshot=true
-	// The action will timeout since no extension is processing, but the schema should accept the param
-	args := json.RawMessage(`{"what":"click","selector":"button","include_screenshot":true,"sync":false}`)
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolInteract(req, args)
-
-	result := parseToolResult(t, resp)
-	// Should be queued (async mode), NOT an error about invalid param
-	if result.IsError {
-		text := result.Content[0].Text
-		if strings.Contains(text, "include_screenshot") {
-			t.Fatalf("include_screenshot should be accepted as a valid parameter, got error: %s", text)
-		}
+	schema := env.handler.toolCatalog.Schema("interact")
+	properties, ok := schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("interact schema properties = %T, want map[string]any", schema["properties"])
+	}
+	includeScreenshot, ok := properties["include_screenshot"].(map[string]any)
+	if !ok {
+		t.Fatalf("include_screenshot schema = %T, want map[string]any", properties["include_screenshot"])
+	}
+	if got := includeScreenshot["type"]; got != "boolean" {
+		t.Fatalf("include_screenshot type = %v, want boolean", got)
 	}
 }
 

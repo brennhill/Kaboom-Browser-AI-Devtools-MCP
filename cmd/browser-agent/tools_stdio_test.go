@@ -28,9 +28,11 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // captureStdout runs fn while capturing stdout output.
@@ -102,6 +104,10 @@ func TestToolHandler_Observe_NoStdout(t *testing.T) {
 	}
 
 	handler := createTestToolHandler(t)
+	handler.capture.Telemetry().NetworkWaterfall().Add(
+		[]types.NetworkWaterfallEntry{{Timestamp: time.Now()}},
+		"",
+	)
 
 	testCases := []struct {
 		name string

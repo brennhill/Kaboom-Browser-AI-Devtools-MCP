@@ -1,6 +1,8 @@
 // mcp_protocol_test.go — Tests JSON-RPC framing, errors, IDs, and stdout payloads.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
+//go:build integration
+
 package main
 
 import (

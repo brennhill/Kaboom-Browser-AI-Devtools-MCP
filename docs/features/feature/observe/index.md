@@ -52,6 +52,7 @@ code_paths:
   - src/lib/net/websocket.ts
   - src/lib/net/websocket-tracking.ts
 test_paths:
+  - cmd/browser-agent/waterfall_ondemand_test.go
   - internal/tools/observe/correlation_test.go
   - internal/tools/observe/logs_edge_test.go
   - internal/tools/observe/idbquery/execute_test.go
@@ -112,6 +113,9 @@ last_verified_date: 2026-03-05
 The background service-worker entrypoint owns startup only. Telemetry tests and
 runtime code import caches, batching, transport, and log processing directly
 from the modules that own those APIs.
+On-demand waterfall refresh uses an explicit dependency-owned timeout budget:
+production retains the bounded five-second extension wait, while deterministic
+tests provide a short budget without sleeping or mutating global timing state.
 Queued observation modes receive command admission and completion functions
 from `internal/asynccommand.Handler`; observe owns no host interface and the
 composition root provides no forwarding methods.

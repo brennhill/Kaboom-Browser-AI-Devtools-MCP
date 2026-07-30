@@ -1,6 +1,8 @@
 // Purpose: Tests for stdio silence enforcement in MCP mode.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
+//go:build integration
+
 package main
 
 import (

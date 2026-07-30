@@ -1,6 +1,8 @@
 // cli_modes_subprocess_test.go — Covers user-facing CLI exit modes through the real binary.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
+//go:build integration
+
 package main
 
 import (

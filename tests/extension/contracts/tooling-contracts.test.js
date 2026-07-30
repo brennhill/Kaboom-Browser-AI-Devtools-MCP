@@ -71,6 +71,45 @@ describe('Tooling contracts', () => {
     )
   })
 
+  test('subprocess lifecycle tests run in the explicit Go integration job', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const coverageRunner = readFileSync('scripts/build/run-go-coverage.sh', 'utf8')
+    assert.match(workflow, /name: Go Integration Checks/)
+    assert.match(workflow, /run-go-integration\.sh -race -count=1/)
+    assert.match(
+      coverageRunner,
+      /run-go-integration\.sh -count=1/,
+      'honest aggregate coverage must include the tagged real-binary suite'
+    )
+    assert.match(
+      workflow,
+      /TestFastStart_ResourceWorkflowSoak[\s\S]*-tags=integration|go test -race -tags=integration[\s\S]*TestFastStart_ResourceWorkflowSoak/
+    )
+
+    for (const path of [
+      'cmd/browser-agent/bridge_faststart_extended_test.go',
+      'cmd/browser-agent/bridge_faststart_test.go',
+      'cmd/browser-agent/bridge_startup_contention_test.go',
+      'cmd/browser-agent/cli_modes_subprocess_test.go',
+      'cmd/browser-agent/integration_test.go',
+      'cmd/browser-agent/mcp_initialize_test.go',
+      'cmd/browser-agent/mcp_protocol_test.go',
+      'cmd/browser-agent/server_persistence_test.go',
+      'cmd/browser-agent/server_reliability_integration_test.go',
+      'cmd/browser-agent/server_reliability_test.go',
+      'cmd/browser-agent/stdio_silence_test.go'
+    ]) {
+      assert.match(readFileSync(path, 'utf8'), /^\/\/go:build integration$/m)
+    }
+  })
+
+  test('hardening lint is a named CI gate rather than a subprocess unit test', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const hardeningTests = readFileSync('cmd/browser-agent/lint_hardening_test.go', 'utf8')
+    assert.match(workflow, /name: Hardening lint[\s\S]*run: make lint-hardening/)
+    assert.doesNotMatch(hardeningTests, /exec\.Command\("bash", scriptPath\)/)
+  })
+
   test('JavaScript shard reporting identifies only the shards that failed', () => {
     const runner = readFileSync('scripts/test-js-sharded.sh', 'utf8')
     assert.match(runner, /SHARD_FAILED/)

@@ -240,19 +240,19 @@ func TestWaterfallOnDemand_TimeoutHandling(t *testing.T) {
 		t.Fatalf("Failed to create server: %v", err)
 	}
 	cap := capture.NewCapture()
-	// Set a very short timeout for this test
-	cap.Queries().SetQueryTimeout(100 * time.Millisecond)
 	handler := NewToolHandler(server, cap)
 	th := handler.tools.Executor.(*ToolHandler)
+	deps := buildObserveReadDeps(th)
+	deps.WaterfallRefreshTimeout = 10 * time.Millisecond
 
 	// Don't respond to the query - let it timeout
 	start := time.Now()
-	resp := observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 	elapsed := time.Since(start)
 
 	// Should complete within reasonable time (not hang forever)
-	if elapsed > 10*time.Second {
-		t.Errorf("Query took too long: %v (expected < 10s)", elapsed)
+	if elapsed > time.Second {
+		t.Errorf("Query took too long: %v (expected < 1s)", elapsed)
 	}
 
 	// Should still return a valid response (empty entries)

@@ -1,6 +1,8 @@
 // mcp_initialize_test.go — Tests MCP initialization and tool discovery.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
+//go:build integration
+
 package main
 
 import (

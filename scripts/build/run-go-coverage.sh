@@ -17,6 +17,8 @@ find "$SUBPROCESS_DIR" -mindepth 1 -maxdepth 1 -type f -delete
 cd "$PROJECT_ROOT"
 KABOOM_GO_COVERDIR="$SUBPROCESS_DIR" \
   go test -count=1 -coverpkg=./... -coverprofile="$PACKAGE_PROFILE" ./...
+KABOOM_GO_COVERDIR="$SUBPROCESS_DIR" \
+  scripts/build/run-go-integration.sh -count=1
 
 coverage_inputs="$(
   find "$SUBPROCESS_DIR" -type f -name 'covmeta.*' -exec dirname {} \; |

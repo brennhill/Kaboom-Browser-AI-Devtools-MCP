@@ -1,6 +1,8 @@
 // Purpose: Extended tests for bridge fast-start client compatibility.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
+//go:build integration
+
 // bridge_faststart_extended_test.go — Extended fast-start tests for MCP bridge mode.
 // Covers: client compatibility matrix, resource workflow soak, retry-when-booting,
 // and version verification.

@@ -21,6 +21,9 @@ type Deps struct {
 	ExecuteA11yQuery     func(string, []string, any, bool) (json.RawMessage, error)
 	IsConsoleNoise       func(types.LogEntry) bool
 	DiagnosticHintString func() string
+	// WaterfallRefreshTimeout bounds the on-demand extension query. Zero uses
+	// the production default; tests provide a short deterministic budget.
+	WaterfallRefreshTimeout time.Duration
 }
 
 // MaxObserveLimit caps the limit parameter to prevent oversized responses.

@@ -20,6 +20,8 @@
 // DO NOT skip these tests before release. They catch issues that only manifest
 // under sustained load or extended operation.
 
+//go:build integration
+
 package main
 
 import (

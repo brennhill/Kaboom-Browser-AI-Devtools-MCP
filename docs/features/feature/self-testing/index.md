@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-30
 code_paths:
+  - .github/workflows/ci.yml
   - scripts/smoke-test.sh
   - scripts/smoke-tests/framework-smoke.sh
   - scripts/smoke-tests/14-browser-push.sh
@@ -16,12 +17,15 @@ code_paths:
   - scripts/test-original-uat.sh
   - scripts/test-new-uat.sh
   - scripts/test-js-sharded.sh
+  - scripts/build/run-go-integration.sh
+  - scripts/build/run-go-coverage.sh
   - scripts/uat-result-lib.sh
   - scripts/tests/framework/framework.sh
   - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
   - scripts/tests/browser/cat-33-connected-action-coverage.sh
   - scripts/contracts/check-architecture-boundaries.cjs
+  - scripts/check-dormant-tests.sh
   - .architecture-boundaries.json
   - scripts/test-all-tools-comprehensive.sh
   - scripts/cleanup-test-daemons.sh
@@ -30,6 +34,11 @@ code_paths:
   - cmd/browser-agent/internal/testpages/websocket.go
   - cmd/browser-agent/internal/wsframe/frame.go
 test_paths:
+  - tests/extension/contracts/tooling-contracts.test.js
+  - cmd/browser-agent/bridge_faststart_extended_test.go
+  - cmd/browser-agent/server_persistence_test.go
+  - cmd/browser-agent/server_reliability_integration_test.go
+  - cmd/browser-agent/stdio_silence_test.go
   - cmd/browser-agent/internal/testpages/websocket_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - scripts/contracts/check-architecture-boundaries.test.cjs
@@ -120,6 +129,10 @@ last_verified_date: 2026-03-05
   ratcheted public-surface budgets, the 800-line and 10-file physical limits,
   dormant-test detection, circular dependency reporting, and zero non-trivial
   clones across background/popup.
+- Go unit/race checks and real-binary lifecycle checks run as separate,
+  parallel CI jobs. Subprocess suites carry the `integration` build tag, while
+  the named integration job runs every tagged transport, persistence,
+  contention, reliability, and stdio contract plus the fast-start soak.
 - Category daemon lifecycle and result-file contract: `scripts/tests/framework/framework.sh`
 - User-state guard: `scripts/tests/framework/uat-user-state.sh` snapshots the
   prior daemon executable, LaunchAgent lifecycle, version, and tracked tab

@@ -89,6 +89,10 @@ func (e *observeTestEnv) addLogEntry(entry types.LogEntry) {
 // TestObserveAudit_Errors_DataFlow verifies: add errors → observe errors returns them
 func TestObserveAudit_Errors_DataFlow(t *testing.T) {
 	env := newObserveTestEnv(t)
+	env.capture.Telemetry().NetworkWaterfall().Add(
+		[]types.NetworkWaterfallEntry{{Timestamp: time.Now()}},
+		"",
+	)
 
 	// 1. Add error log entry (simulating browser extension POST)
 	errorEntry := types.LogEntry{
@@ -336,6 +340,10 @@ func TestObserveAudit_AllModes_NoPanic(t *testing.T) {
 	}
 
 	env := newObserveTestEnv(t)
+	env.capture.Telemetry().NetworkWaterfall().Add(
+		[]types.NetworkWaterfallEntry{{Timestamp: time.Now()}},
+		"",
+	)
 
 	// Complete list from tools_observe.go
 	allModes := []string{
