@@ -99,6 +99,17 @@ export interface ClearLogsMessage {
   readonly type: 'clear_logs'
 }
 
+export interface StateRecoveryDiagnostic {
+  readonly name: string
+  readonly detail: string
+  readonly fix: string
+}
+
+export interface ReportStateRecoveryMessage {
+  readonly type: 'report_state_recovery'
+  readonly diagnostic: StateRecoveryDiagnostic
+}
+
 /**
  * Set log level message
  */
@@ -250,6 +261,7 @@ export type BackgroundMessage =
   | LogMessage
   | GetStatusMessage
   | ClearLogsMessage
+  | ReportStateRecoveryMessage
   | SetLogLevelMessage
   | SetBooleanSettingMessage
   | SetWebSocketCaptureModeMessage

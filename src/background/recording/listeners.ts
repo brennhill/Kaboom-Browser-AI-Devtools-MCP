@@ -10,7 +10,8 @@
 
 import { scaleTimeout } from '../../lib/timeouts.js'
 import { StorageKey } from '../../lib/constants.js'
-import { getLocal } from '../../lib/storage/local.js'
+import { readLocalState } from '../../lib/storage/validated.js'
+import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
 import type { OffscreenRecordingStoppedMessage } from '../../types/runtime-messages.js'
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { trackUIFeature } from '../ui/ui-usage-tracker.js'
@@ -19,11 +20,12 @@ import { buildScreenRecordingSlug } from './utils.js'
 import type { ScreenRecordingHandlers } from '../ui/keyboard-shortcuts.js'
 import { stopRecordingBadgeTimer } from './badge.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
+import { reportStateRecovery } from '../runtime-state/state-recovery.js'
 
 const LOG = KABOOM_RECORDING_LOG_PREFIX
 
 async function resolvePopupRecordingTargetTab(): Promise<chrome.tabs.Tab | undefined> {
-  const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
+  const trackedTabId = (await readTrackedTab()).id
   if (trackedTabId) {
     try {
       return await chrome.tabs.get(trackedTabId)
@@ -147,8 +149,21 @@ export function installRecordingListeners(deps: RecordingListenerDeps): void {
 
     // Read the stored return tab before closing the permission tab
     void (async () => {
-      const value = await getLocal(StorageKey.PENDING_MIC_RECORDING)
-      const pending = value as { returnTabId?: number } | undefined
+      const pending = await readLocalState<{ returnTabId?: number } | undefined>({
+        key: StorageKey.PENDING_MIC_RECORDING,
+        fallback: undefined,
+        validate: (value): value is { returnTabId?: number } =>
+          typeof value === 'object' &&
+          value !== null &&
+          (typeof (value as { returnTabId?: unknown }).returnTabId === 'number' ||
+            (value as { returnTabId?: unknown }).returnTabId === undefined),
+        diagnostic: {
+          name: 'pending_recording_state',
+          detail: 'Saved microphone recording intent was invalid or unreadable; no return tab is active.',
+          fix: 'Start the microphone recording flow again.'
+        },
+        report: reportStateRecovery
+      })
       const returnTabId = pending?.returnTabId
       console.log(LOG, 'Pending mic recording intent:', pending, 'returnTabId:', returnTabId)
 

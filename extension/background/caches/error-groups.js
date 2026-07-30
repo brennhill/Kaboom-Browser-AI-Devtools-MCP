@@ -4,7 +4,9 @@
  */
 import { StorageKey } from '../../lib/constants.js';
 import { persist } from '../../lib/storage/io.js';
-import { getSession, setSession } from '../../lib/storage/session.js';
+import { setSession } from '../../lib/storage/session.js';
+import { readSessionState } from '../../lib/storage/validated.js';
+import { reportStateRecovery } from '../runtime-state/state-recovery.js';
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -56,27 +58,37 @@ function schedulePersist() {
  * is not persisted, so the first new occurrence will populate it.
  */
 async function restoreFromSession() {
-    try {
-        const raw = await getSession(StorageKey.ERROR_GROUPS);
-        if (!Array.isArray(raw))
-            return;
-        const now = Date.now();
-        for (const item of raw) {
-            // Skip groups that have aged out
-            if (now - item.lastSeen > ERROR_GROUP_MAX_AGE_MS)
-                continue;
-            // Restore with a placeholder entry — next real error will overwrite it
-            errorGroups.set(item.signature, {
-                entry: { level: 'error' },
-                count: item.count,
-                firstSeen: item.firstSeen,
-                lastSeen: item.lastSeen
-            });
-        }
+    const raw = await readSessionState({
+        key: StorageKey.ERROR_GROUPS,
+        fallback: [],
+        validate: isErrorGroupSnapshotArray,
+        diagnostic: {
+            name: 'error_group_state',
+            detail: 'Saved error deduplication state was invalid or unreadable; a fresh cache is active.',
+            fix: 'No action is required. Reload the extension if this warning repeats.'
+        },
+        report: reportStateRecovery
+    });
+    const now = Date.now();
+    for (const item of raw) {
+        if (now - item.lastSeen > ERROR_GROUP_MAX_AGE_MS)
+            continue;
+        errorGroups.set(item.signature, {
+            entry: { level: 'error' },
+            count: item.count,
+            firstSeen: item.firstSeen,
+            lastSeen: item.lastSeen
+        });
     }
-    catch {
-        // Session storage may not be available — degrade silently
-    }
+}
+function isErrorGroupSnapshotArray(value) {
+    return (Array.isArray(value) &&
+        value.every((item) => typeof item === 'object' &&
+            item !== null &&
+            typeof item.signature === 'string' &&
+            typeof item.count === 'number' &&
+            typeof item.firstSeen === 'number' &&
+            typeof item.lastSeen === 'number'));
 }
 // Restore on module load (top-level await is fine in MV3 service worker modules)
 void restoreFromSession();

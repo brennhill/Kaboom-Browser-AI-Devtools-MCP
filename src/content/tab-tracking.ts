@@ -10,7 +10,7 @@
 
 import { StorageKey } from '../lib/constants.js'
 import { onStorageChanged } from '../lib/storage/changes.js'
-import { getLocal } from '../lib/storage/local.js'
+import { readTrackedTab } from '../lib/tabs/tracked-tab-storage.js'
 
 // Whether this content script's tab is the currently tracked tab
 let isTrackedTab = false
@@ -23,7 +23,7 @@ let currentTabId: number | null = null
  */
 export async function updateTrackingStatus(): Promise<void> {
   try {
-    const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
+    const trackedTabId = (await readTrackedTab()).id
 
     // Request tab ID from background script (content scripts can't access chrome.tabs)
     const response = (await chrome.runtime.sendMessage({ type: 'get_tab_id' })) as { tabId?: number } | undefined

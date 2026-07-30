@@ -7,7 +7,8 @@
 
 import { StorageKey, TERMINAL_PANEL_FALLBACK_HINT, TERMINAL_PANEL_STALE_CONTEXT_HINT } from '../../lib/constants.js'
 import { onStorageChanged } from '../../lib/storage/changes.js'
-import { getSession } from '../../lib/storage/session.js'
+import { readSessionState } from '../../lib/storage/validated.js'
+import { reportStateRecovery } from '../../lib/storage/recovery.js'
 import { showActionToast } from './toast.js'
 
 type VisibilityListener = (visible: boolean) => void
@@ -55,13 +56,18 @@ function setPanelVisible(nextVisible: boolean): void {
 }
 
 async function syncPanelVisibilityFromStorage(): Promise<void> {
-  try {
-    const value = await getSession(StorageKey.TERMINAL_UI_STATE)
-    const uiState = value as string | undefined
-    setPanelVisible(uiState === 'open')
-  } catch {
-    // Extension context invalidated - keep the last known visibility.
-  }
+  const uiState = await readSessionState<'open' | 'closed' | 'minimized'>({
+    key: StorageKey.TERMINAL_UI_STATE,
+    fallback: 'closed',
+    validate: (value): value is 'open' | 'closed' | 'minimized' =>
+      value === 'open' || value === 'closed' || value === 'minimized',
+    diagnostic: {
+      name: 'terminal_session_state',
+      detail: 'Saved terminal panel visibility was invalid or unreadable; closed state is active.',
+      fix: 'Reopen the terminal panel.'
+    }
+  })
+  setPanelVisible(uiState === 'open')
 }
 
 function installStorageListener(): void {
@@ -71,7 +77,16 @@ function installStorageListener(): void {
     if (areaName !== 'session') return
     const change = changes[StorageKey.TERMINAL_UI_STATE]
     if (!change) return
-    const nextValue = change.newValue as string | undefined
+    const nextValue = change.newValue
+    if (nextValue !== undefined && nextValue !== 'open' && nextValue !== 'closed' && nextValue !== 'minimized') {
+      reportStateRecovery({
+        name: 'terminal_session_state',
+        detail: 'Terminal visibility changed to an invalid value; closed state is active.',
+        fix: 'Reopen the terminal panel.'
+      })
+      setPanelVisible(false)
+      return
+    }
     setPanelVisible(nextValue === 'open')
   })
 }

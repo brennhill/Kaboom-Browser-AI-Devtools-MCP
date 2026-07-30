@@ -26,6 +26,10 @@ export function createStatusMessageHandler(deps) {
                         sendResponse({ error: errorMessage(error) });
                     });
                     return true;
+                case 'report_state_recovery':
+                    deps.reportStateRecovery(message.diagnostic);
+                    sendResponse({ success: true });
+                    return false;
                 case 'get_debug_log':
                     sendResponse({ log: deps.exportDebugLog() });
                     return false;

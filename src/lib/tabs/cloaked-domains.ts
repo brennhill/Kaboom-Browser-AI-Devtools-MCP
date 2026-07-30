@@ -2,7 +2,7 @@
 // Content scripts bail out early on cloaked domains to avoid interference.
 
 import { StorageKey } from '../constants.js'
-import { getLocal } from '../storage/local.js'
+import { readLocalState } from '../storage/validated.js'
 
 /**
  * Built-in domains where Kaboom should never run.
@@ -33,24 +33,31 @@ export async function isDomainCloaked(hostname?: string): Promise<boolean> {
   }
 
   // Check user-configured list
-  try {
-    const userDomains = (await getLocal(StorageKey.CLOAKED_DOMAINS)) as string[] | undefined
-    if (userDomains && Array.isArray(userDomains)) {
-      for (const domain of userDomains) {
-        if (matchesDomain(host, domain)) return true
-      }
-    }
-  } catch {
-    // Storage unavailable — allow by default
+  const userDomains = await readUserDomains()
+  for (const domain of userDomains) {
+    if (matchesDomain(host, domain)) return true
   }
 
   return false
+}
+
+function readUserDomains(): Promise<string[]> {
+  return readLocalState<string[]>({
+    key: StorageKey.CLOAKED_DOMAINS,
+    fallback: [],
+    validate: (value): value is string[] =>
+      Array.isArray(value) && value.every((domain) => typeof domain === 'string' && domain.length > 0),
+    diagnostic: {
+      name: 'cloaked_domain_state',
+      detail: 'Saved cloaked-domain rules were invalid or unreadable; built-in protections remain active.',
+      fix: 'Open extension settings and save the cloaked-domain list again.'
+    }
+  })
 }
 
 /**
  * Get the full list of cloaked domains (built-in + user-configured).
  */
 export async function getCloakedDomains(): Promise<string[]> {
-  const userDomains = (await getLocal(StorageKey.CLOAKED_DOMAINS)) as string[] | undefined
-  return [...BUILTIN_CLOAKED, ...(userDomains || [])]
+  return [...BUILTIN_CLOAKED, ...(await readUserDomains())]
 }

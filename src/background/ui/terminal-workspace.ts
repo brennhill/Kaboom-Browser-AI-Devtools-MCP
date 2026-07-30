@@ -5,6 +5,7 @@
 
 import { StorageKey } from '../../lib/constants.js'
 import { getLocals, setLocals } from '../../lib/storage/local.js'
+import { reportStateRecovery } from '../runtime-state/state-recovery.js'
 
 export interface TerminalWorkspaceTarget {
   hostTabId: number
@@ -77,10 +78,25 @@ async function createTerminalWorkspaceGroup(tabId: number): Promise<number | nul
 }
 
 export async function resolveTerminalWorkspaceTarget(requestTabId?: number): Promise<TerminalWorkspaceTarget | null> {
-  const result = (await getLocals(TERMINAL_WORKSPACE_STORAGE_KEYS)) as {
+  let result: {
     trackedTabId?: number
     kaboom_terminal_workspace_group_id?: number
     kaboom_terminal_workspace_main_tab_id?: number
+  }
+  try {
+    const stored = await getLocals(TERMINAL_WORKSPACE_STORAGE_KEYS)
+    const valid = Object.values(stored).every(
+      (value) => value === undefined || (typeof value === 'number' && Number.isInteger(value))
+    )
+    if (!valid) {
+      reportTerminalWorkspaceRecovery('Saved terminal workspace was malformed; the active or tracked tab is used.')
+      result = {}
+    } else {
+      result = stored
+    }
+  } catch {
+    reportTerminalWorkspaceRecovery('Saved terminal workspace could not be read; the active or tracked tab is used.')
+    result = {}
   }
   const trackedTabId = typeof result.trackedTabId === 'number' ? result.trackedTabId : null
   const storedMainTabId =
@@ -114,4 +130,12 @@ export async function resolveTerminalWorkspaceTarget(requestTabId?: number): Pro
     [StorageKey.TERMINAL_WORKSPACE_MAIN_TAB_ID]: mainTabId
   })
   return { hostTabId, mainTabId, tabGroupId }
+}
+
+function reportTerminalWorkspaceRecovery(detail: string): void {
+  reportStateRecovery({
+    name: 'terminal_workspace_state',
+    detail,
+    fix: 'Open the terminal panel again to save a fresh workspace.'
+  })
 }

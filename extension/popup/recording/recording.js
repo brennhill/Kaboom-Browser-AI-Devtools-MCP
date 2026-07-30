@@ -12,8 +12,40 @@ import { StorageKey } from '../../lib/constants.js';
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js';
 import { onStorageChanged } from '../../lib/storage/changes.js';
 import { persist } from '../../lib/storage/io.js';
-import { getLocal, removeLocal } from '../../lib/storage/local.js';
+import { removeLocal } from '../../lib/storage/local.js';
+import { readLocalState } from '../../lib/storage/validated.js';
+import { reportStateRecovery } from '../../lib/storage/recovery.js';
 import { sendRecordingGestureDecision, handleStartClick, handleStopClick } from './recording-io.js';
+function isAudioMode(value) {
+    return value === '' || value === 'tab' || value === 'mic' || value === 'both';
+}
+function isPendingRecordingIntent(value) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value))
+        return false;
+    const intent = value;
+    return ((intent.highlight === undefined || typeof intent.highlight === 'boolean') &&
+        (intent.name === undefined || typeof intent.name === 'string') &&
+        (intent.fps === undefined || typeof intent.fps === 'number') &&
+        (intent.audio === undefined || isAudioMode(intent.audio)) &&
+        (intent.tabId === undefined || typeof intent.tabId === 'number') &&
+        (intent.url === undefined || typeof intent.url === 'string'));
+}
+function isPopupRecordingState(value) {
+    return (typeof value === 'object' &&
+        value !== null &&
+        (typeof value.active === 'boolean' ||
+            value.active === undefined) &&
+        (typeof value.name === 'string' || value.name === undefined) &&
+        (typeof value.startTime === 'number' ||
+            value.startTime === undefined));
+}
+function recordingDiagnostic(detail) {
+    return {
+        name: 'screen_recording_state',
+        detail,
+        fix: 'Start the screen recording flow again.'
+    };
+}
 const START_LABEL = 'Record screen';
 const STOP_LABEL = 'Stop recording';
 const HIGHLIGHT_LABEL = '\u25CF \u00AB Click here to record';
@@ -234,20 +266,34 @@ export function setupRecordingUI() {
     };
     // Row is visible immediately with default "not recording" state.
     // Storage read updates it async — visual change is minimal (button label toggle).
-    void getLocal(StorageKey.RECORDING).then(async (value) => {
-        const rec = value;
+    void readLocalState({
+        key: StorageKey.RECORDING,
+        fallback: null,
+        validate: isPopupRecordingState,
+        diagnostic: recordingDiagnostic('Saved screen recording was invalid or unreadable; idle state is active.')
+    }).then(async (rec) => {
         console.log(LOG, 'recording state from storage:', rec);
         if (rec?.active && rec.name && rec.startTime) {
             console.log(LOG, 'resuming recording UI for', rec.name);
             showRecording(els, state, rec.name, rec.startTime);
         }
         // Check for highlight request from hover launcher
-        const pendingValue = await getLocal(StorageKey.PENDING_RECORDING);
+        const pendingValue = await readLocalState({
+            key: StorageKey.PENDING_RECORDING,
+            fallback: null,
+            validate: isPendingRecordingIntent,
+            diagnostic: recordingDiagnostic('Saved pending recording request was invalid or unreadable; it was cancelled.')
+        });
         updatePendingRecording(pendingValue);
     });
     onStorageChanged((changes, areaName) => {
         if (areaName === 'local' && changes[StorageKey.RECORDING]) {
             const rec = changes[StorageKey.RECORDING].newValue;
+            if (rec !== undefined && !isPopupRecordingState(rec)) {
+                reportStateRecovery(recordingDiagnostic('Screen recording changed to an invalid value; idle state is active.'));
+                showIdle(els, state);
+                return;
+            }
             console.log(LOG, 'recording state changed:', rec);
             if (rec?.active && rec.name && rec.startTime) {
                 showRecording(els, state, rec.name, rec.startTime);
@@ -259,7 +305,13 @@ export function setupRecordingUI() {
             return;
         }
         if (areaName === 'local' && changes[StorageKey.PENDING_RECORDING]) {
-            updatePendingRecording(changes[StorageKey.PENDING_RECORDING].newValue);
+            const pending = changes[StorageKey.PENDING_RECORDING].newValue;
+            if (pending !== undefined && !isPendingRecordingIntent(pending)) {
+                reportStateRecovery(recordingDiagnostic('Pending recording changed to an invalid value; it was cancelled.'));
+                updatePendingRecording(null);
+                return;
+            }
+            updatePendingRecording(pending);
         }
     });
     approvalEls.approveBtn?.addEventListener('click', (event) => {
@@ -272,8 +324,15 @@ export function setupRecordingUI() {
         sendRecordingGestureDecision('recording_gesture_denied');
         clearPendingRecordingIntent();
     });
-    void getLocal(StorageKey.PENDING_MIC_RECORDING).then(async (value) => {
-        const intent = value;
+    void readLocalState({
+        key: StorageKey.PENDING_MIC_RECORDING,
+        fallback: null,
+        validate: (value) => typeof value === 'object' &&
+            value !== null &&
+            (value.audioMode === undefined ||
+                isAudioMode(value.audioMode)),
+        diagnostic: recordingDiagnostic('Saved microphone recording request was invalid or unreadable; it was cancelled.')
+    }).then(async (intent) => {
         console.log(LOG, 'pending mic recording intent:', intent);
         if (!intent?.audioMode)
             return;
@@ -296,8 +355,12 @@ export function setupRecordingUI() {
         if (audioSelect)
             audioSelect.value = intent.audioMode;
     });
-    void getLocal(StorageKey.RECORD_AUDIO_PREF).then((value) => {
-        const saved = value;
+    void readLocalState({
+        key: StorageKey.RECORD_AUDIO_PREF,
+        fallback: '',
+        validate: (value) => isAudioMode(value),
+        diagnostic: recordingDiagnostic('Saved recording audio preference was invalid or unreadable; video-only is active.')
+    }).then((saved) => {
         if (saved) {
             const audioSelect = document.getElementById('record-audio-mode');
             if (audioSelect)

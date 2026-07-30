@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -29,6 +29,8 @@ code_paths:
   - extension/sidepanel.js
   - src/content/ui/terminal-panel-bridge.ts
   - src/content/ui/terminal-widget-session.ts
+  - src/lib/storage/recovery.ts
+  - src/lib/storage/validated.ts
   - src/content/ui/terminal-widget-types.ts
   - src/lib/terminal-server.ts
   - src/content/ui/terminal-root-folder.ts
@@ -78,6 +80,8 @@ test_paths:
   - tests/extension/terminal-panel/terminal-panel-open-failure.test.js
   - tests/extension/terminal-panel/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/ui-controls/tracked-hover-launcher.test.js
+  - tests/extension/state-recovery/state-recovery-contract.test.js
+  - tests/extension/state-recovery/validated-storage.test.js
   - tests/extension/terminal-panel/terminal-panel-bridge.test.js
   - tests/extension/content/message-handlers.test.js
   - tests/extension/contracts/background-boundaries.test.js

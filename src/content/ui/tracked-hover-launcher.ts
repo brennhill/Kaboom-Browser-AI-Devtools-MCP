@@ -18,7 +18,9 @@ import { playShutterSound, primeShutterAudio, showScreenshotFlash } from './hove
 const AUDIT_BUTTON_ENABLED = false
 import { onStorageChanged } from '../../lib/storage/changes.js'
 import { persist } from '../../lib/storage/io.js'
-import { getLocal, removeLocal, setLocal } from '../../lib/storage/local.js'
+import { removeLocal, setLocal } from '../../lib/storage/local.js'
+import { readLocalState } from '../../lib/storage/validated.js'
+import { reportStateRecovery } from '../../lib/storage/recovery.js'
 import {
   initTerminalPanelBridge,
   isTerminalVisible,
@@ -103,14 +105,18 @@ function updateStopButtonVisibility(active: boolean): void {
 }
 
 async function syncRecordingStateFromStorage(): Promise<void> {
-  try {
-    const value = await getLocal(StorageKey.RECORDING)
-    const rec = value
-    const active = rec != null && typeof rec === 'object' && Boolean((rec as { active?: boolean }).active)
-    updateStopButtonVisibility(active)
-  } catch {
-    // Extension context invalidated
-  }
+  const recording = await readLocalState<{ active: boolean } | null>({
+    key: StorageKey.RECORDING,
+    fallback: null,
+    validate: (value): value is { active: boolean } =>
+      typeof value === 'object' && value !== null && typeof (value as { active?: unknown }).active === 'boolean',
+    diagnostic: {
+      name: 'screen_recording_state',
+      detail: 'Saved recording launcher state was invalid or unreadable; idle state is active.',
+      fix: 'Start the screen recording again.'
+    }
+  })
+  updateStopButtonVisibility(recording?.active === true)
 }
 
 function installRecordingStorageSync(): void {
@@ -120,7 +126,19 @@ function installRecordingStorageSync(): void {
     const change = changes[StorageKey.RECORDING]
     if (!change) return
     const rec = change.newValue
-    const active = rec != null && typeof rec === 'object' && Boolean((rec as { active?: boolean }).active)
+    if (
+      rec !== undefined &&
+      (typeof rec !== 'object' || rec === null || typeof (rec as { active?: unknown }).active !== 'boolean')
+    ) {
+      reportStateRecovery({
+        name: 'screen_recording_state',
+        detail: 'Recording launcher state changed to an invalid value; idle state is active.',
+        fix: 'Start the screen recording again.'
+      })
+      updateStopButtonVisibility(false)
+      return
+    }
+    const active = rec != null && typeof rec === 'object' && (rec as { active?: boolean }).active === true
     updateStopButtonVisibility(active)
   }
   recordingStorageUnsubscribe = onStorageChanged(recordingStorageListener)
@@ -136,12 +154,16 @@ function uninstallRecordingStorageSync(): void {
 }
 
 async function syncHiddenStateFromStorage(): Promise<void> {
-  try {
-    const value = await getLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN)
-    hiddenUntilPopupOpen = Boolean(value)
-  } catch {
-    // Extension context invalidated — proceed with defaults
-  }
+  hiddenUntilPopupOpen = await readLocalState<boolean>({
+    key: StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN,
+    fallback: false,
+    validate: (value): value is boolean => typeof value === 'boolean',
+    diagnostic: {
+      name: 'launcher_visibility_state',
+      detail: 'Saved launcher visibility was invalid or unreadable; visible state is active.',
+      fix: 'Hide or show the launcher again to save a fresh preference.'
+    }
+  })
 }
 
 function persistHiddenState(hidden: boolean): void {

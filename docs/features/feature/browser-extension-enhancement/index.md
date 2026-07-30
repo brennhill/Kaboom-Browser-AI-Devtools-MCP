@@ -19,12 +19,15 @@ code_paths:
   - src/background/message-handlers.ts
   - src/background/message-routing/
   - src/background/runtime-state/
+  - src/background/runtime-state/state-recovery.ts
   - src/background/state-snapshots.ts
   - src/background/ui/content-script-bridge.ts
   - src/background/ui/settings-storage.ts
   - src/background/ui/tracked-tab-state.ts
   - src/background/ui/terminal-workspace.ts
   - src/lib/daemon-http.ts
+  - src/lib/storage/recovery.ts
+  - src/lib/storage/validated.ts
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - extension/popup.html
   - extension/popup.css
@@ -48,6 +51,8 @@ test_paths:
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/content/message-handlers.test.js
   - tests/extension/content/message-handlers-edge.test.js
+  - tests/extension/state-recovery/state-recovery-contract.test.js
+  - tests/extension/state-recovery/validated-storage.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -70,6 +75,9 @@ last_verified_date: 2026-03-28
   including redacted local Claude/Codex authentication classification,
   subscription-versus-API provider status, keychain failures, version state,
   extension connectivity, and tracked-tab readiness.
+- Corrupt or unreadable extension-local state now falls back deterministically
+  and emits a redacted `state_recovery` diagnostic that System Doctor can explain
+  without exposing the persisted value.
 
 ## Specs
 

@@ -20,8 +20,10 @@ import type { PopupConnectionStatus, ToggleWarningConfig } from './popup/shell/t
 import type { ShowTrackedHoverLauncherMessage } from './types/runtime-messages.js'
 import { RuntimeMessageName, StorageKey } from './lib/constants.js'
 import { persist } from './lib/storage/io.js'
-import { getLocal, getLocals } from './lib/storage/local.js'
-import { getSession, setSession } from './lib/storage/session.js'
+import { getLocals } from './lib/storage/local.js'
+import { setSession } from './lib/storage/session.js'
+import { readLocalState, readSessionState } from './lib/storage/validated.js'
+import { reportStateRecovery } from './lib/storage/recovery.js'
 import { updateConnectionStatus } from './popup/shell/status-display.js'
 import { refreshSystemDoctor } from './popup/system-doctor.js'
 import { setupRecordingUI } from './popup/recording/recording.js'
@@ -34,7 +36,12 @@ import { initPopupLogoMotion } from './popup/shell/logo-motion.js'
 import { applyWebSocketMode, handleWebSocketModeChange, handleClearLogs, resetClearConfirm } from './popup/settings.js'
 
 // Apply theme early to prevent flash of unstyled content (moved from inline script for CSP compliance).
-void getLocal('theme').then((value) => {
+void readLocalState<string>({
+  key: StorageKey.THEME,
+  fallback: 'dark',
+  validate: (value): value is string => value === 'dark' || value === 'light',
+  diagnostic: popupDiagnostic('Saved popup theme was invalid or unreadable; dark theme is active.')
+}).then((value) => {
   if (value === 'light') document.body.classList.add('light-theme')
 })
 
@@ -177,8 +184,12 @@ export function initPopup(): void {
   )
 
   // ── Cached status: hydrate from sessionStorage (sync read) ───────────
-  void getSession(StorageKey.POPUP_LAST_STATUS).then((value) => {
-    const cached = value as PopupConnectionStatus | undefined
+  void readSessionState<PopupConnectionStatus | null>({
+    key: StorageKey.POPUP_LAST_STATUS,
+    fallback: null,
+    validate: isPopupConnectionStatus,
+    diagnostic: popupDiagnostic('Saved popup status was invalid or unreadable; live status is loading.')
+  }).then((cached) => {
     if (cached) renderPopupStatus(cached, false)
   })
 
@@ -215,16 +226,26 @@ export function initPopup(): void {
   const toggleKeys = TOGGLE_DEFS.map((t) => t.storageKey)
   const allKeys = [...toggleKeys, StorageKey.WEBSOCKET_CAPTURE_MODE, StorageKey.AI_WEB_PILOT_ENABLED]
 
-  void getLocals(allKeys).then((result) => {
-    // Apply feature toggles (9 checkboxes)
-    applyFeatureToggles(result)
-
-    // Apply WS mode selector
-    applyWebSocketMode(result[StorageKey.WEBSOCKET_CAPTURE_MODE])
-
-    // Apply AI Web Pilot toggle
-    applyAiWebPilotToggle(result[StorageKey.AI_WEB_PILOT_ENABLED])
-  })
+  void getLocals(allKeys)
+    .then((result) => {
+      const valuesValid = Object.entries(result).every(([key, value]) => {
+        if (value === undefined) return true
+        if (key === StorageKey.WEBSOCKET_CAPTURE_MODE) {
+          return value === 'low' || value === 'medium' || value === 'high' || value === 'all'
+        }
+        return typeof value === 'boolean'
+      })
+      if (!valuesValid) {
+        reportStateRecovery(popupDiagnostic('Saved popup controls were malformed; defaults are active.'))
+        return
+      }
+      applyFeatureToggles(result)
+      applyWebSocketMode(result[StorageKey.WEBSOCKET_CAPTURE_MODE])
+      applyAiWebPilotToggle(result[StorageKey.AI_WEB_PILOT_ENABLED])
+    })
+    .catch(() => {
+      reportStateRecovery(popupDiagnostic('Saved popup controls could not be read; defaults are active.'))
+    })
 
   // ── Deferred: non-critical cosmetic init after first paint ───────────
   const deferredInit = (): void => {
@@ -238,6 +259,18 @@ export function initPopup(): void {
     // Node.js test environment — run synchronously
     deferredInit()
   }
+}
+
+function popupDiagnostic(detail: string) {
+  return {
+    name: 'popup_state',
+    detail,
+    fix: 'Reopen the popup and save the affected preference again.'
+  } as const
+}
+
+function isPopupConnectionStatus(value: unknown): value is PopupConnectionStatus {
+  return typeof value === 'object' && value !== null && typeof (value as PopupConnectionStatus).connected === 'boolean'
 }
 
 // Initialize when DOM is ready

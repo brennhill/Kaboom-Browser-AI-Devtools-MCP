@@ -1745,6 +1745,23 @@ let storageAvailable = typeof chrome !== 'undefined' && !!chrome.storage?.sessio
 
 // persistence-submission.js — Annotation persistence, cancellation, submission, and result delivery.
 /* eslint-disable no-unused-vars, no-undef */
+function reportDrawStateRecovery(detail) {
+  try {
+    void chrome.runtime
+      .sendMessage({
+        type: 'report_state_recovery',
+        diagnostic: {
+          name: 'annotation_state',
+          detail,
+          fix: 'Start annotation mode again to create fresh annotation state.'
+        }
+      })
+      .catch(() => undefined)
+  } catch {
+    // The draw UI still falls back safely when the extension context is gone.
+  }
+}
+
 function persistAnnotations() {
   if (saveTimeout) clearTimeout(saveTimeout)
   saveTimeout = setTimeout(() => {
@@ -1764,6 +1781,7 @@ function persistAnnotations() {
         () => {
           if (chrome.runtime?.lastError) {
             storageAvailable = false
+            reportDrawStateRecovery('Annotation state could not be saved; the current canvas remains active.')
           }
         }
       )
@@ -1779,6 +1797,7 @@ function clearPersistedAnnotations() {
     chrome.storage.session.remove('gasoline_draw_annotations', () => {
       if (chrome.runtime?.lastError) {
         storageAvailable = false
+        reportDrawStateRecovery('Saved annotation state could not be cleared; the current canvas was still closed.')
       }
     })
   } catch {
@@ -1793,9 +1812,21 @@ function loadAnnotations() {
     chrome.storage.session.get([key], (result) => {
       if (chrome.runtime?.lastError) {
         storageAvailable = false
+        reportDrawStateRecovery('Saved annotation state could not be read; an empty canvas is active.')
         return
       }
       const data = result?.[key]
+      const valid =
+        data === undefined ||
+        (typeof data === 'object' &&
+          data !== null &&
+          Array.isArray(data.annotations) &&
+          typeof data.page_url === 'string' &&
+          (data.timestamp === undefined || typeof data.timestamp === 'number'))
+      if (!valid) {
+        reportDrawStateRecovery('Saved annotation state was malformed; an empty canvas is active.')
+        return
+      }
       if (data?.annotations && data.page_url === window.location.href) {
         annotations = data.annotations.map(normalizeLoadedAnnotation)
         renderAnnotations()
@@ -1910,7 +1941,18 @@ export function deactivateAndSendResults() {
         // Key literal must match StorageKey.ANNOTATION_CHANNEL_NONCE in lib/constants.ts.
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
           chrome.storage.local.get('kaboom_annotation_channel_nonce', (res) => {
-            emitAnnotationsReady(res && res['kaboom_annotation_channel_nonce'])
+            if (chrome.runtime?.lastError) {
+              reportDrawStateRecovery('Saved annotation channel identity could not be read; page notification was suppressed.')
+              emitAnnotationsReady('')
+              return
+            }
+            const nonce = res && res['kaboom_annotation_channel_nonce']
+            if (nonce !== undefined && typeof nonce !== 'string') {
+              reportDrawStateRecovery('Saved annotation channel identity was malformed; page notification was suppressed.')
+              emitAnnotationsReady('')
+              return
+            }
+            emitAnnotationsReady(nonce)
           })
         } else {
           emitAnnotationsReady('')

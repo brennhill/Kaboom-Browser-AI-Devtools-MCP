@@ -4,6 +4,7 @@
  */
 import { SettingName } from '../lib/constants.js';
 import { getLocals } from '../lib/storage/local.js';
+import { reportStateRecovery } from '../lib/storage/recovery.js';
 /** Whether inject.bundled.js has been injected into the page (MAIN world) */
 let injected = false;
 /** Whether inject.js has responded to a bridge ping for this page load */
@@ -46,12 +47,23 @@ const SYNC_SETTINGS = [
  */
 async function syncStoredSettings() {
     const storageKeys = SYNC_SETTINGS.map((s) => s.storageKey);
-    const result = await getLocals(storageKeys);
+    let result;
+    try {
+        result = await getLocals(storageKeys);
+    }
+    catch {
+        reportInjectionSettingsRecovery('Saved page capture settings could not be read; defaults are active.');
+        return;
+    }
     for (const setting of SYNC_SETTINGS) {
         const value = result[setting.storageKey];
         if (value === undefined)
             continue; // Use default if not set
         if (setting.isMode) {
+            if (value !== 'low' && value !== 'medium' && value !== 'high' && value !== 'all') {
+                reportInjectionSettingsRecovery('Saved WebSocket capture mode was malformed; the default is active.');
+                continue;
+            }
             window.postMessage({
                 type: 'kaboom_setting',
                 setting: setting.messageType,
@@ -60,9 +72,20 @@ async function syncStoredSettings() {
             }, window.location.origin);
         }
         else {
+            if (typeof value !== 'boolean') {
+                reportInjectionSettingsRecovery('A saved page capture setting was malformed; its default is active.');
+                continue;
+            }
             window.postMessage({ type: 'kaboom_setting', setting: setting.messageType, enabled: value, _nonce: pageNonce }, window.location.origin);
         }
     }
+}
+function reportInjectionSettingsRecovery(detail) {
+    reportStateRecovery({
+        name: 'page_capture_settings_state',
+        detail,
+        fix: 'Open extension settings and save capture preferences again.'
+    });
 }
 /**
  * Inject axe-core library into the page

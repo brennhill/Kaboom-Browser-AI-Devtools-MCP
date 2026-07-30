@@ -14,7 +14,9 @@ import { StorageKey } from '../../lib/constants.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
 import { onStorageChanged } from '../../lib/storage/changes.js'
 import { persist } from '../../lib/storage/io.js'
-import { getLocal, removeLocal } from '../../lib/storage/local.js'
+import { removeLocal } from '../../lib/storage/local.js'
+import { readLocalState } from '../../lib/storage/validated.js'
+import { reportStateRecovery } from '../../lib/storage/recovery.js'
 import {
   sendRecordingGestureDecision,
   handleStartClick,
@@ -32,11 +34,48 @@ interface PendingRecordingIntent {
   url?: string
 }
 
+function isAudioMode(value: unknown): value is string {
+  return value === '' || value === 'tab' || value === 'mic' || value === 'both'
+}
+
+function isPendingRecordingIntent(value: unknown): value is PendingRecordingIntent {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const intent = value as PendingRecordingIntent
+  return (
+    (intent.highlight === undefined || typeof intent.highlight === 'boolean') &&
+    (intent.name === undefined || typeof intent.name === 'string') &&
+    (intent.fps === undefined || typeof intent.fps === 'number') &&
+    (intent.audio === undefined || isAudioMode(intent.audio)) &&
+    (intent.tabId === undefined || typeof intent.tabId === 'number') &&
+    (intent.url === undefined || typeof intent.url === 'string')
+  )
+}
+
+function isPopupRecordingState(value: unknown): value is { active?: boolean; name?: string; startTime?: number } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (typeof (value as { active?: unknown }).active === 'boolean' ||
+      (value as { active?: unknown }).active === undefined) &&
+    (typeof (value as { name?: unknown }).name === 'string' || (value as { name?: unknown }).name === undefined) &&
+    (typeof (value as { startTime?: unknown }).startTime === 'number' ||
+      (value as { startTime?: unknown }).startTime === undefined)
+  )
+}
+
 interface ApprovalElements {
   card: HTMLElement | null
   detail: HTMLElement | null
   approveBtn: HTMLButtonElement | null
   denyBtn: HTMLButtonElement | null
+}
+
+function recordingDiagnostic(detail: string) {
+  return {
+    name: 'screen_recording_state',
+    detail,
+    fix: 'Start the screen recording flow again.'
+  } as const
 }
 
 const START_LABEL = 'Record screen'
@@ -265,8 +304,12 @@ export function setupRecordingUI(): void {
 
   // Row is visible immediately with default "not recording" state.
   // Storage read updates it async — visual change is minimal (button label toggle).
-  void getLocal(StorageKey.RECORDING).then(async (value: unknown) => {
-    const rec = value as { active?: boolean; name?: string; startTime?: number } | undefined
+  void readLocalState<{ active?: boolean; name?: string; startTime?: number } | null>({
+    key: StorageKey.RECORDING,
+    fallback: null,
+    validate: isPopupRecordingState,
+    diagnostic: recordingDiagnostic('Saved screen recording was invalid or unreadable; idle state is active.')
+  }).then(async (rec) => {
     console.log(LOG, 'recording state from storage:', rec)
     if (rec?.active && rec.name && rec.startTime) {
       console.log(LOG, 'resuming recording UI for', rec.name)
@@ -274,15 +317,23 @@ export function setupRecordingUI(): void {
     }
 
     // Check for highlight request from hover launcher
-    const pendingValue = await getLocal(StorageKey.PENDING_RECORDING)
+    const pendingValue = await readLocalState<PendingRecordingIntent | null>({
+      key: StorageKey.PENDING_RECORDING,
+      fallback: null,
+      validate: isPendingRecordingIntent,
+      diagnostic: recordingDiagnostic('Saved pending recording request was invalid or unreadable; it was cancelled.')
+    })
     updatePendingRecording(pendingValue)
   })
 
   onStorageChanged((changes, areaName) => {
     if (areaName === 'local' && changes[StorageKey.RECORDING]) {
-      const rec = changes[StorageKey.RECORDING]!.newValue as
-        | { active?: boolean; name?: string; startTime?: number }
-        | undefined
+      const rec = changes[StorageKey.RECORDING]!.newValue
+      if (rec !== undefined && !isPopupRecordingState(rec)) {
+        reportStateRecovery(recordingDiagnostic('Screen recording changed to an invalid value; idle state is active.'))
+        showIdle(els, state)
+        return
+      }
       console.log(LOG, 'recording state changed:', rec)
       if (rec?.active && rec.name && rec.startTime) {
         showRecording(els, state, rec.name, rec.startTime)
@@ -293,7 +344,13 @@ export function setupRecordingUI(): void {
       return
     }
     if (areaName === 'local' && changes[StorageKey.PENDING_RECORDING]) {
-      updatePendingRecording(changes[StorageKey.PENDING_RECORDING]!.newValue)
+      const pending = changes[StorageKey.PENDING_RECORDING]!.newValue
+      if (pending !== undefined && !isPendingRecordingIntent(pending)) {
+        reportStateRecovery(recordingDiagnostic('Pending recording changed to an invalid value; it was cancelled.'))
+        updatePendingRecording(null)
+        return
+      }
+      updatePendingRecording(pending)
     }
   })
 
@@ -309,8 +366,16 @@ export function setupRecordingUI(): void {
     clearPendingRecordingIntent()
   })
 
-  void getLocal(StorageKey.PENDING_MIC_RECORDING).then(async (value: unknown) => {
-    const intent = value as { audioMode?: string } | undefined
+  void readLocalState<{ audioMode?: string } | null>({
+    key: StorageKey.PENDING_MIC_RECORDING,
+    fallback: null,
+    validate: (value): value is { audioMode?: string } =>
+      typeof value === 'object' &&
+      value !== null &&
+      ((value as { audioMode?: unknown }).audioMode === undefined ||
+        isAudioMode((value as { audioMode?: unknown }).audioMode)),
+    diagnostic: recordingDiagnostic('Saved microphone recording request was invalid or unreadable; it was cancelled.')
+  }).then(async (intent) => {
     console.log(LOG, 'pending mic recording intent:', intent)
     if (!intent?.audioMode) return
 
@@ -335,8 +400,12 @@ export function setupRecordingUI(): void {
     if (audioSelect) audioSelect.value = intent.audioMode
   })
 
-  void getLocal(StorageKey.RECORD_AUDIO_PREF).then((value: unknown) => {
-    const saved = value as string | undefined
+  void readLocalState<string>({
+    key: StorageKey.RECORD_AUDIO_PREF,
+    fallback: '',
+    validate: (value): value is string => isAudioMode(value),
+    diagnostic: recordingDiagnostic('Saved recording audio preference was invalid or unreadable; video-only is active.')
+  }).then((saved) => {
     if (saved) {
       const audioSelect = document.getElementById('record-audio-mode') as HTMLSelectElement | null
       if (audioSelect) audioSelect.value = saved

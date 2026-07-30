@@ -7,6 +7,7 @@
 
 import { StorageKey } from '../constants.js'
 import { getLocals, setLocals, removeLocals } from '../storage/local.js'
+import { reportStateRecovery } from '../storage/recovery.js'
 
 export interface TrackedTabState {
   id?: number
@@ -23,12 +24,37 @@ export const TRACKED_TAB_STORAGE_KEYS = [
 
 /** Read the complete tracked-tab identity as one consistent snapshot. */
 export async function readTrackedTab(): Promise<TrackedTabState> {
-  const stored = await getLocals(TRACKED_TAB_STORAGE_KEYS)
-  return {
-    id: stored[StorageKey.TRACKED_TAB_ID] as number | undefined,
-    url: stored[StorageKey.TRACKED_TAB_URL] as string | undefined,
-    title: stored[StorageKey.TRACKED_TAB_TITLE] as string | undefined
+  let stored: Record<string, unknown>
+  try {
+    stored = await getLocals(TRACKED_TAB_STORAGE_KEYS)
+  } catch {
+    reportTrackedTabRecovery('Saved tracked-tab state could not be read; automatic tab selection is active.')
+    return {}
   }
+  const id = stored[StorageKey.TRACKED_TAB_ID]
+  const url = stored[StorageKey.TRACKED_TAB_URL]
+  const title = stored[StorageKey.TRACKED_TAB_TITLE]
+  const valid =
+    (id === undefined || (typeof id === 'number' && Number.isInteger(id) && id > 0)) &&
+    (url === undefined || typeof url === 'string') &&
+    (title === undefined || typeof title === 'string')
+  if (!valid) {
+    reportTrackedTabRecovery('Saved tracked-tab state was malformed; automatic tab selection is active.')
+    return {}
+  }
+  return {
+    id,
+    url,
+    title
+  }
+}
+
+function reportTrackedTabRecovery(detail: string): void {
+  reportStateRecovery({
+    name: 'tracked_tab_state',
+    detail,
+    fix: 'Choose a tab from the extension popup to save a fresh tracking state.'
+  })
 }
 
 /**

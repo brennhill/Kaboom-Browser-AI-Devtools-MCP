@@ -81,13 +81,15 @@ import { isRecording, startRecording, stopRecording, initRecording } from './rec
 import { installMessageListener } from './message-handlers.js'
 import { createTelemetryMessageHandler } from './message-routing/telemetry-handler.js'
 import { createStatusMessageHandler } from './message-routing/status-handler.js'
+import { reportStateRecovery } from './runtime-state/state-recovery.js'
 import { createSettingsMessageHandler } from './message-routing/settings-handler.js'
 import { broadcastTrackingState, createPilotMessageHandler } from './message-routing/pilot-handler.js'
 import { createCaptureMessageHandler } from './message-routing/capture-handler.js'
 import { createUtilityMessageHandler } from './message-routing/utility-handler.js'
 import { captureScreenshot } from './sync/screenshot.js'
 import { updateBadge } from './sync/server.js'
-import { getLocal, setLocal } from '../lib/storage/local.js'
+import { setLocal } from '../lib/storage/local.js'
+import { readTrackedTab } from '../lib/tabs/tracked-tab-storage.js'
 import { markStateVersion, setSessionAccessLevel, wasServiceWorkerRestarted } from '../lib/storage/session.js'
 import { loadServerInstallId } from './sync/install-identity.js'
 
@@ -263,7 +265,8 @@ async function initializeExtensionAsync(): Promise<void> {
           clearLogs: handleClearLogs,
           exportDebugLog,
           clearDebugLog,
-          debugLog
+          debugLog,
+          reportStateRecovery
         }),
         createSettingsMessageHandler({
           getServerUrl,
@@ -327,7 +330,7 @@ async function initializeExtensionAsync(): Promise<void> {
     // Without this the manifest default makes the panel available on every tab,
     // where it renders empty.
     void (async () => {
-      const trackedTabId = (await getLocal('trackedTabId')) as number | undefined
+      const trackedTabId = (await readTrackedTab()).id
       await syncTerminalPanelAvailability(typeof trackedTabId === 'number' ? trackedTabId : undefined)
     })()
 

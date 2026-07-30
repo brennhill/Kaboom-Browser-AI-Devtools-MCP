@@ -103,6 +103,21 @@
   var KABOOM_LOG_PREFIX = "[KaBOOM!]";
   var KABOOM_RECORDING_LOG_PREFIX = "[KaBOOM! REC]";
 
+  // extension/lib/storage/recovery.js
+  function reportStateRecovery(diagnostic) {
+    console.warn(`${KABOOM_LOG_PREFIX} persisted state recovered: ${diagnostic.name}`);
+    if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage)
+      return;
+    const message = { type: "report_state_recovery", diagnostic };
+    try {
+      const pending = chrome.runtime.sendMessage(message);
+      if (pending && typeof pending.catch === "function") {
+        void pending.catch(() => void 0);
+      }
+    } catch {
+    }
+  }
+
   // extension/lib/storage/io.js
   function isPromiseLike(value) {
     return typeof value === "object" && value !== null && typeof value.then === "function";
@@ -161,10 +176,22 @@
     });
   }
   function writeStorage(method, items) {
-    return runStorageWrite("write", (finish) => method(items, finish));
+    return reportStorageMutationFailure(runStorageWrite("write", (finish) => method(items, finish)), "saved");
   }
   function removeFromStorage(method, keys) {
-    return runStorageWrite("remove", (finish) => method(keys, finish));
+    return reportStorageMutationFailure(runStorageWrite("remove", (finish) => method(keys, finish)), "removed");
+  }
+  async function reportStorageMutationFailure(operation, verb) {
+    try {
+      await operation;
+    } catch (error) {
+      reportStateRecovery({
+        name: "extension_storage_write_state",
+        detail: `Extension state could not be ${verb}; the current in-memory value remains active.`,
+        fix: "Check extension storage permissions, then repeat the affected action."
+      });
+      throw error;
+    }
   }
 
   // extension/lib/storage/local.js
@@ -218,6 +245,29 @@
     if (!storage?.session)
       return;
     await writeStorage(storage.session.set.bind(storage.session), { [key]: value });
+  }
+
+  // extension/lib/storage/validated.js
+  async function readValidated(read, options) {
+    const report = options.report ?? reportStateRecovery;
+    try {
+      const value = await read(options.key);
+      if (value === void 0 || value === null)
+        return options.fallback;
+      if (options.validate(value))
+        return value;
+      report(options.diagnostic);
+      return options.fallback;
+    } catch {
+      report(options.diagnostic);
+      return options.fallback;
+    }
+  }
+  function readLocalState(options) {
+    return readValidated(getLocal, options);
+  }
+  function readSessionState(options) {
+    return readValidated(getSession, options);
   }
 
   // extension/popup/shell/ui-utils.js
@@ -538,6 +588,25 @@
   }
 
   // extension/popup/recording/recording.js
+  function isAudioMode(value) {
+    return value === "" || value === "tab" || value === "mic" || value === "both";
+  }
+  function isPendingRecordingIntent(value) {
+    if (typeof value !== "object" || value === null || Array.isArray(value))
+      return false;
+    const intent = value;
+    return (intent.highlight === void 0 || typeof intent.highlight === "boolean") && (intent.name === void 0 || typeof intent.name === "string") && (intent.fps === void 0 || typeof intent.fps === "number") && (intent.audio === void 0 || isAudioMode(intent.audio)) && (intent.tabId === void 0 || typeof intent.tabId === "number") && (intent.url === void 0 || typeof intent.url === "string");
+  }
+  function isPopupRecordingState(value) {
+    return typeof value === "object" && value !== null && (typeof value.active === "boolean" || value.active === void 0) && (typeof value.name === "string" || value.name === void 0) && (typeof value.startTime === "number" || value.startTime === void 0);
+  }
+  function recordingDiagnostic(detail) {
+    return {
+      name: "screen_recording_state",
+      detail,
+      fix: "Start the screen recording flow again."
+    };
+  }
   var START_LABEL = "Record screen";
   var STOP_LABEL = "Stop recording";
   var HIGHLIGHT_LABEL = "\u25CF \xAB Click here to record";
@@ -754,19 +823,33 @@
       setApprovalPendingState(els, approvalEls, state, null);
       persist(removeLocal(StorageKey.PENDING_RECORDING), "pending-recording-clear");
     };
-    void getLocal(StorageKey.RECORDING).then(async (value) => {
-      const rec = value;
+    void readLocalState({
+      key: StorageKey.RECORDING,
+      fallback: null,
+      validate: isPopupRecordingState,
+      diagnostic: recordingDiagnostic("Saved screen recording was invalid or unreadable; idle state is active.")
+    }).then(async (rec) => {
       console.log(LOG2, "recording state from storage:", rec);
       if (rec?.active && rec.name && rec.startTime) {
         console.log(LOG2, "resuming recording UI for", rec.name);
         showRecording(els, state, rec.name, rec.startTime);
       }
-      const pendingValue = await getLocal(StorageKey.PENDING_RECORDING);
+      const pendingValue = await readLocalState({
+        key: StorageKey.PENDING_RECORDING,
+        fallback: null,
+        validate: isPendingRecordingIntent,
+        diagnostic: recordingDiagnostic("Saved pending recording request was invalid or unreadable; it was cancelled.")
+      });
       updatePendingRecording(pendingValue);
     });
     onStorageChanged((changes, areaName) => {
       if (areaName === "local" && changes[StorageKey.RECORDING]) {
         const rec = changes[StorageKey.RECORDING].newValue;
+        if (rec !== void 0 && !isPopupRecordingState(rec)) {
+          reportStateRecovery(recordingDiagnostic("Screen recording changed to an invalid value; idle state is active."));
+          showIdle(els, state);
+          return;
+        }
         console.log(LOG2, "recording state changed:", rec);
         if (rec?.active && rec.name && rec.startTime) {
           showRecording(els, state, rec.name, rec.startTime);
@@ -777,7 +860,13 @@
         return;
       }
       if (areaName === "local" && changes[StorageKey.PENDING_RECORDING]) {
-        updatePendingRecording(changes[StorageKey.PENDING_RECORDING].newValue);
+        const pending = changes[StorageKey.PENDING_RECORDING].newValue;
+        if (pending !== void 0 && !isPendingRecordingIntent(pending)) {
+          reportStateRecovery(recordingDiagnostic("Pending recording changed to an invalid value; it was cancelled."));
+          updatePendingRecording(null);
+          return;
+        }
+        updatePendingRecording(pending);
       }
     });
     approvalEls.approveBtn?.addEventListener("click", (event) => {
@@ -790,8 +879,12 @@
       sendRecordingGestureDecision("recording_gesture_denied");
       clearPendingRecordingIntent();
     });
-    void getLocal(StorageKey.PENDING_MIC_RECORDING).then(async (value) => {
-      const intent = value;
+    void readLocalState({
+      key: StorageKey.PENDING_MIC_RECORDING,
+      fallback: null,
+      validate: (value) => typeof value === "object" && value !== null && (value.audioMode === void 0 || isAudioMode(value.audioMode)),
+      diagnostic: recordingDiagnostic("Saved microphone recording request was invalid or unreadable; it was cancelled.")
+    }).then(async (intent) => {
       console.log(LOG2, "pending mic recording intent:", intent);
       if (!intent?.audioMode)
         return;
@@ -813,8 +906,12 @@
       if (audioSelect)
         audioSelect.value = intent.audioMode;
     });
-    void getLocal(StorageKey.RECORD_AUDIO_PREF).then((value) => {
-      const saved = value;
+    void readLocalState({
+      key: StorageKey.RECORD_AUDIO_PREF,
+      fallback: "",
+      validate: (value) => isAudioMode(value),
+      diagnostic: recordingDiagnostic("Saved recording audio preference was invalid or unreadable; video-only is active.")
+    }).then((saved) => {
       if (saved) {
         const audioSelect = document.getElementById("record-audio-mode");
         if (audioSelect)
@@ -959,8 +1056,19 @@
     }, 5e3);
   }
   async function getServerUrl() {
-    const value = await getLocal(StorageKey.SERVER_URL);
-    return value || DEFAULT_SERVER_URL;
+    return readLocalState({
+      key: StorageKey.SERVER_URL,
+      fallback: DEFAULT_SERVER_URL,
+      validate: (value) => typeof value === "string" && value.length > 0,
+      diagnostic: actionRecordingDiagnostic("Saved server URL was invalid or unreadable; the default is active.")
+    });
+  }
+  function actionRecordingDiagnostic(detail) {
+    return {
+      name: "action_recording_state",
+      detail,
+      fix: "Start the action recording again."
+    };
   }
   function getConfigureError(data) {
     const message = data.error?.message;
@@ -1067,8 +1175,17 @@
       timerInterval: null,
       startTime: null
     };
-    void getLocal(StorageKey.ACTION_RECORDING).then(async (value) => {
-      const saved = value;
+    void readLocalState({
+      key: StorageKey.ACTION_RECORDING,
+      fallback: null,
+      validate: (value) => {
+        if (typeof value !== "object" || value === null || Array.isArray(value))
+          return false;
+        const saved = value;
+        return (saved.active === void 0 || typeof saved.active === "boolean") && (saved.recordingId === void 0 || typeof saved.recordingId === "string") && (saved.startTime === void 0 || typeof saved.startTime === "number") && (saved.daemonPid === void 0 || saved.daemonPid === null || typeof saved.daemonPid === "number");
+      },
+      diagnostic: actionRecordingDiagnostic("Saved action recording was invalid or unreadable; idle state is active.")
+    }).then(async (saved) => {
       if (!saved?.active || !saved.recordingId)
         return;
       if (!await isActionRecordingStillLive(saved.daemonPid)) {
@@ -1184,12 +1301,33 @@
     StorageKey.TRACKED_TAB_TITLE
   ];
   async function readTrackedTab() {
-    const stored = await getLocals(TRACKED_TAB_STORAGE_KEYS);
+    let stored;
+    try {
+      stored = await getLocals(TRACKED_TAB_STORAGE_KEYS);
+    } catch {
+      reportTrackedTabRecovery("Saved tracked-tab state could not be read; automatic tab selection is active.");
+      return {};
+    }
+    const id = stored[StorageKey.TRACKED_TAB_ID];
+    const url = stored[StorageKey.TRACKED_TAB_URL];
+    const title = stored[StorageKey.TRACKED_TAB_TITLE];
+    const valid = (id === void 0 || typeof id === "number" && Number.isInteger(id) && id > 0) && (url === void 0 || typeof url === "string") && (title === void 0 || typeof title === "string");
+    if (!valid) {
+      reportTrackedTabRecovery("Saved tracked-tab state was malformed; automatic tab selection is active.");
+      return {};
+    }
     return {
-      id: stored[StorageKey.TRACKED_TAB_ID],
-      url: stored[StorageKey.TRACKED_TAB_URL],
-      title: stored[StorageKey.TRACKED_TAB_TITLE]
+      id,
+      url,
+      title
     };
+  }
+  function reportTrackedTabRecovery(detail) {
+    reportStateRecovery({
+      name: "tracked_tab_state",
+      detail,
+      fix: "Choose a tab from the extension popup to save a fresh tracking state."
+    });
   }
   async function setTrackedTab(tab) {
     if (!tab.id)
@@ -1217,17 +1355,24 @@
       if (matchesDomain(host, domain))
         return true;
     }
-    try {
-      const userDomains = await getLocal(StorageKey.CLOAKED_DOMAINS);
-      if (userDomains && Array.isArray(userDomains)) {
-        for (const domain of userDomains) {
-          if (matchesDomain(host, domain))
-            return true;
-        }
-      }
-    } catch {
+    const userDomains = await readUserDomains();
+    for (const domain of userDomains) {
+      if (matchesDomain(host, domain))
+        return true;
     }
     return false;
+  }
+  function readUserDomains() {
+    return readLocalState({
+      key: StorageKey.CLOAKED_DOMAINS,
+      fallback: [],
+      validate: (value) => Array.isArray(value) && value.every((domain) => typeof domain === "string" && domain.length > 0),
+      diagnostic: {
+        name: "cloaked_domain_state",
+        detail: "Saved cloaked-domain rules were invalid or unreadable; built-in protections remain active.",
+        fix: "Open extension settings and save the cloaked-domain list again."
+      }
+    });
   }
 
   // extension/lib/tabs/tab-tracking-core.js
@@ -1599,7 +1744,12 @@
   }
 
   // extension/popup.js
-  void getLocal("theme").then((value) => {
+  void readLocalState({
+    key: StorageKey.THEME,
+    fallback: "dark",
+    validate: (value) => value === "dark" || value === "light",
+    diagnostic: popupDiagnostic("Saved popup theme was invalid or unreadable; dark theme is active.")
+  }).then((value) => {
     if (value === "light")
       document.body.classList.add("light-theme");
   });
@@ -1695,8 +1845,12 @@
         renderPopupStatus(message.status);
       }
     });
-    void getSession(StorageKey.POPUP_LAST_STATUS).then((value) => {
-      const cached = value;
+    void readSessionState({
+      key: StorageKey.POPUP_LAST_STATUS,
+      fallback: null,
+      validate: isPopupConnectionStatus,
+      diagnostic: popupDiagnostic("Saved popup status was invalid or unreadable; live status is loading.")
+    }).then((cached) => {
       if (cached)
         renderPopupStatus(cached, false);
     });
@@ -1730,9 +1884,23 @@
     const toggleKeys = FEATURE_TOGGLES.map((t) => t.storageKey);
     const allKeys = [...toggleKeys, StorageKey.WEBSOCKET_CAPTURE_MODE, StorageKey.AI_WEB_PILOT_ENABLED];
     void getLocals(allKeys).then((result) => {
+      const valuesValid = Object.entries(result).every(([key, value]) => {
+        if (value === void 0)
+          return true;
+        if (key === StorageKey.WEBSOCKET_CAPTURE_MODE) {
+          return value === "low" || value === "medium" || value === "high" || value === "all";
+        }
+        return typeof value === "boolean";
+      });
+      if (!valuesValid) {
+        reportStateRecovery(popupDiagnostic("Saved popup controls were malformed; defaults are active."));
+        return;
+      }
       applyFeatureToggles(result);
       applyWebSocketMode(result[StorageKey.WEBSOCKET_CAPTURE_MODE]);
       applyAiWebPilotToggle(result[StorageKey.AI_WEB_PILOT_ENABLED]);
+    }).catch(() => {
+      reportStateRecovery(popupDiagnostic("Saved popup controls could not be read; defaults are active."));
     });
     const deferredInit = () => {
       initPopupLogoMotion();
@@ -1744,6 +1912,16 @@
     } else {
       deferredInit();
     }
+  }
+  function popupDiagnostic(detail) {
+    return {
+      name: "popup_state",
+      detail,
+      fix: "Reopen the popup and save the affected preference again."
+    };
+  }
+  function isPopupConnectionStatus(value) {
+    return typeof value === "object" && value !== null && typeof value.connected === "boolean";
   }
   if (typeof document !== "undefined" && typeof globalThis.process === "undefined") {
     if (document.readyState === "loading") {

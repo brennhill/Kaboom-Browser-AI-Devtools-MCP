@@ -6,33 +6,31 @@
 import { DEFAULT_SERVER_URL, StorageKey } from '../../lib/constants.js';
 import { getDaemonStartHint } from '../../lib/brand.js';
 import { persist } from '../../lib/storage/io.js';
-import { getLocal, setLocal } from '../../lib/storage/local.js';
-import { getSession, removeSessions, setSession } from '../../lib/storage/session.js';
+import { setLocal } from '../../lib/storage/local.js';
+import { removeSessions, setSession } from '../../lib/storage/session.js';
+import { readLocalState, readSessionState } from '../../lib/storage/validated.js';
 import { resolveTerminalServerUrl } from '../../lib/terminal-server.js';
 import { state } from './terminal-widget-types.js';
 // =============================================================================
 // CONFIG HELPERS — read/write chrome.storage.local
 // =============================================================================
 export async function getServerUrl() {
-    try {
-        const value = await getLocal(StorageKey.SERVER_URL);
-        const url = value || DEFAULT_SERVER_URL;
-        state.serverUrl = url;
-        return url;
-    }
-    catch {
-        return DEFAULT_SERVER_URL; // Extension context invalidated
-    }
+    const url = await readLocalState({
+        key: StorageKey.SERVER_URL,
+        fallback: DEFAULT_SERVER_URL,
+        validate: (value) => typeof value === 'string' && value.length > 0,
+        diagnostic: terminalDiagnostic('Saved terminal server URL was invalid or unreadable; the default is active.')
+    });
+    state.serverUrl = url;
+    return url;
 }
 export async function getTerminalConfig() {
-    try {
-        const value = await getLocal(StorageKey.TERMINAL_CONFIG);
-        const config = value || {};
-        return config;
-    }
-    catch {
-        return {}; // Extension context invalidated
-    }
+    return readLocalState({
+        key: StorageKey.TERMINAL_CONFIG,
+        fallback: {},
+        validate: isTerminalConfig,
+        diagnostic: terminalDiagnostic('Saved terminal configuration was invalid or unreadable; defaults are active.')
+    });
 }
 export function saveTerminalConfig(config) {
     try {
@@ -43,14 +41,12 @@ export function saveTerminalConfig(config) {
     }
 }
 async function getTerminalAICommand() {
-    try {
-        const value = await getLocal(StorageKey.TERMINAL_AI_COMMAND);
-        const cmd = value || 'claude';
-        return cmd;
-    }
-    catch {
-        return 'claude';
-    }
+    return readLocalState({
+        key: StorageKey.TERMINAL_AI_COMMAND,
+        fallback: 'claude',
+        validate: (value) => typeof value === 'string' && value.trim().length > 0,
+        diagnostic: terminalDiagnostic('Saved terminal AI command was invalid or unreadable; Claude is active.')
+    });
 }
 /**
  * Build the command entered into the login shell after it has loaded the user's
@@ -100,13 +96,12 @@ export function buildAIInitCommand(aiCommand) {
         ` unset kaboom_execution_provider kaboom_api_confirm claude_auth_status codex_auth_status`);
 }
 export async function getTerminalDevRoot() {
-    try {
-        const value = await getLocal(StorageKey.TERMINAL_DEV_ROOT);
-        return value || '';
-    }
-    catch {
-        return '';
-    }
+    return readLocalState({
+        key: StorageKey.TERMINAL_DEV_ROOT,
+        fallback: '',
+        validate: (value) => typeof value === 'string',
+        diagnostic: terminalDiagnostic('Saved terminal root was invalid or unreadable; no root override is active.')
+    });
 }
 // =============================================================================
 // SESSION PERSISTENCE — survives page refresh via chrome.storage.session
@@ -136,16 +131,44 @@ export function persistUIState(uiState) {
     }
 }
 export async function loadPersistedSession() {
-    try {
-        const sessionValue = await getSession(StorageKey.TERMINAL_SESSION);
-        const uiValue = await getSession(StorageKey.TERMINAL_UI_STATE);
-        const session = sessionValue;
-        const uiState = uiValue || 'closed';
-        return { session: session || null, uiState };
-    }
-    catch {
-        return { session: null, uiState: 'closed' };
-    }
+    const [session, uiState] = await Promise.all([
+        readSessionState({
+            key: StorageKey.TERMINAL_SESSION,
+            fallback: null,
+            validate: isTerminalSessionState,
+            diagnostic: terminalDiagnostic('Saved terminal session was invalid or unreadable; a new session is required.')
+        }),
+        readSessionState({
+            key: StorageKey.TERMINAL_UI_STATE,
+            fallback: 'closed',
+            validate: (value) => value === 'open' || value === 'closed' || value === 'minimized',
+            diagnostic: terminalDiagnostic('Saved terminal UI state was invalid or unreadable; closed state is active.')
+        })
+    ]);
+    return { session, uiState };
+}
+function terminalDiagnostic(detail) {
+    return {
+        name: 'terminal_session_state',
+        detail,
+        fix: 'Reopen the terminal panel and save its settings again.'
+    };
+}
+function isTerminalConfig(value) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value))
+        return false;
+    const config = value;
+    return ((config.cmd === undefined || typeof config.cmd === 'string') &&
+        (config.args === undefined ||
+            (Array.isArray(config.args) && config.args.every((argument) => typeof argument === 'string'))) &&
+        (config.dir === undefined || typeof config.dir === 'string') &&
+        (config.serverUrl === undefined || typeof config.serverUrl === 'string'));
+}
+function isTerminalSessionState(value) {
+    return (typeof value === 'object' &&
+        value !== null &&
+        typeof value.token === 'string' &&
+        typeof value.sessionId === 'string');
 }
 // =============================================================================
 // SESSION LIFECYCLE — start, validate

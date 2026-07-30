@@ -3,6 +3,7 @@
  * Why: Keep error handling and fire-and-forget write reporting consistent.
  */
 import { KABOOM_LOG_PREFIX } from '../brand.js';
+import { reportStateRecovery } from './recovery.js';
 function isPromiseLike(value) {
     return typeof value === 'object' && value !== null && typeof value.then === 'function';
 }
@@ -62,12 +63,25 @@ function runStorageWrite(label, invoke) {
     });
 }
 export function writeStorage(method, items) {
-    return runStorageWrite('write', (finish) => method(items, finish));
+    return reportStorageMutationFailure(runStorageWrite('write', (finish) => method(items, finish)), 'saved');
 }
 export function removeFromStorage(method, keys) {
-    return runStorageWrite('remove', (finish) => method(keys, finish));
+    return reportStorageMutationFailure(runStorageWrite('remove', (finish) => method(keys, finish)), 'removed');
 }
 export function setStorageAccessLevel(method, accessLevel) {
-    return runStorageWrite('setAccessLevel', (finish) => method({ accessLevel }, finish));
+    return reportStorageMutationFailure(runStorageWrite('setAccessLevel', (finish) => method({ accessLevel }, finish)), 'configured');
+}
+async function reportStorageMutationFailure(operation, verb) {
+    try {
+        await operation;
+    }
+    catch (error) {
+        reportStateRecovery({
+            name: 'extension_storage_write_state',
+            detail: `Extension state could not be ${verb}; the current in-memory value remains active.`,
+            fix: 'Check extension storage permissions, then repeat the affected action.'
+        });
+        throw error;
+    }
 }
 //# sourceMappingURL=io.js.map

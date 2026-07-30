@@ -6,8 +6,9 @@ import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { StorageKey } from '../lib/constants.js';
 import { onStorageChanged } from '../lib/storage/changes.js';
 import { persist } from '../lib/storage/io.js';
-import { getLocal, setLocal, setLocals } from '../lib/storage/local.js';
-import { clearTrackedTab as clearTrackedTabState } from '../lib/tabs/tracked-tab-storage.js';
+import { setLocal, setLocals } from '../lib/storage/local.js';
+import { clearTrackedTab as clearTrackedTabState, readTrackedTab } from '../lib/tabs/tracked-tab-storage.js';
+import { reportStateRecovery } from './runtime-state/state-recovery.js';
 // =============================================================================
 // CONSTANTS - Rate Limiting & DoS Protection
 // =============================================================================
@@ -126,7 +127,7 @@ export function installTabUpdatedListener(onTabUpdated) {
  * Updates the stored URL and title when the tracked tab navigates
  */
 export async function handleTrackedTabUrlChange(updatedTabId, newUrl, logFn) {
-    const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID));
+    const trackedTabId = (await readTrackedTab()).id;
     if (trackedTabId === updatedTabId) {
         // Update URL immediately, then refresh title from the tab
         try {
@@ -151,7 +152,7 @@ export async function handleTrackedTabUrlChange(updatedTabId, newUrl, logFn) {
  * Uses session storage for ephemeral tab tracking data
  */
 export async function handleTrackedTabClosed(closedTabId, logFn) {
-    const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID));
+    const trackedTabId = (await readTrackedTab()).id;
     if (trackedTabId === closedTabId) {
         if (logFn)
             logFn(`${KABOOM_LOG_PREFIX} Tracked tab closed (id:`, closedTabId);
@@ -168,14 +169,33 @@ export function installStorageChangeListener(handlers) {
     onStorageChanged((changes, areaName) => {
         if (areaName === 'local') {
             if (changes[StorageKey.AI_WEB_PILOT_ENABLED] && handlers.onAiWebPilotChanged) {
-                handlers.onAiWebPilotChanged(changes[StorageKey.AI_WEB_PILOT_ENABLED].newValue === true);
+                const nextPilot = changes[StorageKey.AI_WEB_PILOT_ENABLED].newValue;
+                if (typeof nextPilot === 'boolean') {
+                    handlers.onAiWebPilotChanged(nextPilot);
+                }
+                else if (nextPilot !== undefined) {
+                    reportStorageChangeRecovery('Saved AI Web Pilot change was malformed; the current setting remains active.');
+                }
             }
             if (changes[StorageKey.TRACKED_TAB_ID] && handlers.onTrackedTabChanged) {
-                const newTabId = changes[StorageKey.TRACKED_TAB_ID].newValue ?? null;
-                const oldTabId = changes[StorageKey.TRACKED_TAB_ID].oldValue ?? null;
+                const newValue = changes[StorageKey.TRACKED_TAB_ID].newValue;
+                const oldValue = changes[StorageKey.TRACKED_TAB_ID].oldValue;
+                if (newValue !== undefined && (typeof newValue !== 'number' || !Number.isInteger(newValue))) {
+                    reportStorageChangeRecovery('Saved tracked-tab change was malformed; automatic tab selection remains active.');
+                    return;
+                }
+                const newTabId = newValue ?? null;
+                const oldTabId = typeof oldValue === 'number' ? oldValue : null;
                 handlers.onTrackedTabChanged(newTabId, oldTabId);
             }
         }
+    });
+}
+function reportStorageChangeRecovery(detail) {
+    reportStateRecovery({
+        name: 'extension_storage_change_state',
+        detail,
+        fix: 'Reload the extension and save the affected setting again.'
     });
 }
 // =============================================================================
@@ -189,7 +209,7 @@ export function installStartupListener(logFn) {
         return;
     chrome.runtime.onStartup.addListener(async () => {
         try {
-            const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID));
+            const trackedTabId = (await readTrackedTab()).id;
             if (trackedTabId) {
                 try {
                     await chrome.tabs.get(trackedTabId);

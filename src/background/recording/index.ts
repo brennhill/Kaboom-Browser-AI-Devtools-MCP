@@ -19,15 +19,17 @@ import type {
 } from '../../types/runtime-messages.js'
 import { ensureOffscreenDocument, getStreamIdWithRecovery, requestRecordingGesture } from './capture.js'
 import { installRecordingListeners } from './listeners.js'
-import { resolveRecordingRehydration, type PersistedRecordingState } from './rehydration.js'
+import { isPersistedRecordingState, resolveRecordingRehydration, type PersistedRecordingState } from './rehydration.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { persist } from '../../lib/storage/io.js'
 import { getLocal, removeLocal, setLocals } from '../../lib/storage/local.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { buildRecordingToastLabel } from './utils.js'
 import { startRecordingBadgeTimer, stopRecordingBadgeTimer } from './badge.js'
-import { setTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
+import { readTrackedTab, setTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
+import { readLocalState } from '../../lib/storage/validated.js'
+import { reportStateRecovery } from '../runtime-state/state-recovery.js'
 
 // =============================================================================
 // STATE
@@ -102,7 +104,17 @@ async function rehydrateRecordingStateOnLoad(): Promise<void> {
     const restored = await resolveRecordingRehydration({
       queryOffscreenRecordingState,
       getPersistedRecording: async () =>
-        ((await getLocal(StorageKey.RECORDING)) as PersistedRecordingState | undefined) ?? null
+        await readLocalState<PersistedRecordingState | null>({
+          key: StorageKey.RECORDING,
+          fallback: null,
+          validate: isPersistedRecordingState,
+          diagnostic: {
+            name: 'screen_recording_state',
+            detail: 'Saved screen-recording state was invalid or unreadable; idle state is active.',
+            fix: 'Start the screen recording again.'
+          },
+          report: reportStateRecovery
+        })
     })
     if (restored) {
       recordingState = { ...restored }
@@ -365,7 +377,7 @@ export async function startRecording(
     const tab = tabResult
 
     // Auto-enable tab tracking if not already tracked
-    const trackedTabId = await getLocal(StorageKey.TRACKED_TAB_ID)
+    const trackedTabId = (await readTrackedTab()).id
     console.log(LOG, 'Tracked tab:', {
       trackedTabId,
       willAutoTrack: !trackedTabId

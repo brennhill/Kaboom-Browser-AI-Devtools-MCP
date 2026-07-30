@@ -6,7 +6,8 @@
 import { DEFAULT_SERVER_URL, StorageKey } from '../../lib/constants.js';
 import { postDaemonJSON } from '../../lib/daemon-http.js';
 import { persist } from '../../lib/storage/io.js';
-import { getLocal, removeLocal, setLocal } from '../../lib/storage/local.js';
+import { removeLocal, setLocal } from '../../lib/storage/local.js';
+import { readLocalState } from '../../lib/storage/validated.js';
 const START_LABEL = 'Record action workflow';
 const STOP_LABEL = 'Stop recording';
 function showRecording(els, state) {
@@ -45,8 +46,19 @@ function showError(els, message) {
     }, 5000);
 }
 async function getServerUrl() {
-    const value = await getLocal(StorageKey.SERVER_URL);
-    return value || DEFAULT_SERVER_URL;
+    return readLocalState({
+        key: StorageKey.SERVER_URL,
+        fallback: DEFAULT_SERVER_URL,
+        validate: (value) => typeof value === 'string' && value.length > 0,
+        diagnostic: actionRecordingDiagnostic('Saved server URL was invalid or unreadable; the default is active.')
+    });
+}
+function actionRecordingDiagnostic(detail) {
+    return {
+        name: 'action_recording_state',
+        detail,
+        fix: 'Start the action recording again.'
+    };
 }
 function getConfigureError(data) {
     const message = data.error?.message;
@@ -186,8 +198,20 @@ export function setupActionRecordingUI() {
     // Restore state if popup was closed during recording — but only after
     // confirming with the daemon that the recording actually survived (F5). A
     // daemon restart would otherwise resurrect a phantom "recording" here.
-    void getLocal(StorageKey.ACTION_RECORDING).then(async (value) => {
-        const saved = value;
+    void readLocalState({
+        key: StorageKey.ACTION_RECORDING,
+        fallback: null,
+        validate: (value) => {
+            if (typeof value !== 'object' || value === null || Array.isArray(value))
+                return false;
+            const saved = value;
+            return ((saved.active === undefined || typeof saved.active === 'boolean') &&
+                (saved.recordingId === undefined || typeof saved.recordingId === 'string') &&
+                (saved.startTime === undefined || typeof saved.startTime === 'number') &&
+                (saved.daemonPid === undefined || saved.daemonPid === null || typeof saved.daemonPid === 'number'));
+        },
+        diagnostic: actionRecordingDiagnostic('Saved action recording was invalid or unreadable; idle state is active.')
+    }).then(async (saved) => {
         if (!saved?.active || !saved.recordingId)
             return;
         if (!(await isActionRecordingStillLive(saved.daemonPid))) {

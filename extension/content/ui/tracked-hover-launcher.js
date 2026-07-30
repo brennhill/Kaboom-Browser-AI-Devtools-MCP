@@ -15,7 +15,9 @@ import { playShutterSound, primeShutterAudio, showScreenshotFlash } from './hove
 const AUDIT_BUTTON_ENABLED = false;
 import { onStorageChanged } from '../../lib/storage/changes.js';
 import { persist } from '../../lib/storage/io.js';
-import { getLocal, removeLocal, setLocal } from '../../lib/storage/local.js';
+import { removeLocal, setLocal } from '../../lib/storage/local.js';
+import { readLocalState } from '../../lib/storage/validated.js';
+import { reportStateRecovery } from '../../lib/storage/recovery.js';
 import { initTerminalPanelBridge, isTerminalVisible, onTerminalPanelVisibilityChanged, openTerminalPanel, writeToTerminal } from './terminal-panel-bridge.js';
 const ROOT_ID = 'kaboom-tracked-hover-launcher';
 const PANEL_ID = 'kaboom-tracked-hover-panel';
@@ -86,15 +88,17 @@ function updateStopButtonVisibility(active) {
     stopButtonEl.style.display = active ? 'flex' : 'none';
 }
 async function syncRecordingStateFromStorage() {
-    try {
-        const value = await getLocal(StorageKey.RECORDING);
-        const rec = value;
-        const active = rec != null && typeof rec === 'object' && Boolean(rec.active);
-        updateStopButtonVisibility(active);
-    }
-    catch {
-        // Extension context invalidated
-    }
+    const recording = await readLocalState({
+        key: StorageKey.RECORDING,
+        fallback: null,
+        validate: (value) => typeof value === 'object' && value !== null && typeof value.active === 'boolean',
+        diagnostic: {
+            name: 'screen_recording_state',
+            detail: 'Saved recording launcher state was invalid or unreadable; idle state is active.',
+            fix: 'Start the screen recording again.'
+        }
+    });
+    updateStopButtonVisibility(recording?.active === true);
 }
 function installRecordingStorageSync() {
     if (recordingStorageListener)
@@ -106,7 +110,17 @@ function installRecordingStorageSync() {
         if (!change)
             return;
         const rec = change.newValue;
-        const active = rec != null && typeof rec === 'object' && Boolean(rec.active);
+        if (rec !== undefined &&
+            (typeof rec !== 'object' || rec === null || typeof rec.active !== 'boolean')) {
+            reportStateRecovery({
+                name: 'screen_recording_state',
+                detail: 'Recording launcher state changed to an invalid value; idle state is active.',
+                fix: 'Start the screen recording again.'
+            });
+            updateStopButtonVisibility(false);
+            return;
+        }
+        const active = rec != null && typeof rec === 'object' && rec.active === true;
         updateStopButtonVisibility(active);
     };
     recordingStorageUnsubscribe = onStorageChanged(recordingStorageListener);
@@ -121,13 +135,16 @@ function uninstallRecordingStorageSync() {
     recordingStorageListener = null;
 }
 async function syncHiddenStateFromStorage() {
-    try {
-        const value = await getLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN);
-        hiddenUntilPopupOpen = Boolean(value);
-    }
-    catch {
-        // Extension context invalidated — proceed with defaults
-    }
+    hiddenUntilPopupOpen = await readLocalState({
+        key: StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN,
+        fallback: false,
+        validate: (value) => typeof value === 'boolean',
+        diagnostic: {
+            name: 'launcher_visibility_state',
+            detail: 'Saved launcher visibility was invalid or unreadable; visible state is active.',
+            fix: 'Hide or show the launcher again to save a fresh preference.'
+        }
+    });
 }
 function persistHiddenState(hidden) {
     try {

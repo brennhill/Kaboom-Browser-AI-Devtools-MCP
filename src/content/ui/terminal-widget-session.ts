@@ -7,8 +7,9 @@
 import { DEFAULT_SERVER_URL, StorageKey } from '../../lib/constants.js'
 import { getDaemonStartHint } from '../../lib/brand.js'
 import { persist } from '../../lib/storage/io.js'
-import { getLocal, setLocal } from '../../lib/storage/local.js'
-import { getSession, removeSessions, setSession } from '../../lib/storage/session.js'
+import { setLocal } from '../../lib/storage/local.js'
+import { removeSessions, setSession } from '../../lib/storage/session.js'
+import { readLocalState, readSessionState } from '../../lib/storage/validated.js'
 import { resolveTerminalServerUrl } from '../../lib/terminal-server.js'
 import { state, type TerminalConfig, type TerminalSessionState, type TerminalUIState } from './terminal-widget-types.js'
 
@@ -37,24 +38,23 @@ export type TerminalSandboxErrorHandler = (
 // =============================================================================
 
 export async function getServerUrl(): Promise<string> {
-  try {
-    const value = await getLocal(StorageKey.SERVER_URL)
-    const url = (value as string) || DEFAULT_SERVER_URL
-    state.serverUrl = url
-    return url
-  } catch {
-    return DEFAULT_SERVER_URL // Extension context invalidated
-  }
+  const url = await readLocalState<string>({
+    key: StorageKey.SERVER_URL,
+    fallback: DEFAULT_SERVER_URL,
+    validate: (value): value is string => typeof value === 'string' && value.length > 0,
+    diagnostic: terminalDiagnostic('Saved terminal server URL was invalid or unreadable; the default is active.')
+  })
+  state.serverUrl = url
+  return url
 }
 
 export async function getTerminalConfig(): Promise<TerminalConfig> {
-  try {
-    const value = await getLocal(StorageKey.TERMINAL_CONFIG)
-    const config = (value as TerminalConfig) || {}
-    return config
-  } catch {
-    return {} // Extension context invalidated
-  }
+  return readLocalState<TerminalConfig>({
+    key: StorageKey.TERMINAL_CONFIG,
+    fallback: {},
+    validate: isTerminalConfig,
+    diagnostic: terminalDiagnostic('Saved terminal configuration was invalid or unreadable; defaults are active.')
+  })
 }
 
 export function saveTerminalConfig(config: TerminalConfig): void {
@@ -66,13 +66,12 @@ export function saveTerminalConfig(config: TerminalConfig): void {
 }
 
 async function getTerminalAICommand(): Promise<string> {
-  try {
-    const value = await getLocal(StorageKey.TERMINAL_AI_COMMAND)
-    const cmd = (value as string) || 'claude'
-    return cmd
-  } catch {
-    return 'claude'
-  }
+  return readLocalState<string>({
+    key: StorageKey.TERMINAL_AI_COMMAND,
+    fallback: 'claude',
+    validate: (value): value is string => typeof value === 'string' && value.trim().length > 0,
+    diagnostic: terminalDiagnostic('Saved terminal AI command was invalid or unreadable; Claude is active.')
+  })
 }
 
 /**
@@ -127,12 +126,12 @@ export function buildAIInitCommand(aiCommand: string): string {
 }
 
 export async function getTerminalDevRoot(): Promise<string> {
-  try {
-    const value = await getLocal(StorageKey.TERMINAL_DEV_ROOT)
-    return (value as string) || ''
-  } catch {
-    return ''
-  }
+  return readLocalState<string>({
+    key: StorageKey.TERMINAL_DEV_ROOT,
+    fallback: '',
+    validate: (value): value is string => typeof value === 'string',
+    diagnostic: terminalDiagnostic('Saved terminal root was invalid or unreadable; no root override is active.')
+  })
 }
 
 // =============================================================================
@@ -167,15 +166,50 @@ export async function loadPersistedSession(): Promise<{
   session: TerminalSessionState | null
   uiState: TerminalUIState
 }> {
-  try {
-    const sessionValue = await getSession(StorageKey.TERMINAL_SESSION)
-    const uiValue = await getSession(StorageKey.TERMINAL_UI_STATE)
-    const session = sessionValue as TerminalSessionState | undefined
-    const uiState = (uiValue as TerminalUIState) || 'closed'
-    return { session: session || null, uiState }
-  } catch {
-    return { session: null, uiState: 'closed' }
-  }
+  const [session, uiState] = await Promise.all([
+    readSessionState<TerminalSessionState | null>({
+      key: StorageKey.TERMINAL_SESSION,
+      fallback: null,
+      validate: isTerminalSessionState,
+      diagnostic: terminalDiagnostic('Saved terminal session was invalid or unreadable; a new session is required.')
+    }),
+    readSessionState<TerminalUIState>({
+      key: StorageKey.TERMINAL_UI_STATE,
+      fallback: 'closed',
+      validate: (value): value is TerminalUIState => value === 'open' || value === 'closed' || value === 'minimized',
+      diagnostic: terminalDiagnostic('Saved terminal UI state was invalid or unreadable; closed state is active.')
+    })
+  ])
+  return { session, uiState }
+}
+
+function terminalDiagnostic(detail: string) {
+  return {
+    name: 'terminal_session_state',
+    detail,
+    fix: 'Reopen the terminal panel and save its settings again.'
+  } as const
+}
+
+function isTerminalConfig(value: unknown): value is TerminalConfig {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const config = value as TerminalConfig
+  return (
+    (config.cmd === undefined || typeof config.cmd === 'string') &&
+    (config.args === undefined ||
+      (Array.isArray(config.args) && config.args.every((argument) => typeof argument === 'string'))) &&
+    (config.dir === undefined || typeof config.dir === 'string') &&
+    (config.serverUrl === undefined || typeof config.serverUrl === 'string')
+  )
+}
+
+function isTerminalSessionState(value: unknown): value is TerminalSessionState {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as TerminalSessionState).token === 'string' &&
+    typeof (value as TerminalSessionState).sessionId === 'string'
+  )
 }
 
 // =============================================================================

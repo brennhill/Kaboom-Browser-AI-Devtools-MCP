@@ -78,6 +78,15 @@ export interface GetStatusMessage {
 export interface ClearLogsMessage {
     readonly type: 'clear_logs';
 }
+export interface StateRecoveryDiagnostic {
+    readonly name: string;
+    readonly detail: string;
+    readonly fix: string;
+}
+export interface ReportStateRecoveryMessage {
+    readonly type: 'report_state_recovery';
+    readonly diagnostic: StateRecoveryDiagnostic;
+}
 /**
  * Set log level message
  */
@@ -187,7 +196,7 @@ export interface VersionMismatchMessage {
 /**
  * Union of all background-bound messages
  */
-export type BackgroundMessage = GetTabIdMessage | WsEventMessage | EnhancedActionMessage | NetworkBodyMessage | PerformanceSnapshotMessage | LogMessage | GetStatusMessage | ClearLogsMessage | SetLogLevelMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | GetAiWebPilotEnabledMessage | GetTrackingStateMessage | GetDiagnosticStateMessage | CaptureScreenshotMessage | TrackUiFeatureMessage | GetDebugLogMessage | ClearDebugLogMessage | SetServerUrlMessage | DrawModeCaptureScreenshotMessage | DrawModeCompletedMessage | PushChatMessage | ScreenRecordingStartMessage | ScreenRecordingStopMessage | RecordingGestureGrantedMessage | RecordingGestureDeniedMessage | OpenPopupForRecordingMessage | OpenTerminalPanelMessage | CloseTerminalPanelMessage | QaScanRequestedMessage;
+export type BackgroundMessage = GetTabIdMessage | WsEventMessage | EnhancedActionMessage | NetworkBodyMessage | PerformanceSnapshotMessage | LogMessage | GetStatusMessage | ClearLogsMessage | ReportStateRecoveryMessage | SetLogLevelMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | GetAiWebPilotEnabledMessage | GetTrackingStateMessage | GetDiagnosticStateMessage | CaptureScreenshotMessage | TrackUiFeatureMessage | GetDebugLogMessage | ClearDebugLogMessage | SetServerUrlMessage | DrawModeCaptureScreenshotMessage | DrawModeCompletedMessage | PushChatMessage | ScreenRecordingStartMessage | ScreenRecordingStopMessage | RecordingGestureGrantedMessage | RecordingGestureDeniedMessage | OpenPopupForRecordingMessage | OpenTerminalPanelMessage | CloseTerminalPanelMessage | QaScanRequestedMessage;
 /**
  * Draw mode: content script requests screenshot capture
  */

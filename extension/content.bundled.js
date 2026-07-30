@@ -108,6 +108,21 @@
     return "[KaBOOM!] Please refresh this page. The KaBOOM! extension was reloaded and this page still has the old content script. A page refresh will reconnect capture automatically.";
   }
 
+  // extension/lib/storage/recovery.js
+  function reportStateRecovery(diagnostic) {
+    console.warn(`${KABOOM_LOG_PREFIX} persisted state recovered: ${diagnostic.name}`);
+    if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage)
+      return;
+    const message = { type: "report_state_recovery", diagnostic };
+    try {
+      const pending = chrome.runtime.sendMessage(message);
+      if (pending && typeof pending.catch === "function") {
+        void pending.catch(() => void 0);
+      }
+    } catch {
+    }
+  }
+
   // extension/lib/storage/io.js
   function isPromiseLike(value) {
     return typeof value === "object" && value !== null && typeof value.then === "function";
@@ -166,10 +181,22 @@
     });
   }
   function writeStorage(method, items) {
-    return runStorageWrite("write", (finish) => method(items, finish));
+    return reportStorageMutationFailure(runStorageWrite("write", (finish) => method(items, finish)), "saved");
   }
   function removeFromStorage(method, keys) {
-    return runStorageWrite("remove", (finish) => method(keys, finish));
+    return reportStorageMutationFailure(runStorageWrite("remove", (finish) => method(keys, finish)), "removed");
+  }
+  async function reportStorageMutationFailure(operation, verb) {
+    try {
+      await operation;
+    } catch (error) {
+      reportStateRecovery({
+        name: "extension_storage_write_state",
+        detail: `Extension state could not be ${verb}; the current in-memory value remains active.`,
+        fix: "Check extension storage permissions, then repeat the affected action."
+      });
+      throw error;
+    }
   }
 
   // extension/lib/storage/local.js
@@ -195,6 +222,43 @@
     await removeFromStorage(chrome.storage.local.remove.bind(chrome.storage.local), [key]);
   }
 
+  // extension/lib/storage/session.js
+  function getStorageWithSession() {
+    if (typeof chrome === "undefined" || !chrome.storage)
+      return null;
+    return chrome.storage;
+  }
+  async function getSession(key) {
+    const storage = getStorageWithSession();
+    if (!storage?.session)
+      return void 0;
+    const result = await readStorage(storage.session.get.bind(storage.session), key);
+    return result[key];
+  }
+
+  // extension/lib/storage/validated.js
+  async function readValidated(read, options) {
+    const report = options.report ?? reportStateRecovery;
+    try {
+      const value = await read(options.key);
+      if (value === void 0 || value === null)
+        return options.fallback;
+      if (options.validate(value))
+        return value;
+      report(options.diagnostic);
+      return options.fallback;
+    } catch {
+      report(options.diagnostic);
+      return options.fallback;
+    }
+  }
+  function readLocalState(options) {
+    return readValidated(getLocal, options);
+  }
+  function readSessionState(options) {
+    return readValidated(getSession, options);
+  }
+
   // extension/lib/tabs/cloaked-domains.js
   var BUILTIN_CLOAKED = ["cloudflare.com", "dash.cloudflare.com"];
   function matchesDomain(hostname, domain) {
@@ -208,17 +272,24 @@
       if (matchesDomain(host, domain))
         return true;
     }
-    try {
-      const userDomains = await getLocal(StorageKey.CLOAKED_DOMAINS);
-      if (userDomains && Array.isArray(userDomains)) {
-        for (const domain of userDomains) {
-          if (matchesDomain(host, domain))
-            return true;
-        }
-      }
-    } catch {
+    const userDomains = await readUserDomains();
+    for (const domain of userDomains) {
+      if (matchesDomain(host, domain))
+        return true;
     }
     return false;
+  }
+  function readUserDomains() {
+    return readLocalState({
+      key: StorageKey.CLOAKED_DOMAINS,
+      fallback: [],
+      validate: (value) => Array.isArray(value) && value.every((domain) => typeof domain === "string" && domain.length > 0),
+      diagnostic: {
+        name: "cloaked_domain_state",
+        detail: "Saved cloaked-domain rules were invalid or unreadable; built-in protections remain active.",
+        fix: "Open extension settings and save the cloaked-domain list again."
+      }
+    });
   }
 
   // extension/lib/storage/changes.js
@@ -230,12 +301,48 @@
     return () => chrome.storage.onChanged.removeListener(listener);
   }
 
+  // extension/lib/tabs/tracked-tab-storage.js
+  var TRACKED_TAB_STORAGE_KEYS = [
+    StorageKey.TRACKED_TAB_ID,
+    StorageKey.TRACKED_TAB_URL,
+    StorageKey.TRACKED_TAB_TITLE
+  ];
+  async function readTrackedTab() {
+    let stored;
+    try {
+      stored = await getLocals(TRACKED_TAB_STORAGE_KEYS);
+    } catch {
+      reportTrackedTabRecovery("Saved tracked-tab state could not be read; automatic tab selection is active.");
+      return {};
+    }
+    const id = stored[StorageKey.TRACKED_TAB_ID];
+    const url = stored[StorageKey.TRACKED_TAB_URL];
+    const title = stored[StorageKey.TRACKED_TAB_TITLE];
+    const valid = (id === void 0 || typeof id === "number" && Number.isInteger(id) && id > 0) && (url === void 0 || typeof url === "string") && (title === void 0 || typeof title === "string");
+    if (!valid) {
+      reportTrackedTabRecovery("Saved tracked-tab state was malformed; automatic tab selection is active.");
+      return {};
+    }
+    return {
+      id,
+      url,
+      title
+    };
+  }
+  function reportTrackedTabRecovery(detail) {
+    reportStateRecovery({
+      name: "tracked_tab_state",
+      detail,
+      fix: "Choose a tab from the extension popup to save a fresh tracking state."
+    });
+  }
+
   // extension/content/tab-tracking.js
   var isTrackedTab = false;
   var currentTabId = null;
   async function updateTrackingStatus() {
     try {
-      const trackedTabId = await getLocal(StorageKey.TRACKED_TAB_ID);
+      const trackedTabId = (await readTrackedTab()).id;
       const response = await chrome.runtime.sendMessage({ type: "get_tab_id" });
       currentTabId = response?.tabId ?? null;
       isTrackedTab = currentTabId !== null && currentTabId !== void 0 && currentTabId === trackedTabId;
@@ -286,12 +393,22 @@
   ];
   async function syncStoredSettings() {
     const storageKeys = SYNC_SETTINGS.map((s) => s.storageKey);
-    const result = await getLocals(storageKeys);
+    let result;
+    try {
+      result = await getLocals(storageKeys);
+    } catch {
+      reportInjectionSettingsRecovery("Saved page capture settings could not be read; defaults are active.");
+      return;
+    }
     for (const setting of SYNC_SETTINGS) {
       const value = result[setting.storageKey];
       if (value === void 0)
         continue;
       if (setting.isMode) {
+        if (value !== "low" && value !== "medium" && value !== "high" && value !== "all") {
+          reportInjectionSettingsRecovery("Saved WebSocket capture mode was malformed; the default is active.");
+          continue;
+        }
         window.postMessage({
           type: "kaboom_setting",
           setting: setting.messageType,
@@ -299,9 +416,20 @@
           _nonce: pageNonce
         }, window.location.origin);
       } else {
+        if (typeof value !== "boolean") {
+          reportInjectionSettingsRecovery("A saved page capture setting was malformed; its default is active.");
+          continue;
+        }
         window.postMessage({ type: "kaboom_setting", setting: setting.messageType, enabled: value, _nonce: pageNonce }, window.location.origin);
       }
     }
+  }
+  function reportInjectionSettingsRecovery(detail) {
+    reportStateRecovery({
+      name: "page_capture_settings_state",
+      detail,
+      fix: "Open extension settings and save capture preferences again."
+    });
   }
   function injectAxeCore() {
     if (document.getElementById("kaboom-axe-loader"))
@@ -1893,21 +2021,29 @@
   var actionToastsEnabled = true;
   var subtitlesEnabled = true;
   function applyOverlayToggleState(result) {
-    if (result.actionToastsEnabled !== void 0)
-      actionToastsEnabled = result.actionToastsEnabled;
-    if (result.subtitlesEnabled !== void 0)
-      subtitlesEnabled = result.subtitlesEnabled;
+    const actionToasts = result.actionToastsEnabled;
+    const subtitles = result.subtitlesEnabled;
+    if (actionToasts !== void 0 && typeof actionToasts !== "boolean" || subtitles !== void 0 && typeof subtitles !== "boolean") {
+      reportStateRecovery({
+        name: "overlay_settings_state",
+        detail: "Saved overlay settings were malformed; enabled defaults are active.",
+        fix: "Open extension settings and save overlay preferences again."
+      });
+      return;
+    }
+    if (typeof actionToasts === "boolean")
+      actionToastsEnabled = actionToasts;
+    if (typeof subtitles === "boolean")
+      subtitlesEnabled = subtitles;
   }
   function hydrateOverlayToggleState() {
-    if (typeof chrome === "undefined" || !chrome.storage?.local)
-      return;
-    try {
-      const maybePromise = chrome.storage.local.get(["actionToastsEnabled", "subtitlesEnabled"], applyOverlayToggleState);
-      if (maybePromise && typeof maybePromise.then === "function") {
-        void maybePromise.then((result) => applyOverlayToggleState(result));
-      }
-    } catch {
-    }
+    void getLocals(["actionToastsEnabled", "subtitlesEnabled"]).then(applyOverlayToggleState).catch(() => {
+      reportStateRecovery({
+        name: "overlay_settings_state",
+        detail: "Saved overlay settings could not be read; enabled defaults are active.",
+        fix: "Reload the extension, then save overlay preferences again."
+      });
+    });
   }
   function initRuntimeMessageListener() {
     actionToastsEnabled = true;
@@ -2177,20 +2313,6 @@
     setTimeout(() => flash.remove(), 450);
   }
 
-  // extension/lib/storage/session.js
-  function getStorageWithSession() {
-    if (typeof chrome === "undefined" || !chrome.storage)
-      return null;
-    return chrome.storage;
-  }
-  async function getSession(key) {
-    const storage = getStorageWithSession();
-    if (!storage?.session)
-      return void 0;
-    const result = await readStorage(storage.session.get.bind(storage.session), key);
-    return result[key];
-  }
-
   // extension/content/ui/terminal-panel-bridge.js
   var panelVisible = false;
   var bridgeInitialized = false;
@@ -2218,12 +2340,17 @@
     notifyVisibilityListeners(panelVisible);
   }
   async function syncPanelVisibilityFromStorage() {
-    try {
-      const value = await getSession(StorageKey.TERMINAL_UI_STATE);
-      const uiState = value;
-      setPanelVisible(uiState === "open");
-    } catch {
-    }
+    const uiState = await readSessionState({
+      key: StorageKey.TERMINAL_UI_STATE,
+      fallback: "closed",
+      validate: (value) => value === "open" || value === "closed" || value === "minimized",
+      diagnostic: {
+        name: "terminal_session_state",
+        detail: "Saved terminal panel visibility was invalid or unreadable; closed state is active.",
+        fix: "Reopen the terminal panel."
+      }
+    });
+    setPanelVisible(uiState === "open");
   }
   function installStorageListener() {
     if (storageListenerInstalled)
@@ -2236,6 +2363,15 @@
       if (!change)
         return;
       const nextValue = change.newValue;
+      if (nextValue !== void 0 && nextValue !== "open" && nextValue !== "closed" && nextValue !== "minimized") {
+        reportStateRecovery({
+          name: "terminal_session_state",
+          detail: "Terminal visibility changed to an invalid value; closed state is active.",
+          fix: "Reopen the terminal panel."
+        });
+        setPanelVisible(false);
+        return;
+      }
       setPanelVisible(nextValue === "open");
     });
   }
@@ -2395,13 +2531,17 @@
     stopButtonEl.style.display = active ? "flex" : "none";
   }
   async function syncRecordingStateFromStorage() {
-    try {
-      const value = await getLocal(StorageKey.RECORDING);
-      const rec = value;
-      const active = rec != null && typeof rec === "object" && Boolean(rec.active);
-      updateStopButtonVisibility(active);
-    } catch {
-    }
+    const recording = await readLocalState({
+      key: StorageKey.RECORDING,
+      fallback: null,
+      validate: (value) => typeof value === "object" && value !== null && typeof value.active === "boolean",
+      diagnostic: {
+        name: "screen_recording_state",
+        detail: "Saved recording launcher state was invalid or unreadable; idle state is active.",
+        fix: "Start the screen recording again."
+      }
+    });
+    updateStopButtonVisibility(recording?.active === true);
   }
   function installRecordingStorageSync() {
     if (recordingStorageListener)
@@ -2413,7 +2553,16 @@
       if (!change)
         return;
       const rec = change.newValue;
-      const active = rec != null && typeof rec === "object" && Boolean(rec.active);
+      if (rec !== void 0 && (typeof rec !== "object" || rec === null || typeof rec.active !== "boolean")) {
+        reportStateRecovery({
+          name: "screen_recording_state",
+          detail: "Recording launcher state changed to an invalid value; idle state is active.",
+          fix: "Start the screen recording again."
+        });
+        updateStopButtonVisibility(false);
+        return;
+      }
+      const active = rec != null && typeof rec === "object" && rec.active === true;
       updateStopButtonVisibility(active);
     };
     recordingStorageUnsubscribe = onStorageChanged(recordingStorageListener);
@@ -2428,11 +2577,16 @@
     recordingStorageListener = null;
   }
   async function syncHiddenStateFromStorage() {
-    try {
-      const value = await getLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN);
-      hiddenUntilPopupOpen = Boolean(value);
-    } catch {
-    }
+    hiddenUntilPopupOpen = await readLocalState({
+      key: StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN,
+      fallback: false,
+      validate: (value) => typeof value === "boolean",
+      diagnostic: {
+        name: "launcher_visibility_state",
+        detail: "Saved launcher visibility was invalid or unreadable; visible state is active.",
+        fix: "Hide or show the launcher again to save a fresh preference."
+      }
+    });
   }
   function persistHiddenState(hidden) {
     try {

@@ -13,8 +13,9 @@ import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { StorageKey } from '../lib/constants.js'
 import { onStorageChanged } from '../lib/storage/changes.js'
 import { persist } from '../lib/storage/io.js'
-import { getLocal, setLocal, setLocals } from '../lib/storage/local.js'
-import { clearTrackedTab as clearTrackedTabState } from '../lib/tabs/tracked-tab-storage.js'
+import { setLocal, setLocals } from '../lib/storage/local.js'
+import { clearTrackedTab as clearTrackedTabState, readTrackedTab } from '../lib/tabs/tracked-tab-storage.js'
+import { reportStateRecovery } from './runtime-state/state-recovery.js'
 
 // =============================================================================
 // CONSTANTS - Rate Limiting & DoS Protection
@@ -158,7 +159,7 @@ export async function handleTrackedTabUrlChange(
   newUrl: string,
   logFn?: (message: string) => void
 ): Promise<void> {
-  const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
+  const trackedTabId = (await readTrackedTab()).id
   if (trackedTabId === updatedTabId) {
     // Update URL immediately, then refresh title from the tab
     try {
@@ -185,7 +186,7 @@ export async function handleTrackedTabClosed(
   closedTabId: number,
   logFn?: (message: string, data?: unknown) => void
 ): Promise<void> {
-  const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
+  const trackedTabId = (await readTrackedTab()).id
   if (trackedTabId === closedTabId) {
     if (logFn) logFn(`${KABOOM_LOG_PREFIX} Tracked tab closed (id:`, closedTabId)
     await clearTrackedTabState()
@@ -206,14 +207,33 @@ export function installStorageChangeListener(handlers: {
   onStorageChanged((changes: { [key: string]: StorageChange<unknown> }, areaName: string) => {
     if (areaName === 'local') {
       if (changes[StorageKey.AI_WEB_PILOT_ENABLED] && handlers.onAiWebPilotChanged) {
-        handlers.onAiWebPilotChanged(changes[StorageKey.AI_WEB_PILOT_ENABLED]!.newValue === true)
+        const nextPilot = changes[StorageKey.AI_WEB_PILOT_ENABLED]!.newValue
+        if (typeof nextPilot === 'boolean') {
+          handlers.onAiWebPilotChanged(nextPilot)
+        } else if (nextPilot !== undefined) {
+          reportStorageChangeRecovery('Saved AI Web Pilot change was malformed; the current setting remains active.')
+        }
       }
       if (changes[StorageKey.TRACKED_TAB_ID] && handlers.onTrackedTabChanged) {
-        const newTabId = (changes[StorageKey.TRACKED_TAB_ID]!.newValue as number) ?? null
-        const oldTabId = (changes[StorageKey.TRACKED_TAB_ID]!.oldValue as number) ?? null
+        const newValue = changes[StorageKey.TRACKED_TAB_ID]!.newValue
+        const oldValue = changes[StorageKey.TRACKED_TAB_ID]!.oldValue
+        if (newValue !== undefined && (typeof newValue !== 'number' || !Number.isInteger(newValue))) {
+          reportStorageChangeRecovery('Saved tracked-tab change was malformed; automatic tab selection remains active.')
+          return
+        }
+        const newTabId = newValue ?? null
+        const oldTabId = typeof oldValue === 'number' ? oldValue : null
         handlers.onTrackedTabChanged(newTabId, oldTabId)
       }
     }
+  })
+}
+
+function reportStorageChangeRecovery(detail: string): void {
+  reportStateRecovery({
+    name: 'extension_storage_change_state',
+    detail,
+    fix: 'Reload the extension and save the affected setting again.'
   })
 }
 
@@ -229,7 +249,7 @@ export function installStartupListener(logFn?: (message: string) => void): void 
 
   chrome.runtime.onStartup.addListener(async () => {
     try {
-      const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
+      const trackedTabId = (await readTrackedTab()).id
       if (trackedTabId) {
         try {
           await chrome.tabs.get(trackedTabId)

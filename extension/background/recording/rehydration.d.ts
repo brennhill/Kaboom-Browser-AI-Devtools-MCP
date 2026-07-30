@@ -16,6 +16,7 @@ export interface PersistedRecordingState {
     url?: string;
     queryId?: string;
 }
+export declare function isPersistedRecordingState(value: unknown): value is PersistedRecordingState;
 /** Fully-populated recording state restored after a service-worker restart. */
 export interface RehydratedRecordingState {
     active: true;

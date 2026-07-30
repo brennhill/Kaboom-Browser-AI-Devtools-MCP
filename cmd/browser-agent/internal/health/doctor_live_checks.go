@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 
@@ -173,7 +174,42 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 	}
 	checks = append(checks, cmdExecCheck)
 	checks = append(checks, runAIAuthDoctorCheck("claude"), runAIAuthDoctorCheck("codex"))
+	checks = append(checks, extensionStateRecoveryChecks(cap)...)
 
+	return checks
+}
+
+func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
+	if cap == nil {
+		return nil
+	}
+	type recoveryData struct {
+		Name   string `json:"name"`
+		Detail string `json:"detail"`
+		Fix    string `json:"fix"`
+	}
+	byName := make(map[string]DoctorCheck)
+	for _, entry := range cap.ExtensionLogs().Entries() {
+		if entry.Category != "state_recovery" {
+			continue
+		}
+		var recovery recoveryData
+		if json.Unmarshal(entry.Data, &recovery) != nil || recovery.Name == "" || recovery.Detail == "" {
+			continue
+		}
+		byName[recovery.Name] = DoctorCheck{
+			Name: recovery.Name, Status: "warn", Detail: recovery.Detail, Fix: recovery.Fix,
+		}
+	}
+	names := make([]string, 0, len(byName))
+	for name := range byName {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	checks := make([]DoctorCheck, 0, len(names))
+	for _, name := range names {
+		checks = append(checks, byName[name])
+	}
 	return checks
 }
 

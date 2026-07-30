@@ -2,8 +2,7 @@
  * Purpose: Chrome context menu installation and click handlers for Kaboom actions.
  * Split from event-listeners.ts to keep files under 800 LOC.
  */
-import { StorageKey } from '../../lib/constants.js';
-import { getLocal } from '../../lib/storage/local.js';
+import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';
 import { toggleScreenRecording, toggleActionSequenceRecording } from './keyboard-shortcuts.js';
 import { errorMessage } from '../../lib/error-utils.js';
 import { toggleDrawModeForTab } from './draw-mode-toggle.js';
@@ -48,7 +47,7 @@ async function isDrawModeActive(tabId) {
     }
 }
 async function refreshDynamicContextMenuTitles(tabId, recordingHandlers, actionRecordingHandlers) {
-    const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID));
+    const trackedTabId = (await readTrackedTab()).id;
     const drawModeActive = await isDrawModeActive(tabId);
     await Promise.all([
         updateContextMenuTitle(MENU_ID_CONTROL, trackedTabId && tabId === trackedTabId ? RELEASE_CONTROL_TITLE : CONTROL_TAB_TITLE),
@@ -112,7 +111,7 @@ export function installContextMenus(recordingHandlers, actionRecordingHandlers, 
         }
         if (info.menuItemId === MENU_ID_CONTROL) {
             try {
-                const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID));
+                const trackedTabId = (await readTrackedTab()).id;
                 if (trackedTabId === tab.id) {
                     // Release: shared core clears state, stops recording, and notifies the
                     // content script. The menu can reach the recording handler directly.

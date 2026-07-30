@@ -4,6 +4,7 @@
  */
 
 import { KABOOM_LOG_PREFIX } from '../brand.js'
+import { reportStateRecovery } from './recovery.js'
 
 export type StorageReadResult = Record<string, unknown>
 export type StorageReadCallback = (result: StorageReadResult) => void
@@ -81,16 +82,32 @@ function runStorageWrite(
 }
 
 export function writeStorage(method: StorageSetMethod, items: Record<string, unknown>): Promise<void> {
-  return runStorageWrite('write', (finish) => method(items, finish))
+  return reportStorageMutationFailure(runStorageWrite('write', (finish) => method(items, finish)), 'saved')
 }
 
 export function removeFromStorage(method: StorageRemoveMethod, keys: string | string[]): Promise<void> {
-  return runStorageWrite('remove', (finish) => method(keys, finish))
+  return reportStorageMutationFailure(runStorageWrite('remove', (finish) => method(keys, finish)), 'removed')
 }
 
 export function setStorageAccessLevel(
   method: StorageAccessLevelMethod,
   accessLevel: 'TRUSTED_CONTEXTS' | 'TRUSTED_AND_UNTRUSTED_CONTEXTS'
 ): Promise<void> {
-  return runStorageWrite('setAccessLevel', (finish) => method({ accessLevel }, finish))
+  return reportStorageMutationFailure(
+    runStorageWrite('setAccessLevel', (finish) => method({ accessLevel }, finish)),
+    'configured'
+  )
+}
+
+async function reportStorageMutationFailure(operation: Promise<void>, verb: string): Promise<void> {
+  try {
+    await operation
+  } catch (error) {
+    reportStateRecovery({
+      name: 'extension_storage_write_state',
+      detail: `Extension state could not be ${verb}; the current in-memory value remains active.`,
+      fix: 'Check extension storage permissions, then repeat the affected action.'
+    })
+    throw error
+  }
 }

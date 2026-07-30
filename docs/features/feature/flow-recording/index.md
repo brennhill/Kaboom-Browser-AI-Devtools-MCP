@@ -4,7 +4,7 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -35,6 +35,8 @@ code_paths:
   - src/popup/recording/recording-io.ts
   - src/lib/brand.ts
   - src/lib/daemon-http.ts
+  - src/lib/storage/recovery.ts
+  - src/lib/storage/validated.ts
 test_paths:
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - internal/capture/http_handlers_owner_test.go
@@ -63,6 +65,8 @@ test_paths:
   - tests/extension/recording-lifecycle/action-recording-reconcile.test.js
   - tests/extension/contracts/entry-point-parity.test.js
   - tests/extension/ui-controls/tracked-hover-launcher.test.js
+  - tests/extension/state-recovery/state-recovery-contract.test.js
+  - tests/extension/state-recovery/validated-storage.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

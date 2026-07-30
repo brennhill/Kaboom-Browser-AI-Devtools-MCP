@@ -4,7 +4,7 @@ feature_id: feature-error-clustering
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-30
 code_paths:
   - internal/tools/observe/errorcluster/cluster.go
   - internal/tools/observe/errorcluster/normalize.go
@@ -12,9 +12,14 @@ code_paths:
   - internal/types/log.go
   - internal/schema/analyze.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
+  - src/background/caches/error-groups.ts
+  - src/lib/storage/recovery.ts
+  - src/lib/storage/validated.ts
 test_paths:
   - internal/tools/observe/errorcluster/cluster_test.go
   - internal/tools/observe/errorcluster/normalize_test.go
+  - tests/extension/state-recovery/state-recovery-contract.test.js
+  - tests/extension/state-recovery/validated-storage.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-07-26
 ---

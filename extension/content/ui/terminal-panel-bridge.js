@@ -6,7 +6,8 @@
  */
 import { StorageKey, TERMINAL_PANEL_FALLBACK_HINT, TERMINAL_PANEL_STALE_CONTEXT_HINT } from '../../lib/constants.js';
 import { onStorageChanged } from '../../lib/storage/changes.js';
-import { getSession } from '../../lib/storage/session.js';
+import { readSessionState } from '../../lib/storage/validated.js';
+import { reportStateRecovery } from '../../lib/storage/recovery.js';
 import { showActionToast } from './toast.js';
 let panelVisible = false;
 let bridgeInitialized = false;
@@ -46,14 +47,17 @@ function setPanelVisible(nextVisible) {
     notifyVisibilityListeners(panelVisible);
 }
 async function syncPanelVisibilityFromStorage() {
-    try {
-        const value = await getSession(StorageKey.TERMINAL_UI_STATE);
-        const uiState = value;
-        setPanelVisible(uiState === 'open');
-    }
-    catch {
-        // Extension context invalidated - keep the last known visibility.
-    }
+    const uiState = await readSessionState({
+        key: StorageKey.TERMINAL_UI_STATE,
+        fallback: 'closed',
+        validate: (value) => value === 'open' || value === 'closed' || value === 'minimized',
+        diagnostic: {
+            name: 'terminal_session_state',
+            detail: 'Saved terminal panel visibility was invalid or unreadable; closed state is active.',
+            fix: 'Reopen the terminal panel.'
+        }
+    });
+    setPanelVisible(uiState === 'open');
 }
 function installStorageListener() {
     if (storageListenerInstalled)
@@ -66,6 +70,15 @@ function installStorageListener() {
         if (!change)
             return;
         const nextValue = change.newValue;
+        if (nextValue !== undefined && nextValue !== 'open' && nextValue !== 'closed' && nextValue !== 'minimized') {
+            reportStateRecovery({
+                name: 'terminal_session_state',
+                detail: 'Terminal visibility changed to an invalid value; closed state is active.',
+                fix: 'Reopen the terminal panel.'
+            });
+            setPanelVisible(false);
+            return;
+        }
         setPanelVisible(nextValue === 'open');
     });
 }

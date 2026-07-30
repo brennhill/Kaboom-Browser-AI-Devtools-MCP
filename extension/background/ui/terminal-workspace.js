@@ -4,6 +4,7 @@
  */
 import { StorageKey } from '../../lib/constants.js';
 import { getLocals, setLocals } from '../../lib/storage/local.js';
+import { reportStateRecovery } from '../runtime-state/state-recovery.js';
 const TERMINAL_WORKSPACE_STORAGE_KEYS = [
     StorageKey.TERMINAL_WORKSPACE_GROUP_ID,
     StorageKey.TERMINAL_WORKSPACE_MAIN_TAB_ID,
@@ -68,7 +69,22 @@ async function createTerminalWorkspaceGroup(tabId) {
     }
 }
 export async function resolveTerminalWorkspaceTarget(requestTabId) {
-    const result = (await getLocals(TERMINAL_WORKSPACE_STORAGE_KEYS));
+    let result;
+    try {
+        const stored = await getLocals(TERMINAL_WORKSPACE_STORAGE_KEYS);
+        const valid = Object.values(stored).every((value) => value === undefined || (typeof value === 'number' && Number.isInteger(value)));
+        if (!valid) {
+            reportTerminalWorkspaceRecovery('Saved terminal workspace was malformed; the active or tracked tab is used.');
+            result = {};
+        }
+        else {
+            result = stored;
+        }
+    }
+    catch {
+        reportTerminalWorkspaceRecovery('Saved terminal workspace could not be read; the active or tracked tab is used.');
+        result = {};
+    }
     const trackedTabId = typeof result.trackedTabId === 'number' ? result.trackedTabId : null;
     const storedMainTabId = typeof result.kaboom_terminal_workspace_main_tab_id === 'number'
         ? result.kaboom_terminal_workspace_main_tab_id
@@ -102,5 +118,12 @@ export async function resolveTerminalWorkspaceTarget(requestTabId) {
         [StorageKey.TERMINAL_WORKSPACE_MAIN_TAB_ID]: mainTabId
     });
     return { hostTabId, mainTabId, tabGroupId };
+}
+function reportTerminalWorkspaceRecovery(detail) {
+    reportStateRecovery({
+        name: 'terminal_workspace_state',
+        detail,
+        fix: 'Open the terminal panel again to save a fresh workspace.'
+    });
 }
 //# sourceMappingURL=terminal-workspace.js.map

@@ -38,6 +38,8 @@ code_paths:
   - src/lib/storage/io.ts
   - src/lib/storage/local.ts
   - src/lib/storage/session.ts
+  - src/lib/storage/recovery.ts
+  - src/lib/storage/validated.ts
   - src/popup/recording/recording.ts
   - extension/manifest.json
   - extension/popup.html
@@ -58,6 +60,8 @@ test_paths:
   - tests/extension/recording-ui/recording-listeners-target-tab.test.js
   - tests/extension/contracts/storage-modules.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
+  - tests/extension/state-recovery/state-recovery-contract.test.js
+  - tests/extension/state-recovery/validated-storage.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

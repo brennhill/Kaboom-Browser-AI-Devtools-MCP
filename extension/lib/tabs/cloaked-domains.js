@@ -1,7 +1,7 @@
 // cloaked-domains.ts — Domain blocklist where Kaboom disables itself.
 // Content scripts bail out early on cloaked domains to avoid interference.
 import { StorageKey } from '../constants.js';
-import { getLocal } from '../storage/local.js';
+import { readLocalState } from '../storage/validated.js';
 /**
  * Built-in domains where Kaboom should never run.
  * These are also excluded via manifest exclude_matches, but this list
@@ -29,25 +29,29 @@ export async function isDomainCloaked(hostname) {
             return true;
     }
     // Check user-configured list
-    try {
-        const userDomains = (await getLocal(StorageKey.CLOAKED_DOMAINS));
-        if (userDomains && Array.isArray(userDomains)) {
-            for (const domain of userDomains) {
-                if (matchesDomain(host, domain))
-                    return true;
-            }
-        }
-    }
-    catch {
-        // Storage unavailable — allow by default
+    const userDomains = await readUserDomains();
+    for (const domain of userDomains) {
+        if (matchesDomain(host, domain))
+            return true;
     }
     return false;
+}
+function readUserDomains() {
+    return readLocalState({
+        key: StorageKey.CLOAKED_DOMAINS,
+        fallback: [],
+        validate: (value) => Array.isArray(value) && value.every((domain) => typeof domain === 'string' && domain.length > 0),
+        diagnostic: {
+            name: 'cloaked_domain_state',
+            detail: 'Saved cloaked-domain rules were invalid or unreadable; built-in protections remain active.',
+            fix: 'Open extension settings and save the cloaked-domain list again.'
+        }
+    });
 }
 /**
  * Get the full list of cloaked domains (built-in + user-configured).
  */
 export async function getCloakedDomains() {
-    const userDomains = (await getLocal(StorageKey.CLOAKED_DOMAINS));
-    return [...BUILTIN_CLOAKED, ...(userDomains || [])];
+    return [...BUILTIN_CLOAKED, ...(await readUserDomains())];
 }
 //# sourceMappingURL=cloaked-domains.js.map

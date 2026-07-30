@@ -4,7 +4,9 @@
  */
 
 import { StorageKey } from '../../lib/constants.js'
-import { getLocal, setLocal } from '../../lib/storage/local.js'
+import { setLocal } from '../../lib/storage/local.js'
+import { readLocalState } from '../../lib/storage/validated.js'
+import { reportStateRecovery } from '../runtime-state/state-recovery.js'
 
 let serverInstallId: string | undefined
 
@@ -13,13 +15,19 @@ export function getServerInstallId(): string | undefined {
 }
 
 export async function loadServerInstallId(): Promise<void> {
-  try {
-    const stored = await getLocal(StorageKey.SERVER_INSTALL_ID)
-    if (typeof stored === 'string' && stored && !serverInstallId) {
-      serverInstallId = stored
-    }
-  } catch {
-    // Identity persistence is best-effort and must not block worker startup.
+  const stored = await readLocalState<string | undefined>({
+    key: StorageKey.SERVER_INSTALL_ID,
+    fallback: undefined,
+    validate: (value): value is string => typeof value === 'string' && value.length > 0,
+    diagnostic: {
+      name: 'extension_install_identity_state',
+      detail: 'Saved daemon identity was invalid or unreadable; live synchronization will refresh it.',
+      fix: 'Keep the extension connected to Kaboom until the next successful sync.'
+    },
+    report: reportStateRecovery
+  })
+  if (stored && !serverInstallId) {
+    serverInstallId = stored
   }
 }
 
@@ -27,6 +35,10 @@ export function updateServerInstallId(id: string): void {
   if (!id || id === serverInstallId) return
   serverInstallId = id
   void setLocal(StorageKey.SERVER_INSTALL_ID, id).catch(() => {
-    // A live identity remains usable when durable storage is unavailable.
+    reportStateRecovery({
+      name: 'extension_install_identity_state',
+      detail: 'Daemon identity could not be saved; the live identity remains active for this worker.',
+      fix: 'Check extension storage permissions, then reload the extension.'
+    })
   })
 }

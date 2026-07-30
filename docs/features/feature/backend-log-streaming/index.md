@@ -46,6 +46,7 @@ code_paths:
   - src/background/message-routing/
   - src/background/runtime-state/
   - src/background/runtime-state/csp-state.ts
+  - src/background/runtime-state/state-recovery.ts
   - src/background/caches/cache-limits.ts
   - src/background/caches/error-groups.ts
   - src/background/caches/snapshots.ts
@@ -56,6 +57,8 @@ code_paths:
   - src/background/sync/sync-client.ts
   - src/background/sync/install-identity.ts
   - src/lib/daemon-http.ts
+  - src/lib/storage/recovery.ts
+  - src/lib/storage/validated.ts
   - src/lib/net/network.ts
   - src/lib/net/websocket.ts
   - src/lib/net/websocket-tracking.ts
@@ -65,6 +68,8 @@ test_paths:
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/contracts/no-dynamic-import-background.test.js
+  - tests/extension/state-recovery/state-recovery-contract.test.js
+  - tests/extension/state-recovery/validated-storage.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_network_recording_test.go
   - cmd/browser-agent/tools_configure_network_recording_handler_test.go

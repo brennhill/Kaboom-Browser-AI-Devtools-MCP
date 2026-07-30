@@ -3,8 +3,7 @@
  * Split from event-listeners.ts to keep files under 800 LOC.
  */
 
-import { StorageKey } from '../../lib/constants.js'
-import { getLocal } from '../../lib/storage/local.js'
+import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
 import type { ScreenRecordingHandlers, RecordingShortcutHandlers } from './keyboard-shortcuts.js'
 import { toggleScreenRecording, toggleActionSequenceRecording } from './keyboard-shortcuts.js'
 import { errorMessage } from '../../lib/error-utils.js'
@@ -58,7 +57,7 @@ async function refreshDynamicContextMenuTitles(
   recordingHandlers: ScreenRecordingHandlers,
   actionRecordingHandlers: RecordingShortcutHandlers
 ): Promise<void> {
-  const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
+  const trackedTabId = (await readTrackedTab()).id
   const drawModeActive = await isDrawModeActive(tabId)
 
   await Promise.all([
@@ -140,7 +139,7 @@ export function installContextMenus(
 
     if (info.menuItemId === MENU_ID_CONTROL) {
       try {
-        const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
+        const trackedTabId = (await readTrackedTab()).id
         if (trackedTabId === tab.id) {
           // Release: shared core clears state, stops recording, and notifies the
           // content script. The menu can reach the recording handler directly.

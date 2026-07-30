@@ -14,6 +14,8 @@ import type { ContentMessage } from '../types/runtime-messages.js'
 import type { WebSocketCaptureMode } from '../types/capture/websocket.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { SettingName } from '../lib/constants.js'
+import { getLocals } from '../lib/storage/local.js'
+import { reportStateRecovery } from '../lib/storage/recovery.js'
 import {
   isValidBackgroundSender,
   handlePing,
@@ -43,23 +45,33 @@ let actionToastsEnabled = true
 let subtitlesEnabled = true
 
 function applyOverlayToggleState(result: Record<string, unknown>): void {
-  if (result.actionToastsEnabled !== undefined) actionToastsEnabled = result.actionToastsEnabled as boolean
-  if (result.subtitlesEnabled !== undefined) subtitlesEnabled = result.subtitlesEnabled as boolean
+  const actionToasts = result.actionToastsEnabled
+  const subtitles = result.subtitlesEnabled
+  if (
+    (actionToasts !== undefined && typeof actionToasts !== 'boolean') ||
+    (subtitles !== undefined && typeof subtitles !== 'boolean')
+  ) {
+    reportStateRecovery({
+      name: 'overlay_settings_state',
+      detail: 'Saved overlay settings were malformed; enabled defaults are active.',
+      fix: 'Open extension settings and save overlay preferences again.'
+    })
+    return
+  }
+  if (typeof actionToasts === 'boolean') actionToastsEnabled = actionToasts
+  if (typeof subtitles === 'boolean') subtitlesEnabled = subtitles
 }
 
 function hydrateOverlayToggleState(): void {
-  if (typeof chrome === 'undefined' || !chrome.storage?.local) return
-  try {
-    const maybePromise = chrome.storage.local.get(
-      ['actionToastsEnabled', 'subtitlesEnabled'],
-      applyOverlayToggleState
-    ) as Promise<Record<string, unknown>> | void
-    if (maybePromise && typeof maybePromise.then === 'function') {
-      void maybePromise.then((result: Record<string, unknown>) => applyOverlayToggleState(result))
-    }
-  } catch {
-    // Storage hydration is best-effort. Keep defaults if the content context cannot read storage.
-  }
+  void getLocals(['actionToastsEnabled', 'subtitlesEnabled'])
+    .then(applyOverlayToggleState)
+    .catch(() => {
+      reportStateRecovery({
+        name: 'overlay_settings_state',
+        detail: 'Saved overlay settings could not be read; enabled defaults are active.',
+        fix: 'Reload the extension, then save overlay preferences again.'
+      })
+    })
 }
 
 /**

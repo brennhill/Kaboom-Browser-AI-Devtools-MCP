@@ -5,8 +5,7 @@
 
 import { delay } from '../../lib/timeout-utils.js'
 import { scaleTimeout } from '../../lib/timeouts.js'
-import { getLocals } from '../../lib/storage/local.js'
-import { TRACKED_TAB_STORAGE_KEYS } from '../../lib/tabs/tracked-tab-storage.js'
+import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
 import { setKaboomOverlayVisibility } from './content-script-bridge.js'
 
 export interface TrackedTabInfo {
@@ -31,12 +30,8 @@ export async function waitForTabLoad(tabId: number, timeoutMs = scaleTimeout(500
 }
 
 export async function getTrackedTabInfo(): Promise<TrackedTabInfo> {
-  const result = (await getLocals(TRACKED_TAB_STORAGE_KEYS)) as {
-    trackedTabId?: number
-    trackedTabUrl?: string
-    trackedTabTitle?: string
-  }
-  const tabId = result.trackedTabId || null
+  const result = await readTrackedTab()
+  const tabId = result.id || null
   let tabStatus: 'loading' | 'complete' | null = null
   let trackedTabActive: boolean | null = null
   if (tabId && typeof chrome !== 'undefined' && chrome.tabs) {
@@ -50,8 +45,8 @@ export async function getTrackedTabInfo(): Promise<TrackedTabInfo> {
   }
   return {
     trackedTabId: tabId,
-    trackedTabUrl: result.trackedTabUrl || null,
-    trackedTabTitle: result.trackedTabTitle || null,
+    trackedTabUrl: result.url || null,
+    trackedTabTitle: result.title || null,
     tabStatus,
     trackedTabActive
   }

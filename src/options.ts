@@ -16,7 +16,9 @@
 
 import { SettingName, StorageKey, DEFAULT_SERVER_URL } from './lib/constants.js'
 import { buildDaemonHeaders, buildDaemonJSONRequestInit } from './lib/daemon-http.js'
-import { getLocal, getLocals, setLocals } from './lib/storage/local.js'
+import { getLocals, setLocals } from './lib/storage/local.js'
+import { readLocalState } from './lib/storage/validated.js'
+import { reportStateRecovery } from './lib/storage/recovery.js'
 import { KABOOM_LOG_PREFIX } from './lib/brand.js'
 
 interface StorageResult {
@@ -41,13 +43,62 @@ interface ClearLogResponse {
   error?: string
 }
 
+function optionsDiagnostic(detail: string) {
+  return {
+    name: 'extension_options_state',
+    detail,
+    fix: 'Open extension settings and save your preferences again.'
+  } as const
+}
+
+function readTheme(): Promise<string> {
+  return readLocalState<string>({
+    key: StorageKey.THEME,
+    fallback: 'dark',
+    validate: (value): value is string => value === 'dark' || value === 'light',
+    diagnostic: optionsDiagnostic('Saved theme was invalid or unreadable; dark theme is active.')
+  })
+}
+
+async function readOptionsState(): Promise<StorageResult> {
+  try {
+    const result = await getLocals([
+      StorageKey.SERVER_URL,
+      StorageKey.SCREENSHOT_ON_ERROR,
+      StorageKey.SOURCE_MAP_ENABLED,
+      StorageKey.DEFERRAL_ENABLED,
+      StorageKey.DEBUG_MODE,
+      StorageKey.THEME,
+      StorageKey.TERMINAL_AI_COMMAND,
+      StorageKey.TERMINAL_DEV_ROOT
+    ])
+    const candidate = result as StorageResult
+    const valid =
+      (candidate.serverUrl === undefined || typeof candidate.serverUrl === 'string') &&
+      (candidate.theme === undefined || typeof candidate.theme === 'string') &&
+      (candidate.kaboom_terminal_ai_command === undefined ||
+        typeof candidate.kaboom_terminal_ai_command === 'string') &&
+      (candidate.kaboom_terminal_dev_root === undefined ||
+        typeof candidate.kaboom_terminal_dev_root === 'string') &&
+      (candidate.screenshotOnError === undefined || typeof candidate.screenshotOnError === 'boolean') &&
+      (candidate.sourceMapEnabled === undefined || typeof candidate.sourceMapEnabled === 'boolean') &&
+      (candidate.deferralEnabled === undefined || typeof candidate.deferralEnabled === 'boolean') &&
+      (candidate.debugMode === undefined || typeof candidate.debugMode === 'boolean')
+    if (valid) return candidate
+    reportStateRecovery(optionsDiagnostic('Saved extension options were malformed; defaults are active.'))
+  } catch {
+    reportStateRecovery(optionsDiagnostic('Saved extension options could not be read; defaults are active.'))
+  }
+  return {}
+}
+
 /**
  * Apply persisted theme as early as possible without inline HTML scripts.
  * Keeps options page CSP-compliant (MV3 disallows inline scripts by default).
  */
 function bootstrapTheme(): void {
   if (typeof document === 'undefined' || typeof chrome === 'undefined' || !chrome.storage?.local) return
-  void getLocal(StorageKey.THEME).then((value) => {
+  void readTheme().then((value) => {
     if (value === 'light') {
       document.body?.classList.add('light-theme')
     }
@@ -99,16 +150,7 @@ function loadActiveCodebaseFromDaemon(serverUrl: string): void {
  * Load saved options
  */
 export async function loadOptions(): Promise<void> {
-  const result = (await getLocals([
-    StorageKey.SERVER_URL,
-    StorageKey.SCREENSHOT_ON_ERROR,
-    StorageKey.SOURCE_MAP_ENABLED,
-    StorageKey.DEFERRAL_ENABLED,
-    StorageKey.DEBUG_MODE,
-    StorageKey.THEME,
-    StorageKey.TERMINAL_AI_COMMAND,
-    StorageKey.TERMINAL_DEV_ROOT
-  ])) as StorageResult
+  const result = await readOptionsState()
 
   // Set server URL
   const serverUrlInput = document.getElementById('server-url-input') as HTMLInputElement | null
@@ -403,8 +445,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // After chrome.storage options load, also pull active_codebase from daemon
   // to sync any MCP-side changes back to the extension options UI.
-  void getLocal(StorageKey.SERVER_URL).then((value) => {
-    const url = (value as string) || DEFAULT_SERVER_URL
+  void readLocalState<string>({
+    key: StorageKey.SERVER_URL,
+    fallback: DEFAULT_SERVER_URL,
+    validate: (value): value is string => typeof value === 'string' && value.length > 0,
+    diagnostic: optionsDiagnostic('Saved server URL was invalid or unreadable; the default is active.')
+  }).then((url) => {
     loadActiveCodebaseFromDaemon(url)
   })
 

@@ -3,12 +3,28 @@
 package health
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestRunDoctorChecksSurfacesExtensionStateRecovery(t *testing.T) {
+	c := newTestCapture(t)
+	c.ExtensionLogs().Add([]types.ExtensionLog{{
+		Level: "warn", Category: "state_recovery", Message: "Persisted extension state recovered",
+		Data: json.RawMessage(`{"name":"tracked_tab_state","detail":"Saved tracking state was malformed; automatic tracking is active.","fix":"Choose a tracked tab again."}`),
+	}})
+
+	check := findCheck(t, RunDoctorChecks(c), "tracked_tab_state")
+	if check.Status != "warn" || check.Fix == "" {
+		t.Fatalf("extension recovery check = %#v, want actionable warning", check)
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Metrics

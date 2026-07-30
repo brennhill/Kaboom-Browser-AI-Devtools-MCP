@@ -11,6 +11,8 @@ code_paths:
   - src/lib/tabs/request-audit.ts
   - src/lib/tabs/tab-tracking-core.ts
   - src/lib/tabs/tracked-tab-storage.ts
+  - src/lib/storage/recovery.ts
+  - src/lib/storage/validated.ts
   - src/lib/tabs/internal-url.ts
   - src/types/runtime-messages.ts
   - src/content.ts
@@ -60,6 +62,8 @@ test_paths:
   - tests/extension/contracts/entry-point-parity.test.js
   - tests/extension/misc/integration.test.cjs
   - tests/extension/contracts/no-compatibility-facades.test.js
+  - tests/extension/state-recovery/state-recovery-contract.test.js
+  - tests/extension/state-recovery/validated-storage.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-03
 ---
@@ -78,6 +82,8 @@ last_verified_date: 2026-04-03
 - The hover launcher now includes an `Audit` action that opens the side panel and then triggers the shared audit bridge.
 - Cloaked-domain disable messaging and popup-driven recording guidance now use Kaboom copy consistently.
 - The hover launcher settings gear now points at `gokaboom.dev/docs` and the Kaboom repo, and tracked-tab-loss guidance tells users to reopen the Kaboom popup.
+- Invalid or unreadable tracked-tab state is treated as an untracked workspace,
+  with a redacted recovery entry available in System Doctor.
 - Draw-mode recovery warnings from the hover launcher now use Kaboom copy when the extension was reloaded or the draw bundle is unavailable.
 - Popup tab-tracking logs now use the shared Kaboom runtime prefix instead of hardcoded Kaboom labels.
 - The popup validates the stored tab ID before presenting it as healthy. A closed
