@@ -21,11 +21,20 @@ code_paths:
   - src/background/runtime-state/
   - src/background/runtime-state/state-recovery.ts
   - src/background/event-listeners.ts
+  - src/background/commands/helpers.ts
+  - src/background/exec/browser-actions.ts
+  - src/background/message-routing/capture-handler.ts
+  - src/background/message-routing/pilot-handler.ts
+  - src/background/recording/listeners.ts
   - src/background/state-snapshots.ts
   - src/background/ui/content-script-bridge.ts
   - src/background/ui/settings-storage.ts
   - src/background/ui/tracked-tab-state.ts
   - src/background/ui/terminal-workspace.ts
+  - src/background/ui/context-menus.ts
+  - src/background/ui/side-panel-availability.ts
+  - src/background/ui/terminal-panel.ts
+  - src/content/draw-mode/persistence-submission.js
   - src/content/script-injection.ts
   - src/content/runtime-message-listener.ts
   - src/content/ui/terminal-panel-bridge.ts
@@ -36,6 +45,7 @@ code_paths:
   - src/lib/storage/validated.ts
   - src/lib/tabs/tracked-tab-storage.ts
   - src/popup/recording/recording.ts
+  - src/offscreen/recording-worker.ts
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/daemonlife/
   - cmd/browser-agent/internal/screenrec/
@@ -51,6 +61,7 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - tests/architecture/async-failure-evidence.test.cjs
   - tests/architecture/user-state-loaders.test.cjs
   - internal/recording/manager_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
@@ -102,6 +113,10 @@ last_verified_date: 2026-03-28
   persisted value. Diagnostics have an explicit active/recovered lifecycle,
   retain bounded transition history and occurrence counts, and clear their
   warning state only after the owning loader verifies fresh valid state.
+- Async failures are never discarded with empty promise catches. Unexpected
+  failures leave redacted evidence; intentionally unlogged absence/cancellation
+  carries an explicit `EXPECTED_ABSENCE:` rationale explaining why a log would
+  be misleading.
 
 ## Specs
 

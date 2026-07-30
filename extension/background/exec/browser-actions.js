@@ -60,7 +60,9 @@ async function handleNavigateAction(tabId, url, actionToast, reason) {
     await delay(500);
     const tab = await chrome.tabs.get(tabId);
     if (await pingContentScript(tabId)) {
-        broadcastTrackingState().catch(() => { });
+        broadcastTrackingState().catch(() => {
+            debugLog(DebugCategory.CAPTURE, 'Tracking broadcast failed after navigation');
+        });
         actionToast(tabId, reason || 'navigate', reason ? undefined : url, 'success');
         return enrichWithCSP(tabId, {
             success: true,
@@ -89,7 +91,9 @@ async function handleNavigateAction(tabId, url, actionToast, reason) {
     await delay(1000);
     const reloadedTab = await chrome.tabs.get(tabId);
     if (await pingContentScript(tabId)) {
-        broadcastTrackingState().catch(() => { });
+        broadcastTrackingState().catch(() => {
+            debugLog(DebugCategory.CAPTURE, 'Tracking broadcast failed after navigation reload');
+        });
         return enrichWithCSP(tabId, {
             success: true,
             action: 'navigate',
@@ -217,7 +221,9 @@ export async function handleBrowserAction(tabId, params, actionToast) {
                 // update (issue #271). This ensures subsequent /sync heartbeats report
                 // the correct tracked tab.
                 await persistTrackedTab(activeTab);
-                broadcastTrackingState().catch(() => { });
+                broadcastTrackingState().catch(() => {
+                    debugLog(DebugCategory.CAPTURE, 'Tracking broadcast failed after tab switch');
+                });
                 return {
                     success: true,
                     action: 'switch_tab',

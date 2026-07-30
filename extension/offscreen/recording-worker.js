@@ -25,6 +25,9 @@ const defaultState = {
 };
 let state = { ...defaultState };
 const LOG = `${KABOOM_RECORDING_LOG_PREFIX} offscreen`;
+function reportBackgroundDeliveryFailure(transition) {
+    console.error(LOG, `Background did not receive recording transition: ${transition}`);
+}
 /**
  * Start recording using a tab capture stream ID.
  * Called when the service worker sends OFFSCREEN_START_RECORDING.
@@ -48,7 +51,7 @@ async function handleStartRecording(msg) {
             success: false,
             error: 'RECORD_START: Already recording in offscreen document.'
         })
-            .catch(() => { });
+            .catch(() => reportBackgroundDeliveryFailure('start_already_active'));
         return;
     }
     state.active = true; // eslint-disable-line require-atomic-updates
@@ -178,7 +181,7 @@ async function handleStartRecording(msg) {
             type: 'offscreen_recording_started',
             success: true
         })
-            .catch(() => { });
+            .catch(() => reportBackgroundDeliveryFailure('start_confirmed'));
     }
     catch (err) {
         console.error(LOG, 'START EXCEPTION:', errorMessage(err), err.stack);
@@ -195,7 +198,7 @@ async function handleStartRecording(msg) {
             success: false,
             error: `RECORD_START: ${errorMessage(err, 'Failed to start recording in offscreen document.')}`
         })
-            .catch(() => { });
+            .catch(() => reportBackgroundDeliveryFailure('start_failed'));
     }
 }
 /**
@@ -221,7 +224,7 @@ function handleStopRecording(truncated = false) {
             name: '',
             error: 'RECORD_STOP: No active recording in offscreen document.'
         })
-            .catch(() => { });
+            .catch(() => reportBackgroundDeliveryFailure('stop_not_active'));
         return;
     }
     const { name, startTime, recorder, stream, chunks, serverUrl } = state;
@@ -240,7 +243,7 @@ function handleStopRecording(truncated = false) {
             name: '',
             error: 'RECORD_STOP: Recorder already inactive.'
         })
-            .catch(() => { });
+            .catch(() => reportBackgroundDeliveryFailure('stop_recorder_inactive'));
         return;
     }
     console.log(LOG, 'Stopping recorder, waiting for onstop callback');
@@ -297,7 +300,7 @@ function handleStopRecording(truncated = false) {
                     name,
                     error: `RECORD_STOP: Server returned ${response.status}.`
                 })
-                    .catch(() => { });
+                    .catch(() => reportBackgroundDeliveryFailure('save_http_failed'));
                 return;
             }
             let savePath;
@@ -306,7 +309,8 @@ function handleStopRecording(truncated = false) {
                 savePath = body.path;
             }
             catch {
-                /* path is optional */
+                // EXPECTED_ABSENCE: older daemon responses omit the optional path; logging
+                // a successful save without that enhancement would falsely imply data loss.
             }
             console.log(LOG, 'Recording SAVED', { name, duration, size: blob.size, path: savePath });
             chrome.runtime
@@ -320,7 +324,7 @@ function handleStopRecording(truncated = false) {
                 truncated: truncated || undefined,
                 path: savePath
             })
-                .catch(() => { });
+                .catch(() => reportBackgroundDeliveryFailure('save_confirmed'));
         }
         catch (err) {
             console.error(LOG, 'SAVE EXCEPTION:', errorMessage(err), err.stack);
@@ -333,7 +337,7 @@ function handleStopRecording(truncated = false) {
                 name,
                 error: `RECORD_STOP: ${errorMessage(err, 'Save failed.')}`
             })
-                .catch(() => { });
+                .catch(() => reportBackgroundDeliveryFailure('save_failed'));
         }
     };
     recorder.stop();

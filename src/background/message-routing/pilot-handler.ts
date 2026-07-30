@@ -26,7 +26,10 @@ export async function broadcastTrackingState(untrackedTabId?: number | null): Pr
           type: 'tracking_state_changed',
           state: { isTracked: true, aiPilotEnabled }
         })
-        .catch(() => {})
+        .catch(() => {
+          // EXPECTED_ABSENCE: content scripts disappear during navigation; storage
+          // remains authoritative and logging this would flag normal reinjection.
+        })
     }
     if (untrackedTabId && untrackedTabId !== trackedTabId) {
       chrome.tabs
@@ -34,7 +37,10 @@ export async function broadcastTrackingState(untrackedTabId?: number | null): Pr
           type: 'tracking_state_changed',
           state: { isTracked: false, aiPilotEnabled: false }
         })
-        .catch(() => {})
+        .catch(() => {
+          // EXPECTED_ABSENCE: an untracked or closed tab need not retain a content
+          // recipient; logging the cleanup miss would imply tracking is unhealthy.
+        })
     }
   } catch (error) {
     console.error(`${KABOOM_LOG_PREFIX} Failed to broadcast tracking state:`, error)

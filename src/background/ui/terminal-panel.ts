@@ -144,9 +144,13 @@ async function refineTerminalWorkspace(tabId: number | undefined): Promise<void>
     if (workspace.hostTabId === tabId) return
     await chrome.sidePanel
       .setOptions({ tabId: workspace.hostTabId, path: SIDE_PANEL_PATH, enabled: true })
-      .catch(() => undefined)
+      .catch(() => {
+        // EXPECTED_ABSENCE: the panel is already open on its gesture-safe host;
+        // logging optional post-open refinement would imply the open failed.
+      })
   } catch {
-    // Best-effort: the panel is already open.
+    // EXPECTED_ABSENCE: the panel is already open; workspace refinement is
+    // optional and logging it would misdiagnose a successful user action.
   }
 }
 

@@ -1757,7 +1757,9 @@ function reportDrawStateRecovery(detail) {
           fix: 'Start annotation mode again to create fresh annotation state.'
         }
       })
-      .catch(() => undefined)
+      .catch(() => {
+        console.warn('[KaBOOM!] annotation recovery diagnostic was not delivered')
+      })
   } catch {
     // The draw UI still falls back safely when the extension context is gone.
   }
@@ -1771,7 +1773,9 @@ function resolveDrawStateRecovery() {
         lifecycle: 'recovered',
         diagnostic: { name: 'annotation_state', detail: '', fix: '' }
       })
-      .catch(() => undefined)
+      .catch(() => {
+        console.warn('[KaBOOM!] annotation recovery resolution was not delivered')
+      })
   } catch {
     // A later page load will verify state again when this context is unavailable.
   }

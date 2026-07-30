@@ -154,7 +154,9 @@ async function initializeExtensionAsync() {
                             sendTabToast(tab.id, 'Tab tracking lost', getTrackedTabLostToastDetail(), 'warning', 5000);
                         }
                     })
-                        .catch(() => { });
+                        .catch(() => {
+                        console.warn(`${KABOOM_LOG_PREFIX} Could not resolve an active tab after tracking loss`);
+                    });
                 }
                 broadcastTrackingState(oldTabId).catch((err) => console.error(`${KABOOM_LOG_PREFIX} Error broadcasting tracking state:`, err));
             }

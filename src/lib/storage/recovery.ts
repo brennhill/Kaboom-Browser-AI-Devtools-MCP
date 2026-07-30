@@ -30,7 +30,11 @@ function sendTransition(
   try {
     const pending = chrome.runtime.sendMessage(message)
     if (pending && typeof pending.catch === 'function') {
-      void pending.catch(() => undefined)
+      void pending.catch(() => {
+        console.warn(
+          `${KABOOM_LOG_PREFIX} state recovery transition was not delivered: ${lifecycle}/${diagnostic.name}`
+        )
+      })
     }
   } catch {
     // Console warning remains available when the background worker is unavailable.

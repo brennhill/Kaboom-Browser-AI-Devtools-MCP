@@ -350,7 +350,10 @@ export function setupRecordingUI() {
                     state: 'success',
                     duration_ms: 1
                 })
-                    .catch(() => { });
+                    .catch(() => {
+                    // EXPECTED_ABSENCE: closing the popup or active tab can remove the
+                    // toast recipient; logging would misrepresent a successful mic reset.
+                });
             }
         });
         const audioSelect = document.getElementById('record-audio-mode');

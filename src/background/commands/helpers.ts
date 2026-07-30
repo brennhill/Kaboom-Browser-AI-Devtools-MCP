@@ -211,7 +211,10 @@ export function actionToast(
       state,
       duration_ms: durationMs
     })
-    .catch(() => {})
+    .catch(() => {
+      // EXPECTED_ABSENCE: action toasts are optional and their content-script
+      // recipient can be between documents; logging would duplicate action status.
+    })
 }
 
 // =============================================================================
@@ -649,10 +652,14 @@ export async function resolveTargetTab(
             state: 'warning',
             duration_ms: 5000
           })
-          .catch(() => {})
+          .catch(() => {
+            // EXPECTED_ABSENCE: this recovery toast targets whichever tab remains;
+            // no recipient is normal and logging would obscure the primary diagnostic.
+          })
       }
     } catch {
-      /* best effort */
+      // EXPECTED_ABSENCE: active-tab discovery is best-effort after tracked-tab
+      // loss; the primary diagnostic already records the actionable failure.
     }
 
     return resolveAutoTrackOrEscapeFallback(trackedTabId, 'Falling back to active tab')

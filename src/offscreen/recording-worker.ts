@@ -57,6 +57,10 @@ let state: RecordingState = { ...defaultState }
 
 const LOG = `${KABOOM_RECORDING_LOG_PREFIX} offscreen`
 
+function reportBackgroundDeliveryFailure(transition: string): void {
+  console.error(LOG, `Background did not receive recording transition: ${transition}`)
+}
+
 /**
  * Start recording using a tab capture stream ID.
  * Called when the service worker sends OFFSCREEN_START_RECORDING.
@@ -80,7 +84,7 @@ async function handleStartRecording(msg: OffscreenStartRecordingMessage): Promis
         success: false,
         error: 'RECORD_START: Already recording in offscreen document.'
       })
-      .catch(() => {})
+      .catch(() => reportBackgroundDeliveryFailure('start_already_active'))
     return
   }
 
@@ -224,7 +228,7 @@ async function handleStartRecording(msg: OffscreenStartRecordingMessage): Promis
         type: 'offscreen_recording_started',
         success: true
       })
-      .catch(() => {})
+      .catch(() => reportBackgroundDeliveryFailure('start_confirmed'))
   } catch (err) {
     console.error(LOG, 'START EXCEPTION:', errorMessage(err), (err as Error).stack)
     // Clean up any acquired streams to release the tab capture
@@ -240,7 +244,7 @@ async function handleStartRecording(msg: OffscreenStartRecordingMessage): Promis
         success: false,
         error: `RECORD_START: ${errorMessage(err, 'Failed to start recording in offscreen document.')}`
       })
-      .catch(() => {})
+      .catch(() => reportBackgroundDeliveryFailure('start_failed'))
   }
 }
 
@@ -267,7 +271,7 @@ function handleStopRecording(truncated: boolean = false): void {
         name: '',
         error: 'RECORD_STOP: No active recording in offscreen document.'
       })
-      .catch(() => {})
+      .catch(() => reportBackgroundDeliveryFailure('stop_not_active'))
     return
   }
 
@@ -288,7 +292,7 @@ function handleStopRecording(truncated: boolean = false): void {
         name: '',
         error: 'RECORD_STOP: Recorder already inactive.'
       })
-      .catch(() => {})
+      .catch(() => reportBackgroundDeliveryFailure('stop_recorder_inactive'))
     return
   }
 
@@ -355,7 +359,7 @@ function handleStopRecording(truncated: boolean = false): void {
             name,
             error: `RECORD_STOP: Server returned ${response.status}.`
           })
-          .catch(() => {})
+          .catch(() => reportBackgroundDeliveryFailure('save_http_failed'))
         return
       }
 
@@ -364,7 +368,8 @@ function handleStopRecording(truncated: boolean = false): void {
         const body = (await response.json()) as { path?: string }
         savePath = body.path
       } catch {
-        /* path is optional */
+        // EXPECTED_ABSENCE: older daemon responses omit the optional path; logging
+        // a successful save without that enhancement would falsely imply data loss.
       }
 
       console.log(LOG, 'Recording SAVED', { name, duration, size: blob.size, path: savePath })
@@ -379,7 +384,7 @@ function handleStopRecording(truncated: boolean = false): void {
           truncated: truncated || undefined,
           path: savePath
         })
-        .catch(() => {})
+        .catch(() => reportBackgroundDeliveryFailure('save_confirmed'))
     } catch (err) {
       console.error(LOG, 'SAVE EXCEPTION:', errorMessage(err), (err as Error).stack)
       state = { ...defaultState }
@@ -391,7 +396,7 @@ function handleStopRecording(truncated: boolean = false): void {
           name,
           error: `RECORD_STOP: ${errorMessage(err, 'Save failed.')}`
         })
-        .catch(() => {})
+        .catch(() => reportBackgroundDeliveryFailure('save_failed'))
     }
   }
 

@@ -180,7 +180,13 @@ export function installContextMenus(recordingHandlers, actionRecordingHandlers, 
                     logFn('Cannot reach content script for annotation via context menu');
             }
         }
-        refreshDynamicContextMenuTitles(tab.id, recordingHandlers, actionRecordingHandlers).catch(() => { });
+        refreshDynamicContextMenuTitles(tab.id, recordingHandlers, actionRecordingHandlers).catch(() => {
+            const message = 'Context menu titles could not be refreshed';
+            if (logFn)
+                logFn(message);
+            else
+                console.warn(`[KaBOOM!] ${message}`);
+        });
     });
 }
 //# sourceMappingURL=context-menus.js.map

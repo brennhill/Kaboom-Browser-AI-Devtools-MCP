@@ -190,6 +190,10 @@ export function installContextMenus(
       }
     }
 
-    refreshDynamicContextMenuTitles(tab.id, recordingHandlers, actionRecordingHandlers).catch(() => {})
+    refreshDynamicContextMenuTitles(tab.id, recordingHandlers, actionRecordingHandlers).catch(() => {
+      const message = 'Context menu titles could not be refreshed'
+      if (logFn) logFn(message)
+      else console.warn(`[KaBOOM!] ${message}`)
+    })
   })
 }

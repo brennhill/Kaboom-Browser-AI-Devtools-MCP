@@ -4,6 +4,7 @@
 import type { DrawModeCompletedMessage } from '../../types/runtime-messages.js'
 import type { LogEntry } from '../../types/capture/telemetry.js'
 import { errorMessage } from '../../lib/error-utils.js'
+import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { postDaemonJSON } from '../../lib/daemon-http.js'
 import { setKaboomOverlayVisibility } from '../ui/content-script-bridge.js'
 import { trackUIFeature } from '../ui/ui-usage-tracker.js'
@@ -56,7 +57,9 @@ async function captureDrawOverlay(tabId: number | undefined, sendResponse: SendR
     await setKaboomOverlayVisibility(tabId, true)
     sendResponse({ dataUrl })
   } catch {
-    await setKaboomOverlayVisibility(tabId, true).catch(() => {})
+    await setKaboomOverlayVisibility(tabId, true).catch(() => {
+      console.error(`${KABOOM_LOG_PREFIX} Failed to restore overlay after screenshot capture error`)
+    })
     sendResponse({ dataUrl: '' })
   }
 }

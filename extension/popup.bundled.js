@@ -122,7 +122,9 @@
     try {
       const pending = chrome.runtime.sendMessage(message);
       if (pending && typeof pending.catch === "function") {
-        void pending.catch(() => void 0);
+        void pending.catch(() => {
+          console.warn(`${KABOOM_LOG_PREFIX} state recovery transition was not delivered: ${lifecycle}/${diagnostic.name}`);
+        });
       }
     } catch {
     }

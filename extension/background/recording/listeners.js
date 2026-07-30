@@ -57,7 +57,9 @@ export function installRecordingListeners(deps) {
         });
         stopRecordingBadgeTimer();
         deps.setInactive();
-        deps.clearRecordingState().catch(() => { });
+        deps.clearRecordingState().catch(() => {
+            console.error(LOG, 'Failed to clear recording state after tab removal');
+        });
     });
     /**
      * Handle popup-initiated screen_recording_start / screen_recording_stop messages.
@@ -147,7 +149,10 @@ export function installRecordingListeners(deps) {
             // Close the permission tab
             if (sender.tab?.id) {
                 console.log(LOG, 'Closing permission tab', sender.tab.id);
-                chrome.tabs.remove(sender.tab.id).catch(() => { });
+                chrome.tabs.remove(sender.tab.id).catch(() => {
+                    // EXPECTED_ABSENCE: the user may close the one-shot permission tab
+                    // before cleanup; logging that normal race would suggest recording failed.
+                });
             }
             // Activate the original tab and show guidance toast
             if (returnTabId) {

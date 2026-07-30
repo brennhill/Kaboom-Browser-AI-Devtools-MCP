@@ -63,10 +63,14 @@ export function enableTerminalPanelForTab(tabId) {
         return;
     try {
         const pending = chrome.sidePanel.setOptions({ tabId, path: SIDE_PANEL_PATH, enabled: true });
-        void Promise.resolve(pending).catch(() => undefined);
+        void Promise.resolve(pending).catch(() => {
+            // EXPECTED_ABSENCE: the authoritative open() path reports this failure;
+            // logging this preparatory miss would duplicate it without new evidence.
+        });
     }
     catch {
-        // Never block the open attempt on this; open() reports its own failure.
+        // EXPECTED_ABSENCE: never block the open attempt here; open() reports the
+        // authoritative failure, so another log would be duplicate evidence.
     }
 }
 //# sourceMappingURL=side-panel-availability.js.map
