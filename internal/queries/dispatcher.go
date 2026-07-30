@@ -36,7 +36,7 @@ type QueryResultEntry struct {
 // QueryDispatcher manages pending query queues, result storage, and async command tracking.
 // Owns two locks:
 //   - mu (sync.Mutex): protects pendingQueries, queryResults, queryCond, queryIDCounter, queryTimeout, queryNotify
-//   - resultsMu (sync.RWMutex): protects completedResults, failedCommands
+//   - resultsMu (sync.RWMutex): protects activeCommands, terminalHistory
 //
 // Lock ordering: mu released BEFORE resultsMu acquired (never reverse).
 //
@@ -44,7 +44,7 @@ type QueryResultEntry struct {
 // - pendingQueries is FIFO and bounded by MaxPendingQueries.
 // - commandNotify is always non-nil; writers close-and-rotate it under resultsMu to signal waiters.
 // - queryNotify is always non-nil; enqueuers close-and-rotate it under mu so ALL waiters wake.
-// - failedCommands is an append-only ring (max 100) for terminal failure history.
+// - terminalHistory is a five-entry ring shared by successful and failed terminal commands.
 //
 // Failure semantics:
 // - Queue saturation rejects new work with ErrQueueFull instead of dropping existing entries.
@@ -56,13 +56,14 @@ type QueryDispatcher struct {
 	queryResults   map[string]QueryResultEntry
 	queryCond      *sync.Cond
 	queryIDCounter int
+	queryIDPrefix  string
 	queryTimeout   time.Duration
 
-	resultsMu        sync.RWMutex
-	completedResults map[string]*CommandResult
-	failedCommands   []*CommandResult
-	commandNotify    chan struct{} // closed on a terminal ApplyCommandResult, then recreated
-	queryNotify      chan struct{} // closed when pending queries are enqueued, then recreated (protected by mu)
+	resultsMu       sync.RWMutex
+	activeCommands  map[string]*CommandResult
+	terminalHistory []*CommandResult
+	commandNotify   chan struct{} // closed on a terminal ApplyCommandResult, then recreated
+	queryNotify     chan struct{} // closed when pending queries are enqueued, then recreated (protected by mu)
 
 	stopCleanup func()
 }
@@ -74,13 +75,14 @@ type QueryDispatcher struct {
 // - Constructor never returns a partially initialized dispatcher.
 func NewQueryDispatcher() *QueryDispatcher {
 	qd := &QueryDispatcher{
-		pendingQueries:   make([]PendingQueryEntry, 0),
-		queryResults:     make(map[string]QueryResultEntry),
-		queryTimeout:     DefaultQueryTimeout,
-		completedResults: make(map[string]*CommandResult),
-		failedCommands:   make([]*CommandResult, 0, 100),
-		commandNotify:    make(chan struct{}),
-		queryNotify:      make(chan struct{}),
+		pendingQueries:  make([]PendingQueryEntry, 0),
+		queryResults:    make(map[string]QueryResultEntry),
+		queryIDPrefix:   newQueryIDPrefix(),
+		queryTimeout:    DefaultQueryTimeout,
+		activeCommands:  make(map[string]*CommandResult),
+		terminalHistory: make([]*CommandResult, 0, terminalCommandHistoryLimit),
+		commandNotify:   make(chan struct{}),
+		queryNotify:     make(chan struct{}),
 	}
 	qd.queryCond = sync.NewCond(&qd.mu)
 	qd.stopCleanup = qd.startResultCleanup()

@@ -319,12 +319,20 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 	clickArgs := filterNavigateAndDocumentClickArgs(args)
 	clickStart := time.Now()
 	clickResp := h.dom.HandleDOMPrimitive(req, clickArgs, "click")
+	navigationInterruptedClick := waitForURLChange && clickLostToNavigation(clickResp)
+	clickStatus := act.ResponseStatus(clickResp)
+	clickDetail := ""
+	if navigationInterruptedClick {
+		clickStatus = "success"
+		clickDetail = "page navigation interrupted the old document response"
+	}
 	trace = append(trace, act.WorkflowStep{
 		Action:   "click",
-		Status:   act.ResponseStatus(clickResp),
+		Status:   clickStatus,
 		TimingMs: time.Since(clickStart).Milliseconds(),
+		Detail:   clickDetail,
 	})
-	if act.IsErrorResponse(clickResp) {
+	if act.IsErrorResponse(clickResp) && !navigationInterruptedClick {
 		return h.runtime.AppendWorkflowTraceToResponse(clickResp, "navigate_and_document", trace, workflowStart, "failed")
 	}
 
@@ -374,6 +382,12 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 			TimingMs: time.Since(waitURLStart).Milliseconds(),
 			Detail:   lastURL,
 		})
+		if navigationInterruptedClick {
+			clickResp = mcp.Succeed(req, "Navigation completed", map[string]any{
+				"status": "complete",
+				"url":    lastURL,
+			})
+		}
 	} else if waitForURLChange {
 		trace = append(trace, act.WorkflowStep{
 			Action: "wait_for_url_change",
@@ -424,6 +438,13 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 
 	resp := h.page.AppendPageContextToResponse(clickResp, req)
 	return h.runtime.AppendWorkflowTraceToResponse(resp, "navigate_and_document", trace, workflowStart, "success")
+}
+
+func clickLostToNavigation(resp mcp.JSONRPCResponse) bool {
+	if resp.Error != nil {
+		return strings.Contains(resp.Error.Message, "no_result")
+	}
+	return strings.Contains(string(resp.Result), "no_result")
 }
 
 // filterNavigateAndDocumentClickArgs keeps only click-relevant fields.

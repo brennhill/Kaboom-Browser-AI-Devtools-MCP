@@ -144,7 +144,7 @@ echo ""
 # Pilot-unavailable assertions cannot be invalidated by a live browser.
 OFFLINE_UAT_PORT="${KABOOM_UAT_OFFLINE_PORT:-17890}"
 CONNECTED_UAT_PORT="${KABOOM_UAT_CONNECTED_PORT:-7890}"
-OFFLINE_CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 20 25 26 28"
+OFFLINE_CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 20 25 26 28 34"
 CONNECTED_CAT_IDS="14 15 16 33 18 19 23 24"
 
 # shellcheck source=tests/framework/uat-user-state.sh
@@ -235,7 +235,7 @@ category_timeout() {
     case "$1" in
         19) echo 600 ;;
         33) echo 900 ;;
-        26) echo 180 ;;
+        26|34) echo 180 ;;
         *) echo 120 ;;
     esac
 }
@@ -328,6 +328,7 @@ get_default_name() {
         26) echo "Dynamic Binary Upgrade" ;;
         28) echo "Terminal HTTP Endpoints" ;;
         33) echo "Connected Action Coverage" ;;
+        34) echo "Packaged Corruption Recovery" ;;
         *)  echo "Unknown" ;;
     esac
 }

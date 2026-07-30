@@ -131,6 +131,11 @@ jobs:
       - name: End-to-end upgrade regression
         run: node scripts/release/install-upgrade-regression.mjs
 
+      - name: Packaged corruption and recovery UAT
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/tests/release/cat-34-packaged-corruption-recovery.sh 17890 /dev/stdout
+
   go:
     name: Go Checks
     runs-on: ubuntu-latest

@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const terminalCommandHistoryLimit = 5
+
 // normalizeCommandStatus accepts the canonical lifecycle vocabulary.
 //
 // Failure semantics:
@@ -84,7 +86,7 @@ func (qd *QueryDispatcher) RegisterCommand(correlationID string, queryID string,
 		UpdatedAt:     now,
 	}
 	qd.appendTraceEventLocked(cmd, traceStageQueued, "queue", "pending", "", now)
-	qd.completedResults[correlationID] = cmd
+	qd.activeCommands[correlationID] = cmd
 }
 
 // ApplyCommandResult applies one extension lifecycle update to a command record.
@@ -95,7 +97,7 @@ func (qd *QueryDispatcher) RegisterCommand(correlationID string, queryID string,
 //
 // Failure semantics:
 // - Unknown correlation IDs are ignored (idempotent for late/duplicate extension callbacks).
-// - Failed terminal states are moved to failedCommands and evicted from completedResults.
+// - Every terminal state moves from activeCommands into the shared five-entry terminalHistory ring.
 func (qd *QueryDispatcher) ApplyCommandResult(correlationID string, status string, result json.RawMessage, err string) {
 	if correlationID == "" {
 		return
@@ -107,7 +109,7 @@ func (qd *QueryDispatcher) ApplyCommandResult(correlationID string, status strin
 		qd.resultsMu.Lock()
 		defer qd.resultsMu.Unlock()
 
-		cmd, exists := qd.completedResults[correlationID]
+		cmd, exists := qd.activeCommands[correlationID]
 		if !exists {
 			return nil, false
 		}
@@ -129,12 +131,9 @@ func (qd *QueryDispatcher) ApplyCommandResult(correlationID string, status strin
 			cmd.CompletedAt = eventAt
 		}
 
-		if isFailedCommandStatus(normalizedStatus) {
-			qd.failedCommands = append(qd.failedCommands, cmd)
-			if len(qd.failedCommands) > 100 {
-				qd.failedCommands = qd.failedCommands[1:]
-			}
-			delete(qd.completedResults, correlationID)
+		if normalizedStatus != "pending" {
+			delete(qd.activeCommands, correlationID)
+			qd.appendTerminalCommandLocked(cmd)
 		}
 
 		ch := qd.commandNotify
@@ -144,6 +143,20 @@ func (qd *QueryDispatcher) ApplyCommandResult(correlationID string, status strin
 	if shouldSignal {
 		close(ch)
 	}
+}
+
+// appendTerminalCommandLocked retains only the newest terminal lifecycle snapshots.
+//
+// Invariants:
+// - Caller holds resultsMu.
+// - Eviction is single-pass and never affects pending commands.
+func (qd *QueryDispatcher) appendTerminalCommandLocked(cmd *CommandResult) {
+	if len(qd.terminalHistory) == terminalCommandHistoryLimit {
+		copy(qd.terminalHistory, qd.terminalHistory[1:])
+		qd.terminalHistory[len(qd.terminalHistory)-1] = cmd
+		return
+	}
+	qd.terminalHistory = append(qd.terminalHistory, cmd)
 }
 
 // ExpireCommand marks a pending command as expired due to timeout/dequeue loss.
@@ -177,7 +190,7 @@ func (qd *QueryDispatcher) GetPendingCommands() []*CommandResult {
 	defer qd.resultsMu.RUnlock()
 
 	result := make([]*CommandResult, 0)
-	for _, cmd := range qd.completedResults {
+	for _, cmd := range qd.activeCommands {
 		if cmd.Status == "pending" {
 			result = append(result, copyCommandResultWithTrace(cmd))
 		}
@@ -192,7 +205,7 @@ func (qd *QueryDispatcher) GetCompletedCommands() []*CommandResult {
 	defer qd.resultsMu.RUnlock()
 
 	result := make([]*CommandResult, 0)
-	for _, cmd := range qd.completedResults {
+	for _, cmd := range qd.terminalHistory {
 		if cmd.Status == "complete" {
 			result = append(result, copyCommandResultWithTrace(cmd))
 		}
@@ -209,24 +222,9 @@ func (qd *QueryDispatcher) GetFailedCommands() []*CommandResult {
 	qd.resultsMu.RLock()
 	defer qd.resultsMu.RUnlock()
 
-	result := make([]*CommandResult, 0, len(qd.failedCommands)+len(qd.completedResults))
-	seen := make(map[string]struct{}, len(qd.failedCommands))
-
-	for _, cmd := range qd.failedCommands {
-		if cmd == nil {
-			continue
-		}
-		cp := copyCommandResultWithTrace(cmd)
-		result = append(result, cp)
-		if cp.CorrelationID != "" {
-			seen[cp.CorrelationID] = struct{}{}
-		}
-	}
-	for _, cmd := range qd.completedResults {
+	result := make([]*CommandResult, 0, len(qd.terminalHistory))
+	for _, cmd := range qd.terminalHistory {
 		if cmd == nil || !isFailedCommandStatus(cmd.Status) {
-			continue
-		}
-		if _, exists := seen[cmd.CorrelationID]; exists {
 			continue
 		}
 		result = append(result, copyCommandResultWithTrace(cmd))
@@ -292,11 +290,11 @@ func (qd *QueryDispatcher) GetCommandResult(correlationID string) (*CommandResul
 	qd.resultsMu.RLock()
 	defer qd.resultsMu.RUnlock()
 
-	if cmd, exists := qd.completedResults[correlationID]; exists {
+	if cmd, exists := qd.activeCommands[correlationID]; exists {
 		return copyCommandResultWithTrace(cmd), true
 	}
 
-	for _, cmd := range qd.failedCommands {
+	for _, cmd := range qd.terminalHistory {
 		if cmd.CorrelationID == correlationID {
 			return copyCommandResultWithTrace(cmd), true
 		}
@@ -332,7 +330,7 @@ func (qd *QueryDispatcher) cleanExpiredCommands() {
 	}()
 
 	qd.resultsMu.RLock()
-	for correlationID, cmd := range qd.completedResults {
+	for correlationID, cmd := range qd.activeCommands {
 		if cmd.Status != "pending" {
 			continue
 		}

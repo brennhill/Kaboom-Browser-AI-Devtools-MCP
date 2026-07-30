@@ -153,6 +153,11 @@ methods were deleted rather than retained as forwarding facades. The sync
 transport is likewise owned by `capture.SyncHandler`, which composes extension
 liveness, command results, long-poll delivery, lifecycle events, and sync
 diagnostics without adding forwarding methods to `Capture`.
+The extension sync client retains only the five newest acknowledged command
+signatures for duplicate-delivery protection. In-progress commands remain in
+their separate active map until completion. The short terminal window prevents
+a restarted daemon's reused query IDs from being mistaken for stale commands;
+durable event recordings are owned independently by `RecordingManager`.
 Aggregate health reads are owned by `capture.HealthReader`; it snapshots the
 independently synchronized telemetry, query, extension, and circuit owners
 without a cross-owner method on `Capture`.

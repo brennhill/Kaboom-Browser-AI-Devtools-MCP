@@ -195,6 +195,39 @@ describe('SyncClient — Command dispatch', () => {
     assert.strictEqual(callbacks.onCommand.mock.calls.length, 1)
   })
 
+  test('should retain only five acknowledged command signatures across daemon ID reuse', async () => {
+    let pollCount = 0
+    const firstBatch = Array.from({ length: 6 }, (_, index) => ({
+      id: `cmd-${index + 1}`,
+      type: 'screenshot',
+      params: {}
+    }))
+    globalThis.fetch = mock.fn(() => {
+      pollCount++
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            makeSyncResponse({
+              commands:
+                pollCount === 1
+                  ? firstBatch
+                  : pollCount === 2
+                    ? [{ id: 'cmd-1', type: 'screenshot', params: {} }]
+                    : [],
+              next_poll_ms: pollCount < 2 ? 10 : 60000
+            })
+          )
+      })
+    })
+
+    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks)
+    client.start()
+    await tick(120)
+
+    assert.strictEqual(callbacks.onCommand.mock.calls.length, 7)
+  })
+
   test('should keep syncing while async command handlers are still running', async () => {
     let fetchCalls = 0
     globalThis.fetch = mock.fn(() => {

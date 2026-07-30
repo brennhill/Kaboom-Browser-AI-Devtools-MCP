@@ -24,6 +24,7 @@ code_paths:
   - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
   - scripts/tests/browser/cat-33-connected-action-coverage.sh
+  - scripts/tests/release/cat-34-packaged-corruption-recovery.sh
   - scripts/contracts/check-architecture-boundaries.cjs
   - scripts/check-dormant-tests.sh
   - .architecture-boundaries.json
@@ -72,6 +73,8 @@ test_paths:
   - scripts/tests/browser/cat-23-draw-mode.sh
   - scripts/tests/browser/cat-24-upload.sh
   - scripts/tests/browser/cat-33-connected-action-coverage.sh
+  - scripts/tests/release/cat-34-packaged-corruption-recovery.sh
+  - tests/cli/contracts/packaged-recovery-uat.test.cjs
   - scripts/tests/runtime/cat-26-dynamic-upgrade.sh
   - scripts/tests/workflows/cat-29-reproduction.sh
   - scripts/tests/workflows/cat-30-recording-automation.sh
@@ -151,9 +154,16 @@ last_verified_date: 2026-03-05
   exact prior daemon and tracked-tab state, including signal-driven exits.
 - Connected action coverage derives every live tool action from `tools/list`,
   runs it against the dedicated tracked fixture tab, and fails closed if a
-  schema action is omitted. The connected preflight uses isolated daemon state
+  schema action is omitted. State-sensitive actions re-establish the fixture
+  page through the readiness barrier, intent actions use isolated scopes,
+  CDP actions carry the tracked tab explicitly, and visual comparisons create
+  their prerequisite baseline. The connected preflight uses isolated daemon state
   so malformed user persistence cannot make the test environment
   nondeterministic; production persistence recovery is validated separately.
+- Packaged corruption recovery UAT builds and installs the public npm launcher
+  plus its current-platform binary package, starts that artifact with isolated
+  corrupt fixtures for every daemon-owned state family, and verifies startup,
+  deterministic fallback, Doctor lifecycle history, and raw-value redaction.
 - UAT category suites: `scripts/tests/cat-*.sh`
 - HTTP fixtures and embedded test pages: `cmd/browser-agent/internal/testpages/http.go`
 - WebSocket harness: `cmd/browser-agent/internal/testpages/websocket.go`

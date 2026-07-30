@@ -37,11 +37,11 @@ func TestNewNewQueryDispatcher_Initialization(t *testing.T) {
 	if qd.queryTimeout != DefaultQueryTimeout {
 		t.Errorf("queryTimeout = %v, want %v", qd.queryTimeout, DefaultQueryTimeout)
 	}
-	if qd.completedResults == nil {
-		t.Fatal("completedResults should be initialized")
+	if qd.activeCommands == nil {
+		t.Fatal("activeCommands should be initialized")
 	}
-	if qd.failedCommands == nil {
-		t.Fatal("failedCommands should be initialized")
+	if qd.terminalHistory == nil {
+		t.Fatal("terminalHistory should be initialized")
 	}
 	if qd.commandNotify == nil {
 		t.Fatal("commandNotify channel should be initialized")
@@ -51,6 +51,27 @@ func TestNewNewQueryDispatcher_Initialization(t *testing.T) {
 	}
 	if qd.queryIDCounter != 0 {
 		t.Errorf("queryIDCounter = %d, want 0", qd.queryIDCounter)
+	}
+}
+
+func TestNewQueryDispatcher_QueryIDsAreUniqueAcrossDaemonLifetimes(t *testing.T) {
+	t.Parallel()
+
+	first := NewQueryDispatcher()
+	defer first.Close()
+	second := NewQueryDispatcher()
+	defer second.Close()
+
+	firstID, err := first.CreatePendingQuery(PendingQuery{Type: "screenshot"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondID, err := second.CreatePendingQuery(PendingQuery{Type: "screenshot"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstID == secondID {
+		t.Fatalf("fresh dispatchers reused query ID %q", firstID)
 	}
 }
 

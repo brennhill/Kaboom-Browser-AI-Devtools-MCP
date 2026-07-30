@@ -124,8 +124,8 @@ action_args() {
         interact/close_tab) echo '{"what":"close_tab","tab_id":'"${HEALTH_EXTRA_TAB_ID:-0}"'}' ;;
         interact/activate_tab) echo '{"what":"activate_tab"}' ;;
         interact/click|interact/focus|interact/hover) echo '{"what":"'"$mode"'","selector":"#sf-btn"}' ;;
-        interact/open_composer) echo '{"what":"open_composer","selector":"#uat-composer"}' ;;
-        interact/submit_active_composer) echo '{"what":"submit_active_composer","selector":"#uat-composer-active"}' ;;
+        interact/open_composer) echo '{"what":"open_composer","scope_selector":"#uat-composer-scope"}' ;;
+        interact/submit_active_composer) echo '{"what":"submit_active_composer","scope_selector":"#uat-composer-active-scope"}' ;;
         interact/type) echo '{"what":"type","selector":"#sf-name","text":"Kaboom UAT"}' ;;
         interact/select) echo '{"what":"select","selector":"#sf-role","value":"admin"}' ;;
         interact/check) echo '{"what":"check","selector":"#sf-agree","checked":true}' ;;
@@ -139,12 +139,12 @@ action_args() {
         interact/paste) echo '{"what":"paste","selector":"#sf-name","text":"Kaboom paste"}' ;;
         interact/query) echo '{"what":"query","selector":"#sf-btn","query_type":"exists"}' ;;
         interact/navigate_and_wait_for) echo '{"what":"navigate_and_wait_for","url":'"$(json_string "$base_url")"', "wait_for":"#sf-btn"}' ;;
-        interact/navigate_and_document) echo '{"what":"navigate_and_document","selector":"#sf-link"}' ;;
+        interact/navigate_and_document) echo '{"what":"navigate_and_document","selector":"#sf-link","wait_for_url_change":true,"timeout_ms":15000}' ;;
         interact/fill_form) echo '{"what":"fill_form","fields":[{"selector":"#sf-user","value":"kaboom"},{"selector":"#sf-email2","value":"uat@example.com"}]}' ;;
         interact/fill_form_and_submit) echo '{"what":"fill_form_and_submit","fields":[{"selector":"#sf-user","value":"kaboom"},{"selector":"#sf-email2","value":"uat@example.com"}],"submit_selector":"#sf-submit"}' ;;
         interact/upload) echo '{"what":"upload","selector":"#file-input","file_path":"/tmp/kaboom-connected-action-coverage.txt"}' ;;
         interact/draw_mode_start) echo '{"what":"draw_mode_start","annot_session":"connected-action-coverage"}' ;;
-        interact/hardware_click) echo '{"what":"hardware_click","x":10,"y":10}' ;;
+        interact/hardware_click) echo '{"what":"hardware_click","x":10,"y":10,"tab_id":'"${HEALTH_TRACKED_TAB_ID:-0}"'}' ;;
         interact/batch) echo '{"what":"batch","steps":[{"what":"get_text","selector":"body"}]}' ;;
         interact/clipboard_write) echo '{"what":"clipboard_write","text":"Kaboom connected coverage"}' ;;
         analyze/dom|analyze/computed_styles) echo '{"what":"'"$mode"'","selector":"#sf-btn"}' ;;
@@ -180,20 +180,58 @@ ensure_event_recording() {
     fi
 }
 
+ensure_fixture_page() {
+    local fixture_url="http://127.0.0.1:${PORT}/tests/interact.html"
+    local fixture_attempt=1
+    local response
+    if ! uat_wait_for_connected_browser "$PORT" "$WRAPPER"; then
+        fail "Connected browser was unavailable before fixture navigation"
+        return 1
+    fi
+    while [ "$fixture_attempt" -le 2 ]; do
+        response="$(call_tool "interact" '{"what":"navigate_and_wait_for","url":'"$(json_string "$fixture_url")"',"wait_for":"#sf-btn"}')"
+        if check_valid_jsonrpc "$response" && ! check_is_error "$response"; then
+            break
+        fi
+        if [ "$fixture_attempt" -eq 1 ]; then
+            uat_wait_for_connected_browser "$PORT" "$WRAPPER" || return 1
+        fi
+        fixture_attempt=$((fixture_attempt + 1))
+    done
+    if [ "$fixture_attempt" -gt 2 ]; then
+        fail "Could not navigate to the connected action fixture: $(truncate "$(extract_content_text "$response")")"
+        return 1
+    fi
+    if ! uat_wait_for_connected_browser "$PORT" "$WRAPPER"; then
+        fail "Connected action fixture did not acknowledge readiness"
+        return 1
+    fi
+    HEALTH_TRACKED_TAB_ID="$(uat_connected_tracked_tab "$PORT" "$WRAPPER")"
+}
+
 prepare_action() {
     local action="$1/$2"
+    local response=""
     local script=""
+    local visual_baseline_attempt=1
     case "$action" in
         observe/indexeddb)
             script='new Promise((resolve,reject)=>{const r=indexedDB.open("kaboom_uat",1);r.onupgradeneeded=()=>r.result.createObjectStore("items",{keyPath:"id"});r.onsuccess=()=>{const db=r.result;const tx=db.transaction("items","readwrite");tx.objectStore("items").put({id:1,value:"ready"});tx.oncomplete=()=>{db.close();resolve("ready")};tx.onerror=()=>reject(tx.error)}})'
             ;;
         interact/open_composer)
-            call_tool "interact" '{"what":"navigate","url":'"$(json_string "http://127.0.0.1:${PORT}/tests/interact.html")"'}' >/dev/null
-            script='document.body.insertAdjacentHTML("beforeend","<div id=\"uat-composer\" contenteditable=\"true\" role=\"textbox\"></div>"); "ready"'
+            ensure_fixture_page || return 1
+            script='document.body.insertAdjacentHTML("beforeend","<section id=\"uat-composer-scope\"><button type=\"button\" aria-label=\"Open composer\">Compose</button></section>"); "ready"'
             ;;
         interact/submit_active_composer)
-            call_tool "interact" '{"what":"navigate","url":'"$(json_string "http://127.0.0.1:${PORT}/tests/interact.html")"'}' >/dev/null
-            script='document.body.insertAdjacentHTML("beforeend","<div id=\"uat-composer-active\" contenteditable=\"true\" role=\"textbox\">ready</div><button id=\"uat-send\" aria-label=\"Send\">Send</button>"); document.getElementById("uat-composer-active").focus(); "ready"'
+            ensure_fixture_page || return 1
+            script='document.body.insertAdjacentHTML("beforeend","<section id=\"uat-composer-active-scope\" role=\"dialog\"><div contenteditable=\"true\" role=\"textbox\">ready</div><button type=\"button\" aria-label=\"Send\">Send</button></section>"); document.querySelector("#uat-composer-active-scope [contenteditable]").focus(); "ready"'
+            ;;
+        interact/navigate_and_document)
+            ensure_fixture_page || return 1
+            script='document.getElementById("sf-link").href="/tests/interact.html?documented=1"; "ready"'
+            ;;
+        interact/hardware_click)
+            ensure_fixture_page || return 1
             ;;
         interact/back)
             call_tool "interact" \
@@ -206,6 +244,16 @@ prepare_action() {
                 >/dev/null
             call_tool "interact" '{"what":"back"}' >/dev/null
             ;;
+        interact/close_tab)
+            if [ -z "${HEALTH_EXTRA_TAB_ID:-}" ]; then
+                response="$(call_tool "interact" '{"what":"new_tab","url":'"$(json_string "http://127.0.0.1:${PORT}/tests/interact.html")"'}')"
+                HEALTH_EXTRA_TAB_ID="$(uat_new_tab_id "$response")"
+            fi
+            if [ -z "$HEALTH_EXTRA_TAB_ID" ]; then
+                fail "Could not create a disposable close_tab target"
+                return 1
+            fi
+            ;;
         interact/confirm_top_dialog)
             script='document.body.insertAdjacentHTML("beforeend","<div role=\"dialog\" id=\"uat-dialog\"><button>Confirm</button></div>"); "ready"'
             ;;
@@ -213,13 +261,62 @@ prepare_action() {
             script='document.body.insertAdjacentHTML("beforeend","<div role=\"dialog\" id=\"uat-overlay\"><button aria-label=\"Close\">Close</button></div>"); "ready"'
             ;;
         interact/fill_form|interact/fill_form_and_submit|analyze/visual_baseline)
-            call_tool "interact" '{"what":"navigate","url":'"$(json_string "http://127.0.0.1:${PORT}/tests/interact.html")"'}' >/dev/null
+            ensure_fixture_page || return 1
+            ;;
+        analyze/visual_diff)
+            ensure_fixture_page || return 1
+            while [ "$visual_baseline_attempt" -le 2 ]; do
+                response="$(call_tool "analyze" '{"what":"visual_baseline","name":"connected-action-coverage"}')"
+                if check_valid_jsonrpc "$response" && ! check_is_error "$response"; then
+                    break
+                fi
+                if [ "$visual_baseline_attempt" -eq 1 ]; then
+                    uat_wait_for_connected_browser "$PORT" "$WRAPPER" || return 1
+                    ensure_fixture_page || return 1
+                fi
+                visual_baseline_attempt=$((visual_baseline_attempt + 1))
+            done
+            if [ "$visual_baseline_attempt" -gt 2 ]; then
+                fail "Could not capture the visual diff baseline: $(truncate "$(extract_content_text "$response")")"
+                return 1
+            fi
             ;;
         configure/event_recording_stop)
             ensure_event_recording
             ;;
     esac
     [ -z "$script" ] || call_tool "interact" '{"what":"execute_js","script":'"$(json_string "$script")"'}' >/dev/null
+}
+
+call_action_with_retry() {
+    local tool="$1"
+    local mode="$2"
+    local args="$3"
+    local attempt=1
+    local response=""
+    local response_text=""
+    while [ "$attempt" -le 3 ]; do
+        response="$(call_tool "$tool" "$args")"
+        response_text="$(extract_content_text "$response")"
+        if ! printf '%s\n%s' "$response" "$response_text" |
+                grep -qE 'context deadline exceeded|extension_timeout|no_result|dismiss_loop_detected|extension_lost_command|screenshot_failed'; then
+            printf '%s' "$response"
+            return 0
+        fi
+        if [ "$attempt" -eq 3 ]; then
+            break
+        fi
+        if [ "$tool/$mode" = "interact/close_tab" ]; then
+            HEALTH_EXTRA_TAB_ID=""
+        fi
+        if ! uat_wait_for_connected_browser "$PORT" "$WRAPPER" ||
+            ! prepare_action "$tool" "$mode"; then
+            break
+        fi
+        args="$(action_args "$tool" "$mode")"
+        attempt=$((attempt + 1))
+    done
+    printf '%s' "$response"
 }
 
 touch /tmp/kaboom-connected-action-coverage.txt
@@ -245,7 +342,9 @@ HEALTH_RECORDING_ID=""
 
 for tool in $TOOLS; do
     modes="$(printf '%s' "$tools_response" | jq -r --arg tool "$tool" '
-        .result.tools[] | select(.name == $tool) | .inputSchema.properties.what.enum[]
+        .result.tools[] |
+        select(.name == $tool) |
+        .inputSchema.properties.what.enum[]
     ')"
     if [ -z "$modes" ]; then
         fail "$tool exposes no discoverable what modes"
@@ -284,7 +383,7 @@ for tool in $TOOLS; do
                 '{"what":"save_sequence","name":"connected-action-coverage","steps":[{"what":"get_text","selector":"body"}]}' \
                 >/dev/null
         fi
-        response="$(call_tool "$tool" "$args")"
+        response="$(call_action_with_retry "$tool" "$mode" "$args")"
         executed_count=$((executed_count + 1))
         if [ "$tool/$mode" = "interact/new_tab" ]; then
             HEALTH_EXTRA_TAB_ID="$(uat_new_tab_id "$response")"

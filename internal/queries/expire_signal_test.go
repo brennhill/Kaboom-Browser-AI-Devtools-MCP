@@ -41,8 +41,8 @@ func TestExpireCommand_SignalsWaiters(t *testing.T) {
 	select {
 	case <-done:
 		if !found {
-			// Command was expired and moved to failedCommands — found via ring buffer
-			t.Log("Command expired and moved to failedCommands (expected)")
+			// Command was expired and moved to terminalHistory — found via ring buffer.
+			t.Log("Command expired and moved to terminalHistory (expected)")
 		}
 		if result != nil && result.Status != "expired" {
 			t.Errorf("Expected status 'expired', got %q", result.Status)

@@ -444,7 +444,8 @@ func TestHandleScreenshotRoutes(t *testing.T) {
 		t.Fatalf("expected query result for query-1 to be set, got ok=%v result=%q", ok, string(result))
 	}
 
-	rlReq1 := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(validBody))
+	unsolicitedBody := `{"data_url":"` + dataURL + `","url":"https://example.test/page"}`
+	rlReq1 := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(unsolicitedBody))
 	rlReq1.Header.Set("X-Kaboom-Client", "kaboom-extension/rl-client")
 	rlRR1 := httptest.NewRecorder()
 	mux.ServeHTTP(rlRR1, rlReq1)
@@ -452,7 +453,7 @@ func TestHandleScreenshotRoutes(t *testing.T) {
 		t.Fatalf("rate-limit first request status = %d, want %d", rlRR1.Code, http.StatusOK)
 	}
 
-	rlReq2 := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(validBody))
+	rlReq2 := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(unsolicitedBody))
 	rlReq2.Header.Set("X-Kaboom-Client", "kaboom-extension/rl-client")
 	rlRR2 := httptest.NewRecorder()
 	mux.ServeHTTP(rlRR2, rlReq2)

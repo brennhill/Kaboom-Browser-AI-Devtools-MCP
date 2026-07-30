@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync/atomic"
 	"time"
 )
 
@@ -14,11 +15,22 @@ import (
 // Callers should return an immediate error to the LLM so it knows the command was not accepted.
 var ErrQueueFull = errors.New("queue_full")
 
+var queryDispatcherSequence atomic.Uint64
+
 // Constants for query management.
 const (
 	QueryResultTTL    = 5 * time.Minute // How long to keep query results before cleanup
 	MaxPendingQueries = 15              // Max pending queries in queue
 )
+
+func newQueryIDPrefix() string {
+	return fmt.Sprintf(
+		"q-%x-%x-%x",
+		time.Now().UnixNano(),
+		os.Getpid(),
+		queryDispatcherSequence.Add(1),
+	)
+}
 
 // ============================================
 // Pending Query Creation
@@ -60,7 +72,7 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 		}
 
 		qd.queryIDCounter++
-		id := fmt.Sprintf("q-%d", qd.queryIDCounter)
+		id := fmt.Sprintf("%s-%d", qd.queryIDPrefix, qd.queryIDCounter)
 
 		entry := PendingQueryEntry{
 			Query: PendingQueryResponse{
@@ -270,7 +282,7 @@ func (qd *QueryDispatcher) ExpireAllPendingQueries(reason string) {
 		qd.resultsMu.Lock()
 		defer qd.resultsMu.Unlock()
 		for _, correlationID := range correlationIDs {
-			cmd, exists := qd.completedResults[correlationID]
+			cmd, exists := qd.activeCommands[correlationID]
 			if !exists {
 				continue
 			}
@@ -282,11 +294,8 @@ func (qd *QueryDispatcher) ExpireAllPendingQueries(reason string) {
 			now := time.Now()
 			qd.appendTraceEventLocked(cmd, traceStageTimedOut, "timeout", "expired", reason, now)
 			cmd.CompletedAt = now
-			qd.failedCommands = append(qd.failedCommands, cmd)
-			if len(qd.failedCommands) > 100 {
-				qd.failedCommands = qd.failedCommands[1:]
-			}
-			delete(qd.completedResults, correlationID)
+			delete(qd.activeCommands, correlationID)
+			qd.appendTerminalCommandLocked(cmd)
 		}
 
 		ch := qd.commandNotify

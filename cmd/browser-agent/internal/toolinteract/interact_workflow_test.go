@@ -144,6 +144,22 @@ func TestHandleNavigateAndDocument_ClickError(t *testing.T) {
 	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)), mcp.ErrExtError)
 }
 
+func TestHandleNavigateAndDocument_NoResultAfterNavigationContinues(t *testing.T) {
+	h, fs := newFakeWorkflowActions(t)
+	fs.cap.Extension().SetTrackingStatusForTest(1, "https://example.test/before")
+	noResult := mcp.Fail(testReq(), mcp.ErrExtError, "Command failed: no_result", "retry")
+	if !clickLostToNavigation(noResult) {
+		t.Fatalf("clickLostToNavigation did not classify response: %+v", noResult)
+	}
+	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
+		fs.cap.Extension().SetTrackingStatusForTest(1, "https://example.test/after")
+		return noResult
+	}
+
+	args := `{"selector":"#link","wait_for_url_change":true,"wait_for_stable":false}`
+	assertOK(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)))
+}
+
 func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {
 	h, _ := newFakeWorkflowActions(t)
 	assertOK(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{"scope":"page"}`)))

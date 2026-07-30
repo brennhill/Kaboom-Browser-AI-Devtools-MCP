@@ -44,7 +44,7 @@ describe('comprehensive UAT harness regressions', () => {
     const offline = categoryIds('OFFLINE_CAT_IDS')
     const connected = categoryIds('CONNECTED_CAT_IDS')
 
-    assert.equal(new Set([...offline, ...connected]).size, 25)
+    assert.equal(new Set([...offline, ...connected]).size, 26)
     assert.deepEqual(offline.filter((id) => connected.includes(id)), [])
     assert.ok(offline.includes('05'), 'Pilot-unavailable contract belongs offline')
     assert.ok(connected.includes('15'), 'Pilot success path belongs connected')
@@ -253,6 +253,12 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(actionCoverage, /No live schema action matched KABOOM_UAT_ACTION/)
     assert.match(actionCoverage, /ensure_event_recording/)
     assert.match(actionCoverage, /Event recording start returned no recording_id/)
+    assert.match(actionCoverage, /call_action_with_retry\(\)/)
+    assert.match(actionCoverage, /context deadline exceeded\|extension_timeout\|no_result\|dismiss_loop_detected\|extension_lost_command\|screenshot_failed/)
+    assert.match(actionCoverage, /attempt" -le 3/)
+    assert.match(actionCoverage, /uat_wait_for_connected_browser "\$PORT" "\$WRAPPER"/)
+    assert.match(actionCoverage, /prepare_action "\$tool" "\$mode"/)
+    assert.doesNotMatch(actionCoverage, /call_action_with_retry\(\)[\s\S]*sleep /)
     assert.match(actionCoverage, /if ! prepare_action[\s\S]*args="\$\(action_args/)
     assert.doesNotMatch(actionCoverage, /history\.pushState/)
     assert.match(actionCoverage, /interact\/back\)[\s\S]*"what":"navigate"/)
@@ -263,6 +269,49 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(actionCoverage, /HEALTH_TRACKED_TAB_ID/)
     assert.match(actionCoverage, /interact\/switch_tab.*HEALTH_TRACKED_TAB_ID/)
     assert.match(actionCoverage, /"fields":\[\{/)
+    assert.match(actionCoverage, /ensure_fixture_page\(\)/)
+    assert.match(actionCoverage, /fixture_attempt=1/)
+    assert.match(actionCoverage, /fixture_attempt" -le 2/)
+    assert.match(actionCoverage, /uat_wait_for_connected_browser "\$PORT" "\$WRAPPER"/)
+    assert.match(
+      actionCoverage,
+      /ensure_fixture_page\(\)[\s\S]*uat_wait_for_connected_browser[\s\S]*response="\$\(call_tool "interact"/,
+    )
+    assert.match(
+      actionCoverage,
+      /ensure_fixture_page\(\)[\s\S]*"what":"navigate_and_wait_for"[\s\S]*"wait_for":"#sf-btn"/,
+    )
+    assert.match(
+      actionCoverage,
+      /interact\/open_composer\).*"scope_selector":"#uat-composer-scope"/,
+    )
+    assert.match(
+      actionCoverage,
+      /interact\/submit_active_composer\).*"scope_selector":"#uat-composer-active-scope"/,
+    )
+    assert.match(
+      actionCoverage,
+      /interact\/navigate_and_document\)[\s\S]*ensure_fixture_page[\s\S]*documented=1/,
+    )
+    assert.match(
+      actionCoverage,
+      /interact\/navigate_and_document\).*"wait_for_url_change":true/,
+    )
+    assert.match(
+      actionCoverage,
+      /interact\/hardware_click\)[\s\S]*ensure_fixture_page/,
+    )
+    assert.match(actionCoverage, /interact\/close_tab\)[\s\S]*HEALTH_EXTRA_TAB_ID/)
+    assert.match(
+      actionCoverage,
+      /interact\/hardware_click\).*"tab_id":'"\$\{HEALTH_TRACKED_TAB_ID:-0\}"'/,
+    )
+    assert.match(
+      actionCoverage,
+      /analyze\/visual_diff\)[\s\S]*ensure_fixture_page[\s\S]*"what":"visual_baseline"/,
+    )
+    assert.match(actionCoverage, /visual_baseline_attempt=1/)
+    assert.match(actionCoverage, /visual_baseline_attempt" -le 2/)
     assert.match(actionCoverage, /fail "Action coverage mismatch/)
   })
 
@@ -349,7 +398,8 @@ describe('comprehensive UAT harness regressions', () => {
           '20',
           '25',
           '26',
-          '28'
+          '28',
+          '34'
         ]) {
           const script = join(testsDir, `cat-${id}-fake.sh`)
           writeFileSync(
@@ -387,11 +437,11 @@ describe('comprehensive UAT harness regressions', () => {
 
     const complete = run(makeProject(true))
     assert.equal(complete.status, 0)
-    assert.match(complete.stdout, /TOTAL\s+\|\s+17\s+\|\s+0\s+\|\s+17\s+\|\s+34/)
-    assert.match(complete.stdout, /ALL 17 TESTS PASSED \(17 skipped\)/)
+    assert.match(complete.stdout, /TOTAL\s+\|\s+18\s+\|\s+0\s+\|\s+18\s+\|\s+36/)
+    assert.match(complete.stdout, /ALL 18 TESTS PASSED \(18 skipped\)/)
     const report = JSON.parse(readFileSync(join(complete.artifactDir, 'uat-results.json'), 'utf8'))
-    assert.equal(report.categories.length, 17)
-    assert.equal(report.totals.skip, 17)
+    assert.equal(report.categories.length, 18)
+    assert.equal(report.totals.skip, 18)
     assert.equal(report.restoration.status, 'not_required')
     assert.match(readFileSync(join(complete.artifactDir, 'uat-results.xml'), 'utf8'), /<testsuites/)
   })

@@ -35,7 +35,10 @@ func ScreenshotsDir() (string, error) {
 
 // checkScreenshotRateLimit enforces per-client screenshot rate limiting.
 // Returns an HTTP status code (0 means allowed) and an error message.
-func (h *Handler) checkScreenshotRateLimit(clientID string) (int, string) {
+func (h *Handler) checkScreenshotRateLimit(clientID, queryID string) (int, string) {
+	if queryID != "" {
+		return 0, ""
+	}
 	if clientID == "" {
 		return 0, ""
 	}
@@ -87,11 +90,6 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if status, msg := h.checkScreenshotRateLimit(r.Header.Get("X-Kaboom-Client")); status != 0 {
-		util.JSONResponse(w, status, map[string]string{"error": msg})
-		return
-	}
-
 	r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
 	var body struct {
 		DataURL       string `json:"data_url"`
@@ -101,6 +99,10 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return
+	}
+	if status, msg := h.checkScreenshotRateLimit(r.Header.Get("X-Kaboom-Client"), body.QueryID); status != 0 {
+		util.JSONResponse(w, status, map[string]string{"error": msg})
 		return
 	}
 

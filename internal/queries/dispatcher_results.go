@@ -301,13 +301,13 @@ func (qd *QueryDispatcher) cleanExpiredResults() {
 		qd.ExpireCommand(correlationID)
 	}
 
-	// 4. Clean stale completedResults entries (under resultsMu).
+	// 4. Clean stale active command entries (under resultsMu).
 	func() {
 		qd.resultsMu.Lock()
 		defer qd.resultsMu.Unlock()
-		for id, cmd := range qd.completedResults {
+		for id, cmd := range qd.activeCommands {
 			if now.Sub(cmd.CreatedAt) > QueryResultTTL {
-				delete(qd.completedResults, id)
+				delete(qd.activeCommands, id)
 			}
 		}
 	}()

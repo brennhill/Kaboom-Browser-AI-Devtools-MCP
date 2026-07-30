@@ -4,7 +4,7 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - src/content/draw-mode/lifecycle-overlay.js
   - src/content/draw-mode/input-rendering.js
@@ -52,6 +52,7 @@ test_paths:
   - cmd/browser-agent/internal/mediaapi/annotation_store_test.go
   - cmd/browser-agent/internal/mediaapi/draw_mode_http_test.go
   - cmd/browser-agent/internal/mediaapi/handler_test.go
+  - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_generate_annotations_test.go
   - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go
@@ -97,6 +98,9 @@ last_verified_date: 2026-03-05
   Enter saves the active annotation, and the next Enter submits.
 - Persisted annotations restored after an interrupted extension lifecycle
   immediately update the action count and remain undoable.
+- Daemon-correlated screenshot queries bypass the unsolicited-upload throttle,
+  allowing visual baseline and diff capture to run back-to-back while
+  preserving rate limiting for uncorrelated browser uploads.
 
 ### Go (store + handler)
 - `internal/annotation/store.go` — `Detail` struct with ParentContext, Siblings, CSSFramework fields; session TTL = 2 hours

@@ -12,6 +12,7 @@ import { getServerInstallId, updateServerInstallId } from './install-identity.js
 // =============================================================================
 const BASE_POLL_MS = 1000;
 const DEFAULT_COMMAND_TIMEOUT_MS = 65000;
+const ACKNOWLEDGED_COMMAND_HISTORY_LIMIT = 5;
 // =============================================================================
 // SYNC CLIENT CLASS
 // =============================================================================
@@ -217,8 +218,10 @@ export class SyncClient {
                     // Dedup on RECEIPT — prevents re-execution if server re-sends before ack
                     if (command.id) {
                         this.processedCommandSignatures.add(signature);
-                        const MAX_PROCESSED_COMMANDS = 1000;
-                        if (this.processedCommandSignatures.size > MAX_PROCESSED_COMMANDS) {
+                        // This is a short duplicate-delivery guard, not a command archive.
+                        // Active work is protected separately by inProgressById; retaining a
+                        // large completed set can suppress valid IDs after a daemon restart.
+                        if (this.processedCommandSignatures.size > ACKNOWLEDGED_COMMAND_HISTORY_LIMIT) {
                             const oldest = this.processedCommandSignatures.values().next().value;
                             if (oldest !== undefined) {
                                 this.processedCommandSignatures.delete(oldest);

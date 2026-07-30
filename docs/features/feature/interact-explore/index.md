@@ -233,7 +233,7 @@ extension falls back to page history and reports success only after a bounded,
 correlation-logged URL/load transition; an unacknowledged fallback remains an
 error.
 
-`navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow.
+`navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow. A page unload may destroy the old content-script context before its click acknowledgement arrives; an exact `no_result` is therefore accepted only when the bounded tracked-URL transition independently confirms that navigation completed. Other click errors still fail normally.
 
 Upload-handler unit tests replace native-dialog and verification waits at the
 time boundary. Production backoff remains unchanged, while mocked Chrome and

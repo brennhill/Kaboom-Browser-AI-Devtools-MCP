@@ -150,12 +150,12 @@ func (qd *QueryDispatcher) recordTraceEvent(correlationID string, stage string, 
 	qd.resultsMu.Lock()
 	defer qd.resultsMu.Unlock()
 
-	if cmd, exists := qd.completedResults[correlationID]; exists {
+	if cmd, exists := qd.activeCommands[correlationID]; exists {
 		qd.ensureTraceContextLocked(cmd, correlationID, "", "", at)
 		qd.appendTraceEventLocked(cmd, stage, source, status, message, at)
 		return
 	}
-	for _, cmd := range qd.failedCommands {
+	for _, cmd := range qd.terminalHistory {
 		if cmd == nil || cmd.CorrelationID != correlationID {
 			continue
 		}
@@ -187,8 +187,8 @@ func (qd *QueryDispatcher) GetRecentCommandTraces(limit int) []*CommandResult {
 	qd.resultsMu.RLock()
 	defer qd.resultsMu.RUnlock()
 
-	combined := make([]*CommandResult, 0, len(qd.completedResults)+len(qd.failedCommands))
-	seen := make(map[string]struct{}, len(qd.completedResults)+len(qd.failedCommands))
+	combined := make([]*CommandResult, 0, len(qd.activeCommands)+len(qd.terminalHistory))
+	seen := make(map[string]struct{}, len(qd.activeCommands)+len(qd.terminalHistory))
 	add := func(cmd *CommandResult) {
 		if cmd == nil {
 			return
@@ -206,10 +206,10 @@ func (qd *QueryDispatcher) GetRecentCommandTraces(limit int) []*CommandResult {
 		combined = append(combined, copyCommandResultWithTrace(cmd))
 	}
 
-	for _, cmd := range qd.failedCommands {
+	for _, cmd := range qd.terminalHistory {
 		add(cmd)
 	}
-	for _, cmd := range qd.completedResults {
+	for _, cmd := range qd.activeCommands {
 		add(cmd)
 	}
 

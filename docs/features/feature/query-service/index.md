@@ -84,6 +84,15 @@ last_verified_date: 2026-03-05
   - `internal/mcp/response_content.go` — image and warning content blocks
   - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
 - Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
+- Live command lifecycle storage keeps every pending command until it reaches a
+  terminal state or expires. Completed and failed commands then share one
+  five-entry terminal-history ring, preventing long browser sessions from
+  accumulating stale dispatch records. Event recordings remain complete because
+  `RecordingManager` owns and persists recorded actions independently of this
+  diagnostic ring.
+- Query IDs include a per-dispatcher process/time/sequence prefix, so a restarted
+  daemon cannot reuse an ID that an attached extension still remembers for
+  duplicate-delivery protection.
 - Query and command state is accessed through the canonical
   `Capture.Queries()` owner. The former Capture forwarding layer and test-only
   pending-query facade have been deleted; disconnect-aware queue reconciliation

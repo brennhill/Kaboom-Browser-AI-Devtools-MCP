@@ -6,6 +6,7 @@ package queries
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -120,7 +121,7 @@ func TestNewQueryDispatcher_ApplyCommandResult_ErrorStatus(t *testing.T) {
 	completed := qd.GetCompletedCommands()
 	for _, cmd := range completed {
 		if cmd.CorrelationID == "corr-err-status" {
-			t.Fatal("error command should not remain in completedResults")
+			t.Fatal("error command should not remain in completed command results")
 		}
 	}
 
@@ -499,6 +500,45 @@ func TestNewQueryDispatcher_GetFailedCommands_Empty(t *testing.T) {
 	failed := qd.GetFailedCommands()
 	if len(failed) != 0 {
 		t.Errorf("GetFailedCommands len = %d, want 0", len(failed))
+	}
+}
+
+func TestQueryDispatcherRetainsOnlyFiveNewestTerminalCommands(t *testing.T) {
+	t.Parallel()
+
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+
+	qd.RegisterCommand("still-pending", "q-pending", time.Minute)
+	for i := 0; i < 200; i++ {
+		correlationID := fmt.Sprintf("terminal-%03d", i)
+		qd.RegisterCommand(correlationID, "q-"+correlationID, time.Minute)
+		if i%2 == 0 {
+			qd.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"ok":true}`), "")
+		} else {
+			qd.ApplyCommandResult(correlationID, "error", nil, "fixture failure")
+		}
+	}
+
+	completed := qd.GetCompletedCommands()
+	failed := qd.GetFailedCommands()
+	if got := len(completed) + len(failed); got != 5 {
+		t.Fatalf("terminal history length = %d, want 5", got)
+	}
+
+	for i := 195; i < 200; i++ {
+		correlationID := fmt.Sprintf("terminal-%03d", i)
+		if _, found := qd.GetCommandResult(correlationID); !found {
+			t.Errorf("new terminal command %q was evicted", correlationID)
+		}
+	}
+	if _, found := qd.GetCommandResult("terminal-194"); found {
+		t.Error("old terminal command remains available after ring eviction")
+	}
+
+	pending := qd.GetPendingCommands()
+	if len(pending) != 1 || pending[0].CorrelationID != "still-pending" {
+		t.Fatalf("pending commands = %#v, want still-pending unaffected by terminal eviction", pending)
 	}
 }
 
