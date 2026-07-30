@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
- * @fileoverview page-structure-targeting.test.js — Regression guard for analyze(page_structure)
- * target-tab resolution (must not execute against tab_id 0).
+ * @fileoverview page-query-targeting.test.js — Regression guards for page-query
+ * target-tab resolution (commands must not execute against tab_id 0).
  */
 
 import { beforeEach, describe, mock, test } from 'node:test'
@@ -99,7 +99,7 @@ function createMockChrome(trackedTabId = 1830196419) {
   }
 }
 
-describe('page_structure target resolution', () => {
+describe('page query target resolution', () => {
   let bgModule
   let resetPilotCacheForTesting
   const trackedTabId = 1830196419
@@ -132,6 +132,31 @@ describe('page_structure target resolution', () => {
         id: 'q-page-structure',
         type: 'page_structure',
         correlation_id: 'corr-page-structure',
+        params: JSON.stringify({})
+      },
+      mockSyncClient
+    )
+
+    assert.strictEqual(globalThis.chrome.scripting.executeScript.mock.calls.length >= 1, true)
+    const firstCall = globalThis.chrome.scripting.executeScript.mock.calls[0].arguments[0]
+    assert.strictEqual(firstCall.target.tabId, trackedTabId)
+    assert.notStrictEqual(firstCall.target.tabId, 0)
+
+    assert.strictEqual(mockSyncClient.queueCommandResult.mock.calls.length, 1)
+    const queued = mockSyncClient.queueCommandResult.mock.calls[0].arguments[0]
+    assert.strictEqual(queued.status, 'complete')
+    assert.strictEqual(queued.result.resolved_tab_id, trackedTabId)
+    assert.strictEqual(queued.result.target_context.source, 'tracked_tab')
+  })
+
+  test('observe page_inventory runs against tracked tab, not tab 0', async () => {
+    const mockSyncClient = { queueCommandResult: mock.fn() }
+
+    await bgModule.handlePendingQuery(
+      {
+        id: 'q-page-inventory',
+        type: 'page_inventory',
+        correlation_id: 'corr-page-inventory',
         params: JSON.stringify({})
       },
       mockSyncClient

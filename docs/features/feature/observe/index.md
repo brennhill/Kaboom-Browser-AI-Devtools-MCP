@@ -57,6 +57,7 @@ test_paths:
   - internal/tools/observe/idbquery/execute_test.go
   - internal/capture/health_reader_owner_test.go
   - tests/extension/dom/command-element-results.test.js
+  - tests/extension/dom/page-query-targeting.test.js
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go

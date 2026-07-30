@@ -295,6 +295,7 @@ const TARGETED_QUERY_TYPES = new Set<string>([
   'get_readable',
   'get_markdown',
   'page_summary',
+  'page_inventory',
   'page_structure',
   'navigation',
   'feature_gates'
