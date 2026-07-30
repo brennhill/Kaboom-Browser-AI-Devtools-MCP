@@ -162,7 +162,7 @@ jobs:
           STATE_DIR="$(mktemp -d)"
           echo "Using state dir: ${STATE_DIR}"
           KABOOM_STATE_DIR="${STATE_DIR}" go test -race ./cmd/browser-agent -run TestFastStart_ResourceWorkflowSoak -count=3 -timeout=12m
-          go run ./cmd/browser-agent --check --state-dir "${STATE_DIR}" --fastpath-min-samples 100 --fastpath-max-failure-ratio 0.02
+          go run ./cmd/browser-agent --doctor --state-dir "${STATE_DIR}" --fastpath-min-samples 100 --fastpath-max-failure-ratio 0.02
 
       - name: Go test coverage (70% minimum)
         run: |

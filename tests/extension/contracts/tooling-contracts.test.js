@@ -57,6 +57,20 @@ describe('Tooling contracts', () => {
     )
   })
 
+  test('reliability CI invokes the canonical Doctor entry point', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const reliabilityGate = workflow.match(
+      /- name: Reliability soak gate \(bridge fast-start\)([\s\S]*?)(?=\n {6}- name:)/
+    )
+    assert.ok(reliabilityGate, 'expected the bridge fast-start reliability gate')
+    assert.match(reliabilityGate[1], /go run \.\/cmd\/browser-agent --doctor\b/)
+    assert.doesNotMatch(
+      reliabilityGate[1],
+      /go run \.\/cmd\/browser-agent --check\b/,
+      'CI must not invoke the removed --check compatibility facade'
+    )
+  })
+
   test('JavaScript shard reporting identifies only the shards that failed', () => {
     const runner = readFileSync('scripts/test-js-sharded.sh', 'utf8')
     assert.match(runner, /SHARD_FAILED/)
