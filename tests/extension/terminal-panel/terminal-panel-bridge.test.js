@@ -140,10 +140,16 @@ describe('terminal-panel-bridge writeToTerminal delivery', () => {
 
     _terminalPanelBridgeForTests.setWriteRetryDelay(30)
     let calls = 0
-    sendMessageImpl = () => { calls += 1; return Promise.resolve({}) } // reachable, never acks -> schedules a retry
+    let settleInitialWrite
+    sendMessageImpl = (message) => {
+      if (message.type !== 'terminal_panel_write') return Promise.resolve({})
+      calls += 1
+      return new Promise((resolve) => {
+        settleInitialWrite = resolve
+      })
+    }
     writeToTerminal('stale nudge')
-    await flush()
-    assert.equal(calls, 1, 'the first send happened and a retry is scheduled')
+    assert.equal(calls, 1, 'the first send is in flight')
 
     // The panel is torn down and a fresh one opens BEFORE the retry fires. An
     // untracked retry timer would still fire against the new session.
@@ -151,6 +157,8 @@ describe('terminal-panel-bridge writeToTerminal delivery', () => {
     await initTerminalPanelBridge() // fresh panel: mirror says 'open' -> visible
     assert.equal(isTerminalVisible(), true, 'the fresh panel is visible')
 
+    settleInitialWrite({})
+    await flush()
     await new Promise((resolve) => setTimeout(resolve, 60)) // past the 30ms retry delay
     await flush()
 

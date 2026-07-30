@@ -186,6 +186,7 @@ export function writeToTerminal(text) {
  * misses do we fail loud and reconcile the (possibly stale) visibility mirror.
  */
 function sendTerminalWrite(text, allowRetry) {
+    const attemptGeneration = writeGeneration;
     let pending;
     try {
         pending = chrome.runtime.sendMessage({ type: 'terminal_panel_write', text });
@@ -204,6 +205,11 @@ function sendTerminalWrite(text, allowRetry) {
         if (resp && resp.received === true)
             return;
         if (allowRetry) {
+            if (attemptGeneration !== writeGeneration) {
+                // EXPECTED_ABSENCE: teardown superseded this in-flight response; logging
+                // it would falsely attribute an old panel's miss to the fresh session.
+                return;
+            }
             // Possibly the panel's boot window — retry once before concluding it is gone.
             scheduleWriteRetry(text);
             return;
@@ -214,6 +220,11 @@ function sendTerminalWrite(text, allowRetry) {
         // Transport error. Retry once (transient); if it recurs, fail loud but do NOT
         // reconcile — an ambiguous transport error is not proof the panel is gone.
         if (allowRetry) {
+            if (attemptGeneration !== writeGeneration) {
+                // EXPECTED_ABSENCE: teardown superseded this transport result; logging
+                // it would misdiagnose a deliberately discarded old-session retry.
+                return;
+            }
             scheduleWriteRetry(text);
             return;
         }
@@ -231,8 +242,8 @@ function scheduleWriteRetry(text) {
     const generation = writeGeneration;
     writeRetryTimer = setTimeout(() => {
         writeRetryTimer = null;
-        // A reset/teardown or a newer send bumps the generation; a closed panel clears
-        // panelVisible. In either case this retry is stale — drop it silently.
+        // EXPECTED_ABSENCE: reset/teardown or a newer send makes this timer stale;
+        // logging its cancellation would misdiagnose intentional session isolation.
         if (generation !== writeGeneration || !panelVisible)
             return;
         sendTerminalWrite(text, false);

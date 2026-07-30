@@ -579,7 +579,13 @@
     return bridgeProbePromise;
   }
   function initScriptInjection(force = false) {
-    void beginInjection(force);
+    void beginInjection(force).then((ready) => {
+      if (!ready)
+        return;
+      void chrome.runtime.sendMessage({ type: "tracking_content_ready", url: window.location.href }).catch(() => {
+        console.warn(`${KABOOM_LOG_PREFIX} tracking readiness acknowledgement was not delivered`);
+      });
+    });
   }
 
   // extension/content/request-tracking.js
@@ -2454,6 +2460,7 @@
     sendTerminalWrite(text, true);
   }
   function sendTerminalWrite(text, allowRetry) {
+    const attemptGeneration = writeGeneration;
     let pending;
     try {
       pending = chrome.runtime.sendMessage({ type: "terminal_panel_write", text });
@@ -2467,12 +2474,18 @@
       if (resp && resp.received === true)
         return;
       if (allowRetry) {
+        if (attemptGeneration !== writeGeneration) {
+          return;
+        }
         scheduleWriteRetry(text);
         return;
       }
       reportTerminalWriteFailure(text, "no terminal panel received the message", true);
     }, (err) => {
       if (allowRetry) {
+        if (attemptGeneration !== writeGeneration) {
+          return;
+        }
         scheduleWriteRetry(text);
         return;
       }
