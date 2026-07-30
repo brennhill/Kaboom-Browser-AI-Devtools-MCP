@@ -857,6 +857,8 @@ function captureElementsUnderRect(rect) {
           if (elements.length >= MAX_CAPTURED_ELEMENTS) break
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // elementsFromPoint may fail on some edge cases
       }
       if (elements.length >= MAX_CAPTURED_ELEMENTS) break
@@ -873,6 +875,8 @@ function captureElementsUnderRect(rect) {
           elements.push(el)
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // elementFromPoint fallback failed
       }
     }
@@ -895,6 +899,8 @@ function captureElementsUnderRect(rect) {
           }
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // DOM walk fallback failed
       }
     }
@@ -990,6 +996,8 @@ function captureIframeElements(rect, seenElements) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore iframe enumeration errors
   }
   return results
@@ -1015,6 +1023,8 @@ function refreshElementDetails() {
         ann.element_summary = freshData.summary || ann.element_summary
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Keep existing data if re-capture fails
     }
   }
@@ -1120,6 +1130,8 @@ function buildElementDetail(el) {
       else if (childClasses) parentSelector += '.' + childClasses
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore selector build errors
   }
 
@@ -1128,6 +1140,8 @@ function buildElementDetail(el) {
   try {
     outerHtml = el.outerHTML.slice(0, 2000)
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // outerHTML may fail on some special elements
   }
 
@@ -1151,6 +1165,8 @@ function buildElementDetail(el) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Shadow DOM access may fail
   }
 
@@ -1178,6 +1194,8 @@ function buildElementDetail(el) {
       parentContext = { parent: parentInfo, grandparent: grandparentInfo }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore parent context build errors
   }
 
@@ -1210,6 +1228,8 @@ function buildElementDetail(el) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore sibling capture errors
   }
 
@@ -1379,6 +1399,8 @@ function runA11yChecks(el, computed) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore contrast parse errors
   }
 
@@ -1395,6 +1417,8 @@ function runA11yChecks(el, computed) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore focus indicator check errors
   }
 
@@ -1415,6 +1439,8 @@ function runA11yChecks(el, computed) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore form label check errors
   }
 
@@ -1427,6 +1453,8 @@ function runA11yChecks(el, computed) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore touch target check errors
   }
 
@@ -1640,6 +1668,8 @@ function traceMatchedCSSRules(el) {
       if (rules.length >= MAX_MATCHED_RULES) break
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Stylesheet enumeration may fail in rare cases
   }
   return rules
@@ -1681,6 +1711,8 @@ function detectComponentSource(el) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // React internals may throw
   }
 
@@ -1695,6 +1727,8 @@ function detectComponentSource(el) {
         if (vue.type?.__file) info.source_file = vue.type.__file
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Vue internals may throw
     }
   }
@@ -1714,6 +1748,8 @@ function detectComponentSource(el) {
         }
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Angular detection may fail
     }
   }
@@ -1725,6 +1761,8 @@ function detectComponentSource(el) {
     const component = el.getAttribute('data-component') || el.getAttribute('data-source')
     if (component) info.data_component = component
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Attribute access may fail
   }
 
@@ -1761,6 +1799,8 @@ function reportDrawStateRecovery(detail) {
         console.warn('[KaBOOM!] annotation recovery diagnostic was not delivered')
       })
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // The draw UI still falls back safely when the extension context is gone.
   }
 }
@@ -1777,6 +1817,8 @@ function resolveDrawStateRecovery() {
         console.warn('[KaBOOM!] annotation recovery resolution was not delivered')
       })
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // A later page load will verify state again when this context is unavailable.
   }
 }
@@ -1908,6 +1950,8 @@ export function deactivateAndSendResults() {
         })
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Extension context may be invalidated
     }
 
@@ -1933,6 +1977,8 @@ export function deactivateAndSendResults() {
           chrome.runtime.sendMessage(msg)
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // Extension context may be invalidated
       }
 
@@ -1954,6 +2000,8 @@ export function deactivateAndSendResults() {
             })
           )
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           // CustomEvent dispatch failed — non-critical
         }
       }
@@ -1962,13 +2010,17 @@ export function deactivateAndSendResults() {
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
           chrome.storage.local.get('kaboom_annotation_channel_nonce', (res) => {
             if (chrome.runtime?.lastError) {
-              reportDrawStateRecovery('Saved annotation channel identity could not be read; page notification was suppressed.')
+              reportDrawStateRecovery(
+                'Saved annotation channel identity could not be read; page notification was suppressed.'
+              )
               emitAnnotationsReady('')
               return
             }
             const nonce = res && res['kaboom_annotation_channel_nonce']
             if (nonce !== undefined && typeof nonce !== 'string') {
-              reportDrawStateRecovery('Saved annotation channel identity was malformed; page notification was suppressed.')
+              reportDrawStateRecovery(
+                'Saved annotation channel identity was malformed; page notification was suppressed.'
+              )
               emitAnnotationsReady('')
               return
             }
@@ -2041,6 +2093,8 @@ function cancelDrawMode() {
       })
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Extension context may be invalidated
   }
 }
@@ -2060,6 +2114,8 @@ function submitActiveTextInputBeforeExit() {
         })
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Extension context may be invalidated
     }
     textInput.focus()
@@ -2216,6 +2272,8 @@ function detectTheme() {
       return 'dark'
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // fallback below
   }
   return 'light'

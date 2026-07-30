@@ -154,6 +154,8 @@ export async function executeViaScriptingAPI(
             try {
               return serialize((obj as { toJSON: () => unknown }).toJSON(), depth + 1, seen)
             } catch {
+              // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+              // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
               // Fall through to Object.keys() enumeration
             }
           }
@@ -177,6 +179,8 @@ export async function executeViaScriptingAPI(
                       hostResult[key] = value
                     }
                   } catch {
+                    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+                    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
                     // Ignore getter access errors.
                   }
                   if (Object.keys(hostResult).length >= 50) break
@@ -184,6 +188,8 @@ export async function executeViaScriptingAPI(
                 if (Object.keys(hostResult).length > 0) return hostResult
               }
             } catch {
+              // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+              // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
               // Fall through to default object key enumeration.
             }
           }

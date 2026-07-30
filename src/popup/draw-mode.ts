@@ -56,7 +56,8 @@ export function setupDrawModeButton(): void {
       // keyboard/context-menu entry points already track; the popup did not (F7).
       const trackMsg: TrackUiFeatureMessage = { type: 'track_ui_feature', feature: 'annotations' }
       chrome.runtime.sendMessage(trackMsg).catch(() => {
-        // best-effort telemetry ping; the annotation flow does not depend on it
+        // EXPECTED_ABSENCE: it is normal for service-worker suspension to miss optional
+        // usage telemetry; logging it would misleadingly mark annotation startup failed.
       })
 
       label.textContent = 'Starting...'

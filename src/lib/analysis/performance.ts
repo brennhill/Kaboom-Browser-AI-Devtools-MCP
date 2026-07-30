@@ -219,6 +219,8 @@ export function installPerformanceCapture(): void {
         performanceObserver.observe({ entryTypes: ['mark', 'measure'] })
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // PerformanceObserver not supported, continue without it
     }
   }
@@ -307,6 +309,8 @@ export async function getPerformanceSnapshotForError(errorEntry: { ts?: string }
         }
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Navigation timing not available
     }
   }

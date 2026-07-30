@@ -408,6 +408,8 @@ async function exitTerminalSession() {
             });
         }
         catch {
+            // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+            // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
             // daemon unreachable or timeout — tear down locally
         }
     }

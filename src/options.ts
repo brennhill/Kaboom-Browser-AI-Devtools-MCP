@@ -78,8 +78,7 @@ async function readOptionsState(): Promise<StorageResult> {
       (candidate.theme === undefined || typeof candidate.theme === 'string') &&
       (candidate.kaboom_terminal_ai_command === undefined ||
         typeof candidate.kaboom_terminal_ai_command === 'string') &&
-      (candidate.kaboom_terminal_dev_root === undefined ||
-        typeof candidate.kaboom_terminal_dev_root === 'string') &&
+      (candidate.kaboom_terminal_dev_root === undefined || typeof candidate.kaboom_terminal_dev_root === 'string') &&
       (candidate.screenshotOnError === undefined || typeof candidate.screenshotOnError === 'boolean') &&
       (candidate.sourceMapEnabled === undefined || typeof candidate.sourceMapEnabled === 'boolean') &&
       (candidate.deferralEnabled === undefined || typeof candidate.deferralEnabled === 'boolean') &&
@@ -119,7 +118,8 @@ function syncDevRootToDaemon(serverUrl: string, devRoot: string): void {
     `${serverUrl}/config/active-codebase`,
     buildDaemonJSONRequestInit({ path: devRoot }, { method: 'PUT', signal: AbortSignal.timeout(3000) })
   ).catch(() => {
-    // Best-effort sync — daemon may be offline
+    // EXPECTED_ABSENCE: an offline daemon is normal while editing local options;
+    // logging it would misleadingly mark the locally saved preference failed.
   })
 }
 
@@ -145,7 +145,8 @@ function loadActiveCodebaseFromDaemon(serverUrl: string): void {
       }
     })
     .catch(() => {
-      // Daemon unreachable — ignore
+      // EXPECTED_ABSENCE: an offline daemon is normal before a tool starts it;
+      // logging it would misleadingly mark the usable local options page failed.
     })
 }
 

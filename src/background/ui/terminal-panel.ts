@@ -124,6 +124,8 @@ function requestPanelRestore(): void {
   try {
     port.postMessage({ type: 'restore_terminal_panel' })
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     // The document died between the presence check and the post; open() covers it.
   }
 }

@@ -16,6 +16,8 @@ function updateRecordingBadge() {
         chrome.action.setBadgeText({ text });
     }
     catch {
+        // EXPECTED_ABSENCE: capture APIs can normally disappear during cancellation
+        // or shutdown; logging it would misleadingly report expected cleanup as recording failure.
         // Badge updates are best-effort.
     }
 }
@@ -28,6 +30,8 @@ export function startRecordingBadgeTimer(startTime) {
         chrome.action.setBadgeBackgroundColor({ color: '#dc2626' });
     }
     catch {
+        // EXPECTED_ABSENCE: capture APIs can normally disappear during cancellation
+        // or shutdown; logging it would misleadingly report expected cleanup as recording failure.
         // Badge updates are best-effort.
     }
     updateRecordingBadge();
@@ -45,6 +49,8 @@ export function stopRecordingBadgeTimer() {
         chrome.action.setBadgeText({ text: '' });
     }
     catch {
+        // EXPECTED_ABSENCE: capture APIs can normally disappear during cancellation
+        // or shutdown; logging it would misleadingly report expected cleanup as recording failure.
         // Badge updates are best-effort.
     }
 }

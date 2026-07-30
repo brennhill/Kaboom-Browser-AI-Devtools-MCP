@@ -371,6 +371,8 @@ export async function tryCDPEscalation(tabId, action, params) {
                         });
                     }
                     catch {
+                        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                         /* reconciliation failed — value is still typed into the DOM */
                     }
                 }
@@ -389,6 +391,8 @@ export async function tryCDPEscalation(tabId, action, params) {
                 await chrome.debugger.detach({ tabId });
             }
             catch {
+                // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                 /* already detached */
             }
         }
@@ -451,6 +455,8 @@ export async function executeCDPAction(query, tabId, syncClient, sendAsyncResult
             await chrome.debugger.detach({ tabId });
         }
         catch {
+            // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+            // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
             // Already detached or tab closed — safe to ignore
         }
     }

@@ -234,6 +234,8 @@ async function dismissFileDialog(serverUrl: string): Promise<void> {
       return
     }
   } catch {
+    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
     // Best-effort cleanup — ignore errors
   }
 }
@@ -298,6 +300,8 @@ async function escalateToStage4Internal(
         const body = (await response.json()) as OSAutomationResponse
         errorMsg = body.error || errorMsg
       } catch {
+        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
         /* non-JSON body */
       }
       if (response.status === 403) {

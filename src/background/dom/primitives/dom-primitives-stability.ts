@@ -126,6 +126,8 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
           textSnapshots.set(el, (el.textContent || '').trim().slice(0, 200))
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         /* ignore invalid selectors */
       }
     }
@@ -148,6 +150,8 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
           beforeOverlays.add(matches[i]!)
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         /* ignore */
       }
     }
@@ -168,6 +172,8 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
         })
         perfObserver.observe({ entryTypes: ['resource'] })
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         /* PerformanceObserver not available */
       }
     }
@@ -225,6 +231,8 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
         try {
           if (typeof el.matches === 'function' && el.matches(sel)) return true
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           /* ignore */
         }
       }
@@ -263,6 +271,8 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
         try {
           perfObserver.disconnect()
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           /* ignore */
         }
       }
@@ -286,6 +296,8 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
             afterOverlays.add(matches[i]!)
           }
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           /* ignore */
         }
       }
@@ -299,6 +311,8 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
             }
           }
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           /* ignore */
         }
       }
@@ -358,6 +372,8 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
             }
           }
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           /* ignore */
         }
       }
@@ -388,6 +404,8 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
             }
           }
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           /* ignore */
         }
       }

@@ -110,6 +110,8 @@ export function screenshotRestoreContainers(): void {
       el.style.flex = s.f || ''
       el.style.contain = s.c || ''
     } catch {
+      // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+      // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
       /* ignore parse errors */
     }
     el.removeAttribute('data-kaboom-fpx')
@@ -493,6 +495,8 @@ async function captureFullPage(
             // Step 6: Clear device metrics override, even when capture fails.
             await chrome.debugger.sendCommand({ tabId: ctx.tabId }, 'Emulation.clearDeviceMetricsOverride', {})
           } catch {
+            // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+            // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
             /* best effort */
           }
           metricsOverrideSet = false
@@ -502,6 +506,8 @@ async function captureFullPage(
       try {
         await chrome.debugger.detach({ tabId: ctx.tabId })
       } catch {
+        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
         /* already detached */
       }
     }
@@ -520,7 +526,8 @@ async function captureFullPage(
         func: screenshotRestoreContainers
       })
       .catch(() => {
-        /* best effort */
+        // EXPECTED_ABSENCE: a detached screenshot target is normal after capture;
+        // logging restoration failure would misleadingly mark the completed capture failed.
       })
   }
 }

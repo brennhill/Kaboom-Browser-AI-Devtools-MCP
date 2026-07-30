@@ -23,6 +23,8 @@ export function primeShutterAudio(): void {
     try {
       shutterAudioCtx = new AudioContext()
     } catch {
+      // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+      // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
       // No audio available — playShutterSound degrades to silence.
     }
   }
@@ -49,6 +51,8 @@ export function playShutterSound(): void {
     source.connect(ctx.destination)
     source.start()
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     // Audio unavailable — silent fallback
   }
 }

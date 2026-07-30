@@ -17,10 +17,7 @@ export function resolveStateRecovery(name: string): void {
   sendTransition('recovered', { name, detail: '', fix: '' })
 }
 
-function sendTransition(
-  lifecycle: StateRecoveryLifecycle,
-  diagnostic: StateRecoveryDiagnostic
-): void {
+function sendTransition(lifecycle: StateRecoveryLifecycle, diagnostic: StateRecoveryDiagnostic): void {
   if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
   const message: ReportStateRecoveryMessage = {
     type: 'report_state_recovery',
@@ -37,6 +34,8 @@ function sendTransition(
       })
     }
   } catch {
+    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
     // Console warning remains available when the background worker is unavailable.
   }
 }

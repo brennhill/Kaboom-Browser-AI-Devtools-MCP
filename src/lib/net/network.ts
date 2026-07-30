@@ -296,6 +296,8 @@ export function shouldCaptureUrl(url: string): boolean {
       const hostPort = serverParsed.host // e.g., 'localhost:7890'
       if (url.includes(hostPort)) return false
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Fall through to hardcoded defaults
     }
   }
@@ -561,6 +563,8 @@ export function wrapXHRWithBodies(): void {
             )
           }
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           /* silent — body capture failure should not affect user code */
         }
       })
@@ -679,6 +683,8 @@ export function wrapFetchWithBodies(fetchFn: FetchLike): FetchLike {
             )
           }
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           /* Body capture failure should not affect user code */
         }
       })

@@ -39,7 +39,8 @@
                 opened = true
               }
             } catch {
-              // Fall through to target=_blank click fallback.
+              // EXPECTED_ABSENCE: blocked window.open is normal under page popup
+              // policy; logging it would misleadingly report the valid link-click fallback as failure.
             }
 
             if (!opened && linkNode instanceof Element) {

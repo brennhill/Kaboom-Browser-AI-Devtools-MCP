@@ -31,6 +31,8 @@ function serializeObject(obj: object, depth: number, seen: WeakSet<object>): unk
     try {
       return safeSerializeForExecute((obj as { toJSON: () => unknown }).toJSON(), depth + 1, seen)
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Fall through to Object.keys() enumeration
     }
   }
@@ -55,6 +57,8 @@ function serializeObject(obj: object, depth: number, seen: WeakSet<object>): unk
               hostResult[key] = hostValue
             }
           } catch {
+            // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+            // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
             // Ignore getter access errors and continue.
           }
           if (Object.keys(hostResult).length >= 50) break
@@ -62,6 +66,8 @@ function serializeObject(obj: object, depth: number, seen: WeakSet<object>): unk
         if (Object.keys(hostResult).length > 0) return hostResult
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Fall through to default enumeration.
     }
   }

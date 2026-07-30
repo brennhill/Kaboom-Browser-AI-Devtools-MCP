@@ -33,6 +33,8 @@ export async function getTrackedTabInfo() {
             trackedTabActive = !!tab.active;
         }
         catch {
+            // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+            // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
             // The tracked tab may have closed.
         }
     }
@@ -61,7 +63,8 @@ export async function captureVisibleTabSafe(tabId, windowId, options) {
         await setKaboomOverlayVisibility(tabId, true);
         if (!wasActive && activeTab?.id) {
             await chrome.tabs.update(activeTab.id, { active: true }).catch(() => {
-                // The original tab may have closed during capture.
+                // EXPECTED_ABSENCE: closure of the prior active tab is normal during
+                // capture; logging it would misleadingly mark the successful capture failed.
             });
         }
     }

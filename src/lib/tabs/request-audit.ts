@@ -20,6 +20,8 @@ export async function requestAudit(pageUrl?: string, tabId?: number): Promise<vo
   try {
     await chrome.runtime.sendMessage({ type: 'open_terminal_panel', tab_id: tabId })
   } catch {
+    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
     // Best effort: still request the audit workflow even if the side panel failed to open.
   }
 

@@ -225,6 +225,8 @@ function syncTrackButtonState(btn: HTMLButtonElement): void {
         try {
           hostname = currentUrl ? new URL(currentUrl).hostname : ''
         } catch {
+          // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+          // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
           /* malformed URL */
         }
         isDomainCloaked(hostname)

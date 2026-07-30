@@ -159,6 +159,8 @@ function pageSummaryFallbackScript(): Record<string, unknown> {
     try {
       href = new URL(href, window.location.href).href
     } catch {
+      // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+      // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
       /* keep as-is */
     }
     if (!href) continue
@@ -190,6 +192,8 @@ function pageSummaryFallbackScript(): Record<string, unknown> {
     try {
       action = new URL(action, window.location.href).href
     } catch {
+      // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+      // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
       /* keep as-is */
     }
     forms.push({ action, method: (form.getAttribute('method') || 'GET').toUpperCase(), fields })

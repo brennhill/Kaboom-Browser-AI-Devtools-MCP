@@ -48,6 +48,8 @@ async function discoverTerminalPort(baseUrl) {
         discoveredTerminalPort = { baseUrl, port: health.terminal_port, discoveredAt: Date.now() };
     }
     catch {
+        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
         // Discovery is optional; callers retain the daemon's derived default.
     }
 }

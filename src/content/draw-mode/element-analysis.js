@@ -46,6 +46,8 @@ function runA11yChecks(el, computed) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore contrast parse errors
   }
 
@@ -62,6 +64,8 @@ function runA11yChecks(el, computed) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore focus indicator check errors
   }
 
@@ -82,6 +86,8 @@ function runA11yChecks(el, computed) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore form label check errors
   }
 
@@ -94,6 +100,8 @@ function runA11yChecks(el, computed) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore touch target check errors
   }
 
@@ -307,6 +315,8 @@ function traceMatchedCSSRules(el) {
       if (rules.length >= MAX_MATCHED_RULES) break
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Stylesheet enumeration may fail in rare cases
   }
   return rules
@@ -348,6 +358,8 @@ function detectComponentSource(el) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // React internals may throw
   }
 
@@ -362,6 +374,8 @@ function detectComponentSource(el) {
         if (vue.type?.__file) info.source_file = vue.type.__file
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Vue internals may throw
     }
   }
@@ -381,6 +395,8 @@ function detectComponentSource(el) {
         }
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Angular detection may fail
     }
   }
@@ -392,6 +408,8 @@ function detectComponentSource(el) {
     const component = el.getAttribute('data-component') || el.getAttribute('data-source')
     if (component) info.data_component = component
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Attribute access may fail
   }
 

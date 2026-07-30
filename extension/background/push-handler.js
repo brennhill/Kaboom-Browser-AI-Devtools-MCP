@@ -70,6 +70,8 @@ export function installPushCommandListener(logFn) {
                 });
             }
             catch {
+                // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+                // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
                 // Tab unreachable for toast
             }
             const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId ?? chrome.windows.WINDOW_ID_CURRENT, {
@@ -97,6 +99,8 @@ export function installPushCommandListener(logFn) {
                 }
             }
             catch {
+                // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+                // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
                 // Tab unreachable for toast
             }
         }
@@ -197,6 +201,8 @@ async function showPushUnavailableToast(detail) {
         });
     }
     catch {
+        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
         // Tab unreachable
     }
 }

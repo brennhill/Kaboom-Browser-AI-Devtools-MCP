@@ -137,7 +137,8 @@ export function updateBadge(status) {
                 color: '#3fb950'
             })
         ]).catch(() => {
-            /* badge update failed — SW may be shutting down */
+            // EXPECTED_ABSENCE: badge APIs can disappear during normal service-worker
+            // shutdown; logging it would misleadingly report a connection failure.
         });
     }
     else {
@@ -147,7 +148,8 @@ export function updateBadge(status) {
                 color: '#f85149'
             })
         ]).catch(() => {
-            /* badge update failed — SW may be shutting down */
+            // EXPECTED_ABSENCE: badge APIs can disappear during normal service-worker
+            // shutdown; logging it would misleadingly report a connection failure.
         });
     }
 }

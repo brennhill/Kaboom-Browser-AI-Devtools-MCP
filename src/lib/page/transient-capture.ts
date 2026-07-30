@@ -95,6 +95,8 @@ export function classifyTransient(el: Element): TransientInfo | null {
         }
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // getComputedStyle can throw in detached elements
     }
   }

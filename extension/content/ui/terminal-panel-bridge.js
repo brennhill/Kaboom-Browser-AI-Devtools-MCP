@@ -122,6 +122,8 @@ function reportPanelOpenFailure(reason) {
         showActionToast('Terminal side panel did not open', stale ? hint : `${reason} ${hint}`, 'error', 8000);
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Toast is best-effort; the console error above is the durable signal.
     }
 }
@@ -167,6 +169,8 @@ function reportTerminalWriteFailure(text, reason, reconcile) {
         showActionToast('Terminal did not receive the message', 'Open the terminal panel and try again', 'warning', 5000);
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Toast is best-effort; the console warning above is the durable signal.
     }
 }

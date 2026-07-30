@@ -32,6 +32,8 @@
                 return true;
         }
         catch {
+            // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+            // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
             // Non-writable — try defineProperty below.
         }
         try {
@@ -171,15 +173,18 @@
                         });
                     })
                         .catch(() => {
-                        /* silent — early body capture must not affect page */
+                        // EXPECTED_ABSENCE: unreadable cloned bodies are normal page
+                        // behavior; logging them would misleadingly attribute page data limits to Kaboom.
                     });
                 }
                 catch {
-                    /* silent */
+                    // EXPECTED_ABSENCE: hostile response accessors are normal page
+                    // behavior; logging them would misleadingly blame Kaboom for page code.
                 }
             })
                 .catch(() => {
-                /* silent — fetch errors are the page's concern, not ours */
+                // EXPECTED_ABSENCE: rejected page fetches are normal application behavior;
+                // logging them would misleadingly duplicate the page's own network failure.
             });
             return responsePromise;
         };
@@ -238,6 +243,8 @@
                     });
                 }
                 catch {
+                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                     /* silent — early body capture must not affect page */
                 }
             });

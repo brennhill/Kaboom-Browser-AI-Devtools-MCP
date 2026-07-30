@@ -33,6 +33,8 @@ async function focusTab(tab) {
         await chrome.tabs.update(tab.id, { active: true });
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Best effort.
     }
     if (typeof tab.windowId !== 'number' || !chrome.windows?.update)
@@ -41,6 +43,8 @@ async function focusTab(tab) {
         await chrome.windows.update(tab.windowId, { focused: true });
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Best effort.
     }
 }

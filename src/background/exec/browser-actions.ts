@@ -356,6 +356,8 @@ export async function handleAsyncExecuteCommand(
     const p = typeof query.params === 'string' ? JSON.parse(query.params) : query.params
     reason = (p as { reason?: string })?.reason
   } catch {
+    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
     /* ignore parse errors */
   }
 
@@ -375,6 +377,8 @@ export async function handleAsyncExecuteCommand(
       const tab = await chrome.tabs.get(tabId)
       enrichedResult = { ...result, effective_tab_id: tabId, effective_url: tab.url, effective_title: tab.title }
     } catch {
+      // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+      // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
       /* tab may have closed */
     }
 

@@ -88,6 +88,8 @@ export async function handleTrackPageClick(
       await handleStopTracking(showIdleState)
       return
     } catch {
+      // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+      // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
       // A stale identity is replaced atomically below. setTrackedTab writes the
       // complete identity snapshot, so no intermediate untracked state leaks.
     }

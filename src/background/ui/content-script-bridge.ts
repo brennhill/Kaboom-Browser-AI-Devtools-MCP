@@ -59,6 +59,8 @@ export async function setKaboomOverlayVisibility(tabId: number, visible: boolean
       args: [visible]
     })
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     // The tab may not have a content script.
   }
 }
@@ -79,6 +81,7 @@ export function sendTabToast(
       duration_ms
     })
     .catch(() => {
-      // The tab may not have a content script.
+      // EXPECTED_ABSENCE: a missing content recipient is normal for restricted or
+      // navigating tabs; logging it would misleadingly mark an optional toast failed.
     })
 }

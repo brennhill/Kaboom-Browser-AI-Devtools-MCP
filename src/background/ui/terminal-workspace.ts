@@ -5,10 +5,7 @@
 
 import { StorageKey } from '../../lib/constants.js'
 import { getLocals, setLocals } from '../../lib/storage/local.js'
-import {
-  reportStateRecovery,
-  resolveStateRecovery
-} from '../runtime-state/state-recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js'
 
 export interface TerminalWorkspaceTarget {
   hostTabId: number
@@ -44,12 +41,16 @@ async function focusTab(tab: chrome.tabs.Tab): Promise<void> {
   try {
     await chrome.tabs.update(tab.id, { active: true })
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     // Best effort.
   }
   if (typeof tab.windowId !== 'number' || !chrome.windows?.update) return
   try {
     await chrome.windows.update(tab.windowId, { focused: true })
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     // Best effort.
   }
 }

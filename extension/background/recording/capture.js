@@ -24,6 +24,8 @@ function applyAwaitingApprovalBadge() {
         chrome.action.setBadgeBackgroundColor({ color: AWAITING_APPROVAL_BADGE_COLOR });
     }
     catch {
+        // EXPECTED_ABSENCE: capture APIs can normally disappear during cancellation
+        // or shutdown; logging it would misleadingly report expected cleanup as recording failure.
         // Badge updates are best-effort.
     }
 }
@@ -44,6 +46,8 @@ function stopAwaitingApprovalBadge() {
         chrome.action.setBadgeText({ text: '' });
     }
     catch {
+        // EXPECTED_ABSENCE: capture APIs can normally disappear during cancellation
+        // or shutdown; logging it would misleadingly report expected cleanup as recording failure.
         // Badge updates are best-effort.
     }
 }
@@ -76,6 +80,8 @@ export async function getStreamIdWithRecovery(tabId) {
                 await chrome.offscreen.closeDocument();
             }
             catch {
+                // EXPECTED_ABSENCE: capture APIs can normally disappear during cancellation
+                // or shutdown; logging it would misleadingly report expected cleanup as recording failure.
                 /* might not exist */
             }
             // Brief pause to let Chrome release the capture

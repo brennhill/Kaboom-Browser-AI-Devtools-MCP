@@ -37,6 +37,8 @@ export function cspSafeExecutor(command) {
                     return serialize(value.toJSON(), depth + 1, seen);
                 }
                 catch {
+                    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+                    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
                     // Fall through to Object.keys() enumeration
                 }
             }
@@ -62,6 +64,8 @@ export function cspSafeExecutor(command) {
                                 }
                             }
                             catch {
+                                // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+                                // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
                                 // Ignore getter access errors.
                             }
                             if (Object.keys(hostResult).length >= 50)
@@ -72,6 +76,8 @@ export function cspSafeExecutor(command) {
                     }
                 }
                 catch {
+                    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+                    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
                     // Fall through to default object key enumeration.
                 }
             }

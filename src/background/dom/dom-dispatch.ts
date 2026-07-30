@@ -409,6 +409,8 @@ export async function executeDOMAction(
           return
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // CDP failed — fall through to DOM primitives
       }
     }

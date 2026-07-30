@@ -140,7 +140,8 @@ export function createRootFolderBar(options) {
             }
         })
             .catch(() => {
-            /* leave the placeholder; typing and browsing still work */
+            // EXPECTED_ABSENCE: daemon unavailability is normal before terminal startup;
+            // logging it would misleadingly mark the usable manual root input failed.
         });
     }
     return {

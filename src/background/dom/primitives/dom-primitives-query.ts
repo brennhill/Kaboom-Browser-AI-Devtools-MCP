@@ -95,6 +95,8 @@ export function domPrimitiveQuery(
       const scopeEl = document.querySelector(options.scope_selector)
       if (scopeEl) scopeRoot = scopeEl
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       /* use document */
     }
   }

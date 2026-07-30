@@ -40,6 +40,8 @@ async function requestAudit(pageUrl, serverUrl, respond) {
             }
         }
         catch {
+            // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+            // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
             /* try the next local endpoint */
         }
     }

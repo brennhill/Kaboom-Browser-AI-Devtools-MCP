@@ -26,6 +26,8 @@ export function safeAssignGlobal(target, key, value) {
             return true;
     }
     catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // Non-writable — try defineProperty below.
     }
     try {

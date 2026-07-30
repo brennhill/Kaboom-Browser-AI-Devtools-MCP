@@ -51,6 +51,8 @@ export async function setKaboomOverlayVisibility(tabId, visible) {
         });
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // The tab may not have a content script.
     }
 }
@@ -64,7 +66,8 @@ export function sendTabToast(tabId, text, detail = '', state = 'success', durati
         duration_ms
     })
         .catch(() => {
-        // The tab may not have a content script.
+        // EXPECTED_ABSENCE: a missing content recipient is normal for restricted or
+        // navigating tabs; logging it would misleadingly mark an optional toast failed.
     });
 }
 //# sourceMappingURL=content-script-bridge.js.map

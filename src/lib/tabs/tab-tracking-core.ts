@@ -31,7 +31,8 @@ function notifyTrackingState(tabId: number, isTracked: boolean): void {
   chrome.tabs
     .sendMessage(tabId, { type: 'tracking_state_changed', state: { isTracked, aiPilotEnabled: false } })
     .catch(() => {
-      // tab closed or content script absent; storage remains the source of truth
+      // EXPECTED_ABSENCE: it is normal for a closed or reinjecting tracked tab to lack a
+      // recipient; logging it would misleadingly contradict authoritative storage.
     })
 }
 

@@ -35,6 +35,8 @@ function captureElementsUnderRect(rect) {
           if (elements.length >= MAX_CAPTURED_ELEMENTS) break
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // elementsFromPoint may fail on some edge cases
       }
       if (elements.length >= MAX_CAPTURED_ELEMENTS) break
@@ -51,6 +53,8 @@ function captureElementsUnderRect(rect) {
           elements.push(el)
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // elementFromPoint fallback failed
       }
     }
@@ -73,6 +77,8 @@ function captureElementsUnderRect(rect) {
           }
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // DOM walk fallback failed
       }
     }
@@ -168,6 +174,8 @@ function captureIframeElements(rect, seenElements) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore iframe enumeration errors
   }
   return results
@@ -193,6 +201,8 @@ function refreshElementDetails() {
         ann.element_summary = freshData.summary || ann.element_summary
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Keep existing data if re-capture fails
     }
   }
@@ -298,6 +308,8 @@ function buildElementDetail(el) {
       else if (childClasses) parentSelector += '.' + childClasses
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore selector build errors
   }
 
@@ -306,6 +318,8 @@ function buildElementDetail(el) {
   try {
     outerHtml = el.outerHTML.slice(0, 2000)
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // outerHTML may fail on some special elements
   }
 
@@ -329,6 +343,8 @@ function buildElementDetail(el) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Shadow DOM access may fail
   }
 
@@ -356,6 +372,8 @@ function buildElementDetail(el) {
       parentContext = { parent: parentInfo, grandparent: grandparentInfo }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore parent context build errors
   }
 
@@ -388,6 +406,8 @@ function buildElementDetail(el) {
       }
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Ignore sibling capture errors
   }
 

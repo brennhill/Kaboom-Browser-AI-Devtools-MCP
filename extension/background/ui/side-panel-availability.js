@@ -35,6 +35,8 @@ export async function syncTerminalPanelAvailability(trackedTabId) {
         await chrome.sidePanel.setOptions({ enabled: false });
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Older Chrome without a global default — the per-tab enable below still applies.
     }
     if (typeof trackedTabId !== 'number')
@@ -43,6 +45,8 @@ export async function syncTerminalPanelAvailability(trackedTabId) {
         await chrome.sidePanel.setOptions({ tabId: trackedTabId, path: SIDE_PANEL_PATH, enabled: true });
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // The tab may have closed between read and write.
     }
 }

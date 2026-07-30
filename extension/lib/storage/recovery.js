@@ -23,6 +23,8 @@ function sendTransition(lifecycle, diagnostic) {
         }
     }
     catch {
+        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
         // Console warning remains available when the background worker is unavailable.
     }
 }

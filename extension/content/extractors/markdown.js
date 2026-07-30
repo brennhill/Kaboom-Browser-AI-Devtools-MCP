@@ -96,6 +96,8 @@ function nodeToMarkdown(node, depth, budget) {
                     href = new URL(href, window.location.href).href;
                 }
                 catch {
+                    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+                    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
                     /* keep original */
                 }
                 return '[' + children.trim() + '](' + href + ')';
@@ -110,6 +112,8 @@ function nodeToMarkdown(node, depth, budget) {
                     src = new URL(src, window.location.href).href;
                 }
                 catch {
+                    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+                    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
                     /* keep original */
                 }
                 return '![' + alt + '](' + src + ')';

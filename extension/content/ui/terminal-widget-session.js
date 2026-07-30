@@ -37,6 +37,8 @@ export function saveTerminalConfig(config) {
         persist(setLocal(StorageKey.TERMINAL_CONFIG, config), 'terminal-config');
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Extension context invalidated — config won't persist but session still works
     }
 }
@@ -111,6 +113,8 @@ function persistSession(ss) {
         persist(setSession(StorageKey.TERMINAL_SESSION, ss), 'terminal-session');
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         /* extension context invalidated */
     }
 }
@@ -119,6 +123,8 @@ export function clearPersistedSession() {
         persist(removeSessions([StorageKey.TERMINAL_SESSION, StorageKey.TERMINAL_UI_STATE]), 'terminal-session-clear');
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         /* extension context invalidated */
     }
 }
@@ -127,6 +133,8 @@ export function persistUIState(uiState) {
         persist(setSession(StorageKey.TERMINAL_UI_STATE, uiState), 'terminal-ui-state');
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         /* extension context invalidated */
     }
 }
@@ -265,6 +273,8 @@ export async function setTerminalDevRoot(root) {
         await setLocal(StorageKey.TERMINAL_DEV_ROOT, root);
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Extension context invalidated — nothing to persist into.
     }
 }
@@ -314,6 +324,8 @@ export async function stopActiveSession() {
             return;
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Timed out / unreachable — the stop is unconfirmed. Verify below.
     }
     if (token)

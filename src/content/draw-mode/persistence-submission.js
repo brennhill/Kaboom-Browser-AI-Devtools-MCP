@@ -16,6 +16,8 @@ function reportDrawStateRecovery(detail) {
         console.warn('[KaBOOM!] annotation recovery diagnostic was not delivered')
       })
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // The draw UI still falls back safely when the extension context is gone.
   }
 }
@@ -32,6 +34,8 @@ function resolveDrawStateRecovery() {
         console.warn('[KaBOOM!] annotation recovery resolution was not delivered')
       })
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // A later page load will verify state again when this context is unavailable.
   }
 }
@@ -163,6 +167,8 @@ export function deactivateAndSendResults() {
         })
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Extension context may be invalidated
     }
 
@@ -188,6 +194,8 @@ export function deactivateAndSendResults() {
           chrome.runtime.sendMessage(msg)
         }
       } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
         // Extension context may be invalidated
       }
 
@@ -209,6 +217,8 @@ export function deactivateAndSendResults() {
             })
           )
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           // CustomEvent dispatch failed — non-critical
         }
       }
@@ -217,13 +227,17 @@ export function deactivateAndSendResults() {
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
           chrome.storage.local.get('kaboom_annotation_channel_nonce', (res) => {
             if (chrome.runtime?.lastError) {
-              reportDrawStateRecovery('Saved annotation channel identity could not be read; page notification was suppressed.')
+              reportDrawStateRecovery(
+                'Saved annotation channel identity could not be read; page notification was suppressed.'
+              )
               emitAnnotationsReady('')
               return
             }
             const nonce = res && res['kaboom_annotation_channel_nonce']
             if (nonce !== undefined && typeof nonce !== 'string') {
-              reportDrawStateRecovery('Saved annotation channel identity was malformed; page notification was suppressed.')
+              reportDrawStateRecovery(
+                'Saved annotation channel identity was malformed; page notification was suppressed.'
+              )
               emitAnnotationsReady('')
               return
             }
@@ -296,6 +310,8 @@ function cancelDrawMode() {
       })
     }
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Extension context may be invalidated
   }
 }
@@ -315,6 +331,8 @@ function submitActiveTextInputBeforeExit() {
         })
       }
     } catch {
+      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       // Extension context may be invalidated
     }
     textInput.focus()

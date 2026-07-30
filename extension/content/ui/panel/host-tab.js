@@ -74,6 +74,8 @@ export async function closeBrowserSidePanel() {
                 return;
             }
             catch {
+                // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+                // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
                 // Fall through to window.close().
             }
         }
@@ -82,6 +84,8 @@ export async function closeBrowserSidePanel() {
         window.close();
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Nothing else to try; the panel stays open but remains usable.
     }
 }

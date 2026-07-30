@@ -115,8 +115,10 @@ last_verified_date: 2026-03-28
   warning state only after the owning loader verifies fresh valid state.
 - Async failures are never discarded with empty promise catches. Unexpected
   failures leave redacted evidence; intentionally unlogged absence/cancellation
-  carries an explicit `EXPECTED_ABSENCE:` rationale explaining why a log would
-  be misleading.
+  carries an adjacent `EXPECTED_ABSENCE:` rationale explaining both why the
+  condition is normal and why logging would be misleading. Architecture tests
+  enforce the same contract for comment-only promise catches and empty
+  synchronous catches.
 
 ## Specs
 

@@ -88,6 +88,8 @@ export function domPrimitiveActionDiff(options) {
                 }
             }
             catch {
+                // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                 /* ignore invalid selectors */
             }
         }
@@ -110,6 +112,8 @@ export function domPrimitiveActionDiff(options) {
                 }
             }
             catch {
+                // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                 /* ignore */
             }
         }
@@ -129,6 +133,8 @@ export function domPrimitiveActionDiff(options) {
                 perfObserver.observe({ entryTypes: ['resource'] });
             }
             catch {
+                // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                 /* PerformanceObserver not available */
             }
         }
@@ -190,6 +196,8 @@ export function domPrimitiveActionDiff(options) {
                         return true;
                 }
                 catch {
+                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                     /* ignore */
                 }
             }
@@ -234,6 +242,8 @@ export function domPrimitiveActionDiff(options) {
                     perfObserver.disconnect();
                 }
                 catch {
+                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                     /* ignore */
                 }
             }
@@ -250,6 +260,8 @@ export function domPrimitiveActionDiff(options) {
                     }
                 }
                 catch {
+                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                     /* ignore */
                 }
             }
@@ -265,6 +277,8 @@ export function domPrimitiveActionDiff(options) {
                     }
                 }
                 catch {
+                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                     /* ignore */
                 }
             }
@@ -318,6 +332,8 @@ export function domPrimitiveActionDiff(options) {
                     }
                 }
                 catch {
+                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                     /* ignore */
                 }
             }
@@ -350,6 +366,8 @@ export function domPrimitiveActionDiff(options) {
                     }
                 }
                 catch {
+                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                     /* ignore */
                 }
             }

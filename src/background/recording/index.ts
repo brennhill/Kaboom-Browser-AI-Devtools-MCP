@@ -319,7 +319,8 @@ async function startOffscreenRecording(
         url: tab.url ?? ''
       })
       .catch(() => {
-        /* offscreen replies via a separate broadcast; ignore port-closed rejections */
+        // EXPECTED_ABSENCE: a closed request port is normal because offscreen
+        // replies use a separate broadcast; logging it would misleadingly report failure.
       })
   })
 }
@@ -529,7 +530,8 @@ export async function stopRecording(truncated: boolean = false): Promise<{
           type: 'offscreen_stop_recording'
         })
         .catch(() => {
-          /* offscreen replies via a separate broadcast; ignore port-closed rejections */
+          // EXPECTED_ABSENCE: a closed request port is normal because offscreen
+          // replies use a separate broadcast; logging it would misleadingly report failure.
         })
     })
 

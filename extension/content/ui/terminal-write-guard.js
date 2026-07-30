@@ -27,6 +27,8 @@ export function notifyIframe(command, data = {}) {
         origin = getTerminalServerUrl(state.serverUrl);
     }
     catch {
+        // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+        // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
         // Unparseable server URL — fall back to wildcard so the write still lands.
     }
     state.iframeEl.contentWindow.postMessage({ target: 'kaboom-terminal', command, ...data }, origin);

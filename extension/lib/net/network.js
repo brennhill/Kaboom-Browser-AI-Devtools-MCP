@@ -180,6 +180,8 @@ export function shouldCaptureUrl(url) {
                 return false;
         }
         catch {
+            // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+            // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
             // Fall through to hardcoded defaults
         }
     }
@@ -405,6 +407,8 @@ export function wrapXHRWithBodies() {
                     }
                 }
                 catch {
+                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                     /* silent — body capture failure should not affect user code */
                 }
             });
@@ -503,6 +507,8 @@ export function wrapFetchWithBodies(fetchFn) {
                 }
             }
             catch {
+                // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                 /* Body capture failure should not affect user code */
             }
         })

@@ -128,6 +128,10 @@ Use this as a hard checklist during design, coding, and review.
 - An intentionally unlogged expected absence or cancellation must include an
   adjacent `EXPECTED_ABSENCE:` comment explaining both why the condition is
   normal and why emitting a log would be misleading.
+- This applies equally to promise rejection handlers and synchronous
+  `try/catch` fallbacks. Comment-only promise catches and empty synchronous
+  catches are rejected by the architecture suite unless they carry that
+  explicit two-part rationale.
 - Do not include raw errors when they may contain user state. Prefer stable
   operation names, error categories, correlation IDs, and redacted remediation.
 

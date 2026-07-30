@@ -59,6 +59,8 @@ function cdpResolveAndPrepare(selectorStr, actionType, scopeSelectorStr, element
                         el = root.querySelector(selectorStr);
                     }
                     catch {
+                        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                         /* invalid selector */
                     }
             }
@@ -68,6 +70,8 @@ function cdpResolveAndPrepare(selectorStr, actionType, scopeSelectorStr, element
                 el = root.querySelector(selectorStr);
             }
             catch {
+                // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
                 /* invalid selector */
             }
         }

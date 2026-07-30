@@ -320,6 +320,8 @@ export function createConnectionTracker(id: string, url: string): ConnectionTrac
             }
           }
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           // Not JSON, no schema
         }
       }
@@ -337,6 +339,8 @@ export function createConnectionTracker(id: string, url: string): ConnectionTrac
             }
           }
         } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
           // Not JSON
         }
       }

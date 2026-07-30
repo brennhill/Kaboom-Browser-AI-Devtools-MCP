@@ -89,6 +89,8 @@ export function installPushCommandListener(logFn?: (message: string) => void): v
           duration_ms: 3000
         })
       } catch {
+        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
         // Tab unreachable for toast
       }
 
@@ -117,6 +119,8 @@ export function installPushCommandListener(logFn?: (message: string) => void): v
           })
         }
       } catch {
+        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
         // Tab unreachable for toast
       }
     } catch (err) {
@@ -230,6 +234,8 @@ async function showPushUnavailableToast(detail: string): Promise<void> {
       duration_ms: 3000
     })
   } catch {
+    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
     // Tab unreachable
   }
 }

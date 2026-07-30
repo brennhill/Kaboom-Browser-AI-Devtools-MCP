@@ -76,7 +76,8 @@ export function startSyncClient(deps) {
                     status: { ...deps.getConnectionStatus(), aiControlled: deps.getAiControlled() }
                 })
                     .catch(() => {
-                    /* popup may not be open */
+                    // EXPECTED_ABSENCE: no popup recipient is normal while the popup is
+                    // closed; logging it would misleadingly report a sync failure.
                 });
             }
         },
@@ -90,7 +91,8 @@ export function startSyncClient(deps) {
                     status: { ...deps.getConnectionStatus(), aiControlled: deps.getAiControlled() }
                 })
                     .catch(() => {
-                    /* popup may not be open */
+                    // EXPECTED_ABSENCE: no popup recipient is normal while the popup is
+                    // closed; logging it would misleadingly report a sync failure.
                 });
             }
         },
@@ -112,7 +114,8 @@ export function startSyncClient(deps) {
                     serverVersion
                 })
                     .catch(() => {
-                    /* popup may not be open */
+                    // EXPECTED_ABSENCE: no popup recipient is normal while the popup is
+                    // closed; logging it would misleadingly report a version-check failure.
                 });
             }
         },

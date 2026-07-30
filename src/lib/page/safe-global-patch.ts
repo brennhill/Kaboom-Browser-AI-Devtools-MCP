@@ -25,6 +25,8 @@ export function safeAssignGlobal<T extends object, K extends keyof T>(target: T,
     // eslint-disable-next-line security/detect-object-injection -- same key, read back to confirm the write landed
     if (target[key] === value) return true
   } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Non-writable — try defineProperty below.
   }
   try {

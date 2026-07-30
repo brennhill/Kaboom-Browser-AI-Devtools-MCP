@@ -94,6 +94,8 @@ function stopRecordingAction(): void {
       }
     )
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     // Extension context invalidated
   }
 }
@@ -175,6 +177,8 @@ function persistHiddenState(hidden: boolean): void {
     }
     persist(removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN), 'launcher-hidden-clear')
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     // Extension context invalidated — hidden state won't persist but functionality is unaffected
   }
 }
@@ -300,7 +304,8 @@ async function startDrawMode(): Promise<void> {
     // so report in or the usage counter undercounts annotations (F7).
     const trackMsg: TrackUiFeatureMessage = { type: 'track_ui_feature', feature: 'annotations' }
     chrome.runtime.sendMessage(trackMsg).catch(() => {
-      // best-effort telemetry ping; the annotation flow does not depend on it
+      // EXPECTED_ABSENCE: it is normal for service-worker suspension to miss optional
+      // usage telemetry; logging it would misleadingly mark annotation startup failed.
     })
     const drawModeModule = await import(/* webpackIgnore: true */ chrome.runtime.getURL('content/draw-mode.js'))
     if (typeof drawModeModule.activateDrawMode === 'function') {
@@ -762,6 +767,8 @@ export async function setTrackedHoverLauncherEnabled(enabled: boolean): Promise<
   try {
     await initTerminalPanelBridge()
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     /* keep last-known terminal visibility */
   }
   installTerminalVisibilitySync()
@@ -777,11 +784,15 @@ export async function setTrackedHoverLauncherEnabled(enabled: boolean): Promise<
       await uninstallAnnotationListener()
     }
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     /* nonce publish failed; annotation auto-paste degrades, launcher still shows */
   }
   try {
     await syncHiddenStateFromStorage()
   } catch {
+    // EXPECTED_ABSENCE: UI recipients can normally disappear during navigation
+    // or teardown; logging it would misleadingly report a normal lifecycle race as failure.
     /* proceed with the default hidden state */
   }
   applyVisibilityFromState()
