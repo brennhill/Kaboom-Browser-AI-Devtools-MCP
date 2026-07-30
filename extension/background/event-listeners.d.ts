@@ -40,7 +40,11 @@ export declare function installTabRemovedListener(onTabRemoved: (tabId: number) 
 /**
  * Install tab updated listener to track URL changes
  */
-export declare function installTabUpdatedListener(onTabUpdated: (tabId: number, newUrl: string) => void): void;
+export interface TrackedTabUpdate {
+    readonly status?: string;
+    readonly url?: string;
+}
+export declare function installTabUpdatedListener(onTabUpdated: (tabId: number, update: TrackedTabUpdate) => void): void;
 /**
  * Handle tracked tab URL change
  * Updates the stored URL and title when the tracked tab navigates

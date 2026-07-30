@@ -5,10 +5,14 @@ import assert from 'node:assert'
 let storageState = {}
 let storageChangeListener = null
 let trackedTabExists = true
+let continuityState = { phase: 'confirmed', is_tracked: true, tab_id: 7 }
 
 const mockChrome = {
   runtime: {
-    sendMessage: mock.fn(() => Promise.resolve()),
+    sendMessage: mock.fn((message) =>
+      Promise.resolve(message?.type === 'get_tracking_state'
+        ? { state: { continuity: continuityState } }
+        : undefined)),
     onMessage: { addListener: mock.fn() }
   },
   storage: {
@@ -93,6 +97,7 @@ describe('popup tab tracking sync', () => {
     storageState = {}
     storageChangeListener = null
     trackedTabExists = true
+    continuityState = { phase: 'confirmed', is_tracked: true, tab_id: 7 }
     globalThis.document = createMockDocument()
   })
 
@@ -163,5 +168,26 @@ describe('popup tab tracking sync', () => {
 
     assert.strictEqual(document.getElementById('tracking-bar-title').textContent, 'Active Tab')
     assert.strictEqual(document.getElementById('tracking-bar-url').textContent, 'https://active/7')
+  })
+
+  test('shows continuity progress instead of transient no-tracking state', async () => {
+    storageState = {
+      trackedTabId: 7,
+      trackedTabUrl: 'https://next.example/',
+      trackedTabTitle: 'Active Tab'
+    }
+    continuityState = {
+      tab_id: 7,
+      phase: 'extension_reconnecting',
+      is_tracked: true,
+      provisional_url: 'https://next.example/'
+    }
+
+    const { initTrackPageButton } = await import('../../../extension/popup/tabs/tab-tracking.js')
+    initTrackPageButton()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.match(document.getElementById('tracking-bar-title').textContent, /Reconnecting/)
+    assert.strictEqual(document.getElementById('no-tracking-warning').style.display, 'none')
   })
 })

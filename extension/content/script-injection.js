@@ -2,6 +2,7 @@
  * Purpose: Injects inject.bundled.js into the page MAIN world and syncs stored settings to the inject context.
  * Docs: docs/features/feature/csp-safe-execution/index.md
  */
+import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { SettingName } from '../lib/constants.js';
 import { getLocals } from '../lib/storage/local.js';
 import { reportStateRecovery, resolveStateRecovery } from '../lib/storage/recovery.js';
@@ -244,6 +245,14 @@ export async function ensureInjectBridgeReady(timeoutMs = 350) {
  * Initialize script injection (call when DOM is ready)
  */
 export function initScriptInjection(force = false) {
-    void beginInjection(force);
+    void beginInjection(force).then((ready) => {
+        if (!ready)
+            return;
+        void chrome.runtime
+            .sendMessage({ type: 'tracking_content_ready', url: window.location.href })
+            .catch(() => {
+            console.warn(`${KABOOM_LOG_PREFIX} tracking readiness acknowledgement was not delivered`);
+        });
+    });
 }
 //# sourceMappingURL=script-injection.js.map

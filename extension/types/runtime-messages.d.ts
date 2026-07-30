@@ -12,6 +12,8 @@ import type { WirePerformanceSnapshot as PerformanceSnapshot } from './wire/wire
 import type { LogLevelFilter } from './capture/telemetry.js';
 import type { ConnectionStatus } from './runtime/state.js';
 import type { BrowserStateSnapshot, StateAction } from './runtime/state.js';
+import type { GetTrackingStateMessage, TrackingContentReadyMessage, TrackingContinuityChangedMessage } from './runtime/tracking.js';
+export type { GetTrackingStateResponse, TrackingContentReadyMessage, TrackingContinuityChangedMessage, TrackingContinuityPhase, TrackingContinuitySnapshot } from './runtime/tracking.js';
 import type { RuntimeMessageName } from '../lib/constants.js';
 /**
  * Message to get current tab ID
@@ -116,12 +118,6 @@ export interface GetAiWebPilotEnabledResponse {
     readonly enabled: boolean;
 }
 /**
- * Get tracking state message (for favicon replacer)
- */
-interface GetTrackingStateMessage {
-    readonly type: 'get_tracking_state';
-}
-/**
  * Get diagnostic state message
  */
 export interface GetDiagnosticStateMessage {
@@ -194,7 +190,7 @@ export interface VersionMismatchMessage {
 /**
  * Union of all background-bound messages
  */
-export type BackgroundMessage = GetTabIdMessage | WsEventMessage | EnhancedActionMessage | NetworkBodyMessage | PerformanceSnapshotMessage | LogMessage | GetStatusMessage | ClearLogsMessage | ReportStateRecoveryMessage | SetLogLevelMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | GetAiWebPilotEnabledMessage | GetTrackingStateMessage | GetDiagnosticStateMessage | CaptureScreenshotMessage | TrackUiFeatureMessage | GetDebugLogMessage | ClearDebugLogMessage | SetServerUrlMessage | DrawModeCaptureScreenshotMessage | DrawModeCompletedMessage | PushChatMessage | ScreenRecordingStartMessage | ScreenRecordingStopMessage | RecordingGestureGrantedMessage | RecordingGestureDeniedMessage | OpenPopupForRecordingMessage | OpenTerminalPanelMessage | CloseTerminalPanelMessage | QaScanRequestedMessage;
+export type BackgroundMessage = GetTabIdMessage | WsEventMessage | EnhancedActionMessage | NetworkBodyMessage | PerformanceSnapshotMessage | LogMessage | GetStatusMessage | ClearLogsMessage | ReportStateRecoveryMessage | SetLogLevelMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | GetAiWebPilotEnabledMessage | GetTrackingStateMessage | TrackingContentReadyMessage | TrackingContinuityChangedMessage | GetDiagnosticStateMessage | CaptureScreenshotMessage | TrackUiFeatureMessage | GetDebugLogMessage | ClearDebugLogMessage | SetServerUrlMessage | DrawModeCaptureScreenshotMessage | DrawModeCompletedMessage | PushChatMessage | ScreenRecordingStartMessage | ScreenRecordingStopMessage | RecordingGestureGrantedMessage | RecordingGestureDeniedMessage | OpenPopupForRecordingMessage | OpenTerminalPanelMessage | CloseTerminalPanelMessage | QaScanRequestedMessage;
 /**
  * Draw mode: content script requests screenshot capture
  */
@@ -586,5 +582,4 @@ export interface ExecuteJsResult {
     readonly message?: string;
     readonly stack?: string;
 }
-export {};
 //# sourceMappingURL=runtime-messages.d.ts.map

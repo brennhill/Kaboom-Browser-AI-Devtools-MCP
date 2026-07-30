@@ -53,12 +53,28 @@ export function createPilotMessageHandler(deps) {
                         sendResponse({
                             state: {
                                 isTracked: sender.tab?.id !== undefined && sender.tab.id === tracked.id,
-                                aiPilotEnabled: deps.isEnabled()
+                                aiPilotEnabled: deps.isEnabled(),
+                                continuity: deps.getTrackingContinuity()
                             }
                         });
                     })
-                        .catch(() => sendResponse({ state: { isTracked: false, aiPilotEnabled: false } }));
+                        .catch(() => {
+                        console.warn(`${KABOOM_LOG_PREFIX} tracking state lookup failed after validated fallback`);
+                        sendResponse({
+                            state: {
+                                isTracked: false,
+                                aiPilotEnabled: false,
+                                continuity: deps.getTrackingContinuity()
+                            }
+                        });
+                    });
                     return true;
+                case 'tracking_content_ready':
+                    if (sender.tab?.id !== undefined) {
+                        deps.confirmTracking(sender.tab.id, message.url);
+                    }
+                    sendResponse({ success: true });
+                    return false;
                 case 'get_diagnostic_state':
                     readPilotPreference().then((storage) => {
                         sendResponse({ cache: deps.isEnabled(), storage, timestamp: new Date().toISOString() });

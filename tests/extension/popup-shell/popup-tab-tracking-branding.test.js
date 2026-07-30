@@ -29,6 +29,12 @@ describe('popup tab-tracking branding', () => {
     mock.reset()
     globalThis.document = createMockDocument()
     globalThis.chrome = {
+      runtime: {
+        sendMessage: mock.fn(() => Promise.resolve({
+          state: { continuity: { phase: 'idle', is_tracked: false } }
+        })),
+        onMessage: { addListener: mock.fn() }
+      },
       storage: {
         local: {
           get: mock.fn((keys, callback) => {

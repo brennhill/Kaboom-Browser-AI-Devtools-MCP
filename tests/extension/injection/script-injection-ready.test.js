@@ -104,7 +104,8 @@ function installDomMocks() {
 
 globalThis.chrome = {
   runtime: {
-    getURL: (path) => `chrome-extension://gasoline/${path}`
+    getURL: (path) => `chrome-extension://gasoline/${path}`,
+    sendMessage: () => Promise.resolve()
   },
   storage: {
     local: {

@@ -6,11 +6,14 @@ import { StorageKey } from '../../lib/constants.js'
 import { readLocalState } from '../../lib/storage/validated.js'
 import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
 import { reportStateRecovery } from '../runtime-state/state-recovery.js'
+import type { TrackingContinuitySnapshot } from '../../types/runtime/tracking.js'
 import type { MessageHandlerOwner } from './types.js'
 
 export interface PilotHandlerDependencies {
   isEnabled: () => boolean
   setEnabled: (enabled: boolean, callback?: () => void) => void
+  getTrackingContinuity: () => TrackingContinuitySnapshot
+  confirmTracking: (tabId: number, url?: string) => void
 }
 
 export async function broadcastTrackingState(untrackedTabId?: number | null): Promise<void> {
@@ -60,12 +63,28 @@ export function createPilotMessageHandler(deps: PilotHandlerDependencies): Messa
               sendResponse({
                 state: {
                   isTracked: sender.tab?.id !== undefined && sender.tab.id === tracked.id,
-                  aiPilotEnabled: deps.isEnabled()
+                  aiPilotEnabled: deps.isEnabled(),
+                  continuity: deps.getTrackingContinuity()
                 }
               })
             })
-            .catch(() => sendResponse({ state: { isTracked: false, aiPilotEnabled: false } }))
+            .catch(() => {
+              console.warn(`${KABOOM_LOG_PREFIX} tracking state lookup failed after validated fallback`)
+              sendResponse({
+                state: {
+                  isTracked: false,
+                  aiPilotEnabled: false,
+                  continuity: deps.getTrackingContinuity()
+                }
+              })
+            })
           return true
+        case 'tracking_content_ready':
+          if (sender.tab?.id !== undefined) {
+            deps.confirmTracking(sender.tab.id, message.url)
+          }
+          sendResponse({ success: true })
+          return false
         case 'get_diagnostic_state':
           readPilotPreference().then((storage) => {
             sendResponse({ cache: deps.isEnabled(), storage, timestamp: new Date().toISOString() })

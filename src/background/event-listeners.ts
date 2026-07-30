@@ -16,6 +16,7 @@ import { persist } from '../lib/storage/io.js'
 import { setLocal, setLocals } from '../lib/storage/local.js'
 import { clearTrackedTab as clearTrackedTabState, readTrackedTab } from '../lib/tabs/tracked-tab-storage.js'
 import { reportStateRecovery, resolveStateRecovery } from './runtime-state/state-recovery.js'
+import { trackingContinuity } from './runtime-state/tracking-continuity.js'
 
 // =============================================================================
 // CONSTANTS - Rate Limiting & DoS Protection
@@ -139,13 +140,17 @@ export function installTabRemovedListener(onTabRemoved: (tabId: number) => void)
 /**
  * Install tab updated listener to track URL changes
  */
-export function installTabUpdatedListener(onTabUpdated: (tabId: number, newUrl: string) => void): void {
+export interface TrackedTabUpdate {
+  readonly status?: string
+  readonly url?: string
+}
+
+export function installTabUpdatedListener(onTabUpdated: (tabId: number, update: TrackedTabUpdate) => void): void {
   if (typeof chrome === 'undefined' || !chrome.tabs || !chrome.tabs.onUpdated) return
 
   chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    // Only care about URL changes
-    if (changeInfo.url) {
-      onTabUpdated(tabId, changeInfo.url)
+    if (changeInfo.url || changeInfo.status) {
+      onTabUpdated(tabId, { status: changeInfo.status, url: changeInfo.url })
     }
   })
 }
@@ -161,6 +166,8 @@ export async function handleTrackedTabUrlChange(
 ): Promise<void> {
   const trackedTabId = (await readTrackedTab()).id
   if (trackedTabId === updatedTabId) {
+    trackingContinuity.navigationStarted(updatedTabId)
+    trackingContinuity.observeProvisionalURL(updatedTabId, newUrl)
     // Update URL immediately, then refresh title from the tab
     try {
       const tab = await chrome.tabs.get(updatedTabId)
@@ -189,6 +196,7 @@ export async function handleTrackedTabClosed(
   const trackedTabId = (await readTrackedTab()).id
   if (trackedTabId === closedTabId) {
     if (logFn) logFn(`${KABOOM_LOG_PREFIX} Tracked tab closed (id:`, closedTabId)
+    trackingContinuity.close(closedTabId)
     await clearTrackedTabState()
   }
 }
@@ -225,6 +233,12 @@ export function installStorageChangeListener(handlers: {
         const newTabId = newValue ?? null
         const oldTabId = typeof oldValue === 'number' ? oldValue : null
         resolveStateRecovery('extension_storage_change_state')
+        if (typeof newTabId === 'number') {
+          if (oldTabId !== null && oldTabId !== newTabId) trackingContinuity.close(oldTabId)
+          trackingContinuity.establish(newTabId)
+        } else if (oldTabId !== null) {
+          trackingContinuity.close(oldTabId)
+        }
         handlers.onTrackedTabChanged(newTabId, oldTabId)
       }
     }

@@ -14,6 +14,7 @@ import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';
 import { isDomainCloaked } from '../../lib/tabs/cloaked-domains.js';
 import { handleAuditClick, handleStopTracking, handleUrlClick, handleTrackPageClick as handleTrackPageClickAPI } from './tab-tracking-api.js';
 let trackingStorageSyncInstalled = false;
+let trackingRuntimeSyncInstalled = false;
 /**
  * Audit launches the QA-scan workflow through the terminal side panel. It stays
  * hidden until the side-panel/terminal path is fully verified, so users can't
@@ -53,7 +54,7 @@ function showCloakedState(btn) {
     btn.title = 'This domain is in the cloaked domains list. KaBOOM! is disabled here to prevent interference.';
     Object.assign(btn.style, { opacity: '0.5', background: '#252525', color: '#888', borderColor: '#333' });
 }
-function showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId) {
+function showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId, continuity) {
     // Hide the hero button area
     const heroEl = document.getElementById('track-hero');
     if (heroEl)
@@ -69,8 +70,12 @@ function showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId) {
     const trackingBarStop = document.getElementById('tracking-bar-stop');
     if (trackingBar)
         trackingBar.style.display = 'flex';
-    if (trackingBarTitle)
-        trackingBarTitle.textContent = trackedTabTitle || 'Tracked tab';
+    if (trackingBarTitle) {
+        const progress = trackingProgressLabel(continuity?.phase);
+        trackingBarTitle.textContent = progress
+            ? `${progress} · ${trackedTabTitle || 'Tracked tab'}`
+            : trackedTabTitle || 'Tracked tab';
+    }
     if (trackingBarUrl && trackedTabUrl) {
         trackingBarUrl.textContent = trackedTabUrl;
         trackingBarUrl.onclick = () => {
@@ -98,6 +103,32 @@ function showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId) {
             e.stopPropagation();
             void handleStopTracking(showIdleState);
         };
+    }
+}
+function trackingProgressLabel(phase) {
+    switch (phase) {
+        case 'navigation_started':
+        case 'provisional_url':
+            return 'Navigating';
+        case 'content_injecting':
+            return 'Reconnecting page';
+        case 'extension_reconnecting':
+            return 'Reconnecting';
+        case 'recovery_failed':
+            return 'Recovery needs attention';
+        default:
+            return '';
+    }
+}
+async function readTrackingContinuity() {
+    try {
+        const response = (await chrome.runtime.sendMessage({
+            type: 'get_tracking_state'
+        }));
+        return response?.state?.continuity;
+    }
+    catch {
+        return undefined;
     }
 }
 function showStaleState(btn, trackedTabTitle, trackedTabUrl) {
@@ -149,11 +180,12 @@ function showIdleState(btn) {
     }
 }
 function syncTrackButtonState(btn) {
-    void readTrackedTab().then(({ id: trackedTabId, url: trackedTabUrl, title: trackedTabTitle }) => {
+    void Promise.all([readTrackedTab(), readTrackingContinuity()]).then(([tracked, continuity]) => {
+        const { id: trackedTabId, url: trackedTabUrl, title: trackedTabTitle } = tracked;
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const currentUrl = tabs?.[0]?.url;
             if (trackedTabId) {
-                void chrome.tabs.get(trackedTabId).then(() => showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId), () => showStaleState(btn, trackedTabTitle, trackedTabUrl));
+                void chrome.tabs.get(trackedTabId).then(() => showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId, continuity), () => showStaleState(btn, trackedTabTitle, trackedTabUrl));
             }
             else if (isInternalUrl(currentUrl)) {
                 showInternalPageState(btn);
@@ -195,12 +227,22 @@ function installTrackingStorageSync(btn) {
         syncTrackButtonState(btn);
     });
 }
+function installTrackingRuntimeSync(btn) {
+    if (trackingRuntimeSyncInstalled)
+        return;
+    trackingRuntimeSyncInstalled = true;
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.type === 'tracking_continuity_changed')
+            syncTrackButtonState(btn);
+    });
+}
 export function initTrackPageButton() {
     const btn = document.getElementById('track-page-btn');
     if (!btn)
         return;
     syncTrackButtonState(btn);
     installTrackingStorageSync(btn);
+    installTrackingRuntimeSync(btn);
     btn.addEventListener('click', () => {
         void handleTrackPageClickAPI(showInternalPageState, showCloakedState, showTrackingState, showIdleState);
     });

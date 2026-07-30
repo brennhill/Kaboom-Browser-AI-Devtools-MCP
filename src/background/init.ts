@@ -76,6 +76,7 @@ import { installContextMenus } from './ui/context-menus.js'
 import { saveSetting, loadDebugModeState, loadAiWebPilotState, loadSavedSettings } from './ui/settings-storage.js'
 import { forwardToAllContentScripts, sendTabToast } from './ui/content-script-bridge.js'
 import { getActiveTab } from './ui/tracked-tab-state.js'
+import { trackingContinuity } from './runtime-state/tracking-continuity.js'
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js'
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js'
 import { installMessageListener } from './message-handlers.js'
@@ -281,7 +282,12 @@ async function initializeExtensionAsync(): Promise<void> {
           checkConnection: checkConnectionAndUpdate,
           debugLog
         }),
-        createPilotMessageHandler({ isEnabled: isAiWebPilotEnabled, setEnabled: setPilotEnabled }),
+        createPilotMessageHandler({
+          isEnabled: isAiWebPilotEnabled,
+          setEnabled: setPilotEnabled,
+          getTrackingContinuity: () => trackingContinuity.snapshot(),
+          confirmTracking: (tabId, url) => trackingContinuity.confirm(tabId, url)
+        }),
         createCaptureMessageHandler({
           getServerUrl,
           captureScreenshot: (tabId, relatedErrorId) =>
@@ -295,6 +301,15 @@ async function initializeExtensionAsync(): Promise<void> {
 
     // ============= STEP 8: Setup Chrome alarms =============
     setupChromeAlarms()
+    trackingContinuity.subscribe((snapshot) => {
+      void chrome.runtime
+        .sendMessage({ type: 'tracking_continuity_changed', snapshot })
+        .catch((error: unknown) => {
+          debugLog(DebugCategory.LIFECYCLE, 'Tracking continuity update had no runtime recipient', {
+            error_type: error instanceof Error ? error.name : 'unknown_error'
+          })
+        })
+    })
     installAlarmListener({
       onReconnect: checkConnectionAndUpdate,
       onErrorGroupFlush: () => {
@@ -319,8 +334,12 @@ async function initializeExtensionAsync(): Promise<void> {
     })
 
     // ============= STEP 9.5: Install tab updated listener =============
-    installTabUpdatedListener((tabId, newUrl) => {
-      handleTrackedTabUrlChange(tabId, newUrl, (msg) => console.log(msg))
+    installTabUpdatedListener((tabId, update) => {
+      if (update.status === 'loading') trackingContinuity.navigationStarted(tabId)
+      if (update.url) {
+        handleTrackedTabUrlChange(tabId, update.url, (msg) => console.log(msg))
+      }
+      if (update.status === 'complete') trackingContinuity.injectionStarted(tabId)
     })
 
     // ============= STEP 9.6: Install draw mode keyboard shortcut listener =============
@@ -330,7 +349,17 @@ async function initializeExtensionAsync(): Promise<void> {
     // Without this the manifest default makes the panel available on every tab,
     // where it renders empty.
     void (async () => {
-      const trackedTabId = (await readTrackedTab()).id
+      const tracked = await readTrackedTab()
+      const trackedTabId = tracked.id
+      if (typeof trackedTabId === 'number') {
+        trackingContinuity.establish(trackedTabId, tracked.url)
+        trackingContinuity.extensionReconnectStarted(trackedTabId)
+        chrome.tabs.sendMessage(trackedTabId, { type: 'kaboom_ping' }, (response?: { status?: string }) => {
+          if (!chrome.runtime.lastError && response?.status) {
+            trackingContinuity.confirm(trackedTabId, tracked.url)
+          }
+        })
+      }
       await syncTerminalPanelAvailability(typeof trackedTabId === 'number' ? trackedTabId : undefined)
     })()
 

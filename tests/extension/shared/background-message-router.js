@@ -34,7 +34,10 @@ export function composeBackgroundHandlers(deps) {
       checkConnection: deps.checkConnectionAndUpdate, debugLog: deps.debugLog
     }),
     createPilotMessageHandler({
-      isEnabled: deps.getAiWebPilotEnabled, setEnabled: deps.setAiWebPilotEnabled
+      isEnabled: deps.getAiWebPilotEnabled,
+      setEnabled: deps.setAiWebPilotEnabled,
+      getTrackingContinuity: () => ({ phase: 'idle', is_tracked: false }),
+      confirmTracking: () => {}
     }),
     createCaptureMessageHandler({
       getServerUrl: deps.getServerUrl, captureScreenshot: deps.captureScreenshot,

@@ -16,6 +16,18 @@ import type { WirePerformanceSnapshot as PerformanceSnapshot } from './wire/wire
 import type { LogLevelFilter } from './capture/telemetry.js'
 import type { ConnectionStatus } from './runtime/state.js'
 import type { BrowserStateSnapshot, StateAction } from './runtime/state.js'
+import type {
+  GetTrackingStateMessage,
+  TrackingContentReadyMessage,
+  TrackingContinuityChangedMessage
+} from './runtime/tracking.js'
+export type {
+  GetTrackingStateResponse,
+  TrackingContentReadyMessage,
+  TrackingContinuityChangedMessage,
+  TrackingContinuityPhase,
+  TrackingContinuitySnapshot
+} from './runtime/tracking.js'
 import type { DomQueryResult } from './capture/dom.js'
 import type { A11yAuditResult } from './capture/accessibility.js'
 import type { RuntimeMessageName } from '../lib/constants.js'
@@ -157,20 +169,6 @@ export interface GetAiWebPilotEnabledResponse {
 }
 
 /**
- * Get tracking state message (for favicon replacer)
- */
-interface GetTrackingStateMessage {
-  readonly type: 'get_tracking_state'
-}
-
-interface GetTrackingStateResponse {
-  readonly state: {
-    isTracked: boolean
-    aiPilotEnabled: boolean
-  }
-}
-
-/**
  * Get diagnostic state message
  */
 export interface GetDiagnosticStateMessage {
@@ -265,6 +263,8 @@ export type BackgroundMessage =
   | SetWebSocketCaptureModeMessage
   | GetAiWebPilotEnabledMessage
   | GetTrackingStateMessage
+  | TrackingContentReadyMessage
+  | TrackingContinuityChangedMessage
   | GetDiagnosticStateMessage
   | CaptureScreenshotMessage
   | TrackUiFeatureMessage

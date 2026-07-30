@@ -15,8 +15,10 @@ code_paths:
   - src/lib/storage/validated.ts
   - src/lib/tabs/internal-url.ts
   - src/types/runtime-messages.ts
+  - src/types/runtime/tracking.ts
   - src/content.ts
   - src/content/tab-tracking.ts
+  - src/content/script-injection.ts
   - src/content/ui/terminal-panel-bridge.ts
   - src/content/ui/tracked-hover-launcher.ts
   - src/popup.ts
@@ -28,6 +30,7 @@ code_paths:
   - src/background/message-handlers.ts
   - src/background/message-routing/pilot-handler.ts
   - src/background/runtime-state/pilot-state.ts
+  - src/background/runtime-state/tracking-continuity.ts
   - src/background/event-listeners.ts
   - src/background/init.ts
   - src/background/ui/content-script-bridge.ts
@@ -58,6 +61,9 @@ test_paths:
   - tests/extension/terminal-sidepanel/sidepanel-terminal-ui.test.js
   - tests/extension/terminal-sidepanel/sidepanel-terminal.test.js
   - tests/extension/tab-state/tab-tracking-core.test.js
+  - tests/extension/tab-state/tracking-continuity.test.js
+  - tests/extension/injection/script-injection-ready.test.js
+  - tests/extension/shared/background-message-router.js
   - extension/background/event-listeners.test.js
   - tests/extension/contracts/entry-point-parity.test.js
   - tests/extension/misc/integration.test.cjs
@@ -91,6 +97,11 @@ last_verified_date: 2026-04-03
   recovery action.
 - Healthy tracking identity consistently presents both the tracked page title
   and URL. Reads and writes use the canonical tracked-tab storage module.
+- Tracking continuity is now an explicit state machine. Navigation start,
+  provisional URL, content reinjection, extension reconnect, confirmation, and
+  failure retain one stable tab ID until that tab is explicitly closed or
+  untracked. The popup renders transitional progress instead of briefly
+  reporting that capture is disabled.
 
 ## Specs
 
