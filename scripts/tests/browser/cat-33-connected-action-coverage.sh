@@ -200,6 +200,12 @@ prepare_action() {
                 '{"what":"navigate","url":'"$(json_string "http://127.0.0.1:${PORT}/tests/interact.html?history=1")"'}' \
                 >/dev/null
             ;;
+        interact/forward)
+            call_tool "interact" \
+                '{"what":"navigate","url":'"$(json_string "http://127.0.0.1:${PORT}/tests/interact.html?history=1")"'}' \
+                >/dev/null
+            call_tool "interact" '{"what":"back"}' >/dev/null
+            ;;
         interact/confirm_top_dialog)
             script='document.body.insertAdjacentHTML("beforeend","<div role=\"dialog\" id=\"uat-dialog\"><button>Confirm</button></div>"); "ready"'
             ;;

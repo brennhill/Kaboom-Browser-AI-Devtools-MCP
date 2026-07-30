@@ -256,6 +256,10 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(actionCoverage, /if ! prepare_action[\s\S]*args="\$\(action_args/)
     assert.doesNotMatch(actionCoverage, /history\.pushState/)
     assert.match(actionCoverage, /interact\/back\)[\s\S]*"what":"navigate"/)
+    assert.match(
+      actionCoverage,
+      /interact\/forward\)[\s\S]*"what":"navigate"[\s\S]*"what":"back"/,
+    )
     assert.match(actionCoverage, /HEALTH_TRACKED_TAB_ID/)
     assert.match(actionCoverage, /interact\/switch_tab.*HEALTH_TRACKED_TAB_ID/)
     assert.match(actionCoverage, /"fields":\[\{/)

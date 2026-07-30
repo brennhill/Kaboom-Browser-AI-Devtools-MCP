@@ -106,6 +106,9 @@ last_verified_date: 2026-03-05
 - Stateful focused actions prepare their prerequisites before materializing
   arguments; event-recording stop therefore proves a real start/ID/stop
   lifecycle instead of using a placeholder identifier.
+- Isolated history actions create real browser history: `back` navigates away
+  from the deterministic fixture, while `forward` performs that navigation and
+  returns with `back` before exercising the forward transition.
 - Comprehensive aggregation reports pass/fail/skip counts and fails closed when
   any selected category omits or corrupts its structured result file.
 - `make uat` runs both suite boundaries and emits canonical
