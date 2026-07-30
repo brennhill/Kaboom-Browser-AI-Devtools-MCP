@@ -57,7 +57,13 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return handleConfigureRestart(req)
 		},
 		"doctor": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-			return handleConfigureDoctor(h.healthMetrics, h.capture, h.Guards.DiagnosticHintString, req)
+			return handleConfigureDoctor(
+				h.healthMetrics,
+				h.capture,
+				h.Guards.DiagnosticHintString,
+				noisePersistenceDoctorChecks(h.noiseConfig),
+				req,
+			)
 		},
 		"noise_rule": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			rewrittenArgs, err := cfg.RewriteNoiseRuleArgs(args)
@@ -165,9 +171,11 @@ func handleConfigureDoctor(
 	metrics *health.Metrics,
 	captureStore *capture.Capture,
 	diagnosticHint func() string,
+	extraChecks []health.DoctorCheck,
 	req mcp.JSONRPCRequest,
 ) mcp.JSONRPCResponse {
 	checks := health.RunDoctorChecks(captureStore)
+	checks = append(checks, extraChecks...)
 	if metrics != nil {
 		uptime := metrics.GetUptime()
 		checks = append(checks, health.DoctorCheck{
@@ -190,6 +198,22 @@ func handleConfigureDoctor(
 		"status": overallStatus, "ready_for_interaction": readyForInteraction,
 		"checks": checks, "hint": diagnosticHint(),
 	})
+}
+
+func noisePersistenceDoctorChecks(config *noise.NoiseConfig) []health.DoctorCheck {
+	if config == nil {
+		return nil
+	}
+	diagnostic, ok := config.PersistenceDiagnostic()
+	if !ok {
+		return nil
+	}
+	return []health.DoctorCheck{{
+		Name:   "noise_rule_state",
+		Status: "warn",
+		Detail: diagnostic.Detail,
+		Fix:    diagnostic.Fix,
+	}}
 }
 
 type serverDepsAdapter struct{ s *Server }

@@ -71,6 +71,13 @@ type PersistedNoiseData struct {
 	Statistics NoiseStatistics `json:"statistics,omitempty"`
 }
 
+// PersistenceDiagnostic describes a safe fallback taken while loading user rules.
+type PersistenceDiagnostic struct {
+	Kind   string
+	Detail string
+	Fix    string
+}
+
 // NoiseConfig manages noise filtering rules with dual-mutex concurrency control.
 //
 // LOCK ORDERING INVARIANT (H-5 documented):
@@ -86,13 +93,24 @@ type PersistedNoiseData struct {
 // If future code needs both locks simultaneously, it MUST acquire mu first.
 // Violating this ordering will cause deadlock.
 type NoiseConfig struct {
-	mu            sync.RWMutex
-	rules         []NoiseRule
-	compiled      []compiledRule
-	statsMu       sync.Mutex // Separate mutex for stats (written during reads).
-	stats         NoiseStatistics
-	userIDCounter int
-	store         *persistence.SessionStore // nil if no persistence
+	mu                    sync.RWMutex
+	rules                 []NoiseRule
+	compiled              []compiledRule
+	statsMu               sync.Mutex // Separate mutex for stats (written during reads).
+	stats                 NoiseStatistics
+	userIDCounter         int
+	store                 *persistence.SessionStore // nil if no persistence
+	persistenceDiagnostic *PersistenceDiagnostic
+}
+
+// PersistenceDiagnostic reports a non-fatal persisted-state recovery.
+func (nc *NoiseConfig) PersistenceDiagnostic() (PersistenceDiagnostic, bool) {
+	nc.mu.RLock()
+	defer nc.mu.RUnlock()
+	if nc.persistenceDiagnostic == nil {
+		return PersistenceDiagnostic{}, false
+	}
+	return *nc.persistenceDiagnostic, true
 }
 
 // NewNoiseConfig creates a new NoiseConfig with built-in rules.

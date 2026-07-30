@@ -227,6 +227,16 @@ func TestNoiseConfigWithStoreIgnoresCorruptOrUnsupportedData(t *testing.T) {
 		}
 
 		nc := NewNoiseConfigWithStore(store)
+		diagnostic, ok := nc.PersistenceDiagnostic()
+		if !ok {
+			t.Fatal("corrupt persisted data should retain a Doctor diagnostic")
+		}
+		if diagnostic.Kind != "corrupt_json" {
+			t.Fatalf("diagnostic kind = %q, want corrupt_json", diagnostic.Kind)
+		}
+		if diagnostic.Fix == "" {
+			t.Fatal("corrupt persisted data should provide remediation")
+		}
 		for _, r := range nc.ListRules() {
 			if strings.HasPrefix(r.ID, "user_") || strings.HasPrefix(r.ID, "dismiss_") {
 				t.Fatalf("corrupt persisted data should not load user rules, got %q", r.ID)
@@ -258,6 +268,10 @@ func TestNoiseConfigWithStoreIgnoresCorruptOrUnsupportedData(t *testing.T) {
 		}
 
 		nc := NewNoiseConfigWithStore(store)
+		diagnostic, ok := nc.PersistenceDiagnostic()
+		if !ok || diagnostic.Kind != "unsupported_version" {
+			t.Fatalf("unsupported version diagnostic = %#v, %v", diagnostic, ok)
+		}
 		for _, r := range nc.ListRules() {
 			if r.ID == "user_1" {
 				t.Fatal("unsupported persistence version should be ignored")

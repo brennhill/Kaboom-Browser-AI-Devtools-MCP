@@ -4,8 +4,9 @@ feature_id: feature-noise-filtering
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
+  - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/toolconfigure/noise_actions.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
   - internal/mcp/response.go
@@ -24,6 +25,7 @@ code_paths:
   - internal/noise/noise_stats.go
   - internal/util/url.go
 test_paths:
+  - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
@@ -74,3 +76,8 @@ there is no capture-layer pass-through.
 Configure noise handlers receive their owner callbacks through the explicit
 configure dependency value; no noise-specific ToolHandler adapter surface
 remains.
+
+Persisted rule loading is fail-safe: malformed or unsupported saved data cannot
+block startup, built-in defaults remain active, and both the HTTP and MCP System
+Doctor surfaces report an actionable `noise_rule_state` warning. The diagnostic
+does not include raw persisted content.

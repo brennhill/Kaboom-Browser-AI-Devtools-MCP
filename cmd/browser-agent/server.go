@@ -623,7 +623,11 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	proxyHandler := insecureproxy.New(captured, httpapi.JSON)
 	mux.HandleFunc("/insecure-proxy", httpguard.CORS(proxyHandler.ServeHTTP))
 	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, _ *http.Request) {
-		health.HandleDoctorHTTP(w, captured, version)
+		var extraChecks []health.DoctorCheck
+		if handler, ok := mcpHandler.tools.Executor.(*ToolHandler); ok {
+			extraChecks = noisePersistenceDoctorChecks(handler.noiseConfig)
+		}
+		health.HandleDoctorHTTP(w, captured, version, extraChecks...)
 	}))
 	mux.HandleFunc("/api/token-savings", httpguard.CORS(tracking.HandleRecordTokenSavings(server.tokenTracker)))
 

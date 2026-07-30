@@ -32,8 +32,9 @@ type DoctorCheck struct {
 }
 
 // HandleDoctorHTTP serves the /doctor HTTP endpoint with JSON readiness checks.
-func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Capture, ver string) {
+func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Capture, ver string, extraChecks ...DoctorCheck) {
 	checks := RunDoctorChecks(cap)
+	checks = append(checks, extraChecks...)
 
 	overallStatus := "healthy"
 	readyForInteraction := true
