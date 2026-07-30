@@ -372,7 +372,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.healthMetrics = health.NewMetrics()
 	handler.toolCallLimiter = toolresp.NewToolCallLimiter(500, time.Minute)
 	handler.alertBuffer = alertbuf.NewAlertBuffer()
-	handler.stateRecovery = statediag.NewCollector()
+	handler.stateRecovery = server.stateRecovery
 	if captureStore != nil {
 		captureStore.Recordings().SetDiagnostics(handler.stateRecovery)
 	}

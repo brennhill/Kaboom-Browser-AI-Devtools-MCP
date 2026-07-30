@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // TestRecordRestartAndComputeDelay_ThrottlesRapidRestarts asserts the backoff engages
@@ -42,6 +44,26 @@ func TestRecordRestartAndComputeDelay_ThrottlesRapidRestarts(t *testing.T) {
 	}
 	if delay != restartThrottleCap {
 		t.Fatalf("escalating delay must be capped at %s, got %s", restartThrottleCap, delay)
+	}
+}
+
+func TestApplyStartupRestartThrottleReportsCorruptHistory(t *testing.T) {
+	stateDir := t.TempDir()
+	t.Setenv("KABOOM_STATE_DIR", stateDir)
+	path := restartHistoryPath(stateDir)
+	if err := os.WriteFile(path, []byte(`{"token":"secret"`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	deps, _ := newTestDeps(t)
+	diagnostics := statediag.NewCollector()
+	deps.Recovery = diagnostics
+	if delay := ApplyStartupRestartThrottle(deps, throttleTestPort); delay != 0 {
+		t.Fatalf("corrupt history fallback delay = %s, want none", delay)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "restart_history_state" || got[0].Fix == "" {
+		t.Fatalf("diagnostics = %#v, want actionable restart-history warning", got)
 	}
 }
 
@@ -141,7 +163,7 @@ func TestRestartHistoryPersistenceRoundTrip(t *testing.T) {
 	path := restartHistoryPath(dir)
 
 	// Missing file -> empty.
-	if got := loadRestartHistory(path); got.Version != "" || len(got.Timestamps) != 0 {
+	if got, err := loadRestartHistory(path); err != nil || got.Version != "" || len(got.Timestamps) != 0 {
 		t.Fatalf("missing file must load empty, got %+v", got)
 	}
 
@@ -149,17 +171,20 @@ func TestRestartHistoryPersistenceRoundTrip(t *testing.T) {
 	if err := saveRestartHistory(path, want); err != nil {
 		t.Fatalf("saveRestartHistory error = %v", err)
 	}
-	got := loadRestartHistory(path)
+	got, err := loadRestartHistory(path)
+	if err != nil {
+		t.Fatalf("loadRestartHistory error = %v", err)
+	}
 	if got.Version != want.Version || got.InstallEpoch != want.InstallEpoch || len(got.Timestamps) != len(want.Timestamps) {
 		t.Fatalf("round-trip mismatch: got %+v want %+v", got, want)
 	}
 
-	// Corrupt file -> empty, no error.
+	// Corrupt file -> empty fallback plus explicit recovery error.
 	if err := os.WriteFile(path, []byte("{not valid json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := loadRestartHistory(path); got.Version != "" {
-		t.Fatalf("corrupt file must load empty, got %+v", got)
+	if got, err := loadRestartHistory(path); err == nil || got.Version != "" {
+		t.Fatalf("corrupt file = %+v, %v; want empty plus recovery error", got, err)
 	}
 }
 

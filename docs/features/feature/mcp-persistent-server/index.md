@@ -38,6 +38,7 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/startup_throttle.go
   - cmd/browser-agent/internal/daemonlife/version_compare.go
   - cmd/browser-agent/internal/daemonlife/deps.go
+  - internal/statediag/collector.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/internal/procctl/stop.go
   - cmd/browser-agent/main_connection_mcp.go
@@ -71,6 +72,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - internal/statediag/collector_test.go
   - cmd/browser-agent/cli_modes_subprocess_test.go
   - cmd/browser-agent/main_connection_adapters_test.go
   - cmd/browser-agent/main_connection_recovery_primitives_test.go
@@ -180,6 +182,11 @@ does not maintain parallel lazy registries.
 > **2026-07-28:** Daemon lifecycle state, logs, PID files, and exit diagnostics
 > resolve only through `internal/state`. Process control no longer reads,
 > removes, or writes fallback filesystem locations.
+
+> **2026-07-30:** Malformed daemon locks no longer block startup, and malformed
+> restart history cannot trigger false throttling. Lock, restart-history, and
+> install-epoch recovery use safe defaults, structured lifecycle events, and
+> the canonical System Doctor recovery collector.
 
 > **2026-07-28:** Route construction now treats a missing capture runtime as an
 > unavailable optional dependency. Guard diagnostics and injected query,

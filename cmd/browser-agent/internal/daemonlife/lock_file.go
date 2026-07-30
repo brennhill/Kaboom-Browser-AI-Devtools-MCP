@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 func daemonLockFilePath() (string, error) {
@@ -87,7 +88,7 @@ func RemoveLockIfOwned(pid int) {
 
 // PersistCurrentLock registers this process as the owner of port, stamping the
 // record with version and this install's epoch so later launches can classify it.
-func PersistCurrentLock(port int, version string) error {
+func PersistCurrentLock(port int, version string, diagnostics statediag.Reporter) error {
 	stateDir, err := state.RootDir()
 	if err != nil {
 		return err
@@ -98,6 +99,6 @@ func PersistCurrentLock(port int, version string) error {
 		StateDir:     stateDir,
 		Version:      version,
 		UpdatedAt:    daemonNow().UTC().Format(time.RFC3339),
-		InstallEpoch: resolveInstallEpoch(),
+		InstallEpoch: resolveInstallEpoch(diagnostics),
 	})
 }

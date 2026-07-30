@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // isolatedStateDir points the whole package at a temp state root for one test.
@@ -43,7 +44,7 @@ func TestEnforceStartupPolicy_NoLockFile_Proceeds(t *testing.T) {
 	}
 }
 
-func TestEnforceStartupPolicy_CorruptLockFile_ReturnsActionableError(t *testing.T) {
+func TestEnforceStartupPolicy_CorruptLockFileRecoversAndReports(t *testing.T) {
 	isolatedStateDir(t)
 	path, err := daemonLockFilePath()
 	if err != nil {
@@ -57,13 +58,18 @@ func TestEnforceStartupPolicy_CorruptLockFile_ReturnsActionableError(t *testing.
 	}
 
 	deps, _ := newTestDeps(t)
+	diagnostics := statediag.NewCollector()
+	deps.Recovery = diagnostics
 	err = EnforceStartupPolicy(deps, 7890, LaunchOptions{})
-	if err == nil {
-		t.Fatal("a corrupt lock must not be silently ignored")
+	if err != nil {
+		t.Fatalf("corrupt lock must not block startup: %v", err)
 	}
-	// Rule 25: the error has to tell the operator what to do about it.
-	if !strings.Contains(err.Error(), "Delete the stale lock file") {
-		t.Fatalf("error = %q, want removal guidance", err.Error())
+	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
+		t.Fatalf("stale lock still exists: %v", statErr)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "daemon_lock_state" || got[0].Fix == "" {
+		t.Fatalf("diagnostics = %#v, want actionable daemon-lock warning", got)
 	}
 }
 
@@ -334,7 +340,7 @@ func TestEnforceStartupPolicy_Takeover(t *testing.T) {
 func TestPersistCurrentLockAndRemoveIfOwned(t *testing.T) {
 	dir := isolatedStateDir(t)
 
-	if err := PersistCurrentLock(7890, "1.2.3"); err != nil {
+	if err := PersistCurrentLock(7890, "1.2.3", nil); err != nil {
 		t.Fatalf("PersistCurrentLock() error = %v", err)
 	}
 	rec, err := readDaemonLockFile()
@@ -387,8 +393,8 @@ func TestRemoveLockIfOwned_NoLockFile(t *testing.T) {
 // and never changes within a process — a drifting epoch would make this daemon
 // win or lose the takeover tiebreaker non-deterministically.
 func TestResolveInstallEpoch_MemoizedAndStable(t *testing.T) {
-	first := resolveInstallEpoch()
-	if second := resolveInstallEpoch(); second != first {
+	first := resolveInstallEpoch(nil)
+	if second := resolveInstallEpoch(nil); second != first {
 		t.Fatalf("install epoch must be stable, got %d then %d", first, second)
 	}
 	if first < 0 {

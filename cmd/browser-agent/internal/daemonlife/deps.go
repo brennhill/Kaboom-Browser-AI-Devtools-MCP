@@ -11,6 +11,8 @@ package daemonlife
 import (
 	"context"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // Logger receives structured daemon lifecycle events. The host adapts its own
@@ -31,7 +33,8 @@ type Deps struct {
 	// Version is the host binary's version, the primary takeover comparand.
 	Version string
 	// Warnf writes an operator-facing warning to the host's diagnostic sink.
-	Warnf func(format string, args ...any)
+	Warnf    func(format string, args ...any)
+	Recovery statediag.Reporter
 
 	// IsProcessAlive reports whether a PID is still running.
 	IsProcessAlive func(pid int) bool

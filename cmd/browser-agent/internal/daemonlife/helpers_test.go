@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // loggedEvent is one captured lifecycle event.
@@ -80,5 +82,5 @@ func stubInstallEpoch(t *testing.T, epoch int64) {
 	t.Helper()
 	old := daemonInstallEpoch
 	t.Cleanup(func() { daemonInstallEpoch = old })
-	daemonInstallEpoch = func() int64 { return epoch }
+	daemonInstallEpoch = func(statediag.Reporter) int64 { return epoch }
 }

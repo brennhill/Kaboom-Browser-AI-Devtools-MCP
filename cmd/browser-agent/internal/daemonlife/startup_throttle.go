@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 const (
@@ -95,16 +96,19 @@ func restartHistoryPath(stateDir string) string {
 
 // loadRestartHistory reads the restart history; a missing or corrupt file yields an
 // empty history (treated as a fresh install), never an error.
-func loadRestartHistory(path string) restartHistory {
+func loadRestartHistory(path string) (restartHistory, error) {
 	b, err := os.ReadFile(path) // #nosec G304 -- path derived from our own state dir
 	if err != nil {
-		return restartHistory{}
+		if os.IsNotExist(err) {
+			return restartHistory{}, nil
+		}
+		return restartHistory{}, err
 	}
 	var h restartHistory
 	if err := json.Unmarshal(b, &h); err != nil {
-		return restartHistory{}
+		return restartHistory{}, err
 	}
-	return h
+	return h, nil
 }
 
 // saveRestartHistory persists the restart history, creating the state dir if needed.
@@ -148,8 +152,18 @@ func ApplyStartupRestartThrottle(d Deps, port int) time.Duration {
 		return 0
 	}
 	path := restartHistoryPath(stateDir)
-	prev := loadRestartHistory(path)
-	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), d.Version, daemonInstallEpoch(), port)
+	prev, loadErr := loadRestartHistory(path)
+	if loadErr != nil {
+		d.Log.LogLifecycle("restart_history_recovered", port, map[string]any{"error": loadErr.Error()})
+		if d.Recovery != nil {
+			d.Recovery.Report(statediag.Diagnostic{
+				Name:   "restart_history_state",
+				Detail: "Daemon restart history was unreadable or malformed; a fresh bounded history is active.",
+				Fix:    "If this recurs, check permissions and disk health for the Kaboom state directory.",
+			})
+		}
+	}
+	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), d.Version, daemonInstallEpoch(d.Recovery), port)
 	if err := saveRestartHistory(path, next); err != nil {
 		d.Log.LogLifecycle("restart_history_write_failed", port, map[string]any{"error": err.Error()})
 	}

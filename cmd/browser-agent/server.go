@@ -38,6 +38,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
 	uploadapi "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -90,7 +91,8 @@ type Server struct {
 	activeCodebase   string
 
 	// Token savings tracker for output compression hooks.
-	tokenTracker *tracking.TokenTracker
+	tokenTracker  *tracking.TokenTracker
+	stateRecovery *statediag.Collector
 
 	// Push drain authentication token. When non-empty, /push/drain requires
 	// Authorization: Bearer <token>. Set via --push-drain-token flag.
@@ -152,6 +154,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		ptyManager:      pty.NewManager(),
 		tokenTracker:    tracking.NewTokenTracker(),
 		intentStore:     terminal.NewIntentStore(),
+		stateRecovery:   statediag.NewCollector(),
 	}
 
 	// Create log store with warning callback wired to server

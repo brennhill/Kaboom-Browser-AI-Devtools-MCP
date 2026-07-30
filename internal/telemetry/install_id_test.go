@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 var hexPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
@@ -193,6 +195,8 @@ func TestGetInstallID_ReadFailure(t *testing.T) {
 	resetInstallIDState()
 	overrideKaboomDir(dir)
 	defer resetKaboomDir()
+	diagnostics := statediag.NewCollector()
+	stateRecovery = diagnostics
 
 	// Create a directory where the install_id file would be, making ReadFile fail.
 	idPath := filepath.Join(dir, "install_id")
@@ -202,7 +206,39 @@ func TestGetInstallID_ReadFailure(t *testing.T) {
 	defer os.Chmod(idPath, 0700) // cleanup
 
 	id := GetInstallID()
-	if !hexPattern.MatchString(id) {
-		t.Fatalf("GetInstallID() = %q, want 12-char hex string even on read failure", id)
+	if id != "" {
+		t.Fatalf("GetInstallID() = %q, want telemetry-suppressing empty ID on read failure", id)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "install_identity_state" || got[0].Fix == "" {
+		t.Fatalf("diagnostics = %#v, want actionable install identity warning", got)
+	}
+}
+
+func TestGetInstallIDReplacesMalformedIdentityOnce(t *testing.T) {
+	dir := t.TempDir()
+	resetInstallIDState()
+	overrideKaboomDir(dir)
+	defer resetKaboomDir()
+	diagnostics := statediag.NewCollector()
+	stateRecovery = diagnostics
+
+	idPath := filepath.Join(dir, "install_id")
+	if err := os.WriteFile(idPath, []byte("not-a-stable-id"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	first := GetInstallID()
+	if !hexPattern.MatchString(first) {
+		t.Fatalf("replacement ID = %q, want stable hex ID", first)
+	}
+	resetInstallIDState()
+	stateRecovery = diagnostics
+	second := GetInstallID()
+	if second != first {
+		t.Fatalf("replacement rotated across restart: first=%q second=%q", first, second)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "install_identity_state" {
+		t.Fatalf("diagnostics = %#v, want one identity recovery", got)
 	}
 }

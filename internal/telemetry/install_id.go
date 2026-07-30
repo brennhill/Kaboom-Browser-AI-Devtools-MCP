@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // kaboomDir is the directory where install_id is persisted. Overridable for tests.
@@ -28,6 +30,7 @@ var firstToolCallOnce sync.Once
 
 // cachedFirstToolCallInstallID is the install ID that has already emitted first_tool_call.
 var cachedFirstToolCallInstallID string
+var stateRecovery statediag.Reporter
 
 // defaultKaboomDir resolves the installation root. Installation identity must
 // not follow KABOOM_STATE_DIR or XDG_STATE_HOME: those roots isolate runtime
@@ -42,14 +45,16 @@ func defaultKaboomDir() string {
 
 // Warm pre-loads install ID and session state so the first tool call
 // doesn't incur filesystem I/O on the hot path. Call at daemon startup.
-func Warm() {
+func Warm(diagnostics statediag.Reporter) {
+	stateRecovery = diagnostics
 	GetInstallID()
 	TouchSession()
 }
 
 // GetInstallID returns the persistent anonymous install ID.
 // On first call, reads from ~/.kaboom/install_id or generates a new 12-char hex string.
-// Thread-safe via sync.Once. Never returns an error — falls back to a fresh random ID.
+// Thread-safe via sync.Once. Returns empty when identity cannot be read or
+// persisted so telemetry is suppressed rather than fragmenting one install.
 func GetInstallID() string {
 	installIDOnce.Do(func() {
 		cachedInstallID = loadOrGenerateInstallID()
@@ -64,9 +69,15 @@ func loadOrGenerateInstallID() string {
 	data, err := os.ReadFile(idPath)
 	if err == nil {
 		id := strings.TrimSpace(string(data))
-		if id != "" {
+		if validInstallID(id) {
 			return id
 		}
+		reportInstallIDRecovery("Installation identity was malformed; a new stable identity replaced it.")
+		return replaceInstallID(idPath)
+	}
+	if !os.IsNotExist(err) {
+		reportInstallIDRecovery("Installation identity could not be read; anonymous telemetry is disabled for this process.")
+		return ""
 	}
 
 	// Generate a new random ID.
@@ -88,7 +99,7 @@ func loadOrGenerateInstallID() string {
 					return id
 				}
 				if winner, readErr := os.ReadFile(idPath); readErr == nil {
-					if persisted := strings.TrimSpace(string(winner)); persisted != "" {
+					if persisted := strings.TrimSpace(string(winner)); validInstallID(persisted) {
 						return persisted
 					}
 				}
@@ -96,7 +107,52 @@ func loadOrGenerateInstallID() string {
 		}
 	}
 
+	reportInstallIDRecovery("Installation identity could not be persisted; anonymous telemetry is disabled for this process.")
+	return ""
+}
+
+func replaceInstallID(idPath string) string {
+	id := generateRandomID()
+	if err := os.MkdirAll(kaboomDir, 0o700); err != nil {
+		return ""
+	}
+	tmp, err := os.CreateTemp(kaboomDir, ".install-id-recovery-*")
+	if err != nil {
+		return ""
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+	_ = tmp.Chmod(0o600)
+	if _, err := tmp.WriteString(id); err != nil {
+		_ = tmp.Close()
+		return ""
+	}
+	if err := tmp.Close(); err != nil {
+		return ""
+	}
+	if err := os.Rename(tmpPath, idPath); err != nil {
+		return ""
+	}
 	return id
+}
+
+func validInstallID(id string) bool {
+	if len(id) != 12 {
+		return false
+	}
+	_, err := hex.DecodeString(id)
+	return err == nil
+}
+
+func reportInstallIDRecovery(detail string) {
+	if stateRecovery == nil {
+		return
+	}
+	stateRecovery.Report(statediag.Diagnostic{
+		Name:   "install_identity_state",
+		Detail: detail,
+		Fix:    "Check permissions for ~/.kaboom/install_id, then restart Kaboom.",
+	})
 }
 
 func loadFirstToolCallInstallID() string {
@@ -157,6 +213,7 @@ func resetKaboomDir() {
 func resetInstallIDState() {
 	installIDOnce = sync.Once{}
 	cachedInstallID = ""
+	stateRecovery = nil
 }
 
 // resetFirstToolCallState clears the cached first-tool-call state for testing.

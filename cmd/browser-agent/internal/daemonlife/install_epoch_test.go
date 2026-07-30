@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // --- computeInstallEpoch ------------------------------------------------------
@@ -29,7 +31,7 @@ func TestComputeInstallEpoch_StampFileWins(t *testing.T) {
 		}
 		return []byte("  1730000000123456789\n"), nil
 	}
-	if got := computeInstallEpoch(exe, stat, readFile); got != 1730000000123456789 {
+	if got := computeInstallEpoch(exe, stat, readFile, nil); got != 1730000000123456789 {
 		t.Fatalf("want stamp value, got %d", got)
 	}
 }
@@ -39,7 +41,7 @@ func TestComputeInstallEpoch_FallsBackToBinaryMtime(t *testing.T) {
 	exe := func() (string, error) { return "/x/kaboom", nil }
 	stat := func(string) (os.FileInfo, error) { return fakeFileInfo{mod: mtime}, nil }
 	readFile := func(string) ([]byte, error) { return nil, os.ErrNotExist }
-	if got := computeInstallEpoch(exe, stat, readFile); got != mtime.UnixNano() {
+	if got := computeInstallEpoch(exe, stat, readFile, nil); got != mtime.UnixNano() {
 		t.Fatalf("want mtime nanos %d, got %d", mtime.UnixNano(), got)
 	}
 }
@@ -49,8 +51,13 @@ func TestComputeInstallEpoch_InvalidStampFallsBackToMtime(t *testing.T) {
 	exe := func() (string, error) { return "/x/kaboom", nil }
 	stat := func(string) (os.FileInfo, error) { return fakeFileInfo{mod: mtime}, nil }
 	readFile := func(string) ([]byte, error) { return []byte("not-a-number"), nil }
-	if got := computeInstallEpoch(exe, stat, readFile); got != mtime.UnixNano() {
+	diagnostics := statediag.NewCollector()
+	if got := computeInstallEpoch(exe, stat, readFile, diagnostics); got != mtime.UnixNano() {
 		t.Fatalf("invalid stamp should fall back to mtime; got %d", got)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "install_epoch_state" || got[0].Fix == "" {
+		t.Fatalf("diagnostics = %#v, want actionable install-epoch warning", got)
 	}
 }
 
@@ -58,7 +65,7 @@ func TestComputeInstallEpoch_NoExecutable_ReturnsZero(t *testing.T) {
 	exe := func() (string, error) { return "", os.ErrNotExist }
 	stat := func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
 	readFile := func(string) ([]byte, error) { return nil, os.ErrNotExist }
-	if got := computeInstallEpoch(exe, stat, readFile); got != 0 {
+	if got := computeInstallEpoch(exe, stat, readFile, nil); got != 0 {
 		t.Fatalf("want 0 when executable unknown, got %d", got)
 	}
 }

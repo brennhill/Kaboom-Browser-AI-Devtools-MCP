@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // LaunchOptions describes how this daemon instance was launched.
@@ -108,7 +109,7 @@ func classifyExistingDaemon(d Deps, port int, rec *daemonLockRecord) error {
 	// An equal-or-older epoch never reaches the takeover here, so this cannot
 	// ping-pong: the older install always defers to the newer one.
 	if sameNonEmptyVersion(d.Version, rec.Version) {
-		if ourEpoch := daemonInstallEpoch(); ourEpoch > 0 && ourEpoch > rec.InstallEpoch {
+		if ourEpoch := daemonInstallEpoch(d.Recovery); ourEpoch > 0 && ourEpoch > rec.InstallEpoch {
 			d.Log.LogLifecycle("daemon_takeover_newer_install", port, map[string]any{
 				"existing_pid":           rec.PID,
 				"existing_install_epoch": rec.InstallEpoch,
@@ -207,7 +208,18 @@ func EnforceStartupPolicy(d Deps, port int, opts LaunchOptions) error {
 	}
 	rec, err := readDaemonLockFile()
 	if err != nil {
-		return err
+		d.Log.LogLifecycle("daemon_lock_recovered", port, map[string]any{"error": err.Error()})
+		if d.Recovery != nil {
+			d.Recovery.Report(statediag.Diagnostic{
+				Name:   "daemon_lock_state",
+				Detail: "Daemon ownership state was malformed; the stale lock was removed and startup continued.",
+				Fix:    "If this recurs, check permissions and disk health for the Kaboom run-state directory.",
+			})
+		}
+		if removeErr := removeDaemonLockFile(); removeErr != nil {
+			return fmt.Errorf("cannot recover malformed daemon lock: %w", removeErr)
+		}
+		return nil
 	}
 	if rec == nil {
 		return nil

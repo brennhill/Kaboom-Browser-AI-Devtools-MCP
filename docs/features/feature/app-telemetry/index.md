@@ -4,7 +4,7 @@ feature_id: feature-app-telemetry
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - internal/telemetry/beacon.go
   - internal/telemetry/install_id.go
@@ -12,6 +12,7 @@ code_paths:
   - internal/telemetry/usage_beacon.go
   - internal/telemetry/usage_counter.go
   - cmd/browser-agent/internal/operationalapi/handler.go
+  - internal/statediag/collector.go
 test_paths:
   - internal/telemetry/beacon_test.go
   - internal/telemetry/contract_compliance_test.go
@@ -23,6 +24,7 @@ test_paths:
   - internal/telemetry/usage_beacon_test.go
   - internal/telemetry/usage_counter_test.go
   - cmd/browser-agent/internal/operationalapi/debug_test.go
+  - internal/statediag/collector_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/tests/contracts/app-telemetry-producers.test.mjs
@@ -43,6 +45,10 @@ summary beacons.
 Install identity is installation-scoped at `~/.kaboom/install_id`, independent
 of project/UAT runtime-state roots, and concurrent first starts atomically
 converge on one persisted value.
+Malformed identity is atomically replaced once. Transient read or persistence
+failure suppresses telemetry instead of inventing a process-local identity
+that would inflate install counts, and System Doctor reports the redacted
+recovery state.
 The operational debug endpoint reads non-destructive flat counters through the
 canonical `UsageTracker.DebugCounts` API; the former compatibility-named
 counter accessor is deleted.

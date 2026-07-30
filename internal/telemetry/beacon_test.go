@@ -32,6 +32,24 @@ func TestShouldSendToEndpoint_BlocksProductionFromTestBinaries(t *testing.T) {
 	}
 }
 
+func TestBeaconSuppressesDeliveryWithoutStableInstallIdentity(t *testing.T) {
+	drainSem()
+	resetDeliveryDiagnostics()
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		calls++
+	}))
+	defer server.Close()
+	overrideEndpoint(server.URL)
+	defer resetEndpoint()
+
+	fireBeacon(map[string]any{"event": "session_start", "iid": ""})
+	got := DeliveryDiagnostics()
+	if calls != 0 || got.Suppressed != 1 {
+		t.Fatalf("delivery = calls:%d diagnostics:%+v, want suppressed", calls, got)
+	}
+}
+
 func TestBeaconDeliveryRequiresAcceptedStatus(t *testing.T) {
 	drainSem()
 	resetDeliveryDiagnostics()

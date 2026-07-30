@@ -18,6 +18,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // installEpochStampName is the per-install stamp file the installer writes next to
@@ -32,9 +34,9 @@ var (
 )
 
 // resolveInstallEpoch returns this binary's install epoch, computing it once.
-func resolveInstallEpoch() int64 {
+func resolveInstallEpoch(diagnostics statediag.Reporter) int64 {
 	installEpochOnce.Do(func() {
-		installEpoch = computeInstallEpoch(os.Executable, os.Stat, os.ReadFile)
+		installEpoch = computeInstallEpoch(os.Executable, os.Stat, os.ReadFile, diagnostics)
 	})
 	return installEpoch
 }
@@ -44,9 +46,11 @@ func computeInstallEpoch(
 	execPath func() (string, error),
 	stat func(string) (os.FileInfo, error),
 	readFile func(string) ([]byte, error),
+	diagnostics statediag.Reporter,
 ) int64 {
 	exe, err := execPath()
 	if err != nil || exe == "" {
+		reportInstallEpochRecovery(diagnostics, "The daemon executable path could not be resolved; install ordering is unavailable.")
 		return 0
 	}
 	// 1. Installer stamp next to the binary wins — it records the actual install
@@ -56,10 +60,25 @@ func computeInstallEpoch(
 		if v, e2 := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64); e2 == nil && v > 0 {
 			return v
 		}
+		reportInstallEpochRecovery(diagnostics, "The install epoch stamp was malformed; the executable modification time is active.")
+	} else if !os.IsNotExist(e) {
+		reportInstallEpochRecovery(diagnostics, "The install epoch stamp could not be read; the executable modification time is active.")
 	}
 	// 2. Fall back to the binary's mtime.
 	if fi, e := stat(exe); e == nil {
 		return fi.ModTime().UnixNano()
 	}
+	reportInstallEpochRecovery(diagnostics, "Neither install epoch nor executable modification time could be read; this install has the lowest takeover priority.")
 	return 0
+}
+
+func reportInstallEpochRecovery(diagnostics statediag.Reporter, detail string) {
+	if diagnostics == nil {
+		return
+	}
+	diagnostics.Report(statediag.Diagnostic{
+		Name:   "install_epoch_state",
+		Detail: detail,
+		Fix:    "Reinstall Kaboom to recreate a valid install epoch stamp.",
+	})
 }

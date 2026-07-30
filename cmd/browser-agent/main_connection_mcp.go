@@ -222,7 +222,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	})
 	server.logLifecycle("mcp_transport_ready", port, nil)
 
-	telemetry.Warm() // Pre-load install ID and session off the hot path.
+	telemetry.Warm(server.stateRecovery) // Pre-load install ID and session off the hot path.
 
 	// Start periodic usage beacon loop (structured tool stats every 5 minutes).
 	if tracker := mcpHandler.GetUsageTracker(); tracker != nil {
@@ -418,7 +418,7 @@ func persistDaemonRuntimeState(server *Server, port int) {
 	if err := procctl.WritePIDFile(port); err != nil {
 		server.logLifecycle("pid_file_error", port, map[string]any{"error": err.Error()})
 	}
-	if err := daemonlife.PersistCurrentLock(port, version); err != nil {
+	if err := daemonlife.PersistCurrentLock(port, version, server.stateRecovery); err != nil {
 		server.logLifecycle("daemon_lock_write_failed", port, map[string]any{"error": err.Error()})
 	}
 }

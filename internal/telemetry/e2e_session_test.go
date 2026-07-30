@@ -300,7 +300,7 @@ func TestE2E_Warm_PreloadsInstallID(t *testing.T) {
 	// Before Warm, install ID is not cached.
 	resetInstallIDState()
 
-	Warm()
+	Warm(nil)
 
 	// After Warm, GetInstallID should return instantly (no I/O).
 	id := GetInstallID()

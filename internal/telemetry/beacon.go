@@ -229,6 +229,11 @@ func fireBeacon(payload map[string]any) {
 		callOnFireBeacon(false)
 		return
 	}
+	if installID, _ := payload["iid"].(string); installID == "" {
+		deliveryCounters.suppressed.Add(1)
+		callOnFireBeacon(false)
+		return
+	}
 
 	beaconMu.RLock()
 	ep := endpoint
