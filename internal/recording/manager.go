@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // ============================================================================
@@ -47,6 +49,18 @@ type RecordingManager struct {
 	activeRecordingID    string
 	recordings           map[string]*Recording
 	recordingStorageUsed int64
+	diagnosticsMu        sync.RWMutex
+	diagnostics          statediag.Reporter
+}
+
+// SetDiagnostics connects recording recovery to the owning server's Doctor collector.
+func (r *RecordingManager) SetDiagnostics(diagnostics statediag.Reporter) {
+	if r == nil {
+		return
+	}
+	r.diagnosticsMu.Lock()
+	defer r.diagnosticsMu.Unlock()
+	r.diagnostics = diagnostics
 }
 
 // NewRecordingManager creates a RecordingManager with initialized state.

@@ -17,6 +17,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -49,6 +50,7 @@ type Config struct {
 	InjectSummary        func(json.RawMessage) json.RawMessage
 	DrainAlerts          func() []types.Alert
 	DiagnosticHint       func(*mcp.StructuredError)
+	StateDiagnostics     statediag.Reporter
 }
 
 type Dispatcher struct {
@@ -195,5 +197,5 @@ func (d *Dispatcher) FailedCommands(req mcp.JSONRPCRequest, _ json.RawMessage) m
 }
 
 func (d *Dispatcher) savedVideos(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return screenrec.HandleObserveSavedVideos(req, args)
+	return screenrec.HandleObserveSavedVideos(req, args, d.config.StateDiagnostics)
 }

@@ -373,6 +373,9 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.toolCallLimiter = toolresp.NewToolCallLimiter(500, time.Minute)
 	handler.alertBuffer = alertbuf.NewAlertBuffer()
 	handler.stateRecovery = statediag.NewCollector()
+	if captureStore != nil {
+		captureStore.Recordings().SetDiagnostics(handler.stateRecovery)
+	}
 
 	if currentDirectory, err := os.Getwd(); err == nil {
 		if store, storeErr := persistence.NewSessionStore(currentDirectory, handler.stateRecovery); storeErr == nil {
@@ -520,6 +523,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		},
 		FormatCommand: handler.asyncCommands.FormatCommandResult, InjectSummary: handler.summaryPrefs.Inject,
 		DrainAlerts: handler.alertBuffer.DrainAlerts, DiagnosticHint: handler.Guards.DiagnosticHint(),
+		StateDiagnostics: handler.stateRecovery,
 	})
 	handler.stateInteractHandler = interactstate.New(&interactstate.Deps{
 		IsPilotActionAllowed: func() bool {

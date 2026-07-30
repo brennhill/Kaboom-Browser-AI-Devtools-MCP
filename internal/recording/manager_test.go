@@ -6,11 +6,14 @@ package recording
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // ============================================
@@ -497,6 +500,50 @@ func TestGetRecording_ValidatesIDAndReadsDisk(t *testing.T) {
 	}
 	if got.ID != id || len(got.Actions) != 1 || got.Actions[0].Selector != "#go" {
 		t.Fatalf("GetRecording(%q) = %+v, want the persisted single-click recording", id, got)
+	}
+}
+
+func TestListRecordingsReportsMalformedMetadataAndKeepsValidSiblings(t *testing.T) {
+	stateRoot := t.TempDir()
+	t.Setenv(state.StateDirEnv, stateRoot)
+
+	manager := NewRecordingManager()
+	diagnostics := statediag.NewCollector()
+	manager.SetDiagnostics(diagnostics)
+
+	validID, err := manager.StartRecording("valid", "https://example.com", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := manager.StopRecording(validID); err != nil {
+		t.Fatal(err)
+	}
+
+	recordingsDir, err := state.RecordingsDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	brokenDir := filepath.Join(recordingsDir, "broken")
+	if err := os.MkdirAll(brokenDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(brokenDir, recordingMetadataFile), []byte(`{"token":"secret"`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	recordings, err := manager.ListRecordings(0)
+	if err != nil {
+		t.Fatalf("malformed sibling must not fail listing: %v", err)
+	}
+	if len(recordings) != 1 || recordings[0].ID != validID {
+		t.Fatalf("recordings = %#v, want valid sibling only", recordings)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "event_recording_state" || got[0].Fix == "" {
+		t.Fatalf("diagnostics = %#v, want actionable event-recording warning", got)
+	}
+	if strings.Contains(got[0].Detail, "secret") {
+		t.Fatalf("diagnostic leaked metadata: %#v", got[0])
 	}
 }
 

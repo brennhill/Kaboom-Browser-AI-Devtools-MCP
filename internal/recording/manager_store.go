@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // ============================================================================
@@ -178,6 +179,7 @@ func (r *RecordingManager) loadRecordingFromDisk(recordingID string) (*Recording
 				continue
 			}
 			lastErr = fmt.Errorf("read_failed: %w", err)
+			r.reportRecovery("Saved event recording metadata could not be read; the affected recording was omitted.")
 			continue
 		}
 
@@ -186,6 +188,7 @@ func (r *RecordingManager) loadRecordingFromDisk(recordingID string) (*Recording
 		err = json.Unmarshal(data, metadata)
 		if err != nil {
 			lastErr = fmt.Errorf("json_unmarshal_failed: %w", err)
+			r.reportRecovery("Saved event recording metadata was malformed; the affected recording was omitted.")
 			continue
 		}
 
@@ -210,4 +213,21 @@ func (r *RecordingManager) loadRecordingFromDisk(recordingID string) (*Recording
 		return nil, lastErr
 	}
 	return nil, fmt.Errorf("read_failed: recording not found: %s", recordingID)
+}
+
+func (r *RecordingManager) reportRecovery(detail string) {
+	if r == nil {
+		return
+	}
+	r.diagnosticsMu.RLock()
+	diagnostics := r.diagnostics
+	r.diagnosticsMu.RUnlock()
+	if diagnostics == nil {
+		return
+	}
+	diagnostics.Report(statediag.Diagnostic{
+		Name:   "event_recording_state",
+		Detail: detail,
+		Fix:    "Delete the affected recording metadata or capture the recording again.",
+	})
 }

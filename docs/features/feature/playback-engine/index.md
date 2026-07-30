@@ -4,11 +4,12 @@ feature_id: feature-playback-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-30
 code_paths:
   - internal/recording/types.go
   - internal/recording/manager.go
   - internal/recording/manager_store.go
+  - internal/statediag/collector.go
   - internal/recording/manager_storage.go
   - internal/recording/playback/types.go
   - internal/recording/playback/session.go
@@ -38,6 +39,7 @@ test_paths:
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/recording_playback_result_test.go
   - internal/recording/manager_test.go
+  - internal/statediag/collector_test.go
   - internal/recording/types_test.go
   - internal/recording/state_path_test.go
   - internal/recording/playback/playback_test.go
@@ -83,6 +85,9 @@ last_verified_date: 2026-03-05
 - Recording capture, persistence, and storage quotas: `internal/recording/`
 - Recording persistence reads and writes only the canonical state recordings
   directory; historical storage locations are not migration inputs.
+- Malformed or unreadable event-recording metadata is isolated per recording,
+  valid siblings remain available, and System Doctor receives a redacted
+  recovery warning with remediation.
 - Replay engine (session lifecycle, action execution, selector fragility): `internal/recording/playback/`
 - Recording comparison and regression reporting: `internal/recording/logdiff/`
 - Both engines read recordings through a one-method source interface that

@@ -20,6 +20,7 @@ code_paths:
   - cmd/browser-agent/internal/screenrec/save.go
   - cmd/browser-agent/internal/screenrec/reveal.go
   - cmd/browser-agent/internal/screenrec/observe.go
+  - internal/statediag/collector.go
   - internal/recording/actionlog/recorder.go
   - src/background/event-listeners.ts
   - src/background/init.ts
@@ -50,6 +51,7 @@ test_paths:
   - cmd/browser-agent/tools_interact_dom_routing_test.go
   - cmd/browser-agent/tools_interact_state_queries_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
+  - internal/statediag/collector_test.go
   - internal/recording/actionlog/recorder_test.go
   - tests/extension/recording-ui/recording-shortcut-command.test.js
   - tests/extension/ui-controls/context-menus-labels.test.js
@@ -86,6 +88,8 @@ last_verified_date: 2026-03-05
 The implementation and tests for popup/manual recording and shortcut-toggle recording are listed in frontmatter `code_paths` and `test_paths`.
 Saved-video discovery is scoped to the canonical recordings directory; it does
 not merge or deduplicate entries from historical storage roots.
+Unreadable or malformed saved-video metadata is omitted without failing the
+query and is reported through the canonical System Doctor recovery collector.
 Extension storage is divided by change lifecycle, shared I/O mechanics, durable
 local state, and ephemeral session state. Consumers import those owners
 directly; there is no all-purpose storage facade or compatibility barrel.

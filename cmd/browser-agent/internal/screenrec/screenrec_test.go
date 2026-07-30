@@ -21,7 +21,29 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
+
+func TestLoadAndFilterRecordingsReportsMalformedMetadata(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "broken_meta.json")
+	if err := os.WriteFile(path, []byte(`{"token":"secret"`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	diagnostics := statediag.NewCollector()
+	recordings, totalSize := loadAndFilterRecordings([]string{path}, "", diagnostics)
+	if len(recordings) != 0 || totalSize != 0 {
+		t.Fatalf("fallback = %#v, %d; want empty", recordings, totalSize)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "saved_video_state" || got[0].Fix == "" {
+		t.Fatalf("diagnostics = %#v, want actionable saved-video warning", got)
+	}
+	if strings.Contains(got[0].Detail, "secret") {
+		t.Fatalf("diagnostic leaked metadata: %#v", got[0])
+	}
+}
 
 // videoTestEnv drives screenrec against a real capture.Capture through the same
 // Deps struct the host builds. It deliberately does NOT construct a Server or a
@@ -374,7 +396,7 @@ func TestToolObserveSavedVideosListsSortsFiltersAndDedupes(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
-	resp := HandleObserveSavedVideos(req, json.RawMessage(`{}`))
+	resp := HandleObserveSavedVideos(req, json.RawMessage(`{}`), nil)
 	toolResult := parseToolResult(t, resp)
 	data := parseResponseJSON(t, toolResult)
 
@@ -399,7 +421,7 @@ func TestToolObserveSavedVideosListsSortsFiltersAndDedupes(t *testing.T) {
 	}
 
 	// Filter down to alpha and enforce last_n.
-	filteredResp := HandleObserveSavedVideos(req, json.RawMessage(`{"url":"alpha","last_n":1}`))
+	filteredResp := HandleObserveSavedVideos(req, json.RawMessage(`{"url":"alpha","last_n":1}`), nil)
 	filteredResult := parseToolResult(t, filteredResp)
 	filtered := parseResponseJSON(t, filteredResult)
 
