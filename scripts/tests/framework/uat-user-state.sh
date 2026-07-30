@@ -77,10 +77,26 @@ uat_connected_tracked_tab() {
 uat_check_connected_readiness() {
     local port="$1"
     local wrapper="$2"
+    if ! uat_check_extension_readiness "$port"; then
+        return 1
+    fi
+    local tracked=""
+
+    tracked="$(uat_connected_tracked_tab "$port" "$wrapper")"
+    if [ -z "$tracked" ]; then
+        UAT_CONNECTED_READINESS_REASON="no tracked browser tab on port $port"
+        return 1
+    fi
+
+    UAT_CONNECTED_READINESS_REASON="ready"
+    return 0
+}
+
+uat_check_extension_readiness() {
+    local port="$1"
     local health=""
     local connected=""
     local last_seen=""
-    local tracked=""
 
     health="$(uat_connected_health_payload "$port")"
     if [ -z "$health" ]; then
@@ -97,13 +113,7 @@ uat_check_connected_readiness() {
         return 1
     fi
 
-    tracked="$(uat_connected_tracked_tab "$port" "$wrapper")"
-    if [ -z "$tracked" ]; then
-        UAT_CONNECTED_READINESS_REASON="no tracked browser tab on port $port"
-        return 1
-    fi
-
-    UAT_CONNECTED_READINESS_REASON="ready"
+    UAT_CONNECTED_READINESS_REASON="extension ready"
     return 0
 }
 
@@ -173,6 +183,11 @@ uat_create_disposable_tab() {
     UAT_DISPOSABLE_TAB_ID="$(uat_new_tab_id "$response")"
     if [ -z "$UAT_DISPOSABLE_TAB_ID" ]; then
         echo "Failed to create disposable UAT tab: no created tab_id in response" >&2
+        return 1
+    fi
+    if ! uat_call_tool "$wrapper" "$port" "interact" \
+        '{"what":"switch_tab","tab_id":'"$UAT_DISPOSABLE_TAB_ID"',"set_tracked":true}' >/dev/null; then
+        echo "Failed to select disposable UAT tab $UAT_DISPOSABLE_TAB_ID" >&2
         return 1
     fi
     if ! uat_wait_for_disposable_tracking; then
@@ -272,15 +287,18 @@ uat_wait_for_daemon() {
 }
 
 uat_wait_for_extension() {
+    local port="$1"
     local attempt=0
-    local connected=""
-    while [ "$attempt" -lt 50 ]; do
-        connected="$(curl -s --max-time 1 "http://127.0.0.1:$1/health" 2>/dev/null |
-            jq -r '.capture.extension_connected // false' 2>/dev/null)"
-        [ "$connected" = "true" ] && return 0
+
+    while [ "$attempt" -lt "$UAT_CONNECTED_READY_ATTEMPTS" ]; do
+        if uat_check_extension_readiness "$port"; then
+            return 0
+        fi
         attempt=$((attempt + 1))
-        sleep 0.1
+        [ "$attempt" -lt "$UAT_CONNECTED_READY_ATTEMPTS" ] && uat_readiness_sleep
     done
+
+    echo "Connected UAT extension readiness timed out: $UAT_CONNECTED_READINESS_REASON" >&2
     return 1
 }
 

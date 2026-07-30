@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - scripts/smoke-test.sh
   - scripts/smoke-tests/framework-smoke.sh
@@ -60,6 +60,7 @@ test_paths:
   - scripts/tests/runtime/cat-22-advanced.sh
   - scripts/tests/browser/cat-23-draw-mode.sh
   - scripts/tests/browser/cat-24-upload.sh
+  - scripts/tests/browser/cat-33-connected-action-coverage.sh
   - scripts/tests/runtime/cat-26-dynamic-upgrade.sh
   - scripts/tests/workflows/cat-29-reproduction.sh
   - scripts/tests/workflows/cat-30-recording-automation.sh
@@ -124,6 +125,11 @@ last_verified_date: 2026-03-05
 - Connected UAT opens and tracks a dedicated local test-harness tab rather than
   navigating the user's tab. Cleanup closes that tab before restoring the
   exact prior daemon and tracked-tab state, including signal-driven exits.
+- Connected action coverage derives every live tool action from `tools/list`,
+  runs it against the dedicated tracked fixture tab, and fails closed if a
+  schema action is omitted. The connected preflight uses isolated daemon state
+  so malformed user persistence cannot make the test environment
+  nondeterministic; production persistence recovery is validated separately.
 - UAT category suites: `scripts/tests/cat-*.sh`
 - HTTP fixtures and embedded test pages: `cmd/browser-agent/internal/testpages/http.go`
 - WebSocket harness: `cmd/browser-agent/internal/testpages/websocket.go`

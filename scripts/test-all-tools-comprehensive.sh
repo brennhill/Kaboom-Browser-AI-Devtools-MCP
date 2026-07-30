@@ -145,7 +145,7 @@ echo ""
 OFFLINE_UAT_PORT="${KABOOM_UAT_OFFLINE_PORT:-17890}"
 CONNECTED_UAT_PORT="${KABOOM_UAT_CONNECTED_PORT:-7890}"
 OFFLINE_CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 20 25 26 28"
-CONNECTED_CAT_IDS="14 15 16 18 19 23 24"
+CONNECTED_CAT_IDS="14 15 16 33 18 19 23 24"
 
 # shellcheck source=tests/framework/uat-user-state.sh
 source "$TESTS_DIR/framework/uat-user-state.sh"
@@ -163,6 +163,16 @@ case "$SUITE" in
     all) CAT_IDS="$OFFLINE_CAT_IDS $CONNECTED_CAT_IDS" ;;
 esac
 
+if [ -n "${KABOOM_UAT_CATEGORY:-}" ]; then
+    case " $CAT_IDS " in
+        *" $KABOOM_UAT_CATEGORY "*) CAT_IDS="$KABOOM_UAT_CATEGORY" ;;
+        *)
+            echo "FATAL: category $KABOOM_UAT_CATEGORY is not part of the selected $SUITE suite" >&2
+            exit 2
+            ;;
+    esac
+fi
+
 stop_preflight_daemon() {
     kill "$1" 2>/dev/null || true
     lsof -tiTCP:"$CONNECTED_UAT_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
@@ -175,10 +185,10 @@ preflight_connected_extension() {
     lsof -tiTCP:"$CONNECTED_UAT_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
     sleep 0.3
     echo "Pre-flight: waiting for daemon, extension, and tracked tab..."
-    (cd "$PROJECT_ROOT" && "$WRAPPER" --daemon --port "$CONNECTED_UAT_PORT" >/dev/null 2>&1) &
+    (cd "$PROJECT_ROOT" && "$WRAPPER" --daemon --parallel --port "$CONNECTED_UAT_PORT" >/dev/null 2>&1) &
     preflight_pid="$!"
 
-    uat_wait_for_connected_browser "$CONNECTED_UAT_PORT" "$WRAPPER"
+    uat_wait_for_extension "$CONNECTED_UAT_PORT"
     local readiness_status="$?"
 
     if [ "$readiness_status" -ne 0 ]; then
@@ -224,6 +234,7 @@ trap 'uat_exit_for_signal HUP' HUP
 category_timeout() {
     case "$1" in
         19) echo 600 ;;
+        33) echo 900 ;;
         26) echo 180 ;;
         *) echo 120 ;;
     esac
@@ -265,12 +276,26 @@ run_suite() {
 }
 
 if [ "$SUITE" = "offline" ] || [ "$SUITE" = "all" ]; then
-    run_suite "offline-contract" "$OFFLINE_UAT_PORT" "$OFFLINE_CAT_IDS"
+    offline_run_ids="$OFFLINE_CAT_IDS"
+    if [ -n "${KABOOM_UAT_CATEGORY:-}" ]; then
+        case " $OFFLINE_CAT_IDS " in
+            *" $KABOOM_UAT_CATEGORY "*) offline_run_ids="$KABOOM_UAT_CATEGORY" ;;
+            *) offline_run_ids="" ;;
+        esac
+    fi
+    [ -z "$offline_run_ids" ] || run_suite "offline-contract" "$OFFLINE_UAT_PORT" "$offline_run_ids"
 fi
 if [ "$SUITE" = "connected" ] || [ "$SUITE" = "all" ]; then
     export KABOOM_UAT_REQUIRE_CONNECTED=1
     preflight_connected_extension || exit 1
-    run_suite "connected-browser" "$CONNECTED_UAT_PORT" "$CONNECTED_CAT_IDS"
+    connected_run_ids="$CONNECTED_CAT_IDS"
+    if [ -n "${KABOOM_UAT_CATEGORY:-}" ]; then
+        case " $CONNECTED_CAT_IDS " in
+            *" $KABOOM_UAT_CATEGORY "*) connected_run_ids="$KABOOM_UAT_CATEGORY" ;;
+            *) connected_run_ids="" ;;
+        esac
+    fi
+    [ -z "$connected_run_ids" ] || run_suite "connected-browser" "$CONNECTED_UAT_PORT" "$connected_run_ids"
 fi
 
 # ── Collect and Display Results ───────────────────────────
@@ -302,6 +327,7 @@ get_default_name() {
         25) echo "Annotation Integration" ;;
         26) echo "Dynamic Binary Upgrade" ;;
         28) echo "Terminal HTTP Endpoints" ;;
+        33) echo "Connected Action Coverage" ;;
         *)  echo "Unknown" ;;
     esac
 }

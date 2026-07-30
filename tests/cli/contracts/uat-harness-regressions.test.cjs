@@ -44,7 +44,7 @@ describe('comprehensive UAT harness regressions', () => {
     const offline = categoryIds('OFFLINE_CAT_IDS')
     const connected = categoryIds('CONNECTED_CAT_IDS')
 
-    assert.equal(new Set([...offline, ...connected]).size, 24)
+    assert.equal(new Set([...offline, ...connected]).size, 25)
     assert.deepEqual(offline.filter((id) => connected.includes(id)), [])
     assert.ok(offline.includes('05'), 'Pilot-unavailable contract belongs offline')
     assert.ok(connected.includes('15'), 'Pilot success path belongs connected')
@@ -87,14 +87,16 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(runner, /OFFLINE_UAT_PORT=.*17890/)
     assert.match(runner, /CONNECTED_UAT_PORT=.*7890/)
     assert.match(runner, /preflight_connected_extension/)
+    assert.match(runner, /"\$WRAPPER" --daemon --parallel --port "\$CONNECTED_UAT_PORT"/)
     assert.match(runner, /KABOOM_UAT_REQUIRE_CONNECTED=1/)
-    assert.match(runner, /uat_wait_for_connected_browser/)
+    assert.match(runner, /uat_wait_for_extension/)
     assert.match(runner, /source "\$TESTS_DIR\/framework\/uat-user-state\.sh"/)
     assert.match(runner, /uat_snapshot_user_state "\$CONNECTED_UAT_PORT" "\$WRAPPER"/)
     assert.match(runner, /trap 'uat_exit_for_signal TERM' TERM/)
     assert.match(runner, /offline\) _cleanup_ports="\$OFFLINE_UAT_PORT"/)
     assert.doesNotMatch(runner, /lsof -ti :/)
     assert.match(runner, /Running .* categories sequentially/)
+    assert.match(runner, /KABOOM_UAT_CATEGORY/)
     assert.doesNotMatch(runner, /Running \d+ parallel groups/)
     assert.doesNotMatch(runner, /PORT_GROUP\d+=/)
   })
@@ -131,6 +133,20 @@ describe('comprehensive UAT harness regressions', () => {
         'ready=ready'
       ].join('\n')
     )
+  })
+
+  test('disposable-tab preflight accepts a connected extension without requiring user tab state', () => {
+    const output = userStateCall(`
+      uat_connected_health_payload() {
+        printf '%s\\n' '{"capture":{"extension_connected":true}}'
+      }
+      uat_readiness_sleep() { :; }
+      UAT_CONNECTED_READY_ATTEMPTS=1
+      uat_wait_for_extension 7890
+      printf '%s\\n' "$UAT_CONNECTED_READINESS_REASON"
+    `)
+
+    assert.equal(output, 'extension ready')
   })
 
   test('connected readiness retries boundedly until all prerequisites become available', () => {
@@ -171,11 +187,12 @@ describe('comprehensive UAT harness regressions', () => {
             if printf '%s' "$4" | grep -q '"what":"new_tab"'; then
               printf '%s\\n' '{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"Command completed\\n{\\"action\\":\\"new_tab\\",\\"tab_id\\":222}"}]}}'
             else
-              printf 'close:%s\\n' "$4" > "$close_log"
+              printf 'call:%s\\n' "$4" >> "$close_log"
             fi
             ;;
         esac
       }
+      uat_ensure_cleanup_daemon() { return 0; }
       uat_wait_for_extension() { return 0; }
       uat_wait_for_disposable_tracking() { return 0; }
       close_log="$(mktemp)"
@@ -189,7 +206,8 @@ describe('comprehensive UAT harness regressions', () => {
     `)
 
     assert.match(output, /^created=222 url=http:\/\/127\.0\.0\.1:7890\/tests\/interact\.html$/m)
-    assert.match(output, /close:\{"what":"close_tab","tab_id":222\}/)
+    assert.match(output, /"what":"switch_tab","tab_id":222,"set_tracked":true/)
+    assert.match(output, /call:\{"what":"close_tab","tab_id":222\}/)
     assert.match(output, /closed=1/)
   })
 
@@ -213,6 +231,19 @@ describe('comprehensive UAT harness regressions', () => {
     assert.doesNotMatch(runner, /"\$TESTS_DIR\/cat-\$\{cat_id\}-"\*\.sh/)
     assert.match(framework, /local project_root="\$script_dir\/\.\.\/\.\.\/\.\."/)
     assert.match(framework, /TEST_DAEMON_CLEANER="\$FRAMEWORK_DIR\/\.\.\/\.\.\/cleanup-test-daemons\.sh"/)
+  })
+
+  test('connected UAT derives action coverage from the live five-tool schema', () => {
+    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const actionCoverage = readFileSync('scripts/tests/browser/cat-33-connected-action-coverage.sh', 'utf8')
+
+    assert.match(runner, /CONNECTED_CAT_IDS="[^"]*\b33\b/)
+    assert.match(actionCoverage, /"method":"tools\/list"/)
+    assert.match(actionCoverage, /observe generate configure interact analyze/)
+    assert.match(actionCoverage, /\.inputSchema\.properties\.what\.enum/)
+    assert.match(actionCoverage, /schema_count/)
+    assert.match(actionCoverage, /executed_count/)
+    assert.match(actionCoverage, /fail "Action coverage mismatch/)
   })
 
   test('long-running categories retain complete result accounting', () => {
