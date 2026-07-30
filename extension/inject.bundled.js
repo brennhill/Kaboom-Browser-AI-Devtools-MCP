@@ -3595,24 +3595,24 @@ function handleSetting(data) {
   if (handler)
     handler(data);
 }
-function handleStateCommand(data, captureStateFn, restoreStateFn) {
+function handleStateCommand(data, captureStateFn, restoreStateFn, respond) {
   const { messageId, action, state } = data;
   if (!VALID_STATE_ACTIONS.has(action)) {
     console.warn("[KaBOOM!] Invalid state action:", action);
-    window.postMessage({
+    respond({
       type: "kaboom_state_response",
       messageId,
       result: { error: `Invalid action: ${action}` }
-    }, window.location.origin);
+    });
     return;
   }
   if (action === "restore" && (!state || typeof state !== "object")) {
     console.warn("[KaBOOM!] Invalid state object for restore");
-    window.postMessage({
+    respond({
       type: "kaboom_state_response",
       messageId,
       result: { error: "Invalid state object" }
-    }, window.location.origin);
+    });
     return;
   }
   let result;
@@ -3628,11 +3628,11 @@ function handleStateCommand(data, captureStateFn, restoreStateFn) {
   } catch (err) {
     result = { error: errorMessage(err) };
   }
-  window.postMessage({
+  respond({
     type: "kaboom_state_response",
     messageId,
     result
-  }, window.location.origin);
+  });
 }
 
 // extension/inject/message-handlers.js
@@ -3678,7 +3678,7 @@ function installMessageListener(captureStateFn, restoreStateFn) {
       if (isValidSettingPayload(settingData))
         handleSetting(settingData);
     },
-    kaboom_state_command: (data) => handleStateCommand(data, captureStateFn, restoreStateFn),
+    kaboom_state_command: (data) => handleStateCommand(data, captureStateFn, restoreStateFn, postResponse),
     kaboom_execute_js: (data) => handleExecuteJs(data),
     kaboom_a11y_query: (data) => handleA11yQuery(data),
     kaboom_dom_query: (data) => handleDomQuery(data),

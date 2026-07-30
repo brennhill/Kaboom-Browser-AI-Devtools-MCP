@@ -29,5 +29,5 @@ export interface StateCommandMessageData {
 }
 export declare function isValidSettingPayload(data: SettingMessageData): boolean;
 export declare function handleSetting(data: SettingMessageData): void;
-export declare function handleStateCommand(data: StateCommandMessageData, captureStateFn: () => BrowserStateSnapshot, restoreStateFn: (state: BrowserStateSnapshot, includeUrl: boolean) => unknown): void;
+export declare function handleStateCommand(data: StateCommandMessageData, captureStateFn: () => BrowserStateSnapshot, restoreStateFn: (state: BrowserStateSnapshot, includeUrl: boolean) => unknown, respond: (response: Record<string, unknown>) => void): void;
 //# sourceMappingURL=settings.d.ts.map

@@ -12,6 +12,8 @@ code_paths:
   - internal/recording/actionlog/recorder.go
   - internal/schema/interact/actions.go
   - internal/statediag/collector.go
+  - src/inject/message-handlers.ts
+  - src/inject/settings.ts
   - src/inject/state.ts
 test_paths:
   - cmd/browser-agent/lint_hardening_test.go
@@ -22,6 +24,7 @@ test_paths:
   - cmd/browser-agent/tools_interact_state_test.go
   - internal/schema/interact/schema_test.go
   - tests/extension/pilot/pilot-state.test.js
+  - tests/extension/injection/inject-settings.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
   - tests/architecture/user-state-loaders.test.cjs
 last_verified_version: 0.7.12
@@ -53,7 +56,12 @@ last_verified_date: 2026-03-05
 
 - State capture, persistence, restore, listing, and deletion:
   - `cmd/browser-agent/internal/toolinteract/interactstate/state.go`
+  - `src/inject/message-handlers.ts`
+  - `src/inject/settings.ts`
   - `src/inject/state.ts`
+- Inject-context state results return through the canonical nonce-authenticated
+  response boundary. Unauthenticated page messages cannot satisfy a pending
+  capture or restore request.
 - Save, load, and delete share one request-validation boundary for canonical
   snapshot naming and session-store readiness.
 - The handler package tests install a package-owned temporary state root, so
@@ -80,4 +88,5 @@ last_verified_date: 2026-03-05
   - `cmd/browser-agent/tools_interact_state_test.go`
   - `internal/schema/interact/schema_test.go`
   - `tests/extension/pilot/pilot-state.test.js`
+  - `tests/extension/injection/inject-settings.test.js`
   - `tests/extension/contracts/no-compatibility-facades.test.js`

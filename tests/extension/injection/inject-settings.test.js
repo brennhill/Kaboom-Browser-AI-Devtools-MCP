@@ -221,6 +221,10 @@ describe('handleSetting', () => {
 // =============================================================================
 
 describe('handleStateCommand', () => {
+  const respondToWindow = (response) => {
+    globalThis.window.postMessage(response, globalThis.window.location.origin)
+  }
+
   beforeEach(() => {
     originalWindow = globalThis.window
     globalThis.window = createMockWindow({ href: 'http://localhost:3000/test' })
@@ -236,19 +240,19 @@ describe('handleStateCommand', () => {
     const capturedState = { url: 'http://localhost:3000', cookies: [], localStorage: {} }
     const captureFn = mock.fn(() => capturedState)
     const restoreFn = mock.fn()
+    const respond = mock.fn()
 
     handleStateCommand(
       { type: 'kaboom_state_command', messageId: 'msg-1', action: 'capture' },
       captureFn,
-      restoreFn
+      restoreFn,
+      respond
     )
 
     assert.strictEqual(captureFn.mock.calls.length, 1, 'Should call captureStateFn')
     assert.strictEqual(restoreFn.mock.calls.length, 0, 'Should not call restoreStateFn')
-
-    const postCalls = globalThis.window.postMessage.mock.calls
-    assert.strictEqual(postCalls.length, 1)
-    const msg = postCalls[0].arguments[0]
+    assert.strictEqual(respond.mock.calls.length, 1, 'Should use the authenticated response boundary')
+    const msg = respond.mock.calls[0].arguments[0]
     assert.strictEqual(msg.type, 'kaboom_state_response')
     assert.strictEqual(msg.messageId, 'msg-1')
     assert.deepStrictEqual(msg.result, capturedState)
@@ -264,7 +268,8 @@ describe('handleStateCommand', () => {
     handleStateCommand(
       { type: 'kaboom_state_command', messageId: 'msg-2', action: 'restore', state: stateToRestore, include_url: true },
       captureFn,
-      restoreFn
+      restoreFn,
+      respondToWindow
     )
 
     assert.strictEqual(captureFn.mock.calls.length, 0)
@@ -285,7 +290,8 @@ describe('handleStateCommand', () => {
     handleStateCommand(
       { type: 'kaboom_state_command', messageId: 'msg-3', action: 'restore', state: { url: '/' } },
       mock.fn(),
-      restoreFn
+      restoreFn,
+      respondToWindow
     )
 
     assert.strictEqual(restoreFn.mock.calls[0].arguments[1], true, 'include_url should default to true')
@@ -297,7 +303,8 @@ describe('handleStateCommand', () => {
     handleStateCommand(
       { type: 'kaboom_state_command', messageId: 'msg-4', action: 'delete' },
       mock.fn(),
-      mock.fn()
+      mock.fn(),
+      respondToWindow
     )
 
     const msg = globalThis.window.postMessage.mock.calls[0].arguments[0]
@@ -312,7 +319,8 @@ describe('handleStateCommand', () => {
     handleStateCommand(
       { type: 'kaboom_state_command', messageId: 'msg-5', action: 'restore' },
       mock.fn(),
-      mock.fn()
+      mock.fn(),
+      respondToWindow
     )
 
     const msg = globalThis.window.postMessage.mock.calls[0].arguments[0]
@@ -328,7 +336,8 @@ describe('handleStateCommand', () => {
     handleStateCommand(
       { type: 'kaboom_state_command', messageId: 'msg-6', action: 'capture' },
       captureFn,
-      mock.fn()
+      mock.fn(),
+      respondToWindow
     )
 
     const msg = globalThis.window.postMessage.mock.calls[0].arguments[0]
@@ -342,7 +351,8 @@ describe('handleStateCommand', () => {
     handleStateCommand(
       { type: 'kaboom_state_command', messageId: 'msg-7', action: 'capture' },
       mock.fn(() => ({})),
-      mock.fn()
+      mock.fn(),
+      respondToWindow
     )
 
     const targetOrigin = globalThis.window.postMessage.mock.calls[0].arguments[1]

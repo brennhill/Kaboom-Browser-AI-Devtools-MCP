@@ -19,6 +19,7 @@ code_paths:
   - scripts/tests/framework/framework.sh
   - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
+  - scripts/tests/browser/cat-33-connected-action-coverage.sh
   - scripts/contracts/check-architecture-boundaries.cjs
   - .architecture-boundaries.json
   - scripts/test-all-tools-comprehensive.sh
@@ -99,6 +100,9 @@ last_verified_date: 2026-03-05
 - Smoke module contracts for push/upload/framework resilience/stability: `scripts/smoke-tests/14-browser-push.sh`, `scripts/smoke-tests/15-file-upload.sh`, `scripts/smoke-tests/29-framework-selector-resilience.sh`, `scripts/smoke-tests/30-stability-shutdown.sh`
 - Split UAT orchestration + integrity checks: `scripts/test-all-split.sh`, `scripts/test-original-uat.sh`, `scripts/test-new-uat.sh`
 - Shared UAT result parsing: `scripts/uat-result-lib.sh`
+- Connected action coverage classifies every live five-tool action and supports
+  `KABOOM_UAT_ACTION=tool/mode` for isolated reproduction without inheriting
+  state from unrelated actions.
 - Comprehensive aggregation reports pass/fail/skip counts and fails closed when
   any selected category omits or corrupts its structured result file.
 - `make uat` runs both suite boundaries and emits canonical

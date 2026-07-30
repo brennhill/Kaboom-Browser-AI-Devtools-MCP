@@ -64,7 +64,7 @@ export function installMessageListener(captureStateFn, restoreStateFn) {
             if (isValidSettingPayload(settingData))
                 handleSetting(settingData);
         },
-        kaboom_state_command: (data) => handleStateCommand(data, captureStateFn, restoreStateFn),
+        kaboom_state_command: (data) => handleStateCommand(data, captureStateFn, restoreStateFn, postResponse),
         kaboom_execute_js: (data) => handleExecuteJs(data),
         kaboom_a11y_query: (data) => handleA11yQuery(data),
         kaboom_dom_query: (data) => handleDomQuery(data),

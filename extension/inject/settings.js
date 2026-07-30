@@ -59,26 +59,26 @@ export function handleSetting(data) {
     if (handler)
         handler(data);
 }
-export function handleStateCommand(data, captureStateFn, restoreStateFn) {
+export function handleStateCommand(data, captureStateFn, restoreStateFn, respond) {
     const { messageId, action, state } = data;
     // Validate action
     if (!VALID_STATE_ACTIONS.has(action)) {
         console.warn('[KaBOOM!] Invalid state action:', action);
-        window.postMessage({
+        respond({
             type: 'kaboom_state_response',
             messageId,
             result: { error: `Invalid action: ${action}` }
-        }, window.location.origin);
+        });
         return;
     }
     // Validate state object for restore action
     if (action === 'restore' && (!state || typeof state !== 'object')) {
         console.warn('[KaBOOM!] Invalid state object for restore');
-        window.postMessage({
+        respond({
             type: 'kaboom_state_response',
             messageId,
             result: { error: 'Invalid state object' }
-        }, window.location.origin);
+        });
         return;
     }
     let result;
@@ -98,10 +98,10 @@ export function handleStateCommand(data, captureStateFn, restoreStateFn) {
         result = { error: errorMessage(err) };
     }
     // Send response back to content script
-    window.postMessage({
+    respond({
         type: 'kaboom_state_response',
         messageId,
         result
-    }, window.location.origin);
+    });
 }
 //# sourceMappingURL=settings.js.map

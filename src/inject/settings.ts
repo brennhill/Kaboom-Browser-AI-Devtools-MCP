@@ -101,35 +101,30 @@ export function handleSetting(data: SettingMessageData): void {
 export function handleStateCommand(
   data: StateCommandMessageData,
   captureStateFn: () => BrowserStateSnapshot,
-  restoreStateFn: (state: BrowserStateSnapshot, includeUrl: boolean) => unknown
+  restoreStateFn: (state: BrowserStateSnapshot, includeUrl: boolean) => unknown,
+  respond: (response: Record<string, unknown>) => void
 ): void {
   const { messageId, action, state } = data
 
   // Validate action
   if (!VALID_STATE_ACTIONS.has(action)) {
     console.warn('[KaBOOM!] Invalid state action:', action)
-    window.postMessage(
-      {
-        type: 'kaboom_state_response',
-        messageId,
-        result: { error: `Invalid action: ${action}` }
-      },
-      window.location.origin
-    )
+    respond({
+      type: 'kaboom_state_response',
+      messageId,
+      result: { error: `Invalid action: ${action}` }
+    })
     return
   }
 
   // Validate state object for restore action
   if (action === 'restore' && (!state || typeof state !== 'object')) {
     console.warn('[KaBOOM!] Invalid state object for restore')
-    window.postMessage(
-      {
-        type: 'kaboom_state_response',
-        messageId,
-        result: { error: 'Invalid state object' }
-      },
-      window.location.origin
-    )
+    respond({
+      type: 'kaboom_state_response',
+      messageId,
+      result: { error: 'Invalid state object' }
+    })
     return
   }
 
@@ -149,12 +144,9 @@ export function handleStateCommand(
   }
 
   // Send response back to content script
-  window.postMessage(
-    {
-      type: 'kaboom_state_response',
-      messageId,
-      result
-    },
-    window.location.origin
-  )
+  respond({
+    type: 'kaboom_state_response',
+    messageId,
+    result
+  })
 }
