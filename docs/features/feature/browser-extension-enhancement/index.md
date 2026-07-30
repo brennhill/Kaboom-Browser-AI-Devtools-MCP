@@ -20,23 +20,44 @@ code_paths:
   - src/background/message-routing/
   - src/background/runtime-state/
   - src/background/runtime-state/state-recovery.ts
+  - src/background/event-listeners.ts
   - src/background/state-snapshots.ts
   - src/background/ui/content-script-bridge.ts
   - src/background/ui/settings-storage.ts
   - src/background/ui/tracked-tab-state.ts
   - src/background/ui/terminal-workspace.ts
+  - src/content/script-injection.ts
+  - src/content/runtime-message-listener.ts
+  - src/content/ui/terminal-panel-bridge.ts
+  - src/content/ui/tracked-hover-launcher.ts
   - src/lib/daemon-http.ts
+  - src/lib/storage/io.ts
   - src/lib/storage/recovery.ts
   - src/lib/storage/validated.ts
+  - src/lib/tabs/tracked-tab-storage.ts
+  - src/popup/recording/recording.ts
   - cmd/browser-agent/internal/health/doctor_live_checks.go
+  - cmd/browser-agent/internal/daemonlife/
+  - cmd/browser-agent/internal/screenrec/
+  - cmd/browser-agent/internal/sequencehandler/
+  - cmd/browser-agent/internal/summarypref/
+  - cmd/browser-agent/internal/toolinteract/interactstate/
+  - internal/noise/
+  - internal/persistence/
+  - internal/recording/
+  - internal/statediag/collector.go
+  - internal/telemetry/install_id.go
   - extension/popup.html
   - extension/popup.css
   - extension/options.html
 test_paths:
   - tests/architecture/user-state-loaders.test.cjs
+  - internal/recording/manager_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/system-doctor/system-doctor-ui.test.js
   - cmd/browser-agent/internal/health/health_coverage_test.go
+  - cmd/browser-agent/internal/health/health_test.go
+  - internal/statediag/collector_test.go
   - tests/extension/popup-shell/popup-features.test.js
   - tests/extension/popup-shell/popup-toggles.test.js
   - tests/extension/ui-controls/toggle-feature.test.js
@@ -77,8 +98,10 @@ last_verified_date: 2026-03-28
   subscription-versus-API provider status, keychain failures, version state,
   extension connectivity, and tracked-tab readiness.
 - Corrupt or unreadable extension-local state now falls back deterministically
-  and emits a redacted `state_recovery` diagnostic that System Doctor can explain
-  without exposing the persisted value.
+  and emits a redacted `state_recovery` diagnostic without exposing the
+  persisted value. Diagnostics have an explicit active/recovered lifecycle,
+  retain bounded transition history and occurrence counts, and clear their
+  warning state only after the owning loader verifies fresh valid state.
 
 ## Specs
 

@@ -1,7 +1,7 @@
 ---
 doc_type: legacy_doc
 status: reference
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-30
 ---
 
 # Error Recovery Strategy - Kaboom MCP
@@ -14,6 +14,20 @@ last_reviewed: 2026-07-28
 ## Overview
 
 Kaboom implements a multi-layered error recovery strategy to handle transient failures, network timeouts, and server crashes gracefully. The system combines timeout escalation, exponential backoff, circuit breakers, and fallback mechanisms to maintain reliability under adverse conditions.
+
+## Persisted-State Diagnostic Lifecycle
+
+Every persisted-state owner reports recovery through the canonical state
+diagnostic collector. A malformed or unreadable value creates an `active`
+diagnostic with redacted detail, a deterministic fallback, and an actionable
+fix. The same owner must emit `recovered` only after a later read or write
+verifies valid fresh state.
+
+System Doctor retains the first and last observation times, recovery time,
+occurrence count, and a bounded transition history. Recovered diagnostics remain
+visible as historical health information but no longer degrade readiness.
+Diagnostic fields must never include raw persisted values, paths containing
+secrets, credentials, page content, prompts, URLs, or captured traffic.
 
 ---
 

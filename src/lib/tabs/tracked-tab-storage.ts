@@ -7,7 +7,7 @@
 
 import { StorageKey } from '../constants.js'
 import { getLocals, setLocals, removeLocals } from '../storage/local.js'
-import { reportStateRecovery } from '../storage/recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../storage/recovery.js'
 
 export interface TrackedTabState {
   id?: number
@@ -42,6 +42,7 @@ export async function readTrackedTab(): Promise<TrackedTabState> {
     reportTrackedTabRecovery('Saved tracked-tab state was malformed; automatic tab selection is active.')
     return {}
   }
+  resolveStateRecovery('tracked_tab_state')
   return {
     id,
     url,

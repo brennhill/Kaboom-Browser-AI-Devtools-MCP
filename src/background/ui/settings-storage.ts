@@ -8,7 +8,10 @@ import { StorageKey } from '../../lib/constants.js'
 import { persist } from '../../lib/storage/io.js'
 import { getLocals, setLocal } from '../../lib/storage/local.js'
 import { readLocalState } from '../../lib/storage/validated.js'
-import { reportStateRecovery } from '../runtime-state/state-recovery.js'
+import {
+  reportStateRecovery,
+  resolveStateRecovery
+} from '../runtime-state/state-recovery.js'
 
 export interface SavedSettings {
   serverUrl?: string
@@ -33,7 +36,10 @@ export async function loadSavedSettings(): Promise<SavedSettings> {
       [StorageKey.SCREENSHOT_ON_ERROR, StorageKey.SOURCE_MAP_ENABLED, StorageKey.DEBUG_MODE].every(
         (key) => stored[key] === undefined || typeof stored[key] === 'boolean'
       )
-    if (valid) return stored as SavedSettings
+    if (valid) {
+      resolveStateRecovery('extension_settings_state')
+      return stored as SavedSettings
+    }
     reportSettingsRecovery('Saved extension settings were malformed; defaults are active.')
     return {}
   } catch {
@@ -50,7 +56,8 @@ export async function loadAiWebPilotState(logFn?: (message: string) => void): Pr
     fallback: true,
     validate: (value): value is boolean => typeof value === 'boolean',
     diagnostic: settingsDiagnostic('Saved AI Web Pilot preference was invalid or unreadable; enabled is active.'),
-    report: reportStateRecovery
+    report: reportStateRecovery,
+    resolve: resolveStateRecovery
   })
   const wasLoaded = aiEnabled !== false
   const loadTime = performance.now() - startTime
@@ -64,7 +71,8 @@ export async function loadDebugModeState(): Promise<boolean> {
     fallback: false,
     validate: (value): value is boolean => typeof value === 'boolean',
     diagnostic: settingsDiagnostic('Saved debug-mode preference was invalid or unreadable; disabled is active.'),
-    report: reportStateRecovery
+    report: reportStateRecovery,
+    resolve: resolveStateRecovery
   })
 }
 
@@ -102,6 +110,7 @@ export async function getAllConfigSettings(): Promise<Record<string, boolean | s
         (value) => value === undefined || typeof value === 'boolean' || typeof value === 'string'
       )
     ) {
+      resolveStateRecovery('extension_settings_state')
       return stored as Record<string, boolean | string | undefined>
     }
     reportSettingsRecovery('Saved capture settings were malformed; defaults are active.')

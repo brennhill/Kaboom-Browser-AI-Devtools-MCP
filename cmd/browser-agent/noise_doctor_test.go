@@ -25,4 +25,13 @@ func TestRecoveryDoctorChecks(t *testing.T) {
 	if checks[0].Name != "noise_rule_state" || checks[0].Status != "warn" || checks[0].Fix == "" {
 		t.Fatalf("unexpected Doctor check: %#v", checks[0])
 	}
+
+	collector.Resolve("noise_rule_state")
+	checks = recoveryDoctorChecks(collector)
+	if checks[0].Status != "pass" || checks[0].Lifecycle != "recovered" || checks[0].RecoveredAt == "" {
+		t.Fatalf("recovered Doctor check: %#v", checks[0])
+	}
+	if len(checks[0].History) != 2 {
+		t.Fatalf("history = %#v, want active and recovered transitions", checks[0].History)
+	}
 }

@@ -76,6 +76,7 @@ func (r *RecordingManager) persistRecordingToDisk(recording *Recording) error {
 		return fmt.Errorf("write_file_failed: %w", err)
 	}
 
+	r.resolveRecovery()
 	return nil
 }
 
@@ -84,9 +85,10 @@ func (r *RecordingManager) persistRecordingToDisk(recording *Recording) error {
 // ============================================================================
 
 // collectRecordingsFromRoots loads recordings from disk directories, deduplicating by name.
-func (r *RecordingManager) collectRecordingsFromRoots(roots []string, limit int) ([]Recording, error) {
+func (r *RecordingManager) collectRecordingsFromRoots(roots []string, limit int) ([]Recording, bool, error) {
 	recordings := make([]Recording, 0)
 	seen := make(map[string]bool)
+	hadRecovery := false
 
 	for _, recordingsDir := range roots {
 		entries, err := os.ReadDir(recordingsDir)
@@ -94,7 +96,7 @@ func (r *RecordingManager) collectRecordingsFromRoots(roots []string, limit int)
 			if os.IsNotExist(err) {
 				continue
 			}
-			return nil, fmt.Errorf("readdir_failed: %w", err)
+			return nil, hadRecovery, fmt.Errorf("readdir_failed: %w", err)
 		}
 		for _, entry := range entries {
 			if !entry.IsDir() || seen[entry.Name()] {
@@ -103,15 +105,16 @@ func (r *RecordingManager) collectRecordingsFromRoots(roots []string, limit int)
 			seen[entry.Name()] = true
 			recording, err := r.loadRecordingFromDisk(entry.Name())
 			if err != nil {
+				hadRecovery = true
 				continue
 			}
 			recordings = append(recordings, *recording)
 			if limit > 0 && len(recordings) >= limit {
-				return recordings, nil
+				return recordings, hadRecovery, nil
 			}
 		}
 	}
-	return recordings, nil
+	return recordings, hadRecovery, nil
 }
 
 // ListRecordings returns all saved recordings from disk.
@@ -121,9 +124,12 @@ func (r *RecordingManager) ListRecordings(limit int) ([]Recording, error) {
 		return nil, err
 	}
 
-	recordings, err := r.collectRecordingsFromRoots(roots, limit)
+	recordings, hadRecovery, err := r.collectRecordingsFromRoots(roots, limit)
 	if err != nil {
 		return nil, err
+	}
+	if !hadRecovery {
+		r.resolveRecovery()
 	}
 
 	// Sort by created_at (newest first).
@@ -141,7 +147,11 @@ func (r *RecordingManager) GetRecording(recordingID string) (*Recording, error) 
 	if err := ValidateRecordingID(recordingID); err != nil {
 		return nil, err
 	}
-	return r.loadRecordingFromDisk(recordingID)
+	recording, err := r.loadRecordingFromDisk(recordingID)
+	if err == nil {
+		r.resolveRecovery()
+	}
+	return recording, err
 }
 
 // LookupRecording returns a recording by ID, preferring the in-memory copy (an
@@ -230,4 +240,14 @@ func (r *RecordingManager) reportRecovery(detail string) {
 		Detail: detail,
 		Fix:    "Delete the affected recording metadata or capture the recording again.",
 	})
+}
+
+func (r *RecordingManager) resolveRecovery() {
+	if r == nil {
+		return
+	}
+	r.diagnosticsMu.RLock()
+	diagnostics := r.diagnostics
+	r.diagnosticsMu.RUnlock()
+	statediag.Resolve(diagnostics, "event_recording_state")
 }

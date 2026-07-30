@@ -3,7 +3,7 @@
  */
 import type { CircuitBreakerState, ConnectionStatus, ContextWarning, MemoryPressureState } from '../../types/runtime/state.js';
 import type { MessageHandlerOwner } from './types.js';
-import type { StateRecoveryDiagnostic } from '../../types/runtime-messages.js';
+import type { StateRecoveryDiagnostic, StateRecoveryLifecycle } from '../../types/runtime-messages.js';
 export interface StatusHandlerDependencies {
     getConnectionStatus: () => ConnectionStatus;
     getServerUrl: () => string;
@@ -20,7 +20,7 @@ export interface StatusHandlerDependencies {
     exportDebugLog: () => string;
     clearDebugLog: () => void;
     debugLog: (category: string, message: string, data?: unknown) => void;
-    reportStateRecovery: (diagnostic: StateRecoveryDiagnostic) => void;
+    reportStateRecovery: (diagnostic: StateRecoveryDiagnostic, lifecycle: StateRecoveryLifecycle) => void;
 }
 export declare function createStatusMessageHandler(deps: StatusHandlerDependencies): MessageHandlerOwner;
 //# sourceMappingURL=status-handler.d.ts.map

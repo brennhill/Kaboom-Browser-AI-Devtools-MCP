@@ -6,7 +6,10 @@
 import { StorageKey } from '../../lib/constants.js'
 import { setLocal } from '../../lib/storage/local.js'
 import { readLocalState } from '../../lib/storage/validated.js'
-import { reportStateRecovery } from '../runtime-state/state-recovery.js'
+import {
+  reportStateRecovery,
+  resolveStateRecovery
+} from '../runtime-state/state-recovery.js'
 
 let serverInstallId: string | undefined
 
@@ -24,7 +27,8 @@ export async function loadServerInstallId(): Promise<void> {
       detail: 'Saved daemon identity was invalid or unreadable; live synchronization will refresh it.',
       fix: 'Keep the extension connected to Kaboom until the next successful sync.'
     },
-    report: reportStateRecovery
+    report: reportStateRecovery,
+    resolve: resolveStateRecovery
   })
   if (stored && !serverInstallId) {
     serverInstallId = stored

@@ -208,11 +208,35 @@ func recoveryDoctorChecks(diagnostics interface{ Snapshot() []statediag.Diagnost
 	snapshot := diagnostics.Snapshot()
 	checks := make([]health.DoctorCheck, 0, len(snapshot))
 	for _, diagnostic := range snapshot {
+		status := "warn"
+		if diagnostic.Lifecycle == statediag.LifecycleRecovered {
+			status = "pass"
+		}
+		history := make([]health.DoctorTransition, 0, len(diagnostic.History))
+		for _, transition := range diagnostic.History {
+			history = append(history, health.DoctorTransition{
+				Lifecycle: string(transition.Lifecycle),
+				At:        transition.At.Format(time.RFC3339Nano),
+			})
+		}
 		checks = append(checks, health.DoctorCheck{
-			Name: diagnostic.Name, Status: "warn", Detail: diagnostic.Detail, Fix: diagnostic.Fix,
+			Name: diagnostic.Name, Status: status, Detail: diagnostic.Detail, Fix: diagnostic.Fix,
+			Lifecycle:   string(diagnostic.Lifecycle),
+			FirstSeenAt: diagnostic.FirstSeenAt.Format(time.RFC3339Nano),
+			LastSeenAt:  diagnostic.LastSeenAt.Format(time.RFC3339Nano),
+			RecoveredAt: formatDiagnosticTime(diagnostic.RecoveredAt),
+			Occurrences: diagnostic.Occurrences,
+			History:     history,
 		})
 	}
 	return checks
+}
+
+func formatDiagnosticTime(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return value.Format(time.RFC3339Nano)
 }
 
 type serverDepsAdapter struct{ s *Server }

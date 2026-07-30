@@ -93,12 +93,16 @@ func PersistCurrentLock(port int, version string, diagnostics statediag.Reporter
 	if err != nil {
 		return err
 	}
-	return writeDaemonLockFile(daemonLockRecord{
+	if err := writeDaemonLockFile(daemonLockRecord{
 		PID:          os.Getpid(),
 		Port:         port,
 		StateDir:     stateDir,
 		Version:      version,
 		UpdatedAt:    daemonNow().UTC().Format(time.RFC3339),
 		InstallEpoch: resolveInstallEpoch(diagnostics),
-	})
+	}); err != nil {
+		return err
+	}
+	statediag.Resolve(diagnostics, "daemon_lock_state")
+	return nil
 }

@@ -545,6 +545,19 @@ func TestListRecordingsReportsMalformedMetadataAndKeepsValidSiblings(t *testing.
 	if strings.Contains(got[0].Detail, "secret") {
 		t.Fatalf("diagnostic leaked metadata: %#v", got[0])
 	}
+	if got[0].Lifecycle != statediag.LifecycleActive {
+		t.Fatalf("diagnostic lifecycle = %q, want active while malformed sibling remains", got[0].Lifecycle)
+	}
+	if err := os.RemoveAll(brokenDir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.ListRecordings(0); err != nil {
+		t.Fatal(err)
+	}
+	got = diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
+		t.Fatalf("diagnostics = %#v, want recovered after a clean listing", got)
+	}
 }
 
 // TestLookupRecording_PrefersInMemoryOverDisk pins the one behavior that makes

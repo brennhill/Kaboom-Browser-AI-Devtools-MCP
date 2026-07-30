@@ -7,12 +7,24 @@
 import type { PopupConnectionStatus } from './shell/types.js'
 
 type DoctorStatus = 'pass' | 'warn' | 'fail'
+type DoctorLifecycle = 'active' | 'recovered'
+
+interface DoctorTransition {
+  lifecycle: DoctorLifecycle
+  at: string
+}
 
 interface DoctorCheck {
   name: string
   status: DoctorStatus
   detail: string
   fix?: string
+  lifecycle?: DoctorLifecycle
+  first_seen_at?: string
+  last_seen_at?: string
+  recovered_at?: string
+  occurrences?: number
+  history?: DoctorTransition[]
 }
 
 interface DoctorReport {
@@ -64,10 +76,22 @@ function renderReport(report: DoctorReport): void {
     ...report.checks.map((check) => {
       const row = document.createElement('div')
       row.className = `doctor-check doctor-${check.status}`
+      if (check.lifecycle) row.dataset.lifecycle = check.lifecycle
       const detail = document.createElement('div')
       detail.className = 'doctor-check-detail'
       detail.textContent = check.detail
       row.appendChild(detail)
+      if (check.lifecycle === 'recovered') {
+        const lifecycle = document.createElement('div')
+        lifecycle.className = 'doctor-check-lifecycle'
+        lifecycle.textContent = check.recovered_at
+          ? `Recovered ${new Date(check.recovered_at).toLocaleString()}`
+          : 'Recovered'
+        if ((check.occurrences ?? 0) > 1) {
+          lifecycle.textContent += ` · ${check.occurrences} occurrences`
+        }
+        row.appendChild(lifecycle)
+      }
       if (check.fix) {
         const fix = document.createElement('div')
         fix.className = 'doctor-check-fix'

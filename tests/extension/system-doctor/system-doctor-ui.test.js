@@ -13,6 +13,7 @@ function element(id = '') {
     id,
     textContent: '',
     className: '',
+    dataset: {},
     style: {},
     children: [],
     appendChild(child) {
@@ -113,6 +114,34 @@ describe('popup System Doctor', () => {
 
     assert.equal(document.getElementById('system-doctor-overall').textContent, 'Needs attention')
     assert.equal(document.getElementById('system-doctor-overall').className, 'doctor-overall doctor-warn')
+  })
+
+  test('renders recovered diagnostics as historical health information', async () => {
+    const { refreshSystemDoctor } = await import('../../../extension/popup/system-doctor.js')
+    await refreshSystemDoctor(
+      { connected: true, serverUrl: 'http://127.0.0.1:7890' },
+      async () => ({
+        ok: true,
+        json: async () => ({
+          status: 'healthy',
+          ready_for_interaction: true,
+          version: '0.9.0',
+          checks: [{
+            name: 'tracked_tab_state',
+            status: 'pass',
+            detail: 'Saved tracking state was malformed; automatic tracking was used.',
+            lifecycle: 'recovered',
+            recovered_at: '2026-07-30T08:01:00Z',
+            occurrences: 2
+          }]
+        })
+      })
+    )
+
+    const checks = document.getElementById('system-doctor-checks')
+    assert.match(renderedText(checks), /Recovered/)
+    assert.match(renderedText(checks), /2 occurrences/)
+    assert.equal(checks.children[0].dataset.lifecycle, 'recovered')
   })
 
   test('shows daemon unavailability without throwing or inventing check results', async () => {

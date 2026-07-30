@@ -4,7 +4,7 @@
  */
 
 import { KABOOM_LOG_PREFIX } from '../brand.js'
-import { reportStateRecovery } from './recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from './recovery.js'
 
 export type StorageReadResult = Record<string, unknown>
 export type StorageReadCallback = (result: StorageReadResult) => void
@@ -102,6 +102,7 @@ export function setStorageAccessLevel(
 async function reportStorageMutationFailure(operation: Promise<void>, verb: string): Promise<void> {
   try {
     await operation
+    resolveStateRecovery('extension_storage_write_state')
   } catch (error) {
     reportStateRecovery({
       name: 'extension_storage_write_state',

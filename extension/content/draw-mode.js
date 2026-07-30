@@ -1750,6 +1750,7 @@ function reportDrawStateRecovery(detail) {
     void chrome.runtime
       .sendMessage({
         type: 'report_state_recovery',
+        lifecycle: 'active',
         diagnostic: {
           name: 'annotation_state',
           detail,
@@ -1759,6 +1760,20 @@ function reportDrawStateRecovery(detail) {
       .catch(() => undefined)
   } catch {
     // The draw UI still falls back safely when the extension context is gone.
+  }
+}
+
+function resolveDrawStateRecovery() {
+  try {
+    void chrome.runtime
+      .sendMessage({
+        type: 'report_state_recovery',
+        lifecycle: 'recovered',
+        diagnostic: { name: 'annotation_state', detail: '', fix: '' }
+      })
+      .catch(() => undefined)
+  } catch {
+    // A later page load will verify state again when this context is unavailable.
   }
 }
 
@@ -1827,6 +1842,7 @@ function loadAnnotations() {
         reportDrawStateRecovery('Saved annotation state was malformed; an empty canvas is active.')
         return
       }
+      resolveDrawStateRecovery()
       if (data?.annotations && data.page_url === window.location.href) {
         annotations = data.annotations.map(normalizeLoadedAnnotation)
         renderAnnotations()

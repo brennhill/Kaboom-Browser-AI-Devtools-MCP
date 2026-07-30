@@ -37,10 +37,23 @@ function renderReport(report) {
     elements.checks.replaceChildren(...report.checks.map((check) => {
         const row = document.createElement('div');
         row.className = `doctor-check doctor-${check.status}`;
+        if (check.lifecycle)
+            row.dataset.lifecycle = check.lifecycle;
         const detail = document.createElement('div');
         detail.className = 'doctor-check-detail';
         detail.textContent = check.detail;
         row.appendChild(detail);
+        if (check.lifecycle === 'recovered') {
+            const lifecycle = document.createElement('div');
+            lifecycle.className = 'doctor-check-lifecycle';
+            lifecycle.textContent = check.recovered_at
+                ? `Recovered ${new Date(check.recovered_at).toLocaleString()}`
+                : 'Recovered';
+            if ((check.occurrences ?? 0) > 1) {
+                lifecycle.textContent += ` · ${check.occurrences} occurrences`;
+            }
+            row.appendChild(lifecycle);
+        }
         if (check.fix) {
             const fix = document.createElement('div');
             fix.className = 'doctor-check-fix';

@@ -1,4 +1,5 @@
 // user-state-loaders.test.cjs — Prevents unregistered persisted user-state readers.
+/* global __dirname */
 
 const assert = require('node:assert/strict')
 const fs = require('node:fs')

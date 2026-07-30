@@ -41,19 +41,22 @@ func loadAndFilterRecordings(
 	matches []string,
 	urlFilter string,
 	diagnostics statediag.Reporter,
-) ([]Metadata, int64) {
+) ([]Metadata, int64, bool) {
 	var recordings []Metadata
 	var totalSize int64
 	seenByName := make(map[string]bool)
+	hadRecovery := false
 
 	for _, metaPath := range matches {
 		data, err := os.ReadFile(metaPath) // nosemgrep: go_filesystem_rule-fileread -- CLI tool reads local recording metadata
 		if err != nil {
+			hadRecovery = true
 			reportSavedVideoRecovery(diagnostics, "Saved video metadata could not be read; the affected video was omitted.")
 			continue
 		}
 		var meta Metadata
 		if err := json.Unmarshal(data, &meta); err != nil {
+			hadRecovery = true
 			reportSavedVideoRecovery(diagnostics, "Saved video metadata was malformed; the affected video was omitted.")
 			continue
 		}
@@ -74,7 +77,7 @@ func loadAndFilterRecordings(
 		return recordings[i].CreatedAt > recordings[j].CreatedAt
 	})
 
-	return recordings, totalSize
+	return recordings, totalSize, hadRecovery
 }
 
 // recordingMatchesFilter checks if a recording's name or URL contains the filter string (case-insensitive).
@@ -113,7 +116,10 @@ func HandleObserveSavedVideos(
 		})
 	}
 
-	recordings, totalSize := loadAndFilterRecordings(matches, params.URL, diagnostics)
+	recordings, totalSize, hadRecovery := loadAndFilterRecordings(matches, params.URL, diagnostics)
+	if !hadRecovery {
+		statediag.Resolve(diagnostics, "saved_video_state")
+	}
 
 	if params.LastN > 0 && len(recordings) > params.LastN {
 		recordings = recordings[:params.LastN]

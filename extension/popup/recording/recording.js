@@ -14,7 +14,7 @@ import { onStorageChanged } from '../../lib/storage/changes.js';
 import { persist } from '../../lib/storage/io.js';
 import { removeLocal } from '../../lib/storage/local.js';
 import { readLocalState } from '../../lib/storage/validated.js';
-import { reportStateRecovery } from '../../lib/storage/recovery.js';
+import { reportStateRecovery, resolveStateRecovery } from '../../lib/storage/recovery.js';
 import { sendRecordingGestureDecision, handleStartClick, handleStopClick } from './recording-io.js';
 function isAudioMode(value) {
     return value === '' || value === 'tab' || value === 'mic' || value === 'both';
@@ -294,6 +294,7 @@ export function setupRecordingUI() {
                 showIdle(els, state);
                 return;
             }
+            resolveStateRecovery('screen_recording_state');
             console.log(LOG, 'recording state changed:', rec);
             if (rec?.active && rec.name && rec.startTime) {
                 showRecording(els, state, rec.name, rec.startTime);
@@ -311,6 +312,7 @@ export function setupRecordingUI() {
                 updatePendingRecording(null);
                 return;
             }
+            resolveStateRecovery('screen_recording_state');
             updatePendingRecording(pending);
         }
     });

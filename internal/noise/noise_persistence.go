@@ -67,6 +67,7 @@ func (nc *NoiseConfig) readPersistedData() (PersistedNoiseData, bool) {
 		})
 		return PersistedNoiseData{}, false
 	}
+	statediag.Resolve(nc.diagnostics, "noise_rule_state")
 	return persisted, true
 }
 
@@ -171,6 +172,7 @@ func (nc *NoiseConfig) persistRulesLocked() {
 		fmt.Fprintf(os.Stderr, "noise: failed to persist rules: %v\n", err)
 		return
 	}
+	statediag.Resolve(nc.diagnostics, "noise_rule_state")
 }
 
 // filterUserRulesLocked extracts non-builtin rules (assumes mu is held).

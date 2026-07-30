@@ -88,6 +88,7 @@ func (h *Handler) Save(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 	if err := h.deps.Store.Save(toolconfigure.SequenceNamespace, params.Name, data); err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Failed to save sequence: "+err.Error(), "Check disk space")
 	}
+	statediag.Resolve(h.deps.Diagnostics, "saved_sequence_state")
 	return mcp.Succeed(req, "Sequence saved", map[string]any{
 		"status": "saved", "name": sequence.Name, "step_count": sequence.StepCount,
 		"saved_at": sequence.SavedAt, "message": fmt.Sprintf("Sequence saved: %s (%d steps)", sequence.Name, sequence.StepCount),
@@ -125,14 +126,17 @@ func (h *Handler) List(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 		return mcp.Succeed(req, "Sequences", map[string]any{"status": "ok", "sequences": []any{}, "count": 0})
 	}
 	summaries := make([]toolconfigure.SequenceSummary, 0, len(keys))
+	hadRecovery := false
 	for _, key := range keys {
 		data, loadErr := h.deps.Store.Load(toolconfigure.SequenceNamespace, key)
 		var sequence toolconfigure.Sequence
 		if loadErr != nil {
+			hadRecovery = true
 			h.reportRecovery("Saved sequence '" + key + "' could not be read; it was omitted.")
 			continue
 		}
 		if json.Unmarshal(data, &sequence) != nil {
+			hadRecovery = true
 			h.reportRecovery("A saved sequence was malformed and was omitted.")
 			continue
 		}
@@ -143,6 +147,9 @@ func (h *Handler) List(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 			Name: sequence.Name, Description: sequence.Description, Tags: sequence.Tags,
 			SavedAt: sequence.SavedAt, StepCount: sequence.StepCount,
 		})
+	}
+	if !hadRecovery {
+		statediag.Resolve(h.deps.Diagnostics, "saved_sequence_state")
 	}
 	return mcp.Succeed(req, "Sequences", map[string]any{"status": "ok", "sequences": summaries, "count": len(summaries)})
 }
@@ -189,6 +196,7 @@ func (h *Handler) load(req mcp.JSONRPCRequest, name string) (*toolconfigure.Sequ
 		resp := mcp.Fail(req, mcp.ErrInvalidJSON, "Corrupted sequence data: "+err.Error(), "Delete and re-save the sequence")
 		return nil, &resp
 	}
+	statediag.Resolve(h.deps.Diagnostics, "saved_sequence_state")
 	return &sequence, nil
 }
 

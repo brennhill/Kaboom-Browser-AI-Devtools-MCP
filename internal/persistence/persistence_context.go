@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 func (s *SessionStore) loadJSONFileAs(path, diagnosticName string) map[string]any {
@@ -21,6 +23,7 @@ func (s *SessionStore) loadJSONFileAs(path, diagnosticName string) map[string]an
 		s.reportRecovery(diagnosticName, "Saved project context was malformed; that context was ignored.", "Recreate the affected project context with the corresponding configure action.")
 		return nil
 	}
+	statediag.Resolve(s.diagnostics, diagnosticName)
 	return result
 }
 
@@ -49,6 +52,7 @@ func (s *SessionStore) loadErrorHistory(path string) []ErrorHistoryEntry {
 
 	var entries []ErrorHistoryEntry
 	if json.Unmarshal(data, &entries) == nil {
+		statediag.Resolve(s.diagnostics, "error_history_state")
 		return entries
 	}
 
@@ -62,6 +66,7 @@ func (s *SessionStore) loadErrorHistory(path string) []ErrorHistoryEntry {
 	for _, raw := range rawEntries {
 		result = append(result, parseRawErrorEntry(raw))
 	}
+	statediag.Resolve(s.diagnostics, "error_history_state")
 	return result
 }
 

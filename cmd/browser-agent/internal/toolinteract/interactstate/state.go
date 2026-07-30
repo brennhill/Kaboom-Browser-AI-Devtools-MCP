@@ -224,6 +224,7 @@ func (h *Handler) HandleStateSave(req mcp.JSONRPCRequest, args json.RawMessage) 
 	if err := h.sessionStoreImpl.Save(act.StateNamespace, snapshotName, data); err != nil {
 		return mcp.Fail(req, mcp.ErrInternal, "Failed to save state: "+err.Error(), "Internal error — check storage")
 	}
+	statediag.Resolve(h.deps.StateDiagnostics, "page_snapshot_state")
 
 	h.deps.RecordAIAction("save_state", tabURL, map[string]any{"snapshot_name": snapshotName})
 
@@ -259,6 +260,7 @@ func (h *Handler) HandleStateLoad(req mcp.JSONRPCRequest, args json.RawMessage) 
 		h.reportSnapshotRecovery("A saved page snapshot was malformed; it was not restored.")
 		return mcp.Fail(req, mcp.ErrInternal, "Failed to parse state data", "Internal error — state may be corrupted")
 	}
+	statediag.Resolve(h.deps.StateDiagnostics, "page_snapshot_state")
 
 	if params.IncludeURL {
 		h.QueueStateNavigation(req, stateData)

@@ -23,7 +23,7 @@ import { persist } from './lib/storage/io.js'
 import { getLocals } from './lib/storage/local.js'
 import { setSession } from './lib/storage/session.js'
 import { readLocalState, readSessionState } from './lib/storage/validated.js'
-import { reportStateRecovery } from './lib/storage/recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from './lib/storage/recovery.js'
 import { updateConnectionStatus } from './popup/shell/status-display.js'
 import { refreshSystemDoctor } from './popup/system-doctor.js'
 import { setupRecordingUI } from './popup/recording/recording.js'
@@ -239,6 +239,7 @@ export function initPopup(): void {
         reportStateRecovery(popupDiagnostic('Saved popup controls were malformed; defaults are active.'))
         return
       }
+      resolveStateRecovery('popup_state')
       applyFeatureToggles(result)
       applyWebSocketMode(result[StorageKey.WEBSOCKET_CAPTURE_MODE])
       applyAiWebPilotToggle(result[StorageKey.AI_WEB_PILOT_ENABLED])

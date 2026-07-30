@@ -15,7 +15,7 @@ import type { WebSocketCaptureMode } from '../types/capture/websocket.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { SettingName } from '../lib/constants.js'
 import { getLocals } from '../lib/storage/local.js'
-import { reportStateRecovery } from '../lib/storage/recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../lib/storage/recovery.js'
 import {
   isValidBackgroundSender,
   handlePing,
@@ -60,6 +60,7 @@ function applyOverlayToggleState(result: Record<string, unknown>): void {
   }
   if (typeof actionToasts === 'boolean') actionToastsEnabled = actionToasts
   if (typeof subtitles === 'boolean') subtitlesEnabled = subtitles
+  resolveStateRecovery('overlay_settings_state')
 }
 
 function hydrateOverlayToggleState(): void {

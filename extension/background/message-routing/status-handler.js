@@ -27,7 +27,7 @@ export function createStatusMessageHandler(deps) {
                     });
                     return true;
                 case 'report_state_recovery':
-                    deps.reportStateRecovery(message.diagnostic);
+                    deps.reportStateRecovery(message.diagnostic, message.lifecycle);
                     sendResponse({ success: true });
                     return false;
                 case 'get_debug_log':

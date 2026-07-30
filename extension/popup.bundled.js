@@ -105,10 +105,20 @@
 
   // extension/lib/storage/recovery.js
   function reportStateRecovery(diagnostic) {
-    console.warn(`${KABOOM_LOG_PREFIX} persisted state recovered: ${diagnostic.name}`);
+    console.warn(`${KABOOM_LOG_PREFIX} persisted state fallback active: ${diagnostic.name}`);
+    sendTransition("active", diagnostic);
+  }
+  function resolveStateRecovery(name) {
+    sendTransition("recovered", { name, detail: "", fix: "" });
+  }
+  function sendTransition(lifecycle, diagnostic) {
     if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage)
       return;
-    const message = { type: "report_state_recovery", diagnostic };
+    const message = {
+      type: "report_state_recovery",
+      lifecycle,
+      diagnostic
+    };
     try {
       const pending = chrome.runtime.sendMessage(message);
       if (pending && typeof pending.catch === "function") {
@@ -184,6 +194,7 @@
   async function reportStorageMutationFailure(operation, verb) {
     try {
       await operation;
+      resolveStateRecovery("extension_storage_write_state");
     } catch (error) {
       reportStateRecovery({
         name: "extension_storage_write_state",
@@ -250,12 +261,15 @@
   // extension/lib/storage/validated.js
   async function readValidated(read, options) {
     const report = options.report ?? reportStateRecovery;
+    const resolve = options.resolve ?? resolveStateRecovery;
     try {
       const value = await read(options.key);
       if (value === void 0 || value === null)
         return options.fallback;
-      if (options.validate(value))
+      if (options.validate(value)) {
+        resolve(options.diagnostic.name);
         return value;
+      }
       report(options.diagnostic);
       return options.fallback;
     } catch {
@@ -444,10 +458,21 @@
     elements.checks.replaceChildren(...report.checks.map((check) => {
       const row = document.createElement("div");
       row.className = `doctor-check doctor-${check.status}`;
+      if (check.lifecycle)
+        row.dataset.lifecycle = check.lifecycle;
       const detail = document.createElement("div");
       detail.className = "doctor-check-detail";
       detail.textContent = check.detail;
       row.appendChild(detail);
+      if (check.lifecycle === "recovered") {
+        const lifecycle = document.createElement("div");
+        lifecycle.className = "doctor-check-lifecycle";
+        lifecycle.textContent = check.recovered_at ? `Recovered ${new Date(check.recovered_at).toLocaleString()}` : "Recovered";
+        if ((check.occurrences ?? 0) > 1) {
+          lifecycle.textContent += ` \xB7 ${check.occurrences} occurrences`;
+        }
+        row.appendChild(lifecycle);
+      }
       if (check.fix) {
         const fix = document.createElement("div");
         fix.className = "doctor-check-fix";
@@ -850,6 +875,7 @@
           showIdle(els, state);
           return;
         }
+        resolveStateRecovery("screen_recording_state");
         console.log(LOG2, "recording state changed:", rec);
         if (rec?.active && rec.name && rec.startTime) {
           showRecording(els, state, rec.name, rec.startTime);
@@ -866,6 +892,7 @@
           updatePendingRecording(null);
           return;
         }
+        resolveStateRecovery("screen_recording_state");
         updatePendingRecording(pending);
       }
     });
@@ -1316,6 +1343,7 @@
       reportTrackedTabRecovery("Saved tracked-tab state was malformed; automatic tab selection is active.");
       return {};
     }
+    resolveStateRecovery("tracked_tab_state");
     return {
       id,
       url,
@@ -1896,6 +1924,7 @@
         reportStateRecovery(popupDiagnostic("Saved popup controls were malformed; defaults are active."));
         return;
       }
+      resolveStateRecovery("popup_state");
       applyFeatureToggles(result);
       applyWebSocketMode(result[StorageKey.WEBSOCKET_CAPTURE_MODE]);
       applyAiWebPilotToggle(result[StorageKey.AI_WEB_PILOT_ENABLED]);

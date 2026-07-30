@@ -8,7 +8,7 @@
 import { StorageKey, TERMINAL_PANEL_FALLBACK_HINT, TERMINAL_PANEL_STALE_CONTEXT_HINT } from '../../lib/constants.js'
 import { onStorageChanged } from '../../lib/storage/changes.js'
 import { readSessionState } from '../../lib/storage/validated.js'
-import { reportStateRecovery } from '../../lib/storage/recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../../lib/storage/recovery.js'
 import { showActionToast } from './toast.js'
 
 type VisibilityListener = (visible: boolean) => void
@@ -87,6 +87,7 @@ function installStorageListener(): void {
       setPanelVisible(false)
       return
     }
+    resolveStateRecovery('terminal_session_state')
     setPanelVisible(nextValue === 'open')
   })
 }

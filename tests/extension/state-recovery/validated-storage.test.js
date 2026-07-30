@@ -28,15 +28,18 @@ test('valid persisted state is returned unchanged', async () => {
   installLocalRead(true)
   const { readLocalState } = await loadValidated()
   const recovered = []
+  const resolved = []
   const value = await readLocalState({
     key: 'state',
     fallback: false,
     validate: (candidate) => typeof candidate === 'boolean',
     diagnostic: { name: 'state', detail: 'fallback', fix: 'reset' },
-    report: (diagnostic) => recovered.push(diagnostic)
+    report: (diagnostic) => recovered.push(diagnostic),
+    resolve: (name) => resolved.push(name)
   })
   assert.equal(value, true)
   assert.deepEqual(recovered, [])
+  assert.deepEqual(resolved, ['state'])
 })
 
 test('malformed persisted state uses fallback and reports redacted diagnostic', async () => {

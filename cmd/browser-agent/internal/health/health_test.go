@@ -16,13 +16,36 @@ import (
 func TestRunDoctorChecksSurfacesExtensionStateRecovery(t *testing.T) {
 	c := newTestCapture(t)
 	c.ExtensionLogs().Add([]types.ExtensionLog{{
-		Level: "warn", Category: "state_recovery", Message: "Persisted extension state recovered",
-		Data: json.RawMessage(`{"name":"tracked_tab_state","detail":"Saved tracking state was malformed; automatic tracking is active.","fix":"Choose a tracked tab again."}`),
+		Timestamp: time.Date(2026, 7, 30, 8, 0, 0, 0, time.UTC),
+		Level:     "warn", Category: "state_recovery", Message: "Persisted extension state recovered",
+		Data: json.RawMessage(`{"name":"tracked_tab_state","detail":"Saved tracking state was malformed; automatic tracking is active.","fix":"Choose a tracked tab again.","lifecycle":"active"}`),
+	}, {
+		Timestamp: time.Date(2026, 7, 30, 8, 1, 0, 0, time.UTC),
+		Level:     "info", Category: "state_recovery", Message: "Persisted extension state verified",
+		Data: json.RawMessage(`{"name":"tracked_tab_state","detail":"","fix":"","lifecycle":"recovered"}`),
 	}})
 
 	check := findCheck(t, RunDoctorChecks(c), "tracked_tab_state")
-	if check.Status != "warn" || check.Fix == "" {
-		t.Fatalf("extension recovery check = %#v, want actionable warning", check)
+	if check.Status != "pass" || check.Lifecycle != "recovered" || check.RecoveredAt == "" {
+		t.Fatalf("extension recovery check = %#v, want recovered lifecycle", check)
+	}
+	if check.Occurrences != 1 || len(check.History) != 2 {
+		t.Fatalf("extension recovery history = %#v, want one occurrence and two transitions", check)
+	}
+}
+
+func TestRunDoctorChecksIgnoresRecoveryWithoutPriorFailure(t *testing.T) {
+	c := newTestCapture(t)
+	c.ExtensionLogs().Add([]types.ExtensionLog{{
+		Timestamp: time.Date(2026, 7, 30, 8, 1, 0, 0, time.UTC),
+		Level:     "info", Category: "state_recovery", Message: "Persisted extension state verified",
+		Data: json.RawMessage(`{"name":"popup_state","detail":"","fix":"","lifecycle":"recovered"}`),
+	}})
+
+	for _, check := range RunDoctorChecks(c) {
+		if check.Name == "popup_state" {
+			t.Fatalf("recovery-only transition created historical failure: %#v", check)
+		}
 	}
 }
 

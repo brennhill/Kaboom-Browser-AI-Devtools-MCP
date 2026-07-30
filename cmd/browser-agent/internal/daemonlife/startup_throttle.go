@@ -166,6 +166,8 @@ func ApplyStartupRestartThrottle(d Deps, port int) time.Duration {
 	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), d.Version, daemonInstallEpoch(d.Recovery), port)
 	if err := saveRestartHistory(path, next); err != nil {
 		d.Log.LogLifecycle("restart_history_write_failed", port, map[string]any{"error": err.Error()})
+	} else {
+		statediag.Resolve(d.Recovery, "restart_history_state")
 	}
 	if delay <= 0 {
 		return 0

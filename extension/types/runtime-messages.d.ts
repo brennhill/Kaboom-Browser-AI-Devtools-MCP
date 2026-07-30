@@ -3,10 +3,6 @@
  * Why: Keeps inter-context communication explicit and compatible as message surfaces evolve.
  * Docs: docs/features/feature/query-service/index.md
  */
-/**
- * @fileoverview Runtime Message Types
- * Chrome runtime messages for background, content, and inject script communication
- */
 import type { LogEntry } from './capture/telemetry.js';
 import type { WebSocketCaptureMode } from './capture/websocket.js';
 import type { WireWebSocketEvent as WebSocketEvent } from './wire/wire-websocket-event.js';
@@ -83,8 +79,10 @@ export interface StateRecoveryDiagnostic {
     readonly detail: string;
     readonly fix: string;
 }
+export type StateRecoveryLifecycle = 'active' | 'recovered';
 export interface ReportStateRecoveryMessage {
     readonly type: 'report_state_recovery';
+    readonly lifecycle: StateRecoveryLifecycle;
     readonly diagnostic: StateRecoveryDiagnostic;
 }
 /**

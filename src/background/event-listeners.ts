@@ -15,7 +15,7 @@ import { onStorageChanged } from '../lib/storage/changes.js'
 import { persist } from '../lib/storage/io.js'
 import { setLocal, setLocals } from '../lib/storage/local.js'
 import { clearTrackedTab as clearTrackedTabState, readTrackedTab } from '../lib/tabs/tracked-tab-storage.js'
-import { reportStateRecovery } from './runtime-state/state-recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from './runtime-state/state-recovery.js'
 
 // =============================================================================
 // CONSTANTS - Rate Limiting & DoS Protection
@@ -209,6 +209,7 @@ export function installStorageChangeListener(handlers: {
       if (changes[StorageKey.AI_WEB_PILOT_ENABLED] && handlers.onAiWebPilotChanged) {
         const nextPilot = changes[StorageKey.AI_WEB_PILOT_ENABLED]!.newValue
         if (typeof nextPilot === 'boolean') {
+          resolveStateRecovery('extension_storage_change_state')
           handlers.onAiWebPilotChanged(nextPilot)
         } else if (nextPilot !== undefined) {
           reportStorageChangeRecovery('Saved AI Web Pilot change was malformed; the current setting remains active.')
@@ -223,6 +224,7 @@ export function installStorageChangeListener(handlers: {
         }
         const newTabId = newValue ?? null
         const oldTabId = typeof oldValue === 'number' ? oldValue : null
+        resolveStateRecovery('extension_storage_change_state')
         handlers.onTrackedTabChanged(newTabId, oldTabId)
       }
     }

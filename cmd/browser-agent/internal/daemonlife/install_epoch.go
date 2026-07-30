@@ -58,6 +58,7 @@ func computeInstallEpoch(
 	stamp := filepath.Join(filepath.Dir(exe), installEpochStampName)
 	if b, e := readFile(stamp); e == nil {
 		if v, e2 := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64); e2 == nil && v > 0 {
+			statediag.Resolve(diagnostics, "install_epoch_state")
 			return v
 		}
 		reportInstallEpochRecovery(diagnostics, "The install epoch stamp was malformed; the executable modification time is active.")
@@ -66,6 +67,7 @@ func computeInstallEpoch(
 	}
 	// 2. Fall back to the binary's mtime.
 	if fi, e := stat(exe); e == nil {
+		statediag.Resolve(diagnostics, "install_epoch_state")
 		return fi.ModTime().UnixNano()
 	}
 	reportInstallEpochRecovery(diagnostics, "Neither install epoch nor executable modification time could be read; this install has the lowest takeover priority.")

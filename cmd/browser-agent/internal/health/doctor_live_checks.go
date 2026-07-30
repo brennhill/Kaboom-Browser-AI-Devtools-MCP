@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 var doctorLookPath = exec.LookPath
@@ -26,10 +27,21 @@ var doctorCommandOutput = func(timeout time.Duration, name string, args ...strin
 
 // DoctorCheck represents a single diagnostic check result.
 type DoctorCheck struct {
-	Name   string `json:"name"`
-	Status string `json:"status"` // "pass", "warn", "fail"
-	Detail string `json:"detail"`
-	Fix    string `json:"fix,omitempty"`
+	Name        string             `json:"name"`
+	Status      string             `json:"status"` // "pass", "warn", "fail"
+	Detail      string             `json:"detail"`
+	Fix         string             `json:"fix,omitempty"`
+	Lifecycle   string             `json:"lifecycle,omitempty"`
+	FirstSeenAt string             `json:"first_seen_at,omitempty"`
+	LastSeenAt  string             `json:"last_seen_at,omitempty"`
+	RecoveredAt string             `json:"recovered_at,omitempty"`
+	Occurrences int                `json:"occurrences,omitempty"`
+	History     []DoctorTransition `json:"history,omitempty"`
+}
+
+type DoctorTransition struct {
+	Lifecycle string `json:"lifecycle"`
+	At        string `json:"at"`
 }
 
 // HandleDoctorHTTP serves the /doctor HTTP endpoint with JSON readiness checks.
@@ -184,9 +196,10 @@ func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
 		return nil
 	}
 	type recoveryData struct {
-		Name   string `json:"name"`
-		Detail string `json:"detail"`
-		Fix    string `json:"fix"`
+		Name      string `json:"name"`
+		Detail    string `json:"detail"`
+		Fix       string `json:"fix"`
+		Lifecycle string `json:"lifecycle"`
 	}
 	byName := make(map[string]DoctorCheck)
 	for _, entry := range cap.ExtensionLogs().Entries() {
@@ -194,12 +207,47 @@ func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
 			continue
 		}
 		var recovery recoveryData
-		if json.Unmarshal(entry.Data, &recovery) != nil || recovery.Name == "" || recovery.Detail == "" {
+		if json.Unmarshal(entry.Data, &recovery) != nil || recovery.Name == "" {
 			continue
 		}
-		byName[recovery.Name] = DoctorCheck{
-			Name: recovery.Name, Status: "warn", Detail: recovery.Detail, Fix: recovery.Fix,
+		if recovery.Lifecycle == "" {
+			recovery.Lifecycle = string(statediag.LifecycleActive)
 		}
+		if recovery.Lifecycle != string(statediag.LifecycleActive) &&
+			recovery.Lifecycle != string(statediag.LifecycleRecovered) {
+			continue
+		}
+		check := byName[recovery.Name]
+		if recovery.Lifecycle == string(statediag.LifecycleRecovered) && check.Name == "" {
+			continue
+		}
+		check.Name = recovery.Name
+		if recovery.Detail != "" {
+			check.Detail = recovery.Detail
+			check.Fix = recovery.Fix
+		}
+		at := ""
+		if !entry.Timestamp.IsZero() {
+			at = entry.Timestamp.UTC().Format(time.RFC3339Nano)
+		}
+		check.Lifecycle = recovery.Lifecycle
+		check.LastSeenAt = at
+		check.History = append(check.History, DoctorTransition{Lifecycle: recovery.Lifecycle, At: at})
+		if len(check.History) > 20 {
+			check.History = append([]DoctorTransition(nil), check.History[len(check.History)-20:]...)
+		}
+		if recovery.Lifecycle == string(statediag.LifecycleActive) {
+			check.Status = "warn"
+			check.RecoveredAt = ""
+			check.Occurrences++
+			if check.FirstSeenAt == "" {
+				check.FirstSeenAt = at
+			}
+		} else {
+			check.Status = "pass"
+			check.RecoveredAt = at
+		}
+		byName[recovery.Name] = check
 	}
 	names := make([]string, 0, len(byName))
 	for name := range byName {

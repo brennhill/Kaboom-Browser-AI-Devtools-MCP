@@ -110,10 +110,20 @@
 
   // extension/lib/storage/recovery.js
   function reportStateRecovery(diagnostic) {
-    console.warn(`${KABOOM_LOG_PREFIX} persisted state recovered: ${diagnostic.name}`);
+    console.warn(`${KABOOM_LOG_PREFIX} persisted state fallback active: ${diagnostic.name}`);
+    sendTransition("active", diagnostic);
+  }
+  function resolveStateRecovery(name) {
+    sendTransition("recovered", { name, detail: "", fix: "" });
+  }
+  function sendTransition(lifecycle, diagnostic) {
     if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage)
       return;
-    const message = { type: "report_state_recovery", diagnostic };
+    const message = {
+      type: "report_state_recovery",
+      lifecycle,
+      diagnostic
+    };
     try {
       const pending = chrome.runtime.sendMessage(message);
       if (pending && typeof pending.catch === "function") {
@@ -189,6 +199,7 @@
   async function reportStorageMutationFailure(operation, verb) {
     try {
       await operation;
+      resolveStateRecovery("extension_storage_write_state");
     } catch (error) {
       reportStateRecovery({
         name: "extension_storage_write_state",
@@ -239,12 +250,15 @@
   // extension/lib/storage/validated.js
   async function readValidated(read, options) {
     const report = options.report ?? reportStateRecovery;
+    const resolve = options.resolve ?? resolveStateRecovery;
     try {
       const value = await read(options.key);
       if (value === void 0 || value === null)
         return options.fallback;
-      if (options.validate(value))
+      if (options.validate(value)) {
+        resolve(options.diagnostic.name);
         return value;
+      }
       report(options.diagnostic);
       return options.fallback;
     } catch {
@@ -323,6 +337,7 @@
       reportTrackedTabRecovery("Saved tracked-tab state was malformed; automatic tab selection is active.");
       return {};
     }
+    resolveStateRecovery("tracked_tab_state");
     return {
       id,
       url,
@@ -400,6 +415,7 @@
       reportInjectionSettingsRecovery("Saved page capture settings could not be read; defaults are active.");
       return;
     }
+    let validState = true;
     for (const setting of SYNC_SETTINGS) {
       const value = result[setting.storageKey];
       if (value === void 0)
@@ -407,6 +423,7 @@
       if (setting.isMode) {
         if (value !== "low" && value !== "medium" && value !== "high" && value !== "all") {
           reportInjectionSettingsRecovery("Saved WebSocket capture mode was malformed; the default is active.");
+          validState = false;
           continue;
         }
         window.postMessage({
@@ -418,11 +435,14 @@
       } else {
         if (typeof value !== "boolean") {
           reportInjectionSettingsRecovery("A saved page capture setting was malformed; its default is active.");
+          validState = false;
           continue;
         }
         window.postMessage({ type: "kaboom_setting", setting: setting.messageType, enabled: value, _nonce: pageNonce }, window.location.origin);
       }
     }
+    if (validState)
+      resolveStateRecovery("page_capture_settings_state");
   }
   function reportInjectionSettingsRecovery(detail) {
     reportStateRecovery({
@@ -2035,6 +2055,7 @@
       actionToastsEnabled = actionToasts;
     if (typeof subtitles === "boolean")
       subtitlesEnabled = subtitles;
+    resolveStateRecovery("overlay_settings_state");
   }
   function hydrateOverlayToggleState() {
     void getLocals(["actionToastsEnabled", "subtitlesEnabled"]).then(applyOverlayToggleState).catch(() => {
@@ -2372,6 +2393,7 @@
         setPanelVisible(false);
         return;
       }
+      resolveStateRecovery("terminal_session_state");
       setPanelVisible(nextValue === "open");
     });
   }
@@ -2562,6 +2584,7 @@
         updateStopButtonVisibility(false);
         return;
       }
+      resolveStateRecovery("screen_recording_state");
       const active = rec != null && typeof rec === "object" && rec.active === true;
       updateStopButtonVisibility(active);
     };

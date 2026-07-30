@@ -5,7 +5,10 @@
 
 import { StorageKey } from '../../lib/constants.js'
 import { getLocals, setLocals } from '../../lib/storage/local.js'
-import { reportStateRecovery } from '../runtime-state/state-recovery.js'
+import {
+  reportStateRecovery,
+  resolveStateRecovery
+} from '../runtime-state/state-recovery.js'
 
 export interface TerminalWorkspaceTarget {
   hostTabId: number
@@ -129,6 +132,7 @@ export async function resolveTerminalWorkspaceTarget(requestTabId?: number): Pro
     [StorageKey.TERMINAL_WORKSPACE_GROUP_ID]: tabGroupId,
     [StorageKey.TERMINAL_WORKSPACE_MAIN_TAB_ID]: mainTabId
   })
+  resolveStateRecovery('terminal_workspace_state')
   return { hostTabId, mainTabId, tabGroupId }
 }
 

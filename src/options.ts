@@ -18,7 +18,7 @@ import { SettingName, StorageKey, DEFAULT_SERVER_URL } from './lib/constants.js'
 import { buildDaemonHeaders, buildDaemonJSONRequestInit } from './lib/daemon-http.js'
 import { getLocals, setLocals } from './lib/storage/local.js'
 import { readLocalState } from './lib/storage/validated.js'
-import { reportStateRecovery } from './lib/storage/recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from './lib/storage/recovery.js'
 import { KABOOM_LOG_PREFIX } from './lib/brand.js'
 
 interface StorageResult {
@@ -84,7 +84,10 @@ async function readOptionsState(): Promise<StorageResult> {
       (candidate.sourceMapEnabled === undefined || typeof candidate.sourceMapEnabled === 'boolean') &&
       (candidate.deferralEnabled === undefined || typeof candidate.deferralEnabled === 'boolean') &&
       (candidate.debugMode === undefined || typeof candidate.debugMode === 'boolean')
-    if (valid) return candidate
+    if (valid) {
+      resolveStateRecovery('extension_options_state')
+      return candidate
+    }
     reportStateRecovery(optionsDiagnostic('Saved extension options were malformed; defaults are active.'))
   } catch {
     reportStateRecovery(optionsDiagnostic('Saved extension options could not be read; defaults are active.'))

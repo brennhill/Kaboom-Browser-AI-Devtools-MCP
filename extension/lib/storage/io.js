@@ -3,7 +3,7 @@
  * Why: Keep error handling and fire-and-forget write reporting consistent.
  */
 import { KABOOM_LOG_PREFIX } from '../brand.js';
-import { reportStateRecovery } from './recovery.js';
+import { reportStateRecovery, resolveStateRecovery } from './recovery.js';
 function isPromiseLike(value) {
     return typeof value === 'object' && value !== null && typeof value.then === 'function';
 }
@@ -74,6 +74,7 @@ export function setStorageAccessLevel(method, accessLevel) {
 async function reportStorageMutationFailure(operation, verb) {
     try {
         await operation;
+        resolveStateRecovery('extension_storage_write_state');
     }
     catch (error) {
         reportStateRecovery({

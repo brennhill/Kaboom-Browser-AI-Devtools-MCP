@@ -70,6 +70,7 @@ func loadOrGenerateInstallID() string {
 	if err == nil {
 		id := strings.TrimSpace(string(data))
 		if validInstallID(id) {
+			statediag.Resolve(stateRecovery, "install_identity_state")
 			return id
 		}
 		reportInstallIDRecovery("Installation identity was malformed; a new stable identity replaced it.")
@@ -96,10 +97,12 @@ func loadOrGenerateInstallID() string {
 			closeErr := tmp.Close()
 			if writeErr == nil && closeErr == nil {
 				if linkErr := os.Link(tmpPath, idPath); linkErr == nil {
+					statediag.Resolve(stateRecovery, "install_identity_state")
 					return id
 				}
 				if winner, readErr := os.ReadFile(idPath); readErr == nil {
 					if persisted := strings.TrimSpace(string(winner)); validInstallID(persisted) {
+						statediag.Resolve(stateRecovery, "install_identity_state")
 						return persisted
 					}
 				}

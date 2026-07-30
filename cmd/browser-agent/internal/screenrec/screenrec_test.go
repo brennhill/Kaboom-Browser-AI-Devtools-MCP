@@ -32,7 +32,7 @@ func TestLoadAndFilterRecordingsReportsMalformedMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	diagnostics := statediag.NewCollector()
-	recordings, totalSize := loadAndFilterRecordings([]string{path}, "", diagnostics)
+	recordings, totalSize, _ := loadAndFilterRecordings([]string{path}, "", diagnostics)
 	if len(recordings) != 0 || totalSize != 0 {
 		t.Fatalf("fallback = %#v, %d; want empty", recordings, totalSize)
 	}

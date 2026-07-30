@@ -11,7 +11,7 @@
 import type { WebSocketCaptureMode } from '../types/capture/websocket.js'
 import { SettingName } from '../lib/constants.js'
 import { getLocals } from '../lib/storage/local.js'
-import { reportStateRecovery } from '../lib/storage/recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../lib/storage/recovery.js'
 
 /** Whether inject.bundled.js has been injected into the page (MAIN world) */
 let injected = false
@@ -73,6 +73,7 @@ async function syncStoredSettings(): Promise<void> {
     return
   }
 
+  let validState = true
   for (const setting of SYNC_SETTINGS) {
     const value = result[setting.storageKey]
     if (value === undefined) continue // Use default if not set
@@ -80,6 +81,7 @@ async function syncStoredSettings(): Promise<void> {
     if (setting.isMode) {
       if (value !== 'low' && value !== 'medium' && value !== 'high' && value !== 'all') {
         reportInjectionSettingsRecovery('Saved WebSocket capture mode was malformed; the default is active.')
+        validState = false
         continue
       }
       window.postMessage(
@@ -94,6 +96,7 @@ async function syncStoredSettings(): Promise<void> {
     } else {
       if (typeof value !== 'boolean') {
         reportInjectionSettingsRecovery('A saved page capture setting was malformed; its default is active.')
+        validState = false
         continue
       }
       window.postMessage(
@@ -102,6 +105,7 @@ async function syncStoredSettings(): Promise<void> {
       )
     }
   }
+  if (validState) resolveStateRecovery('page_capture_settings_state')
 }
 
 function reportInjectionSettingsRecovery(detail: string): void {

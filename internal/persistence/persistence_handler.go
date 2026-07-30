@@ -7,6 +7,8 @@ package persistence
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 // requireFields validates that required string fields are non-empty for a
@@ -60,6 +62,8 @@ func (s *SessionStore) handleLoad(args SessionStoreArgs) (json.RawMessage, error
 			"Saved session data was malformed and was returned as an empty value.",
 			"Overwrite or delete the affected configure store entry.",
 		)
+	} else {
+		statediag.Resolve(s.diagnostics, "stored_session_state")
 	}
 	// Error impossible: map contains only primitive types and pre-parsed JSON data
 	result, _ := json.Marshal(map[string]any{

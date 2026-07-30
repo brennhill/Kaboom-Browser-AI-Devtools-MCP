@@ -2,7 +2,7 @@
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { SettingName } from '../lib/constants.js';
 import { getLocals } from '../lib/storage/local.js';
-import { reportStateRecovery } from '../lib/storage/recovery.js';
+import { reportStateRecovery, resolveStateRecovery } from '../lib/storage/recovery.js';
 import { isValidBackgroundSender, handlePing, handleToggleMessage, forwardHighlightMessage, handleStateCommand, handleExecuteJs, handleExecuteQuery, handleA11yQuery, handleDomQuery, handleGetNetworkWaterfall, handleLinkHealthQuery, handleComputedStylesQuery, handleFormDiscoveryQuery, handleFormStateQuery, handleDataTableQuery, handleGetReadable, handleGetMarkdown, handlePageSummary } from './message-handlers.js';
 import { showActionToast } from './ui/toast.js';
 import { showSubtitle, toggleRecordingWatermark } from './ui/subtitle.js';
@@ -26,6 +26,7 @@ function applyOverlayToggleState(result) {
         actionToastsEnabled = actionToasts;
     if (typeof subtitles === 'boolean')
         subtitlesEnabled = subtitles;
+    resolveStateRecovery('overlay_settings_state');
 }
 function hydrateOverlayToggleState() {
     void getLocals(['actionToastsEnabled', 'subtitlesEnabled'])

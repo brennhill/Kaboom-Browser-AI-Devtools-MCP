@@ -12,6 +12,7 @@ test('runtime message contract owns state recovery reports', () => {
   const messages = source('src/types/runtime-messages.ts')
   assert.match(messages, /interface ReportStateRecoveryMessage/)
   assert.match(messages, /readonly type: 'report_state_recovery'/)
+  assert.match(messages, /readonly lifecycle: StateRecoveryLifecycle/)
   assert.match(messages, /\| ReportStateRecoveryMessage/)
 })
 
@@ -25,6 +26,8 @@ test('background recovery owner emits structured sync diagnostics', () => {
 test('cross-context reporter never includes raw persisted values', () => {
   const recovery = source('src/lib/storage/recovery.ts')
   assert.match(recovery, /report_state_recovery/)
+  assert.match(recovery, /resolveStateRecovery/)
+  assert.match(recovery, /sendTransition\('recovered'/)
   assert.doesNotMatch(recovery, /value|payload|raw_state/)
 })
 

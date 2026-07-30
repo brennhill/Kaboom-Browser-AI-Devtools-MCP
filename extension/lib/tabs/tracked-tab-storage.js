@@ -6,7 +6,7 @@
  */
 import { StorageKey } from '../constants.js';
 import { getLocals, setLocals, removeLocals } from '../storage/local.js';
-import { reportStateRecovery } from '../storage/recovery.js';
+import { reportStateRecovery, resolveStateRecovery } from '../storage/recovery.js';
 /** All storage keys that make up tracked-tab state. Always read/cleared together. */
 export const TRACKED_TAB_STORAGE_KEYS = [
     StorageKey.TRACKED_TAB_ID,
@@ -33,6 +33,7 @@ export async function readTrackedTab() {
         reportTrackedTabRecovery('Saved tracked-tab state was malformed; automatic tab selection is active.');
         return {};
     }
+    resolveStateRecovery('tracked_tab_state');
     return {
         id,
         url,

@@ -64,6 +64,7 @@ func (c *Cache) Enabled() bool {
 		c.reportRecovery("Saved response-mode preference was malformed; full responses are active.")
 		return false
 	}
+	statediag.Resolve(c.report, "response_mode_state")
 	c.value = pref.Summary
 	return c.value
 }

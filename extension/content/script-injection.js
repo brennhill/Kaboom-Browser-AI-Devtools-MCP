@@ -4,7 +4,7 @@
  */
 import { SettingName } from '../lib/constants.js';
 import { getLocals } from '../lib/storage/local.js';
-import { reportStateRecovery } from '../lib/storage/recovery.js';
+import { reportStateRecovery, resolveStateRecovery } from '../lib/storage/recovery.js';
 /** Whether inject.bundled.js has been injected into the page (MAIN world) */
 let injected = false;
 /** Whether inject.js has responded to a bridge ping for this page load */
@@ -55,6 +55,7 @@ async function syncStoredSettings() {
         reportInjectionSettingsRecovery('Saved page capture settings could not be read; defaults are active.');
         return;
     }
+    let validState = true;
     for (const setting of SYNC_SETTINGS) {
         const value = result[setting.storageKey];
         if (value === undefined)
@@ -62,6 +63,7 @@ async function syncStoredSettings() {
         if (setting.isMode) {
             if (value !== 'low' && value !== 'medium' && value !== 'high' && value !== 'all') {
                 reportInjectionSettingsRecovery('Saved WebSocket capture mode was malformed; the default is active.');
+                validState = false;
                 continue;
             }
             window.postMessage({
@@ -74,11 +76,14 @@ async function syncStoredSettings() {
         else {
             if (typeof value !== 'boolean') {
                 reportInjectionSettingsRecovery('A saved page capture setting was malformed; its default is active.');
+                validState = false;
                 continue;
             }
             window.postMessage({ type: 'kaboom_setting', setting: setting.messageType, enabled: value, _nonce: pageNonce }, window.location.origin);
         }
     }
+    if (validState)
+        resolveStateRecovery('page_capture_settings_state');
 }
 function reportInjectionSettingsRecovery(detail) {
     reportStateRecovery({

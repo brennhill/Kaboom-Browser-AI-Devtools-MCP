@@ -16,7 +16,7 @@ import { onStorageChanged } from '../../lib/storage/changes.js'
 import { persist } from '../../lib/storage/io.js'
 import { removeLocal } from '../../lib/storage/local.js'
 import { readLocalState } from '../../lib/storage/validated.js'
-import { reportStateRecovery } from '../../lib/storage/recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../../lib/storage/recovery.js'
 import {
   sendRecordingGestureDecision,
   handleStartClick,
@@ -334,6 +334,7 @@ export function setupRecordingUI(): void {
         showIdle(els, state)
         return
       }
+      resolveStateRecovery('screen_recording_state')
       console.log(LOG, 'recording state changed:', rec)
       if (rec?.active && rec.name && rec.startTime) {
         showRecording(els, state, rec.name, rec.startTime)
@@ -350,6 +351,7 @@ export function setupRecordingUI(): void {
         updatePendingRecording(null)
         return
       }
+      resolveStateRecovery('screen_recording_state')
       updatePendingRecording(pending)
     }
   })

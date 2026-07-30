@@ -17,7 +17,7 @@ import { onStorageChanged } from '../../lib/storage/changes.js';
 import { persist } from '../../lib/storage/io.js';
 import { removeLocal, setLocal } from '../../lib/storage/local.js';
 import { readLocalState } from '../../lib/storage/validated.js';
-import { reportStateRecovery } from '../../lib/storage/recovery.js';
+import { reportStateRecovery, resolveStateRecovery } from '../../lib/storage/recovery.js';
 import { initTerminalPanelBridge, isTerminalVisible, onTerminalPanelVisibilityChanged, openTerminalPanel, writeToTerminal } from './terminal-panel-bridge.js';
 const ROOT_ID = 'kaboom-tracked-hover-launcher';
 const PANEL_ID = 'kaboom-tracked-hover-panel';
@@ -120,6 +120,7 @@ function installRecordingStorageSync() {
             updateStopButtonVisibility(false);
             return;
         }
+        resolveStateRecovery('screen_recording_state');
         const active = rec != null && typeof rec === 'object' && rec.active === true;
         updateStopButtonVisibility(active);
     };

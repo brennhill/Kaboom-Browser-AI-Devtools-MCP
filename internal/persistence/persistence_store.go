@@ -118,7 +118,11 @@ func (s *SessionStore) loadOrCreateMeta() error {
 	meta.SessionCount++
 	meta.LastSession = time.Now()
 	s.meta = &meta
-	return s.saveMeta()
+	if err := s.saveMeta(); err != nil {
+		return err
+	}
+	statediag.Resolve(s.diagnostics, "session_metadata_state")
+	return nil
 }
 
 func (s *SessionStore) reportRecovery(name, detail, fix string) {

@@ -20,7 +20,7 @@ import { onStorageChanged } from '../../lib/storage/changes.js'
 import { persist } from '../../lib/storage/io.js'
 import { removeLocal, setLocal } from '../../lib/storage/local.js'
 import { readLocalState } from '../../lib/storage/validated.js'
-import { reportStateRecovery } from '../../lib/storage/recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../../lib/storage/recovery.js'
 import {
   initTerminalPanelBridge,
   isTerminalVisible,
@@ -138,6 +138,7 @@ function installRecordingStorageSync(): void {
       updateStopButtonVisibility(false)
       return
     }
+    resolveStateRecovery('screen_recording_state')
     const active = rec != null && typeof rec === 'object' && (rec as { active?: boolean }).active === true
     updateStopButtonVisibility(active)
   }

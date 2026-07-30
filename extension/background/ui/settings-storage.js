@@ -7,7 +7,7 @@ import { StorageKey } from '../../lib/constants.js';
 import { persist } from '../../lib/storage/io.js';
 import { getLocals, setLocal } from '../../lib/storage/local.js';
 import { readLocalState } from '../../lib/storage/validated.js';
-import { reportStateRecovery } from '../runtime-state/state-recovery.js';
+import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js';
 export async function loadSavedSettings() {
     try {
         const stored = await getLocals([
@@ -20,8 +20,10 @@ export async function loadSavedSettings() {
         const valid = (stored[StorageKey.SERVER_URL] === undefined || typeof stored[StorageKey.SERVER_URL] === 'string') &&
             (stored[StorageKey.LOG_LEVEL] === undefined || typeof stored[StorageKey.LOG_LEVEL] === 'string') &&
             [StorageKey.SCREENSHOT_ON_ERROR, StorageKey.SOURCE_MAP_ENABLED, StorageKey.DEBUG_MODE].every((key) => stored[key] === undefined || typeof stored[key] === 'boolean');
-        if (valid)
+        if (valid) {
+            resolveStateRecovery('extension_settings_state');
             return stored;
+        }
         reportSettingsRecovery('Saved extension settings were malformed; defaults are active.');
         return {};
     }
@@ -39,7 +41,8 @@ export async function loadAiWebPilotState(logFn) {
         fallback: true,
         validate: (value) => typeof value === 'boolean',
         diagnostic: settingsDiagnostic('Saved AI Web Pilot preference was invalid or unreadable; enabled is active.'),
-        report: reportStateRecovery
+        report: reportStateRecovery,
+        resolve: resolveStateRecovery
     });
     const wasLoaded = aiEnabled !== false;
     const loadTime = performance.now() - startTime;
@@ -52,7 +55,8 @@ export async function loadDebugModeState() {
         fallback: false,
         validate: (value) => typeof value === 'boolean',
         diagnostic: settingsDiagnostic('Saved debug-mode preference was invalid or unreadable; disabled is active.'),
-        report: reportStateRecovery
+        report: reportStateRecovery,
+        resolve: resolveStateRecovery
     });
 }
 export function saveSetting(key, value) {
@@ -82,6 +86,7 @@ export async function getAllConfigSettings() {
             StorageKey.NETWORK_BODY_CAPTURE_ENABLED
         ]);
         if (Object.values(stored).every((value) => value === undefined || typeof value === 'boolean' || typeof value === 'string')) {
+            resolveStateRecovery('extension_settings_state');
             return stored;
         }
         reportSettingsRecovery('Saved capture settings were malformed; defaults are active.');
