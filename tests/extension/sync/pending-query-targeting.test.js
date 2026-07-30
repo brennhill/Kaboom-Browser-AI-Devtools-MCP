@@ -40,6 +40,9 @@ function createMockChrome(trackedTabId = 1, activeTabId = 1) {
       remove: mock.fn(() => Promise.resolve()),
       onRemoved: { addListener: mock.fn() }
     },
+    scripting: {
+      executeScript: mock.fn(() => Promise.resolve([{ result: { history_length: 2 } }]))
+    },
     storage: {
       local: {
         get: mock.fn((keys, callback) => {
@@ -133,6 +136,47 @@ describe('pending query targeting', () => {
     const queued = mockSyncClient.queueCommandResult.mock.calls[0].arguments[0]
     assert.strictEqual(queued.result.resolved_tab_id, 99)
     assert.strictEqual(queued.result.target_context.source, 'explicit_tab')
+  })
+
+  test('falls back to page history when Chrome rejects a valid back transition', async () => {
+    const trackedTabId = 41
+    globalThis.chrome = createMockChrome(trackedTabId, trackedTabId)
+    globalThis.chrome.tabs.goBack = mock.fn(() =>
+      Promise.reject(new Error('Cannot find a next page in history.'))
+    )
+    globalThis.chrome.tabs.get = mock.fn(async () => {
+      return {
+        id: trackedTabId,
+        windowId: 1,
+        status: 'complete',
+        url:
+          globalThis.chrome.scripting.executeScript.mock.calls.length === 0
+            ? 'https://example.test/current'
+            : 'https://example.test/previous'
+      }
+    })
+    const mockSyncClient = { queueCommandResult: mock.fn() }
+
+    await bgModule.handlePendingQuery(
+      {
+        id: 'q-back-fallback',
+        type: 'browser_action',
+        correlation_id: 'corr-back-fallback',
+        params: JSON.stringify({ action: 'back' })
+      },
+      mockSyncClient
+    )
+
+    assert.strictEqual(globalThis.chrome.tabs.goBack.mock.calls.length, 1)
+    assert.strictEqual(globalThis.chrome.scripting.executeScript.mock.calls.length, 1)
+    const fallback = globalThis.chrome.scripting.executeScript.mock.calls[0].arguments[0]
+    assert.strictEqual(fallback.target.tabId, trackedTabId)
+    assert.strictEqual(fallback.args[0], -1)
+
+    const queued = mockSyncClient.queueCommandResult.mock.calls[0].arguments[0]
+    assert.strictEqual(queued.status, 'complete')
+    assert.strictEqual(queued.result.success, true)
+    assert.strictEqual(queued.result.url, 'https://example.test/previous')
   })
 
   test('use_active_tab=true overrides tracked tab fallback', async () => {

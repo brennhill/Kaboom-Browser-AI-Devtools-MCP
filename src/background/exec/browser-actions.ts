@@ -20,6 +20,7 @@ import { persistTrackedTab } from '../commands/helpers.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { focusTabAndWindow } from '../../lib/tabs/tab-focus.js'
 import { contentReadiness } from '../runtime-state/content-readiness.js'
+import { delay } from '../../lib/timeout-utils.js'
 
 // =============================================================================
 // TIMEOUT CONFIGURATION
@@ -151,6 +152,55 @@ function coerceNonNegativeInt(value: unknown): number | null {
   return value
 }
 
+const HISTORY_FALLBACK_DELAYS_MS = [50, 100, 200, 400, 800, 800, 800, 800] as const
+const HISTORY_API_REJECTION = /Cannot find a (?:next|previous) page in history/i
+
+async function navigateHistory(
+  tabId: number,
+  offset: -1 | 1,
+  correlationId: string
+): Promise<chrome.tabs.Tab> {
+  const initialTab = await chrome.tabs.get(tabId)
+  try {
+    if (offset === -1) await chrome.tabs.goBack(tabId)
+    else await chrome.tabs.goForward(tabId)
+  } catch (err) {
+    const message = errorMessage(err)
+    if (!HISTORY_API_REJECTION.test(message)) throw err
+
+    debugLog(DebugCategory.CONNECTION, 'Chrome history API rejected a valid transition; trying page history', {
+      tab_id: tabId,
+      correlation_id: correlationId,
+      direction: offset === -1 ? 'back' : 'forward',
+      browser_error: message
+    })
+    const injected = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (historyOffset: number) => {
+        const historyLength = window.history.length
+        window.history.go(historyOffset)
+        return { history_length: historyLength }
+      },
+      args: [offset]
+    })
+    const historyLength = injected[0]?.result?.history_length
+    if (typeof historyLength !== 'number' || historyLength <= 1) throw err
+
+    for (let attempt = 0; attempt < HISTORY_FALLBACK_DELAYS_MS.length; attempt += 1) {
+      await delay(HISTORY_FALLBACK_DELAYS_MS[attempt]!)
+      const transitionedTab = await chrome.tabs.get(tabId)
+      if (transitionedTab.url !== initialTab.url || transitionedTab.status === 'loading') {
+        await waitForTabLoad(tabId)
+        return chrome.tabs.get(tabId)
+      }
+    }
+    throw new Error(`Page history fallback did not acknowledge transition for ${correlationId}`)
+  }
+
+  await waitForTabLoad(tabId)
+  return chrome.tabs.get(tabId)
+}
+
 // =============================================================================
 // BROWSER ACTION DISPATCH
 // =============================================================================
@@ -208,19 +258,15 @@ export async function handleBrowserAction(
       case 'back': {
         contentReadiness.begin(tabId, correlationId)
         actionToast(tabId, reason || 'back', reason ? undefined : 'going back', 'trying', 10000)
-        await chrome.tabs.goBack(tabId)
-        await waitForTabLoad(tabId)
+        const backTab = await navigateHistory(tabId, -1, correlationId)
         actionToast(tabId, reason || 'back', undefined, 'success')
-        const backTab = await chrome.tabs.get(tabId)
         return { success: true, action: 'back', url: backTab.url, title: backTab.title }
       }
       case 'forward': {
         contentReadiness.begin(tabId, correlationId)
         actionToast(tabId, reason || 'forward', reason ? undefined : 'going forward', 'trying', 10000)
-        await chrome.tabs.goForward(tabId)
-        await waitForTabLoad(tabId)
+        const fwdTab = await navigateHistory(tabId, 1, correlationId)
         actionToast(tabId, reason || 'forward', undefined, 'success')
-        const fwdTab = await chrome.tabs.get(tabId)
         return { success: true, action: 'forward', url: fwdTab.url, title: fwdTab.title }
       }
       case 'new_tab': {

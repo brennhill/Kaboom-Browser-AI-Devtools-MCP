@@ -227,6 +227,12 @@ failure is retryable and retained by System Doctor.
 
 `execute_js` host-object serialization must preserve prototype-backed values (for example `DOMRect`) so return payloads remain structured and parse-safe.
 
+Back/forward navigation uses Chrome's tab-history API first so restricted pages
+remain controllable. If Chrome incorrectly rejects an available transition, the
+extension falls back to page history and reports success only after a bounded,
+correlation-logged URL/load transition; an unacknowledged fallback remains an
+error.
+
 `navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow.
 
 Upload-handler unit tests replace native-dialog and verification waits at the

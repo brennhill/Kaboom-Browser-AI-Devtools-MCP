@@ -196,7 +196,9 @@ prepare_action() {
             script='document.body.insertAdjacentHTML("beforeend","<div id=\"uat-composer-active\" contenteditable=\"true\" role=\"textbox\">ready</div><button id=\"uat-send\" aria-label=\"Send\">Send</button>"); document.getElementById("uat-composer-active").focus(); "ready"'
             ;;
         interact/back)
-            script='history.pushState({uat:true},"","?history=1"); "ready"'
+            call_tool "interact" \
+                '{"what":"navigate","url":'"$(json_string "http://127.0.0.1:${PORT}/tests/interact.html?history=1")"'}' \
+                >/dev/null
             ;;
         interact/confirm_top_dialog)
             script='document.body.insertAdjacentHTML("beforeend","<div role=\"dialog\" id=\"uat-dialog\"><button>Confirm</button></div>"); "ready"'
