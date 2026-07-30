@@ -119,6 +119,18 @@ Use this as a hard checklist during design, coding, and review.
 - A re-export used only to avoid updating callers is a failed migration, not a module boundary.
 - Public wire-protocol compatibility is maintained in the canonical implementation; it does not justify a second internal API surface.
 
+## 14) Async Failure Evidence
+
+- Unexpected promise rejections and caught exceptions must emit a redacted
+  structured log or Doctor diagnostic through the feature owner.
+- Never use an empty catch or `.catch(() => undefined)` for an unexpected
+  condition.
+- An intentionally unlogged expected absence or cancellation must include an
+  adjacent `EXPECTED_ABSENCE:` comment explaining both why the condition is
+  normal and why emitting a log would be misleading.
+- Do not include raw errors when they may contain user state. Prefer stable
+  operation names, error categories, correlation IDs, and redacted remediation.
+
 ## Review Checklist
 
 - [ ] Storage access follows helper/module boundaries.
@@ -132,3 +144,4 @@ Use this as a hard checklist during design, coding, and review.
 - [ ] `jscpd` run completed and clones were resolved or documented.
 - [ ] Unit + e2e/smoke tests reflect current behavior and pass.
 - [ ] Migrations are complete: no compatibility facade, alias-only module, old caller, stale test, or stale documentation remains.
+- [ ] Every catch leaves redacted evidence, or carries an explicit `EXPECTED_ABSENCE:` rationale.
