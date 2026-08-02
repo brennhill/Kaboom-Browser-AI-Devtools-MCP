@@ -19,6 +19,16 @@ func TestCollectorReplacesDiagnosticByStableName(t *testing.T) {
 	}
 }
 
+func TestCollectorPreservesSafeCorrelationID(t *testing.T) {
+	collector := NewCollector()
+	collector.Report(Diagnostic{Name: "fixture_transaction", CorrelationID: "qa_fixture_123", Detail: "pending", Fix: "restore"})
+
+	got := collector.Snapshot()
+	if len(got) != 1 || got[0].CorrelationID != "qa_fixture_123" {
+		t.Fatalf("Snapshot() = %#v, want correlated diagnostic", got)
+	}
+}
+
 func TestCollectorReturnsIndependentSortedSnapshot(t *testing.T) {
 	t.Parallel()
 

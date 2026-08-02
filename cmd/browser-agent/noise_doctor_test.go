@@ -16,7 +16,7 @@ func TestRecoveryDoctorChecks(t *testing.T) {
 
 	collector := statediag.NewCollector()
 	collector.Report(statediag.Diagnostic{
-		Name: "noise_rule_state", Detail: "Defaults active.", Fix: "Reset rules.",
+		Name: "noise_rule_state", CorrelationID: "noise_123", Detail: "Defaults active.", Fix: "Reset rules.",
 	})
 	checks := recoveryDoctorChecks(collector)
 	if len(checks) != 1 {
@@ -24,6 +24,9 @@ func TestRecoveryDoctorChecks(t *testing.T) {
 	}
 	if checks[0].Name != "noise_rule_state" || checks[0].Status != "warn" || checks[0].Fix == "" {
 		t.Fatalf("unexpected Doctor check: %#v", checks[0])
+	}
+	if checks[0].CorrelationID != "noise_123" {
+		t.Fatalf("Doctor correlation = %q, want noise_123", checks[0].CorrelationID)
 	}
 
 	collector.Resolve("noise_rule_state")

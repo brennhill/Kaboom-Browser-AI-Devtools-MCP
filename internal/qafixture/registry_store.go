@@ -122,7 +122,7 @@ func discardClosedTemporary(path string) error {
 func validRecords(records []TransactionRecord) bool {
 	transactionIDs := make(map[string]struct{}, len(records))
 	for _, record := range records {
-		if record.TransactionID == "" || record.SnapshotID == "" || record.ExtensionGeneration == "" {
+		if !validOpaqueID(record.TransactionID) || !validOpaqueID(record.CorrelationID) || !validOpaqueID(record.SnapshotID) || !validOpaqueID(record.ExtensionGeneration) {
 			return false
 		}
 		if _, duplicate := transactionIDs[record.TransactionID]; duplicate {
@@ -132,6 +132,19 @@ func validRecords(records []TransactionRecord) bool {
 		if record.State != TransactionRestoreRequired && record.State != TransactionRestoring {
 			return false
 		}
+	}
+	return true
+}
+
+func validOpaqueID(value string) bool {
+	if value == "" || len(value) > 160 {
+		return false
+	}
+	for _, char := range value {
+		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9') || char == '_' || char == '-' {
+			continue
+		}
+		return false
 	}
 	return true
 }

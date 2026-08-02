@@ -30,14 +30,13 @@ func TestRecoverAtStartupRestoresPersistedTransactionWhenExtensionIsReady(t *tes
 		}
 	})
 	handler.Handle(mcp.JSONRPCRequest{ID: 1}, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1}}`))
-	diagnostics := statediag.NewCollector()
 
-	handler.RecoverAtStartup(context.Background(), func(context.Context, time.Duration) bool { return true }, diagnostics)
+	handler.RecoverAtStartup(context.Background(), func(context.Context, time.Duration) bool { return true })
 	if restores != 1 || handler.registry.Len() != 0 {
 		t.Fatalf("restores=%d registry_len=%d", restores, handler.registry.Len())
 	}
-	if got := diagnostics.Snapshot(); len(got) != 0 {
-		t.Fatalf("diagnostics = %#v", got)
+	if got := handler.diagnostics.(interface{ Snapshot() []statediag.Diagnostic }).Snapshot(); len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
+		t.Fatalf("diagnostics = %#v, want correlated recovered lifecycle", got)
 	}
 }
 
@@ -49,11 +48,10 @@ func TestRecoverAtStartupLeavesRedactedDoctorNoticeWhenExtensionIsUnavailable(t 
 		return json.RawMessage(`{"success":true,"mutations":{}}`), nil
 	})
 	handler.Handle(mcp.JSONRPCRequest{ID: 1}, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1}}`))
-	diagnostics := statediag.NewCollector()
 
-	handler.RecoverAtStartup(context.Background(), func(context.Context, time.Duration) bool { return false }, diagnostics)
-	got := diagnostics.Snapshot()
-	if len(got) != 1 || got[0].Name != "fixture_transaction_recovery" {
+	handler.RecoverAtStartup(context.Background(), func(context.Context, time.Duration) bool { return false })
+	got := handler.diagnostics.(interface{ Snapshot() []statediag.Diagnostic }).Snapshot()
+	if len(got) != 1 || got[0].CorrelationID != "fixture_test_1" || got[0].Lifecycle != statediag.LifecycleActive {
 		t.Fatalf("diagnostics = %#v", got)
 	}
 	encoded, _ := json.Marshal(got)
@@ -86,7 +84,7 @@ func TestRecoverAtStartupRehydratesDaemonRegistryAfterRestart(t *testing.T) {
 		t.Fatalf("Load() len=%d notice=%q", rehydrated.Len(), notice)
 	}
 	second := mustRecoveryHandler(t, rehydrated, store.Save, execute)
-	second.RecoverAtStartup(context.Background(), func(context.Context, time.Duration) bool { return true }, statediag.NewCollector())
+	second.RecoverAtStartup(context.Background(), func(context.Context, time.Duration) bool { return true })
 	finalRegistry, finalNotice := store.Load()
 	if finalNotice != "" || finalRegistry.Len() != 0 {
 		t.Fatalf("final Load() len=%d notice=%q", finalRegistry.Len(), finalNotice)
@@ -107,6 +105,7 @@ func mustRecoveryHandler(
 		ExtensionGeneration: func() string { return "generation_1" },
 		Now:                 func() time.Time { return time.Unix(1, 0) },
 		Registry:            registry, Persist: persist, OnNotice: func(string) {},
+		Diagnostics: statediag.NewCollector(),
 	})
 	if err != nil {
 		t.Fatal(err)

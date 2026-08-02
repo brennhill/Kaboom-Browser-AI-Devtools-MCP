@@ -45,7 +45,7 @@ func TestRegistryStoreResumesInterruptedRestoreAsRequired(t *testing.T) {
 	store := NewRegistryStore(path, 2)
 	registry := NewRegistry(2)
 	if err := registry.Add(TransactionRecord{
-		TransactionID: "tx_1", SnapshotID: "snapshot_1", ExtensionGeneration: "generation_1",
+		TransactionID: "tx_1", CorrelationID: "corr_1", SnapshotID: "snapshot_1", ExtensionGeneration: "generation_1",
 		State: TransactionRestoring, CreatedAt: time.Unix(1, 0),
 	}); err != nil {
 		t.Fatal(err)
@@ -110,6 +110,19 @@ func TestRegistryStoreQuarantinesDuplicateTransactionIDs(t *testing.T) {
 	}
 	if _, err := os.Stat(path + ".corrupt"); err != nil {
 		t.Fatalf("duplicate state was not quarantined: %v", err)
+	}
+}
+
+func TestRegistryStoreQuarantinesUnsafeOpaqueIdentifiers(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fixture-transactions.json")
+	data := `{"version":1,"records":[{"transaction_id":"private value","correlation_id":"corr_1","snapshot_id":"snapshot_1","extension_generation":"generation_1","state":"restore_required","created_at":"1970-01-01T00:00:01Z","mutations":{}}]}`
+	if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	registry, notice := NewRegistryStore(path, 4).Load()
+	if registry.Len() != 0 || notice != "fixture_transaction_registry_corrupt" {
+		t.Fatalf("Load() len=%d notice=%q", registry.Len(), notice)
 	}
 }
 

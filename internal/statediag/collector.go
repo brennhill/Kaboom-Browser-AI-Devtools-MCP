@@ -28,15 +28,16 @@ type Transition struct {
 
 // Diagnostic describes a safe fallback taken while reading persisted user state.
 type Diagnostic struct {
-	Name        string
-	Detail      string
-	Fix         string
-	Lifecycle   Lifecycle
-	FirstSeenAt time.Time
-	LastSeenAt  time.Time
-	RecoveredAt time.Time
-	Occurrences int
-	History     []Transition
+	Name          string
+	CorrelationID string
+	Detail        string
+	Fix           string
+	Lifecycle     Lifecycle
+	FirstSeenAt   time.Time
+	LastSeenAt    time.Time
+	RecoveredAt   time.Time
+	Occurrences   int
+	History       []Transition
 }
 
 // Reporter accepts recovery diagnostics from state-owning modules.

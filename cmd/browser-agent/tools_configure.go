@@ -84,11 +84,12 @@ func buildQAFixtureHandler(h *ToolHandler) (*qafixturehandler.Handler, error) {
 				Fix: "Check the Kaboom state directory, then restore the active fixture transaction.",
 			})
 		},
+		Diagnostics: h.stateRecovery,
 	})
 	if err != nil {
 		return nil, err
 	}
-	go handler.RecoverAtStartup(h.shutdownCtx, h.capture.Extension().WaitForExtensionConnected, h.stateRecovery)
+	go handler.RecoverAtStartup(h.shutdownCtx, h.capture.Extension().WaitForExtensionConnected)
 	h.fixtureRecovery = handler
 	return handler, nil
 }
@@ -331,7 +332,7 @@ func recoveryDoctorChecks(diagnostics interface{ Snapshot() []statediag.Diagnost
 			})
 		}
 		checks = append(checks, health.DoctorCheck{
-			Name: diagnostic.Name, Status: status, Detail: diagnostic.Detail, Fix: diagnostic.Fix,
+			Name: diagnostic.Name, CorrelationID: diagnostic.CorrelationID, Status: status, Detail: diagnostic.Detail, Fix: diagnostic.Fix,
 			Lifecycle:   string(diagnostic.Lifecycle),
 			FirstSeenAt: diagnostic.FirstSeenAt.Format(time.RFC3339Nano),
 			LastSeenAt:  diagnostic.LastSeenAt.Format(time.RFC3339Nano),

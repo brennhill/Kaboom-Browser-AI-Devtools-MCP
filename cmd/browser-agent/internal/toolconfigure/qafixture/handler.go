@@ -12,9 +12,15 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	fixturecontract "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/qafixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 type CommandExecutor func(context.Context, string, json.RawMessage, time.Duration) (json.RawMessage, error)
+
+type LifecycleDiagnostics interface {
+	statediag.Reporter
+	statediag.Resolver
+}
 
 type Deps struct {
 	Context             context.Context
@@ -26,6 +32,7 @@ type Deps struct {
 	Registry            *fixturecontract.Registry
 	Persist             func(*fixturecontract.Registry) error
 	OnNotice            func(string)
+	Diagnostics         LifecycleDiagnostics
 }
 
 type Handler struct {
@@ -35,11 +42,12 @@ type Handler struct {
 	persist     func(*fixturecontract.Registry) error
 	generation  func() string
 	restore     func(context.Context, string) error
+	diagnostics LifecycleDiagnostics
 	lifecycleMu sync.Mutex
 }
 
 func New(deps Deps) (*Handler, error) {
-	if deps.Context == nil || deps.Execute == nil || deps.NewCorrelationID == nil {
+	if deps.Context == nil || deps.Execute == nil || deps.NewCorrelationID == nil || deps.Diagnostics == nil {
 		return nil, errors.New("incomplete_qa_fixture_dependencies")
 	}
 	restore := func(ctx context.Context, snapshotID string) error {
@@ -103,6 +111,7 @@ func New(deps Deps) (*Handler, error) {
 	return &Handler{
 		ctx: deps.Context, coordinator: coordinator, registry: deps.Registry,
 		persist: deps.Persist, generation: deps.ExtensionGeneration, restore: restore,
+		diagnostics: deps.Diagnostics,
 	}, nil
 }
 
@@ -141,6 +150,7 @@ func (handler *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		})
 	}
 	result, err := handler.applyFixture(fixture)
+	handler.reportApplyLifecycle(result, err)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrExtError, "QA fixture transaction failed: "+result.Status,
 			"Inspect configure({what:'doctor'}), correct browser state, and retry the fixture.",
@@ -165,13 +175,22 @@ func (handler *Handler) RecoverPending(ctx context.Context) []string {
 	return failures
 }
 
-func (handler *Handler) restoreTransaction(ctx context.Context, transactionID string) (bool, error) {
+func (handler *Handler) restoreTransaction(ctx context.Context, transactionID string) (alreadyRestored bool, returnErr error) {
 	handler.lifecycleMu.Lock()
 	defer handler.lifecycleMu.Unlock()
 	record, exists := handler.registry.Get(transactionID)
 	if !exists {
 		return true, nil
 	}
+	defer func() {
+		if returnErr != nil {
+			handler.diagnostics.Report(statediag.Diagnostic{
+				Name: fixtureDiagnosticName(record.CorrelationID), CorrelationID: record.CorrelationID,
+				Detail: "QA fixture restoration failed with status " + returnErr.Error() + ".",
+				Fix:    "Reconnect the extension, inspect transaction status, and retry restore.",
+			})
+		}
+	}()
 	record, err := handler.registry.BeginRestore(transactionID, handler.generation())
 	if err != nil {
 		return false, err
@@ -203,7 +222,42 @@ func (handler *Handler) restoreTransaction(ctx context.Context, transactionID st
 		}
 		return false, errors.New("fixture_transaction_registry_persist_failed")
 	}
+	handler.diagnostics.Resolve(fixtureDiagnosticName(record.CorrelationID))
 	return false, nil
+}
+
+func (handler *Handler) reportApplyLifecycle(result fixturecontract.TransactionResult, err error) {
+	if result.CorrelationID == "" {
+		return
+	}
+	name := fixtureDiagnosticName(result.CorrelationID)
+	detail := "QA fixture transaction requires browser state restoration."
+	fix := "Restore the transaction through configure({what:'qa_fixture',fixture_action:'restore'})."
+	if err != nil {
+		detail = "QA fixture transaction ended with status " + result.Status + "."
+		fix = "Inspect fixture transaction status and retry after correcting browser state."
+	}
+	handler.diagnostics.Report(statediag.Diagnostic{
+		Name: name, CorrelationID: result.CorrelationID, Detail: detail, Fix: fix,
+	})
+	if err != nil && (result.RolledBack || noMutationFailure(result.Status)) {
+		handler.diagnostics.Resolve(name)
+	}
+}
+
+func noMutationFailure(status string) bool {
+	return status == fixturecontract.StatusSnapshotFailed || status == fixturecontract.StatusTimedOut || status == fixturecontract.StatusCanceled
+}
+
+func (handler *Handler) reportPendingRecovery(correlationID, detail string) {
+	handler.diagnostics.Report(statediag.Diagnostic{
+		Name: fixtureDiagnosticName(correlationID), CorrelationID: correlationID, Detail: detail,
+		Fix: "Reconnect the extension and retry fixture restoration.",
+	})
+}
+
+func fixtureDiagnosticName(correlationID string) string {
+	return "fixture_transaction_" + correlationID
 }
 
 func (handler *Handler) transactionSummaries() []map[string]any {

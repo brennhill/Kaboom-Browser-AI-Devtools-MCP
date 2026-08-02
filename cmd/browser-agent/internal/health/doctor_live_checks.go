@@ -27,16 +27,17 @@ var doctorCommandOutput = func(timeout time.Duration, name string, args ...strin
 
 // DoctorCheck represents a single diagnostic check result.
 type DoctorCheck struct {
-	Name        string             `json:"name"`
-	Status      string             `json:"status"` // "pass", "warn", "fail"
-	Detail      string             `json:"detail"`
-	Fix         string             `json:"fix,omitempty"`
-	Lifecycle   string             `json:"lifecycle,omitempty"`
-	FirstSeenAt string             `json:"first_seen_at,omitempty"`
-	LastSeenAt  string             `json:"last_seen_at,omitempty"`
-	RecoveredAt string             `json:"recovered_at,omitempty"`
-	Occurrences int                `json:"occurrences,omitempty"`
-	History     []DoctorTransition `json:"history,omitempty"`
+	Name          string             `json:"name"`
+	CorrelationID string             `json:"correlation_id,omitempty"`
+	Status        string             `json:"status"` // "pass", "warn", "fail"
+	Detail        string             `json:"detail"`
+	Fix           string             `json:"fix,omitempty"`
+	Lifecycle     string             `json:"lifecycle,omitempty"`
+	FirstSeenAt   string             `json:"first_seen_at,omitempty"`
+	LastSeenAt    string             `json:"last_seen_at,omitempty"`
+	RecoveredAt   string             `json:"recovered_at,omitempty"`
+	Occurrences   int                `json:"occurrences,omitempty"`
+	History       []DoctorTransition `json:"history,omitempty"`
 }
 
 type DoctorTransition struct {

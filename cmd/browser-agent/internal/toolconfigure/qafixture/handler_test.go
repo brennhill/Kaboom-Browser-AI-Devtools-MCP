@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	fixturecontract "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/qafixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 func TestHandleValidateAcceptsVersionedFixtureWithoutEchoingState(t *testing.T) {
@@ -163,7 +164,80 @@ func TestHandlerExposesRedactedStatusAndIdempotentRestoreLifecycle(t *testing.T)
 	}
 }
 
+func TestHandlerReportsCorrelatedActiveAndRecoveredLifecycle(t *testing.T) {
+	diagnostics := statediag.NewCollector()
+	handler := mustHandlerWithDiagnostics(t, func(_ context.Context, command string, _ json.RawMessage, _ time.Duration) (json.RawMessage, error) {
+		switch command {
+		case "environment_transaction_snapshot":
+			return json.RawMessage(`{"success":true,"snapshot_id":"opaque_1"}`), nil
+		case "environment_transaction_apply":
+			return json.RawMessage(`{"success":true,"mutations":{}}`), nil
+		case "environment_transaction_restore":
+			return json.RawMessage(`{"success":true,"restored":true}`), nil
+		default:
+			return nil, errors.New("unexpected command")
+		}
+	}, diagnostics)
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	handler.Handle(req, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1}}`))
+
+	active := diagnostics.Snapshot()
+	if len(active) != 1 || active[0].Lifecycle != statediag.LifecycleActive || active[0].CorrelationID != "fixture_test_1" {
+		t.Fatalf("active diagnostics = %#v", active)
+	}
+	handler.Handle(req, json.RawMessage(`{"fixture_action":"restore","transaction_id":"transaction_test_1"}`))
+	recovered := diagnostics.Snapshot()
+	if len(recovered) != 1 || recovered[0].Lifecycle != statediag.LifecycleRecovered || len(recovered[0].History) != 2 {
+		t.Fatalf("recovered diagnostics = %#v", recovered)
+	}
+}
+
+func TestHandlerReportsRedactedCorrelatedRestoreFailure(t *testing.T) {
+	diagnostics := statediag.NewCollector()
+	handler := mustHandlerWithDiagnostics(t, func(_ context.Context, command string, _ json.RawMessage, _ time.Duration) (json.RawMessage, error) {
+		switch command {
+		case "environment_transaction_snapshot":
+			return json.RawMessage(`{"success":true,"snapshot_id":"opaque_1"}`), nil
+		case "environment_transaction_apply":
+			return json.RawMessage(`{"success":true,"mutations":{}}`), nil
+		case "environment_transaction_restore":
+			return nil, errors.New("private-cookie-value")
+		default:
+			return nil, errors.New("unexpected command")
+		}
+	}, diagnostics)
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	handler.Handle(req, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1}}`))
+	handler.Handle(req, json.RawMessage(`{"fixture_action":"restore","transaction_id":"transaction_test_1"}`))
+
+	got := diagnostics.Snapshot()
+	encoded, _ := json.Marshal(got)
+	if len(got) != 1 || got[0].Lifecycle != statediag.LifecycleActive || got[0].CorrelationID != "fixture_test_1" {
+		t.Fatalf("restore failure diagnostics = %s", encoded)
+	}
+	if strings.Contains(string(encoded), "private-cookie-value") {
+		t.Fatalf("restore failure leaked private cause: %s", encoded)
+	}
+}
+
+func TestHandlerMarksSnapshotFailureRecoveredBecauseNoStateWasMutated(t *testing.T) {
+	diagnostics := statediag.NewCollector()
+	handler := mustHandlerWithDiagnostics(t, func(_ context.Context, _ string, _ json.RawMessage, _ time.Duration) (json.RawMessage, error) {
+		return nil, errors.New("private-snapshot-cause")
+	}, diagnostics)
+	handler.Handle(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1}}`))
+
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
+		t.Fatalf("snapshot failure diagnostics = %#v, want recovered incident", got)
+	}
+}
+
 func mustHandler(t *testing.T, execute CommandExecutor) *Handler {
+	return mustHandlerWithDiagnostics(t, execute, statediag.NewCollector())
+}
+
+func mustHandlerWithDiagnostics(t *testing.T, execute CommandExecutor, diagnostics *statediag.Collector) *Handler {
 	t.Helper()
 	if execute == nil {
 		execute = func(context.Context, string, json.RawMessage, time.Duration) (json.RawMessage, error) {
@@ -180,6 +254,7 @@ func mustHandler(t *testing.T, execute CommandExecutor) *Handler {
 		Registry:            fixturecontract.NewRegistry(32),
 		Persist:             func(*fixturecontract.Registry) error { return nil },
 		OnNotice:            func(string) {},
+		Diagnostics:         diagnostics,
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -10,6 +10,7 @@ code_paths:
   - cmd/browser-agent/internal/playbooks/playbooks_guides.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup.go
+  - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolinteract/interact_storage.go
   - cmd/browser-agent/tools_configure.go
@@ -19,6 +20,7 @@ code_paths:
   - internal/qafixture/registry.go
   - internal/qafixture/registry_store.go
   - internal/schema/configure/properties_fixture.go
+  - internal/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
   - scripts/build/generate-wire-types.js
   - scripts/contracts/check-wire-drift.js
@@ -36,6 +38,7 @@ test_paths:
   - cmd/browser-agent/golden_test.go
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
   - cmd/browser-agent/tools_configure_handler_test.go
+  - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/internal/toolinteract/interact_storage_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup_test.go
@@ -44,6 +47,7 @@ test_paths:
   - internal/qafixture/registry_test.go
   - internal/qafixture/registry_store_test.go
   - internal/schema/configure/schema_test.go
+  - internal/statediag/collector_test.go
   - tests/extension/environment-transaction/browser-state-driver.test.js
   - tests/extension/environment-transaction/chrome-state-adapter.test.js
   - tests/extension/environment-transaction/snapshot-store.test.js
@@ -119,6 +123,10 @@ last_verified_date: 2026-08-02
   while `restore` is idempotent. Daemon startup waits a bounded interval for the
   extension, resumes same-generation recovery, and records pending or failed
   transitions in Doctor without raw state.
+- Doctor retains one correlated active-to-recovered timeline per fixture
+  transaction. Startup, extension-unavailable, rollback, and explicit restore
+  transitions use stable redacted status text; malformed persisted identifiers
+  are quarantined before they can reach Doctor or MCP responses.
 - Connected category 35 applies synthetic state to the disposable UAT tab, then
   uses cross-origin snapshot rejection and a real invalid-domain cookie failure
   to prove redaction, exact partial-apply rollback, and explicit cleanup through
