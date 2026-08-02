@@ -44,8 +44,11 @@ func TestToolSchemaExposesAtomicQAFixtureApplyContract(t *testing.T) {
 		t.Fatal("configure what enum missing qa_fixture")
 	}
 	actions := props["fixture_action"].(map[string]any)["enum"].([]string)
-	if len(actions) != 2 || actions[0] != "validate" || actions[1] != "apply" {
-		t.Fatalf("fixture_action enum = %v, want validate and apply", actions)
+	if len(actions) != 4 || actions[0] != "validate" || actions[1] != "apply" || actions[2] != "status" || actions[3] != "restore" {
+		t.Fatalf("fixture_action enum = %v, want validate, apply, status, and restore", actions)
+	}
+	if _, ok := props["transaction_id"]; !ok {
+		t.Fatal("configure schema missing fixture transaction_id")
 	}
 	fixture := props["fixture"].(map[string]any)
 	if fixture["additionalProperties"] != false {

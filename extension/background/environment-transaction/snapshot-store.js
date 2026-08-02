@@ -11,8 +11,10 @@ export function createPersistentEnvironmentSnapshotStore(deps) {
         async save(snapshot) {
             const document = await readDocument(deps);
             const records = [...document.records];
-            if (records.length >= limit)
-                records.splice(oldestRecordIndex(records), 1);
+            if (records.length >= limit) {
+                deps.onNotice('environment_snapshot_store_full');
+                throw new Error('environment_snapshot_store_full');
+            }
             const id = deps.newID();
             records.push({ id, created_at: deps.now(), snapshot });
             await writeDocument(deps, { version: DOCUMENT_VERSION, records });
@@ -93,18 +95,5 @@ function isRestorePlan(value) {
 }
 function isRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-function oldestRecordIndex(records) {
-    let oldest = 0;
-    for (let index = 1; index < records.length; index += 1) {
-        const candidate = records[index];
-        const current = records[oldest];
-        if (!candidate || !current)
-            continue;
-        if (candidate.created_at < current.created_at || (candidate.created_at === current.created_at && candidate.id < current.id)) {
-            oldest = index;
-        }
-    }
-    return oldest;
 }
 //# sourceMappingURL=snapshot-store.js.map

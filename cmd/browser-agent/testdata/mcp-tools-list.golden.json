@@ -969,10 +969,12 @@
           "type": "object"
         },
         "fixture_action": {
-          "description": "Validate a QA fixture or apply it atomically after an extension-owned snapshot. Failed applies are rolled back.",
+          "description": "Validate, apply, inspect, or restore a QA fixture transaction. Failed applies are rolled back.",
           "enum": [
             "validate",
-            "apply"
+            "apply",
+            "status",
+            "restore"
           ],
           "type": "string"
         },
@@ -1189,6 +1191,10 @@
         },
         "tool_name": {
           "description": "Filter by tool name",
+          "type": "string"
+        },
+        "transaction_id": {
+          "description": "Opaque transaction handle returned by fixture_action=apply.",
           "type": "string"
         },
         "url": {

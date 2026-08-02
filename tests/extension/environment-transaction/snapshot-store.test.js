@@ -5,7 +5,7 @@ import test from 'node:test'
 
 import { createPersistentEnvironmentSnapshotStore } from '../../../extension/background/environment-transaction/snapshot-store.js'
 
-test('persistent snapshot store survives reconstruction and evicts the oldest record', async () => {
+test('persistent snapshot store survives reconstruction and never evicts an active snapshot', async () => {
   const storage = memoryStorage()
   let now = 1
   let id = 0
@@ -13,12 +13,12 @@ test('persistent snapshot store survives reconstruction and evicts the oldest re
   const first = createPersistentEnvironmentSnapshotStore(deps)
   await first.save(snapshot('one'))
   await first.save(snapshot('two'))
-  const newestID = await first.save(snapshot('three'))
+  await assert.rejects(first.save(snapshot('three')), { message: 'environment_snapshot_store_full' })
 
   const reconstructed = createPersistentEnvironmentSnapshotStore(deps)
-  assert.equal(await reconstructed.get('opaque_1'), undefined)
+  assert.equal((await reconstructed.get('opaque_1')).tab_url, 'https://one.test/')
   assert.equal((await reconstructed.get('opaque_2')).tab_url, 'https://two.test/')
-  assert.equal((await reconstructed.get(newestID)).tab_url, 'https://three.test/')
+  assert.equal(await reconstructed.get('opaque_3'), undefined)
 })
 
 test('persistent snapshot store clears corrupt state and emits a stable notice', async () => {

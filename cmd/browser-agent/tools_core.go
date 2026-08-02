@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
@@ -70,11 +71,12 @@ type ToolHandler struct {
 	*MCPHandler
 	capture *capture.Capture
 
-	// shutdownCtx is cancelled when the ToolHandler is closed. Gates like
-	// requireExtension pass this context to blocking waits so they abort
-	// promptly on server shutdown instead of leaking goroutines.
-	shutdownCtx    context.Context
-	shutdownCancel context.CancelFunc
+	// shutdownCtx lets readiness gates abort promptly when the handler closes,
+	// while fixture recovery runs through the bounded pre-cancellation owner.
+	shutdownCtx     context.Context
+	shutdownCancel  context.CancelFunc
+	closeOnce       sync.Once
+	fixtureRecovery fixtureRecoveryRunner
 
 	// Health metrics for MCP get_health tool
 	healthMetrics *health.Metrics
@@ -308,9 +310,7 @@ func isToolResultError(raw json.RawMessage) bool {
 
 // Close cancels readiness gates and other in-flight work owned by this handler.
 func (h *ToolHandler) Close() {
-	if h.shutdownCancel != nil {
-		h.shutdownCancel()
-	}
+	h.closeOnce.Do(h.closeWithFixtureRecovery)
 }
 
 const (
@@ -423,16 +423,17 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	detectNoise := func() {
 		noiseautorun.Detect(handler.noiseConfig, handler.capture, handler.server.logs.Entries())
 	}
-	noiseautorun.WireNavigation(handler.capture, detectNoise)
-	noiseautorun.WireFirstConnect(handler.capture, handler.shutdownCtx.Done(), func() {
-		if handler.noiseFirstConnectFn != nil {
-			handler.noiseFirstConnectFn()
-			return
-		}
-		detectNoise()
-		diag.Printf("[Kaboom] noise auto-detect: ran on first extension connection\n")
-	})
-
+	if handler.capture != nil {
+		noiseautorun.WireNavigation(handler.capture, detectNoise)
+		noiseautorun.WireFirstConnect(handler.capture, handler.shutdownCtx.Done(), func() {
+			if handler.noiseFirstConnectFn != nil {
+				handler.noiseFirstConnectFn()
+				return
+			}
+			detectNoise()
+			diag.Printf("[Kaboom] noise auto-detect: ran on first extension connection\n")
+		})
+	}
 	handler.securityScannerImpl = scan.NewScanner()
 	handler.thirdPartyAuditorImpl = thirdparty.NewThirdPartyAuditor()
 	handler.apiContractRuntime = apicontract.NewRuntime()
@@ -583,7 +584,6 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	})
 	handler.configureDispatcher = buildConfigureDispatcher(handler)
 	handler.toolCatalog = buildToolCatalog(handler)
-
 	handler.MCPHandler.SetToolBackend(buildMCPToolBackend(handler))
 	return handler.MCPHandler
 }

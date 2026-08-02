@@ -9,9 +9,11 @@ code_paths:
   - cmd/browser-agent/internal/cli/cli_tool_parsers_generate_configure.go
   - cmd/browser-agent/internal/playbooks/playbooks_guides.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/startup.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolinteract/interact_storage.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/tools_core.go
   - internal/qafixture/wire_fixture.go
   - internal/qafixture/transaction.go
   - internal/qafixture/registry.go
@@ -27,6 +29,7 @@ code_paths:
   - src/background/environment-transaction/commands.ts
   - src/background/environment-transaction/runtime.ts
   - src/background/environment-transaction/snapshot-store.ts
+  - src/background/init.ts
   - src/types/runtime/queries.ts
   - src/types/wire/wire-qa-fixture.ts
 test_paths:
@@ -35,6 +38,7 @@ test_paths:
   - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/internal/toolinteract/interact_storage_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler_test.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/startup_test.go
   - internal/qafixture/fixture_test.go
   - internal/qafixture/transaction_test.go
   - internal/qafixture/registry_test.go
@@ -43,6 +47,7 @@ test_paths:
   - tests/extension/environment-transaction/browser-state-driver.test.js
   - tests/extension/environment-transaction/chrome-state-adapter.test.js
   - tests/extension/environment-transaction/snapshot-store.test.js
+  - extension/background/pending-queries-iframe.test.js
   - scripts/tests/browser/cat-35-qa-fixtures.sh
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-02
@@ -109,6 +114,11 @@ last_verified_date: 2026-08-02
 - Each private snapshot includes its own extension-only restore plan. Recovery
   therefore sends only the opaque snapshot handle; the daemon neither persists
   nor retransmits original cookie or storage values during restoration.
+- Successful apply persists a bounded recovery obligation before returning its
+  opaque transaction handle. `status` exposes only redacted lifecycle metadata,
+  while `restore` is idempotent. Daemon startup waits a bounded interval for the
+  extension, resumes same-generation recovery, and records pending or failed
+  transitions in Doctor without raw state.
 - Connected category 35 applies synthetic state to the disposable UAT tab, then
   uses cross-origin snapshot rejection and a real invalid-domain cookie failure
   to prove redaction, exact partial-apply rollback, and explicit cleanup through

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -16,37 +17,69 @@ import (
 type CommandExecutor func(context.Context, string, json.RawMessage, time.Duration) (json.RawMessage, error)
 
 type Deps struct {
-	Context          context.Context
-	Execute          CommandExecutor
-	NewCorrelationID func() string
+	Context             context.Context
+	Execute             CommandExecutor
+	NewCorrelationID    func() string
+	NewTransactionID    func() string
+	ExtensionGeneration func() string
+	Now                 func() time.Time
+	Registry            *fixturecontract.Registry
+	Persist             func(*fixturecontract.Registry) error
+	OnNotice            func(string)
 }
 
 type Handler struct {
 	ctx         context.Context
 	coordinator *fixturecontract.Coordinator
+	registry    *fixturecontract.Registry
+	persist     func(*fixturecontract.Registry) error
+	generation  func() string
+	restore     func(context.Context, string) error
+	lifecycleMu sync.Mutex
 }
 
 func New(deps Deps) (*Handler, error) {
 	if deps.Context == nil || deps.Execute == nil || deps.NewCorrelationID == nil {
 		return nil, errors.New("incomplete_qa_fixture_dependencies")
 	}
+	restore := func(ctx context.Context, snapshotID string) error {
+		if snapshotID == "" {
+			return errors.New("invalid_fixture_snapshot_reference")
+		}
+		result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_restore", nil, snapshotID, fixturecontract.DefaultSetupTimeoutMs)
+		if err != nil {
+			return err
+		}
+		var restored struct {
+			Success  bool `json:"success"`
+			Restored bool `json:"restored"`
+		}
+		if json.Unmarshal(result, &restored) != nil || !restored.Success || !restored.Restored {
+			return errors.New("invalid_fixture_restore_result")
+		}
+		return nil
+	}
 	coordinator, err := fixturecontract.NewCoordinator(fixturecontract.TransactionDeps{
-		NewCorrelationID: deps.NewCorrelationID,
-		Snapshot: func(ctx context.Context, fixture fixturecontract.WireQAFixture) (json.RawMessage, error) {
+		NewCorrelationID:    deps.NewCorrelationID,
+		NewTransactionID:    deps.NewTransactionID,
+		ExtensionGeneration: deps.ExtensionGeneration,
+		Now:                 deps.Now,
+		Registry:            deps.Registry,
+		Persist:             deps.Persist,
+		OnNotice:            deps.OnNotice,
+		Snapshot: func(ctx context.Context, fixture fixturecontract.WireQAFixture) (string, error) {
 			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_snapshot", &fixture, "", fixture.SetupTimeoutMs)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			var snapshot struct {
 				Success    bool   `json:"success"`
 				SnapshotID string `json:"snapshot_id"`
 			}
 			if json.Unmarshal(result, &snapshot) != nil || !snapshot.Success || snapshot.SnapshotID == "" {
-				return nil, errors.New("invalid_fixture_snapshot_result")
+				return "", errors.New("invalid_fixture_snapshot_result")
 			}
-			return json.Marshal(struct {
-				SnapshotID string `json:"snapshot_id"`
-			}{SnapshotID: snapshot.SnapshotID})
+			return snapshot.SnapshotID, nil
 		},
 		Apply: func(ctx context.Context, fixture fixturecontract.WireQAFixture) (fixturecontract.MutationCounts, error) {
 			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_apply", &fixture, "", fixture.SetupTimeoutMs)
@@ -62,43 +95,41 @@ func New(deps Deps) (*Handler, error) {
 			}
 			return applied.Mutations, nil
 		},
-		Restore: func(ctx context.Context, snapshot json.RawMessage) error {
-			var reference struct {
-				SnapshotID string `json:"snapshot_id"`
-			}
-			if json.Unmarshal(snapshot, &reference) != nil || reference.SnapshotID == "" {
-				return errors.New("invalid_fixture_snapshot_reference")
-			}
-			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_restore", nil, reference.SnapshotID, fixturecontract.DefaultSetupTimeoutMs)
-			if err != nil {
-				return err
-			}
-			var restored struct {
-				Success  bool `json:"success"`
-				Restored bool `json:"restored"`
-			}
-			if json.Unmarshal(result, &restored) != nil || !restored.Success || !restored.Restored {
-				return errors.New("invalid_fixture_restore_result")
-			}
-			return nil
-		},
+		Restore: restore,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &Handler{ctx: deps.Context, coordinator: coordinator}, nil
+	return &Handler{
+		ctx: deps.Context, coordinator: coordinator, registry: deps.Registry,
+		persist: deps.Persist, generation: deps.ExtensionGeneration, restore: restore,
+	}, nil
 }
 
 func (handler *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		FixtureAction string          `json:"fixture_action"`
 		Fixture       json.RawMessage `json:"fixture"`
+		TransactionID string          `json:"transaction_id"`
 	}
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
+	if params.FixtureAction == "status" {
+		return mcp.Succeed(req, "QA fixture transaction status", map[string]any{"transactions": handler.transactionSummaries()})
+	}
+	if params.FixtureAction == "restore" {
+		if params.TransactionID == "" {
+			return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'transaction_id' is missing", "Pass the transaction_id returned by apply", mcp.WithParam("transaction_id"))
+		}
+		alreadyRestored, err := handler.restoreTransaction(handler.ctx, params.TransactionID)
+		if err != nil {
+			return mcp.Fail(req, mcp.ErrExtError, "QA fixture restore failed: "+err.Error(), "Inspect configure({what:'doctor'}) and retry restore.")
+		}
+		return mcp.Succeed(req, "QA fixture restored", map[string]any{"transaction_id": params.TransactionID, "restored": true, "already_restored": alreadyRestored})
+	}
 	if params.FixtureAction != "validate" && params.FixtureAction != "apply" {
-		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid fixture_action", "Use fixture_action='validate' or fixture_action='apply'", mcp.WithParam("fixture_action"))
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid fixture_action", "Use fixture_action='validate', 'apply', 'status', or 'restore'", mcp.WithParam("fixture_action"))
 	}
 	fixture, response, invalid := parseFixture(req, params.Fixture)
 	if invalid {
@@ -109,13 +140,82 @@ func (handler *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp
 			"valid": true, "fixture_version": fixture.Version, "setup_timeout_ms": fixture.SetupTimeoutMs,
 		})
 	}
-	result, err := handler.coordinator.Apply(handler.ctx, fixture)
+	result, err := handler.applyFixture(fixture)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrExtError, "QA fixture transaction failed: "+result.Status,
 			"Inspect configure({what:'doctor'}), correct browser state, and retry the fixture.",
 			mcp.WithHint("correlation_id="+result.CorrelationID))
 	}
 	return mcp.Succeed(req, "QA fixture applied", result)
+}
+
+func (handler *Handler) applyFixture(fixture fixturecontract.WireQAFixture) (fixturecontract.TransactionResult, error) {
+	handler.lifecycleMu.Lock()
+	defer handler.lifecycleMu.Unlock()
+	return handler.coordinator.Apply(handler.ctx, fixture)
+}
+
+func (handler *Handler) RecoverPending(ctx context.Context) []string {
+	failures := make([]string, 0)
+	for _, record := range handler.registry.Records() {
+		if _, err := handler.restoreTransaction(ctx, record.TransactionID); err != nil {
+			failures = append(failures, err.Error())
+		}
+	}
+	return failures
+}
+
+func (handler *Handler) restoreTransaction(ctx context.Context, transactionID string) (bool, error) {
+	handler.lifecycleMu.Lock()
+	defer handler.lifecycleMu.Unlock()
+	record, exists := handler.registry.Get(transactionID)
+	if !exists {
+		return true, nil
+	}
+	record, err := handler.registry.BeginRestore(transactionID, handler.generation())
+	if err != nil {
+		return false, err
+	}
+	if err := handler.persist(handler.registry); err != nil {
+		if restoreStateErr := handler.registry.RestoreFailed(transactionID); restoreStateErr != nil {
+			return false, errors.New("fixture_transaction_registry_recovery_failed")
+		}
+		return false, errors.New("fixture_transaction_registry_persist_failed")
+	}
+	restoreCtx, cancel := context.WithTimeout(ctx, time.Duration(fixturecontract.DefaultSetupTimeoutMs)*time.Millisecond)
+	defer cancel()
+	if err := handler.restore(restoreCtx, record.SnapshotID); err != nil {
+		if restoreStateErr := handler.registry.RestoreFailed(transactionID); restoreStateErr != nil {
+			return false, errors.New("fixture_transaction_registry_recovery_failed")
+		}
+		if persistErr := handler.persist(handler.registry); persistErr != nil {
+			return false, errors.New("fixture_transaction_restore_and_persist_failed")
+		}
+		return false, errors.New("fixture_transaction_restore_failed")
+	}
+	if err := handler.registry.CompleteRestore(transactionID); err != nil {
+		return false, err
+	}
+	if err := handler.persist(handler.registry); err != nil {
+		record.State = fixturecontract.TransactionRestoreRequired
+		if addErr := handler.registry.Add(record); addErr != nil {
+			return false, errors.New("fixture_transaction_registry_recovery_failed")
+		}
+		return false, errors.New("fixture_transaction_registry_persist_failed")
+	}
+	return false, nil
+}
+
+func (handler *Handler) transactionSummaries() []map[string]any {
+	records := handler.registry.Records()
+	summaries := make([]map[string]any, 0, len(records))
+	for _, record := range records {
+		summaries = append(summaries, map[string]any{
+			"transaction_id": record.TransactionID, "correlation_id": record.CorrelationID,
+			"state": record.State, "created_at": record.CreatedAt, "mutations": record.Mutations,
+		})
+	}
+	return summaries
 }
 
 func parseFixture(req mcp.JSONRPCRequest, raw json.RawMessage) (fixturecontract.WireQAFixture, mcp.JSONRPCResponse, bool) {

@@ -45,6 +45,7 @@ import { readTrackedTab } from '../lib/tabs/tracked-tab-storage.js';
 import { markStateVersion, setSessionAccessLevel, wasServiceWorkerRestarted } from '../lib/storage/session.js';
 import { loadServerInstallId } from './sync/install-identity.js';
 import { getExtensionLogQueueMetrics, initializeExtensionLogQueue, recordExtensionDiagnosticLifecycle } from './runtime-state/log-queue.js';
+import { initializeEnvironmentTransactionRuntime } from './environment-transaction/runtime.js';
 /**
  * Initialize the extension on startup
  * Handles state recovery after service worker restart, loads settings, installs listeners.
@@ -59,6 +60,7 @@ export function initializeExtension() {
     // level runs. A listener installed later in the async sequence would miss it,
     // and the background would believe no panel exists.
     watchTerminalPanelState();
+    initializeEnvironmentTransactionRuntime();
     // Rehydrate any recording that survived a service-worker restart. Explicit
     // call (formerly a recording-module import side effect) so it fires exactly
     // once, here at startup. Best-effort — not awaited at the top level.

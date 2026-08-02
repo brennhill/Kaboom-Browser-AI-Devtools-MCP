@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	fixturecontract "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/qafixture"
 )
 
 func TestHandleValidateAcceptsVersionedFixtureWithoutEchoingState(t *testing.T) {
@@ -122,6 +123,46 @@ func TestHandlerApplyFailureRestoresWithOpaqueSnapshotAndRedactsCause(t *testing
 	}
 }
 
+func TestHandlerExposesRedactedStatusAndIdempotentRestoreLifecycle(t *testing.T) {
+	restores := 0
+	handler := mustHandler(t, func(_ context.Context, command string, _ json.RawMessage, _ time.Duration) (json.RawMessage, error) {
+		switch command {
+		case "environment_transaction_snapshot":
+			return json.RawMessage(`{"success":true,"snapshot_id":"opaque_private_snapshot"}`), nil
+		case "environment_transaction_apply":
+			return json.RawMessage(`{"success":true,"mutations":{"cookies":1}}`), nil
+		case "environment_transaction_restore":
+			restores++
+			return json.RawMessage(`{"success":true,"restored":true}`), nil
+		default:
+			return nil, errors.New("unexpected command")
+		}
+	})
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	apply := handler.Handle(req, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1,"cookies":[{"name":"session","value":"private-cookie"}]}}`))
+	applyJSON, _ := json.Marshal(apply)
+	if !strings.Contains(string(applyJSON), "transaction_test_1") || strings.Contains(string(applyJSON), "opaque_private_snapshot") {
+		t.Fatalf("apply response = %s", applyJSON)
+	}
+
+	status := handler.Handle(req, json.RawMessage(`{"fixture_action":"status"}`))
+	statusJSON, _ := json.Marshal(status)
+	if !strings.Contains(string(statusJSON), "transaction_test_1") || strings.Contains(string(statusJSON), "opaque_private_snapshot") || strings.Contains(string(statusJSON), "generation_test_1") {
+		t.Fatalf("status response = %s", statusJSON)
+	}
+
+	for attempt := 0; attempt < 2; attempt++ {
+		response := handler.Handle(req, json.RawMessage(`{"fixture_action":"restore","transaction_id":"transaction_test_1"}`))
+		encoded, _ := json.Marshal(response)
+		if !strings.Contains(string(encoded), `\"restored\":true`) {
+			t.Fatalf("restore response = %s", encoded)
+		}
+	}
+	if restores != 1 {
+		t.Fatalf("restore command count = %d, want 1", restores)
+	}
+}
+
 func mustHandler(t *testing.T, execute CommandExecutor) *Handler {
 	t.Helper()
 	if execute == nil {
@@ -130,9 +171,15 @@ func mustHandler(t *testing.T, execute CommandExecutor) *Handler {
 		}
 	}
 	handler, err := New(Deps{
-		Context:          context.Background(),
-		Execute:          execute,
-		NewCorrelationID: func() string { return "fixture_test_1" },
+		Context:             context.Background(),
+		Execute:             execute,
+		NewCorrelationID:    func() string { return "fixture_test_1" },
+		NewTransactionID:    func() string { return "transaction_test_1" },
+		ExtensionGeneration: func() string { return "generation_test_1" },
+		Now:                 func() time.Time { return time.Unix(1, 0) },
+		Registry:            fixturecontract.NewRegistry(32),
+		Persist:             func(*fixturecontract.Registry) error { return nil },
+		OnNotice:            func(string) {},
 	})
 	if err != nil {
 		t.Fatal(err)

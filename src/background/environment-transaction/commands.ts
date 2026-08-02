@@ -63,9 +63,9 @@ export async function restoreEnvironment(
   snapshots: EnvironmentSnapshotStore,
   tabId: number,
   snapshotID: string
-): Promise<{ readonly success: true; readonly restored: true }> {
+): Promise<{ readonly success: true; readonly restored: true; readonly already_restored?: true }> {
   const snapshot = await snapshots.get(snapshotID)
-  if (!snapshot) throw new Error('fixture_snapshot_not_found')
+  if (!snapshot) return { success: true, restored: true, already_restored: true }
   try {
     await driver.restore(tabId, snapshot)
   } catch {

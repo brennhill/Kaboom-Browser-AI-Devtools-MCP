@@ -36,14 +36,19 @@ func (store *RegistryStore) Load() (*Registry, string) {
 		return registry, "fixture_transaction_registry_unreadable"
 	}
 	var document registryDocument
-	if json.Unmarshal(data, &document) != nil || document.Version != registryVersion || !validRecords(document.Records) {
+	if json.Unmarshal(data, &document) != nil || document.Version != registryVersion || len(document.Records) > registry.limit || !validRecords(document.Records) {
 		if store.rename(store.path, store.path+".corrupt") != nil {
 			return registry, "fixture_transaction_registry_corrupt_quarantine_failed"
 		}
 		return registry, "fixture_transaction_registry_corrupt"
 	}
 	for _, record := range document.Records {
-		registry.Add(record)
+		if record.State == TransactionRestoring {
+			record.State = TransactionRestoreRequired
+		}
+		if registry.Add(record) != nil {
+			return NewRegistry(store.limit), "fixture_transaction_registry_corrupt"
+		}
 	}
 	return registry, ""
 }
@@ -115,10 +120,15 @@ func discardClosedTemporary(path string) error {
 }
 
 func validRecords(records []TransactionRecord) bool {
+	transactionIDs := make(map[string]struct{}, len(records))
 	for _, record := range records {
 		if record.TransactionID == "" || record.SnapshotID == "" || record.ExtensionGeneration == "" {
 			return false
 		}
+		if _, duplicate := transactionIDs[record.TransactionID]; duplicate {
+			return false
+		}
+		transactionIDs[record.TransactionID] = struct{}{}
 		if record.State != TransactionRestoreRequired && record.State != TransactionRestoring {
 			return false
 		}

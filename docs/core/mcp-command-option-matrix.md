@@ -130,7 +130,7 @@ selector parameters and shorthand mode names are rejected.
 | `action_jitter` | `toolConfigureActionJitter` | Set random delay before interact actions |
 | `report_issue` | `issuereport.Handle` | Submit a bug report or issue template |
 | `setup_quality_gates` | `qualitygates.Handle` | Install the managed quality-gate configuration |
-| `qa_fixture` | `qafixture.Handler.Handle` | Validate or atomically apply a strict, versioned QA environment fixture with mandatory rollback |
+| `qa_fixture` | `qafixture.Handler.Handle` | Validate, atomically apply, inspect, or idempotently restore a strict versioned QA environment fixture |
 
 ---
 

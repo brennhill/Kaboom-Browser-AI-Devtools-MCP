@@ -6,10 +6,11 @@ func fixtureProperties() map[string]any {
 	return map[string]any{
 		"fixture_action": map[string]any{
 			"type":        "string",
-			"description": "Validate a QA fixture or apply it atomically after an extension-owned snapshot. Failed applies are rolled back.",
-			"enum":        []string{"validate", "apply"},
+			"description": "Validate, apply, inspect, or restore a QA fixture transaction. Failed applies are rolled back.",
+			"enum":        []string{"validate", "apply", "status", "restore"},
 		},
-		"fixture": qaFixtureSchema(),
+		"fixture":        qaFixtureSchema(),
+		"transaction_id": map[string]any{"type": "string", "description": "Opaque transaction handle returned by fixture_action=apply."},
 	}
 }
 

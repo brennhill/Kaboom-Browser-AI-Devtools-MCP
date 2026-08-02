@@ -114,6 +114,25 @@ test('command boundary replaces private driver failures with stable errors and r
   assert.equal(await store.get('fixture_snapshot_1'), snapshot)
 })
 
+test('restore is idempotent after the private snapshot was already consumed', async () => {
+  const store = snapshotStore('fixture_snapshot_1')
+  const driver = {
+    snapshot: async () => {
+      throw new Error('unexpected')
+    },
+    apply: async () => ({}),
+    restore: async () => {
+      throw new Error('unexpected')
+    }
+  }
+
+  assert.deepEqual(await restoreEnvironment(driver, store, 7, 'missing_snapshot'), {
+    success: true,
+    restored: true,
+    already_restored: true
+  })
+})
+
 function snapshotStore(id) {
   const snapshots = new Map()
   return {

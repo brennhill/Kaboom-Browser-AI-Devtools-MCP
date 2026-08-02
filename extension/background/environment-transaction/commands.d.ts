@@ -18,5 +18,6 @@ export declare function applyEnvironment(driver: EnvironmentStateDriver, tabId: 
 export declare function restoreEnvironment(driver: EnvironmentStateDriver, snapshots: EnvironmentSnapshotStore, tabId: number, snapshotID: string): Promise<{
     readonly success: true;
     readonly restored: true;
+    readonly already_restored?: true;
 }>;
 //# sourceMappingURL=commands.d.ts.map

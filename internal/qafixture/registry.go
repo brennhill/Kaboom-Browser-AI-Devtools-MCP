@@ -40,13 +40,18 @@ func NewRegistry(limit int) *Registry {
 	return &Registry{limit: limit, records: make(map[string]TransactionRecord, limit)}
 }
 
-func (registry *Registry) Add(record TransactionRecord) {
+func (registry *Registry) Add(record TransactionRecord) error {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
+	if record.TransactionID == "" || record.SnapshotID == "" || record.ExtensionGeneration == "" ||
+		(record.State != TransactionRestoreRequired && record.State != TransactionRestoring) {
+		return errors.New("fixture_transaction_record_invalid")
+	}
 	if _, exists := registry.records[record.TransactionID]; !exists && len(registry.records) >= registry.limit {
-		registry.evictOldest()
+		return errors.New("fixture_transaction_registry_full")
 	}
 	registry.records[record.TransactionID] = record
+	return nil
 }
 
 func (registry *Registry) Get(transactionID string) (TransactionRecord, bool) {
@@ -108,6 +113,18 @@ func (registry *Registry) RestoreFailed(transactionID string) error {
 	return nil
 }
 
+func (registry *Registry) SetMutations(transactionID string, mutations MutationCounts) error {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	record, ok := registry.records[transactionID]
+	if !ok {
+		return errors.New("fixture_transaction_not_found")
+	}
+	record.Mutations = mutations
+	registry.records[transactionID] = record
+	return nil
+}
+
 func (registry *Registry) CompleteRestore(transactionID string) error {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
@@ -118,13 +135,10 @@ func (registry *Registry) CompleteRestore(transactionID string) error {
 	return nil
 }
 
-func (registry *Registry) evictOldest() {
-	var oldestID string
-	var oldest time.Time
-	for id, record := range registry.records {
-		if oldestID == "" || record.CreatedAt.Before(oldest) || (record.CreatedAt.Equal(oldest) && id < oldestID) {
-			oldestID, oldest = id, record.CreatedAt
-		}
-	}
-	delete(registry.records, oldestID)
+// Discard removes an uncommitted record during same-process compensation.
+// Unlike CompleteRestore, absence is harmless because persistence never succeeded.
+func (registry *Registry) Discard(transactionID string) {
+	registry.mu.Lock()
+	delete(registry.records, transactionID)
+	registry.mu.Unlock()
 }

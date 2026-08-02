@@ -99,6 +99,7 @@ import {
   initializeExtensionLogQueue,
   recordExtensionDiagnosticLifecycle
 } from './runtime-state/log-queue.js'
+import { initializeEnvironmentTransactionRuntime } from './environment-transaction/runtime.js'
 
 /**
  * Initialize the extension on startup
@@ -115,6 +116,7 @@ export function initializeExtension(): void {
   // level runs. A listener installed later in the async sequence would miss it,
   // and the background would believe no panel exists.
   watchTerminalPanelState()
+  initializeEnvironmentTransactionRuntime()
 
   // Rehydrate any recording that survived a service-worker restart. Explicit
   // call (formerly a recording-module import side effect) so it fires exactly

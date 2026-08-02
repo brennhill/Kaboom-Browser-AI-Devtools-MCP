@@ -8,25 +8,47 @@ import (
 	"time"
 )
 
-func TestRegistryEvictsOldestTransactionAtCapacity(t *testing.T) {
+func TestRegistryRejectsNewTransactionAtCapacityWithoutEvictingRecovery(t *testing.T) {
 	registry := NewRegistry(2)
-	registry.Add(TransactionRecord{TransactionID: "old", CreatedAt: time.Unix(1, 0)})
-	registry.Add(TransactionRecord{TransactionID: "new", CreatedAt: time.Unix(2, 0)})
-	registry.Add(TransactionRecord{TransactionID: "newest", CreatedAt: time.Unix(3, 0)})
+	if err := registry.Add(recoveryRecord("old", time.Unix(1, 0))); err != nil {
+		t.Fatal(err)
+	}
+	if err := registry.Add(recoveryRecord("new", time.Unix(2, 0))); err != nil {
+		t.Fatal(err)
+	}
+	if err := registry.Add(recoveryRecord("newest", time.Unix(3, 0))); err == nil || err.Error() != "fixture_transaction_registry_full" {
+		t.Fatalf("Add() error = %v", err)
+	}
 
-	if _, ok := registry.Get("old"); ok {
-		t.Fatal("oldest transaction was not evicted")
+	if _, ok := registry.Get("old"); !ok {
+		t.Fatal("active recovery obligation was evicted")
 	}
 	if registry.Len() != 2 {
 		t.Fatalf("Len() = %d, want 2", registry.Len())
 	}
 }
 
+func TestRegistryRejectsIncompleteRecoveryRecord(t *testing.T) {
+	registry := NewRegistry(2)
+	for _, record := range []TransactionRecord{
+		{SnapshotID: "snapshot", ExtensionGeneration: "generation", State: TransactionRestoreRequired},
+		{TransactionID: "transaction", ExtensionGeneration: "generation", State: TransactionRestoreRequired},
+		{TransactionID: "transaction", SnapshotID: "snapshot", State: TransactionRestoreRequired},
+	} {
+		if err := registry.Add(record); err == nil || err.Error() != "fixture_transaction_record_invalid" {
+			t.Fatalf("Add(%+v) error = %v", record, err)
+		}
+	}
+	if registry.Len() != 0 {
+		t.Fatalf("Len() = %d, want 0", registry.Len())
+	}
+}
+
 func TestRegistryRecordsHaveStableRecoveryOrder(t *testing.T) {
 	registry := NewRegistry(3)
-	registry.Add(TransactionRecord{TransactionID: "b", CreatedAt: time.Unix(2, 0)})
-	registry.Add(TransactionRecord{TransactionID: "c", CreatedAt: time.Unix(1, 0)})
-	registry.Add(TransactionRecord{TransactionID: "a", CreatedAt: time.Unix(1, 0)})
+	_ = registry.Add(recoveryRecord("b", time.Unix(2, 0)))
+	_ = registry.Add(recoveryRecord("c", time.Unix(1, 0)))
+	_ = registry.Add(recoveryRecord("a", time.Unix(1, 0)))
 	records := registry.Records()
 	got := []string{records[0].TransactionID, records[1].TransactionID, records[2].TransactionID}
 	if !reflect.DeepEqual(got, []string{"a", "c", "b"}) {
@@ -36,12 +58,14 @@ func TestRegistryRecordsHaveStableRecoveryOrder(t *testing.T) {
 
 func TestRegistryRejectsRestoreFromStaleExtensionGeneration(t *testing.T) {
 	registry := NewRegistry(2)
-	registry.Add(TransactionRecord{
+	if err := registry.Add(TransactionRecord{
 		TransactionID:       "tx_1",
 		SnapshotID:          "opaque_1",
 		ExtensionGeneration: "generation_1",
 		State:               TransactionRestoreRequired,
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := registry.BeginRestore("tx_1", "generation_2"); err == nil || err.Error() != "fixture_transaction_generation_mismatch" {
 		t.Fatalf("BeginRestore() error = %v", err)
@@ -54,7 +78,9 @@ func TestRegistryRejectsRestoreFromStaleExtensionGeneration(t *testing.T) {
 
 func TestRegistryRestoreTransitionsAreDeterministic(t *testing.T) {
 	registry := NewRegistry(2)
-	registry.Add(TransactionRecord{TransactionID: "tx_1", ExtensionGeneration: "generation_1", State: TransactionRestoreRequired})
+	if err := registry.Add(TransactionRecord{TransactionID: "tx_1", SnapshotID: "snapshot_1", ExtensionGeneration: "generation_1", State: TransactionRestoreRequired}); err != nil {
+		t.Fatal(err)
+	}
 
 	record, err := registry.BeginRestore("tx_1", "generation_1")
 	if err != nil || record.State != TransactionRestoring {
@@ -72,5 +98,12 @@ func TestRegistryRestoreTransitionsAreDeterministic(t *testing.T) {
 	}
 	if _, ok := registry.Get("tx_1"); ok {
 		t.Fatal("completed transaction remains in registry")
+	}
+}
+
+func recoveryRecord(id string, createdAt time.Time) TransactionRecord {
+	return TransactionRecord{
+		TransactionID: id, SnapshotID: "snapshot_" + id, ExtensionGeneration: "generation_1",
+		State: TransactionRestoreRequired, CreatedAt: createdAt,
 	}
 }

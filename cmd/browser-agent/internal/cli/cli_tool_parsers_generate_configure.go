@@ -130,6 +130,7 @@ func ParseConfigureArgs(action string, args []string) (map[string]any, error) {
 		// QA fixtures
 		"--fixture-action": {MCPKey: "fixture_action", Kind: FlagString},
 		"--fixture":        {MCPKey: "fixture", Kind: FlagJSON},
+		"--transaction-id": {MCPKey: "transaction_id", Kind: FlagString},
 		// Network recording
 		"--network-action": {MCPKey: "network_action", Kind: FlagString},
 	})

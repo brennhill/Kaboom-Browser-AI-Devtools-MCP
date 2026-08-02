@@ -7,8 +7,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"syscall"
@@ -30,8 +32,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	fixturecontract "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/qafixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
+	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
@@ -43,14 +47,83 @@ const restartSelfSignalDelay = 100 * time.Millisecond
 
 var replayMu sync.Mutex
 
-func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
-	fixtureHandler, fixtureErr := qafixturehandler.New(qafixturehandler.Deps{
+type fixtureRecoveryRunner interface {
+	RecoverPending(context.Context) []string
+}
+
+func buildQAFixtureHandler(h *ToolHandler) (*qafixturehandler.Handler, error) {
+	if h.capture == nil {
+		return nil, errors.New("fixture_capture_unavailable")
+	}
+	registryPath, err := fixtureRegistryPath(h.server.logs.LogFile())
+	if err != nil {
+		return nil, err
+	}
+	store := fixturecontract.NewRegistryStore(registryPath, 32)
+	registry, notice := store.Load()
+	if notice != "" {
+		h.stateRecovery.Report(statediag.Diagnostic{
+			Name: "fixture_transaction_registry", Detail: notice,
+			Fix: "Reconnect the extension and retry configure({what:'qa_fixture',fixture_action:'status'}).",
+		})
+	}
+	handler, err := qafixturehandler.New(qafixturehandler.Deps{
 		Context: h.shutdownCtx,
 		Execute: func(ctx context.Context, command string, params json.RawMessage, timeout time.Duration) (json.RawMessage, error) {
 			return executeQAFixtureCommand(ctx, h, command, params, timeout)
 		},
-		NewCorrelationID: func() string { return toolresp.NewCorrelationID("qa_fixture") },
+		NewCorrelationID:    func() string { return toolresp.NewCorrelationID("qa_fixture") },
+		NewTransactionID:    func() string { return toolresp.NewCorrelationID("fixture_transaction") },
+		ExtensionGeneration: func() string { return h.capture.Extension().Snapshot().ExtSessionID },
+		Now:                 time.Now,
+		Registry:            registry,
+		Persist:             store.Save,
+		OnNotice: func(notice string) {
+			h.stateRecovery.Report(statediag.Diagnostic{
+				Name: "fixture_transaction_persistence", Detail: notice,
+				Fix: "Check the Kaboom state directory, then restore the active fixture transaction.",
+			})
+		},
 	})
+	if err != nil {
+		return nil, err
+	}
+	go handler.RecoverAtStartup(h.shutdownCtx, h.capture.Extension().WaitForExtensionConnected, h.stateRecovery)
+	h.fixtureRecovery = handler
+	return handler, nil
+}
+
+func fixtureRegistryPath(logFile string) (string, error) {
+	if logFile == "" {
+		return statecfg.InRoot("run", "fixture-transactions.json")
+	}
+	directory := filepath.Dir(logFile)
+	if filepath.Base(directory) == "logs" {
+		directory = filepath.Dir(directory)
+	}
+	return filepath.Join(directory, "run", "fixture-transactions.json"), nil
+}
+
+func (h *ToolHandler) closeWithFixtureRecovery() {
+	if h.fixtureRecovery != nil {
+		recoveryCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		failures := h.fixtureRecovery.RecoverPending(recoveryCtx)
+		cancel()
+		if len(failures) > 0 && h.stateRecovery != nil {
+			h.stateRecovery.Report(statediag.Diagnostic{
+				Name:   "fixture_transaction_shutdown_recovery",
+				Detail: "One or more fixture transactions could not be restored during daemon shutdown.",
+				Fix:    "Restart Kaboom, reconnect the extension, and inspect fixture transaction status.",
+			})
+		}
+	}
+	if h.shutdownCancel != nil {
+		h.shutdownCancel()
+	}
+}
+
+func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
+	fixtureHandler, fixtureErr := buildQAFixtureHandler(h)
 	return toolconfigure.NewDispatcher(map[string]toolconfigure.Handler{
 		"store": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return h.configureSessions.Store(req, args)

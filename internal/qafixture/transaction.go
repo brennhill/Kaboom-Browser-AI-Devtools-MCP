@@ -4,20 +4,21 @@ package qafixture
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"sync"
 	"time"
 )
 
 const (
-	StatusApplied               = "applied"
-	StatusSnapshotFailed        = "snapshot_failed"
-	StatusApplyFailedRolledBack = "apply_failed_rolled_back"
-	StatusRollbackFailed        = "rollback_failed"
-	StatusTimedOut              = "timed_out"
-	StatusCanceled              = "canceled"
-	StatusBusy                  = "fixture_transaction_busy"
+	StatusApplied                = "applied"
+	StatusSnapshotFailed         = "snapshot_failed"
+	StatusApplyFailedRolledBack  = "apply_failed_rolled_back"
+	StatusRollbackFailed         = "rollback_failed"
+	StatusTimedOut               = "timed_out"
+	StatusCanceled               = "canceled"
+	StatusBusy                   = "fixture_transaction_busy"
+	StatusRecoveryRegisterFailed = "recovery_registration_failed_rolled_back"
+	StatusRecoveryRollbackFailed = "recovery_registration_rollback_failed"
 )
 
 type MutationCounts struct {
@@ -31,6 +32,7 @@ type MutationCounts struct {
 type TransactionResult struct {
 	Status        string         `json:"status"`
 	CorrelationID string         `json:"correlation_id"`
+	TransactionID string         `json:"transaction_id,omitempty"`
 	RolledBack    bool           `json:"rolled_back"`
 	Mutations     MutationCounts `json:"mutations"`
 }
@@ -38,10 +40,16 @@ type TransactionResult struct {
 type TransactionDeps struct {
 	// Snapshot, Apply, and Restore must honor context cancellation. This keeps
 	// setup bounded without allowing a timed-out mutation to race its rollback.
-	NewCorrelationID func() string
-	Snapshot         func(context.Context, WireQAFixture) (json.RawMessage, error)
-	Apply            func(context.Context, WireQAFixture) (MutationCounts, error)
-	Restore          func(context.Context, json.RawMessage) error
+	NewCorrelationID    func() string
+	NewTransactionID    func() string
+	ExtensionGeneration func() string
+	Now                 func() time.Time
+	Registry            *Registry
+	Persist             func(*Registry) error
+	OnNotice            func(string)
+	Snapshot            func(context.Context, WireQAFixture) (string, error)
+	Apply               func(context.Context, WireQAFixture) (MutationCounts, error)
+	Restore             func(context.Context, string) error
 }
 
 type Coordinator struct {
@@ -51,7 +59,7 @@ type Coordinator struct {
 }
 
 func NewCoordinator(deps TransactionDeps) (*Coordinator, error) {
-	if deps.NewCorrelationID == nil || deps.Snapshot == nil || deps.Apply == nil || deps.Restore == nil {
+	if deps.NewCorrelationID == nil || deps.NewTransactionID == nil || deps.ExtensionGeneration == nil || deps.Now == nil || deps.Registry == nil || deps.Persist == nil || deps.OnNotice == nil || deps.Snapshot == nil || deps.Apply == nil || deps.Restore == nil {
 		return nil, errors.New("incomplete_transaction_dependencies")
 	}
 	return &Coordinator{deps: deps}, nil
@@ -81,11 +89,30 @@ func (coordinator *Coordinator) Apply(
 	if err != nil {
 		return transactionFailure(contextStatus(transactionCtx, err, StatusSnapshotFailed), correlationID, false, MutationCounts{})
 	}
+	transactionID := coordinator.deps.NewTransactionID()
+	record := TransactionRecord{
+		TransactionID: transactionID, CorrelationID: correlationID, SnapshotID: snapshot,
+		ExtensionGeneration: coordinator.deps.ExtensionGeneration(), State: TransactionRestoreRequired,
+		CreatedAt: coordinator.deps.Now(),
+	}
+	if addErr := coordinator.deps.Registry.Add(record); addErr != nil {
+		return coordinator.rollbackRegistrationFailure(timeout, correlationID, snapshot, MutationCounts{})
+	}
+	if persistErr := coordinator.deps.Persist(coordinator.deps.Registry); persistErr != nil {
+		coordinator.deps.Registry.Discard(transactionID)
+		return coordinator.rollbackRegistrationFailure(timeout, correlationID, snapshot, MutationCounts{})
+	}
 
 	mutations, err := coordinator.deps.Apply(transactionCtx, fixture)
 	if err == nil {
+		if updateErr := coordinator.deps.Registry.SetMutations(transactionID, mutations); updateErr != nil {
+			return coordinator.rollbackRegisteredMutation(timeout, transactionID, correlationID, snapshot, mutations, StatusRecoveryRollbackFailed)
+		}
+		if persistErr := coordinator.deps.Persist(coordinator.deps.Registry); persistErr != nil {
+			coordinator.deps.OnNotice("fixture_transaction_metadata_persist_failed")
+		}
 		return TransactionResult{
-			Status: StatusApplied, CorrelationID: correlationID, Mutations: mutations,
+			Status: StatusApplied, CorrelationID: correlationID, TransactionID: transactionID, Mutations: mutations,
 		}, nil
 	}
 
@@ -94,8 +121,38 @@ func (coordinator *Coordinator) Apply(
 	if restoreErr := coordinator.deps.Restore(rollbackCtx, snapshot); restoreErr != nil {
 		return transactionFailure(StatusRollbackFailed, correlationID, false, mutations)
 	}
+	if completeErr := coordinator.deps.Registry.CompleteRestore(transactionID); completeErr != nil {
+		return transactionFailure(StatusRecoveryRollbackFailed, correlationID, true, mutations)
+	}
+	if persistErr := coordinator.deps.Persist(coordinator.deps.Registry); persistErr != nil {
+		coordinator.deps.OnNotice("fixture_transaction_cleanup_persist_failed")
+	}
 	status := contextStatus(transactionCtx, err, StatusApplyFailedRolledBack)
 	return transactionFailure(status, correlationID, true, mutations)
+}
+
+func (coordinator *Coordinator) rollbackRegisteredMutation(timeout time.Duration, transactionID, correlationID, snapshot string, mutations MutationCounts, failureStatus string) (TransactionResult, error) {
+	rollbackCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if err := coordinator.deps.Restore(rollbackCtx, snapshot); err != nil {
+		return transactionFailure(failureStatus, correlationID, false, mutations)
+	}
+	if err := coordinator.deps.Registry.CompleteRestore(transactionID); err != nil {
+		return transactionFailure(failureStatus, correlationID, true, mutations)
+	}
+	if err := coordinator.deps.Persist(coordinator.deps.Registry); err != nil {
+		coordinator.deps.OnNotice("fixture_transaction_cleanup_persist_failed")
+	}
+	return transactionFailure(StatusRecoveryRegisterFailed, correlationID, true, mutations)
+}
+
+func (coordinator *Coordinator) rollbackRegistrationFailure(timeout time.Duration, correlationID, snapshot string, mutations MutationCounts) (TransactionResult, error) {
+	rollbackCtx, rollbackCancel := context.WithTimeout(context.Background(), timeout)
+	defer rollbackCancel()
+	if err := coordinator.deps.Restore(rollbackCtx, snapshot); err != nil {
+		return transactionFailure(StatusRecoveryRollbackFailed, correlationID, false, mutations)
+	}
+	return transactionFailure(StatusRecoveryRegisterFailed, correlationID, true, mutations)
 }
 
 func (coordinator *Coordinator) acquire() bool {

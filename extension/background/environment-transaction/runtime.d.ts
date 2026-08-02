@@ -3,5 +3,5 @@
  * Why: Keeps browser globals and registration side effects out of command policy modules.
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
-export {};
+export declare function initializeEnvironmentTransactionRuntime(): void;
 //# sourceMappingURL=runtime.d.ts.map

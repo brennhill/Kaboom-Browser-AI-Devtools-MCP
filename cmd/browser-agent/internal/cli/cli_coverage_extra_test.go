@@ -19,6 +19,17 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
+func TestParseConfigureFixtureRestoreTransactionID(t *testing.T) {
+	t.Parallel()
+	args, err := ParseConfigureArgs("qa_fixture", []string{"--fixture-action", "restore", "--transaction-id", "transaction_1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if args["what"] != "qa_fixture" || args["fixture_action"] != "restore" || args["transaction_id"] != "transaction_1" {
+		t.Fatalf("ParseConfigureArgs() = %#v", args)
+	}
+}
+
 // serverPort extracts the numeric port from an httptest server URL.
 func serverPort(t *testing.T, rawURL string) int {
 	t.Helper()

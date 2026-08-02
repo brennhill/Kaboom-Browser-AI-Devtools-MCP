@@ -4,11 +4,39 @@
 package main
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
+
+type shutdownFixtureRecovery struct {
+	calledBeforeCancellation bool
+}
+
+func (recovery *shutdownFixtureRecovery) RecoverPending(ctx context.Context) []string {
+	recovery.calledBeforeCancellation = ctx.Err() == nil
+	return nil
+}
+
+func TestToolHandlerCloseRecoversFixturesBeforeCancellation(t *testing.T) {
+	shutdownCtx, cancel := context.WithCancel(context.Background())
+	recovery := &shutdownFixtureRecovery{}
+	handler := &ToolHandler{
+		shutdownCtx: shutdownCtx, shutdownCancel: cancel,
+		fixtureRecovery: recovery, stateRecovery: statediag.NewCollector(),
+	}
+	handler.Close()
+	handler.Close()
+	if !recovery.calledBeforeCancellation {
+		t.Fatal("fixture recovery did not run before shutdown cancellation")
+	}
+	if shutdownCtx.Err() == nil {
+		t.Fatal("shutdown context remains active after Close")
+	}
+}
 
 // ============================================
 // Dispatch Tests

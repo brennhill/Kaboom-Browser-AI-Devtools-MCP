@@ -39,7 +39,7 @@ export async function applyEnvironment(driver, tabId, fixture) {
 export async function restoreEnvironment(driver, snapshots, tabId, snapshotID) {
     const snapshot = await snapshots.get(snapshotID);
     if (!snapshot)
-        throw new Error('fixture_snapshot_not_found');
+        return { success: true, restored: true, already_restored: true };
     try {
         await driver.restore(tabId, snapshot);
     }
