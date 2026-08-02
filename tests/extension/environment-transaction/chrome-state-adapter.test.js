@@ -6,7 +6,6 @@ import { afterEach, test } from 'node:test'
 import { chromeDriverDeps } from '../../../extension/background/environment-transaction/chrome-state-adapter.js'
 import {
   applyEnvironment,
-  createEnvironmentSnapshotStore,
   restoreEnvironment,
   snapshotEnvironment
 } from '../../../extension/background/environment-transaction/commands.js'
@@ -63,8 +62,8 @@ test('adapter snapshots absent keys and restores exact prior raw values', async 
   assert.equal(session.getItem('journey'), 'old')
 })
 
-test('snapshot store exposes only generated opaque identifiers', () => {
-  const store = createEnvironmentSnapshotStore(() => 'fixture_snapshot_1')
+test('snapshot command exposes only generated opaque identifiers', async () => {
+  const store = snapshotStore('fixture_snapshot_1')
   const snapshot = {
     tab_url: 'https://example.test/',
     window_id: 2,
@@ -76,12 +75,12 @@ test('snapshot store exposes only generated opaque identifiers', () => {
     },
     cookies: [{ name: 'session', value: 'private-cookie' }]
   }
-  const id = store.save(snapshot)
+  const id = await store.save(snapshot)
   assert.equal(id, 'fixture_snapshot_1')
   assert.equal(JSON.stringify({ success: true, snapshot_id: id }).includes('private'), false)
-  assert.equal(store.get(id), snapshot)
-  store.delete(id)
-  assert.equal(store.get(id), undefined)
+  assert.equal(await store.get(id), snapshot)
+  await store.delete(id)
+  assert.equal(await store.get(id), undefined)
 })
 
 test('command boundary replaces private driver failures with stable errors and retains failed restores', async () => {
@@ -97,7 +96,7 @@ test('command boundary replaces private driver failures with stable errors and r
       throw privateFailure
     }
   }
-  const store = createEnvironmentSnapshotStore(() => 'fixture_snapshot_1')
+  const store = snapshotStore('fixture_snapshot_1')
   const fixture = { version: 1 }
   const snapshot = {
     tab_url: 'https://example.test/',
@@ -105,15 +104,31 @@ test('command boundary replaces private driver failures with stable errors and r
     page_state: { local_storage: {}, session_storage: {}, feature_flags: {}, seed_data: {} },
     cookies: []
   }
-  store.save(snapshot)
+  await store.save(snapshot)
 
   await assert.rejects(snapshotEnvironment(driver, store, 7, fixture), { message: 'fixture_snapshot_failed' })
   await assert.rejects(applyEnvironment(driver, 7, fixture), { message: 'fixture_apply_failed' })
   await assert.rejects(restoreEnvironment(driver, store, 7, fixture, 'fixture_snapshot_1'), {
     message: 'fixture_restore_failed'
   })
-  assert.equal(store.get('fixture_snapshot_1'), snapshot)
+  assert.equal(await store.get('fixture_snapshot_1'), snapshot)
 })
+
+function snapshotStore(id) {
+  const snapshots = new Map()
+  return {
+    async save(snapshot) {
+      snapshots.set(id, snapshot)
+      return id
+    },
+    async get(snapshotID) {
+      return snapshots.get(snapshotID)
+    },
+    async delete(snapshotID) {
+      snapshots.delete(snapshotID)
+    }
+  }
+}
 
 function storage(initial) {
   const values = new Map(Object.entries(initial))

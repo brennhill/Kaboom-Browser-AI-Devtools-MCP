@@ -4,13 +4,8 @@
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
 import type { WireQAFixture } from '../../types/wire/wire-qa-fixture.js';
-import type { EnvironmentStateDriver, EnvironmentSnapshot } from './browser-state-driver.js';
-export interface EnvironmentSnapshotStore {
-    readonly save: (snapshot: EnvironmentSnapshot) => string;
-    readonly get: (id: string) => EnvironmentSnapshot | undefined;
-    readonly delete: (id: string) => void;
-}
-export declare function createEnvironmentSnapshotStore(newID: () => string): EnvironmentSnapshotStore;
+import type { EnvironmentStateDriver } from './browser-state-driver.js';
+import type { EnvironmentSnapshotStore } from './snapshot-store.js';
 export declare function registerEnvironmentTransactionCommands(driver: EnvironmentStateDriver, snapshots: EnvironmentSnapshotStore): void;
 export declare function snapshotEnvironment(driver: EnvironmentStateDriver, snapshots: EnvironmentSnapshotStore, tabId: number, fixture: WireQAFixture): Promise<{
     readonly success: true;

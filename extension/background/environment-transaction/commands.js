@@ -4,19 +4,6 @@
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
 import { registerCommand } from '../commands/registry.js';
-import { createChromeEnvironmentStateDriver } from './chrome-state-adapter.js';
-export function createEnvironmentSnapshotStore(newID) {
-    const snapshots = new Map();
-    return {
-        save(snapshot) {
-            const id = newID();
-            snapshots.set(id, snapshot);
-            return id;
-        },
-        get: (id) => snapshots.get(id),
-        delete: (id) => snapshots.delete(id)
-    };
-}
 export function registerEnvironmentTransactionCommands(driver, snapshots) {
     registerCommand('environment_transaction_snapshot', async (ctx) => {
         const fixture = requireFixture(ctx.params);
@@ -36,7 +23,7 @@ export function registerEnvironmentTransactionCommands(driver, snapshots) {
 export async function snapshotEnvironment(driver, snapshots, tabId, fixture) {
     try {
         const snapshot = await driver.snapshot(tabId, fixture);
-        return { success: true, snapshot_id: snapshots.save(snapshot) };
+        return { success: true, snapshot_id: await snapshots.save(snapshot) };
     }
     catch {
         throw new Error('fixture_snapshot_failed');
@@ -51,7 +38,7 @@ export async function applyEnvironment(driver, tabId, fixture) {
     }
 }
 export async function restoreEnvironment(driver, snapshots, tabId, fixture, snapshotID) {
-    const snapshot = snapshots.get(snapshotID);
+    const snapshot = await snapshots.get(snapshotID);
     if (!snapshot)
         throw new Error('fixture_snapshot_not_found');
     try {
@@ -60,7 +47,7 @@ export async function restoreEnvironment(driver, snapshots, tabId, fixture, snap
     catch {
         throw new Error('fixture_restore_failed');
     }
-    snapshots.delete(snapshotID);
+    await snapshots.delete(snapshotID);
     return { success: true, restored: true };
 }
 function requireFixture(params) {
@@ -74,7 +61,4 @@ function requireSnapshotID(params) {
         throw new Error('fixture_snapshot_id_required');
     return params.snapshot_id;
 }
-const driver = createChromeEnvironmentStateDriver();
-const snapshots = createEnvironmentSnapshotStore(() => crypto.randomUUID());
-registerEnvironmentTransactionCommands(driver, snapshots);
 //# sourceMappingURL=commands.js.map

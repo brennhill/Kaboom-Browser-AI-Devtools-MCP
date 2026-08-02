@@ -6,31 +6,12 @@
 
 import type { WireQAFixture } from '../../types/wire/wire-qa-fixture.js'
 import { registerCommand } from '../commands/registry.js'
-import { createChromeEnvironmentStateDriver } from './chrome-state-adapter.js'
 import type { EnvironmentStateDriver, EnvironmentSnapshot } from './browser-state-driver.js'
-
-export interface EnvironmentSnapshotStore {
-  readonly save: (snapshot: EnvironmentSnapshot) => string
-  readonly get: (id: string) => EnvironmentSnapshot | undefined
-  readonly delete: (id: string) => void
-}
+import type { EnvironmentSnapshotStore } from './snapshot-store.js'
 
 interface EnvironmentTransactionParams {
   readonly fixture?: WireQAFixture
   readonly snapshot_id?: string
-}
-
-export function createEnvironmentSnapshotStore(newID: () => string): EnvironmentSnapshotStore {
-  const snapshots = new Map<string, EnvironmentSnapshot>()
-  return {
-    save(snapshot) {
-      const id = newID()
-      snapshots.set(id, snapshot)
-      return id
-    },
-    get: (id) => snapshots.get(id),
-    delete: (id) => snapshots.delete(id)
-  }
 }
 
 export function registerEnvironmentTransactionCommands(driver: EnvironmentStateDriver, snapshots: EnvironmentSnapshotStore): void {
@@ -60,7 +41,7 @@ export async function snapshotEnvironment(
 ): Promise<{ readonly success: true; readonly snapshot_id: string }> {
   try {
     const snapshot = await driver.snapshot(tabId, fixture)
-    return { success: true, snapshot_id: snapshots.save(snapshot) }
+    return { success: true, snapshot_id: await snapshots.save(snapshot) }
   } catch {
     throw new Error('fixture_snapshot_failed')
   }
@@ -85,14 +66,14 @@ export async function restoreEnvironment(
   fixture: WireQAFixture,
   snapshotID: string
 ): Promise<{ readonly success: true; readonly restored: true }> {
-  const snapshot = snapshots.get(snapshotID)
+  const snapshot = await snapshots.get(snapshotID)
   if (!snapshot) throw new Error('fixture_snapshot_not_found')
   try {
     await driver.restore(tabId, fixture, snapshot)
   } catch {
     throw new Error('fixture_restore_failed')
   }
-  snapshots.delete(snapshotID)
+  await snapshots.delete(snapshotID)
   return { success: true, restored: true }
 }
 
@@ -106,7 +87,3 @@ function requireSnapshotID(params: EnvironmentTransactionParams): string {
   if (!params.snapshot_id) throw new Error('fixture_snapshot_id_required')
   return params.snapshot_id
 }
-
-const driver = createChromeEnvironmentStateDriver()
-const snapshots = createEnvironmentSnapshotStore(() => crypto.randomUUID())
-registerEnvironmentTransactionCommands(driver, snapshots)

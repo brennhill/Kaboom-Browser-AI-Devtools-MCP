@@ -25,6 +25,8 @@ code_paths:
   - src/background/environment-transaction/browser-state-driver.ts
   - src/background/environment-transaction/chrome-state-adapter.ts
   - src/background/environment-transaction/commands.ts
+  - src/background/environment-transaction/runtime.ts
+  - src/background/environment-transaction/snapshot-store.ts
   - src/types/runtime/queries.ts
   - src/types/wire/wire-qa-fixture.ts
 test_paths:
@@ -40,6 +42,7 @@ test_paths:
   - internal/schema/configure/schema_test.go
   - tests/extension/environment-transaction/browser-state-driver.test.js
   - tests/extension/environment-transaction/chrome-state-adapter.test.js
+  - tests/extension/environment-transaction/snapshot-store.test.js
   - scripts/tests/browser/cat-35-qa-fixtures.sh
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-02
@@ -99,6 +102,10 @@ last_verified_date: 2026-08-02
   including absent keys, and restored through independent best-effort recovery
   steps. Private snapshots remain extension-owned; only an opaque snapshot ID
   crosses the daemon command boundary.
+- Private snapshots use one bounded `chrome.storage.local` owner so recovery
+  survives MV3 service-worker suspension. Corrupt or unavailable storage emits
+  stable lifecycle diagnostics without including captured values, and runtime
+  registration lives in a dedicated composition root.
 - Connected category 35 applies synthetic state to the disposable UAT tab, then
   uses cross-origin snapshot rejection and a real invalid-domain cookie failure
   to prove redaction, exact partial-apply rollback, and explicit cleanup through

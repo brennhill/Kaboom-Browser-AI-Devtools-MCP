@@ -19,7 +19,7 @@ import './commands/analyze-feature-gates.js'
 import './commands/interact.js'
 import './commands/interact-content.js'
 import './commands/interact-explore.js'
-import './environment-transaction/commands.js'
+import './environment-transaction/runtime.js'
 
 export async function handlePendingQuery(query: PendingQuery, syncClient: SyncClient): Promise<void> {
   return dispatch(query, syncClient)
