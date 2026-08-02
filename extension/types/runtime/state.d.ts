@@ -59,7 +59,14 @@ export interface MemoryPressureState {
  * Connection status
  */
 export interface ConnectionStatus {
+    /** Whether the daemon answered its HTTP health endpoint. */
     readonly connected: boolean;
+    /** Whether the extension's sync heartbeat is currently reaching the daemon. */
+    readonly extensionConnected?: boolean;
+    /** Actionable heartbeat diagnostic; does not imply that the daemon is offline. */
+    readonly extensionError?: string;
+    /** Daemon reachability diagnostic. */
+    readonly error?: string;
     readonly entries: number;
     readonly maxEntries: number;
     readonly errorCount: number;

@@ -4,7 +4,7 @@ feature_id: feature-browser-extension-enhancement
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-02
 code_paths:
   - src/popup/system-doctor.ts
   - src/popup.ts
@@ -16,6 +16,10 @@ code_paths:
   - src/popup/tabs/tab-tracking.ts
   - src/options.ts
   - src/background/sync/version-check.ts
+  - src/background/sync/server.ts
+  - src/background/sync/sync-manager.ts
+  - src/background/orchestration/connection-monitor.ts
+  - src/types/runtime/state.ts
   - src/background/message-handlers.ts
   - src/background/message-routing/
   - src/background/runtime-state/
@@ -81,6 +85,9 @@ test_paths:
   - tests/extension/sync/sync-client-fixture.js
   - tests/extension/sync/sync-client-resilience.test.js
   - tests/extension/sync/sync-client.test.js
+  - tests/extension/sync/sync-manager.test.js
+  - tests/extension/sync/background-batching.test.js
+  - tests/extension/reliability/server.test.js
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/content/message-handlers.test.js
   - tests/extension/content/message-handlers-edge.test.js
@@ -99,7 +106,9 @@ last_verified_date: 2026-03-28
 - Mode/Action: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
 - Location: `docs/features/feature/browser-extension-enhancement`
 - The popup header now uses the restored Kaboom flame icon consistently and does not swap assets on hover.
-- Popup connection status is heartbeat-based: `Connected` only appears after the daemon reports a live extension heartbeat.
+- Popup server status is based on daemon HTTP reachability. Extension heartbeat
+  health is tracked independently, so a transient heartbeat gap cannot present
+  a live daemon as offline; Doctor retains the actionable heartbeat diagnosis.
 - The popup System Doctor renders the daemon's canonical readiness checks,
   treating the absence of a tracked page as a healthy idle state while reserving
   its attention treatment for actionable faults. It sits after the routine
@@ -138,7 +147,8 @@ last_verified_date: 2026-03-28
 - Popup feature toggles and WebSocket mode consume the orchestrator's single
   batched storage read through `applyFeatureToggles` and `applyWebSocketMode`;
   self-loading compatibility initializers are not exported.
-- `src/popup/shell/status-display.ts` renders `Connected` only for heartbeat-confirmed daemon status and shows offline recovery hints otherwise.
+- `src/popup/shell/status-display.ts` renders daemon reachability without
+  conflating it with extension heartbeat or tracked-tab readiness.
 - `src/popup/shell/logo-motion.ts` pins popup logo rendering to the shared flame asset without hover-only swaps.
 - `src/options.ts` uses shared daemon request/header helpers for health checks and active-codebase config sync.
 - `src/background/sync/version-check.ts` keeps the update badge/title and release download target aligned with Kaboom branding and the canonical Kaboom repo slug.

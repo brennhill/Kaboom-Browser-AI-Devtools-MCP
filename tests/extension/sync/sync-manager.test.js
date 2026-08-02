@@ -170,6 +170,29 @@ describe('startSyncClient', () => {
     assert.strictEqual(sessionId, 'test-session-1')
   })
 
+  test('tracks sync heartbeat separately from daemon reachability', async () => {
+    const { startSyncClient } = await freshImport()
+    const deps = createMockDeps({
+      getConnectionStatus: mock.fn(() => ({
+        connected: true,
+        extensionConnected: true,
+        entries: 0,
+        maxEntries: 1000,
+        errorCount: 0,
+        logFile: ''
+      }))
+    })
+    startSyncClient(deps)
+
+    const callbacks = mockCreateSyncClient.mock.calls[0].arguments[2]
+    callbacks.onConnectionChange(false)
+
+    assert.deepStrictEqual(deps.setConnectionStatus.mock.calls[0].arguments[0], {
+      extensionConnected: false
+    })
+    assert.strictEqual(deps.getConnectionStatus().connected, true)
+  })
+
   test('is idempotent — second call is a no-op', async () => {
     const { startSyncClient } = await freshImport()
     const deps = createMockDeps()

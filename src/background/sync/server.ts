@@ -29,6 +29,8 @@ import { buildDaemonHeaders } from '../../lib/daemon-http.js'
  */
 export type ServerHealthResponse = components['schemas']['HealthResponse'] & {
   connected: boolean
+  extensionConnected?: boolean
+  extensionError?: string
   error?: string
 }
 
@@ -169,16 +171,13 @@ export async function checkServerHealth(serverUrl: string): Promise<ServerHealth
         error: 'Server returned invalid response - check Server URL in options'
       }
     }
-    if (data.capture?.extension_connected !== true) {
-      return {
-        ...data,
-        connected: false,
-        error: buildHeartbeatStatusError(data.capture)
-      }
-    }
+    const extensionConnected =
+      typeof data.capture?.extension_connected === 'boolean' ? data.capture.extension_connected : undefined
     return {
       ...data,
-      connected: true
+      connected: true,
+      extensionConnected,
+      extensionError: extensionConnected === true ? undefined : buildHeartbeatStatusError(data.capture)
     }
   } catch (error) {
     return {

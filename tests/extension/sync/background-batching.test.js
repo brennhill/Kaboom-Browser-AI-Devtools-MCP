@@ -258,7 +258,7 @@ describe('checkServerHealth', () => {
     assert.strictEqual(health.connected, true)
   })
 
-  test('should return disconnected when daemon is up but heartbeat is missing', async () => {
+  test('should keep daemon connected when extension heartbeat is missing', async () => {
     globalThis.fetch = mock.fn(() =>
       Promise.resolve({
         ok: true,
@@ -277,8 +277,9 @@ describe('checkServerHealth', () => {
 
     const health = await checkServerHealth()
 
-    assert.strictEqual(health.connected, false)
-    assert.ok(health.error.includes('heartbeat'))
+    assert.strictEqual(health.connected, true)
+    assert.strictEqual(health.extensionConnected, false)
+    assert.ok(health.extensionError.includes('heartbeat'))
   })
 
   test('should return disconnected when server is down', async () => {

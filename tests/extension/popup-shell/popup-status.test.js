@@ -42,6 +42,7 @@ const createMockDocument = () => {
   const elements = {}
 
   return {
+    createElement: mock.fn((tagName) => createMockElement(tagName)),
     getElementById: mock.fn((id) => {
       if (!elements[id]) {
         elements[id] = createMockElement(id)
@@ -70,7 +71,10 @@ const createMockElement = (id) => ({
   getAttribute: mock.fn(),
   value: '',
   checked: false,
-  disabled: false
+  disabled: false,
+  dataset: {},
+  appendChild: mock.fn(),
+  replaceChildren: mock.fn()
 })
 
 let mockDocument
@@ -131,19 +135,20 @@ describe('Popup State Display', () => {
     assert.ok(errorEl.textContent.includes('Connection refused'))
   })
 
-  test('should render offline when daemon is reachable but heartbeat is missing', async () => {
+  test('should keep server connected when extension heartbeat is missing', async () => {
     const { updateConnectionStatus } = await import('../../../extension/popup/shell/status-display.js')
 
     updateConnectionStatus({
-      connected: false,
-      error: 'Server reachable, but extension heartbeat is missing. Open the Kaboom popup and click "Track This Tab".'
+      connected: true,
+      extensionConnected: false,
+      extensionError: 'Server reachable, but extension heartbeat is missing.'
     })
 
     const statusEl = mockDocument.getElementById('status')
     const errorEl = mockDocument.getElementById('error-message')
 
-    assert.ok(statusEl.textContent.toLowerCase().includes('offline'))
-    assert.ok(errorEl.textContent.includes('heartbeat'))
+    assert.ok(statusEl.textContent.toLowerCase().includes('connected'))
+    assert.strictEqual(errorEl.textContent, '')
   })
 
   test('should show insecure debug warning when security mode is insecure_proxy', async () => {

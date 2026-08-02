@@ -75,7 +75,9 @@ export async function checkConnectionAndUpdate() {
     setConnectionCheckRunning(true);
     try {
         const health = await checkServerHealth(getServerUrl());
-        const wasConnected = getConnectionStatus().connected;
+        const previousStatus = getConnectionStatus();
+        const wasConnected = previousStatus.connected;
+        const wasExtensionConnected = previousStatus.extensionConnected;
         applyVersionState(health);
         setConnectionStatus({ ...health, connected: health.connected });
         applyHealthLogs(health);
@@ -86,6 +88,9 @@ export async function checkConnectionAndUpdate() {
                 error: health.error || null,
                 serverVersion: health.version || null
             });
+        }
+        if (wasExtensionConnected !== health.extensionConnected && health.extensionConnected !== undefined) {
+            debugLog(DebugCategory.CONNECTION, health.extensionConnected ? 'Extension heartbeat connected' : 'Extension heartbeat unavailable', { error: health.extensionError || null });
         }
         startSyncClient(syncManagerDeps);
         broadcastStatusUpdate();

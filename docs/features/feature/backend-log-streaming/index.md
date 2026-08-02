@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-02
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -158,6 +158,11 @@ signatures for duplicate-delivery protection. In-progress commands remain in
 their separate active map until completion. The short terminal window prevents
 a restarted daemon's reused query IDs from being mistaken for stale commands;
 durable event recordings are owned independently by `RecordingManager`.
+Daemon HTTP reachability and extension sync-heartbeat state are tracked as
+separate signals. A missing or stale heartbeat remains visible to Doctor and
+the connection log, but cannot label a daemon that answered `/health` as
+offline. Sync reconnect transitions update only heartbeat state; actual HTTP
+failures own the daemon-offline state.
 Sync reconciliation tolerates partial heartbeat/result batches: an
 acknowledged command that briefly disappears from `in_progress` remains pending
 for a bounded two-second result-delivery grace. A command still absent after

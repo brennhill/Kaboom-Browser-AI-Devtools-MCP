@@ -231,7 +231,7 @@ describe('checkServerHealth', () => {
     assert.strictEqual(result.uptime, 120)
   })
 
-  test('returns connected false when daemon is reachable but heartbeat is missing', async () => {
+  test('keeps daemon connected when extension heartbeat is missing', async () => {
     // Assert against the same literal the fixture serves. This test is about
     // heartbeat handling, not about any particular release, and hardcoding the
     // version in two places desyncs whenever bump-version.js rewrites only one.
@@ -252,10 +252,25 @@ describe('checkServerHealth', () => {
     )
 
     const result = await checkServerHealth('http://localhost:9222')
-    assert.strictEqual(result.connected, false)
+    assert.strictEqual(result.connected, true)
+    assert.strictEqual(result.extensionConnected, false)
     assert.strictEqual(result.status, 'ok')
     assert.strictEqual(result.version, servedVersion)
-    assert.ok(result.error.includes('heartbeat'))
+    assert.ok(result.extensionError.includes('heartbeat'))
+  })
+
+  test('keeps daemon connected when heartbeat status is unavailable', async () => {
+    mockFetch.mock.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: 'ok', version: '0.9.0' })
+      })
+    )
+
+    const result = await checkServerHealth('http://localhost:9222')
+    assert.strictEqual(result.connected, true)
+    assert.strictEqual(result.extensionConnected, undefined)
+    assert.ok(result.extensionError.includes('unavailable'))
   })
 
   test('returns connected false on fetch error', async () => {

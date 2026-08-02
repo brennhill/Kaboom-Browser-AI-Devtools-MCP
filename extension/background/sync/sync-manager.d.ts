@@ -6,7 +6,7 @@ import type { ConnectionStatus } from '../../types/runtime/state.js';
 import type { ExtensionLogQueueEntry } from '../runtime-state/log-queue.js';
 type DebugLogFn = (category: string, message: string, data?: unknown) => void;
 /** Mutable connection status (same shape as index.ts) */
-export type SyncConnectionStatusRef = Pick<ConnectionStatus, 'connected' | 'entries' | 'maxEntries' | 'errorCount' | 'logFile' | 'logFileSize' | 'serverVersion' | 'extensionVersion' | 'versionMismatch' | 'securityMode' | 'productionParity' | 'insecureRewritesApplied'>;
+export type SyncConnectionStatusRef = Pick<ConnectionStatus, 'connected' | 'extensionConnected' | 'extensionError' | 'error' | 'entries' | 'maxEntries' | 'errorCount' | 'logFile' | 'logFileSize' | 'serverVersion' | 'extensionVersion' | 'versionMismatch' | 'securityMode' | 'productionParity' | 'insecureRewritesApplied'>;
 /** Dependencies injected by index.ts to avoid circular imports */
 export interface SyncManagerDeps {
     getServerUrl: () => string;

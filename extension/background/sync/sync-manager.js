@@ -65,7 +65,9 @@ export function startSyncClient(deps) {
         },
         // Handle connection state changes
         onConnectionChange: (connected) => {
-            deps.setConnectionStatus({ connected });
+            // Sync heartbeat health is independent of daemon HTTP reachability.
+            // A transient sync failure must not make a healthy daemon appear offline.
+            deps.setConnectionStatus({ extensionConnected: connected });
             updateBadge(deps.getConnectionStatus());
             deps.debugLog(DebugCategory.CONNECTION, connected ? 'Sync connected' : 'Sync disconnected');
             // Notify popup

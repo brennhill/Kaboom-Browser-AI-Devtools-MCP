@@ -100,16 +100,12 @@ export async function checkServerHealth(serverUrl) {
                 error: 'Server returned invalid response - check Server URL in options'
             };
         }
-        if (data.capture?.extension_connected !== true) {
-            return {
-                ...data,
-                connected: false,
-                error: buildHeartbeatStatusError(data.capture)
-            };
-        }
+        const extensionConnected = typeof data.capture?.extension_connected === 'boolean' ? data.capture.extension_connected : undefined;
         return {
             ...data,
-            connected: true
+            connected: true,
+            extensionConnected,
+            extensionError: extensionConnected === true ? undefined : buildHeartbeatStatusError(data.capture)
         };
     }
     catch (error) {

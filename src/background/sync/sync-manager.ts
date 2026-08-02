@@ -29,6 +29,9 @@ type DebugLogFn = (category: string, message: string, data?: unknown) => void
 export type SyncConnectionStatusRef = Pick<
   ConnectionStatus,
   | 'connected'
+  | 'extensionConnected'
+  | 'extensionError'
+  | 'error'
   | 'entries'
   | 'maxEntries'
   | 'errorCount'
@@ -119,7 +122,9 @@ export function startSyncClient(deps: SyncManagerDeps): void {
 
       // Handle connection state changes
       onConnectionChange: (connected: boolean) => {
-        deps.setConnectionStatus({ connected })
+        // Sync heartbeat health is independent of daemon HTTP reachability.
+        // A transient sync failure must not make a healthy daemon appear offline.
+        deps.setConnectionStatus({ extensionConnected: connected })
         updateBadge(deps.getConnectionStatus())
         deps.debugLog(DebugCategory.CONNECTION, connected ? 'Sync connected' : 'Sync disconnected')
 

@@ -22,6 +22,8 @@ import type { components } from '../../generated/openapi-types.js';
  */
 export type ServerHealthResponse = components['schemas']['HealthResponse'] & {
     connected: boolean;
+    extensionConnected?: boolean;
+    extensionError?: string;
     error?: string;
 };
 /**
