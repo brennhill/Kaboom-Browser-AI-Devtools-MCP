@@ -153,7 +153,9 @@ last_verified_date: 2026-03-05
   `--suite offline|connected`.
 - Connected UAT opens and tracks a dedicated local test-harness tab rather than
   navigating the user's tab. Cleanup closes that tab before restoring the
-  exact prior daemon and tracked-tab state, including signal-driven exits.
+  exact prior daemon and tracked-tab state, including signal-driven exits. Once
+  explicit restoration completes, the later shell `EXIT` trap is a no-op so it
+  cannot kill the restored daemon on the shared connected-suite port.
 - Connected action coverage derives every live tool action from `tools/list`,
   runs it against the dedicated tracked fixture tab, and fails closed if a
   schema action is omitted. State-sensitive actions re-establish the fixture

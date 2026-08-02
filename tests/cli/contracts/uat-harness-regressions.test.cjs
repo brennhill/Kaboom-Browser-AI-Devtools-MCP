@@ -515,6 +515,16 @@ describe('comprehensive UAT harness regressions', () => {
     assert.equal(output, ['stop', 'launchagent', 'tab:73:https://user.test/work'].join('\n'))
   })
 
+  test('exit cleanup cannot kill a daemon that explicit restoration already replaced', () => {
+    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const cleanup = runner.match(/_uat_cleanup\(\) \{([\s\S]*?)\n\}/)?.[1] ?? ''
+    const restoredGuard = cleanup.indexOf('UAT_USER_STATE_RESTORED')
+    const firstPortKill = cleanup.indexOf('lsof -tiTCP')
+
+    assert.ok(restoredGuard >= 0, 'EXIT cleanup must detect completed restoration')
+    assert.ok(firstPortKill > restoredGuard, 'completed-restoration guard must run before any port kill')
+  })
+
   test('signal exit runs the same state restoration before preserving its exit code', () => {
     const result = require('node:child_process').spawnSync(
       '/bin/bash',

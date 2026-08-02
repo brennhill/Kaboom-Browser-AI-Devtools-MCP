@@ -207,6 +207,11 @@ preflight_connected_extension() {
 
 # Safety-net trap: clean only suite-owned ports, then restore user state.
 _uat_cleanup() {
+    # Normal completion restores the user's daemon before emitting artifacts.
+    # The EXIT trap runs afterward; killing the shared connected port again
+    # would terminate the daemon we just restored.
+    [ "$UAT_USER_STATE_RESTORED" = "1" ] && return 0
+
     local _cleanup_ports=""
     case "$SUITE" in
         offline) _cleanup_ports="$OFFLINE_UAT_PORT" ;;
