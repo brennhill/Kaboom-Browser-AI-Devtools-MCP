@@ -87,9 +87,17 @@ export declare function handleDomQuery(params: string | Record<string, unknown>,
 /**
  * Handle GET_NETWORK_WATERFALL message
  */
-export declare function handleGetNetworkWaterfall(sendResponse: (result: {
+interface WaterfallBridgeResult {
     entries: WaterfallEntry[];
-}) => void): boolean;
+    error?: 'waterfall_bridge_timeout' | 'waterfall_bridge_failed';
+    message?: string;
+}
+type WaterfallResponseWaiter = (response: Promise<{
+    entries: WaterfallEntry[];
+}>, cleanup: () => void) => Promise<{
+    entries: WaterfallEntry[];
+}>;
+export declare function handleGetNetworkWaterfall(sendResponse: (result: WaterfallBridgeResult) => void, waitForResponse?: WaterfallResponseWaiter): boolean;
 export declare function handleComputedStylesQuery(params: string | Record<string, unknown>, sendResponse: (result: unknown) => void): boolean;
 export declare function handleFormDiscoveryQuery(params: string | Record<string, unknown>, sendResponse: (result: unknown) => void): boolean;
 export declare function handleFormStateQuery(params: string | Record<string, unknown>, sendResponse: (result: unknown) => void): boolean;

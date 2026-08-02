@@ -45,6 +45,7 @@ code_paths:
   - src/lib/page/context.ts
   - src/lib/daemon-http.ts
   - src/content/message-forwarding.ts
+  - src/content/message-handlers.ts
   - src/content/runtime-message-listener.ts
   - src/content/window-message-listener.ts
   - src/inject.ts
@@ -97,6 +98,8 @@ test_paths:
   - tests/extension/network-realtime/websocket.test.js
   - tests/extension/network-realtime/websocket-tracking.test.js
   - tests/extension/content/content.test.js
+  - tests/extension/content/content-message-correlation.test.js
+  - tests/extension/capture/observe-waterfall.test.js
   - tests/extension/branding/runtime-log-branding.test.js
   - tests/extension/misc/background-errors-comms.test.js
   - tests/extension/performance/performance.test.js
@@ -130,6 +133,10 @@ Page titles and URLs containing raw control bytes are escaped through both the
 nested tool payload and outer JSON-RPC envelope. The HTTP boundary rejects any
 malformed raw result with a structured protocol error instead of returning an
 empty or partial response.
+On-demand waterfall capture distinguishes a confirmed empty page from inject
+bridge timeout, rejection, and dispatch failure. Failures remain structured
+through background dispatch and activate a redacted Doctor diagnostic; the next
+authenticated response resolves that incident even when it contains no entries.
 
 ## TL;DR
 - Status: shipped

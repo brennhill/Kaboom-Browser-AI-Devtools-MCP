@@ -42,6 +42,9 @@ function resetWindow() {
   })
 
   globalThis.window = mockWindow
+  globalThis.chrome = {
+    runtime: { sendMessage: mock.fn(async () => ({ success: true })) }
+  }
 }
 
 /** Simulate a postMessage event from the page (inject.js response) */
@@ -215,6 +218,98 @@ describe('handleGetNetworkWaterfall — requestId correlation', () => {
     })
 
     assert.deepStrictEqual(result, { entries: [{ url: '/api/data', status: 200 }] })
+  })
+
+  test('an authenticated empty waterfall remains a successful empty result', async () => {
+    const result = await new Promise((resolve) => {
+      handleGetNetworkWaterfall(resolve)
+      const posted = postedMessages.find((m) => m.type === 'kaboom_get_waterfall')
+      fireWindowMessage({
+        type: 'kaboom_waterfall_response',
+        requestId: posted.requestId,
+        entries: []
+      })
+    })
+
+    assert.deepStrictEqual(result, { entries: [] })
+    const recovery = chrome.runtime.sendMessage.mock.calls.find(
+      (call) => call.arguments[0]?.diagnostic?.name === 'waterfall_bridge'
+    )?.arguments[0]
+    assert.strictEqual(recovery?.lifecycle, 'recovered')
+  })
+
+  test('synchronous bridge dispatch failure is explicit and diagnosable', async () => {
+    mockWindow.postMessage = () => {
+      throw new Error('page rejected postMessage')
+    }
+
+    const result = await new Promise((resolve) => handleGetNetworkWaterfall(resolve))
+
+    assert.deepStrictEqual(result, {
+      entries: [],
+      error: 'waterfall_bridge_failed',
+      message: 'Failed to dispatch the injected waterfall request.'
+    })
+    const diagnostic = chrome.runtime.sendMessage.mock.calls.find(
+      (call) => call.arguments[0]?.diagnostic?.name === 'waterfall_bridge'
+    )?.arguments[0]
+    assert.strictEqual(diagnostic?.lifecycle, 'active')
+  })
+
+  test('timeout returns a structured failure and reports it for Doctor', async () => {
+    const originalSetTimeout = globalThis.setTimeout
+    const diagnosticMessages = []
+    globalThis.chrome = {
+      runtime: {
+        sendMessage: async (message) => {
+          diagnosticMessages.push(message)
+          return { success: true }
+        }
+      }
+    }
+    globalThis.setTimeout = (callback) => {
+      queueMicrotask(callback)
+      return 1
+    }
+
+    try {
+      const result = await new Promise((resolve) => handleGetNetworkWaterfall(resolve))
+
+      assert.deepStrictEqual(result, {
+        entries: [],
+        error: 'waterfall_bridge_timeout',
+        message: 'Injected waterfall bridge did not respond before the deadline.'
+      })
+      assert.strictEqual(diagnosticMessages.length, 1)
+      assert.strictEqual(diagnosticMessages[0].type, 'report_state_recovery')
+      assert.strictEqual(diagnosticMessages[0].lifecycle, 'active')
+      assert.strictEqual(diagnosticMessages[0].diagnostic.name, 'waterfall_bridge')
+    } finally {
+      globalThis.setTimeout = originalSetTimeout
+      delete globalThis.chrome
+    }
+  })
+
+  test('rejected waterfall wait is distinct from timeout', async () => {
+    const originalSetTimeout = globalThis.setTimeout
+    globalThis.setTimeout = (callback) => {
+      queueMicrotask(callback)
+      return 1
+    }
+    try {
+      const rejectWait = async () => {
+        throw new Error('bridge listener rejected')
+      }
+      const result = await new Promise((resolve) => handleGetNetworkWaterfall(resolve, rejectWait))
+
+      assert.deepStrictEqual(result, {
+        entries: [],
+        error: 'waterfall_bridge_failed',
+        message: 'Injected waterfall bridge rejected the response wait.'
+      })
+    } finally {
+      globalThis.setTimeout = originalSetTimeout
+    }
   })
 
   test('two concurrent waterfall queries each get own entries', async () => {

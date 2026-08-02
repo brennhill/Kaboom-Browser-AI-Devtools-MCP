@@ -338,7 +338,46 @@ export function handleDomQuery(
 /**
  * Handle GET_NETWORK_WATERFALL message
  */
-export function handleGetNetworkWaterfall(sendResponse: (result: { entries: WaterfallEntry[] }) => void): boolean {
+interface WaterfallBridgeResult {
+  entries: WaterfallEntry[]
+  error?: 'waterfall_bridge_timeout' | 'waterfall_bridge_failed'
+  message?: string
+}
+
+type WaterfallResponseWaiter = (
+  response: Promise<{ entries: WaterfallEntry[] }>,
+  cleanup: () => void
+) => Promise<{ entries: WaterfallEntry[] }>
+
+const waitForWaterfallResponse: WaterfallResponseWaiter = (response, cleanup) =>
+  withTimeoutAndCleanup(response, 5000, { cleanup })
+
+function reportWaterfallBridgeLifecycle(
+  lifecycle: 'active' | 'recovered',
+  requestId: number,
+  reason = ''
+): void {
+  const diagnostic =
+    lifecycle === 'active'
+      ? {
+          name: 'waterfall_bridge',
+          detail: `Injected waterfall bridge request ${requestId} failed: ${reason}.`,
+          fix: 'Reload the tracked page and retry; include System Doctor output if the bridge repeatedly fails.'
+        }
+      : { name: 'waterfall_bridge', detail: '', fix: '' }
+  try {
+    void chrome.runtime
+      .sendMessage({ type: 'report_state_recovery', lifecycle, diagnostic })
+      .catch((error) => console.warn('[KaBOOM!] Waterfall bridge diagnostic delivery failed:', errorMessage(error)))
+  } catch (error) {
+    console.warn('[KaBOOM!] Waterfall bridge diagnostic delivery failed:', errorMessage(error))
+  }
+}
+
+export function handleGetNetworkWaterfall(
+  sendResponse: (result: WaterfallBridgeResult) => void,
+  waitForResponse: WaterfallResponseWaiter = waitForWaterfallResponse
+): boolean {
   const requestId = nextRequestId++
   const deferred = createDeferredPromise<{ entries: WaterfallEntry[] }>()
 
@@ -351,6 +390,7 @@ export function handleGetNetworkWaterfall(sendResponse: (result: { entries: Wate
     if (nonce !== getPageNonce()) return
     if (event.data?.type === 'kaboom_waterfall_response' && event.data?.requestId === requestId) {
       window.removeEventListener('message', responseHandler)
+      reportWaterfallBridgeLifecycle('recovered', requestId)
       deferred.resolve({ entries: event.data.entries || [] })
     }
   }
@@ -358,21 +398,38 @@ export function handleGetNetworkWaterfall(sendResponse: (result: { entries: Wate
   window.addEventListener('message', responseHandler)
 
   // Post message to page context
-  postToInject({
-    type: 'kaboom_get_waterfall',
-    requestId
-  })
+  try {
+    postToInject({
+      type: 'kaboom_get_waterfall',
+      requestId
+    })
+  } catch {
+    window.removeEventListener('message', responseHandler)
+    reportWaterfallBridgeLifecycle('active', requestId, 'request dispatch failed')
+    sendResponse({
+      entries: [],
+      error: 'waterfall_bridge_failed',
+      message: 'Failed to dispatch the injected waterfall request.'
+    })
+    return true
+  }
 
-  // Timeout fallback: respond with empty array after 5 seconds
-  withTimeoutAndCleanup(deferred.promise, 5000, {
-    fallback: { entries: [] },
-    cleanup: () => window.removeEventListener('message', responseHandler)
-  }).then(
+  // Timeout is a bridge failure, not evidence that the page has no requests.
+  waitForResponse(deferred.promise, () => window.removeEventListener('message', responseHandler)).then(
     (result) => {
       sendResponse(result)
     },
-    () => {
-      sendResponse({ entries: [] })
+    (error) => {
+      window.removeEventListener('message', responseHandler)
+      const timedOut = error instanceof Error && error.name === 'TimeoutError'
+      reportWaterfallBridgeLifecycle('active', requestId, timedOut ? 'response timeout' : 'response rejected')
+      sendResponse({
+        entries: [],
+        error: timedOut ? 'waterfall_bridge_timeout' : 'waterfall_bridge_failed',
+        message: timedOut
+          ? 'Injected waterfall bridge did not respond before the deadline.'
+          : 'Injected waterfall bridge rejected the response wait.'
+      })
     }
   )
 

@@ -458,13 +458,16 @@ registerCommand('waterfall', async (ctx) => {
         const result = (await chrome.tabs.sendMessage(ctx.tabId, {
             type: 'get_network_waterfall'
         }));
+        const entries = result?.entries || [];
         debugLog(DebugCategory.CAPTURE, 'Waterfall result from content script', {
-            entries: result?.entries?.length || 0
+            entries: entries.length,
+            error: result?.error
         });
         ctx.sendResult({
-            entries: result?.entries || [],
+            entries,
+            ...(result?.error ? { error: result.error, message: result.message || 'Waterfall bridge failed' } : {}),
             page_url: tab.url || '',
-            count: result?.entries?.length || 0
+            count: entries.length
         });
         debugLog(DebugCategory.CAPTURE, 'Posted waterfall result', { queryId: ctx.query.id });
     }
