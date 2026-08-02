@@ -4,7 +4,7 @@ feature_id: feature-ai-web-pilot
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-02
 code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/tools_core.go
@@ -28,6 +28,7 @@ test_paths:
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
   - tests/extension/pilot/pilot-toggle.test.js
+  - tests/extension/pilot/pilot-command-response.test.js
   - tests/extension/dom/dom-primitives-branding.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -64,3 +65,6 @@ is no self-loading compatibility initializer or second storage-read path.
 DOM actions distinguish Kaboom-owned overlays through the explicit
 `data-kaboom-owned="true"` marker. Page IDs and classes that happen to begin
 with `kaboom-` remain ordinary, targetable application DOM.
+Pilot command delivery requires an explicit terminal response from the content
+script. Missing or falsy responses return `pilot_command_no_response` and emit
+a redacted local diagnostic; they can never be converted into success.

@@ -15,7 +15,7 @@ import { executeWithWorldRouting } from '../exec/query-execution.js';
 import { handleBrowserAction, handleAsyncBrowserAction, handleAsyncExecuteCommand } from '../exec/browser-actions.js';
 import { saveStateSnapshot, loadStateSnapshot, listStateSnapshots, deleteStateSnapshot } from '../state-snapshots.js';
 import { registerCommand } from './registry.js';
-import { requireAiWebPilot, isContentScriptUnreachableError } from './helpers.js';
+import { debugLog, requireAiWebPilot, isContentScriptUnreachableError } from './helpers.js';
 import { errorMessage } from '../../lib/error-utils.js';
 // =============================================================================
 // SUBTITLE
@@ -346,7 +346,19 @@ async function handlePilotCommandOnTab(tabId, command, params) {
             type: command,
             params
         });
-        return result || { success: true };
+        if (!result) {
+            debugLog('error', 'Pilot command returned no terminal response', {
+                command,
+                tab_id: tabId,
+                response_type: String(result)
+            });
+            return {
+                success: false,
+                error: 'pilot_command_no_response',
+                message: `The content script returned no terminal response for ${command}.`
+            };
+        }
+        return result;
     }
     catch (err) {
         if (command === 'kaboom_highlight' && isContentScriptUnreachableError(err)) {
