@@ -37,15 +37,15 @@ func TestToolSchema_RequiresWhat(t *testing.T) {
 	}
 }
 
-func TestToolSchema_ExposesValidateOnlyQAFixtureContract(t *testing.T) {
+func TestToolSchemaExposesAtomicQAFixtureApplyContract(t *testing.T) {
 	props := ToolSchema().InputSchema["properties"].(map[string]any)
 	what := props["what"].(map[string]any)["enum"].([]string)
 	if !contains(what, "qa_fixture") {
 		t.Fatal("configure what enum missing qa_fixture")
 	}
 	actions := props["fixture_action"].(map[string]any)["enum"].([]string)
-	if len(actions) != 1 || actions[0] != "validate" {
-		t.Fatalf("fixture_action enum = %v, want validate only until transactional apply ships", actions)
+	if len(actions) != 2 || actions[0] != "validate" || actions[1] != "apply" {
+		t.Fatalf("fixture_action enum = %v, want validate and apply", actions)
 	}
 	fixture := props["fixture"].(map[string]any)
 	if fixture["additionalProperties"] != false {

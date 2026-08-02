@@ -23,7 +23,7 @@ func TestCoordinatorAppliesOnlyAfterSnapshot(t *testing.T) {
 			order = append(order, "apply")
 			return MutationCounts{LocalStorage: 2}, nil
 		},
-		Restore: func(context.Context, json.RawMessage) error {
+		Restore: func(context.Context, WireQAFixture, json.RawMessage) error {
 			order = append(order, "restore")
 			return nil
 		},
@@ -53,7 +53,7 @@ func TestCoordinatorStopsWhenSnapshotFails(t *testing.T) {
 			applied = true
 			return MutationCounts{}, nil
 		},
-		Restore: func(context.Context, json.RawMessage) error { return nil },
+		Restore: func(context.Context, WireQAFixture, json.RawMessage) error { return nil },
 	})
 	result, err := coordinator.Apply(context.Background(), WireQAFixture{Version: 1, SetupTimeoutMs: 1000})
 	assertTransactionError(t, result, err, StatusSnapshotFailed)
@@ -72,7 +72,10 @@ func TestCoordinatorRollsBackPartialApplyFailure(t *testing.T) {
 		Apply: func(context.Context, WireQAFixture) (MutationCounts, error) {
 			return MutationCounts{Cookies: 1}, errors.New("private apply failure")
 		},
-		Restore: func(_ context.Context, value json.RawMessage) error {
+		Restore: func(_ context.Context, restoredFixture WireQAFixture, value json.RawMessage) error {
+			if restoredFixture.Version != 1 {
+				t.Fatalf("restored fixture = %+v", restoredFixture)
+			}
 			restored = append(json.RawMessage(nil), value...)
 			return nil
 		},
@@ -94,7 +97,7 @@ func TestCoordinatorReportsRollbackFailureWithoutLeakingCause(t *testing.T) {
 		Apply: func(context.Context, WireQAFixture) (MutationCounts, error) {
 			return MutationCounts{}, errors.New("secret apply")
 		},
-		Restore: func(context.Context, json.RawMessage) error { return errors.New("secret restore") },
+		Restore: func(context.Context, WireQAFixture, json.RawMessage) error { return errors.New("secret restore") },
 	})
 	result, err := coordinator.Apply(context.Background(), WireQAFixture{Version: 1, SetupTimeoutMs: 1000})
 	assertTransactionError(t, result, err, StatusRollbackFailed)
@@ -119,7 +122,7 @@ func TestCoordinatorBoundsTimeoutAndCancellation(t *testing.T) {
 					return nil, ctx.Err()
 				},
 				Apply:   func(context.Context, WireQAFixture) (MutationCounts, error) { return MutationCounts{}, nil },
-				Restore: func(context.Context, json.RawMessage) error { return nil },
+				Restore: func(context.Context, WireQAFixture, json.RawMessage) error { return nil },
 			})
 			fixture := WireQAFixture{Version: 1, SetupTimeoutMs: 5}
 			result, err := coordinator.Apply(tt.ctx(), fixture)
@@ -135,7 +138,7 @@ func TestCoordinatorClassifiesExplicitDriverDeadline(t *testing.T) {
 			return nil, context.DeadlineExceeded
 		},
 		Apply:   func(context.Context, WireQAFixture) (MutationCounts, error) { return MutationCounts{}, nil },
-		Restore: func(context.Context, json.RawMessage) error { return nil },
+		Restore: func(context.Context, WireQAFixture, json.RawMessage) error { return nil },
 	})
 	result, err := coordinator.Apply(context.Background(), WireQAFixture{SetupTimeoutMs: 1000})
 	assertTransactionError(t, result, err, StatusTimedOut)
@@ -152,7 +155,7 @@ func TestCoordinatorRejectsConcurrentRun(t *testing.T) {
 			return json.RawMessage(`{}`), nil
 		},
 		Apply:   func(context.Context, WireQAFixture) (MutationCounts, error) { return MutationCounts{}, nil },
-		Restore: func(context.Context, json.RawMessage) error { return nil },
+		Restore: func(context.Context, WireQAFixture, json.RawMessage) error { return nil },
 	})
 	var wg sync.WaitGroup
 	wg.Add(1)

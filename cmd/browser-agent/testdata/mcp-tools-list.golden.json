@@ -969,9 +969,10 @@
           "type": "object"
         },
         "fixture_action": {
-          "description": "QA fixture operation. Only validation is exposed until transactional apply and restore ship.",
+          "description": "Validate a QA fixture or apply it atomically after an extension-owned snapshot. Failed applies are rolled back.",
           "enum": [
-            "validate"
+            "validate",
+            "apply"
           ],
           "type": "string"
         },

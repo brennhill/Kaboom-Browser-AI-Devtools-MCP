@@ -6,8 +6,8 @@ func fixtureProperties() map[string]any {
 	return map[string]any{
 		"fixture_action": map[string]any{
 			"type":        "string",
-			"description": "QA fixture operation. Only validation is exposed until transactional apply and restore ship.",
-			"enum":        []string{"validate"},
+			"description": "Validate a QA fixture or apply it atomically after an extension-owned snapshot. Failed applies are rolled back.",
+			"enum":        []string{"validate", "apply"},
 		},
 		"fixture": qaFixtureSchema(),
 	}

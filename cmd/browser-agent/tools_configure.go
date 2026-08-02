@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -29,6 +30,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
@@ -42,6 +44,13 @@ const restartSelfSignalDelay = 100 * time.Millisecond
 var replayMu sync.Mutex
 
 func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
+	fixtureHandler, fixtureErr := qafixturehandler.New(qafixturehandler.Deps{
+		Context: h.shutdownCtx,
+		Execute: func(ctx context.Context, command string, params json.RawMessage, timeout time.Duration) (json.RawMessage, error) {
+			return executeQAFixtureCommand(ctx, h, command, params, timeout)
+		},
+		NewCorrelationID: func() string { return toolresp.NewCorrelationID("qa_fixture") },
+	})
 	return toolconfigure.NewDispatcher(map[string]toolconfigure.Handler{
 		"store": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return h.configureSessions.Store(req, args)
@@ -144,8 +153,35 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 		"setup_quality_gates": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return qualitygates.Handle(h.server, req, args)
 		},
-		"qa_fixture": qafixturehandler.Handle,
+		"qa_fixture": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			if fixtureErr != nil {
+				return mcp.Fail(req, mcp.ErrInternal, "QA fixture handler is unavailable", "Restart Kaboom and inspect configure({what:'doctor'}).")
+			}
+			return fixtureHandler.Handle(req, args)
+		},
 	})
+}
+
+func executeQAFixtureCommand(
+	ctx context.Context,
+	h *ToolHandler,
+	command string,
+	params json.RawMessage,
+	timeout time.Duration,
+) (json.RawMessage, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if h.capture == nil || !h.capture.Extension().IsExtensionConnected() {
+		return nil, context.Canceled
+	}
+	queryID, err := h.capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+		Type: command, Params: params,
+	}, timeout, "")
+	if err != nil {
+		return nil, err
+	}
+	return h.capture.Queries().WaitForResultContext(ctx, queryID, timeout)
 }
 
 func configureLocal(

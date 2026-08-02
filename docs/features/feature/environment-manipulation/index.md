@@ -70,8 +70,11 @@ last_verified_date: 2026-03-05
 - `configure(what="qa_fixture", fixture_action="validate")` now validates the
   canonical version-1 QA environment document without mutating the browser or
   echoing cookies, storage, flags, or seed values. The contract bounds setup
-  time and state size, rejects unknown fields and unsupported capabilities,
-  and only advertises validation until transactional apply and restore ship.
+  time and state size and rejects unknown fields and unsupported capabilities.
+- `configure(what="qa_fixture", fixture_action="apply")` drives the canonical
+  extension-owned snapshot before mutation and mandates rollback after any
+  partial apply failure. Only opaque snapshot and correlation identifiers cross
+  process boundaries; private fixture values never appear in responses.
 - The fixture transaction coordinator generates its own correlation ID,
   captures an opaque private snapshot before the first mutation, and performs
   bounded rollback after any partial apply failure. Driver errors collapse to

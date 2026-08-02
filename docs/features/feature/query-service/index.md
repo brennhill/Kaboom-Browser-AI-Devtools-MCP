@@ -4,7 +4,7 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-02
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -84,6 +84,9 @@ last_verified_date: 2026-03-05
   - `internal/mcp/response_content.go` — image and warning content blocks
   - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
 - Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
+- Synchronous result consumers may bind waits to a caller context; cancellation
+  wakes the canonical query condition immediately instead of waiting for the
+  command timeout, while preserving one-time result consumption.
 - Live command lifecycle storage keeps every pending command until it reaches a
   terminal state or expires. Completed and failed commands then share one
   five-entry terminal-history ring, preventing long browser sessions from

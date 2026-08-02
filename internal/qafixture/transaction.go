@@ -41,7 +41,7 @@ type TransactionDeps struct {
 	NewCorrelationID func() string
 	Snapshot         func(context.Context, WireQAFixture) (json.RawMessage, error)
 	Apply            func(context.Context, WireQAFixture) (MutationCounts, error)
-	Restore          func(context.Context, json.RawMessage) error
+	Restore          func(context.Context, WireQAFixture, json.RawMessage) error
 }
 
 type Coordinator struct {
@@ -91,7 +91,7 @@ func (coordinator *Coordinator) Apply(
 
 	rollbackCtx, rollbackCancel := context.WithTimeout(context.Background(), timeout)
 	defer rollbackCancel()
-	if restoreErr := coordinator.deps.Restore(rollbackCtx, snapshot); restoreErr != nil {
+	if restoreErr := coordinator.deps.Restore(rollbackCtx, fixture, snapshot); restoreErr != nil {
 		return transactionFailure(StatusRollbackFailed, correlationID, false, mutations)
 	}
 	status := contextStatus(transactionCtx, err, StatusApplyFailedRolledBack)

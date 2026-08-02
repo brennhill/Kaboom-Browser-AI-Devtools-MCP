@@ -5,7 +5,9 @@
 package queries
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -466,6 +468,25 @@ func TestNewQueryDispatcher_WaitForResult_Timeout(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "timeout") {
 		t.Errorf("error = %q, want timeout message", err.Error())
+	}
+}
+
+func TestQueryDispatcherWaitForResultContextStopsOnCancellation(t *testing.T) {
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+	id, err := qd.CreatePendingQuery(PendingQuery{Type: "qa_fixture_snapshot"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	started := time.Now()
+	_, err = qd.WaitForResultContext(ctx, id, time.Second)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, want context canceled", err)
+	}
+	if elapsed := time.Since(started); elapsed > 100*time.Millisecond {
+		t.Fatalf("cancellation took %s", elapsed)
 	}
 }
 

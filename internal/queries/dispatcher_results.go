@@ -8,6 +8,7 @@
 package queries
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -169,7 +170,13 @@ func (qd *QueryDispatcher) TakeQueryResultForClient(id string, clientID string) 
 // WaitForResult blocks until result is available or timeout.
 // Used by synchronous tool handlers that need immediate results.
 func (qd *QueryDispatcher) WaitForResult(id string, timeout time.Duration) (json.RawMessage, error) {
-	return qd.WaitForResultWithClient(id, timeout, "")
+	return qd.waitForResultContext(context.Background(), id, timeout, "")
+}
+
+// WaitForResultContext waits for one result and wakes promptly when the caller
+// is canceled. The result remains one-time consumption, matching WaitForResult.
+func (qd *QueryDispatcher) WaitForResultContext(ctx context.Context, id string, timeout time.Duration) (json.RawMessage, error) {
+	return qd.waitForResultContext(ctx, id, timeout, "")
 }
 
 // WaitForResultWithClient waits for one result under client-isolated view.
@@ -189,6 +196,10 @@ func (qd *QueryDispatcher) WaitForResult(id string, timeout time.Duration) (json
 // - Timeout returns deterministic error; caller decides retry/abort policy.
 // - Missing result after wakeups is expected (spurious or unrelated broadcasts).
 func (qd *QueryDispatcher) WaitForResultWithClient(id string, timeout time.Duration, clientID string) (json.RawMessage, error) {
+	return qd.waitForResultContext(context.Background(), id, timeout, clientID)
+}
+
+func (qd *QueryDispatcher) waitForResultContext(ctx context.Context, id string, timeout time.Duration, clientID string) (json.RawMessage, error) {
 	deadline := time.Now().Add(timeout)
 
 	// Single wakeup goroutine: broadcasts every 10ms to recheck condition.
@@ -212,6 +223,9 @@ func (qd *QueryDispatcher) WaitForResultWithClient(id string, timeout time.Durat
 	defer close(done) // Stop wakeup goroutine on return (runs before Unlock per LIFO)
 
 	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		// Check if result exists
 		if entry, found := qd.queryResults[id]; found {
 			// Check client isolation
