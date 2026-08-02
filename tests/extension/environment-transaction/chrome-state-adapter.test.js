@@ -6,7 +6,7 @@ import { afterEach, test } from 'node:test'
 import { chromeDriverDeps } from '../../../extension/background/environment-transaction/chrome-state-adapter.js'
 import {
   applyEnvironment,
-  createEnvironmentEnvironmentSnapshotStore,
+  createEnvironmentSnapshotStore,
   restoreEnvironment,
   snapshotEnvironment
 } from '../../../extension/background/environment-transaction/commands.js'
@@ -64,7 +64,7 @@ test('adapter snapshots absent keys and restores exact prior raw values', async 
 })
 
 test('snapshot store exposes only generated opaque identifiers', () => {
-  const store = createEnvironmentEnvironmentSnapshotStore(() => 'fixture_snapshot_1')
+  const store = createEnvironmentSnapshotStore(() => 'fixture_snapshot_1')
   const snapshot = {
     tab_url: 'https://example.test/',
     window_id: 2,
@@ -97,7 +97,7 @@ test('command boundary replaces private driver failures with stable errors and r
       throw privateFailure
     }
   }
-  const store = createEnvironmentEnvironmentSnapshotStore(() => 'fixture_snapshot_1')
+  const store = createEnvironmentSnapshotStore(() => 'fixture_snapshot_1')
   const fixture = { version: 1 }
   const snapshot = {
     tab_url: 'https://example.test/',

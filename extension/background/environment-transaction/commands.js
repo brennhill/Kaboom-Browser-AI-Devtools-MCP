@@ -5,7 +5,7 @@
  */
 import { registerCommand } from '../commands/registry.js';
 import { createChromeEnvironmentStateDriver } from './chrome-state-adapter.js';
-export function createEnvironmentEnvironmentSnapshotStore(newID) {
+export function createEnvironmentSnapshotStore(newID) {
     const snapshots = new Map();
     return {
         save(snapshot) {
@@ -75,6 +75,6 @@ function requireSnapshotID(params) {
     return params.snapshot_id;
 }
 const driver = createChromeEnvironmentStateDriver();
-const snapshots = createEnvironmentEnvironmentSnapshotStore(() => crypto.randomUUID());
+const snapshots = createEnvironmentSnapshotStore(() => crypto.randomUUID());
 registerEnvironmentTransactionCommands(driver, snapshots);
 //# sourceMappingURL=commands.js.map

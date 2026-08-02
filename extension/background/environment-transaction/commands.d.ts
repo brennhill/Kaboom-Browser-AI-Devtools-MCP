@@ -10,7 +10,7 @@ export interface EnvironmentSnapshotStore {
     readonly get: (id: string) => EnvironmentSnapshot | undefined;
     readonly delete: (id: string) => void;
 }
-export declare function createEnvironmentEnvironmentSnapshotStore(newID: () => string): EnvironmentSnapshotStore;
+export declare function createEnvironmentSnapshotStore(newID: () => string): EnvironmentSnapshotStore;
 export declare function registerEnvironmentTransactionCommands(driver: EnvironmentStateDriver, snapshots: EnvironmentSnapshotStore): void;
 export declare function snapshotEnvironment(driver: EnvironmentStateDriver, snapshots: EnvironmentSnapshotStore, tabId: number, fixture: WireQAFixture): Promise<{
     readonly success: true;

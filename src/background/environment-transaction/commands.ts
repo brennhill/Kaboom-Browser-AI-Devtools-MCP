@@ -20,7 +20,7 @@ interface EnvironmentTransactionParams {
   readonly snapshot_id?: string
 }
 
-export function createEnvironmentEnvironmentSnapshotStore(newID: () => string): EnvironmentSnapshotStore {
+export function createEnvironmentSnapshotStore(newID: () => string): EnvironmentSnapshotStore {
   const snapshots = new Map<string, EnvironmentSnapshot>()
   return {
     save(snapshot) {
@@ -108,5 +108,5 @@ function requireSnapshotID(params: EnvironmentTransactionParams): string {
 }
 
 const driver = createChromeEnvironmentStateDriver()
-const snapshots = createEnvironmentEnvironmentSnapshotStore(() => crypto.randomUUID())
+const snapshots = createEnvironmentSnapshotStore(() => crypto.randomUUID())
 registerEnvironmentTransactionCommands(driver, snapshots)
