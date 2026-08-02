@@ -14,6 +14,8 @@ code_paths:
   - cmd/browser-agent/tools_configure.go
   - internal/qafixture/wire_fixture.go
   - internal/qafixture/transaction.go
+  - internal/qafixture/registry.go
+  - internal/qafixture/registry_store.go
   - internal/schema/configure/properties_fixture.go
   - internal/tools/configure/capabilities/modespecs_configure.go
   - scripts/build/generate-wire-types.js
@@ -33,6 +35,8 @@ test_paths:
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler_test.go
   - internal/qafixture/fixture_test.go
   - internal/qafixture/transaction_test.go
+  - internal/qafixture/registry_test.go
+  - internal/qafixture/registry_store_test.go
   - internal/schema/configure/schema_test.go
   - tests/extension/environment-transaction/browser-state-driver.test.js
   - tests/extension/environment-transaction/chrome-state-adapter.test.js
@@ -80,6 +84,10 @@ last_verified_date: 2026-08-02
   `environment_transaction_*` daemon-extension protocol. QA-specific private
   command aliases and module paths are prohibited; the public capability is
   exposed only through `configure(what="qa_fixture")`.
+- The daemon recovery registry persists only opaque transaction, snapshot,
+  correlation, extension-generation, lifecycle, timestamp, and mutation-count
+  fields. It is bounded, rejects stale generations, atomically replaces its
+  state file, and quarantines corrupt state behind stable diagnostic codes.
 - The fixture transaction coordinator generates its own correlation ID,
   captures an opaque private snapshot before the first mutation, and performs
   bounded rollback after any partial apply failure. Driver errors collapse to
