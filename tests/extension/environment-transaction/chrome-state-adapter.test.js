@@ -3,13 +3,13 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
-import { chromeDriverDeps } from '../../../extension/background/qa-fixture/chrome-state-adapter.js'
+import { chromeDriverDeps } from '../../../extension/background/environment-transaction/chrome-state-adapter.js'
 import {
-  applyFixture,
-  createFixtureSnapshotStore,
-  restoreFixture,
-  snapshotFixture
-} from '../../../extension/background/qa-fixture/commands.js'
+  applyEnvironment,
+  createEnvironmentEnvironmentSnapshotStore,
+  restoreEnvironment,
+  snapshotEnvironment
+} from '../../../extension/background/environment-transaction/commands.js'
 
 const originalChrome = globalThis.chrome
 const originalLocalStorage = globalThis.localStorage
@@ -64,7 +64,7 @@ test('adapter snapshots absent keys and restores exact prior raw values', async 
 })
 
 test('snapshot store exposes only generated opaque identifiers', () => {
-  const store = createFixtureSnapshotStore(() => 'fixture_snapshot_1')
+  const store = createEnvironmentEnvironmentSnapshotStore(() => 'fixture_snapshot_1')
   const snapshot = {
     tab_url: 'https://example.test/',
     window_id: 2,
@@ -97,7 +97,7 @@ test('command boundary replaces private driver failures with stable errors and r
       throw privateFailure
     }
   }
-  const store = createFixtureSnapshotStore(() => 'fixture_snapshot_1')
+  const store = createEnvironmentEnvironmentSnapshotStore(() => 'fixture_snapshot_1')
   const fixture = { version: 1 }
   const snapshot = {
     tab_url: 'https://example.test/',
@@ -107,9 +107,9 @@ test('command boundary replaces private driver failures with stable errors and r
   }
   store.save(snapshot)
 
-  await assert.rejects(snapshotFixture(driver, store, 7, fixture), { message: 'fixture_snapshot_failed' })
-  await assert.rejects(applyFixture(driver, 7, fixture), { message: 'fixture_apply_failed' })
-  await assert.rejects(restoreFixture(driver, store, 7, fixture, 'fixture_snapshot_1'), {
+  await assert.rejects(snapshotEnvironment(driver, store, 7, fixture), { message: 'fixture_snapshot_failed' })
+  await assert.rejects(applyEnvironment(driver, 7, fixture), { message: 'fixture_apply_failed' })
+  await assert.rejects(restoreEnvironment(driver, store, 7, fixture, 'fixture_snapshot_1'), {
     message: 'fixture_restore_failed'
   })
   assert.equal(store.get('fixture_snapshot_1'), snapshot)

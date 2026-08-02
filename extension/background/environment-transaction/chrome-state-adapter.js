@@ -1,17 +1,17 @@
 /**
- * Purpose: Adapts Chrome tab, cookie, scripting, and window APIs to the QA fixture state driver.
+ * Purpose: Adapts Chrome tab, cookie, scripting, and window APIs to the environment transaction state driver.
  * Why: Keeps browser API details out of transaction policy and makes every I/O boundary replaceable in tests.
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
-import { createBrowserStateDriver } from './browser-state-driver.js';
+import { createEnvironmentStateDriver } from './browser-state-driver.js';
 const EMPTY_KEYS = {
     local_storage: [],
     session_storage: [],
     feature_flags: [],
     seed_data: []
 };
-export function createChromeBrowserStateDriver() {
-    return createBrowserStateDriver(chromeDriverDeps());
+export function createChromeEnvironmentStateDriver() {
+    return createEnvironmentStateDriver(chromeDriverDeps());
 }
 export function chromeDriverDeps() {
     return {
@@ -34,10 +34,10 @@ export function chromeDriverDeps() {
             await chrome.cookies.remove({ url, name });
         },
         applyPageState: async (tabId, fixture) => {
-            await executePageFunction(tabId, applyFixturePageState, fixture);
+            await executePageFunction(tabId, applyEnvironmentPageState, fixture);
         },
         restorePageState: async (tabId, state) => {
-            await executePageFunction(tabId, restoreFixturePageState, state);
+            await executePageFunction(tabId, restoreEnvironmentPageState, state);
         }
     };
 }
@@ -120,7 +120,7 @@ function captureNamedPageState(keys) {
         seed_data: capture(localStorage, keys.seed_data)
     };
 }
-function applyFixturePageState(fixture) {
+function applyEnvironmentPageState(fixture) {
     for (const [key, value] of Object.entries(fixture.local_storage ?? {}))
         localStorage.setItem(key, value);
     for (const [key, value] of Object.entries(fixture.session_storage ?? {}))
@@ -131,7 +131,7 @@ function applyFixturePageState(fixture) {
         localStorage.setItem(key, JSON.stringify(value));
     return true;
 }
-function restoreFixturePageState(state) {
+function restoreEnvironmentPageState(state) {
     const restore = (storage, values) => {
         for (const [key, value] of Object.entries(values)) {
             if (value === null)

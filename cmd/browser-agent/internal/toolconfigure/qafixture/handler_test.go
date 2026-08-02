@@ -64,7 +64,7 @@ func TestHandlerApplyRunsSnapshotThenApplyWithoutEchoingFixture(t *testing.T) {
 		if !strings.Contains(string(params), "private-value") {
 			t.Fatalf("%s params missing fixture", command)
 		}
-		if command == "qa_fixture_snapshot" {
+		if command == "environment_transaction_snapshot" {
 			return json.RawMessage(`{"success":true,"snapshot_id":"opaque_1"}`), nil
 		}
 		return json.RawMessage(`{"success":true,"mutations":{"local_storage":1}}`), nil
@@ -74,7 +74,7 @@ func TestHandlerApplyRunsSnapshotThenApplyWithoutEchoingFixture(t *testing.T) {
 		"fixture":{"version":1,"local_storage":{"token":"private-value"}}
 	}`))
 	encoded, _ := json.Marshal(resp)
-	if strings.Join(commands, ",") != "qa_fixture_snapshot,qa_fixture_apply" {
+	if strings.Join(commands, ",") != "environment_transaction_snapshot,environment_transaction_apply" {
 		t.Fatalf("commands = %v", commands)
 	}
 	if strings.Contains(string(encoded), "private-value") || strings.Contains(string(encoded), "opaque_1") {
@@ -90,11 +90,11 @@ func TestHandlerApplyFailureRestoresWithOpaqueSnapshotAndRedactsCause(t *testing
 	handler := mustHandler(t, func(_ context.Context, command string, params json.RawMessage, _ time.Duration) (json.RawMessage, error) {
 		commands = append(commands, command)
 		switch command {
-		case "qa_fixture_snapshot":
+		case "environment_transaction_snapshot":
 			return json.RawMessage(`{"success":true,"snapshot_id":"opaque_1"}`), nil
-		case "qa_fixture_apply":
+		case "environment_transaction_apply":
 			return nil, errors.New("private-cookie-value")
-		case "qa_fixture_restore":
+		case "environment_transaction_restore":
 			if !strings.Contains(string(params), `"snapshot_id":"opaque_1"`) {
 				t.Fatalf("restore params = %s", params)
 			}
@@ -108,7 +108,7 @@ func TestHandlerApplyFailureRestoresWithOpaqueSnapshotAndRedactsCause(t *testing
 		"fixture_action":"apply","fixture":{"version":1,"cookies":[{"name":"session","value":"private-cookie"}]}
 	}`))
 	encoded, _ := json.Marshal(resp)
-	if strings.Join(commands, ",") != "qa_fixture_snapshot,qa_fixture_apply,qa_fixture_restore" {
+	if strings.Join(commands, ",") != "environment_transaction_snapshot,environment_transaction_apply,environment_transaction_restore" {
 		t.Fatalf("commands = %v", commands)
 	}
 	if strings.Contains(string(encoded), "private") || strings.Contains(string(encoded), "opaque_1") {

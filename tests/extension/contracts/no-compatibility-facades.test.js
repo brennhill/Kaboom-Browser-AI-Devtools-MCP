@@ -50,6 +50,29 @@ test('background sync modules have no communication facade', () => {
   )
 })
 
+test('environment transactions expose no QA-specific private transport aliases', () => {
+  assert.equal(
+    existsSync('src/background/qa-fixture'),
+    false,
+    'private browser state transactions belong to the canonical environment-transaction module'
+  )
+  assert.equal(
+    existsSync('extension/background/qa-fixture'),
+    false,
+    'compiled QA-specific private transport must not survive an atomic migration'
+  )
+
+  for (const path of [
+    'src/types/runtime/queries.ts',
+    'src/background/commands/helpers.ts',
+    'src/background/pending-queries.ts',
+    'cmd/browser-agent/internal/toolconfigure/qafixture/handler.go'
+  ]) {
+    const source = readFileSync(path, 'utf8')
+    assert.doesNotMatch(source, /qa_fixture_(?:snapshot|apply|restore)/, `${path} retains an obsolete private command`)
+  }
+})
+
 test('background runtime entrypoint is not an API compatibility facade', () => {
   const source = readFileSync('src/background.ts', 'utf8')
   assert.doesNotMatch(

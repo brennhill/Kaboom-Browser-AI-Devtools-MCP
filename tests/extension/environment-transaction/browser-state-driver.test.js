@@ -4,22 +4,22 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
-  createBrowserStateDriver,
-  unsupportedFixtureCapabilities
-} from '../../../extension/background/qa-fixture/browser-state-driver.js'
+  createEnvironmentStateDriver,
+  unsupportedEnvironmentCapabilities
+} from '../../../extension/background/environment-transaction/browser-state-driver.js'
 
 test('unsupported capabilities are reported before snapshot or mutation', async () => {
   const calls = []
-  const driver = createBrowserStateDriver(fakeDeps(calls))
+  const driver = createEnvironmentStateDriver(fakeDeps(calls))
   const fixture = { version: 1, locale: 'de-DE', network: { profile: 'offline' } }
-  assert.deepEqual(unsupportedFixtureCapabilities(fixture), ['locale', 'network'])
+  assert.deepEqual(unsupportedEnvironmentCapabilities(fixture), ['locale', 'network'])
   await assert.rejects(driver.snapshot(7, fixture), /unsupported_fixture_capabilities/)
   assert.deepEqual(calls, [])
 })
 
 test('snapshot captures exact change-coupled state before mutation', async () => {
   const calls = []
-  const driver = createBrowserStateDriver(fakeDeps(calls))
+  const driver = createEnvironmentStateDriver(fakeDeps(calls))
   const fixture = {
     version: 1,
     target: { url: 'https://example.test/checkout' },
@@ -37,7 +37,7 @@ test('snapshot captures exact change-coupled state before mutation', async () =>
 
 test('apply uses bounded navigation before page-scoped mutations', async () => {
   const calls = []
-  const driver = createBrowserStateDriver(fakeDeps(calls))
+  const driver = createEnvironmentStateDriver(fakeDeps(calls))
   const fixture = {
     version: 1,
     target: { url: 'https://example.test/checkout' },
@@ -66,14 +66,14 @@ test('apply uses bounded navigation before page-scoped mutations', async () => {
 
 test('empty viewport is a no-op', async () => {
   const calls = []
-  const driver = createBrowserStateDriver(fakeDeps(calls))
+  const driver = createEnvironmentStateDriver(fakeDeps(calls))
   await driver.apply(7, { version: 1, viewport: {} })
   assert.deepEqual(calls, [])
 })
 
 test('cross-origin page state is rejected before mutation', async () => {
   const calls = []
-  const driver = createBrowserStateDriver(fakeDeps(calls))
+  const driver = createEnvironmentStateDriver(fakeDeps(calls))
   await assert.rejects(
     driver.snapshot(7, {
       version: 1,
@@ -88,7 +88,7 @@ test('cross-origin page state is rejected before mutation', async () => {
 test('restore reverses page, cookie, viewport, and navigation state', async () => {
   const calls = []
   const deps = fakeDeps(calls)
-  const driver = createBrowserStateDriver(deps)
+  const driver = createEnvironmentStateDriver(deps)
   const fixture = {
     version: 1,
     target: { url: 'https://example.test/checkout' },
@@ -115,7 +115,7 @@ test('restore attempts every independent recovery step after a failure', async (
     calls.push(`navigate:${url}`)
     throw new Error('private navigation detail')
   }
-  const driver = createBrowserStateDriver(deps)
+  const driver = createEnvironmentStateDriver(deps)
   const fixture = {
     version: 1,
     target: { url: 'https://example.test/checkout' },

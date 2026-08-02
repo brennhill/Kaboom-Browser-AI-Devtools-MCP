@@ -33,7 +33,7 @@ func New(deps Deps) (*Handler, error) {
 	coordinator, err := fixturecontract.NewCoordinator(fixturecontract.TransactionDeps{
 		NewCorrelationID: deps.NewCorrelationID,
 		Snapshot: func(ctx context.Context, fixture fixturecontract.WireQAFixture) (json.RawMessage, error) {
-			result, err := executeFixtureCommand(ctx, deps.Execute, "qa_fixture_snapshot", fixture, "", fixture.SetupTimeoutMs)
+			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_snapshot", fixture, "", fixture.SetupTimeoutMs)
 			if err != nil {
 				return nil, err
 			}
@@ -49,7 +49,7 @@ func New(deps Deps) (*Handler, error) {
 			}{SnapshotID: snapshot.SnapshotID})
 		},
 		Apply: func(ctx context.Context, fixture fixturecontract.WireQAFixture) (fixturecontract.MutationCounts, error) {
-			result, err := executeFixtureCommand(ctx, deps.Execute, "qa_fixture_apply", fixture, "", fixture.SetupTimeoutMs)
+			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_apply", fixture, "", fixture.SetupTimeoutMs)
 			if err != nil {
 				return fixturecontract.MutationCounts{}, err
 			}
@@ -69,7 +69,7 @@ func New(deps Deps) (*Handler, error) {
 			if json.Unmarshal(snapshot, &reference) != nil || reference.SnapshotID == "" {
 				return errors.New("invalid_fixture_snapshot_reference")
 			}
-			result, err := executeFixtureCommand(ctx, deps.Execute, "qa_fixture_restore", fixture, reference.SnapshotID, fixture.SetupTimeoutMs)
+			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_restore", fixture, reference.SnapshotID, fixture.SetupTimeoutMs)
 			if err != nil {
 				return err
 			}

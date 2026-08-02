@@ -20,9 +20,9 @@ code_paths:
   - scripts/contracts/check-wire-drift.js
   - src/background/commands/helpers.ts
   - src/background/pending-queries.ts
-  - src/background/qa-fixture/browser-state-driver.ts
-  - src/background/qa-fixture/chrome-state-adapter.ts
-  - src/background/qa-fixture/commands.ts
+  - src/background/environment-transaction/browser-state-driver.ts
+  - src/background/environment-transaction/chrome-state-adapter.ts
+  - src/background/environment-transaction/commands.ts
   - src/types/runtime/queries.ts
   - src/types/wire/wire-qa-fixture.ts
 test_paths:
@@ -34,11 +34,11 @@ test_paths:
   - internal/qafixture/fixture_test.go
   - internal/qafixture/transaction_test.go
   - internal/schema/configure/schema_test.go
-  - tests/extension/qa-fixture/browser-state-driver.test.js
-  - tests/extension/qa-fixture/chrome-state-adapter.test.js
+  - tests/extension/environment-transaction/browser-state-driver.test.js
+  - tests/extension/environment-transaction/chrome-state-adapter.test.js
   - scripts/tests/browser/cat-35-qa-fixtures.sh
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-02
 ---
 
 # Environment Manipulation
@@ -76,6 +76,10 @@ last_verified_date: 2026-03-05
   extension-owned snapshot before mutation and mandates rollback after any
   partial apply failure. Only opaque snapshot and correlation identifiers cross
   process boundaries; private fixture values never appear in responses.
+- Snapshot, mutation, and recovery use one private
+  `environment_transaction_*` daemon-extension protocol. QA-specific private
+  command aliases and module paths are prohibited; the public capability is
+  exposed only through `configure(what="qa_fixture")`.
 - The fixture transaction coordinator generates its own correlation ID,
   captures an opaque private snapshot before the first mutation, and performs
   bounded rollback after any partial apply failure. Driver errors collapse to

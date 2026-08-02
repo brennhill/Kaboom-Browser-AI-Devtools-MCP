@@ -1,15 +1,15 @@
 /**
- * Purpose: Adapts Chrome tab, cookie, scripting, and window APIs to the QA fixture state driver.
+ * Purpose: Adapts Chrome tab, cookie, scripting, and window APIs to the environment transaction state driver.
  * Why: Keeps browser API details out of transaction policy and makes every I/O boundary replaceable in tests.
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
 
 import type { WireQACookie, WireQAFixture } from '../../types/wire/wire-qa-fixture.js'
 import {
-  createBrowserStateDriver,
-  type BrowserStateDriver,
-  type BrowserStateDriverDeps,
-  type FixturePageState
+  createEnvironmentStateDriver,
+  type EnvironmentStateDriver,
+  type EnvironmentStateDriverDeps,
+  type EnvironmentPageState
 } from './browser-state-driver.js'
 
 interface PageStateKeys {
@@ -26,11 +26,11 @@ const EMPTY_KEYS: PageStateKeys = {
   seed_data: []
 }
 
-export function createChromeBrowserStateDriver(): BrowserStateDriver {
-  return createBrowserStateDriver(chromeDriverDeps())
+export function createChromeEnvironmentStateDriver(): EnvironmentStateDriver {
+  return createEnvironmentStateDriver(chromeDriverDeps())
 }
 
-export function chromeDriverDeps(): BrowserStateDriverDeps {
+export function chromeDriverDeps(): EnvironmentStateDriverDeps {
   return {
     getTab: (tabId) => chrome.tabs.get(tabId),
     getWindow: (windowId) => chrome.windows.get(windowId),
@@ -51,10 +51,10 @@ export function chromeDriverDeps(): BrowserStateDriverDeps {
       await chrome.cookies.remove({ url, name })
     },
     applyPageState: async (tabId, fixture) => {
-      await executePageFunction(tabId, applyFixturePageState, fixture)
+      await executePageFunction(tabId, applyEnvironmentPageState, fixture)
     },
     restorePageState: async (tabId, state) => {
-      await executePageFunction(tabId, restoreFixturePageState, state)
+      await executePageFunction(tabId, restoreEnvironmentPageState, state)
     }
   }
 }
@@ -128,7 +128,7 @@ function readViewport(_unused: PageStateKeys): { width: number; height: number }
   return { width: window.innerWidth, height: window.innerHeight }
 }
 
-function captureNamedPageState(keys: PageStateKeys): FixturePageState {
+function captureNamedPageState(keys: PageStateKeys): EnvironmentPageState {
   const capture = (storage: Storage, names: readonly string[]): Record<string, string | null> => {
     const result: Record<string, string | null> = {}
     for (const name of names) result[name] = storage.getItem(name)
@@ -142,7 +142,7 @@ function captureNamedPageState(keys: PageStateKeys): FixturePageState {
   }
 }
 
-function applyFixturePageState(fixture: WireQAFixture): boolean {
+function applyEnvironmentPageState(fixture: WireQAFixture): boolean {
   for (const [key, value] of Object.entries(fixture.local_storage ?? {})) localStorage.setItem(key, value)
   for (const [key, value] of Object.entries(fixture.session_storage ?? {})) sessionStorage.setItem(key, value)
   for (const [key, value] of Object.entries(fixture.feature_flags ?? {}))
@@ -151,7 +151,7 @@ function applyFixturePageState(fixture: WireQAFixture): boolean {
   return true
 }
 
-function restoreFixturePageState(state: FixturePageState): boolean {
+function restoreEnvironmentPageState(state: EnvironmentPageState): boolean {
   const restore = (storage: Storage, values: Readonly<Record<string, string | null>>): void => {
     for (const [key, value] of Object.entries(values)) {
       if (value === null) storage.removeItem(key)

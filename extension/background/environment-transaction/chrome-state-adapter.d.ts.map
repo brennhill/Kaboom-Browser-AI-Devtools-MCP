@@ -1,0 +1,1 @@
+{"version":3,"file":"chrome-state-adapter.d.ts","sourceRoot":"","sources":["../../../src/background/environment-transaction/chrome-state-adapter.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAGH,OAAO,EAEL,KAAK,sBAAsB,EAC3B,KAAK,0BAA0B,EAEhC,MAAM,2BAA2B,CAAA;AAgBlC,wBAAgB,kCAAkC,IAAI,sBAAsB,CAE3E;AAED,wBAAgB,gBAAgB,IAAI,0BAA0B,CA2B7D"}

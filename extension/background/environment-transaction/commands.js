@@ -1,11 +1,11 @@
 /**
- * Purpose: Registers private extension commands for QA fixture snapshot, apply, and restore.
+ * Purpose: Registers private extension commands for environment transaction snapshot, apply, and restore.
  * Why: Keeps sensitive snapshots extension-owned while exposing only opaque IDs to the daemon coordinator.
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
 import { registerCommand } from '../commands/registry.js';
-import { createChromeBrowserStateDriver } from './chrome-state-adapter.js';
-export function createFixtureSnapshotStore(newID) {
+import { createChromeEnvironmentStateDriver } from './chrome-state-adapter.js';
+export function createEnvironmentEnvironmentSnapshotStore(newID) {
     const snapshots = new Map();
     return {
         save(snapshot) {
@@ -17,23 +17,23 @@ export function createFixtureSnapshotStore(newID) {
         delete: (id) => snapshots.delete(id)
     };
 }
-export function registerFixtureCommands(driver, snapshots) {
-    registerCommand('qa_fixture_snapshot', async (ctx) => {
+export function registerEnvironmentTransactionCommands(driver, snapshots) {
+    registerCommand('environment_transaction_snapshot', async (ctx) => {
         const fixture = requireFixture(ctx.params);
-        ctx.sendResult(await snapshotFixture(driver, snapshots, ctx.tabId, fixture));
+        ctx.sendResult(await snapshotEnvironment(driver, snapshots, ctx.tabId, fixture));
     });
-    registerCommand('qa_fixture_apply', async (ctx) => {
+    registerCommand('environment_transaction_apply', async (ctx) => {
         const fixture = requireFixture(ctx.params);
-        ctx.sendResult(await applyFixture(driver, ctx.tabId, fixture));
+        ctx.sendResult(await applyEnvironment(driver, ctx.tabId, fixture));
     });
-    registerCommand('qa_fixture_restore', async (ctx) => {
+    registerCommand('environment_transaction_restore', async (ctx) => {
         const params = ctx.params;
         const fixture = requireFixture(params);
         const snapshotID = requireSnapshotID(params);
-        ctx.sendResult(await restoreFixture(driver, snapshots, ctx.tabId, fixture, snapshotID));
+        ctx.sendResult(await restoreEnvironment(driver, snapshots, ctx.tabId, fixture, snapshotID));
     });
 }
-export async function snapshotFixture(driver, snapshots, tabId, fixture) {
+export async function snapshotEnvironment(driver, snapshots, tabId, fixture) {
     try {
         const snapshot = await driver.snapshot(tabId, fixture);
         return { success: true, snapshot_id: snapshots.save(snapshot) };
@@ -42,7 +42,7 @@ export async function snapshotFixture(driver, snapshots, tabId, fixture) {
         throw new Error('fixture_snapshot_failed');
     }
 }
-export async function applyFixture(driver, tabId, fixture) {
+export async function applyEnvironment(driver, tabId, fixture) {
     try {
         return { success: true, mutations: await driver.apply(tabId, fixture) };
     }
@@ -50,7 +50,7 @@ export async function applyFixture(driver, tabId, fixture) {
         throw new Error('fixture_apply_failed');
     }
 }
-export async function restoreFixture(driver, snapshots, tabId, fixture, snapshotID) {
+export async function restoreEnvironment(driver, snapshots, tabId, fixture, snapshotID) {
     const snapshot = snapshots.get(snapshotID);
     if (!snapshot)
         throw new Error('fixture_snapshot_not_found');
@@ -74,7 +74,7 @@ function requireSnapshotID(params) {
         throw new Error('fixture_snapshot_id_required');
     return params.snapshot_id;
 }
-const driver = createChromeBrowserStateDriver();
-const snapshots = createFixtureSnapshotStore(() => crypto.randomUUID());
-registerFixtureCommands(driver, snapshots);
+const driver = createChromeEnvironmentStateDriver();
+const snapshots = createEnvironmentEnvironmentSnapshotStore(() => crypto.randomUUID());
+registerEnvironmentTransactionCommands(driver, snapshots);
 //# sourceMappingURL=commands.js.map

@@ -1,6 +1,6 @@
 /**
- * Purpose: Captures, applies, and restores the browser state touched by a QA fixture.
- * Why: Keeps private fixture state inside one extension boundary with deterministic mutation order.
+ * Purpose: Captures, applies, and restores the browser state touched by a configured environment fixture.
+ * Why: Keeps private environment state inside one extension boundary with deterministic mutation order.
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
 const EMPTY_PAGE_STATE = {
@@ -9,7 +9,7 @@ const EMPTY_PAGE_STATE = {
     feature_flags: {},
     seed_data: {}
 };
-export function unsupportedFixtureCapabilities(fixture) {
+export function unsupportedEnvironmentCapabilities(fixture) {
     const unsupported = [];
     if (fixture.locale)
         unsupported.push('locale');
@@ -19,7 +19,7 @@ export function unsupportedFixtureCapabilities(fixture) {
         unsupported.push('network');
     return unsupported;
 }
-export function createBrowserStateDriver(deps) {
+export function createEnvironmentStateDriver(deps) {
     return {
         snapshot: async (tabId, fixture) => {
             assertStaticCapabilities(fixture);
@@ -99,7 +99,7 @@ export function createBrowserStateDriver(deps) {
     };
 }
 function assertStaticCapabilities(fixture) {
-    if (unsupportedFixtureCapabilities(fixture).length > 0)
+    if (unsupportedEnvironmentCapabilities(fixture).length > 0)
         throw new Error('unsupported_fixture_capabilities');
 }
 function requireHTTPURL(value) {

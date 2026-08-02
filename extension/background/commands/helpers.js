@@ -209,9 +209,9 @@ const TARGETED_QUERY_TYPES = new Set([
     'page_structure',
     'navigation',
     'feature_gates',
-    'qa_fixture_snapshot',
-    'qa_fixture_apply',
-    'qa_fixture_restore'
+    'environment_transaction_snapshot',
+    'environment_transaction_apply',
+    'environment_transaction_restore'
 ]);
 export function requiresTargetTab(queryType) {
     return TARGETED_QUERY_TYPES.has(queryType);

@@ -474,7 +474,7 @@ func TestNewQueryDispatcher_WaitForResult_Timeout(t *testing.T) {
 func TestQueryDispatcherWaitForResultContextStopsOnCancellation(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
-	id, err := qd.CreatePendingQuery(PendingQuery{Type: "qa_fixture_snapshot"})
+	id, err := qd.CreatePendingQuery(PendingQuery{Type: "environment_transaction_snapshot"})
 	if err != nil {
 		t.Fatal(err)
 	}

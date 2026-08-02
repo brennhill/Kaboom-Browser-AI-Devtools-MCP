@@ -1,27 +1,27 @@
 /**
- * Purpose: Captures, applies, and restores the browser state touched by a QA fixture.
- * Why: Keeps private fixture state inside one extension boundary with deterministic mutation order.
+ * Purpose: Captures, applies, and restores the browser state touched by a configured environment fixture.
+ * Why: Keeps private environment state inside one extension boundary with deterministic mutation order.
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
 
 import type { WireQACookie, WireQAFixture } from '../../types/wire/wire-qa-fixture.js'
 
-export interface FixturePageState {
+export interface EnvironmentPageState {
   readonly local_storage: Readonly<Record<string, string | null>>
   readonly session_storage: Readonly<Record<string, string | null>>
   readonly feature_flags: Readonly<Record<string, string | null>>
   readonly seed_data: Readonly<Record<string, string | null>>
 }
 
-export interface FixtureSnapshot {
+export interface EnvironmentSnapshot {
   readonly tab_url: string
   readonly window_id: number
   readonly window_bounds?: { readonly width: number; readonly height: number }
-  readonly page_state: FixturePageState
+  readonly page_state: EnvironmentPageState
   readonly cookies: readonly WireQACookie[]
 }
 
-export interface FixtureMutationCounts {
+export interface EnvironmentMutationCounts {
   readonly cookies: number
   readonly local_storage: number
   readonly session_storage: number
@@ -39,10 +39,10 @@ interface WindowBounds {
   readonly height?: number
 }
 
-export interface BrowserStateDriverDeps {
+export interface EnvironmentStateDriverDeps {
   readonly getTab: (tabId: number) => Promise<TabState>
   readonly getWindow: (windowId: number) => Promise<WindowBounds>
-  readonly capturePageState: (tabId: number, fixture: WireQAFixture) => Promise<FixturePageState>
+  readonly capturePageState: (tabId: number, fixture: WireQAFixture) => Promise<EnvironmentPageState>
   readonly getCookie: (url: string, name: string) => Promise<WireQACookie | null>
   readonly navigate: (tabId: number, url: string, timeoutMs: number) => Promise<void>
   readonly resizeViewport: (tabId: number, windowId: number, width: number, height: number) => Promise<void>
@@ -50,23 +50,23 @@ export interface BrowserStateDriverDeps {
   readonly setCookie: (cookie: WireQACookie, url: string) => Promise<void>
   readonly removeCookie: (url: string, name: string) => Promise<void>
   readonly applyPageState: (tabId: number, fixture: WireQAFixture) => Promise<void>
-  readonly restorePageState: (tabId: number, state: FixturePageState) => Promise<void>
+  readonly restorePageState: (tabId: number, state: EnvironmentPageState) => Promise<void>
 }
 
-export interface BrowserStateDriver {
-  readonly snapshot: (tabId: number, fixture: WireQAFixture) => Promise<FixtureSnapshot>
-  readonly apply: (tabId: number, fixture: WireQAFixture) => Promise<FixtureMutationCounts>
-  readonly restore: (tabId: number, fixture: WireQAFixture, snapshot: FixtureSnapshot) => Promise<void>
+export interface EnvironmentStateDriver {
+  readonly snapshot: (tabId: number, fixture: WireQAFixture) => Promise<EnvironmentSnapshot>
+  readonly apply: (tabId: number, fixture: WireQAFixture) => Promise<EnvironmentMutationCounts>
+  readonly restore: (tabId: number, fixture: WireQAFixture, snapshot: EnvironmentSnapshot) => Promise<void>
 }
 
-const EMPTY_PAGE_STATE: FixturePageState = {
+const EMPTY_PAGE_STATE: EnvironmentPageState = {
   local_storage: {},
   session_storage: {},
   feature_flags: {},
   seed_data: {}
 }
 
-export function unsupportedFixtureCapabilities(fixture: WireQAFixture): string[] {
+export function unsupportedEnvironmentCapabilities(fixture: WireQAFixture): string[] {
   const unsupported: string[] = []
   if (fixture.locale) unsupported.push('locale')
   if (fixture.permissions && fixture.permissions.length > 0) unsupported.push('permissions')
@@ -74,7 +74,7 @@ export function unsupportedFixtureCapabilities(fixture: WireQAFixture): string[]
   return unsupported
 }
 
-export function createBrowserStateDriver(deps: BrowserStateDriverDeps): BrowserStateDriver {
+export function createEnvironmentStateDriver(deps: EnvironmentStateDriverDeps): EnvironmentStateDriver {
   return {
     snapshot: async (tabId, fixture) => {
       assertStaticCapabilities(fixture)
@@ -83,7 +83,7 @@ export function createBrowserStateDriver(deps: BrowserStateDriverDeps): BrowserS
       const targetUrl = fixture.target?.url ?? tabUrl
       assertSameOriginForPageState(tabUrl, targetUrl, fixture)
 
-      let windowBounds: FixtureSnapshot['window_bounds']
+      let windowBounds: EnvironmentSnapshot['window_bounds']
       if (hasViewport(fixture)) {
         const current = await deps.getWindow(tab.windowId)
         if (current.width === undefined || current.height === undefined) {
@@ -155,7 +155,7 @@ export function createBrowserStateDriver(deps: BrowserStateDriverDeps): BrowserS
 }
 
 function assertStaticCapabilities(fixture: WireQAFixture): void {
-  if (unsupportedFixtureCapabilities(fixture).length > 0) throw new Error('unsupported_fixture_capabilities')
+  if (unsupportedEnvironmentCapabilities(fixture).length > 0) throw new Error('unsupported_fixture_capabilities')
 }
 
 function requireHTTPURL(value: string | undefined): string {
@@ -183,7 +183,7 @@ function hasViewport(fixture: WireQAFixture): boolean {
   return (fixture.viewport?.width ?? 0) > 0 && (fixture.viewport?.height ?? 0) > 0
 }
 
-function mutationCounts(fixture: WireQAFixture): FixtureMutationCounts {
+function mutationCounts(fixture: WireQAFixture): EnvironmentMutationCounts {
   return {
     cookies: fixture.cookies?.length ?? 0,
     local_storage: Object.keys(fixture.local_storage ?? {}).length,
