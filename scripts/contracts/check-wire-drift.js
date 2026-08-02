@@ -53,6 +53,17 @@ const WIRE_PAIRS = [
       { go: 'WireUserTimingEntry', ts: 'WireUserTimingEntry' },
       { go: 'WireUserTimingData', ts: 'WireUserTimingData' }
     ]
+  },
+  {
+    go: 'internal/qafixture/wire_fixture.go',
+    ts: 'src/types/wire/wire-qa-fixture.ts',
+    types: [
+      { go: 'WireQAFixture', ts: 'WireQAFixture' },
+      { go: 'WireQATarget', ts: 'WireQATarget' },
+      { go: 'WireQAViewport', ts: 'WireQAViewport' },
+      { go: 'WireQANetwork', ts: 'WireQANetwork' },
+      { go: 'WireQACookie', ts: 'WireQACookie' }
+    ]
   }
 ]
 

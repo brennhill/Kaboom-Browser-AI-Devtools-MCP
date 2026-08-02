@@ -12,10 +12,13 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolinteract/interact_storage.go
   - cmd/browser-agent/tools_configure.go
-  - internal/qafixture/fixture.go
+  - internal/qafixture/wire_fixture.go
   - internal/qafixture/transaction.go
   - internal/schema/configure/properties_fixture.go
   - internal/tools/configure/capabilities/modespecs_configure.go
+  - scripts/build/generate-wire-types.js
+  - scripts/contracts/check-wire-drift.js
+  - src/types/wire/wire-qa-fixture.ts
 test_paths:
   - cmd/browser-agent/golden_test.go
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json

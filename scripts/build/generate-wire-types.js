@@ -26,7 +26,8 @@ const WIRE_PAIRS = [
   { go: 'internal/types/wire_enhanced_action.go', ts: 'src/types/wire/wire-enhanced-action.ts' },
   { go: 'internal/types/wire_network.go', ts: 'src/types/wire/wire-network.ts' },
   { go: 'internal/types/wire_websocket_event.go', ts: 'src/types/wire/wire-websocket-event.ts' },
-  { go: 'internal/performance/wire_performance.go', ts: 'src/types/wire/wire-performance-snapshot.ts' }
+  { go: 'internal/performance/wire_performance.go', ts: 'src/types/wire/wire-performance-snapshot.ts' },
+  { go: 'internal/qafixture/wire_fixture.go', ts: 'src/types/wire/wire-qa-fixture.ts' }
 ]
 
 /**
@@ -35,7 +36,9 @@ const WIRE_PAIRS = [
  */
 const TYPE_OVERRIDES = {
   // direction is a string in Go but a union type in TS
-  'WireWebSocketEvent.direction': "'incoming' | 'outgoing'"
+  'WireWebSocketEvent.direction': "'incoming' | 'outgoing'",
+  // json.RawMessage values are arbitrary valid JSON on the TypeScript side.
+  'WireQAFixture.seed_data': 'Readonly<Record<string, unknown>>'
 }
 
 /**
@@ -68,6 +71,10 @@ const FILE_DESCRIPTIONS = {
   'wire_performance.go': {
     overview: 'Wire types for performance snapshots',
     description: 'Canonical TypeScript definitions for the PerformanceSnapshot HTTP payload.'
+  },
+  'wire_fixture.go': {
+    overview: 'Wire types for deterministic QA fixtures',
+    description: 'Canonical TypeScript definitions for the versioned QA fixture command payload.'
   }
 }
 

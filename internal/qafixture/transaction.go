@@ -39,8 +39,8 @@ type TransactionDeps struct {
 	// Snapshot, Apply, and Restore must honor context cancellation. This keeps
 	// setup bounded without allowing a timed-out mutation to race its rollback.
 	NewCorrelationID func() string
-	Snapshot         func(context.Context, Fixture) (json.RawMessage, error)
-	Apply            func(context.Context, Fixture) (MutationCounts, error)
+	Snapshot         func(context.Context, WireQAFixture) (json.RawMessage, error)
+	Apply            func(context.Context, WireQAFixture) (MutationCounts, error)
 	Restore          func(context.Context, json.RawMessage) error
 }
 
@@ -62,7 +62,7 @@ func NewCoordinator(deps TransactionDeps) (*Coordinator, error) {
 // values cannot escape through MCP responses or diagnostics.
 func (coordinator *Coordinator) Apply(
 	ctx context.Context,
-	fixture Fixture,
+	fixture WireQAFixture,
 ) (TransactionResult, error) {
 	if !coordinator.acquire() {
 		return transactionFailure(StatusBusy, "", false, MutationCounts{})

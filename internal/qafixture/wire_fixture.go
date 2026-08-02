@@ -1,4 +1,4 @@
-// fixture.go — Defines and validates versioned browser QA environment fixtures.
+// wire_fixture.go — Defines and validates the versioned browser QA fixture wire contract.
 
 package qafixture
 
@@ -23,14 +23,14 @@ const (
 var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)
 var cookieNamePattern = regexp.MustCompile("^[!#$%&'*+\\-.^_`|~0-9A-Za-z]+$")
 
-type Fixture struct {
+type WireQAFixture struct {
 	Version        int                        `json:"version"`
-	Target         Target                     `json:"target,omitempty"`
-	Viewport       Viewport                   `json:"viewport,omitempty"`
+	Target         WireQATarget               `json:"target,omitempty"`
+	Viewport       WireQAViewport             `json:"viewport,omitempty"`
 	Locale         string                     `json:"locale,omitempty"`
 	Permissions    []string                   `json:"permissions,omitempty"`
-	Network        Network                    `json:"network,omitempty"`
-	Cookies        []Cookie                   `json:"cookies,omitempty"`
+	Network        WireQANetwork              `json:"network,omitempty"`
+	Cookies        []WireQACookie             `json:"cookies,omitempty"`
 	LocalStorage   map[string]string          `json:"local_storage,omitempty"`
 	SessionStorage map[string]string          `json:"session_storage,omitempty"`
 	FeatureFlags   map[string]bool            `json:"feature_flags,omitempty"`
@@ -40,20 +40,20 @@ type Fixture struct {
 	SetupTimeoutMs int                        `json:"setup_timeout_ms,omitempty"`
 }
 
-type Target struct {
+type WireQATarget struct {
 	URL string `json:"url,omitempty"`
 }
 
-type Viewport struct {
+type WireQAViewport struct {
 	Width  int `json:"width,omitempty"`
 	Height int `json:"height,omitempty"`
 }
 
-type Network struct {
+type WireQANetwork struct {
 	Profile string `json:"profile,omitempty"`
 }
 
-type Cookie struct {
+type WireQACookie struct {
 	Name     string `json:"name"`
 	Value    string `json:"value"`
 	Domain   string `json:"domain,omitempty"`
@@ -74,21 +74,21 @@ var supportedNetworkProfiles = map[string]struct{}{
 
 // Parse decodes one strict fixture document and validates every bound before
 // browser state can be read or mutated.
-func Parse(raw json.RawMessage) (Fixture, error) {
-	var fixture Fixture
+func Parse(raw json.RawMessage) (WireQAFixture, error) {
+	var fixture WireQAFixture
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&fixture); err != nil {
-		return Fixture{}, fmt.Errorf("invalid fixture JSON: %w", err)
+		return WireQAFixture{}, fmt.Errorf("invalid fixture JSON: %w", err)
 	}
 	if err := requireJSONEnd(decoder); err != nil {
-		return Fixture{}, err
+		return WireQAFixture{}, err
 	}
 	if fixture.SetupTimeoutMs == 0 {
 		fixture.SetupTimeoutMs = DefaultSetupTimeoutMs
 	}
 	if err := fixture.validate(); err != nil {
-		return Fixture{}, err
+		return WireQAFixture{}, err
 	}
 	return fixture, nil
 }
@@ -101,7 +101,7 @@ func requireJSONEnd(decoder *json.Decoder) error {
 	return nil
 }
 
-func (fixture Fixture) validate() error {
+func (fixture WireQAFixture) validate() error {
 	if fixture.Version != CurrentVersion {
 		return fmt.Errorf("unsupported fixture version %d; use version %d", fixture.Version, CurrentVersion)
 	}
@@ -158,7 +158,7 @@ func (fixture Fixture) validate() error {
 	return nil
 }
 
-func validateStateCardinality(fixture Fixture) error {
+func validateStateCardinality(fixture WireQAFixture) error {
 	counts := []struct {
 		name  string
 		count int
@@ -176,7 +176,7 @@ func validateStateCardinality(fixture Fixture) error {
 	return nil
 }
 
-func validateTarget(target Target) error {
+func validateTarget(target WireQATarget) error {
 	if target.URL == "" {
 		return nil
 	}
@@ -187,7 +187,7 @@ func validateTarget(target Target) error {
 	return nil
 }
 
-func validateViewport(viewport Viewport) error {
+func validateViewport(viewport WireQAViewport) error {
 	if viewport.Width == 0 && viewport.Height == 0 {
 		return nil
 	}
@@ -200,9 +200,9 @@ func validateViewport(viewport Viewport) error {
 	return nil
 }
 
-func stateSize(fixture Fixture) int {
+func stateSize(fixture WireQAFixture) int {
 	data, err := json.Marshal(struct {
-		Cookies        []Cookie                   `json:"cookies"`
+		Cookies        []WireQACookie             `json:"cookies"`
 		LocalStorage   map[string]string          `json:"local_storage"`
 		SessionStorage map[string]string          `json:"session_storage"`
 		FeatureFlags   map[string]bool            `json:"feature_flags"`
