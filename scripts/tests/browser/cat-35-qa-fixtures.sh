@@ -60,9 +60,8 @@ begin_test "35.2" "Snapshot failure is redacted and mutation-free" \
     "The transaction must stop at snapshot_failed without exposing the synthetic secret"
 run_test_35_2() {
     local response verify
-    execute_script 'window.__kaboomGetItem=Storage.prototype.getItem; Storage.prototype.getItem=function(key){if(key==="kaboom_snapshot_fault")throw new Error("private-fixture-secret");return window.__kaboomGetItem.call(this,key)}; localStorage.setItem("kaboom_snapshot_fault","old"); "armed"' >/dev/null
-    response="$(fixture_call '{"version":1,"local_storage":{"kaboom_snapshot_fault":"private-fixture-secret"}}')"
-    execute_script 'Storage.prototype.getItem=window.__kaboomGetItem; "disarmed"' >/dev/null
+    execute_script 'localStorage.setItem("kaboom_snapshot_fault","old"); "prepared"' >/dev/null
+    response="$(fixture_call '{"version":1,"target":{"url":"https://example.com/"},"local_storage":{"kaboom_snapshot_fault":"private-fixture-secret"}}')"
     verify="$(execute_script 'localStorage.getItem("kaboom_snapshot_fault")')"
     execute_script 'localStorage.removeItem("kaboom_snapshot_fault"); "restored"' >/dev/null
     if ! extract_content_text "$response" | grep -q 'snapshot_failed'; then
@@ -82,16 +81,15 @@ begin_test "35.3" "Partial apply rolls back exact state" \
     "Rollback must restore every captured value and redact the driver cause"
 run_test_35_3() {
     local response verify
-    execute_script 'localStorage.setItem("a_kaboom_partial","old-a"); localStorage.setItem("z_kaboom_fault","old-z"); window.__kaboomSetItem=Storage.prototype.setItem; Storage.prototype.setItem=function(key,value){if(key==="z_kaboom_fault"&&value==="private-fixture-secret")throw new Error("private-fixture-secret");return window.__kaboomSetItem.call(this,key,value)}; "armed"' >/dev/null
-    response="$(fixture_call '{"version":1,"local_storage":{"a_kaboom_partial":"new-a","z_kaboom_fault":"private-fixture-secret"}}')"
-    execute_script 'Storage.prototype.setItem=window.__kaboomSetItem; "disarmed"' >/dev/null
-    verify="$(execute_script '({a:localStorage.getItem("a_kaboom_partial"),z:localStorage.getItem("z_kaboom_fault")})')"
-    execute_script 'localStorage.removeItem("a_kaboom_partial"); localStorage.removeItem("z_kaboom_fault"); "restored"' >/dev/null
+    execute_script 'document.cookie="kaboom_partial=old; path=/"; "prepared"' >/dev/null
+    response="$(fixture_call '{"version":1,"cookies":[{"name":"kaboom_partial","value":"new","path":"/"},{"name":"kaboom_fault","value":"private-fixture-secret","domain":"definitely.invalid","path":"/"}]}')"
+    verify="$(execute_script 'document.cookie')"
+    execute_script 'document.cookie="kaboom_partial=; Max-Age=0; path=/"; document.cookie="kaboom_fault=; Max-Age=0; path=/"; "restored"' >/dev/null
     if ! extract_content_text "$response" | grep -q 'apply_failed_rolled_back'; then
         fail "Partial failure did not report rollback: $(truncate "$(extract_content_text "$response")")"
     elif printf '%s' "$response" | grep -q 'private-fixture-secret'; then
         fail "Partial apply failure leaked fixture data"
-    elif ! extract_content_text "$verify" | grep -q 'old-a' || ! extract_content_text "$verify" | grep -q 'old-z'; then
+    elif ! extract_content_text "$verify" | grep -q 'kaboom_partial=old' || extract_content_text "$verify" | grep -q 'kaboom_fault'; then
         fail "Rollback did not restore exact prior state"
     else
         pass "Partial apply rolled back exact state without leaking its cause"

@@ -87,6 +87,7 @@ last_verified_date: 2026-03-05
   including absent keys, and restored through independent best-effort recovery
   steps. Private snapshots remain extension-owned; only an opaque snapshot ID
   crosses the daemon command boundary.
-- Connected category 35 applies synthetic state to the disposable UAT tab and
-  injects storage read/write failures to prove snapshot rejection, redaction,
-  exact rollback, and explicit cleanup through the installed extension.
+- Connected category 35 applies synthetic state to the disposable UAT tab, then
+  uses cross-origin snapshot rejection and a real invalid-domain cookie failure
+  to prove redaction, exact partial-apply rollback, and explicit cleanup through
+  the installed extension.
