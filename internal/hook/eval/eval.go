@@ -57,6 +57,15 @@ type Result struct {
 	Failures  []string
 }
 
+type evaluationMode bool
+
+const (
+	contractEvaluation    evaluationMode = false
+	performanceEvaluation evaluationMode = true
+)
+
+type hookRunner func(string, hook.Input, string, string) string
+
 // fixtureDirs are the subdirectories of testdata/ that contain eval fixtures.
 // Hook infrastructure dirs test specific hook behaviors.
 // Principle dirs (u01-u10) test the 10 universal principles across
@@ -114,9 +123,20 @@ func LoadFixtures(dir string) ([]*Fixture, error) {
 	return fixtures, nil
 }
 
-// RunFixture executes a single fixture and validates the result.
-// repoRoot is the absolute path to the repository root (used when project_root is "REPO_ROOT").
-func RunFixture(fix *Fixture, repoRoot string) *Result {
+// runContractFixture validates deterministic output contracts without treating
+// scheduler contention as hook latency. Production SLOs belong to the serial
+// performance evaluation below.
+func runContractFixture(fix *Fixture, repoRoot string) *Result {
+	return runFixture(fix, repoRoot, contractEvaluation, runHook)
+}
+
+// runPerformanceFixture validates the real hook implementation and its
+// wall-clock production latency budget.
+func runPerformanceFixture(fix *Fixture, repoRoot string) *Result {
+	return runFixture(fix, repoRoot, performanceEvaluation, runHook)
+}
+
+func runFixture(fix *Fixture, repoRoot string, mode evaluationMode, runner hookRunner) *Result {
 	result := &Result{Fixture: fix}
 
 	// Resolve project root.
@@ -159,14 +179,14 @@ func RunFixture(fix *Fixture, repoRoot string) *Result {
 
 	// Run the hook and measure latency.
 	start := time.Now()
-	output := runHook(fix.Hook, input, projectRoot, sessionDir)
+	output := runner(fix.Hook, input, projectRoot, sessionDir)
 	elapsed := time.Since(start)
 
 	result.Output = output
 	result.LatencyMs = elapsed.Milliseconds()
 
 	// Validate.
-	result.Failures = validate(fix.Expect, output, elapsed)
+	result.Failures = validate(fix.Expect, output, elapsed, mode == performanceEvaluation)
 	result.Passed = len(result.Failures) == 0
 
 	return result
@@ -249,7 +269,7 @@ func runHook(hookName string, input hook.Input, projectRoot, sessionDir string) 
 }
 
 // validate checks expectations against actual output.
-func validate(expect Expectation, output string, elapsed time.Duration) []string {
+func validate(expect Expectation, output string, elapsed time.Duration, enforceLatency bool) []string {
 	var failures []string
 
 	if expect.HasOutput && output == "" {
@@ -280,7 +300,7 @@ func validate(expect Expectation, output string, elapsed time.Duration) []string
 
 	// Latency budgets measure real performance; the race detector inflates wall time
 	// several-fold and makes the measurement meaningless, so skip the budget under -race.
-	if !raceDetectorActive && expect.MaxLatencyMs > 0 && elapsed.Milliseconds() > int64(expect.MaxLatencyMs) {
+	if enforceLatency && !raceDetectorActive && expect.MaxLatencyMs > 0 && elapsed.Milliseconds() > int64(expect.MaxLatencyMs) {
 		failures = append(failures, fmt.Sprintf("latency %dms exceeds budget %dms", elapsed.Milliseconds(), expect.MaxLatencyMs))
 	}
 

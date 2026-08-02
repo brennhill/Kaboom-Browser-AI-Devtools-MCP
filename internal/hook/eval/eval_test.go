@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/hook"
 )
 
 // findRepoRoot walks up from dir looking for go.mod.
@@ -48,7 +51,7 @@ func TestEval_AllFixtures(t *testing.T) {
 				t.Skip("aspirational fixture — not yet implemented")
 			}
 			t.Parallel()
-			result := RunFixture(fix, repoRoot)
+			result := runContractFixture(fix, repoRoot)
 			if !result.Passed {
 				for _, f := range result.Failures {
 					t.Error(f)
@@ -81,7 +84,7 @@ func TestEval_Report(t *testing.T) {
 		if strings.Contains(fix.Description, "ASPIRATIONAL") || strings.Contains(fix.FixturePath, "ASPIRATIONAL") {
 			continue
 		}
-		results = append(results, RunFixture(fix, repoRoot))
+		results = append(results, runContractFixture(fix, repoRoot))
 	}
 
 	report := Aggregate(results)
@@ -90,6 +93,63 @@ func TestEval_Report(t *testing.T) {
 	if report.Failed > 0 {
 		t.Errorf("%d/%d fixtures failed", report.Failed, report.Total)
 	}
+}
+
+func TestEval_ProductionLatency(t *testing.T) {
+	fixtures, err := LoadFixtures("testdata")
+	if err != nil {
+		t.Fatalf("LoadFixtures: %v", err)
+	}
+	repoRoot := findRepoRoot(mustAbs(t, "testdata"))
+	if repoRoot == "" {
+		t.Fatal("cannot find repo root (go.mod)")
+	}
+
+	for _, fix := range fixtures {
+		if fix.Expect.MaxLatencyMs == 0 || strings.Contains(fix.Description, "ASPIRATIONAL") || strings.Contains(fix.FixturePath, "ASPIRATIONAL") {
+			continue
+		}
+		result := runPerformanceFixture(fix, repoRoot)
+		for _, failure := range result.Failures {
+			if strings.HasPrefix(failure, "latency ") {
+				t.Errorf("%s/%s: %s", fix.Hook, fix.Description, failure)
+			}
+		}
+	}
+}
+
+func TestEval_ContractIgnoresSchedulerDelay(t *testing.T) {
+	fix := &Fixture{Expect: Expectation{MaxLatencyMs: 1}}
+	result := runFixture(fix, "", contractEvaluation, func(string, hook.Input, string, string) string {
+		time.Sleep(5 * time.Millisecond)
+		return ""
+	})
+	if !result.Passed {
+		t.Fatalf("contract evaluation failed on scheduler delay: %v", result.Failures)
+	}
+}
+
+func TestEval_PerformanceEnforcesLatencyBudget(t *testing.T) {
+	if raceDetectorActive {
+		t.Skip("race instrumentation intentionally disables wall-clock SLO assertions")
+	}
+	fix := &Fixture{Expect: Expectation{MaxLatencyMs: 1}}
+	result := runFixture(fix, "", performanceEvaluation, func(string, hook.Input, string, string) string {
+		time.Sleep(5 * time.Millisecond)
+		return ""
+	})
+	if result.Passed || len(result.Failures) != 1 || !strings.HasPrefix(result.Failures[0], "latency ") {
+		t.Fatalf("performance evaluation failures = %v, want latency failure", result.Failures)
+	}
+}
+
+func mustAbs(t *testing.T, path string) string {
+	t.Helper()
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		t.Fatalf("absolute path: %v", err)
+	}
+	return abs
 }
 
 func TestMaterializeOversizedFixtureRemainsValidGoWhileVisible(t *testing.T) {
