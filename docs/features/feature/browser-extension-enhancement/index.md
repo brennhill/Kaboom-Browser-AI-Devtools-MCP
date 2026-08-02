@@ -88,6 +88,7 @@ test_paths:
   - tests/extension/sync/sync-manager.test.js
   - tests/extension/sync/background-batching.test.js
   - tests/extension/reliability/server.test.js
+  - tests/extension/reliability/diagnostic-log-queue.test.js
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/content/message-handlers.test.js
   - tests/extension/content/message-handlers-edge.test.js
@@ -122,6 +123,11 @@ last_verified_date: 2026-03-28
   persisted value. Diagnostics have an explicit active/recovered lifecycle,
   retain bounded transition history and occurrence counts, and clear their
   warning state only after the owning loader verifies fresh valid state.
+- Extension diagnostics persist as a bounded, redacted session ring and flush
+  through the existing local sync transport after daemon recovery. System
+  Doctor summarizes the latest worker/reconnect sequence and reports dropped
+  entries without exposing private diagnostic values or sending them to usage
+  telemetry.
 - Async failures are never discarded with empty promise catches. Unexpected
   failures leave redacted evidence; intentionally unlogged absence/cancellation
   carries an adjacent `EXPECTED_ABSENCE:` rationale explaining both why the

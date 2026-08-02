@@ -456,6 +456,11 @@ func TestBuildUsageSummaryPayload_Structure(t *testing.T) {
 	if _, exists := payload["session_depth"]; exists {
 		t.Error("session_depth should not be in usage_summary payload — not in Counterscale contract")
 	}
+	for _, localOnly := range []string{"extension_logs", "diagnostic_logs", "diagnostic_lifecycle", "doctor"} {
+		if _, exists := payload[localOnly]; exists {
+			t.Errorf("local extension diagnostics leaked into usage telemetry field %q", localOnly)
+		}
+	}
 }
 
 // #6: Semaphore cleanup safety — drainSem prevents leaked slots from poisoning subsequent tests.

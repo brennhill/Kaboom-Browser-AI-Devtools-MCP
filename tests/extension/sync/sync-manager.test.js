@@ -111,6 +111,7 @@ function createMockDeps(overrides = {}) {
     getAiWebPilotEnabledCache: mock.fn(() => false),
     getExtensionLogQueue: mock.fn(() => []),
     acknowledgeExtensionLogQueue: mock.fn(),
+    recordDiagnosticLifecycle: mock.fn(),
     applyCaptureOverrides: mock.fn(),
     debugLog: mock.fn(),
     ...overrides
@@ -191,6 +192,12 @@ describe('startSyncClient', () => {
       extensionConnected: false
     })
     assert.strictEqual(deps.getConnectionStatus().connected, true)
+    const transition = deps.debugLog.mock.calls.find((call) => call.arguments[1] === 'Sync disconnected')
+    assert.strictEqual(transition.arguments[2].correlation_id, 'test-session-1')
+    assert.deepStrictEqual(deps.recordDiagnosticLifecycle.mock.calls[0].arguments, [
+      'sync_disconnected',
+      'test-session-1'
+    ])
   })
 
   test('is idempotent — second call is a no-op', async () => {

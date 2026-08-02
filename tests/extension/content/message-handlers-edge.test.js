@@ -179,6 +179,35 @@ describe('log message handling', () => {
   })
 })
 
+describe('message handler diagnostics', () => {
+  test('logs and responds when a feature owner throws unexpectedly', () => {
+    const addListenerFn = mock.fn()
+    const originalOnMessage = chrome.runtime.onMessage
+    chrome.runtime.onMessage = { addListener: addListenerFn }
+    const debugLog = mock.fn()
+    installMessageListener({
+      debugLog,
+      handlers: [{ feature: 'broken', handle: () => { throw new Error('private detail') } }]
+    })
+    chrome.runtime.onMessage = originalOnMessage
+    const handler = addListenerFn.mock.calls[0].arguments[0]
+    const sendResponse = mock.fn()
+
+    const result = handler({ type: 'get_status' }, extensionSender, sendResponse)
+
+    assert.strictEqual(result, false)
+    assert.deepStrictEqual(sendResponse.mock.calls[0].arguments[0], {
+      success: false,
+      error: 'message_handler_failed'
+    })
+    const diagnostic = debugLog.mock.calls.find((call) => call.arguments[1] === 'Runtime message handler failed')
+    assert.ok(diagnostic)
+    assert.match(diagnostic.arguments[2].correlation_id, /^runtime_message_/)
+    assert.strictEqual(diagnostic.arguments[2].message_type, 'get_status')
+    assert.strictEqual(diagnostic.arguments[2].error, 'private detail')
+  })
+})
+
 // ============================================
 // getAiWebPilotEnabled
 // ============================================

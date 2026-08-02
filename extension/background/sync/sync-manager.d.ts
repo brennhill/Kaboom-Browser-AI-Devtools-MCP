@@ -17,6 +17,7 @@ export interface SyncManagerDeps {
     getAiWebPilotEnabledCache: () => boolean;
     getExtensionLogQueue: () => ExtensionLogQueueEntry[];
     acknowledgeExtensionLogQueue: (sentCount: number) => void;
+    recordDiagnosticLifecycle: (event: string, correlationId: string) => void;
     applyCaptureOverrides: (overrides: Record<string, string>) => void;
     debugLog: DebugLogFn;
 }

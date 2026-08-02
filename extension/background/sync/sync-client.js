@@ -260,7 +260,11 @@ export class SyncClient {
                 restoreUIFeatures(features);
             }
             const retryMs = this.retryDelayMs();
-            this.log('Sync failed, retrying', { error: errorMessage(err), retryMs });
+            this.log('Sync failed, retrying', {
+                correlation_id: this.extSessionId,
+                error: errorMessage(err),
+                retry_ms: retryMs
+            });
             this.scheduleNextSync(retryMs);
         }
     }

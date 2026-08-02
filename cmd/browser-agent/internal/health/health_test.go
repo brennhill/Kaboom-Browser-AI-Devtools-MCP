@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -46,6 +47,31 @@ func TestRunDoctorChecksIgnoresRecoveryWithoutPriorFailure(t *testing.T) {
 		if check.Name == "popup_state" {
 			t.Fatalf("recovery-only transition created historical failure: %#v", check)
 		}
+	}
+}
+
+func TestRunDoctorChecksIncludesExtensionDiagnosticLifecycle(t *testing.T) {
+	c := newTestCapture(t)
+	c.ExtensionLogs().Add([]types.ExtensionLog{{
+		Timestamp: time.Date(2026, 8, 2, 8, 0, 0, 0, time.UTC),
+		Level:     "debug", Category: "diagnostic_lifecycle", Message: "Extension worker started",
+		Data: json.RawMessage(`{"event":"worker_started","correlation_id":"ext-1"}`),
+	}, {
+		Timestamp: time.Date(2026, 8, 2, 8, 1, 0, 0, time.UTC),
+		Level:     "warn", Category: "diagnostic_queue", Message: "Diagnostic queue saturated",
+		Data: json.RawMessage(`{"dropped_count":7,"capacity":200}`),
+	}, {
+		Timestamp: time.Date(2026, 8, 2, 8, 2, 0, 0, time.UTC),
+		Level:     "debug", Category: "diagnostic_lifecycle", Message: "Extension sync connected",
+		Data: json.RawMessage(`{"event":"sync_connected","correlation_id":"ext-1","lifecycle_sequence":["worker_suspend","worker_started","sync_connected"]}`),
+	}})
+
+	check := findCheck(t, RunDoctorChecks(c), "extension_diagnostics")
+	if check.Status != "warn" {
+		t.Fatalf("extension diagnostics status = %q, want warn", check.Status)
+	}
+	if !strings.Contains(check.Detail, "worker_suspend -> worker_started -> sync_connected") || !strings.Contains(check.Detail, "7 dropped") {
+		t.Fatalf("extension diagnostics detail = %q", check.Detail)
 	}
 }
 

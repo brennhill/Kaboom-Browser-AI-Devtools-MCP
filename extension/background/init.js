@@ -17,11 +17,11 @@ import { sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatche
 import { getServerUrl, isDebugMode, isScreenshotOnError, getCurrentLogLevel, setServerUrl, setCurrentLogLevel, setScreenshotOnError } from './runtime-state/settings-state.js';
 import { getConnectionStatus } from './runtime-state/connection-state.js';
 import { isAiWebPilotEnabled, isAiWebPilotCacheInitialized, getPilotInitCallback, setAiWebPilotEnabledCache, setAiWebPilotCacheInitialized, setPilotInitCallback } from './runtime-state/pilot-state.js';
-import { markInitComplete } from './runtime-state/startup-state.js';
+import { EXTENSION_SESSION_ID, markInitComplete } from './runtime-state/startup-state.js';
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getMemoryPressureState, isNetworkBodyCaptureDisabled, clearScreenshotTimestamps } from './caches/cache-limits.js';
 import { flushErrorGroups, cleanupStaleErrorGroups } from './caches/error-groups.js';
 import { getContextWarning } from './caches/snapshots.js';
-import { installStorageChangeListener, setupChromeAlarms, installAlarmListener, installTabRemovedListener, installTabUpdatedListener, installStartupListener, handleTrackedTabClosed, handleTrackedTabUrlChange } from './event-listeners.js';
+import { installStorageChangeListener, setupChromeAlarms, installAlarmListener, installTabRemovedListener, installTabUpdatedListener, installStartupListener, installDiagnosticSuspendListener, handleTrackedTabClosed, handleTrackedTabUrlChange } from './event-listeners.js';
 import { installDrawModeCommandListener, installRecordingShortcutCommandListener, installTerminalPanelCommandListener, installScreenRecordingCommandListener } from './ui/keyboard-shortcuts.js';
 import { installContextMenus } from './ui/context-menus.js';
 import { saveSetting, loadDebugModeState, loadAiWebPilotState, loadSavedSettings } from './ui/settings-storage.js';
@@ -33,7 +33,7 @@ import { isRecording, startRecording, stopRecording, initRecording } from './rec
 import { installMessageListener } from './message-handlers.js';
 import { createTelemetryMessageHandler } from './message-routing/telemetry-handler.js';
 import { createStatusMessageHandler } from './message-routing/status-handler.js';
-import { reportStateRecovery } from './runtime-state/state-recovery.js';
+import { reportStateRecovery, resolveStateRecovery } from './runtime-state/state-recovery.js';
 import { createSettingsMessageHandler } from './message-routing/settings-handler.js';
 import { broadcastTrackingState, createPilotMessageHandler } from './message-routing/pilot-handler.js';
 import { createCaptureMessageHandler } from './message-routing/capture-handler.js';
@@ -44,6 +44,7 @@ import { setLocal } from '../lib/storage/local.js';
 import { readTrackedTab } from '../lib/tabs/tracked-tab-storage.js';
 import { markStateVersion, setSessionAccessLevel, wasServiceWorkerRestarted } from '../lib/storage/session.js';
 import { loadServerInstallId } from './sync/install-identity.js';
+import { getExtensionLogQueueMetrics, initializeExtensionLogQueue, recordExtensionDiagnosticLifecycle } from './runtime-state/log-queue.js';
 /**
  * Initialize the extension on startup
  * Handles state recovery after service worker restart, loads settings, installs listeners.
@@ -74,6 +75,23 @@ export function initializeExtension() {
  */
 async function initializeExtensionAsync() {
     try {
+        const diagnosticRecovery = await initializeExtensionLogQueue();
+        if (diagnosticRecovery.status === 'recovered') {
+            reportStateRecovery({
+                name: 'extension_diagnostic_queue',
+                detail: 'Saved extension diagnostics were invalid or unreadable; a clean local buffer is active.',
+                fix: 'No action is required unless this warning repeats; include System Doctor output in a bug report.'
+            });
+        }
+        else {
+            resolveStateRecovery('extension_diagnostic_queue');
+        }
+        const diagnosticMetrics = getExtensionLogQueueMetrics();
+        recordExtensionDiagnosticLifecycle('worker_started', EXTENSION_SESSION_ID, {
+            recovery_status: diagnosticRecovery.status,
+            restored_entries: diagnosticRecovery.restoredEntries,
+            dropped_count: diagnosticMetrics.droppedCount
+        });
         // ============= STEP 1: Check service worker restart =============
         const wasRestarted = await wasServiceWorkerRestarted();
         if (wasRestarted) {
@@ -107,6 +125,7 @@ async function initializeExtensionAsync() {
         }
         // ============= STEP 3: Install startup listener =============
         installStartupListener((msg) => console.log(msg));
+        installDiagnosticSuspendListener((event) => recordExtensionDiagnosticLifecycle(event, EXTENSION_SESSION_ID));
         // ============= STEP 4: Load AI Web Pilot state =============
         const aiPilotEnabled = await loadAiWebPilotState();
         setAiWebPilotEnabledCache(aiPilotEnabled);

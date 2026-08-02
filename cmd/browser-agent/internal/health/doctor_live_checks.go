@@ -187,8 +187,67 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 	checks = append(checks, cmdExecCheck)
 	checks = append(checks, runAIAuthDoctorCheck("claude"), runAIAuthDoctorCheck("codex"))
 	checks = append(checks, extensionStateRecoveryChecks(cap)...)
+	if diagnosticCheck, ok := extensionDiagnosticLifecycleCheck(cap); ok {
+		checks = append(checks, diagnosticCheck)
+	}
 
 	return checks
+}
+
+func extensionDiagnosticLifecycleCheck(cap *capture.Capture) (DoctorCheck, bool) {
+	if cap == nil {
+		return DoctorCheck{}, false
+	}
+	type diagnosticData struct {
+		Event             string   `json:"event"`
+		DroppedCount      int      `json:"dropped_count"`
+		LifecycleSequence []string `json:"lifecycle_sequence"`
+	}
+	events := make([]string, 0, 5)
+	droppedCount := 0
+	for _, entry := range cap.ExtensionLogs().Entries() {
+		var data diagnosticData
+		if json.Unmarshal(entry.Data, &data) != nil {
+			continue
+		}
+		event := data.Event
+		if event == "" && entry.Category == "connection" {
+			switch entry.Message {
+			case "Sync connected":
+				event = "sync_connected"
+			case "Sync disconnected":
+				event = "sync_disconnected"
+			case "[Sync] Sync failed, retrying":
+				event = "sync_failed"
+			}
+		}
+		if event != "" && (entry.Category == "diagnostic_lifecycle" || entry.Category == "connection") {
+			if len(data.LifecycleSequence) > 0 {
+				start := max(0, len(data.LifecycleSequence)-5)
+				events = append([]string(nil), data.LifecycleSequence[start:]...)
+			} else {
+				events = append(events, event)
+			}
+			if len(events) > 5 {
+				events = append([]string(nil), events[len(events)-5:]...)
+			}
+		}
+		if entry.Category == "diagnostic_queue" && data.DroppedCount > droppedCount {
+			droppedCount = data.DroppedCount
+		}
+	}
+	if len(events) == 0 && droppedCount == 0 {
+		return DoctorCheck{}, false
+	}
+	detail := "Extension lifecycle: " + strings.Join(events, " -> ")
+	status := "pass"
+	fix := ""
+	if droppedCount > 0 {
+		status = "warn"
+		detail += fmt.Sprintf("; %d dropped diagnostic entries", droppedCount)
+		fix = "Export System Doctor diagnostics and report repeated queue saturation; reduce noisy extension logging if it persists."
+	}
+	return DoctorCheck{Name: "extension_diagnostics", Status: status, Detail: detail, Fix: fix}, true
 }
 
 func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {

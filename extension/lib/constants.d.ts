@@ -120,6 +120,7 @@ export declare const StorageKey: {
     readonly TERMINAL_AI_COMMAND: "kaboom_terminal_ai_command";
     readonly TERMINAL_DEV_ROOT: "kaboom_terminal_dev_root";
     readonly POPUP_LAST_STATUS: "kaboom_popup_last_status";
+    readonly EXTENSION_DIAGNOSTIC_LOGS: "kaboom_extension_diagnostic_logs";
     readonly TERMINAL_SESSION: "kaboom_terminal_session";
     readonly TERMINAL_UI_STATE: "kaboom_terminal_ui_state";
     readonly TERMINAL_WORKSPACE_GROUP_ID: "kaboom_terminal_workspace_group_id";

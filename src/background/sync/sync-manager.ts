@@ -55,6 +55,7 @@ export interface SyncManagerDeps {
   getAiWebPilotEnabledCache: () => boolean
   getExtensionLogQueue: () => ExtensionLogQueueEntry[]
   acknowledgeExtensionLogQueue: (sentCount: number) => void
+  recordDiagnosticLifecycle: (event: string, correlationId: string) => void
   applyCaptureOverrides: (overrides: Record<string, string>) => void
   debugLog: DebugLogFn
 }
@@ -125,8 +126,11 @@ export function startSyncClient(deps: SyncManagerDeps): void {
         // Sync heartbeat health is independent of daemon HTTP reachability.
         // A transient sync failure must not make a healthy daemon appear offline.
         deps.setConnectionStatus({ extensionConnected: connected })
+        deps.recordDiagnosticLifecycle(connected ? 'sync_connected' : 'sync_disconnected', deps.getExtSessionId())
         updateBadge(deps.getConnectionStatus())
-        deps.debugLog(DebugCategory.CONNECTION, connected ? 'Sync connected' : 'Sync disconnected')
+        deps.debugLog(DebugCategory.CONNECTION, connected ? 'Sync connected' : 'Sync disconnected', {
+          correlation_id: deps.getExtSessionId()
+        })
 
         // Notify popup
         if (typeof chrome !== 'undefined' && chrome.runtime) {

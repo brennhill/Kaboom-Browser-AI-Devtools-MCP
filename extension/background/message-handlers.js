@@ -1,3 +1,4 @@
+import { errorMessage } from '../lib/error-utils.js';
 function isValidMessageSender(sender) {
     if (sender.tab?.id !== undefined && sender.tab?.url)
         return true;
@@ -23,7 +24,19 @@ export function installMessageListener(deps) {
             });
             return false;
         }
-        return dispatch(message, sender, sendResponse, deps.handlers);
+        try {
+            return dispatch(message, sender, sendResponse, deps.handlers);
+        }
+        catch (error) {
+            const correlationId = `runtime_message_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            deps.debugLog('error', 'Runtime message handler failed', {
+                correlation_id: correlationId,
+                message_type: message.type,
+                error: errorMessage(error)
+            });
+            sendResponse({ success: false, error: 'message_handler_failed' });
+            return false;
+        }
     });
 }
 //# sourceMappingURL=message-handlers.js.map

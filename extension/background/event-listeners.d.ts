@@ -67,5 +67,11 @@ export declare function installStorageChangeListener(handlers: {
  * Install browser startup listener (clears tracking state)
  */
 export declare function installStartupListener(logFn?: (message: string) => void): void;
+/**
+ * Record Chrome's best-effort warning that the MV3 worker is about to stop.
+ * Chrome does not guarantee asynchronous work completes from onSuspend, so the
+ * queue already persists every preceding entry; this marker is an approximation.
+ */
+export declare function installDiagnosticSuspendListener(recordLifecycle: (event: string) => void): void;
 export {};
 //# sourceMappingURL=event-listeners.d.ts.map

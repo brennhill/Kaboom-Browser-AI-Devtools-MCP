@@ -36,3 +36,15 @@ test('extension log queue only exposes snapshots', async () => {
   snapshot.push({ timestamp: 'later', level: 'debug', message: 'two', source: 'test', category: 'test' })
   assert.strictEqual(queue.getExtensionLogQueueSnapshot().length, 1)
 })
+
+test('extension diagnostics hydrate before startup logging and install a suspension approximation', () => {
+  const init = fs.readFileSync('src/background/init.ts', 'utf8')
+  const listeners = fs.readFileSync('src/background/event-listeners.ts', 'utf8')
+  const hydrateAt = init.indexOf('await initializeExtensionLogQueue')
+  const restartCheckAt = init.indexOf('await wasServiceWorkerRestarted')
+
+  assert.ok(hydrateAt > 0, 'startup must hydrate the persisted diagnostic queue')
+  assert.ok(hydrateAt < restartCheckAt, 'diagnostics must hydrate before restart events are recorded')
+  assert.match(init, /installDiagnosticSuspendListener/)
+  assert.match(listeners, /chrome\.runtime\.onSuspend\.addListener/)
+})

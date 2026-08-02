@@ -7,7 +7,7 @@ import { addDebugLogEntry } from './caches/debug-log.js';
 import { getDebugLog as getDebugLogEntries, clearDebugLog as clearDebugLogEntries } from './caches/debug-log.js';
 import { isSourceMapEnabled } from './caches/cache-limits.js';
 import { getConnectionStatus } from './runtime-state/connection-state.js';
-import { pushExtensionLog, capExtensionLogs } from './runtime-state/log-queue.js';
+import { pushExtensionLog } from './runtime-state/log-queue.js';
 import { getCurrentLogLevel, isDebugMode, isScreenshotOnError, setDebugModeRaw } from './runtime-state/settings-state.js';
 /** Log categories for debug output */
 export const DebugCategory = {
@@ -36,7 +36,6 @@ export function debugLog(category, message, data = null) {
         category,
         ...(data !== null ? { data } : {})
     });
-    capExtensionLogs(2000);
     if (!isDebugMode())
         return;
     const prefix = `${KABOOM_LOG_PREFIX.slice(0, -1)}:${category}]`;

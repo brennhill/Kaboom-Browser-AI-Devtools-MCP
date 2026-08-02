@@ -107,6 +107,7 @@ test_paths:
   - tests/extension/sync/sync-client.test.js
   - tests/extension/branding/install-id.test.js
   - tests/extension/reliability/server.test.js
+  - tests/extension/reliability/diagnostic-log-queue.test.js
   - tests/extension/sync/background-batching.test.js
   - tests/extension/sync/batcher-instances.test.js
   - tests/extension/sync/sync-manager.test.js
@@ -163,6 +164,14 @@ separate signals. A missing or stale heartbeat remains visible to Doctor and
 the connection log, but cannot label a daemon that answered `/health` as
 offline. Sync reconnect transitions update only heartbeat state; actual HTTP
 failures own the daemon-offline state.
+The canonical extension diagnostic queue is a 200-entry redacted ring persisted
+in `chrome.storage.session`. It restores before startup logging, survives MV3
+worker restarts and daemon outages, and acknowledges only the entries accepted
+by a successful `/sync` cycle. Queue saturation, persistence failures, worker
+startup/suspension approximation, sync transitions, fetch failures, and runtime
+message-handler failures remain local and carry correlation IDs where they
+cross an asynchronous lifecycle boundary. Diagnostic contents never enter the
+external usage-telemetry producer.
 Sync reconciliation tolerates partial heartbeat/result batches: an
 acknowledged command that briefly disappears from `in_progress` remains pending
 for a bounded two-second result-delivery grace. A command still absent after

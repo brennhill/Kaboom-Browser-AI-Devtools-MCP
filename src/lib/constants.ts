@@ -211,6 +211,7 @@ export const StorageKey = {
   TERMINAL_AI_COMMAND: 'kaboom_terminal_ai_command',
   TERMINAL_DEV_ROOT: 'kaboom_terminal_dev_root',
   POPUP_LAST_STATUS: 'kaboom_popup_last_status',
+  EXTENSION_DIAGNOSTIC_LOGS: 'kaboom_extension_diagnostic_logs',
   TERMINAL_SESSION: 'kaboom_terminal_session',
   TERMINAL_UI_STATE: 'kaboom_terminal_ui_state',
   TERMINAL_WORKSPACE_GROUP_ID: 'kaboom_terminal_workspace_group_id',

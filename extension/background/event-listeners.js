@@ -239,4 +239,14 @@ export function installStartupListener(logFn) {
         }
     });
 }
+/**
+ * Record Chrome's best-effort warning that the MV3 worker is about to stop.
+ * Chrome does not guarantee asynchronous work completes from onSuspend, so the
+ * queue already persists every preceding entry; this marker is an approximation.
+ */
+export function installDiagnosticSuspendListener(recordLifecycle) {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.onSuspend)
+        return;
+    chrome.runtime.onSuspend.addListener(() => recordLifecycle('worker_suspend'));
+}
 //# sourceMappingURL=event-listeners.js.map

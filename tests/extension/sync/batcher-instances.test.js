@@ -185,5 +185,11 @@ describe('withConnectionStatus — error path', () => {
     )
     assert.ok(disconnectedCall, 'setConnectionStatus should be called with connected: false')
     assert.ok(mockUpdateBadge.mock.calls.length >= 1, 'updateBadge should be called on error')
+    const diagnostic = deps.debugLog.mock.calls.find(
+      c => c.arguments[1] === 'Telemetry batch delivery failed'
+    )
+    assert.ok(diagnostic, 'fetch failures should leave a structured extension diagnostic')
+    assert.match(diagnostic.arguments[2].correlation_id, /^telemetry_batch_/)
+    assert.strictEqual(diagnostic.arguments[2].error, 'Network down')
   })
 })

@@ -68,8 +68,11 @@ export function startSyncClient(deps) {
             // Sync heartbeat health is independent of daemon HTTP reachability.
             // A transient sync failure must not make a healthy daemon appear offline.
             deps.setConnectionStatus({ extensionConnected: connected });
+            deps.recordDiagnosticLifecycle(connected ? 'sync_connected' : 'sync_disconnected', deps.getExtSessionId());
             updateBadge(deps.getConnectionStatus());
-            deps.debugLog(DebugCategory.CONNECTION, connected ? 'Sync connected' : 'Sync disconnected');
+            deps.debugLog(DebugCategory.CONNECTION, connected ? 'Sync connected' : 'Sync disconnected', {
+                correlation_id: deps.getExtSessionId()
+            });
             // Notify popup
             if (typeof chrome !== 'undefined' && chrome.runtime) {
                 chrome.runtime

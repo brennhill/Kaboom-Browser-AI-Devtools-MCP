@@ -26,6 +26,7 @@ import {
   sendPerformanceSnapshotsToServer
 } from './server.js'
 import { checkContextAnnotations } from '../caches/snapshots.js'
+import { errorMessage } from '../../lib/error-utils.js'
 
 // =============================================================================
 // TYPES
@@ -63,6 +64,10 @@ function withConnectionStatus<T>(
     } catch (err) {
       deps.setConnectionStatus({ connected: false })
       updateBadge(deps.getConnectionStatus())
+      deps.debugLog('error', 'Telemetry batch delivery failed', {
+        correlation_id: `telemetry_batch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        error: errorMessage(err)
+      })
       throw err
     }
   }

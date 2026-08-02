@@ -6,6 +6,7 @@
 import type { BackgroundMessage } from '../types/runtime-messages.js'
 import type { ChromeMessageSender } from '../types/runtime/chrome.js'
 import type { MessageHandlerOwner, SendResponse } from './message-routing/types.js'
+import { errorMessage } from '../lib/error-utils.js'
 
 export interface MessageRouterDependencies {
   handlers: readonly MessageHandlerOwner[]
@@ -42,7 +43,18 @@ export function installMessageListener(deps: MessageRouterDependencies): void {
         })
         return false
       }
-      return dispatch(message, sender as ChromeMessageSender, sendResponse, deps.handlers)
+      try {
+        return dispatch(message, sender as ChromeMessageSender, sendResponse, deps.handlers)
+      } catch (error) {
+        const correlationId = `runtime_message_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+        deps.debugLog('error', 'Runtime message handler failed', {
+          correlation_id: correlationId,
+          message_type: message.type,
+          error: errorMessage(error)
+        })
+        sendResponse({ success: false, error: 'message_handler_failed' })
+        return false
+      }
     }
   )
 }

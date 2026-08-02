@@ -43,7 +43,7 @@ import {
   setAiWebPilotCacheInitialized,
   setPilotInitCallback
 } from './runtime-state/pilot-state.js'
-import { markInitComplete } from './runtime-state/startup-state.js'
+import { EXTENSION_SESSION_ID, markInitComplete } from './runtime-state/startup-state.js'
 import {
   isSourceMapEnabled,
   setSourceMapEnabled,
@@ -63,6 +63,7 @@ import {
   installTabRemovedListener,
   installTabUpdatedListener,
   installStartupListener,
+  installDiagnosticSuspendListener,
   handleTrackedTabClosed,
   handleTrackedTabUrlChange
 } from './event-listeners.js'
@@ -82,7 +83,7 @@ import { isRecording, startRecording, stopRecording, initRecording } from './rec
 import { installMessageListener } from './message-handlers.js'
 import { createTelemetryMessageHandler } from './message-routing/telemetry-handler.js'
 import { createStatusMessageHandler } from './message-routing/status-handler.js'
-import { reportStateRecovery } from './runtime-state/state-recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from './runtime-state/state-recovery.js'
 import { createSettingsMessageHandler } from './message-routing/settings-handler.js'
 import { broadcastTrackingState, createPilotMessageHandler } from './message-routing/pilot-handler.js'
 import { createCaptureMessageHandler } from './message-routing/capture-handler.js'
@@ -93,6 +94,11 @@ import { setLocal } from '../lib/storage/local.js'
 import { readTrackedTab } from '../lib/tabs/tracked-tab-storage.js'
 import { markStateVersion, setSessionAccessLevel, wasServiceWorkerRestarted } from '../lib/storage/session.js'
 import { loadServerInstallId } from './sync/install-identity.js'
+import {
+  getExtensionLogQueueMetrics,
+  initializeExtensionLogQueue,
+  recordExtensionDiagnosticLifecycle
+} from './runtime-state/log-queue.js'
 
 /**
  * Initialize the extension on startup
@@ -128,6 +134,23 @@ export function initializeExtension(): void {
  */
 async function initializeExtensionAsync(): Promise<void> {
   try {
+    const diagnosticRecovery = await initializeExtensionLogQueue()
+    if (diagnosticRecovery.status === 'recovered') {
+      reportStateRecovery({
+        name: 'extension_diagnostic_queue',
+        detail: 'Saved extension diagnostics were invalid or unreadable; a clean local buffer is active.',
+        fix: 'No action is required unless this warning repeats; include System Doctor output in a bug report.'
+      })
+    } else {
+      resolveStateRecovery('extension_diagnostic_queue')
+    }
+    const diagnosticMetrics = getExtensionLogQueueMetrics()
+    recordExtensionDiagnosticLifecycle('worker_started', EXTENSION_SESSION_ID, {
+      recovery_status: diagnosticRecovery.status,
+      restored_entries: diagnosticRecovery.restoredEntries,
+      dropped_count: diagnosticMetrics.droppedCount
+    })
+
     // ============= STEP 1: Check service worker restart =============
     const wasRestarted = await wasServiceWorkerRestarted()
     if (wasRestarted) {
@@ -164,6 +187,9 @@ async function initializeExtensionAsync(): Promise<void> {
 
     // ============= STEP 3: Install startup listener =============
     installStartupListener((msg) => console.log(msg))
+    installDiagnosticSuspendListener((event) =>
+      recordExtensionDiagnosticLifecycle(event, EXTENSION_SESSION_ID)
+    )
 
     // ============= STEP 4: Load AI Web Pilot state =============
     const aiPilotEnabled = await loadAiWebPilotState()

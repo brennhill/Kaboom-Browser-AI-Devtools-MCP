@@ -281,3 +281,13 @@ export function installStartupListener(logFn?: (message: string) => void): void 
     }
   })
 }
+
+/**
+ * Record Chrome's best-effort warning that the MV3 worker is about to stop.
+ * Chrome does not guarantee asynchronous work completes from onSuspend, so the
+ * queue already persists every preceding entry; this marker is an approximation.
+ */
+export function installDiagnosticSuspendListener(recordLifecycle: (event: string) => void): void {
+  if (typeof chrome === 'undefined' || !chrome.runtime?.onSuspend) return
+  chrome.runtime.onSuspend.addListener(() => recordLifecycle('worker_suspend'))
+}

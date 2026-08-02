@@ -7,7 +7,11 @@ import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { DebugCategory, debugLog } from '../debug.js'
 import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js'
-import { acknowledgeExtensionLogQueue, getExtensionLogQueueSnapshot } from '../runtime-state/log-queue.js'
+import {
+  acknowledgeExtensionLogQueue,
+  getExtensionLogQueueSnapshot,
+  recordExtensionDiagnosticLifecycle
+} from '../runtime-state/log-queue.js'
 import {
   applyConnectionOverrides,
   getConnectionStatus,
@@ -31,6 +35,7 @@ const syncManagerDeps = {
   getAiWebPilotEnabledCache: isAiWebPilotEnabled,
   getExtensionLogQueue: getExtensionLogQueueSnapshot,
   acknowledgeExtensionLogQueue,
+  recordDiagnosticLifecycle: recordExtensionDiagnosticLifecycle,
   applyCaptureOverrides: (overrides: Record<string, string>) => {
     applySettingOverrides(overrides)
     applyConnectionOverrides(overrides)

@@ -6,7 +6,7 @@ import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js';
 import { DebugCategory, debugLog } from '../debug.js';
 import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js';
-import { acknowledgeExtensionLogQueue, getExtensionLogQueueSnapshot } from '../runtime-state/log-queue.js';
+import { acknowledgeExtensionLogQueue, getExtensionLogQueueSnapshot, recordExtensionDiagnosticLifecycle } from '../runtime-state/log-queue.js';
 import { applyConnectionOverrides, getConnectionStatus, isConnectionCheckRunning, setConnectionCheckRunning, setConnectionStatus } from '../runtime-state/connection-state.js';
 import { EXTENSION_SESSION_ID } from '../runtime-state/startup-state.js';
 import { applySettingOverrides, getServerUrl, isAiControlled } from '../runtime-state/settings-state.js';
@@ -22,6 +22,7 @@ const syncManagerDeps = {
     getAiWebPilotEnabledCache: isAiWebPilotEnabled,
     getExtensionLogQueue: getExtensionLogQueueSnapshot,
     acknowledgeExtensionLogQueue,
+    recordDiagnosticLifecycle: recordExtensionDiagnosticLifecycle,
     applyCaptureOverrides: (overrides) => {
         applySettingOverrides(overrides);
         applyConnectionOverrides(overrides);
