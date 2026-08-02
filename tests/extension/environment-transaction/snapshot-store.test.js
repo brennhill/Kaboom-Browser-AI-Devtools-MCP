@@ -62,7 +62,14 @@ function snapshot(name) {
     tab_url: `https://${name}.test/`,
     window_id: 1,
     page_state: { local_storage: {}, session_storage: {}, feature_flags: {}, seed_data: {} },
-    cookies: []
+    cookies: [],
+    restore_plan: {
+      mutated_url: `https://${name}.test/`,
+      setup_timeout_ms: 10_000,
+      cookie_names: [],
+      page_state_touched: false,
+      navigation_changed: false
+    }
   }
 }
 

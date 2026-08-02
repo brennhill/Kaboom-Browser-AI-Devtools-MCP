@@ -108,7 +108,7 @@ test('command boundary replaces private driver failures with stable errors and r
 
   await assert.rejects(snapshotEnvironment(driver, store, 7, fixture), { message: 'fixture_snapshot_failed' })
   await assert.rejects(applyEnvironment(driver, 7, fixture), { message: 'fixture_apply_failed' })
-  await assert.rejects(restoreEnvironment(driver, store, 7, fixture, 'fixture_snapshot_1'), {
+  await assert.rejects(restoreEnvironment(driver, store, 7, 'fixture_snapshot_1'), {
     message: 'fixture_restore_failed'
   })
   assert.equal(await store.get('fixture_snapshot_1'), snapshot)

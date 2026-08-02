@@ -106,6 +106,9 @@ last_verified_date: 2026-08-02
   survives MV3 service-worker suspension. Corrupt or unavailable storage emits
   stable lifecycle diagnostics without including captured values, and runtime
   registration lives in a dedicated composition root.
+- Each private snapshot includes its own extension-only restore plan. Recovery
+  therefore sends only the opaque snapshot handle; the daemon neither persists
+  nor retransmits original cookie or storage values during restoration.
 - Connected category 35 applies synthetic state to the disposable UAT tab, then
   uses cross-origin snapshot rejection and a real invalid-domain cookie failure
   to prove redaction, exact partial-apply rollback, and explicit cleanup through

@@ -98,6 +98,9 @@ func TestHandlerApplyFailureRestoresWithOpaqueSnapshotAndRedactsCause(t *testing
 			if !strings.Contains(string(params), `"snapshot_id":"opaque_1"`) {
 				t.Fatalf("restore params = %s", params)
 			}
+			if strings.Contains(string(params), `"fixture"`) || strings.Contains(string(params), "private-cookie") {
+				t.Fatalf("restore resent private fixture state: %s", params)
+			}
 			return json.RawMessage(`{"success":true,"restored":true}`), nil
 		default:
 			t.Fatalf("unexpected command %q", command)

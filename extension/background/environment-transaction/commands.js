@@ -15,9 +15,8 @@ export function registerEnvironmentTransactionCommands(driver, snapshots) {
     });
     registerCommand('environment_transaction_restore', async (ctx) => {
         const params = ctx.params;
-        const fixture = requireFixture(params);
         const snapshotID = requireSnapshotID(params);
-        ctx.sendResult(await restoreEnvironment(driver, snapshots, ctx.tabId, fixture, snapshotID));
+        ctx.sendResult(await restoreEnvironment(driver, snapshots, ctx.tabId, snapshotID));
     });
 }
 export async function snapshotEnvironment(driver, snapshots, tabId, fixture) {
@@ -37,12 +36,12 @@ export async function applyEnvironment(driver, tabId, fixture) {
         throw new Error('fixture_apply_failed');
     }
 }
-export async function restoreEnvironment(driver, snapshots, tabId, fixture, snapshotID) {
+export async function restoreEnvironment(driver, snapshots, tabId, snapshotID) {
     const snapshot = await snapshots.get(snapshotID);
     if (!snapshot)
         throw new Error('fixture_snapshot_not_found');
     try {
-        await driver.restore(tabId, fixture, snapshot);
+        await driver.restore(tabId, snapshot);
     }
     catch {
         throw new Error('fixture_restore_failed');

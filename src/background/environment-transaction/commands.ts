@@ -27,9 +27,8 @@ export function registerEnvironmentTransactionCommands(driver: EnvironmentStateD
 
   registerCommand('environment_transaction_restore', async (ctx) => {
     const params = ctx.params as EnvironmentTransactionParams
-    const fixture = requireFixture(params)
     const snapshotID = requireSnapshotID(params)
-    ctx.sendResult(await restoreEnvironment(driver, snapshots, ctx.tabId, fixture, snapshotID))
+    ctx.sendResult(await restoreEnvironment(driver, snapshots, ctx.tabId, snapshotID))
   })
 }
 
@@ -63,13 +62,12 @@ export async function restoreEnvironment(
   driver: EnvironmentStateDriver,
   snapshots: EnvironmentSnapshotStore,
   tabId: number,
-  fixture: WireQAFixture,
   snapshotID: string
 ): Promise<{ readonly success: true; readonly restored: true }> {
   const snapshot = await snapshots.get(snapshotID)
   if (!snapshot) throw new Error('fixture_snapshot_not_found')
   try {
-    await driver.restore(tabId, fixture, snapshot)
+    await driver.restore(tabId, snapshot)
   } catch {
     throw new Error('fixture_restore_failed')
   }

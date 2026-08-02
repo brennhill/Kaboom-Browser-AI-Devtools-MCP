@@ -114,7 +114,20 @@ function isEnvironmentSnapshot(value: unknown): value is EnvironmentSnapshot {
     typeof value.tab_url === 'string' &&
     typeof value.window_id === 'number' &&
     isRecord(value.page_state) &&
-    Array.isArray(value.cookies)
+    Array.isArray(value.cookies) &&
+    isRestorePlan(value.restore_plan)
+  )
+}
+
+function isRestorePlan(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.mutated_url === 'string' &&
+    typeof value.setup_timeout_ms === 'number' &&
+    Array.isArray(value.cookie_names) &&
+    value.cookie_names.every((name) => typeof name === 'string') &&
+    typeof value.page_state_touched === 'boolean' &&
+    typeof value.navigation_changed === 'boolean'
   )
 }
 

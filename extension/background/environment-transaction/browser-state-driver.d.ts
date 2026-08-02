@@ -19,6 +19,13 @@ export interface EnvironmentSnapshot {
     };
     readonly page_state: EnvironmentPageState;
     readonly cookies: readonly WireQACookie[];
+    readonly restore_plan: {
+        readonly mutated_url: string;
+        readonly setup_timeout_ms: number;
+        readonly cookie_names: readonly string[];
+        readonly page_state_touched: boolean;
+        readonly navigation_changed: boolean;
+    };
 }
 export interface EnvironmentMutationCounts {
     readonly cookies: number;
@@ -51,7 +58,7 @@ export interface EnvironmentStateDriverDeps {
 export interface EnvironmentStateDriver {
     readonly snapshot: (tabId: number, fixture: WireQAFixture) => Promise<EnvironmentSnapshot>;
     readonly apply: (tabId: number, fixture: WireQAFixture) => Promise<EnvironmentMutationCounts>;
-    readonly restore: (tabId: number, fixture: WireQAFixture, snapshot: EnvironmentSnapshot) => Promise<void>;
+    readonly restore: (tabId: number, snapshot: EnvironmentSnapshot) => Promise<void>;
 }
 export declare function unsupportedEnvironmentCapabilities(fixture: WireQAFixture): string[];
 export declare function createEnvironmentStateDriver(deps: EnvironmentStateDriverDeps): EnvironmentStateDriver;

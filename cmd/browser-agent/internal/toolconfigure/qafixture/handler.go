@@ -33,7 +33,7 @@ func New(deps Deps) (*Handler, error) {
 	coordinator, err := fixturecontract.NewCoordinator(fixturecontract.TransactionDeps{
 		NewCorrelationID: deps.NewCorrelationID,
 		Snapshot: func(ctx context.Context, fixture fixturecontract.WireQAFixture) (json.RawMessage, error) {
-			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_snapshot", fixture, "", fixture.SetupTimeoutMs)
+			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_snapshot", &fixture, "", fixture.SetupTimeoutMs)
 			if err != nil {
 				return nil, err
 			}
@@ -49,7 +49,7 @@ func New(deps Deps) (*Handler, error) {
 			}{SnapshotID: snapshot.SnapshotID})
 		},
 		Apply: func(ctx context.Context, fixture fixturecontract.WireQAFixture) (fixturecontract.MutationCounts, error) {
-			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_apply", fixture, "", fixture.SetupTimeoutMs)
+			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_apply", &fixture, "", fixture.SetupTimeoutMs)
 			if err != nil {
 				return fixturecontract.MutationCounts{}, err
 			}
@@ -62,14 +62,14 @@ func New(deps Deps) (*Handler, error) {
 			}
 			return applied.Mutations, nil
 		},
-		Restore: func(ctx context.Context, fixture fixturecontract.WireQAFixture, snapshot json.RawMessage) error {
+		Restore: func(ctx context.Context, snapshot json.RawMessage) error {
 			var reference struct {
 				SnapshotID string `json:"snapshot_id"`
 			}
 			if json.Unmarshal(snapshot, &reference) != nil || reference.SnapshotID == "" {
 				return errors.New("invalid_fixture_snapshot_reference")
 			}
-			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_restore", fixture, reference.SnapshotID, fixture.SetupTimeoutMs)
+			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_restore", nil, reference.SnapshotID, fixturecontract.DefaultSetupTimeoutMs)
 			if err != nil {
 				return err
 			}
@@ -137,13 +137,13 @@ func executeFixtureCommand(
 	ctx context.Context,
 	execute CommandExecutor,
 	command string,
-	fixture fixturecontract.WireQAFixture,
+	fixture *fixturecontract.WireQAFixture,
 	snapshotID string,
 	timeoutMs int,
 ) (json.RawMessage, error) {
 	params := struct {
-		Fixture    fixturecontract.WireQAFixture `json:"fixture"`
-		SnapshotID string                        `json:"snapshot_id,omitempty"`
+		Fixture    *fixturecontract.WireQAFixture `json:"fixture,omitempty"`
+		SnapshotID string                         `json:"snapshot_id,omitempty"`
 	}{Fixture: fixture, SnapshotID: snapshotID}
 	payload, err := json.Marshal(params)
 	if err != nil {

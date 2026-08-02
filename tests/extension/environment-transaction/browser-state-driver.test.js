@@ -98,7 +98,7 @@ test('restore reverses page, cookie, viewport, and navigation state', async () =
   }
   const snapshot = await driver.snapshot(7, fixture)
   calls.length = 0
-  await driver.restore(7, fixture, snapshot)
+  await driver.restore(7, snapshot)
   assert.deepEqual(calls, [
     'navigate:https://example.test/original',
     'resize:1440x900',
@@ -116,13 +116,6 @@ test('restore attempts every independent recovery step after a failure', async (
     throw new Error('private navigation detail')
   }
   const driver = createEnvironmentStateDriver(deps)
-  const fixture = {
-    version: 1,
-    target: { url: 'https://example.test/checkout' },
-    viewport: { width: 1280, height: 720 },
-    cookies: [{ name: 'session', value: 'new-private-value' }],
-    local_storage: { token: 'new-private-token' }
-  }
   const snapshot = {
     tab_url: 'https://example.test/original',
     window_id: 2,
@@ -133,9 +126,16 @@ test('restore attempts every independent recovery step after a failure', async (
       feature_flags: {},
       seed_data: {}
     },
-    cookies: [{ name: 'session', value: 'old-private-value' }]
+    cookies: [{ name: 'session', value: 'old-private-value' }],
+    restore_plan: {
+      mutated_url: 'https://example.test/checkout',
+      setup_timeout_ms: 10_000,
+      cookie_names: ['session'],
+      page_state_touched: true,
+      navigation_changed: true
+    }
   }
-  await assert.rejects(driver.restore(7, fixture, snapshot), (error) => {
+  await assert.rejects(driver.restore(7, snapshot), (error) => {
     assert.equal(error.message, 'fixture_restore_failed')
     return true
   })

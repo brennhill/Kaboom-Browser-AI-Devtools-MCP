@@ -15,7 +15,7 @@ export declare function applyEnvironment(driver: EnvironmentStateDriver, tabId: 
     readonly success: true;
     readonly mutations: Awaited<ReturnType<EnvironmentStateDriver['apply']>>;
 }>;
-export declare function restoreEnvironment(driver: EnvironmentStateDriver, snapshots: EnvironmentSnapshotStore, tabId: number, fixture: WireQAFixture, snapshotID: string): Promise<{
+export declare function restoreEnvironment(driver: EnvironmentStateDriver, snapshots: EnvironmentSnapshotStore, tabId: number, snapshotID: string): Promise<{
     readonly success: true;
     readonly restored: true;
 }>;

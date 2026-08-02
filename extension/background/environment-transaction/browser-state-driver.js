@@ -47,7 +47,14 @@ export function createEnvironmentStateDriver(deps) {
                 window_id: tab.windowId,
                 ...(windowBounds ? { window_bounds: windowBounds } : {}),
                 page_state: pageState,
-                cookies
+                cookies,
+                restore_plan: {
+                    mutated_url: targetUrl,
+                    setup_timeout_ms: fixture.setup_timeout_ms ?? 10_000,
+                    cookie_names: (fixture.cookies ?? []).map((cookie) => cookie.name),
+                    page_state_touched: hasPageState(fixture),
+                    navigation_changed: fixture.target?.url !== undefined && targetUrl !== tabUrl
+                }
             };
         },
         apply: async (tabId, fixture) => {
@@ -67,7 +74,7 @@ export function createEnvironmentStateDriver(deps) {
                 await deps.applyPageState(tabId, fixture);
             return mutationCounts(fixture);
         },
-        restore: async (tabId, fixture, snapshot) => {
+        restore: async (tabId, snapshot) => {
             let failures = 0;
             const attempt = async (operation) => {
                 try {
@@ -79,19 +86,19 @@ export function createEnvironmentStateDriver(deps) {
                     failures++;
                 }
             };
-            if (fixture.target?.url && fixture.target.url !== snapshot.tab_url) {
-                await attempt(() => deps.navigate(tabId, snapshot.tab_url, fixture.setup_timeout_ms ?? 10_000));
+            if (snapshot.restore_plan.navigation_changed) {
+                await attempt(() => deps.navigate(tabId, snapshot.tab_url, snapshot.restore_plan.setup_timeout_ms));
             }
             if (snapshot.window_bounds) {
                 const bounds = snapshot.window_bounds;
                 await attempt(() => deps.restoreWindow(snapshot.window_id, bounds.width, bounds.height));
             }
-            const cookieUrl = fixture.target?.url ?? snapshot.tab_url;
-            for (const changed of fixture.cookies ?? [])
-                await attempt(() => deps.removeCookie(cookieUrl, changed.name));
+            const cookieUrl = snapshot.restore_plan.mutated_url;
+            for (const name of snapshot.restore_plan.cookie_names)
+                await attempt(() => deps.removeCookie(cookieUrl, name));
             for (const cookie of snapshot.cookies)
                 await attempt(() => deps.setCookie(cookie, cookieUrl));
-            if (hasPageState(fixture))
+            if (snapshot.restore_plan.page_state_touched)
                 await attempt(() => deps.restorePageState(tabId, snapshot.page_state));
             if (failures > 0)
                 throw new Error('fixture_restore_failed');
