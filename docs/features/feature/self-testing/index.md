@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-02
 code_paths:
   - .github/workflows/ci.yml
   - scripts/smoke-test.sh
@@ -24,6 +24,7 @@ code_paths:
   - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
   - scripts/tests/browser/cat-33-connected-action-coverage.sh
+  - scripts/tests/browser/cat-35-qa-fixtures.sh
   - scripts/tests/release/cat-34-packaged-corruption-recovery.sh
   - scripts/contracts/check-architecture-boundaries.cjs
   - scripts/check-dormant-tests.sh
@@ -73,6 +74,7 @@ test_paths:
   - scripts/tests/browser/cat-23-draw-mode.sh
   - scripts/tests/browser/cat-24-upload.sh
   - scripts/tests/browser/cat-33-connected-action-coverage.sh
+  - scripts/tests/browser/cat-35-qa-fixtures.sh
   - scripts/tests/release/cat-34-packaged-corruption-recovery.sh
   - tests/cli/contracts/packaged-recovery-uat.test.cjs
   - scripts/tests/runtime/cat-26-dynamic-upgrade.sh

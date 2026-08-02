@@ -44,11 +44,12 @@ describe('comprehensive UAT harness regressions', () => {
     const offline = categoryIds('OFFLINE_CAT_IDS')
     const connected = categoryIds('CONNECTED_CAT_IDS')
 
-    assert.equal(new Set([...offline, ...connected]).size, 26)
+    assert.equal(new Set([...offline, ...connected]).size, 27)
     assert.deepEqual(offline.filter((id) => connected.includes(id)), [])
     assert.ok(offline.includes('05'), 'Pilot-unavailable contract belongs offline')
     assert.ok(connected.includes('15'), 'Pilot success path belongs connected')
     assert.ok(connected.includes('24'), 'Upload success path dispatches through the extension')
+    assert.ok(connected.includes('35'), 'QA fixture transactions require a real attached browser')
     assert.match(runner, /--suite offline\|connected\|all/)
   })
 
@@ -321,6 +322,19 @@ describe('comprehensive UAT harness regressions', () => {
 
     assert.match(runner, /19\) echo 600/)
     assert.match(dynamicUpgrade.trimEnd(), /finish_category$/)
+  })
+
+  test('connected UAT includes deterministic QA fixture mutation and rollback coverage', () => {
+    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const fixtureUAT = readFileSync('scripts/tests/browser/cat-35-qa-fixtures.sh', 'utf8')
+
+    assert.match(runner, /CONNECTED_CAT_IDS=.*35/)
+    assert.match(runner, /35\) echo "QA Fixture Transactions"/)
+    assert.match(fixtureUAT, /fixture_action":"apply"/)
+    assert.match(fixtureUAT, /snapshot_failed/)
+    assert.match(fixtureUAT, /apply_failed_rolled_back/)
+    assert.match(fixtureUAT, /private-fixture-secret/)
+    assert.match(fixtureUAT, /finish_category/)
   })
 
   test('result parsing preserves skips and rejects missing or malformed files', () => {
