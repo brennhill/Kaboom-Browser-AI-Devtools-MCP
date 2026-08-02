@@ -1,0 +1,215 @@
+// fixture.go — Defines and validates versioned browser QA environment fixtures.
+
+package qafixture
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/url"
+	"regexp"
+)
+
+const (
+	CurrentVersion        = 1
+	DefaultSetupTimeoutMs = 10_000
+	MaxSetupTimeoutMs     = 30_000
+	MaxStateBytes         = 64 * 1024
+	maxStateEntries       = 100
+)
+
+var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)
+var cookieNamePattern = regexp.MustCompile("^[!#$%&'*+\\-.^_`|~0-9A-Za-z]+$")
+
+type Fixture struct {
+	Version        int                        `json:"version"`
+	Target         Target                     `json:"target,omitempty"`
+	Viewport       Viewport                   `json:"viewport,omitempty"`
+	Locale         string                     `json:"locale,omitempty"`
+	Permissions    []string                   `json:"permissions,omitempty"`
+	Network        Network                    `json:"network,omitempty"`
+	Cookies        []Cookie                   `json:"cookies,omitempty"`
+	LocalStorage   map[string]string          `json:"local_storage,omitempty"`
+	SessionStorage map[string]string          `json:"session_storage,omitempty"`
+	FeatureFlags   map[string]bool            `json:"feature_flags,omitempty"`
+	SeedData       map[string]json.RawMessage `json:"seed_data,omitempty"`
+	UserState      string                     `json:"user_state,omitempty"`
+	AuthRole       string                     `json:"auth_role,omitempty"`
+	SetupTimeoutMs int                        `json:"setup_timeout_ms,omitempty"`
+}
+
+type Target struct {
+	URL string `json:"url,omitempty"`
+}
+
+type Viewport struct {
+	Width  int `json:"width,omitempty"`
+	Height int `json:"height,omitempty"`
+}
+
+type Network struct {
+	Profile string `json:"profile,omitempty"`
+}
+
+type Cookie struct {
+	Name     string `json:"name"`
+	Value    string `json:"value"`
+	Domain   string `json:"domain,omitempty"`
+	Path     string `json:"path,omitempty"`
+	Secure   bool   `json:"secure,omitempty"`
+	HTTPOnly bool   `json:"http_only,omitempty"`
+	SameSite string `json:"same_site,omitempty"`
+}
+
+var supportedPermissions = map[string]struct{}{
+	"camera": {}, "clipboard_read": {}, "clipboard_write": {},
+	"geolocation": {}, "microphone": {}, "notifications": {},
+}
+
+var supportedNetworkProfiles = map[string]struct{}{
+	"online": {}, "offline": {}, "slow_3g": {}, "fast_3g": {},
+}
+
+// Parse decodes one strict fixture document and validates every bound before
+// browser state can be read or mutated.
+func Parse(raw json.RawMessage) (Fixture, error) {
+	var fixture Fixture
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&fixture); err != nil {
+		return Fixture{}, fmt.Errorf("invalid fixture JSON: %w", err)
+	}
+	if err := requireJSONEnd(decoder); err != nil {
+		return Fixture{}, err
+	}
+	if fixture.SetupTimeoutMs == 0 {
+		fixture.SetupTimeoutMs = DefaultSetupTimeoutMs
+	}
+	if err := fixture.validate(); err != nil {
+		return Fixture{}, err
+	}
+	return fixture, nil
+}
+
+func requireJSONEnd(decoder *json.Decoder) error {
+	var extra json.RawMessage
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		return errors.New("invalid fixture JSON: multiple values are not allowed")
+	}
+	return nil
+}
+
+func (fixture Fixture) validate() error {
+	if fixture.Version != CurrentVersion {
+		return fmt.Errorf("unsupported fixture version %d; use version %d", fixture.Version, CurrentVersion)
+	}
+	if err := validateTarget(fixture.Target); err != nil {
+		return err
+	}
+	if err := validateViewport(fixture.Viewport); err != nil {
+		return err
+	}
+	if fixture.Locale != "" && !localePattern.MatchString(fixture.Locale) {
+		return errors.New("locale must be a valid language tag")
+	}
+	seenPermissions := make(map[string]struct{}, len(fixture.Permissions))
+	for _, permission := range fixture.Permissions {
+		if _, ok := supportedPermissions[permission]; !ok {
+			return errors.New("permissions contains an unsupported capability")
+		}
+		if _, duplicate := seenPermissions[permission]; duplicate {
+			return errors.New("permissions contains a duplicate capability")
+		}
+		seenPermissions[permission] = struct{}{}
+	}
+	if fixture.Network.Profile != "" {
+		if _, ok := supportedNetworkProfiles[fixture.Network.Profile]; !ok {
+			return errors.New("network.profile is unsupported")
+		}
+	}
+	if fixture.UserState != "" && fixture.UserState != "fresh" && fixture.UserState != "returning" {
+		return errors.New("user_state must be fresh or returning")
+	}
+	if len(fixture.AuthRole) > 64 {
+		return errors.New("auth_role exceeds 64 characters")
+	}
+	if fixture.SetupTimeoutMs < 100 || fixture.SetupTimeoutMs > MaxSetupTimeoutMs {
+		return fmt.Errorf("setup_timeout_ms must be between 100 and %d", MaxSetupTimeoutMs)
+	}
+	if len(fixture.Cookies) > maxStateEntries {
+		return errors.New("cookies exceeds 100 entries")
+	}
+	for _, cookie := range fixture.Cookies {
+		if !cookieNamePattern.MatchString(cookie.Name) {
+			return errors.New("cookies contains an invalid cookie name")
+		}
+		if cookie.SameSite != "" && cookie.SameSite != "strict" && cookie.SameSite != "lax" && cookie.SameSite != "none" {
+			return errors.New("cookies contains an unsupported same_site value")
+		}
+	}
+	if err := validateStateCardinality(fixture); err != nil {
+		return err
+	}
+	if stateSize(fixture) > MaxStateBytes {
+		return fmt.Errorf("state payload exceeds %d bytes", MaxStateBytes)
+	}
+	return nil
+}
+
+func validateStateCardinality(fixture Fixture) error {
+	counts := []struct {
+		name  string
+		count int
+	}{
+		{"local_storage", len(fixture.LocalStorage)},
+		{"session_storage", len(fixture.SessionStorage)},
+		{"feature_flags", len(fixture.FeatureFlags)},
+		{"seed_data", len(fixture.SeedData)},
+	}
+	for _, state := range counts {
+		if state.count > maxStateEntries {
+			return fmt.Errorf("%s exceeds %d entries", state.name, maxStateEntries)
+		}
+	}
+	return nil
+}
+
+func validateTarget(target Target) error {
+	if target.URL == "" {
+		return nil
+	}
+	parsed, err := url.Parse(target.URL)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return errors.New("target.url must be an absolute HTTP or HTTPS URL")
+	}
+	return nil
+}
+
+func validateViewport(viewport Viewport) error {
+	if viewport.Width == 0 && viewport.Height == 0 {
+		return nil
+	}
+	if viewport.Width < 320 || viewport.Width > 7680 {
+		return errors.New("viewport.width must be between 320 and 7680")
+	}
+	if viewport.Height < 240 || viewport.Height > 4320 {
+		return errors.New("viewport.height must be between 240 and 4320")
+	}
+	return nil
+}
+
+func stateSize(fixture Fixture) int {
+	data, err := json.Marshal(struct {
+		Cookies        []Cookie                   `json:"cookies"`
+		LocalStorage   map[string]string          `json:"local_storage"`
+		SessionStorage map[string]string          `json:"session_storage"`
+		FeatureFlags   map[string]bool            `json:"feature_flags"`
+		SeedData       map[string]json.RawMessage `json:"seed_data"`
+	}{fixture.Cookies, fixture.LocalStorage, fixture.SessionStorage, fixture.FeatureFlags, fixture.SeedData})
+	if err != nil {
+		return MaxStateBytes + 1
+	}
+	return len(data)
+}

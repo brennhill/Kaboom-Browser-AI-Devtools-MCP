@@ -119,4 +119,8 @@ var configureModeSpecs = map[string]modeParamSpec{
 		Hint:     "Scaffold .kaboom.json and code standards file for automated quality gate enforcement",
 		Optional: []string{"target_dir"},
 	},
+	"qa_fixture": {
+		Hint:     "Validate a versioned, declarative browser QA environment before applying it",
+		Required: []string{"fixture_action", "fixture"},
+	},
 }

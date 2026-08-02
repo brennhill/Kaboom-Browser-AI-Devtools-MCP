@@ -104,6 +104,16 @@ func TestToolsConfigure_GetValidConfigureActions(t *testing.T) {
 	}
 }
 
+func TestToolsConfigure_QAFixtureValidationIsRegistered(t *testing.T) {
+	t.Parallel()
+	h, _, _ := makeToolHandler(t)
+	resp := callConfigureRaw(h, `{"what":"qa_fixture","fixture_action":"validate","fixture":{"version":1}}`)
+	result := parseToolResult(t, resp)
+	if result.IsError || !strings.Contains(result.Content[0].Text, "QA fixture valid") {
+		t.Fatalf("qa_fixture validation failed: %s", result.Content[0].Text)
+	}
+}
+
 // ============================================
 // configure(action:"health") — Response Fields
 // ============================================

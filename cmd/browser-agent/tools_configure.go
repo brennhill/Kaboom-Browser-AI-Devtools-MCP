@@ -20,6 +20,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/auditlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
+	qafixturehandler "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qafixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
@@ -143,6 +144,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 		"setup_quality_gates": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return qualitygates.Handle(h.server, req, args)
 		},
+		"qa_fixture": qafixturehandler.Handle,
 	})
 }
 

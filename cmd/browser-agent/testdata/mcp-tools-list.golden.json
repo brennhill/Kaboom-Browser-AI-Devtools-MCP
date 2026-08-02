@@ -812,6 +812,169 @@
           },
           "type": "array"
         },
+        "fixture": {
+          "additionalProperties": false,
+          "description": "Versioned, declarative browser QA environment. Values remain local and are never echoed in responses or diagnostics.",
+          "properties": {
+            "auth_role": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "cookies": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  },
+                  "http_only": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "same_site": {
+                    "enum": [
+                      "strict",
+                      "lax",
+                      "none"
+                    ],
+                    "type": "string"
+                  },
+                  "secure": {
+                    "type": "boolean"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "maxItems": 100,
+              "type": "array"
+            },
+            "feature_flags": {
+              "additionalProperties": {
+                "type": "boolean"
+              },
+              "maxProperties": 100,
+              "type": "object"
+            },
+            "local_storage": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "maxProperties": 100,
+              "type": "object"
+            },
+            "locale": {
+              "type": "string"
+            },
+            "network": {
+              "additionalProperties": false,
+              "properties": {
+                "profile": {
+                  "enum": [
+                    "online",
+                    "offline",
+                    "slow_3g",
+                    "fast_3g"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "permissions": {
+              "items": {
+                "enum": [
+                  "camera",
+                  "clipboard_read",
+                  "clipboard_write",
+                  "geolocation",
+                  "microphone",
+                  "notifications"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "seed_data": {
+              "maxProperties": 100,
+              "type": "object"
+            },
+            "session_storage": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "maxProperties": 100,
+              "type": "object"
+            },
+            "setup_timeout_ms": {
+              "maximum": 30000,
+              "minimum": 100,
+              "type": "integer"
+            },
+            "target": {
+              "additionalProperties": false,
+              "properties": {
+                "url": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "user_state": {
+              "enum": [
+                "fresh",
+                "returning"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "enum": [
+                1
+              ],
+              "type": "integer"
+            },
+            "viewport": {
+              "additionalProperties": false,
+              "properties": {
+                "height": {
+                  "maximum": 4320,
+                  "minimum": 240,
+                  "type": "integer"
+                },
+                "width": {
+                  "maximum": 7680,
+                  "minimum": 320,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "version"
+          ],
+          "type": "object"
+        },
+        "fixture_action": {
+          "description": "QA fixture operation. Only validation is exposed until transactional apply and restore ship.",
+          "enum": [
+            "validate"
+          ],
+          "type": "string"
+        },
         "key": {
           "description": "Storage key",
           "type": "string"
@@ -1080,7 +1243,8 @@
             "network_recording",
             "action_jitter",
             "report_issue",
-            "setup_quality_gates"
+            "setup_quality_gates",
+            "qa_fixture"
           ],
           "type": "string"
         }

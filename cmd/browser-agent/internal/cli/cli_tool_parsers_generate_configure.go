@@ -127,6 +127,9 @@ func ParseConfigureArgs(action string, args []string) (map[string]any, error) {
 		"--description":       {MCPKey: "description", Kind: FlagString},
 		// Quality gates
 		"--target-dir": {MCPKey: "target_dir", Kind: FlagString},
+		// QA fixtures
+		"--fixture-action": {MCPKey: "fixture_action", Kind: FlagString},
+		"--fixture":        {MCPKey: "fixture", Kind: FlagJSON},
 		// Network recording
 		"--network-action": {MCPKey: "network_action", Kind: FlagString},
 	})

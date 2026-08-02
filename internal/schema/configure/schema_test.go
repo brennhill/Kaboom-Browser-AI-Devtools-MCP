@@ -37,6 +37,31 @@ func TestToolSchema_RequiresWhat(t *testing.T) {
 	}
 }
 
+func TestToolSchema_ExposesValidateOnlyQAFixtureContract(t *testing.T) {
+	props := ToolSchema().InputSchema["properties"].(map[string]any)
+	what := props["what"].(map[string]any)["enum"].([]string)
+	if !contains(what, "qa_fixture") {
+		t.Fatal("configure what enum missing qa_fixture")
+	}
+	actions := props["fixture_action"].(map[string]any)["enum"].([]string)
+	if len(actions) != 1 || actions[0] != "validate" {
+		t.Fatalf("fixture_action enum = %v, want validate only until transactional apply ships", actions)
+	}
+	fixture := props["fixture"].(map[string]any)
+	if fixture["additionalProperties"] != false {
+		t.Fatal("fixture schema must reject unknown fields")
+	}
+}
+
+func contains(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
 // TestToolProperties_MergePreservesEveryGroupKey guards the merge in
 // properties.go: both property groups must survive intact. A collision between
 // the two groups would silently drop one definition, and a merge that skipped
@@ -47,15 +72,21 @@ func TestToolProperties_MergePreservesEveryGroupKey(t *testing.T) {
 
 	core := coreProperties()
 	runtime := runtimeProperties()
+	fixture := fixtureProperties()
 	merged := toolProperties()
 
-	for key := range core {
-		if _, dup := runtime[key]; dup {
-			t.Errorf("property %q defined in BOTH core and runtime groups — one definition wins silently", key)
+	groups := map[string]map[string]any{"core": core, "runtime": runtime, "fixture": fixture}
+	owners := make(map[string]string)
+	for name, group := range groups {
+		for key := range group {
+			if prior, dup := owners[key]; dup {
+				t.Errorf("property %q defined in BOTH %s and %s groups — one definition wins silently", key, prior, name)
+			}
+			owners[key] = name
 		}
 	}
 
-	for name, group := range map[string]map[string]any{"core": core, "runtime": runtime} {
+	for name, group := range groups {
 		for key, want := range group {
 			got, ok := merged[key]
 			if !ok {
@@ -75,8 +106,8 @@ func TestToolProperties_MergePreservesEveryGroupKey(t *testing.T) {
 		}
 	}
 
-	if len(merged) != len(core)+len(runtime) {
-		t.Errorf("merged configure properties = %d, want %d (core %d + runtime %d)",
-			len(merged), len(core)+len(runtime), len(core), len(runtime))
+	if len(merged) != len(core)+len(runtime)+len(fixture) {
+		t.Errorf("merged configure properties = %d, want %d (core %d + runtime %d + fixture %d)",
+			len(merged), len(core)+len(runtime)+len(fixture), len(core), len(runtime), len(fixture))
 	}
 }

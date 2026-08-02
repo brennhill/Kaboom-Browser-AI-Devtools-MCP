@@ -97,7 +97,7 @@ selector parameters and shorthand mode names are rejected.
 
 ---
 
-### `configure` — 29 modes (`what` -> handler)
+### `configure` — 30 modes (`what` -> handler)
 
 | Mode | Handler / File | Description |
 |---|---|---|
@@ -129,6 +129,8 @@ selector parameters and shorthand mode names are rejected.
 | `network_recording` | `toolConfigureNetworkRecording` | Configure network request recording filters |
 | `action_jitter` | `toolConfigureActionJitter` | Set random delay before interact actions |
 | `report_issue` | `issuereport.Handle` | Submit a bug report or issue template |
+| `setup_quality_gates` | `qualitygates.Handle` | Install the managed quality-gate configuration |
+| `qa_fixture` | `qafixture.Handle` | Validate a strict, versioned QA environment fixture before mutation |
 
 ---
 
