@@ -8,6 +8,7 @@ import { queryComputedStyles } from './computed-styles.js';
 import { discoverForms } from './form-discovery.js';
 import { extractDataTables } from './data-table.js';
 import { getNetworkWaterfall } from '../lib/net/network.js';
+import { highlightElement } from './state.js';
 import { executeJavaScript } from './execute-js.js';
 import { errorMessage } from '../lib/error-utils.js';
 import { isValidSettingPayload, handleSetting, handleStateCommand } from './settings.js';
@@ -68,6 +69,7 @@ export function installMessageListener(captureStateFn, restoreStateFn) {
         kaboom_execute_js: (data) => handleExecuteJs(data),
         kaboom_a11y_query: (data) => handleA11yQuery(data),
         kaboom_dom_query: (data) => handleDomQuery(data),
+        kaboom_highlight_request: (data) => handleHighlightMessage(data),
         kaboom_get_waterfall: (data) => handleGetWaterfall(data),
         kaboom_link_health_query: (data) => handleLinkHealthMessage(data),
         kaboom_computed_styles_query: (data) => handleComputedStylesMessage(data),
@@ -87,6 +89,15 @@ export function installMessageListener(captureStateFn, restoreStateFn) {
         const handler = messageHandlers[msgType]; // nosemgrep: unsafe-dynamic-method
         if (handler)
             handler(event.data);
+    });
+}
+function handleHighlightMessage(data) {
+    const selector = data.params?.selector ?? '';
+    const durationMs = data.params?.duration_ms;
+    postResponse({
+        type: 'kaboom_highlight_response',
+        requestId: data.requestId,
+        result: highlightElement(selector, durationMs)
     });
 }
 function handleBridgePingMessage(data) {

@@ -68,13 +68,14 @@ async function importScriptInjection() {
 }
 
 test('injected highlight responses preserve the authenticated request nonce', () => {
-  const source = fs.readFileSync(new URL('../../../extension/inject/state.js', import.meta.url), 'utf8')
+  const source = fs.readFileSync(new URL('../../../extension/inject/message-handlers.js', import.meta.url), 'utf8')
   const response = source.match(
     /type:\s*['"]kaboom_highlight_response['"][\s\S]{0,240}?requestId[\s\S]{0,240}?result[\s\S]{0,240}/
   )
 
   assert.ok(response, 'expected the injected highlight response envelope')
-  assert.match(response[0], /_nonce:\s*pageNonce/, 'highlight response must echo the authenticated page nonce')
+  assert.match(source, /function postResponse[\s\S]{0,180}?_nonce:\s*pageNonce/)
+  assert.match(response[0], /postResponse/, 'highlight must use the canonical authenticated response owner')
 })
 
 // =============================================================================

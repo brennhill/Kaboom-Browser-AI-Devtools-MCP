@@ -170,6 +170,29 @@ test('cross-context messages require the canonical page nonce', () => {
   }
 })
 
+test('page bridge uses one canonical authenticated contract and dispatcher', () => {
+  const runtimeTypes = readFileSync('src/types/runtime-messages.ts', 'utf8')
+  const contentTypes = readFileSync('src/content/types.ts', 'utf8')
+  const contentListener = readFileSync('src/content/window-message-listener.ts', 'utf8')
+  const injectDispatcher = readFileSync('src/inject/message-handlers.ts', 'utf8')
+  const injectState = readFileSync('src/inject/state.ts', 'utf8')
+
+  for (const messageType of [
+    'kaboom_computed_styles_query',
+    'kaboom_computed_styles_response',
+    'kaboom_form_discovery_query',
+    'kaboom_form_discovery_response'
+  ]) {
+    assert.match(runtimeTypes, new RegExp(`['"]${messageType}['"]`), `${messageType} is missing from the contract`)
+  }
+  assert.match(runtimeTypes, /interface PageMessageEventData[\s\S]*readonly _nonce:\s*string/)
+  assert.doesNotMatch(contentTypes, /interface PageMessageEventData/, 'content must not redeclare the canonical envelope')
+  assert.match(contentListener, /from ['"]\.\.\/types\/runtime-messages\.js['"]/)
+  assert.match(injectDispatcher, /kaboom_highlight_request:\s*\(data\)\s*=>/)
+  assert.doesNotMatch(injectState, /addEventListener\(['"]message['"]/, 'state must not install a second dispatcher')
+  assert.doesNotMatch(injectState, /data-kaboom-nonce/, 'state must not own a second nonce read')
+})
+
 test('WebSocket instrumentation does not re-export tracking APIs', () => {
   const source = readFileSync('src/lib/net/websocket.ts', 'utf8')
   assert.doesNotMatch(

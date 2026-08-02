@@ -2,14 +2,6 @@
  * Purpose: Captures and restores browser state snapshots (localStorage, cookies, scroll position) and manages element highlighting for the AI Web Pilot.
  * Docs: docs/features/feature/state-time-travel/index.md
  */
-/** Read the page nonce set by the content script on the inject script element */
-let pageNonce = '';
-if (typeof document !== 'undefined' && typeof document.querySelector === 'function') {
-    const nonceEl = document.querySelector('script[data-kaboom-nonce]');
-    if (nonceEl) {
-        pageNonce = nonceEl.getAttribute('data-kaboom-nonce') || '';
-    }
-}
 /** Patterns for sensitive storage keys whose values should be redacted */
 const SENSITIVE_KEY_PATTERNS = /token|secret|password|api.?key|auth|session.?id|csrf|jwt/i;
 let kaboomHighlighter = null;
@@ -239,27 +231,5 @@ if (typeof window !== 'undefined') {
             }
         }
     }, { passive: true });
-}
-/**
- * Handle KABOOM_HIGHLIGHT_REQUEST messages from content script
- */
-if (typeof window !== 'undefined') {
-    window.addEventListener('message', (event) => {
-        if (event.source !== window || event.origin !== window.location.origin)
-            return;
-        if (!pageNonce || event.data?._nonce !== pageNonce)
-            return;
-        if (event.data?.type === 'kaboom_highlight_request') {
-            const { requestId, params } = event.data;
-            const { selector, duration_ms } = params || { selector: '' };
-            const result = highlightElement(selector, duration_ms);
-            window.postMessage({
-                type: 'kaboom_highlight_response',
-                _nonce: pageNonce,
-                requestId,
-                result
-            }, window.location.origin);
-        }
-    });
 }
 //# sourceMappingURL=state.js.map

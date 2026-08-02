@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-02
 code_paths:
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
@@ -61,6 +61,7 @@ code_paths:
   - src/content/script-injection.ts
   - src/content/window-message-listener.ts
   - src/content/runtime-message-listener.ts
+  - src/types/runtime-messages.ts
   - src/background/dom/primitives/dom-primitives-list-interactive.ts
   - src/background/dom/primitives/dom-primitives-intent.ts
   - src/background/dom/primitives/dom-primitives-overlay.ts

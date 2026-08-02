@@ -9,7 +9,7 @@
 
 import type { WebSocketCaptureMode } from '../types/capture/websocket.js'
 import type { StateAction, BrowserStateSnapshot } from '../types/runtime/state.js'
-import type { PageMessageType, ContentToPageMessageType } from '../types/runtime-messages.js'
+import type { ContentToPageMessageType } from '../types/runtime-messages.js'
 import type { LogEntry } from '../types/capture/telemetry.js'
 import type { WireWebSocketEvent as WebSocketEvent } from '../types/wire/wire-websocket-event.js'
 import type { WireNetworkBody as NetworkBodyPayload } from '../types/wire/wire-network.js'
@@ -24,16 +24,6 @@ export interface PendingRequestStats {
   readonly execute: number
   readonly a11y: number
   readonly dom: number
-}
-
-/**
- * Page message event data from inject.js
- */
-export interface PageMessageEventData {
-  type?: PageMessageType
-  requestId?: number | string
-  result?: unknown
-  payload?: unknown
 }
 
 /**

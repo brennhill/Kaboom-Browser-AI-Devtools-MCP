@@ -655,9 +655,7 @@ export type ContentMessage =
 // INJECT SCRIPT MESSAGE TYPES (postMessage between content and inject)
 // =============================================================================
 
-/**
- * Page to content script messages (postMessage types)
- */
+/** Page-to-content postMessage types. */
 export type PageMessageType =
   | 'kaboom_log'
   | 'kaboom_ws'
@@ -672,12 +670,12 @@ export type PageMessageType =
   | 'kaboom_state_response'
   | 'kaboom_waterfall_response'
   | 'kaboom_link_health_response'
+  | 'kaboom_computed_styles_response'
+  | 'kaboom_form_discovery_response'
   | 'kaboom_form_state_response'
   | 'kaboom_data_table_response'
 
-/**
- * Content to page messages (postMessage types)
- */
+/** Content-to-page postMessage types. */
 export type ContentToPageMessageType =
   | 'kaboom_setting'
   | 'kaboom_inject_bridge_ping'
@@ -688,8 +686,18 @@ export type ContentToPageMessageType =
   | 'kaboom_state_command'
   | 'kaboom_get_waterfall'
   | 'kaboom_link_health_query'
+  | 'kaboom_computed_styles_query'
+  | 'kaboom_form_discovery_query'
   | 'kaboom_form_state_query'
   | 'kaboom_data_table_query'
+
+export interface PageMessageEventData {
+  readonly _nonce: string
+  readonly type?: PageMessageType
+  readonly requestId?: number | string
+  readonly result?: unknown
+  readonly payload?: unknown
+}
 
 // =============================================================================
 // OFFSCREEN DOCUMENT MESSAGE TYPES (service worker ↔ offscreen)

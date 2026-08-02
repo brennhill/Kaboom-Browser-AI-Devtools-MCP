@@ -19,6 +19,9 @@ code_paths:
   - src/background/dom/primitives/dom-primitives-pointer.ts
   - src/background/dom/primitives/dom-primitives-read.ts
   - src/background/commands/interact.ts
+  - src/types/runtime-messages.ts
+  - src/content/window-message-listener.ts
+  - src/inject/message-handlers.ts
   - src/inject/state.ts
   - src/content/ui/panel/shell.ts
   - src/content/ui/subtitle.ts
@@ -29,6 +32,8 @@ test_paths:
   - cmd/browser-agent/tools_coldstart_gate_test.go
   - tests/extension/pilot/pilot-toggle.test.js
   - tests/extension/pilot/pilot-command-response.test.js
+  - tests/extension/content/content-message-correlation.test.js
+  - tests/extension/contracts/no-compatibility-facades.test.js
   - tests/extension/dom/dom-primitives-branding.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -68,3 +73,7 @@ with `kaboom-` remain ordinary, targetable application DOM.
 Pilot command delivery requires an explicit terminal response from the content
 script. Missing or falsy responses return `pilot_command_no_response` and emit
 a redacted local diagnostic; they can never be converted into success.
+All page-bridge request and response literals live in the canonical runtime
+message contract and require the page nonce. Highlight dispatch shares the one
+authenticated inject dispatcher with DOM, accessibility, state, computed-style,
+and form queries; state ownership contains no second listener or nonce reader.

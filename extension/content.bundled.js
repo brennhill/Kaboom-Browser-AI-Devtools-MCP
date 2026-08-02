@@ -759,8 +759,7 @@
       const { type: messageType, requestId, result, payload } = event.data || {};
       const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : void 0;
       if (responseHandler) {
-        const nonce = event.data?._nonce;
-        if (nonce !== getPageNonce())
+        if (event.data._nonce !== getPageNonce())
           return;
         if (requestId !== void 0)
           responseHandler(requestId, result);

@@ -11,7 +11,8 @@
 import type { HighlightResponse, ExecuteJsResult } from '../types/runtime-messages.js'
 import type { A11yAuditResult } from '../types/capture/accessibility.js'
 import type { DomQueryResult } from '../types/capture/dom.js'
-import type { PageMessageEventData, BackgroundMessageFromContent } from './types.js'
+import type { BackgroundMessageFromContent } from './types.js'
+import type { PageMessageEventData } from '../types/runtime-messages.js'
 import {
   resolveHighlightRequest,
   resolveExecuteRequest,
@@ -43,8 +44,7 @@ export function initWindowMessageListener(): void {
 
     const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : undefined
     if (responseHandler) {
-      const nonce = (event.data as { _nonce?: string })?._nonce
-      if (nonce !== getPageNonce()) return
+      if (event.data._nonce !== getPageNonce()) return
       if (requestId !== undefined) responseHandler(requestId, result)
       return
     }

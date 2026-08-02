@@ -493,14 +493,17 @@ export interface ShowTrackedHoverLauncherMessage {
  * Union of all content-script-bound messages
  */
 export type ContentMessage = ContentPingMessage | TrackingReadinessProbeMessage | HighlightMessage | ExecuteJsMessage | ExecuteQueryMessage | DomQueryMessage | A11yQueryMessage | GetNetworkWaterfallMessage | LinkHealthMessage | ComputedStylesQueryMessage | FormDiscoveryQueryMessage | FormStateQueryMessage | DataTableQueryMessage | ManageStateMessage | ActionToastMessage | SubtitleMessage | RecordingWatermarkMessage | ShowTrackedHoverLauncherMessage | DrawModeStartMessage | DrawModeStopMessage | GetAnnotationsMessage | TrackingStateChangedMessage | ToggleChatMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | SetServerUrlMessage;
-/**
- * Page to content script messages (postMessage types)
- */
-export type PageMessageType = 'kaboom_log' | 'kaboom_ws' | 'kaboom_network_body' | 'kaboom_enhanced_action' | 'kaboom_performance_snapshot' | 'kaboom_inject_bridge_pong' | 'kaboom_highlight_response' | 'kaboom_execute_js_result' | 'kaboom_a11y_query_response' | 'kaboom_dom_query_response' | 'kaboom_state_response' | 'kaboom_waterfall_response' | 'kaboom_link_health_response' | 'kaboom_form_state_response' | 'kaboom_data_table_response';
-/**
- * Content to page messages (postMessage types)
- */
-export type ContentToPageMessageType = 'kaboom_setting' | 'kaboom_inject_bridge_ping' | 'kaboom_highlight_request' | 'kaboom_execute_js' | 'kaboom_a11y_query' | 'kaboom_dom_query' | 'kaboom_state_command' | 'kaboom_get_waterfall' | 'kaboom_link_health_query' | 'kaboom_form_state_query' | 'kaboom_data_table_query';
+/** Page-to-content postMessage types. */
+export type PageMessageType = 'kaboom_log' | 'kaboom_ws' | 'kaboom_network_body' | 'kaboom_enhanced_action' | 'kaboom_performance_snapshot' | 'kaboom_inject_bridge_pong' | 'kaboom_highlight_response' | 'kaboom_execute_js_result' | 'kaboom_a11y_query_response' | 'kaboom_dom_query_response' | 'kaboom_state_response' | 'kaboom_waterfall_response' | 'kaboom_link_health_response' | 'kaboom_computed_styles_response' | 'kaboom_form_discovery_response' | 'kaboom_form_state_response' | 'kaboom_data_table_response';
+/** Content-to-page postMessage types. */
+export type ContentToPageMessageType = 'kaboom_setting' | 'kaboom_inject_bridge_ping' | 'kaboom_highlight_request' | 'kaboom_execute_js' | 'kaboom_a11y_query' | 'kaboom_dom_query' | 'kaboom_state_command' | 'kaboom_get_waterfall' | 'kaboom_link_health_query' | 'kaboom_computed_styles_query' | 'kaboom_form_discovery_query' | 'kaboom_form_state_query' | 'kaboom_data_table_query';
+export interface PageMessageEventData {
+    readonly _nonce: string;
+    readonly type?: PageMessageType;
+    readonly requestId?: number | string;
+    readonly result?: unknown;
+    readonly payload?: unknown;
+}
 /**
  * Start recording message (SW → offscreen)
  */

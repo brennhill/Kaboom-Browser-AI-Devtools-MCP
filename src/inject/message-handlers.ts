@@ -19,6 +19,7 @@ import { queryComputedStyles } from './computed-styles.js'
 import { discoverForms } from './form-discovery.js'
 import { extractDataTables } from './data-table.js'
 import { getNetworkWaterfall } from '../lib/net/network.js'
+import { highlightElement } from './state.js'
 
 import { executeJavaScript } from './execute-js.js'
 import { errorMessage } from '../lib/error-utils.js'
@@ -212,6 +213,7 @@ export function installMessageListener(
     kaboom_execute_js: (data) => handleExecuteJs(data as ExecuteJsRequestMessageData),
     kaboom_a11y_query: (data) => handleA11yQuery(data as A11yQueryRequestMessageData),
     kaboom_dom_query: (data) => handleDomQuery(data as DomQueryRequestMessageData),
+    kaboom_highlight_request: (data) => handleHighlightMessage(data as HighlightRequestMessageData),
     kaboom_get_waterfall: (data) => handleGetWaterfall(data as GetWaterfallRequestMessageData),
     kaboom_link_health_query: (data) => handleLinkHealthMessage(data as LinkHealthQueryRequestMessageData),
     kaboom_computed_styles_query: (data) => handleComputedStylesMessage(data as ComputedStylesQueryRequestMessageData),
@@ -230,6 +232,16 @@ export function installMessageListener(
 
     const handler = messageHandlers[msgType] // nosemgrep: unsafe-dynamic-method
     if (handler) handler(event.data)
+  })
+}
+
+function handleHighlightMessage(data: HighlightRequestMessageData): void {
+  const selector = data.params?.selector ?? ''
+  const durationMs = data.params?.duration_ms
+  postResponse({
+    type: 'kaboom_highlight_response',
+    requestId: data.requestId,
+    result: highlightElement(selector, durationMs)
   })
 }
 
