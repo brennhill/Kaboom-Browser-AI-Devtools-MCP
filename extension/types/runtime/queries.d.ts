@@ -10,7 +10,7 @@
 /**
  * Query types from server
  */
-export type QueryType = 'dom' | 'a11y' | 'execute' | 'highlight' | 'page_info' | 'tabs' | 'browser_action' | 'waterfall' | 'dom_action' | 'state_capture' | 'state_save' | 'state_load' | 'state_list' | 'state_delete' | 'subtitle' | 'screenshot' | 'screen_recording_start' | 'screen_recording_stop' | 'link_health' | 'draw_mode' | 'upload' | 'cdp_action' | 'explore_page' | 'get_readable' | 'get_markdown' | 'page_summary';
+export type QueryType = 'dom' | 'a11y' | 'execute' | 'highlight' | 'page_info' | 'tabs' | 'browser_action' | 'waterfall' | 'dom_action' | 'state_capture' | 'state_save' | 'state_load' | 'state_list' | 'state_delete' | 'subtitle' | 'screenshot' | 'screen_recording_start' | 'screen_recording_stop' | 'link_health' | 'draw_mode' | 'upload' | 'cdp_action' | 'explore_page' | 'get_readable' | 'get_markdown' | 'page_summary' | 'qa_fixture_snapshot' | 'qa_fixture_apply' | 'qa_fixture_restore';
 /**
  * Pending query from server
  */

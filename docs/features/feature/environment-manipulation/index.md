@@ -18,6 +18,12 @@ code_paths:
   - internal/tools/configure/capabilities/modespecs_configure.go
   - scripts/build/generate-wire-types.js
   - scripts/contracts/check-wire-drift.js
+  - src/background/commands/helpers.ts
+  - src/background/pending-queries.ts
+  - src/background/qa-fixture/browser-state-driver.ts
+  - src/background/qa-fixture/chrome-state-adapter.ts
+  - src/background/qa-fixture/commands.ts
+  - src/types/runtime/queries.ts
   - src/types/wire/wire-qa-fixture.ts
 test_paths:
   - cmd/browser-agent/golden_test.go
@@ -28,6 +34,8 @@ test_paths:
   - internal/qafixture/fixture_test.go
   - internal/qafixture/transaction_test.go
   - internal/schema/configure/schema_test.go
+  - tests/extension/qa-fixture/browser-state-driver.test.js
+  - tests/extension/qa-fixture/chrome-state-adapter.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -69,3 +77,9 @@ last_verified_date: 2026-03-05
   bounded rollback after any partial apply failure. Driver errors collapse to
   stable status codes, so raw cookies, storage, and seed values cannot enter
   MCP responses or Doctor diagnostics.
+- The extension driver preflights unsupported locale, permission, network, and
+  cross-origin page-state combinations before mutation. Supported navigation,
+  viewport, cookies, storage, flags, and seed state are captured exactly,
+  including absent keys, and restored through independent best-effort recovery
+  steps. Private snapshots remain extension-owned; only an opaque snapshot ID
+  crosses the daemon command boundary.

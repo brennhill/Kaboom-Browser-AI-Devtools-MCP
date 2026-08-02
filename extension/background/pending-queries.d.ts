@@ -12,5 +12,6 @@ import './commands/analyze-feature-gates.js';
 import './commands/interact.js';
 import './commands/interact-content.js';
 import './commands/interact-explore.js';
+import './qa-fixture/commands.js';
 export declare function handlePendingQuery(query: PendingQuery, syncClient: SyncClient): Promise<void>;
 //# sourceMappingURL=pending-queries.d.ts.map

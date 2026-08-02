@@ -1,0 +1,80 @@
+/**
+ * Purpose: Registers private extension commands for QA fixture snapshot, apply, and restore.
+ * Why: Keeps sensitive snapshots extension-owned while exposing only opaque IDs to the daemon coordinator.
+ * Docs: docs/features/feature/environment-manipulation/index.md
+ */
+import { registerCommand } from '../commands/registry.js';
+import { createChromeBrowserStateDriver } from './chrome-state-adapter.js';
+export function createFixtureSnapshotStore(newID) {
+    const snapshots = new Map();
+    return {
+        save(snapshot) {
+            const id = newID();
+            snapshots.set(id, snapshot);
+            return id;
+        },
+        get: (id) => snapshots.get(id),
+        delete: (id) => snapshots.delete(id)
+    };
+}
+export function registerFixtureCommands(driver, snapshots) {
+    registerCommand('qa_fixture_snapshot', async (ctx) => {
+        const fixture = requireFixture(ctx.params);
+        ctx.sendResult(await snapshotFixture(driver, snapshots, ctx.tabId, fixture));
+    });
+    registerCommand('qa_fixture_apply', async (ctx) => {
+        const fixture = requireFixture(ctx.params);
+        ctx.sendResult(await applyFixture(driver, ctx.tabId, fixture));
+    });
+    registerCommand('qa_fixture_restore', async (ctx) => {
+        const params = ctx.params;
+        const fixture = requireFixture(params);
+        const snapshotID = requireSnapshotID(params);
+        ctx.sendResult(await restoreFixture(driver, snapshots, ctx.tabId, fixture, snapshotID));
+    });
+}
+export async function snapshotFixture(driver, snapshots, tabId, fixture) {
+    try {
+        const snapshot = await driver.snapshot(tabId, fixture);
+        return { success: true, snapshot_id: snapshots.save(snapshot) };
+    }
+    catch {
+        throw new Error('fixture_snapshot_failed');
+    }
+}
+export async function applyFixture(driver, tabId, fixture) {
+    try {
+        return { success: true, mutations: await driver.apply(tabId, fixture) };
+    }
+    catch {
+        throw new Error('fixture_apply_failed');
+    }
+}
+export async function restoreFixture(driver, snapshots, tabId, fixture, snapshotID) {
+    const snapshot = snapshots.get(snapshotID);
+    if (!snapshot)
+        throw new Error('fixture_snapshot_not_found');
+    try {
+        await driver.restore(tabId, fixture, snapshot);
+    }
+    catch {
+        throw new Error('fixture_restore_failed');
+    }
+    snapshots.delete(snapshotID);
+    return { success: true, restored: true };
+}
+function requireFixture(params) {
+    const fixture = params.fixture;
+    if (!fixture || fixture.version !== 1)
+        throw new Error('invalid_qa_fixture');
+    return fixture;
+}
+function requireSnapshotID(params) {
+    if (!params.snapshot_id)
+        throw new Error('fixture_snapshot_id_required');
+    return params.snapshot_id;
+}
+const driver = createChromeBrowserStateDriver();
+const snapshots = createFixtureSnapshotStore(() => crypto.randomUUID());
+registerFixtureCommands(driver, snapshots);
+//# sourceMappingURL=commands.js.map

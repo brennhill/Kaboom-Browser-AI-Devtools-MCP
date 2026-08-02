@@ -298,7 +298,10 @@ const TARGETED_QUERY_TYPES = new Set<string>([
   'page_inventory',
   'page_structure',
   'navigation',
-  'feature_gates'
+  'feature_gates',
+  'qa_fixture_snapshot',
+  'qa_fixture_apply',
+  'qa_fixture_restore'
 ])
 
 export function requiresTargetTab(queryType: string): boolean {
