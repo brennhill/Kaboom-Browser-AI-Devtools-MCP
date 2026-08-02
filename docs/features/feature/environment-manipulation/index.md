@@ -13,6 +13,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_storage.go
   - cmd/browser-agent/tools_configure.go
   - internal/qafixture/fixture.go
+  - internal/qafixture/transaction.go
   - internal/schema/configure/properties_fixture.go
   - internal/tools/configure/capabilities/modespecs_configure.go
 test_paths:
@@ -22,6 +23,7 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_storage_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler_test.go
   - internal/qafixture/fixture_test.go
+  - internal/qafixture/transaction_test.go
   - internal/schema/configure/schema_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -59,3 +61,8 @@ last_verified_date: 2026-03-05
   echoing cookies, storage, flags, or seed values. The contract bounds setup
   time and state size, rejects unknown fields and unsupported capabilities,
   and only advertises validation until transactional apply and restore ship.
+- The fixture transaction coordinator generates its own correlation ID,
+  captures an opaque private snapshot before the first mutation, and performs
+  bounded rollback after any partial apply failure. Driver errors collapse to
+  stable status codes, so raw cookies, storage, and seed values cannot enter
+  MCP responses or Doctor diagnostics.
