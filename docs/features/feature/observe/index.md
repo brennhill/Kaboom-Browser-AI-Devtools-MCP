@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-02
 code_paths:
   - internal/capture/accessors.go
   - internal/queries/dispatcher_queries.go
@@ -33,6 +33,7 @@ code_paths:
   - internal/tools/observe/session.go
   - internal/tools/observe/correlation.go
   - internal/tools/observe/page_state.go
+  - cmd/browser-agent/internal/mcphttp/handler.go
   - internal/tools/observe/hints/hints.go
   - internal/tools/observe/idbquery/execute.go
   - internal/tools/observe/idbquery/scripts.go
@@ -83,6 +84,7 @@ test_paths:
   - internal/tools/observe/summarized_logs_test.go
   - internal/tools/observe/validation_test.go
   - internal/tools/observe/page_state_test.go
+  - cmd/browser-agent/internal/mcphttp/handler_test.go
   - internal/tools/observe/page_state_storage_test.go
   - internal/tools/observe/page_state_screenshot_test.go
   - internal/tools/observe/hints/hints_test.go
@@ -124,6 +126,10 @@ APIs remain owned by their focused `src/inject` and `src/lib` modules.
 Go observe modes receive the canonical capture owner plus explicit log, noise,
 accessibility, and diagnostic reads. No ToolHandler-satisfied observation
 interface or observation-only root getter remains.
+Page titles and URLs containing raw control bytes are escaped through both the
+nested tool payload and outer JSON-RPC envelope. The HTTP boundary rejects any
+malformed raw result with a structured protocol error instead of returning an
+empty or partial response.
 
 ## TL;DR
 - Status: shipped

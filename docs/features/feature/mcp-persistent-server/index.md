@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-02
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -128,6 +128,7 @@ test_paths:
   - cmd/browser-agent/internal/operationalapi/coverage_contract_test.go
   - cmd/browser-agent/internal/dashboard/handler_test.go
   - cmd/browser-agent/internal/exitdiag/recorder_test.go
+
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_contract_test.go
@@ -168,6 +169,10 @@ The obsolete `internal/mcp/deps.go` provider contracts were deleted after all
 consumers migrated to explicit owner functions. Asynchronous command lifecycle
 behavior now belongs to `internal/asynccommand.Handler`; MCP transport owns no
 capture, accessibility, log-buffer, noise, or completion provider interface.
+HTTP MCP responses are marshaled once at the transport boundary and those exact
+validated bytes are written to the client. Upstream serialization failures are
+converted into a valid `-32603` JSON-RPC error with the original request ID, so
+HTTP 200 can never carry an empty or partially encoded protocol response.
 `MCPHandler` owns its capture, tool schemas, limiter, redactor, usage tracker,
 and execution backend through one `ToolBackend` value. The executor contract has
 only `HandleToolCall`; no transport-policy getter remains on `ToolHandler`.

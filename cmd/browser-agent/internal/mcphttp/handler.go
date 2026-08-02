@@ -6,7 +6,6 @@ package mcphttp
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"io"
 	"net/http"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 type Config struct {
@@ -106,10 +106,19 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 		writer.WriteHeader(http.StatusNoContent)
 		return
 	}
-	responseJSON, _ := json.Marshal(response)
-	handler.log(ctx, requestPreview, http.StatusOK, preview(string(responseJSON)), "")
+	responseJSON, marshalErr := json.Marshal(response)
+	logMessage := ""
+	if marshalErr != nil {
+		logMessage = "Response serialization failed: " + marshalErr.Error()
+		responseJSON, _ = json.Marshal(mcp.JSONRPCResponse{
+			JSONRPC: mcp.JSONRPCVersion,
+			ID:      response.ID,
+			Error:   &mcp.JSONRPCError{Code: -32603, Message: "Response serialization failed"},
+		})
+	}
+	handler.log(ctx, requestPreview, http.StatusOK, preview(string(responseJSON)), logMessage)
 	writer.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(writer).Encode(response)
+	_, _ = writer.Write(append(responseJSON, '\n'))
 }
 
 func writeJSONRPCError(writer http.ResponseWriter, id any, code int, message string) {
