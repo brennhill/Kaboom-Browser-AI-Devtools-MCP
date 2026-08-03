@@ -165,16 +165,19 @@ jobs:
       - name: Go tests with race detection
         run: go test -race -v ./cmd/browser-agent/... ./internal/...
 
-      - name: Go test coverage (70% minimum)
-        run: |
-          go test -coverprofile=coverage.out ./cmd/browser-agent/...
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          echo "Coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
-            echo "FAIL: Coverage ${COVERAGE}% is below 70% threshold"
-            exit 1
-          fi
-          echo "OK: Coverage ${COVERAGE}% meets 70% threshold"
+      - name: Honest aggregate Go coverage
+        run: make test-cover
+
+      - name: Retain aggregate Go coverage
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: aggregate-go-coverage
+          path: |
+            coverage.out
+            coverage/go/*.out
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Verify zero external dependencies
         run: |

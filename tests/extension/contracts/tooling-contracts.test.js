@@ -103,6 +103,18 @@ describe('Tooling contracts', () => {
     }
   })
 
+  test('hosted and local CI share honest aggregate Go coverage', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const makefile = readFileSync('Makefile', 'utf8')
+    const coverageRunner = readFileSync('scripts/build/run-go-coverage.sh', 'utf8')
+
+    assert.match(workflow, /name: Honest aggregate Go coverage[\s\S]*run: make test-cover/)
+    assert.match(workflow, /name: Retain aggregate Go coverage[\s\S]*path:[\s\S]*coverage\.out/)
+    assert.match(makefile, /^ci-go:[\s\S]*\n\t\$\(MAKE\) test-cover/m)
+    assert.match(coverageRunner, /MINIMUM="\$\{GO_COVERAGE_MINIMUM:-89\}"/)
+    assert.doesNotMatch(workflow, /70% minimum|COVERAGE < 70|coverprofile=coverage\.out/)
+  })
+
   test('hardening lint is a named CI gate rather than a subprocess unit test', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
     const hardeningTests = readFileSync('cmd/browser-agent/lint_hardening_test.go', 'utf8')

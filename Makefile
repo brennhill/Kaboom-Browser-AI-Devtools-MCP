@@ -390,10 +390,10 @@ release-check: ci-local ci-e2e smoke-mcp-transport
 
 ci-go:
 	go vet $(CMD_PKG)/
-	make test-race
-	make test-cover
-	make build
-	make verify-zero-deps
+	$(MAKE) test-race
+	$(MAKE) test-cover
+	$(MAKE) build
+	$(MAKE) verify-zero-deps
 
 ci-js:
 	npm ci
