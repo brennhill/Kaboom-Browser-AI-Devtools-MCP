@@ -208,7 +208,7 @@ func EnforceStartupPolicy(d Deps, port int, opts LaunchOptions) error {
 	}
 	rec, err := readDaemonLockFile()
 	if err != nil {
-		d.Log.LogLifecycle("daemon_lock_recovered", port, map[string]any{"error": err.Error()})
+		d.Log.LogLifecycle("daemon_lock_recovered", port, map[string]any{"reason": "state_read_or_parse_failed"})
 		if d.Recovery != nil {
 			d.Recovery.Report(statediag.Diagnostic{
 				Name:   "daemon_lock_state",

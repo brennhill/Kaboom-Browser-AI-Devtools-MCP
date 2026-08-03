@@ -2,12 +2,70 @@
 package daemonlife
 
 import (
+	"io/fs"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
+
+type faultLifecycleFilesystem struct {
+	readData  []byte
+	readErr   error
+	writeErr  error
+	removeErr error
+}
+
+func (f faultLifecycleFilesystem) ReadFile(string) ([]byte, error) {
+	if f.readErr != nil {
+		return nil, f.readErr
+	}
+	if f.readData == nil {
+		return nil, fs.ErrNotExist
+	}
+	return append([]byte(nil), f.readData...), nil
+}
+func (f faultLifecycleFilesystem) WriteFile(string, []byte) error { return f.writeErr }
+func (f faultLifecycleFilesystem) Remove(string) error            { return f.removeErr }
+
+func installLifecycleFault(t *testing.T, files lifecycleFilesystem) {
+	t.Helper()
+	daemonLifecycleFiles = files
+	t.Cleanup(func() { daemonLifecycleFiles = localLifecycleFilesystem{} })
+}
+
+func TestStartupThrottleCanonicalStateFaultsFailOpenWithDiagnostics(t *testing.T) {
+	for _, kind := range []statefault.Kind{statefault.Read, statefault.Write, statefault.Quota, statefault.Cancellation} {
+		t.Run(string(kind), func(t *testing.T) {
+			t.Setenv("KABOOM_STATE_DIR", t.TempDir())
+			scenario := statefault.New(kind, "private-restart-history")
+			files := faultLifecycleFilesystem{}
+			if kind == statefault.Read {
+				files.readErr = scenario.Error()
+			} else {
+				files.writeErr = scenario.Error()
+			}
+			installLifecycleFault(t, files)
+			deps, logger := newTestDeps(t)
+			diagnostics := statediag.NewCollector()
+			deps.Recovery = diagnostics
+
+			if delay := ApplyStartupRestartThrottle(deps, throttleTestPort); delay != 0 {
+				t.Fatalf("fault fallback delay = %s, want zero", delay)
+			}
+			if got := diagnostics.Snapshot(); len(got) == 0 || got[0].Name != "restart_history_state" {
+				t.Fatalf("diagnostics = %#v, want restart history incident", got)
+			}
+			for _, event := range logger.events {
+				if value := event.Fields["error"]; value != nil {
+					t.Fatalf("lifecycle event leaked raw error: %#v", event)
+				}
+			}
+		})
+	}
+}
 
 // TestRecordRestartAndComputeDelay_ThrottlesRapidRestarts asserts the backoff engages
 // only once the same install restarts MORE than restartThrottleMax times within the

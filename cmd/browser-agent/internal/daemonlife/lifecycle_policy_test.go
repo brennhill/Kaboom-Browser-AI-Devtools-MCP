@@ -18,7 +18,41 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
+
+func TestDaemonLockCanonicalFaultsAreRedactedAndFailSafe(t *testing.T) {
+	for _, kind := range []statefault.Kind{statefault.Read, statefault.Write, statefault.Quota, statefault.Cancellation} {
+		t.Run(string(kind), func(t *testing.T) {
+			isolatedStateDir(t)
+			scenario := statefault.New(kind, "private-daemon-lock")
+			files := faultLifecycleFilesystem{}
+			if kind == statefault.Read {
+				files.readErr = scenario.Error()
+			} else {
+				files.writeErr = scenario.Error()
+			}
+			installLifecycleFault(t, files)
+			diagnostics := statediag.NewCollector()
+
+			if kind == statefault.Read {
+				deps, logger := newTestDeps(t)
+				deps.Recovery = diagnostics
+				if err := EnforceStartupPolicy(deps, 7890, LaunchOptions{}); err != nil {
+					t.Fatalf("read fault should recover: %v", err)
+				}
+				if event := logger.find("daemon_lock_recovered"); event == nil || event.Fields["error"] != nil {
+					t.Fatalf("recovery event = %#v, want redacted reason", event)
+				}
+			} else if err := PersistCurrentLock(7890, "0.9.0", diagnostics); err == nil {
+				t.Fatal("write fault must prevent unsafe ownership claim")
+			}
+			if got := diagnostics.Snapshot(); len(got) == 0 || got[0].Name != "daemon_lock_state" {
+				t.Fatalf("diagnostics = %#v, want daemon lock incident", got)
+			}
+		})
+	}
+}
 
 // isolatedStateDir points the whole package at a temp state root for one test.
 func isolatedStateDir(t *testing.T) string {

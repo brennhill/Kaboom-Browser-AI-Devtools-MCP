@@ -13,7 +13,8 @@ package daemonlife
 
 import (
 	"encoding/json"
-	"os"
+	"errors"
+	"io/fs"
 	"path/filepath"
 	"time"
 
@@ -97,9 +98,9 @@ func restartHistoryPath(stateDir string) string {
 // loadRestartHistory reads the restart history; a missing or corrupt file yields an
 // empty history (treated as a fresh install), never an error.
 func loadRestartHistory(path string) (restartHistory, error) {
-	b, err := os.ReadFile(path) // #nosec G304 -- path derived from our own state dir
+	b, err := daemonLifecycleFiles.ReadFile(path) // #nosec G304 -- path derived from our own state dir
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return restartHistory{}, nil
 		}
 		return restartHistory{}, err
@@ -113,14 +114,11 @@ func loadRestartHistory(path string) (restartHistory, error) {
 
 // saveRestartHistory persists the restart history, creating the state dir if needed.
 func saveRestartHistory(path string, h restartHistory) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
-	}
 	b, err := json.Marshal(h)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, b, 0o600)
+	return daemonLifecycleFiles.WriteFile(path, b)
 }
 
 // ClearRestartHistoryOnCleanShutdown removes the restart history after a graceful,
@@ -136,8 +134,11 @@ func ClearRestartHistoryOnCleanShutdown(d Deps, port int) {
 		return
 	}
 	path := restartHistoryPath(stateDir)
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		d.Log.LogLifecycle("restart_history_clear_failed", port, map[string]any{"error": err.Error()})
+	if err := daemonLifecycleFiles.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		d.Log.LogLifecycle("restart_history_clear_failed", port, map[string]any{"reason": "state_remove_failed"})
+		if d.Recovery != nil {
+			d.Recovery.Report(statediag.Diagnostic{Name: "restart_history_state", Detail: "Restart history could not be cleared after clean shutdown.", Fix: "Check state-directory permissions, then restart Kaboom."})
+		}
 	}
 }
 
@@ -148,13 +149,13 @@ func ClearRestartHistoryOnCleanShutdown(d Deps, port int) {
 func ApplyStartupRestartThrottle(d Deps, port int) time.Duration {
 	stateDir, err := state.RootDir()
 	if err != nil {
-		d.Log.LogLifecycle("restart_history_statedir_failed", port, map[string]any{"error": err.Error()})
+		d.Log.LogLifecycle("restart_history_statedir_failed", port, map[string]any{"reason": "state_directory_unavailable"})
 		return 0
 	}
 	path := restartHistoryPath(stateDir)
 	prev, loadErr := loadRestartHistory(path)
 	if loadErr != nil {
-		d.Log.LogLifecycle("restart_history_recovered", port, map[string]any{"error": loadErr.Error()})
+		d.Log.LogLifecycle("restart_history_recovered", port, map[string]any{"reason": "state_read_or_parse_failed"})
 		if d.Recovery != nil {
 			d.Recovery.Report(statediag.Diagnostic{
 				Name:   "restart_history_state",
@@ -165,7 +166,10 @@ func ApplyStartupRestartThrottle(d Deps, port int) time.Duration {
 	}
 	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), d.Version, daemonInstallEpoch(d.Recovery), port)
 	if err := saveRestartHistory(path, next); err != nil {
-		d.Log.LogLifecycle("restart_history_write_failed", port, map[string]any{"error": err.Error()})
+		d.Log.LogLifecycle("restart_history_write_failed", port, map[string]any{"reason": "state_write_failed"})
+		if d.Recovery != nil {
+			d.Recovery.Report(statediag.Diagnostic{Name: "restart_history_state", Detail: "Daemon restart history could not be persisted; startup proceeds without durable crash-loop accounting.", Fix: "Check state-directory permissions and available disk space, then restart Kaboom."})
+		}
 	} else {
 		statediag.Resolve(d.Recovery, "restart_history_state")
 	}

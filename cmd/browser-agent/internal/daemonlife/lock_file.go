@@ -7,12 +7,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
+
+type lifecycleFilesystem interface {
+	ReadFile(string) ([]byte, error)
+	WriteFile(string, []byte) error
+	Remove(string) error
+}
+
+type localLifecycleFilesystem struct{}
+
+func (localLifecycleFilesystem) ReadFile(path string) ([]byte, error) { return os.ReadFile(path) }
+func (localLifecycleFilesystem) WriteFile(path string, data []byte) error {
+	return statefile.Write(path, data, 0o600)
+}
+func (localLifecycleFilesystem) Remove(path string) error { return os.Remove(path) }
+
+var daemonLifecycleFiles lifecycleFilesystem = localLifecycleFilesystem{}
 
 func daemonLockFilePath() (string, error) {
 	return state.InRoot("run", "daemon.lock.json")
@@ -31,7 +47,7 @@ func readDaemonLockFile() (*daemonLockRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(path)
+	data, err := daemonLifecycleFiles.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -50,9 +66,6 @@ func writeDaemonLockFile(rec daemonLockRecord) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return err
-	}
 	if rec.UpdatedAt == "" {
 		rec.UpdatedAt = daemonNow().UTC().Format(time.RFC3339)
 	}
@@ -60,7 +73,7 @@ func writeDaemonLockFile(rec daemonLockRecord) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o600)
+	return daemonLifecycleFiles.WriteFile(path, data)
 }
 
 func removeDaemonLockFile() error {
@@ -68,7 +81,7 @@ func removeDaemonLockFile() error {
 	if err != nil {
 		return err
 	}
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+	if err := daemonLifecycleFiles.Remove(path); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return nil
@@ -76,14 +89,20 @@ func removeDaemonLockFile() error {
 
 // RemoveLockIfOwned deletes the daemon lock only when pid still owns it, so a
 // shutting-down daemon never clears a successor's lock.
-func RemoveLockIfOwned(pid int) {
+func RemoveLockIfOwned(pid int) error {
 	rec, err := readDaemonLockFile()
-	if err != nil || rec == nil {
-		return
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		// EXPECTED_ABSENCE: no lock is the normal state after another clean shutdown;
+		// logging it would misleadingly report idempotent cleanup as a failure.
+		return nil
 	}
 	if rec.PID == pid {
-		_ = removeDaemonLockFile() //nolint:errcheck // best-effort ownership cleanup
+		return removeDaemonLockFile()
 	}
+	return nil
 }
 
 // PersistCurrentLock registers this process as the owner of port, stamping the
@@ -101,6 +120,13 @@ func PersistCurrentLock(port int, version string, diagnostics statediag.Reporter
 		UpdatedAt:    daemonNow().UTC().Format(time.RFC3339),
 		InstallEpoch: resolveInstallEpoch(diagnostics),
 	}); err != nil {
+		if diagnostics != nil {
+			diagnostics.Report(statediag.Diagnostic{
+				Name:   "daemon_lock_state",
+				Detail: "Daemon ownership could not be persisted; startup cannot safely claim this state directory.",
+				Fix:    "Check state-directory permissions and available disk space, then restart Kaboom.",
+			})
+		}
 		return err
 	}
 	statediag.Resolve(diagnostics, "daemon_lock_state")

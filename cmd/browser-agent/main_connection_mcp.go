@@ -480,7 +480,9 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	persistTokenSavings(server)
 
 	procctl.RemovePIDFile(port)
-	daemonlife.RemoveLockIfOwned(os.Getpid())
+	if err := daemonlife.RemoveLockIfOwned(os.Getpid()); err != nil {
+		server.logLifecycle("daemon_lock_cleanup_failed", port, map[string]any{"reason": "state_remove_failed"})
+	}
 }
 
 func shutdownTerminalServer(server *Server, termSrv *http.Server, port int) {

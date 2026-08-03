@@ -27,6 +27,7 @@ import (
 // reports its OWN install time — a shared stamp would collapse to one value and
 // defeat the tiebreaker.
 const installEpochStampName = ".kaboom-install-epoch"
+const minimumInstallEpoch = int64(1_500_000_000_000_000_000)
 
 var (
 	installEpochOnce sync.Once
@@ -57,7 +58,7 @@ func computeInstallEpoch(
 	//    moment, which mtime can't when a copy preserves timestamps.
 	stamp := filepath.Join(filepath.Dir(exe), installEpochStampName)
 	if b, e := readFile(stamp); e == nil {
-		if v, e2 := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64); e2 == nil && v > 0 {
+		if v, e2 := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64); e2 == nil && v >= minimumInstallEpoch {
 			statediag.Resolve(diagnostics, "install_epoch_state")
 			return v
 		}

@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-02
+last_reviewed: 2026-08-03
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -39,6 +39,8 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/version_compare.go
   - cmd/browser-agent/internal/daemonlife/deps.go
   - internal/statediag/collector.go
+  - internal/statefault/fault.go
+  - internal/statefile/statefile.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/internal/procctl/stop.go
   - cmd/browser-agent/main_connection_mcp.go
@@ -193,6 +195,13 @@ does not maintain parallel lazy registries.
 > restart history cannot trigger false throttling. Lock, restart-history, and
 > install-epoch recovery use safe defaults, structured lifecycle events, and
 > the canonical System Doctor recovery collector.
+
+> **2026-08-03:** Daemon lock and restart-throttle persistence now share one
+> canonical lifecycle filesystem boundary with durable atomic writes. Read,
+> write, quota, cancellation, corruption, partial-write, cleanup, and restart
+> tests use deterministic fakes; lifecycle logs expose stable reasons instead
+> of paths or raw errors. Partial install-epoch stamps can no longer be accepted
+> as plausible nanosecond identities.
 
 > **2026-07-28:** Route construction now treats a missing capture runtime as an
 > unavailable optional dependency. Guard diagnostics and injected query,

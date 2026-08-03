@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
 
 // --- computeInstallEpoch ------------------------------------------------------
@@ -67,6 +68,33 @@ func TestComputeInstallEpoch_NoExecutable_ReturnsZero(t *testing.T) {
 	readFile := func(string) ([]byte, error) { return nil, os.ErrNotExist }
 	if got := computeInstallEpoch(exe, stat, readFile, nil); got != 0 {
 		t.Fatalf("want 0 when executable unknown, got %d", got)
+	}
+}
+
+func TestComputeInstallEpochCanonicalFaultsUseDeterministicMtimeFallback(t *testing.T) {
+	mtime := time.Date(2026, 8, 3, 1, 2, 3, 0, time.UTC)
+	for _, kind := range []statefault.Kind{statefault.Read, statefault.Corruption, statefault.PartialWrite} {
+		t.Run(string(kind), func(t *testing.T) {
+			scenario := statefault.New(kind, "private-install-epoch")
+			diagnostics := statediag.NewCollector()
+			got := computeInstallEpoch(
+				func() (string, error) { return "/x/kaboom", nil },
+				func(string) (os.FileInfo, error) { return fakeFileInfo{mod: mtime}, nil },
+				func(string) ([]byte, error) {
+					if kind == statefault.Read {
+						return nil, scenario.Error()
+					}
+					return scenario.Payload([]byte("1730000000123456789")), nil
+				},
+				diagnostics,
+			)
+			if got != mtime.UnixNano() {
+				t.Fatalf("epoch = %d, want mtime fallback %d", got, mtime.UnixNano())
+			}
+			if incidents := diagnostics.Snapshot(); len(incidents) != 1 || incidents[0].Name != "install_epoch_state" {
+				t.Fatalf("diagnostics = %#v, want install epoch incident", incidents)
+			}
+		})
 	}
 }
 
