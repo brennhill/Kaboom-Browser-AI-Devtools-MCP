@@ -74,6 +74,7 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 		qd.queryIDCounter++
 		id := fmt.Sprintf("%s-%d", qd.queryIDPrefix, qd.queryIDCounter)
 
+		createdAt := time.Now()
 		entry := PendingQueryEntry{
 			Query: PendingQueryResponse{
 				ID:            id,
@@ -83,8 +84,9 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 				CorrelationID: query.CorrelationID,
 				TraceID:       deriveTraceID(query.TraceID, query.CorrelationID, id),
 			},
-			Expires:  time.Now().Add(timeout),
-			ClientID: clientID,
+			CreatedAt: createdAt,
+			Expires:   createdAt.Add(timeout),
+			ClientID:  clientID,
 		}
 
 		qd.pendingQueries = append(qd.pendingQueries, entry)

@@ -702,7 +702,7 @@ func TestGetHealth_FullResponse(t *testing.T) {
 		return LaunchModeInfo{Mode: "cli", Reason: "manual", ParentProcess: "sh"}
 	}
 
-	resp := m.GetHealth(c, server, up, getLaunch, "8.8.8")
+	resp := m.GetHealth(c, server, up, getLaunch, nil, "8.8.8")
 	if resp.Server.Version != "8.8.8" {
 		t.Errorf("Server.Version: want 8.8.8, got %s", resp.Server.Version)
 	}
@@ -731,7 +731,7 @@ func TestGetHealth_NilServerAndUpgrade(t *testing.T) {
 	c := newTestCapture(t)
 	getLaunch := func() LaunchModeInfo { return LaunchModeInfo{Mode: "auto"} }
 
-	resp := m.GetHealth(c, nil, nil, getLaunch, "1.0")
+	resp := m.GetHealth(c, nil, nil, getLaunch, nil, "1.0")
 	if resp.Server.TerminalPort != 0 {
 		t.Errorf("nil server: TerminalPort should be 0, got %d", resp.Server.TerminalPort)
 	}

@@ -26,6 +26,8 @@ code_paths:
   - cmd/browser-agent/internal/toolmodule/registry.go
   - cmd/browser-agent/internal/toolcatalog/catalog.go
   - cmd/browser-agent/server.go
+  - cmd/browser-agent/internal/health/response_builders.go
+  - cmd/browser-agent/internal/health/response_types.go
   - cmd/browser-agent/internal/playbooks/resource_catalog.go
   - cmd/browser-agent/internal/playbooks/playbooks_resolver.go
   - cmd/browser-agent/internal/bridge/bridge.go
@@ -207,6 +209,12 @@ does not maintain parallel lazy registries.
 > unavailable optional dependency. Guard diagnostics and injected query,
 > performance, and session readers remain nil-safe, allowing middleware-only
 > route tests without inventing a fake Capture.
+
+> **2026-08-03:** Health and Doctor expose one machine-readable pressure
+> contract for console, browser telemetry, extension diagnostics, performance
+> snapshots, pending commands, alerts, notification queues, recordings, and
+> the correlated Doctor timeline. Active obligations remain distinct from
+> recoverable history, and historical drops do not falsely degrade health.
 
 > **2026-07-27:** Removed the unreachable `main_connection_diag.go`
 > connection-probing path and its dedicated tests. No production caller invoked

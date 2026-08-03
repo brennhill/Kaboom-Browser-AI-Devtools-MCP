@@ -95,6 +95,9 @@ last_verified_date: 2026-03-05
   cleanup failures preserve the previous in-memory quota/accounting state,
   return stable value-free errors, and keep the recording available for retry;
   successful recount or deletion resolves the Doctor incident.
+- Health reports the recording count, active recording count, retained bytes,
+  and byte capacity from the manager's in-memory accounting without performing
+  filesystem I/O on the diagnostic request path.
 - Recording persistence reads and writes only the canonical state recordings
   directory; historical storage locations are not migration inputs.
 - Malformed or unreadable event-recording metadata is isolated per recording,

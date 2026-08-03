@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +14,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -105,7 +109,7 @@ func TestHealthResponseIncludesDroppedCount(t *testing.T) {
 	_ = srv.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop1"}})
 	_ = srv.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop2"}})
 
-	resp := getHealthResponse(hm, nil, srv, "test")
+	resp := getHealthResponse(hm, nil, srv, nil, nil, "test")
 
 	if resp.Buffers.Console.DroppedCount != 2 {
 		t.Fatalf("Console.DroppedCount = %d, want 2", resp.Buffers.Console.DroppedCount)
@@ -138,13 +142,54 @@ func TestHealthResponseZeroDroppedCount(t *testing.T) {
 		}),
 	}
 
-	resp := getHealthResponse(hm, nil, srv, "test")
+	resp := getHealthResponse(hm, nil, srv, nil, nil, "test")
 
 	if resp.Buffers.Console.DroppedCount != 0 {
 		t.Fatalf("Console.DroppedCount = %d, want 0 for fresh server", resp.Buffers.Console.DroppedCount)
 	}
 
 	srv.logs.Shutdown(10 * time.Millisecond)
+}
+
+func TestHealthResponseExposesMachineReadableResourcePressure(t *testing.T) {
+	hm := health.NewMetrics()
+	cap := capture.NewCapture()
+	cap.Telemetry().AddNetworkBodies(make([]types.NetworkBody, capture.MaxNetworkBodies+2))
+	cap.ExtensionLogs().Add(make([]types.ExtensionLog, capture.MaxExtensionLogs+1))
+	alerts := alertbuf.NewAlertBuffer()
+	for i := 0; i < alertbuf.AlertBufferCap+3; i++ {
+		alerts.AddAlert(types.Alert{Title: fmt.Sprintf("alert-%d", i)})
+	}
+
+	resp := getHealthResponse(hm, cap, nil, alerts, nil, "test")
+	for name, wantDropped := range map[string]int64{"network": 2, "extension_diagnostics": 1, "alerts": 3} {
+		got, ok := resp.ResourcePressure[name]
+		if !ok {
+			t.Fatalf("resource_pressure missing %q: %#v", name, resp.ResourcePressure)
+		}
+		if got.DroppedCount != wantDropped || got.Entries > got.Capacity {
+			t.Fatalf("resource_pressure[%s] = %#v, want dropped=%d and bounded", name, got, wantDropped)
+		}
+	}
+	commands := resp.ResourcePressure["pending_commands"]
+	if commands.Capacity != queries.MaxPendingQueries || commands.ActiveEntries != 0 {
+		t.Fatalf("pending command pressure = %#v", commands)
+	}
+	if recordings := resp.ResourcePressure["recordings"]; recordings.ByteCapacity == 0 {
+		t.Fatalf("recording storage byte budget missing: %#v", recordings)
+	}
+}
+
+func TestHealthResponseExposesDoctorTimelinePressure(t *testing.T) {
+	recovery := statediag.NewCollector()
+	recovery.Report(statediag.Diagnostic{Name: "restart", CorrelationID: "corr-1", Detail: "recovering", Fix: "wait"})
+	recovery.Resolve("restart")
+
+	resp := getHealthResponse(health.NewMetrics(), nil, nil, nil, recovery, "test")
+	pressure := resp.ResourcePressure["doctor_timeline"]
+	if pressure.Entries != 1 || pressure.ActiveEntries != 0 || pressure.Capacity == 0 {
+		t.Fatalf("doctor timeline pressure = %#v", pressure)
+	}
 }
 
 func TestBuildPilotInfo_AssumedEnabledStartupState(t *testing.T) {
@@ -246,7 +291,7 @@ func TestBuildServerInfo_IncludesLaunchModeMetadata(t *testing.T) {
 	t.Cleanup(func() { launchmode.SetCurrent(previous) })
 
 	hm := health.NewMetrics()
-	resp := getHealthResponse(hm, nil, nil, "test-version")
+	resp := getHealthResponse(hm, nil, nil, nil, nil, "test-version")
 	info := resp.Server
 	if info.LaunchMode != launchmode.LikelyTransient {
 		t.Fatalf("launch_mode = %q, want %q", info.LaunchMode, launchmode.LikelyTransient)

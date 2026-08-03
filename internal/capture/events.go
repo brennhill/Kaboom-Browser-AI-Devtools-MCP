@@ -99,6 +99,7 @@ type NetworkWaterfallStore struct {
 	mu       sync.RWMutex
 	entries  boundedRing[types.NetworkWaterfallEntry]
 	capacity int
+	dropped  int64
 }
 
 func newNetworkWaterfallStore(capacity int) *NetworkWaterfallStore {
@@ -125,8 +126,18 @@ func (s *NetworkWaterfallStore) addAt(entries []types.NetworkWaterfallEntry, pag
 	for i := range entries {
 		entries[i].PageURL = pageURL
 		entries[i].Timestamp = now
-		s.entries.push(entries[i])
+		_, overwritten := s.entries.push(entries[i])
+		if overwritten {
+			s.dropped++
+		}
 	}
+}
+
+// Pressure returns bounded waterfall retention metrics.
+func (s *NetworkWaterfallStore) Pressure() PressureStats {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return pressureForRing(s.entries, s.dropped, time.Now(), func(entry types.NetworkWaterfallEntry) time.Time { return entry.Timestamp })
 }
 
 // Entries returns a detached snapshot of resource timings.
@@ -177,9 +188,10 @@ type BufferStore struct {
 
 // TelemetryPressure is the bounded retention state for disposable browser telemetry.
 type TelemetryPressure struct {
-	Network   PressureStats `json:"network"`
-	WebSocket PressureStats `json:"websocket"`
-	Actions   PressureStats `json:"actions"`
+	Network          PressureStats `json:"network"`
+	NetworkWaterfall PressureStats `json:"network_waterfall"`
+	WebSocket        PressureStats `json:"websocket"`
+	Actions          PressureStats `json:"actions"`
 }
 
 // TelemetryStore owns event buffers, WebSocket connection state, navigation
@@ -399,13 +411,15 @@ func (s *BufferStore) evictWebSocketForMemory() {
 // Pressure returns count, capacity, cumulative drops, and oldest age for each stream.
 func (s *TelemetryStore) Pressure() TelemetryPressure {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
 	now := time.Now()
-	return TelemetryPressure{
+	pressure := TelemetryPressure{
 		Network:   pressureForRing(s.buffers.networkBodies, s.buffers.networkDropped, now, func(entry networkBodyEntry) time.Time { return entry.AddedAt }),
 		WebSocket: pressureForRing(s.buffers.wsEvents, s.buffers.wsDropped, now, func(entry wsEventEntry) time.Time { return entry.AddedAt }),
 		Actions:   pressureForRing(s.buffers.enhancedActions, s.buffers.actionDropped, now, func(entry enhancedActionEntry) time.Time { return entry.AddedAt }),
 	}
+	s.mu.RUnlock()
+	pressure.NetworkWaterfall = s.networkWaterfall.Pressure()
+	return pressure
 }
 
 func pressureForRing[T any](ring boundedRing[T], dropped int64, now time.Time, addedAt func(T) time.Time) PressureStats {

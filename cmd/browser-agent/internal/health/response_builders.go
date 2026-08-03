@@ -5,11 +5,13 @@
 package health
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 )
 
 const (
@@ -23,12 +25,17 @@ func (hm *Metrics) GetHealth(
 	server ServerDeps,
 	upgrade UpgradeProvider,
 	getLaunchMode func() LaunchModeInfo,
+	alerts *alertbuf.AlertBuffer,
 	ver string,
 ) MCPHealthResponse {
 	serverInfo := hm.buildServerInfo(ver, getLaunchMode)
 	if server != nil {
 		serverInfo.TerminalPort = server.GetTerminalPort()
 	}
+	resourcePressure := BuildResourcePressure(cap, alerts)
+	consoleEntries, consoleCapacity, consoleDropped := getConsoleStats(server)
+	resourcePressure["console"] = ResourcePressure{Entries: consoleEntries, Capacity: consoleCapacity,
+		DroppedCount: consoleDropped, RecoverableEntries: consoleEntries}
 	resp := MCPHealthResponse{
 		Server:           serverInfo,
 		Memory:           BuildMemoryInfo(cap),
@@ -37,11 +44,75 @@ func (hm *Metrics) GetHealth(
 		Audit:            hm.BuildAuditInfo(),
 		Pilot:            BuildPilotInfo(cap),
 		CommandExecution: BuildCommandExecutionInfo(cap),
+		ResourcePressure: resourcePressure,
 	}
 	if info := BuildUpgradeInfo(upgrade); info != nil {
 		resp.Upgrade = info
 	}
 	return resp
+}
+
+// BuildResourcePressureChecks explains saturation without treating bounded historical eviction as failure.
+func BuildResourcePressureChecks(cap *capture.Capture, alerts *alertbuf.AlertBuffer) []DoctorCheck {
+	pressure := BuildResourcePressure(cap, alerts)
+	checks := make([]DoctorCheck, 0, len(pressure))
+	for name, resource := range pressure {
+		countBelowLimit := resource.Capacity == 0 || resource.Entries < resource.Capacity
+		bytesBelowLimit := resource.ByteCapacity == 0 || resource.RetainedBytes < resource.ByteCapacity
+		if resource.DroppedCount == 0 && countBelowLimit && bytesBelowLimit {
+			continue
+		}
+		status := "pass"
+		fix := "No action required; disposable history was evicted and active obligations were preserved."
+		if (resource.ActiveEntries >= resource.Capacity && resource.Capacity > 0) || !bytesBelowLimit {
+			status = "warn"
+			fix = "Wait for active commands to complete before dispatching more work."
+		}
+		checks = append(checks, DoctorCheck{Name: "resource_pressure_" + name, Status: status,
+			Detail: fmt.Sprintf("%s retains %d/%d entries, dropped %d, oldest age %dms.", name,
+				resource.Entries, resource.Capacity, resource.DroppedCount, resource.OldestAgeMs),
+			Fix: fix, Occurrences: int(resource.DroppedCount)})
+	}
+	return checks
+}
+
+// BuildResourcePressure exposes common resource budgets without merging ownership.
+func BuildResourcePressure(cap *capture.Capture, alerts *alertbuf.AlertBuffer) map[string]ResourcePressure {
+	result := make(map[string]ResourcePressure)
+	if cap != nil {
+		telemetry := cap.Telemetry().Pressure()
+		for name, pressure := range map[string]capture.PressureStats{
+			"network": telemetry.Network, "network_waterfall": telemetry.NetworkWaterfall,
+			"websocket": telemetry.WebSocket, "actions": telemetry.Actions,
+			"extension_diagnostics": cap.ExtensionLogs().Pressure(),
+		} {
+			result[name] = ResourcePressure{Entries: pressure.Size, Capacity: pressure.Capacity,
+				DroppedCount: pressure.Dropped, OldestAgeMs: pressure.OldestAge.Milliseconds(), RecoverableEntries: pressure.Size}
+		}
+		queries := cap.Queries().GetSnapshot()
+		result["pending_commands"] = ResourcePressure{Entries: queries.PendingQueryCount,
+			Capacity: queries.PendingCapacity, OldestAgeMs: queries.OldestPendingAge.Milliseconds(), ActiveEntries: queries.PendingQueryCount}
+		performance := cap.Performance().Pressure()
+		for name, pressure := range map[string]capture.PressureStats{
+			"performance_snapshots": performance.Snapshots, "performance_baselines": performance.BeforeSnapshots,
+		} {
+			result[name] = ResourcePressure{Entries: pressure.Size, Capacity: pressure.Capacity,
+				DroppedCount: pressure.Dropped, OldestAgeMs: pressure.OldestAge.Milliseconds(), RecoverableEntries: pressure.Size}
+		}
+		recordings := cap.Recordings().Pressure()
+		result["recordings"] = ResourcePressure{Entries: recordings.RecordingCount,
+			ActiveEntries: recordings.ActiveCount, RecoverableEntries: recordings.RecordingCount,
+			RetainedBytes: recordings.UsedBytes, ByteCapacity: recordings.CapacityBytes}
+	}
+	if alerts != nil {
+		pressure := alerts.Pressure()
+		result["alerts"] = ResourcePressure{Entries: pressure.Size, Capacity: pressure.Capacity,
+			DroppedCount: pressure.Dropped, OldestAgeMs: pressure.OldestAge.Milliseconds(), RecoverableEntries: pressure.Size}
+		stream := alerts.Stream.Pressure()
+		result["notification_queue"] = ResourcePressure{Entries: stream.Size, Capacity: stream.Capacity,
+			DroppedCount: stream.Dropped, OldestAgeMs: stream.OldestAge.Milliseconds(), RecoverableEntries: stream.Size}
+	}
+	return result
 }
 
 // BuildUpgradeInfo returns upgrade detection state, or nil if no upgrade is pending.

@@ -7,14 +7,27 @@ package health
 // MCPHealthResponse is the response structure for the get_health MCP tool.
 // Named to distinguish from the simpler HealthResponse used by /health HTTP endpoint.
 type MCPHealthResponse struct {
-	Server           ServerInfo           `json:"server"`
-	Memory           MemoryInfo           `json:"memory"`
-	Buffers          BuffersInfo          `json:"buffers"`
-	RateLimiting     RateLimitingInfo     `json:"rate_limiting"`
-	Audit            AuditInfo            `json:"audit"`
-	Pilot            PilotInfo            `json:"pilot"`
-	CommandExecution CommandExecutionInfo `json:"command_execution"`
-	Upgrade          *UpgradeInfo         `json:"upgrade,omitempty"`
+	Server           ServerInfo                  `json:"server"`
+	Memory           MemoryInfo                  `json:"memory"`
+	Buffers          BuffersInfo                 `json:"buffers"`
+	RateLimiting     RateLimitingInfo            `json:"rate_limiting"`
+	Audit            AuditInfo                   `json:"audit"`
+	Pilot            PilotInfo                   `json:"pilot"`
+	CommandExecution CommandExecutionInfo        `json:"command_execution"`
+	ResourcePressure map[string]ResourcePressure `json:"resource_pressure"`
+	Upgrade          *UpgradeInfo                `json:"upgrade,omitempty"`
+}
+
+// ResourcePressure is the common machine-readable budget for retained state.
+type ResourcePressure struct {
+	Entries            int   `json:"entries"`
+	Capacity           int   `json:"capacity"`
+	DroppedCount       int64 `json:"dropped_count"`
+	OldestAgeMs        int64 `json:"oldest_age_ms"`
+	ActiveEntries      int   `json:"active_entries"`
+	RecoverableEntries int   `json:"recoverable_entries"`
+	RetainedBytes      int64 `json:"retained_bytes"`
+	ByteCapacity       int64 `json:"byte_capacity"`
 }
 
 // UpgradeInfo contains binary upgrade detection state.

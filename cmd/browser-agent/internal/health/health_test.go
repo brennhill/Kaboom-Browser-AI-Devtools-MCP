@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -424,6 +426,31 @@ func TestMCPHealthResponse_Construction(t *testing.T) {
 	}
 	if resp.Upgrade != nil {
 		t.Error("expected nil Upgrade by default")
+	}
+}
+
+func TestBuildResourcePressureChecksDistinguishesDisposableDropsFromActiveSaturation(t *testing.T) {
+	cap := capture.NewCapture()
+	cap.Telemetry().AddNetworkBodies(make([]types.NetworkBody, capture.MaxNetworkBodies+1))
+	checks := BuildResourcePressureChecks(cap, nil)
+	if len(checks) != 1 || checks[0].Name != "resource_pressure_network" || checks[0].Status != "pass" {
+		t.Fatalf("disposable pressure checks = %#v, want one recovered/pass network check", checks)
+	}
+
+	for i := 0; i < queries.MaxPendingQueries; i++ {
+		if _, err := cap.Queries().CreatePendingQuery(queries.PendingQuery{Type: "pressure"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	checks = BuildResourcePressureChecks(cap, nil)
+	foundWarn := false
+	for _, check := range checks {
+		if check.Name == "resource_pressure_pending_commands" && check.Status == "warn" {
+			foundWarn = true
+		}
+	}
+	if !foundWarn {
+		t.Fatalf("active command saturation missing warning: %#v", checks)
 	}
 }
 

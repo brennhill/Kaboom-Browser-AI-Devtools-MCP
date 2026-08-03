@@ -4,7 +4,7 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-02
+last_reviewed: 2026-08-03
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -49,6 +49,7 @@ test_paths:
   - cmd/browser-agent/tools_async_formatting_test.go
   - cmd/browser-agent/tools_async_timeout_test.go
   - cmd/browser-agent/tools_core_sync_test.go
+  - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - tests/extension/contracts/no-compatibility-facades.test.js
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/tooling-contracts.test.js
@@ -72,6 +73,10 @@ last_verified_date: 2026-03-05
 - QA Plan: [qa-plan.md](./qa-plan.md)
 
 ## Requirement IDs
+
+Pending commands expose their fixed capacity, active count, and oldest age to
+health diagnostics. Saturation rejects new work explicitly; it never evicts an
+accepted unresolved command to make room for disposable history.
 
 - FEATURE_QUERY_SERVICE_001
 - FEATURE_QUERY_SERVICE_002

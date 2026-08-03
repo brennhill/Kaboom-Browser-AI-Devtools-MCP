@@ -16,9 +16,10 @@ import (
 // - Expires is an absolute deadline; once passed, queue cleanup treats the entry as non-deliverable.
 // - ClientID is empty for single-client mode, non-empty for multi-client isolation.
 type PendingQueryEntry struct {
-	Query    PendingQueryResponse
-	Expires  time.Time
-	ClientID string // owning client for multi-client isolation
+	Query     PendingQueryResponse
+	CreatedAt time.Time
+	Expires   time.Time
+	ClientID  string // owning client for multi-client isolation
 }
 
 // QueryResultEntry stores a one-time consumable extension result.
@@ -108,6 +109,8 @@ func (qd *QueryDispatcher) Close() {
 type QuerySnapshot struct {
 	PendingQueryCount int
 	QueryResultCount  int
+	PendingCapacity   int
+	OldestPendingAge  time.Duration
 	QueryTimeout      time.Duration
 }
 
@@ -115,9 +118,14 @@ type QuerySnapshot struct {
 func (qd *QueryDispatcher) GetSnapshot() QuerySnapshot {
 	qd.mu.Lock()
 	defer qd.mu.Unlock()
-	return QuerySnapshot{
+	snapshot := QuerySnapshot{
 		PendingQueryCount: len(qd.pendingQueries),
 		QueryResultCount:  len(qd.queryResults),
+		PendingCapacity:   MaxPendingQueries,
 		QueryTimeout:      qd.queryTimeout,
 	}
+	if len(qd.pendingQueries) > 0 && !qd.pendingQueries[0].CreatedAt.IsZero() {
+		snapshot.OldestPendingAge = time.Since(qd.pendingQueries[0].CreatedAt)
+	}
+	return snapshot
 }

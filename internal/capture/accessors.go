@@ -209,8 +209,36 @@ const (
 	maxBeforeSnapshots      = 50
 )
 
+// PerformancePressure describes retained page snapshots and active pre-action baselines.
+type PerformancePressure struct {
+	Snapshots       PressureStats `json:"snapshots"`
+	BeforeSnapshots PressureStats `json:"before_snapshots"`
+}
+
+// Pressure returns bounded performance-retention metrics.
+func (s *PerformanceStore) Pressure() PerformancePressure {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	now := time.Now()
+	return PerformancePressure{
+		Snapshots:       pressureForKeys(s.snapshotOrder, s.snapshotAdded, s.snapshotDropped, maxPerformanceSnapshots, now),
+		BeforeSnapshots: pressureForKeys(s.beforeOrder, s.beforeAdded, s.beforeDropped, maxBeforeSnapshots, now),
+	}
+}
+
+func pressureForKeys(order []string, added map[string]time.Time, dropped int64, capacity int, now time.Time) PressureStats {
+	stats := PressureStats{Size: len(order), Capacity: capacity, Dropped: dropped}
+	if len(order) > 0 {
+		stats.OldestAge = now.Sub(added[order[0]])
+	}
+	return stats
+}
+
 // appendSnapshots stores snapshots by URL with oldest-entry eviction.
 func (s *PerformanceStore) appendSnapshots(snapshots []performance.PerformanceSnapshot) {
+	if s.snapshotAdded == nil {
+		s.snapshotAdded = make(map[string]time.Time)
+	}
 	for _, snapshot := range snapshots {
 		key := snapshot.URL
 		if key == "" {
@@ -219,13 +247,16 @@ func (s *PerformanceStore) appendSnapshots(snapshots []performance.PerformanceSn
 
 		if _, exists := s.snapshots[key]; !exists {
 			s.snapshotOrder = append(s.snapshotOrder, key)
+			s.snapshotAdded[key] = time.Now()
 		}
 		s.snapshots[key] = snapshot
 
-		for len(s.snapshots) > maxPerformanceSnapshots && len(s.snapshotOrder) > 0 {
+		if len(s.snapshots) > maxPerformanceSnapshots && len(s.snapshotOrder) > 0 {
 			oldestKey := s.snapshotOrder[0]
 			s.snapshotOrder = s.snapshotOrder[1:]
 			delete(s.snapshots, oldestKey)
+			delete(s.snapshotAdded, oldestKey)
+			s.snapshotDropped++
 		}
 	}
 }
@@ -250,16 +281,23 @@ func (s *PerformanceStore) snapshotByURL(url string) (performance.PerformanceSna
 
 // storeBeforeSnapshot keeps a pre-action snapshot for perf diff correlation.
 func (s *PerformanceStore) storeBeforeSnapshot(correlationID string, snapshot performance.PerformanceSnapshot) {
+	if s.beforeAdded == nil {
+		s.beforeAdded = make(map[string]time.Time)
+	}
+	if _, exists := s.beforeSnapshots[correlationID]; !exists {
+		s.beforeOrder = append(s.beforeOrder, correlationID)
+		s.beforeAdded[correlationID] = time.Now()
+	}
 	s.beforeSnapshots[correlationID] = snapshot
 	if len(s.beforeSnapshots) <= maxBeforeSnapshots {
 		return
 	}
 
-	// Preserve current semantics: remove an arbitrary key when over cap.
-	for key := range s.beforeSnapshots {
-		delete(s.beforeSnapshots, key)
-		break
-	}
+	oldest := s.beforeOrder[0]
+	s.beforeOrder = s.beforeOrder[1:]
+	delete(s.beforeSnapshots, oldest)
+	delete(s.beforeAdded, oldest)
+	s.beforeDropped++
 }
 
 // takeBeforeSnapshot retrieves and deletes a before-snapshot (consume-on-read).
@@ -267,6 +305,13 @@ func (s *PerformanceStore) takeBeforeSnapshot(correlationID string) (performance
 	snap, ok := s.beforeSnapshots[correlationID]
 	if ok {
 		delete(s.beforeSnapshots, correlationID)
+		delete(s.beforeAdded, correlationID)
+		for index, key := range s.beforeOrder {
+			if key == correlationID {
+				s.beforeOrder = append(s.beforeOrder[:index], s.beforeOrder[index+1:]...)
+				break
+			}
+		}
 	}
 	return snap, ok
 }
@@ -278,4 +323,7 @@ func (s *PerformanceStore) clear() {
 	s.snapshots = make(map[string]performance.PerformanceSnapshot)
 	s.snapshotOrder = make([]string, 0)
 	s.beforeSnapshots = make(map[string]performance.PerformanceSnapshot)
+	s.snapshotAdded = make(map[string]time.Time)
+	s.beforeOrder = nil
+	s.beforeAdded = make(map[string]time.Time)
 }

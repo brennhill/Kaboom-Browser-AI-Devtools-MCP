@@ -92,6 +92,10 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	assertPressure("network", pressure.Network, MaxNetworkBodies, 3)
 	assertPressure("websocket", pressure.WebSocket, MaxWSEvents, 2)
 	assertPressure("actions", pressure.Actions, MaxEnhancedActions, 1)
+	c.Telemetry().NetworkWaterfall().addAt(make([]types.NetworkWaterfallEntry, DefaultNetworkWaterfallCapacity+4), "https://example.test", now)
+	if got := c.Telemetry().Pressure().NetworkWaterfall; got.Size != DefaultNetworkWaterfallCapacity || got.Dropped != 4 {
+		t.Fatalf("network waterfall pressure = %#v, want bounded with four drops", got)
+	}
 
 	c.Telemetry().ClearNetworkBuffers()
 	c.Telemetry().ClearWebSocketBuffers()
@@ -132,6 +136,10 @@ func TestCapturePerformanceSnapshotAccessors(t *testing.T) {
 	if _, ok := c.Performance().ByURL("https://example.test/missing"); ok {
 		t.Fatal("missing snapshot lookup should return ok=false")
 	}
+	pressure := c.Performance().Pressure()
+	if pressure.Snapshots.Size != maxPerformanceSnapshots || pressure.Snapshots.Dropped != 5 {
+		t.Fatalf("performance snapshot pressure = %#v, want size=%d dropped=5", pressure.Snapshots, maxPerformanceSnapshots)
+	}
 }
 
 func TestCaptureBeforeSnapshotStoreAndConsume(t *testing.T) {
@@ -156,6 +164,9 @@ func TestCaptureBeforeSnapshotStoreAndConsume(t *testing.T) {
 	c.perf.mu.RUnlock()
 	if beforeCount > 50 {
 		t.Fatalf("beforeSnapshots size = %d, want <= 50", beforeCount)
+	}
+	if got := c.Performance().Pressure().BeforeSnapshots; got.Size != maxBeforeSnapshots || got.Dropped != 10 {
+		t.Fatalf("before snapshot pressure = %#v, want size=%d dropped=10", got, maxBeforeSnapshots)
 	}
 }
 

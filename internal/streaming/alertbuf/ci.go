@@ -30,12 +30,7 @@ func (ab *AlertBuffer) ProcessCIResult(ciResult types.CIResult) *types.Alert {
 	ab.CIResults = append(ab.CIResults, ciResult)
 
 	alert := BuildCIAlert(ciResult)
-	if len(ab.Alerts) >= AlertBufferCap {
-		newAlerts := make([]types.Alert, len(ab.Alerts)-1)
-		copy(newAlerts, ab.Alerts[1:])
-		ab.Alerts = newAlerts
-	}
-	ab.Alerts = append(ab.Alerts, alert)
+	ab.appendAlertLocked(alert, time.Now())
 	return &alert
 }
 

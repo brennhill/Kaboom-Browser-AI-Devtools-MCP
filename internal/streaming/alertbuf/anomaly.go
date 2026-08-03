@@ -81,12 +81,7 @@ func (ab *AlertBuffer) maybeCreateAnomalyAlert(t time.Time, recentCount int, rol
 		Timestamp: t.Format(time.RFC3339),
 		Source:    "anomaly_detector",
 	}
-	if len(ab.Alerts) >= AlertBufferCap {
-		newAlerts := make([]types.Alert, len(ab.Alerts)-1)
-		copy(newAlerts, ab.Alerts[1:])
-		ab.Alerts = newAlerts
-	}
-	ab.Alerts = append(ab.Alerts, alert)
+	ab.appendAlertLocked(alert, t)
 	return &alert
 }
 

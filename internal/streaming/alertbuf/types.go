@@ -41,6 +41,8 @@ type AlertBuffer struct {
 	CIResults  []types.CIResult
 	ErrorTimes []time.Time
 	Stream     *streaming.StreamState
+	Dropped    int64
+	AlertTimes []time.Time
 }
 
 // NewAlertBuffer creates an AlertBuffer with a default StreamState.

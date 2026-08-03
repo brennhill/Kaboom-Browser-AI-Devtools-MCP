@@ -136,7 +136,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return h.configureSessions.Diff(req, args)
 		},
 		"health": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-			return handleConfigureHealth(h.healthMetrics, h.capture, h.server, req)
+			return handleConfigureHealth(h.healthMetrics, h.capture, h.server, h.alertBuffer, h.stateRecovery, req)
 		},
 		"restart": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 			return handleConfigureRestart(req)
@@ -145,6 +145,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return handleConfigureDoctor(
 				h.healthMetrics,
 				h.capture,
+				h.alertBuffer,
 				h.Guards.DiagnosticHintString,
 				recoveryDoctorChecks(h.stateRecovery),
 				req,
@@ -271,23 +272,27 @@ func handleConfigureHealth(
 	metrics *health.Metrics,
 	captureStore *capture.Capture,
 	server *Server,
+	alerts *alertbuf.AlertBuffer,
+	recovery recoveryDiagnostics,
 	req mcp.JSONRPCRequest,
 ) mcp.JSONRPCResponse {
 	if metrics == nil {
 		return mcp.Fail(req, mcp.ErrInternal, "Health metrics not initialized", "Internal server error — do not retry")
 	}
-	response := getHealthResponse(metrics, captureStore, server, version)
+	response := getHealthResponse(metrics, captureStore, server, alerts, recovery, version)
 	return mcp.Succeed(req, "Server health", response)
 }
 
 func handleConfigureDoctor(
 	metrics *health.Metrics,
 	captureStore *capture.Capture,
+	alerts *alertbuf.AlertBuffer,
 	diagnosticHint func() string,
 	extraChecks []health.DoctorCheck,
 	req mcp.JSONRPCRequest,
 ) mcp.JSONRPCResponse {
 	checks := health.RunDoctorChecks(captureStore)
+	checks = append(checks, health.BuildResourcePressureChecks(captureStore, alerts)...)
 	checks = append(checks, extraChecks...)
 	if metrics != nil {
 		uptime := metrics.GetUptime()
@@ -388,7 +393,7 @@ func (a *serverDepsAdapter) GetConsoleStats() (int, int, int64) {
 
 const defaultMaxEntries = 1000
 
-func getHealthResponse(hm *health.Metrics, cap *capture.Capture, server *Server, ver string) health.MCPHealthResponse {
+func getHealthResponse(hm *health.Metrics, cap *capture.Capture, server *Server, alerts *alertbuf.AlertBuffer, recovery recoveryDiagnostics, ver string) health.MCPHealthResponse {
 	var serverDeps health.ServerDeps
 	if server != nil {
 		serverDeps = &serverDepsAdapter{s: server}
@@ -397,7 +402,22 @@ func getHealthResponse(hm *health.Metrics, cap *capture.Capture, server *Server,
 	if binaryUpgradeState != nil {
 		upgrade = binaryUpgradeState
 	}
-	return hm.GetHealth(cap, serverDeps, upgrade, getLaunchModeInfo, ver)
+	response := hm.GetHealth(cap, serverDeps, upgrade, getLaunchModeInfo, alerts, ver)
+	if recovery != nil {
+		stats := recovery.Stats()
+		oldestAge := int64(0)
+		for _, diagnostic := range recovery.Snapshot() {
+			age := time.Since(diagnostic.FirstSeenAt).Milliseconds()
+			if age > oldestAge {
+				oldestAge = age
+			}
+		}
+		response.ResourcePressure["doctor_timeline"] = health.ResourcePressure{
+			Entries: stats.Recovered, Capacity: stats.RecoveredLimit, DroppedCount: int64(stats.DroppedRecovered),
+			OldestAgeMs: oldestAge, ActiveEntries: stats.Active, RecoverableEntries: stats.Recovered,
+		}
+	}
+	return response
 }
 
 func getLaunchModeInfo() health.LaunchModeInfo {

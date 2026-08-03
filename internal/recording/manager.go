@@ -55,6 +55,26 @@ type RecordingManager struct {
 	files                recordingFilesystem
 }
 
+// PressureStats is the in-memory view of the recording storage budget.
+type PressureStats struct {
+	RecordingCount int
+	ActiveCount    int
+	UsedBytes      int64
+	CapacityBytes  int64
+}
+
+// Pressure returns storage metrics without performing filesystem I/O.
+func (r *RecordingManager) Pressure() PressureStats {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	active := 0
+	if r.activeRecordingID != "" {
+		active = 1
+	}
+	return PressureStats{RecordingCount: len(r.recordings), ActiveCount: active,
+		UsedBytes: r.recordingStorageUsed, CapacityBytes: RecordingStorageMax}
+}
+
 // SetDiagnostics connects recording recovery to the owning server's Doctor collector.
 func (r *RecordingManager) SetDiagnostics(diagnostics statediag.Reporter) {
 	if r == nil {
