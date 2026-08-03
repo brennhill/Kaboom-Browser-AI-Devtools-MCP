@@ -7,6 +7,8 @@ async function readValidated(read, options) {
     const resolve = options.resolve ?? resolveAcrossContexts;
     try {
         const value = await read(options.key);
+        // EXPECTED_ABSENCE: an unset optional state key is the owner's normal first-run state;
+        // logging it would misleadingly describe a missing optional value as failed persistence.
         if (value === undefined || value === null)
             return options.fallback;
         if (options.validate(value)) {

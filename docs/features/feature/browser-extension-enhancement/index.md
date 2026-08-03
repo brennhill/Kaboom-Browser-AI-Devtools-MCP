@@ -104,6 +104,7 @@ test_paths:
   - tests/extension/state-recovery/state-recovery-contract.test.js
   - tests/extension/state-recovery/storage-fault-contract.test.js
   - tests/extension/state-recovery/storage-fault-fixture.js
+  - tests/extension/state-recovery/storage-owner-faults.test.js
   - tests/extension/state-recovery/validated-storage.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28

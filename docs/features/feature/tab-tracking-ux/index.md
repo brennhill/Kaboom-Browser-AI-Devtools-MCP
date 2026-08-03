@@ -4,7 +4,7 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - src/lib/brand.ts
   - src/lib/constants.ts
@@ -12,6 +12,7 @@ code_paths:
   - src/lib/tabs/tab-tracking-core.ts
   - src/lib/tabs/tracked-tab-storage.ts
   - src/lib/storage/recovery.ts
+  - src/lib/storage/fault.ts
   - src/lib/storage/validated.ts
   - src/lib/tabs/internal-url.ts
   - src/types/runtime-messages.ts
@@ -78,6 +79,8 @@ test_paths:
   - tests/extension/contracts/no-compatibility-facades.test.js
   - tests/extension/state-recovery/state-recovery-contract.test.js
   - tests/extension/state-recovery/validated-storage.test.js
+  - tests/extension/state-recovery/storage-fault-fixture.js
+  - tests/extension/state-recovery/storage-owner-faults.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-03
 ---

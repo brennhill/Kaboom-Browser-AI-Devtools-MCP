@@ -5,6 +5,7 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 import { StorageKey } from '../constants.js';
+import { classifyStorageFailure, storageFaultDetail } from '../storage/fault.js';
 import { getLocals, setLocals, removeLocals } from '../storage/local.js';
 import { reportStateRecovery, resolveStateRecovery } from '../storage/recovery.js';
 /** All storage keys that make up tracked-tab state. Always read/cleared together. */
@@ -19,18 +20,20 @@ export async function readTrackedTab() {
     try {
         stored = await getLocals(TRACKED_TAB_STORAGE_KEYS);
     }
-    catch {
-        reportTrackedTabRecovery('Saved tracked-tab state could not be read; automatic tab selection is active.');
+    catch (error) {
+        reportTrackedTabRecovery(classifyStorageFailure(error, 'read'), 'Saved tracked-tab state could not be read; automatic tab selection is active.');
         return {};
     }
     const id = stored[StorageKey.TRACKED_TAB_ID];
     const url = stored[StorageKey.TRACKED_TAB_URL];
     const title = stored[StorageKey.TRACKED_TAB_TITLE];
-    const valid = (id === undefined || (typeof id === 'number' && Number.isInteger(id) && id > 0)) &&
+    const valid = typeof stored === 'object' &&
+        stored !== null &&
+        (id === undefined || (typeof id === 'number' && Number.isInteger(id) && id > 0)) &&
         (url === undefined || typeof url === 'string') &&
         (title === undefined || typeof title === 'string');
     if (!valid) {
-        reportTrackedTabRecovery('Saved tracked-tab state was malformed; automatic tab selection is active.');
+        reportTrackedTabRecovery('corruption', 'Saved tracked-tab state was malformed; automatic tab selection is active.');
         return {};
     }
     resolveStateRecovery('tracked_tab_state');
@@ -40,10 +43,10 @@ export async function readTrackedTab() {
         title
     };
 }
-function reportTrackedTabRecovery(detail) {
+function reportTrackedTabRecovery(kind, detail) {
     reportStateRecovery({
         name: 'tracked_tab_state',
-        detail,
+        detail: storageFaultDetail(kind, detail),
         fix: 'Choose a tab from the extension popup to save a fresh tracking state.'
     });
 }

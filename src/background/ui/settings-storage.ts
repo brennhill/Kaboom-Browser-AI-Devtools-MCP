@@ -6,6 +6,7 @@
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { StorageKey } from '../../lib/constants.js'
 import { persist } from '../../lib/storage/io.js'
+import { classifyStorageFailure, storageFaultDetail, type StorageFaultKind } from '../../lib/storage/fault.js'
 import { getLocals, setLocal } from '../../lib/storage/local.js'
 import { readLocalState } from '../../lib/storage/validated.js'
 import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js'
@@ -28,6 +29,9 @@ export async function loadSavedSettings(): Promise<SavedSettings> {
       StorageKey.DEBUG_MODE
     ])
     const valid =
+      typeof stored === 'object' &&
+      stored !== null &&
+      !Array.isArray(stored) &&
       (stored[StorageKey.SERVER_URL] === undefined || typeof stored[StorageKey.SERVER_URL] === 'string') &&
       (stored[StorageKey.LOG_LEVEL] === undefined || typeof stored[StorageKey.LOG_LEVEL] === 'string') &&
       [StorageKey.SCREENSHOT_ON_ERROR, StorageKey.SOURCE_MAP_ENABLED, StorageKey.DEBUG_MODE].every(
@@ -37,10 +41,13 @@ export async function loadSavedSettings(): Promise<SavedSettings> {
       resolveStateRecovery('extension_settings_state')
       return stored as SavedSettings
     }
-    reportSettingsRecovery('Saved extension settings were malformed; defaults are active.')
+    reportSettingsRecovery('corruption', 'Saved extension settings were malformed; defaults are active.')
     return {}
-  } catch {
-    reportSettingsRecovery('Saved extension settings could not be read; defaults are active.')
+  } catch (error) {
+    reportSettingsRecovery(
+      classifyStorageFailure(error, 'read'),
+      'Saved extension settings could not be read; defaults are active.'
+    )
     return {}
   }
 }
@@ -85,9 +92,10 @@ function settingsDiagnostic(detail: string) {
   } as const
 }
 
-function reportSettingsRecovery(detail: string): void {
-  reportStateRecovery(settingsDiagnostic(detail))
-  console.warn(`${KABOOM_LOG_PREFIX} ${detail}`)
+function reportSettingsRecovery(kind: StorageFaultKind, detail: string): void {
+  const classifiedDetail = storageFaultDetail(kind, detail)
+  reportStateRecovery(settingsDiagnostic(classifiedDetail))
+  console.warn(`${KABOOM_LOG_PREFIX} ${classifiedDetail}`)
 }
 
 export async function getAllConfigSettings(): Promise<Record<string, boolean | string | undefined>> {
@@ -103,6 +111,9 @@ export async function getAllConfigSettings(): Promise<Record<string, boolean | s
       StorageKey.NETWORK_BODY_CAPTURE_ENABLED
     ])
     if (
+      typeof stored === 'object' &&
+      stored !== null &&
+      !Array.isArray(stored) &&
       Object.values(stored).every(
         (value) => value === undefined || typeof value === 'boolean' || typeof value === 'string'
       )
@@ -110,9 +121,12 @@ export async function getAllConfigSettings(): Promise<Record<string, boolean | s
       resolveStateRecovery('extension_settings_state')
       return stored as Record<string, boolean | string | undefined>
     }
-    reportSettingsRecovery('Saved capture settings were malformed; defaults are active.')
-  } catch {
-    reportSettingsRecovery('Saved capture settings could not be read; defaults are active.')
+    reportSettingsRecovery('corruption', 'Saved capture settings were malformed; defaults are active.')
+  } catch (error) {
+    reportSettingsRecovery(
+      classifyStorageFailure(error, 'read'),
+      'Saved capture settings could not be read; defaults are active.'
+    )
   }
   return {}
 }

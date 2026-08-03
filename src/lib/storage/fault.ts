@@ -19,9 +19,9 @@ export const STORAGE_FAULT_KINDS = [
 export type StorageFaultKind = (typeof STORAGE_FAULT_KINDS)[number]
 
 export function classifyStorageFailure(error: unknown, operation: 'read' | 'write'): StorageFaultKind {
-  if (error instanceof DOMException && error.name === 'AbortError') return 'cancellation'
   const name = error instanceof Error ? error.name.toLowerCase() : ''
   const message = error instanceof Error ? error.message.toLowerCase() : ''
+  if (name === 'aborterror') return 'cancellation'
   if (name.includes('quota') || message.includes('quota')) return 'quota'
   return operation
 }

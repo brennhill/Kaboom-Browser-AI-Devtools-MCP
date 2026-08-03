@@ -15,9 +15,12 @@ export const STORAGE_FAULT_KINDS = Object.freeze([
 export function createStorageFaultScenario(kind, privateSentinel) {
   void privateSentinel
   if (!STORAGE_FAULT_KINDS.includes(kind)) throw new Error('persisted_state_fault:unknown')
+  const error = new Error(`persisted_state_fault:${kind}`)
+  if (kind === 'quota') error.name = 'QuotaExceededError'
+  if (kind === 'cancellation') error.name = 'AbortError'
   return {
     kind,
-    error: new Error(`persisted_state_fault:${kind}`),
+    error,
     cancelled: kind === 'cancellation',
     storedValue(valid) {
       if (kind === 'corruption') return '{"schema_version":'

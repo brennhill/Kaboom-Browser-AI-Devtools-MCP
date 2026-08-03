@@ -103,10 +103,10 @@
 
   // extension/lib/storage/fault.js
   function classifyStorageFailure(error, operation) {
-    if (error instanceof DOMException && error.name === "AbortError")
-      return "cancellation";
     const name = error instanceof Error ? error.name.toLowerCase() : "";
     const message = error instanceof Error ? error.message.toLowerCase() : "";
+    if (name === "aborterror")
+      return "cancellation";
     if (name.includes("quota") || message.includes("quota"))
       return "quota";
     return operation;
@@ -349,16 +349,16 @@
     let stored;
     try {
       stored = await getLocals(TRACKED_TAB_STORAGE_KEYS);
-    } catch {
-      reportTrackedTabRecovery("Saved tracked-tab state could not be read; automatic tab selection is active.");
+    } catch (error) {
+      reportTrackedTabRecovery(classifyStorageFailure(error, "read"), "Saved tracked-tab state could not be read; automatic tab selection is active.");
       return {};
     }
     const id = stored[StorageKey.TRACKED_TAB_ID];
     const url = stored[StorageKey.TRACKED_TAB_URL];
     const title = stored[StorageKey.TRACKED_TAB_TITLE];
-    const valid = (id === void 0 || typeof id === "number" && Number.isInteger(id) && id > 0) && (url === void 0 || typeof url === "string") && (title === void 0 || typeof title === "string");
+    const valid = typeof stored === "object" && stored !== null && (id === void 0 || typeof id === "number" && Number.isInteger(id) && id > 0) && (url === void 0 || typeof url === "string") && (title === void 0 || typeof title === "string");
     if (!valid) {
-      reportTrackedTabRecovery("Saved tracked-tab state was malformed; automatic tab selection is active.");
+      reportTrackedTabRecovery("corruption", "Saved tracked-tab state was malformed; automatic tab selection is active.");
       return {};
     }
     resolveStateRecovery("tracked_tab_state");
@@ -368,10 +368,10 @@
       title
     };
   }
-  function reportTrackedTabRecovery(detail) {
+  function reportTrackedTabRecovery(kind, detail) {
     reportStateRecovery({
       name: "tracked_tab_state",
-      detail,
+      detail: storageFaultDetail(kind, detail),
       fix: "Choose a tab from the extension popup to save a fresh tracking state."
     });
   }

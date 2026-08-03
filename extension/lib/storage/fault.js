@@ -15,10 +15,10 @@ export const STORAGE_FAULT_KINDS = [
     'restart'
 ];
 export function classifyStorageFailure(error, operation) {
-    if (error instanceof DOMException && error.name === 'AbortError')
-        return 'cancellation';
     const name = error instanceof Error ? error.name.toLowerCase() : '';
     const message = error instanceof Error ? error.message.toLowerCase() : '';
+    if (name === 'aborterror')
+        return 'cancellation';
     if (name.includes('quota') || message.includes('quota'))
         return 'quota';
     return operation;
