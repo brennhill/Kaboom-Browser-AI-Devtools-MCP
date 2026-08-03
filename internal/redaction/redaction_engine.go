@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"os"
 	"regexp"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // NewRedactionEngine creates a new engine with built-in patterns and optional
@@ -96,7 +98,7 @@ func (e *RedactionEngine) Redact(input string) string {
 // It parses the JSON, redacts text content in MCPContentBlocks, and re-serializes.
 // If the JSON is malformed, returns the input with string-level redaction applied.
 func (e *RedactionEngine) RedactJSON(input json.RawMessage) json.RawMessage {
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(input, &result); err != nil {
 		// Fallback: redact the raw JSON string
 		redacted := e.Redact(string(input))

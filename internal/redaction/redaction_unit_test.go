@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestNewRedactionEngine_CustomPatterns(t *testing.T) {
@@ -297,7 +299,7 @@ func TestRedactJSON_StructuredBlocksOnly(t *testing.T) {
 	}`)
 
 	out := engine.RedactJSON(input)
-	var parsed MCPToolResult
+	var parsed mcp.MCPToolResult
 	if err := json.Unmarshal(out, &parsed); err != nil {
 		t.Fatalf("unmarshal output: %v", err)
 	}

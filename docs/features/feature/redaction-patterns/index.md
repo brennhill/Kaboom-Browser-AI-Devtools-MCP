@@ -4,9 +4,10 @@ feature_id: feature-redaction-patterns
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-03
 code_paths:
   - internal/capture/extension_logs.go
+  - internal/mcp/types.go
   - internal/redaction/redaction.go
   - internal/redaction/redaction_engine.go
   - internal/redaction/redaction_types.go
@@ -18,11 +19,15 @@ test_paths:
   - internal/redaction/redaction_test.go
   - internal/redaction/redaction_config_test.go
   - internal/redaction/redaction_engine_test.go
+  - internal/redaction/redaction_coverage_test.go
+  - internal/redaction/redaction_fuzz_test.go
   - internal/redaction/redaction_map_test.go
+  - internal/redaction/redaction_property_test.go
+  - internal/redaction/redaction_unit_test.go
   - internal/security/scan/unit_test.go
   - internal/security/scan/coverage_part2_test.go
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-03
 ---
 
 # Redaction Patterns
@@ -48,6 +53,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-The redaction package exposes its canonical `RedactionEngine`,
-`RedactionConfig`, and `RedactionPattern` contracts directly. Alias-only type
-facades are prohibited and guarded by a package regression test.
+The redaction package consumes the canonical `internal/mcp` result and content
+block wire types directly. It owns only `RedactionEngine`, `RedactionConfig`,
+and `RedactionPattern`; duplicate or alias compatibility types are prohibited
+and guarded by a package regression test.

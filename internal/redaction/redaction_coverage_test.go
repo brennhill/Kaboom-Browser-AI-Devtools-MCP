@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -106,14 +108,14 @@ func TestRedact_EmptyInput(t *testing.T) {
 func TestRedactJSON_NonTextBlockUnchanged(t *testing.T) {
 	t.Parallel()
 	engine := NewRedactionEngine("")
-	result := MCPToolResult{
-		Content: []MCPContentBlock{
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{
 			{Type: "image", Text: "Bearer secret_token_123"},
 		},
 	}
 	data, _ := json.Marshal(result)
 	out := engine.RedactJSON(data)
-	var parsed MCPToolResult
+	var parsed mcp.MCPToolResult
 	if err := json.Unmarshal(out, &parsed); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -233,15 +235,15 @@ func TestNewRedactionEngine_BuiltinPatternsCompile(t *testing.T) {
 func TestRedactJSON_IsErrorPreserved(t *testing.T) {
 	t.Parallel()
 	engine := NewRedactionEngine("")
-	result := MCPToolResult{
-		Content: []MCPContentBlock{
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{
 			{Type: "text", Text: "error: Bearer secret123"},
 		},
 		IsError: true,
 	}
 	data, _ := json.Marshal(result)
 	out := engine.RedactJSON(data)
-	var parsed MCPToolResult
+	var parsed mcp.MCPToolResult
 	if err := json.Unmarshal(out, &parsed); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -260,12 +262,12 @@ func TestRedactJSON_IsErrorPreserved(t *testing.T) {
 func TestRedactJSON_EmptyContent(t *testing.T) {
 	t.Parallel()
 	engine := NewRedactionEngine("")
-	result := MCPToolResult{
-		Content: []MCPContentBlock{},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{},
 	}
 	data, _ := json.Marshal(result)
 	out := engine.RedactJSON(data)
-	var parsed MCPToolResult
+	var parsed mcp.MCPToolResult
 	if err := json.Unmarshal(out, &parsed); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

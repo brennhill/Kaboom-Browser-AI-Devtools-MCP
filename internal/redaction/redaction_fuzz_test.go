@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // FuzzRedact validates the Redact() method against arbitrary inputs.
@@ -33,7 +35,7 @@ func FuzzRedact(f *testing.F) {
 	// Edge cases
 	f.Add("")
 	f.Add("\x00\xff\xfe")
-	f.Add(strings.Repeat("a", 100000)) // 100KB repeated 'a'
+	f.Add(strings.Repeat("a", 100000))     // 100KB repeated 'a'
 	f.Add(strings.Repeat("a]a]a]", 10000)) // ReDoS-oriented pattern
 
 	engine := NewRedactionEngine("")
@@ -107,7 +109,7 @@ func FuzzRedactJSON(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, input []byte) {
 		// Check if input is valid MCPToolResult first (before any redaction)
-		var mcpCheck MCPToolResult
+		var mcpCheck mcp.MCPToolResult
 		isValidMCPToolResult := json.Unmarshal(input, &mcpCheck) == nil
 
 		// Apply redaction multiple times
@@ -124,7 +126,7 @@ func FuzzRedactJSON(f *testing.F) {
 		if isValidMCPToolResult {
 			// Invariant: If input is valid MCPToolResult → output must be valid MCPToolResult JSON
 			// This is the primary use case and must preserve JSON structure.
-			var mcpOutput MCPToolResult
+			var mcpOutput mcp.MCPToolResult
 			if err := json.Unmarshal(redacted1, &mcpOutput); err != nil {
 				t.Errorf("Input was valid MCPToolResult but output is not valid JSON:\nInput:  %s\nOutput: %s\nError:  %v",
 					string(input), string(redacted1), err)

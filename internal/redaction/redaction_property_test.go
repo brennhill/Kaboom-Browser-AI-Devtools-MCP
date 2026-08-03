@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"testing"
 	"testing/quick"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // TestPropertyRedactIdempotent verifies that Redact(Redact(s)) == Redact(s) for all strings.
@@ -35,8 +37,8 @@ func TestPropertyRedactJSONStructuralPreservation(t *testing.T) {
 
 	f := func(text1, text2, text3 string) bool {
 		// Construct a valid MCPToolResult from random text
-		result := MCPToolResult{
-			Content: []MCPContentBlock{
+		result := mcp.MCPToolResult{
+			Content: []mcp.MCPContentBlock{
 				{Type: "text", Text: text1},
 				{Type: "text", Text: text2},
 				{Type: "text", Text: text3},
@@ -53,7 +55,7 @@ func TestPropertyRedactJSONStructuralPreservation(t *testing.T) {
 		redacted := engine.RedactJSON(json.RawMessage(jsonBytes))
 
 		// Verify it's still valid JSON by unmarshaling
-		var parsed MCPToolResult
+		var parsed mcp.MCPToolResult
 		if err := json.Unmarshal([]byte(redacted), &parsed); err != nil {
 			return false
 		}

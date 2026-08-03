@@ -3,6 +3,8 @@
 
 package mcp
 
+import "encoding/json"
+
 // JSONRPCVersion is the JSON-RPC protocol version string. Use this constant
 // instead of the magic string "2.0" when constructing JSON-RPC responses.
 const JSONRPCVersion = "2.0"
@@ -12,9 +14,24 @@ const JSONRPCVersion = "2.0"
 // For text: Type + Text are used. For image: Type + Data + MimeType are used.
 type MCPContentBlock struct {
 	Type     string `json:"type"`
-	Text     string `json:"text,omitempty"`
+	Text     string `json:"text"`
 	Data     string `json:"data,omitempty"`     // SPEC:MCP — base64-encoded image data (type="image")
 	MimeType string `json:"mimeType,omitempty"` // SPEC:MCP — MIME type for image content (e.g. "image/png", "image/jpeg")
+}
+
+// MarshalJSON preserves the required text member for text blocks while keeping
+// image blocks free of an irrelevant empty text member.
+func (block MCPContentBlock) MarshalJSON() ([]byte, error) {
+	var text *string
+	if block.Type == "text" || block.Text != "" {
+		text = &block.Text
+	}
+	return json.Marshal(struct {
+		Type     string  `json:"type"`
+		Text     *string `json:"text,omitempty"`
+		Data     string  `json:"data,omitempty"`
+		MimeType string  `json:"mimeType,omitempty"`
+	}{Type: block.Type, Text: text, Data: block.Data, MimeType: block.MimeType})
 }
 
 // MCPToolResult represents the result of an MCP tool call.

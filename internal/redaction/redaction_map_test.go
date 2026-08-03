@@ -5,9 +5,32 @@ package redaction
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+func TestRedactionUsesCanonicalMCPWireTypes(t *testing.T) {
+	source, err := os.ReadFile("redaction_types.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, duplicate := range []string{"type MCPContentBlock struct", "type MCPToolResult struct"} {
+		if strings.Contains(string(source), duplicate) {
+			t.Fatalf("redaction package duplicates canonical internal/mcp type %q", duplicate)
+		}
+	}
+	result := mcp.MCPToolResult{Content: []mcp.MCPContentBlock{{Type: "image", Data: "pixels", MimeType: "image/png"}}}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := NewRedactionEngine("").RedactJSON(encoded); !strings.Contains(string(got), `"mimeType":"image/png"`) {
+		t.Fatalf("canonical image block did not round-trip: %s", got)
+	}
+}
 
 // ============================================
 // MCP Response Integration Tests
@@ -18,8 +41,8 @@ func TestRedactMCPToolResult(t *testing.T) {
 	engine := NewRedactionEngine("")
 
 	// Simulate an MCP tool result with sensitive content
-	result := MCPToolResult{
-		Content: []MCPContentBlock{
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{
 			{Type: "text", Text: `{"headers": {"Authorization": "Bearer secret123abc"}, "body": "SSN: 123-45-6789"}`},
 		},
 	}
@@ -27,7 +50,7 @@ func TestRedactMCPToolResult(t *testing.T) {
 
 	redacted := engine.RedactJSON(resultJSON)
 
-	var redactedResult MCPToolResult
+	var redactedResult mcp.MCPToolResult
 	if err := json.Unmarshal(redacted, &redactedResult); err != nil {
 		t.Fatalf("Redacted JSON should be valid: %v", err)
 	}
@@ -55,7 +78,7 @@ func TestRedactJSONPreservesStructure(t *testing.T) {
 	input := `{"content":[{"type":"text","text":"Hello world, no secrets here"}]}`
 	got := engine.RedactJSON(json.RawMessage(input))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got, &result); err != nil {
 		t.Fatalf("Output should be valid JSON: %v", err)
 	}
@@ -68,8 +91,8 @@ func TestRedactJSONMultipleContentBlocks(t *testing.T) {
 	t.Parallel()
 	engine := NewRedactionEngine("")
 
-	result := MCPToolResult{
-		Content: []MCPContentBlock{
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{
 			{Type: "text", Text: "Bearer token_one"},
 			{Type: "text", Text: "SSN: 999-88-7777"},
 			{Type: "text", Text: "No secrets here"},
@@ -78,7 +101,7 @@ func TestRedactJSONMultipleContentBlocks(t *testing.T) {
 	resultJSON, _ := json.Marshal(result)
 
 	redacted := engine.RedactJSON(resultJSON)
-	var redactedResult MCPToolResult
+	var redactedResult mcp.MCPToolResult
 	if err := json.Unmarshal(redacted, &redactedResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}

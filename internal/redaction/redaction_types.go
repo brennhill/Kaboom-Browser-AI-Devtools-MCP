@@ -1,29 +1,8 @@
-// Purpose: Defines MCP content block and tool result types duplicated to avoid circular imports.
-// Why: Provides local type definitions so the redaction engine can re-marshal responses without importing cmd/.
+// Purpose: Defines redaction pattern configuration and compiled matcher state.
+// Why: Keeps redaction-specific types local while MCP wire types remain canonical in internal/mcp.
 package redaction
 
 import "regexp"
-
-// MCPContentBlock represents a single content block in an MCP tool response.
-// This is duplicated from cmd/browser-agent/tools_core.go to avoid circular imports.
-// IMPORTANT: Must stay in sync with the main package's MCPContentBlock.
-// Note: text is NOT omitempty here because the redaction engine re-marshals
-// content blocks and must preserve empty text fields (B2 regression guard).
-type MCPContentBlock struct {
-	Type     string `json:"type"`
-	Text     string `json:"text"`
-	Data     string `json:"data,omitempty"`     // SPEC:MCP — base64-encoded image data (type="image")
-	MimeType string `json:"mimeType,omitempty"` // SPEC:MCP — MIME type for image content
-}
-
-// MCPToolResult represents the result of an MCP tool call.
-// This is duplicated from cmd/browser-agent/tools_core.go to avoid circular imports.
-// IMPORTANT: Must stay in sync with the main package's MCPToolResult.
-type MCPToolResult struct {
-	Content  []MCPContentBlock `json:"content"`
-	IsError  bool              `json:"isError,omitempty"` // SPEC:MCP
-	Metadata map[string]any    `json:"metadata,omitempty"`
-}
 
 // RedactionPattern represents a single redaction rule.
 type RedactionPattern struct {
