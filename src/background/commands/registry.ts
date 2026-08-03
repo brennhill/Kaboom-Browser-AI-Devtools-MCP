@@ -73,6 +73,7 @@ interface DispatchLifecycle {
   sendResult: (result: unknown) => void
   sendAsyncResult: SendAsyncResultFn
   sendError: (payload: unknown, errorHint?: string) => void
+  sendStaleError: (payload: unknown) => void
   sent: () => boolean
 }
 
@@ -99,15 +100,12 @@ function rejectSupersededCommand(query: PendingQuery, lifecycle: DispatchLifecyc
     received_generation: query.connection_generation,
     current_generation: currentGeneration
   })
-  lifecycle.sendError(
-    {
-      success: false,
-      error: 'stale_connection_generation',
-      message: 'The daemon connection changed before this command could run.',
-      retryable: true
-    },
-    'stale_connection_generation'
-  )
+  lifecycle.sendStaleError({
+    success: false,
+    error: 'stale_connection_generation',
+    message: 'The daemon connection changed before this command could run.',
+    retryable: true
+  })
   return true
 }
 
@@ -128,7 +126,16 @@ function createDispatchLifecycle(
 ): DispatchLifecycle {
   let terminalSent = false
 
-  const sendOnce = (fn: () => void, metadata: Record<string, unknown>): void => {
+  const sendRawError = (payload: unknown, errorHint: string): void => {
+    const wrapped = wrapResult(payload)
+    if (query.correlation_id) {
+      sendAsyncResult(syncClient, query.id, query.correlation_id, 'error', wrapped, errorHint)
+      return
+    }
+    sendResult(syncClient, query.id, wrapped)
+  }
+
+  const sendOnce = (fn: () => void, metadata: Record<string, unknown>, allowStale = false): void => {
     if (terminalSent) {
       debugLog(DebugCategory.CONNECTION, 'Ignoring duplicate terminal command response', {
         query_id: query.id,
@@ -139,6 +146,34 @@ function createDispatchLifecycle(
       return
     }
     terminalSent = true
+    if (
+      !allowStale &&
+      query.connection_generation !== undefined &&
+      !isConnectionGenerationCurrent(query.connection_generation)
+    ) {
+      reportStateRecovery({
+        name: 'command_generation_state',
+        detail: 'An in-flight command result from a superseded daemon connection was rejected.',
+        fix: 'Retry the command after the extension reconnects.'
+      })
+      debugLog(DebugCategory.CONNECTION, 'Rejected stale connection generation', {
+        query_id: query.id,
+        correlation_id: query.correlation_id || query.id,
+        bridge: 'command_terminal_result',
+        received_generation: query.connection_generation,
+        current_generation: getConnectionGeneration()
+      })
+      sendRawError(
+        {
+          success: false,
+          error: 'stale_connection_generation',
+          message: 'The daemon connection changed before this command completed.',
+          retryable: true
+        },
+        'stale_connection_generation'
+      )
+      return
+    }
     fn()
   }
 
@@ -203,10 +238,15 @@ function createDispatchLifecycle(
     sendResultNormalized(payload)
   }
 
+  const sendStaleError = (payload: unknown): void => {
+    sendOnce(() => sendRawError(payload, 'stale_connection_generation'), { via: 'sendStaleError' }, true)
+  }
+
   return {
     sendResult: sendResultNormalized,
     sendAsyncResult: sendAsyncResultNormalized,
     sendError,
+    sendStaleError,
     sent: () => terminalSent
   }
 }

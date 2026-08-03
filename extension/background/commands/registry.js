@@ -45,12 +45,12 @@ function rejectSupersededCommand(query, lifecycle, bridge) {
         received_generation: query.connection_generation,
         current_generation: currentGeneration
     });
-    lifecycle.sendError({
+    lifecycle.sendStaleError({
         success: false,
         error: 'stale_connection_generation',
         message: 'The daemon connection changed before this command could run.',
         retryable: true
-    }, 'stale_connection_generation');
+    });
     return true;
 }
 function pickErrorHint(payload, fallback = 'command_failed') {
@@ -66,7 +66,15 @@ function pickErrorHint(payload, fallback = 'command_failed') {
 }
 function createDispatchLifecycle(query, syncClient, wrapResult) {
     let terminalSent = false;
-    const sendOnce = (fn, metadata) => {
+    const sendRawError = (payload, errorHint) => {
+        const wrapped = wrapResult(payload);
+        if (query.correlation_id) {
+            sendAsyncResult(syncClient, query.id, query.correlation_id, 'error', wrapped, errorHint);
+            return;
+        }
+        sendResult(syncClient, query.id, wrapped);
+    };
+    const sendOnce = (fn, metadata, allowStale = false) => {
         if (terminalSent) {
             debugLog(DebugCategory.CONNECTION, 'Ignoring duplicate terminal command response', {
                 query_id: query.id,
@@ -77,6 +85,29 @@ function createDispatchLifecycle(query, syncClient, wrapResult) {
             return;
         }
         terminalSent = true;
+        if (!allowStale &&
+            query.connection_generation !== undefined &&
+            !isConnectionGenerationCurrent(query.connection_generation)) {
+            reportStateRecovery({
+                name: 'command_generation_state',
+                detail: 'An in-flight command result from a superseded daemon connection was rejected.',
+                fix: 'Retry the command after the extension reconnects.'
+            });
+            debugLog(DebugCategory.CONNECTION, 'Rejected stale connection generation', {
+                query_id: query.id,
+                correlation_id: query.correlation_id || query.id,
+                bridge: 'command_terminal_result',
+                received_generation: query.connection_generation,
+                current_generation: getConnectionGeneration()
+            });
+            sendRawError({
+                success: false,
+                error: 'stale_connection_generation',
+                message: 'The daemon connection changed before this command completed.',
+                retryable: true
+            }, 'stale_connection_generation');
+            return;
+        }
         fn();
     };
     const sendResultNormalized = (result) => {
@@ -118,10 +149,14 @@ function createDispatchLifecycle(query, syncClient, wrapResult) {
         }
         sendResultNormalized(payload);
     };
+    const sendStaleError = (payload) => {
+        sendOnce(() => sendRawError(payload, 'stale_connection_generation'), { via: 'sendStaleError' }, true);
+    };
     return {
         sendResult: sendResultNormalized,
         sendAsyncResult: sendAsyncResultNormalized,
         sendError,
+        sendStaleError,
         sent: () => terminalSent
     };
 }

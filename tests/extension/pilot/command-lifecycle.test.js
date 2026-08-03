@@ -191,4 +191,44 @@ describe('Command lifecycle contracts', () => {
     assert.strictEqual(queued[0].status, 'error')
     assert.strictEqual(queued[0].error, 'stale_connection_generation')
   })
+
+  test('daemon handoff rejects a terminal success from work already in flight', async () => {
+    const { registry, pending, generation } = await setupHarness()
+    const queryType = makeType('handoff_in_flight')
+    let releaseHandler
+    let markHandlerEntered
+    const handlerEntered = new Promise((resolve) => {
+      markHandlerEntered = resolve
+    })
+    registry.registerCommand(queryType, async (ctx) => {
+      markHandlerEntered()
+      await new Promise((resolve) => {
+        releaseHandler = resolve
+      })
+      ctx.sendResult({ success: true, generation: 1 })
+    })
+    generation.setConnectionGeneration(1)
+
+    const { queued, syncClient } = createSyncClientSink()
+    const dispatch = pending.handlePendingQuery(
+      {
+        id: 'q-handoff-in-flight',
+        type: queryType,
+        correlation_id: 'corr-handoff-in-flight',
+        connection_generation: 1,
+        params: {}
+      },
+      syncClient
+    )
+    await handlerEntered
+
+    generation.setConnectionGeneration(2)
+    releaseHandler()
+    await dispatch
+
+    assert.strictEqual(queued.length, 1)
+    assert.strictEqual(queued[0].status, 'error')
+    assert.strictEqual(queued[0].error, 'stale_connection_generation')
+    assert.notDeepStrictEqual(queued[0].result, { success: true, generation: 1 })
+  })
 })

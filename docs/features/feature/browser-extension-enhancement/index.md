@@ -32,6 +32,7 @@ code_paths:
   - src/background/runtime-state/state-recovery.ts
   - src/background/event-listeners.ts
   - src/background/commands/helpers.ts
+  - src/background/commands/registry.ts
   - src/background/exec/browser-actions.ts
   - src/background/message-routing/capture-handler.ts
   - src/background/message-routing/pilot-handler.ts
@@ -89,6 +90,7 @@ test_paths:
   - tests/extension/popup-shell/popup-status.test.js
   - tests/extension/popup-shell/popup-tab-tracking-sync.test.js
   - tests/extension/pilot/pilot-toggle.test.js
+  - tests/extension/pilot/command-lifecycle.test.js
   - tests/extension/branding/version-check-branding.test.js
   - tests/extension/sync/sync-client-commands.test.js
   - tests/extension/sync/sync-client-fixture.js
@@ -180,3 +182,7 @@ last_verified_date: 2026-03-28
   change-coupled dependencies.
 - `src/background/runtime-state/` separates connection, settings, pilot, startup,
   and diagnostic queue lifecycles. Queue consumers receive defensive snapshots.
+- Command dispatch validates the daemon-owned connection generation both before
+  invoking a handler and when it emits its terminal result. A daemon handoff
+  therefore converts late in-flight completion into a retryable stale-generation
+  error instead of allowing obsolete work to report success.
