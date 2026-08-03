@@ -5,7 +5,12 @@ import { createMockChrome } from '../shared/helpers.js'
 
 import { initTabTracking } from '../../../extension/content/tab-tracking.js'
 import { initWindowMessageListener } from '../../../extension/content/window-message-listener.js'
-import { registerDomRequest } from '../../../extension/content/request-tracking.js'
+import {
+  initRequestTracking,
+  cleanupRequestTracking,
+  registerDomRequest,
+  resolveDomRequest
+} from '../../../extension/content/request-tracking.js'
 import { MESSAGE_MAP, safeSendMessage } from '../../../extension/content/message-forwarding.js'
 import { getPageNonce } from '../../../extension/content/script-injection.js'
 
@@ -52,6 +57,50 @@ describe('Content Window Message Bridge', () => {
     assert.strictEqual(MESSAGE_MAP.kaboom_network_body, 'network_body')
     assert.strictEqual(MESSAGE_MAP.kaboom_enhanced_action, 'enhanced_action')
     assert.strictEqual(MESSAGE_MAP.kaboom_performance_snapshot, 'performance_snapshot')
+  })
+
+  test('request tracking owns cancellable per-request expiry without a shared interval', () => {
+	const originalSetInterval = globalThis.setInterval
+	const originalSetTimeout = globalThis.setTimeout
+	const originalClearTimeout = globalThis.clearTimeout
+	const setIntervalCalls = []
+	const timeoutCallbacks = new Map()
+	const cleared = []
+	globalThis.setInterval = (...args) => {
+		setIntervalCalls.push(args)
+		return 99
+	}
+	globalThis.setTimeout = (callback) => {
+		timeoutCallbacks.set(42, callback)
+		return 42
+	}
+	globalThis.clearTimeout = (id) => cleared.push(id)
+	try {
+		initRequestTracking()
+		let resolved
+		const requestId = registerDomRequest((result) => { resolved = result }, 1000, () => assert.fail('resolved request timed out'))
+      resolveDomRequest(requestId, { matches: [] })
+      assert.deepStrictEqual(resolved, { matches: [] })
+      assert.deepStrictEqual(cleared, [42])
+      assert.strictEqual(setIntervalCalls.length, 0)
+
+      let cancelled = false
+      registerDomRequest(
+        () => {},
+        1000,
+        () => {
+          cancelled = true
+        }
+      )
+      cleanupRequestTracking()
+      assert.strictEqual(cancelled, true)
+      assert.deepStrictEqual(cleared, [42, 42])
+	} finally {
+		cleanupRequestTracking()
+		globalThis.setInterval = originalSetInterval
+		globalThis.setTimeout = originalSetTimeout
+		globalThis.clearTimeout = originalClearTimeout
+	}
   })
 
   test('forwards GASOLINE_NETWORK_BODY from tracked tab through runtime.sendMessage', async () => {

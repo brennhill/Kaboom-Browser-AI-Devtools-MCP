@@ -2,7 +2,7 @@
  * Purpose: Handles incoming chrome.runtime messages from the background script -- pings, setting toggles, highlights, JS execution, state management, and draw mode.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import { registerHighlightRequest, hasHighlightRequest, deleteHighlightRequest, registerExecuteRequest, hasExecuteRequest, deleteExecuteRequest, registerA11yRequest, hasA11yRequest, deleteA11yRequest, registerDomRequest, hasDomRequest, deleteDomRequest } from './request-tracking.js';
+import { registerHighlightRequest, hasHighlightRequest, deleteHighlightRequest, registerExecuteRequest, registerA11yRequest, registerDomRequest } from './request-tracking.js';
 import { createDeferredPromise, withTimeoutAndCleanup } from '../lib/timeout-utils.js';
 import { isInjectScriptLoaded, getPageNonce, ensureInjectBridgeReady } from './script-injection.js';
 import { ASYNC_COMMAND_TIMEOUT_MS, INJECT_FORWARDED_SETTINGS, SettingName } from '../lib/constants.js';
@@ -51,8 +51,8 @@ export function forwardHighlightMessage(message) {
                 error: isInjectScriptLoaded() ? 'inject_not_responding' : 'inject_not_loaded'
             };
         }
-        const requestId = registerHighlightRequest((result) => deferred.resolve(result));
         const deferred = createDeferredPromise();
+        const requestId = registerHighlightRequest((result) => deferred.resolve(result), () => deferred.resolve({ success: false, error: 'page_unloaded' }));
         // Post message to page context (inject.js)
         postToInject({
             type: 'kaboom_highlight_request',
@@ -136,21 +136,17 @@ export function handleToggleMessage(message) {
  */
 function executeInMainWorld(params, sendResponse) {
     const timeoutMs = params.timeout_ms || 5000;
-    const requestId = registerExecuteRequest(sendResponse);
     // Safety timeout: user's timeout + 2s buffer (NOT fixed 30s)
     // If inject script responds, its own timeout handles slow scripts.
     // This only fires if inject script never responds at all.
     const safetyTimeoutMs = timeoutMs + 2000;
-    setTimeout(() => {
-        if (hasExecuteRequest(requestId)) {
-            deleteExecuteRequest(requestId);
-            sendResponse({
-                success: false,
-                error: 'inject_not_responding',
-                message: `Inject script did not respond within ${safetyTimeoutMs}ms. The tab may not be tracked or the inject script failed to load.`
-            });
-        }
-    }, safetyTimeoutMs);
+    const requestId = registerExecuteRequest(sendResponse, safetyTimeoutMs, () => {
+        sendResponse({
+            success: false,
+            error: 'inject_not_responding',
+            message: `Inject script did not respond within ${safetyTimeoutMs}ms. The tab may not be tracked or the inject script failed to load.`
+        });
+    });
     postToInject({
         type: 'kaboom_execute_js',
         requestId,
@@ -205,14 +201,9 @@ export function handleExecuteQuery(params, sendResponse) {
  */
 export function handleA11yQuery(params, sendResponse) {
     const parsedParams = parseQueryParams(params);
-    const requestId = registerA11yRequest(sendResponse);
-    // Timeout fallback: respond with error and cleanup the real pending map
-    setTimeout(() => {
-        if (hasA11yRequest(requestId)) {
-            deleteA11yRequest(requestId);
-            sendResponse({ error: 'Accessibility audit timeout' });
-        }
-    }, ASYNC_COMMAND_TIMEOUT_MS);
+    const requestId = registerA11yRequest(sendResponse, ASYNC_COMMAND_TIMEOUT_MS, () => {
+        sendResponse({ error: 'Accessibility audit timeout' });
+    });
     // Forward to inject.js via postMessage
     postToInject({
         type: 'kaboom_a11y_query',
@@ -226,14 +217,9 @@ export function handleA11yQuery(params, sendResponse) {
  */
 export function handleDomQuery(params, sendResponse) {
     const parsedParams = parseQueryParams(params);
-    const requestId = registerDomRequest(sendResponse);
-    // Timeout fallback: respond with error and cleanup the real pending map
-    setTimeout(() => {
-        if (hasDomRequest(requestId)) {
-            deleteDomRequest(requestId);
-            sendResponse({ error: 'DOM query timeout' });
-        }
-    }, ASYNC_COMMAND_TIMEOUT_MS);
+    const requestId = registerDomRequest(sendResponse, ASYNC_COMMAND_TIMEOUT_MS, () => {
+        sendResponse({ error: 'DOM query timeout' });
+    });
     // Forward to inject.js via postMessage
     postToInject({
         type: 'kaboom_dom_query',

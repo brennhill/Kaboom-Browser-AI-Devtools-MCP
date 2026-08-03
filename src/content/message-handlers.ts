@@ -19,14 +19,8 @@ import {
   hasHighlightRequest,
   deleteHighlightRequest,
   registerExecuteRequest,
-  hasExecuteRequest,
-  deleteExecuteRequest,
   registerA11yRequest,
-  hasA11yRequest,
-  deleteA11yRequest,
-  registerDomRequest,
-  hasDomRequest,
-  deleteDomRequest
+  registerDomRequest
 } from './request-tracking.js'
 import { createDeferredPromise, withTimeoutAndCleanup } from '../lib/timeout-utils.js'
 import { isInjectScriptLoaded, getPageNonce, ensureInjectBridgeReady } from './script-injection.js'
@@ -84,8 +78,11 @@ export function forwardHighlightMessage(message: {
       }
     }
 
-    const requestId = registerHighlightRequest((result) => deferred.resolve(result))
     const deferred = createDeferredPromise<HighlightResponse>()
+    const requestId = registerHighlightRequest(
+      (result) => deferred.resolve(result),
+      () => deferred.resolve({ success: false, error: 'page_unloaded' })
+    )
 
     // Post message to page context (inject.js)
     postToInject({
@@ -203,22 +200,17 @@ function executeInMainWorld(
   sendResponse: (result: ExecuteJsResponse) => void
 ): void {
   const timeoutMs = params.timeout_ms || 5000
-  const requestId = registerExecuteRequest(sendResponse)
-
   // Safety timeout: user's timeout + 2s buffer (NOT fixed 30s)
   // If inject script responds, its own timeout handles slow scripts.
   // This only fires if inject script never responds at all.
   const safetyTimeoutMs = timeoutMs + 2000
-  setTimeout(() => {
-    if (hasExecuteRequest(requestId)) {
-      deleteExecuteRequest(requestId)
-      sendResponse({
-        success: false,
-        error: 'inject_not_responding',
-        message: `Inject script did not respond within ${safetyTimeoutMs}ms. The tab may not be tracked or the inject script failed to load.`
-      })
-    }
-  }, safetyTimeoutMs)
+  const requestId = registerExecuteRequest(sendResponse, safetyTimeoutMs, () => {
+    sendResponse({
+      success: false,
+      error: 'inject_not_responding',
+      message: `Inject script did not respond within ${safetyTimeoutMs}ms. The tab may not be tracked or the inject script failed to load.`
+    })
+  })
 
   postToInject({
     type: 'kaboom_execute_js',
@@ -287,15 +279,9 @@ export function handleA11yQuery(
   sendResponse: (result: A11yAuditResult | { error: string }) => void
 ): boolean {
   const parsedParams = parseQueryParams(params)
-  const requestId = registerA11yRequest(sendResponse)
-
-  // Timeout fallback: respond with error and cleanup the real pending map
-  setTimeout(() => {
-    if (hasA11yRequest(requestId)) {
-      deleteA11yRequest(requestId)
-      sendResponse({ error: 'Accessibility audit timeout' })
-    }
-  }, ASYNC_COMMAND_TIMEOUT_MS)
+  const requestId = registerA11yRequest(sendResponse, ASYNC_COMMAND_TIMEOUT_MS, () => {
+    sendResponse({ error: 'Accessibility audit timeout' })
+  })
 
   // Forward to inject.js via postMessage
   postToInject({
@@ -315,15 +301,9 @@ export function handleDomQuery(
   sendResponse: (result: { error?: string; matches?: unknown[] }) => void
 ): boolean {
   const parsedParams = parseQueryParams(params)
-  const requestId = registerDomRequest(sendResponse)
-
-  // Timeout fallback: respond with error and cleanup the real pending map
-  setTimeout(() => {
-    if (hasDomRequest(requestId)) {
-      deleteDomRequest(requestId)
-      sendResponse({ error: 'DOM query timeout' })
-    }
-  }, ASYNC_COMMAND_TIMEOUT_MS)
+  const requestId = registerDomRequest(sendResponse, ASYNC_COMMAND_TIMEOUT_MS, () => {
+    sendResponse({ error: 'DOM query timeout' })
+  })
 
   // Forward to inject.js via postMessage
   postToInject({

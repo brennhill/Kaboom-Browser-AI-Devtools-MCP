@@ -2,7 +2,6 @@
  * Purpose: Manages pending request/response pairs (highlight, execute_js, a11y, DOM queries) with timeout cleanup for AI Web Pilot features.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-// Pending highlight response resolvers (keyed by request ID)
 const pendingHighlightRequests = new Map();
 let highlightRequestId = 0;
 // Pending execute requests waiting for responses from inject.js
@@ -14,50 +13,54 @@ let a11yRequestId = 0;
 // Pending DOM query requests waiting for responses from inject.js
 const pendingDomRequests = new Map();
 let domRequestId = 0;
-// Periodic cleanup timer (Issue #2 fix)
-const CLEANUP_INTERVAL_MS = 30000; // 30 seconds
-let cleanupTimer = null;
-// Track request timestamps for stale detection
-const requestTimestamps = new Map();
-/**
- * Get request timestamps for stale detection (Issue #2 fix).
- * Returns array of [requestId, timestamp] pairs for cleanup.
- */
-function getRequestTimestamps() {
-    const timestamps = [];
-    for (const [id, timestamp] of requestTimestamps) {
-        timestamps.push([id, timestamp]);
+let initialized = false;
+function registerRequest(requests, requestId, resolve, timeoutMs, onTimeout, onCancel) {
+    const request = { resolve, timer: null, cancel: onCancel };
+    requests.set(requestId, request);
+    if (timeoutMs !== undefined && onTimeout !== undefined) {
+        request.timer = setTimeout(() => {
+            if (!requests.delete(requestId))
+                return;
+            request.timer = null;
+            onTimeout();
+        }, timeoutMs);
     }
-    return timestamps;
+    return requestId;
+}
+function resolveRequest(requests, requestId, result) {
+    const request = requests.get(requestId);
+    if (!request)
+        return;
+    requests.delete(requestId);
+    if (request.timer !== null)
+        clearTimeout(request.timer);
+    request.resolve(result);
+}
+function deleteRequest(requests, requestId) {
+    const request = requests.get(requestId);
+    if (!request)
+        return;
+    requests.delete(requestId);
+    if (request.timer !== null)
+        clearTimeout(request.timer);
+}
+function clearRequests(requests) {
+    for (const request of requests.values()) {
+        if (request.timer !== null)
+            clearTimeout(request.timer);
+        request.cancel?.();
+    }
+    requests.clear();
 }
 /**
  * Clear all pending request Maps on page unload (Issue 2 fix).
  * Prevents memory leaks and stale request accumulation across navigations.
  */
 export function clearPendingRequests() {
-    pendingHighlightRequests.clear();
-    pendingExecuteRequests.clear();
-    pendingA11yRequests.clear();
-    pendingDomRequests.clear();
-    requestTimestamps.clear();
-}
-/**
- * Perform periodic cleanup of stale requests (Issue #2 fix).
- * Removes requests older than 60 seconds as a fallback when pagehide/beforeunload don't fire.
- */
-function performPeriodicCleanup() {
-    const now = Date.now();
-    const staleThreshold = 60000; // 60 seconds
-    for (const [id, timestamp] of getRequestTimestamps()) {
-        if (now - timestamp > staleThreshold) {
-            // Remove stale request from all maps
-            pendingHighlightRequests.delete(id);
-            pendingExecuteRequests.delete(id);
-            pendingA11yRequests.delete(id);
-            pendingDomRequests.delete(id);
-            requestTimestamps.delete(id);
-        }
-    }
+    clearRequests(pendingHighlightRequests);
+    clearRequests(pendingExecuteRequests);
+    clearRequests(pendingA11yRequests);
+    clearRequests(pendingDomRequests);
 }
 /**
  * Get statistics about pending requests (for testing/debugging)
@@ -74,20 +77,15 @@ export function getPendingRequestStats() {
 /**
  * Get the next highlight request ID and register a resolver
  */
-export function registerHighlightRequest(resolve) {
+export function registerHighlightRequest(resolve, onCancel) {
     const requestId = ++highlightRequestId;
-    pendingHighlightRequests.set(requestId, resolve);
-    return requestId;
+    return registerRequest(pendingHighlightRequests, requestId, resolve, undefined, undefined, onCancel);
 }
 /**
  * Resolve a highlight request
  */
 export function resolveHighlightRequest(requestId, result) {
-    const resolve = pendingHighlightRequests.get(requestId);
-    if (resolve) {
-        pendingHighlightRequests.delete(requestId);
-        resolve(result);
-    }
+    resolveRequest(pendingHighlightRequests, requestId, result);
 }
 /**
  * Check if a highlight request exists
@@ -99,25 +97,20 @@ export function hasHighlightRequest(requestId) {
  * Delete a highlight request without resolving
  */
 export function deleteHighlightRequest(requestId) {
-    pendingHighlightRequests.delete(requestId);
+    deleteRequest(pendingHighlightRequests, requestId);
 }
 /**
  * Get the next execute request ID and register a resolver
  */
-export function registerExecuteRequest(resolve) {
+export function registerExecuteRequest(resolve, timeoutMs, onTimeout) {
     const requestId = ++executeRequestId;
-    pendingExecuteRequests.set(requestId, resolve);
-    return requestId;
+    return registerRequest(pendingExecuteRequests, requestId, resolve, timeoutMs, onTimeout, onTimeout);
 }
 /**
  * Resolve an execute request
  */
 export function resolveExecuteRequest(requestId, result) {
-    const resolve = pendingExecuteRequests.get(requestId);
-    if (resolve) {
-        pendingExecuteRequests.delete(requestId);
-        resolve(result);
-    }
+    resolveRequest(pendingExecuteRequests, requestId, result);
 }
 /**
  * Check if an execute request exists
@@ -129,25 +122,20 @@ export function hasExecuteRequest(requestId) {
  * Delete an execute request without resolving
  */
 export function deleteExecuteRequest(requestId) {
-    pendingExecuteRequests.delete(requestId);
+    deleteRequest(pendingExecuteRequests, requestId);
 }
 /**
  * Get the next a11y request ID and register a resolver
  */
-export function registerA11yRequest(resolve) {
+export function registerA11yRequest(resolve, timeoutMs, onTimeout) {
     const requestId = ++a11yRequestId;
-    pendingA11yRequests.set(requestId, resolve);
-    return requestId;
+    return registerRequest(pendingA11yRequests, requestId, resolve, timeoutMs, onTimeout, onTimeout);
 }
 /**
  * Resolve an a11y request
  */
 export function resolveA11yRequest(requestId, result) {
-    const resolve = pendingA11yRequests.get(requestId);
-    if (resolve) {
-        pendingA11yRequests.delete(requestId);
-        resolve(result);
-    }
+    resolveRequest(pendingA11yRequests, requestId, result);
 }
 /**
  * Check if an a11y request exists
@@ -159,25 +147,20 @@ export function hasA11yRequest(requestId) {
  * Delete an a11y request without resolving
  */
 export function deleteA11yRequest(requestId) {
-    pendingA11yRequests.delete(requestId);
+    deleteRequest(pendingA11yRequests, requestId);
 }
 /**
  * Get the next DOM request ID and register a resolver
  */
-export function registerDomRequest(resolve) {
+export function registerDomRequest(resolve, timeoutMs, onTimeout) {
     const requestId = ++domRequestId;
-    pendingDomRequests.set(requestId, resolve);
-    return requestId;
+    return registerRequest(pendingDomRequests, requestId, resolve, timeoutMs, onTimeout, onTimeout);
 }
 /**
  * Resolve a DOM request
  */
 export function resolveDomRequest(requestId, result) {
-    const resolve = pendingDomRequests.get(requestId);
-    if (resolve) {
-        pendingDomRequests.delete(requestId);
-        resolve(result);
-    }
+    resolveRequest(pendingDomRequests, requestId, result);
 }
 /**
  * Check if a DOM request exists
@@ -189,16 +172,17 @@ export function hasDomRequest(requestId) {
  * Delete a DOM request without resolving
  */
 export function deleteDomRequest(requestId) {
-    pendingDomRequests.delete(requestId);
+    deleteRequest(pendingDomRequests, requestId);
 }
 /**
  * Cleanup periodic timer (Issue #2 fix).
  * Should be called when content script is shutting down.
  */
 export function cleanupRequestTracking() {
-    if (cleanupTimer) {
-        clearInterval(cleanupTimer);
-        cleanupTimer = null;
+    if (initialized) {
+        window.removeEventListener('pagehide', clearPendingRequests);
+        window.removeEventListener('beforeunload', clearPendingRequests);
+        initialized = false;
     }
     clearPendingRequests();
 }
@@ -206,12 +190,12 @@ export function cleanupRequestTracking() {
  * Initialize request tracking (register cleanup handlers)
  */
 export function initRequestTracking() {
+    if (initialized)
+        return;
     // Register cleanup handlers for page unload/navigation (Issue 2 fix)
     // Using 'pagehide' (modern, fires on both close and navigation) + 'beforeunload' (legacy fallback)
     window.addEventListener('pagehide', clearPendingRequests);
     window.addEventListener('beforeunload', clearPendingRequests);
-    // Start periodic cleanup timer (Issue #2 fix)
-    // Provides fallback when pagehide/beforeunload don't fire (e.g., page crash)
-    cleanupTimer = setInterval(performPeriodicCleanup, CLEANUP_INTERVAL_MS);
+    initialized = true;
 }
 //# sourceMappingURL=request-tracking.js.map

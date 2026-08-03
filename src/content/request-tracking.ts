@@ -6,7 +6,7 @@
 /**
  * @fileoverview Request Tracking Module
  * Manages pending requests for AI Web Pilot features
- * Includes periodic cleanup timer to handle edge cases where pagehide/beforeunload don't fire.
+ * Each request owns its expiry timer; page lifecycle cleanup cancels every timer.
  */
 
 import type { HighlightResponse, ExecuteJsResult } from '../types/runtime-messages.js'
@@ -15,38 +15,70 @@ import type { DomQueryResult } from '../types/capture/dom.js'
 import type { PendingRequestStats } from './types.js'
 
 // Pending highlight response resolvers (keyed by request ID)
-const pendingHighlightRequests = new Map<number, (result: HighlightResponse) => void>()
+type PendingRequest<T> = {
+  resolve: (result: T) => void
+  timer: ReturnType<typeof setTimeout> | null
+  cancel?: () => void
+}
+
+const pendingHighlightRequests = new Map<number, PendingRequest<HighlightResponse>>()
 let highlightRequestId = 0
 
 // Pending execute requests waiting for responses from inject.js
-const pendingExecuteRequests = new Map<number, (result: ExecuteJsResult) => void>()
+const pendingExecuteRequests = new Map<number, PendingRequest<ExecuteJsResult>>()
 let executeRequestId = 0
 
 // Pending a11y audit requests waiting for responses from inject.js
-const pendingA11yRequests = new Map<number, (result: A11yAuditResult) => void>()
+const pendingA11yRequests = new Map<number, PendingRequest<A11yAuditResult>>()
 let a11yRequestId = 0
 
 // Pending DOM query requests waiting for responses from inject.js
-const pendingDomRequests = new Map<number, (result: DomQueryResult) => void>()
+const pendingDomRequests = new Map<number, PendingRequest<DomQueryResult>>()
 let domRequestId = 0
 
-// Periodic cleanup timer (Issue #2 fix)
-const CLEANUP_INTERVAL_MS = 30000 // 30 seconds
-let cleanupTimer: ReturnType<typeof setInterval> | null = null
+let initialized = false
 
-// Track request timestamps for stale detection
-const requestTimestamps = new Map<number, number>()
-
-/**
- * Get request timestamps for stale detection (Issue #2 fix).
- * Returns array of [requestId, timestamp] pairs for cleanup.
- */
-function getRequestTimestamps(): [number, number][] {
-  const timestamps: [number, number][] = []
-  for (const [id, timestamp] of requestTimestamps) {
-    timestamps.push([id, timestamp])
+function registerRequest<T>(
+  requests: Map<number, PendingRequest<T>>,
+  requestId: number,
+  resolve: (result: T) => void,
+  timeoutMs?: number,
+  onTimeout?: () => void,
+  onCancel?: () => void
+): number {
+  const request: PendingRequest<T> = { resolve, timer: null, cancel: onCancel }
+  requests.set(requestId, request)
+  if (timeoutMs !== undefined && onTimeout !== undefined) {
+    request.timer = setTimeout(() => {
+      if (!requests.delete(requestId)) return
+      request.timer = null
+      onTimeout()
+    }, timeoutMs)
   }
-  return timestamps
+  return requestId
+}
+
+function resolveRequest<T>(requests: Map<number, PendingRequest<T>>, requestId: number, result: T): void {
+  const request = requests.get(requestId)
+  if (!request) return
+  requests.delete(requestId)
+  if (request.timer !== null) clearTimeout(request.timer)
+  request.resolve(result)
+}
+
+function deleteRequest<T>(requests: Map<number, PendingRequest<T>>, requestId: number): void {
+  const request = requests.get(requestId)
+  if (!request) return
+  requests.delete(requestId)
+  if (request.timer !== null) clearTimeout(request.timer)
+}
+
+function clearRequests<T>(requests: Map<number, PendingRequest<T>>): void {
+  for (const request of requests.values()) {
+    if (request.timer !== null) clearTimeout(request.timer)
+    request.cancel?.()
+  }
+  requests.clear()
 }
 
 /**
@@ -54,31 +86,10 @@ function getRequestTimestamps(): [number, number][] {
  * Prevents memory leaks and stale request accumulation across navigations.
  */
 export function clearPendingRequests(): void {
-  pendingHighlightRequests.clear()
-  pendingExecuteRequests.clear()
-  pendingA11yRequests.clear()
-  pendingDomRequests.clear()
-  requestTimestamps.clear()
-}
-
-/**
- * Perform periodic cleanup of stale requests (Issue #2 fix).
- * Removes requests older than 60 seconds as a fallback when pagehide/beforeunload don't fire.
- */
-function performPeriodicCleanup(): void {
-  const now = Date.now()
-  const staleThreshold = 60000 // 60 seconds
-
-  for (const [id, timestamp] of getRequestTimestamps()) {
-    if (now - timestamp > staleThreshold) {
-      // Remove stale request from all maps
-      pendingHighlightRequests.delete(id)
-      pendingExecuteRequests.delete(id)
-      pendingA11yRequests.delete(id)
-      pendingDomRequests.delete(id)
-      requestTimestamps.delete(id)
-    }
-  }
+  clearRequests(pendingHighlightRequests)
+  clearRequests(pendingExecuteRequests)
+  clearRequests(pendingA11yRequests)
+  clearRequests(pendingDomRequests)
 }
 
 /**
@@ -97,21 +108,16 @@ export function getPendingRequestStats(): PendingRequestStats {
 /**
  * Get the next highlight request ID and register a resolver
  */
-export function registerHighlightRequest(resolve: (result: HighlightResponse) => void): number {
+export function registerHighlightRequest(resolve: (result: HighlightResponse) => void, onCancel?: () => void): number {
   const requestId = ++highlightRequestId
-  pendingHighlightRequests.set(requestId, resolve)
-  return requestId
+  return registerRequest(pendingHighlightRequests, requestId, resolve, undefined, undefined, onCancel)
 }
 
 /**
  * Resolve a highlight request
  */
 export function resolveHighlightRequest(requestId: number, result: HighlightResponse): void {
-  const resolve = pendingHighlightRequests.get(requestId)
-  if (resolve) {
-    pendingHighlightRequests.delete(requestId)
-    resolve(result)
-  }
+  resolveRequest(pendingHighlightRequests, requestId, result)
 }
 
 /**
@@ -125,27 +131,26 @@ export function hasHighlightRequest(requestId: number): boolean {
  * Delete a highlight request without resolving
  */
 export function deleteHighlightRequest(requestId: number): void {
-  pendingHighlightRequests.delete(requestId)
+  deleteRequest(pendingHighlightRequests, requestId)
 }
 
 /**
  * Get the next execute request ID and register a resolver
  */
-export function registerExecuteRequest(resolve: (result: ExecuteJsResult) => void): number {
+export function registerExecuteRequest(
+  resolve: (result: ExecuteJsResult) => void,
+  timeoutMs?: number,
+  onTimeout?: () => void
+): number {
   const requestId = ++executeRequestId
-  pendingExecuteRequests.set(requestId, resolve)
-  return requestId
+  return registerRequest(pendingExecuteRequests, requestId, resolve, timeoutMs, onTimeout, onTimeout)
 }
 
 /**
  * Resolve an execute request
  */
 export function resolveExecuteRequest(requestId: number, result: ExecuteJsResult): void {
-  const resolve = pendingExecuteRequests.get(requestId)
-  if (resolve) {
-    pendingExecuteRequests.delete(requestId)
-    resolve(result)
-  }
+  resolveRequest(pendingExecuteRequests, requestId, result)
 }
 
 /**
@@ -159,27 +164,26 @@ export function hasExecuteRequest(requestId: number): boolean {
  * Delete an execute request without resolving
  */
 export function deleteExecuteRequest(requestId: number): void {
-  pendingExecuteRequests.delete(requestId)
+  deleteRequest(pendingExecuteRequests, requestId)
 }
 
 /**
  * Get the next a11y request ID and register a resolver
  */
-export function registerA11yRequest(resolve: (result: A11yAuditResult) => void): number {
+export function registerA11yRequest(
+  resolve: (result: A11yAuditResult) => void,
+  timeoutMs?: number,
+  onTimeout?: () => void
+): number {
   const requestId = ++a11yRequestId
-  pendingA11yRequests.set(requestId, resolve)
-  return requestId
+  return registerRequest(pendingA11yRequests, requestId, resolve, timeoutMs, onTimeout, onTimeout)
 }
 
 /**
  * Resolve an a11y request
  */
 export function resolveA11yRequest(requestId: number, result: A11yAuditResult): void {
-  const resolve = pendingA11yRequests.get(requestId)
-  if (resolve) {
-    pendingA11yRequests.delete(requestId)
-    resolve(result)
-  }
+  resolveRequest(pendingA11yRequests, requestId, result)
 }
 
 /**
@@ -193,27 +197,26 @@ export function hasA11yRequest(requestId: number): boolean {
  * Delete an a11y request without resolving
  */
 export function deleteA11yRequest(requestId: number): void {
-  pendingA11yRequests.delete(requestId)
+  deleteRequest(pendingA11yRequests, requestId)
 }
 
 /**
  * Get the next DOM request ID and register a resolver
  */
-export function registerDomRequest(resolve: (result: DomQueryResult) => void): number {
+export function registerDomRequest(
+  resolve: (result: DomQueryResult) => void,
+  timeoutMs?: number,
+  onTimeout?: () => void
+): number {
   const requestId = ++domRequestId
-  pendingDomRequests.set(requestId, resolve)
-  return requestId
+  return registerRequest(pendingDomRequests, requestId, resolve, timeoutMs, onTimeout, onTimeout)
 }
 
 /**
  * Resolve a DOM request
  */
 export function resolveDomRequest(requestId: number, result: DomQueryResult): void {
-  const resolve = pendingDomRequests.get(requestId)
-  if (resolve) {
-    pendingDomRequests.delete(requestId)
-    resolve(result)
-  }
+  resolveRequest(pendingDomRequests, requestId, result)
 }
 
 /**
@@ -227,7 +230,7 @@ export function hasDomRequest(requestId: number): boolean {
  * Delete a DOM request without resolving
  */
 export function deleteDomRequest(requestId: number): void {
-  pendingDomRequests.delete(requestId)
+  deleteRequest(pendingDomRequests, requestId)
 }
 
 /**
@@ -235,9 +238,10 @@ export function deleteDomRequest(requestId: number): void {
  * Should be called when content script is shutting down.
  */
 export function cleanupRequestTracking(): void {
-  if (cleanupTimer) {
-    clearInterval(cleanupTimer)
-    cleanupTimer = null
+  if (initialized) {
+    window.removeEventListener('pagehide', clearPendingRequests)
+    window.removeEventListener('beforeunload', clearPendingRequests)
+    initialized = false
   }
   clearPendingRequests()
 }
@@ -246,12 +250,10 @@ export function cleanupRequestTracking(): void {
  * Initialize request tracking (register cleanup handlers)
  */
 export function initRequestTracking(): void {
+  if (initialized) return
   // Register cleanup handlers for page unload/navigation (Issue 2 fix)
   // Using 'pagehide' (modern, fires on both close and navigation) + 'beforeunload' (legacy fallback)
   window.addEventListener('pagehide', clearPendingRequests)
   window.addEventListener('beforeunload', clearPendingRequests)
-
-  // Start periodic cleanup timer (Issue #2 fix)
-  // Provides fallback when pagehide/beforeunload don't fire (e.g., page crash)
-  cleanupTimer = setInterval(performPeriodicCleanup, CLEANUP_INTERVAL_MS)
+  initialized = true
 }

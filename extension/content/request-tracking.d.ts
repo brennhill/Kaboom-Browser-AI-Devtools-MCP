@@ -5,7 +5,7 @@
 /**
  * @fileoverview Request Tracking Module
  * Manages pending requests for AI Web Pilot features
- * Includes periodic cleanup timer to handle edge cases where pagehide/beforeunload don't fire.
+ * Each request owns its expiry timer; page lifecycle cleanup cancels every timer.
  */
 import type { HighlightResponse, ExecuteJsResult } from '../types/runtime-messages.js';
 import type { A11yAuditResult } from '../types/capture/accessibility.js';
@@ -24,7 +24,7 @@ export declare function getPendingRequestStats(): PendingRequestStats;
 /**
  * Get the next highlight request ID and register a resolver
  */
-export declare function registerHighlightRequest(resolve: (result: HighlightResponse) => void): number;
+export declare function registerHighlightRequest(resolve: (result: HighlightResponse) => void, onCancel?: () => void): number;
 /**
  * Resolve a highlight request
  */
@@ -40,7 +40,7 @@ export declare function deleteHighlightRequest(requestId: number): void;
 /**
  * Get the next execute request ID and register a resolver
  */
-export declare function registerExecuteRequest(resolve: (result: ExecuteJsResult) => void): number;
+export declare function registerExecuteRequest(resolve: (result: ExecuteJsResult) => void, timeoutMs?: number, onTimeout?: () => void): number;
 /**
  * Resolve an execute request
  */
@@ -56,7 +56,7 @@ export declare function deleteExecuteRequest(requestId: number): void;
 /**
  * Get the next a11y request ID and register a resolver
  */
-export declare function registerA11yRequest(resolve: (result: A11yAuditResult) => void): number;
+export declare function registerA11yRequest(resolve: (result: A11yAuditResult) => void, timeoutMs?: number, onTimeout?: () => void): number;
 /**
  * Resolve an a11y request
  */
@@ -72,7 +72,7 @@ export declare function deleteA11yRequest(requestId: number): void;
 /**
  * Get the next DOM request ID and register a resolver
  */
-export declare function registerDomRequest(resolve: (result: DomQueryResult) => void): number;
+export declare function registerDomRequest(resolve: (result: DomQueryResult) => void, timeoutMs?: number, onTimeout?: () => void): number;
 /**
  * Resolve a DOM request
  */

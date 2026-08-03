@@ -621,35 +621,50 @@
   var a11yRequestId = 0;
   var pendingDomRequests = /* @__PURE__ */ new Map();
   var domRequestId = 0;
-  var CLEANUP_INTERVAL_MS = 3e4;
-  var cleanupTimer = null;
-  var requestTimestamps = /* @__PURE__ */ new Map();
-  function getRequestTimestamps() {
-    const timestamps = [];
-    for (const [id, timestamp] of requestTimestamps) {
-      timestamps.push([id, timestamp]);
+  var initialized = false;
+  function registerRequest(requests, requestId, resolve, timeoutMs, onTimeout, onCancel) {
+    const request = { resolve, timer: null, cancel: onCancel };
+    requests.set(requestId, request);
+    if (timeoutMs !== void 0 && onTimeout !== void 0) {
+      request.timer = setTimeout(() => {
+        if (!requests.delete(requestId))
+          return;
+        request.timer = null;
+        onTimeout();
+      }, timeoutMs);
     }
-    return timestamps;
+    return requestId;
+  }
+  function resolveRequest(requests, requestId, result) {
+    const request = requests.get(requestId);
+    if (!request)
+      return;
+    requests.delete(requestId);
+    if (request.timer !== null)
+      clearTimeout(request.timer);
+    request.resolve(result);
+  }
+  function deleteRequest(requests, requestId) {
+    const request = requests.get(requestId);
+    if (!request)
+      return;
+    requests.delete(requestId);
+    if (request.timer !== null)
+      clearTimeout(request.timer);
+  }
+  function clearRequests(requests) {
+    for (const request of requests.values()) {
+      if (request.timer !== null)
+        clearTimeout(request.timer);
+      request.cancel?.();
+    }
+    requests.clear();
   }
   function clearPendingRequests() {
-    pendingHighlightRequests.clear();
-    pendingExecuteRequests.clear();
-    pendingA11yRequests.clear();
-    pendingDomRequests.clear();
-    requestTimestamps.clear();
-  }
-  function performPeriodicCleanup() {
-    const now = Date.now();
-    const staleThreshold = 6e4;
-    for (const [id, timestamp] of getRequestTimestamps()) {
-      if (now - timestamp > staleThreshold) {
-        pendingHighlightRequests.delete(id);
-        pendingExecuteRequests.delete(id);
-        pendingA11yRequests.delete(id);
-        pendingDomRequests.delete(id);
-        requestTimestamps.delete(id);
-      }
-    }
+    clearRequests(pendingHighlightRequests);
+    clearRequests(pendingExecuteRequests);
+    clearRequests(pendingA11yRequests);
+    clearRequests(pendingDomRequests);
   }
   function getPendingRequestStats() {
     return {
@@ -659,89 +674,54 @@
       dom: pendingDomRequests.size
     };
   }
-  function registerHighlightRequest(resolve) {
+  function registerHighlightRequest(resolve, onCancel) {
     const requestId = ++highlightRequestId;
-    pendingHighlightRequests.set(requestId, resolve);
-    return requestId;
+    return registerRequest(pendingHighlightRequests, requestId, resolve, void 0, void 0, onCancel);
   }
   function resolveHighlightRequest(requestId, result) {
-    const resolve = pendingHighlightRequests.get(requestId);
-    if (resolve) {
-      pendingHighlightRequests.delete(requestId);
-      resolve(result);
-    }
+    resolveRequest(pendingHighlightRequests, requestId, result);
   }
   function hasHighlightRequest(requestId) {
     return pendingHighlightRequests.has(requestId);
   }
   function deleteHighlightRequest(requestId) {
-    pendingHighlightRequests.delete(requestId);
+    deleteRequest(pendingHighlightRequests, requestId);
   }
-  function registerExecuteRequest(resolve) {
+  function registerExecuteRequest(resolve, timeoutMs, onTimeout) {
     const requestId = ++executeRequestId;
-    pendingExecuteRequests.set(requestId, resolve);
-    return requestId;
+    return registerRequest(pendingExecuteRequests, requestId, resolve, timeoutMs, onTimeout, onTimeout);
   }
   function resolveExecuteRequest(requestId, result) {
-    const resolve = pendingExecuteRequests.get(requestId);
-    if (resolve) {
-      pendingExecuteRequests.delete(requestId);
-      resolve(result);
-    }
+    resolveRequest(pendingExecuteRequests, requestId, result);
   }
-  function hasExecuteRequest(requestId) {
-    return pendingExecuteRequests.has(requestId);
-  }
-  function deleteExecuteRequest(requestId) {
-    pendingExecuteRequests.delete(requestId);
-  }
-  function registerA11yRequest(resolve) {
+  function registerA11yRequest(resolve, timeoutMs, onTimeout) {
     const requestId = ++a11yRequestId;
-    pendingA11yRequests.set(requestId, resolve);
-    return requestId;
+    return registerRequest(pendingA11yRequests, requestId, resolve, timeoutMs, onTimeout, onTimeout);
   }
   function resolveA11yRequest(requestId, result) {
-    const resolve = pendingA11yRequests.get(requestId);
-    if (resolve) {
-      pendingA11yRequests.delete(requestId);
-      resolve(result);
-    }
+    resolveRequest(pendingA11yRequests, requestId, result);
   }
-  function hasA11yRequest(requestId) {
-    return pendingA11yRequests.has(requestId);
-  }
-  function deleteA11yRequest(requestId) {
-    pendingA11yRequests.delete(requestId);
-  }
-  function registerDomRequest(resolve) {
+  function registerDomRequest(resolve, timeoutMs, onTimeout) {
     const requestId = ++domRequestId;
-    pendingDomRequests.set(requestId, resolve);
-    return requestId;
+    return registerRequest(pendingDomRequests, requestId, resolve, timeoutMs, onTimeout, onTimeout);
   }
   function resolveDomRequest(requestId, result) {
-    const resolve = pendingDomRequests.get(requestId);
-    if (resolve) {
-      pendingDomRequests.delete(requestId);
-      resolve(result);
-    }
-  }
-  function hasDomRequest(requestId) {
-    return pendingDomRequests.has(requestId);
-  }
-  function deleteDomRequest(requestId) {
-    pendingDomRequests.delete(requestId);
+    resolveRequest(pendingDomRequests, requestId, result);
   }
   function cleanupRequestTracking() {
-    if (cleanupTimer) {
-      clearInterval(cleanupTimer);
-      cleanupTimer = null;
+    if (initialized) {
+      window.removeEventListener("pagehide", clearPendingRequests);
+      window.removeEventListener("beforeunload", clearPendingRequests);
+      initialized = false;
     }
     clearPendingRequests();
   }
   function initRequestTracking() {
+    if (initialized)
+      return;
     window.addEventListener("pagehide", clearPendingRequests);
     window.addEventListener("beforeunload", clearPendingRequests);
-    cleanupTimer = setInterval(performPeriodicCleanup, CLEANUP_INTERVAL_MS);
+    initialized = true;
   }
 
   // extension/content/message-forwarding.js
@@ -1254,8 +1234,8 @@
           error: isInjectScriptLoaded() ? "inject_not_responding" : "inject_not_loaded"
         };
       }
-      const requestId = registerHighlightRequest((result) => deferred.resolve(result));
       const deferred = createDeferredPromise();
+      const requestId = registerHighlightRequest((result) => deferred.resolve(result), () => deferred.resolve({ success: false, error: "page_unloaded" }));
       postToInject({
         type: "kaboom_highlight_request",
         requestId,
@@ -1318,18 +1298,14 @@
   }
   function executeInMainWorld(params, sendResponse) {
     const timeoutMs = params.timeout_ms || 5e3;
-    const requestId = registerExecuteRequest(sendResponse);
     const safetyTimeoutMs = timeoutMs + 2e3;
-    setTimeout(() => {
-      if (hasExecuteRequest(requestId)) {
-        deleteExecuteRequest(requestId);
-        sendResponse({
-          success: false,
-          error: "inject_not_responding",
-          message: `Inject script did not respond within ${safetyTimeoutMs}ms. The tab may not be tracked or the inject script failed to load.`
-        });
-      }
-    }, safetyTimeoutMs);
+    const requestId = registerExecuteRequest(sendResponse, safetyTimeoutMs, () => {
+      sendResponse({
+        success: false,
+        error: "inject_not_responding",
+        message: `Inject script did not respond within ${safetyTimeoutMs}ms. The tab may not be tracked or the inject script failed to load.`
+      });
+    });
     postToInject({
       type: "kaboom_execute_js",
       requestId,
@@ -1368,13 +1344,9 @@
   }
   function handleA11yQuery(params, sendResponse) {
     const parsedParams = parseQueryParams(params);
-    const requestId = registerA11yRequest(sendResponse);
-    setTimeout(() => {
-      if (hasA11yRequest(requestId)) {
-        deleteA11yRequest(requestId);
-        sendResponse({ error: "Accessibility audit timeout" });
-      }
-    }, ASYNC_COMMAND_TIMEOUT_MS);
+    const requestId = registerA11yRequest(sendResponse, ASYNC_COMMAND_TIMEOUT_MS, () => {
+      sendResponse({ error: "Accessibility audit timeout" });
+    });
     postToInject({
       type: "kaboom_a11y_query",
       requestId,
@@ -1384,13 +1356,9 @@
   }
   function handleDomQuery(params, sendResponse) {
     const parsedParams = parseQueryParams(params);
-    const requestId = registerDomRequest(sendResponse);
-    setTimeout(() => {
-      if (hasDomRequest(requestId)) {
-        deleteDomRequest(requestId);
-        sendResponse({ error: "DOM query timeout" });
-      }
-    }, ASYNC_COMMAND_TIMEOUT_MS);
+    const requestId = registerDomRequest(sendResponse, ASYNC_COMMAND_TIMEOUT_MS, () => {
+      sendResponse({ error: "DOM query timeout" });
+    });
     postToInject({
       type: "kaboom_dom_query",
       requestId,

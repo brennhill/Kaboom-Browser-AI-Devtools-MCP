@@ -58,6 +58,7 @@ code_paths:
   - src/inject/message-handlers.ts
   - src/inject/state.ts
   - src/content/message-handlers.ts
+  - src/content/request-tracking.ts
   - src/content/script-injection.ts
   - src/content/window-message-listener.ts
   - src/content/runtime-message-listener.ts
@@ -82,6 +83,7 @@ code_paths:
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
+  - tests/extension/content/content.test.js
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - cmd/browser-agent/internal/toolinteract/action_runtime_edge_test.go
   - cmd/browser-agent/internal/toolinteract/interact_evidence_test.go
@@ -286,6 +288,12 @@ index construction, and truncation so response-shaping paths cannot drift.
 Interact action metadata now has a single canonical registry in `internal/schema/interact/actions.go`, consumed by both schema enum generation and `describe_capabilities` mode specs.
 
 Extension-dispatched interact actions now use shared enqueue fail-fast handling: when queue capacity is saturated, responses return structured `queue_full` immediately rather than entering async wait mode.
+
+Content-to-page requests have one lifecycle owner. Each request timer is cleared
+on response, explicit deletion, pagehide, beforeunload, or content-script
+shutdown; page lifecycle cancellation resolves the pending callback. The dead
+shared cleanup interval and timestamp registry are deleted, so importing the
+content bundle cannot keep focused test runners alive.
 
 Async execution is controlled only by the canonical `background` parameter.
 The entrypoint does not translate alternate parameter names.
