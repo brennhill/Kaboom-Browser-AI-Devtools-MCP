@@ -19,8 +19,9 @@ code_paths:
   - internal/qafixture/transaction.go
   - internal/qafixture/registry.go
   - internal/qafixture/registry_store.go
-  - internal/qafixture/directory_sync_unix.go
-  - internal/qafixture/directory_sync_windows.go
+  - internal/statefile/statefile.go
+  - internal/statefile/directory_sync_unix.go
+  - internal/statefile/directory_sync_windows.go
   - internal/schema/configure/properties_fixture.go
   - internal/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
@@ -48,6 +49,7 @@ test_paths:
   - internal/qafixture/transaction_test.go
   - internal/qafixture/registry_test.go
   - internal/qafixture/registry_store_test.go
+  - internal/statefile/statefile_test.go
   - internal/schema/configure/schema_test.go
   - internal/statediag/collector_test.go
   - tests/extension/environment-transaction/browser-state-driver.test.js
@@ -100,11 +102,12 @@ last_verified_date: 2026-08-02
   exposed only through `configure(what="qa_fixture")`.
 - The daemon recovery registry persists only opaque transaction, snapshot,
   correlation, extension-generation, lifecycle, timestamp, and mutation-count
-  fields. It is bounded, rejects stale generations, atomically replaces its
-  state file, syncs the containing directory after replacement/quarantine on
-  platforms with directory fsync, and quarantines corrupt state behind stable
-  diagnostic codes. Injected sync failures return actionable recovery codes;
-  Windows' unsupported directory-sync semantics are isolated explicitly.
+  fields. It is bounded, rejects stale generations, and delegates replacement
+  and quarantine durability to the canonical `internal/statefile` owner. That
+  owner uses same-directory temporary writes, file sync, atomic rename, and
+  directory sync where supported, with stable redacted failure stages and
+  deterministic cleanup coverage. Windows' unsupported directory-sync
+  semantics are isolated explicitly.
 - The fixture transaction coordinator generates its own correlation ID,
   captures an opaque private snapshot before the first mutation, and performs
   bounded rollback after any partial apply failure. Driver errors collapse to
