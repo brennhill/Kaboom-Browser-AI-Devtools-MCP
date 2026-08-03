@@ -129,6 +129,39 @@ describe('Tooling contracts', () => {
     assert.match(makefile, /node scripts\/security\/check-npm-audit\.mjs/)
   })
 
+  test('hosted workflows invoke canonical invariant owners without copied implementations', () => {
+    const makefile = readFileSync('Makefile', 'utf8')
+    const ci = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const architecture = readFileSync('.github/workflows/architecture-validation.yml', 'utf8')
+    const versions = readFileSync('.github/workflows/validate-versions.yml', 'utf8')
+    const release = readFileSync('.github/workflows/release.yml', 'utf8')
+    const cutRelease = readFileSync('.github/workflows/cut-release.yml', 'utf8')
+
+    assert.match(makefile, /^check-schema:/m)
+    assert.match(makefile, /^validate-architecture:/m)
+    assert.match(makefile, /^verify-llm: check-invariants check-schema$/m)
+    assert.match(ci, /name: Wire drift gate[^\n]*\n\s*run: make check-invariants/)
+    assert.match(architecture, /name: Run architecture validation\s*\n\s*run: make validate-architecture/)
+    assert.match(versions, /name: Validate all versions match VERSION file\s*\n\s*run: make validate-versions/)
+    assert.match(release, /name: Wire drift gate[^\n]*\n\s*run: make check-invariants/)
+    assert.match(cutRelease, /name: Validate version consistency[^\n]*\n\s*run: make validate-versions/)
+    assert.match(cutRelease, /name: Wire drift gate[^\n]*\n\s*run: make check-invariants/)
+
+    for (const [name, workflow] of [
+      ['ci.yml', ci],
+      ['architecture-validation.yml', architecture],
+      ['validate-versions.yml', versions],
+      ['release.yml', release],
+      ['cut-release.yml', cutRelease]
+    ]) {
+      assert.doesNotMatch(workflow, /generate-wire-types\.js --check/, `${name} duplicates wire generation checks`)
+      assert.doesNotMatch(workflow, /check-sync-wire-drift\.js/, `${name} bypasses make check-invariants`)
+      assert.doesNotMatch(workflow, /version-sync\.mjs --check/, `${name} bypasses make validate-versions`)
+      assert.doesNotMatch(workflow, /scripts\/validate-architecture\.sh/, `${name} bypasses make validate-architecture`)
+      assert.doesNotMatch(workflow, /GO_COVERAGE_MINIMUM|COVERAGE\s*[<=>]|89%/, `${name} copies the coverage threshold`)
+    }
+  })
+
   test('active workflows pin the patched Go version declared by go.mod', () => {
     const goVersion = readFileSync('go.mod', 'utf8').match(/^go (\S+)$/m)?.[1]
     assert.equal(goVersion, '1.25.12')

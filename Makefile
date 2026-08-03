@@ -22,12 +22,12 @@ PLATFORMS := \
 
 .PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-race test-cover test-integration test-cover-integration test-cover-all test-bench test-fuzz \
 	dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
-	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-ts-json-casing ci \
+	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-ts-json-casing check-invariants check-schema ci \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench ci-fuzz \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
-	verify-llm check-folder-size check-structure check-dormant-tests check-duplicates folder-baseline-update \
+	verify-llm check-folder-size check-structure check-dormant-tests check-duplicates validate-architecture folder-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -187,6 +187,9 @@ check-dormant-tests:
 # All structural gates: physical size, dependency direction, public surface,
 # cycles, dormant tests, and high-risk extension duplication.
 check-structure: check-file-length check-folder-size check-dormant-tests lint-boundaries lint-silent-catches lint-circular check-duplicates
+
+validate-architecture:
+	@bash scripts/validate-architecture.sh
 
 check-duplicates:
 	@npx jscpd src/background src/popup --min-lines 8 --min-tokens 60 --threshold 0
@@ -355,6 +358,10 @@ check-ts-json-casing:
 
 check-invariants: check-wire-drift check-ts-json-casing
 	@node scripts/contracts/check-sync-wire-drift.js
+
+check-schema:
+	@npm run docs:lint:reference-schema-sync
+	@go test ./cmd/browser-agent -run 'TestSchemaParity_' -count=1
 	@./scripts/check-esm-extensions.sh
 	@./scripts/check-sync-invariants.sh
 	@./scripts/check-bridge-stdout-invariant.sh
@@ -455,14 +462,12 @@ verify-all: lint security-check test-cover test-js
 
 # Fast, high-signal verification loop for LLM-driven maintenance.
 # Typical runtime target: ~60-120 seconds on a warm cache.
-verify-llm:
+verify-llm: check-invariants check-schema
 	@echo "Running verify-llm fast gate (schema + docs + core contracts)..."
-	@node scripts/build/generate-wire-types.js --check
 	@npm run docs:lint:integrity
 	@npm run docs:check:strict
 	@npm run docs:lint:content-contract
-	@npm run docs:lint:reference-schema-sync
-	@go test ./cmd/browser-agent -run 'TestSchemaParity_|TestInteract_NavigateAndDocument_.*|TestNavigateAndDocument_.*|TestContractEnforcement_ErrorsHaveRetryableField|TestContractEnforcement_CommandResult_HasElapsedMs' -count=1
+	@go test ./cmd/browser-agent -run 'TestInteract_NavigateAndDocument_.*|TestNavigateAndDocument_.*|TestContractEnforcement_ErrorsHaveRetryableField|TestContractEnforcement_CommandResult_HasElapsedMs' -count=1
 	@echo "verify-llm passed"
 
 # Quality gate for top 1% standards (comprehensive)

@@ -7,7 +7,11 @@ owners: []
 last_reviewed: 2026-08-03
 code_paths:
   - Makefile
+  - .github/workflows/architecture-validation.yml
   - .github/workflows/ci.yml
+  - .github/workflows/cut-release.yml
+  - .github/workflows/release.yml
+  - .github/workflows/validate-versions.yml
   - .golangci.yml
   - scripts/build/generate-wire-types.js
   - scripts/build/run-go-coverage.sh
@@ -16,6 +20,7 @@ code_paths:
   - scripts/docs/features/check-feature-bundles.js
   - scripts/docs/site/check-gokaboom-content-contract.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs
+  - gokaboom.dev/src/content/docs/reference/configure.md
   - scripts/lint-documentation.py
   - scripts/check-dormant-tests.sh
   - scripts/test-js-sharded.sh
@@ -32,8 +37,8 @@ test_paths:
   - tests/cli/runtime/doctor.test.cjs
   - tests/cli/lifecycle/server-install-hardening.test.cjs
   - tests/site/gokaboom-domain-contract.test.js
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-03
 ---
 
 # Kaboom Ci
@@ -50,6 +55,10 @@ last_verified_date: 2026-03-05
   runner merges package and real-binary subprocess coverage and enforces the
   unchanged 89% minimum. GitHub retains the merged and component profiles for
   diagnosis even when the gate fails.
+- Hosted CI and release workflows invoke Make-owned entrypoints for version,
+  wire, schema, architecture, coverage, and security invariants. Contract tests
+  reject copied thresholds, reduced scopes, direct script bypasses, and workflow
+  drift, so the documented local command reproduces the hosted failure.
 - The canonical security gate scans every `cmd/browser-agent` and `internal` Go
   package with gosec and govulncheck, audits production npm dependencies with
   zero tolerance, and admits build-tool findings only through exact advisory

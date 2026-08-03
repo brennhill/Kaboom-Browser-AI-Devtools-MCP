@@ -18,4 +18,4 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
 
       - name: Validate all versions match VERSION file
-        run: node scripts/release/version/version-sync.mjs --check
+        run: make validate-versions

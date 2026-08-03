@@ -1,8 +1,8 @@
 ---
 title: "Configure — Customize the Session"
-description: "Complete reference for the configure tool. 29 modes for noise filtering, persistent storage, recording, playback, streaming, log diff, session diffs, macro sequences, audit log, diagnostics, issue reporting, and more."
-last_verified_version: 0.8.0
-last_verified_date: 2026-03-06
+description: "Complete reference for the configure tool. 30 modes for noise filtering, persistent storage, recording, playback, streaming, QA fixtures, session diffs, diagnostics, and more."
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-03
 normalized_tags: ['reference', 'configure']
 ---
 
@@ -23,6 +23,7 @@ configure({what:"playback", recording_id: "rec-123"})            // Replay recor
 configure({what:"log_diff", original_id: "rec-1", replay_id: "rec-2"})  // Compare error states
 configure({what:"diff_sessions", verif_session_action: "capture", name: "v1"})  // Session snapshot
 configure({what:"audit_log", tool_name: "observe"})               // View tool usage history
+configure({what:"qa_fixture", fixture_action: "validate", fixture: {version: 1}}) // Validate local QA state
 ```
 
 ## Common Parameters
@@ -522,3 +523,26 @@ configure({what: "setup_quality_gates", target_dir: "/path/within/project"})
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `target_dir` | string | Directory to write the config into. Must be within the project. Defaults to the active codebase root. |
+
+---
+
+## qa_fixture — Transactional Browser Test State
+
+Validate, apply, inspect, or restore a versioned browser fixture. Applying a
+fixture snapshots the current page state before mutation and returns an opaque
+`transaction_id`; restore with that handle when the test finishes. Cookie and
+storage values remain local to the extension and are never echoed in tool
+responses or Doctor diagnostics.
+
+```js
+configure({what: "qa_fixture", fixture_action: "validate", fixture: {version: 1, viewport: {width: 1280, height: 720}}})
+configure({what: "qa_fixture", fixture_action: "apply", fixture: {version: 1, user_state: "fresh", feature_flags: {new_checkout: true}}})
+configure({what: "qa_fixture", fixture_action: "status"})
+configure({what: "qa_fixture", fixture_action: "restore", transaction_id: "fixture_transaction_opaque"})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `fixture_action` | string | `validate`, `apply`, `status`, or `restore` |
+| `fixture` | object | Version-1 fixture for validate/apply; supports target URL, viewport, locale, permissions, network profile, cookies, browser storage, feature flags, seed data, user state, auth role, and a bounded setup timeout |
+| `transaction_id` | string | Opaque handle returned by `apply`; required by `restore` |

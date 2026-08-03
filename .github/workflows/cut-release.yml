@@ -94,12 +94,10 @@ jobs:
           echo "version=$TARGET" >> "$GITHUB_OUTPUT"
 
       - name: Validate version consistency (fail closed)
-        run: node scripts/release/version/version-sync.mjs --check
+        run: make validate-versions
 
       - name: Wire drift gate (Go <-> TS payload contracts)
-        run: |
-          make check-wire-drift
-          node scripts/contracts/check-sync-wire-drift.js
+        run: make check-invariants
 
       - name: Go tests (short)
         run: go test -short ./...

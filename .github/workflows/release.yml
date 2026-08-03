@@ -111,9 +111,7 @@ jobs:
         run: npm ci
 
       - name: Wire drift gate (Go <-> TS payload contracts)
-        run: |
-          make check-wire-drift
-          node scripts/contracts/check-sync-wire-drift.js
+        run: make check-invariants
 
       - name: Go tests (short)
         run: go test -short ./...

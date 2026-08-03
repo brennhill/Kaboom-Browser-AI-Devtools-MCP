@@ -27,6 +27,4 @@ jobs:
           go-version: '1.25.12'
 
       - name: Run architecture validation
-        run: |
-          chmod +x scripts/validate-architecture.sh
-          ./scripts/validate-architecture.sh
+        run: make validate-architecture

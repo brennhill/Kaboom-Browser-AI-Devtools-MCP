@@ -263,9 +263,7 @@ jobs:
         run: npm run docs:check:strict
 
       - name: Wire drift gate (Go <-> TS payload contracts)
-        run: |
-          make check-wire-drift
-          node scripts/contracts/check-sync-wire-drift.js
+        run: make check-invariants
 
       - name: ESLint (errors only)
         run: npx eslint extension/ tests/extension/ --max-warnings=50
