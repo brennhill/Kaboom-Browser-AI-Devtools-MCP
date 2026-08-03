@@ -12,6 +12,19 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
+func TestSecureJitterStaysWithinRequestedRange(t *testing.T) {
+	t.Parallel()
+	for i := 0; i < 100; i++ {
+		got := secureJitter(7)
+		if got < 0 || got >= 7 {
+			t.Fatalf("secureJitter(7) = %d", got)
+		}
+	}
+	if got := secureJitter(0); got != 0 {
+		t.Fatalf("secureJitter(0) = %d", got)
+	}
+}
+
 func TestRetryContractStopsUnchangedSecondAttempt(t *testing.T) {
 	runtime := NewActionRuntime(RuntimeDeps{})
 	firstArgs := json.RawMessage(`{"what":"click","selector":"#save"}`)

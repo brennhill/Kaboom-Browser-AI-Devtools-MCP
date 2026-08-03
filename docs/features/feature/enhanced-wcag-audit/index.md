@@ -4,7 +4,7 @@ feature_id: feature-enhanced-wcag-audit
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-03
 code_paths:
   - internal/a11ysummary/summary.go
   - internal/tools/observe/page_state.go
@@ -20,6 +20,9 @@ last_verified_date: 2026-03-05
 # Enhanced Wcag Audit
 
 ## TL;DR
+
+- Accessibility summary counts reject unsigned values that cannot fit the host
+  integer rather than wrapping them into negative counts.
 
 - Status: proposed
 - Tool: observe

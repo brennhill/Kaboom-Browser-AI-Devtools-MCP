@@ -6,6 +6,7 @@ package a11ysummary
 
 import (
 	"encoding/json"
+	"math"
 	"strconv"
 )
 
@@ -112,9 +113,12 @@ func parseCount(value any) (int, bool) {
 	case int32:
 		return int(v), true
 	case int64:
+		if v > int64(math.MaxInt) || v < int64(math.MinInt) {
+			return 0, false
+		}
 		return int(v), true
 	case uint:
-		return int(v), true
+		return intFromUint64(uint64(v))
 	case uint8:
 		return int(v), true
 	case uint16:
@@ -122,7 +126,7 @@ func parseCount(value any) (int, bool) {
 	case uint32:
 		return int(v), true
 	case uint64:
-		return int(v), true
+		return intFromUint64(v)
 	case float32:
 		return int(v), true
 	case float64:
@@ -137,4 +141,11 @@ func parseCount(value any) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+func intFromUint64(value uint64) (int, bool) {
+	if value > uint64(math.MaxInt) {
+		return 0, false
+	}
+	return int(value), true // #nosec G115 -- value is explicitly bounded to math.MaxInt above.
 }

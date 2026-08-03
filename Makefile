@@ -40,6 +40,7 @@ GO_TEST_P ?= 8
 GO_TEST_STATE_DIR ?= /tmp/kaboom-state-test
 GO_TEST_TOOLCHAIN ?= auto
 GO_TEST_CACHE_DIR ?= /tmp/go-build-cache
+SUPPORTED_GO_TOOLCHAIN := go$(shell awk '/^go / {print $$2}' go.mod)
 
 uat:
 	./scripts/test-all-tools-comprehensive.sh --suite all
@@ -401,8 +402,7 @@ ci-js:
 	npx tsc --noEmit
 	JS_TEST_TIMEOUT=20000 ./scripts/test-js-sharded.sh
 
-ci-security:
-	@command -v gosec >/dev/null 2>&1 && gosec -exclude=G104,G114,G204,G301,G304,G306 $(CMD_PKG)/ || echo "gosec not installed (optional - GitHub Actions will verify)"
+ci-security: security-check
 
 ci-bench:
 	@command -v benchstat >/dev/null 2>&1 || { echo "benchstat not found. Install: go install golang.org/x/perf/cmd/benchstat@latest"; exit 1; }
@@ -432,11 +432,16 @@ install-hooks:
 
 # --- Quality Gates ---
 
-# Run all security checks (gosec for Go, ESLint security rules for JS)
+# Run all security checks: source analysis, known Go vulnerabilities, production
+# runtime dependency audit, bounded build-tool exceptions, and JS security lint.
 security-check:
 	@echo "Running security checks..."
 	@command -v gosec >/dev/null 2>&1 || { echo "gosec not found. Install: go install github.com/securego/gosec/v2/cmd/gosec@latest"; exit 1; }
-	gosec -exclude=G104,G114,G204,G301,G304,G306 -severity=high $(CMD_PKG)/
+	@command -v govulncheck >/dev/null 2>&1 || { echo "govulncheck not found. Install: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4"; exit 1; }
+	gosec -quiet -exclude=G104,G114,G204,G301,G304,G306 -severity=high ./cmd/browser-agent/... ./internal/...
+	GOTOOLCHAIN=$(SUPPORTED_GO_TOOLCHAIN) govulncheck ./cmd/browser-agent/... ./internal/...
+	node --test scripts/security/check-npm-audit.test.mjs
+	node scripts/security/check-npm-audit.mjs
 	npx eslint extension/ tests/extension/
 	@echo "All security checks passed"
 

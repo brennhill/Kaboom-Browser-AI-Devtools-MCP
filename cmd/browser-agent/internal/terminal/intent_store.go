@@ -59,7 +59,7 @@ func (s *IntentStore) Add(pageURL, action string) string {
 		Action:        action,
 		CreatedAt:     time.Now().Unix(),
 	})
-	s.count.Store(int32(len(s.items)))
+	s.syncCountLocked()
 	return id
 }
 
@@ -73,7 +73,7 @@ func (s *IntentStore) Consume(correlationID string) *Intent {
 	for i, it := range s.items {
 		if it.CorrelationID == correlationID {
 			s.items = append(s.items[:i], s.items[i+1:]...)
-			s.count.Store(int32(len(s.items)))
+			s.syncCountLocked()
 			return &it
 		}
 	}
@@ -115,7 +115,7 @@ func (s *IntentStore) NudgeAndClean() bool {
 		}
 	}
 	s.items = s.items[:n]
-	s.count.Store(int32(n))
+	s.syncCountLocked()
 	return n > 0
 }
 
@@ -145,7 +145,12 @@ func (s *IntentStore) cleanExpiredLocked() {
 		}
 	}
 	s.items = s.items[:n]
-	s.count.Store(int32(n))
+	s.syncCountLocked()
+}
+
+func (s *IntentStore) syncCountLocked() {
+	// #nosec G115 -- Add caps this slice at IntentMaxCount (3).
+	s.count.Store(int32(len(s.items)))
 }
 
 // GenerateCorrelationID creates a unique correlation ID for intents.

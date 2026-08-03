@@ -144,6 +144,22 @@ func TestCompareImages_ThresholdFiltering(t *testing.T) {
 	}
 }
 
+func TestRebuildChangedGridClampsThreshold(t *testing.T) {
+	t.Parallel()
+	baseline := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	current := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	baseline.Set(0, 0, color.Black)
+	current.Set(0, 0, color.White)
+	if !RebuildChangedGrid(baseline, current, -1)[0][0] {
+		t.Fatal("negative threshold was not clamped to zero")
+	}
+	oversized := RebuildChangedGrid(baseline, current, 1<<30)[0][0]
+	maximum := RebuildChangedGrid(baseline, current, 255)[0][0]
+	if oversized != maximum {
+		t.Fatal("oversized threshold did not behave like the clamped maximum")
+	}
+}
+
 func TestWriteDiffImage_OutputValid(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

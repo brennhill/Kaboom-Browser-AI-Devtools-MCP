@@ -44,9 +44,9 @@ func WriteDiffImage(baseline, current image.Image, changed [][]bool, path string
 			if bx < bBounds.Max.X && by < bBounds.Max.Y {
 				r, g, b, _ := baseline.At(bx, by).RGBA()
 				diff.Set(x, y, color.RGBA{
-					uint8(r >> 8 * 77 / 255),
-					uint8(g >> 8 * 77 / 255),
-					uint8(b >> 8 * 77 / 255),
+					dimmedChannel(r),
+					dimmedChannel(g),
+					dimmedChannel(b),
 					255,
 				})
 			} else {
@@ -61,4 +61,10 @@ func WriteDiffImage(baseline, current image.Image, changed [][]bool, path string
 	}
 	defer f.Close()
 	return png.Encode(f, diff)
+}
+
+func dimmedChannel(channel uint32) uint8 {
+	// RGBA returns a 16-bit channel in uint32; shifting produces [0,255], and
+	// multiplying by 77/255 can only reduce that bound.
+	return uint8(channel>>8) * 77 / 255 // #nosec G115 -- channel>>8 is bounded to uint8.
 }

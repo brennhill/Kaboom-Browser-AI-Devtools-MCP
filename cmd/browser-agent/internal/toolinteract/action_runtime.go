@@ -7,8 +7,9 @@
 package toolinteract
 
 import (
+	cryptorand "crypto/rand"
 	"encoding/json"
-	"math/rand/v2"
+	"math/big"
 	"strings"
 	"sync"
 	"time"
@@ -364,14 +365,22 @@ func (h *ActionRuntime) ApplyJitter(action string) int {
 	if maxMs <= 0 {
 		return 0
 	}
-	jitterMs := 0
-	if maxMs > 0 {
-		jitterMs = rand.IntN(maxMs)
-	}
+	jitterMs := secureJitter(maxMs)
 	if jitterMs > 0 {
 		time.Sleep(time.Duration(jitterMs) * time.Millisecond)
 	}
 	return jitterMs
+}
+
+func secureJitter(maxMs int) int {
+	if maxMs <= 0 {
+		return 0
+	}
+	value, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(maxMs)))
+	if err != nil {
+		return 0
+	}
+	return int(value.Int64()) // #nosec G115 -- crypto/rand result is strictly less than maxMs, which is an int.
 }
 
 // isResponseQueued checks if an MCP response is a queued async response.

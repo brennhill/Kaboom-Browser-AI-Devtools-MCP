@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -122,6 +122,10 @@ last_verified_date: 2026-03-28
 # Terminal
 
 ## TL;DR
+
+- Start and resize dimensions are bounded before conversion to PTY wire widths;
+  oversized external values are rejected instead of wrapping. Intent counts use
+  one bounded synchronization helper.
 - Status: shipped
 - Side-panel terminal host that embeds a PTY-backed shell via iframe
 - Availability: macOS + Linux only (Windows currently reports terminal unavailable / `terminal_port: 0`)

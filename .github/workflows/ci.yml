@@ -30,7 +30,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
         with:
-          go-version: "1.24"
+          go-version: "1.25.12"
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -103,7 +103,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
         with:
-          go-version: "1.24"
+          go-version: "1.25.12"
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -144,7 +144,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
         with:
-          go-version: "1.24"
+          go-version: "1.25.12"
 
       - name: Go vet
         run: go vet ./cmd/browser-agent/
@@ -199,7 +199,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
         with:
-          go-version: "1.24"
+          go-version: "1.25.12"
 
       - name: Binary lifecycle and transport integration tests
         run: scripts/build/run-go-integration.sh -race -count=1
@@ -285,7 +285,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
         with:
-          go-version: "1.24"
+          go-version: "1.25.12"
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -295,15 +295,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install gosec
-        # Pinned: gosec >= v2.27 requires Go 1.25, but this repo targets Go 1.24
-        # (go.mod). v2.22.7 requires Go 1.23 and installs on the CI toolchain.
-        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.22.7
-
-      - name: Go security scan (gosec)
+      - name: Install Go security scanners
+        # Keep gosec pinned for reproducible findings; govulncheck evaluates the
+        # exact patched standard library declared by go.mod.
         run: |
-          gosec -exclude=G104,G114,G204,G301,G304,G306 -severity=high ./cmd/browser-agent/
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.22.7
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
 
-      - name: JS security lint
-        run: |
-          npx eslint extension/ tests/extension/ --max-warnings=50
+      - name: Canonical security gate
+        run: make security-check

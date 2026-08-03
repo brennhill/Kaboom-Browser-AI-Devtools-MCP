@@ -11,6 +11,8 @@ code_paths:
   - .golangci.yml
   - scripts/build/generate-wire-types.js
   - scripts/build/run-go-coverage.sh
+  - scripts/security/check-npm-audit.mjs
+  - scripts/security/npm-audit-policy.json
   - scripts/docs/features/check-feature-bundles.js
   - scripts/docs/site/check-gokaboom-content-contract.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs
@@ -19,6 +21,7 @@ code_paths:
   - scripts/test-js-sharded.sh
   - package.json
 test_paths:
+  - scripts/security/check-npm-audit.test.mjs
   - tests/extension/contracts/tooling-contracts.test.js
   - scripts/docs/features/check-feature-bundles.test.mjs
   - cmd/browser-agent/tools_schema_parity_test.go
@@ -47,6 +50,11 @@ last_verified_date: 2026-03-05
   runner merges package and real-binary subprocess coverage and enforces the
   unchanged 89% minimum. GitHub retains the merged and component profiles for
   diagnosis even when the gate fails.
+- The canonical security gate scans every `cmd/browser-agent` and `internal` Go
+  package with gosec and govulncheck, audits production npm dependencies with
+  zero tolerance, and admits build-tool findings only through exact advisory
+  fingerprints with Beads references and expiry dates. Active workflows pin the
+  patched Go 1.25.12 toolchain declared by `go.mod`.
 
 ## Specs
 

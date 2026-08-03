@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-02
+last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
@@ -199,6 +199,9 @@ generator partial; generated copies remain self-contained because Chrome
 serializes injected functions without module scope.
 
 ## TL;DR
+
+- Action jitter uses the standard-library cryptographic random source and stays
+  within the configured exclusive upper bound.
 - Status: shipped
 - Tool: `interact`
 - Mode key: `what`

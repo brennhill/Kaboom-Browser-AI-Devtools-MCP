@@ -7,6 +7,7 @@ package imagediff
 import "image"
 
 func RebuildChangedGrid(baseline, current image.Image, threshold int) [][]bool {
+	threshold = min(max(threshold, 0), 255)
 	bBounds := baseline.Bounds()
 	cBounds := current.Bounds()
 	bW, bH := bBounds.Dx(), bBounds.Dy()
@@ -27,6 +28,7 @@ func RebuildChangedGrid(baseline, current image.Image, threshold int) [][]bool {
 			r1, g1, b1, a1 := baseline.At(bBounds.Min.X+x, bBounds.Min.Y+y).RGBA()
 			r2, g2, b2, a2 := current.At(cBounds.Min.X+x, cBounds.Min.Y+y).RGBA()
 			delta := absDiff16(r1, r2) + absDiff16(g1, g2) + absDiff16(b1, b2) + absDiff16(a1, a2)
+			// #nosec G115 -- threshold is clamped to [0,255] above.
 			if delta > uint32(threshold)*257 {
 				changed[y][x] = true
 			}

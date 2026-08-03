@@ -257,6 +257,11 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		deps.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
 		return
 	}
+	cols, rows, validDimensions := terminalDimensions(req.Cols, req.Rows)
+	if !validDimensions {
+		deps.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "cols and rows must be between 0 and 65535"})
+		return
+	}
 
 	req.Cmd, req.Args = resolveTerminalCommand(req.Cmd, req.Args)
 
@@ -277,8 +282,8 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		Cmd:       req.Cmd,
 		Args:      req.Args,
 		Dir:       req.Dir,
-		Cols:      uint16(req.Cols),
-		Rows:      uint16(req.Rows),
+		Cols:      cols,
+		Rows:      rows,
 		RepoPath:  req.RepoPath,
 		AgentType: req.AgentType,
 	}
@@ -368,6 +373,14 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		"token":      result.Token,
 		"pid":        result.Pid,
 	})
+}
+
+func terminalDimensions(cols, rows int) (uint16, uint16, bool) {
+	if cols < 0 || rows < 0 || cols > 65535 || rows > 65535 {
+		return 0, 0, false
+	}
+	// #nosec G115 -- both values are explicitly bounded to uint16 above.
+	return uint16(cols), uint16(rows), true
 }
 
 // AutoDetectCWD gets the CWD from the first registered MCP client.

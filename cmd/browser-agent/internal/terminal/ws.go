@@ -381,7 +381,11 @@ func HandleControlMessage(payload []byte, sess *pty.Session) {
 	switch msg.Type {
 	case "resize":
 		if msg.Cols > 0 && msg.Rows > 0 {
-			_ = sess.Resize(uint16(msg.Cols), uint16(msg.Rows))
+			cols, rows, ok := terminalDimensions(msg.Cols, msg.Rows)
+			if !ok {
+				return
+			}
+			_ = sess.Resize(cols, rows)
 			// Always force SIGWINCH so TUI apps redraw — TIOCSWINSZ only
 			// sends SIGWINCH when dimensions actually change, but on reconnect
 			// the dimensions may match while the display is stale.

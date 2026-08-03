@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { test, describe } from 'node:test'
 import assert from 'node:assert'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 
 import eslintConfig from '../../../eslint.config.js'
 
@@ -113,6 +113,31 @@ describe('Tooling contracts', () => {
     assert.match(makefile, /^ci-go:[\s\S]*\n\t\$\(MAKE\) test-cover/m)
     assert.match(coverageRunner, /MINIMUM="\$\{GO_COVERAGE_MINIMUM:-89\}"/)
     assert.doesNotMatch(workflow, /70% minimum|COVERAGE < 70|coverprofile=coverage\.out/)
+  })
+
+  test('security CI scans all Go code and enforces bounded dependency policy', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const makefile = readFileSync('Makefile', 'utf8')
+
+    assert.match(workflow, /go install golang\.org\/x\/vuln\/cmd\/govulncheck@v[\d.]+/)
+    assert.match(workflow, /name: Canonical security gate[\s\S]*run: make security-check/)
+    assert.match(makefile, /gosec[^\n]*\.\/cmd\/browser-agent\/\.\.\. \.\/internal\/\.\.\./)
+    assert.match(
+      makefile,
+      /GOTOOLCHAIN=\$\(SUPPORTED_GO_TOOLCHAIN\) govulncheck \.\/cmd\/browser-agent\/\.\.\. \.\/internal\/\.\.\./
+    )
+    assert.match(makefile, /node scripts\/security\/check-npm-audit\.mjs/)
+  })
+
+  test('active workflows pin the patched Go version declared by go.mod', () => {
+    const goVersion = readFileSync('go.mod', 'utf8').match(/^go (\S+)$/m)?.[1]
+    assert.equal(goVersion, '1.25.12')
+    for (const name of readdirSync('.github/workflows').filter((file) => file.endsWith('.yml'))) {
+      const workflow = readFileSync(`.github/workflows/${name}`, 'utf8')
+      for (const match of workflow.matchAll(/go-version:\s*["']?([^\s"']+)/g)) {
+        assert.equal(match[1], goVersion, `${name} uses Go ${match[1]} instead of ${goVersion}`)
+      }
+    }
   })
 
   test('hardening lint is a named CI gate rather than a subprocess unit test', () => {

@@ -92,5 +92,6 @@ func randomID() int64 {
 	if _, err := rand.Read(b[:]); err != nil {
 		return time.Now().UnixNano()
 	}
+	// #nosec G115 -- the sign bit mask proves the result is within math.MaxInt64.
 	return int64(binary.BigEndian.Uint64(b[:]) & 0x7FFFFFFFFFFFFFFF)
 }

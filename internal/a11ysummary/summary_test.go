@@ -3,8 +3,18 @@ package a11ysummary
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 )
+
+func TestParseCountRejectsUnsignedOverflow(t *testing.T) {
+	t.Parallel()
+	for _, value := range []any{uint64(math.MaxUint64), uint(math.MaxUint)} {
+		if parsed, ok := parseCount(value); ok {
+			t.Fatalf("parseCount(%T) = %d, true; want overflow rejection", value, parsed)
+		}
+	}
+}
 
 func TestBuildSummary_ExposesCanonicalKeysOnly(t *testing.T) {
 	t.Parallel()

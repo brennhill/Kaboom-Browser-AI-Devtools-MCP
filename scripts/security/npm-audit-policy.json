@@ -1,0 +1,40 @@
+{
+  "reviewed_at": "2026-08-03",
+  "exceptions": [
+    {
+      "package": "brace-expansion",
+      "severity": "high",
+      "advisories": ["1120311", "1123898", "1130591"],
+      "expires": "2026-08-31",
+      "issue": "kaboom-ol8r"
+    },
+    {
+      "package": "flatted",
+      "severity": "high",
+      "advisories": ["1114526", "1115357"],
+      "expires": "2026-08-31",
+      "issue": "kaboom-ol8r"
+    },
+    {
+      "package": "next",
+      "severity": "high",
+      "advisories": ["postcss", "sharp"],
+      "expires": "2026-08-31",
+      "issue": "kaboom-ol8r"
+    },
+    {
+      "package": "postcss",
+      "severity": "high",
+      "advisories": ["1117015", "1124252", "1124288"],
+      "expires": "2026-08-31",
+      "issue": "kaboom-ol8r"
+    },
+    {
+      "package": "sharp",
+      "severity": "high",
+      "advisories": ["1124066"],
+      "expires": "2026-08-31",
+      "issue": "kaboom-ol8r"
+    }
+  ]
+}

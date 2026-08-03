@@ -238,6 +238,8 @@ func TestHandleControlMessage_NoSessionAccessPaths(t *testing.T) {
 		{"resize zero cols", `{"type":"resize","cols":0,"rows":24}`},
 		{"resize zero rows", `{"type":"resize","cols":80,"rows":0}`},
 		{"resize negative", `{"type":"resize","cols":-1,"rows":-1}`},
+		{"resize cols overflow", `{"type":"resize","cols":65536,"rows":24}`},
+		{"resize rows overflow", `{"type":"resize","cols":80,"rows":65536}`},
 		{"empty object", `{}`},
 	}
 	for _, tc := range cases {
@@ -245,6 +247,22 @@ func TestHandleControlMessage_NoSessionAccessPaths(t *testing.T) {
 			// Must not panic with nil session on these early-return paths.
 			HandleControlMessage([]byte(tc.payload), nil)
 		})
+	}
+}
+
+func TestTerminalDimensionsRejectOverflow(t *testing.T) {
+	t.Parallel()
+	for _, dimensions := range [][2]int{{-1, 24}, {80, -1}, {65536, 24}, {80, 65536}} {
+		if _, _, ok := terminalDimensions(dimensions[0], dimensions[1]); ok {
+			t.Fatalf("terminalDimensions(%d, %d) accepted invalid dimensions", dimensions[0], dimensions[1])
+		}
+	}
+	if cols, rows, ok := terminalDimensions(0, 0); !ok || cols != 0 || rows != 0 {
+		t.Fatalf("terminalDimensions defaults = (%d, %d, %v)", cols, rows, ok)
+	}
+	cols, rows, ok := terminalDimensions(65535, 65535)
+	if !ok || cols != 65535 || rows != 65535 {
+		t.Fatalf("terminalDimensions max = (%d, %d, %v)", cols, rows, ok)
 	}
 }
 

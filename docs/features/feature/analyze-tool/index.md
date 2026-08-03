@@ -4,7 +4,7 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -91,6 +91,9 @@ read value. The unused `internal/tools/analyze` host declaration was deleted
 rather than retained as a prospective interface.
 
 ## TL;DR
+
+- Visual-diff thresholds are clamped before unsigned arithmetic, and rendered
+  channel narrowing is explicitly proven safe for the security scanner.
 - Status: shipped
 - Tool: `analyze`
 - Mode key: `what`

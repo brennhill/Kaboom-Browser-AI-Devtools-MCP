@@ -4,7 +4,7 @@ feature_id: browser-push
 status: implementation
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-03
 code_paths:
   - internal/push/
   - cmd/browser-agent/internal/pushapi/runtime.go
@@ -38,6 +38,9 @@ last_verified_date: 2026-03-05
 Push browser content (annotations, screenshots, chat messages) to the AI automatically — no chat round-trip required.
 
 ## TL;DR
+
+- Sampling request IDs mask the sign bit before their documented safe integer
+  conversion; the expanded Go security gate verifies the full package.
 
 - Status: implementation
 - Tool: observe (inbox), internal (push delivery)
