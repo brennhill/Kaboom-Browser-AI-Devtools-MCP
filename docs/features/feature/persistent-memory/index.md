@@ -10,8 +10,11 @@ code_paths:
   - internal/persistence/persistence_context.go
   - internal/persistence/persistence_crud.go
   - internal/persistence/persistence_dirty.go
+  - internal/persistence/persistence_maintenance.go
+  - internal/persistence/persistence_stats.go
   - internal/persistence/persistence_store.go
   - internal/persistence/persistence_types.go
+  - internal/persistence/persistence_validation.go
   - internal/statefile/statefile.go
   - internal/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
@@ -68,3 +71,9 @@ last_verified_date: 2026-03-05
   next bounded flush without overwriting a newer concurrently queued value.
   Write and shutdown failures activate redacted Doctor incidents; a complete
   retry resolves the deferred-write incident.
+- One injectable session-filesystem boundary owns metadata, CRUD, context,
+  statistics, quota, and restart I/O. Deterministic read, directory, delete,
+  quota, corruption, and restart fixtures prove fallback behavior without
+  touching real user state. Operational failures return stable value-free
+  errors and activate Doctor incidents; expected optional-state absence is
+  explicitly classified and resolves earlier incidents.

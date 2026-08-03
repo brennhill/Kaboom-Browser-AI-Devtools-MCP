@@ -57,10 +57,12 @@ func (s *SessionStore) validatedPath(namespace, key string) (nsDir, filePath str
 	return nsDir, filePath, nil
 }
 
-func jsonKeysFromDir(dir string) ([]string, error) {
-	entries, err := os.ReadDir(dir)
+func jsonKeysFromDir(files sessionFilesystem, dir string) ([]string, error) {
+	entries, err := files.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// EXPECTED_ABSENCE: a namespace directory does not exist until its
+			// first key is persisted.
 			return []string{}, nil
 		}
 		return nil, err

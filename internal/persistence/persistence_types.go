@@ -6,7 +6,6 @@ package persistence
 
 import (
 	"encoding/json"
-	"os"
 	"sync"
 	"time"
 
@@ -36,7 +35,7 @@ type SessionStore struct {
 	stopCh        chan struct{}
 	stopped       bool
 	diagnostics   statediag.Reporter
-	writeFile     func(string, []byte, os.FileMode) error
+	files         sessionFilesystem
 }
 
 type ProjectMeta struct {

@@ -4,14 +4,13 @@ package persistence
 
 import (
 	"os"
-	"path/filepath"
 )
 
 func (s *SessionStore) projectSize() (int64, error) {
 	var total int64
-	err := filepath.Walk(s.projectDir, func(path string, info os.FileInfo, err error) error {
+	err := s.filesystem().Walk(s.projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil //nolint:nilerr // intentionally skip errors to continue walking
+			return err
 		}
 		if !info.IsDir() {
 			total += info.Size()

@@ -4,7 +4,9 @@ package persistence
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +17,41 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
+
+type sessionFilesystem interface {
+	MkdirAll(string, fs.FileMode) error
+	ReadFile(string) ([]byte, error)
+	ReadDir(string) ([]os.DirEntry, error)
+	Remove(string) error
+	Walk(string, filepath.WalkFunc) error
+	WriteFile(string, []byte, fs.FileMode) error
+}
+
+type localSessionFilesystem struct{}
+
+func (localSessionFilesystem) MkdirAll(path string, permissions fs.FileMode) error {
+	return os.MkdirAll(path, permissions)
+}
+func (localSessionFilesystem) ReadFile(path string) ([]byte, error) { return os.ReadFile(path) }
+func (localSessionFilesystem) ReadDir(path string) ([]os.DirEntry, error) {
+	return os.ReadDir(path)
+}
+func (localSessionFilesystem) Remove(path string) error { return os.Remove(path) }
+func (localSessionFilesystem) Walk(root string, walkFn filepath.WalkFunc) error {
+	return filepath.Walk(root, walkFn)
+}
+func (localSessionFilesystem) WriteFile(path string, data []byte, permissions fs.FileMode) error {
+	return statefile.Write(path, data, permissions)
+}
+
+func (s *SessionStore) filesystem() sessionFilesystem {
+	if s != nil && s.files != nil {
+		return s.files
+	}
+	// EXPECTED_ABSENCE: read-only helper tests use a partial zero-value store;
+	// production constructors always install the local filesystem boundary.
+	return localSessionFilesystem{}
+}
 
 func NewSessionStore(projectPath string, diagnostics statediag.Reporter) (*SessionStore, error) {
 	return NewSessionStoreWithInterval(projectPath, defaultFlushInterval, diagnostics)
@@ -52,6 +89,15 @@ func newSessionStoreInDir(
 	flushInterval time.Duration,
 	diagnostics statediag.Reporter,
 ) (*SessionStore, error) {
+	return newSessionStoreWithFilesystem(projectPath, projectDir, flushInterval, diagnostics, localSessionFilesystem{})
+}
+
+func newSessionStoreWithFilesystem(
+	projectPath, projectDir string,
+	flushInterval time.Duration,
+	diagnostics statediag.Reporter,
+	files sessionFilesystem,
+) (*SessionStore, error) {
 	s := &SessionStore{
 		projectPath:   projectPath,
 		projectDir:    projectDir,
@@ -59,11 +105,12 @@ func newSessionStoreInDir(
 		flushInterval: flushInterval,
 		stopCh:        make(chan struct{}),
 		diagnostics:   diagnostics,
-		writeFile:     statefile.Write,
+		files:         files,
 	}
 
-	if err := os.MkdirAll(projectDir, dirPermissions); err != nil {
-		return nil, fmt.Errorf("failed to create project directory: %w", err)
+	if err := s.filesystem().MkdirAll(projectDir, dirPermissions); err != nil {
+		s.reportRecovery("session_directory_state", "The project session directory could not be prepared, so persistence is unavailable.", "Check parent-directory permissions and available disk space, then restart Kaboom.")
+		return nil, errors.New("session_directory_initialization_failed")
 	}
 	if err := s.loadOrCreateMeta(); err != nil {
 		return nil, fmt.Errorf("failed to load meta: %w", err)
@@ -75,8 +122,8 @@ func newSessionStoreInDir(
 
 func (s *SessionStore) loadOrCreateMeta() error {
 	metaPath := filepath.Join(s.projectDir, "meta.json")
-	data, err := os.ReadFile(metaPath) // #nosec G304 -- path is constructed from internal projectDir field // nosemgrep: go_filesystem_rule-fileread -- local persistence store I/O
-	if err != nil || len(data) == 0 {
+	data, err := s.filesystem().ReadFile(metaPath) // #nosec G304 -- path is constructed from internal projectDir field // nosemgrep: go_filesystem_rule-fileread -- local persistence store I/O
+	if err != nil {
 		now := time.Now()
 		s.meta = &ProjectMeta{
 			ProjectID:    s.projectPath,
@@ -85,7 +132,7 @@ func (s *SessionStore) loadOrCreateMeta() error {
 			LastSession:  now,
 			SessionCount: 1,
 		}
-		if err != nil && !os.IsNotExist(err) {
+		if !os.IsNotExist(err) {
 			s.reportRecovery(
 				"session_metadata_state",
 				"Project session metadata could not be read; a fresh in-memory session is active.",
@@ -93,6 +140,7 @@ func (s *SessionStore) loadOrCreateMeta() error {
 			)
 			return nil
 		}
+		// EXPECTED_ABSENCE: this project has no session metadata on its first run.
 		return s.saveMeta()
 	}
 
@@ -150,7 +198,7 @@ func (s *SessionStore) saveMeta() error {
 }
 
 func (s *SessionStore) writeStateFile(path string, data []byte, diagnosticName, detail, fix string) error {
-	if err := s.writeFile(path, data, filePermissions); err != nil {
+	if err := s.filesystem().WriteFile(path, data, filePermissions); err != nil {
 		s.reportRecovery(diagnosticName, detail, fix)
 		return fmt.Errorf("session state persistence failed: %w", err)
 	}

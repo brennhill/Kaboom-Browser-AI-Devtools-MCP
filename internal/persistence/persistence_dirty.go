@@ -70,7 +70,7 @@ func (s *SessionStore) flushDirty() {
 			invalidQueuedKey = true
 			continue
 		}
-		if err := s.writeFile(filePath, data, filePermissions); err != nil {
+		if err := s.filesystem().WriteFile(filePath, data, filePermissions); err != nil {
 			failed[key] = data
 		}
 	}

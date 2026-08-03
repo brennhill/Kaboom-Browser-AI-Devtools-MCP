@@ -11,11 +11,15 @@ import (
 )
 
 func (s *SessionStore) loadJSONFileAs(path, diagnosticName string) map[string]any {
-	data, err := os.ReadFile(path) // #nosec G304 -- callers construct path from internal projectDir field // nosemgrep: go_filesystem_rule-fileread -- local persistence store I/O
+	data, err := s.filesystem().ReadFile(path) // #nosec G304 -- callers construct path from internal projectDir field // nosemgrep: go_filesystem_rule-fileread -- local persistence store I/O
 	if err != nil {
-		if !os.IsNotExist(err) {
-			s.reportRecovery(diagnosticName, "Saved project context could not be read; that context is unavailable.", "Check permissions for the project .kaboom directory.")
+		if os.IsNotExist(err) {
+			// EXPECTED_ABSENCE: optional project context has not been authored yet;
+			// resolving clears any earlier transient read incident.
+			statediag.Resolve(s.diagnostics, diagnosticName)
+			return nil
 		}
+		s.reportRecovery(diagnosticName, "Saved project context could not be read; that context is unavailable.", "Check permissions for the project .kaboom directory.")
 		return nil
 	}
 	var result map[string]any
@@ -42,11 +46,15 @@ func parseRawErrorEntry(raw map[string]any) ErrorHistoryEntry {
 }
 
 func (s *SessionStore) loadErrorHistory(path string) []ErrorHistoryEntry {
-	data, err := os.ReadFile(path) // #nosec G304 -- callers construct path from internal projectDir field
+	data, err := s.filesystem().ReadFile(path) // #nosec G304 -- callers construct path from internal projectDir field
 	if err != nil {
-		if !os.IsNotExist(err) {
-			s.reportRecovery("error_history_state", "Saved error history could not be read; an empty history is active.", "Check permissions for the project .kaboom directory.")
+		if os.IsNotExist(err) {
+			// EXPECTED_ABSENCE: error history is optional until the first recorded
+			// error; resolving clears any earlier transient read incident.
+			statediag.Resolve(s.diagnostics, "error_history_state")
+			return nil
 		}
+		s.reportRecovery("error_history_state", "Saved error history could not be read; an empty history is active.", "Check permissions for the project .kaboom directory.")
 		return nil
 	}
 
@@ -82,8 +90,12 @@ func (s *SessionStore) LoadSessionContext() SessionContext {
 	}
 
 	baselineDir := filepath.Join(s.projectDir, "baselines")
-	if keys, err := jsonKeysFromDir(baselineDir); err == nil && len(keys) > 0 {
+	if keys, err := jsonKeysFromDir(s.filesystem(), baselineDir); err == nil && len(keys) > 0 {
 		ctx.Baselines = keys
+	} else if err != nil {
+		s.reportRecovery("baseline_context_state", "Saved baselines could not be listed; an empty baseline list is active.", "Check permissions for the project .kaboom directory.")
+	} else {
+		statediag.Resolve(s.diagnostics, "baseline_context_state")
 	}
 
 	ctx.NoiseConfig = s.loadJSONFileAs(filepath.Join(s.projectDir, "noise", "config.json"), "noise_context_state")

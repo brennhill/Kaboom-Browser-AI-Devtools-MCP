@@ -5,6 +5,7 @@ package persistence
 
 import (
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -13,8 +14,65 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
+
+type faultSessionFilesystem struct {
+	sessionFilesystem
+	readErr    error
+	readDirErr error
+	mkdirErr   error
+	removeErr  error
+	walkErr    error
+	write      func(string, []byte, os.FileMode) error
+}
+
+func (files *faultSessionFilesystem) MkdirAll(path string, permissions fs.FileMode) error {
+	if files.mkdirErr != nil {
+		return files.mkdirErr
+	}
+	return files.sessionFilesystem.MkdirAll(path, permissions)
+}
+
+func (files *faultSessionFilesystem) ReadFile(path string) ([]byte, error) {
+	if files.readErr != nil {
+		return nil, files.readErr
+	}
+	return files.sessionFilesystem.ReadFile(path)
+}
+
+func (files *faultSessionFilesystem) ReadDir(path string) ([]os.DirEntry, error) {
+	if files.readDirErr != nil {
+		return nil, files.readDirErr
+	}
+	return files.sessionFilesystem.ReadDir(path)
+}
+
+func (files *faultSessionFilesystem) Remove(path string) error {
+	if files.removeErr != nil {
+		return files.removeErr
+	}
+	return files.sessionFilesystem.Remove(path)
+}
+
+func (files *faultSessionFilesystem) Walk(root string, walkFn filepath.WalkFunc) error {
+	if files.walkErr != nil {
+		return files.walkErr
+	}
+	return files.sessionFilesystem.Walk(root, walkFn)
+}
+
+func (files *faultSessionFilesystem) WriteFile(path string, data []byte, permissions fs.FileMode) error {
+	if files.write != nil {
+		return files.write(path, data, permissions)
+	}
+	return files.sessionFilesystem.WriteFile(path, data, permissions)
+}
+
+func replaceSessionWriter(store *SessionStore, write func(string, []byte, os.FileMode) error) sessionFilesystem {
+	previous := store.files
+	store.files = &faultSessionFilesystem{sessionFilesystem: previous, write: write}
+	return previous
+}
 
 func TestSessionStoreNewAndGetMetaCopy(t *testing.T) {
 	t.Parallel()
@@ -287,9 +345,9 @@ func TestSessionStoreImmediateWriteFaultsPreserveStateAndReportRecovery(t *testi
 				t.Fatal(err)
 			}
 
-			store.writeFile = func(string, []byte, os.FileMode) error {
+			previousFiles := replaceSessionWriter(store, func(string, []byte, os.FileMode) error {
 				return statefault.New(kind, privateValue).Error()
-			}
+			})
 			err = store.Save("session", "state", []byte(privateValue))
 			if err == nil || strings.Contains(err.Error(), privateValue) {
 				t.Fatalf("Save() error = %v, want redacted failure", err)
@@ -307,7 +365,7 @@ func TestSessionStoreImmediateWriteFaultsPreserveStateAndReportRecovery(t *testi
 				t.Fatalf("write diagnostic leaked state identity or value: %#v", got[0])
 			}
 
-			store.writeFile = statefile.Write
+			store.files = previousFiles
 			if err := store.Save("session", "state", []byte(`{"version":"recovered"}`)); err != nil {
 				t.Fatal(err)
 			}
@@ -326,9 +384,10 @@ func TestSessionStoreMetadataWriteFailureIsRedactedAndActionable(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(store.Shutdown)
-	store.writeFile = func(string, []byte, os.FileMode) error {
+	previousFiles := replaceSessionWriter(store, func(string, []byte, os.FileMode) error {
 		return statefault.New(statefault.PartialWrite, "private-project-path").Error()
-	}
+	})
+	defer func() { store.files = previousFiles }()
 
 	err = store.saveMeta()
 	if err == nil || strings.Contains(err.Error(), "private-project-path") {
@@ -351,9 +410,9 @@ func TestSessionStoreDeferredWriteFailuresRetainObligationUntilRecovery(t *testi
 			}
 			t.Cleanup(store.Shutdown)
 			store.MarkDirty("session", "deferred", []byte(privateValue))
-			store.writeFile = func(string, []byte, os.FileMode) error {
+			previousFiles := replaceSessionWriter(store, func(string, []byte, os.FileMode) error {
 				return statefault.New(kind, privateValue).Error()
-			}
+			})
 
 			store.flushDirty()
 			store.dirtyMu.Lock()
@@ -370,7 +429,7 @@ func TestSessionStoreDeferredWriteFailuresRetainObligationUntilRecovery(t *testi
 				t.Fatalf("deferred diagnostic leaked state: %#v", got[0])
 			}
 
-			store.writeFile = statefile.Write
+			store.files = previousFiles
 			store.flushDirty()
 			store.dirtyMu.Lock()
 			remaining := len(store.dirty)
@@ -397,10 +456,10 @@ func TestSessionStoreDeferredRetryNeverOverwritesNewerQueuedValue(t *testing.T) 
 	}
 	t.Cleanup(store.Shutdown)
 	store.MarkDirty("session", "state", []byte("old"))
-	store.writeFile = func(string, []byte, os.FileMode) error {
+	previousFiles := replaceSessionWriter(store, func(string, []byte, os.FileMode) error {
 		store.MarkDirty("session", "state", []byte("new"))
 		return statefault.New(statefault.Write, "private").Error()
-	}
+	})
 
 	store.flushDirty()
 	store.dirtyMu.Lock()
@@ -409,7 +468,7 @@ func TestSessionStoreDeferredRetryNeverOverwritesNewerQueuedValue(t *testing.T) 
 	if retained != "new" {
 		t.Fatalf("queued value = %q, want newer value", retained)
 	}
-	store.writeFile = statefile.Write
+	store.files = previousFiles
 }
 
 func TestSessionStoreMarkDirtyOwnsQueuedBytes(t *testing.T) {
@@ -436,9 +495,9 @@ func TestSessionStoreShutdownRetainsFailedDeferredWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	store.MarkDirty("session", "shutdown", []byte("latest"))
-	store.writeFile = func(string, []byte, os.FileMode) error {
+	replaceSessionWriter(store, func(string, []byte, os.FileMode) error {
 		return statefault.New(statefault.Write, "private").Error()
-	}
+	})
 
 	store.Shutdown()
 	store.dirtyMu.Lock()
@@ -453,5 +512,212 @@ func TestSessionStoreShutdownRetainsFailedDeferredWrite(t *testing.T) {
 	}
 	if !names[deferredWriteDiagnostic] || !names["session_metadata_write_state"] {
 		t.Fatalf("shutdown diagnostics = %#v", diagnostics.Snapshot())
+	}
+}
+
+func TestSessionStoreStartupReadFailureFallsBackWithRedactedDoctorEvidence(t *testing.T) {
+	const private = "private-startup-state"
+	diagnostics := statediag.NewCollector()
+	files := &faultSessionFilesystem{
+		sessionFilesystem: localSessionFilesystem{},
+		readErr:           statefault.New(statefault.Read, private).Error(),
+	}
+	store, err := newSessionStoreWithFilesystem(t.TempDir(), t.TempDir(), defaultFlushInterval, diagnostics, files)
+	if err != nil {
+		t.Fatalf("startup read fallback failed: %v", err)
+	}
+	t.Cleanup(store.Shutdown)
+	if store.GetMeta().SessionCount != 1 {
+		t.Fatalf("metadata fallback = %#v", store.GetMeta())
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "session_metadata_state" || strings.Contains(got[0].Detail, private) {
+		t.Fatalf("startup diagnostics = %#v", got)
+	}
+}
+
+func TestSessionStoreStartupDirectoryFailureIsRedactedAndDiagnosable(t *testing.T) {
+	const private = "private-project-directory"
+	diagnostics := statediag.NewCollector()
+	files := &faultSessionFilesystem{
+		sessionFilesystem: localSessionFilesystem{},
+		mkdirErr:          statefault.New(statefault.Write, private).Error(),
+	}
+	store, err := newSessionStoreWithFilesystem(t.TempDir(), t.TempDir(), defaultFlushInterval, diagnostics, files)
+	if store != nil || err == nil || strings.Contains(err.Error(), private) {
+		t.Fatalf("startup directory result store=%v err=%v", store, err)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "session_directory_state" || got[0].Fix == "" || strings.Contains(got[0].Detail, private) {
+		t.Fatalf("startup directory diagnostics = %#v", got)
+	}
+}
+
+func TestSessionStoreEmptyMetadataIsCorruptionNotExpectedAbsence(t *testing.T) {
+	projectDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(projectDir, "meta.json"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	diagnostics := statediag.NewCollector()
+	store, err := newSessionStoreInDir(t.TempDir(), projectDir, defaultFlushInterval, diagnostics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(store.Shutdown)
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "session_metadata_state" || got[0].Lifecycle != statediag.LifecycleActive {
+		t.Fatalf("empty metadata diagnostics = %#v", got)
+	}
+}
+
+func TestSessionStoreReadListDeleteAndQuotaFaultsAreDiagnosable(t *testing.T) {
+	const private = "private-filesystem-state"
+	for _, testCase := range []struct {
+		name           string
+		diagnosticName string
+		configure      func(*faultSessionFilesystem)
+		invoke         func(*SessionStore) error
+	}{
+		{
+			name: "read", diagnosticName: "session_store_read_state",
+			configure: func(files *faultSessionFilesystem) { files.readErr = statefault.New(statefault.Read, private).Error() },
+			invoke:    func(store *SessionStore) error { _, err := store.Load("session", "state"); return err },
+		},
+		{
+			name: "list", diagnosticName: "session_store_list_state",
+			configure: func(files *faultSessionFilesystem) {
+				files.readDirErr = statefault.New(statefault.Read, private).Error()
+			},
+			invoke: func(store *SessionStore) error { _, err := store.List("session"); return err },
+		},
+		{
+			name: "stats", diagnosticName: "session_store_stats_state",
+			configure: func(files *faultSessionFilesystem) {
+				files.readDirErr = statefault.New(statefault.Read, private).Error()
+			},
+			invoke: func(store *SessionStore) error { _, err := store.Stats(); return err },
+		},
+		{
+			name: "delete", diagnosticName: "session_store_delete_state",
+			configure: func(files *faultSessionFilesystem) {
+				files.removeErr = statefault.New(statefault.Write, private).Error()
+			},
+			invoke: func(store *SessionStore) error { return store.Delete("session", "state") },
+		},
+		{
+			name: "quota", diagnosticName: "session_store_quota_state",
+			configure: func(files *faultSessionFilesystem) { files.walkErr = statefault.New(statefault.Quota, private).Error() },
+			invoke:    func(store *SessionStore) error { return store.Save("session", "new", []byte(private)) },
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			diagnostics := statediag.NewCollector()
+			store, err := newSessionStoreInDir(t.TempDir(), t.TempDir(), defaultFlushInterval, diagnostics)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(store.Shutdown)
+			if err := store.Save("session", "state", []byte(`{"old":true}`)); err != nil {
+				t.Fatal(err)
+			}
+			files := &faultSessionFilesystem{sessionFilesystem: store.files}
+			testCase.configure(files)
+			store.files = files
+
+			err = testCase.invoke(store)
+			if err == nil || strings.Contains(err.Error(), private) {
+				t.Fatalf("operation error = %v, want redacted failure", err)
+			}
+			got := diagnostics.Snapshot()
+			if len(got) != 1 || got[0].Name != testCase.diagnosticName || got[0].Fix == "" || strings.Contains(got[0].Detail, private) {
+				t.Fatalf("operation diagnostics = %#v", got)
+			}
+			store.files = localSessionFilesystem{}
+			if err := testCase.invoke(store); err != nil {
+				t.Fatalf("operation recovery failed: %v", err)
+			}
+			got = diagnostics.Snapshot()
+			if len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
+				t.Fatalf("resolved operation diagnostics = %#v", got)
+			}
+		})
+	}
+}
+
+func TestSessionStoreContextReadFaultsFallBackAndResolveWithoutLeakingState(t *testing.T) {
+	const private = "private-context-state"
+	diagnostics := statediag.NewCollector()
+	store, err := newSessionStoreInDir(t.TempDir(), t.TempDir(), defaultFlushInterval, diagnostics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(store.Shutdown)
+	store.files = &faultSessionFilesystem{
+		sessionFilesystem: localSessionFilesystem{},
+		readErr:           statefault.New(statefault.Read, private).Error(),
+		readDirErr:        statefault.New(statefault.Read, private).Error(),
+	}
+
+	context := store.LoadSessionContext()
+	if len(context.Baselines) != 0 || len(context.ErrorHistory) != 0 || context.NoiseConfig != nil || context.APISchema != nil || context.Performance != nil {
+		t.Fatalf("context fault fallback = %#v", context)
+	}
+	wantNames := map[string]bool{
+		"baseline_context_state":    false,
+		"noise_context_state":       false,
+		"error_history_state":       false,
+		"api_schema_state":          false,
+		"performance_context_state": false,
+	}
+	for _, diagnostic := range diagnostics.Snapshot() {
+		if strings.Contains(diagnostic.Detail, private) {
+			t.Fatalf("context diagnostic leaked private state: %#v", diagnostic)
+		}
+		if _, exists := wantNames[diagnostic.Name]; exists {
+			wantNames[diagnostic.Name] = diagnostic.Lifecycle == statediag.LifecycleActive
+		}
+	}
+	for name, active := range wantNames {
+		if !active {
+			t.Fatalf("missing active context diagnostic %q: %#v", name, diagnostics.Snapshot())
+		}
+	}
+
+	store.files = localSessionFilesystem{}
+	store.LoadSessionContext()
+	for _, diagnostic := range diagnostics.Snapshot() {
+		if _, tracked := wantNames[diagnostic.Name]; tracked && diagnostic.Lifecycle != statediag.LifecycleRecovered {
+			t.Fatalf("context diagnostic did not recover after expected absence: %#v", diagnostic)
+		}
+	}
+}
+
+func TestSessionStoreRestartPreservesDurableStateAndAdvancesSession(t *testing.T) {
+	projectPath := t.TempDir()
+	projectDir := t.TempDir()
+	first, err := newSessionStoreInDir(projectPath, projectDir, defaultFlushInterval, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Save("session", "restart", []byte(`{"durable":true}`)); err != nil {
+		t.Fatal(err)
+	}
+	firstCount := first.GetMeta().SessionCount
+	first.Shutdown()
+	if got := statefault.New(statefault.Restart, "private").NextGeneration(uint64(firstCount)); got != uint64(firstCount+1) {
+		t.Fatalf("restart fixture generation = %d", got)
+	}
+
+	second, err := newSessionStoreInDir(projectPath, projectDir, defaultFlushInterval, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(second.Shutdown)
+	persisted, err := second.Load("session", "restart")
+	if err != nil || string(persisted) != `{"durable":true}` {
+		t.Fatalf("restart state = %q err=%v", persisted, err)
+	}
+	if second.GetMeta().SessionCount != firstCount+1 {
+		t.Fatalf("restart session count = %d, want %d", second.GetMeta().SessionCount, firstCount+1)
 	}
 }

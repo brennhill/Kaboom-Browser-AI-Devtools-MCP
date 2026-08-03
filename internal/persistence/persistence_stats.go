@@ -3,27 +3,30 @@
 package persistence
 
 import (
-	"os"
+	"errors"
 	"path/filepath"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
-func countNamespaceFiles(nsDir string) (count int, bytes int64) {
-	nsEntries, err := os.ReadDir(nsDir)
+func countNamespaceFiles(files sessionFilesystem, nsDir string) (count int, bytes int64, readErr error) {
+	nsEntries, err := files.ReadDir(nsDir)
 	if err != nil {
-		return 0, 0
+		return 0, 0, err
 	}
 	for _, nsEntry := range nsEntries {
 		if nsEntry.IsDir() {
 			continue
 		}
 		info, err := nsEntry.Info()
-		if err == nil {
-			bytes += info.Size()
-			count++
+		if err != nil {
+			return 0, 0, err
 		}
+		bytes += info.Size()
+		count++
 	}
-	return count, bytes
+	return count, bytes, nil
 }
 
 func isSafeDirName(name string) bool {
@@ -39,17 +42,20 @@ func (s *SessionStore) Stats() (StoreStats, error) {
 		SessionCount: s.meta.SessionCount,
 	}
 
-	entries, err := os.ReadDir(s.projectDir)
+	entries, err := s.filesystem().ReadDir(s.projectDir)
 	if err != nil {
-		return stats, err
+		s.reportRecovery("session_store_stats_state", "Session storage statistics could not be read; no incomplete totals were returned.", "Check permissions for the project .kaboom directory, then retry.")
+		return stats, errors.New("session_state_stats_failed")
 	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			info, err := entry.Info()
-			if err == nil {
-				stats.TotalBytes += info.Size()
+			if err != nil {
+				s.reportRecovery("session_store_stats_state", "Session storage statistics could not be read; no incomplete totals were returned.", "Check permissions for the project .kaboom directory, then retry.")
+				return StoreStats{Namespaces: make(map[string]int), SessionCount: s.meta.SessionCount}, errors.New("session_state_stats_failed")
 			}
+			stats.TotalBytes += info.Size()
 			continue
 		}
 
@@ -59,10 +65,15 @@ func (s *SessionStore) Stats() (StoreStats, error) {
 		}
 
 		nsDir := filepath.Join(s.projectDir, name)
-		count, bytes := countNamespaceFiles(nsDir)
+		count, bytes, readErr := countNamespaceFiles(s.filesystem(), nsDir)
+		if readErr != nil {
+			s.reportRecovery("session_store_stats_state", "Session storage statistics could not be read; no incomplete totals were returned.", "Check permissions for the project .kaboom directory, then retry.")
+			return StoreStats{Namespaces: make(map[string]int), SessionCount: s.meta.SessionCount}, errors.New("session_state_stats_failed")
+		}
 		stats.TotalBytes += bytes
 		stats.Namespaces[name] = count
 	}
 
+	statediag.Resolve(s.diagnostics, "session_store_stats_state")
 	return stats, nil
 }

@@ -104,15 +104,19 @@ func TestCountNamespaceFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	// Empty dir
-	count, bytes := countNamespaceFiles(dir)
+	files := localSessionFilesystem{}
+	count, bytes, err := countNamespaceFiles(files, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if count != 0 || bytes != 0 {
 		t.Errorf("empty dir: count=%d bytes=%d, want 0/0", count, bytes)
 	}
 
 	// Non-existent dir
-	count, bytes = countNamespaceFiles(filepath.Join(dir, "nonexistent"))
-	if count != 0 || bytes != 0 {
-		t.Errorf("non-existent dir: count=%d bytes=%d, want 0/0", count, bytes)
+	count, bytes, err = countNamespaceFiles(files, filepath.Join(dir, "nonexistent"))
+	if err == nil || count != 0 || bytes != 0 {
+		t.Errorf("non-existent dir: count=%d bytes=%d err=%v, want 0/0/error", count, bytes, err)
 	}
 
 	// Dir with files
@@ -127,7 +131,10 @@ func TestCountNamespaceFiles(t *testing.T) {
 		t.Fatalf("MkdirAll error = %v", err)
 	}
 
-	count, bytes = countNamespaceFiles(dir)
+	count, bytes, err = countNamespaceFiles(files, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if count != 2 {
 		t.Errorf("count = %d, want 2", count)
 	}
@@ -146,7 +153,8 @@ func TestJsonKeysFromDir(t *testing.T) {
 	dir := t.TempDir()
 
 	// Non-existent directory
-	keys, err := jsonKeysFromDir(filepath.Join(dir, "nonexistent"))
+	files := localSessionFilesystem{}
+	keys, err := jsonKeysFromDir(files, filepath.Join(dir, "nonexistent"))
 	if err != nil {
 		t.Fatalf("non-existent dir should not error, got %v", err)
 	}
@@ -159,7 +167,7 @@ func TestJsonKeysFromDir(t *testing.T) {
 	if err := os.MkdirAll(emptyDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll error = %v", err)
 	}
-	keys, err = jsonKeysFromDir(emptyDir)
+	keys, err = jsonKeysFromDir(files, emptyDir)
 	if err != nil {
 		t.Fatalf("empty dir error = %v", err)
 	}
@@ -179,7 +187,7 @@ func TestJsonKeysFromDir(t *testing.T) {
 	os.WriteFile(filepath.Join(mixedDir, "notes.txt"), []byte("text"), 0o644)
 	os.MkdirAll(filepath.Join(mixedDir, "subdir"), 0o755)
 
-	keys, err = jsonKeysFromDir(mixedDir)
+	keys, err = jsonKeysFromDir(files, mixedDir)
 	if err != nil {
 		t.Fatalf("mixed dir error = %v", err)
 	}
