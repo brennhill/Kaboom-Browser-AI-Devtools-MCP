@@ -3,6 +3,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import net from 'node:net'
+import http from 'node:http'
+import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { spawn, spawnSync } from 'node:child_process'
 import { resolveDaemonServiceName } from './daemon-health-identity.mjs'
@@ -12,6 +14,17 @@ const __dirname = path.dirname(__filename)
 const repoRoot = path.resolve(__dirname, '..', '..')
 const isWindows = process.platform === 'win32'
 const exeSuffix = isWindows ? '.exe' : ''
+const supportedPreviousVersion = '0.8.1'
+let cleanupHost = () => {}
+
+process.once('SIGINT', () => {
+  cleanupHost()
+  process.exit(130)
+})
+process.once('SIGTERM', () => {
+  cleanupHost()
+  process.exit(143)
+})
 
 function info(message) {
   process.stdout.write(`[upgrade-regression] ${message}\n`)
@@ -134,6 +147,111 @@ function readVersionFile() {
   return fs.readFileSync(versionPath, 'utf8').trim()
 }
 
+function sha256(file) {
+  return createHash('sha256').update(fs.readFileSync(file)).digest('hex')
+}
+
+function binaryVersion(binaryPath, env) {
+  const result = run(binaryPath, ['--version'], { env })
+  const match = `${result.stdout || ''}${result.stderr || ''}`.match(/\d+\.\d+\.\d+/)
+  return match ? match[0] : ''
+}
+
+function validateCandidateVersion(binaryPath, expectedVersion, expectedChecksum, env) {
+  if (sha256(binaryPath) !== expectedChecksum) fail('candidate checksum changed before replacement')
+  const actualVersion = binaryVersion(binaryPath, env)
+  if (actualVersion !== expectedVersion) {
+    fail('candidate embedded version mismatch', `expected=${expectedVersion} actual=${actualVersion || '<missing>'}`)
+  }
+}
+
+function rollbackReplacement(activePath, backupPath) {
+  fs.copyFileSync(backupPath, activePath)
+  if (!isWindows) fs.chmodSync(activePath, 0o755)
+}
+
+async function exerciseFailedReadinessRollback(activePath, backupPath, candidatePath, expectedChecksum, env) {
+  fs.copyFileSync(activePath, backupPath)
+  fs.copyFileSync(candidatePath, activePath)
+  validateCandidateVersion(activePath, readVersionFile(), expectedChecksum, env)
+
+  const blockedPort = await getFreePort()
+  const blocker = http.createServer((_request, response) => {
+    response.writeHead(503)
+    response.end('not ready')
+  })
+  await new Promise((resolve, reject) => {
+    blocker.once('error', reject)
+    blocker.listen(blockedPort, '127.0.0.1', resolve)
+  })
+  const rejected = startDaemon(activePath, blockedPort, env)
+  const health = await waitForPortHealth(blockedPort, 500)
+  await new Promise((resolve) => blocker.close(resolve))
+  await waitForChildExit(rejected, 5000)
+  if (health) fail('replacement unexpectedly became ready on a blocked service port')
+  rollbackReplacement(activePath, backupPath)
+}
+
+function platformPackageDirectory() {
+  const key = `${process.platform}-${process.arch}`
+  const directories = {
+    'darwin-arm64': 'darwin-arm64',
+    'darwin-x64': 'darwin-x64',
+    'linux-arm64': 'linux-arm64',
+    'linux-x64': 'linux-x64',
+    'win32-x64': 'win32-x64'
+  }
+  const directory = directories[key]
+  if (!directory) fail(`unsupported packaged lifecycle platform ${key}`)
+  return directory
+}
+
+function buildPackedArtifact(tmpRoot, version, browserBinary, hooksBinary, env) {
+  const packageRoot = path.join(tmpRoot, 'packages')
+  const packRoot = path.join(tmpRoot, 'packs')
+  const installRoot = path.join(tmpRoot, 'install')
+  const platformDir = platformPackageDirectory()
+  const mainPackage = path.join(packageRoot, 'kaboom-agentic-browser')
+  const platformPackage = path.join(packageRoot, platformDir)
+  fs.cpSync(path.join(repoRoot, 'npm', 'kaboom-agentic-browser'), mainPackage, { recursive: true })
+  fs.cpSync(path.join(repoRoot, 'extension'), path.join(mainPackage, 'extension'), { recursive: true })
+  fs.cpSync(path.join(repoRoot, 'npm', platformDir), platformPackage, { recursive: true })
+  fs.mkdirSync(path.join(platformPackage, 'bin'), { recursive: true })
+  fs.mkdirSync(packRoot, { recursive: true })
+  fs.copyFileSync(browserBinary, path.join(platformPackage, 'bin', `kaboom-agentic-browser${exeSuffix}`))
+  fs.copyFileSync(hooksBinary, path.join(platformPackage, 'bin', `kaboom-hooks${exeSuffix}`))
+  const platformTar = run('npm', ['pack', platformPackage, '--pack-destination', packRoot, '--silent'], {
+    env
+  }).stdout.trim()
+  const mainTar = run('npm', ['pack', mainPackage, '--pack-destination', packRoot, '--silent'], { env }).stdout.trim()
+  run(
+    'npm',
+    [
+      'install',
+      '--prefix',
+      installRoot,
+      '--ignore-scripts',
+      '--omit=optional',
+      path.join(packRoot, platformTar),
+      path.join(packRoot, mainTar)
+    ],
+    { env }
+  )
+  const wrapperName = isWindows ? 'kaboom-agentic-browser.cmd' : 'kaboom-agentic-browser'
+  const wrapper = path.join(installRoot, 'node_modules', '.bin', wrapperName)
+  if (binaryVersion(wrapper, env) !== version) fail('packed npm wrapper did not expose the expected embedded version')
+  const extensionManifest = JSON.parse(
+    fs.readFileSync(
+      path.join(installRoot, 'node_modules', 'kaboom-agentic-browser', 'extension', 'manifest.json'),
+      'utf8'
+    )
+  )
+  if (extensionManifest.version !== version) {
+    fail('packed extension version mismatch', `expected=${version} actual=${extensionManifest.version || '<missing>'}`)
+  }
+  return { wrapper, mainTar: path.join(packRoot, mainTar), installRoot }
+}
+
 function readPidFile(pidFile) {
   if (!fs.existsSync(pidFile)) return 0
   const raw = fs.readFileSync(pidFile, 'utf8').trim()
@@ -236,13 +354,24 @@ async function main() {
   // never serves /health. A real user's HOME has no symlinked ancestors, so this only
   // affects the temp-dir test environment.
   const tmpRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-')))
+  cleanupHost = () => fs.rmSync(tmpRoot, { recursive: true, force: true })
   const homeDir = path.join(tmpRoot, 'home')
   const binDir = path.join(tmpRoot, 'bin')
   fs.mkdirSync(homeDir, { recursive: true })
   fs.mkdirSync(binDir, { recursive: true })
+  const identityPath = path.join(homeDir, '.kaboom', 'install_id')
+  const preferencesPath = path.join(homeDir, '.kaboom', 'preferences.json')
+  fs.mkdirSync(path.dirname(identityPath), { recursive: true })
+  fs.writeFileSync(identityPath, 'a1b2c3d4e5f6')
+  fs.writeFileSync(preferencesPath, '{"capture_mode":"summary"}\n')
+  const continuityBefore = {
+    identity: fs.readFileSync(identityPath, 'utf8'),
+    preferences: fs.readFileSync(preferencesPath, 'utf8')
+  }
 
   const oldBinary = path.join(tmpRoot, `kaboom-old${exeSuffix}`)
   const newBinary = path.join(tmpRoot, `kaboom-new${exeSuffix}`)
+  const hooksBinary = path.join(tmpRoot, `kaboom-hooks${exeSuffix}`)
 
   const envBase = {
     ...process.env,
@@ -254,16 +383,29 @@ async function main() {
 
   const cmdPkg = process.env.KABOOM_CMD_PKG || './cmd/browser-agent'
   info('building old/new binaries')
-  run('go', ['build', '-ldflags', '-X main.version=0.0.1', '-o', oldBinary, cmdPkg], {
+  run('go', ['build', '-ldflags', `-X main.version=${supportedPreviousVersion}`, '-o', oldBinary, cmdPkg], {
     env: envBase
   })
   run('go', ['build', '-ldflags', `-X main.version=${version}`, '-o', newBinary, cmdPkg], {
     env: envBase
   })
+  run('go', ['build', '-ldflags', `-X main.version=${version}`, '-o', hooksBinary, './cmd/hooks'], { env: envBase })
 
-  writeShim(binDir, 'kaboom-agentic-browser', newBinary)
-  writeShim(binDir, 'kaboom', newBinary)
-  writeShim(binDir, 'browser-agent', newBinary)
+  info('packing and installing the npm artifact under test')
+  const packed = buildPackedArtifact(tmpRoot, version, newBinary, hooksBinary, envBase)
+  const candidateChecksum = sha256(newBinary)
+  validateCandidateVersion(newBinary, version, candidateChecksum, envBase)
+  const evidence = {
+    schema_version: 1,
+    platform: `${process.platform}-${process.arch}`,
+    version,
+    artifact_sha256: sha256(packed.mainTar),
+    scenarios: []
+  }
+
+  writeShim(binDir, 'kaboom-agentic-browser', packed.wrapper)
+  writeShim(binDir, 'kaboom', packed.wrapper)
+  writeShim(binDir, 'browser-agent', packed.wrapper)
   const envWithShims = {
     ...envBase,
     PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}`
@@ -271,26 +413,53 @@ async function main() {
 
   const port = await getFreePort()
   const pidFile = path.join(homeDir, '.kaboom', 'run', `kaboom-${port}.pid`)
+  cleanupHost = () => {
+    stopDaemon(packed.wrapper, port, envWithShims)
+    stopDaemon(oldBinary, port, envWithShims)
+    fs.rmSync(tmpRoot, { recursive: true, force: true })
+  }
   info(`using port ${port}`)
 
   let daemon = null
   try {
     info('stage 1: go wrapper version-mismatch recycle')
+    fs.mkdirSync(path.dirname(pidFile), { recursive: true })
+    fs.writeFileSync(pidFile, 'corrupt-service-registration')
     daemon = startDaemon(oldBinary, port, envWithShims)
-    await expectDaemonIdentity(port, '0.0.1')
+    await expectDaemonIdentity(port, supportedPreviousVersion)
+    if (readPidFile(pidFile) !== daemon.pid) fail('daemon did not repair the corrupt service registration')
+    evidence.scenarios.push({ name: 'corrupt_service_registration_recovery', status: 'passed' })
     const oldPid = daemon.pid
-    ensureMcpRoundTrip(newBinary, port, envWithShims)
+    ensureMcpRoundTrip(packed.wrapper, port, envWithShims)
     await expectDaemonIdentity(port, version)
     await waitForChildExit(daemon, 12000)
     const newPid = readPidFile(pidFile)
     if (!newPid || newPid === oldPid) {
       fail(`expected respawned daemon pid after recycle`, `old=${oldPid} new=${newPid}`)
     }
-    stopDaemon(newBinary, port, envWithShims)
+    stopDaemon(packed.wrapper, port, envWithShims)
+    evidence.scenarios.push({ name: 'fresh_install_upgrade', status: 'passed' })
+
+    info('stage 1b: same-version reinstall')
+    run('npm', ['install', '--prefix', packed.installRoot, '--ignore-scripts', '--omit=optional', packed.mainTar], {
+      env: envWithShims
+    })
+    validateCandidateVersion(newBinary, version, candidateChecksum, envWithShims)
+    evidence.scenarios.push({ name: 'same_version_reinstall', status: 'passed' })
+
+    info('stage 1c: failed replacement rolls back')
+    const activeBinary = path.join(tmpRoot, `active-kaboom${exeSuffix}`)
+    const backupBinary = path.join(tmpRoot, `active-kaboom.backup${exeSuffix}`)
+    fs.copyFileSync(oldBinary, activeBinary)
+    await exerciseFailedReadinessRollback(activeBinary, backupBinary, newBinary, candidateChecksum, envWithShims)
+    if (binaryVersion(activeBinary, envWithShims) !== supportedPreviousVersion) {
+      fail('rollback did not restore the prior executable')
+    }
+    evidence.scenarios.push({ name: 'failed_readiness_rollback', status: 'passed' })
 
     info('stage 2: npm cleanup kills old daemon + pid file')
     daemon = startDaemon(oldBinary, port, envWithShims)
-    await expectDaemonIdentity(port, '0.0.1')
+    await expectDaemonIdentity(port, supportedPreviousVersion)
     run('node', ['npm/kaboom-agentic-browser/lib/kill-daemon.js'], { env: envWithShims })
     await waitForChildExit(daemon, 12000)
     if (fs.existsSync(pidFile)) {
@@ -300,7 +469,7 @@ async function main() {
     if (hasPypiPackage) {
       info('stage 3: pypi cleanup kills old daemon + pid file')
       daemon = startDaemon(oldBinary, port, envWithShims)
-      await expectDaemonIdentity(port, '0.0.1')
+      await expectDaemonIdentity(port, supportedPreviousVersion)
       run(
         python,
         [
@@ -320,11 +489,19 @@ async function main() {
       }
     } else {
       info('stage 3 skipped: pypi/kaboom-agentic-browser not present in this checkout')
+      evidence.scenarios.push({ name: 'pypi_cleanup', status: 'skipped', reason: 'package_tree_absent' })
     }
 
+    if (
+      fs.readFileSync(identityPath, 'utf8') !== continuityBefore.identity ||
+      fs.readFileSync(preferencesPath, 'utf8') !== continuityBefore.preferences
+    ) {
+      fail('install identity or user preferences changed during packaged lifecycle UAT')
+    }
     info('all upgrade cleanup regressions passed')
+    evidence.scenarios.push({ name: 'identity_continuity', status: 'passed' })
   } finally {
-    stopDaemon(newBinary, port, envWithShims)
+    stopDaemon(packed.wrapper, port, envWithShims)
     stopDaemon(oldBinary, port, envWithShims)
     if (daemon && daemon.pid && pidAlive(daemon.pid)) {
       try {
@@ -333,10 +510,15 @@ async function main() {
         // Best effort cleanup.
       }
     }
+    const evidencePath = process.env.KABOOM_UAT_EVIDENCE
+    if (evidencePath) fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`)
+    cleanupHost()
+    cleanupHost = () => {}
   }
 }
 
 main().catch((err) => {
+  cleanupHost()
   console.error(String(err && err.stack ? err.stack : err))
   process.exit(1)
 })

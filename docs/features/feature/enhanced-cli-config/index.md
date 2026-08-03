@@ -130,6 +130,12 @@ last_verified_date: 2026-03-28
 - Location: `docs/features/feature/enhanced-cli-config`
 - `cmd/browser-agent/config.go` owns both flag parsing and the runtime mode policy those flags drive.
 - `VERSION` is the only human-edited release version. `make bump-version NEW_VERSION=X.Y.Z`, `make sync-version`, and `make validate-versions` all delegate to one explicit transactional implementation.
+- Release upgrade UAT packs and installs the public npm launcher plus the
+  current platform package in a disposable home. It validates artifact hashes,
+  daemon and extension versions, same-version reinstall, rollback restoration,
+  service identity, and install identity/preferences continuity, then emits
+  optional machine-readable evidence and removes the host on success, failure,
+  or interruption.
 
 ## Specs
 

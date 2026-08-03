@@ -21,6 +21,24 @@ test('upgrade regression script validates health service identity', () => {
   assert.match(source, /KABOOM_TELEMETRY:\s*'off'/, 'upgrade regression daemons must not emit production telemetry')
 })
 
+test('upgrade regression exercises a packed artifact with validated replacement and rollback evidence', () => {
+  const source = fs.readFileSync(scriptPath, 'utf8')
+  assert.match(source, /npm["']?,\s*\[?["']pack|npm pack/, 'must create the npm artifact under test')
+  assert.match(source, /createHash\(["']sha256["']\)/, 'must checksum the candidate before replacement')
+  assert.match(source, /validateCandidateVersion/, 'must validate the embedded candidate version before replacement')
+  assert.match(source, /rollbackReplacement/, 'must restore the previous executable after failed readiness')
+  assert.match(source, /same_version_reinstall/, 'must report the same-version reinstall scenario')
+  assert.match(source, /identity_continuity/, 'must report preserved install identity and user state')
+  assert.match(source, /KABOOM_UAT_EVIDENCE/, 'must support a machine-readable evidence destination')
+})
+
+test('upgrade regression always restores its disposable host', () => {
+  const source = fs.readFileSync(scriptPath, 'utf8')
+  assert.match(source, /process\.once\(["']SIGINT["']/, 'must restore the host when interrupted')
+  assert.match(source, /process\.once\(["']SIGTERM["']/, 'must restore the host when terminated')
+  assert.match(source, /rmSync\(tmpRoot,\s*\{\s*recursive:\s*true/, 'must remove the disposable host after UAT')
+})
+
 test('upgrade identity accepts the canonical operational health name', () => {
   assert.equal(resolveDaemonServiceName({ name: 'kaboom-browser-devtools' }), 'kaboom-browser-devtools')
   assert.equal(resolveDaemonServiceName({ service_name: 'legacy-snake' }), 'legacy-snake')
