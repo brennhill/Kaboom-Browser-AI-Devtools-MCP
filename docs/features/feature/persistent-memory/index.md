@@ -4,12 +4,14 @@ feature_id: feature-persistent-memory
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/session.go
   - internal/persistence/persistence_context.go
   - internal/persistence/persistence_crud.go
   - internal/persistence/persistence_store.go
+  - internal/persistence/persistence_types.go
+  - internal/statefile/statefile.go
   - internal/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
 test_paths:
@@ -56,3 +58,8 @@ last_verified_date: 2026-03-05
   read or parse failures. Failures activate bounded defaults and publish
   redacted, actionable diagnostics through the canonical state-recovery
   collector consumed by System Doctor.
+- Immediate session and metadata writes use the canonical durable state-file
+  boundary: same-directory temporary write, file sync, atomic rename, and
+  directory sync where supported. Pre-rename failures preserve the previous
+  durable value, publish a value-free Doctor incident, and a successful retry
+  resolves that incident.

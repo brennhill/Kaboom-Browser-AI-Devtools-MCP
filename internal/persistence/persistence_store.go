@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -58,6 +59,7 @@ func newSessionStoreInDir(
 		flushInterval: flushInterval,
 		stopCh:        make(chan struct{}),
 		diagnostics:   diagnostics,
+		writeFile:     statefile.Write,
 	}
 
 	if err := os.MkdirAll(projectDir, dirPermissions); err != nil {
@@ -138,7 +140,22 @@ func (s *SessionStore) saveMeta() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(metaPath, data, filePermissions)
+	return s.writeStateFile(
+		metaPath,
+		data,
+		"session_metadata_write_state",
+		"Project session metadata could not be persisted; the previous durable metadata remains active.",
+		"Check permissions and available disk space for the project .kaboom directory, then retry.",
+	)
+}
+
+func (s *SessionStore) writeStateFile(path string, data []byte, diagnosticName, detail, fix string) error {
+	if err := s.writeFile(path, data, filePermissions); err != nil {
+		s.reportRecovery(diagnosticName, detail, fix)
+		return fmt.Errorf("session state persistence failed: %w", err)
+	}
+	statediag.Resolve(s.diagnostics, diagnosticName)
+	return nil
 }
 
 func (s *SessionStore) GetMeta() ProjectMeta {

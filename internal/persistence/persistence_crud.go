@@ -10,7 +10,7 @@ import (
 )
 
 func (s *SessionStore) Save(namespace, key string, data []byte) error {
-	nsDir, filePath, err := s.validatedPath(namespace, key)
+	_, filePath, err := s.validatedPath(namespace, key)
 	if err != nil {
 		return err
 	}
@@ -25,13 +25,13 @@ func (s *SessionStore) Save(namespace, key string, data []byte) error {
 	if sizeErr == nil && currentSize+int64(len(data)) > maxProjectSize {
 		return fmt.Errorf("project size limit exceeded (10MB): current=%d, adding=%d", currentSize, len(data))
 	}
-	if err := os.MkdirAll(nsDir, dirPermissions); err != nil {
-		return fmt.Errorf("failed to create namespace directory: %w", err)
-	}
-	if err := os.WriteFile(filePath, data, filePermissions); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-	return nil
+	return s.writeStateFile(
+		filePath,
+		data,
+		"session_store_write_state",
+		"Session state could not be persisted; the previous durable value remains active.",
+		"Check permissions, available disk space, and the project .kaboom directory, then retry.",
+	)
 }
 
 func (s *SessionStore) Load(namespace, key string) ([]byte, error) {

@@ -8,9 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
 
 func TestSessionStoreNewAndGetMetaCopy(t *testing.T) {
@@ -260,5 +263,79 @@ func TestSessionStoreSaveListDeleteErrorBranches(t *testing.T) {
 	}
 	if err := store.Delete("safe", "../unsafe"); err == nil {
 		t.Fatal("Delete() should reject unsafe key")
+	}
+}
+
+func TestSessionStoreImmediateWriteFaultsPreserveStateAndReportRecovery(t *testing.T) {
+	const privateValue = `{"private":"must-not-leak"}`
+	for _, kind := range []statefault.Kind{
+		statefault.Write,
+		statefault.Sync,
+		statefault.Rename,
+		statefault.DirectorySync,
+		statefault.PartialWrite,
+		statefault.Quota,
+	} {
+		t.Run(string(kind), func(t *testing.T) {
+			diagnostics := statediag.NewCollector()
+			store, err := newSessionStoreInDir(t.TempDir(), t.TempDir(), defaultFlushInterval, diagnostics)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(store.Shutdown)
+			if err := store.Save("session", "state", []byte(`{"version":"old"}`)); err != nil {
+				t.Fatal(err)
+			}
+
+			store.writeFile = func(string, []byte, os.FileMode) error {
+				return statefault.New(kind, privateValue).Error()
+			}
+			err = store.Save("session", "state", []byte(privateValue))
+			if err == nil || strings.Contains(err.Error(), privateValue) {
+				t.Fatalf("Save() error = %v, want redacted failure", err)
+			}
+			persisted, loadErr := store.Load("session", "state")
+			if loadErr != nil || string(persisted) != `{"version":"old"}` {
+				t.Fatalf("persisted state = %q err=%v, want prior value", persisted, loadErr)
+			}
+
+			got := diagnostics.Snapshot()
+			if len(got) != 1 || got[0].Name != "session_store_write_state" || got[0].Lifecycle != statediag.LifecycleActive {
+				t.Fatalf("write diagnostics = %#v", got)
+			}
+			if strings.Contains(got[0].Detail, privateValue) || strings.Contains(got[0].Detail, "session/state") {
+				t.Fatalf("write diagnostic leaked state identity or value: %#v", got[0])
+			}
+
+			store.writeFile = statefile.Write
+			if err := store.Save("session", "state", []byte(`{"version":"recovered"}`)); err != nil {
+				t.Fatal(err)
+			}
+			got = diagnostics.Snapshot()
+			if len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
+				t.Fatalf("resolved write diagnostics = %#v", got)
+			}
+		})
+	}
+}
+
+func TestSessionStoreMetadataWriteFailureIsRedactedAndActionable(t *testing.T) {
+	diagnostics := statediag.NewCollector()
+	store, err := newSessionStoreInDir(t.TempDir(), t.TempDir(), defaultFlushInterval, diagnostics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(store.Shutdown)
+	store.writeFile = func(string, []byte, os.FileMode) error {
+		return statefault.New(statefault.PartialWrite, "private-project-path").Error()
+	}
+
+	err = store.saveMeta()
+	if err == nil || strings.Contains(err.Error(), "private-project-path") {
+		t.Fatalf("saveMeta() error = %v, want redacted failure", err)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "session_metadata_write_state" || got[0].Fix == "" {
+		t.Fatalf("metadata write diagnostics = %#v", got)
 	}
 }
