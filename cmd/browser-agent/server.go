@@ -468,7 +468,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	mux.HandleFunc("/sync", httpguard.CORS(httpguard.ExtensionOnly(capture.NewSyncHandler(captured).HandleSync)))
 	registerClientRegistryRoutes(mux, captured)
 	mux.HandleFunc("/recordings/save", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		screenrec.HandleSave(w, r, captured.Queries())
+		screenrec.HandleSave(w, r, captured.Queries(), server.stateRecovery)
 	})))
 	mux.HandleFunc("/recordings/storage", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleRecordingStorage)))
 	mux.HandleFunc("/recordings/reveal", httpguard.CORS(httpguard.ExtensionOnly(screenrec.HandleReveal)))

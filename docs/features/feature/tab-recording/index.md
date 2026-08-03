@@ -4,11 +4,12 @@ feature_id: feature-tab-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/schema/interact/actions.go
   - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/internal/screenrec/deps.go
@@ -21,6 +22,7 @@ code_paths:
   - cmd/browser-agent/internal/screenrec/reveal.go
   - cmd/browser-agent/internal/screenrec/observe.go
   - internal/statediag/collector.go
+  - internal/statefile/statefile.go
   - internal/recording/actionlog/recorder.go
   - src/background/event-listeners.ts
   - src/background/init.ts
@@ -94,6 +96,12 @@ Saved-video discovery is scoped to the canonical recordings directory; it does
 not merge or deduplicate entries from historical storage roots.
 Unreadable or malformed saved-video metadata is omitted without failing the
 query and is reported through the canonical System Doctor recovery collector.
+Video uploads are committed as a durable pair: the WebM is written to a private
+temporary file, synced, closed, and durably moved before the sidecar is
+atomically written. Any move, metadata, quota, partial-write, sync, or
+cancellation failure removes both halves and activates a redacted Doctor
+incident; a successful retry resolves it. Incomplete pairs are never returned
+as saved recordings.
 Extension storage is divided by change lifecycle, shared I/O mechanics, durable
 local state, and ephemeral session state. Consumers import those owners
 directly; there is no all-purpose storage facade or compatibility barrel.

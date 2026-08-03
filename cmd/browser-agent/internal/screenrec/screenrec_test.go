@@ -22,6 +22,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
 
 func TestLoadAndFilterRecordingsReportsMalformedMetadata(t *testing.T) {
@@ -42,6 +43,64 @@ func TestLoadAndFilterRecordingsReportsMalformedMetadata(t *testing.T) {
 	}
 	if strings.Contains(got[0].Detail, "secret") {
 		t.Fatalf("diagnostic leaked metadata: %#v", got[0])
+	}
+}
+
+func TestWriteVideoToDiskCleansPairOnCanonicalPersistenceFaults(t *testing.T) {
+	const private = "private-video-state"
+	for _, kind := range []statefault.Kind{
+		statefault.Write, statefault.Sync, statefault.Rename, statefault.DirectorySync,
+		statefault.Quota, statefault.PartialWrite, statefault.Cancellation,
+	} {
+		t.Run(string(kind), func(t *testing.T) {
+			dir := t.TempDir()
+			ops := defaultVideoDiskOperations()
+			if kind == statefault.Rename || kind == statefault.DirectorySync {
+				ops.moveFile = func(string, string) error { return statefault.New(kind, private).Error() }
+			} else {
+				ops.writeMetadata = func(string, []byte, os.FileMode) error { return statefault.New(kind, private).Error() }
+			}
+			meta := Metadata{Name: "fault-video"}
+			path, err := writeVideoToDiskWithOperations(dir, &meta, strings.NewReader(private), ops)
+			if path != "" || err == nil || strings.Contains(err.Error(), private) {
+				t.Fatalf("write result path=%q err=%v", path, err)
+			}
+			entries, readErr := os.ReadDir(dir)
+			if readErr != nil || len(entries) != 0 {
+				t.Fatalf("orphaned recording files = %#v err=%v", entries, readErr)
+			}
+		})
+	}
+}
+
+func TestHandleSaveReportsAndResolvesPairPersistenceFailure(t *testing.T) {
+	t.Setenv(state.StateDirEnv, t.TempDir())
+	diagnostics := statediag.NewCollector()
+	ops := defaultVideoDiskOperations()
+	ops.writeMetadata = func(string, []byte, os.FileMode) error {
+		return statefault.New(statefault.PartialWrite, "private-video").Error()
+	}
+	metadata := `{"name":"doctor-video","created_at":"2026-01-01T00:00:00Z"}`
+	failedRequest := buildRecordingSaveRequest(t, http.MethodPost, []byte("video"), metadata, "")
+	failedResponse := httptest.NewRecorder()
+	handleSaveWithOperations(failedResponse, failedRequest, nil, diagnostics, ops)
+	if failedResponse.Code != http.StatusInternalServerError {
+		t.Fatalf("failure status = %d", failedResponse.Code)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Name != "saved_video_state" || got[0].Lifecycle != statediag.LifecycleActive || strings.Contains(got[0].Detail, "private-video") {
+		t.Fatalf("failure diagnostics = %#v", got)
+	}
+
+	retryRequest := buildRecordingSaveRequest(t, http.MethodPost, []byte("video"), metadata, "")
+	retryResponse := httptest.NewRecorder()
+	HandleSave(retryResponse, retryRequest, nil, diagnostics)
+	if retryResponse.Code != http.StatusOK {
+		t.Fatalf("retry status = %d body=%s", retryResponse.Code, retryResponse.Body.String())
+	}
+	got = diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
+		t.Fatalf("resolved diagnostics = %#v", got)
 	}
 }
 
@@ -223,7 +282,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Method guard.
 	methodReq := httptest.NewRequest(http.MethodGet, "/recordings/save", nil)
 	methodRR := httptest.NewRecorder()
-	HandleSave(methodRR, methodReq, env.capture.Queries())
+	HandleSave(methodRR, methodReq, env.capture.Queries(), nil)
 	if methodRR.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("method guard status = %d, want 405", methodRR.Code)
 	}
@@ -231,7 +290,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Missing metadata.
 	missingMetaReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), "", "")
 	missingMetaRR := httptest.NewRecorder()
-	HandleSave(missingMetaRR, missingMetaReq, env.capture.Queries())
+	HandleSave(missingMetaRR, missingMetaReq, env.capture.Queries(), nil)
 	if missingMetaRR.Code != http.StatusBadRequest {
 		t.Fatalf("missing metadata status = %d, want 400", missingMetaRR.Code)
 	}
@@ -239,7 +298,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Invalid metadata JSON.
 	invalidMetaReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), "{bad json", "")
 	invalidMetaRR := httptest.NewRecorder()
-	HandleSave(invalidMetaRR, invalidMetaReq, env.capture.Queries())
+	HandleSave(invalidMetaRR, invalidMetaReq, env.capture.Queries(), nil)
 	if invalidMetaRR.Code != http.StatusBadRequest {
 		t.Fatalf("invalid metadata status = %d, want 400", invalidMetaRR.Code)
 	}
@@ -248,7 +307,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	traversalMeta := `{"name":"../escape","created_at":"2026-01-01T00:00:00Z"}`
 	traversalReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), traversalMeta, "")
 	traversalRR := httptest.NewRecorder()
-	HandleSave(traversalRR, traversalReq, env.capture.Queries())
+	HandleSave(traversalRR, traversalReq, env.capture.Queries(), nil)
 	if traversalRR.Code != http.StatusBadRequest {
 		t.Fatalf("path traversal status = %d, want 400", traversalRR.Code)
 	}
@@ -257,7 +316,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	okMeta := `{"name":"e2e-checkout","display_name":"Checkout","created_at":"2026-01-01T00:00:00Z","duration_seconds":7,"url":"https://app.example.com/checkout"}`
 	req := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes-123"), okMeta, "query-1")
 	rr := httptest.NewRecorder()
-	HandleSave(rr, req, env.capture.Queries())
+	HandleSave(rr, req, env.capture.Queries(), nil)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("success status = %d, want 200; body=%s", rr.Code, rr.Body.String())
@@ -318,7 +377,7 @@ func TestHandleVideoRecordingSaveRejectsOversizedUpload(t *testing.T) {
 	meta := `{"name":"oversized-recording","created_at":"2026-01-01T00:00:00Z"}`
 	req := buildRecordingSaveRequest(t, http.MethodPost, largeVideo, meta, "")
 	rr := httptest.NewRecorder()
-	HandleSave(rr, req, env.capture.Queries())
+	HandleSave(rr, req, env.capture.Queries(), nil)
 
 	if rr.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized upload status = %d, want %d (body=%q)", rr.Code, http.StatusRequestEntityTooLarge, rr.Body.String())
