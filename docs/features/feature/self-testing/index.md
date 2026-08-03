@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-02
+last_reviewed: 2026-08-03
 code_paths:
   - .github/workflows/ci.yml
   - scripts/smoke-test.sh
@@ -35,6 +35,7 @@ code_paths:
   - cmd/browser-agent/internal/testpages/http.go
   - cmd/browser-agent/internal/testpages/websocket.go
   - cmd/browser-agent/internal/wsframe/frame.go
+  - internal/statefault/fault.go
 test_paths:
   - tests/extension/contracts/tooling-contracts.test.js
   - cmd/browser-agent/bridge_faststart_extended_test.go
@@ -84,6 +85,8 @@ test_paths:
   - scripts/tests/workflows/cat-32-auto-detect.sh
   - cmd/browser-agent/internal/testpages/testpages_test.go
   - cmd/browser-agent/internal/wsframe/frame_test.go
+  - internal/statefault/fault_test.go
+  - internal/statefault/boundary_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -134,6 +137,10 @@ last_verified_date: 2026-03-05
   ratcheted public-surface budgets, the 800-line and 10-file physical limits,
   dormant-test detection, circular dependency reporting, and zero non-trivial
   clones across background/popup.
+- Persisted-state owner tests share the stable `internal/statefault` fixture
+  vocabulary for read, write, sync, rename, directory-sync, quota, corruption,
+  partial-write, cancellation, and restart failures. Scenarios are deterministic,
+  never retain private test sentinels, and expose only redacted classified errors.
 - Go unit/race checks and real-binary lifecycle checks run as separate,
   parallel CI jobs. Subprocess suites carry the `integration` build tag, while
   the named integration job runs every tagged transport, persistence,
