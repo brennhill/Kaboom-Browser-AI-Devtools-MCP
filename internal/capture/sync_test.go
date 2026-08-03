@@ -59,6 +59,122 @@ func TestHandleSync_BasicRequest(t *testing.T) {
 	}
 }
 
+func TestHandleSync_RejectsSupersededConnectionGeneration(t *testing.T) {
+	t.Parallel()
+	cap := NewCapture()
+
+	first := runSyncRequest(t, cap, SyncRequest{
+		ExtSessionID: "session-old",
+		Settings:     &SyncSettings{PilotEnabled: false},
+	})
+	if first.Code != http.StatusOK {
+		t.Fatalf("first sync status = %d, want 200", first.Code)
+	}
+	firstGeneration := decodeSyncResponse(t, first).ConnectionGeneration
+	if firstGeneration == 0 {
+		t.Fatal("first sync did not assign a connection generation")
+	}
+
+	current := runSyncRequest(t, cap, SyncRequest{
+		ExtSessionID: "session-current",
+		Settings:     &SyncSettings{PilotEnabled: true},
+	})
+	if current.Code != http.StatusOK {
+		t.Fatalf("current sync status = %d, want 200", current.Code)
+	}
+	currentGeneration := decodeSyncResponse(t, current).ConnectionGeneration
+	if currentGeneration <= firstGeneration {
+		t.Fatalf("current generation = %d, want > %d", currentGeneration, firstGeneration)
+	}
+
+	stale := runSyncRequest(t, cap, SyncRequest{
+		ExtSessionID:         "session-old",
+		ConnectionGeneration: firstGeneration,
+		Settings:             &SyncSettings{PilotEnabled: false},
+	})
+	if stale.Code != http.StatusConflict {
+		t.Fatalf("stale sync status = %d, want 409", stale.Code)
+	}
+
+	state := extensionStateSnapshotForTest(cap.Extension())
+	if state.extSessionID != "session-current" {
+		t.Fatalf("extension session = %q, want current session", state.extSessionID)
+	}
+	if !state.pilotEnabled {
+		t.Fatal("stale sync mutated current pilot state")
+	}
+}
+
+func TestHandleSync_RejectsStaleCommandResultWithoutCompletingCurrentWork(t *testing.T) {
+	t.Parallel()
+	cap := NewCapture()
+
+	first := runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-old"})
+	firstGeneration := decodeSyncResponse(t, first).ConnectionGeneration
+	runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-current"})
+
+	correlationID := "corr-current-generation"
+	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+		Type:          "browser_action",
+		Params:        json.RawMessage(`{"action":"highlight"}`),
+		CorrelationID: correlationID,
+	}, queries.AsyncCommandTimeout, "")
+
+	stale := runSyncRequest(t, cap, SyncRequest{
+		ExtSessionID:         "session-old",
+		ConnectionGeneration: firstGeneration,
+		CommandResults: []SyncCommandResult{{
+			ID:            queryID,
+			CorrelationID: correlationID,
+			Status:        "complete",
+			Result:        json.RawMessage(`{"success":true}`),
+		}},
+	})
+	if stale.Code != http.StatusConflict {
+		t.Fatalf("stale result status = %d, want 409", stale.Code)
+	}
+	result, found := cap.Queries().GetCommandResult(correlationID)
+	if !found || result.Status != "pending" {
+		t.Fatalf("current command result = %#v, found=%v; want pending", result, found)
+	}
+}
+
+func TestHandleSync_RejectsStaleResultInsideCurrentHeartbeat(t *testing.T) {
+	t.Parallel()
+	cap := NewCapture()
+
+	first := runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-old"})
+	firstGeneration := decodeSyncResponse(t, first).ConnectionGeneration
+	current := runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-current"})
+	currentGeneration := decodeSyncResponse(t, current).ConnectionGeneration
+
+	correlationID := "corr-stale-result-current-heartbeat"
+	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+		Type:          "browser_action",
+		Params:        json.RawMessage(`{"action":"highlight"}`),
+		CorrelationID: correlationID,
+	}, queries.AsyncCommandTimeout, "")
+
+	response := runSyncRequest(t, cap, SyncRequest{
+		ExtSessionID:         "session-current",
+		ConnectionGeneration: currentGeneration,
+		CommandResults: []SyncCommandResult{{
+			ID:                   queryID,
+			CorrelationID:        correlationID,
+			ConnectionGeneration: firstGeneration,
+			Status:               "complete",
+			Result:               json.RawMessage(`{"success":true}`),
+		}},
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("current heartbeat status = %d, want 200", response.Code)
+	}
+	result, found := cap.Queries().GetCommandResult(correlationID)
+	if !found || result.Status != "pending" {
+		t.Fatalf("current command result = %#v, found=%v; want pending", result, found)
+	}
+}
+
 func TestHandleSync_MethodNotAllowed(t *testing.T) {
 	t.Parallel()
 	cap := NewCapture()

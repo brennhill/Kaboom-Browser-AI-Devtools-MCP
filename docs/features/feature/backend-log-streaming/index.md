@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-03
 code_paths:
+  - cmd/browser-agent/openapi.json
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go
@@ -270,6 +271,14 @@ directly instead of relying on re-exported compatibility names.
 The injected page-world entrypoint likewise owns startup only. Network,
 WebSocket, and performance consumers import the focused modules that implement
 those contracts.
+
+The daemon owns a monotonic connection generation for the active extension
+runtime. `/sync` responses and delivered commands carry that generation; the
+extension returns it with heartbeats and command results. A superseded
+heartbeat, result, long-poll response, or command is rejected before it can
+mutate current state, and the rejection is retained as a correlated lifecycle
+diagnostic. Daemon handoffs also invalidate in-flight extension responses so an
+old server cannot dispatch work after the client changes endpoints.
 
 ## Specs
 

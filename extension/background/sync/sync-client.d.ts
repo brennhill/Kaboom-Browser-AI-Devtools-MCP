@@ -34,6 +34,7 @@ export interface SyncCommandResult {
     status: 'complete' | 'error' | 'timeout' | 'cancelled';
     result?: unknown;
     error?: string;
+    connection_generation?: number;
 }
 /** Active command metadata sent on each sync heartbeat */
 export interface SyncInProgress {
@@ -44,6 +45,7 @@ export interface SyncInProgress {
     progress_pct?: number;
     started_at?: string;
     updated_at?: string;
+    connection_generation: number;
 }
 /** Command from server */
 export interface SyncCommand {
@@ -53,6 +55,7 @@ export interface SyncCommand {
     tab_id?: number;
     correlation_id?: string;
     trace_id?: string;
+    connection_generation: number;
 }
 /** Sync state */
 export interface SyncState {
@@ -87,6 +90,8 @@ export declare class SyncClient {
     private inProgressById;
     private processedCommandSignatures;
     private extensionVersion;
+    private connectionGeneration;
+    private lifecycleEpoch;
     constructor(serverUrl: string, extSessionId: string, callbacks: SyncClientCallbacks, extensionVersion?: string);
     /** Get current sync state */
     getState(): SyncState;

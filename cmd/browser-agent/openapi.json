@@ -3165,6 +3165,12 @@
           "correlation_id": {
             "type": "string",
             "description": "Links this query to the originating MCP tool call for result routing"
+          },
+          "connection_generation": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Daemon-owned connection generation that must still be current when this command executes"
           }
         }
       },
@@ -3328,9 +3334,15 @@
           "doc": "docs/features/sync-endpoint.md"
         },
         "properties": {
-          "session_id": {
+          "ext_session_id": {
             "type": "string",
             "description": "Extension session identifier for reconnection tracking"
+          },
+          "connection_generation": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Last daemon-owned connection generation acknowledged by this extension runtime; omitted only during bootstrap"
           },
           "extension_version": {
             "type": "string",
@@ -3427,6 +3439,12 @@
           "ack": {
             "type": "boolean",
             "description": "Acknowledgement that the sync request was processed"
+          },
+          "connection_generation": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Authoritative generation for this extension-daemon connection"
           },
           "commands": {
             "type": "array",
@@ -3612,6 +3630,12 @@
           "correlation_id": {
             "type": "string",
             "description": "Links back to the originating MCP tool call"
+          },
+          "connection_generation": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Generation in which this result's command was dispatched; omitted only when it inherits the validated heartbeat generation"
           },
           "status": {
             "type": "string",

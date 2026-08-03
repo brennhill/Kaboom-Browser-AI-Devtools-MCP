@@ -29,6 +29,8 @@ export class SyncClient {
     inProgressById = new Map();
     processedCommandSignatures = new Set();
     extensionVersion;
+    connectionGeneration = 0;
+    lifecycleEpoch = 0;
     constructor(serverUrl, extSessionId, callbacks, extensionVersion = '') {
         this.serverUrl = serverUrl;
         this.extSessionId = extSessionId;
@@ -53,6 +55,7 @@ export class SyncClient {
     start() {
         if (this.running)
             return;
+        this.lifecycleEpoch++;
         this.running = true;
         this.log('Starting sync client');
         this.scheduleNextSync(0); // Sync immediately
@@ -60,6 +63,7 @@ export class SyncClient {
     /** Stop the sync loop */
     stop() {
         this.running = false;
+        this.lifecycleEpoch++;
         if (this.intervalId) {
             clearTimeout(this.intervalId);
             this.intervalId = null;
@@ -68,8 +72,12 @@ export class SyncClient {
     }
     /** Queue a command result to send on next sync, then flush immediately */
     queueCommandResult(result) {
+        const activeGeneration = this.inProgressById.get(result.id)?.connection_generation;
         this.clearInProgressById(result.id);
-        this.pendingResults.push(result);
+        this.pendingResults.push({
+            ...result,
+            connection_generation: result.connection_generation || activeGeneration || this.connectionGeneration || undefined
+        });
         // Cap queue size to prevent memory leak if server is unreachable
         const MAX_PENDING_RESULTS = 200;
         if (this.pendingResults.length > MAX_PENDING_RESULTS) {
@@ -93,10 +101,14 @@ export class SyncClient {
     }
     /** Reset connection state (e.g., when user toggles pilot/tracking) */
     resetConnection() {
+        this.lifecycleEpoch++;
         this.state.consecutiveFailures = 0;
         this.log('Connection state reset');
         // Trigger immediate sync if running
-        if (this.running && this.intervalId) {
+        if (this.running && this.syncing) {
+            this.flushRequested = true;
+        }
+        else if (this.running && this.intervalId) {
             clearTimeout(this.intervalId);
             this.scheduleNextSync(0);
         }
@@ -134,6 +146,7 @@ export class SyncClient {
     async doSync() {
         if (!this.running)
             return;
+        const lifecycleEpoch = this.lifecycleEpoch;
         this.syncing = true;
         this.flushRequested = false;
         let features;
@@ -143,6 +156,7 @@ export class SyncClient {
             const logs = this.callbacks.getExtensionLogs();
             const request = {
                 ext_session_id: this.extSessionId,
+                connection_generation: this.connectionGeneration || undefined,
                 extension_version: this.extensionVersion || undefined,
                 settings,
                 in_progress: this.getInProgressSnapshot()
@@ -173,6 +187,24 @@ export class SyncClient {
                 throw new Error(`Sync request failed: HTTP ${response.status} ${response.statusText} from ${this.serverUrl}/sync`);
             }
             const data = await response.json();
+            if (lifecycleEpoch !== this.lifecycleEpoch) {
+                this.syncing = false;
+                this.log('Rejected stale connection generation', {
+                    correlation_id: this.extSessionId,
+                    bridge: 'sync_response',
+                    received_epoch: lifecycleEpoch,
+                    current_epoch: this.lifecycleEpoch
+                });
+                if (this.running) {
+                    this.flushRequested = false;
+                    this.scheduleNextSync(0);
+                }
+                return;
+            }
+            if (!Number.isSafeInteger(data.connection_generation) || data.connection_generation <= 0) {
+                throw new Error('Sync response omitted a valid connection generation');
+            }
+            this.connectionGeneration = data.connection_generation;
             // Log sync cycle summary
             this.log('Sync OK', {
                 commands: data.commands?.length || 0,
@@ -206,6 +238,15 @@ export class SyncClient {
             if (data.commands && data.commands.length > 0) {
                 this.log('Received commands', { count: data.commands.length, ids: data.commands.map((c) => c.id) });
                 for (const command of data.commands) {
+                    if (command.connection_generation !== this.connectionGeneration) {
+                        this.log('Rejected stale connection generation', {
+                            correlation_id: command.correlation_id || command.id,
+                            bridge: 'sync_command',
+                            received_generation: command.connection_generation,
+                            current_generation: this.connectionGeneration
+                        });
+                        continue;
+                    }
                     const signature = this.getCommandSignature(command);
                     if (command.id && this.processedCommandSignatures.has(signature)) {
                         this.log('Skipping already processed command', {
@@ -368,7 +409,8 @@ export class SyncClient {
             status: current?.status || 'running',
             progress_pct: current?.progress_pct,
             started_at: current?.started_at || now,
-            updated_at: now
+            updated_at: now,
+            connection_generation: command.connection_generation
         });
     }
     clearInProgressById(id) {

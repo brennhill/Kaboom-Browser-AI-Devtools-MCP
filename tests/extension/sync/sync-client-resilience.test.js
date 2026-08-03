@@ -191,6 +191,43 @@ describe('SyncClient — Error recovery', () => {
     client.stop()
   })
 
+  test('rejects an in-flight response superseded by a daemon handoff', async () => {
+    let resolveFirst
+    const firstResponse = new Promise((resolve) => {
+      resolveFirst = resolve
+    })
+    globalThis.fetch = mock.fn((url) => {
+      if (url.startsWith('http://localhost:7777')) return firstResponse
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(makeSyncResponse({ connection_generation: 1, next_poll_ms: 60000 }))
+      })
+    })
+
+    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks)
+    client.start()
+    await tick(20)
+    client.setServerUrl('http://localhost:8888')
+    resolveFirst({
+      ok: true,
+      json: () =>
+        Promise.resolve(
+          makeSyncResponse({
+            connection_generation: 7,
+            commands: [{ id: 'stale-command', type: 'screenshot', params: {} }],
+            next_poll_ms: 60000
+          })
+        )
+    })
+    await tick(50)
+
+    assert.strictEqual(callbacks.onCommand.mock.calls.length, 0)
+    const staleLog = callbacks.debugLog.mock.calls.find(
+      (call) => call.arguments[1] === 'Rejected stale connection generation'
+    )
+    assert.ok(staleLog, 'superseded response should remain visible to Doctor diagnostics')
+  })
+
   test('should recover from network error and reconnect', async () => {
     let callCount = 0
     globalThis.fetch = mock.fn(() => {

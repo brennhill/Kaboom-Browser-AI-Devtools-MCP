@@ -64,7 +64,8 @@ func extractBrowserName(ua string) string {
 // - Missing optional fields are treated as "no update" rather than protocol errors.
 type SyncRequest struct {
 	// Session identification
-	ExtSessionID string `json:"ext_session_id"`
+	ExtSessionID         string `json:"ext_session_id"`
+	ConnectionGeneration uint64 `json:"connection_generation,omitempty"`
 
 	// Extension version for compatibility checking
 	ExtensionVersion string `json:"extension_version,omitempty"`
@@ -109,11 +110,12 @@ type SyncSettings struct {
 
 // SyncCommandResult is a command result from the extension.
 type SyncCommandResult struct {
-	ID            string          `json:"id"`
-	CorrelationID string          `json:"correlation_id,omitempty"`
-	Status        string          `json:"status"` // "complete", "error", "timeout", "cancelled"
-	Result        json.RawMessage `json:"result,omitempty"`
-	Error         string          `json:"error,omitempty"`
+	ID                   string          `json:"id"`
+	CorrelationID        string          `json:"correlation_id,omitempty"`
+	ConnectionGeneration uint64          `json:"connection_generation,omitempty"`
+	Status               string          `json:"status"` // "complete", "error", "timeout", "cancelled"
+	Result               json.RawMessage `json:"result,omitempty"`
+	Error                string          `json:"error,omitempty"`
 }
 
 // SyncInProgress represents extension-reported active command execution state.
@@ -122,19 +124,23 @@ type SyncCommandResult struct {
 // - Either ID or CorrelationID must be present after normalization.
 // - Status is normalized to lower-case running/pending vocabulary.
 type SyncInProgress struct {
-	ID            string   `json:"id"`
-	CorrelationID string   `json:"correlation_id,omitempty"`
-	Type          string   `json:"type,omitempty"`
-	Status        string   `json:"status,omitempty"` // running | pending
-	ProgressPct   *float64 `json:"progress_pct,omitempty"`
-	StartedAt     string   `json:"started_at,omitempty"`
-	UpdatedAt     string   `json:"updated_at,omitempty"`
+	ID                   string   `json:"id"`
+	CorrelationID        string   `json:"correlation_id,omitempty"`
+	ConnectionGeneration uint64   `json:"connection_generation,omitempty"`
+	Type                 string   `json:"type,omitempty"`
+	Status               string   `json:"status,omitempty"` // running | pending
+	ProgressPct          *float64 `json:"progress_pct,omitempty"`
+	StartedAt            string   `json:"started_at,omitempty"`
+	UpdatedAt            string   `json:"updated_at,omitempty"`
 }
 
 // SyncResponse is the response body for /sync.
 type SyncResponse struct {
 	// Server acknowledged the sync
 	Ack bool `json:"ack"`
+
+	// ConnectionGeneration identifies the currently authoritative extension runtime.
+	ConnectionGeneration uint64 `json:"connection_generation"`
 
 	// Commands for extension to execute (replaces /pending-queries GET)
 	Commands []SyncCommand `json:"commands"`
@@ -158,12 +164,13 @@ type SyncResponse struct {
 
 // SyncCommand is a command from server to extension.
 type SyncCommand struct {
-	ID            string          `json:"id"`
-	Type          string          `json:"type"`
-	Params        json.RawMessage `json:"params"`
-	TabID         int             `json:"tab_id,omitempty"`
-	CorrelationID string          `json:"correlation_id,omitempty"`
-	TraceID       string          `json:"trace_id,omitempty"`
+	ID                   string          `json:"id"`
+	Type                 string          `json:"type"`
+	Params               json.RawMessage `json:"params"`
+	TabID                int             `json:"tab_id,omitempty"`
+	CorrelationID        string          `json:"correlation_id,omitempty"`
+	TraceID              string          `json:"trace_id,omitempty"`
+	ConnectionGeneration uint64          `json:"connection_generation"`
 }
 
 // =============================================================================
@@ -225,6 +232,10 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	clientID := r.Header.Get("X-Kaboom-Client")
 
 	state := h.capture.extension.updateSyncConnectionState(req, clientID, now)
+	if state.staleGeneration {
+		h.rejectStaleGeneration(w, req, state.connectionGeneration, "extension_sync")
+		return
+	}
 
 	if !state.wasConnected || state.isReconnect {
 		util.SafeGo(func() {
@@ -236,15 +247,22 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Forward extension feature usage to the usage counter via callback.
-	// Only known UI-originated keys are forwarded to prevent unbounded counter cardinality.
-	if filtered := filterFeaturesUsed(req.FeaturesUsed); len(filtered) > 0 {
-		h.capture.FeatureUsage().Notify(filtered)
-	}
-
-	h.processSyncCommandResults(req.CommandResults, clientID)
-	if req.LastCommandAck != "" {
-		h.capture.Queries().AcknowledgePendingQuery(req.LastCommandAck)
+	if currentGeneration, applied := h.capture.extension.applyIfCurrentSyncGeneration(
+		req.ExtSessionID,
+		state.connectionGeneration,
+		func() {
+			// Only known UI-originated keys are forwarded to prevent unbounded cardinality.
+			if filtered := filterFeaturesUsed(req.FeaturesUsed); len(filtered) > 0 {
+				h.capture.FeatureUsage().Notify(filtered)
+			}
+			h.processSyncCommandResults(req.CommandResults, clientID, state.connectionGeneration)
+			if req.LastCommandAck != "" {
+				h.capture.Queries().AcknowledgePendingQuery(req.LastCommandAck)
+			}
+		},
+	); !applied {
+		h.rejectStaleGeneration(w, req, currentGeneration, "extension_sync_apply")
+		return
 	}
 
 	if state.wasDisconnected {
@@ -261,17 +279,35 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	// Reconcile started commands against extension heartbeat state.
 	// If a command disappears from heartbeat in_progress without a terminal result,
 	// fail it fast instead of waiting for eventual timeout.
-	h.reconcileInProgressCommandState(req.InProgress, now)
+	currentInProgress := currentGenerationInProgress(req.InProgress, state.connectionGeneration)
+	for _, entry := range req.InProgress {
+		if entry.ConnectionGeneration != 0 && entry.ConnectionGeneration != state.connectionGeneration {
+			h.capture.Lifecycle().Emit(lifecycle.EventStaleGenerationRejected, map[string]any{
+				"correlation_id":      entry.CorrelationID,
+				"received_generation": entry.ConnectionGeneration,
+				"current_generation":  state.connectionGeneration,
+				"bridge":              "sync_command_progress",
+			})
+		}
+	}
+	h.reconcileInProgressCommandState(currentInProgress, now)
 
 	pendingQueries := h.capture.Queries().GetPendingQueries()
 	if len(pendingQueries) == 0 {
 		h.capture.Queries().WaitForPendingQueries(syncLongPollTimeout())
 		pendingQueries = h.capture.Queries().GetPendingQueries()
 	}
+	if currentGeneration, current := h.capture.extension.isCurrentSyncGeneration(
+		req.ExtSessionID,
+		state.connectionGeneration,
+	); !current {
+		h.rejectStaleGeneration(w, req, currentGeneration, "extension_sync_response")
+		return
+	}
 
 	h.updateSyncLogs(req, now, state.pilotEnabled, len(pendingQueries))
 
-	commands := buildSyncCommands(pendingQueries)
+	commands := buildSyncCommands(pendingQueries, state.connectionGeneration)
 
 	nextPollMs := 1000
 	if len(commands) > 0 {
@@ -293,29 +329,45 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := SyncResponse{
-		Ack:              true,
-		Commands:         commands,
-		NextPollMs:       nextPollMs,
-		ServerTime:       now.Format(time.RFC3339),
-		ServerVersion:    h.capture.Extension().ServerVersion(),
-		InstallID:        telemetry.GetInstallID(),
-		CaptureOverrides: h.buildCaptureOverrides(),
+		Ack:                  true,
+		ConnectionGeneration: state.connectionGeneration,
+		Commands:             commands,
+		NextPollMs:           nextPollMs,
+		ServerTime:           now.Format(time.RFC3339),
+		ServerVersion:        h.capture.Extension().ServerVersion(),
+		InstallID:            telemetry.GetInstallID(),
+		CaptureOverrides:     h.buildCaptureOverrides(),
 	}
 
 	util.JSONResponse(w, http.StatusOK, resp)
 }
 
+func (h *SyncHandler) rejectStaleGeneration(w http.ResponseWriter, req SyncRequest, currentGeneration uint64, bridge string) {
+	h.capture.Lifecycle().Emit(lifecycle.EventStaleGenerationRejected, map[string]any{
+		"correlation_id":      req.ExtSessionID,
+		"received_generation": req.ConnectionGeneration,
+		"current_generation":  currentGeneration,
+		"bridge":              bridge,
+	})
+	util.JSONResponse(w, http.StatusConflict, map[string]any{
+		"ack":                   false,
+		"error":                 "stale_connection_generation",
+		"connection_generation": currentGeneration,
+	})
+}
+
 // buildSyncCommands converts pending queries to sync commands.
-func buildSyncCommands(pending []queries.PendingQueryResponse) []SyncCommand {
+func buildSyncCommands(pending []queries.PendingQueryResponse, generation uint64) []SyncCommand {
 	commands := make([]SyncCommand, len(pending))
 	for i, q := range pending {
 		commands[i] = SyncCommand{
-			ID:            q.ID,
-			Type:          q.Type,
-			Params:        q.Params,
-			TabID:         q.TabID,
-			CorrelationID: q.CorrelationID,
-			TraceID:       q.TraceID,
+			ID:                   q.ID,
+			Type:                 q.Type,
+			Params:               q.Params,
+			TabID:                q.TabID,
+			CorrelationID:        q.CorrelationID,
+			TraceID:              q.TraceID,
+			ConnectionGeneration: generation,
 		}
 	}
 	return commands
@@ -367,13 +419,15 @@ func syncLongPollTimeout() time.Duration {
 }
 
 type syncConnectionState struct {
-	wasConnected      bool
-	isReconnect       bool
-	wasDisconnected   bool
-	timeSinceLastPoll time.Duration
-	extSessionID      string
-	pilotEnabled      bool
-	inProgressCount   int
+	wasConnected         bool
+	isReconnect          bool
+	wasDisconnected      bool
+	timeSinceLastPoll    time.Duration
+	extSessionID         string
+	pilotEnabled         bool
+	inProgressCount      int
+	connectionGeneration uint64
+	staleGeneration      bool
 }
 
 func (r *ExtensionRuntime) updateSyncConnectionState(req SyncRequest, clientID string, now time.Time) syncConnectionState {
@@ -384,6 +438,20 @@ func (r *ExtensionRuntime) updateSyncConnectionState(req SyncRequest, clientID s
 		wasConnected:      r.state.lastExtensionConnected,
 		timeSinceLastPoll: now.Sub(r.state.lastPollAt),
 	}
+	if r.state.connectionGeneration == 0 {
+		r.state.connectionGeneration = 1
+	}
+	if r.state.extSessionID != "" && req.ConnectionGeneration != 0 && req.ConnectionGeneration != r.state.connectionGeneration {
+		state.connectionGeneration = r.state.connectionGeneration
+		state.staleGeneration = true
+		return state
+	}
+	if req.ExtSessionID != "" && req.ExtSessionID != r.state.extSessionID {
+		if r.state.extSessionID != "" {
+			r.state.connectionGeneration++
+		}
+	}
+	state.connectionGeneration = r.state.connectionGeneration
 	state.wasDisconnected = !r.state.lastSyncSeen.IsZero() && now.Sub(r.state.lastSyncSeen) >= extensionDisconnectThreshold
 	state.isReconnect = state.wasDisconnected
 
@@ -418,7 +486,7 @@ func (r *ExtensionRuntime) updateSyncConnectionState(req SyncRequest, clientID s
 		r.state.cspLevel = req.Settings.CspLevel
 	}
 	if req.InProgress != nil {
-		r.state.inProgress = normalizeInProgressList(req.InProgress)
+		r.state.inProgress = normalizeInProgressList(currentGenerationInProgress(req.InProgress, state.connectionGeneration))
 		r.state.inProgressUpdated = now
 	}
 	state.pilotEnabled = r.state.pilotEnabled
@@ -426,8 +494,41 @@ func (r *ExtensionRuntime) updateSyncConnectionState(req SyncRequest, clientID s
 	return state
 }
 
-func (h *SyncHandler) processSyncCommandResults(results []SyncCommandResult, clientID string) {
+func (r *ExtensionRuntime) isCurrentSyncGeneration(sessionID string, generation uint64) (uint64, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.connectionGeneration,
+		sessionID != "" && sessionID == r.state.extSessionID && generation == r.state.connectionGeneration
+}
+
+func (r *ExtensionRuntime) applyIfCurrentSyncGeneration(
+	sessionID string,
+	generation uint64,
+	apply func(),
+) (uint64, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if sessionID == "" || sessionID != r.state.extSessionID || generation != r.state.connectionGeneration {
+		return r.state.connectionGeneration, false
+	}
+	apply()
+	return r.state.connectionGeneration, true
+}
+
+func (h *SyncHandler) processSyncCommandResults(results []SyncCommandResult, clientID string, currentGeneration uint64) {
 	for _, result := range results {
+		// EXPECTED_ABSENCE: a result without its own generation inherits the
+		// already-validated enclosing heartbeat generation; logging that normal
+		// compact form would create a false stale-work incident.
+		if result.ConnectionGeneration != 0 && result.ConnectionGeneration != currentGeneration {
+			h.capture.Lifecycle().Emit(lifecycle.EventStaleGenerationRejected, map[string]any{
+				"correlation_id":      result.CorrelationID,
+				"received_generation": result.ConnectionGeneration,
+				"current_generation":  currentGeneration,
+				"bridge":              "sync_command_result",
+			})
+			continue
+		}
 		if result.ID != "" {
 			if result.CorrelationID != "" {
 				h.capture.Queries().SetQueryResultWithClientNoCommandComplete(result.ID, result.Result, clientID)
@@ -504,6 +605,22 @@ func normalizeInProgressList(in []SyncInProgress) []SyncInProgress {
 			continue
 		}
 		out = append(out, entry)
+	}
+	return out
+}
+
+func currentGenerationInProgress(in []SyncInProgress, generation uint64) []SyncInProgress {
+	if in == nil {
+		return nil
+	}
+	out := make([]SyncInProgress, 0, len(in))
+	for _, entry := range in {
+		// EXPECTED_ABSENCE: progress without its own generation inherits the
+		// already-validated enclosing heartbeat generation; logging this compact
+		// form would create a false stale-work incident.
+		if entry.ConnectionGeneration == 0 || entry.ConnectionGeneration == generation {
+			out = append(out, entry)
+		}
 	}
 	return out
 }

@@ -14,28 +14,30 @@ import (
 type Event int
 
 const (
-	EventUnknown               Event = iota
-	EventCircuitOpened               // Circuit breaker opened (rate exceeded)
-	EventCircuitClosed               // Circuit breaker closed (recovered)
-	EventExtensionConnected          // Extension connected or reconnected
-	EventExtensionDisconnected       // Extension disconnected (poll timeout)
-	EventBufferEviction              // Ring buffer evicted old entries
-	EventRateLimitTriggered          // Rate limit threshold hit
-	EventCommandStateDesync          // Command state mismatch with extension
-	EventSyncSnapshot                // Periodic sync state snapshot
+	EventUnknown                 Event = iota
+	EventCircuitOpened                 // Circuit breaker opened (rate exceeded)
+	EventCircuitClosed                 // Circuit breaker closed (recovered)
+	EventExtensionConnected            // Extension connected or reconnected
+	EventExtensionDisconnected         // Extension disconnected (poll timeout)
+	EventBufferEviction                // Ring buffer evicted old entries
+	EventRateLimitTriggered            // Rate limit threshold hit
+	EventCommandStateDesync            // Command state mismatch with extension
+	EventSyncSnapshot                  // Periodic sync state snapshot
+	EventStaleGenerationRejected       // Superseded asynchronous work was rejected
 )
 
 // eventNames maps typed events to their wire-format string names.
 var eventNames = map[Event]string{
-	EventUnknown:               "unknown",
-	EventCircuitOpened:         "circuit_opened",
-	EventCircuitClosed:         "circuit_closed",
-	EventExtensionConnected:    "extension_connected",
-	EventExtensionDisconnected: "extension_disconnected",
-	EventBufferEviction:        "buffer_eviction",
-	EventRateLimitTriggered:    "rate_limit_triggered",
-	EventCommandStateDesync:    "command_state_desync",
-	EventSyncSnapshot:          "sync_snapshot",
+	EventUnknown:                 "unknown",
+	EventCircuitOpened:           "circuit_opened",
+	EventCircuitClosed:           "circuit_closed",
+	EventExtensionConnected:      "extension_connected",
+	EventExtensionDisconnected:   "extension_disconnected",
+	EventBufferEviction:          "buffer_eviction",
+	EventRateLimitTriggered:      "rate_limit_triggered",
+	EventCommandStateDesync:      "command_state_desync",
+	EventSyncSnapshot:            "sync_snapshot",
+	EventStaleGenerationRejected: "stale_generation_rejected",
 }
 
 // String returns the wire-format name for a lifecycle event.

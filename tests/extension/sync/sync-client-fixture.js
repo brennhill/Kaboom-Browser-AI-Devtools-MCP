@@ -61,12 +61,18 @@ export function createMockCallbacks(overrides = {}) {
 
 /** Build a valid /sync response body. */
 export function makeSyncResponse(overrides = {}) {
+  const connectionGeneration = overrides.connection_generation || 1
+  const commands = (overrides.commands || []).map((command) => ({
+    connection_generation: connectionGeneration,
+    ...command
+  }))
   return {
     ack: true,
-    commands: [],
+    connection_generation: connectionGeneration,
     next_poll_ms: 1000,
     server_time: new Date().toISOString(),
-    ...overrides
+    ...overrides,
+    commands
   }
 }
 

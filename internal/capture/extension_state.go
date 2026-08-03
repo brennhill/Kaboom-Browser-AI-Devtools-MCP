@@ -46,6 +46,7 @@ type ExtensionState struct {
 	lastPollAt             time.Time // When extension last polled. Health endpoint uses 3s/5s thresholds.
 	extSessionID           string    // Extension session ID (changes on reload/update).
 	extSessionChangedAt    time.Time // When extSessionID last changed.
+	connectionGeneration   uint64    // Monotonic daemon-owned generation for the active extension runtime.
 	lastExtensionConnected bool      // Previous connection state for transition detection.
 	extensionVersion       string    // Last reported extension version from sync request.
 	serverVersion          string    // Daemon version used for extension compatibility checks.
@@ -105,22 +106,24 @@ func newExtensionRuntime() *ExtensionRuntime {
 
 // ExtensionSnapshot contains a point-in-time view of extension state for health reporting.
 type ExtensionSnapshot struct {
-	LastPollAt          time.Time
-	ExtSessionID        string
-	ExtSessionChangedAt time.Time
-	PilotEnabled        bool
-	ActiveTestIDCount   int
+	LastPollAt           time.Time
+	ExtSessionID         string
+	ExtSessionChangedAt  time.Time
+	ConnectionGeneration uint64
+	PilotEnabled         bool
+	ActiveTestIDCount    int
 }
 
 func (r *ExtensionRuntime) Snapshot() ExtensionSnapshot {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return ExtensionSnapshot{
-		LastPollAt:          r.state.lastPollAt,
-		ExtSessionID:        r.state.extSessionID,
-		ExtSessionChangedAt: r.state.extSessionChangedAt,
-		PilotEnabled:        r.state.pilotEnabled,
-		ActiveTestIDCount:   len(r.state.activeTestIDs),
+		LastPollAt:           r.state.lastPollAt,
+		ExtSessionID:         r.state.extSessionID,
+		ExtSessionChangedAt:  r.state.extSessionChangedAt,
+		ConnectionGeneration: r.state.connectionGeneration,
+		PilotEnabled:         r.state.pilotEnabled,
+		ActiveTestIDCount:    len(r.state.activeTestIDs),
 	}
 }
 

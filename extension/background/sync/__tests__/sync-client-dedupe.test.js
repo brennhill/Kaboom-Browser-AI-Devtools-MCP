@@ -60,7 +60,8 @@ function createSyncResponse(commands) {
     async json() {
       return {
         ack: true,
-        commands,
+        connection_generation: 1,
+        commands: commands.map((command) => ({ connection_generation: 1, ...command })),
         next_poll_ms: 5000,
         server_time: new Date().toISOString()
       }

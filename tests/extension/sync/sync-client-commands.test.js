@@ -38,8 +38,33 @@ describe('SyncClient — Command dispatch', () => {
     await tick(50)
 
     assert.strictEqual(callbacks.onCommand.mock.calls.length, 2)
-    assert.deepStrictEqual(callbacks.onCommand.mock.calls[0].arguments[0], commands[0])
-    assert.deepStrictEqual(callbacks.onCommand.mock.calls[1].arguments[0], commands[1])
+    assert.deepStrictEqual(callbacks.onCommand.mock.calls[0].arguments[0], {
+      connection_generation: 1,
+      ...commands[0]
+    })
+    assert.deepStrictEqual(callbacks.onCommand.mock.calls[1].arguments[0], {
+      connection_generation: 1,
+      ...commands[1]
+    })
+  })
+
+  test('rejects commands from a superseded connection generation', async () => {
+    const commands = [
+      { id: 'cmd-stale', type: 'dom_query', params: {}, connection_generation: 6 },
+      { id: 'cmd-current', type: 'screenshot', params: {}, connection_generation: 7 }
+    ]
+    installFetchMock(makeSyncResponse({ connection_generation: 7, commands, next_poll_ms: 60000 }))
+
+    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks)
+    client.start()
+    await tick(50)
+
+    assert.strictEqual(callbacks.onCommand.mock.calls.length, 1)
+    assert.strictEqual(callbacks.onCommand.mock.calls[0].arguments[0].id, 'cmd-current')
+    const staleLog = callbacks.debugLog.mock.calls.find(
+      (call) => call.arguments[1] === 'Rejected stale connection generation'
+    )
+    assert.ok(staleLog, 'stale command rejection should remain visible to Doctor diagnostics')
   })
 
   test('should set lastCommandAck to the last successfully dispatched command id', async () => {
@@ -148,6 +173,44 @@ describe('SyncClient — Command dispatch', () => {
     assert.strictEqual(active.correlation_id, 'corr-running')
     assert.strictEqual(active.type, 'browser_action')
     assert.ok(active.status === 'running' || active.status === 'pending')
+  })
+
+  test('retains the originating generation on late command progress and results', async () => {
+    let resolveCommand
+    let callCount = 0
+    globalThis.fetch = mock.fn(() => {
+      callCount++
+      const response =
+        callCount === 1
+          ? makeSyncResponse({
+              connection_generation: 1,
+              commands: [{ id: 'cmd-late', type: 'browser_action', params: {} }],
+              next_poll_ms: 10
+            })
+          : makeSyncResponse({ connection_generation: 2, commands: [], next_poll_ms: 10 })
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(response) })
+    })
+    callbacks.onCommand = mock.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveCommand = () => {
+            client.queueCommandResult({ id: 'cmd-late', status: 'complete', result: { success: true } })
+            resolve()
+          }
+        })
+    )
+
+    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks)
+    client.start()
+    await tick(70)
+    resolveCommand()
+    await tick(70)
+
+    const bodies = globalThis.fetch.mock.calls.map((call) => JSON.parse(call.arguments[1].body))
+    const progress = bodies.flatMap((body) => body.in_progress || []).find((entry) => entry.id === 'cmd-late')
+    assert.strictEqual(progress.connection_generation, 1)
+    const result = bodies.flatMap((body) => body.command_results || []).find((entry) => entry.id === 'cmd-late')
+    assert.strictEqual(result.connection_generation, 1)
   })
 
   test('should not dispatch commands when response has empty commands array', async () => {
@@ -392,6 +455,8 @@ describe('SyncClient — Command result queuing', () => {
     const body = JSON.parse(callsWithResults[0].arguments[1].body)
     assert.strictEqual(body.command_results[0].id, 'cmd-1')
     assert.strictEqual(body.command_results[0].status, 'complete')
+    assert.strictEqual(body.connection_generation, 1)
+    assert.strictEqual(body.command_results[0].connection_generation, 1)
   })
 
   test('should cap pending results queue at 200', () => {

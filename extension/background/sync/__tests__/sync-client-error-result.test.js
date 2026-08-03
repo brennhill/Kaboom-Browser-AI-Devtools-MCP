@@ -102,7 +102,10 @@ describe('SyncClient — error result on command dispatch failure', () => {
         json: () =>
           Promise.resolve({
             ack: true,
-            commands: [{ id: 'cmd-1', type: 'upload', params: '{}', correlation_id: 'corr-1' }],
+            connection_generation: 1,
+            commands: [
+              { id: 'cmd-1', type: 'upload', params: '{}', correlation_id: 'corr-1', connection_generation: 1 }
+            ],
             next_poll_ms: 5000,
             server_time: new Date().toISOString()
           })
@@ -154,9 +157,10 @@ describe('SyncClient — error result on command dispatch failure', () => {
         json: () =>
           Promise.resolve({
             ack: true,
+            connection_generation: 1,
             commands: [
-              { id: 'cmd-A', type: 'dom', params: '{}' },
-              { id: 'cmd-B', type: 'dom', params: '{}' }
+              { id: 'cmd-A', type: 'dom', params: '{}', connection_generation: 1 },
+              { id: 'cmd-B', type: 'dom', params: '{}', connection_generation: 1 }
             ],
             next_poll_ms: 5000,
             server_time: new Date().toISOString()

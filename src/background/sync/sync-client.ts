@@ -53,6 +53,7 @@ export interface SyncCommandResult {
   status: 'complete' | 'error' | 'timeout' | 'cancelled'
   result?: unknown
   error?: string
+  connection_generation?: number
 }
 
 /** Active command metadata sent on each sync heartbeat */
@@ -64,11 +65,13 @@ export interface SyncInProgress {
   progress_pct?: number
   started_at?: string
   updated_at?: string
+  connection_generation: number
 }
 
 /** Request sent to /sync */
 interface SyncRequest {
   ext_session_id: string
+  connection_generation?: number
   extension_version?: string
   settings?: SyncSettings
   extension_logs?: SyncExtensionLog[]
@@ -86,11 +89,13 @@ export interface SyncCommand {
   tab_id?: number
   correlation_id?: string
   trace_id?: string
+  connection_generation: number
 }
 
 /** Response from /sync */
 interface SyncResponse {
   ack: boolean
+  connection_generation: number
   commands: SyncCommand[]
   next_poll_ms: number
   server_time: string
@@ -146,6 +151,8 @@ export class SyncClient {
   private inProgressById = new Map<string, SyncInProgress>()
   private processedCommandSignatures: Set<string> = new Set()
   private extensionVersion: string
+  private connectionGeneration = 0
+  private lifecycleEpoch = 0
 
   constructor(serverUrl: string, extSessionId: string, callbacks: SyncClientCallbacks, extensionVersion = '') {
     this.serverUrl = serverUrl
@@ -173,6 +180,7 @@ export class SyncClient {
   /** Start the sync loop */
   start(): void {
     if (this.running) return
+    this.lifecycleEpoch++
     this.running = true
     this.log('Starting sync client')
     this.scheduleNextSync(0) // Sync immediately
@@ -181,6 +189,7 @@ export class SyncClient {
   /** Stop the sync loop */
   stop(): void {
     this.running = false
+    this.lifecycleEpoch++
     if (this.intervalId) {
       clearTimeout(this.intervalId)
       this.intervalId = null
@@ -190,8 +199,12 @@ export class SyncClient {
 
   /** Queue a command result to send on next sync, then flush immediately */
   queueCommandResult(result: SyncCommandResult): void {
+    const activeGeneration = this.inProgressById.get(result.id)?.connection_generation
     this.clearInProgressById(result.id)
-    this.pendingResults.push(result)
+    this.pendingResults.push({
+      ...result,
+      connection_generation: result.connection_generation || activeGeneration || this.connectionGeneration || undefined
+    })
     // Cap queue size to prevent memory leak if server is unreachable
     const MAX_PENDING_RESULTS = 200
     if (this.pendingResults.length > MAX_PENDING_RESULTS) {
@@ -216,10 +229,13 @@ export class SyncClient {
 
   /** Reset connection state (e.g., when user toggles pilot/tracking) */
   resetConnection(): void {
+    this.lifecycleEpoch++
     this.state.consecutiveFailures = 0
     this.log('Connection state reset')
     // Trigger immediate sync if running
-    if (this.running && this.intervalId) {
+    if (this.running && this.syncing) {
+      this.flushRequested = true
+    } else if (this.running && this.intervalId) {
       clearTimeout(this.intervalId)
       this.scheduleNextSync(0)
     }
@@ -258,6 +274,7 @@ export class SyncClient {
 
   private async doSync(): Promise<void> {
     if (!this.running) return
+    const lifecycleEpoch = this.lifecycleEpoch
     this.syncing = true
     this.flushRequested = false
     let features: Record<string, boolean> | undefined
@@ -269,6 +286,7 @@ export class SyncClient {
 
       const request: SyncRequest = {
         ext_session_id: this.extSessionId,
+        connection_generation: this.connectionGeneration || undefined,
         extension_version: this.extensionVersion || undefined,
         settings,
         in_progress: this.getInProgressSnapshot()
@@ -313,6 +331,26 @@ export class SyncClient {
 
       const data: SyncResponse = await response.json()
 
+      if (lifecycleEpoch !== this.lifecycleEpoch) {
+        this.syncing = false
+        this.log('Rejected stale connection generation', {
+          correlation_id: this.extSessionId,
+          bridge: 'sync_response',
+          received_epoch: lifecycleEpoch,
+          current_epoch: this.lifecycleEpoch
+        })
+        if (this.running) {
+          this.flushRequested = false
+          this.scheduleNextSync(0)
+        }
+        return
+      }
+
+      if (!Number.isSafeInteger(data.connection_generation) || data.connection_generation <= 0) {
+        throw new Error('Sync response omitted a valid connection generation')
+      }
+      this.connectionGeneration = data.connection_generation
+
       // Log sync cycle summary
       this.log('Sync OK', {
         commands: data.commands?.length || 0,
@@ -351,6 +389,15 @@ export class SyncClient {
       if (data.commands && data.commands.length > 0) {
         this.log('Received commands', { count: data.commands.length, ids: data.commands.map((c) => c.id) })
         for (const command of data.commands) {
+          if (command.connection_generation !== this.connectionGeneration) {
+            this.log('Rejected stale connection generation', {
+              correlation_id: command.correlation_id || command.id,
+              bridge: 'sync_command',
+              received_generation: command.connection_generation,
+              current_generation: this.connectionGeneration
+            })
+            continue
+          }
           const signature = this.getCommandSignature(command)
 
           if (command.id && this.processedCommandSignatures.has(signature)) {
@@ -536,7 +583,8 @@ export class SyncClient {
       status: current?.status || 'running',
       progress_pct: current?.progress_pct,
       started_at: current?.started_at || now,
-      updated_at: now
+      updated_at: now,
+      connection_generation: command.connection_generation
     })
   }
 
