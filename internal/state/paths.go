@@ -90,6 +90,11 @@ func ScreenshotsDir() (string, error) {
 	return InRoot("screenshots")
 }
 
+// EvidenceDir returns the local content-addressed QA evidence directory.
+func EvidenceDir() (string, error) {
+	return InRoot("evidence")
+}
+
 // SettingsFile returns the extension settings cache file path.
 func SettingsFile() (string, error) {
 	return InRoot("settings", "extension-settings.json")

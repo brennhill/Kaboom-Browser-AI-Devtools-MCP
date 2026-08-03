@@ -5,6 +5,7 @@ package verification
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 const SchemaVersion = "1"
@@ -33,8 +34,10 @@ type Assertion struct {
 }
 
 type EvidenceRef struct {
-	ID   string `json:"evidence_id"`
-	Kind string `json:"kind"`
+	ID            string    `json:"evidence_id"`
+	Kind          string    `json:"kind"`
+	CorrelationID string    `json:"correlation_id"`
+	CapturedAt    time.Time `json:"captured_at"`
 }
 
 type AssertionResult struct {
@@ -79,7 +82,7 @@ func ValidateContract(contract Contract) error {
 	return nil
 }
 
-func Evaluate(contract Contract, supplied []AssertionResult) (Result, error) {
+func Evaluate(contract Contract, supplied []AssertionResult, catalog []EvidenceArtifact, now time.Time, maxAge time.Duration) (Result, error) {
 	if err := ValidateContract(contract); err != nil {
 		return Result{}, err
 	}
@@ -99,9 +102,10 @@ func Evaluate(contract Contract, supplied []AssertionResult) (Result, error) {
 		if !validVerdict(result.Verdict) {
 			return Result{}, fmt.Errorf("invalid verdict %q", result.Verdict)
 		}
-		if result.Verdict == VerdictPass && !hasRequiredEvidence(assertion.RequiredEvidence, result.Evidence) {
+		validKinds, complete := validateEvidence(result.Evidence, catalog, now, maxAge)
+		if result.Verdict != VerdictUnverified && (!complete || !hasRequiredEvidence(assertion.RequiredEvidence, validKinds)) {
 			result.Verdict = VerdictUnverified
-			result.Reason = "required evidence is incomplete"
+			result.Reason = "supporting evidence is missing, stale, or invalid"
 		}
 		byID[result.AssertionID] = result
 	}
@@ -127,19 +131,36 @@ func validVerdict(verdict Verdict) bool {
 	}
 }
 
-func hasRequiredEvidence(required []string, evidence []EvidenceRef) bool {
-	found := make(map[string]bool, len(evidence))
-	for _, ref := range evidence {
-		if strings.TrimSpace(ref.ID) != "" && strings.TrimSpace(ref.Kind) != "" {
-			found[ref.Kind] = true
-		}
-	}
+func hasRequiredEvidence(required []string, found map[string]bool) bool {
 	for _, kind := range required {
 		if !found[kind] {
 			return false
 		}
 	}
 	return true
+}
+
+func validateEvidence(refs []EvidenceRef, catalog []EvidenceArtifact, now time.Time, maxAge time.Duration) (map[string]bool, bool) {
+	if len(refs) == 0 || maxAge <= 0 {
+		return nil, false
+	}
+	artifacts := make(map[string]EvidenceArtifact, len(catalog))
+	for _, artifact := range catalog {
+		if evidenceIsAuthentic(artifact) {
+			artifacts[artifact.Ref.ID] = artifact
+		}
+	}
+	kinds := make(map[string]bool, len(refs))
+	for _, ref := range refs {
+		artifact, exists := artifacts[ref.ID]
+		matches := exists && artifact.Ref.ID == ref.ID && artifact.Ref.Kind == ref.Kind &&
+			artifact.Ref.CorrelationID == ref.CorrelationID && artifact.Ref.CapturedAt.Equal(ref.CapturedAt)
+		if !matches || ref.CapturedAt.After(now) || now.Sub(ref.CapturedAt) > maxAge {
+			return kinds, false
+		}
+		kinds[ref.Kind] = true
+	}
+	return kinds, true
 }
 
 func combineVerdicts(current, next Verdict) Verdict {

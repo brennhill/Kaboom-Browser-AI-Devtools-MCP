@@ -2,7 +2,10 @@
 
 package verification
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestValidateContractRejectsIncompleteAndUnknownSchemas(t *testing.T) {
 	tests := []struct {
@@ -27,6 +30,8 @@ func TestValidateContractRejectsIncompleteAndUnknownSchemas(t *testing.T) {
 }
 
 func TestEvaluateUsesExplicitVerdicts(t *testing.T) {
+	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
+	evidence := mustEvidence(t, EvidenceInput{Kind: "dom", Tool: "observe", Action: "dom", CorrelationID: "qa-1", CapturedAt: now, Content: map[string]any{"visible": true}})
 	contract := Contract{
 		SchemaVersion: SchemaVersion,
 		ID:            "checkout",
@@ -40,16 +45,16 @@ func TestEvaluateUsesExplicitVerdicts(t *testing.T) {
 		results []AssertionResult
 		want    Verdict
 	}{
-		{name: "pass", results: []AssertionResult{{AssertionID: "total", Verdict: VerdictPass, Evidence: []EvidenceRef{{ID: "dom-1", Kind: "dom"}}}}, want: VerdictPass},
-		{name: "fail", results: []AssertionResult{{AssertionID: "total", Verdict: VerdictFail, Evidence: []EvidenceRef{{ID: "dom-1", Kind: "dom"}}}}, want: VerdictFail},
-		{name: "blocked", results: []AssertionResult{{AssertionID: "total", Verdict: VerdictBlocked}}, want: VerdictBlocked},
+		{name: "pass", results: []AssertionResult{{AssertionID: "total", Verdict: VerdictPass, Evidence: []EvidenceRef{evidence.Ref}}}, want: VerdictPass},
+		{name: "fail", results: []AssertionResult{{AssertionID: "total", Verdict: VerdictFail, Evidence: []EvidenceRef{evidence.Ref}}}, want: VerdictFail},
+		{name: "blocked", results: []AssertionResult{{AssertionID: "total", Verdict: VerdictBlocked, Evidence: []EvidenceRef{evidence.Ref}}}, want: VerdictBlocked},
 		{name: "unverified", results: []AssertionResult{{AssertionID: "total", Verdict: VerdictUnverified}}, want: VerdictUnverified},
-		{name: "flaky", results: []AssertionResult{{AssertionID: "total", Verdict: VerdictFlaky, Evidence: []EvidenceRef{{ID: "dom-1", Kind: "dom"}}}}, want: VerdictFlaky},
+		{name: "flaky", results: []AssertionResult{{AssertionID: "total", Verdict: VerdictFlaky, Evidence: []EvidenceRef{evidence.Ref}}}, want: VerdictFlaky},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := Evaluate(contract, tt.results)
+			result, err := Evaluate(contract, tt.results, []EvidenceArtifact{evidence}, now, 24*time.Hour)
 			if err != nil {
 				t.Fatalf("Evaluate() error = %v", err)
 			}
@@ -73,8 +78,7 @@ func TestEvaluateNeverPassesMissingEvidenceOrAssertionResults(t *testing.T) {
 	result, err := Evaluate(contract, []AssertionResult{{
 		AssertionID: "total",
 		Verdict:     VerdictPass,
-		Evidence:    []EvidenceRef{{ID: "dom-1", Kind: "dom"}},
-	}})
+	}}, nil, time.Now(), 24*time.Hour)
 	if err != nil {
 		t.Fatalf("Evaluate() error = %v", err)
 	}
@@ -95,7 +99,7 @@ func TestEvaluateRejectsUnknownAssertionsAndVerdicts(t *testing.T) {
 		{AssertionID: "other", Verdict: VerdictPass},
 		{AssertionID: "total", Verdict: Verdict("MAYBE")},
 	} {
-		if _, err := Evaluate(contract, []AssertionResult{result}); err == nil {
+		if _, err := Evaluate(contract, []AssertionResult{result}, nil, time.Now(), 24*time.Hour); err == nil {
 			t.Fatalf("expected error for result %#v", result)
 		}
 	}

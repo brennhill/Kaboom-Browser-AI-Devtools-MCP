@@ -4,7 +4,7 @@ feature_id: feature-project-isolation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-03
 code_paths:
   - internal/state/paths.go
   - internal/persistence/persistence_store.go
@@ -43,6 +43,8 @@ last_verified_date: 2026-03-05
 Shared runtime state resolves through `internal/state` and honors
 `KABOOM_STATE_DIR` as its explicit isolation boundary. The package exposes only
 canonical paths; callers do not read, migrate, or delete historical locations.
+Content-addressed QA artifacts use the canonical `evidence` directory beneath
+that same root, so test isolation and user-state isolation apply consistently.
 Persistence's asynchronous flush runs through the shared panic-contained
 goroutine launcher, keeping a background storage failure from terminating the
 daemon.

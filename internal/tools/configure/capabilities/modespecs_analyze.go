@@ -114,6 +114,6 @@ var analyzeModeSpecs = map[string]modeParamSpec{
 	"verification": {
 		Hint:     "Define or evaluate a versioned QA contract; missing required evidence produces UNVERIFIED",
 		Required: []string{"operation", "contract"},
-		Optional: []string{"results"},
+		Optional: []string{"results", "evidence", "evidence_catalog", "max_age_seconds"},
 	},
 }

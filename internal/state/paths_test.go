@@ -84,4 +84,12 @@ func TestRuntimePathsUnderRoot(t *testing.T) {
 	if want := filepath.Join(root, "settings", "extension-settings.json"); settingsFile != want {
 		t.Fatalf("SettingsFile() = %q, want %q", settingsFile, want)
 	}
+
+	evidenceDir, err := EvidenceDir()
+	if err != nil {
+		t.Fatalf("EvidenceDir() error = %v", err)
+	}
+	if want := filepath.Join(root, "evidence"); evidenceDir != want {
+		t.Fatalf("EvidenceDir() = %q, want %q", evidenceDir, want)
+	}
 }

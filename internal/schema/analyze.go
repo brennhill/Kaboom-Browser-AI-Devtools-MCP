@@ -49,6 +49,20 @@ func analyzeToolSchema() mcp.MCPTool {
 					"description": "Assertion results using PASS, FAIL, BLOCKED, UNVERIFIED, or FLAKY (verification evaluate)",
 					"items":       map[string]any{"type": "object"},
 				},
+				"evidence": map[string]any{
+					"type":        "array",
+					"description": "Compact evidence submissions bound to assertion_id with five-tool provenance, correlation_id, captured_at, and content (verification evaluate)",
+					"items":       map[string]any{"type": "object"},
+				},
+				"evidence_catalog": map[string]any{
+					"type":        "array",
+					"description": "Previously generated content-addressed evidence artifacts (verification evaluate)",
+					"items":       map[string]any{"type": "object"},
+				},
+				"max_age_seconds": map[string]any{
+					"type":        "number",
+					"description": "Maximum evidence age in seconds (verification evaluate, default 86400)",
+				},
 				"ignore_endpoints": map[string]any{
 					"type":        "array",
 					"description": "URL substrings to exclude (api_validation)",

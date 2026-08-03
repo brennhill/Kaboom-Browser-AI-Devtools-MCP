@@ -304,6 +304,20 @@
           "description": "Domain to check (link_health)",
           "type": "string"
         },
+        "evidence": {
+          "description": "Compact evidence submissions bound to assertion_id with five-tool provenance, correlation_id, captured_at, and content (verification evaluate)",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence_catalog": {
+          "description": "Previously generated content-addressed evidence artifacts (verification evaluate)",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
         "file": {
           "description": "Session filename from draw_history results (draw_session)",
           "type": "string"
@@ -336,6 +350,10 @@
         },
         "limit": {
           "description": "Max issues per section (page_issues, default 50)",
+          "type": "number"
+        },
+        "max_age_seconds": {
+          "description": "Maximum evidence age in seconds (verification evaluate, default 86400)",
           "type": "number"
         },
         "max_cols": {

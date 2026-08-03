@@ -18,6 +18,8 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler.go
   - internal/verification/contract.go
+  - internal/verification/evidence.go
+  - internal/verification/store.go
   - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
@@ -70,6 +72,8 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler_test.go
   - internal/verification/contract_test.go
+  - internal/verification/evidence_test.go
+  - internal/verification/store_test.go
   - internal/annotation/draw_sessions_handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/tools_analyze_structured_extraction_test.go
