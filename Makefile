@@ -20,10 +20,10 @@ PLATFORMS := \
 	linux-arm64 \
 	windows-amd64
 
-.PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-race test-cover test-integration test-cover-integration test-cover-all test-bench test-fuzz \
+.PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly \
 	dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
 	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-ts-json-casing check-invariants check-schema ci \
-	ci-local ci-go ci-js ci-security ci-e2e ci-bench ci-fuzz \
+	ci-local ci-go ci-js ci-security ci-e2e ci-bench \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
@@ -144,8 +144,11 @@ test-cover-all:
 test-bench:
 	go test -bench=. -benchmem -count=3 $(CMD_PKG)/...
 
-test-fuzz:
-	go test -fuzz=. -fuzztime=10s $(CMD_PKG)/...
+fuzz-smoke:
+	@scripts/ci/run-fuzz-campaigns.sh --smoke
+
+fuzz-nightly:
+	@scripts/ci/run-fuzz-campaigns.sh --nightly
 
 clean-test-daemons:
 	bash ./scripts/cleanup-test-daemons.sh
@@ -416,15 +419,6 @@ ci-bench:
 	@test -f docs/benchmarks/baseline.txt || { echo "FAIL: No baseline. Run 'make bench-baseline' first."; exit 1; }
 	go test -bench=. -benchmem -count=6 -run=^$$ $(CMD_PKG)/ > /tmp/kaboom-bench-current.txt
 	benchstat docs/benchmarks/baseline.txt /tmp/kaboom-bench-current.txt
-
-ci-fuzz:
-	go test -fuzz=FuzzPostLogs -fuzztime=30s $(CMD_PKG)/
-	go test -fuzz=FuzzMCPRequest -fuzztime=30s $(CMD_PKG)/
-	go test -fuzz=FuzzNetworkBodies -fuzztime=30s $(CMD_PKG)/
-	go test -fuzz=FuzzWebSocketEvents -fuzztime=30s $(CMD_PKG)/
-	go test -fuzz=FuzzEnhancedActions -fuzztime=30s $(CMD_PKG)/
-	go test -fuzz=FuzzValidateLogEntry -fuzztime=30s $(CMD_PKG)/
-	go test -fuzz=FuzzScreenshotEndpoint -fuzztime=30s $(CMD_PKG)/
 
 bench-baseline:
 	@mkdir -p benchmarks

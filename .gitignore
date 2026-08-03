@@ -39,6 +39,7 @@ tests/e2e/.tmp/
 tests/e2e/test-results/
 tests/e2e/playwright-report/
 /artifacts/uat/
+/artifacts/fuzz/
 
 # Lint/build caches
 .eslintcache

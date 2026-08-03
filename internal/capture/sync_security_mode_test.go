@@ -66,3 +66,32 @@ func TestHandleSync_DefaultSecurityModeOverridesEmpty(t *testing.T) {
 		t.Fatalf("capture_overrides should be empty in normal mode, got: %#v", resp.CaptureOverrides)
 	}
 }
+
+func FuzzSyncRequestCanonicalRoundTrip(f *testing.F) {
+	for _, seed := range [][]byte{
+		[]byte(`{"ext_session_id":"generation-1"}`),
+		[]byte(`{"ext_session_id":"generation-1","command_results":[{"id":"command-1","status":"complete","result":{"ok":true}}]}`),
+		[]byte(`{"ext_session_id":"generation-1","in_progress":[{"id":"command-1","status":"running","progress_pct":50}]}`),
+		[]byte(`{"ext_session_id":`),
+	} {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, raw []byte) {
+		var request SyncRequest
+		if json.Unmarshal(raw, &request) != nil {
+			return
+		}
+		encoded, err := json.Marshal(request)
+		if err != nil || !json.Valid(encoded) {
+			t.Fatalf("canonical sync request could not serialize: %v", err)
+		}
+		var roundTrip SyncRequest
+		if err := json.Unmarshal(encoded, &roundTrip); err != nil {
+			t.Fatal(err)
+		}
+		if request.ExtSessionID != roundTrip.ExtSessionID || len(request.CommandResults) != len(roundTrip.CommandResults) ||
+			len(request.InProgress) != len(roundTrip.InProgress) {
+			t.Fatal("canonical sync identity or message cardinality changed during round trip")
+		}
+	})
+}

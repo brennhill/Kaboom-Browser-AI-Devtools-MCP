@@ -153,3 +153,34 @@ func TestCollectorRecoveredEvictionBreaksTimestampTiesByName(t *testing.T) {
 		t.Fatalf("Snapshot() = %#v, want deterministic eviction of a_state", got)
 	}
 }
+
+func FuzzCollectorLifecycleTransitions(f *testing.F) {
+	f.Add([]byte{0, 1, 2, 3, 4, 5})
+	f.Add([]byte{1, 3, 5, 7, 0, 2, 4, 6})
+	f.Fuzz(func(t *testing.T, operations []byte) {
+		collector := NewCollector()
+		now := time.Date(2026, 8, 3, 10, 0, 0, 0, time.UTC)
+		collector.now = func() time.Time { return now }
+		for _, operation := range operations {
+			name := fmt.Sprintf("incident_%d", operation%8)
+			if operation&1 == 0 {
+				collector.Report(Diagnostic{Name: name, CorrelationID: "correlation_fuzz", Detail: "safe", Fix: "retry"})
+			} else {
+				collector.Resolve(name)
+			}
+			now = now.Add(time.Nanosecond)
+		}
+		for _, diagnostic := range collector.Snapshot() {
+			if diagnostic.Name == "" || diagnostic.FirstSeenAt.IsZero() || len(diagnostic.History) > maxHistoryTransitions {
+				t.Fatalf("invalid diagnostic lifecycle: %#v", diagnostic)
+			}
+			if diagnostic.Lifecycle != LifecycleActive && diagnostic.Lifecycle != LifecycleRecovered {
+				t.Fatalf("invalid lifecycle: %q", diagnostic.Lifecycle)
+			}
+		}
+		stats := collector.Stats()
+		if stats.Recovered > stats.RecoveredLimit {
+			t.Fatalf("recovered diagnostics exceeded bound: %#v", stats)
+		}
+	})
+}

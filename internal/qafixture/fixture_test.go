@@ -109,3 +109,31 @@ func TestParseRejectsOversizedStateWithoutLeakingIt(t *testing.T) {
 		t.Fatal("error leaked oversized state value")
 	}
 }
+
+func FuzzParseFixture(f *testing.F) {
+	for _, seed := range [][]byte{
+		[]byte(`{"version":1}`),
+		[]byte(`{"version":1,"viewport":{"width":1280,"height":720},"user_state":"fresh"}`),
+		[]byte(`{"version":1,"local_storage":{"token":"private-seed"}}`),
+		[]byte(`{"version":1,"unknown":"private-seed"}`),
+		[]byte(`{"version":1`),
+	} {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, raw []byte) {
+		fixture, err := Parse(raw)
+		if err != nil {
+			return
+		}
+		if fixture.Version != CurrentVersion || fixture.SetupTimeoutMs < 100 || fixture.SetupTimeoutMs > MaxSetupTimeoutMs {
+			t.Fatalf("accepted fixture violates version or timeout bounds: %+v", fixture)
+		}
+		encoded, marshalErr := json.Marshal(fixture)
+		if marshalErr != nil {
+			t.Fatal(marshalErr)
+		}
+		if _, roundTripErr := Parse(encoded); roundTripErr != nil {
+			t.Fatalf("accepted fixture failed canonical round trip: %v", roundTripErr)
+		}
+	})
+}

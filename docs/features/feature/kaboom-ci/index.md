@@ -9,6 +9,7 @@ code_paths:
   - Makefile
   - .github/workflows/architecture-validation.yml
   - .github/workflows/ci.yml
+  - .github/workflows/fuzz.yml
   - .github/workflows/cut-release.yml
   - .github/workflows/release.yml
   - .github/workflows/validate-versions.yml
@@ -23,6 +24,7 @@ code_paths:
   - gokaboom.dev/src/content/docs/reference/configure.md
   - scripts/lint-documentation.py
   - scripts/check-dormant-tests.sh
+  - scripts/ci/run-fuzz-campaigns.sh
   - scripts/test-js-sharded.sh
   - package.json
 test_paths:
@@ -37,6 +39,12 @@ test_paths:
   - tests/cli/runtime/doctor.test.cjs
   - tests/cli/lifecycle/server-install-hardening.test.cjs
   - tests/site/gokaboom-domain-contract.test.js
+  - internal/capture/sync_security_mode_test.go
+  - internal/qafixture/fixture_test.go
+  - internal/qafixture/registry_test.go
+  - internal/redaction/redaction_fuzz_test.go
+  - internal/security/scan/scan_test.go
+  - internal/statediag/collector_test.go
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-03
 ---
@@ -67,6 +75,11 @@ last_verified_date: 2026-08-03
   the daily scheduled workflow reruns the same canonical check so newly
   disclosed vulnerabilities surface without a source change. Active workflows
   pin the patched Go 1.25.12 toolchain declared by `go.mod`.
+- Pull requests replay the committed seeds for critical fixture, transaction,
+  Doctor, runtime-message, generation, redaction, and scanner state machines.
+  A scheduled bounded mutation campaign uses the same target inventory and
+  retains its manifest, per-target logs, and generated crash corpora so every
+  discovered failure can become a permanent deterministic regression seed.
 
 ## Specs
 
@@ -84,3 +97,6 @@ last_verified_date: 2026-08-03
 
 - `tests/extension/contracts/tooling-contracts.test.js` prevents hosted CI,
   `ci-go`, the 89% threshold, and retained coverage artifacts from drifting.
+- `scripts/ci/run-fuzz-campaigns.sh` is the sole owner of both deterministic
+  seed replay and nightly mutation target selection; `make fuzz-smoke` and
+  `make fuzz-nightly` are the canonical local and hosted entrypoints.

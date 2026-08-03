@@ -162,6 +162,31 @@ describe('Tooling contracts', () => {
     }
   })
 
+  test('scheduled and pull-request fuzzing share the canonical bounded campaign owner', () => {
+    const makefile = readFileSync('Makefile', 'utf8')
+    const ci = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const fuzz = readFileSync('.github/workflows/fuzz.yml', 'utf8')
+    const runner = readFileSync('scripts/ci/run-fuzz-campaigns.sh', 'utf8')
+
+    assert.match(makefile, /^fuzz-smoke:\s*\n\s*@?scripts\/ci\/run-fuzz-campaigns\.sh --smoke$/m)
+    assert.match(makefile, /^fuzz-nightly:\s*\n\s*@?scripts\/ci\/run-fuzz-campaigns\.sh --nightly$/m)
+    assert.doesNotMatch(makefile, /go test[^\n]*-fuzz=/, 'Make recipes must not bypass the canonical campaign owner')
+    assert.match(ci, /name: Deterministic fuzz seed smoke\s*\n\s*run: make fuzz-smoke/)
+    assert.match(fuzz, /schedule:\s*\n\s*- cron:/)
+    assert.match(fuzz, /run: make fuzz-nightly/)
+    assert.match(fuzz, /if: always\(\)[\s\S]*path:[\s\S]*artifacts\/fuzz[\s\S]*testdata\/fuzz/)
+    for (const target of [
+      'FuzzParseFixture',
+      'FuzzRegistryGenerationTransitions',
+      'FuzzCollectorLifecycleTransitions',
+      'FuzzSyncRequestCanonicalRoundTrip',
+      'FuzzRedactJSON'
+    ]) {
+      assert.ok(runner.includes(target), `canonical fuzz campaign missing ${target}`)
+    }
+    assert.doesNotMatch(ci, /go test[^\n]*-fuzz=/, 'pull requests must replay seeds rather than run random campaigns')
+  })
+
   test('active workflows pin the patched Go version declared by go.mod', () => {
     const goVersion = readFileSync('go.mod', 'utf8').match(/^go (\S+)$/m)?.[1]
     assert.equal(goVersion, '1.25.12')

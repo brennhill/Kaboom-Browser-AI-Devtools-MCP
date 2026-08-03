@@ -90,6 +90,20 @@ jobs:
           fi
           echo "OK: folder baseline is current"
 
+  fuzz-smoke:
+    name: Fuzz Seed Smoke
+    needs: versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
+        with:
+          go-version: "1.25.12"
+
+      - name: Deterministic fuzz seed smoke
+        run: make fuzz-smoke
+
   upgrade-guards:
     name: Upgrade Guards (${{ matrix.os }})
     needs: versions

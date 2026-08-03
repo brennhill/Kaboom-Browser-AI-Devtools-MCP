@@ -107,3 +107,56 @@ func recoveryRecord(id string, createdAt time.Time) TransactionRecord {
 		State: TransactionRestoreRequired, CreatedAt: createdAt,
 	}
 }
+
+func FuzzRegistryGenerationTransitions(f *testing.F) {
+	f.Add([]byte{0, 1, 2, 3, 4})
+	f.Add([]byte{1, 1, 1, 0, 4, 2})
+	f.Fuzz(func(t *testing.T, operations []byte) {
+		registry := NewRegistry(1)
+		initial := TransactionRecord{
+			TransactionID: "tx_fuzz", SnapshotID: "snapshot_fuzz", CorrelationID: "correlation_fuzz",
+			ExtensionGeneration: "generation_current", State: TransactionRestoreRequired,
+		}
+		if err := registry.Add(initial); err != nil {
+			t.Fatal(err)
+		}
+		for _, operation := range operations {
+			before, exists := registry.Get(initial.TransactionID)
+			if !exists {
+				t.Fatal("recovery obligation disappeared before a proven completion")
+			}
+			switch operation % 5 {
+			case 0:
+				_, _ = registry.BeginRestore(initial.TransactionID, initial.ExtensionGeneration)
+			case 1:
+				if _, err := registry.BeginRestore(initial.TransactionID, "generation_stale"); err == nil {
+					t.Fatal("stale generation began restoration")
+				}
+				after, _ := registry.Get(initial.TransactionID)
+				if !reflect.DeepEqual(before, after) {
+					t.Fatal("stale generation mutated the current recovery obligation")
+				}
+			case 2:
+				_ = registry.RestoreFailed(initial.TransactionID)
+			case 3:
+				_ = registry.SetMutations(initial.TransactionID, MutationCounts{Cookies: int(operation)})
+			case 4:
+				current, _ := registry.Get(initial.TransactionID)
+				if current.State == TransactionRestoring {
+					if err := registry.CompleteRestore(initial.TransactionID); err != nil {
+						t.Fatal(err)
+					}
+					if _, exists := registry.Get(initial.TransactionID); exists {
+						t.Fatal("completed recovery obligation was retained")
+					}
+					if err := registry.Add(initial); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			if _, exists := registry.Get(initial.TransactionID); !exists {
+				t.Fatal("recovery obligation disappeared without restoration proof")
+			}
+		}
+	})
+}
