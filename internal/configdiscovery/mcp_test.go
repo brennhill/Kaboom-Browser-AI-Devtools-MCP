@@ -40,3 +40,34 @@ func TestFindPrefersProjectLocalConfig(t *testing.T) {
 		t.Fatalf("Find() = %q, want .mcp.json", got)
 	}
 }
+
+func TestFindDiscoversOnlyManagedUserConfigurations(t *testing.T) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(workingDir) })
+	project := t.TempDir()
+	if err := os.Chdir(project); err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if got := Find(); got != "" {
+		t.Fatalf("Find() without configs = %q", got)
+	}
+	claude := filepath.Join(home, ".claude.json")
+	if err := os.WriteFile(claude, []byte(`{"mcpServers":{"github":{}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor := filepath.Join(home, ".cursor", "mcp.json")
+	if err := os.MkdirAll(filepath.Dir(cursor), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cursor, []byte(`{"mcpServers":{"kaboom-browser-devtools":{}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := Find(); got != cursor {
+		t.Fatalf("Find() = %q, want %q", got, cursor)
+	}
+}

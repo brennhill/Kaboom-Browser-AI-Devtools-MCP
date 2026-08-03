@@ -155,3 +155,64 @@ func TestGetRecentCommandTraces_RespectsLimitAndIncludesTimeline(t *testing.T) {
 		t.Fatalf("trace_timeline = %q, expected queued stage", traces[0].TraceTimeline)
 	}
 }
+
+func TestCommandTraceHelpersPreserveIdentityAndIgnoreNoise(t *testing.T) {
+	t.Parallel()
+	if deriveTraceID("explicit", "correlation", "query") != "explicit" ||
+		deriveTraceID("", "correlation", "query") != "correlation" ||
+		deriveTraceID("", "", "query") != "trace_query" || deriveTraceID("", "", "") != "" {
+		t.Fatal("deriveTraceID priority changed")
+	}
+	if buildTraceTimeline(nil) != "" || buildTraceTimeline([]CommandTraceEvent{{}, {Stage: "queued"}, {Stage: "sent"}}) != "queued -> sent" {
+		t.Fatal("trace timeline did not skip empty stages")
+	}
+	for status, stage := range map[string]string{
+		"pending": "started", "complete": "resolved", "error": "errored",
+		"cancelled": "errored", "timeout": "timed_out", "expired": "timed_out", "unknown": "errored",
+	} {
+		if got := traceStageFromStatus(status); got != stage {
+			t.Fatalf("traceStageFromStatus(%q) = %q", status, got)
+		}
+	}
+
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+	now := time.Now()
+	qd.ensureTraceContextLocked(nil, "corr", "query", "trace", now)
+	cmd := &CommandResult{CorrelationID: "kept", TraceID: "kept-trace", QueryID: "kept-query", UpdatedAt: now}
+	qd.ensureTraceContextLocked(cmd, "new", "new-query", "new-trace", now.Add(time.Second))
+	if cmd.CorrelationID != "kept" || cmd.TraceID != "kept-trace" || cmd.QueryID != "kept-query" || !cmd.UpdatedAt.Equal(now) {
+		t.Fatalf("existing trace identity was overwritten: %#v", cmd)
+	}
+	qd.appendTraceEventLocked(nil, "queued", "test", "pending", "", now)
+	qd.appendTraceEventLocked(cmd, "", "test", "pending", "", now)
+	qd.appendTraceEventLocked(cmd, "queued", "test", "pending", "", now)
+	qd.appendTraceEventLocked(cmd, "queued", "test", "pending", "", now.Add(time.Second))
+	if len(cmd.TraceEvents) != 1 || !cmd.UpdatedAt.Equal(now.Add(time.Second)) || !qd.hasTraceStageLocked(cmd, "queued") || qd.hasTraceStageLocked(nil, "queued") {
+		t.Fatalf("trace de-duplication = %#v", cmd)
+	}
+	copy := copyCommandResultWithTrace(cmd)
+	copy.TraceEvents[0].Stage = "changed"
+	if cmd.TraceEvents[0].Stage == "changed" || copyCommandResultWithTrace(nil) != nil {
+		t.Fatal("trace copy aliases internal state")
+	}
+}
+
+func TestRecentCommandTracesDeduplicateAndUseCreatedAtFallback(t *testing.T) {
+	t.Parallel()
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+	older := &CommandResult{CorrelationID: "same", CreatedAt: time.Now().Add(-time.Minute)}
+	newer := &CommandResult{CorrelationID: "same", CreatedAt: time.Now()}
+	traceOnly := &CommandResult{TraceID: "trace-only", CreatedAt: time.Now().Add(time.Minute)}
+	qd.terminalHistory = []*CommandResult{older, traceOnly}
+	qd.activeCommands["same"] = newer
+	qd.activeCommands["nil"] = nil
+	traces := qd.GetRecentCommandTraces(0)
+	// Results are defensive copies, so compare stable identity instead of pointers.
+	if len(traces) != 2 || traces[0].TraceID != "trace-only" || traces[1].CorrelationID != "same" {
+		t.Fatalf("recent traces = %#v", traces)
+	}
+	qd.recordTraceEvent("", "queued", "test", "", "", time.Now())
+	qd.recordTraceEvent("missing", "queued", "test", "", "", time.Now())
+}

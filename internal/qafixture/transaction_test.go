@@ -257,6 +257,49 @@ func TestCoordinatorNeverEvictsActiveRecoveryAtCapacity(t *testing.T) {
 	}
 }
 
+func TestRollbackRegisteredMutationPersistsCleanupAndRedactsFailures(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		restoreErr error
+		wantRolled bool
+		wantStatus string
+	}{
+		{name: "restored", wantRolled: true, wantStatus: StatusRecoveryRegisterFailed},
+		{name: "restore failed", restoreErr: errors.New("private browser state"), wantRolled: false, wantStatus: StatusRecoveryRollbackFailed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			registry := NewRegistry(2)
+			if err := registry.Add(TransactionRecord{
+				TransactionID: "transaction_rollback", SnapshotID: "opaque_snapshot",
+				ExtensionGeneration: "generation_1", State: TransactionRestoreRequired,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			persisted := false
+			coordinator := mustCoordinator(t, TransactionDeps{
+				NewCorrelationID: func() string { return "correlation_rollback" },
+				Registry:         registry,
+				Persist:          func(*Registry) error { persisted = true; return nil },
+				Restore:          func(context.Context, string) error { return tc.restoreErr },
+				Snapshot:         func(context.Context, WireQAFixture) (string, error) { return "unused", nil },
+				Apply:            func(context.Context, WireQAFixture) (MutationCounts, error) { return MutationCounts{}, nil },
+			})
+			mutations := MutationCounts{Cookies: 2}
+			result, err := coordinator.rollbackRegisteredMutation(
+				time.Second, "transaction_rollback", "correlation_rollback", "opaque_snapshot", mutations, StatusRecoveryRollbackFailed,
+			)
+			assertTransactionError(t, result, err, tc.wantStatus)
+			if result.RolledBack != tc.wantRolled || result.Mutations != mutations {
+				t.Fatalf("rollback result = %+v", result)
+			}
+			if tc.wantRolled && (!persisted || registry.Len() != 0) {
+				t.Fatalf("cleanup persisted=%v registry_len=%d", persisted, registry.Len())
+			}
+			assertNoSecret(t, result, err)
+		})
+	}
+}
+
 func TestNewCoordinatorRejectsMissingTransactionSeams(t *testing.T) {
 	if _, err := NewCoordinator(TransactionDeps{}); err == nil || err.Error() != "incomplete_transaction_dependencies" {
 		t.Fatalf("NewCoordinator error = %v", err)

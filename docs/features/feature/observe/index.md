@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-02
+last_reviewed: 2026-08-03
 code_paths:
   - internal/capture/accessors.go
   - internal/queries/dispatcher_queries.go

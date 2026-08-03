@@ -111,6 +111,33 @@ func TestUsageKey_CommandResultMapsToOriginalCommand(t *testing.T) {
 	}
 }
 
+func TestToolResultPostProcessingRejectsAbsentAndMalformedPayloads(t *testing.T) {
+	t.Parallel()
+	for _, raw := range []json.RawMessage{nil, json.RawMessage(`not-json`)} {
+		if result, ok := parseToolResultForPostProcessing(raw); ok || result != nil {
+			t.Fatalf("parseToolResultForPostProcessing(%q) = %#v, %t", raw, result, ok)
+		}
+		if isToolResultError(raw) {
+			t.Fatalf("isToolResultError(%q) = true", raw)
+		}
+	}
+	for _, test := range []struct {
+		raw     json.RawMessage
+		isError bool
+	}{
+		{raw: json.RawMessage(`{"isError":false}`)},
+		{raw: json.RawMessage(`{"isError":true}`), isError: true},
+	} {
+		result, ok := parseToolResultForPostProcessing(test.raw)
+		if !ok || result == nil || result.IsError != test.isError {
+			t.Fatalf("parseToolResultForPostProcessing(%s) = %#v, %t", test.raw, result, ok)
+		}
+		if got := isToolResultError(test.raw); got != test.isError {
+			t.Fatalf("isToolResultError(%s) = %t", test.raw, got)
+		}
+	}
+}
+
 func TestGetUsageTracker(t *testing.T) {
 	t.Run("happy path returns counter", func(t *testing.T) {
 		handler := createTestToolHandler(t)

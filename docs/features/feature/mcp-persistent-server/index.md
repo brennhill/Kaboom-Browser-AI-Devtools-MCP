@@ -81,6 +81,9 @@ test_paths:
   - cmd/browser-agent/cli_modes_subprocess_test.go
   - cmd/browser-agent/main_connection_adapters_test.go
   - cmd/browser-agent/main_connection_recovery_primitives_test.go
+  - cmd/browser-agent/connection_lifecycle_helpers_test.go
+  - cmd/browser-agent/server_core_unit_test.go
+  - cmd/browser-agent/internal/asynccommand/handler_test.go
   - cmd/browser-agent/server_telemetry_contract_test.go
   - internal/capture/health_reader_owner_test.go
   - cmd/browser-agent/internal/toolrouting/routing_test.go
@@ -94,6 +97,7 @@ test_paths:
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/handler_unit_test.go
   - cmd/browser-agent/handler_unit_telemetry_test.go
+  - cmd/browser-agent/handler_tools_call_usage_test.go
   - cmd/browser-agent/internal/procctl/stop_parse_test.go
   - cmd/browser-agent/internal/procctl/stop_test.go
   - cmd/browser-agent/main_flags_test.go
@@ -116,6 +120,7 @@ test_paths:
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
   - cmd/browser-agent/start_timeout_norace_test.go
+  - cmd/browser-agent/start_timeout_race_test.go
   - cmd/browser-agent/internal/mcphttp/handler_test.go
   - cmd/browser-agent/internal/httpguard/middleware_test.go
   - cmd/browser-agent/internal/connectmode/runner_test.go

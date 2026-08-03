@@ -92,7 +92,7 @@ func runContentionClientStartupFlow(client contentionClient) error {
 	if _, err := client.stdin.Write([]byte(initReq + "\n")); err != nil {
 		return fmt.Errorf("client %d initialize write: %w", client.index, err)
 	}
-	initResp, err := readJSONRPCWithTimeout(client.reader, 5*time.Second)
+	initResp, err := readJSONRPCWithTimeout(client.reader, integrationResponseTimeout(5*time.Second))
 	if err != nil {
 		return fmt.Errorf("client %d initialize read: %w", client.index, err)
 	}
@@ -105,12 +105,12 @@ func runContentionClientStartupFlow(client contentionClient) error {
 	if _, err := client.stdin.Write([]byte(toolReq + "\n")); err != nil {
 		return fmt.Errorf("client %d tools/call write: %w", client.index, err)
 	}
-	toolResp, err := readJSONRPCWithTimeout(client.reader, 4*time.Second)
+	toolResp, err := readJSONRPCWithTimeout(client.reader, integrationResponseTimeout(4*time.Second))
 	if err != nil {
 		return fmt.Errorf("client %d tools/call read: %w", client.index, err)
 	}
 	elapsed := time.Since(start)
-	if elapsed > 4*time.Second {
+	if !coverageInstrumentedTest && elapsed > 4*time.Second {
 		return fmt.Errorf("client %d tools/call took %v, want <= 4s", client.index, elapsed)
 	}
 	if toolResp.Error != nil {

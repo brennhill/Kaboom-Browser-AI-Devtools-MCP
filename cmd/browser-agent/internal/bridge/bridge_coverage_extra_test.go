@@ -6,6 +6,7 @@ package bridge
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -21,6 +22,32 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
+
+func TestForceKillOnPortHandlesLookupFailuresAndSkipsSelf(t *testing.T) {
+	runner := NewRunner(Identity{}, Transport{}, Protocol{}, Lifecycle{
+		FindProcessOnPort: func(int) ([]int, error) { return nil, errors.New("lookup unavailable") },
+	})
+	runner.forceKillOnPort(7890)
+
+	runner.lifecycle.FindProcessOnPort = func(int) ([]int, error) {
+		return []int{os.Getpid(), 99999999}, nil
+	}
+	runner.forceKillOnPort(7890)
+}
+
+func TestNormalizeMCPPayloadRejectsProtocolNoise(t *testing.T) {
+	valid := []byte("  {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}  ")
+	if got := normalizeMCPPayload(valid); string(got) != strings.TrimSpace(string(valid)) {
+		t.Fatalf("normalized valid payload = %q", got)
+	}
+	var response mcp.JSONRPCResponse
+	if err := json.Unmarshal(normalizeMCPPayload([]byte("diagnostic noise")), &response); err != nil {
+		t.Fatalf("invalid payload replacement is not JSON: %v", err)
+	}
+	if response.Error == nil || response.Error.Code != -32603 {
+		t.Fatalf("invalid payload replacement = %+v", response)
+	}
+}
 
 // --- Fast-path event telemetry ---
 

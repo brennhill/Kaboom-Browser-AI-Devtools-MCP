@@ -157,6 +157,26 @@ func TestAppendWarningsToToolResult_NoOp(t *testing.T) {
 	}
 }
 
+func TestResponseBuildersFailClosedOnUnserializablePayloads(t *testing.T) {
+	t.Parallel()
+	result := JSONResponse("cannot encode", make(chan int))
+	var decoded MCPToolResult
+	if err := json.Unmarshal(result, &decoded); err != nil || !decoded.IsError ||
+		len(decoded.Content) != 1 || !strings.Contains(decoded.Content[0].Text, "Failed to serialize response") {
+		t.Fatalf("serialization failure = %s, %v", result, err)
+	}
+	if got := SafeMarshal(make(chan int), `{"fallback":true}`); string(got) != `{"fallback":true}` {
+		t.Fatalf("SafeMarshal fallback = %s", got)
+	}
+	req := JSONRPCRequest{JSONRPC: JSONRPCVersion, ID: 1}
+	if _, stop := ParseArgs(req, json.RawMessage(`not-json`), &map[string]any{}); !stop {
+		t.Fatal("ParseArgs accepted malformed JSON")
+	}
+	var optional map[string]any
+	LenientUnmarshal(nil, &optional)
+	LenientUnmarshal(json.RawMessage(`not-json`), &optional)
+}
+
 func TestImageContentBlock(t *testing.T) {
 	t.Parallel()
 	block := ImageContentBlock("dGVzdA==", "image/png")

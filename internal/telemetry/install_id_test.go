@@ -344,3 +344,28 @@ func TestGetInstallIDReplacesMalformedIdentityOnce(t *testing.T) {
 		t.Fatalf("diagnostics = %#v, want one identity recovery", got)
 	}
 }
+
+func TestLocalIdentityFilesystemReportsBlockedParentDirectories(t *testing.T) {
+	blocked := filepath.Join(t.TempDir(), "blocked")
+	if err := os.WriteFile(blocked, []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	files := localIdentityFilesystem{}
+	path := filepath.Join(blocked, "install_id")
+	if err := files.CreateExclusive(blocked, path, []byte("aabbccddeeff")); err == nil {
+		t.Fatal("CreateExclusive accepted blocked parent")
+	}
+	if err := files.Replace(blocked, path, []byte("aabbccddeeff")); err == nil {
+		t.Fatal("Replace accepted blocked parent")
+	}
+	if err := files.WriteFile(path, []byte("aabbccddeeff")); err == nil {
+		t.Fatal("WriteFile accepted blocked parent")
+	}
+	if validInstallID("zzzzzzzzzzzz") || validInstallID("short") {
+		t.Fatal("invalid install identity was accepted")
+	}
+	previous := stateRecovery
+	defer func() { stateRecovery = previous }()
+	stateRecovery = nil
+	reportInstallIDRecovery("expected absence")
+}

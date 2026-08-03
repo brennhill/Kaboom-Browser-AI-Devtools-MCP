@@ -19,6 +19,22 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 )
 
+func TestExtractBrowserNameUsesPrivacySafeFamilies(t *testing.T) {
+	t.Parallel()
+	for userAgent, want := range map[string]string{
+		"Mozilla Chrome Brave":   "brave",
+		"Mozilla Chrome Edg/120": "edge",
+		"Mozilla Chrome/120":     "chrome",
+		"Mozilla Firefox/120":    "firefox",
+		"Mozilla Safari/17":      "safari",
+		"custom client":          "unknown",
+	} {
+		if got := extractBrowserName(userAgent); got != want {
+			t.Fatalf("extractBrowserName(%q) = %q, want %q", userAgent, got, want)
+		}
+	}
+}
+
 // ============================================
 // Lifecycle observer
 // ============================================

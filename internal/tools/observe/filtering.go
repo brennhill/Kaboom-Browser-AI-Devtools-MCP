@@ -133,8 +133,8 @@ func parseJSONPath(path string) ([]jsonPathToken, error) {
 		switch trimmed[i] {
 		case '.':
 			i++
-			if i >= len(trimmed) {
-				return nil, fmt.Errorf("path cannot end with '.'")
+			if i >= len(trimmed) || trimmed[i] == '.' || trimmed[i] == '[' {
+				return nil, fmt.Errorf("invalid empty segment after '.'")
 			}
 		case '[':
 			endOffset := strings.IndexByte(trimmed[i:], ']')

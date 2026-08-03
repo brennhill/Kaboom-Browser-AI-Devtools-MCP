@@ -125,6 +125,27 @@ func TestRunInstallerConfiguresDetectedFileClients(t *testing.T) {
 	}
 }
 
+func TestRunInstallerAlwaysConfiguresCodex(t *testing.T) {
+	home := t.TempDir()
+	codexHome := filepath.Join(home, "not-yet-created", ".codex")
+	t.Setenv("HOME", home)
+	t.Setenv("CODEX_HOME", codexHome)
+	t.Setenv("PATH", "")
+	t.Setenv("KABOOM_NO_OPEN", "1")
+	t.Setenv("KABOOM_INSTALL_NO_WAIT", "1")
+
+	if err := runInstaller(nil, func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	config, err := os.ReadFile(filepath.Join(codexHome, "config.toml"))
+	if err != nil {
+		t.Fatalf("Codex config was not created: %v", err)
+	}
+	if !strings.Contains(string(config), identity.MCPServerName) {
+		t.Fatalf("Codex config missing managed server: %s", config)
+	}
+}
+
 // TestEnvWithout_RemovesVariable verifies the variable is absent entirely,
 // not merely present-but-empty (which nesting guards still detect).
 func TestEnvWithout_RemovesVariable(t *testing.T) {

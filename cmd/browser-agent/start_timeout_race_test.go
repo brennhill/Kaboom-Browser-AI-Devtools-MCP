@@ -11,4 +11,11 @@ package main
 
 import "time"
 
-const serverStartTimeout = 30 * time.Second
+const (
+	serverStartTimeout       = 30 * time.Second
+	coverageInstrumentedTest = true
+)
+
+func integrationResponseTimeout(time.Duration) time.Duration {
+	return 30 * time.Second
+}

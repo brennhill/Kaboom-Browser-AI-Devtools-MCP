@@ -5,6 +5,7 @@ package connectmode
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,6 +19,48 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+type failingRoundTripper struct{ err error }
+
+func (transport failingRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, transport.err
+}
+
+func TestRunnerSurfacesConnectionAndMalformedResponseFailures(t *testing.T) {
+	exits := 0
+	diagnostics := ""
+	runner := New(Deps{
+		HTTPClient:  &http.Client{Transport: failingRoundTripper{err: errors.New("connection refused")}},
+		Diagnosticf: func(format string, args ...any) { diagnostics += fmt.Sprintf(format, args...) },
+		Exit:        func(int) { exits++ },
+	})
+	if runner.checkHealth("http://127.0.0.1:1", 1) || exits != 1 || !strings.Contains(diagnostics, "Cannot connect") {
+		t.Fatalf("health failure exits=%d diagnostics=%q", exits, diagnostics)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/health":
+			w.WriteHeader(http.StatusOK)
+		case "/mcp":
+			_, _ = w.Write([]byte("not-json"))
+		default:
+			w.WriteHeader(http.StatusNoContent)
+		}
+	}))
+	defer server.Close()
+	var output bytes.Buffer
+	runner = New(Deps{HTTPClient: server.Client(), WriteMCP: func(payload []byte, _ bridge.StdioFraming) { output.Write(payload) }})
+	runner.forwardRequest(server.URL+"/mcp", "client", `{"jsonrpc":"2.0","id":7,"method":"ping"}`)
+	if !strings.Contains(output.String(), "Invalid server response") {
+		t.Fatalf("malformed response output = %q", output.String())
+	}
+	output.Reset()
+	runner.forwardRequest(server.URL+"/mcp", "client", `notification without an id`)
+	if output.Len() != 0 {
+		t.Fatalf("malformed notification unexpectedly emitted response: %q", output.String())
+	}
+}
 
 type serverState struct {
 	mu              sync.Mutex

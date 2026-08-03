@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 
@@ -39,9 +40,8 @@ var (
 	testBinaryOnce sync.Once
 	testBinaryPath string
 	testBinaryErr  error
-	testStateOnce  sync.Once
-	testStateDir   string
-	testStateErr   error
+	testStateMu    sync.Mutex
+	testStateDirs  = make(map[string]string)
 	// testCoverDir is set from GOCOVERDIR env var; when non-empty, instrumented
 	// binaries spawned via startServerCmd write coverage data to this directory.
 	testCoverDir string
@@ -57,10 +57,7 @@ func buildTestBinary(t *testing.T) string {
 	t.Helper()
 	testBinaryOnce.Do(func() {
 		testBinaryPath = filepath.Join(os.TempDir(), "kaboom-test-binary")
-		args := []string{"build", "-cover", "-o", testBinaryPath, "."}
-		if testCoverDir != "" {
-			args = []string{"build", "-cover", "-coverpkg=./...", "-o", testBinaryPath, "."}
-		}
+		args := testBinaryBuildArgs(testBinaryPath, testCoverDir != "")
 		cmd := exec.Command("go", args...) // #nosec G204,G202 -- fixed test build arguments
 		if output, err := cmd.CombinedOutput(); err != nil {
 			testBinaryErr = fmt.Errorf("failed to build kaboom: %v\nOutput: %s", err, output)
@@ -72,26 +69,95 @@ func buildTestBinary(t *testing.T) string {
 	return testBinaryPath
 }
 
+func testBinaryBuildArgs(outputPath string, collectSubprocessCoverage bool) []string {
+	args := []string{"build", "-cover", "-o", outputPath, "."}
+	if collectSubprocessCoverage {
+		// Black-box tests exercise cross-package production paths that package tests
+		// cannot observe. Instrument the full module once in the shared test binary;
+		// isolated per-test state keeps those daemon launches deterministic.
+		args = []string{"build", "-cover", "-coverpkg=./...", "-o", outputPath, "."}
+	}
+	return args
+}
+
+func TestTestBinaryBuildArgsCoversBlackBoxDependencies(t *testing.T) {
+	ordinary := strings.Join(testBinaryBuildArgs("/tmp/kaboom", false), " ")
+	if ordinary != "build -cover -o /tmp/kaboom ." {
+		t.Fatalf("ordinary build args = %q", ordinary)
+	}
+	covered := strings.Join(testBinaryBuildArgs("/tmp/kaboom", true), " ")
+	if covered != "build -cover -coverpkg=./... -o /tmp/kaboom ." {
+		t.Fatalf("covered build args = %q", covered)
+	}
+	if !strings.Contains(covered, "./...") {
+		t.Fatalf("black-box instrumentation must include production dependencies: %q", covered)
+	}
+}
+
 func getTestStateDir(t *testing.T) string {
 	t.Helper()
-	testStateOnce.Do(func() {
-		// Honor an externally provided state dir. The reliability soak gate sets
-		// KABOOM_STATE_DIR so the server spawned by startServerCmd writes its fast-path
-		// telemetry to the same root that `--doctor` later inspects; otherwise every
-		// spawned server gets its own isolated temp dir.
-		if ext := os.Getenv(statecfg.StateDirEnv); ext != "" {
-			testStateDir = ext
-			return
-		}
-		testStateDir, testStateErr = os.MkdirTemp("", "kaboom-test-state-*")
-		if testStateErr != nil {
-			testStateErr = fmt.Errorf("failed to create isolated test state dir: %w", testStateErr)
+	// Honor an externally provided state dir. The reliability soak gate sets
+	// KABOOM_STATE_DIR so the server spawned by startServerCmd writes its fast-path
+	// telemetry to the same root that `--doctor` later inspects.
+	if ext := os.Getenv(statecfg.StateDirEnv); ext != "" {
+		return ext
+	}
+
+	testStateMu.Lock()
+	defer testStateMu.Unlock()
+	if stateDir, ok := testStateDirs[t.Name()]; ok {
+		return stateDir
+	}
+	stateDir, err := os.MkdirTemp("", "kaboom-test-state-*")
+	if err != nil {
+		t.Fatalf("create isolated test state directory: %v", err)
+	}
+	testStateDirs[t.Name()] = stateDir
+	t.Cleanup(func() {
+		testStateMu.Lock()
+		delete(testStateDirs, t.Name())
+		testStateMu.Unlock()
+		if err := removeTestStateDir(stateDir); err != nil {
+			t.Errorf("remove isolated test state directory: %v", err)
 		}
 	})
-	if testStateErr != nil {
-		t.Fatalf("getTestStateDir: %v", testStateErr)
+	return stateDir
+}
+
+func removeTestStateDir(stateDir string) error {
+	var err error
+	backoff := 10 * time.Millisecond
+	for attempt := 0; attempt < 6; attempt++ {
+		if err = os.RemoveAll(stateDir); err == nil {
+			return nil
+		}
+		time.Sleep(backoff)
+		backoff *= 2
 	}
-	return testStateDir
+	return err
+}
+
+func TestGetTestStateDirIsolatesUnrelatedTests(t *testing.T) {
+	if os.Getenv(statecfg.StateDirEnv) != "" {
+		t.Skip("external state directory intentionally overrides test isolation")
+	}
+	paths := make(chan string, 2)
+	for _, name := range []string{"first", "second"} {
+		name := name
+		t.Run(name, func(t *testing.T) {
+			first := getTestStateDir(t)
+			if second := getTestStateDir(t); second != first {
+				t.Fatalf("same test received different state directories: %q != %q", first, second)
+			}
+			paths <- first
+		})
+	}
+	close(paths)
+	first := <-paths
+	second := <-paths
+	if first == second {
+		t.Fatalf("unrelated tests shared state directory %q", first)
+	}
 }
 
 // startServerCmd creates an exec.Cmd for the test binary with GOCOVERDIR

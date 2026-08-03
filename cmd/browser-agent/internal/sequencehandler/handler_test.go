@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
@@ -163,6 +166,109 @@ func TestHandlerReportsCanonicalStoreFaultsWithoutPrivateState(t *testing.T) {
 				t.Fatal("Doctor diagnostic leaked private persisted state")
 			}
 		})
+	}
+}
+
+func TestReplayExecutesSavedStepsAndRecordsOutcome(t *testing.T) {
+	t.Parallel()
+	store := memoryStore{
+		"sequences/journey": []byte(`{"name":"journey","step_count":3,"steps":[{"what":"click"},{"what":"type"},{"action":"scroll"}]}`),
+	}
+	var recorded bool
+	handler := New(Deps{
+		Store:    store,
+		ReplayMu: &sync.Mutex{},
+		Interact: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			var step struct {
+				What string `json:"what"`
+			}
+			_ = json.Unmarshal(args, &step)
+			if step.What == "type" {
+				return mcp.Fail(req, mcp.ErrInvalidParam, "typing failed", "retry")
+			}
+			return mcp.Succeed(req, "queued", map[string]any{"correlation_id": step.What + "-id"})
+		},
+		WaitForCommand: func(id string, _ time.Duration) (*queries.CommandResult, bool) {
+			if id == "click-id" {
+				return &queries.CommandResult{Status: "complete"}, true
+			}
+			return nil, false
+		},
+		RecordAction: func(action, _ string, fields map[string]any) {
+			recorded = action == "replay_sequence" && fields["name"] == "journey"
+		},
+	})
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	response := handler.Replay(req, json.RawMessage(`{"name":"journey","step_timeout_ms":1}`))
+	if responseIsError(response) || !containsResult(response, `steps_executed\":3`) ||
+		!containsResult(response, `steps_failed\":1`) || !containsResult(response, `steps_queued\":1`) {
+		t.Fatalf("Replay() = %s", response.Result)
+	}
+	if !recorded {
+		t.Fatal("Replay() did not record the replay action")
+	}
+}
+
+func TestReplayHonorsOverridesStopAndFailFast(t *testing.T) {
+	t.Parallel()
+	store := memoryStore{
+		"sequences/journey": []byte(`{"name":"journey","step_count":3,"steps":[{"what":"first"},{"what":"second"},{"what":"third"}]}`),
+	}
+	var actions []string
+	handler := New(Deps{
+		Store:    store,
+		ReplayMu: &sync.Mutex{},
+		Interact: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			action := actionName(args)
+			actions = append(actions, action)
+			if action == "replacement" {
+				return mcp.Fail(req, mcp.ErrInvalidParam, "stopped", "fix step")
+			}
+			return mcp.Succeed(req, "ok", map[string]any{"status": "ok"})
+		},
+	})
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	response := handler.Replay(req, json.RawMessage(`{
+		"name":"journey",
+		"override_steps":[null,{"what":"replacement"},null],
+		"continue_on_error":false,
+		"stop_after_step":3
+	}`))
+	if responseIsError(response) || !containsResult(response, `status\":\"error`) || len(actions) != 2 {
+		t.Fatalf("Replay() = %s, actions = %#v", response.Result, actions)
+	}
+}
+
+func TestReplayRejectsInvalidOrUnavailableExecution(t *testing.T) {
+	t.Parallel()
+	store := memoryStore{
+		"sequences/journey": []byte(`{"name":"journey","step_count":2,"steps":[{"what":"first"},{"what":"second"}]}`),
+	}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	for name, handler := range map[string]*Handler{
+		"missing dependencies": New(Deps{Store: store}),
+		"override mismatch": New(Deps{Store: store, ReplayMu: &sync.Mutex{}, Interact: func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+			return mcp.Succeed(req, "ok", nil)
+		}}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			args := json.RawMessage(`{"name":"journey"}`)
+			if name == "override mismatch" {
+				args = json.RawMessage(`{"name":"journey","override_steps":[null]}`)
+			}
+			if response := handler.Replay(req, args); !responseIsError(response) {
+				t.Fatalf("Replay() = %s, want error", response.Result)
+			}
+		})
+	}
+	locked := &sync.Mutex{}
+	locked.Lock()
+	defer locked.Unlock()
+	handler := New(Deps{Store: store, ReplayMu: locked, Interact: func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+		return mcp.Succeed(req, "ok", nil)
+	}})
+	if response := handler.Replay(req, json.RawMessage(`{"name":"journey"}`)); !responseIsError(response) {
+		t.Fatalf("Replay() = %s, want busy error", response.Result)
 	}
 }
 

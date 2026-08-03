@@ -4,10 +4,95 @@
 package observe
 
 import (
+	"encoding/json"
+	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 )
+
+func TestNetworkBodyHandlerFiltersTransformsAndExplainsEmptyResults(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+		{URL: "https://example.test/api/users", Method: "GET", Status: 200, Timestamp: time.Now().Format(time.RFC3339), ResponseBody: `{"data":{"id":7}}`},
+		{URL: "https://example.test/api/admin", Method: "POST", Status: 503, Timestamp: time.Now().Format(time.RFC3339), ResponseBody: `{"error":"down"}`},
+	})
+	deps := pageStateDeps(cap)
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 7}
+	response := decodePageStateToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"url":"users","method":"get","status_min":200,"status_max":299,"body_path":"data.id"}`)))
+	if response.IsError || !strings.Contains(response.Content[0].Text, `"response_body":"7"`) {
+		t.Fatalf("filtered network bodies = %+v", response)
+	}
+	response = decodePageStateToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"url":"missing","summary":true}`)))
+	if response.IsError || !strings.Contains(response.Content[0].Text, "hint") {
+		t.Fatalf("empty body summary = %+v", response)
+	}
+	response = decodePageStateToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"body_path":"data["}`)))
+	if !response.IsError {
+		t.Fatalf("malformed body filter = %+v", response)
+	}
+}
+
+func TestWebSocketHandlerFiltersAndSummarizesTraffic(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	cap.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
+		{ID: "one", URL: "wss://example.test/socket", Direction: "incoming", Event: "message", Timestamp: time.Now().Format(time.RFC3339)},
+		{ID: "two", URL: "wss://other.test/socket", Direction: "outgoing", Event: "message", Timestamp: time.Now().Format(time.RFC3339)},
+	})
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 8}
+	deps := pageStateDeps(cap)
+	result := decodePageStateToolResult(t, GetWSEvents(deps, req, json.RawMessage(`{"url":"example","connection_id":"one","direction":"incoming"}`)))
+	if result.IsError || !strings.Contains(result.Content[0].Text, `"count":1`) {
+		t.Fatalf("filtered websocket events = %+v", result)
+	}
+	result = decodePageStateToolResult(t, GetWSEvents(deps, req, json.RawMessage(`{"url":"missing","direction":"sideways","summary":true}`)))
+	if result.IsError || !strings.Contains(result.Content[0].Text, "param_hint") || !strings.Contains(result.Content[0].Text, "hint") {
+		t.Fatalf("websocket summary = %+v", result)
+	}
+}
+
+func TestWaterfallAndWebSocketStatusHandlersExposeOperationalShapes(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
+		{URL: "https://example.test/app.js", InitiatorType: "script", Duration: 12, Timestamp: time.Now()},
+		{URL: "https://other.test/image.png", InitiatorType: "img", Duration: 5, Timestamp: time.Now()},
+	}, "https://example.test")
+	cap.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
+		{ID: "active", URL: "wss://example.test/socket", Event: "open", Timestamp: time.Now().Format(time.RFC3339)},
+		{ID: "closed", URL: "wss://other.test/socket", Event: "open", Timestamp: time.Now().Add(-time.Second).Format(time.RFC3339)},
+		{ID: "closed", URL: "wss://other.test/socket", Event: "close", Timestamp: time.Now().Format(time.RFC3339)},
+	})
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 9}
+	deps := pageStateDeps(cap)
+	for _, args := range []json.RawMessage{json.RawMessage(`{"url":"example"}`), json.RawMessage(`{"url":"example","summary":true}`)} {
+		result := decodePageStateToolResult(t, GetNetworkWaterfall(deps, req, args))
+		if result.IsError || !strings.Contains(result.Content[0].Text, `"count":1`) {
+			t.Fatalf("waterfall result = %+v", result)
+		}
+	}
+	if result := decodePageStateToolResult(t, GetWSStatus(deps, req, json.RawMessage(`not-json`))); !result.IsError {
+		t.Fatal("websocket status accepted invalid JSON")
+	}
+	result := decodePageStateToolResult(t, GetWSStatus(deps, req, json.RawMessage(`{"summary":true}`)))
+	if result.IsError || !strings.Contains(result.Content[0].Text, "active_connection_ids") || !strings.Contains(result.Content[0].Text, "closed_connection_ids") {
+		t.Fatalf("websocket status summary = %+v", result)
+	}
+	empty := capture.NewCapture()
+	t.Cleanup(empty.Close)
+	result = decodePageStateToolResult(t, GetWSStatus(pageStateDeps(empty), req, nil))
+	if result.IsError || !strings.Contains(result.Content[0].Text, "hint") {
+		t.Fatalf("empty websocket status = %+v", result)
+	}
+}
 
 func TestWaterfallSummaryEntry_CompactFields(t *testing.T) {
 	t.Parallel()

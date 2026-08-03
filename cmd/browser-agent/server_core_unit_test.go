@@ -6,8 +6,43 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
+
+func TestConfigPathsInitializeLocalStateAndUploadBoundary(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv(state.StateDirEnv, "")
+	previousSecurity := uploadSecurityConfig
+	t.Cleanup(func() { uploadSecurityConfig = previousSecurity })
+
+	initUploadSecurity(false, "", multiFlag{"private-*"})
+	if uploadSecurityConfig == nil {
+		t.Fatal("default upload security was not initialized")
+	}
+	if _, err := os.Stat(filepath.Join(home, "kaboom-upload-dir")); err != nil {
+		t.Fatalf("default upload directory: %v", err)
+	}
+
+	relative := filepath.Join(".", "test-state")
+	normalizeStateDir(&relative)
+	if !filepath.IsAbs(relative) || os.Getenv(state.StateDirEnv) != relative {
+		t.Fatalf("normalized state directory = %q env=%q", relative, os.Getenv(state.StateDirEnv))
+	}
+
+	explicit := filepath.Join(t.TempDir(), "explicit")
+	if err := applyParallelModeStateDir(true, &explicit); err != nil || explicit == "" {
+		t.Fatalf("explicit parallel state directory = %q, err=%v", explicit, err)
+	}
+	logFile := ""
+	resolveDefaultLogFile(&logFile)
+	if logFile == "" || !strings.HasSuffix(logFile, "kaboom.jsonl") {
+		t.Fatalf("default log file = %q", logFile)
+	}
+}
 
 func TestNewServer_FallbacksWhenLogDirUnwritable(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "readonly")

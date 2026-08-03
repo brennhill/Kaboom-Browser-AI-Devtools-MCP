@@ -5,6 +5,7 @@ package verification
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -31,6 +32,38 @@ func TestStoreRoundTripsContentAddressedArtifact(t *testing.T) {
 	}
 	if filepath.Ext(entries[0].Name()) != ".json" {
 		t.Fatalf("unexpected artifact filename %q", entries[0].Name())
+	}
+}
+
+func TestStoreSurfacesLocalPersistenceFailures(t *testing.T) {
+	artifact := mustEvidence(t, EvidenceInput{Kind: "dom", Tool: "observe", Action: "dom", CorrelationID: "qa-io", CapturedAt: time.Now().UTC(), Content: map[string]any{"visible": true}})
+	tampered := artifact
+	tampered.Content = []byte(`{"visible":false}`)
+	if err := (Store{Dir: t.TempDir()}).Save(tampered); err == nil || !strings.Contains(err.Error(), "content address") {
+		t.Fatalf("tampered Save error = %v", err)
+	}
+	if err := (Store{}).Save(artifact); err == nil || !strings.Contains(err.Error(), "directory is required") {
+		t.Fatalf("missing-directory Save error = %v", err)
+	}
+
+	blockingFile := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(blockingFile, []byte("private"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := (Store{Dir: blockingFile}).Save(artifact); err == nil || !strings.Contains(err.Error(), "inspect evidence artifact") {
+		t.Fatalf("blocked-directory Save error = %v", err)
+	}
+
+	store := Store{Dir: t.TempDir()}
+	path, err := store.path(artifact.Ref.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(strings.Repeat("x", maxStoredArtifactBytes+1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Load(artifact.Ref.ID); err == nil || !strings.Contains(err.Error(), "size limit") {
+		t.Fatalf("oversized Load error = %v", err)
 	}
 }
 

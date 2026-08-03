@@ -216,15 +216,14 @@ func runInstaller(forceCleanup func() error, startDaemon func(string), targetArg
 		// cwd-relative junk paths, so skip the file-based configs entirely.
 		diag.Printf("  ⚠️  Could not determine home directory (%v); skipping file-based MCP client configs\n", homeErr)
 	} else {
+		// Codex is always configured. Unlike the optional desktop clients below,
+		// its config directory is safe to create before Codex's first launch.
 		codexPath := codexConfigPath(home)
-		_, codexDirErr := os.Stat(filepath.Dir(codexPath))
-		if targets.codexOnly || codexDirErr == nil {
-			if err := mergeCodexConfig(codexPath, exe); err != nil {
-				telemetry.AppError("install_config_error")
-				diag.Printf("  ⚠️  Codex: %v\n", err)
-			} else {
-				clientsConfigured++
-			}
+		if err := mergeCodexConfig(codexPath, exe); err != nil {
+			telemetry.AppError("install_config_error")
+			diag.Printf("  ⚠️  Codex: %v\n", err)
+		} else {
+			clientsConfigured++
 		}
 		if !targets.codexOnly {
 			for _, cfg := range fileConfigTargets(home) {

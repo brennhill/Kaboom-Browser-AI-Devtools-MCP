@@ -233,6 +233,65 @@ func TestHandlerMarksSnapshotFailureRecoveredBecauseNoStateWasMutated(t *testing
 	}
 }
 
+func TestHandlerRejectsIncompleteDependenciesAndMalformedExtensionResults(t *testing.T) {
+	t.Parallel()
+	if handler, err := New(Deps{}); err == nil || handler != nil {
+		t.Fatalf("New() = %#v, %v", handler, err)
+	}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	if resp := mustHandler(t, nil).Handle(req, json.RawMessage(`{"fixture_action":"restore"}`)); !strings.Contains(string(resp.Result), "missing_param") {
+		t.Fatalf("missing transaction response = %s", resp.Result)
+	}
+	if resp := mustHandler(t, nil).Handle(req, json.RawMessage(`{"fixture_action":"validate"}`)); !strings.Contains(string(resp.Result), "missing_param") {
+		t.Fatalf("missing fixture response = %s", resp.Result)
+	}
+	for name, commandResult := range map[string]json.RawMessage{
+		"snapshot": json.RawMessage(`{"success":true}`),
+		"apply":    json.RawMessage(`{"success":false}`),
+	} {
+		t.Run(name, func(t *testing.T) {
+			handler := mustHandler(t, func(_ context.Context, command string, _ json.RawMessage, _ time.Duration) (json.RawMessage, error) {
+				if (name == "snapshot" && command == "environment_transaction_snapshot") ||
+					(name == "apply" && command == "environment_transaction_apply") {
+					return commandResult, nil
+				}
+				if command == "environment_transaction_snapshot" {
+					return json.RawMessage(`{"success":true,"snapshot_id":"opaque"}`), nil
+				}
+				if command == "environment_transaction_restore" {
+					return json.RawMessage(`{"success":true,"restored":true}`), nil
+				}
+				return nil, errors.New("unexpected")
+			})
+			resp := handler.Handle(req, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1}}`))
+			if !strings.Contains(string(resp.Result), "failed") {
+				t.Fatalf("%s malformed result response = %s", name, resp.Result)
+			}
+		})
+	}
+}
+
+func TestHandlerRejectsInvalidRestoreAcknowledgement(t *testing.T) {
+	handler := mustHandler(t, func(_ context.Context, command string, _ json.RawMessage, _ time.Duration) (json.RawMessage, error) {
+		switch command {
+		case "environment_transaction_snapshot":
+			return json.RawMessage(`{"success":true,"snapshot_id":"opaque"}`), nil
+		case "environment_transaction_apply":
+			return json.RawMessage(`{"success":true,"mutations":{}}`), nil
+		case "environment_transaction_restore":
+			return json.RawMessage(`{"success":true,"restored":false}`), nil
+		default:
+			return nil, errors.New("unexpected")
+		}
+	})
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 3}
+	_ = handler.Handle(req, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1}}`))
+	resp := handler.Handle(req, json.RawMessage(`{"fixture_action":"restore","transaction_id":"transaction_test_1"}`))
+	if !strings.Contains(string(resp.Result), "restore failed") {
+		t.Fatalf("invalid restore acknowledgement = %s", resp.Result)
+	}
+}
+
 func mustHandler(t *testing.T, execute CommandExecutor) *Handler {
 	return mustHandlerWithDiagnostics(t, execute, statediag.NewCollector())
 }

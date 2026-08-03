@@ -327,6 +327,44 @@ func TestSessionDirReportsMetadataWriteFailure(t *testing.T) {
 	}
 }
 
+func TestSessionDirClassifiesEveryPersistenceBoundary(t *testing.T) {
+	privateErr := errors.New("private persisted value")
+	tests := []struct {
+		name string
+		want string
+		edit func(*sessionDirectoryOperations, string)
+	}{
+		{name: "home", want: "session_home_directory_failed", edit: func(ops *sessionDirectoryOperations, _ string) {
+			ops.userHomeDir = func() (string, error) { return "", privateErr }
+		}},
+		{name: "mkdir", want: "session_directory_create_failed", edit: func(ops *sessionDirectoryOperations, _ string) {
+			ops.mkdirAll = func(string, os.FileMode) error { return privateErr }
+		}},
+		{name: "stat", want: "session_metadata_stat_failed", edit: func(ops *sessionDirectoryOperations, _ string) {
+			ops.stat = func(string) (os.FileInfo, error) { return nil, privateErr }
+		}},
+		{name: "read", want: "session_metadata_read_failed", edit: func(ops *sessionDirectoryOperations, home string) {
+			ops.stat = func(string) (os.FileInfo, error) { return os.Stat(home) }
+			ops.readFile = func(string) ([]byte, error) { return nil, privateErr }
+		}},
+		{name: "working directory", want: "session_working_directory_failed", edit: func(ops *sessionDirectoryOperations, _ string) {
+			ops.getwd = func() (string, error) { return "", privateErr }
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			ops := defaultSessionDirectoryOperations()
+			ops.userHomeDir = func() (string, error) { return home, nil }
+			tc.edit(&ops, home)
+			path, err := sessionDirWithOperations(ops)
+			if path != "" || err == nil || err.Error() != tc.want || strings.Contains(err.Error(), "private") {
+				t.Fatalf("sessionDirWithOperations() = %q, %v", path, err)
+			}
+		})
+	}
+}
+
 func TestReadTouchesRejectsMalformedAndOversizedRecords(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, touchesFile)

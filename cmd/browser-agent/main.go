@@ -202,6 +202,6 @@ MCP Configuration:
   kaboom-agentic-browser --config      Show configuration and detected clients
   kaboom-agentic-browser --doctor      Run diagnostics on installed configs
 
-  Supported clients: Claude Code, Claude Desktop, Cursor, Windsurf, VS Code
+  Supported clients: Codex, Claude Code, Claude Desktop, Cursor, Windsurf, VS Code
 `)
 }

@@ -8,6 +8,18 @@ import (
 	"time"
 )
 
+func TestCompareShapesReportsTopLevelTypeChanges(t *testing.T) {
+	t.Parallel()
+	validator := &APIContractValidator{}
+	if violations := validator.compareShapes("GET /items", []any{}, []any{}, nil); len(violations) != 0 {
+		t.Fatalf("matching top-level types = %#v", violations)
+	}
+	violations := validator.compareShapes("GET /items", map[string]any{"items": "array"}, []any{}, nil)
+	if len(violations) != 1 || violations[0].ViolationType != "type_change" || violations[0].ExpectedType == violations[0].ActualType {
+		t.Fatalf("top-level type change = %#v", violations)
+	}
+}
+
 // ============================================
 // describeType — covers $array map and default branches
 // ============================================

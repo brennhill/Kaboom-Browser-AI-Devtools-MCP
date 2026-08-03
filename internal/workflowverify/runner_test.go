@@ -101,6 +101,52 @@ func TestRunnerRejectsIncompleteWorkflow(t *testing.T) {
 	}
 }
 
+func TestRunnerValidatesEveryWorkflowIdentityBoundary(t *testing.T) {
+	t.Parallel()
+	tests := map[string]func(*Workflow){
+		"missing workflow id":      func(w *Workflow) { w.ID = "" },
+		"missing correlation id":   func(w *Workflow) { w.CorrelationID = "" },
+		"missing preconditions":    func(w *Workflow) { w.Preconditions = nil },
+		"missing step id":          func(w *Workflow) { w.Steps[0].ID = "" },
+		"missing step description": func(w *Workflow) { w.Steps[0].Description = "" },
+		"missing invariants":       func(w *Workflow) { w.Steps[0].Invariants = nil },
+		"missing cleanup id":       func(w *Workflow) { w.Cleanup[0].ID = "" },
+		"missing invariant id":     func(w *Workflow) { w.Preconditions[0].ID = "" },
+		"missing invariant text":   func(w *Workflow) { w.Preconditions[0].Description = "" },
+		"duplicate invariant": func(w *Workflow) {
+			w.Steps[0].Invariants[0].ID = w.Preconditions[0].ID
+		},
+	}
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			workflow := validWorkflow()
+			mutate(&workflow)
+			if _, err := (Runner{Executor: &fakeExecutor{}}).Run(context.Background(), workflow); err == nil {
+				t.Fatal("invalid workflow was accepted")
+			}
+		})
+	}
+	if _, err := (Runner{}).Run(context.Background(), validWorkflow()); err == nil {
+		t.Fatal("workflow without executor was accepted")
+	}
+}
+
+func TestRunnerNormalizesCheckErrorsAndBlankFailureReasons(t *testing.T) {
+	workflow := validWorkflow()
+	fake := &fakeExecutor{checkErr: map[string]error{"ready": errors.New("readiness unavailable")}}
+	report, err := (Runner{Executor: fake}).Run(context.Background(), workflow)
+	if err != nil || report.FirstFailure == nil || report.FirstFailure.Reason != "readiness unavailable" {
+		t.Fatalf("check error report = %#v, %v", report, err)
+	}
+
+	report = Report{Verdict: verification.VerdictPass}
+	runner := Runner{Executor: &fakeExecutor{}}
+	failure := runner.checkInvariant(context.Background(), "invariant", "step", Invariant{ID: "blank"}, &report)
+	if failure == nil || failure.Reason != "invariant was not satisfied" {
+		t.Fatalf("blank failure = %#v", failure)
+	}
+}
+
 func validWorkflow() Workflow {
 	return Workflow{
 		ID: "checkout-flow", CorrelationID: "workflow-123",
@@ -120,6 +166,7 @@ func evidenceRefs(kind string, count int) []verification.EvidenceRef {
 
 type fakeExecutor struct {
 	checks                     map[string]CheckResult
+	checkErr                   map[string]error
 	executeErr                 error
 	cleanupErr                 map[string]error
 	diagnostics                DiagnosticBundle
@@ -129,7 +176,7 @@ type fakeExecutor struct {
 }
 
 func (f *fakeExecutor) Check(_ context.Context, invariant Invariant) (CheckResult, error) {
-	return f.checks[invariant.ID], nil
+	return f.checks[invariant.ID], f.checkErr[invariant.ID]
 }
 
 func (f *fakeExecutor) Execute(ctx context.Context, step Step) error {

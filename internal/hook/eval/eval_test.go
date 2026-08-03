@@ -190,3 +190,123 @@ func TestTruncate(t *testing.T) {
 		t.Fatalf("truncate long string = %q, want long...", got)
 	}
 }
+
+func TestValidateReportsEveryContractFailure(t *testing.T) {
+	t.Parallel()
+	failures := validate(Expectation{
+		HasOutput: false, Contains: []string{"required"}, NotContains: []string{"secret"},
+		MaxTokens: 1, MaxLatencyMs: 1,
+	}, "secret and too long", 10*time.Millisecond, true)
+	wantFailures := 5
+	if raceDetectorActive {
+		wantFailures-- // Latency contracts are intentionally disabled under race instrumentation.
+	}
+	if len(failures) != wantFailures {
+		t.Fatalf("validate failures = %#v", failures)
+	}
+	if got := validate(Expectation{HasOutput: true}, "", 0, false); len(got) != 1 || !strings.Contains(got[0], "expected output") {
+		t.Fatalf("missing-output failures = %#v", got)
+	}
+}
+
+func TestResolveToolInputPathsHandlesMalformedMissingAndAbsolutePaths(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	for _, raw := range []json.RawMessage{json.RawMessage(`not-json`), json.RawMessage(`{"other":true}`), json.RawMessage(`{"file_path":7}`)} {
+		if got := resolveToolInputPaths(raw, root); string(got) != string(raw) {
+			t.Fatalf("resolveToolInputPaths(%s) = %s", raw, got)
+		}
+	}
+	absolute := filepath.Join(root, "already.go")
+	raw, _ := json.Marshal(map[string]string{"file_path": absolute})
+	if got := resolveToolInputPaths(raw, root); !strings.Contains(string(got), absolute) {
+		t.Fatalf("absolute path changed: %s", got)
+	}
+	relative := json.RawMessage(`{"file_path":"nested/file.go"}`)
+	if got := resolveToolInputPaths(relative, root); !strings.Contains(string(got), filepath.Join(root, "nested", "file.go")) {
+		t.Fatalf("relative path was not resolved: %s", got)
+	}
+}
+
+func TestRunFixtureUsesExplicitRootAndUnknownHookIsSilent(t *testing.T) {
+	t.Parallel()
+	fix := &Fixture{
+		Hook: "unknown", ProjectRoot: "/explicit/project",
+		Input:  FixtureInput{ToolName: "Read", ToolInput: json.RawMessage(`{}`)},
+		Expect: Expectation{HasOutput: false},
+	}
+	result := runFixture(fix, "/repository", contractEvaluation, func(name string, _ hook.Input, root, _ string) string {
+		if name != "unknown" || root != "/explicit/project" {
+			t.Fatalf("runner inputs = %q, %q", name, root)
+		}
+		return runHook(name, hook.Input{}, root, "")
+	})
+	if !result.Passed || result.Output != "" {
+		t.Fatalf("unknown hook result = %#v", result)
+	}
+}
+
+func TestLoadFixturesHandlesMissingSkippedMalformedAndUnreadableEntries(t *testing.T) {
+	original := fixtureDirs
+	t.Cleanup(func() { fixtureDirs = original })
+	root := t.TempDir()
+
+	fixtureDirs = []string{"missing"}
+	fixtures, err := LoadFixtures(root)
+	if err != nil || len(fixtures) != 0 {
+		t.Fatalf("missing fixture directory = %#v, %v", fixtures, err)
+	}
+
+	fixtureDirs = []string{"blocked"}
+	if err := os.WriteFile(filepath.Join(root, "blocked"), []byte("file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadFixtures(root); err == nil {
+		t.Fatal("non-directory fixture root was accepted")
+	}
+
+	fixtureDirs = []string{"cases"}
+	cases := filepath.Join(root, "cases")
+	if err := os.Mkdir(cases, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.Mkdir(filepath.Join(cases, "nested.json"), 0o700)
+	_ = os.WriteFile(filepath.Join(cases, "notes.txt"), []byte("ignored"), 0o600)
+	_ = os.WriteFile(filepath.Join(cases, "broken.json"), []byte(`not-json`), 0o600)
+	if _, err := LoadFixtures(root); err == nil || !strings.Contains(err.Error(), "parse fixture") {
+		t.Fatalf("malformed fixture error = %v", err)
+	}
+
+	if err := os.Remove(filepath.Join(cases, "broken.json")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(cases, "absent"), filepath.Join(cases, "unreadable.json")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadFixtures(root); err == nil || !strings.Contains(err.Error(), "read fixture") {
+		t.Fatalf("unreadable fixture error = %v", err)
+	}
+}
+
+func TestAggregateCountsFailures(t *testing.T) {
+	t.Parallel()
+	report := Aggregate([]*Result{{Fixture: &Fixture{Hook: "quality-gate"}, Passed: false, LatencyMs: 3}})
+	if report.Total != 1 || report.Failed != 1 || report.Passed != 0 {
+		t.Fatalf("aggregate = %#v", report)
+	}
+}
+
+func TestEvalFilesystemFailuresFallBackSafely(t *testing.T) {
+	blocked := filepath.Join(t.TempDir(), "blocked")
+	if err := os.WriteFile(blocked, []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	raw := json.RawMessage(`{"file_path":"EVAL_OVERSIZED_FILE"}`)
+	if got, cleanup := materializeFixtureFile(raw, blocked); cleanup != nil || string(got) != string(raw) {
+		t.Fatalf("materialize blocked path = %s, cleanup=%v", got, cleanup != nil)
+	}
+	t.Setenv("TMPDIR", blocked)
+	if output := runHook("session-track", hook.Input{ToolName: "Read", ToolInput: json.RawMessage(`{}`)}, "", ""); output != "" {
+		t.Fatalf("session-track tempdir failure output = %q", output)
+	}
+}

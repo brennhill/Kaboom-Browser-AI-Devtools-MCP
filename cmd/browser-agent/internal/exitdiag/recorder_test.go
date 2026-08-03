@@ -82,6 +82,25 @@ func TestWriteDiagnosticToCandidates_FallsBackOnInvalidPath(t *testing.T) {
 	}
 }
 
+func TestWriteDiagnosticToCandidatesClassifiesUnavailableDestinations(t *testing.T) {
+	if _, err := writeDiagnosticToCandidates(nil, map[string]any{"event": "test"}); err == nil || !strings.Contains(err.Error(), "no crash-log candidates") {
+		t.Fatalf("empty candidates error = %v", err)
+	}
+	if _, err := writeDiagnosticToCandidates([]string{""}, map[string]any{"event": "test"}); err == nil || !strings.Contains(err.Error(), "no writable") {
+		t.Fatalf("blank candidate error = %v", err)
+	}
+	if _, err := writeDiagnosticToCandidates([]string{filepath.Join(t.TempDir(), "unused")}, map[string]any{"invalid": make(chan int)}); err == nil {
+		t.Fatal("unencodable diagnostic entry was accepted")
+	}
+	blocker := filepath.Join(t.TempDir(), "blocker")
+	if err := os.WriteFile(blocker, []byte("private"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writeDiagnosticToCandidates([]string{filepath.Join(blocker, "crash.log")}, map[string]any{"event": "test"}); err == nil {
+		t.Fatal("unwritable diagnostic destination was accepted")
+	}
+}
+
 func TestAppendExitDiagnostic_UsesStateCrashPath(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv(state.StateDirEnv, stateDir)

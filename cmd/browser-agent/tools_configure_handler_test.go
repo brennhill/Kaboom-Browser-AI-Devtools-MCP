@@ -5,12 +5,92 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
+
+func TestExecuteQAFixtureCommandHonorsConnectionCancellationAndQueuePressure(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := executeQAFixtureCommand(ctx, &ToolHandler{}, "qa", nil, time.Second); err != context.Canceled {
+		t.Fatalf("cancelled context error = %v", err)
+	}
+
+	disconnected := capture.NewCapture()
+	defer disconnected.Close()
+	if _, err := executeQAFixtureCommand(context.Background(), &ToolHandler{capture: disconnected}, "qa", nil, time.Second); err != context.Canceled {
+		t.Fatalf("disconnected extension error = %v", err)
+	}
+
+	connected := capture.NewCapture()
+	defer connected.Close()
+	syncRequest := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"fixture-test"}`))
+	capture.NewSyncHandler(connected).HandleSync(httptest.NewRecorder(), syncRequest)
+	for i := 0; i < queries.MaxPendingQueries; i++ {
+		if _, err := connected.Queries().CreatePendingQuery(queries.PendingQuery{Type: "occupied"}); err != nil {
+			t.Fatalf("fill command queue: %v", err)
+		}
+	}
+	if _, err := executeQAFixtureCommand(context.Background(), &ToolHandler{capture: connected}, "qa", nil, time.Second); err == nil {
+		t.Fatal("saturated command queue accepted QA fixture command")
+	}
+}
+
+func TestExecuteQAFixtureCommandReturnsExtensionResult(t *testing.T) {
+	cap := capture.NewCapture()
+	defer cap.Close()
+	syncRequest := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"fixture-test"}`))
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), syncRequest)
+
+	go func() {
+		deadline := time.Now().Add(time.Second)
+		for time.Now().Before(deadline) {
+			pending := cap.Queries().GetPendingQueries()
+			if len(pending) > 0 {
+				cap.Queries().SetQueryResultWithClient(pending[0].ID, json.RawMessage(`{"restored":true}`), "")
+				return
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}()
+	result, err := executeQAFixtureCommand(context.Background(), &ToolHandler{capture: cap}, "qa_restore", json.RawMessage(`{"fixture":"corrupt"}`), time.Second)
+	if err != nil || string(result) != `{"restored":true}` {
+		t.Fatalf("fixture command result = %s, err = %v", result, err)
+	}
+}
+
+func TestHandleConfigureDoctorReportsReadinessAndExtraChecks(t *testing.T) {
+	cap := capture.NewCapture()
+	defer cap.Close()
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 42}
+	resp := handleConfigureDoctor(
+		health.NewMetrics(), cap, nil,
+		func() string { return "inspect local lifecycle logs" },
+		[]health.DoctorCheck{{Name: "fixture_recovery", Status: "warn", Detail: "recovery pending"}},
+		req,
+	)
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("decode doctor result: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("doctor returned error: %s", result.Content[0].Text)
+	}
+	for _, want := range []string{"Doctor: unhealthy", "ready_for_interaction", "fixture_recovery", "server_uptime", "inspect local lifecycle logs"} {
+		if !strings.Contains(result.Content[0].Text, want) {
+			t.Errorf("doctor response missing %q: %s", want, result.Content[0].Text)
+		}
+	}
+}
 
 type shutdownFixtureRecovery struct {
 	calledBeforeCancellation bool

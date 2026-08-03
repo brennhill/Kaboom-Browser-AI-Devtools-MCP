@@ -4,6 +4,7 @@ package health
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,6 +79,69 @@ func TestRunDoctorChecksIncludesExtensionDiagnosticLifecycle(t *testing.T) {
 	}
 	if !strings.Contains(check.Detail, "worker_suspend -> worker_started -> sync_connected") || !strings.Contains(check.Detail, "7 dropped") {
 		t.Fatalf("extension diagnostics detail = %q", check.Detail)
+	}
+}
+
+func TestDoctorExtensionDiagnosticsRejectMalformedAndMapLegacyEvents(t *testing.T) {
+	if _, ok := extensionDiagnosticLifecycleCheck(nil); ok {
+		t.Fatal("nil capture produced extension diagnostics")
+	}
+	c := newTestCapture(t)
+	c.ExtensionLogs().Add([]types.ExtensionLog{
+		{Category: "connection", Message: "ignored", Data: json.RawMessage(`not-json`)},
+		{Category: "connection", Message: "Sync connected", Data: json.RawMessage(`{}`)},
+		{Category: "connection", Message: "Sync disconnected", Data: json.RawMessage(`{}`)},
+		{Category: "connection", Message: "[Sync] Sync failed, retrying", Data: json.RawMessage(`{}`)},
+	})
+	check, ok := extensionDiagnosticLifecycleCheck(c)
+	if !ok || check.Status != "pass" || !strings.Contains(check.Detail, "sync_connected -> sync_disconnected -> sync_failed") {
+		t.Fatalf("legacy lifecycle check = %#v, %t", check, ok)
+	}
+}
+
+func TestDoctorStateRecoveryDefaultsAndBoundsHistory(t *testing.T) {
+	if checks := extensionStateRecoveryChecks(nil); checks != nil {
+		t.Fatalf("nil capture checks = %#v", checks)
+	}
+	c := newTestCapture(t)
+	logs := []types.ExtensionLog{
+		{Category: "other", Data: json.RawMessage(`{}`)},
+		{Category: "state_recovery", Data: json.RawMessage(`not-json`)},
+		{Category: "state_recovery", Data: json.RawMessage(`{"name":"ignored","lifecycle":"unknown"}`)},
+	}
+	for i := 0; i < 22; i++ {
+		logs = append(logs, types.ExtensionLog{
+			Timestamp: time.Date(2026, 8, 2, 9, i, 0, 0, time.UTC),
+			Category:  "state_recovery",
+			Data:      json.RawMessage(`{"name":"storage_state","detail":"fallback active"}`),
+		})
+	}
+	c.ExtensionLogs().Add(logs)
+	checks := extensionStateRecoveryChecks(c)
+	if len(checks) != 1 || checks[0].Status != "warn" || checks[0].ExpectedNextTransition != "state_verified" ||
+		checks[0].RecoveryOutcome != "pending" || checks[0].RecoveryAttempt != 22 || len(checks[0].History) != 20 {
+		t.Fatalf("bounded recovery = %#v", checks)
+	}
+}
+
+func TestAIAuthDoctorCheckClassifiesAbsentUnauthenticatedAndUnknown(t *testing.T) {
+	previousLookPath, previousOutput := doctorLookPath, doctorCommandOutput
+	t.Cleanup(func() { doctorLookPath, doctorCommandOutput = previousLookPath, previousOutput })
+
+	doctorLookPath = func(string) (string, error) { return "", errors.New("missing") }
+	if check := runAIAuthDoctorCheck("codex"); check.Status != "pass" {
+		t.Fatalf("absent optional CLI = %#v", check)
+	}
+	doctorLookPath = func(tool string) (string, error) { return "/bin/" + tool, nil }
+	doctorCommandOutput = func(time.Duration, string, ...string) ([]byte, error) {
+		return []byte("not logged in"), errors.New("exit 1")
+	}
+	if check := runAIAuthDoctorCheck("codex"); check.Status != "warn" || !strings.Contains(check.Detail, "not authenticated") {
+		t.Fatalf("unauthenticated CLI = %#v", check)
+	}
+	doctorCommandOutput = func(time.Duration, string, ...string) ([]byte, error) { return []byte("authenticated"), nil }
+	if check := runAIAuthDoctorCheck("claude"); check.Status != "warn" || !strings.Contains(check.Detail, "could not be determined") {
+		t.Fatalf("unknown provider = %#v", check)
 	}
 }
 

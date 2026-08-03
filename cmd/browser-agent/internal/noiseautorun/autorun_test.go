@@ -8,6 +8,11 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -98,4 +103,59 @@ func TestNoiseAutoDetectEnabled_TruthyValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWireFirstConnectRunsOnceAndHonorsShutdown(t *testing.T) {
+	for name, shutDown := range map[string]bool{"connected": false, "shutdown": true} {
+		t.Run(name, func(t *testing.T) {
+			cap := capture.NewCapture()
+			defer cap.Close()
+			shutdown := make(chan struct{})
+			if shutDown {
+				close(shutdown)
+			}
+			var calls atomic.Int32
+			WireFirstConnect(cap, shutdown, func() { calls.Add(1) })
+			cap.Lifecycle().Emit(lifecycle.EventExtensionDisconnected, nil)
+			cap.Lifecycle().Emit(lifecycle.EventExtensionConnected, nil)
+			cap.Lifecycle().Emit(lifecycle.EventExtensionConnected, nil)
+			time.Sleep(50 * time.Millisecond)
+			want := int32(1)
+			if shutDown {
+				want = 0
+			}
+			if got := calls.Load(); got != want {
+				t.Fatalf("first-connect calls = %d, want %d", got, want)
+			}
+		})
+	}
+	WireFirstConnect(nil, nil, func() {})
+	unused := capture.NewCapture()
+	defer unused.Close()
+	WireFirstConnect(unused, nil, nil)
+}
+
+func TestWireNavigationAndDetectApplyHighConfidenceRules(t *testing.T) {
+	t.Setenv(EnvVar, "true")
+	cap := capture.NewCapture()
+	defer cap.Close()
+	called := make(chan struct{}, 1)
+	WireNavigation(cap, func() { called <- struct{}{} })
+	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "navigation", Timestamp: time.Now().UnixMilli()}})
+	select {
+	case <-called:
+	case <-time.After(time.Second):
+		t.Fatal("navigation did not schedule noise detection")
+	}
+	config := noise.NewNoiseConfig()
+	logs := make([]types.LogEntry, 30)
+	for index := range logs {
+		logs[index] = types.LogEntry{"message": "repeated application heartbeat"}
+	}
+	Detect(config, cap, logs)
+	if !config.IsConsoleNoise(types.LogEntry{"message": "repeated application heartbeat"}) {
+		t.Fatal("high-confidence repetitive message was not classified as noise")
+	}
+	Detect(nil, cap, logs)
+	Detect(config, nil, logs)
 }

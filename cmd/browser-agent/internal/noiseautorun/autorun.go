@@ -137,17 +137,10 @@ func Detect(config *noise.NoiseConfig, store *capture.Capture, logs []types.LogE
 	for index, entry := range logs {
 		consoleEntries[index] = types.LogEntry(entry)
 	}
+	// AutoDetect canonically applies high-confidence proposals. Do not add them a
+	// second time here; duplicate application skews rule counts and diagnostics.
 	proposals := config.AutoDetect(consoleEntries, store.Telemetry().GetNetworkBodies(), store.Telemetry().GetAllWebSocketEvents())
-	var rules []noise.NoiseRule
-	for _, proposal := range proposals {
-		if proposal.Confidence >= 0.9 {
-			rules = append(rules, proposal.Rule)
-		}
-	}
-	if len(rules) > 0 {
-		_ = config.AddRules(rules)
-	}
 	if len(proposals) > 0 {
-		diag.Printf("[Kaboom] noise auto-detect: %d proposals, %d auto-applied\n", len(proposals), len(rules))
+		diag.Printf("[Kaboom] noise auto-detect: %d proposals evaluated\n", len(proposals))
 	}
 }

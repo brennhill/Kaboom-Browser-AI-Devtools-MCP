@@ -15,6 +15,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 type fakeDeps struct {
@@ -23,14 +24,55 @@ type fakeDeps struct {
 	hasStore       bool
 	storeResult    json.RawMessage
 	storeErr       error
+	screenshotResp *mcp.JSONRPCResponse
 }
 
 func (f *fakeDeps) CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+	if f.screenshotResp != nil {
+		return *f.screenshotResp
+	}
 	path := f.screenshotPath
 	if path == "" {
 		path = "/tmp/current.png"
 	}
 	return mcp.Succeed(req, "Screenshot captured", map[string]any{"path": path})
+}
+
+func TestVisualHandlersSurfaceCaptureAndArtifactFailures(t *testing.T) {
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 9}
+	if resp := SaveBaseline(&fakeDeps{}, req, json.RawMessage(`{}`)); !strings.Contains(string(resp.Result), "missing_param") {
+		t.Fatalf("missing-name response = %s", resp.Result)
+	}
+	captureFailure := mcp.Fail(req, mcp.ErrExtError, "capture unavailable", "retry")
+	if resp := SaveBaseline(&fakeDeps{screenshotResp: &captureFailure}, req, json.RawMessage(`{"name":"home"}`)); !strings.Contains(string(resp.Result), "capture unavailable") {
+		t.Fatalf("capture-failure response = %s", resp.Result)
+	}
+	missingPath := mcp.Succeed(req, "Screenshot captured", map[string]any{"status": "ok"})
+	if resp := SaveBaseline(&fakeDeps{screenshotResp: &missingPath}, req, json.RawMessage(`{"name":"home"}`)); !strings.Contains(string(resp.Result), "path not available") {
+		t.Fatalf("missing-path response = %s", resp.Result)
+	}
+	if resp := SaveBaseline(&fakeDeps{hasStore: true, storeErr: errors.New("disk full")}, req, json.RawMessage(`{"name":"home"}`)); !strings.Contains(string(resp.Result), "disk full") {
+		t.Fatalf("store-failure response = %s", resp.Result)
+	}
+
+	if resp := DiffBaseline(&fakeDeps{}, req, json.RawMessage(`{}`)); !strings.Contains(string(resp.Result), "missing_param") {
+		t.Fatalf("missing-baseline response = %s", resp.Result)
+	}
+	invalidMetadata := &fakeDeps{hasStore: true, storeResult: json.RawMessage(`{"data":"not-json"}`)}
+	if resp := DiffBaseline(invalidMetadata, req, json.RawMessage(`{"baseline":"home"}`)); !strings.Contains(string(resp.Result), "parse baseline metadata") {
+		t.Fatalf("invalid-metadata response = %s", resp.Result)
+	}
+	metadata, _ := json.Marshal(map[string]any{"path": filepath.Join(t.TempDir(), "missing.png")})
+	storeResult, _ := json.Marshal(map[string]any{"data": json.RawMessage(metadata)})
+	missingImage := &fakeDeps{hasStore: true, screenshotPath: filepath.Join(t.TempDir(), "current.png"), storeResult: storeResult}
+	if resp := DiffBaseline(missingImage, req, json.RawMessage(`{"baseline":"home"}`)); !strings.Contains(string(resp.Result), "Image comparison failed") {
+		t.Fatalf("missing-image response = %s", resp.Result)
+	}
+
+	invalidList := &fakeDeps{hasStore: true, storeResult: json.RawMessage(`not-json`)}
+	if resp := ListBaselines(invalidList, req, nil); !strings.Contains(string(resp.Result), "not-json") {
+		t.Fatalf("invalid-list fallback = %s", resp.Result)
+	}
 }
 
 func (f *fakeDeps) GetTrackingStatus() (bool, int, string) {
@@ -111,6 +153,31 @@ func TestDiffBaselineComparesStoredImage(t *testing.T) {
 	}
 	if deps.stored.Action != "load" || deps.stored.Key != "home" {
 		t.Fatalf("load args = %#v", deps.stored)
+	}
+}
+
+func TestDiffBaselineWritesChangedImageAndDimensionDelta(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(state.StateDirEnv, dir)
+	baselinePath := filepath.Join(dir, "baseline.png")
+	currentPath := filepath.Join(dir, "current.png")
+	writeSolidPNG(t, baselinePath, color.RGBA{R: 255, A: 255})
+	img := image.NewRGBA(image.Rect(0, 0, 3, 2))
+	file, err := os.Create(currentPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := png.Encode(file, img); err != nil {
+		t.Fatal(err)
+	}
+	_ = file.Close()
+	metadata, _ := json.Marshal(map[string]any{"path": baselinePath, "url": "https://example.test"})
+	storeResult, _ := json.Marshal(map[string]any{"data": json.RawMessage(metadata)})
+	deps := &fakeDeps{hasStore: true, screenshotPath: currentPath, storeResult: storeResult}
+	resp := DiffBaseline(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 5}, json.RawMessage(`{"baseline":"changed","threshold":0}`))
+	if !strings.Contains(string(resp.Result), `\"dimensions_match\":false`) ||
+		!strings.Contains(string(resp.Result), `\"dimension_delta\"`) || !strings.Contains(string(resp.Result), `\"diff_path\"`) {
+		t.Fatalf("changed diff response = %s", resp.Result)
 	}
 }
 
