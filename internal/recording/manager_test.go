@@ -22,6 +22,9 @@ type faultRecordingFilesystem struct {
 	readErr    error
 	readDirErr error
 	writeErr   error
+	statErr    error
+	removeErr  error
+	walkErr    error
 }
 
 func (files *faultRecordingFilesystem) ReadFile(path string) ([]byte, error) {
@@ -43,6 +46,27 @@ func (files *faultRecordingFilesystem) WriteFile(path string, data []byte, permi
 		return files.writeErr
 	}
 	return files.recordingFilesystem.WriteFile(path, data, permissions)
+}
+
+func (files *faultRecordingFilesystem) Stat(path string) (os.FileInfo, error) {
+	if files.statErr != nil {
+		return nil, files.statErr
+	}
+	return files.recordingFilesystem.Stat(path)
+}
+
+func (files *faultRecordingFilesystem) RemoveAll(path string) error {
+	if files.removeErr != nil {
+		return files.removeErr
+	}
+	return files.recordingFilesystem.RemoveAll(path)
+}
+
+func (files *faultRecordingFilesystem) Walk(root string, walkFn filepath.WalkFunc) error {
+	if files.walkErr != nil {
+		return files.walkErr
+	}
+	return files.recordingFilesystem.Walk(root, walkFn)
 }
 
 // ============================================

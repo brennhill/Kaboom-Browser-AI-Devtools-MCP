@@ -22,6 +22,9 @@ type recordingFilesystem interface {
 	MkdirAll(string, fs.FileMode) error
 	ReadDir(string) ([]os.DirEntry, error)
 	ReadFile(string) ([]byte, error)
+	RemoveAll(string) error
+	Stat(string) (os.FileInfo, error)
+	Walk(string, filepath.WalkFunc) error
 	WriteFile(string, []byte, fs.FileMode) error
 }
 
@@ -34,6 +37,13 @@ func (localRecordingFilesystem) ReadDir(path string) ([]os.DirEntry, error) {
 	return os.ReadDir(path)
 }
 func (localRecordingFilesystem) ReadFile(path string) ([]byte, error) { return os.ReadFile(path) }
+func (localRecordingFilesystem) RemoveAll(path string) error          { return os.RemoveAll(path) }
+func (localRecordingFilesystem) Stat(path string) (os.FileInfo, error) {
+	return os.Stat(path)
+}
+func (localRecordingFilesystem) Walk(root string, walkFn filepath.WalkFunc) error {
+	return filepath.Walk(root, walkFn)
+}
 func (localRecordingFilesystem) WriteFile(path string, data []byte, permissions fs.FileMode) error {
 	return statefile.Write(path, data, permissions)
 }

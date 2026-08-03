@@ -91,12 +91,20 @@ last_verified_date: 2026-03-05
   redacted and reported through Doctor. A failed stop retains the active
   recording for retry; successful retry resolves the incident. User-authored
   recording names are normalized before they become storage identifiers.
+- Recording quota scans and deletion use that same boundary. Measurement and
+  cleanup failures preserve the previous in-memory quota/accounting state,
+  return stable value-free errors, and keep the recording available for retry;
+  successful recount or deletion resolves the Doctor incident.
 - Recording persistence reads and writes only the canonical state recordings
   directory; historical storage locations are not migration inputs.
 - Malformed or unreadable event-recording metadata is isolated per recording,
   valid siblings remain available, and System Doctor receives a redacted
   recovery warning with remediation.
 - Replay engine (session lifecycle, action execution, selector fragility): `internal/recording/playback/`
+- Replay execution results are intentionally ephemeral and process-owned. A
+  daemon restart yields an explicit no-data response rather than guessing or
+  creating a new persisted private-data surface; the durable input recording
+  remains available to replay again.
 - Recording comparison and regression reporting: `internal/recording/logdiff/`
 - Both engines read recordings through a one-method source interface that
   `*recording.RecordingManager` satisfies (`LookupRecording` for replay, `GetRecording`
