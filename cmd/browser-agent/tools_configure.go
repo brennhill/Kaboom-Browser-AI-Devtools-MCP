@@ -313,7 +313,12 @@ func handleConfigureDoctor(
 	})
 }
 
-func recoveryDoctorChecks(diagnostics interface{ Snapshot() []statediag.Diagnostic }) []health.DoctorCheck {
+type recoveryDiagnostics interface {
+	Snapshot() []statediag.Diagnostic
+	Stats() statediag.CollectorStats
+}
+
+func recoveryDoctorChecks(diagnostics recoveryDiagnostics) []health.DoctorCheck {
 	if diagnostics == nil {
 		return nil
 	}
@@ -339,6 +344,15 @@ func recoveryDoctorChecks(diagnostics interface{ Snapshot() []statediag.Diagnost
 			RecoveredAt: formatDiagnosticTime(diagnostic.RecoveredAt),
 			Occurrences: diagnostic.Occurrences,
 			History:     history,
+		})
+	}
+	stats := diagnostics.Stats()
+	if stats.DroppedRecovered > 0 {
+		checks = append(checks, health.DoctorCheck{
+			Name: "state_recovery_retention", Status: "pass", Lifecycle: string(statediag.LifecycleRecovered),
+			Detail: fmt.Sprintf("Doctor retained %d recovered incidents and dropped %d oldest recovered incidents at its %d-entry bound.",
+				stats.Recovered, stats.DroppedRecovered, stats.RecoveredLimit),
+			Fix: "No action required; active incidents remain retained.", Occurrences: stats.DroppedRecovered,
 		})
 	}
 	return checks

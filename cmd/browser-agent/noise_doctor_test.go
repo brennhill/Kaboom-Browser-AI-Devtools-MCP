@@ -2,6 +2,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
@@ -36,5 +38,30 @@ func TestRecoveryDoctorChecks(t *testing.T) {
 	}
 	if len(checks[0].History) != 2 {
 		t.Fatalf("history = %#v, want active and recovered transitions", checks[0].History)
+	}
+}
+
+func TestRecoveryDoctorChecksExposeRecoveredIncidentDrops(t *testing.T) {
+	collector := statediag.NewCollector()
+	for index := 0; index < 1_000; index++ {
+		name := fmt.Sprintf("incident_%03d", index)
+		collector.Report(statediag.Diagnostic{Name: name, Detail: "safe", Fix: "retry"})
+		collector.Resolve(name)
+	}
+
+	checks := recoveryDoctorChecks(collector)
+	retention := checks[len(checks)-1]
+	if len(checks) != 101 {
+		t.Fatalf("Doctor check count = %d, want 100 retained incidents plus retention summary", len(checks))
+	}
+	if retention.Name != "state_recovery_retention" || retention.Status != "pass" || retention.Occurrences != 900 {
+		t.Fatalf("retention check = %#v", retention)
+	}
+	payload, err := json.Marshal(checks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(payload) > 100_000 {
+		t.Fatalf("Doctor recovery payload = %d bytes, want bounded below 100000", len(payload))
 	}
 }

@@ -2,6 +2,7 @@
 package statediag
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -107,5 +108,48 @@ func TestResolveUnknownDiagnosticIsNoop(t *testing.T) {
 	collector.Resolve("unknown")
 	if got := collector.Snapshot(); len(got) != 0 {
 		t.Fatalf("Snapshot() = %#v, want empty", got)
+	}
+}
+
+func TestCollectorBoundsRecoveredIncidentsWithoutEvictingActiveIncidents(t *testing.T) {
+	collector := NewCollector()
+	now := time.Date(2026, 8, 3, 10, 0, 0, 0, time.UTC)
+	collector.now = func() time.Time { return now }
+
+	for index := 0; index < maxRecoveredDiagnostics+25; index++ {
+		name := fmt.Sprintf("recovered_%03d", index)
+		collector.Report(Diagnostic{Name: name, Detail: "safe", Fix: "retry"})
+		collector.Resolve(name)
+		now = now.Add(time.Second)
+	}
+	for index := 0; index < 12; index++ {
+		collector.Report(Diagnostic{Name: fmt.Sprintf("active_%03d", index), Detail: "safe", Fix: "retry"})
+	}
+
+	snapshot := collector.Snapshot()
+	stats := collector.Stats()
+	if len(snapshot) != maxRecoveredDiagnostics+12 {
+		t.Fatalf("Snapshot size = %d, want %d", len(snapshot), maxRecoveredDiagnostics+12)
+	}
+	if stats.Active != 12 || stats.Recovered != maxRecoveredDiagnostics || stats.DroppedRecovered != 25 {
+		t.Fatalf("Stats() = %#v", stats)
+	}
+	if snapshot[12].Name != "recovered_025" {
+		t.Fatalf("oldest retained recovered incident = %q, want recovered_025", snapshot[12].Name)
+	}
+}
+
+func TestCollectorRecoveredEvictionBreaksTimestampTiesByName(t *testing.T) {
+	collector := NewCollector()
+	collector.recoveredLimit = 2
+	collector.now = func() time.Time { return time.Date(2026, 8, 3, 10, 0, 0, 0, time.UTC) }
+	for _, name := range []string{"z_state", "a_state", "m_state"} {
+		collector.Report(Diagnostic{Name: name, Detail: "safe", Fix: "retry"})
+		collector.Resolve(name)
+	}
+
+	got := collector.Snapshot()
+	if len(got) != 2 || got[0].Name != "m_state" || got[1].Name != "z_state" {
+		t.Fatalf("Snapshot() = %#v, want deterministic eviction of a_state", got)
 	}
 }

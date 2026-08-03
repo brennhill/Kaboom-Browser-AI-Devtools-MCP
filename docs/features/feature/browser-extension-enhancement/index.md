@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-03
 code_paths:
+  - cmd/browser-agent/tools_configure.go
   - scripts/contracts/check-silent-catches.cjs
   - src/background/
   - src/content/
@@ -70,6 +71,7 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - cmd/browser-agent/noise_doctor_test.go
   - scripts/contracts/check-silent-catches.test.cjs
   - tests/architecture/async-failure-evidence.test.cjs
   - tests/architecture/user-state-loaders.test.cjs
@@ -128,7 +130,10 @@ last_verified_date: 2026-03-28
   and emits a redacted `state_recovery` diagnostic without exposing the
   persisted value. Diagnostics have an explicit active/recovered lifecycle,
   retain bounded transition history and occurrence counts, and clear their
-  warning state only after the owning loader verifies fresh valid state.
+  warning state only after the owning loader verifies fresh valid state. Active
+  incidents are never evicted; Doctor retains at most 100 recovered incidents,
+  deterministically evicts the oldest in one pass, and exposes its dropped count
+  through a content-free retention check.
 - Extension diagnostics persist as a bounded, redacted session ring and flush
   through the existing local sync transport after daemon recovery. System
   Doctor summarizes the latest worker/reconnect sequence and reports dropped

@@ -12,7 +12,10 @@ import (
 // ErrAbsent identifies normal first-run state absence rather than recovery.
 var ErrAbsent = errors.New("persisted state absent")
 
-const maxHistoryTransitions = 20
+const (
+	maxHistoryTransitions   = 20
+	maxRecoveredDiagnostics = 100
+)
 
 type Lifecycle string
 
@@ -49,16 +52,26 @@ type Resolver interface {
 	Resolve(name string)
 }
 
+// CollectorStats describes bounded incident retention without exposing diagnostic contents.
+type CollectorStats struct {
+	Active           int
+	Recovered        int
+	RecoveredLimit   int
+	DroppedRecovered int
+}
+
 // Collector owns the current recovery diagnostic for each stable state name.
 type Collector struct {
-	mu    sync.RWMutex
-	items map[string]Diagnostic
-	now   func() time.Time
+	mu               sync.RWMutex
+	items            map[string]Diagnostic
+	now              func() time.Time
+	recoveredLimit   int
+	droppedRecovered int
 }
 
 // NewCollector creates an empty recovery diagnostic collector.
 func NewCollector() *Collector {
-	return &Collector{items: make(map[string]Diagnostic), now: time.Now}
+	return &Collector{items: make(map[string]Diagnostic), now: time.Now, recoveredLimit: maxRecoveredDiagnostics}
 }
 
 // Report records or replaces a diagnostic without retaining raw persisted data.
@@ -104,6 +117,49 @@ func (c *Collector) Resolve(name string) {
 	diagnostic.LastSeenAt = now
 	diagnostic.History = appendTransition(diagnostic.History, Transition{Lifecycle: LifecycleRecovered, At: now})
 	c.items[name] = diagnostic
+	c.evictOldestRecoveredLocked()
+}
+
+// Stats returns content-free retention counters for System Doctor.
+func (c *Collector) Stats() CollectorStats {
+	if c == nil {
+		return CollectorStats{}
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	stats := CollectorStats{RecoveredLimit: c.recoveredLimit, DroppedRecovered: c.droppedRecovered}
+	for _, diagnostic := range c.items {
+		if diagnostic.Lifecycle == LifecycleRecovered {
+			stats.Recovered++
+		} else {
+			stats.Active++
+		}
+	}
+	return stats
+}
+
+// evictOldestRecoveredLocked performs one deterministic scan. Resolve adds at
+// most one recovered incident, so no repeated remove-and-recheck loop is needed.
+func (c *Collector) evictOldestRecoveredLocked() {
+	recovered := 0
+	oldestName := ""
+	var oldestAt time.Time
+	for name, diagnostic := range c.items {
+		if diagnostic.Lifecycle != LifecycleRecovered {
+			continue
+		}
+		recovered++
+		if oldestName == "" || diagnostic.RecoveredAt.Before(oldestAt) ||
+			(diagnostic.RecoveredAt.Equal(oldestAt) && name < oldestName) {
+			oldestName = name
+			oldestAt = diagnostic.RecoveredAt
+		}
+	}
+	if recovered <= c.recoveredLimit {
+		return
+	}
+	delete(c.items, oldestName)
+	c.droppedRecovered++
 }
 
 func Resolve(reporter Reporter, name string) {
