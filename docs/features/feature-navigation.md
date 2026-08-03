@@ -40,6 +40,7 @@ Features with active code implementations referencing their feature docs.
 | ai-web-pilot | `feature/ai-web-pilot/` | product-spec.md, qa-plan.md, tech-spec.md, test-plan.md | AI Web Pilot browser automation framework |
 | analyze-tool | `feature/analyze-tool/` | product-spec.md, qa-plan.md, tech-spec.md, uat-guide.md, MIGRATION.md | Analyze tool for DOM, accessibility, security, and performance |
 | verification-contracts | `feature/verification-contracts/` | index.md | Versioned QA assertions, required evidence, and explicit verdicts |
+| workflow-verification | `feature/workflow-verification/` | index.md | Ordered workflow invariants, first-failure diagnosis, and interruption-safe cleanup |
 | annotated-screenshots | `feature/annotated-screenshots/` | product-spec.md, qa-plan.md, tech-spec.md | Draw-mode annotation overlay for visual feedback |
 | app-telemetry | `feature/app-telemetry/` | index.md | Privacy-bounded app event, session, and usage-summary reporting |
 | api-key-auth | `feature/api-key-auth/` | product-spec.md, qa-plan.md, tech-spec.md | API key authentication for daemon access |
