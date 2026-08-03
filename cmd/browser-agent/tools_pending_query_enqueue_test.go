@@ -57,3 +57,21 @@ func TestInteractNavigate_QueueFullFailsFast(t *testing.T) {
 	result := parseToolResult(t, resp)
 	assertStructuredErrorCode(t, "interact navigate queue full", result, mcp.ErrQueueFull)
 }
+
+func TestInteractNavigate_QueueRecoversWithoutDiscardingAcceptedCommands(t *testing.T) {
+	env := newToolTestEnv(t)
+	env.capture.Extension().SetPilotEnabled(true)
+	mockConnectedTrackedTab(t, env.capture)
+	saturatePendingQueryQueue(t, env.capture)
+
+	env.capture.Queries().ExpireAllPendingQueries("pressure_fixture_released")
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	resp := env.handler.browserActions.HandleBrowserActionNavigateImpl(req, json.RawMessage(`{"url":"https://example.com","sync":false}`))
+	result := parseToolResult(t, resp)
+	if result.IsError {
+		t.Fatalf("first healthy command after pressure recovery failed: %+v", result)
+	}
+	if got := env.capture.Queries().QueueDepth(); got != 1 {
+		t.Fatalf("queue depth after recovery = %d, want exactly one accepted command", got)
+	}
+}

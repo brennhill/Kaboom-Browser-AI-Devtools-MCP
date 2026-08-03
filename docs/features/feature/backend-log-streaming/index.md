@@ -93,6 +93,7 @@ test_paths:
   - internal/capture/coverage_gaps_part2_test.go
   - internal/capture/api_contract_test.go
   - internal/capture/extension_log_store_test.go
+  - internal/capture/accessor_unit_test.go
   - internal/capture/feature_usage_test.go
   - internal/capture/client_registry_owner_test.go
   - internal/capture/extension_state_test_helpers_test.go
@@ -280,6 +281,11 @@ heartbeat, result, long-poll response, or command is rejected before it can
 mutate current state, and the rejection is retained as a correlated lifecycle
 diagnostic. Daemon handoffs also invalidate in-flight extension responses so an
 old server cannot dispatch work after the client changes endpoints.
+
+Disposable network-body, WebSocket, enhanced-action, and extension-diagnostic
+streams enforce their declared capacity on every ingestion. Their canonical
+owners expose current size, capacity, cumulative drops, and oldest age so
+pressure and recovery are observable without competing with active commands.
 
 ## Specs
 

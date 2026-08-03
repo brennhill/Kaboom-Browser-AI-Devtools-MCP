@@ -4,7 +4,7 @@ feature_id: feature-push-alerts
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -64,3 +64,6 @@ last_verified_date: 2026-03-05
 
 Observe response post-processing receives connectivity and alert-drain
 operations explicitly; it does not dispatch through a catch-all host.
+Rate-limited notifications use a fixed-capacity pending queue whose size,
+capacity, cumulative drops, oldest age, and saturation transition are exposed
+through the stream owner rather than silently discarding overload.

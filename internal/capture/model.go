@@ -53,6 +53,14 @@ type SecurityFlag struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// PressureStats describes the bounded retention state of one capture stream.
+type PressureStats struct {
+	Size      int           `json:"size"`
+	Capacity  int           `json:"capacity"`
+	Dropped   int64         `json:"dropped_count"`
+	OldestAge time.Duration `json:"oldest_age"`
+}
+
 type PerformanceStore struct {
 	mu              sync.RWMutex
 	snapshots       map[string]performance.PerformanceSnapshot

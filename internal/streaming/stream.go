@@ -35,6 +35,7 @@ func (s *StreamState) Configure(action string, events []string, throttle int, ur
 		s.Config.Enabled = false
 		pendingCount := len(s.PendingBatch)
 		s.PendingBatch = nil
+		s.PendingSince = time.Time{}
 		s.SeenMessages = make(map[string]time.Time)
 		s.NotifyCount = 0
 		return map[string]any{"status": "disabled", "pending_cleared": pendingCount}

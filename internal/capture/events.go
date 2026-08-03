@@ -160,16 +160,26 @@ type BufferStore struct {
 	wsEvents      boundedRing[wsEventEntry]
 	wsTotalAdded  int64
 	wsMemoryTotal int64
+	wsDropped     int64
 
 	// Network body buffer state.
 	networkBodies          boundedRing[networkBodyEntry]
 	networkTotalAdded      int64
 	networkErrorTotalAdded int64
 	networkBodyMemoryTotal int64
+	networkDropped         int64
 
 	// Enhanced action buffer state.
 	enhancedActions  boundedRing[enhancedActionEntry]
 	actionTotalAdded int64
+	actionDropped    int64
+}
+
+// TelemetryPressure is the bounded retention state for disposable browser telemetry.
+type TelemetryPressure struct {
+	Network   PressureStats `json:"network"`
+	WebSocket PressureStats `json:"websocket"`
+	Actions   PressureStats `json:"actions"`
 }
 
 // TelemetryStore owns event buffers, WebSocket connection state, navigation
@@ -302,10 +312,13 @@ func (s *BufferStore) appendEnhancedActions(actions []types.EnhancedAction, now 
 	s.actionTotalAdded += int64(len(actions))
 	hasNavigation := false
 	for i := range actions {
-		s.enhancedActions.push(enhancedActionEntry{
+		_, overwritten := s.enhancedActions.push(enhancedActionEntry{
 			Action:  actions[i],
 			AddedAt: now,
 		})
+		if overwritten {
+			s.actionDropped++
+		}
 		if actions[i].Type == "navigation" {
 			hasNavigation = true
 		}
@@ -324,6 +337,7 @@ func (s *BufferStore) appendNetworkBodies(bodies []types.NetworkBody, now time.T
 			AddedAt: now,
 		})
 		if overwritten {
+			s.networkDropped++
 			s.networkBodyMemoryTotal -= nbEntryMemory(&evicted.Body)
 		}
 		s.networkBodyMemoryTotal += nbEntryMemory(&bodies[i])
@@ -342,6 +356,7 @@ func (s *BufferStore) appendWebSocketEvents(events []types.WebSocketEvent, now t
 			AddedAt: now,
 		})
 		if overwritten {
+			s.wsDropped++
 			s.wsMemoryTotal -= wsEventMemory(&evicted.Event)
 		}
 		s.wsMemoryTotal += wsEventMemory(&events[i])
@@ -362,6 +377,7 @@ func (s *BufferStore) evictNetworkForMemory() {
 		drop++
 	}
 	s.networkBodies.dropOldest(drop)
+	s.networkDropped += int64(drop)
 }
 
 func (s *BufferStore) evictWebSocketForMemory() {
@@ -377,6 +393,31 @@ func (s *BufferStore) evictWebSocketForMemory() {
 		drop++
 	}
 	s.wsEvents.dropOldest(drop)
+	s.wsDropped += int64(drop)
+}
+
+// Pressure returns count, capacity, cumulative drops, and oldest age for each stream.
+func (s *TelemetryStore) Pressure() TelemetryPressure {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	now := time.Now()
+	return TelemetryPressure{
+		Network:   pressureForRing(s.buffers.networkBodies, s.buffers.networkDropped, now, func(entry networkBodyEntry) time.Time { return entry.AddedAt }),
+		WebSocket: pressureForRing(s.buffers.wsEvents, s.buffers.wsDropped, now, func(entry wsEventEntry) time.Time { return entry.AddedAt }),
+		Actions:   pressureForRing(s.buffers.enhancedActions, s.buffers.actionDropped, now, func(entry enhancedActionEntry) time.Time { return entry.AddedAt }),
+	}
+}
+
+func pressureForRing[T any](ring boundedRing[T], dropped int64, now time.Time, addedAt func(T) time.Time) PressureStats {
+	stats := PressureStats{Size: ring.len(), Capacity: ring.capacity(), Dropped: dropped}
+	if ring.len() == 0 {
+		return stats
+	}
+	stats.OldestAge = now.Sub(addedAt(*ring.at(0)))
+	if stats.OldestAge < 0 {
+		stats.OldestAge = 0
+	}
+	return stats
 }
 
 func (s *BufferStore) networkTotal() int64 {

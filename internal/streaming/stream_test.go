@@ -7,6 +7,7 @@ package streaming
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -543,5 +544,24 @@ func TestEmitAlert_RateLimit(t *testing.T) {
 	s.EmitAlert(types.Alert{Severity: "error", Category: "regression", Title: "rate limited"})
 	if buf.Len() != prevLen {
 		t.Fatal("alert beyond rate limit should be suppressed")
+	}
+}
+
+func TestEmitAlert_PendingPressureIsBoundedAndObservable(t *testing.T) {
+	s := NewStreamState()
+	s.Config.Enabled = true
+	s.Config.SeverityMin = "info"
+	s.Config.Events = []string{"all"}
+	s.NotifyCount = MaxNotificationsPerMinute
+
+	for i := 0; i < MaxPendingBatch+3; i++ {
+		s.EmitAlert(types.Alert{Severity: "error", Category: "pressure", Title: fmt.Sprintf("alert-%d", i)})
+	}
+	pressure := s.Pressure()
+	if pressure.Size != MaxPendingBatch || pressure.Capacity != MaxPendingBatch || pressure.Dropped != 3 {
+		t.Fatalf("stream pressure = %#v, want size/capacity=%d dropped=3", pressure, MaxPendingBatch)
+	}
+	if !pressure.Saturated || pressure.OldestAge < 0 {
+		t.Fatalf("stream saturation state = %#v, want saturated with non-negative age", pressure)
 	}
 }

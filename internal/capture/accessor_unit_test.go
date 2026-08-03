@@ -73,6 +73,38 @@ func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
 	}
 }
 
+func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
+	c := NewCapture()
+	now := time.Now().Add(-2 * time.Second)
+	c.telemetry.mu.Lock()
+	c.telemetry.buffers.appendNetworkBodies(make([]types.NetworkBody, MaxNetworkBodies+3), now)
+	c.telemetry.buffers.appendWebSocketEvents(make([]types.WebSocketEvent, MaxWSEvents+2), now, nil)
+	c.telemetry.buffers.appendEnhancedActions(make([]types.EnhancedAction, MaxEnhancedActions+1), now)
+	c.telemetry.mu.Unlock()
+
+	pressure := c.Telemetry().Pressure()
+	assertPressure := func(name string, got PressureStats, size int, dropped int64) {
+		t.Helper()
+		if got.Size != size || got.Capacity != size || got.Dropped != dropped || got.OldestAge < time.Second {
+			t.Fatalf("%s pressure = %#v, want size/capacity=%d dropped=%d and positive age", name, got, size, dropped)
+		}
+	}
+	assertPressure("network", pressure.Network, MaxNetworkBodies, 3)
+	assertPressure("websocket", pressure.WebSocket, MaxWSEvents, 2)
+	assertPressure("actions", pressure.Actions, MaxEnhancedActions, 1)
+
+	c.Telemetry().ClearNetworkBuffers()
+	c.Telemetry().ClearWebSocketBuffers()
+	c.Telemetry().ClearActionBuffer()
+	pressure = c.Telemetry().Pressure()
+	if pressure.Network.Size != 0 || pressure.WebSocket.Size != 0 || pressure.Actions.Size != 0 {
+		t.Fatalf("pressure did not recover after clear: %#v", pressure)
+	}
+	if pressure.Network.Dropped != 3 || pressure.WebSocket.Dropped != 2 || pressure.Actions.Dropped != 1 {
+		t.Fatalf("clear erased cumulative drop evidence: %#v", pressure)
+	}
+}
+
 func TestCapturePerformanceSnapshotAccessors(t *testing.T) {
 	t.Parallel()
 

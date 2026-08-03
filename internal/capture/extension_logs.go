@@ -28,6 +28,7 @@ import (
 type ExtensionLogStore struct {
 	mu       sync.RWMutex
 	logs     []types.ExtensionLog
+	dropped  int64
 	redactFn func(string) string
 }
 
@@ -52,12 +53,29 @@ func (s *ExtensionLogStore) addAt(logs []types.ExtensionLog, now time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for _, log := range logs {
+	prepared := make([]types.ExtensionLog, len(logs))
+	for index, log := range logs {
 		if log.Timestamp.IsZero() {
 			log.Timestamp = now
 		}
-		s.appendLocked(s.redactLog(log))
+		prepared[index] = s.redactLog(log)
 	}
+	s.logs = append(s.logs, prepared...)
+	s.enforceCapacityLocked()
+}
+
+// Pressure returns machine-readable capacity, drop, and age metrics.
+func (s *ExtensionLogStore) Pressure() PressureStats {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	stats := PressureStats{Size: len(s.logs), Capacity: MaxExtensionLogs, Dropped: s.dropped}
+	if len(s.logs) > 0 && !s.logs[0].Timestamp.IsZero() {
+		stats.OldestAge = time.Since(s.logs[0].Timestamp)
+		if stats.OldestAge < 0 {
+			stats.OldestAge = 0
+		}
+	}
+	return stats
 }
 
 // Entries returns a detached copy of the buffered extension logs.
@@ -127,13 +145,12 @@ func redactJSONValue(value any, redactFn func(string) string) any {
 	}
 }
 
-func (s *ExtensionLogStore) appendLocked(log types.ExtensionLog) {
-	s.logs = append(s.logs, log)
-	evictionThreshold := MaxExtensionLogs + MaxExtensionLogs/2
-	if len(s.logs) <= evictionThreshold {
+func (s *ExtensionLogStore) enforceCapacityLocked() {
+	overflow := len(s.logs) - MaxExtensionLogs
+	if overflow <= 0 {
 		return
 	}
-
+	s.dropped += int64(overflow)
 	kept := make([]types.ExtensionLog, MaxExtensionLogs)
 	copy(kept, s.logs[len(s.logs)-MaxExtensionLogs:])
 	s.logs = kept

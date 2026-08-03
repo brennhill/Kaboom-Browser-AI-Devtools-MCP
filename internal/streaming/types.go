@@ -47,8 +47,19 @@ type StreamState struct {
 	NotifyCount  int                  // count in current minute
 	MinuteStart  time.Time
 	PendingBatch []types.Alert
+	PendingSince time.Time
+	DroppedCount int64
 	Mu           sync.Mutex
 	Writer       io.Writer // defaults to nil (no output)
+}
+
+// PressureSnapshot describes the bounded pending notification queue.
+type PressureSnapshot struct {
+	Size      int           `json:"size"`
+	Capacity  int           `json:"capacity"`
+	Dropped   int64         `json:"dropped_count"`
+	OldestAge time.Duration `json:"oldest_age"`
+	Saturated bool          `json:"saturated"`
 }
 
 // MCPNotification is the MCP notification format for streaming alerts.

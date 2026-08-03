@@ -28,7 +28,12 @@ func (s *StreamState) EmitAlert(alert types.Alert) {
 		now := time.Now()
 		if !s.canEmitAtLocked(now) {
 			if len(s.PendingBatch) < MaxPendingBatch {
+				if len(s.PendingBatch) == 0 {
+					s.PendingSince = now
+				}
 				s.PendingBatch = append(s.PendingBatch, alert)
+			} else {
+				s.DroppedCount++
 			}
 			return emitPlan{}
 		}
@@ -56,6 +61,23 @@ func (s *StreamState) EmitAlert(alert types.Alert) {
 			_, _ = plan.writer.Write([]byte{'\n'})
 		}
 	}
+}
+
+// Pressure returns the pending notification queue's bounded resource state.
+func (s *StreamState) Pressure() PressureSnapshot {
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
+	pressure := PressureSnapshot{
+		Size: len(s.PendingBatch), Capacity: MaxPendingBatch, Dropped: s.DroppedCount,
+		Saturated: s.DroppedCount > 0,
+	}
+	if !s.PendingSince.IsZero() && len(s.PendingBatch) > 0 {
+		pressure.OldestAge = time.Since(s.PendingSince)
+		if pressure.OldestAge < 0 {
+			pressure.OldestAge = 0
+		}
+	}
+	return pressure
 }
 
 // FormatMCPNotification creates an MCP notification from an alert.

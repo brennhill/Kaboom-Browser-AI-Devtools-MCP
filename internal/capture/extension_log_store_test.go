@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func TestExtensionLogStore_AddAppliesAmortizedEviction(t *testing.T) {
+func TestExtensionLogStore_AddAppliesSinglePassEviction(t *testing.T) {
 	t.Parallel()
 
 	store := newExtensionLogStore(nil)
@@ -36,6 +36,30 @@ func TestExtensionLogStore_AddAppliesAmortizedEviction(t *testing.T) {
 	}
 	if got := entries[len(entries)-1].Message; got != fmt.Sprintf("log-%d", total-1) {
 		t.Fatalf("last kept log = %q, want %q", got, fmt.Sprintf("log-%d", total-1))
+	}
+}
+
+func TestExtensionLogStore_NeverExceedsDeclaredCapacity(t *testing.T) {
+	store := newExtensionLogStore(nil)
+	store.Add(make([]types.ExtensionLog, MaxExtensionLogs+1))
+
+	stats := store.Pressure()
+	if stats.Size != MaxExtensionLogs || len(store.Entries()) != MaxExtensionLogs {
+		t.Fatalf("extension log size = %d/%d, want %d", stats.Size, len(store.Entries()), MaxExtensionLogs)
+	}
+	if stats.Capacity != MaxExtensionLogs || stats.Dropped != 1 {
+		t.Fatalf("extension log pressure = %#v, want capacity=%d dropped=1", stats, MaxExtensionLogs)
+	}
+}
+
+func TestExtensionLogStore_PressureRecoversAfterClear(t *testing.T) {
+	store := newExtensionLogStore(nil)
+	store.addAt(make([]types.ExtensionLog, MaxExtensionLogs+2), time.Unix(100, 0))
+	store.Clear()
+
+	stats := store.Pressure()
+	if stats.Size != 0 || stats.Dropped != 2 || stats.OldestAge != 0 {
+		t.Fatalf("pressure after clear = %#v, want empty with cumulative drops", stats)
 	}
 }
 
