@@ -21,7 +21,7 @@ test('matching acknowledgement releases the first command without delay', async 
   const barrier = new ContentReadinessBarrier({
     probe: async (tabId, correlationId) => {
       calls.push([tabId, correlationId])
-      return { ready: true, correlation_id: correlationId }
+      return { ready: true, correlation_id: correlationId, connection_generation: 0 }
     },
     wait: async () => {
       throw new Error('matching first acknowledgement must not back off')
@@ -44,8 +44,8 @@ test('stale acknowledgement cannot release a newer navigation', async () => {
     probe: async (_tabId, correlationId) => {
       attempts += 1
       return attempts === 1
-        ? { ready: true, correlation_id: 'nav-old' }
-        : { ready: true, correlation_id: correlationId }
+        ? { ready: true, correlation_id: 'nav-old', connection_generation: 0 }
+        : { ready: true, correlation_id: correlationId, connection_generation: 0 }
     },
     wait: async (delayMs) => waits.push(delayMs),
     delays_ms: [10, 20]
@@ -89,7 +89,7 @@ test('superseded waiter cannot affect the newer navigation', async () => {
           releaseFirst = resolve
         })
       }
-      return { ready: true, correlation_id: correlationId }
+      return { ready: true, correlation_id: correlationId, connection_generation: 0 }
     },
     wait: async () => undefined
   })
@@ -101,4 +101,36 @@ test('superseded waiter cannot affect the newer navigation', async () => {
 
   assert.equal((await oldWait).error, 'readiness_superseded')
   assert.equal((await barrier.waitUntilReady(7)).correlation_id, 'nav-new')
+})
+
+test('daemon generation handoff rejects an in-flight readiness acknowledgement', async () => {
+  let generation = 1
+  let releaseProbe
+  const superseded = []
+  const barrier = new ContentReadinessBarrier({
+    get_generation: () => generation,
+    probe: async (_tabId, correlationId, connectionGeneration) => {
+      await new Promise((resolve) => {
+        releaseProbe = resolve
+      })
+      return { ready: true, correlation_id: correlationId, connection_generation: connectionGeneration }
+    },
+    wait: async () => undefined,
+    onSuperseded: (tabId, correlationId, expectedGeneration, currentGeneration) =>
+      superseded.push([tabId, correlationId, expectedGeneration, currentGeneration])
+  })
+  barrier.begin(7, 'nav-generation-1')
+  const readiness = barrier.waitUntilReady(7)
+  await Promise.resolve()
+
+  generation = 2
+  releaseProbe()
+
+  assert.deepEqual(await readiness, {
+    ready: false,
+    correlation_id: 'nav-generation-1',
+    attempts: 1,
+    error: 'readiness_superseded'
+  })
+  assert.deepEqual(superseded, [[7, 'nav-generation-1', 1, 2]])
 })

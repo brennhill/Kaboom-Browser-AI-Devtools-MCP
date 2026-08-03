@@ -47,7 +47,8 @@ async function setupHarness() {
 
   const registry = await import('../../../extension/background/commands/registry.js')
   const pending = await import('../../../extension/background/pending-queries.js')
-  return { registry, pending }
+  const generation = await import('../../../extension/background/runtime-state/connection-generation.js')
+  return { registry, pending, generation }
 }
 
 function createSyncClientSink() {
@@ -161,5 +162,33 @@ describe('Command lifecycle contracts', () => {
     assert.strictEqual(queued[0].result.status, 'error')
     assert.strictEqual(queued[0].result.error, 'boom')
     assert.deepStrictEqual(queued[0].result.result.source, 'async')
+  })
+
+  test('superseded command generation is rejected before its handler can mutate the page', async () => {
+    const { registry, pending, generation } = await setupHarness()
+    const queryType = makeType('stale_generation')
+    let handlerCalls = 0
+    registry.registerCommand(queryType, async (ctx) => {
+      handlerCalls++
+      ctx.sendResult({ unexpected: true })
+    })
+    generation.setConnectionGeneration(2)
+
+    const { queued, syncClient } = createSyncClientSink()
+    await pending.handlePendingQuery(
+      {
+        id: 'q-stale-generation',
+        type: queryType,
+        correlation_id: 'corr-stale-generation',
+        connection_generation: 1,
+        params: {}
+      },
+      syncClient
+    )
+
+    assert.strictEqual(handlerCalls, 0)
+    assert.strictEqual(queued.length, 1)
+    assert.strictEqual(queued[0].status, 'error')
+    assert.strictEqual(queued[0].error, 'stale_connection_generation')
   })
 })

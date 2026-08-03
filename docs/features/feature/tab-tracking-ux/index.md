@@ -31,6 +31,7 @@ code_paths:
   - src/background/message-handlers.ts
   - src/background/message-routing/pilot-handler.ts
   - src/background/runtime-state/pilot-state.ts
+  - src/background/runtime-state/connection-generation.ts
   - src/background/runtime-state/tracking-continuity.ts
   - src/background/runtime-state/content-readiness.ts
   - src/background/runtime-state/state-recovery.ts
@@ -70,6 +71,7 @@ test_paths:
   - tests/extension/tab-state/tracking-continuity.test.js
   - tests/extension/tab-state/content-readiness.test.js
   - tests/extension/ui-controls/toggle-overlay.test.js
+  - tests/extension/pilot/command-lifecycle.test.js
   - tests/architecture/async-failure-evidence.test.cjs
   - tests/extension/injection/script-injection-ready.test.js
   - tests/extension/shared/background-message-router.js
@@ -101,6 +103,10 @@ last_verified_date: 2026-04-03
 - The hover launcher settings gear now points at `gokaboom.dev/docs` and the Kaboom repo, and tracked-tab-loss guidance tells users to reopen the Kaboom popup.
 - Invalid or unreadable tracked-tab state is treated as an untracked workspace,
   with a redacted recovery entry available in System Doctor.
+- Post-navigation readiness probes and command dispatch retain the daemon
+  connection generation that originated them. A reconnect supersedes delayed
+  acknowledgements and commands before they can mutate the current page, with
+  correlated recovery evidence retained for System Doctor.
 - Draw-mode recovery warnings from the hover launcher now use Kaboom copy when the extension was reloaded or the draw bundle is unavailable.
 - Popup tab-tracking logs now use the shared Kaboom runtime prefix instead of hardcoded Kaboom labels.
 - The popup validates the stored tab ID before presenting it as healthy. A closed

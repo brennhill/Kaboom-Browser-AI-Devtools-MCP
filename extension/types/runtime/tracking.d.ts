@@ -28,10 +28,12 @@ export interface TrackingContentReadyMessage {
 export interface TrackingReadinessProbeMessage {
     readonly type: 'tracking_readiness_probe';
     readonly correlation_id: string;
+    readonly connection_generation: number;
 }
 export interface TrackingReadinessProbeResponse {
     readonly ready: true;
     readonly correlation_id: string;
+    readonly connection_generation: number;
 }
 export interface TrackingContinuityChangedMessage {
     readonly type: 'tracking_continuity_changed';

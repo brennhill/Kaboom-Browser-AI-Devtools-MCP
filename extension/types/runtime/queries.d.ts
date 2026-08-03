@@ -20,6 +20,7 @@ export interface PendingQuery {
     readonly params: string | Record<string, unknown>;
     readonly correlation_id?: string;
     readonly tab_id?: number;
+    readonly connection_generation?: number;
 }
 /**
  * Browser action parameters

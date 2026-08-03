@@ -5,6 +5,7 @@
 import { debugLog, DebugCategory } from '../debug.js';
 import { reportStateRecovery, resolveStateRecovery } from './state-recovery.js';
 import { trackingContinuity } from './tracking-continuity.js';
+import { getConnectionGeneration } from './connection-generation.js';
 const DEFAULT_DELAYS_MS = [25, 75, 150];
 const CONTENT_COMMANDS = new Set([
     'a11y',
@@ -36,26 +37,30 @@ export class ContentReadinessBarrier {
     delaysMs;
     onReady;
     onTimeout;
+    onSuperseded;
+    getGeneration;
     constructor(options) {
         this.probe = options.probe;
         this.wait = options.wait;
         this.delaysMs = options.delays_ms ?? DEFAULT_DELAYS_MS;
         this.onReady = options.onReady;
         this.onTimeout = options.onTimeout;
+        this.onSuperseded = options.onSuperseded;
+        this.getGeneration = options.get_generation ?? getConnectionGeneration;
     }
     begin(tabId, correlationId) {
-        this.pending.set(tabId, correlationId);
+        this.pending.set(tabId, { correlationId, connectionGeneration: this.getGeneration() });
     }
     hasPending(tabId) {
         return this.pending.has(tabId);
     }
     cancel(tabId, correlationId) {
-        if (this.pending.get(tabId) === correlationId)
+        if (this.pending.get(tabId)?.correlationId === correlationId)
             this.pending.delete(tabId);
     }
     async waitUntilReady(tabId) {
-        const correlationId = this.pending.get(tabId);
-        if (!correlationId) {
+        const pending = this.pending.get(tabId);
+        if (!pending) {
             return {
                 ready: false,
                 correlation_id: '',
@@ -63,9 +68,16 @@ export class ContentReadinessBarrier {
                 error: 'readiness_superseded'
             };
         }
+        const { correlationId, connectionGeneration } = pending;
         for (let attempt = 1; attempt <= this.delaysMs.length + 1; attempt += 1) {
-            const acknowledgement = await this.probe(tabId, correlationId);
-            if (this.pending.get(tabId) !== correlationId) {
+            const acknowledgement = await this.probe(tabId, correlationId, connectionGeneration);
+            const currentGeneration = this.getGeneration();
+            if (this.pending.get(tabId) !== pending ||
+                currentGeneration !== connectionGeneration ||
+                (acknowledgement !== undefined && acknowledgement.connection_generation !== connectionGeneration)) {
+                if (this.pending.get(tabId) === pending)
+                    this.pending.delete(tabId);
+                this.onSuperseded?.(tabId, correlationId, connectionGeneration, currentGeneration);
                 return {
                     ready: false,
                     correlation_id: correlationId,
@@ -94,11 +106,12 @@ export class ContentReadinessBarrier {
 }
 const failedReadinessTabs = new Set();
 export const contentReadiness = new ContentReadinessBarrier({
-    probe: async (tabId, correlationId) => {
+    probe: async (tabId, correlationId, connectionGeneration) => {
         try {
             return (await chrome.tabs.sendMessage(tabId, {
                 type: 'tracking_readiness_probe',
-                correlation_id: correlationId
+                correlation_id: correlationId,
+                connection_generation: connectionGeneration
             }));
         }
         catch {
@@ -132,6 +145,20 @@ export const contentReadiness = new ContentReadinessBarrier({
             correlation_id: correlationId,
             attempts,
             error: 'content_readiness_timeout'
+        });
+    },
+    onSuperseded: (tabId, correlationId, expectedGeneration, currentGeneration) => {
+        reportStateRecovery({
+            name: 'content_readiness_generation',
+            detail: 'A content readiness acknowledgement arrived after its daemon connection was superseded.',
+            fix: 'Retry the command after the extension reconnects.'
+        });
+        debugLog(DebugCategory.CONNECTION, 'Rejected stale connection generation', {
+            tab_id: tabId,
+            correlation_id: correlationId,
+            bridge: 'content_readiness',
+            received_generation: expectedGeneration,
+            current_generation: currentGeneration
         });
     }
 });

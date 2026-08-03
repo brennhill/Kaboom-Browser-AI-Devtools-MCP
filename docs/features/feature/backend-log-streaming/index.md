@@ -46,6 +46,7 @@ code_paths:
   - src/background/message-handlers.ts
   - src/background/message-routing/
   - src/background/runtime-state/
+  - src/background/runtime-state/connection-generation.ts
   - src/background/runtime-state/csp-state.ts
   - src/background/runtime-state/state-recovery.ts
   - src/background/runtime-state/log-queue.ts

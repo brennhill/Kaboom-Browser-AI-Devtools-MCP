@@ -13,6 +13,8 @@ import { DebugCategory } from '../debug.js'
 import type { SendAsyncResultFn, QueryParamsObject, TargetResolution } from './helpers.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { contentReadiness, requiresContentReadiness } from '../runtime-state/content-readiness.js'
+import { getConnectionGeneration, isConnectionGenerationCurrent } from '../runtime-state/connection-generation.js'
+import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js'
 import {
   debugLog,
   sendResult,
@@ -72,6 +74,41 @@ interface DispatchLifecycle {
   sendAsyncResult: SendAsyncResultFn
   sendError: (payload: unknown, errorHint?: string) => void
   sent: () => boolean
+}
+
+function rejectSupersededCommand(query: PendingQuery, lifecycle: DispatchLifecycle, bridge: string): boolean {
+  // EXPECTED_ABSENCE: commands invoked directly by internal tests and non-sync
+  // entry points have no daemon generation; the sync transport always supplies
+  // one. This direct form is normal, so logging it would falsely report stale remote work.
+  if (query.connection_generation === undefined) return false
+  if (isConnectionGenerationCurrent(query.connection_generation)) {
+    resolveStateRecovery('command_generation_state')
+    return false
+  }
+
+  const currentGeneration = getConnectionGeneration()
+  reportStateRecovery({
+    name: 'command_generation_state',
+    detail: 'A command from a superseded daemon connection was rejected before execution.',
+    fix: 'Retry the command after the extension reconnects.'
+  })
+  debugLog(DebugCategory.CONNECTION, 'Rejected stale connection generation', {
+    query_id: query.id,
+    correlation_id: query.correlation_id || query.id,
+    bridge,
+    received_generation: query.connection_generation,
+    current_generation: currentGeneration
+  })
+  lifecycle.sendError(
+    {
+      success: false,
+      error: 'stale_connection_generation',
+      message: 'The daemon connection changed before this command could run.',
+      retryable: true
+    },
+    'stale_connection_generation'
+  )
+  return true
 }
 
 function pickErrorHint(payload: unknown, fallback = 'command_failed'): string {
@@ -201,6 +238,8 @@ export async function dispatch(query: PendingQuery, syncClient: SyncClient): Pro
   }
   const lifecycle = createDispatchLifecycle(query, syncClient, wrapResult)
 
+  if (rejectSupersededCommand(query, lifecycle, 'command_dispatch')) return
+
   const handler = handlers.get(queryType)
   if (!handler) {
     debugLog(DebugCategory.CONNECTION, 'Unknown query type', { type: query.type })
@@ -281,6 +320,8 @@ export async function dispatch(query: PendingQuery, syncClient: SyncClient): Pro
       return
     }
   }
+
+  if (rejectSupersededCommand(query, lifecycle, 'command_execute')) return
 
   const ctx: CommandContext = {
     query,

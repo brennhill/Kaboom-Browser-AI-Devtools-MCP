@@ -7,6 +7,7 @@ import { fetchWithTimeout } from '../../lib/timeout-utils.js';
 import { buildDaemonJSONRequestInit } from '../../lib/daemon-http.js';
 import { drainUIFeatures, restoreUIFeatures } from '../ui/ui-usage-tracker.js';
 import { getServerInstallId, updateServerInstallId } from './install-identity.js';
+import { setConnectionGeneration } from '../runtime-state/connection-generation.js';
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -205,6 +206,7 @@ export class SyncClient {
                 throw new Error('Sync response omitted a valid connection generation');
             }
             this.connectionGeneration = data.connection_generation;
+            setConnectionGeneration(data.connection_generation);
             // Log sync cycle summary
             this.log('Sync OK', {
                 commands: data.commands?.length || 0,

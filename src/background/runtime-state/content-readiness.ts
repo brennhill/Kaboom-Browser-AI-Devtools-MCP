@@ -6,10 +6,12 @@
 import { debugLog, DebugCategory } from '../debug.js'
 import { reportStateRecovery, resolveStateRecovery } from './state-recovery.js'
 import { trackingContinuity } from './tracking-continuity.js'
+import { getConnectionGeneration } from './connection-generation.js'
 
 export interface ContentReadinessAcknowledgement {
   readonly ready: true
   readonly correlation_id: string
+  readonly connection_generation: number
 }
 
 export type ContentReadinessResult =
@@ -26,11 +28,22 @@ export type ContentReadinessResult =
     }
 
 interface ContentReadinessOptions {
-  readonly probe: (tabId: number, correlationId: string) => Promise<ContentReadinessAcknowledgement | undefined>
+  readonly probe: (
+    tabId: number,
+    correlationId: string,
+    connectionGeneration: number
+  ) => Promise<ContentReadinessAcknowledgement | undefined>
   readonly wait: (delayMs: number) => Promise<void>
+  readonly get_generation?: () => number
   readonly delays_ms?: readonly number[]
   readonly onReady?: (tabId: number, correlationId: string, attempts: number) => void
   readonly onTimeout?: (tabId: number, correlationId: string, attempts: number) => void
+  readonly onSuperseded?: (
+    tabId: number,
+    correlationId: string,
+    expectedGeneration: number,
+    currentGeneration: number
+  ) => void
 }
 
 const DEFAULT_DELAYS_MS = [25, 75, 150] as const
@@ -60,12 +73,14 @@ export function requiresContentReadiness(queryType: string): boolean {
 }
 
 export class ContentReadinessBarrier {
-  private readonly pending = new Map<number, string>()
+  private readonly pending = new Map<number, { correlationId: string; connectionGeneration: number }>()
   private readonly probe: ContentReadinessOptions['probe']
   private readonly wait: ContentReadinessOptions['wait']
   private readonly delaysMs: readonly number[]
   private readonly onReady?: ContentReadinessOptions['onReady']
   private readonly onTimeout?: ContentReadinessOptions['onTimeout']
+  private readonly onSuperseded?: ContentReadinessOptions['onSuperseded']
+  private readonly getGeneration: () => number
 
   constructor(options: ContentReadinessOptions) {
     this.probe = options.probe
@@ -73,10 +88,12 @@ export class ContentReadinessBarrier {
     this.delaysMs = options.delays_ms ?? DEFAULT_DELAYS_MS
     this.onReady = options.onReady
     this.onTimeout = options.onTimeout
+    this.onSuperseded = options.onSuperseded
+    this.getGeneration = options.get_generation ?? getConnectionGeneration
   }
 
   begin(tabId: number, correlationId: string): void {
-    this.pending.set(tabId, correlationId)
+    this.pending.set(tabId, { correlationId, connectionGeneration: this.getGeneration() })
   }
 
   hasPending(tabId: number): boolean {
@@ -84,12 +101,12 @@ export class ContentReadinessBarrier {
   }
 
   cancel(tabId: number, correlationId: string): void {
-    if (this.pending.get(tabId) === correlationId) this.pending.delete(tabId)
+    if (this.pending.get(tabId)?.correlationId === correlationId) this.pending.delete(tabId)
   }
 
   async waitUntilReady(tabId: number): Promise<ContentReadinessResult> {
-    const correlationId = this.pending.get(tabId)
-    if (!correlationId) {
+    const pending = this.pending.get(tabId)
+    if (!pending) {
       return {
         ready: false,
         correlation_id: '',
@@ -97,10 +114,18 @@ export class ContentReadinessBarrier {
         error: 'readiness_superseded'
       }
     }
+    const { correlationId, connectionGeneration } = pending
 
     for (let attempt = 1; attempt <= this.delaysMs.length + 1; attempt += 1) {
-      const acknowledgement = await this.probe(tabId, correlationId)
-      if (this.pending.get(tabId) !== correlationId) {
+      const acknowledgement = await this.probe(tabId, correlationId, connectionGeneration)
+      const currentGeneration = this.getGeneration()
+      if (
+        this.pending.get(tabId) !== pending ||
+        currentGeneration !== connectionGeneration ||
+        (acknowledgement !== undefined && acknowledgement.connection_generation !== connectionGeneration)
+      ) {
+        if (this.pending.get(tabId) === pending) this.pending.delete(tabId)
+        this.onSuperseded?.(tabId, correlationId, connectionGeneration, currentGeneration)
         return {
           ready: false,
           correlation_id: correlationId,
@@ -131,11 +156,12 @@ export class ContentReadinessBarrier {
 const failedReadinessTabs = new Set<number>()
 
 export const contentReadiness = new ContentReadinessBarrier({
-  probe: async (tabId, correlationId) => {
+  probe: async (tabId, correlationId, connectionGeneration) => {
     try {
       return (await chrome.tabs.sendMessage(tabId, {
         type: 'tracking_readiness_probe',
-        correlation_id: correlationId
+        correlation_id: correlationId,
+        connection_generation: connectionGeneration
       })) as ContentReadinessAcknowledgement | undefined
     } catch {
       // EXPECTED_ABSENCE: the content script is normally unavailable while Chrome
@@ -167,6 +193,20 @@ export const contentReadiness = new ContentReadinessBarrier({
       correlation_id: correlationId,
       attempts,
       error: 'content_readiness_timeout'
+    })
+  },
+  onSuperseded: (tabId, correlationId, expectedGeneration, currentGeneration) => {
+    reportStateRecovery({
+      name: 'content_readiness_generation',
+      detail: 'A content readiness acknowledgement arrived after its daemon connection was superseded.',
+      fix: 'Retry the command after the extension reconnects.'
+    })
+    debugLog(DebugCategory.CONNECTION, 'Rejected stale connection generation', {
+      tab_id: tabId,
+      correlation_id: correlationId,
+      bridge: 'content_readiness',
+      received_generation: expectedGeneration,
+      current_generation: currentGeneration
     })
   }
 })

@@ -148,13 +148,15 @@ test('content readiness probe synchronously echoes its correlation ID', async ()
   const sendResponse = mock.fn()
 
   const keepChannelOpen = runtimeMessageHandler(
-    { type: 'tracking_readiness_probe', correlation_id: 'nav-123' },
+    { type: 'tracking_readiness_probe', correlation_id: 'nav-123', connection_generation: 4 },
     { id: mockChrome.runtime.id },
     sendResponse
   )
 
   assert.equal(keepChannelOpen, false)
-  assert.deepEqual(sendResponse.mock.calls[0].arguments, [{ ready: true, correlation_id: 'nav-123' }])
+  assert.deepEqual(sendResponse.mock.calls[0].arguments, [
+    { ready: true, correlation_id: 'nav-123', connection_generation: 4 }
+  ])
 })
 
 describe('Action Toasts Toggle', () => {

@@ -198,7 +198,11 @@ export function initRuntimeMessageListener(): void {
       // Ping is special: sync handler that needs sendResponse
       if (message.type === 'kaboom_ping') return handlePing(sendResponse)
       if (message.type === 'tracking_readiness_probe') {
-        sendResponse({ ready: true, correlation_id: message.correlation_id })
+        sendResponse({
+          ready: true,
+          correlation_id: message.correlation_id,
+          connection_generation: message.connection_generation
+        })
         return false
       }
 
