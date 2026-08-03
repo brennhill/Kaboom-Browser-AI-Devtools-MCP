@@ -4,13 +4,15 @@ feature_id: feature-app-telemetry
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - internal/telemetry/beacon.go
   - internal/telemetry/install_id.go
   - internal/telemetry/session.go
   - internal/telemetry/usage_beacon.go
   - internal/telemetry/usage_counter.go
+  - internal/statefault/fault.go
+  - internal/statefile/statefile.go
   - cmd/browser-agent/internal/operationalapi/handler.go
   - internal/statediag/collector.go
 test_paths:
@@ -50,6 +52,11 @@ Malformed identity is atomically replaced once. Transient read or persistence
 failure suppresses telemetry instead of inventing a process-local identity
 that would inflate install counts, and System Doctor reports the redacted
 recovery state.
+Install identity and the first-tool-call marker share one injected filesystem
+boundary. Canonical read, write, quota, cancellation, corruption, partial-write,
+and restart fixtures never touch the real installation root. A marker is
+cached only after its durable write succeeds; otherwise first-call telemetry is
+suppressed, preventing duplicate events on the next process restart.
 The operational debug endpoint reads non-destructive flat counters through the
 canonical `UsageTracker.DebugCounts` API; the former compatibility-named
 counter accessor is deleted.

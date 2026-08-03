@@ -4,17 +4,119 @@
 package telemetry
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
 
 var hexPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
+
+type faultIdentityFilesystem struct {
+	readErr  error
+	writeErr error
+}
+
+type markerFaultFilesystem struct {
+	localIdentityFilesystem
+	writeErr error
+}
+
+func (f markerFaultFilesystem) WriteFile(string, []byte) error { return f.writeErr }
+
+func (f faultIdentityFilesystem) ReadFile(string) ([]byte, error) {
+	if f.readErr != nil {
+		return nil, f.readErr
+	}
+	return nil, fs.ErrNotExist
+}
+func (f faultIdentityFilesystem) CreateExclusive(string, string, []byte) error { return f.writeErr }
+func (f faultIdentityFilesystem) Replace(string, string, []byte) error         { return f.writeErr }
+func (f faultIdentityFilesystem) WriteFile(string, []byte) error               { return f.writeErr }
+
+func TestInstallIdentityCanonicalFaultsSuppressUnstableTelemetry(t *testing.T) {
+	private := "private-install-state"
+	for _, kind := range []statefault.Kind{statefault.Read, statefault.Write, statefault.Quota, statefault.Cancellation} {
+		t.Run(string(kind), func(t *testing.T) {
+			resetInstallIDState()
+			overrideKaboomDir(t.TempDir())
+			t.Cleanup(resetKaboomDir)
+			diagnostics := statediag.NewCollector()
+			stateRecovery = diagnostics
+			scenario := statefault.New(kind, private)
+			if kind == statefault.Read {
+				installIdentityFiles = faultIdentityFilesystem{readErr: scenario.Error()}
+			} else {
+				installIdentityFiles = faultIdentityFilesystem{writeErr: scenario.Error()}
+			}
+			t.Cleanup(func() { installIdentityFiles = localIdentityFilesystem{} })
+
+			if id := GetInstallID(); id != "" {
+				t.Fatalf("GetInstallID() = %q, want telemetry suppression", id)
+			}
+			got := diagnostics.Snapshot()
+			if len(got) != 1 || got[0].Name != "install_identity_state" {
+				t.Fatalf("diagnostics = %#v, want redacted identity incident", got)
+			}
+			if strings.Contains(got[0].Detail, private) {
+				t.Fatal("diagnostic leaked private state")
+			}
+		})
+	}
+}
+
+func TestInstallIdentityCorruptionRecoveryRemainsStableAcrossRestart(t *testing.T) {
+	for _, kind := range []statefault.Kind{statefault.Corruption, statefault.PartialWrite} {
+		t.Run(string(kind), func(t *testing.T) {
+			dir := t.TempDir()
+			overrideKaboomDir(dir)
+			t.Cleanup(resetKaboomDir)
+			scenario := statefault.New(kind, "private-install-state")
+			if err := os.WriteFile(filepath.Join(dir, "install_id"), scenario.Payload([]byte("aabbccddeeff")), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			resetInstallIDState()
+			first := GetInstallID()
+			if !hexPattern.MatchString(first) {
+				t.Fatalf("replacement ID = %q", first)
+			}
+			resetInstallIDState()
+			if second := GetInstallID(); second != first {
+				t.Fatalf("identity rotated after restart: first=%q second=%q", first, second)
+			}
+		})
+	}
+}
+
+func TestFirstToolCallMarkerWriteFaultSuppressesEvent(t *testing.T) {
+	dir := t.TempDir()
+	overrideKaboomDir(dir)
+	t.Cleanup(resetKaboomDir)
+	resetInstallIDState()
+	resetFirstToolCallState()
+	diagnostics := statediag.NewCollector()
+	stateRecovery = diagnostics
+	if id := GetInstallID(); id == "" {
+		t.Fatal("failed to establish install identity")
+	}
+	scenario := statefault.New(statefault.Quota, "private-marker-state")
+	installIdentityFiles = markerFaultFilesystem{writeErr: scenario.Error()}
+
+	if markFirstToolCallEmittedForInstall() {
+		t.Fatal("first-tool-call telemetry must be suppressed when its durable marker fails")
+	}
+	if got := diagnostics.Snapshot(); len(got) != 1 || got[0].Name != "install_identity_state" {
+		t.Fatalf("diagnostics = %#v, want marker persistence incident", got)
+	}
+}
 
 func TestGetInstallID_GeneratesOnFirstCall(t *testing.T) {
 	dir := t.TempDir()

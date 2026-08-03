@@ -11,10 +11,65 @@ import (
 	"sync"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
+
+type identityFilesystem interface {
+	ReadFile(string) ([]byte, error)
+	CreateExclusive(string, string, []byte) error
+	Replace(string, string, []byte) error
+	WriteFile(string, []byte) error
+}
+
+type localIdentityFilesystem struct{}
+
+func (localIdentityFilesystem) ReadFile(path string) ([]byte, error) { return os.ReadFile(path) }
+
+func (localIdentityFilesystem) CreateExclusive(dir, path string, data []byte) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".install-id-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+	if err := tmp.Chmod(0o600); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Link(tmpPath, path)
+}
+
+func (localIdentityFilesystem) Replace(dir, path string, data []byte) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	return statefile.Write(path, data, 0o600)
+}
+
+func (localIdentityFilesystem) WriteFile(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	return statefile.Write(path, data, 0o600)
+}
 
 // kaboomDir is the directory where install_id is persisted. Overridable for tests.
 var kaboomDir = defaultKaboomDir()
+var installIdentityFiles identityFilesystem = localIdentityFilesystem{}
 
 // cachedInstallID holds the in-memory cached value after first load.
 var cachedInstallID string
@@ -66,7 +121,7 @@ func loadOrGenerateInstallID() string {
 	idPath := filepath.Join(kaboomDir, "install_id")
 
 	// Try to read existing file.
-	data, err := os.ReadFile(idPath)
+	data, err := installIdentityFiles.ReadFile(idPath)
 	if err == nil {
 		id := strings.TrimSpace(string(data))
 		if validInstallID(id) {
@@ -87,26 +142,14 @@ func loadOrGenerateInstallID() string {
 	// Best-effort persist through a fully-written temporary file and an atomic
 	// hard-link create. Concurrent processes can generate candidates, but only
 	// one candidate can become install_id and every process returns that winner.
-	if err := os.MkdirAll(kaboomDir, 0700); err == nil {
-		tmp, createErr := os.CreateTemp(kaboomDir, ".install-id-*")
-		if createErr == nil {
-			tmpPath := tmp.Name()
-			defer os.Remove(tmpPath)
-			_ = tmp.Chmod(0600)
-			_, writeErr := tmp.WriteString(id)
-			closeErr := tmp.Close()
-			if writeErr == nil && closeErr == nil {
-				if linkErr := os.Link(tmpPath, idPath); linkErr == nil {
-					statediag.Resolve(stateRecovery, "install_identity_state")
-					return id
-				}
-				if winner, readErr := os.ReadFile(idPath); readErr == nil {
-					if persisted := strings.TrimSpace(string(winner)); validInstallID(persisted) {
-						statediag.Resolve(stateRecovery, "install_identity_state")
-						return persisted
-					}
-				}
-			}
+	if createErr := installIdentityFiles.CreateExclusive(kaboomDir, idPath, []byte(id)); createErr == nil {
+		statediag.Resolve(stateRecovery, "install_identity_state")
+		return id
+	}
+	if winner, readErr := installIdentityFiles.ReadFile(idPath); readErr == nil {
+		if persisted := strings.TrimSpace(string(winner)); validInstallID(persisted) {
+			statediag.Resolve(stateRecovery, "install_identity_state")
+			return persisted
 		}
 	}
 
@@ -116,26 +159,11 @@ func loadOrGenerateInstallID() string {
 
 func replaceInstallID(idPath string) string {
 	id := generateRandomID()
-	if err := os.MkdirAll(kaboomDir, 0o700); err != nil {
+	if err := installIdentityFiles.Replace(kaboomDir, idPath, []byte(id)); err != nil {
+		reportInstallIDRecovery("Installation identity recovery could not be persisted; anonymous telemetry is disabled for this process.")
 		return ""
 	}
-	tmp, err := os.CreateTemp(kaboomDir, ".install-id-recovery-*")
-	if err != nil {
-		return ""
-	}
-	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
-	_ = tmp.Chmod(0o600)
-	if _, err := tmp.WriteString(id); err != nil {
-		_ = tmp.Close()
-		return ""
-	}
-	if err := tmp.Close(); err != nil {
-		return ""
-	}
-	if err := os.Rename(tmpPath, idPath); err != nil {
-		return ""
-	}
+	statediag.Resolve(stateRecovery, "install_identity_state")
 	return id
 }
 
@@ -159,8 +187,11 @@ func reportInstallIDRecovery(detail string) {
 }
 
 func loadFirstToolCallInstallID() string {
-	data, err := os.ReadFile(filepath.Join(kaboomDir, "first_tool_call_install_id"))
+	data, err := installIdentityFiles.ReadFile(filepath.Join(kaboomDir, "first_tool_call_install_id"))
 	if err != nil {
+		if !os.IsNotExist(err) {
+			reportInstallIDRecovery("The first-tool-call identity marker could not be read; first-call telemetry is suppressed for this process.")
+		}
 		return ""
 	}
 	return strings.TrimSpace(string(data))
@@ -177,19 +208,22 @@ func markFirstToolCallEmittedForInstall() bool {
 	})
 
 	installID := GetInstallID()
+	if installID == "" {
+		return false
+	}
 	if cachedFirstToolCallInstallID == installID {
 		return false
 	}
 
-	cachedFirstToolCallInstallID = installID
-	if err := os.MkdirAll(kaboomDir, 0700); err == nil {
-		_ = os.WriteFile(
-			filepath.Join(kaboomDir, "first_tool_call_install_id"),
-			[]byte(installID),
-			0600,
-		)
+	if err := installIdentityFiles.WriteFile(
+		filepath.Join(kaboomDir, "first_tool_call_install_id"),
+		[]byte(installID),
+	); err != nil {
+		reportInstallIDRecovery("The first-tool-call identity marker could not be persisted; first-call telemetry is suppressed for this process.")
+		return false
 	}
-
+	cachedFirstToolCallInstallID = installID
+	statediag.Resolve(stateRecovery, "install_identity_state")
 	return true
 }
 
@@ -217,6 +251,7 @@ func resetInstallIDState() {
 	installIDOnce = sync.Once{}
 	cachedInstallID = ""
 	stateRecovery = nil
+	installIdentityFiles = localIdentityFilesystem{}
 }
 
 // resetFirstToolCallState clears the cached first-tool-call state for testing.
