@@ -128,8 +128,12 @@ func (registry *Registry) SetMutations(transactionID string, mutations MutationC
 func (registry *Registry) CompleteRestore(transactionID string) error {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
-	if _, ok := registry.records[transactionID]; !ok {
+	record, ok := registry.records[transactionID]
+	if !ok {
 		return errors.New("fixture_transaction_not_found")
+	}
+	if record.State != TransactionRestoring {
+		return errors.New("fixture_transaction_restore_not_started")
 	}
 	delete(registry.records, transactionID)
 	return nil

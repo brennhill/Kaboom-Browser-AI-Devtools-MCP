@@ -93,6 +93,12 @@ func TestRegistryRestoreTransitionsAreDeterministic(t *testing.T) {
 	if record.State != TransactionRestoreRequired {
 		t.Fatalf("state after failure = %q", record.State)
 	}
+	if err := registry.CompleteRestore("tx_1"); err == nil || err.Error() != "fixture_transaction_restore_not_started" {
+		t.Fatalf("CompleteRestore() without proof error = %v", err)
+	}
+	if _, err := registry.BeginRestore("tx_1", "generation_1"); err != nil {
+		t.Fatal(err)
+	}
 	if err := registry.CompleteRestore("tx_1"); err != nil {
 		t.Fatal(err)
 	}

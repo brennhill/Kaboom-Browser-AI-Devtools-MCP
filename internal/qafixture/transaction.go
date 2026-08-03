@@ -118,7 +118,11 @@ func (coordinator *Coordinator) Apply(
 
 	rollbackCtx, rollbackCancel := context.WithTimeout(context.Background(), timeout)
 	defer rollbackCancel()
+	if _, beginErr := coordinator.deps.Registry.BeginRestore(transactionID, coordinator.deps.ExtensionGeneration()); beginErr != nil {
+		return transactionFailure(StatusRecoveryRollbackFailed, correlationID, false, mutations)
+	}
 	if restoreErr := coordinator.deps.Restore(rollbackCtx, snapshot); restoreErr != nil {
+		_ = coordinator.deps.Registry.RestoreFailed(transactionID)
 		return transactionFailure(StatusRollbackFailed, correlationID, false, mutations)
 	}
 	if completeErr := coordinator.deps.Registry.CompleteRestore(transactionID); completeErr != nil {
@@ -134,7 +138,11 @@ func (coordinator *Coordinator) Apply(
 func (coordinator *Coordinator) rollbackRegisteredMutation(timeout time.Duration, transactionID, correlationID, snapshot string, mutations MutationCounts, failureStatus string) (TransactionResult, error) {
 	rollbackCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+	if _, err := coordinator.deps.Registry.BeginRestore(transactionID, coordinator.deps.ExtensionGeneration()); err != nil {
+		return transactionFailure(failureStatus, correlationID, false, mutations)
+	}
 	if err := coordinator.deps.Restore(rollbackCtx, snapshot); err != nil {
+		_ = coordinator.deps.Registry.RestoreFailed(transactionID)
 		return transactionFailure(failureStatus, correlationID, false, mutations)
 	}
 	if err := coordinator.deps.Registry.CompleteRestore(transactionID); err != nil {

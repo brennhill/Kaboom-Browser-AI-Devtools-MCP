@@ -49,6 +49,7 @@ test_paths:
   - internal/qafixture/fixture_test.go
   - internal/qafixture/transaction_test.go
   - internal/qafixture/registry_test.go
+  - internal/qafixture/model_test.go
   - internal/qafixture/registry_store_test.go
   - internal/statefile/statefile_test.go
   - internal/schema/configure/schema_test.go
@@ -57,6 +58,7 @@ test_paths:
   - tests/extension/environment-transaction/chrome-state-adapter.test.js
   - tests/extension/environment-transaction/snapshot-store.test.js
   - tests/extension/state-recovery/storage-fault-fixture.js
+  - tests/extension/state-recovery/lifecycle-model.test.js
   - extension/background/pending-queries-iframe.test.js
   - scripts/tests/browser/cat-35-qa-fixtures.sh
 last_verified_version: 0.9.0
@@ -110,6 +112,11 @@ last_verified_date: 2026-08-02
   directory sync where supported, with stable redacted failure stages and
   deterministic cleanup coverage. Windows' unsupported directory-sync
   semantics are isolated explicitly.
+- Deterministic model-based sequences replay 100 named seeds across add,
+  restore, failure, and completion transitions. A recovery obligation can only
+  disappear after the registry has recorded restoration in progress; stale or
+  out-of-order completion attempts remain active and failing seeds identify the
+  exact step for direct replay.
 - Extension snapshot persistence emits structured, redacted fault notices with
   the canonical storage-fault kind. The runtime records local lifecycle detail
   and activates the `environment_snapshot_state` Doctor incident without
