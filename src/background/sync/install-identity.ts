@@ -4,11 +4,17 @@
  */
 
 import { StorageKey } from '../../lib/constants.js'
+import { classifyStorageFailure, storageFaultDetail } from '../../lib/storage/fault.js'
 import { setLocal } from '../../lib/storage/local.js'
 import { readLocalState } from '../../lib/storage/validated.js'
 import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js'
 
 let serverInstallId: string | undefined
+const SERVER_INSTALL_ID = /^[0-9a-f]{12}$/
+
+function isServerInstallId(value: unknown): value is string {
+  return typeof value === 'string' && SERVER_INSTALL_ID.test(value)
+}
 
 export function getServerInstallId(): string | undefined {
   return serverInstallId
@@ -18,7 +24,7 @@ export async function loadServerInstallId(): Promise<void> {
   const stored = await readLocalState<string | undefined>({
     key: StorageKey.SERVER_INSTALL_ID,
     fallback: undefined,
-    validate: (value): value is string => typeof value === 'string' && value.length > 0,
+    validate: isServerInstallId,
     diagnostic: {
       name: 'extension_install_identity_state',
       detail: 'Saved daemon identity was invalid or unreadable; live synchronization will refresh it.',
@@ -33,12 +39,23 @@ export async function loadServerInstallId(): Promise<void> {
 }
 
 export function updateServerInstallId(id: string): void {
-  if (!id || id === serverInstallId) return
-  serverInstallId = id
-  void setLocal(StorageKey.SERVER_INSTALL_ID, id).catch(() => {
+  if (!isServerInstallId(id)) {
     reportStateRecovery({
       name: 'extension_install_identity_state',
-      detail: 'Daemon identity could not be saved; the live identity remains active for this worker.',
+      detail: storageFaultDetail('corruption', 'The live daemon identity was invalid and was not cached.'),
+      fix: 'Restart the Kaboom daemon and reconnect the extension.'
+    })
+    return
+  }
+  if (id === serverInstallId) return
+  serverInstallId = id
+  void setLocal(StorageKey.SERVER_INSTALL_ID, id).catch((error) => {
+    reportStateRecovery({
+      name: 'extension_install_identity_state',
+      detail: storageFaultDetail(
+        classifyStorageFailure(error, 'write'),
+        'Daemon identity could not be saved; the live identity remains active for this worker.'
+      ),
       fix: 'Check extension storage permissions, then reload the extension.'
     })
   })

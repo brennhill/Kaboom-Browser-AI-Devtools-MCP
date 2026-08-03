@@ -66,7 +66,7 @@ describe('loadServerInstallId', () => {
 
   test('loads persisted install ID from chrome.storage.local', async () => {
     const m = await loadModule()
-    chromeMock._store['kaboom_server_install_id'] = 'stored-id-123'
+    chromeMock._store['kaboom_server_install_id'] = 'aabbccddeeff'
     await m.loadServerInstallId()
     // After loading, getServerInstallId should return the stored value
     // (unless a fresher value was already set from a live sync)

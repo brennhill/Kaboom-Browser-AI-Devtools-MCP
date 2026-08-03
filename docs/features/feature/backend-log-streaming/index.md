@@ -74,6 +74,7 @@ test_paths:
   - tests/extension/state-recovery/validated-storage.test.js
   - tests/extension/state-recovery/storage-fault-fixture.js
   - tests/extension/reliability/diagnostic-log-queue.test.js
+  - tests/extension/branding/install-identity-faults.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_network_recording_test.go
   - cmd/browser-agent/tools_configure_network_recording_handler_test.go
