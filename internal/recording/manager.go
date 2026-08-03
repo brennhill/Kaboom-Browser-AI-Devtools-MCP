@@ -22,6 +22,7 @@ const (
 	RecordingStorageMax   = 1024 * 1024 * 1024 // 1GB max storage
 	RecordingWarningLevel = 800 * 1024 * 1024  // 800MB warning threshold (80%)
 	recordingMetadataFile = "metadata.json"
+	maxRecordingIDNameLen = 64
 )
 
 // ============================================================================
@@ -51,6 +52,7 @@ type RecordingManager struct {
 	recordingStorageUsed int64
 	diagnosticsMu        sync.RWMutex
 	diagnostics          statediag.Reporter
+	files                recordingFilesystem
 }
 
 // SetDiagnostics connects recording recovery to the owning server's Doctor collector.
@@ -67,6 +69,7 @@ func (r *RecordingManager) SetDiagnostics(diagnostics statediag.Reporter) {
 func NewRecordingManager() *RecordingManager {
 	return &RecordingManager{
 		recordings: make(map[string]*Recording),
+		files:      localRecordingFilesystem{},
 	}
 }
 
@@ -119,8 +122,8 @@ func (r *RecordingManager) StartRecording(name string, pageURL string, sensitive
 	now := time.Now()
 	timestamp := fmt.Sprintf("%s-%09dZ", now.Format("20060102T150405"), now.Nanosecond())
 	var recordingID string
-	if name != "" {
-		recordingID = fmt.Sprintf("%s-%s", name, timestamp)
+	if safeName := recordingIDName(name); safeName != "" {
+		recordingID = fmt.Sprintf("%s-%s", safeName, timestamp)
 	} else {
 		// Auto-name from page title or URL.
 		recordingID = fmt.Sprintf("recording-%s", timestamp)
@@ -146,6 +149,23 @@ func (r *RecordingManager) StartRecording(name string, pageURL string, sensitive
 	r.activeRecordingID = recordingID
 
 	return recordingID, nil
+}
+
+func recordingIDName(name string) string {
+	normalized := strings.Map(func(character rune) rune {
+		if (character >= 'a' && character <= 'z') ||
+			(character >= 'A' && character <= 'Z') ||
+			(character >= '0' && character <= '9') ||
+			character == '-' || character == '_' {
+			return character
+		}
+		return '-'
+	}, strings.TrimSpace(name))
+	normalized = strings.Trim(normalized, "-_")
+	if len(normalized) > maxRecordingIDNameLen {
+		normalized = strings.TrimRight(normalized[:maxRecordingIDNameLen], "-_")
+	}
+	return normalized
 }
 
 // StopRecording stops the current recording and persists it to disk.

@@ -4,11 +4,12 @@ feature_id: feature-playback-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - internal/recording/types.go
   - internal/recording/manager.go
   - internal/recording/manager_store.go
+  - internal/statefile/statefile.go
   - internal/statediag/collector.go
   - internal/recording/manager_storage.go
   - internal/recording/playback/types.go
@@ -84,6 +85,12 @@ last_verified_date: 2026-03-05
   fail immediately on persistence errors, preventing secondary nil/index panics.
 
 - Recording capture, persistence, and storage quotas: `internal/recording/`
+- Event-recording metadata uses one injectable filesystem boundary and the
+  canonical atomic state-file writer. Deterministic read, list, write, sync,
+  rename, directory-sync, quota, partial-write, and cancellation failures are
+  redacted and reported through Doctor. A failed stop retains the active
+  recording for retry; successful retry resolves the incident. User-authored
+  recording names are normalized before they become storage identifiers.
 - Recording persistence reads and writes only the canonical state recordings
   directory; historical storage locations are not migration inputs.
 - Malformed or unreadable event-recording metadata is isolated per recording,

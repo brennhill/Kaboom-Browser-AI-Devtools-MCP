@@ -5,7 +5,9 @@ package recording
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -13,7 +15,37 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
+
+type recordingFilesystem interface {
+	MkdirAll(string, fs.FileMode) error
+	ReadDir(string) ([]os.DirEntry, error)
+	ReadFile(string) ([]byte, error)
+	WriteFile(string, []byte, fs.FileMode) error
+}
+
+type localRecordingFilesystem struct{}
+
+func (localRecordingFilesystem) MkdirAll(path string, permissions fs.FileMode) error {
+	return os.MkdirAll(path, permissions)
+}
+func (localRecordingFilesystem) ReadDir(path string) ([]os.DirEntry, error) {
+	return os.ReadDir(path)
+}
+func (localRecordingFilesystem) ReadFile(path string) ([]byte, error) { return os.ReadFile(path) }
+func (localRecordingFilesystem) WriteFile(path string, data []byte, permissions fs.FileMode) error {
+	return statefile.Write(path, data, permissions)
+}
+
+func (r *RecordingManager) filesystem() recordingFilesystem {
+	if r != nil && r.files != nil {
+		return r.files
+	}
+	// EXPECTED_ABSENCE: partial zero-value managers in package tests use the
+	// canonical local boundary; production construction always initializes it.
+	return localRecordingFilesystem{}
+}
 
 // ============================================================================
 // Persistence
@@ -44,9 +76,10 @@ func (r *RecordingManager) persistRecordingToDisk(recording *Recording) error {
 	recordingDir := filepath.Join(recordingsDir, recording.ID)
 
 	// Create directory.
-	err = os.MkdirAll(recordingDir, 0755)
+	err = r.filesystem().MkdirAll(recordingDir, 0o700)
 	if err != nil {
-		return fmt.Errorf("mkdir_failed: %w", err)
+		r.reportRecovery("Event recording storage could not be prepared; the active recording remains available for retry.")
+		return errors.New("recording_directory_create_failed")
 	}
 
 	// Create metadata.
@@ -71,9 +104,10 @@ func (r *RecordingManager) persistRecordingToDisk(recording *Recording) error {
 
 	// Write file.
 	metadataPath := filepath.Join(recordingDir, recordingMetadataFile)
-	err = os.WriteFile(metadataPath, data, 0600)
+	err = r.filesystem().WriteFile(metadataPath, data, 0o600)
 	if err != nil {
-		return fmt.Errorf("write_file_failed: %w", err)
+		r.reportRecovery("Event recording metadata could not be persisted; the active recording remains available for retry.")
+		return errors.New("recording_metadata_write_failed")
 	}
 
 	r.resolveRecovery()
@@ -91,12 +125,14 @@ func (r *RecordingManager) collectRecordingsFromRoots(roots []string, limit int)
 	hadRecovery := false
 
 	for _, recordingsDir := range roots {
-		entries, err := os.ReadDir(recordingsDir)
+		entries, err := r.filesystem().ReadDir(recordingsDir)
 		if err != nil {
 			if os.IsNotExist(err) {
+				// EXPECTED_ABSENCE: no recordings directory exists before the first capture.
 				continue
 			}
-			return nil, hadRecovery, fmt.Errorf("readdir_failed: %w", err)
+			r.reportRecovery("Saved event recordings could not be listed; no incomplete result was returned.")
+			return nil, true, errors.New("recording_list_read_failed")
 		}
 		for _, entry := range entries {
 			if !entry.IsDir() || seen[entry.Name()] {
@@ -183,12 +219,12 @@ func (r *RecordingManager) loadRecordingFromDisk(recordingID string) (*Recording
 		metadataPath := filepath.Join(root, recordingID, recordingMetadataFile)
 
 		// Read file.
-		data, err := os.ReadFile(metadataPath) // nosemgrep: go_filesystem_rule-fileread -- CLI tool reads local recording metadata
+		data, err := r.filesystem().ReadFile(metadataPath) // nosemgrep: go_filesystem_rule-fileread -- CLI tool reads local recording metadata
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
 			}
-			lastErr = fmt.Errorf("read_failed: %w", err)
+			lastErr = errors.New("recording_metadata_read_failed")
 			r.reportRecovery("Saved event recording metadata could not be read; the affected recording was omitted.")
 			continue
 		}
@@ -197,7 +233,7 @@ func (r *RecordingManager) loadRecordingFromDisk(recordingID string) (*Recording
 		metadata := &RecordingMetadata{}
 		err = json.Unmarshal(data, metadata)
 		if err != nil {
-			lastErr = fmt.Errorf("json_unmarshal_failed: %w", err)
+			lastErr = errors.New("recording_metadata_corrupt")
 			r.reportRecovery("Saved event recording metadata was malformed; the affected recording was omitted.")
 			continue
 		}

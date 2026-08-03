@@ -14,7 +14,36 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
+
+type faultRecordingFilesystem struct {
+	recordingFilesystem
+	readErr    error
+	readDirErr error
+	writeErr   error
+}
+
+func (files *faultRecordingFilesystem) ReadFile(path string) ([]byte, error) {
+	if files.readErr != nil {
+		return nil, files.readErr
+	}
+	return files.recordingFilesystem.ReadFile(path)
+}
+
+func (files *faultRecordingFilesystem) ReadDir(path string) ([]os.DirEntry, error) {
+	if files.readDirErr != nil {
+		return nil, files.readDirErr
+	}
+	return files.recordingFilesystem.ReadDir(path)
+}
+
+func (files *faultRecordingFilesystem) WriteFile(path string, data []byte, permissions os.FileMode) error {
+	if files.writeErr != nil {
+		return files.writeErr
+	}
+	return files.recordingFilesystem.WriteFile(path, data, permissions)
+}
 
 // ============================================
 // NewRecordingManager Tests
@@ -592,5 +621,109 @@ func TestLookupRecording_PrefersInMemoryOverDisk(t *testing.T) {
 	if _, err := mgr.LookupRecording("never-recorded"); err == nil ||
 		!strings.Contains(err.Error(), "read_failed") {
 		t.Fatalf("LookupRecording(missing) error = %v, want read_failed from the disk fallback", err)
+	}
+}
+
+func TestRecordingPersistenceFaultsRetainActiveRecordingUntilRetry(t *testing.T) {
+	const private = "private-recording-value"
+	for _, kind := range []statefault.Kind{
+		statefault.Write,
+		statefault.Sync,
+		statefault.Rename,
+		statefault.DirectorySync,
+		statefault.Quota,
+		statefault.PartialWrite,
+		statefault.Cancellation,
+	} {
+		t.Run(string(kind), func(t *testing.T) {
+			t.Setenv(state.StateDirEnv, t.TempDir())
+			diagnostics := statediag.NewCollector()
+			manager := NewRecordingManager()
+			manager.SetDiagnostics(diagnostics)
+			id, err := manager.StartRecording("fault", "https://private.example", false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			previousFiles := manager.files
+			manager.files = &faultRecordingFilesystem{
+				recordingFilesystem: previousFiles,
+				writeErr:            statefault.New(kind, private).Error(),
+			}
+
+			if _, _, err := manager.StopRecording(id); err == nil || strings.Contains(err.Error(), private) {
+				t.Fatalf("StopRecording() error = %v, want redacted failure", err)
+			}
+			if manager.activeRecordingID != id {
+				t.Fatalf("active recording = %q, want retained %q", manager.activeRecordingID, id)
+			}
+			got := diagnostics.Snapshot()
+			if len(got) != 1 || got[0].Name != "event_recording_state" || got[0].Lifecycle != statediag.LifecycleActive || strings.Contains(got[0].Detail, private) {
+				t.Fatalf("recording diagnostics = %#v", got)
+			}
+
+			manager.files = previousFiles
+			if _, _, err := manager.StopRecording(id); err != nil {
+				t.Fatal(err)
+			}
+			got = diagnostics.Snapshot()
+			if len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
+				t.Fatalf("resolved recording diagnostics = %#v", got)
+			}
+		})
+	}
+}
+
+func TestRecordingReadAndListFaultsAreStableAndRecoverable(t *testing.T) {
+	t.Setenv(state.StateDirEnv, t.TempDir())
+	diagnostics := statediag.NewCollector()
+	manager := NewRecordingManager()
+	manager.SetDiagnostics(diagnostics)
+	id, err := manager.StartRecording("read-fault", "https://example.com", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := manager.StopRecording(id); err != nil {
+		t.Fatal(err)
+	}
+	previousFiles := manager.files
+	manager.files = &faultRecordingFilesystem{
+		recordingFilesystem: previousFiles,
+		readErr:             statefault.New(statefault.Read, "private-recording").Error(),
+	}
+	if _, err := manager.GetRecording(id); err == nil || strings.Contains(err.Error(), "private-recording") {
+		t.Fatalf("GetRecording() error = %v", err)
+	}
+	manager.files = &faultRecordingFilesystem{
+		recordingFilesystem: previousFiles,
+		readDirErr:          statefault.New(statefault.Read, "private-recording").Error(),
+	}
+	if _, err := manager.ListRecordings(0); err == nil || strings.Contains(err.Error(), "private-recording") {
+		t.Fatalf("ListRecordings() error = %v", err)
+	}
+	manager.files = previousFiles
+	if _, err := manager.ListRecordings(0); err != nil {
+		t.Fatal(err)
+	}
+	got := diagnostics.Snapshot()
+	if len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
+		t.Fatalf("resolved read diagnostics = %#v", got)
+	}
+}
+
+func TestStartRecordingNormalizesUnsafeNameBeforeBuildingStorageID(t *testing.T) {
+	t.Setenv(state.StateDirEnv, t.TempDir())
+	manager := NewRecordingManager()
+	id, err := manager.StartRecording("../../private recording", "https://example.com", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateRecordingID(id); err != nil {
+		t.Fatalf("generated recording ID %q is unsafe: %v", id, err)
+	}
+	if strings.Contains(id, "private recording") || strings.ContainsAny(id, `/\\`) {
+		t.Fatalf("generated recording ID was not normalized: %q", id)
+	}
+	if _, _, err := manager.StopRecording(id); err != nil {
+		t.Fatal(err)
 	}
 }
