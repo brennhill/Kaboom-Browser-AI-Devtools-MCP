@@ -4,7 +4,7 @@ feature_id: feature-batch-sequences
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/internal/replay/contract.go
   - cmd/browser-agent/internal/sequencehandler/handler.go
@@ -58,3 +58,6 @@ remain. Batch and replay audit entries use the same
 Malformed or unreadable saved sequences are isolated from valid siblings and
 omitted from listings. The handler reports the recovery through System Doctor
 without retaining the saved payload.
+Read, list, write, and delete failures now share that same redacted Doctor
+incident; raw storage errors are never echoed through MCP. Canonical state-fault
+tests also prove corruption, partial writes, cancellation, and restart reloads.

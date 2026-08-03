@@ -4,7 +4,7 @@ feature_id: feature-config-profiles
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
@@ -52,6 +52,9 @@ final handlers with explicit dependencies; `ToolHandler` exposes no configure
 forwarding methods.
 Capability examples resolve through the same `internal/toolcatalog.Catalog`
 that owns executable modules and input schemas.
+The response-mode preference cache uses the canonical persisted-state fault
+fixtures to prove disabled fallback, redacted Doctor recovery, and a fresh load
+after daemon restart; normal first-run absence remains explicitly non-incident.
 
 ## TL;DR
 

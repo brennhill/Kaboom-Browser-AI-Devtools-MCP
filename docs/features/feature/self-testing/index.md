@@ -36,6 +36,7 @@ code_paths:
   - cmd/browser-agent/internal/testpages/websocket.go
   - cmd/browser-agent/internal/wsframe/frame.go
   - internal/statefault/fault.go
+  - internal/statefault/store.go
 test_paths:
   - tests/extension/contracts/tooling-contracts.test.js
   - cmd/browser-agent/bridge_faststart_extended_test.go
@@ -87,6 +88,7 @@ test_paths:
   - cmd/browser-agent/internal/wsframe/frame_test.go
   - internal/statefault/fault_test.go
   - internal/statefault/boundary_test.go
+  - internal/statefault/store_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -141,6 +143,8 @@ last_verified_date: 2026-03-05
   vocabulary for read, write, sync, rename, directory-sync, quota, corruption,
   partial-write, cancellation, and restart failures. Scenarios are deterministic,
   never retain private test sentinels, and expose only redacted classified errors.
+  Key-value state consumers use one canonical wrapper which maps all ten faults
+  to read/write/delete behavior without duplicating per-feature fake stores.
 - Go unit/race checks and real-binary lifecycle checks run as separate,
   parallel CI jobs. Subprocess suites carry the `integration` build tag, while
   the named integration job runs every tagged transport, persistence,

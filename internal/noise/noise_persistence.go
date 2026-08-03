@@ -6,6 +6,7 @@ package noise
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -44,27 +45,31 @@ func (nc *NoiseConfig) loadPersistedRules() {
 func (nc *NoiseConfig) readPersistedData() (PersistedNoiseData, bool) {
 	data, err := nc.store.Load("noise", "rules")
 	if err != nil || data == nil {
+		if err != nil && !errors.Is(err, statediag.ErrAbsent) {
+			nc.reportPersistenceRecovery(
+				"Persisted noise rules could not be read; built-in defaults are active.",
+				"Check session-store permissions, then save the noise rules again.",
+			)
+		}
 		return PersistedNoiseData{}, false
 	}
 
 	var persisted PersistedNoiseData
 	if err := json.Unmarshal(data, &persisted); err != nil {
 		fmt.Fprintf(os.Stderr, "noise: corrupted persisted rules: %v\n", err)
-		nc.diagnostics.Report(statediag.Diagnostic{
-			Name:   "noise_rule_state",
-			Detail: "Persisted noise rules were malformed; built-in defaults are active.",
-			Fix:    "Reset noise rules from System Doctor or configure(what='noise_rule', noise_action='reset').",
-		})
+		nc.reportPersistenceRecovery(
+			"Persisted noise rules were malformed; built-in defaults are active.",
+			"Reset noise rules from System Doctor or configure(what='noise_rule', noise_action='reset').",
+		)
 		return PersistedNoiseData{}, false
 	}
 
 	if persisted.Version != 1 {
 		fmt.Fprintf(os.Stderr, "noise: unsupported persistence version: %d\n", persisted.Version)
-		nc.diagnostics.Report(statediag.Diagnostic{
-			Name:   "noise_rule_state",
-			Detail: fmt.Sprintf("Persisted noise rules use unsupported version %d; built-in defaults are active.", persisted.Version),
-			Fix:    "Reset noise rules to rewrite them in the current format.",
-		})
+		nc.reportPersistenceRecovery(
+			fmt.Sprintf("Persisted noise rules use unsupported version %d; built-in defaults are active.", persisted.Version),
+			"Reset noise rules to rewrite them in the current format.",
+		)
 		return PersistedNoiseData{}, false
 	}
 	statediag.Resolve(nc.diagnostics, "noise_rule_state")
@@ -169,10 +174,21 @@ func (nc *NoiseConfig) persistRulesLocked() {
 	}
 
 	if err := nc.store.Save("noise", "rules", data); err != nil {
-		fmt.Fprintf(os.Stderr, "noise: failed to persist rules: %v\n", err)
+		fmt.Fprintln(os.Stderr, "noise: persisted rule write failed; see System Doctor")
+		nc.reportPersistenceRecovery(
+			"Noise rule changes could not be persisted; they remain active only for this process.",
+			"Check session-store space and permissions, then save the noise rules again.",
+		)
 		return
 	}
 	statediag.Resolve(nc.diagnostics, "noise_rule_state")
+}
+
+func (nc *NoiseConfig) reportPersistenceRecovery(detail, fix string) {
+	if nc == nil || nc.diagnostics == nil {
+		return
+	}
+	nc.diagnostics.Report(statediag.Diagnostic{Name: "noise_rule_state", Detail: detail, Fix: fix})
 }
 
 // filterUserRulesLocked extracts non-builtin rules (assumes mu is held).

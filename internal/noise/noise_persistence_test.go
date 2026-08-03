@@ -11,6 +11,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -22,6 +23,57 @@ func newNoiseTestSessionStore(t *testing.T) *persistence.SessionStore {
 	}
 	t.Cleanup(func() { store.Shutdown() })
 	return store
+}
+
+type noiseMemoryStore map[string][]byte
+
+func (store noiseMemoryStore) Save(namespace, key string, data []byte) error {
+	store[namespace+"/"+key] = append([]byte(nil), data...)
+	return nil
+}
+func (store noiseMemoryStore) Load(namespace, key string) ([]byte, error) {
+	return append([]byte(nil), store[namespace+"/"+key]...), nil
+}
+func (store noiseMemoryStore) List(string) ([]string, error) { return []string{"rules"}, nil }
+func (store noiseMemoryStore) Delete(namespace, key string) error {
+	delete(store, namespace+"/"+key)
+	return nil
+}
+
+func TestNoisePersistenceUsesCanonicalFaultFallbacks(t *testing.T) {
+	const private = "private-noise-rule"
+	valid, err := json.Marshal(PersistedNoiseData{Version: 1, NextUserID: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range statefault.Kinds() {
+		t.Run(string(kind), func(t *testing.T) {
+			collector := statediag.NewCollector()
+			base := noiseMemoryStore{"noise/rules": valid}
+			store := statefault.NewStore(base, statefault.New(kind, private))
+			config := NewNoiseConfigWithStore(store, collector)
+
+			if kind == statefault.Write || kind == statefault.Sync || kind == statefault.Rename ||
+				kind == statefault.DirectorySync || kind == statefault.Quota {
+				if err := config.AddRules([]NoiseRule{{Category: "console", Classification: "repetitive", MatchSpec: NoiseMatchSpec{MessageRegex: "fault"}}}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			diagnostics := collector.Snapshot()
+			if kind == statefault.Restart {
+				if len(diagnostics) != 0 {
+					t.Fatalf("restart diagnostics = %#v, want clean durable reload", diagnostics)
+				}
+				return
+			}
+			if len(diagnostics) != 1 || diagnostics[0].Name != "noise_rule_state" || diagnostics[0].Fix == "" {
+				t.Fatalf("%s diagnostics = %#v, want actionable noise-rule incident", kind, diagnostics)
+			}
+			if strings.Contains(diagnostics[0].Detail, private) {
+				t.Fatal("Doctor diagnostic leaked private noise state")
+			}
+		})
+	}
 }
 
 func TestNoiseConfigWithStorePersistsAndReloadsUserRules(t *testing.T) {

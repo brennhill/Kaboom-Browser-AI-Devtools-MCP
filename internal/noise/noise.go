@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
@@ -72,6 +71,12 @@ type PersistedNoiseData struct {
 	Statistics NoiseStatistics `json:"statistics,omitempty"`
 }
 
+// Store is the minimal persistence boundary owned by noise rules.
+type Store interface {
+	Save(namespace, key string, data []byte) error
+	Load(namespace, key string) ([]byte, error)
+}
+
 // NoiseConfig manages noise filtering rules with dual-mutex concurrency control.
 //
 // LOCK ORDERING INVARIANT (H-5 documented):
@@ -93,7 +98,7 @@ type NoiseConfig struct {
 	statsMu       sync.Mutex // Separate mutex for stats (written during reads).
 	stats         NoiseStatistics
 	userIDCounter int
-	store         *persistence.SessionStore // nil if no persistence
+	store         Store // nil if no persistence
 	diagnostics   statediag.Reporter
 }
 
@@ -111,7 +116,7 @@ func NewNoiseConfig() *NoiseConfig {
 }
 
 // NewNoiseConfigWithStore creates a new NoiseConfig with SessionStore persistence.
-func NewNoiseConfigWithStore(store *persistence.SessionStore, diagnostics statediag.Reporter) *NoiseConfig {
+func NewNoiseConfigWithStore(store Store, diagnostics statediag.Reporter) *NoiseConfig {
 	nc := &NoiseConfig{
 		store:       store,
 		diagnostics: diagnostics,

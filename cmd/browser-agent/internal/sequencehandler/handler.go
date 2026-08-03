@@ -5,6 +5,7 @@ package sequencehandler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -86,7 +87,8 @@ func (h *Handler) Save(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to serialize sequence: "+err.Error(), "Check step format")
 	}
 	if err := h.deps.Store.Save(toolconfigure.SequenceNamespace, params.Name, data); err != nil {
-		return mcp.Fail(req, mcp.ErrInvalidParam, "Failed to save sequence: "+err.Error(), "Check disk space")
+		h.reportRecovery("A saved sequence could not be written; the previous on-disk value, if any, remains active.")
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Failed to save sequence", "Check disk space and System Doctor")
 	}
 	statediag.Resolve(h.deps.Diagnostics, "saved_sequence_state")
 	return mcp.Succeed(req, "Sequence saved", map[string]any{
@@ -123,6 +125,7 @@ func (h *Handler) List(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 	}
 	keys, err := h.deps.Store.List(toolconfigure.SequenceNamespace)
 	if err != nil {
+		h.reportRecovery("Saved sequences could not be listed; an empty list is shown as a safe fallback.")
 		return mcp.Succeed(req, "Sequences", map[string]any{"status": "ok", "sequences": []any{}, "count": 0})
 	}
 	summaries := make([]toolconfigure.SequenceSummary, 0, len(keys))
@@ -166,10 +169,14 @@ func (h *Handler) Delete(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 		return resp
 	}
 	if _, err := h.deps.Store.Load(toolconfigure.SequenceNamespace, params.Name); err != nil {
+		if !errors.Is(err, statediag.ErrAbsent) {
+			h.reportRecovery("A saved sequence could not be read before deletion; no deletion was attempted.")
+		}
 		return mcp.Fail(req, mcp.ErrNoData, "Sequence not found: "+params.Name, "Use list_sequences to see available sequences")
 	}
 	if err := h.deps.Store.Delete(toolconfigure.SequenceNamespace, params.Name); err != nil {
-		return mcp.Fail(req, mcp.ErrInvalidParam, "Failed to delete sequence: "+err.Error(), "Try again")
+		h.reportRecovery("A saved sequence could not be deleted; its on-disk value remains active.")
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Failed to delete sequence", "Check System Doctor and try again")
 	}
 	return mcp.Succeed(req, "Sequence deleted", map[string]any{"status": "deleted", "name": params.Name, "message": "Sequence deleted: " + params.Name})
 }
@@ -187,13 +194,16 @@ func (h *Handler) load(req mcp.JSONRPCRequest, name string) (*toolconfigure.Sequ
 	}
 	data, err := h.deps.Store.Load(toolconfigure.SequenceNamespace, name)
 	if err != nil {
+		if !errors.Is(err, statediag.ErrAbsent) {
+			h.reportRecovery("A saved sequence could not be read; it was not loaded.")
+		}
 		resp := mcp.Fail(req, mcp.ErrNoData, "Sequence not found: "+name, "Use list_sequences to see available sequences")
 		return nil, &resp
 	}
 	var sequence toolconfigure.Sequence
 	if err := json.Unmarshal(data, &sequence); err != nil {
 		h.reportRecovery("A saved sequence was malformed and could not be loaded.")
-		resp := mcp.Fail(req, mcp.ErrInvalidJSON, "Corrupted sequence data: "+err.Error(), "Delete and re-save the sequence")
+		resp := mcp.Fail(req, mcp.ErrInvalidJSON, "Corrupted sequence data", "Delete and re-save the sequence")
 		return nil, &resp
 	}
 	statediag.Resolve(h.deps.Diagnostics, "saved_sequence_state")

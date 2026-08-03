@@ -4,7 +4,7 @@ feature_id: feature-noise-filtering
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/toolconfigure/noise_actions.go
@@ -66,6 +66,12 @@ last_verified_date: 2026-03-05
 - FEATURE_NOISE_FILTERING_003
 
 ## Code and Tests
+
+Noise persistence depends on its own minimal two-method store boundary rather
+than the concrete session-store implementation. Canonical state-fault tests
+prove read, write, quota, corruption, partial-write, cancellation, sync-stage,
+and restart behavior; failures retain built-in or in-memory rules and create a
+redacted `noise_rule_state` Doctor incident.
 
 Automatic detection scheduling, navigation debouncing, first-connect lifecycle
 wiring, and telemetry adaptation are owned together by

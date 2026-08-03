@@ -5,9 +5,11 @@ package summarypref
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
 
 func TestCacheLoadsOnceUntilInvalidated(t *testing.T) {
@@ -95,29 +97,71 @@ func TestCacheInjectAddsSummaryToUnsetArguments(t *testing.T) {
 	}
 }
 
-func TestCacheReportsReadAndParseRecoveryWithoutRawState(t *testing.T) {
+func TestCacheCanonicalFaultFallbackAndRecoveryDoesNotLeakState(t *testing.T) {
 	t.Parallel()
+	const private = "private-response-preference"
+	valid := []byte(`{"summary":true,"private":"private-response-preference"}`)
 
 	for _, tt := range []struct {
-		name string
-		load Loader
+		kind statefault.Kind
 	}{
-		{name: "read", load: func() ([]byte, error) { return nil, errors.New("secret path") }},
-		{name: "parse", load: func() ([]byte, error) { return []byte(`{"token":"secret"`), nil }},
+		{kind: statefault.Read},
+		{kind: statefault.Cancellation},
+		{kind: statefault.Corruption},
+		{kind: statefault.PartialWrite},
 	} {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(string(tt.kind), func(t *testing.T) {
+			scenario := statefault.New(tt.kind, private)
+			faulted := true
+			load := func() ([]byte, error) {
+				if !faulted {
+					return valid, nil
+				}
+				if tt.kind == statefault.Corruption || tt.kind == statefault.PartialWrite {
+					return scenario.Payload(valid), nil
+				}
+				return nil, scenario.Error()
+			}
 			collector := statediag.NewCollector()
-			if New(tt.load, collector).Enabled() {
+			cache := New(load, collector)
+			if cache.Enabled() {
 				t.Fatal("recovered preference must use disabled fallback")
 			}
 			got := collector.Snapshot()
 			if len(got) != 1 || got[0].Name != "response_mode_state" || got[0].Fix == "" {
 				t.Fatalf("diagnostics = %#v, want actionable response-mode warning", got)
 			}
-			if got[0].Detail == "secret path" || got[0].Detail == `{"token":"secret"` {
+			if strings.Contains(got[0].Detail, private) {
 				t.Fatalf("diagnostic leaked persisted state: %#v", got[0])
 			}
+
+			faulted = false
+			cache.Invalidate()
+			if !cache.Enabled() {
+				t.Fatal("valid preference did not recover after canonical fault cleared")
+			}
+			recovered := collector.Snapshot()
+			if len(recovered) != 1 || recovered[0].Lifecycle != statediag.LifecycleRecovered {
+				t.Fatalf("recovered diagnostics = %#v", recovered)
+			}
 		})
+	}
+}
+
+func TestCacheReloadsPersistedPreferenceAfterRestartGeneration(t *testing.T) {
+	loads := 0
+	load := func() ([]byte, error) {
+		loads++
+		return []byte(`{"summary":true}`), nil
+	}
+	if !New(load, nil).Enabled() {
+		t.Fatal("initial generation did not load preference")
+	}
+	if statefault.New(statefault.Restart, "private").NextGeneration(1) != 2 {
+		t.Fatal("restart fixture did not advance generation")
+	}
+	if !New(load, nil).Enabled() || loads != 2 {
+		t.Fatalf("restart did not reload persisted preference; loads=%d", loads)
 	}
 }
 
