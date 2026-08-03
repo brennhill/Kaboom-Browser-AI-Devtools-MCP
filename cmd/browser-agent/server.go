@@ -38,11 +38,19 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
 	uploadapi "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
+
+type stateRecoveryDiagnostics interface {
+	statediag.Reporter
+	statediag.Resolver
+	Snapshot() []statediag.Diagnostic
+	Stats() statediag.CollectorStats
+}
 
 // Server holds the server state.
 type Server struct {
@@ -95,7 +103,7 @@ type Server struct {
 
 	// Token savings tracker for output compression hooks.
 	tokenTracker  *tracking.TokenTracker
-	stateRecovery *statediag.Collector
+	stateRecovery stateRecoveryDiagnostics
 
 	// Push drain authentication token. When non-empty, /push/drain requires
 	// Authorization: Bearer <token>. Set via --push-drain-token flag.
@@ -153,6 +161,24 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	if pathErr != nil {
 		return nil, fmt.Errorf("resolve session project path: %w", pathErr)
 	}
+	var stateRecovery stateRecoveryDiagnostics = statediag.NewCollector()
+	timelinePath, timelinePathErr := state.InRoot("doctor", "incident-timeline.json")
+	if timelinePathErr == nil {
+		persistent, loadErr := statediag.NewPersistentCollector(timelinePath)
+		stateRecovery = persistent
+		if loadErr != nil {
+			stateRecovery.Report(statediag.Diagnostic{
+				Name: "doctor_timeline_state", Detail: "Saved Doctor incident history was invalid or unreadable; a clean local timeline is active.",
+				Fix: "No action is required unless this repeats; check the Kaboom state directory permissions.",
+			})
+		}
+	} else {
+		stateRecovery.Report(statediag.Diagnostic{
+			Name: "doctor_timeline_state", Detail: "Doctor incident history could not resolve its local state path.",
+			Fix: "Check the Kaboom state directory configuration.",
+		})
+	}
+
 	s := &Server{
 		listenPort:         defaultPort,
 		sessionProjectPath: sessionProjectPath,
@@ -162,7 +188,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		ptyManager:         pty.NewManager(),
 		tokenTracker:       tracking.NewTokenTracker(),
 		intentStore:        terminal.NewIntentStore(),
-		stateRecovery:      statediag.NewCollector(),
+		stateRecovery:      stateRecovery,
 	}
 
 	// Create log store with warning callback wired to server

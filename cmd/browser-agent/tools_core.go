@@ -53,7 +53,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
@@ -151,7 +150,7 @@ type ToolHandler struct {
 
 	// Session-level response-mode preference.
 	summaryPrefs  *summarypref.Cache
-	stateRecovery *statediag.Collector
+	stateRecovery stateRecoveryDiagnostics
 
 	// noiseFirstConnectFn overrides the noise auto-detect function for first-connection.
 	// When nil, the canonical noiseautorun detector is used.

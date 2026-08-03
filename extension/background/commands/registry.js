@@ -36,7 +36,11 @@ function rejectSupersededCommand(query, lifecycle, bridge) {
     reportStateRecovery({
         name: 'command_generation_state',
         detail: 'A command from a superseded daemon connection was rejected before execution.',
-        fix: 'Retry the command after the extension reconnects.'
+        fix: 'Retry the command after the extension reconnects.',
+        correlation_id: query.correlation_id || query.id,
+        expected_next_transition: 'command_retried',
+        recovery_attempt: 1,
+        recovery_outcome: 'superseded'
     });
     debugLog(DebugCategory.CONNECTION, 'Rejected stale connection generation', {
         query_id: query.id,
@@ -91,7 +95,11 @@ function createDispatchLifecycle(query, syncClient, wrapResult) {
             reportStateRecovery({
                 name: 'command_generation_state',
                 detail: 'An in-flight command result from a superseded daemon connection was rejected.',
-                fix: 'Retry the command after the extension reconnects.'
+                fix: 'Retry the command after the extension reconnects.',
+                correlation_id: query.correlation_id || query.id,
+                expected_next_transition: 'command_retried',
+                recovery_attempt: 1,
+                recovery_outcome: 'superseded'
             });
             debugLog(DebugCategory.CONNECTION, 'Rejected stale connection generation', {
                 query_id: query.id,

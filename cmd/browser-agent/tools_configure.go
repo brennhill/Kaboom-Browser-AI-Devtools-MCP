@@ -332,18 +332,23 @@ func recoveryDoctorChecks(diagnostics recoveryDiagnostics) []health.DoctorCheck 
 		history := make([]health.DoctorTransition, 0, len(diagnostic.History))
 		for _, transition := range diagnostic.History {
 			history = append(history, health.DoctorTransition{
-				Lifecycle: string(transition.Lifecycle),
-				At:        transition.At.Format(time.RFC3339Nano),
+				Lifecycle: string(transition.Lifecycle), At: transition.At.Format(time.RFC3339Nano),
+				Event: transition.Event, CorrelationID: transition.CorrelationID, Outcome: transition.Outcome,
 			})
 		}
 		checks = append(checks, health.DoctorCheck{
 			Name: diagnostic.Name, CorrelationID: diagnostic.CorrelationID, Status: status, Detail: diagnostic.Detail, Fix: diagnostic.Fix,
-			Lifecycle:   string(diagnostic.Lifecycle),
-			FirstSeenAt: diagnostic.FirstSeenAt.Format(time.RFC3339Nano),
-			LastSeenAt:  diagnostic.LastSeenAt.Format(time.RFC3339Nano),
-			RecoveredAt: formatDiagnosticTime(diagnostic.RecoveredAt),
-			Occurrences: diagnostic.Occurrences,
-			History:     history,
+			Lifecycle:                string(diagnostic.Lifecycle),
+			FirstSeenAt:              diagnostic.FirstSeenAt.Format(time.RFC3339Nano),
+			LastSeenAt:               diagnostic.LastSeenAt.Format(time.RFC3339Nano),
+			RecoveredAt:              formatDiagnosticTime(diagnostic.RecoveredAt),
+			Occurrences:              diagnostic.Occurrences,
+			LastSuccessfulTransition: diagnostic.LastSuccessfulTransition,
+			ExpectedNextTransition:   diagnostic.ExpectedNextTransition,
+			Deadline:                 formatDiagnosticTime(diagnostic.Deadline),
+			RecoveryAttempt:          diagnostic.RecoveryAttempt,
+			RecoveryOutcome:          diagnostic.RecoveryOutcome,
+			History:                  history,
 		})
 	}
 	stats := diagnostics.Stats()

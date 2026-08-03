@@ -43,6 +43,29 @@ function renderReport(report) {
         detail.className = 'doctor-check-detail';
         detail.textContent = check.detail;
         row.appendChild(detail);
+        const timelineParts = [];
+        if (check.correlation_id)
+            timelineParts.push(`ID: ${check.correlation_id}`);
+        if (check.expected_next_transition) {
+            timelineParts.push(`Next: ${check.expected_next_transition.replaceAll('_', ' ')}`);
+        }
+        if (check.deadline)
+            timelineParts.push(`Deadline: ${new Date(check.deadline).toLocaleString()}`);
+        if (check.recovery_attempt) {
+            timelineParts.push(`Attempt ${check.recovery_attempt} · ${check.recovery_outcome ?? 'pending'}`);
+        }
+        const recentEvents = (check.history ?? [])
+            .slice(-3)
+            .map((transition) => transition.event?.replaceAll('_', ' '))
+            .filter((event) => Boolean(event));
+        if (recentEvents.length > 0)
+            timelineParts.push(recentEvents.join(' → '));
+        if (timelineParts.length > 0) {
+            const timeline = document.createElement('div');
+            timeline.className = 'doctor-check-timeline';
+            timeline.textContent = timelineParts.join(' · ');
+            row.appendChild(timeline);
+        }
         if (check.lifecycle === 'recovered') {
             const lifecycle = document.createElement('div');
             lifecycle.className = 'doctor-check-lifecycle';

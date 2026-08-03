@@ -19,7 +19,7 @@ func TestRunDoctorChecksSurfacesExtensionStateRecovery(t *testing.T) {
 	c.ExtensionLogs().Add([]types.ExtensionLog{{
 		Timestamp: time.Date(2026, 7, 30, 8, 0, 0, 0, time.UTC),
 		Level:     "warn", Category: "state_recovery", Message: "Persisted extension state recovered",
-		Data: json.RawMessage(`{"name":"tracked_tab_state","detail":"Saved tracking state was malformed; automatic tracking is active.","fix":"Choose a tracked tab again.","lifecycle":"active"}`),
+		Data: json.RawMessage(`{"name":"tracked_tab_state","detail":"Saved tracking state was malformed; automatic tracking is active.","fix":"Choose a tracked tab again.","lifecycle":"active","correlation_id":"track-123","expected_next_transition":"tracking_confirmed","recovery_attempt":2,"recovery_outcome":"retrying"}`),
 	}, {
 		Timestamp: time.Date(2026, 7, 30, 8, 1, 0, 0, time.UTC),
 		Level:     "info", Category: "state_recovery", Message: "Persisted extension state verified",
@@ -32,6 +32,10 @@ func TestRunDoctorChecksSurfacesExtensionStateRecovery(t *testing.T) {
 	}
 	if check.Occurrences != 1 || len(check.History) != 2 {
 		t.Fatalf("extension recovery history = %#v, want one occurrence and two transitions", check)
+	}
+	if check.CorrelationID != "track-123" || check.LastSuccessfulTransition != "state_verified" ||
+		check.RecoveryAttempt != 2 || check.RecoveryOutcome != "recovered" || check.History[0].Event != "failure_detected" {
+		t.Fatalf("extension recovery timeline = %#v", check)
 	}
 }
 

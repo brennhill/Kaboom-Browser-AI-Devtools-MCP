@@ -2,10 +2,116 @@
 package statediag
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
+
+func TestCollectorBuildsCorrelatedIncidentTimeline(t *testing.T) {
+	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
+	collector := NewCollector()
+	collector.now = func() time.Time { return now }
+	collector.Report(Diagnostic{
+		Name: "content_readiness", CorrelationID: "nav-123", Detail: "probe timed out", Fix: "retry",
+		ExpectedNextTransition: "content_ready", Deadline: now.Add(5 * time.Second),
+	})
+	now = now.Add(time.Second)
+	collector.Report(Diagnostic{Name: "content_readiness", CorrelationID: "nav-123", Detail: "retry failed", Fix: "reload"})
+	now = now.Add(time.Second)
+	collector.Resolve("content_readiness")
+
+	got := collector.Snapshot()[0]
+	if got.CorrelationID != "nav-123" || got.RecoveryAttempt != 2 || got.RecoveryOutcome != "recovered" {
+		t.Fatalf("incident metadata = %#v", got)
+	}
+	if got.LastSuccessfulTransition != "state_verified" || got.ExpectedNextTransition != "" || !got.Deadline.IsZero() {
+		t.Fatalf("recovered transition contract = %#v", got)
+	}
+	if len(got.History) != 3 || got.History[1].Event != "failure_recurred" || got.History[2].Outcome != "recovered" {
+		t.Fatalf("timeline = %#v", got.History)
+	}
+}
+
+func TestCollectorMakesIncompleteTimelineExplicitAndRedactsExports(t *testing.T) {
+	collector := NewCollector()
+	collector.Report(Diagnostic{
+		Name: "command_state", CorrelationID: "cmd-123", Detail: "Bearer private-token at https://example.test/path?token=private",
+		Fix: "retry with api_key=private",
+	})
+	got := collector.Snapshot()[0]
+	if got.ExpectedNextTransition != "state_verified" || got.Deadline.IsZero() == false {
+		t.Fatalf("incomplete timeline fallback = %#v", got)
+	}
+	encoded := fmt.Sprintf("%#v", got)
+	if strings.Contains(encoded, "private-token") || strings.Contains(encoded, "token=private") || strings.Contains(encoded, "api_key=private") {
+		t.Fatalf("diagnostic export leaked private values: %s", encoded)
+	}
+}
+
+func TestPersistentCollectorRestoresBoundedTimelineAcrossRestart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "doctor-incidents.json")
+	first, err := NewPersistentCollector(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first.Report(Diagnostic{Name: "tracking_state", CorrelationID: "track-1", Detail: "recovering", Fix: "wait"})
+	first.Resolve("tracking_state")
+	first.Report(Diagnostic{Name: "command_state", CorrelationID: "cmd-1", Detail: "retry", Fix: "retry"})
+
+	restarted, err := NewPersistentCollector(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := restarted.Snapshot()
+	if len(got) != 2 || got[0].Name != "command_state" || got[1].Lifecycle != LifecycleRecovered {
+		t.Fatalf("restored snapshot = %#v", got)
+	}
+	if restarted.Stats().Active != 1 || restarted.Stats().Recovered != 1 {
+		t.Fatalf("restored stats = %#v", restarted.Stats())
+	}
+}
+
+func TestPersistentCollectorMakesWriteFailureVisibleWithoutLeakingCause(t *testing.T) {
+	collector, err := NewPersistentCollector(filepath.Join(t.TempDir(), "doctor-incidents.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	collector.writeFile = func(string, []byte, os.FileMode) error {
+		return errors.New("private persistence cause")
+	}
+	collector.Report(Diagnostic{Name: "tracking_state", Detail: "recovering", Fix: "retry"})
+
+	got := collector.Snapshot()
+	if len(got) != 2 || got[0].Name != "doctor_timeline_persistence" || got[0].Lifecycle != LifecycleActive {
+		t.Fatalf("persistence failure timeline = %#v", got)
+	}
+	if strings.Contains(fmt.Sprintf("%#v", got), "private persistence cause") {
+		t.Fatalf("persistence cause leaked: %#v", got)
+	}
+	collector.writeFile = statefile.Write
+	collector.Report(Diagnostic{Name: "tracking_state", Detail: "still recovering", Fix: "retry"})
+	got = collector.Snapshot()
+	if got[0].Name != "doctor_timeline_persistence" || got[0].Lifecycle != LifecycleRecovered {
+		t.Fatalf("persistence recovery timeline = %#v", got)
+	}
+}
+
+func TestPersistentCollectorRejectsCorruptRestartState(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "doctor-incidents.json")
+	if err := os.WriteFile(path, []byte(`{"version":1,"diagnostics":[{"detail":"private"}]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	collector, err := NewPersistentCollector(path)
+	if err == nil || len(collector.Snapshot()) != 0 {
+		t.Fatalf("corrupt restore collector=%#v error=%v", collector.Snapshot(), err)
+	}
+}
 
 func TestCollectorReplacesDiagnosticByStableName(t *testing.T) {
 	t.Parallel()
@@ -77,10 +183,11 @@ func TestCollectorTracksActiveRecoveredAndHistoricalTransitions(t *testing.T) {
 	if diagnostic.FirstSeenAt.IsZero() || diagnostic.LastSeenAt.IsZero() || diagnostic.RecoveredAt.IsZero() {
 		t.Fatalf("diagnostic timestamps = %#v, want complete lifecycle timestamps", diagnostic)
 	}
-	if len(diagnostic.History) != 2 ||
+	if len(diagnostic.History) != 3 ||
 		diagnostic.History[0].Lifecycle != LifecycleActive ||
-		diagnostic.History[1].Lifecycle != LifecycleRecovered {
-		t.Fatalf("history = %#v, want active then recovered transitions", diagnostic.History)
+		diagnostic.History[1].Event != "failure_recurred" ||
+		diagnostic.History[2].Lifecycle != LifecycleRecovered {
+		t.Fatalf("history = %#v, want active recurrence then recovery", diagnostic.History)
 	}
 }
 

@@ -305,6 +305,13 @@
         color: #8bcf69;
       }
 
+      .doctor-check-timeline {
+        margin-top: 3px;
+        color: #9aa7bd;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        overflow-wrap: anywhere;
+      }
+
       .badge {
         display: inline-flex;
         align-items: center;

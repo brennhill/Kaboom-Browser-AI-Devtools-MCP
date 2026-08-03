@@ -12,6 +12,9 @@ type DoctorLifecycle = 'active' | 'recovered'
 interface DoctorTransition {
   lifecycle: DoctorLifecycle
   at: string
+  event?: string
+  correlation_id?: string
+  outcome?: string
 }
 
 interface DoctorCheck {
@@ -24,6 +27,12 @@ interface DoctorCheck {
   last_seen_at?: string
   recovered_at?: string
   occurrences?: number
+  correlation_id?: string
+  last_successful_transition?: string
+  expected_next_transition?: string
+  deadline?: string
+  recovery_attempt?: number
+  recovery_outcome?: string
   history?: DoctorTransition[]
 }
 
@@ -81,6 +90,26 @@ function renderReport(report: DoctorReport): void {
       detail.className = 'doctor-check-detail'
       detail.textContent = check.detail
       row.appendChild(detail)
+      const timelineParts: string[] = []
+      if (check.correlation_id) timelineParts.push(`ID: ${check.correlation_id}`)
+      if (check.expected_next_transition) {
+        timelineParts.push(`Next: ${check.expected_next_transition.replaceAll('_', ' ')}`)
+      }
+      if (check.deadline) timelineParts.push(`Deadline: ${new Date(check.deadline).toLocaleString()}`)
+      if (check.recovery_attempt) {
+        timelineParts.push(`Attempt ${check.recovery_attempt} · ${check.recovery_outcome ?? 'pending'}`)
+      }
+      const recentEvents = (check.history ?? [])
+        .slice(-3)
+        .map((transition) => transition.event?.replaceAll('_', ' '))
+        .filter((event): event is string => Boolean(event))
+      if (recentEvents.length > 0) timelineParts.push(recentEvents.join(' → '))
+      if (timelineParts.length > 0) {
+        const timeline = document.createElement('div')
+        timeline.className = 'doctor-check-timeline'
+        timeline.textContent = timelineParts.join(' · ')
+        row.appendChild(timeline)
+      }
       if (check.lifecycle === 'recovered') {
         const lifecycle = document.createElement('div')
         lifecycle.className = 'doctor-check-lifecycle'

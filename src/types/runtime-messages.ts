@@ -91,9 +91,7 @@ export interface GetStatusMessage {
   readonly type: 'get_status'
 }
 
-/**
- * Clear logs message
- */
+/** Clear logs message. */
 export interface ClearLogsMessage {
   readonly type: 'clear_logs'
 }
@@ -102,6 +100,11 @@ export interface StateRecoveryDiagnostic {
   readonly name: string
   readonly detail: string
   readonly fix: string
+  readonly correlation_id?: string
+  readonly expected_next_transition?: string
+  readonly deadline?: string
+  readonly recovery_attempt?: number
+  readonly recovery_outcome?: string
 }
 
 export type StateRecoveryLifecycle = 'active' | 'recovered'

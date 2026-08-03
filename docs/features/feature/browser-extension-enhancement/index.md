@@ -68,6 +68,7 @@ code_paths:
   - internal/persistence/
   - internal/recording/
   - internal/statediag/collector.go
+  - internal/statediag/store.go
   - internal/telemetry/install_id.go
   - extension/popup.html
   - extension/popup.css
@@ -145,6 +146,13 @@ last_verified_date: 2026-03-28
   Doctor summarizes the latest worker/reconnect sequence and reports dropped
   entries without exposing private diagnostic values or sending them to usage
   telemetry.
+- System Doctor incidents form a bounded correlated timeline with failure and
+  recurrence transitions, expected next state, deadline, recovery attempt and
+  outcome, and the last successful transition. The daemon persists the redacted
+  timeline under its canonical state root, restores it after restart, retains
+  active obligations, and evicts only the oldest recovered history. The popup
+  renders a compact recent sequence; recovered incidents remain historical and
+  do not degrade current readiness.
 - Authored extension failures are never discarded through empty or bare-fallback
   synchronous and Promise catches. Unexpected
   failures leave redacted evidence; intentionally unlogged absence/cancellation

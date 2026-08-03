@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
@@ -38,6 +39,25 @@ func TestRecoveryDoctorChecks(t *testing.T) {
 	}
 	if len(checks[0].History) != 2 {
 		t.Fatalf("history = %#v, want active and recovered transitions", checks[0].History)
+	}
+}
+
+func TestRecoveryDoctorChecksExposeIncidentTimelineFields(t *testing.T) {
+	collector := statediag.NewCollector()
+	deadline := time.Now().UTC().Add(time.Minute)
+	collector.Report(statediag.Diagnostic{
+		Name: "content_readiness", CorrelationID: "nav-123", Detail: "waiting", Fix: "retry",
+		ExpectedNextTransition: "content_ready", Deadline: deadline,
+	})
+	check := recoveryDoctorChecks(collector)[0]
+	if check.ExpectedNextTransition != "content_ready" || check.Deadline == "" || check.RecoveryAttempt != 1 ||
+		check.RecoveryOutcome != "pending" || len(check.History) != 1 || check.History[0].Event != "failure_detected" {
+		t.Fatalf("Doctor incident timeline = %#v", check)
+	}
+	collector.Resolve("content_readiness")
+	check = recoveryDoctorChecks(collector)[0]
+	if check.Status != "pass" || check.LastSuccessfulTransition != "state_verified" || check.RecoveryOutcome != "recovered" {
+		t.Fatalf("Doctor recovered timeline = %#v", check)
 	}
 }
 

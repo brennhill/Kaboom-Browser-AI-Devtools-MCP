@@ -186,7 +186,11 @@ export const contentReadiness = new ContentReadinessBarrier({
     reportStateRecovery({
       name: 'content_readiness_state',
       detail: `Content readiness failed after ${attempts} correlated attempts.`,
-      fix: 'Reload the tracked tab or reconnect the extension, then retry the command.'
+      fix: 'Reload the tracked tab or reconnect the extension, then retry the command.',
+      correlation_id: correlationId,
+      expected_next_transition: 'content_ready',
+      recovery_attempt: attempts,
+      recovery_outcome: 'timed_out'
     })
     debugLog(DebugCategory.CONNECTION, 'Content readiness transition failed', {
       tab_id: tabId,
@@ -199,7 +203,11 @@ export const contentReadiness = new ContentReadinessBarrier({
     reportStateRecovery({
       name: 'content_readiness_generation',
       detail: 'A content readiness acknowledgement arrived after its daemon connection was superseded.',
-      fix: 'Retry the command after the extension reconnects.'
+      fix: 'Retry the command after the extension reconnects.',
+      correlation_id: correlationId,
+      expected_next_transition: 'content_ready',
+      recovery_attempt: 1,
+      recovery_outcome: 'superseded'
     })
     debugLog(DebugCategory.CONNECTION, 'Rejected stale connection generation', {
       tab_id: tabId,

@@ -144,6 +144,36 @@ describe('popup System Doctor', () => {
     assert.equal(checks.children[0].dataset.lifecycle, 'recovered')
   })
 
+  test('renders a compact correlated incident and recovery timeline', async () => {
+    const { refreshSystemDoctor } = await import('../../../extension/popup/system-doctor.js')
+    await refreshSystemDoctor(
+      { connected: true, serverUrl: 'http://127.0.0.1:7890' },
+      async () => ({
+        ok: true,
+        json: async () => ({
+          status: 'degraded',
+          ready_for_interaction: false,
+          version: '0.9.0',
+          checks: [{
+            name: 'content_readiness', status: 'warn', detail: 'Waiting for content readiness.',
+            lifecycle: 'active', correlation_id: 'nav-123', expected_next_transition: 'content_ready',
+            deadline: '2026-08-03T12:00:05Z', recovery_attempt: 2, recovery_outcome: 'pending',
+            history: [
+              { lifecycle: 'active', at: '2026-08-03T12:00:00Z', event: 'failure_detected' },
+              { lifecycle: 'active', at: '2026-08-03T12:00:01Z', event: 'failure_recurred' }
+            ]
+          }]
+        })
+      })
+    )
+
+    const text = renderedText(document.getElementById('system-doctor-checks'))
+    assert.match(text, /nav-123/)
+    assert.match(text, /Next: content ready/)
+    assert.match(text, /Attempt 2 · pending/)
+    assert.match(text, /failure detected → failure recurred/)
+  })
+
   test('shows daemon unavailability without throwing or inventing check results', async () => {
     const { refreshSystemDoctor } = await import('../../../extension/popup/system-doctor.js')
     await refreshSystemDoctor(

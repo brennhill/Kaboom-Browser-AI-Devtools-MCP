@@ -27,22 +27,30 @@ var doctorCommandOutput = func(timeout time.Duration, name string, args ...strin
 
 // DoctorCheck represents a single diagnostic check result.
 type DoctorCheck struct {
-	Name          string             `json:"name"`
-	CorrelationID string             `json:"correlation_id,omitempty"`
-	Status        string             `json:"status"` // "pass", "warn", "fail"
-	Detail        string             `json:"detail"`
-	Fix           string             `json:"fix,omitempty"`
-	Lifecycle     string             `json:"lifecycle,omitempty"`
-	FirstSeenAt   string             `json:"first_seen_at,omitempty"`
-	LastSeenAt    string             `json:"last_seen_at,omitempty"`
-	RecoveredAt   string             `json:"recovered_at,omitempty"`
-	Occurrences   int                `json:"occurrences,omitempty"`
-	History       []DoctorTransition `json:"history,omitempty"`
+	Name                     string             `json:"name"`
+	CorrelationID            string             `json:"correlation_id,omitempty"`
+	Status                   string             `json:"status"` // "pass", "warn", "fail"
+	Detail                   string             `json:"detail"`
+	Fix                      string             `json:"fix,omitempty"`
+	Lifecycle                string             `json:"lifecycle,omitempty"`
+	FirstSeenAt              string             `json:"first_seen_at,omitempty"`
+	LastSeenAt               string             `json:"last_seen_at,omitempty"`
+	RecoveredAt              string             `json:"recovered_at,omitempty"`
+	Occurrences              int                `json:"occurrences,omitempty"`
+	LastSuccessfulTransition string             `json:"last_successful_transition,omitempty"`
+	ExpectedNextTransition   string             `json:"expected_next_transition,omitempty"`
+	Deadline                 string             `json:"deadline,omitempty"`
+	RecoveryAttempt          int                `json:"recovery_attempt,omitempty"`
+	RecoveryOutcome          string             `json:"recovery_outcome,omitempty"`
+	History                  []DoctorTransition `json:"history,omitempty"`
 }
 
 type DoctorTransition struct {
-	Lifecycle string `json:"lifecycle"`
-	At        string `json:"at"`
+	Lifecycle     string `json:"lifecycle"`
+	At            string `json:"at"`
+	Event         string `json:"event,omitempty"`
+	CorrelationID string `json:"correlation_id,omitempty"`
+	Outcome       string `json:"outcome,omitempty"`
 }
 
 // HandleDoctorHTTP serves the /doctor HTTP endpoint with JSON readiness checks.
@@ -256,10 +264,15 @@ func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
 		return nil
 	}
 	type recoveryData struct {
-		Name      string `json:"name"`
-		Detail    string `json:"detail"`
-		Fix       string `json:"fix"`
-		Lifecycle string `json:"lifecycle"`
+		Name                   string `json:"name"`
+		Detail                 string `json:"detail"`
+		Fix                    string `json:"fix"`
+		Lifecycle              string `json:"lifecycle"`
+		CorrelationID          string `json:"correlation_id"`
+		ExpectedNextTransition string `json:"expected_next_transition"`
+		Deadline               string `json:"deadline"`
+		RecoveryAttempt        int    `json:"recovery_attempt"`
+		RecoveryOutcome        string `json:"recovery_outcome"`
 	}
 	byName := make(map[string]DoctorCheck)
 	for _, entry := range cap.ExtensionLogs().Entries() {
@@ -282,6 +295,9 @@ func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
 			continue
 		}
 		check.Name = recovery.Name
+		if recovery.CorrelationID != "" {
+			check.CorrelationID = recovery.CorrelationID
+		}
 		if recovery.Detail != "" {
 			check.Detail = recovery.Detail
 			check.Fix = recovery.Fix
@@ -292,7 +308,18 @@ func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
 		}
 		check.Lifecycle = recovery.Lifecycle
 		check.LastSeenAt = at
-		check.History = append(check.History, DoctorTransition{Lifecycle: recovery.Lifecycle, At: at})
+		event := "failure_detected"
+		outcome := recovery.RecoveryOutcome
+		if recovery.Lifecycle == string(statediag.LifecycleRecovered) {
+			event = "recovery_completed"
+			outcome = "recovered"
+		} else if check.Occurrences > 0 {
+			event = "failure_recurred"
+		}
+		check.History = append(check.History, DoctorTransition{
+			Lifecycle: recovery.Lifecycle, At: at, Event: event,
+			CorrelationID: check.CorrelationID, Outcome: outcome,
+		})
 		if len(check.History) > 20 {
 			check.History = append([]DoctorTransition(nil), check.History[len(check.History)-20:]...)
 		}
@@ -300,12 +327,29 @@ func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
 			check.Status = "warn"
 			check.RecoveredAt = ""
 			check.Occurrences++
+			check.ExpectedNextTransition = recovery.ExpectedNextTransition
+			if check.ExpectedNextTransition == "" {
+				check.ExpectedNextTransition = "state_verified"
+			}
+			check.Deadline = recovery.Deadline
+			check.RecoveryAttempt = recovery.RecoveryAttempt
+			if check.RecoveryAttempt == 0 {
+				check.RecoveryAttempt = check.Occurrences
+			}
+			check.RecoveryOutcome = recovery.RecoveryOutcome
+			if check.RecoveryOutcome == "" {
+				check.RecoveryOutcome = "pending"
+			}
 			if check.FirstSeenAt == "" {
 				check.FirstSeenAt = at
 			}
 		} else {
 			check.Status = "pass"
 			check.RecoveredAt = at
+			check.LastSuccessfulTransition = "state_verified"
+			check.ExpectedNextTransition = ""
+			check.Deadline = ""
+			check.RecoveryOutcome = "recovered"
 		}
 		byName[recovery.Name] = check
 	}

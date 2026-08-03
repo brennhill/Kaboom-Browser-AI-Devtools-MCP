@@ -4,6 +4,7 @@ package statediag
 
 import (
 	"errors"
+	"regexp"
 	"sort"
 	"sync"
 	"time"
@@ -25,23 +26,36 @@ const (
 )
 
 type Transition struct {
-	Lifecycle Lifecycle
-	At        time.Time
+	Lifecycle     Lifecycle `json:"lifecycle"`
+	At            time.Time `json:"at"`
+	Event         string    `json:"event,omitempty"`
+	CorrelationID string    `json:"correlation_id,omitempty"`
+	Outcome       string    `json:"outcome,omitempty"`
 }
 
 // Diagnostic describes a safe fallback taken while reading persisted user state.
 type Diagnostic struct {
-	Name          string
-	CorrelationID string
-	Detail        string
-	Fix           string
-	Lifecycle     Lifecycle
-	FirstSeenAt   time.Time
-	LastSeenAt    time.Time
-	RecoveredAt   time.Time
-	Occurrences   int
-	History       []Transition
+	Name                     string       `json:"name"`
+	CorrelationID            string       `json:"correlation_id,omitempty"`
+	Detail                   string       `json:"detail"`
+	Fix                      string       `json:"fix,omitempty"`
+	Lifecycle                Lifecycle    `json:"lifecycle"`
+	FirstSeenAt              time.Time    `json:"first_seen_at"`
+	LastSeenAt               time.Time    `json:"last_seen_at"`
+	RecoveredAt              time.Time    `json:"recovered_at,omitempty"`
+	Occurrences              int          `json:"occurrences"`
+	History                  []Transition `json:"history"`
+	LastSuccessfulTransition string       `json:"last_successful_transition,omitempty"`
+	ExpectedNextTransition   string       `json:"expected_next_transition,omitempty"`
+	Deadline                 time.Time    `json:"deadline,omitempty"`
+	RecoveryAttempt          int          `json:"recovery_attempt,omitempty"`
+	RecoveryOutcome          string       `json:"recovery_outcome,omitempty"`
 }
+
+var (
+	diagnosticBearer = regexp.MustCompile(`(?i)bearer\s+[^\s,;]+`)
+	diagnosticSecret = regexp.MustCompile(`(?i)(token|secret|password|api[_-]?key)=([^\s&#,;]+)`)
+)
 
 // Reporter accepts recovery diagnostics from state-owning modules.
 type Reporter interface {
@@ -80,24 +94,46 @@ func (c *Collector) Report(diagnostic Diagnostic) {
 		return
 	}
 	now := c.now().UTC()
+	diagnostic.Name = compactSafe(diagnostic.Name)
+	diagnostic.CorrelationID = compactSafe(diagnostic.CorrelationID)
+	diagnostic.Detail = compactSafe(diagnostic.Detail)
+	diagnostic.Fix = compactSafe(diagnostic.Fix)
+	diagnostic.ExpectedNextTransition = compactSafe(diagnostic.ExpectedNextTransition)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	current, exists := c.items[diagnostic.Name]
+	event := "failure_detected"
 	if !exists {
 		diagnostic.FirstSeenAt = now
-		diagnostic.History = appendTransition(nil, Transition{Lifecycle: LifecycleActive, At: now})
 	} else {
+		event = "failure_recurred"
 		diagnostic.FirstSeenAt = current.FirstSeenAt
 		diagnostic.History = current.History
-		if current.Lifecycle == LifecycleRecovered {
-			diagnostic.History = appendTransition(diagnostic.History, Transition{Lifecycle: LifecycleActive, At: now})
+		if diagnostic.CorrelationID == "" {
+			diagnostic.CorrelationID = current.CorrelationID
+		}
+		if diagnostic.ExpectedNextTransition == "" {
+			diagnostic.ExpectedNextTransition = current.ExpectedNextTransition
+		}
+		if diagnostic.Deadline.IsZero() {
+			diagnostic.Deadline = current.Deadline
 		}
 		diagnostic.Occurrences = current.Occurrences
+		diagnostic.LastSuccessfulTransition = current.LastSuccessfulTransition
+	}
+	if diagnostic.ExpectedNextTransition == "" {
+		diagnostic.ExpectedNextTransition = "state_verified"
 	}
 	diagnostic.Lifecycle = LifecycleActive
 	diagnostic.LastSeenAt = now
 	diagnostic.RecoveredAt = time.Time{}
 	diagnostic.Occurrences++
+	diagnostic.RecoveryAttempt = diagnostic.Occurrences
+	diagnostic.RecoveryOutcome = "pending"
+	diagnostic.History = appendTransition(diagnostic.History, Transition{
+		Lifecycle: LifecycleActive, At: now, Event: event,
+		CorrelationID: diagnostic.CorrelationID, Outcome: "active",
+	})
 	c.items[diagnostic.Name] = diagnostic
 }
 
@@ -116,8 +152,24 @@ func (c *Collector) Resolve(name string) {
 	diagnostic.RecoveredAt = now
 	diagnostic.LastSeenAt = now
 	diagnostic.History = appendTransition(diagnostic.History, Transition{Lifecycle: LifecycleRecovered, At: now})
+	diagnostic.LastSuccessfulTransition = "state_verified"
+	diagnostic.ExpectedNextTransition = ""
+	diagnostic.Deadline = time.Time{}
+	diagnostic.RecoveryOutcome = "recovered"
+	diagnostic.History[len(diagnostic.History)-1].Event = "recovery_completed"
+	diagnostic.History[len(diagnostic.History)-1].CorrelationID = diagnostic.CorrelationID
+	diagnostic.History[len(diagnostic.History)-1].Outcome = "recovered"
 	c.items[name] = diagnostic
 	c.evictOldestRecoveredLocked()
+}
+
+func compactSafe(value string) string {
+	value = diagnosticBearer.ReplaceAllString(value, "Bearer [REDACTED]")
+	value = diagnosticSecret.ReplaceAllString(value, "$1=[REDACTED]")
+	if len(value) > 500 {
+		value = value[:500]
+	}
+	return value
 }
 
 // Stats returns content-free retention counters for System Doctor.
