@@ -4,9 +4,13 @@ package hook
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
 
 func TestRunSessionTrack_FirstRead(t *testing.T) {
@@ -27,6 +31,39 @@ func TestRunSessionTrack_FirstRead(t *testing.T) {
 	}
 	if touches[0].File != "/project/foo.go" {
 		t.Errorf("expected file /project/foo.go, got %s", touches[0].File)
+	}
+}
+
+func TestRunSessionTrackSurfacesFailedTouchWithoutClaimingItWasRecorded(t *testing.T) {
+	input := Input{ToolName: "Read", ToolInput: json.RawMessage(`{"file_path":"/private/file.go"}`)}
+	result := runSessionTrack(input, t.TempDir(), ReadTouches, func(string, TouchEntry) error {
+		return statefault.New(statefault.Write, "private-touch-value").Error()
+	})
+	if result == nil || result.Action != "persistence_failed" {
+		t.Fatalf("failed touch result = %#v", result)
+	}
+	if !strings.Contains(result.Context, "session_touch_append_failed") || strings.Contains(result.Context, "private-touch-value") {
+		t.Fatalf("failed touch context = %q", result.Context)
+	}
+}
+
+func TestRunSessionTrackRejectsCorruptHistoryBeforeAppend(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, touchesFile)
+	if err := os.WriteFile(path, []byte(`{"private":"must-not-leak"`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := RunSessionTrack(Input{ToolName: "Read", ToolInput: json.RawMessage(`{"file_path":"/private/file.go"}`)}, dir)
+	if result == nil || result.Action != "persistence_failed" || !strings.Contains(result.Context, "session_touch_read_failed") || strings.Contains(result.Context, "must-not-leak") {
+		t.Fatalf("corrupt history result = %#v", result)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || string(after) != string(before) {
+		t.Fatalf("corrupt history was modified: before=%q after=%q err=%v", before, after, err)
 	}
 }
 

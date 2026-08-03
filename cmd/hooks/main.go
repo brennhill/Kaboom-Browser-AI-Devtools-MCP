@@ -152,7 +152,11 @@ func runSessionTrack() int {
 
 	sessionDir, err := hook.SessionDir()
 	if err != nil {
-		return 0 // Graceful degradation — can't track without session dir.
+		context := "[Session] Tracking unavailable (" + err.Error() + "). The latest action was not recorded."
+		if writeErr := hook.WriteOutput(os.Stdout, context); writeErr != nil {
+			return 1
+		}
+		return 0
 	}
 
 	// Clean stale sessions in the background.

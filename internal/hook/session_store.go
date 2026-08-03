@@ -9,13 +9,53 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
+
+type touchAppendFile interface {
+	Write([]byte) (int, error)
+	Sync() error
+	Close() error
+}
+
+type touchFileOpener func(string) (touchAppendFile, error)
+
+type sessionDirectoryOperations struct {
+	userHomeDir func() (string, error)
+	mkdirAll    func(string, os.FileMode) error
+	stat        func(string) (os.FileInfo, error)
+	readFile    func(string) ([]byte, error)
+	writeFile   func(string, []byte, os.FileMode) error
+	getwd       func() (string, error)
+	getppid     func() int
+	now         func() time.Time
+}
+
+func defaultSessionDirectoryOperations() sessionDirectoryOperations {
+	return sessionDirectoryOperations{
+		userHomeDir: os.UserHomeDir,
+		mkdirAll:    os.MkdirAll,
+		stat:        os.Stat,
+		readFile:    os.ReadFile,
+		writeFile:   statefile.Write,
+		getwd:       os.Getwd,
+		getppid:     os.Getppid,
+		now:         time.Now,
+	}
+}
+
+func openTouchFile(path string) (touchAppendFile, error) {
+	return os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+}
 
 const (
 	sessionBaseDir  = ".kaboom/sessions"
@@ -24,6 +64,7 @@ const (
 	staleSessionAge = 8 * time.Hour
 	maxTouchLinelen = 512
 	maxSummaryLen   = 100
+	maxCleanupScan  = 100
 )
 
 // TouchEntry represents a single tool use recorded in the session log.
@@ -46,52 +87,91 @@ type sessionMeta struct {
 // Prefers agent-provided session IDs, falls back to (ppid, cwd) hash.
 func SessionID() string {
 	if id := os.Getenv("GEMINI_SESSION_ID"); id != "" {
-		return truncateID(id)
+		return sessionIDComponent(id)
 	}
 	if id := os.Getenv("CODEX_SESSION_ID"); id != "" {
-		return truncateID(id)
+		return sessionIDComponent(id)
 	}
 	ppid := os.Getppid()
-	cwd, _ := os.Getwd()
-	h := sha256.Sum256([]byte(fmt.Sprintf("%d:%s", ppid, cwd)))
-	return hex.EncodeToString(h[:8])
+	cwd, cwdErr := os.Getwd()
+	if cwdErr != nil {
+		logSessionDiagnostic("session_identity_working_directory_failed")
+		cwd = "working-directory-unavailable"
+	}
+	return hashSessionID(fmt.Sprintf("%d:%s", ppid, cwd))
 }
 
-func truncateID(id string) string {
+func sessionIDComponent(id string) string {
+	for _, character := range id {
+		if (character < 'a' || character > 'z') &&
+			(character < 'A' || character > 'Z') &&
+			(character < '0' || character > '9') &&
+			character != '-' && character != '_' {
+			return hashSessionID(id)
+		}
+	}
 	if len(id) > 16 {
 		return id[:16]
 	}
 	return id
 }
 
+func hashSessionID(value string) string {
+	hash := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(hash[:8])
+}
+
 // SessionDir returns the path to the current session's data directory.
 // Creates the directory if it doesn't exist.
 func SessionDir() (string, error) {
-	home, err := os.UserHomeDir()
+	return sessionDirWithOperations(defaultSessionDirectoryOperations())
+}
+
+func sessionDirWithOperations(ops sessionDirectoryOperations) (string, error) {
+	home, err := ops.userHomeDir()
 	if err != nil {
-		return "", err
+		return "", errors.New("session_home_directory_failed")
 	}
 	dir := filepath.Join(home, sessionBaseDir, SessionID())
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
+	if err := ops.mkdirAll(dir, 0o700); err != nil {
+		return "", errors.New("session_directory_create_failed")
 	}
-	// Write meta.json on first access.
 	metaPath := filepath.Join(dir, metaFile)
-	if _, err := os.Stat(metaPath); os.IsNotExist(err) {
-		cwd, _ := os.Getwd()
-		meta := sessionMeta{
-			StartTime: time.Now(),
-			Cwd:       cwd,
-			Ppid:      os.Getppid(),
+	if _, statErr := ops.stat(metaPath); statErr == nil {
+		data, readErr := ops.readFile(metaPath)
+		if readErr != nil {
+			return "", errors.New("session_metadata_read_failed")
 		}
-		data, _ := json.Marshal(meta)
-		_ = os.WriteFile(metaPath, data, 0o644)
+		var meta sessionMeta
+		if json.Unmarshal(data, &meta) != nil || meta.StartTime.IsZero() || meta.Cwd == "" || meta.Ppid <= 0 {
+			return "", errors.New("session_metadata_corrupt")
+		}
+		return dir, nil
+	} else if !os.IsNotExist(statErr) {
+		return "", errors.New("session_metadata_stat_failed")
+	}
+	// EXPECTED_ABSENCE: the current hook session has not created metadata yet.
+	cwd, cwdErr := ops.getwd()
+	if cwdErr != nil {
+		return "", errors.New("session_working_directory_failed")
+	}
+	meta := sessionMeta{StartTime: ops.now(), Cwd: cwd, Ppid: ops.getppid()}
+	data, marshalErr := json.Marshal(meta)
+	if marshalErr != nil {
+		return "", errors.New("session_metadata_encode_failed")
+	}
+	if err := ops.writeFile(metaPath, data, 0o600); err != nil {
+		return "", errors.New("session_metadata_write_failed")
 	}
 	return dir, nil
 }
 
 // AppendTouch writes a touch entry to the session log.
 func AppendTouch(sessionDir string, entry TouchEntry) error {
+	return appendTouchWithOpener(sessionDir, entry, openTouchFile)
+}
+
+func appendTouchWithOpener(sessionDir string, entry TouchEntry, open touchFileOpener) error {
 	if entry.Timestamp.IsZero() {
 		entry.Timestamp = time.Now()
 	}
@@ -99,17 +179,33 @@ func AppendTouch(sessionDir string, entry TouchEntry) error {
 	if err != nil {
 		return err
 	}
-	f, err := os.OpenFile(
-		filepath.Join(sessionDir, touchesFile),
-		os.O_CREATE|os.O_WRONLY|os.O_APPEND,
-		0o644,
-	)
+	f, err := open(filepath.Join(sessionDir, touchesFile))
 	if err != nil {
-		return err
+		return fmt.Errorf("session_touch_open_failed")
 	}
-	defer f.Close()
-	_, err = f.Write(append(data, '\n'))
-	return err
+	line := append(data, '\n')
+	written, writeErr := f.Write(line)
+	if writeErr != nil || written != len(line) {
+		closeErr := f.Close()
+		if written != len(line) && writeErr == nil {
+			writeErr = io.ErrShortWrite
+		}
+		primary := fmt.Errorf("session_touch_write_failed: %w", writeErr)
+		if closeErr != nil {
+			return errors.Join(primary, fmt.Errorf("session_touch_close_failed"))
+		}
+		return primary
+	}
+	if err := f.Sync(); err != nil {
+		if closeErr := f.Close(); closeErr != nil {
+			return errors.Join(fmt.Errorf("session_touch_sync_failed"), fmt.Errorf("session_touch_close_failed"))
+		}
+		return fmt.Errorf("session_touch_sync_failed")
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("session_touch_close_failed")
+	}
+	return nil
 }
 
 // ReadTouches returns all session entries, newest first.
@@ -118,29 +214,40 @@ func ReadTouches(sessionDir string) ([]TouchEntry, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// EXPECTED_ABSENCE: a session has no touch log before its first event.
 			return nil, nil
 		}
-		return nil, err
+		return nil, errors.New("session_touch_log_open_failed")
 	}
-	defer f.Close()
 
 	var entries []TouchEntry
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, maxTouchLinelen), maxTouchLinelen)
 	for scanner.Scan() {
 		var e TouchEntry
-		if json.Unmarshal(scanner.Bytes(), &e) == nil {
-			entries = append(entries, e)
+		if json.Unmarshal(scanner.Bytes(), &e) != nil {
+			return nil, closeTouchLogWithPrimary(f, errors.New("session_touch_log_corrupt"))
 		}
+		entries = append(entries, e)
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return nil, closeTouchLogWithPrimary(f, errors.New("session_touch_log_read_failed"))
+	}
+	if err := f.Close(); err != nil {
+		return nil, errors.New("session_touch_log_close_failed")
 	}
 	// Newest first.
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].Timestamp.After(entries[j].Timestamp)
 	})
 	return entries, nil
+}
+
+func closeTouchLogWithPrimary(file *os.File, primary error) error {
+	if err := file.Close(); err != nil {
+		return errors.Join(primary, errors.New("session_touch_log_close_failed"))
+	}
+	return primary
 }
 
 // FilesEdited returns file paths edited this session.
@@ -180,6 +287,10 @@ func WasFileRead(sessionDir string, filePath string) (bool, time.Time) {
 	if err != nil {
 		return false, time.Time{}
 	}
+	return wasFileRead(entries, filePath)
+}
+
+func wasFileRead(entries []TouchEntry, filePath string) (bool, time.Time) {
 	for _, e := range entries {
 		if e.Action == "read" && e.File == filePath {
 			return true, e.Timestamp
@@ -194,6 +305,10 @@ func WasFileEdited(sessionDir string, filePath string, since time.Time) (bool, t
 	if err != nil {
 		return false, time.Time{}
 	}
+	return wasFileEdited(entries, filePath, since)
+}
+
+func wasFileEdited(entries []TouchEntry, filePath string, since time.Time) (bool, time.Time) {
 	for _, e := range entries {
 		if (e.Action == "edit" || e.Action == "write") && e.File == filePath && e.Timestamp.After(since) {
 			return true, e.Timestamp
@@ -206,6 +321,13 @@ func WasFileEdited(sessionDir string, filePath string, since time.Time) (bool, t
 func SessionSummary(sessionDir string) string {
 	entries, err := ReadTouches(sessionDir)
 	if err != nil || len(entries) == 0 {
+		return ""
+	}
+	return sessionSummary(entries)
+}
+
+func sessionSummary(entries []TouchEntry) string {
+	if len(entries) == 0 {
 		return ""
 	}
 
@@ -253,12 +375,22 @@ func truncSummary(s string) string {
 func CleanStaleSessions() {
 	home, err := os.UserHomeDir()
 	if err != nil {
+		logSessionDiagnostic("session_cleanup_home_directory_failed")
 		return
 	}
 	base := filepath.Join(home, sessionBaseDir)
 	entries, err := os.ReadDir(base)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// EXPECTED_ABSENCE: no session directory exists before the first hook session.
+			return
+		}
+		logSessionDiagnostic("session_cleanup_list_failed")
 		return
+	}
+	if len(entries) > maxCleanupScan {
+		entries = entries[:maxCleanupScan]
+		logSessionDiagnostic("session_cleanup_scan_truncated")
 	}
 	now := time.Now()
 	for _, entry := range entries {
@@ -268,14 +400,24 @@ func CleanStaleSessions() {
 		metaPath := filepath.Join(base, entry.Name(), metaFile)
 		data, err := os.ReadFile(metaPath)
 		if err != nil {
+			logSessionDiagnostic("session_cleanup_metadata_read_failed")
 			continue
 		}
 		var meta sessionMeta
 		if json.Unmarshal(data, &meta) != nil {
+			logSessionDiagnostic("session_cleanup_metadata_corrupt")
 			continue
 		}
 		if now.Sub(meta.StartTime) > staleSessionAge {
-			_ = os.RemoveAll(filepath.Join(base, entry.Name()))
+			if err := os.RemoveAll(filepath.Join(base, entry.Name())); err != nil {
+				logSessionDiagnostic("session_cleanup_remove_failed")
+			}
 		}
 	}
+}
+
+func logSessionDiagnostic(code string) {
+	// TERMINAL_LOG_SINK: if the local stderr sink itself is unavailable, there
+	// is no second local channel that can report that failure without recursion.
+	_, _ = fmt.Fprintf(os.Stderr, "{\"kaboom_hook_diagnostic\":%q}\n", code)
 }

@@ -153,6 +153,36 @@ func TestCLI_CompressOutput_EmptyStdin(t *testing.T) {
 	}
 }
 
+func TestCLI_SessionTrackSurfacesPersistenceFailure(t *testing.T) {
+	root := t.TempDir()
+	blockedHome := filepath.Join(root, "not-a-directory")
+	if err := os.WriteFile(blockedHome, []byte("blocked"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	input, err := json.Marshal(map[string]any{
+		"tool_name":  "Read",
+		"tool_input": map[string]string{"file_path": "/private/file.go"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := hooksCommand(t, "session-track")
+	cmd.Env = append(os.Environ(), "HOME="+blockedHome, "GEMINI_SESSION_ID=persistence-failure")
+	cmd.Stdin = bytes.NewReader(input)
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("session-track failed: %v", err)
+	}
+	var result map[string]any
+	if err := json.Unmarshal(out, &result); err != nil {
+		t.Fatalf("session-track output is not protocol JSON: %v\n%s", err, out)
+	}
+	context, _ := result["hookSpecificOutput"].(map[string]any)["additionalContext"].(string)
+	if !strings.Contains(context, "session_directory_create_failed") || strings.Contains(context, blockedHome) {
+		t.Fatalf("session-track failure context = %q", context)
+	}
+}
+
 func TestCLI_QualityGate_ValidInput(t *testing.T) {
 	t.Parallel()
 

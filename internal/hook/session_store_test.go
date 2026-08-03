@@ -4,12 +4,49 @@ package hook
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
+
+type faultTouchFile struct {
+	kind  statefault.Kind
+	steps *[]string
+}
+
+func (file *faultTouchFile) Write(data []byte) (int, error) {
+	*file.steps = append(*file.steps, "write")
+	if file.kind == statefault.PartialWrite {
+		return len(data) / 2, nil
+	}
+	if file.kind == statefault.Write || file.kind == statefault.Quota || file.kind == statefault.Cancellation {
+		return 0, statefault.New(file.kind, "private-touch").Error()
+	}
+	return len(data), nil
+}
+
+func (file *faultTouchFile) Sync() error {
+	*file.steps = append(*file.steps, "sync")
+	if file.kind == statefault.Sync {
+		return statefault.New(file.kind, "private-touch").Error()
+	}
+	return nil
+}
+
+func (file *faultTouchFile) Close() error {
+	*file.steps = append(*file.steps, "close")
+	if file.kind == statefault.Restart {
+		return statefault.New(file.kind, "private-touch").Error()
+	}
+	return nil
+}
 
 func TestAppendTouch_And_ReadTouches(t *testing.T) {
 	dir := t.TempDir()
@@ -37,6 +74,44 @@ func TestAppendTouch_And_ReadTouches(t *testing.T) {
 	// Should be newest-first.
 	if touches[0].Tool != "Bash" {
 		t.Errorf("expected newest first (Bash), got %s", touches[0].Tool)
+	}
+}
+
+func TestAppendTouchReportsEveryDurabilityFailureWithoutLeakingState(t *testing.T) {
+	for _, kind := range []statefault.Kind{
+		statefault.Write,
+		statefault.Sync,
+		statefault.Quota,
+		statefault.PartialWrite,
+		statefault.Cancellation,
+		statefault.Restart,
+	} {
+		t.Run(string(kind), func(t *testing.T) {
+			steps := []string{}
+			opener := func(string) (touchAppendFile, error) {
+				return &faultTouchFile{kind: kind, steps: &steps}, nil
+			}
+			err := appendTouchWithOpener(t.TempDir(), TouchEntry{Tool: "Read", Action: "read", Summary: "private-touch"}, opener)
+			if err == nil || strings.Contains(err.Error(), "private-touch") {
+				t.Fatalf("append error = %v, want stable redacted failure", err)
+			}
+			if kind == statefault.PartialWrite && !errors.Is(err, io.ErrShortWrite) {
+				t.Fatalf("partial write error = %v, want io.ErrShortWrite", err)
+			}
+		})
+	}
+}
+
+func TestAppendTouchWritesSyncsAndClosesInOrder(t *testing.T) {
+	steps := []string{}
+	opener := func(string) (touchAppendFile, error) {
+		return &faultTouchFile{steps: &steps}, nil
+	}
+	if err := appendTouchWithOpener(t.TempDir(), TouchEntry{Tool: "Read", Action: "read"}, opener); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(steps, ","); got != "write,sync,close" {
+		t.Fatalf("durability order = %q", got)
 	}
 }
 
@@ -158,6 +233,24 @@ func TestSessionID_CodexAndShortIDs(t *testing.T) {
 	}
 }
 
+func TestSessionIDHashesUnsafeAgentIdentifier(t *testing.T) {
+	t.Setenv("GEMINI_SESSION_ID", "../../private/session")
+	id := SessionID()
+	if len(id) != 16 || strings.ContainsAny(id, `/\\.`) {
+		t.Fatalf("unsafe SessionID() = %q", id)
+	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	dir, err := SessionDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantBase := filepath.Join(home, sessionBaseDir) + string(os.PathSeparator)
+	if !strings.HasPrefix(dir, wantBase) {
+		t.Fatalf("session directory escaped base: %q", dir)
+	}
+}
+
 func TestSessionDirCreatesStableMetadata(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -190,7 +283,51 @@ func TestSessionDirCreatesStableMetadata(t *testing.T) {
 	}
 }
 
-func TestReadTouchesSkipsMalformedAndOversizedRecords(t *testing.T) {
+func TestSessionDirRejectsCorruptMetadataWithStableRedactedError(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("GEMINI_SESSION_ID", "corrupt-session")
+	dir := filepath.Join(home, sessionBaseDir, SessionID())
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, metaFile), []byte(`{"private":"must-not-leak"`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	gotDir, err := SessionDir()
+	if gotDir != "" || err == nil || err.Error() != "session_metadata_corrupt" || strings.Contains(err.Error(), "must-not-leak") {
+		t.Fatalf("SessionDir() = %q, %v", gotDir, err)
+	}
+}
+
+func TestSessionDirReportsMetadataWriteFailure(t *testing.T) {
+	for _, kind := range []statefault.Kind{
+		statefault.Write,
+		statefault.Sync,
+		statefault.Rename,
+		statefault.DirectorySync,
+		statefault.Quota,
+		statefault.PartialWrite,
+		statefault.Cancellation,
+	} {
+		t.Run(string(kind), func(t *testing.T) {
+			home := t.TempDir()
+			ops := defaultSessionDirectoryOperations()
+			ops.userHomeDir = func() (string, error) { return home, nil }
+			ops.writeFile = func(string, []byte, os.FileMode) error {
+				return statefault.New(kind, "private-metadata").Error()
+			}
+
+			dir, err := sessionDirWithOperations(ops)
+			if dir != "" || err == nil || err.Error() != "session_metadata_write_failed" || strings.Contains(err.Error(), "private-metadata") {
+				t.Fatalf("sessionDirWithOperations() = %q, %v", dir, err)
+			}
+		})
+	}
+}
+
+func TestReadTouchesRejectsMalformedAndOversizedRecords(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, touchesFile)
 	valid := `{"t":"2026-01-01T00:00:00Z","tool":"Read","action":"read"}`
@@ -199,8 +336,8 @@ func TestReadTouchesSkipsMalformedAndOversizedRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 	entries, err := ReadTouches(dir)
-	if err == nil {
-		t.Fatal("expected scanner error for oversized record")
+	if err == nil || err.Error() != "session_touch_log_corrupt" {
+		t.Fatalf("ReadTouches() error = %v, want stable corruption error", err)
 	}
 	if len(entries) != 0 {
 		t.Fatalf("entries = %v, want none before scanner failure", entries)
@@ -265,6 +402,31 @@ func TestCleanStaleSessionsRemovesOnlyExpiredValidDirectories(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(base, name)); err != nil {
 			t.Fatalf("%s session removed: %v", name, err)
 		}
+	}
+}
+
+func TestCleanStaleSessionsBoundsEachScan(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	base := filepath.Join(home, sessionBaseDir)
+	stale := `{"start_time":"` + time.Now().Add(-24*time.Hour).Format(time.RFC3339) + `"}`
+	for index := 0; index < maxCleanupScan+5; index++ {
+		dir := filepath.Join(base, fmt.Sprintf("session-%03d", index))
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, metaFile), []byte(stale), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	CleanStaleSessions()
+	entries, err := os.ReadDir(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 5 {
+		t.Fatalf("remaining sessions = %d, want 5 after bounded scan", len(entries))
 	}
 }
 

@@ -23,6 +23,22 @@ func (r *SessionTrackResult) FormatContext() string {
 // RunSessionTrack records the tool use and optionally injects session context.
 // Returns nil if nothing to inject (but still records the touch).
 func RunSessionTrack(input Input, sessionDir string) *SessionTrackResult {
+	return runSessionTrack(input, sessionDir, ReadTouches, AppendTouch)
+}
+
+func runSessionTrack(
+	input Input,
+	sessionDir string,
+	readTouches func(string) ([]TouchEntry, error),
+	appendTouch func(string, TouchEntry) error,
+) *SessionTrackResult {
+	entries, err := readTouches(sessionDir)
+	if err != nil {
+		return &SessionTrackResult{
+			Context: "[Session] Tracking unavailable (session_touch_read_failed). The latest action was not recorded.",
+			Action:  "persistence_failed",
+		}
+	}
 	fields := input.ParseToolInput()
 	action := classifyAction(input.ToolName)
 	filePath := fields.FilePath
@@ -40,15 +56,21 @@ func RunSessionTrack(input Input, sessionDir string) *SessionTrackResult {
 	// Check for redundant read BEFORE recording this touch.
 	var result *SessionTrackResult
 	if action == "read" && filePath != "" {
-		result = checkRedundantRead(sessionDir, filePath)
+		result = checkRedundantRead(entries, filePath)
 	}
 
-	// Always record the touch.
-	_ = AppendTouch(sessionDir, entry)
+	// Always attempt to record the touch; a failed append supersedes contextual
+	// hints so the caller never mistakes an unpersisted event for session state.
+	if err := appendTouch(sessionDir, entry); err != nil {
+		return &SessionTrackResult{
+			Context: "[Session] Tracking unavailable (session_touch_append_failed). The latest action was not recorded.",
+			Action:  "persistence_failed",
+		}
+	}
 
 	// For edits/writes, inject session summary.
 	if result == nil && (action == "edit" || action == "write") {
-		if s := SessionSummary(sessionDir); s != "" {
+		if s := sessionSummary(append(entries, entry)); s != "" {
 			result = &SessionTrackResult{Context: s, Action: "summary"}
 		}
 	}
@@ -57,8 +79,8 @@ func RunSessionTrack(input Input, sessionDir string) *SessionTrackResult {
 }
 
 // checkRedundantRead checks if a file was already read this session.
-func checkRedundantRead(sessionDir, filePath string) *SessionTrackResult {
-	wasRead, readAt := WasFileRead(sessionDir, filePath)
+func checkRedundantRead(entries []TouchEntry, filePath string) *SessionTrackResult {
+	wasRead, readAt := wasFileRead(entries, filePath)
 	if !wasRead {
 		return nil
 	}
@@ -67,7 +89,7 @@ func checkRedundantRead(sessionDir, filePath string) *SessionTrackResult {
 	elapsedStr := formatDuration(elapsed)
 
 	// Check if it was edited since the last read.
-	wasEdited, editAt := WasFileEdited(sessionDir, filePath, readAt)
+	wasEdited, editAt := wasFileEdited(entries, filePath, readAt)
 	if wasEdited {
 		editElapsed := formatDuration(time.Since(editAt))
 		return &SessionTrackResult{
