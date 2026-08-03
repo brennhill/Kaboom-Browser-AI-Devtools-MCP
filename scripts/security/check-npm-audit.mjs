@@ -67,6 +67,13 @@ for (const [name, vulnerability] of highRisk(complete)) {
     continue
   }
   if (!/^kaboom-[a-z0-9]+$/.test(exception.issue ?? '')) failures.push(`${name} exception has no Beads issue`)
+  if (typeof exception.owner !== 'string' || exception.owner.trim() === '') {
+    failures.push(`${name} exception has no owner`)
+  }
+  if (exception.scope !== 'build_only') failures.push(`${name} exception scope must be build_only`)
+  if (typeof exception.rationale !== 'string' || exception.rationale.trim().length < 20) {
+    failures.push(`${name} exception has no meaningful rationale`)
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(exception.expires ?? '') || exception.expires < today) {
     failures.push(`${name} exception expired on ${exception.expires ?? 'an invalid date'}`)
   }

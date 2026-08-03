@@ -53,8 +53,11 @@ last_verified_date: 2026-03-05
 - The canonical security gate scans every `cmd/browser-agent` and `internal` Go
   package with gosec and govulncheck, audits production npm dependencies with
   zero tolerance, and admits build-tool findings only through exact advisory
-  fingerprints with Beads references and expiry dates. Active workflows pin the
-  patched Go 1.25.12 toolchain declared by `go.mod`.
+  fingerprints with Beads references, owners, meaningful rationales, explicit
+  `build_only` scope, and expiry dates. Expired or stale entries fail the gate;
+  the daily scheduled workflow reruns the same canonical check so newly
+  disclosed vulnerabilities surface without a source change. Active workflows
+  pin the patched Go 1.25.12 toolchain declared by `go.mod`.
 
 ## Specs
 
