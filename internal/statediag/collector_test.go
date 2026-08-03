@@ -154,6 +154,20 @@ func TestCollectorRecoveredEvictionBreaksTimestampTiesByName(t *testing.T) {
 	}
 }
 
+func TestCollectorBoundsHistoryAtFirstOverflowTransition(t *testing.T) {
+	collector := NewCollector()
+	for cycle := 0; cycle < maxHistoryTransitions/2; cycle++ {
+		collector.Report(Diagnostic{Name: "bounded", Detail: "safe", Fix: "retry"})
+		collector.Resolve("bounded")
+	}
+	collector.Report(Diagnostic{Name: "bounded", Detail: "safe", Fix: "retry"})
+
+	diagnostics := collector.Snapshot()
+	if len(diagnostics) != 1 || len(diagnostics[0].History) != maxHistoryTransitions {
+		t.Fatalf("history length after first overflow = %d, want %d", len(diagnostics[0].History), maxHistoryTransitions)
+	}
+}
+
 func FuzzCollectorLifecycleTransitions(f *testing.F) {
 	f.Add([]byte{0, 1, 2, 3, 4, 5})
 	f.Add([]byte{1, 3, 5, 7, 0, 2, 4, 6})

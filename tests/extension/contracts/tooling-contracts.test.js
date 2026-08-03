@@ -187,6 +187,17 @@ describe('Tooling contracts', () => {
     assert.doesNotMatch(ci, /go test[^\n]*-fuzz=/, 'pull requests must replay seeds rather than run random campaigns')
   })
 
+  test('scheduled mutation analysis uses the pinned canonical runner and retains survivors', () => {
+    const makefile = readFileSync('Makefile', 'utf8')
+    const fuzz = readFileSync('.github/workflows/fuzz.yml', 'utf8')
+    const config = JSON.parse(readFileSync('scripts/ci/mutation-cases.json', 'utf8'))
+
+    assert.equal(config.minimum_score, 100)
+    assert.match(makefile, /^mutation-test:\s*\n\s*@?node scripts\/ci\/run-targeted-mutations\.mjs$/m)
+    assert.match(fuzz, /name: Critical State Mutation Gate[\s\S]*run: make mutation-test/)
+    assert.match(fuzz, /if: always\(\)[\s\S]*path: artifacts\/mutation/)
+  })
+
   test('active workflows pin the patched Go version declared by go.mod', () => {
     const goVersion = readFileSync('go.mod', 'utf8').match(/^go (\S+)$/m)?.[1]
     assert.equal(goVersion, '1.25.12')

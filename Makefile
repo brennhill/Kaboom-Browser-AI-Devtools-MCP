@@ -20,7 +20,7 @@ PLATFORMS := \
 	linux-arm64 \
 	windows-amd64
 
-.PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly \
+.PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly mutation-test \
 	dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
 	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-ts-json-casing check-invariants check-schema ci \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench \
@@ -149,6 +149,9 @@ fuzz-smoke:
 
 fuzz-nightly:
 	@scripts/ci/run-fuzz-campaigns.sh --nightly
+
+mutation-test:
+	@node scripts/ci/run-targeted-mutations.mjs
 
 clean-test-daemons:
 	bash ./scripts/cleanup-test-daemons.sh

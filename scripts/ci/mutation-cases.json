@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "minimum_score": 100,
+  "timeout_ms": 120000,
+  "cases": [
+    {
+      "id": "fixture_rejects_stale_generation",
+      "file": "internal/qafixture/registry.go",
+      "package": "./internal/qafixture",
+      "from": "record.ExtensionGeneration != generation",
+      "to": "record.ExtensionGeneration == generation"
+    },
+    {
+      "id": "fixture_requires_pending_restore",
+      "file": "internal/qafixture/registry.go",
+      "package": "./internal/qafixture",
+      "from": "if record.State != TransactionRestoreRequired {",
+      "to": "if record.State == TransactionRestoreRequired {"
+    },
+    {
+      "id": "fixture_registry_enforces_capacity",
+      "file": "internal/qafixture/registry.go",
+      "package": "./internal/qafixture",
+      "from": "len(registry.records) >= registry.limit",
+      "to": "len(registry.records) > registry.limit"
+    },
+    {
+      "id": "doctor_evicts_beyond_recovered_limit",
+      "file": "internal/statediag/collector.go",
+      "package": "./internal/statediag",
+      "from": "recovered <= c.recoveredLimit",
+      "to": "recovered < c.recoveredLimit"
+    },
+    {
+      "id": "doctor_bounds_transition_history",
+      "file": "internal/statediag/collector.go",
+      "package": "./internal/statediag",
+      "from": "len(history) >= maxHistoryTransitions",
+      "to": "len(history) > maxHistoryTransitions"
+    },
+    {
+      "id": "ring_overwrites_at_capacity",
+      "file": "internal/capture/events.go",
+      "package": "./internal/capture",
+      "from": "r.size < len(r.storage)",
+      "to": "r.size <= len(r.storage)"
+    },
+    {
+      "id": "ring_drop_is_bounded_by_size",
+      "file": "internal/capture/events.go",
+      "package": "./internal/capture",
+      "from": "count > r.size",
+      "to": "count < r.size"
+    },
+    {
+      "id": "sync_detects_reconnect_after_disconnect",
+      "file": "internal/capture/sync.go",
+      "package": "./internal/capture",
+      "from": "state.isReconnect = state.wasDisconnected",
+      "to": "state.isReconnect = false"
+    },
+    {
+      "id": "redaction_recognizes_sensitive_keys",
+      "file": "internal/redaction/redaction_map.go",
+      "package": "./internal/redaction",
+      "from": "if isSensitiveKeyName(key) {",
+      "to": "if false {"
+    },
+    {
+      "id": "http_auth_rejects_wrong_keys",
+      "file": "cmd/browser-agent/internal/httpguard/apikey.go",
+      "package": "./cmd/browser-agent/internal/httpguard",
+      "from": "subtle.ConstantTimeCompare(expectedBytes, providedBytes) != 1",
+      "to": "subtle.ConstantTimeCompare(expectedBytes, providedBytes) == 1"
+    },
+    {
+      "id": "client_registry_evicts_at_capacity",
+      "file": "internal/session/clientreg/registry.go",
+      "package": "./internal/session/clientreg",
+      "from": "len(r.clients) >= maxClients",
+      "to": "len(r.clients) > maxClients"
+    }
+  ]
+}

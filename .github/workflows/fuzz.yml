@@ -35,3 +35,30 @@ jobs:
             **/testdata/fuzz/**
           if-no-files-found: warn
           retention-days: 30
+
+  mutation:
+    name: Critical State Mutation Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
+        with:
+          go-version: "1.25.12"
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "24"
+
+      - name: Run reproducible semantic mutations
+        run: make mutation-test
+
+      - name: Retain killed and surviving mutant report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: go-mutations-${{ github.run_id }}
+          path: artifacts/mutation
+          if-no-files-found: error
+          retention-days: 30

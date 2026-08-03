@@ -40,6 +40,7 @@ tests/e2e/test-results/
 tests/e2e/playwright-report/
 /artifacts/uat/
 /artifacts/fuzz/
+/artifacts/mutation/
 
 # Lint/build caches
 .eslintcache

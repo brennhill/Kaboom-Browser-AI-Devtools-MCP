@@ -25,6 +25,8 @@ code_paths:
   - scripts/lint-documentation.py
   - scripts/check-dormant-tests.sh
   - scripts/ci/run-fuzz-campaigns.sh
+  - scripts/ci/mutation-cases.json
+  - scripts/ci/run-targeted-mutations.mjs
   - scripts/test-js-sharded.sh
   - package.json
 test_paths:
@@ -45,6 +47,7 @@ test_paths:
   - internal/redaction/redaction_fuzz_test.go
   - internal/security/scan/scan_test.go
   - internal/statediag/collector_test.go
+  - scripts/ci/run-targeted-mutations.test.mjs
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-03
 ---
@@ -80,6 +83,10 @@ last_verified_date: 2026-08-03
   A scheduled bounded mutation campaign uses the same target inventory and
   retains its manifest, per-target logs, and generated crash corpora so every
   discovered failure can become a permanent deterministic regression seed.
+- A pinned, zero-dependency semantic mutation campaign runs each declared
+  recovery, generation, queue, redaction, authentication, and reconnect mutant
+  in an isolated worktree. It first proves every package baseline is green,
+  requires a 100% kill score, and retains a machine-readable survivor report.
 
 ## Specs
 
@@ -100,3 +107,6 @@ last_verified_date: 2026-08-03
 - `scripts/ci/run-fuzz-campaigns.sh` is the sole owner of both deterministic
   seed replay and nightly mutation target selection; `make fuzz-smoke` and
   `make fuzz-nightly` are the canonical local and hosted entrypoints.
+- `scripts/ci/run-targeted-mutations.test.mjs` proves that killed and surviving
+  mutants are classified honestly and that a broken baseline cannot inflate the
+  score; `make mutation-test` runs the scheduled production campaign.
