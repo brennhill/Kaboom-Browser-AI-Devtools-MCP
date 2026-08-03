@@ -16,7 +16,7 @@ func analyzeToolSchema() mcp.MCPTool {
 				"what": map[string]any{
 					"type":        "string",
 					"description": "Analysis mode to run against the page",
-					"enum":        []string{"dom", "performance", "accessibility", "error_clusters", "navigation_patterns", "security_audit", "third_party_audit", "link_health", "link_validation", "page_summary", "annotations", "annotation_detail", "api_validation", "draw_history", "draw_session", "computed_styles", "forms", "form_state", "form_validation", "data_table", "visual_baseline", "visual_diff", "visual_baselines", "navigation", "page_structure", "audit", "feature_gates", "page_issues"},
+					"enum":        []string{"dom", "performance", "accessibility", "error_clusters", "navigation_patterns", "security_audit", "third_party_audit", "link_health", "link_validation", "page_summary", "annotations", "annotation_detail", "api_validation", "draw_history", "draw_session", "computed_styles", "forms", "form_state", "form_validation", "data_table", "visual_baseline", "visual_diff", "visual_baselines", "navigation", "page_structure", "audit", "feature_gates", "page_issues", "verification"},
 				},
 				"telemetry_mode": map[string]any{
 					"type":        "string",
@@ -37,8 +37,17 @@ func analyzeToolSchema() mcp.MCPTool {
 				},
 				"operation": map[string]any{
 					"type":        "string",
-					"description": "Operation selector (api_validation: analyze/report/clear; annotations: flush)",
-					"enum":        []string{"analyze", "report", "clear", "flush"},
+					"description": "Operation selector (api_validation: analyze/report/clear; annotations: flush; verification: define/evaluate)",
+					"enum":        []string{"analyze", "report", "clear", "flush", "define", "evaluate"},
+				},
+				"contract": map[string]any{
+					"type":        "object",
+					"description": "Versioned QA contract with contract_id and assertions (verification)",
+				},
+				"results": map[string]any{
+					"type":        "array",
+					"description": "Assertion results using PASS, FAIL, BLOCKED, UNVERIFIED, or FLAKY (verification evaluate)",
+					"items":       map[string]any{"type": "object"},
 				},
 				"ignore_endpoints": map[string]any{
 					"type":        "array",

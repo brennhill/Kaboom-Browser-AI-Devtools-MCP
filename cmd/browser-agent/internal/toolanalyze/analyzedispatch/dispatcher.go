@@ -12,6 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/pageissues"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/verificationhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/visual"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
@@ -78,6 +79,9 @@ func NewDispatcher(config Config) *Dispatcher {
 			return combinedaudit.Handle(config.Audit, req, args)
 		},
 		"page_issues": wrapLocal(config.Analyze, pageissues.Handle), "feature_gates": mode(config.FeatureGates),
+		"verification": func(_ struct{}, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return verificationhandler.Handle(req, args)
+		},
 	}
 	d.registry = toolrouting.Registry[struct{}]{
 		Handlers: handlers,

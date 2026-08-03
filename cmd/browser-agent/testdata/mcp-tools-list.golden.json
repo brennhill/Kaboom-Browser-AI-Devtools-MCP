@@ -288,6 +288,10 @@
           },
           "type": "array"
         },
+        "contract": {
+          "description": "Versioned QA contract with contract_id and assertions (verification)",
+          "type": "object"
+        },
         "correlation_id": {
           "description": "Correlation ID for fetching annotation detail (applies to annotation_detail)",
           "type": "string"
@@ -351,14 +355,23 @@
           "type": "string"
         },
         "operation": {
-          "description": "Operation selector (api_validation: analyze/report/clear; annotations: flush)",
+          "description": "Operation selector (api_validation: analyze/report/clear; annotations: flush; verification: define/evaluate)",
           "enum": [
             "analyze",
             "report",
             "clear",
-            "flush"
+            "flush",
+            "define",
+            "evaluate"
           ],
           "type": "string"
+        },
+        "results": {
+          "description": "Assertion results using PASS, FAIL, BLOCKED, UNVERIFIED, or FLAKY (verification evaluate)",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
         },
         "scope": {
           "description": "CSS selector scope (accessibility)",
@@ -452,7 +465,8 @@
             "page_structure",
             "audit",
             "feature_gates",
-            "page_issues"
+            "page_issues",
+            "verification"
           ],
           "type": "string"
         },

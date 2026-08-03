@@ -39,6 +39,7 @@ Features with active code implementations referencing their feature docs.
 | ai-capture-control | `feature/ai-capture-control/` | product-spec.md, qa-plan.md, tech-spec.md | AI-driven capture control for selective telemetry |
 | ai-web-pilot | `feature/ai-web-pilot/` | product-spec.md, qa-plan.md, tech-spec.md, test-plan.md | AI Web Pilot browser automation framework |
 | analyze-tool | `feature/analyze-tool/` | product-spec.md, qa-plan.md, tech-spec.md, uat-guide.md, MIGRATION.md | Analyze tool for DOM, accessibility, security, and performance |
+| verification-contracts | `feature/verification-contracts/` | index.md | Versioned QA assertions, required evidence, and explicit verdicts |
 | annotated-screenshots | `feature/annotated-screenshots/` | product-spec.md, qa-plan.md, tech-spec.md | Draw-mode annotation overlay for visual feedback |
 | app-telemetry | `feature/app-telemetry/` | index.md | Privacy-bounded app event, session, and usage-summary reporting |
 | api-key-auth | `feature/api-key-auth/` | product-spec.md, qa-plan.md, tech-spec.md | API key authentication for daemon access |

@@ -111,4 +111,9 @@ var analyzeModeSpecs = map[string]modeParamSpec{
 		Hint:     "One-call sweep: aggregates console errors, network failures, a11y violations, and security findings into a unified prioritized report. summary=true returns counts + top issues",
 		Optional: []string{"categories", "limit", "summary"},
 	},
+	"verification": {
+		Hint:     "Define or evaluate a versioned QA contract; missing required evidence produces UNVERIFIED",
+		Required: []string{"operation", "contract"},
+		Optional: []string{"results"},
+	},
 }

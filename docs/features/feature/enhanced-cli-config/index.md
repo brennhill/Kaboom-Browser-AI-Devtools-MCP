@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/cli/cli_output.go
   - cmd/browser-agent/internal/cli/cli_tool_parsers_generate_configure.go
   - cmd/browser-agent/internal/cli/cli_tool_parsers_interact.go
+  - cmd/browser-agent/internal/cli/cli_tool_parsers_observe_analyze.go
   - cmd/browser-agent/internal/health/doctor.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go

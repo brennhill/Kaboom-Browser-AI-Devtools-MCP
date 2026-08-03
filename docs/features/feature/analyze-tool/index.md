@@ -8,6 +8,7 @@ last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
+  - cmd/browser-agent/internal/playbooks/playbooks_guides.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
   - internal/analysis/apicontract/runtime_handler.go
@@ -15,6 +16,8 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/inspect/dom.go
   - cmd/browser-agent/internal/toolanalyze/visual/handler.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
+  - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler.go
+  - internal/verification/contract.go
   - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
@@ -65,6 +68,8 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/visual/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
+  - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler_test.go
+  - internal/verification/contract_test.go
   - internal/annotation/draw_sessions_handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/tools_analyze_structured_extraction_test.go

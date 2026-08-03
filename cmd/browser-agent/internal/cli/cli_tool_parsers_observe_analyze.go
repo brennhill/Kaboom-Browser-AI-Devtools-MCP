@@ -93,6 +93,8 @@ func ParseAnalyzeArgs(what string, args []string) (map[string]any, error) {
 		"--first-party-origins": {MCPKey: "first_party_origins", Kind: FlagStringList},
 		"--include-static":      {MCPKey: "include_static", Kind: FlagBool},
 		"--custom-lists":        {MCPKey: "custom_lists", Kind: FlagJSON},
+		"--contract":            {MCPKey: "contract", Kind: FlagJSON},
+		"--results":             {MCPKey: "results", Kind: FlagJSON},
 		"--correlation-id":      {MCPKey: "correlation_id", Kind: FlagString},
 		"--annot-session":       {MCPKey: "annot_session", Kind: FlagString},
 		"--urls":                {MCPKey: "urls", Kind: FlagStringList},
