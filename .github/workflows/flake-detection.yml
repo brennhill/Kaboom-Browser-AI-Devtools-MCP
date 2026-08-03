@@ -1,0 +1,61 @@
+name: Scheduled Flake Detection
+
+on:
+  schedule:
+    - cron: "17 3 * * 2,5"
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: Deterministic replay seed (defaults to the workflow run ID)
+        required: false
+        type: string
+      runs:
+        description: Campaign repetitions
+        required: false
+        default: "3"
+        type: string
+      concurrency:
+        description: Go/Node concurrency pressure
+        required: false
+        default: "2"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  shuffled-race-pressure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
+        with:
+          go-version: "1.25.12"
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run deterministic shuffled race/pressure campaign
+        env:
+          KABOOM_FLAKE_SEED: ${{ inputs.seed || github.run_id }}
+          KABOOM_FLAKE_RUNS: ${{ inputs.runs || '3' }}
+          KABOOM_FLAKE_CONCURRENCY: ${{ inputs.concurrency || '2' }}
+          KABOOM_FLAKE_REPRODUCTIONS: "2"
+          KABOOM_FLAKE_EVIDENCE: flake-evidence.json
+          KABOOM_TELEMETRY_DISABLED: "1"
+        run: node scripts/ci/run-flake-detection.mjs
+
+      - name: Retain replayable flake evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flake-evidence-${{ github.run_id }}
+          path: flake-evidence.json
+          if-no-files-found: error
+          retention-days: 30
