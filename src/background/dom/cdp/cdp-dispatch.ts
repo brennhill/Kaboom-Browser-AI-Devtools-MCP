@@ -185,6 +185,7 @@ function parseCDPParams(query: PendingQuery): CDPActionParams | null {
     if (!raw || typeof raw !== 'object' || !('action' in raw)) return null
     return raw as CDPActionParams
   } catch {
+    // EXPECTED_ABSENCE: malformed external parameters are an expected validation case; logging would duplicate the client error.
     return null
   }
 }
@@ -448,7 +449,7 @@ export async function tryCDPEscalation(
       }
     }
   } catch {
-    // CDP unavailable or failed — fall back to DOM primitives silently
+    // EXPECTED_ABSENCE: unavailable optional CDP is normal; logging would mislabel the canonical DOM fallback as failure.
     return null
   }
 }

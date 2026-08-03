@@ -17,6 +17,7 @@ export function getHostTabIdFromLocation() {
         return Number.isFinite(parsed) ? parsed : undefined;
     }
     catch {
+        // EXPECTED_ABSENCE: session storage loss during extension teardown is normal; logging would duplicate lifecycle recovery.
         return undefined;
     }
 }
@@ -31,6 +32,7 @@ export async function getHostTabId() {
         return tab?.id;
     }
     catch {
+        // EXPECTED_ABSENCE: active-tab loss while opening the panel is normal; logging would mislabel user navigation as failure.
         return undefined;
     }
 }

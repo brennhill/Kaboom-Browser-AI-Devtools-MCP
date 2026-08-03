@@ -69,6 +69,7 @@ export function parseSourceMap(dataUrl) {
         return parsed;
     }
     catch {
+        // EXPECTED_ABSENCE: non-JSON model output is an expected parse miss; logging would duplicate the caller's fallback.
         return null;
     }
 }

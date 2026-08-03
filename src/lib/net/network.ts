@@ -535,6 +535,7 @@ export function wrapXHRWithBodies(): void {
           try {
             responseBody = this.responseText
           } catch {
+            // EXPECTED_ABSENCE: inaccessible binary/cross-origin responseText is normal; logging would mislabel metadata capture.
             return
           }
 

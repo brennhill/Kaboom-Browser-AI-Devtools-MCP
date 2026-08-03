@@ -236,6 +236,7 @@ export async function validateSession(token: string): Promise<boolean> {
     const data = (await resp.json()) as { valid?: boolean }
     return data.valid === true
   } catch {
+    // EXPECTED_ABSENCE: an unavailable prior daemon session is normal; logging would duplicate the reconnect state.
     return false
   }
 }
@@ -334,7 +335,8 @@ async function readDaemonError(resp: Response): Promise<string> {
     const body = (await resp.json()) as { error?: unknown }
     return typeof body.error === 'string' ? body.error : ''
   } catch {
-    return '' // Plain-text / empty body — not one of our structured errors.
+    // EXPECTED_ABSENCE: plain-text and empty error bodies are expected; logging would duplicate the displayed HTTP failure.
+    return ''
   }
 }
 

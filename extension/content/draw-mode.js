@@ -1339,6 +1339,7 @@ function detectCSSFramework(el) {
 
     return ''
   } catch {
+    // EXPECTED_ABSENCE: inaccessible page-owned stylesheets are normal; logging would mislabel optional inference as failure.
     return ''
   }
 }

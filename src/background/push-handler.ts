@@ -49,6 +49,7 @@ async function fetchPushCapabilities(): Promise<PushCapabilities | null> {
     capabilitiesFetchedAt = now
     return cachedCapabilities
   } catch {
+    // EXPECTED_ABSENCE: unavailable optional capability discovery is normal; logging would duplicate connection diagnostics.
     return null
   }
 }
@@ -187,6 +188,7 @@ async function pushScreenshot(
     if (!response.ok) return null
     return (await response.json()) as { status: string; event_id?: string }
   } catch {
+    // EXPECTED_ABSENCE: annotation push racing daemon teardown is normal; logging would duplicate queued recovery diagnostics.
     return null
   }
 }
@@ -216,6 +218,7 @@ export async function pushChatMessage(
     if (!response.ok) return null
     return (await response.json()) as { status: string; event_id?: string }
   } catch {
+    // EXPECTED_ABSENCE: annotation reply racing daemon teardown is normal; logging would duplicate queued recovery diagnostics.
     return null
   }
 }

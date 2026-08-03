@@ -352,11 +352,7 @@ type WaterfallResponseWaiter = (
 const waitForWaterfallResponse: WaterfallResponseWaiter = (response, cleanup) =>
   withTimeoutAndCleanup(response, 5000, { cleanup })
 
-function reportWaterfallBridgeLifecycle(
-  lifecycle: 'active' | 'recovered',
-  requestId: number,
-  reason = ''
-): void {
+function reportWaterfallBridgeLifecycle(lifecycle: 'active' | 'recovered', requestId: number, reason = ''): void {
   const diagnostic =
     lifecycle === 'active'
       ? {

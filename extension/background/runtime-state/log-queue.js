@@ -110,7 +110,8 @@ function isPersistedQueue(value) {
         Array.isArray(candidate.entries) &&
         candidate.entries.every(isEntry) &&
         (candidate.lifecycle_events === undefined ||
-            (Array.isArray(candidate.lifecycle_events) && candidate.lifecycle_events.every((event) => typeof event === 'string'))));
+            (Array.isArray(candidate.lifecycle_events) &&
+                candidate.lifecycle_events.every((event) => typeof event === 'string'))));
 }
 function snapshotForPersistence() {
     return {
@@ -135,7 +136,9 @@ function recordPersistenceFailure() {
 function persist() {
     const snapshot = snapshotForPersistence();
     const targetStorage = storage;
-    persistenceTail = persistenceTail.then(() => targetStorage.write(snapshot)).catch(() => {
+    persistenceTail = persistenceTail
+        .then(() => targetStorage.write(snapshot))
+        .catch(() => {
         // This failure cannot be persisted by definition. Retain a redacted in-memory
         // diagnostic so the next successful daemon sync still exposes it to Doctor.
         recordPersistenceFailure();

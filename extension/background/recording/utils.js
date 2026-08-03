@@ -15,6 +15,7 @@ export function buildScreenRecordingSlug(url) {
             .replace(/^-|-$/g, '') || 'recording');
     }
     catch {
+        // EXPECTED_ABSENCE: malformed page URLs are expected inputs here; logging would mislabel the neutral filename fallback.
         return 'recording';
     }
 }
@@ -31,6 +32,7 @@ export function buildRecordingToastLabel(url) {
         return `Recording ${clipped}`;
     }
     catch {
+        // EXPECTED_ABSENCE: malformed page URLs are expected inputs here; logging would mislabel the neutral label fallback.
         return 'Recording started';
     }
 }

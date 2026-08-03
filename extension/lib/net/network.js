@@ -391,6 +391,7 @@ export function wrapXHRWithBodies() {
                         responseBody = this.responseText;
                     }
                     catch {
+                        // EXPECTED_ABSENCE: inaccessible binary/cross-origin responseText is normal; logging would mislabel metadata capture.
                         return;
                     }
                     const rawReq = SENSITIVE_URL_PATTERNS.test(url) ? '[REDACTED: auth endpoint]' : requestBody;

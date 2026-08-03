@@ -128,6 +128,7 @@
       if (matches.length === 0) return null
       return firstVisible(matches) || matches[0] || null
     } catch {
+      // EXPECTED_ABSENCE: invalid or page-rejected selectors are expected; logging would duplicate the structured action error.
       return null
     }
   }

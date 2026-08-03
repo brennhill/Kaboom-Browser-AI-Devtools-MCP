@@ -101,6 +101,7 @@ async function tryNoCors(url, signal) {
         return true;
     }
     catch {
+        // EXPECTED_ABSENCE: an unreachable link is the expected negative probe result; logging would mislabel the measurement.
         return false;
     }
 }
@@ -273,6 +274,7 @@ function matchesDomain(linkURL, domainFilter) {
         return hostname === domainFilter || hostname.endsWith(`.${domainFilter}`);
     }
     catch {
+        // EXPECTED_ABSENCE: malformed candidate URLs are expected non-matches; logging would mislabel input filtering as failure.
         return false;
     }
 }

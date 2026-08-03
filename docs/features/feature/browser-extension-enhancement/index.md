@@ -4,8 +4,13 @@ feature_id: feature-browser-extension-enhancement
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-02
+last_reviewed: 2026-08-03
 code_paths:
+  - scripts/contracts/check-silent-catches.cjs
+  - src/background/
+  - src/content/
+  - src/lib/
+  - src/sidepanel.ts
   - src/popup/system-doctor.ts
   - src/popup.ts
   - src/popup/feature-toggles.ts
@@ -65,6 +70,7 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - scripts/contracts/check-silent-catches.test.cjs
   - tests/architecture/async-failure-evidence.test.cjs
   - tests/architecture/user-state-loaders.test.cjs
   - internal/recording/manager_test.go
@@ -128,12 +134,13 @@ last_verified_date: 2026-03-28
   Doctor summarizes the latest worker/reconnect sequence and reports dropped
   entries without exposing private diagnostic values or sending them to usage
   telemetry.
-- Async failures are never discarded with empty promise catches. Unexpected
+- Authored extension failures are never discarded through empty or bare-fallback
+  synchronous and Promise catches. Unexpected
   failures leave redacted evidence; intentionally unlogged absence/cancellation
   carries an adjacent `EXPECTED_ABSENCE:` rationale explaining both why the
-  condition is normal and why logging would be misleading. Architecture tests
-  enforce the same contract for comment-only promise catches and empty
-  synchronous catches.
+  condition is normal and why logging would be misleading. The structural gate
+  scans source modules and canonical DOM generator templates (rather than their
+  generated output), including nested catches and concise Promise fallbacks.
 
 ## Specs
 

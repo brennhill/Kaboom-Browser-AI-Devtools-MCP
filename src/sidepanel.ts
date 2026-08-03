@@ -273,6 +273,7 @@ function handleIframeMessage(event: MessageEvent): void {
     const termOrigin = getTerminalServerUrl(state.serverUrl)
     if (event.origin !== termOrigin) return
   } catch {
+    // EXPECTED_ABSENCE: an invalid configured origin is an expected rejection; logging would duplicate configuration diagnostics.
     return
   }
   switch (event.data.event as string) {

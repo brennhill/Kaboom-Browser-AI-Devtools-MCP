@@ -43,6 +43,7 @@ async function isDrawModeActive(tabId) {
         return result?.draw_mode_active === true;
     }
     catch {
+        // EXPECTED_ABSENCE: content-script loss during navigation is normal; logging would mislabel inactive draw mode as failure.
         return false;
     }
 }

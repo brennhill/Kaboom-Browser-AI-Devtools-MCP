@@ -353,6 +353,7 @@ export function createConnectionTracker(id, url) {
                 return !this._schemaKeys.includes(keys);
             }
             catch {
+                // EXPECTED_ABSENCE: non-serializable page payloads are expected here; logging would mislabel a skipped comparison.
                 return false;
             }
         }

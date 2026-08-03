@@ -189,9 +189,7 @@ async function initializeExtensionAsync(): Promise<void> {
 
     // ============= STEP 3: Install startup listener =============
     installStartupListener((msg) => console.log(msg))
-    installDiagnosticSuspendListener((event) =>
-      recordExtensionDiagnosticLifecycle(event, EXTENSION_SESSION_ID)
-    )
+    installDiagnosticSuspendListener((event) => recordExtensionDiagnosticLifecycle(event, EXTENSION_SESSION_ID))
 
     // ============= STEP 4: Load AI Web Pilot state =============
     const aiPilotEnabled = await loadAiWebPilotState()

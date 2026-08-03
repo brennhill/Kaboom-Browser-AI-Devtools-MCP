@@ -144,6 +144,7 @@ async function tryNoCors(url: string, signal: AbortSignal): Promise<boolean> {
     // Any response (even opaque) means the server is reachable
     return true
   } catch {
+    // EXPECTED_ABSENCE: an unreachable link is the expected negative probe result; logging would mislabel the measurement.
     return false
   }
 }
@@ -328,6 +329,7 @@ function matchesDomain(linkURL: string, domainFilter: string): boolean {
     const hostname = new URL(linkURL).hostname.toLowerCase()
     return hostname === domainFilter || hostname.endsWith(`.${domainFilter}`)
   } catch {
+    // EXPECTED_ABSENCE: malformed candidate URLs are expected non-matches; logging would mislabel input filtering as failure.
     return false
   }
 }

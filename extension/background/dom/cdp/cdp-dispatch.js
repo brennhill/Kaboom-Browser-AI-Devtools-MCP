@@ -143,6 +143,7 @@ function parseCDPParams(query) {
         return raw;
     }
     catch {
+        // EXPECTED_ABSENCE: malformed external parameters are an expected validation case; logging would duplicate the client error.
         return null;
     }
 }
@@ -398,7 +399,7 @@ export async function tryCDPEscalation(tabId, action, params) {
         }
     }
     catch {
-        // CDP unavailable or failed — fall back to DOM primitives silently
+        // EXPECTED_ABSENCE: unavailable optional CDP is normal; logging would mislabel the canonical DOM fallback as failure.
         return null;
     }
 }

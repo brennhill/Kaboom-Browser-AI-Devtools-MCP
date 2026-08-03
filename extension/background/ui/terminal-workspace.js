@@ -23,6 +23,7 @@ async function safeGetTab(tabId) {
         return await chrome.tabs.get(tabId);
     }
     catch {
+        // EXPECTED_ABSENCE: a saved workspace tab closing is normal; logging would mislabel the expected recreation path.
         return null;
     }
 }
@@ -54,6 +55,7 @@ async function hasTabGroupsPermission() {
             return await chrome.permissions.contains({ permissions: ['tabGroups'] });
         }
         catch {
+            // EXPECTED_ABSENCE: missing optional tabGroups support is normal; logging would mislabel an ungrouped workspace as failure.
             return false;
         }
     }
@@ -69,6 +71,7 @@ async function createTerminalWorkspaceGroup(tabId) {
         return groupId;
     }
     catch {
+        // EXPECTED_ABSENCE: grouping racing tab teardown is normal; logging would mislabel the usable ungrouped fallback.
         return null;
     }
 }

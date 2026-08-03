@@ -39,6 +39,7 @@ export async function probeCSPStatus(tabId: number): Promise<CSPProbeResult> {
           new Function('return 1')()
           return 'ok'
         } catch {
+          // EXPECTED_ABSENCE: CSP rejection is the expected probe result; logging would falsely report the successful measurement.
           return 'csp_blocked'
         }
       }

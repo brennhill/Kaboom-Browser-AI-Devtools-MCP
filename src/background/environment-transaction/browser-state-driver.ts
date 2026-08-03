@@ -162,7 +162,8 @@ export function createEnvironmentStateDriver(deps: EnvironmentStateDriverDeps): 
       const cookieUrl = snapshot.restore_plan.mutated_url
       for (const name of snapshot.restore_plan.cookie_names) await attempt(() => deps.removeCookie(cookieUrl, name))
       for (const cookie of snapshot.cookies) await attempt(() => deps.setCookie(cookie, cookieUrl))
-      if (snapshot.restore_plan.page_state_touched) await attempt(() => deps.restorePageState(tabId, snapshot.page_state))
+      if (snapshot.restore_plan.page_state_touched)
+        await attempt(() => deps.restorePageState(tabId, snapshot.page_state))
       if (failures > 0) throw new Error('fixture_restore_failed')
     }
   }

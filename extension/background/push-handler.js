@@ -32,6 +32,7 @@ async function fetchPushCapabilities() {
         return cachedCapabilities;
     }
     catch {
+        // EXPECTED_ABSENCE: unavailable optional capability discovery is normal; logging would duplicate connection diagnostics.
         return null;
     }
 }
@@ -161,6 +162,7 @@ async function pushScreenshot(screenshotDataUrl, note, pageUrl, tabId) {
         return (await response.json());
     }
     catch {
+        // EXPECTED_ABSENCE: annotation push racing daemon teardown is normal; logging would duplicate queued recovery diagnostics.
         return null;
     }
 }
@@ -183,6 +185,7 @@ export async function pushChatMessage(message, pageUrl, tabId) {
         return (await response.json());
     }
     catch {
+        // EXPECTED_ABSENCE: annotation reply racing daemon teardown is normal; logging would duplicate queued recovery diagnostics.
         return null;
     }
 }

@@ -22,6 +22,7 @@ function parseDOMParams(query) {
         return typeof query.params === 'string' ? JSON.parse(query.params) : query.params;
     }
     catch {
+        // EXPECTED_ABSENCE: malformed external parameters are an expected validation case; logging would duplicate the client error.
         return null;
     }
 }

@@ -334,6 +334,7 @@ async function getTabWithRetry(tabId: number, retry = false): Promise<chrome.tab
     try {
       return await chrome.tabs.get(tabId)
     } catch {
+      // EXPECTED_ABSENCE: a tab closing between selection and lookup is normal; logging would mislabel user navigation as failure.
       return null
     }
   }

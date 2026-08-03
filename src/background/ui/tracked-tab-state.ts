@@ -22,6 +22,7 @@ export async function waitForTabLoad(tabId: number, timeoutMs = scaleTimeout(500
     try {
       if ((await chrome.tabs.get(tabId)).status === 'complete') return true
     } catch {
+      // EXPECTED_ABSENCE: tracked-tab closure during polling is normal; logging would duplicate the resulting recovery state.
       return false
     }
     await delay(scaleTimeout(100))

@@ -149,6 +149,7 @@ async function readTrackingContinuity(): Promise<TrackingContinuitySnapshot | un
     })) as GetTrackingStateResponse | undefined
     return response?.state?.continuity
   } catch {
+    // EXPECTED_ABSENCE: service-worker restart while opening is normal; logging would duplicate the popup's recovery state.
     return undefined
   }
 }

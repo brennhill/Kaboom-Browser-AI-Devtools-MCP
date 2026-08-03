@@ -185,7 +185,7 @@ check-dormant-tests:
 
 # All structural gates: physical size, dependency direction, public surface,
 # cycles, dormant tests, and high-risk extension duplication.
-check-structure: check-file-length check-folder-size check-dormant-tests lint-boundaries lint-circular check-duplicates
+check-structure: check-file-length check-folder-size check-dormant-tests lint-boundaries lint-silent-catches lint-circular check-duplicates
 
 check-duplicates:
 	@npx jscpd src/background src/popup --min-lines 8 --min-tokens 60 --threshold 0
@@ -318,6 +318,10 @@ lint-circular:
 
 lint-boundaries:
 	@node scripts/contracts/check-architecture-boundaries.cjs
+
+lint-silent-catches:
+	@node --test scripts/contracts/check-silent-catches.test.cjs
+	@node scripts/contracts/check-silent-catches.cjs
 
 lint-json-casing:
 	@bash scripts/check-json-casing.sh

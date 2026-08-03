@@ -18,6 +18,7 @@ export async function pingContentScript(tabId: number, timeoutMs = scaleTimeout(
     ])) as { status?: string }
     return response?.status === 'alive'
   } catch {
+    // EXPECTED_ABSENCE: a missing content script during navigation is normal; logging would duplicate bounded readiness recovery.
     return false
   }
 }

@@ -457,6 +457,7 @@ export function createConnectionTracker(id: string, url: string): ConnectionTrac
         // It's a change if none of the first 5 schemas match
         return !this._schemaKeys.includes(keys)
       } catch {
+        // EXPECTED_ABSENCE: non-serializable page payloads are expected here; logging would mislabel a skipped comparison.
         return false
       }
     }

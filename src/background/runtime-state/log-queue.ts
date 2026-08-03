@@ -45,7 +45,8 @@ const MAX_REDACTION_DEPTH = 6
 const REDACTED = '[REDACTED]'
 const SATURATION_MESSAGE = 'Diagnostic queue saturated'
 const INVALID_PERSISTED_QUEUE = Symbol('invalid_persisted_extension_diagnostics')
-const SENSITIVE_KEY = /authorization|cookie|password|passwd|secret|token|api[_-]?key|request[_-]?body|response[_-]?body/i
+const SENSITIVE_KEY =
+  /authorization|cookie|password|passwd|secret|token|api[_-]?key|request[_-]?body|response[_-]?body/i
 const BEARER_CREDENTIAL = /(authorization\s*:\s*)?bearer\s+[^\s,;]+/gi
 const SENSITIVE_PARAMETER = /([?&]|\b)(token|secret|password|passwd|api[_-]?key)=([^\s&#,;]+)/gi
 
@@ -147,7 +148,8 @@ function isPersistedQueue(value: unknown): value is PersistedExtensionLogQueue {
     Array.isArray(candidate.entries) &&
     candidate.entries.every(isEntry) &&
     (candidate.lifecycle_events === undefined ||
-      (Array.isArray(candidate.lifecycle_events) && candidate.lifecycle_events.every((event) => typeof event === 'string')))
+      (Array.isArray(candidate.lifecycle_events) &&
+        candidate.lifecycle_events.every((event) => typeof event === 'string')))
   )
 }
 
@@ -176,11 +178,13 @@ function recordPersistenceFailure(): void {
 function persist(): void {
   const snapshot = snapshotForPersistence()
   const targetStorage = storage
-  persistenceTail = persistenceTail.then(() => targetStorage.write(snapshot)).catch(() => {
-    // This failure cannot be persisted by definition. Retain a redacted in-memory
-    // diagnostic so the next successful daemon sync still exposes it to Doctor.
-    recordPersistenceFailure()
-  })
+  persistenceTail = persistenceTail
+    .then(() => targetStorage.write(snapshot))
+    .catch(() => {
+      // This failure cannot be persisted by definition. Retain a redacted in-memory
+      // diagnostic so the next successful daemon sync still exposes it to Doctor.
+      recordPersistenceFailure()
+    })
 }
 
 function enforceLimit(): void {

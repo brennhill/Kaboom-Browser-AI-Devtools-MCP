@@ -42,6 +42,8 @@
             return target[key] === value;
         }
         catch {
+            // EXPECTED_ABSENCE: a non-configurable page-owned global is normal;
+            // logging would mislabel the documented no-capture fallback as failure.
             return false;
         }
     }
@@ -228,6 +230,8 @@
                         responseBody = this.responseText;
                     }
                     catch {
+                        // EXPECTED_ABSENCE: inaccessible responseText is normal for opaque/non-text XHR;
+                        // logging would mislabel the expected skipped capture as failure.
                         return;
                     }
                     if (responseBody === null)

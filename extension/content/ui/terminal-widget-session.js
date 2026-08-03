@@ -195,6 +195,7 @@ export async function validateSession(token) {
         return data.valid === true;
     }
     catch {
+        // EXPECTED_ABSENCE: an unavailable prior daemon session is normal; logging would duplicate the reconnect state.
         return false;
     }
 }
@@ -264,7 +265,8 @@ async function readDaemonError(resp) {
         return typeof body.error === 'string' ? body.error : '';
     }
     catch {
-        return ''; // Plain-text / empty body — not one of our structured errors.
+        // EXPECTED_ABSENCE: plain-text and empty error bodies are expected; logging would duplicate the displayed HTTP failure.
+        return '';
     }
 }
 /** Persist the terminal root folder (the cwd new sessions spawn in). */

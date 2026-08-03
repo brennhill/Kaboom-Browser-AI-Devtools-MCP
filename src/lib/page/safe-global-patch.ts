@@ -34,7 +34,7 @@ export function safeAssignGlobal<T extends object, K extends keyof T>(target: T,
     // eslint-disable-next-line security/detect-object-injection -- same key, read back to confirm the write landed
     return target[key] === value
   } catch {
-    // Non-configurable too. The page wins; capture for this global is skipped.
+    // EXPECTED_ABSENCE: a non-configurable page global is normal; logging would mislabel skipped optional capture as failure.
     return false
   }
 }

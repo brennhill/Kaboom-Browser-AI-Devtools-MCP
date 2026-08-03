@@ -14,6 +14,7 @@ export async function waitForTabLoad(tabId, timeoutMs = scaleTimeout(5000)) {
                 return true;
         }
         catch {
+            // EXPECTED_ABSENCE: tracked-tab closure during polling is normal; logging would duplicate the resulting recovery state.
             return false;
         }
         await delay(scaleTimeout(100));

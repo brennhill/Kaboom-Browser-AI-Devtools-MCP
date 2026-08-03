@@ -321,6 +321,7 @@ export function captureStateSnapshot(errorMessage: string): StateSnapshotResult 
 
     return { source: 'redux', keys, relevantSlice }
   } catch {
+    // EXPECTED_ABSENCE: inaccessible page-owned Redux state is normal; logging would mislabel optional enrichment as failure.
     return null
   }
 }

@@ -128,6 +128,7 @@ async function postScreenshot(dataUrl, pageUrl, queryId) {
         return response.ok;
     }
     catch {
+        // EXPECTED_ABSENCE: daemon disconnect during optional delivery is normal; logging would duplicate the caller's failure result.
         return false;
     }
 }

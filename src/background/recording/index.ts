@@ -93,7 +93,7 @@ async function queryOffscreenRecordingState(): Promise<OffscreenRecordingStateRe
     if (response && typeof response.active === 'boolean') return response
     return null
   } catch {
-    // No offscreen document (or no listener) — no recording survived the restart.
+    // EXPECTED_ABSENCE: no offscreen listener after restart is normal; logging would mislabel an inactive recording as failure.
     return null
   }
 }

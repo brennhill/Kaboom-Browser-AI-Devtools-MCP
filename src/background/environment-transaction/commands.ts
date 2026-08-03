@@ -14,7 +14,10 @@ interface EnvironmentTransactionParams {
   readonly snapshot_id?: string
 }
 
-export function registerEnvironmentTransactionCommands(driver: EnvironmentStateDriver, snapshots: EnvironmentSnapshotStore): void {
+export function registerEnvironmentTransactionCommands(
+  driver: EnvironmentStateDriver,
+  snapshots: EnvironmentSnapshotStore
+): void {
   registerCommand('environment_transaction_snapshot', async (ctx) => {
     const fixture = requireFixture(ctx.params)
     ctx.sendResult(await snapshotEnvironment(driver, snapshots, ctx.tabId, fixture))

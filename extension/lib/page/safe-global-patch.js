@@ -36,7 +36,7 @@ export function safeAssignGlobal(target, key, value) {
         return target[key] === value;
     }
     catch {
-        // Non-configurable too. The page wins; capture for this global is skipped.
+        // EXPECTED_ABSENCE: a non-configurable page global is normal; logging would mislabel skipped optional capture as failure.
         return false;
     }
 }

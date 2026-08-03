@@ -17,6 +17,7 @@ export function buildScreenRecordingSlug(url: string | undefined): string {
         .replace(/^-|-$/g, '') || 'recording'
     )
   } catch {
+    // EXPECTED_ABSENCE: malformed page URLs are expected inputs here; logging would mislabel the neutral filename fallback.
     return 'recording'
   }
 }
@@ -33,6 +34,7 @@ export function buildRecordingToastLabel(url: string | undefined): string {
     const clipped = base.length > 42 ? `${base.slice(0, 39)}...` : base
     return `Recording ${clipped}`
   } catch {
+    // EXPECTED_ABSENCE: malformed page URLs are expected inputs here; logging would mislabel the neutral label fallback.
     return 'Recording started'
   }
 }

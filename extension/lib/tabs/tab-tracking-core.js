@@ -15,7 +15,8 @@ function hostnameOf(url) {
         return url ? new URL(url).hostname : '';
     }
     catch {
-        return ''; // malformed URL — treated as un-cloaked, but internal-page guard still applies
+        // EXPECTED_ABSENCE: malformed tab URLs are expected inputs; logging would mislabel the guarded uncloaked fallback.
+        return '';
     }
 }
 /**
