@@ -54,7 +54,9 @@ test('malformed persisted state uses fallback and reports redacted diagnostic', 
     report: (diagnostic) => recovered.push(diagnostic)
   })
   assert.equal(value, false)
-  assert.deepEqual(recovered, [{ name: 'state', detail: 'fallback used', fix: 'reset' }])
+  assert.deepEqual(recovered, [
+    { name: 'state', detail: 'Extension state corruption failure; fallback used', fix: 'reset' }
+  ])
   assert.doesNotMatch(JSON.stringify(recovered), /secret/)
 })
 
@@ -80,5 +82,6 @@ test('storage API failure uses the same fallback and diagnostic path', async () 
   })
   assert.equal(value, 'default')
   assert.equal(recovered.length, 1)
+  assert.equal(recovered[0].detail, 'Extension state read failure; fallback used')
   assert.doesNotMatch(JSON.stringify(recovered), /private filesystem path/)
 })

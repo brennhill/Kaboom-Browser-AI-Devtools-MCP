@@ -2,6 +2,7 @@
  * Purpose: Validate persisted extension state and apply explicit safe fallbacks.
  */
 import type { StateRecoveryDiagnostic } from '../../types/runtime-messages.js'
+import { classifyStorageFailure, storageFaultDetail } from './fault.js'
 import { getLocal } from './local.js'
 import {
   reportStateRecovery as reportAcrossContexts,
@@ -32,10 +33,16 @@ async function readValidated<T>(read: (key: string) => Promise<unknown>, options
       resolve(options.diagnostic.name)
       return value
     }
-    report(options.diagnostic)
+    report({
+      ...options.diagnostic,
+      detail: storageFaultDetail('corruption', options.diagnostic.detail)
+    })
     return options.fallback
-  } catch {
-    report(options.diagnostic)
+  } catch (error) {
+    report({
+      ...options.diagnostic,
+      detail: storageFaultDetail(classifyStorageFailure(error, 'read'), options.diagnostic.detail)
+    })
     return options.fallback
   }
 }

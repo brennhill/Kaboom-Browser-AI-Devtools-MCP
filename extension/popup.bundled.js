@@ -104,6 +104,20 @@
   var KABOOM_LOG_PREFIX = "[KaBOOM!]";
   var KABOOM_RECORDING_LOG_PREFIX = "[KaBOOM! REC]";
 
+  // extension/lib/storage/fault.js
+  function classifyStorageFailure(error, operation) {
+    if (error instanceof DOMException && error.name === "AbortError")
+      return "cancellation";
+    const name = error instanceof Error ? error.name.toLowerCase() : "";
+    const message = error instanceof Error ? error.message.toLowerCase() : "";
+    if (name.includes("quota") || message.includes("quota"))
+      return "quota";
+    return operation;
+  }
+  function storageFaultDetail(kind, consequence) {
+    return `Extension state ${kind} failure; ${consequence}`;
+  }
+
   // extension/lib/storage/recovery.js
   function reportStateRecovery(diagnostic) {
     console.warn(`${KABOOM_LOG_PREFIX} persisted state fallback active: ${diagnostic.name}`);
@@ -199,9 +213,10 @@
       await operation;
       resolveStateRecovery("extension_storage_write_state");
     } catch (error) {
+      const kind = classifyStorageFailure(error, "write");
       reportStateRecovery({
         name: "extension_storage_write_state",
-        detail: `Extension state could not be ${verb}; the current in-memory value remains active.`,
+        detail: storageFaultDetail(kind, `state could not be ${verb}; the current in-memory value remains active.`),
         fix: "Check extension storage permissions, then repeat the affected action."
       });
       throw error;
@@ -273,10 +288,16 @@
         resolve(options.diagnostic.name);
         return value;
       }
-      report(options.diagnostic);
+      report({
+        ...options.diagnostic,
+        detail: storageFaultDetail("corruption", options.diagnostic.detail)
+      });
       return options.fallback;
-    } catch {
-      report(options.diagnostic);
+    } catch (error) {
+      report({
+        ...options.diagnostic,
+        detail: storageFaultDetail(classifyStorageFailure(error, "read"), options.diagnostic.detail)
+      });
       return options.fallback;
     }
   }

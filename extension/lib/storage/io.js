@@ -3,6 +3,7 @@
  * Why: Keep error handling and fire-and-forget write reporting consistent.
  */
 import { KABOOM_LOG_PREFIX } from '../brand.js';
+import { classifyStorageFailure, storageFaultDetail } from './fault.js';
 import { reportStateRecovery, resolveStateRecovery } from './recovery.js';
 function isPromiseLike(value) {
     return typeof value === 'object' && value !== null && typeof value.then === 'function';
@@ -77,9 +78,10 @@ async function reportStorageMutationFailure(operation, verb) {
         resolveStateRecovery('extension_storage_write_state');
     }
     catch (error) {
+        const kind = classifyStorageFailure(error, 'write');
         reportStateRecovery({
             name: 'extension_storage_write_state',
-            detail: `Extension state could not be ${verb}; the current in-memory value remains active.`,
+            detail: storageFaultDetail(kind, `state could not be ${verb}; the current in-memory value remains active.`),
             fix: 'Check extension storage permissions, then repeat the affected action.'
         });
         throw error;

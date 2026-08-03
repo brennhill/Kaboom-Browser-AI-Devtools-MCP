@@ -51,6 +51,7 @@ code_paths:
   - src/content/ui/tracked-hover-launcher.ts
   - src/lib/daemon-http.ts
   - src/lib/storage/io.ts
+  - src/lib/storage/fault.ts
   - src/lib/storage/recovery.ts
   - src/lib/storage/validated.ts
   - src/lib/tabs/tracked-tab-storage.ts
@@ -101,6 +102,8 @@ test_paths:
   - tests/extension/content/message-handlers.test.js
   - tests/extension/content/message-handlers-edge.test.js
   - tests/extension/state-recovery/state-recovery-contract.test.js
+  - tests/extension/state-recovery/storage-fault-contract.test.js
+  - tests/extension/state-recovery/storage-fault-fixture.js
   - tests/extension/state-recovery/validated-storage.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28

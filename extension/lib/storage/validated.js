@@ -1,3 +1,4 @@
+import { classifyStorageFailure, storageFaultDetail } from './fault.js';
 import { getLocal } from './local.js';
 import { reportStateRecovery as reportAcrossContexts, resolveStateRecovery as resolveAcrossContexts } from './recovery.js';
 import { getSession } from './session.js';
@@ -12,11 +13,17 @@ async function readValidated(read, options) {
             resolve(options.diagnostic.name);
             return value;
         }
-        report(options.diagnostic);
+        report({
+            ...options.diagnostic,
+            detail: storageFaultDetail('corruption', options.diagnostic.detail)
+        });
         return options.fallback;
     }
-    catch {
-        report(options.diagnostic);
+    catch (error) {
+        report({
+            ...options.diagnostic,
+            detail: storageFaultDetail(classifyStorageFailure(error, 'read'), options.diagnostic.detail)
+        });
         return options.fallback;
     }
 }
