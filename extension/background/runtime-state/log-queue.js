@@ -5,6 +5,7 @@
 import { StorageKey } from '../../lib/constants.js';
 import { setSession } from '../../lib/storage/session.js';
 import { readSessionState } from '../../lib/storage/validated.js';
+import { classifyStorageFailure } from '../../lib/storage/fault.js';
 const MAX_ENTRIES = 200;
 const MAX_STRING_LENGTH = 1000;
 const MAX_REDACTION_DEPTH = 6;
@@ -121,15 +122,31 @@ function snapshotForPersistence() {
         lifecycle_events: [...lifecycleEvents]
     };
 }
-function recordPersistenceFailure() {
+function recordStorageFailure(error, operation) {
     persistenceFailures++;
+    const faultKind = classifyStorageFailure(error, operation);
     entries.push({
         timestamp: new Date().toISOString(),
         level: 'warn',
-        message: 'Diagnostic queue persistence failed',
+        message: operation === 'write' ? 'Diagnostic queue persistence failed' : 'Diagnostic queue read failed',
         source: 'background',
         category: 'diagnostic_queue',
-        data: { reason: 'session_storage_write_failed', occurrences: persistenceFailures }
+        data: {
+            reason: operation === 'write' ? 'session_storage_write_failed' : 'session_storage_read_failed',
+            fault_kind: faultKind,
+            occurrences: persistenceFailures
+        }
+    });
+    enforceLimit();
+}
+function recordQueueRecovery(faultKind) {
+    entries.push({
+        timestamp: new Date().toISOString(),
+        level: 'warn',
+        message: 'Diagnostic queue state recovered',
+        source: 'background',
+        category: 'diagnostic_queue',
+        data: { fault_kind: faultKind }
     });
     enforceLimit();
 }
@@ -138,10 +155,10 @@ function persist() {
     const targetStorage = storage;
     persistenceTail = persistenceTail
         .then(() => targetStorage.write(snapshot))
-        .catch(() => {
+        .catch((error) => {
         // This failure cannot be persisted by definition. Retain a redacted in-memory
         // diagnostic so the next successful daemon sync still exposes it to Doctor.
-        recordPersistenceFailure();
+        recordStorageFailure(error, 'write');
     });
 }
 function enforceLimit() {
@@ -176,6 +193,7 @@ export async function initializeExtensionLogQueue(storageOverride = defaultStora
             entries = startupEntries;
             droppedCount = 0;
             lifecycleEvents = [];
+            recordQueueRecovery('corruption');
             persist();
             return { status: 'recovered', restoredEntries: 0 };
         }
@@ -186,10 +204,11 @@ export async function initializeExtensionLogQueue(storageOverride = defaultStora
         persist();
         return { status: 'restored', restoredEntries: persisted.entries.length };
     }
-    catch {
+    catch (error) {
         entries = startupEntries;
         droppedCount = 0;
         lifecycleEvents = [];
+        recordStorageFailure(error, 'read');
         persist();
         return { status: 'recovered', restoredEntries: 0 };
     }

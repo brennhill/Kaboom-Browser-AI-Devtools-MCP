@@ -4,6 +4,7 @@
  */
 import { beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert'
+import { createStorageFaultScenario } from '../state-recovery/storage-fault-fixture.js'
 
 const queue = await import('../../../extension/background/runtime-state/log-queue.js')
 
@@ -119,7 +120,10 @@ describe('persisted extension diagnostic queue', { concurrency: false }, () => {
     const recovery = await queue.initializeExtensionLogQueue(storage)
 
     assert.strictEqual(recovery.status, 'recovered')
-    assert.strictEqual(queue.getExtensionLogQueueSnapshot().length, 0)
+    const recovered = queue.getExtensionLogQueueSnapshot()
+    assert.strictEqual(recovered.length, 1)
+    assert.strictEqual(recovered[0].message, 'Diagnostic queue state recovered')
+    assert.strictEqual(recovered[0].data.fault_kind, 'corruption')
   })
 
   test('bounds entries and records saturation with a dropped count', async () => {
@@ -215,7 +219,26 @@ describe('persisted extension diagnostic queue', { concurrency: false }, () => {
     assert.ok(failure)
     assert.deepStrictEqual(failure.data, {
       reason: 'session_storage_write_failed',
+      fault_kind: 'quota',
       occurrences: 1
     })
+  })
+
+  test('classifies read, quota, and cancellation faults without retaining private details', async () => {
+    for (const kind of ['read', 'quota', 'cancellation']) {
+      queue.clearExtensionLogsForTesting()
+      const scenario = createStorageFaultScenario(kind, 'private-diagnostic-value')
+      const storage = memoryStorage(undefined)
+      if (kind === 'read') storage.read = async () => { throw scenario.error }
+      else storage.write = async () => { throw scenario.error }
+
+      await queue.initializeExtensionLogQueue(storage)
+      await queue.flushExtensionLogPersistenceForTesting()
+
+      const failure = queue.getExtensionLogQueueSnapshot().find((entry) => entry.category === 'diagnostic_queue')
+      assert.strictEqual(failure.data.fault_kind, kind)
+      assert.doesNotMatch(JSON.stringify(failure), /private-diagnostic-value/)
+      assert.ok(queue.getExtensionLogQueueMetrics().persistenceFailures >= 1)
+    }
   })
 })
