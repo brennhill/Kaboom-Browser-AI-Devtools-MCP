@@ -4,10 +4,18 @@
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
 import type { EnvironmentSnapshot } from './browser-state-driver.js';
+export type EnvironmentSnapshotLookup = {
+    readonly status: 'active';
+    readonly snapshot: EnvironmentSnapshot;
+} | {
+    readonly status: 'consumed';
+} | {
+    readonly status: 'missing';
+};
 export interface EnvironmentSnapshotStore {
     readonly save: (snapshot: EnvironmentSnapshot) => Promise<string>;
-    readonly get: (id: string) => Promise<EnvironmentSnapshot | undefined>;
-    readonly delete: (id: string) => Promise<void>;
+    readonly lookup: (id: string) => Promise<EnvironmentSnapshotLookup>;
+    readonly consume: (id: string) => Promise<void>;
 }
 export interface SnapshotStorageArea {
     readonly get: (key: string) => Promise<Record<string, unknown>>;

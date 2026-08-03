@@ -15,15 +15,26 @@ interface SnapshotRecord {
   readonly snapshot: EnvironmentSnapshot
 }
 
+interface ConsumedSnapshotRecord {
+  readonly id: string
+  readonly consumed_at: number
+}
+
 interface SnapshotDocument {
   readonly version: 1
   readonly records: readonly SnapshotRecord[]
+  readonly consumed: readonly ConsumedSnapshotRecord[]
 }
+
+export type EnvironmentSnapshotLookup =
+  | { readonly status: 'active'; readonly snapshot: EnvironmentSnapshot }
+  | { readonly status: 'consumed' }
+  | { readonly status: 'missing' }
 
 export interface EnvironmentSnapshotStore {
   readonly save: (snapshot: EnvironmentSnapshot) => Promise<string>
-  readonly get: (id: string) => Promise<EnvironmentSnapshot | undefined>
-  readonly delete: (id: string) => Promise<void>
+  readonly lookup: (id: string) => Promise<EnvironmentSnapshotLookup>
+  readonly consume: (id: string) => Promise<void>
 }
 
 export interface SnapshotStorageArea {
@@ -52,18 +63,25 @@ export function createPersistentEnvironmentSnapshotStore(deps: PersistentStoreDe
       }
       const id = deps.newID()
       records.push({ id, created_at: deps.now(), snapshot })
-      await writeDocument(deps, { version: DOCUMENT_VERSION, records })
+      await writeDocument(deps, { ...document, records })
       return id
     },
-    async get(id) {
+    async lookup(id) {
       const document = await readDocument(deps)
-      return document.records.find((record) => record.id === id)?.snapshot
+      const active = document.records.find((record) => record.id === id)
+      if (active) return { status: 'active', snapshot: active.snapshot }
+      if (document.consumed.some((record) => record.id === id)) return { status: 'consumed' }
+      return { status: 'missing' }
     },
-    async delete(id) {
+    async consume(id) {
       const document = await readDocument(deps)
       const records = document.records.filter((record) => record.id !== id)
-      if (records.length === document.records.length) return
-      await writeDocument(deps, { version: DOCUMENT_VERSION, records })
+      if (records.length === document.records.length) {
+        if (document.consumed.some((record) => record.id === id)) return
+        throw new Error('environment_snapshot_store_consume_missing')
+      }
+      const consumed = [...document.consumed, { id, consumed_at: deps.now() }].slice(-limit)
+      await writeDocument(deps, { version: DOCUMENT_VERSION, records, consumed })
     }
   }
 }
@@ -77,8 +95,9 @@ async function readDocument(deps: PersistentStoreDeps): Promise<SnapshotDocument
     throw new Error('environment_snapshot_store_read_failed')
   }
   const candidate = stored[STORAGE_KEY]
-  if (candidate === undefined) return { version: DOCUMENT_VERSION, records: [] }
-  if (isSnapshotDocument(candidate)) return candidate
+  if (candidate === undefined) return emptyDocument()
+  const document = parseSnapshotDocument(candidate)
+  if (document) return document
   deps.onNotice('environment_snapshot_store_corrupt')
   try {
     await deps.storage.remove(STORAGE_KEY)
@@ -86,7 +105,7 @@ async function readDocument(deps: PersistentStoreDeps): Promise<SnapshotDocument
     deps.onNotice('environment_snapshot_store_recovery_failed')
     throw new Error('environment_snapshot_store_recovery_failed')
   }
-  return { version: DOCUMENT_VERSION, records: [] }
+  return emptyDocument()
 }
 
 async function writeDocument(deps: PersistentStoreDeps, document: SnapshotDocument): Promise<void> {
@@ -98,9 +117,9 @@ async function writeDocument(deps: PersistentStoreDeps, document: SnapshotDocume
   }
 }
 
-function isSnapshotDocument(value: unknown): value is SnapshotDocument {
-  if (!isRecord(value) || value.version !== DOCUMENT_VERSION || !Array.isArray(value.records)) return false
-  return value.records.every(
+function parseSnapshotDocument(value: unknown): SnapshotDocument | undefined {
+  if (!isRecord(value) || value.version !== DOCUMENT_VERSION || !Array.isArray(value.records)) return undefined
+  const recordsValid = value.records.every(
     (record) =>
       isRecord(record) &&
       typeof record.id === 'string' &&
@@ -109,6 +128,26 @@ function isSnapshotDocument(value: unknown): value is SnapshotDocument {
       Number.isFinite(record.created_at) &&
       isEnvironmentSnapshot(record.snapshot)
   )
+  const consumed = value.consumed === undefined ? [] : value.consumed
+  if (
+    !recordsValid ||
+    !Array.isArray(consumed) ||
+    !consumed.every(
+      (record) =>
+        isRecord(record) &&
+        typeof record.id === 'string' &&
+        record.id.length > 0 &&
+        typeof record.consumed_at === 'number' &&
+        Number.isFinite(record.consumed_at)
+    )
+  ) {
+    return undefined
+  }
+  return { version: DOCUMENT_VERSION, records: value.records, consumed }
+}
+
+function emptyDocument(): SnapshotDocument {
+  return { version: DOCUMENT_VERSION, records: [], consumed: [] }
 }
 
 function isEnvironmentSnapshot(value: unknown): value is EnvironmentSnapshot {

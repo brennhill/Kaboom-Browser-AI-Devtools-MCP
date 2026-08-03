@@ -16,9 +16,43 @@ test('persistent snapshot store survives reconstruction and never evicts an acti
   await assert.rejects(first.save(snapshot('three')), { message: 'environment_snapshot_store_full' })
 
   const reconstructed = createPersistentEnvironmentSnapshotStore(deps)
-  assert.equal((await reconstructed.get('opaque_1')).tab_url, 'https://one.test/')
-  assert.equal((await reconstructed.get('opaque_2')).tab_url, 'https://two.test/')
-  assert.equal(await reconstructed.get('opaque_3'), undefined)
+  assert.equal((await reconstructed.lookup('opaque_1')).snapshot.tab_url, 'https://one.test/')
+  assert.equal((await reconstructed.lookup('opaque_2')).snapshot.tab_url, 'https://two.test/')
+  assert.deepEqual(await reconstructed.lookup('opaque_3'), { status: 'missing' })
+})
+
+test('persistent snapshot store distinguishes bounded consumed tombstones from unknown identifiers', async () => {
+  const storage = memoryStorage()
+  let id = 0
+  const deps = { storage, limit: 2, now: () => 7, newID: () => `opaque_${++id}`, onNotice: () => {} }
+  const store = createPersistentEnvironmentSnapshotStore(deps)
+  await store.save(snapshot('one'))
+  await store.consume('opaque_1')
+  assert.deepEqual(await createPersistentEnvironmentSnapshotStore(deps).lookup('opaque_1'), { status: 'consumed' })
+
+  await store.save(snapshot('two'))
+  await store.consume('opaque_2')
+  await store.save(snapshot('three'))
+  await store.consume('opaque_3')
+
+  const reconstructed = createPersistentEnvironmentSnapshotStore(deps)
+  assert.deepEqual(await reconstructed.lookup('opaque_1'), { status: 'missing' })
+  assert.deepEqual(await reconstructed.lookup('opaque_2'), { status: 'consumed' })
+  assert.deepEqual(await reconstructed.lookup('opaque_3'), { status: 'consumed' })
+  assert.equal(JSON.stringify(storage.values.get('environment_transaction_snapshots_v1')).includes('one.test'), false)
+})
+
+test('consume rejects an unknown snapshot without creating a false recovery tombstone', async () => {
+  const store = createPersistentEnvironmentSnapshotStore({
+    storage: memoryStorage(),
+    limit: 2,
+    now: () => 1,
+    newID: () => 'opaque_1',
+    onNotice: () => {}
+  })
+
+  await assert.rejects(store.consume('unknown'), { message: 'environment_snapshot_store_consume_missing' })
+  assert.deepEqual(await store.lookup('unknown'), { status: 'missing' })
 })
 
 test('persistent snapshot store clears corrupt state and emits a stable notice', async () => {
@@ -32,7 +66,7 @@ test('persistent snapshot store clears corrupt state and emits a stable notice',
     onNotice: (notice) => notices.push(notice)
   })
 
-  assert.equal(await store.get('opaque_1'), undefined)
+  assert.deepEqual(await store.lookup('opaque_1'), { status: 'missing' })
   assert.deepEqual(notices, ['environment_snapshot_store_corrupt'])
   assert.equal(JSON.stringify(notices).includes('private-secret'), false)
   assert.equal(storage.values.has('environment_transaction_snapshots_v1'), false)

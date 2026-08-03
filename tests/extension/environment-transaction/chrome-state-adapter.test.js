@@ -78,9 +78,9 @@ test('snapshot command exposes only generated opaque identifiers', async () => {
   const id = await store.save(snapshot)
   assert.equal(id, 'fixture_snapshot_1')
   assert.equal(JSON.stringify({ success: true, snapshot_id: id }).includes('private'), false)
-  assert.equal(await store.get(id), snapshot)
-  await store.delete(id)
-  assert.equal(await store.get(id), undefined)
+  assert.deepEqual(await store.lookup(id), { status: 'active', snapshot })
+  await store.consume(id)
+  assert.deepEqual(await store.lookup(id), { status: 'consumed' })
 })
 
 test('command boundary replaces private driver failures with stable errors and retains failed restores', async () => {
@@ -111,10 +111,10 @@ test('command boundary replaces private driver failures with stable errors and r
   await assert.rejects(restoreEnvironment(driver, store, 7, 'fixture_snapshot_1'), {
     message: 'fixture_restore_failed'
   })
-  assert.equal(await store.get('fixture_snapshot_1'), snapshot)
+  assert.deepEqual(await store.lookup('fixture_snapshot_1'), { status: 'active', snapshot })
 })
 
-test('restore is idempotent after the private snapshot was already consumed', async () => {
+test('restore rejects an unknown snapshot so the daemon retains its recovery obligation', async () => {
   const store = snapshotStore('fixture_snapshot_1')
   const driver = {
     snapshot: async () => {
@@ -126,25 +126,83 @@ test('restore is idempotent after the private snapshot was already consumed', as
     }
   }
 
-  assert.deepEqual(await restoreEnvironment(driver, store, 7, 'missing_snapshot'), {
+  await assert.rejects(restoreEnvironment(driver, store, 7, 'missing_snapshot'), {
+    message: 'fixture_snapshot_missing'
+  })
+})
+
+test('restore is idempotent only after the private snapshot was consumed', async () => {
+  const store = snapshotStore('fixture_snapshot_1')
+  const snapshot = {
+    tab_url: 'https://example.test/',
+    window_id: 2,
+    page_state: { local_storage: {}, session_storage: {}, feature_flags: {}, seed_data: {} },
+    cookies: []
+  }
+  const restored = []
+  const driver = {
+    snapshot: async () => snapshot,
+    apply: async () => ({}),
+    restore: async (_tabID, value) => restored.push(value)
+  }
+  await store.save(snapshot)
+
+  assert.deepEqual(await restoreEnvironment(driver, store, 7, 'fixture_snapshot_1'), {
+    success: true,
+    restored: true
+  })
+  assert.deepEqual(await restoreEnvironment(driver, store, 7, 'fixture_snapshot_1'), {
     success: true,
     restored: true,
     already_restored: true
   })
+  assert.deepEqual(restored, [snapshot])
+})
+
+test('restore reports a failed consume and leaves the snapshot active for crash-window recovery', async () => {
+  const snapshot = {
+    tab_url: 'https://example.test/',
+    window_id: 2,
+    page_state: { local_storage: {}, session_storage: {}, feature_flags: {}, seed_data: {} },
+    cookies: []
+  }
+  const store = snapshotStore('fixture_snapshot_1')
+  await store.save(snapshot)
+  store.consume = async () => {
+    throw new Error('environment_snapshot_store_write_failed')
+  }
+  let restores = 0
+  const driver = {
+    snapshot: async () => snapshot,
+    apply: async () => ({}),
+    restore: async () => {
+      restores += 1
+    }
+  }
+
+  await assert.rejects(restoreEnvironment(driver, store, 7, 'fixture_snapshot_1'), {
+    message: 'environment_snapshot_store_write_failed'
+  })
+  assert.equal(restores, 1)
+  assert.deepEqual(await store.lookup('fixture_snapshot_1'), { status: 'active', snapshot })
 })
 
 function snapshotStore(id) {
   const snapshots = new Map()
+  const consumed = new Set()
   return {
     async save(snapshot) {
       snapshots.set(id, snapshot)
       return id
     },
-    async get(snapshotID) {
-      return snapshots.get(snapshotID)
+    async lookup(snapshotID) {
+      if (snapshots.has(snapshotID)) return { status: 'active', snapshot: snapshots.get(snapshotID) }
+      return { status: consumed.has(snapshotID) ? 'consumed' : 'missing' }
     },
-    async delete(snapshotID) {
+    async consume(snapshotID) {
+      if (!snapshots.has(snapshotID)) throw new Error('environment_snapshot_store_consume_missing')
       snapshots.delete(snapshotID)
+      consumed.add(snapshotID)
     }
   }
 }

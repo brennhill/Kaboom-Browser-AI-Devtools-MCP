@@ -67,14 +67,15 @@ export async function restoreEnvironment(
   tabId: number,
   snapshotID: string
 ): Promise<{ readonly success: true; readonly restored: true; readonly already_restored?: true }> {
-  const snapshot = await snapshots.get(snapshotID)
-  if (!snapshot) return { success: true, restored: true, already_restored: true }
+  const lookup = await snapshots.lookup(snapshotID)
+  if (lookup.status === 'consumed') return { success: true, restored: true, already_restored: true }
+  if (lookup.status === 'missing') throw new Error('fixture_snapshot_missing')
   try {
-    await driver.restore(tabId, snapshot)
+    await driver.restore(tabId, lookup.snapshot)
   } catch {
     throw new Error('fixture_restore_failed')
   }
-  await snapshots.delete(snapshotID)
+  await snapshots.consume(snapshotID)
   return { success: true, restored: true }
 }
 

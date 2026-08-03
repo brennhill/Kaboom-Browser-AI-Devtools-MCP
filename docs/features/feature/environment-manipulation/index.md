@@ -120,6 +120,10 @@ last_verified_date: 2026-08-02
   survives MV3 service-worker suspension. Corrupt or unavailable storage emits
   stable lifecycle diagnostics without including captured values, and runtime
   registration lives in a dedicated composition root.
+- Snapshot recovery distinguishes active, consumed, and unknown opaque handles.
+  Successful restores atomically replace private snapshot data with bounded,
+  value-free tombstones; unknown or corrupt handles fail closed so the daemon
+  retains its recovery obligation instead of reporting false success.
 - Each private snapshot includes its own extension-only restore plan. Recovery
   therefore sends only the opaque snapshot handle; the daemon neither persists
   nor retransmits original cookie or storage values during restoration.

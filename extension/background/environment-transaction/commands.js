@@ -37,16 +37,18 @@ export async function applyEnvironment(driver, tabId, fixture) {
     }
 }
 export async function restoreEnvironment(driver, snapshots, tabId, snapshotID) {
-    const snapshot = await snapshots.get(snapshotID);
-    if (!snapshot)
+    const lookup = await snapshots.lookup(snapshotID);
+    if (lookup.status === 'consumed')
         return { success: true, restored: true, already_restored: true };
+    if (lookup.status === 'missing')
+        throw new Error('fixture_snapshot_missing');
     try {
-        await driver.restore(tabId, snapshot);
+        await driver.restore(tabId, lookup.snapshot);
     }
     catch {
         throw new Error('fixture_restore_failed');
     }
-    await snapshots.delete(snapshotID);
+    await snapshots.consume(snapshotID);
     return { success: true, restored: true };
 }
 function requireFixture(params) {
