@@ -49,6 +49,7 @@ async function handleStartRecording(msg) {
             target: 'background',
             type: 'offscreen_recording_started',
             success: false,
+            connection_generation: msg.connection_generation,
             error: 'RECORD_START: Already recording in offscreen document.'
         })
             .catch(() => reportBackgroundDeliveryFailure('start_already_active'));
@@ -172,14 +173,16 @@ async function handleStartRecording(msg) {
             recorder,
             stream,
             chunks,
-            totalBytes: 0
+            totalBytes: 0,
+            connectionGeneration: msg.connection_generation
         };
         console.log(LOG, 'Recording STARTED, sending confirmation to background');
         chrome.runtime
             .sendMessage({
             target: 'background',
             type: 'offscreen_recording_started',
-            success: true
+            success: true,
+            connection_generation: msg.connection_generation
         })
             .catch(() => reportBackgroundDeliveryFailure('start_confirmed'));
     }
@@ -196,6 +199,7 @@ async function handleStartRecording(msg) {
             target: 'background',
             type: 'offscreen_recording_started',
             success: false,
+            connection_generation: msg.connection_generation,
             error: `RECORD_START: ${errorMessage(err, 'Failed to start recording in offscreen document.')}`
         })
             .catch(() => reportBackgroundDeliveryFailure('start_failed'));
@@ -205,7 +209,7 @@ async function handleStartRecording(msg) {
  * Stop recording, assemble the blob, and POST to the Go server.
  * @param truncated — true if auto-stopped due to memory guard or tab close
  */
-function handleStopRecording(truncated = false) {
+function handleStopRecording(truncated = false, connectionGeneration = state.connectionGeneration) {
     console.log(LOG, 'handleStopRecording', {
         active: state.active,
         name: state.name,
@@ -221,6 +225,7 @@ function handleStopRecording(truncated = false) {
             target: 'background',
             type: 'offscreen_recording_stopped',
             status: 'error',
+            connection_generation: connectionGeneration,
             name: '',
             error: 'RECORD_STOP: No active recording in offscreen document.'
         })
@@ -240,6 +245,7 @@ function handleStopRecording(truncated = false) {
             target: 'background',
             type: 'offscreen_recording_stopped',
             status: 'error',
+            connection_generation: connectionGeneration,
             name: '',
             error: 'RECORD_STOP: Recorder already inactive.'
         })
@@ -297,6 +303,7 @@ function handleStopRecording(truncated = false) {
                     target: 'background',
                     type: 'offscreen_recording_stopped',
                     status: 'error',
+                    connection_generation: connectionGeneration,
                     name,
                     error: `RECORD_STOP: Server returned ${response.status}.`
                 })
@@ -318,6 +325,7 @@ function handleStopRecording(truncated = false) {
                 target: 'background',
                 type: 'offscreen_recording_stopped',
                 status: 'saved',
+                connection_generation: connectionGeneration,
                 name,
                 duration_seconds: duration,
                 size_bytes: blob.size,
@@ -334,6 +342,7 @@ function handleStopRecording(truncated = false) {
                 target: 'background',
                 type: 'offscreen_recording_stopped',
                 status: 'error',
+                connection_generation: connectionGeneration,
                 name,
                 error: `RECORD_STOP: ${errorMessage(err, 'Save failed.')}`
             })
@@ -356,7 +365,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         handleStartRecording(message);
     }
     else if (message.type === 'offscreen_stop_recording') {
-        handleStopRecording();
+        handleStopRecording(false, message.connection_generation);
     }
     else if (message.type === 'offscreen_get_recording_state') {
         // Restarted service worker asks whether a recording survived (rehydration).

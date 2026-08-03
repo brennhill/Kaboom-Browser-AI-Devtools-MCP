@@ -517,6 +517,7 @@ export interface OffscreenStartRecordingMessage {
     readonly audioMode: string;
     readonly tabId: number;
     readonly url: string;
+    readonly connection_generation?: number;
 }
 /**
  * Stop recording message (SW → offscreen)
@@ -524,6 +525,7 @@ export interface OffscreenStartRecordingMessage {
 export interface OffscreenStopRecordingMessage {
     readonly target: 'offscreen';
     readonly type: 'offscreen_stop_recording';
+    readonly connection_generation?: number;
 }
 /**
  * Query live recording state (SW → offscreen).
@@ -555,6 +557,7 @@ export interface OffscreenRecordingStartedMessage {
     readonly type: 'offscreen_recording_started';
     readonly success: boolean;
     readonly error?: string;
+    readonly connection_generation?: number;
 }
 /**
  * Recording stopped result (offscreen → SW)
@@ -569,6 +572,7 @@ export interface OffscreenRecordingStoppedMessage {
     readonly truncated?: boolean;
     readonly path?: string;
     readonly error?: string;
+    readonly connection_generation?: number;
 }
 /**
  * Union of offscreen messages

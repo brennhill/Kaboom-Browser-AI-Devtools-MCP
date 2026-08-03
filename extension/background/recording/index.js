@@ -13,7 +13,7 @@ import { StorageKey } from '../../lib/constants.js';
 import { ensureOffscreenDocument, getStreamIdWithRecovery, requestRecordingGesture } from './capture.js';
 import { installRecordingListeners } from './listeners.js';
 import { isPersistedRecordingState, resolveRecordingRehydration } from './rehydration.js';
-import { errorMessage } from '../../lib/error-utils.js';
+import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js';
 import { persist } from '../../lib/storage/io.js';
 import { removeLocal, setLocals } from '../../lib/storage/local.js';
 import { delay } from '../../lib/timeout-utils.js';
@@ -23,6 +23,7 @@ import { readTrackedTab, setTrackedTab } from '../../lib/tabs/tracked-tab-storag
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js';
 import { readLocalState } from '../../lib/storage/validated.js';
 import { reportStateRecovery } from '../runtime-state/state-recovery.js';
+import { getConnectionGeneration, isConnectionGenerationCurrent } from '../runtime-state/connection-generation.js';
 const defaultState = {
     active: false,
     name: '',
@@ -35,6 +36,23 @@ const defaultState = {
 };
 let recordingState = { ...defaultState };
 const LOG = KABOOM_RECORDING_LOG_PREFIX;
+function recordingGenerationIsCurrent(connectionGeneration, bridge, receivedGeneration = connectionGeneration) {
+    if (connectionGeneration === undefined ||
+        (receivedGeneration === connectionGeneration && isConnectionGenerationCurrent(connectionGeneration))) {
+        return true;
+    }
+    reportStateRecovery({
+        name: 'recording_generation_state',
+        detail: 'A recording operation was cancelled after its daemon connection was superseded.',
+        fix: 'Retry recording after the extension reconnects.'
+    });
+    console.warn(LOG, 'Rejected stale connection generation', {
+        bridge,
+        received_generation: receivedGeneration,
+        current_generation: getConnectionGeneration()
+    });
+    return false;
+}
 /** Listener to re-send watermark when recording tab navigates or content script re-injects. */
 let tabUpdateListener = null;
 /**
@@ -240,13 +258,38 @@ async function acquireStreamId(tab, name, fps, audio, fromPopup) {
  * (bounded) for its confirmation. Returns the offscreen reply (success or a
  * failure/timeout message).
  */
-async function startOffscreenRecording(streamId, tab, name, fps, audio) {
+async function startOffscreenRecording(streamId, tab, name, fps, audio, connectionGeneration) {
     console.log(LOG, 'Ensuring offscreen document exists');
     await ensureOffscreenDocument();
     console.log(LOG, 'Offscreen document ready, sending START command');
     return await new Promise((resolve) => {
         const listener = (message) => {
             if (message.target === 'background' && message.type === 'offscreen_recording_started') {
+                if (!recordingGenerationIsCurrent(connectionGeneration, 'offscreen_recording_start', message.connection_generation)) {
+                    clearTimeout(timeout);
+                    chrome.runtime.onMessage.removeListener(listener);
+                    void chrome.runtime
+                        .sendMessage({
+                        target: 'offscreen',
+                        type: 'offscreen_stop_recording',
+                        connection_generation: getConnectionGeneration()
+                    })
+                        .catch((error) => {
+                        // EXPECTED_ABSENCE: a missing offscreen document is benign after it rejects
+                        // a superseded start; logging would misreport successful self-cleanup as a failure.
+                        if (isNoReceiverError(error))
+                            return;
+                        console.error(LOG, 'Failed to clean up superseded offscreen recording:', errorMessage(error));
+                    });
+                    resolve({
+                        target: 'background',
+                        type: 'offscreen_recording_started',
+                        success: false,
+                        connection_generation: connectionGeneration,
+                        error: 'RECORD_START: stale_connection_generation'
+                    });
+                    return;
+                }
                 clearTimeout(timeout);
                 chrome.runtime.onMessage.removeListener(listener);
                 resolve(message);
@@ -272,7 +315,8 @@ async function startOffscreenRecording(streamId, tab, name, fps, audio) {
             fps,
             audioMode: audio,
             tabId: tab.id,
-            url: tab.url ?? ''
+            url: tab.url ?? '',
+            connection_generation: connectionGeneration
         })
             .catch(() => {
             // EXPECTED_ABSENCE: a closed request port is normal because offscreen
@@ -292,7 +336,7 @@ async function startOffscreenRecording(streamId, tab, name, fps, audio) {
  * @param fromPopup — true when initiated from popup (activeTab already granted, skip reload)
  */
 // #lizard forgives
-export async function startRecording(name, fps = 15, queryId = '', audio = '', fromPopup = false, targetTabId) {
+export async function startRecording(name, fps = 15, queryId = '', audio = '', fromPopup = false, targetTabId, connectionGeneration) {
     console.log(LOG, 'startRecording called', {
         name,
         fps,
@@ -305,6 +349,9 @@ export async function startRecording(name, fps = 15, queryId = '', audio = '', f
     if (recordingState.active) {
         console.warn(LOG, 'START BLOCKED: already recording', { currentState: { ...recordingState } });
         return { status: 'error', name: '', error: 'RECORD_START: Already recording. Stop current recording first.' };
+    }
+    if (!recordingGenerationIsCurrent(connectionGeneration, 'recording_start')) {
+        return { status: 'error', name: '', error: 'RECORD_START: stale_connection_generation' };
     }
     // Mark active immediately to prevent TOCTOU race across awaits
     recordingState.active = true; // eslint-disable-line require-atomic-updates
@@ -319,6 +366,10 @@ export async function startRecording(name, fps = 15, queryId = '', audio = '', f
             return { status: 'error', name: '', error: tabResult.error };
         }
         const tab = tabResult;
+        if (!recordingGenerationIsCurrent(connectionGeneration, 'recording_start_target')) {
+            recordingState.active = false; // eslint-disable-line require-atomic-updates
+            return { status: 'error', name: '', error: 'RECORD_START: stale_connection_generation' };
+        }
         // Auto-enable tab tracking if not already tracked
         const trackedTabId = (await readTrackedTab()).id;
         console.log(LOG, 'Tracked tab:', {
@@ -330,6 +381,10 @@ export async function startRecording(name, fps = 15, queryId = '', audio = '', f
         }
         // Ensure the content script is responsive (toasts); may reload the tab.
         await ensureContentScriptReady(tab.id, fromPopup);
+        if (!recordingGenerationIsCurrent(connectionGeneration, 'recording_start_content_ready')) {
+            recordingState.active = false; // eslint-disable-line require-atomic-updates
+            return { status: 'error', name: '', error: 'RECORD_START: stale_connection_generation' };
+        }
         // Acquire the tabCapture stream id (popup activeTab grant vs MCP gesture).
         const streamResult = await acquireStreamId(tab, name, fps, audio, fromPopup);
         if ('errorResult' in streamResult) {
@@ -337,8 +392,12 @@ export async function startRecording(name, fps = 15, queryId = '', audio = '', f
             return streamResult.errorResult;
         }
         const streamId = streamResult.streamId;
+        if (!recordingGenerationIsCurrent(connectionGeneration, 'recording_start_stream')) {
+            recordingState.active = false; // eslint-disable-line require-atomic-updates
+            return { status: 'error', name: '', error: 'RECORD_START: stale_connection_generation' };
+        }
         // Start the offscreen recorder and wait (bounded) for its confirmation.
-        const startResult = await startOffscreenRecording(streamId, tab, name, fps, audio);
+        const startResult = await startOffscreenRecording(streamId, tab, name, fps, audio, connectionGeneration);
         console.log(LOG, 'Offscreen START result:', { success: startResult.success, error: startResult.error });
         if (!startResult.success) {
             recordingState.active = false; // eslint-disable-line require-atomic-updates
@@ -401,7 +460,7 @@ export async function startRecording(name, fps = 15, queryId = '', audio = '', f
  * @param truncated — true if auto-stopped due to memory guard or tab close
  */
 // #lizard forgives
-export async function stopRecording(truncated = false) {
+export async function stopRecording(truncated = false, connectionGeneration) {
     console.log(LOG, 'stopRecording called', {
         currentlyActive: recordingState.active,
         name: recordingState.name,
@@ -425,6 +484,19 @@ export async function stopRecording(truncated = false) {
         const stopResult = await new Promise((resolve) => {
             const listener = (message) => {
                 if (message.target === 'background' && message.type === 'offscreen_recording_stopped') {
+                    if (!recordingGenerationIsCurrent(connectionGeneration, 'offscreen_recording_stop', message.connection_generation)) {
+                        clearTimeout(timeout);
+                        chrome.runtime.onMessage.removeListener(listener);
+                        resolve({
+                            target: 'background',
+                            type: 'offscreen_recording_stopped',
+                            status: 'error',
+                            name: recordingState.name || '',
+                            connection_generation: connectionGeneration,
+                            error: 'RECORD_STOP: stale_connection_generation'
+                        });
+                        return;
+                    }
                     clearTimeout(timeout);
                     chrome.runtime.onMessage.removeListener(listener);
                     resolve(message);
@@ -444,7 +516,8 @@ export async function stopRecording(truncated = false) {
             chrome.runtime
                 .sendMessage({
                 target: 'offscreen',
-                type: 'offscreen_stop_recording'
+                type: 'offscreen_stop_recording',
+                connection_generation: connectionGeneration
             })
                 .catch(() => {
                 // EXPECTED_ABSENCE: a closed request port is normal because offscreen

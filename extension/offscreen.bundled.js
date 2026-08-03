@@ -68,6 +68,7 @@
         target: "background",
         type: "offscreen_recording_started",
         success: false,
+        connection_generation: msg.connection_generation,
         error: "RECORD_START: Already recording in offscreen document."
       }).catch(() => reportBackgroundDeliveryFailure("start_already_active"));
       return;
@@ -176,13 +177,15 @@
         recorder,
         stream,
         chunks,
-        totalBytes: 0
+        totalBytes: 0,
+        connectionGeneration: msg.connection_generation
       };
       console.log(LOG, "Recording STARTED, sending confirmation to background");
       chrome.runtime.sendMessage({
         target: "background",
         type: "offscreen_recording_started",
-        success: true
+        success: true,
+        connection_generation: msg.connection_generation
       }).catch(() => reportBackgroundDeliveryFailure("start_confirmed"));
     } catch (err) {
       console.error(LOG, "START EXCEPTION:", errorMessage(err), err.stack);
@@ -195,11 +198,12 @@
         target: "background",
         type: "offscreen_recording_started",
         success: false,
+        connection_generation: msg.connection_generation,
         error: `RECORD_START: ${errorMessage(err, "Failed to start recording in offscreen document.")}`
       }).catch(() => reportBackgroundDeliveryFailure("start_failed"));
     }
   }
-  function handleStopRecording(truncated = false) {
+  function handleStopRecording(truncated = false, connectionGeneration = state.connectionGeneration) {
     console.log(LOG, "handleStopRecording", {
       active: state.active,
       name: state.name,
@@ -214,6 +218,7 @@
         target: "background",
         type: "offscreen_recording_stopped",
         status: "error",
+        connection_generation: connectionGeneration,
         name: "",
         error: "RECORD_STOP: No active recording in offscreen document."
       }).catch(() => reportBackgroundDeliveryFailure("stop_not_active"));
@@ -231,6 +236,7 @@
         target: "background",
         type: "offscreen_recording_stopped",
         status: "error",
+        connection_generation: connectionGeneration,
         name: "",
         error: "RECORD_STOP: Recorder already inactive."
       }).catch(() => reportBackgroundDeliveryFailure("stop_recorder_inactive"));
@@ -282,6 +288,7 @@
             target: "background",
             type: "offscreen_recording_stopped",
             status: "error",
+            connection_generation: connectionGeneration,
             name,
             error: `RECORD_STOP: Server returned ${response.status}.`
           }).catch(() => reportBackgroundDeliveryFailure("save_http_failed"));
@@ -298,6 +305,7 @@
           target: "background",
           type: "offscreen_recording_stopped",
           status: "saved",
+          connection_generation: connectionGeneration,
           name,
           duration_seconds: duration,
           size_bytes: blob.size,
@@ -311,6 +319,7 @@
           target: "background",
           type: "offscreen_recording_stopped",
           status: "error",
+          connection_generation: connectionGeneration,
           name,
           error: `RECORD_STOP: ${errorMessage(err, "Save failed.")}`
         }).catch(() => reportBackgroundDeliveryFailure("save_failed"));
@@ -328,7 +337,7 @@
     if (message.type === "offscreen_start_recording") {
       handleStartRecording(message);
     } else if (message.type === "offscreen_stop_recording") {
-      handleStopRecording();
+      handleStopRecording(false, message.connection_generation);
     } else if (message.type === "offscreen_get_recording_state") {
       sendResponse({
         active: state.active,

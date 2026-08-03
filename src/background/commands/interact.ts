@@ -113,7 +113,8 @@ registerCommand('screen_recording_start', async (ctx) => {
     ctx.query.id,
     params.audio ?? '',
     false,
-    ctx.tabId
+    ctx.tabId,
+    ctx.query.connection_generation
   )
   ctx.sendResult(result)
 })
@@ -124,7 +125,7 @@ registerCommand('screen_recording_start', async (ctx) => {
 
 registerCommand('screen_recording_stop', async (ctx) => {
   if (!requireAiWebPilot(ctx)) return
-  const result = await stopRecording()
+  const result = await stopRecording(false, ctx.query.connection_generation)
   ctx.sendResult(result)
 })
 

@@ -699,10 +699,6 @@ export interface PageMessageEventData {
   readonly payload?: unknown
 }
 
-// =============================================================================
-// OFFSCREEN DOCUMENT MESSAGE TYPES (service worker ↔ offscreen)
-// =============================================================================
-
 /**
  * Start recording message (SW → offscreen)
  */
@@ -716,6 +712,7 @@ export interface OffscreenStartRecordingMessage {
   readonly audioMode: string
   readonly tabId: number
   readonly url: string
+  readonly connection_generation?: number
 }
 
 /**
@@ -724,6 +721,7 @@ export interface OffscreenStartRecordingMessage {
 export interface OffscreenStopRecordingMessage {
   readonly target: 'offscreen'
   readonly type: 'offscreen_stop_recording'
+  readonly connection_generation?: number
 }
 
 /**
@@ -758,6 +756,7 @@ export interface OffscreenRecordingStartedMessage {
   readonly type: 'offscreen_recording_started'
   readonly success: boolean
   readonly error?: string
+  readonly connection_generation?: number
 }
 
 /**
@@ -773,6 +772,7 @@ export interface OffscreenRecordingStoppedMessage {
   readonly truncated?: boolean
   readonly path?: string
   readonly error?: string
+  readonly connection_generation?: number
 }
 
 /**

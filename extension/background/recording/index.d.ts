@@ -32,7 +32,7 @@ export declare function getRecordingInfo(): {
  * @param audio — Audio mode: 'tab', 'mic', 'both', or '' (no audio)
  * @param fromPopup — true when initiated from popup (activeTab already granted, skip reload)
  */
-export declare function startRecording(name: string, fps?: number, queryId?: string, audio?: string, fromPopup?: boolean, targetTabId?: number): Promise<{
+export declare function startRecording(name: string, fps?: number, queryId?: string, audio?: string, fromPopup?: boolean, targetTabId?: number, connectionGeneration?: number): Promise<{
     status: string;
     name: string;
     startTime?: number;
@@ -42,7 +42,7 @@ export declare function startRecording(name: string, fps?: number, queryId?: str
  * Stop recording and save the video.
  * @param truncated — true if auto-stopped due to memory guard or tab close
  */
-export declare function stopRecording(truncated?: boolean): Promise<{
+export declare function stopRecording(truncated?: boolean, connectionGeneration?: number): Promise<{
     status: string;
     name: string;
     duration_seconds?: number;

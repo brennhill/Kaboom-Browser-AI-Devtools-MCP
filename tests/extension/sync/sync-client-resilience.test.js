@@ -204,6 +204,9 @@ describe('SyncClient — Error recovery', () => {
       })
     })
 
+    callbacks.getExtensionLogs = mock.fn(() => [
+      { timestamp: 'now', level: 'warn', message: 'retained diagnostic', source: 'background', category: 'sync' }
+    ])
     client = new SyncClient('http://localhost:7777', 'sess-1', callbacks)
     client.start()
     await tick(20)
@@ -222,6 +225,11 @@ describe('SyncClient — Error recovery', () => {
     await tick(50)
 
     assert.strictEqual(callbacks.onCommand.mock.calls.length, 0)
+    assert.strictEqual(
+      callbacks.acknowledgeExtensionLogs.mock.calls.length,
+      1,
+      'only the replacement daemon response may acknowledge the retained diagnostic batch'
+    )
     const staleLog = callbacks.debugLog.mock.calls.find(
       (call) => call.arguments[1] === 'Rejected stale connection generation'
     )

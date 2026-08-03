@@ -35,7 +35,10 @@ code_paths:
   - src/background/recording/index.ts
   - src/background/recording/rehydration.ts
   - src/background/recording/utils.ts
+  - src/background/commands/interact.ts
+  - src/background/runtime-state/connection-generation.ts
   - src/offscreen/recording-worker.ts
+  - src/types/runtime-messages.ts
   - src/lib/daemon-http.ts
   - src/lib/storage/changes.ts
   - src/lib/storage/io.ts
@@ -67,6 +70,8 @@ test_paths:
   - tests/extension/state-recovery/state-recovery-contract.test.js
   - tests/extension/state-recovery/validated-storage.test.js
   - tests/extension/recording-lifecycle/recording-rehydration.test.js
+  - tests/extension/recording-lifecycle/recording-fixture.js
+  - tests/extension/recording-lifecycle/recording.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -112,3 +117,9 @@ Screen-recording dependencies receive the query owner callback directly from
 the composition boundary through `buildScreenrecDeps`; dependency construction
 is not a `ToolHandler` method, and no root `getCommandResult` forwarding method
 is retained.
+MCP-initiated start and stop operations carry the daemon connection generation
+through the offscreen bridge. Delayed confirmations from a superseded daemon
+are rejected with redacted Doctor evidence; a stale start is actively stopped
+so it cannot leave an orphaned capture. Popup, keyboard, and context-menu
+recordings remain local operations and are intentionally independent of daemon
+handoffs.

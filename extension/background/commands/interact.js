@@ -89,7 +89,7 @@ registerCommand('screen_recording_start', async (ctx) => {
     if (!requireAiWebPilot(ctx))
         return;
     const params = ctx.params;
-    const result = await startRecording(params.name ?? 'recording', params.fps ?? 15, ctx.query.id, params.audio ?? '', false, ctx.tabId);
+    const result = await startRecording(params.name ?? 'recording', params.fps ?? 15, ctx.query.id, params.audio ?? '', false, ctx.tabId, ctx.query.connection_generation);
     ctx.sendResult(result);
 });
 // =============================================================================
@@ -98,7 +98,7 @@ registerCommand('screen_recording_start', async (ctx) => {
 registerCommand('screen_recording_stop', async (ctx) => {
     if (!requireAiWebPilot(ctx))
         return;
-    const result = await stopRecording();
+    const result = await stopRecording(false, ctx.query.connection_generation);
     ctx.sendResult(result);
 });
 // =============================================================================

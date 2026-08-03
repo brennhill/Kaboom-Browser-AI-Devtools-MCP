@@ -131,12 +131,13 @@ export function createRecordingChromeMock(overrides = {}) {
 }
 
 // Simulate an OFFSCREEN_RECORDING_STARTED message from the offscreen document
-export function simulateOffscreenStarted(success, error) {
+export function simulateOffscreenStarted(success, error, connectionGeneration) {
   const message = {
     target: 'background',
     type: 'offscreen_recording_started',
     success,
-    error: error || undefined
+    error: error || undefined,
+    connection_generation: connectionGeneration
   }
   const sender = { id: globalThis.chrome.runtime.id }
   // Dispatch to all registered listeners
@@ -156,7 +157,8 @@ export function simulateOffscreenStopped(overrides = {}) {
     size_bytes: overrides.size_bytes ?? 1024000,
     truncated: overrides.truncated ?? false,
     path: overrides.path ?? '/tmp/test-recording.webm',
-    error: overrides.error ?? undefined
+    error: overrides.error ?? undefined,
+    connection_generation: overrides.connection_generation
   }
   const sender = { id: globalThis.chrome.runtime.id }
   for (const listener of [...onMessageListeners]) {

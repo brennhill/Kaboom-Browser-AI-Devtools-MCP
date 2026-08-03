@@ -199,6 +199,42 @@ describe('MCP-initiated recording flow', () => {
     await stopPromise
   })
 
+  test('rejects an offscreen start acknowledgement from a superseded daemon generation', async () => {
+    globalThis.chrome = createRecordingChromeMock()
+    const generation = await import('../../../extension/background/runtime-state/connection-generation.js')
+    generation.setConnectionGeneration(1)
+
+    const startPromise = startRecording('stale-mcp-recording', 15, 'query-stale', '', true, 42, 1)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    generation.setConnectionGeneration(2)
+    simulateOffscreenStarted(true, undefined, 1)
+
+    const result = await startPromise
+    assert.strictEqual(result.status, 'error')
+    assert.strictEqual(result.error, 'RECORD_START: stale_connection_generation')
+    assert.strictEqual(isRecording(), false)
+  })
+
+  test('rejects an offscreen stop acknowledgement from a superseded daemon generation', async () => {
+    globalThis.chrome = createRecordingChromeMock()
+    const startPromise = startRecording('stale-stop-recording', 15, '', '', true)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    simulateOffscreenStarted(true)
+    assert.strictEqual((await startPromise).status, 'recording')
+
+    const generation = await import('../../../extension/background/runtime-state/connection-generation.js')
+    generation.setConnectionGeneration(1)
+    const stopPromise = stopRecording(false, 1)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    generation.setConnectionGeneration(2)
+    simulateOffscreenStopped({ name: 'stale-stop-recording', connection_generation: 1 })
+
+    const result = await stopPromise
+    assert.strictEqual(result.status, 'error')
+    assert.strictEqual(result.error, 'RECORD_STOP: stale_connection_generation')
+  })
+
   test('should return denied error when popup rejects MCP recording request', async () => {
     globalThis.chrome = createRecordingChromeMock({
       tabsQueryResult: [{ id: 42, url: 'http://active-tab.example', title: 'Active Tab' }]
