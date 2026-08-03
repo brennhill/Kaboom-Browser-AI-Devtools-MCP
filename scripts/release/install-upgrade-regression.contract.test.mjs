@@ -30,6 +30,36 @@ test('upgrade regression exercises a packed artifact with validated replacement 
   assert.match(source, /same_version_reinstall/, 'must report the same-version reinstall scenario')
   assert.match(source, /identity_continuity/, 'must report preserved install identity and user state')
   assert.match(source, /KABOOM_UAT_EVIDENCE/, 'must support a machine-readable evidence destination')
+  assert.match(source, /\.failure\s*=\s*\{[\s\S]*stage:\s*currentStage/, 'failure evidence must identify the replay stage')
+  assert.match(source, /replay_command/, 'failure evidence must retain exact replay instructions')
+  for (const scenario of [
+    'daemon_crash_recovery',
+    'extension_suspension_recovery',
+    'browser_restart_recovery',
+    'corrupt_state_recovery',
+    'uninstall_cleanup'
+  ]) {
+    assert.match(source, new RegExp(scenario), `must execute ${scenario}`)
+  }
+})
+
+test('scheduled and release platform matrices retain replayable lifecycle evidence', () => {
+  const ci = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'ci.yml'), 'utf8')
+  const release = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'release.yml'), 'utf8')
+  for (const [name, workflow] of [
+    ['ci', ci],
+    ['release', release]
+  ]) {
+    assert.match(
+      workflow,
+      /ubuntu-latest[\s\S]*macos-latest[\s\S]*windows-latest/,
+      `${name} must cover all supported OSes`
+    )
+    assert.match(workflow, /KABOOM_UAT_EVIDENCE/, `${name} must configure machine-readable lifecycle evidence`)
+    assert.match(workflow, /upload-artifact/, `${name} must retain lifecycle evidence on failure`)
+    assert.match(workflow, /install-upgrade-regression\.mjs/, `${name} must consume the canonical lifecycle scenarios`)
+  }
+  assert.match(ci, /schedule:/, 'CI must run the lifecycle matrix on a schedule')
 })
 
 test('upgrade regression always restores its disposable host', () => {

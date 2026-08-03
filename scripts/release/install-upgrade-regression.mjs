@@ -16,6 +16,8 @@ const isWindows = process.platform === 'win32'
 const exeSuffix = isWindows ? '.exe' : ''
 const supportedPreviousVersion = '0.8.1'
 let cleanupHost = () => {}
+let lifecycleEvidence = null
+let currentStage = 'bootstrap'
 
 process.once('SIGINT', () => {
   cleanupHost()
@@ -33,6 +35,13 @@ function info(message) {
 function fail(message, details = '') {
   const text = [`[upgrade-regression] ERROR: ${message}`, details].filter(Boolean).join('\n')
   throw new Error(text)
+}
+
+function persistEvidence() {
+  const evidencePath = process.env.KABOOM_UAT_EVIDENCE
+  if (evidencePath && lifecycleEvidence) {
+    fs.writeFileSync(evidencePath, `${JSON.stringify(lifecycleEvidence, null, 2)}\n`)
+  }
 }
 
 function run(cmd, args, options = {}) {
@@ -273,6 +282,26 @@ function stopDaemon(binaryPath, port, env) {
   tryRun(binaryPath, ['--stop', '--port', String(port)], { env, timeout: 15000 })
 }
 
+async function crashDaemon(child) {
+  if (!child || !child.pid || !pidAlive(child.pid)) return
+  if (isWindows) {
+    tryRun('taskkill', ['/PID', String(child.pid), '/T', '/F'])
+  } else {
+    process.kill(child.pid, 'SIGKILL')
+  }
+  await waitForChildExit(child, 10000)
+}
+
+async function syncExtension(port, sessionID) {
+  const response = await fetch(`http://127.0.0.1:${port}/sync`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-kaboom-client': 'kaboom-extension/lifecycle-uat' },
+    body: JSON.stringify({ ext_session_id: sessionID, in_progress: [] })
+  })
+  if (!response.ok) fail('extension lifecycle sync failed', `status=${response.status}`)
+  return response.json()
+}
+
 function pickPython() {
   const candidates = isWindows ? ['python', 'py'] : ['python3', 'python']
   for (const candidate of candidates) {
@@ -343,6 +372,14 @@ async function expectDaemonIdentity(port, expectedVersion, timeoutMs = 20000) {
 
 async function main() {
   const version = readVersionFile()
+  lifecycleEvidence = {
+    schema_version: 1,
+    platform: `${process.platform}-${process.arch}`,
+    version,
+    artifact_sha256: null,
+    replay_command: 'node scripts/release/install-upgrade-regression.mjs',
+    scenarios: []
+  }
   // The PyPI packaging tree may not exist in this repo; skip its stage when absent
   // (structure preserved so the stage resumes automatically if pypi/ returns).
   const pypiPackageDir = path.join(repoRoot, 'pypi', 'kaboom-agentic-browser')
@@ -356,8 +393,10 @@ async function main() {
   const tmpRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-')))
   cleanupHost = () => fs.rmSync(tmpRoot, { recursive: true, force: true })
   const homeDir = path.join(tmpRoot, 'home')
+  const stateDir = path.join(tmpRoot, 'state')
   const binDir = path.join(tmpRoot, 'bin')
   fs.mkdirSync(homeDir, { recursive: true })
+  fs.mkdirSync(stateDir, { recursive: true })
   fs.mkdirSync(binDir, { recursive: true })
   const identityPath = path.join(homeDir, '.kaboom', 'install_id')
   const preferencesPath = path.join(homeDir, '.kaboom', 'preferences.json')
@@ -377,11 +416,13 @@ async function main() {
     ...process.env,
     HOME: homeDir,
     USERPROFILE: homeDir,
+    KABOOM_STATE_DIR: stateDir,
     KABOOM_TELEMETRY: 'off',
     KABOOM_RELEASES_URL: 'http://127.0.0.1:1/releases/latest'
   }
 
   const cmdPkg = process.env.KABOOM_CMD_PKG || './cmd/browser-agent'
+  currentStage = 'build_artifacts'
   info('building old/new binaries')
   run('go', ['build', '-ldflags', `-X main.version=${supportedPreviousVersion}`, '-o', oldBinary, cmdPkg], {
     env: envBase
@@ -395,13 +436,8 @@ async function main() {
   const packed = buildPackedArtifact(tmpRoot, version, newBinary, hooksBinary, envBase)
   const candidateChecksum = sha256(newBinary)
   validateCandidateVersion(newBinary, version, candidateChecksum, envBase)
-  const evidence = {
-    schema_version: 1,
-    platform: `${process.platform}-${process.arch}`,
-    version,
-    artifact_sha256: sha256(packed.mainTar),
-    scenarios: []
-  }
+  const evidence = lifecycleEvidence
+  evidence.artifact_sha256 = sha256(packed.mainTar)
 
   writeShim(binDir, 'kaboom-agentic-browser', packed.wrapper)
   writeShim(binDir, 'kaboom', packed.wrapper)
@@ -412,7 +448,7 @@ async function main() {
   }
 
   const port = await getFreePort()
-  const pidFile = path.join(homeDir, '.kaboom', 'run', `kaboom-${port}.pid`)
+  const pidFile = path.join(stateDir, 'run', `kaboom-${port}.pid`)
   cleanupHost = () => {
     stopDaemon(packed.wrapper, port, envWithShims)
     stopDaemon(oldBinary, port, envWithShims)
@@ -422,6 +458,7 @@ async function main() {
 
   let daemon = null
   try {
+    currentStage = 'fresh_install_upgrade'
     info('stage 1: go wrapper version-mismatch recycle')
     fs.mkdirSync(path.dirname(pidFile), { recursive: true })
     fs.writeFileSync(pidFile, 'corrupt-service-registration')
@@ -440,6 +477,35 @@ async function main() {
     stopDaemon(packed.wrapper, port, envWithShims)
     evidence.scenarios.push({ name: 'fresh_install_upgrade', status: 'passed' })
 
+    currentStage = 'lifecycle_recovery'
+    info('stage 1a: corrupt state, extension suspension, browser restart, and daemon crash recovery')
+    const doctorState = path.join(stateDir, 'doctor', 'incident-timeline.json')
+    fs.mkdirSync(path.dirname(doctorState), { recursive: true })
+    fs.writeFileSync(doctorState, '{corrupt lifecycle fixture')
+    daemon = startDaemon(newBinary, port, envWithShims)
+    await expectDaemonIdentity(port, version)
+    evidence.scenarios.push({ name: 'corrupt_state_recovery', status: 'passed' })
+
+    await syncExtension(port, 'packaged-lifecycle-session')
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await syncExtension(port, 'packaged-lifecycle-session')
+    evidence.scenarios.push({ name: 'extension_suspension_recovery', status: 'passed' })
+
+    stopDaemon(newBinary, port, envWithShims)
+    await waitForChildExit(daemon, 12000)
+    daemon = startDaemon(newBinary, port, envWithShims)
+    await expectDaemonIdentity(port, version)
+    await syncExtension(port, 'packaged-lifecycle-session')
+    evidence.scenarios.push({ name: 'browser_restart_recovery', status: 'passed' })
+
+    await crashDaemon(daemon)
+    daemon = startDaemon(newBinary, port, envWithShims)
+    await expectDaemonIdentity(port, version)
+    evidence.scenarios.push({ name: 'daemon_crash_recovery', status: 'passed' })
+    stopDaemon(newBinary, port, envWithShims)
+    await waitForChildExit(daemon, 12000)
+
+    currentStage = 'same_version_reinstall'
     info('stage 1b: same-version reinstall')
     run('npm', ['install', '--prefix', packed.installRoot, '--ignore-scripts', '--omit=optional', packed.mainTar], {
       env: envWithShims
@@ -447,6 +513,7 @@ async function main() {
     validateCandidateVersion(newBinary, version, candidateChecksum, envWithShims)
     evidence.scenarios.push({ name: 'same_version_reinstall', status: 'passed' })
 
+    currentStage = 'failed_readiness_rollback'
     info('stage 1c: failed replacement rolls back')
     const activeBinary = path.join(tmpRoot, `active-kaboom${exeSuffix}`)
     const backupBinary = path.join(tmpRoot, `active-kaboom.backup${exeSuffix}`)
@@ -457,6 +524,7 @@ async function main() {
     }
     evidence.scenarios.push({ name: 'failed_readiness_rollback', status: 'passed' })
 
+    currentStage = 'npm_cleanup'
     info('stage 2: npm cleanup kills old daemon + pid file')
     daemon = startDaemon(oldBinary, port, envWithShims)
     await expectDaemonIdentity(port, supportedPreviousVersion)
@@ -500,6 +568,19 @@ async function main() {
     }
     info('all upgrade cleanup regressions passed')
     evidence.scenarios.push({ name: 'identity_continuity', status: 'passed' })
+
+    currentStage = 'uninstall_cleanup'
+    info('stage 4: uninstall removes packaged executables but preserves user state')
+    stopDaemon(packed.wrapper, port, envWithShims)
+    fs.rmSync(packed.installRoot, { recursive: true, force: true })
+    if (fs.existsSync(packed.wrapper)) fail('uninstall left the packaged executable behind')
+    if (
+      fs.readFileSync(identityPath, 'utf8') !== continuityBefore.identity ||
+      fs.readFileSync(preferencesPath, 'utf8') !== continuityBefore.preferences
+    ) {
+      fail('uninstall removed install identity or user preferences')
+    }
+    evidence.scenarios.push({ name: 'uninstall_cleanup', status: 'passed' })
   } finally {
     stopDaemon(packed.wrapper, port, envWithShims)
     stopDaemon(oldBinary, port, envWithShims)
@@ -510,14 +591,20 @@ async function main() {
         // Best effort cleanup.
       }
     }
-    const evidencePath = process.env.KABOOM_UAT_EVIDENCE
-    if (evidencePath) fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`)
+    persistEvidence()
     cleanupHost()
     cleanupHost = () => {}
   }
 }
 
 main().catch((err) => {
+  if (lifecycleEvidence) {
+    lifecycleEvidence.failure = {
+      stage: currentStage,
+      message: 'Packaged lifecycle verification failed. Run replay_command locally for full diagnostics.'
+    }
+    persistEvidence()
+  }
   cleanupHost()
   console.error(String(err && err.stack ? err.stack : err))
   process.exit(1)

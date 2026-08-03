@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-03
 code_paths:
   - internal/configdiscovery/mcp.go
   - cmd/browser-agent/main.go
@@ -27,6 +27,7 @@ code_paths:
   - .github/workflows/validate-versions.yml
   - .github/workflows/cut-release.yml
   - .github/workflows/release.yml
+  - .github/workflows/ci.yml
   - scripts/release/build-crx.js
   - scripts/release/daemon-health-identity.mjs
   - scripts/release/install-upgrade-regression.mjs
@@ -133,8 +134,11 @@ last_verified_date: 2026-03-28
 - Release upgrade UAT packs and installs the public npm launcher plus the
   current platform package in a disposable home. It validates artifact hashes,
   daemon and extension versions, same-version reinstall, rollback restoration,
-  service identity, and install identity/preferences continuity, then emits
-  optional machine-readable evidence and removes the host on success, failure,
+  service identity, corrupt-state recovery, extension sync suspension,
+  browser/daemon restart, forced daemon crash recovery, uninstall cleanup, and
+  install identity/preferences continuity. Scheduled CI and release gates run
+  the same scenarios on macOS, Linux, and Windows, retain redacted replayable
+  evidence even on failure, and remove the disposable host on success, failure,
   or interruption.
 
 ## Specs
