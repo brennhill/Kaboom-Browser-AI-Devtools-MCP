@@ -9,6 +9,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/session.go
   - internal/persistence/persistence_context.go
   - internal/persistence/persistence_crud.go
+  - internal/persistence/persistence_dirty.go
   - internal/persistence/persistence_store.go
   - internal/persistence/persistence_types.go
   - internal/statefile/statefile.go
@@ -63,3 +64,7 @@ last_verified_date: 2026-03-05
   directory sync where supported. Pre-rename failures preserve the previous
   durable value, publish a value-free Doctor incident, and a successful retry
   resolves that incident.
+- Deferred writes own their queued bytes and retain failed obligations for the
+  next bounded flush without overwriting a newer concurrently queued value.
+  Write and shutdown failures activate redacted Doctor incidents; a complete
+  retry resolves the deferred-write incident.

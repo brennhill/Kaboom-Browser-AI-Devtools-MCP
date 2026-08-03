@@ -3,11 +3,14 @@
 package persistence
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
+
+const deferredWriteDiagnostic = "session_deferred_write_state"
 
 func (s *SessionStore) MarkDirty(namespace, key string, data []byte) {
 	if validateStoreInput(namespace, "namespace") != nil || validateStoreInput(key, "key") != nil {
@@ -16,7 +19,7 @@ func (s *SessionStore) MarkDirty(namespace, key string, data []byte) {
 	s.dirtyMu.Lock()
 	defer s.dirtyMu.Unlock()
 	dirtyKey := namespace + "/" + key
-	s.dirty[dirtyKey] = data
+	s.dirty[dirtyKey] = append([]byte(nil), data...)
 }
 
 func (s *SessionStore) backgroundFlush() {
@@ -52,23 +55,44 @@ func (s *SessionStore) flushDirty() {
 		return
 	}
 
+	failed := make(map[string][]byte)
+	invalidQueuedKey := false
 	for key, data := range toFlush {
 		parts := strings.SplitN(key, "/", 2)
 		if len(parts) != 2 {
+			invalidQueuedKey = true
 			continue
 		}
 		namespace, name := parts[0], parts[1]
 
-		nsDir := filepath.Join(s.projectDir, namespace)
-		filePath := filepath.Join(nsDir, name+".json")
+		filePath := filepath.Join(s.projectDir, namespace, name+".json")
 		if validatePathInDir(s.projectDir, filePath) != nil {
+			invalidQueuedKey = true
 			continue
 		}
-		if err := os.MkdirAll(nsDir, dirPermissions); err != nil {
-			continue
+		if err := s.writeFile(filePath, data, filePermissions); err != nil {
+			failed[key] = data
 		}
-		_ = os.WriteFile(filePath, data, filePermissions)
 	}
+
+	if len(failed) > 0 {
+		s.dirtyMu.Lock()
+		for key, data := range failed {
+			if _, newerQueued := s.dirty[key]; !newerQueued {
+				s.dirty[key] = data
+			}
+		}
+		s.dirtyMu.Unlock()
+	}
+	if len(failed) > 0 || invalidQueuedKey {
+		s.reportRecovery(
+			deferredWriteDiagnostic,
+			"Deferred session state could not be fully persisted; valid failed writes remain queued for retry.",
+			"Check permissions and available disk space for the project .kaboom directory; Kaboom will retry automatically.",
+		)
+		return
+	}
+	statediag.Resolve(s.diagnostics, deferredWriteDiagnostic)
 }
 
 func (s *SessionStore) Shutdown() {
@@ -92,6 +116,10 @@ func (s *SessionStore) Shutdown() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		s.meta.LastSession = time.Now()
-		_ = s.saveMeta()
+		if err := s.saveMeta(); err != nil {
+			// saveMeta reports the redacted failure to Doctor before returning;
+			// Shutdown cannot safely retry after the daemon lifecycle has ended.
+			return
+		}
 	}()
 }

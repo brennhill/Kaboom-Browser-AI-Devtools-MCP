@@ -339,3 +339,119 @@ func TestSessionStoreMetadataWriteFailureIsRedactedAndActionable(t *testing.T) {
 		t.Fatalf("metadata write diagnostics = %#v", got)
 	}
 }
+
+func TestSessionStoreDeferredWriteFailuresRetainObligationUntilRecovery(t *testing.T) {
+	const privateValue = `{"private":"deferred-secret"}`
+	for _, kind := range []statefault.Kind{statefault.Write, statefault.Cancellation, statefault.PartialWrite} {
+		t.Run(string(kind), func(t *testing.T) {
+			diagnostics := statediag.NewCollector()
+			store, err := newSessionStoreInDir(t.TempDir(), t.TempDir(), defaultFlushInterval, diagnostics)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(store.Shutdown)
+			store.MarkDirty("session", "deferred", []byte(privateValue))
+			store.writeFile = func(string, []byte, os.FileMode) error {
+				return statefault.New(kind, privateValue).Error()
+			}
+
+			store.flushDirty()
+			store.dirtyMu.Lock()
+			retained := string(store.dirty["session/deferred"])
+			store.dirtyMu.Unlock()
+			if retained != privateValue {
+				t.Fatalf("retained obligation = %q, want original value", retained)
+			}
+			got := diagnostics.Snapshot()
+			if len(got) != 1 || got[0].Name != "session_deferred_write_state" || got[0].Lifecycle != statediag.LifecycleActive {
+				t.Fatalf("deferred diagnostics = %#v", got)
+			}
+			if strings.Contains(got[0].Detail, privateValue) || strings.Contains(got[0].Detail, "session/deferred") {
+				t.Fatalf("deferred diagnostic leaked state: %#v", got[0])
+			}
+
+			store.writeFile = statefile.Write
+			store.flushDirty()
+			store.dirtyMu.Lock()
+			remaining := len(store.dirty)
+			store.dirtyMu.Unlock()
+			if remaining != 0 {
+				t.Fatalf("dirty obligations after recovery = %d", remaining)
+			}
+			persisted, loadErr := store.Load("session", "deferred")
+			if loadErr != nil || string(persisted) != privateValue {
+				t.Fatalf("persisted deferred value = %q err=%v", persisted, loadErr)
+			}
+			got = diagnostics.Snapshot()
+			if len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
+				t.Fatalf("resolved deferred diagnostics = %#v", got)
+			}
+		})
+	}
+}
+
+func TestSessionStoreDeferredRetryNeverOverwritesNewerQueuedValue(t *testing.T) {
+	store, err := newSessionStoreInDir(t.TempDir(), t.TempDir(), defaultFlushInterval, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(store.Shutdown)
+	store.MarkDirty("session", "state", []byte("old"))
+	store.writeFile = func(string, []byte, os.FileMode) error {
+		store.MarkDirty("session", "state", []byte("new"))
+		return statefault.New(statefault.Write, "private").Error()
+	}
+
+	store.flushDirty()
+	store.dirtyMu.Lock()
+	retained := string(store.dirty["session/state"])
+	store.dirtyMu.Unlock()
+	if retained != "new" {
+		t.Fatalf("queued value = %q, want newer value", retained)
+	}
+	store.writeFile = statefile.Write
+}
+
+func TestSessionStoreMarkDirtyOwnsQueuedBytes(t *testing.T) {
+	store, err := newSessionStoreInDir(t.TempDir(), t.TempDir(), defaultFlushInterval, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(store.Shutdown)
+	value := []byte("original")
+	store.MarkDirty("session", "state", value)
+	copy(value, "mutated!")
+
+	store.flushDirty()
+	persisted, err := store.Load("session", "state")
+	if err != nil || string(persisted) != "original" {
+		t.Fatalf("persisted value = %q err=%v, want owned original", persisted, err)
+	}
+}
+
+func TestSessionStoreShutdownRetainsFailedDeferredWrite(t *testing.T) {
+	diagnostics := statediag.NewCollector()
+	store, err := newSessionStoreInDir(t.TempDir(), t.TempDir(), defaultFlushInterval, diagnostics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.MarkDirty("session", "shutdown", []byte("latest"))
+	store.writeFile = func(string, []byte, os.FileMode) error {
+		return statefault.New(statefault.Write, "private").Error()
+	}
+
+	store.Shutdown()
+	store.dirtyMu.Lock()
+	retained := string(store.dirty["session/shutdown"])
+	store.dirtyMu.Unlock()
+	if retained != "latest" {
+		t.Fatalf("shutdown obligation = %q, want latest", retained)
+	}
+	names := make(map[string]bool)
+	for _, diagnostic := range diagnostics.Snapshot() {
+		names[diagnostic.Name] = diagnostic.Lifecycle == statediag.LifecycleActive
+	}
+	if !names[deferredWriteDiagnostic] || !names["session_metadata_write_state"] {
+		t.Fatalf("shutdown diagnostics = %#v", diagnostics.Snapshot())
+	}
+}
