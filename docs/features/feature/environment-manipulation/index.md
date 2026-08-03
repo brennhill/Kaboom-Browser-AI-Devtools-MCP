@@ -4,7 +4,7 @@ feature_id: feature-environment-manipulation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-02
+last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/internal/cli/cli_tool_parsers_generate_configure.go
   - cmd/browser-agent/internal/playbooks/playbooks_guides.go
@@ -19,6 +19,8 @@ code_paths:
   - internal/qafixture/transaction.go
   - internal/qafixture/registry.go
   - internal/qafixture/registry_store.go
+  - internal/qafixture/directory_sync_unix.go
+  - internal/qafixture/directory_sync_windows.go
   - internal/schema/configure/properties_fixture.go
   - internal/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
@@ -99,7 +101,10 @@ last_verified_date: 2026-08-02
 - The daemon recovery registry persists only opaque transaction, snapshot,
   correlation, extension-generation, lifecycle, timestamp, and mutation-count
   fields. It is bounded, rejects stale generations, atomically replaces its
-  state file, and quarantines corrupt state behind stable diagnostic codes.
+  state file, syncs the containing directory after replacement/quarantine on
+  platforms with directory fsync, and quarantines corrupt state behind stable
+  diagnostic codes. Injected sync failures return actionable recovery codes;
+  Windows' unsupported directory-sync semantics are isolated explicitly.
 - The fixture transaction coordinator generates its own correlation ID,
   captures an opaque private snapshot before the first mutation, and performs
   bounded rollback after any partial apply failure. Driver errors collapse to

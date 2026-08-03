@@ -17,13 +17,14 @@ type registryDocument struct {
 }
 
 type RegistryStore struct {
-	path   string
-	limit  int
-	rename func(string, string) error
+	path          string
+	limit         int
+	rename        func(string, string) error
+	syncDirectory func(string) error
 }
 
 func NewRegistryStore(path string, limit int) *RegistryStore {
-	return &RegistryStore{path: path, limit: limit, rename: os.Rename}
+	return &RegistryStore{path: path, limit: limit, rename: os.Rename, syncDirectory: syncRegistryDirectory}
 }
 
 func (store *RegistryStore) Load() (*Registry, string) {
@@ -39,6 +40,9 @@ func (store *RegistryStore) Load() (*Registry, string) {
 	if json.Unmarshal(data, &document) != nil || document.Version != registryVersion || len(document.Records) > registry.limit || !validRecords(document.Records) {
 		if store.rename(store.path, store.path+".corrupt") != nil {
 			return registry, "fixture_transaction_registry_corrupt_quarantine_failed"
+		}
+		if store.syncDirectory(filepath.Dir(store.path)) != nil {
+			return registry, "fixture_transaction_registry_corrupt_quarantine_sync_failed"
 		}
 		return registry, "fixture_transaction_registry_corrupt"
 	}
@@ -97,6 +101,9 @@ func (store *RegistryStore) Save(registry *Registry) error {
 			return cleanupErr
 		}
 		return errors.New("fixture_transaction_registry_replace_failed")
+	}
+	if err := store.syncDirectory(dir); err != nil {
+		return errors.New("fixture_transaction_registry_directory_sync_failed")
 	}
 	return nil
 }

@@ -142,3 +142,51 @@ func TestRegistryStoreFailedSavePreservesExistingFile(t *testing.T) {
 		t.Fatalf("existing file changed after failed save: %s", data)
 	}
 }
+
+func TestRegistryStoreSyncsDirectoryAfterRename(t *testing.T) {
+	dir := t.TempDir()
+	store := NewRegistryStore(filepath.Join(dir, "fixture-transactions.json"), 4)
+	steps := []string{}
+	originalRename := store.rename
+	store.rename = func(from, to string) error {
+		steps = append(steps, "rename")
+		return originalRename(from, to)
+	}
+	store.syncDirectory = func(path string) error {
+		steps = append(steps, "sync:"+path)
+		return nil
+	}
+	if err := store.Save(NewRegistry(4)); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(steps, ","); got != "rename,sync:"+dir {
+		t.Fatalf("durability steps = %q", got)
+	}
+}
+
+func TestRegistryStoreReportsDirectorySyncFailureAfterReplacement(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "fixture-transactions.json")
+	store := NewRegistryStore(path, 4)
+	store.syncDirectory = func(string) error { return os.ErrPermission }
+	err := store.Save(NewRegistry(4))
+	if err == nil || err.Error() != "fixture_transaction_registry_directory_sync_failed" {
+		t.Fatalf("Save() error = %v", err)
+	}
+	if _, statErr := os.Stat(path); statErr != nil {
+		t.Fatalf("renamed registry should remain available for recovery: %v", statErr)
+	}
+}
+
+func TestRegistryStoreReportsCorruptQuarantineSyncFailure(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fixture-transactions.json")
+	if err := os.WriteFile(path, []byte(`not-json`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store := NewRegistryStore(path, 4)
+	store.syncDirectory = func(string) error { return os.ErrPermission }
+	registry, notice := store.Load()
+	if registry.Len() != 0 || notice != "fixture_transaction_registry_corrupt_quarantine_sync_failed" {
+		t.Fatalf("Load() len=%d notice=%q", registry.Len(), notice)
+	}
+}
