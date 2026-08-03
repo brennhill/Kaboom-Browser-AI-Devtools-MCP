@@ -39,6 +39,7 @@ func makeToolHandler(t *testing.T) (*ToolHandler, *Server, *capture.Capture) {
 		t.Fatalf("NewServer: %v", err)
 	}
 	t.Cleanup(func() { server.Close() })
+	server.sessionProjectPath = t.TempDir()
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
 	mcpHandler := NewToolHandler(server, cap)
@@ -65,6 +66,7 @@ func newToolTestEnv(t *testing.T) *toolTestEnv {
 		t.Fatalf("NewServer: %v", err)
 	}
 	t.Cleanup(func() { server.Close() })
+	server.sessionProjectPath = t.TempDir()
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
 	mcpHandler := NewToolHandler(server, cap)

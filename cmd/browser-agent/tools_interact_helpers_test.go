@@ -33,6 +33,7 @@ func newInteractHelpersTestEnv(t *testing.T) *interactHelpersTestEnv {
 		t.Fatalf("NewServer failed: %v", err)
 	}
 	t.Cleanup(func() { server.Close() })
+	server.sessionProjectPath = t.TempDir()
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(false) // explicit default for state/pilot-disabled test branches
 	mcpHandler := NewToolHandler(server, cap)

@@ -48,6 +48,9 @@ import (
 type Server struct {
 	listenPort int
 	mu         sync.RWMutex
+	// sessionProjectPath is resolved once at server construction so handlers do
+	// not independently bind persistence to a changing process working directory.
+	sessionProjectPath string
 
 	// Log subsystem — owns entries, TTL rotation, async channel, file persistence.
 	logs *logstore.Store
@@ -146,15 +149,20 @@ func (s *Server) logLifecycle(event string, port int, fields map[string]any) {
 
 // NewServer creates a new server instance.
 func NewServer(logFile string, maxEntries int) (*Server, error) {
+	sessionProjectPath, pathErr := os.Getwd()
+	if pathErr != nil {
+		return nil, fmt.Errorf("resolve session project path: %w", pathErr)
+	}
 	s := &Server{
-		listenPort:      defaultPort,
-		warningSeen:     make(map[string]struct{}),
-		annotationStore: annotation.NewStore(10 * time.Minute),
-		pushInbox:       push.NewPushInbox(50),
-		ptyManager:      pty.NewManager(),
-		tokenTracker:    tracking.NewTokenTracker(),
-		intentStore:     terminal.NewIntentStore(),
-		stateRecovery:   statediag.NewCollector(),
+		listenPort:         defaultPort,
+		sessionProjectPath: sessionProjectPath,
+		warningSeen:        make(map[string]struct{}),
+		annotationStore:    annotation.NewStore(10 * time.Minute),
+		pushInbox:          push.NewPushInbox(50),
+		ptyManager:         pty.NewManager(),
+		tokenTracker:       tracking.NewTokenTracker(),
+		intentStore:        terminal.NewIntentStore(),
+		stateRecovery:      statediag.NewCollector(),
 	}
 
 	// Create log store with warning callback wired to server

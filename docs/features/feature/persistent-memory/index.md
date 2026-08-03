@@ -6,6 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-03
 code_paths:
+  - cmd/browser-agent/server.go
+  - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolconfigure/session.go
   - internal/persistence/persistence_context.go
   - internal/persistence/persistence_crud.go
@@ -19,6 +21,9 @@ code_paths:
   - internal/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
 test_paths:
+  - cmd/browser-agent/tools_interact_helpers_test.go
+  - cmd/browser-agent/tools_interact_state_test.go
+  - cmd/browser-agent/tools_test_helpers_test.go
   - tests/architecture/user-state-loaders.test.cjs
   - internal/persistence/persistence_branches_test.go
   - internal/statediag/collector_test.go
@@ -77,3 +82,7 @@ last_verified_date: 2026-03-05
   touching real user state. Operational failures return stable value-free
   errors and activate Doctor incidents; expected optional-state absence is
   explicitly classified and resolves earlier incidents.
+- Each server resolves its session project root once, and tool handlers inherit
+  that explicit root. Stateful test factories replace it with an isolated
+  temporary project before handler construction, preventing parallel tests from
+  racing over developer state or each other's quota scans.

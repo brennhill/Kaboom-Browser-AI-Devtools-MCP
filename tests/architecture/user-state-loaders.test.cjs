@@ -8,7 +8,7 @@ const test = require('node:test')
 
 const root = path.resolve(__dirname, '../..')
 const manifestPath = path.join(__dirname, 'user-state-loaders.json')
-const readMarkers = [/\bos\.ReadFile\s*\(/, /\.Load\s*\(/, /\breadFile\s*\(/]
+const readMarkers = [/\.ReadFile\s*\(/, /\.Load\s*\(/, /\breadFile\s*\(/]
 
 function productionGoFiles(target) {
   const absolute = path.join(root, target)

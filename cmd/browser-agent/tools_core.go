@@ -372,10 +372,8 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		captureStore.Recordings().SetDiagnostics(handler.stateRecovery)
 	}
 
-	if currentDirectory, err := os.Getwd(); err == nil {
-		if store, storeErr := persistence.NewSessionStore(currentDirectory, handler.stateRecovery); storeErr == nil {
-			handler.sessionStoreImpl = store
-		}
+	if store, storeErr := persistence.NewSessionStore(server.sessionProjectPath, handler.stateRecovery); storeErr == nil {
+		handler.sessionStoreImpl = store
 	}
 	handler.summaryPrefs = summarypref.New(func() ([]byte, error) {
 		if handler.sessionStoreImpl == nil {
