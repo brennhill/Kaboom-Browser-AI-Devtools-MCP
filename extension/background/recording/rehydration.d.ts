@@ -33,6 +33,8 @@ export interface RecordingRehydrationDeps {
     queryOffscreenRecordingState: () => Promise<OffscreenRecordingStateResponse | null>;
     /** Read persisted recording metadata (StorageKey.RECORDING). Resolves null when absent. */
     getPersistedRecording: () => Promise<PersistedRecordingState | null>;
+    /** Report an unexpected metadata boundary failure without receiving the private error. */
+    onPersistedReadFailure: () => void;
 }
 /**
  * Decide whether an active recording survived a service-worker restart.

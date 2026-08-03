@@ -33,6 +33,7 @@ code_paths:
   - src/background/recording/badge.ts
   - src/background/recording/capture.ts
   - src/background/recording/index.ts
+  - src/background/recording/rehydration.ts
   - src/background/recording/utils.ts
   - src/offscreen/recording-worker.ts
   - src/lib/daemon-http.ts
@@ -41,6 +42,7 @@ code_paths:
   - src/lib/storage/local.ts
   - src/lib/storage/session.ts
   - src/lib/storage/recovery.ts
+  - src/lib/storage/fault.ts
   - src/lib/storage/validated.ts
   - src/popup/recording/recording.ts
   - extension/manifest.json
@@ -64,6 +66,7 @@ test_paths:
   - tests/extension/contracts/no-compatibility-facades.test.js
   - tests/extension/state-recovery/state-recovery-contract.test.js
   - tests/extension/state-recovery/validated-storage.test.js
+  - tests/extension/recording-lifecycle/recording-rehydration.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

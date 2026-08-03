@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createPersistentEnvironmentSnapshotStore } from '../../../extension/background/environment-transaction/snapshot-store.js'
+import { createStorageFaultScenario } from '../state-recovery/storage-fault-fixture.js'
 
 test('persistent snapshot store survives reconstruction and never evicts an active snapshot', async () => {
   const storage = memoryStorage()
@@ -67,7 +68,7 @@ test('persistent snapshot store clears corrupt state and emits a stable notice',
   })
 
   assert.deepEqual(await store.lookup('opaque_1'), { status: 'missing' })
-  assert.deepEqual(notices, ['environment_snapshot_store_corrupt'])
+  assert.deepEqual(notices, [notice('environment_snapshot_store_corrupt', 'corruption')])
   assert.equal(JSON.stringify(notices).includes('private-secret'), false)
   assert.equal(storage.values.has('environment_transaction_snapshots_v1'), false)
 })
@@ -87,9 +88,35 @@ test('persistent snapshot store reports storage failures without leaking values'
   })
 
   await assert.rejects(store.save(snapshot('private')), { message: 'environment_snapshot_store_write_failed' })
-  assert.deepEqual(notices, ['environment_snapshot_store_write_failed'])
+  assert.deepEqual(notices, [notice('environment_snapshot_store_write_failed', 'write')])
   assert.equal(JSON.stringify(notices).includes('private'), false)
 })
+
+test('snapshot store classifies quota and cancellation without retaining private values', async () => {
+  for (const kind of ['quota', 'cancellation']) {
+    const notices = []
+    const scenario = createStorageFaultScenario(kind, 'private-environment-state')
+    const storage = memoryStorage()
+    storage.set = async () => {
+      throw scenario.error
+    }
+    const store = createPersistentEnvironmentSnapshotStore({
+      storage,
+      limit: 2,
+      now: () => 1,
+      newID: () => 'opaque_1',
+      onNotice: (entry) => notices.push(entry)
+    })
+
+    await assert.rejects(store.save(snapshot('private')))
+    assert.deepEqual(notices, [notice('environment_snapshot_store_write_failed', kind)])
+    assert.doesNotMatch(JSON.stringify(notices), /private-environment-state/)
+  }
+})
+
+function notice(code, fault_kind) {
+  return { code, fault_kind, lifecycle: 'active' }
+}
 
 function snapshot(name) {
   return {

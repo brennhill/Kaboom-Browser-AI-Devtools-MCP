@@ -54,6 +54,8 @@ export interface RecordingRehydrationDeps {
   queryOffscreenRecordingState: () => Promise<OffscreenRecordingStateResponse | null>
   /** Read persisted recording metadata (StorageKey.RECORDING). Resolves null when absent. */
   getPersistedRecording: () => Promise<PersistedRecordingState | null>
+  /** Report an unexpected metadata boundary failure without receiving the private error. */
+  onPersistedReadFailure: () => void
 }
 
 /**
@@ -73,6 +75,7 @@ export async function resolveRecordingRehydration(
   try {
     persisted = await deps.getPersistedRecording()
   } catch {
+    deps.onPersistedReadFailure()
     persisted = null
   }
 

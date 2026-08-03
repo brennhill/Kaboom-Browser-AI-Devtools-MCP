@@ -33,6 +33,7 @@ export async function resolveRecordingRehydration(deps) {
         persisted = await deps.getPersistedRecording();
     }
     catch {
+        deps.onPersistedReadFailure();
         persisted = null;
     }
     return {

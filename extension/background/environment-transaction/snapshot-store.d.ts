@@ -4,6 +4,7 @@
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
 import type { EnvironmentSnapshot } from './browser-state-driver.js';
+import { type StorageFaultKind } from '../../lib/storage/fault.js';
 export type EnvironmentSnapshotLookup = {
     readonly status: 'active';
     readonly snapshot: EnvironmentSnapshot;
@@ -27,7 +28,12 @@ interface PersistentStoreDeps {
     readonly limit: number;
     readonly now: () => number;
     readonly newID: () => string;
-    readonly onNotice: (notice: string) => void;
+    readonly onNotice: (notice: SnapshotStoreNotice) => void;
+}
+export interface SnapshotStoreNotice {
+    readonly code: string;
+    readonly fault_kind: StorageFaultKind;
+    readonly lifecycle: 'active';
 }
 export declare function createPersistentEnvironmentSnapshotStore(deps: PersistentStoreDeps): EnvironmentSnapshotStore;
 export {};

@@ -87,7 +87,14 @@ async function rehydrateRecordingStateOnLoad() {
                     fix: 'Start the screen recording again.'
                 },
                 report: reportStateRecovery
-            })
+            }),
+            onPersistedReadFailure: () => {
+                reportStateRecovery({
+                    name: 'screen_recording_state',
+                    detail: 'Recording metadata read failure; live offscreen state was retained with safe defaults.',
+                    fix: 'Stop and restart the recording if its restored metadata is incomplete.'
+                });
+            }
         });
         if (restored) {
             recordingState = { ...restored };

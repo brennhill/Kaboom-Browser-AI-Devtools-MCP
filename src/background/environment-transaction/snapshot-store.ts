@@ -5,6 +5,7 @@
  */
 
 import type { EnvironmentSnapshot } from './browser-state-driver.js'
+import { classifyStorageFailure, type StorageFaultKind } from '../../lib/storage/fault.js'
 
 const STORAGE_KEY = 'environment_transaction_snapshots_v1'
 const DOCUMENT_VERSION = 1
@@ -48,7 +49,17 @@ interface PersistentStoreDeps {
   readonly limit: number
   readonly now: () => number
   readonly newID: () => string
-  readonly onNotice: (notice: string) => void
+  readonly onNotice: (notice: SnapshotStoreNotice) => void
+}
+
+export interface SnapshotStoreNotice {
+  readonly code: string
+  readonly fault_kind: StorageFaultKind
+  readonly lifecycle: 'active'
+}
+
+function notify(deps: PersistentStoreDeps, code: string, faultKind: StorageFaultKind): void {
+  deps.onNotice({ code, fault_kind: faultKind, lifecycle: 'active' })
 }
 
 export function createPersistentEnvironmentSnapshotStore(deps: PersistentStoreDeps): EnvironmentSnapshotStore {
@@ -58,7 +69,7 @@ export function createPersistentEnvironmentSnapshotStore(deps: PersistentStoreDe
       const document = await readDocument(deps)
       const records = [...document.records]
       if (records.length >= limit) {
-        deps.onNotice('environment_snapshot_store_full')
+        notify(deps, 'environment_snapshot_store_full', 'quota')
         throw new Error('environment_snapshot_store_full')
       }
       const id = deps.newID()
@@ -90,19 +101,21 @@ async function readDocument(deps: PersistentStoreDeps): Promise<SnapshotDocument
   let stored: Record<string, unknown>
   try {
     stored = await deps.storage.get(STORAGE_KEY)
-  } catch {
-    deps.onNotice('environment_snapshot_store_read_failed')
+  } catch (error) {
+    notify(deps, 'environment_snapshot_store_read_failed', classifyStorageFailure(error, 'read'))
     throw new Error('environment_snapshot_store_read_failed')
   }
   const candidate = stored[STORAGE_KEY]
+  // EXPECTED_ABSENCE: no snapshot document is the normal state before the first
+  // environment transaction; logging it would misleadingly report first use as recovery.
   if (candidate === undefined) return emptyDocument()
   const document = parseSnapshotDocument(candidate)
   if (document) return document
-  deps.onNotice('environment_snapshot_store_corrupt')
+  notify(deps, 'environment_snapshot_store_corrupt', 'corruption')
   try {
     await deps.storage.remove(STORAGE_KEY)
-  } catch {
-    deps.onNotice('environment_snapshot_store_recovery_failed')
+  } catch (error) {
+    notify(deps, 'environment_snapshot_store_recovery_failed', classifyStorageFailure(error, 'write'))
     throw new Error('environment_snapshot_store_recovery_failed')
   }
   return emptyDocument()
@@ -111,8 +124,8 @@ async function readDocument(deps: PersistentStoreDeps): Promise<SnapshotDocument
 async function writeDocument(deps: PersistentStoreDeps, document: SnapshotDocument): Promise<void> {
   try {
     await deps.storage.set({ [STORAGE_KEY]: document })
-  } catch {
-    deps.onNotice('environment_snapshot_store_write_failed')
+  } catch (error) {
+    notify(deps, 'environment_snapshot_store_write_failed', classifyStorageFailure(error, 'write'))
     throw new Error('environment_snapshot_store_write_failed')
   }
 }

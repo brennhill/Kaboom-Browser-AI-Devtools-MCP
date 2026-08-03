@@ -3,8 +3,12 @@
  * Why: Recovery handles must survive extension suspension without exposing captured values to the daemon.
  * Docs: docs/features/feature/environment-manipulation/index.md
  */
+import { classifyStorageFailure } from '../../lib/storage/fault.js';
 const STORAGE_KEY = 'environment_transaction_snapshots_v1';
 const DOCUMENT_VERSION = 1;
+function notify(deps, code, faultKind) {
+    deps.onNotice({ code, fault_kind: faultKind, lifecycle: 'active' });
+}
 export function createPersistentEnvironmentSnapshotStore(deps) {
     const limit = Math.max(1, deps.limit);
     return {
@@ -12,7 +16,7 @@ export function createPersistentEnvironmentSnapshotStore(deps) {
             const document = await readDocument(deps);
             const records = [...document.records];
             if (records.length >= limit) {
-                deps.onNotice('environment_snapshot_store_full');
+                notify(deps, 'environment_snapshot_store_full', 'quota');
                 throw new Error('environment_snapshot_store_full');
             }
             const id = deps.newID();
@@ -47,22 +51,24 @@ async function readDocument(deps) {
     try {
         stored = await deps.storage.get(STORAGE_KEY);
     }
-    catch {
-        deps.onNotice('environment_snapshot_store_read_failed');
+    catch (error) {
+        notify(deps, 'environment_snapshot_store_read_failed', classifyStorageFailure(error, 'read'));
         throw new Error('environment_snapshot_store_read_failed');
     }
     const candidate = stored[STORAGE_KEY];
+    // EXPECTED_ABSENCE: no snapshot document is the normal state before the first
+    // environment transaction; logging it would misleadingly report first use as recovery.
     if (candidate === undefined)
         return emptyDocument();
     const document = parseSnapshotDocument(candidate);
     if (document)
         return document;
-    deps.onNotice('environment_snapshot_store_corrupt');
+    notify(deps, 'environment_snapshot_store_corrupt', 'corruption');
     try {
         await deps.storage.remove(STORAGE_KEY);
     }
-    catch {
-        deps.onNotice('environment_snapshot_store_recovery_failed');
+    catch (error) {
+        notify(deps, 'environment_snapshot_store_recovery_failed', classifyStorageFailure(error, 'write'));
         throw new Error('environment_snapshot_store_recovery_failed');
     }
     return emptyDocument();
@@ -71,8 +77,8 @@ async function writeDocument(deps, document) {
     try {
         await deps.storage.set({ [STORAGE_KEY]: document });
     }
-    catch {
-        deps.onNotice('environment_snapshot_store_write_failed');
+    catch (error) {
+        notify(deps, 'environment_snapshot_store_write_failed', classifyStorageFailure(error, 'write'));
         throw new Error('environment_snapshot_store_write_failed');
     }
 }

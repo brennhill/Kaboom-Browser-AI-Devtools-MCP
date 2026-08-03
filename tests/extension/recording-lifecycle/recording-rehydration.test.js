@@ -95,11 +95,13 @@ describe('resolveRecordingRehydration', () => {
 
   test('still rehydrates with defaults when persisted metadata read fails', async () => {
     const before = Date.now()
+    const onPersistedReadFailure = mock.fn()
     const result = await resolveRecordingRehydration({
       queryOffscreenRecordingState: mock.fn(() =>
         Promise.resolve({ active: true, name: 'live-rec', startTime: 0, fps: 0, audioMode: '', tabId: 3, url: '' })
       ),
-      getPersistedRecording: mock.fn(() => Promise.reject(new Error('storage unavailable')))
+      getPersistedRecording: mock.fn(() => Promise.reject(new Error('private recording metadata'))),
+      onPersistedReadFailure
     })
     assert.ok(result, 'active offscreen recording must still rehydrate')
     assert.strictEqual(result.active, true)
@@ -107,5 +109,7 @@ describe('resolveRecordingRehydration', () => {
     assert.strictEqual(result.fps, 15, 'fps defaults to 15')
     assert.strictEqual(result.queryId, '')
     assert.ok(result.startTime >= before, 'startTime defaults to now when unknown')
+    assert.strictEqual(onPersistedReadFailure.mock.calls.length, 1)
+    assert.deepStrictEqual(onPersistedReadFailure.mock.calls[0].arguments, [])
   })
 })

@@ -34,6 +34,7 @@ code_paths:
   - src/background/environment-transaction/commands.ts
   - src/background/environment-transaction/runtime.ts
   - src/background/environment-transaction/snapshot-store.ts
+  - src/lib/storage/fault.ts
   - src/background/init.ts
   - src/types/runtime/queries.ts
   - src/types/wire/wire-qa-fixture.ts
@@ -55,6 +56,7 @@ test_paths:
   - tests/extension/environment-transaction/browser-state-driver.test.js
   - tests/extension/environment-transaction/chrome-state-adapter.test.js
   - tests/extension/environment-transaction/snapshot-store.test.js
+  - tests/extension/state-recovery/storage-fault-fixture.js
   - extension/background/pending-queries-iframe.test.js
   - scripts/tests/browser/cat-35-qa-fixtures.sh
 last_verified_version: 0.9.0
@@ -108,6 +110,10 @@ last_verified_date: 2026-08-02
   directory sync where supported, with stable redacted failure stages and
   deterministic cleanup coverage. Windows' unsupported directory-sync
   semantics are isolated explicitly.
+- Extension snapshot persistence emits structured, redacted fault notices with
+  the canonical storage-fault kind. The runtime records local lifecycle detail
+  and activates the `environment_snapshot_state` Doctor incident without
+  including cookies, URLs, storage values, or seed data.
 - The fixture transaction coordinator generates its own correlation ID,
   captures an opaque private snapshot before the first mutation, and performs
   bounded rollback after any partial apply failure. Driver errors collapse to
