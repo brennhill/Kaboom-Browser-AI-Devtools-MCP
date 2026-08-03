@@ -18,20 +18,19 @@ func (e *RedactionEngine) RedactMapValues(data map[string]any) map[string]any {
 func (e *RedactionEngine) redactValue(key string, value any) any {
 	// Check sensitive key name first
 	if isSensitiveKeyName(key) {
-		switch v := value.(type) {
-		case map[string]any:
-			// Keep container shape stable for structural keys (e.g., session_storage),
-			// but recurse so nested sensitive values are still redacted.
-			return e.RedactMapValues(v)
-		case []any:
-			out := make([]any, len(v))
-			for i, elem := range v {
-				out[i] = e.redactValue("", elem)
+		if preservesStateContainerValues(key) {
+			switch current := value.(type) {
+			case map[string]any:
+				return e.RedactMapValues(current)
+			case []any:
+				out := make([]any, len(current))
+				for index, child := range current {
+					out[index] = e.redactValue("", child)
+				}
+				return out
 			}
-			return out
-		default:
-			return "[REDACTED:key-" + normalizeSensitiveKeyName(key) + "]"
 		}
+		return redactSensitiveContainer(value, "[REDACTED:key-"+normalizeSensitiveKeyName(key)+"]")
 	}
 
 	switch v := value.(type) {
@@ -47,5 +46,29 @@ func (e *RedactionEngine) redactValue(key string, value any) any {
 		return out
 	default:
 		return value
+	}
+}
+
+func preservesStateContainerValues(key string) bool {
+	normalized := normalizeSensitiveKeyName(key)
+	return normalized == "sessionstorage" || normalized == "cookies"
+}
+
+func redactSensitiveContainer(value any, replacement string) any {
+	switch current := value.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(current))
+		for key, child := range current {
+			out[key] = redactSensitiveContainer(child, replacement)
+		}
+		return out
+	case []any:
+		out := make([]any, len(current))
+		for index, child := range current {
+			out[index] = redactSensitiveContainer(child, replacement)
+		}
+		return out
+	default:
+		return replacement
 	}
 }

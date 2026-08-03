@@ -69,6 +69,31 @@ describe('persisted extension diagnostic queue', { concurrency: false }, () => {
     assert.ok(!message.includes('message-private-token'))
   })
 
+  test('property: nested runtime diagnostics redact secrets and preserve canonical fields', async () => {
+    const storage = memoryStorage(undefined)
+    await queue.initializeExtensionLogQueue(storage)
+    let state = 0x9e3779b9
+    for (let index = 0; index < 100; index++) {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0
+      const safeID = `correlation_${state.toString(16)}`
+      const secret = `property-secret-${index}`
+      queue.pushExtensionLog({
+        timestamp: `2026-08-03T12:00:${String(index % 60).padStart(2, '0')}Z`,
+        level: 'error',
+        message: `request failed with Bearer ${secret}`,
+        source: 'background',
+        category: 'runtime_message',
+        data: {
+          correlation_id: safeID,
+          nested: [{ password: secret }, { error: `Authorization: Bearer ${secret}` }]
+        }
+      })
+      const entry = queue.getExtensionLogQueueSnapshot().at(-1)
+      assert.strictEqual(entry.data.correlation_id, safeID)
+      assert.ok(!JSON.stringify(entry).includes(secret))
+    }
+  })
+
   test('rehydrates valid entries and merges logs emitted during startup', async () => {
     const storage = memoryStorage({
       version: 1,

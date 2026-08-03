@@ -286,7 +286,7 @@ func TestRedactMapValues_PreservesNonSensitiveData(t *testing.T) {
 	}
 }
 
-func TestRedactJSON_StructuredBlocksOnly(t *testing.T) {
+func TestRedactJSON_RedactsEveryStringBearingBlockField(t *testing.T) {
 	t.Parallel()
 
 	engine := NewRedactionEngine("")
@@ -309,8 +309,8 @@ func TestRedactJSON_StructuredBlocksOnly(t *testing.T) {
 	if !strings.Contains(parsed.Content[0].Text, "[REDACTED:bearer-token]") {
 		t.Fatalf("expected text block redacted, got %q", parsed.Content[0].Text)
 	}
-	if parsed.Content[1].Text != "Authorization: Bearer keep-me" {
-		t.Fatalf("non-text block should be untouched, got %q", parsed.Content[1].Text)
+	if !strings.Contains(parsed.Content[1].Text, "[REDACTED:bearer-token]") {
+		t.Fatalf("malformed image text must not bypass redaction, got %q", parsed.Content[1].Text)
 	}
 }
 

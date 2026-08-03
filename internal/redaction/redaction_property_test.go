@@ -6,7 +6,9 @@
 package redaction
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"strings"
 	"testing"
 	"testing/quick"
 
@@ -26,6 +28,53 @@ func TestPropertyRedactIdempotent(t *testing.T) {
 	cfg := &quick.Config{MaxCount: 1000}
 	if err := quick.Check(f, cfg); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestPropertyCanonicalMCPEnvelopeRedactsNestedSecretsAndPreservesWireFields(t *testing.T) {
+	engine := NewRedactionEngine("")
+	f := func(seed []byte, isError bool) bool {
+		safeID := "safe_" + hex.EncodeToString(seed)
+		result := mcp.MCPToolResult{
+			Content: []mcp.MCPContentBlock{
+				{Type: "text", Text: `{"diagnostic":{"password":"plain-property-secret","error":"Bearer property-secret-token"}}`},
+				{Type: "image", Data: safeID, MimeType: "image/png"},
+			},
+			IsError: isError,
+			Metadata: map[string]any{
+				"correlation_id": safeID,
+				"authorization":  "plain-property-secret",
+				"password":       []any{"plain-property-secret", map[string]any{"value": "plain-property-secret"}},
+				"history":        []any{map[string]any{"error": "Bearer property-secret-token"}},
+			},
+		}
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			return false
+		}
+		var got mcp.MCPToolResult
+		if err := json.Unmarshal(engine.RedactJSON(encoded), &got); err != nil {
+			return false
+		}
+		serialized, err := json.Marshal(got)
+		if err != nil || strings.Contains(string(serialized), "plain-property-secret") ||
+			strings.Contains(string(serialized), "property-secret-token") {
+			return false
+		}
+		return got.IsError == isError && got.Metadata["correlation_id"] == safeID &&
+			len(got.Content) == 2 && got.Content[1].Type == "image" &&
+			got.Content[1].Data == safeID && got.Content[1].MimeType == "image/png"
+	}
+	if err := quick.Check(f, &quick.Config{MaxCount: 1_000}); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestMalformedCanonicalEnvelopeSeedNeverLeaksRawCredential(t *testing.T) {
+	input := json.RawMessage(`{"content":[{"type":"image","data":"Bearer permanent-regression-seed"}`)
+	got := NewRedactionEngine("").RedactJSON(input)
+	if strings.Contains(string(got), "permanent-regression-seed") {
+		t.Fatalf("malformed envelope leaked fixed regression seed: %s", got)
 	}
 }
 

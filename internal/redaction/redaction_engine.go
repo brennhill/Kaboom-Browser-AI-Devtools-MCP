@@ -94,8 +94,8 @@ func (e *RedactionEngine) Redact(input string) string {
 	return result
 }
 
-// RedactJSON applies redaction to all text fields within an MCP tool result JSON.
-// It parses the JSON, redacts text content in MCPContentBlocks, and re-serializes.
+// RedactJSON applies redaction to every string-bearing field within a canonical
+// MCP tool result, including structured text, metadata, and malformed image fields.
 // If the JSON is malformed, returns the input with string-level redaction applied.
 func (e *RedactionEngine) RedactJSON(input json.RawMessage) json.RawMessage {
 	var result mcp.MCPToolResult
@@ -105,12 +105,15 @@ func (e *RedactionEngine) RedactJSON(input json.RawMessage) json.RawMessage {
 		return json.RawMessage(redacted)
 	}
 
-	// Redact each text content block
+	// Canonical text blocks may themselves contain structured JSON. Image data is
+	// normally base64 and remains unchanged, while malformed raw credentials are
+	// still removed instead of being trusted merely because the block says image.
 	for i := range result.Content {
-		if result.Content[i].Type == "text" {
-			result.Content[i].Text = e.Redact(result.Content[i].Text)
-		}
+		result.Content[i].Text = e.redactStructuredText(result.Content[i].Text)
+		result.Content[i].Data = e.Redact(result.Content[i].Data)
+		result.Content[i].MimeType = e.Redact(result.Content[i].MimeType)
 	}
+	result.Metadata = e.RedactMapValues(result.Metadata)
 
 	output, err := json.Marshal(result)
 	if err != nil {
@@ -118,4 +121,16 @@ func (e *RedactionEngine) RedactJSON(input json.RawMessage) json.RawMessage {
 		return json.RawMessage(e.Redact(string(input)))
 	}
 	return json.RawMessage(output)
+}
+
+func (e *RedactionEngine) redactStructuredText(input string) string {
+	var value any
+	if json.Unmarshal([]byte(input), &value) != nil {
+		return e.Redact(input)
+	}
+	redacted, err := json.Marshal(e.redactValue("", value))
+	if err != nil {
+		return e.Redact(input)
+	}
+	return string(redacted)
 }

@@ -102,10 +102,10 @@ func TestRedact_EmptyInput(t *testing.T) {
 }
 
 // ============================================
-// RedactJSON — non-text content block types are not redacted
+// RedactJSON — malformed non-text block fields cannot bypass redaction
 // ============================================
 
-func TestRedactJSON_NonTextBlockUnchanged(t *testing.T) {
+func TestRedactJSON_NonTextBlockCredentialRedacted(t *testing.T) {
 	t.Parallel()
 	engine := NewRedactionEngine("")
 	result := mcp.MCPToolResult{
@@ -119,9 +119,8 @@ func TestRedactJSON_NonTextBlockUnchanged(t *testing.T) {
 	if err := json.Unmarshal(out, &parsed); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	// Image blocks should not be redacted.
-	if parsed.Content[0].Text != "Bearer secret_token_123" {
-		t.Errorf("non-text block should be unchanged, got %q", parsed.Content[0].Text)
+	if !strings.Contains(parsed.Content[0].Text, "[REDACTED:bearer-token]") {
+		t.Errorf("malformed non-text field should be redacted, got %q", parsed.Content[0].Text)
 	}
 }
 

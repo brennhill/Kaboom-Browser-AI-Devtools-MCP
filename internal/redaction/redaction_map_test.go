@@ -62,8 +62,8 @@ func TestRedactMCPToolResult(t *testing.T) {
 	if strings.Contains(text, "123-45-6789") {
 		t.Errorf("SSN should be redacted from MCP result, got: %s", text)
 	}
-	if !strings.Contains(text, "[REDACTED:bearer-token]") {
-		t.Errorf("Expected bearer-token redaction marker in: %s", text)
+	if !strings.Contains(text, "[REDACTED:key-authorization]") {
+		t.Errorf("Expected structured authorization-key redaction marker in: %s", text)
 	}
 	if !strings.Contains(text, "[REDACTED:ssn]") {
 		t.Errorf("Expected ssn redaction marker in: %s", text)
