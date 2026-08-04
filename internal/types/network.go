@@ -23,11 +23,11 @@ type WebSocketEvent struct {
 	Size             int           `json:"size,omitempty"`
 	CloseCode        int           `json:"code,omitempty"`
 	CloseReason      string        `json:"reason,omitempty"`
-	Sampled          *SamplingInfo `json:"sampled,omitempty"`          // server-only enrichment
-	BinaryFormat     string        `json:"binary_format,omitempty"`   // server-only enrichment
+	Sampled          *SamplingInfo `json:"sampled,omitempty"`           // server-only enrichment
+	BinaryFormat     string        `json:"binary_format,omitempty"`     // server-only enrichment
 	FormatConfidence float64       `json:"format_confidence,omitempty"` // server-only enrichment
-	TabID            int           `json:"tab_id,omitempty"`          // Chrome tab ID that produced this event
-	TestIDs          []string      `json:"test_ids,omitempty"`        // Test IDs this event belongs to
+	TabID            int           `json:"tab_id,omitempty"`            // Chrome tab ID that produced this event
+	TestIDs          []string      `json:"test_ids,omitempty"`          // Test IDs this event belongs to
 }
 
 // SamplingInfo describes the sampling state when a message was captured
@@ -134,22 +134,22 @@ type WebSocketSamplingStatus struct {
 // NetworkBody represents a captured network request/response.
 // Wire fields: see WireNetworkBody in wire_network.go
 type NetworkBody struct {
-	Timestamp          string            `json:"ts,omitempty"`
-	Method             string            `json:"method"`
-	URL                string            `json:"url"`
-	Status             int               `json:"status"`
-	RequestBody        string            `json:"request_body,omitempty"`
-	ResponseBody       string            `json:"response_body,omitempty"`
-	ContentType        string            `json:"content_type,omitempty"`
-	Duration           int               `json:"duration,omitempty"`
-	RequestTruncated   bool              `json:"request_truncated,omitempty"`
-	ResponseTruncated  bool              `json:"response_truncated,omitempty"`
-	ResponseHeaders    map[string]string `json:"response_headers,omitempty"` // server-only enrichment
-	HasAuthHeader      bool              `json:"has_auth_header,omitempty"` // server-only enrichment
-	BinaryFormat       string            `json:"binary_format,omitempty"`   // server-only enrichment
-	FormatConfidence   float64           `json:"format_confidence,omitempty"` // server-only enrichment
-	TabID              int               `json:"tab_id,omitempty"` // Chrome tab ID that produced this request
-	TestIDs            []string          `json:"test_ids,omitempty"` // Test IDs this entry belongs to
+	Timestamp         string            `json:"ts,omitempty"`
+	Method            string            `json:"method"`
+	URL               string            `json:"url"`
+	Status            int               `json:"status"`
+	RequestBody       string            `json:"request_body,omitempty"`
+	ResponseBody      string            `json:"response_body,omitempty"`
+	ContentType       string            `json:"content_type,omitempty"`
+	Duration          int               `json:"duration,omitempty"`
+	RequestTruncated  bool              `json:"request_truncated,omitempty"`
+	ResponseTruncated bool              `json:"response_truncated,omitempty"`
+	ResponseHeaders   map[string]string `json:"response_headers,omitempty"`  // server-only enrichment
+	HasAuthHeader     bool              `json:"has_auth_header,omitempty"`   // server-only enrichment
+	BinaryFormat      string            `json:"binary_format,omitempty"`     // server-only enrichment
+	FormatConfidence  float64           `json:"format_confidence,omitempty"` // server-only enrichment
+	TabID             int               `json:"tab_id,omitempty"`            // Chrome tab ID that produced this request
+	TestIDs           []string          `json:"test_ids,omitempty"`          // Test IDs this entry belongs to
 }
 
 // NetworkBodyFilter defines filtering criteria for network bodies
@@ -166,18 +166,40 @@ type NetworkBodyFilter struct {
 // from the browser's PerformanceResourceTiming API.
 // Wire fields: see WireNetworkWaterfallEntry in wire_network.go
 type NetworkWaterfallEntry struct {
-	Name            string    `json:"name"`
-	URL             string    `json:"url"`
-	InitiatorType   string    `json:"initiator_type"`
-	Duration        float64   `json:"duration"`
-	StartTime       float64   `json:"start_time"`
-	FetchStart      float64   `json:"fetch_start"`
-	ResponseEnd     float64   `json:"response_end"`
-	TransferSize    int       `json:"transfer_size"`
-	DecodedBodySize int       `json:"decoded_body_size"`
-	EncodedBodySize int       `json:"encoded_body_size"`
-	PageURL         string    `json:"page_url,omitempty"`
-	Timestamp       time.Time `json:"timestamp,omitempty"` // Server-side timestamp
+	Name             string             `json:"name"`
+	URL              string             `json:"url"`
+	InitiatorType    string             `json:"initiator_type"`
+	Duration         float64            `json:"duration"`
+	StartTime        float64            `json:"start_time"`
+	FetchStart       float64            `json:"fetch_start"`
+	ResponseEnd      float64            `json:"response_end"`
+	TransferSize     int                `json:"transfer_size"`
+	DecodedBodySize  int                `json:"decoded_body_size"`
+	EncodedBodySize  int                `json:"encoded_body_size"`
+	PageURL          string             `json:"page_url,omitempty"`
+	Timestamp        time.Time          `json:"timestamp,omitempty"` // Server-side timestamp
+	QueueingMs       float64            `json:"queueing_ms,omitempty"`
+	DNSMs            float64            `json:"dns_ms,omitempty"`
+	TLSMs            float64            `json:"tls_ms,omitempty"`
+	ConnectMs        float64            `json:"connect_ms,omitempty"`
+	TTFBMs           float64            `json:"ttfb_ms,omitempty"`
+	DownloadMs       float64            `json:"download_ms,omitempty"`
+	Priority         string             `json:"priority,omitempty"`
+	Protocol         string             `json:"protocol,omitempty"`
+	CacheSource      string             `json:"cache_source,omitempty"`
+	CompressionRatio float64            `json:"compression_ratio,omitempty"`
+	ContentEncoding  string             `json:"content_encoding,omitempty"`
+	Status           int                `json:"status,omitempty"`
+	ServerTiming     []WireServerTiming `json:"server_timing,omitempty"`
+	RequestID        string             `json:"request_id,omitempty"`
+	Traceparent      string             `json:"traceparent,omitempty"`
+	InitiatorStack   []string           `json:"initiator_stack,omitempty"`
+	ReactComponent   string             `json:"react_component,omitempty"`
+	RouteLoader      string             `json:"route_loader,omitempty"`
+	StoreAction      string             `json:"store_action,omitempty"`
+	SourceMapStatus  string             `json:"source_map_status,omitempty"`
+	DuplicateGroupID string             `json:"duplicate_group_id,omitempty"`
+	DuplicateCount   int                `json:"duplicate_count,omitempty"`
 }
 
 // NetworkWaterfallPayload is POSTed by the extension.
@@ -207,8 +229,8 @@ type EnhancedAction struct {
 	SelectedValue  string         `json:"selected_value,omitempty"`
 	SelectedText   string         `json:"selected_text,omitempty"`
 	ScrollY        int            `json:"scroll_y,omitempty"`
-	TabID          int            `json:"tab_id,omitempty"`    // Chrome tab ID that produced this action
-	TestIDs        []string       `json:"test_ids,omitempty"` // Test IDs this action belongs to
+	TabID          int            `json:"tab_id,omitempty"`         // Chrome tab ID that produced this action
+	TestIDs        []string       `json:"test_ids,omitempty"`       // Test IDs this action belongs to
 	Source         string         `json:"source,omitempty"`         // "human" for user actions, "ai" for AI-driven actions via interact tool
 	Classification string         `json:"classification,omitempty"` // Transient classification: toast, alert, snackbar, notification, tooltip, banner, flash
 	DurationMs     int            `json:"duration_ms,omitempty"`    // Transient visibility duration (ms). MVP: always 0 (removal tracking not yet implemented)

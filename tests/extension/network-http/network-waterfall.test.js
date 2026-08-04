@@ -188,6 +188,80 @@ describe('Network Waterfall - parseResourceTiming', () => {
     assert.strictEqual(result.duration, 500)
   })
 
+  test('should expose rich network phases, transport, cache, and compression', async () => {
+    const { parseResourceTiming } = await import('../../../extension/lib/net/network.js')
+    const result = parseResourceTiming(
+      createMockResourceTiming({
+        startTime: 90,
+        fetchStart: 100,
+        nextHopProtocol: 'h2',
+        responseStatus: 201,
+        deliveryType: 'cache',
+        serverTiming: [{ name: 'db', duration: 24, description: 'query' }]
+      })
+    )
+
+    assert.deepStrictEqual(
+      {
+        queueing: result.queueing_ms,
+        dns: result.dns_ms,
+        tls: result.tls_ms,
+        connect: result.connect_ms,
+        ttfb: result.ttfb_ms,
+        download: result.download_ms,
+        protocol: result.protocol,
+        cache: result.cache_source,
+        status: result.status,
+        compression: result.compression_ratio
+      },
+      {
+        queueing: 10,
+        dns: 10,
+        tls: 15,
+        connect: 20,
+        ttfb: 70,
+        download: 150,
+        protocol: 'h2',
+        cache: 'cache',
+        status: 201,
+        compression: 2.28
+      }
+    )
+    assert.deepStrictEqual(result.server_timing, [{ name: 'db', duration_ms: 24, description: 'query' }])
+  })
+
+  test('attributes and groups identical concurrent requests', async () => {
+    const { getNetworkWaterfall, resetForTesting } = await import('../../../extension/lib/net/network.js')
+    const { recordRequestAttribution, completeRequestAttribution } = await import(
+      '../../../extension/lib/net/request-attribution.js'
+    )
+    resetForTesting()
+    recordRequestAttribution('http://localhost:3000/api/data', {
+      stack: 'Error\n    at DesignShell (http://localhost:3000/src/DesignShell.tsx:12:4)\n    at routeLoader (http://localhost:3000/src/routes.ts:4:2)',
+      priority: 'high'
+    })
+    completeRequestAttribution('http://localhost:3000/api/data', {
+      status: 200,
+      server_timing: 'app;dur=42',
+      request_id: 'req-123',
+      traceparent: '00-abc-def-01',
+      content_encoding: 'br'
+    })
+    globalThis.performance._addEntry(createMockResourceTiming({ startTime: 100, responseEnd: 350 }))
+    globalThis.performance._addEntry(createMockResourceTiming({ startTime: 101, responseEnd: 300 }))
+
+    const results = getNetworkWaterfall()
+    assert.equal(results.length, 2)
+    assert.equal(results[0].react_component, 'DesignShell')
+    assert.equal(results[0].route_loader, 'routeLoader')
+    assert.equal(results[0].priority, 'high')
+    assert.equal(results[0].request_id, 'req-123')
+    assert.equal(results[0].traceparent, '00-abc-def-01')
+    assert.equal(results[0].content_encoding, 'br')
+    assert.equal(results[0].duplicate_count, 2)
+    assert.equal(results[1].duplicate_group_id, results[0].duplicate_group_id)
+  })
+
   test('should include transfer size information', async () => {
     const { parseResourceTiming } = await import('../../../extension/lib/net/network.js')
 

@@ -34,6 +34,33 @@ export interface WireNetworkWaterfallEntry {
     readonly decoded_body_size: number;
     readonly encoded_body_size: number;
     readonly page_url?: string;
+    readonly queueing_ms?: number;
+    readonly dns_ms?: number;
+    readonly tls_ms?: number;
+    readonly connect_ms?: number;
+    readonly ttfb_ms?: number;
+    readonly download_ms?: number;
+    readonly priority?: string;
+    readonly protocol?: string;
+    readonly cache_source?: string;
+    readonly compression_ratio?: number;
+    readonly content_encoding?: string;
+    readonly status?: number;
+    readonly server_timing?: readonly WireServerTiming[];
+    readonly request_id?: string;
+    readonly traceparent?: string;
+    readonly initiator_stack?: readonly string[];
+    readonly react_component?: string;
+    readonly route_loader?: string;
+    readonly store_action?: string;
+    readonly source_map_status?: string;
+    readonly duplicate_group_id?: string;
+    readonly duplicate_count?: number;
+}
+export interface WireServerTiming {
+    readonly name: string;
+    readonly duration_ms?: number;
+    readonly description?: string;
 }
 /**
  * WireNetworkWaterfallPayload is the top-level shape POSTed to /network-waterfall.

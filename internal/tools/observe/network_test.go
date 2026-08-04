@@ -38,6 +38,24 @@ func TestNetworkBodyHandlerFiltersTransformsAndExplainsEmptyResults(t *testing.T
 	}
 }
 
+func TestWaterfallEntryToMapDistinguishesUnavailableRichFields(t *testing.T) {
+	plain := waterfallEntryToMap(types.NetworkWaterfallEntry{URL: "https://app.test/api"})
+	if _, exists := plain["ttfb_ms"]; exists {
+		t.Fatal("unavailable TTFB must be omitted, not reported as zero")
+	}
+	if _, exists := plain["status"]; exists {
+		t.Fatal("unavailable status must be omitted, not reported as zero")
+	}
+
+	rich := waterfallEntryToMap(types.NetworkWaterfallEntry{
+		URL: "https://app.test/api", TTFBMs: 80, Status: 200, ContentEncoding: "br",
+		DuplicateGroupID: "dup-1", DuplicateCount: 2,
+	})
+	if rich["ttfb_ms"] != float64(80) || rich["status"] != 200 || rich["content_encoding"] != "br" || rich["duplicate_count"] != 2 {
+		t.Fatalf("rich fields missing: %#v", rich)
+	}
+}
+
 func TestWebSocketHandlerFiltersAndSummarizesTraffic(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()

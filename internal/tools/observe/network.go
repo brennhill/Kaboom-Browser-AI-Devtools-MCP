@@ -267,7 +267,7 @@ func filterWaterfallEntries(allEntries []types.NetworkWaterfallEntry, urlFilter 
 }
 
 func waterfallEntryToMap(entry types.NetworkWaterfallEntry) map[string]any {
-	return map[string]any{
+	result := map[string]any{
 		"url":               entry.URL,
 		"initiator_type":    entry.InitiatorType,
 		"duration_ms":       entry.Duration,
@@ -277,6 +277,51 @@ func waterfallEntryToMap(entry types.NetworkWaterfallEntry) map[string]any {
 		"encoded_body_size": entry.EncodedBodySize,
 		"timestamp":         entry.Timestamp,
 		"page_url":          entry.PageURL,
+	}
+	optionalFloat(result, "queueing_ms", entry.QueueingMs)
+	optionalFloat(result, "dns_ms", entry.DNSMs)
+	optionalFloat(result, "tls_ms", entry.TLSMs)
+	optionalFloat(result, "connect_ms", entry.ConnectMs)
+	optionalFloat(result, "ttfb_ms", entry.TTFBMs)
+	optionalFloat(result, "download_ms", entry.DownloadMs)
+	optionalFloat(result, "compression_ratio", entry.CompressionRatio)
+	optionalInt(result, "status", entry.Status)
+	optionalInt(result, "duplicate_count", entry.DuplicateCount)
+	optionalString(result, "priority", entry.Priority)
+	optionalString(result, "protocol", entry.Protocol)
+	optionalString(result, "cache_source", entry.CacheSource)
+	optionalString(result, "content_encoding", entry.ContentEncoding)
+	optionalString(result, "request_id", entry.RequestID)
+	optionalString(result, "traceparent", entry.Traceparent)
+	optionalString(result, "react_component", entry.ReactComponent)
+	optionalString(result, "route_loader", entry.RouteLoader)
+	optionalString(result, "store_action", entry.StoreAction)
+	optionalString(result, "source_map_status", entry.SourceMapStatus)
+	optionalString(result, "duplicate_group_id", entry.DuplicateGroupID)
+	if len(entry.ServerTiming) > 0 {
+		result["server_timing"] = entry.ServerTiming
+	}
+	if len(entry.InitiatorStack) > 0 {
+		result["initiator_stack"] = entry.InitiatorStack
+	}
+	return result
+}
+
+func optionalString(result map[string]any, key, value string) {
+	if value != "" {
+		result[key] = value
+	}
+}
+
+func optionalFloat(result map[string]any, key string, value float64) {
+	if value != 0 {
+		result[key] = value
+	}
+}
+
+func optionalInt(result map[string]any, key string, value int) {
+	if value != 0 {
+		result[key] = value
 	}
 }
 

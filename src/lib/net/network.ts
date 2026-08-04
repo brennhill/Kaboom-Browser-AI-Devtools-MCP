@@ -10,6 +10,13 @@
  */
 
 import type { WireNetworkWaterfallEntry as WaterfallEntry } from '../../types/wire/wire-network.js'
+import {
+  completeRequestAttribution,
+  enrichWaterfallEntries,
+  recordRequestAttribution,
+  resetRequestAttribution
+} from './request-attribution.js'
+
 import type { PendingRequest } from '../../types/capture/network.js'
 
 import {
@@ -107,6 +114,12 @@ const SENSITIVE_URL_PATTERNS = /\/(auth|login|signin|signup|token|oauth|session|
  * @returns Parsed waterfall entry
  */
 export function parseResourceTiming(timing: PerformanceResourceTiming): WaterfallEntry {
+  const extended = timing as PerformanceResourceTiming & {
+    responseStatus?: number
+    deliveryType?: string
+    renderBlockingStatus?: string
+  }
+  const compressionRatio = timing.encodedBodySize > 0 ? timing.decodedBodySize / timing.encodedBodySize : 0
   return {
     name: timing.name,
     url: timing.name,
@@ -117,8 +130,35 @@ export function parseResourceTiming(timing: PerformanceResourceTiming): Waterfal
     response_end: timing.responseEnd || undefined,
     transfer_size: timing.transferSize || 0,
     encoded_body_size: timing.encodedBodySize || 0,
-    decoded_body_size: timing.decodedBodySize || 0
+    decoded_body_size: timing.decodedBodySize || 0,
+    queueing_ms: phaseDuration(timing.startTime, timing.fetchStart),
+    dns_ms: phaseDuration(timing.domainLookupStart, timing.domainLookupEnd),
+    tls_ms: phaseDuration(timing.secureConnectionStart, timing.connectEnd),
+    connect_ms: phaseDuration(timing.connectStart, timing.connectEnd),
+    ttfb_ms: phaseDuration(timing.requestStart, timing.responseStart),
+    download_ms: phaseDuration(timing.responseStart, timing.responseEnd),
+    protocol: timing.nextHopProtocol || undefined,
+    cache_source: inferCacheSource(timing, extended.deliveryType),
+    compression_ratio: compressionRatio > 0 ? Math.round(compressionRatio * 100) / 100 : undefined,
+    status: extended.responseStatus || undefined,
+    server_timing: timing.serverTiming?.map((metric) => ({
+      name: metric.name,
+      duration_ms: metric.duration || undefined,
+      description: metric.description || undefined
+    }))
   }
+}
+
+function phaseDuration(start: number, end: number): number | undefined {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start || (start === 0 && end === 0)) return undefined
+  return Math.round((end - start) * 1000) / 1000
+}
+
+function inferCacheSource(timing: PerformanceResourceTiming, deliveryType: string | undefined): string {
+  if (deliveryType) return deliveryType
+  if (timing.transferSize === 0 && timing.decodedBodySize > 0) return 'memory_or_disk_cache'
+  if (timing.transferSize > 0) return 'network'
+  return 'unavailable'
 }
 
 /**
@@ -153,7 +193,7 @@ export function getNetworkWaterfall(options: WaterfallFilterOptions = {}): Water
       entries = entries.slice(-MAX_WATERFALL_ENTRIES)
     }
 
-    return entries.map(parseResourceTiming)
+    return enrichWaterfallEntries(entries.map(parseResourceTiming))
   } catch {
     return []
   }
@@ -194,6 +234,7 @@ export function getPendingRequests(): PendingRequest[] {
  */
 export function clearPendingRequests(): void {
   pendingRequests.clear()
+  resetRequestAttribution()
 }
 
 /**
@@ -519,12 +560,20 @@ export function wrapXHRWithBodies(): void {
     const method: string = (this as XMLHttpRequest & { __kaboomMethod?: string }).__kaboomMethod || 'GET'
 
     if (shouldCaptureUrl(url) && networkBodyCaptureEnabled) {
+      recordRequestAttribution(url, { stack: new Error().stack })
       const startTime = Date.now()
       const requestBody = typeof body === 'string' ? body : null
       this.addEventListener('load', function (this: XMLHttpRequest) {
         try {
           const duration = Date.now() - startTime
           const contentType = this.getResponseHeader('content-type') || ''
+          completeRequestAttribution(url, {
+            status: this.status,
+            server_timing: this.getResponseHeader('server-timing'),
+            request_id: this.getResponseHeader('x-request-id'),
+            traceparent: this.getResponseHeader('traceparent'),
+            content_encoding: this.getResponseHeader('content-encoding')
+          })
           if (BINARY_CONTENT_TYPES.test(contentType)) return
 
           const responseType: string = this.responseType
@@ -651,10 +700,22 @@ export function wrapFetchWithBodies(fetchFn: FetchLike): FetchLike {
     const { url, method, requestBody } = extractFetchInfo(input, init)
     if (!shouldCaptureUrl(url)) return fetchFn(input, init)
 
+    recordRequestAttribution(url, {
+      stack: new Error().stack,
+      priority: (init as (RequestInit & { priority?: string }) | undefined)?.priority
+    })
+
     const startTime = Date.now()
     const response = await fetchFn(input, init)
     const duration = Date.now() - startTime
     const contentType = response.headers?.get?.('content-type') || ''
+    completeRequestAttribution(url, {
+      status: response.status,
+      server_timing: response.headers?.get?.('server-timing'),
+      request_id: response.headers?.get?.('x-request-id'),
+      traceparent: response.headers?.get?.('traceparent'),
+      content_encoding: response.headers?.get?.('content-encoding')
+    })
     const cloned = response.clone ? response.clone() : null
     const win = typeof window !== 'undefined' ? window : null
 

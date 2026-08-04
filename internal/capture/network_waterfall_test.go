@@ -54,6 +54,21 @@ func TestHandleNetworkWaterfall_AcceptsValidPayload(t *testing.T) {
 	}
 }
 
+func TestHandleNetworkWaterfall_PreservesRichTimingAndAttribution(t *testing.T) {
+	t.Parallel()
+	captured := NewCapture()
+	body := []byte(`{"page_url":"https://app.test","entries":[{"url":"https://app.test/api","name":"https://app.test/api","initiator_type":"fetch","duration":250,"start_time":10,"queueing_ms":3,"dns_ms":4,"tls_ms":5,"connect_ms":8,"ttfb_ms":90,"download_ms":140,"priority":"high","protocol":"h2","cache_source":"network","compression_ratio":2.4,"status":200,"server_timing":[{"name":"db","duration_ms":22}],"request_id":"req-1","traceparent":"00-abc-def-01","initiator_stack":["at DesignShell (src/DesignShell.tsx:1:2)"],"react_component":"DesignShell","route_loader":"designLoader","store_action":"loadDesign","source_map_status":"browser_stack","duplicate_group_id":"dup-1","duplicate_count":2}]}`)
+	w := httptest.NewRecorder()
+	NewHTTPHandlers(captured).HandleNetworkWaterfall(w, httptest.NewRequest(http.MethodPost, "/network-waterfall", bytes.NewReader(body)))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	entry := captured.Telemetry().NetworkWaterfall().Entries()[0]
+	if entry.TTFBMs != 90 || entry.Protocol != "h2" || entry.RequestID != "req-1" || entry.ReactComponent != "DesignShell" || entry.DuplicateCount != 2 {
+		t.Fatalf("rich waterfall fields were not preserved: %+v", entry)
+	}
+}
+
 func TestHandleNetworkWaterfall_RejectsMalformedJSON(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()

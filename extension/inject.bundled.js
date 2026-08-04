@@ -839,12 +839,153 @@ function installNavigationCapture() {
   }
 }
 
+// extension/lib/net/request-attribution.js
+var MAX_ATTRIBUTIONS = 200;
+var MAX_STACK_FRAMES = 12;
+var attributions = [];
+function recordRequestAttribution(url, start = {}) {
+  if (!url)
+    return;
+  attributions.push({ url: normalizeURL(url), ...start, complete: false });
+  if (attributions.length > MAX_ATTRIBUTIONS)
+    attributions.splice(0, attributions.length - MAX_ATTRIBUTIONS);
+}
+function completeRequestAttribution(url, finish) {
+  const normalized = normalizeURL(url);
+  for (let index = attributions.length - 1; index >= 0; index--) {
+    const candidate = attributions[index];
+    if (candidate && candidate.url === normalized && !candidate.complete) {
+      Object.assign(candidate, finish, { complete: true });
+      return;
+    }
+  }
+}
+function enrichWaterfallEntries(entries) {
+  const enriched = entries.map((entry) => enrichEntry(entry, consumeAttribution(entry.url)));
+  assignDuplicateGroups(enriched);
+  return enriched;
+}
+function consumeAttribution(url) {
+  const normalized = normalizeURL(url);
+  const index = attributions.findIndex((candidate) => candidate.url === normalized);
+  if (index < 0)
+    return void 0;
+  return attributions.splice(index, 1)[0];
+}
+function enrichEntry(entry, attribution) {
+  if (!attribution)
+    return entry;
+  const stack = cleanStack(attribution.stack);
+  const semantic = semanticInitiator(stack);
+  return {
+    ...entry,
+    ...attribution.priority ? { priority: attribution.priority } : {},
+    ...attribution.status !== void 0 ? { status: attribution.status } : {},
+    ...attribution.request_id ? { request_id: attribution.request_id.slice(0, 256) } : {},
+    ...attribution.traceparent ? { traceparent: attribution.traceparent.slice(0, 256) } : {},
+    ...attribution.content_encoding ? { content_encoding: attribution.content_encoding.slice(0, 64) } : {},
+    ...attribution.server_timing ? { server_timing: parseServerTiming(attribution.server_timing) } : {},
+    ...stack.length > 0 ? {
+      initiator_stack: stack,
+      source_map_status: stack.some(isOriginalSourceFrame) ? "mapped_or_source" : "browser_stack"
+    } : {},
+    ...semantic
+  };
+}
+function cleanStack(raw) {
+  if (!raw)
+    return [];
+  return raw.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("at ") && !line.includes("kaboom") && !line.includes("request-attribution") && !line.includes("/lib/net/network.") && !line.includes("/inject/observers.")).slice(0, MAX_STACK_FRAMES);
+}
+function isOriginalSourceFrame(frame) {
+  return /(?:\/src\/|\.(?:tsx?|jsx?)(?::\d+){1,2}\)?$)/.test(frame);
+}
+function semanticInitiator(stack) {
+  let reactComponent;
+  let routeLoader;
+  let storeAction;
+  for (const frame of stack) {
+    const name = /^at\s+([^\s(]+)/.exec(frame)?.[1];
+    if (!name)
+      continue;
+    if (!reactComponent && /^[A-Z][A-Za-z0-9_$]*$/.test(name))
+      reactComponent = name;
+    if (!routeLoader && /(?:loader|route)/i.test(name))
+      routeLoader = name;
+    if (!storeAction && /(?:store|dispatch|action|mutation)/i.test(name))
+      storeAction = name;
+  }
+  return {
+    ...reactComponent ? { react_component: reactComponent } : {},
+    ...routeLoader ? { route_loader: routeLoader } : {},
+    ...storeAction ? { store_action: storeAction } : {}
+  };
+}
+function parseServerTiming(raw) {
+  return raw.split(",").slice(0, 20).map((metric) => {
+    const [namePart = "", ...params] = metric.trim().split(";");
+    const result = { name: namePart.slice(0, 128) };
+    for (const param of params) {
+      const [key, rawValue = ""] = param.trim().split("=", 2);
+      const value = rawValue.replace(/^"|"$/g, "");
+      if (key === "dur" && Number.isFinite(Number(value)))
+        result.duration_ms = Number(value);
+      if (key === "desc" && value)
+        result.description = value.slice(0, 256);
+    }
+    return result;
+  }).filter((metric) => metric.name.length > 0);
+}
+function assignDuplicateGroups(entries) {
+  const byURL = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    const group = byURL.get(entry.url) ?? [];
+    group.push(entry);
+    byURL.set(entry.url, group);
+  }
+  for (const [url, group] of byURL) {
+    if (group.length < 2 || !hasOverlap(group))
+      continue;
+    const id = `dup-${stableHash(`${url}:${Math.min(...group.map((entry) => entry.start_time))}`)}`;
+    for (const entry of group) {
+      Object.assign(entry, { duplicate_group_id: id, duplicate_count: group.length });
+    }
+  }
+}
+function hasOverlap(entries) {
+  const sorted = [...entries].sort((a, b) => a.start_time - b.start_time);
+  let latestEnd = -Infinity;
+  for (const entry of sorted) {
+    if (entry.start_time < latestEnd)
+      return true;
+    latestEnd = Math.max(latestEnd, entry.response_end ?? entry.start_time + entry.duration);
+  }
+  return false;
+}
+function stableHash(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index++) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+function normalizeURL(value) {
+  try {
+    return new URL(value, typeof location !== "undefined" ? location.href : void 0).href;
+  } catch {
+    return value;
+  }
+}
+
 // extension/lib/net/network.js
 var configuredServerUrl = "";
 var networkWaterfallEnabled = false;
 var networkBodyCaptureEnabled = true;
 var SENSITIVE_URL_PATTERNS = /\/(auth|login|signin|signup|token|oauth|session|api[_-]?key|password|register)\b/i;
 function parseResourceTiming(timing) {
+  const extended = timing;
+  const compressionRatio = timing.encodedBodySize > 0 ? timing.decodedBodySize / timing.encodedBodySize : 0;
   return {
     name: timing.name,
     url: timing.name,
@@ -855,8 +996,37 @@ function parseResourceTiming(timing) {
     response_end: timing.responseEnd || void 0,
     transfer_size: timing.transferSize || 0,
     encoded_body_size: timing.encodedBodySize || 0,
-    decoded_body_size: timing.decodedBodySize || 0
+    decoded_body_size: timing.decodedBodySize || 0,
+    queueing_ms: phaseDuration(timing.startTime, timing.fetchStart),
+    dns_ms: phaseDuration(timing.domainLookupStart, timing.domainLookupEnd),
+    tls_ms: phaseDuration(timing.secureConnectionStart, timing.connectEnd),
+    connect_ms: phaseDuration(timing.connectStart, timing.connectEnd),
+    ttfb_ms: phaseDuration(timing.requestStart, timing.responseStart),
+    download_ms: phaseDuration(timing.responseStart, timing.responseEnd),
+    protocol: timing.nextHopProtocol || void 0,
+    cache_source: inferCacheSource(timing, extended.deliveryType),
+    compression_ratio: compressionRatio > 0 ? Math.round(compressionRatio * 100) / 100 : void 0,
+    status: extended.responseStatus || void 0,
+    server_timing: timing.serverTiming?.map((metric) => ({
+      name: metric.name,
+      duration_ms: metric.duration || void 0,
+      description: metric.description || void 0
+    }))
   };
+}
+function phaseDuration(start, end) {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start || start === 0 && end === 0)
+    return void 0;
+  return Math.round((end - start) * 1e3) / 1e3;
+}
+function inferCacheSource(timing, deliveryType) {
+  if (deliveryType)
+    return deliveryType;
+  if (timing.transferSize === 0 && timing.decodedBodySize > 0)
+    return "memory_or_disk_cache";
+  if (timing.transferSize > 0)
+    return "network";
+  return "unavailable";
 }
 function getNetworkWaterfall(options = {}) {
   if (typeof performance === "undefined" || !performance)
@@ -874,7 +1044,7 @@ function getNetworkWaterfall(options = {}) {
     if (entries.length > MAX_WATERFALL_ENTRIES) {
       entries = entries.slice(-MAX_WATERFALL_ENTRIES);
     }
-    return entries.map(parseResourceTiming);
+    return enrichWaterfallEntries(entries.map(parseResourceTiming));
   } catch {
     return [];
   }
@@ -1022,12 +1192,20 @@ function wrapXHRWithBodies() {
     const url = this.__kaboomUrl || "";
     const method = this.__kaboomMethod || "GET";
     if (shouldCaptureUrl(url) && networkBodyCaptureEnabled) {
+      recordRequestAttribution(url, { stack: new Error().stack });
       const startTime = Date.now();
       const requestBody = typeof body === "string" ? body : null;
       this.addEventListener("load", function() {
         try {
           const duration = Date.now() - startTime;
           const contentType = this.getResponseHeader("content-type") || "";
+          completeRequestAttribution(url, {
+            status: this.status,
+            server_timing: this.getResponseHeader("server-timing"),
+            request_id: this.getResponseHeader("x-request-id"),
+            traceparent: this.getResponseHeader("traceparent"),
+            content_encoding: this.getResponseHeader("content-encoding")
+          });
           if (BINARY_CONTENT_TYPES.test(contentType))
             return;
           const responseType = this.responseType;
@@ -1104,10 +1282,21 @@ function wrapFetchWithBodies(fetchFn) {
     const { url, method, requestBody } = extractFetchInfo(input, init);
     if (!shouldCaptureUrl(url))
       return fetchFn(input, init);
+    recordRequestAttribution(url, {
+      stack: new Error().stack,
+      priority: init?.priority
+    });
     const startTime = Date.now();
     const response = await fetchFn(input, init);
     const duration = Date.now() - startTime;
     const contentType = response.headers?.get?.("content-type") || "";
+    completeRequestAttribution(url, {
+      status: response.status,
+      server_timing: response.headers?.get?.("server-timing"),
+      request_id: response.headers?.get?.("x-request-id"),
+      traceparent: response.headers?.get?.("traceparent"),
+      content_encoding: response.headers?.get?.("content-encoding")
+    });
     const cloned = response.clone ? response.clone() : null;
     const win = typeof window !== "undefined" ? window : null;
     Promise.resolve().then(async () => {
