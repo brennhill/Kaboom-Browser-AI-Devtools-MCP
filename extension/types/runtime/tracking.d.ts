@@ -14,12 +14,18 @@ export interface TrackingContinuitySnapshot {
 export interface GetTrackingStateMessage {
     readonly type: 'get_tracking_state';
 }
+export interface TrackingState {
+    readonly isTracked: boolean;
+    readonly aiPilotEnabled: boolean;
+}
 export interface GetTrackingStateResponse {
-    readonly state: {
-        isTracked: boolean;
-        aiPilotEnabled: boolean;
+    readonly state: TrackingState & {
         continuity: TrackingContinuitySnapshot;
     };
+}
+export interface TrackingStateChangedMessage {
+    readonly type: 'tracking_state_changed';
+    readonly state: TrackingState;
 }
 export interface TrackingContentReadyMessage {
     readonly type: 'tracking_content_ready';
@@ -39,4 +45,6 @@ export interface TrackingContinuityChangedMessage {
     readonly type: 'tracking_continuity_changed';
     readonly snapshot: TrackingContinuitySnapshot;
 }
+export declare function isTrackingStateChangedMessage(value: unknown): value is TrackingStateChangedMessage;
+export declare function isGetTrackingStateResponse(value: unknown): value is GetTrackingStateResponse;
 //# sourceMappingURL=tracking.d.ts.map

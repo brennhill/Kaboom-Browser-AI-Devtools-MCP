@@ -4,6 +4,10 @@
 
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
+import {
+  isGetTrackingStateResponse,
+  isTrackingStateChangedMessage
+} from '../../../extension/types/runtime/tracking.js'
 
 describe('Favicon Replacer', () => {
   describe('Animation Frame Sequence', () => {
@@ -175,6 +179,42 @@ describe('Favicon Replacer', () => {
   })
 
   describe('Message Handling', () => {
+    it('rejects malformed tracking messages at the content boundary', () => {
+      assert.equal(
+        isTrackingStateChangedMessage({
+          type: 'tracking_state_changed',
+          state: { isTracked: true, aiPilotEnabled: false }
+        }),
+        true
+      )
+      assert.equal(
+        isTrackingStateChangedMessage({
+          type: 'tracking_state_changed',
+          state: { isTracked: 'yes', aiPilotEnabled: false }
+        }),
+        false
+      )
+      assert.equal(isTrackingStateChangedMessage(null), false)
+    })
+
+    it('rejects malformed initial tracking responses', () => {
+      assert.equal(
+        isGetTrackingStateResponse({
+          state: {
+            isTracked: true,
+            aiPilotEnabled: false,
+            continuity: { phase: 'confirmed', is_tracked: true }
+          }
+        }),
+        true
+      )
+      assert.equal(
+        isGetTrackingStateResponse({ state: { isTracked: true, aiPilotEnabled: false } }),
+        false
+      )
+      assert.equal(isGetTrackingStateResponse({ state: 'tracked' }), false)
+    })
+
     it('should listen for trackingStateChanged', () => {
       const messageType = 'tracking_state_changed'
       assert.strictEqual(messageType, 'tracking_state_changed')

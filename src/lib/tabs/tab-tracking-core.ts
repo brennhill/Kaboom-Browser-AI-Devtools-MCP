@@ -11,6 +11,7 @@
 import { isInternalUrl } from './internal-url.js'
 import { isDomainCloaked } from './cloaked-domains.js'
 import { setTrackedTab, clearTrackedTab } from './tracked-tab-storage.js'
+import type { TrackingStateChangedMessage } from '../../types/runtime/tracking.js'
 
 /** Result of an attempt to start tracking. Only 'tracked' persisted anything. */
 export type TrackTabOutcome = 'tracked' | 'internal_page' | 'cloaked'
@@ -29,8 +30,12 @@ function hostnameOf(url: string | undefined): string {
  * may be closed or lack a content script — the authoritative state is in storage.
  */
 function notifyTrackingState(tabId: number, isTracked: boolean): void {
+  const message: TrackingStateChangedMessage = {
+    type: 'tracking_state_changed',
+    state: { isTracked, aiPilotEnabled: false }
+  }
   chrome.tabs
-    .sendMessage(tabId, { type: 'tracking_state_changed', state: { isTracked, aiPilotEnabled: false } })
+    .sendMessage(tabId, message)
     .catch(() => {
       // EXPECTED_ABSENCE: it is normal for a closed or reinjecting tracked tab to lack a
       // recipient; logging it would misleadingly contradict authoritative storage.

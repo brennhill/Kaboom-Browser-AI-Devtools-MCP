@@ -19,6 +19,7 @@ code_paths:
   - src/types/runtime/tracking.ts
   - src/content.ts
   - src/content/tab-tracking.ts
+  - src/content/favicon-replacer.ts
   - src/content/script-injection.ts
   - src/content/ui/terminal-panel-bridge.ts
   - src/content/ui/tracked-hover-launcher.ts
@@ -63,6 +64,7 @@ test_paths:
   - tests/extension/content/content-tab-filtering.test.js
   - tests/extension/content/content-tab-tracking.test.js
   - tests/extension/branding/runtime-log-branding.test.js
+  - tests/extension/branding/favicon-replacer.test.js
   - tests/extension/terminal-sidepanel/sidepanel-terminal-fixture.js
   - tests/extension/terminal-sidepanel/sidepanel-terminal-io.test.js
   - tests/extension/terminal-sidepanel/sidepanel-terminal-ui.test.js
@@ -96,6 +98,9 @@ last_verified_date: 2026-04-03
 - Mode/Action: null
 - Location: `docs/features/feature/tab-tracking-ux`
 - When a site is tracked, the popup now exposes an `Audit` CTA that shares the same trigger path as the tracked hover launcher.
+- Favicon tracking indicators consume runtime-validated canonical tracking
+  messages. Malformed extension messages and incomplete initial responses are
+  ignored rather than mutating page UI from untrusted shapes.
 - The hover launcher is shown on tracked workspace tabs and hides only while the Kaboom side panel is open.
 - Terminal workspace ownership now targets one Chrome tab group, even though broader tracking flows still use `TRACKED_TAB_ID` during the rollout.
 - The hover launcher now includes an `Audit` action that opens the side panel and then triggers the shared audit bridge.

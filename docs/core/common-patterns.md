@@ -165,6 +165,9 @@ Use this as a hard checklist during design, coding, and review.
   bounds, correlates, and reports. Boundary payloads have one canonical wire
   owner; handler-local transport types and manually synchronized enums are
   prohibited.
+- Register important contract names in `.architecture-boundaries.json`; CI
+  rejects declarations outside the configured canonical owner, preventing a
+  local interface from silently drifting away from the runtime contract.
 - Wire contracts flow in one direction: canonical Go structs generate
   TypeScript and OpenAPI schemas, shared fixtures prove both directions, and CI
   byte-compares downstream generated clients. Optionality overrides and parallel

@@ -8,7 +8,7 @@ import type { WsEventMessage, EnhancedActionMessage, NetworkBodyMessage, Perform
 import type { LogLevelFilter } from './capture/telemetry.js';
 import type { ConnectionStatus } from './runtime/state.js';
 import type { BrowserStateSnapshot, StateAction } from './runtime/state.js';
-import type { GetTrackingStateMessage, TrackingContentReadyMessage, TrackingReadinessProbeMessage, TrackingContinuityChangedMessage } from './runtime/tracking.js';
+import type { GetTrackingStateMessage, TrackingContentReadyMessage, TrackingReadinessProbeMessage, TrackingContinuityChangedMessage, TrackingStateChangedMessage } from './runtime/tracking.js';
 import type { RuntimeMessageName } from '../lib/constants.js';
 /**
  * Message to get current tab ID
@@ -405,16 +405,6 @@ interface DrawModeStopMessage {
 }
 interface GetAnnotationsMessage {
     readonly type: 'kaboom_get_annotations';
-}
-/**
- * Tracking state change notification (background to content)
- */
-export interface TrackingStateChangedMessage {
-    readonly type: 'tracking_state_changed';
-    readonly state: {
-        readonly isTracked: boolean;
-        readonly aiPilotEnabled: boolean;
-    };
 }
 /**
  * State management message

@@ -1456,7 +1456,11 @@
     }
   }
   function notifyTrackingState(tabId, isTracked) {
-    chrome.tabs.sendMessage(tabId, { type: "tracking_state_changed", state: { isTracked, aiPilotEnabled: false } }).catch(() => {
+    const message = {
+      type: "tracking_state_changed",
+      state: { isTracked, aiPilotEnabled: false }
+    };
+    chrome.tabs.sendMessage(tabId, message).catch(() => {
     });
   }
   function ensureContentScript(tabId) {

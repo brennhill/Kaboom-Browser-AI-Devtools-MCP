@@ -2319,6 +2319,32 @@
     });
   }
 
+  // extension/types/runtime/tracking.js
+  var TRACKING_PHASES = /* @__PURE__ */ new Set([
+    "idle",
+    "confirmed",
+    "navigation_started",
+    "provisional_url",
+    "content_injecting",
+    "extension_reconnecting",
+    "recovery_failed"
+  ]);
+  function isRecord2(value) {
+    return typeof value === "object" && value !== null;
+  }
+  function isTrackingState(value) {
+    return isRecord2(value) && typeof value.isTracked === "boolean" && typeof value.aiPilotEnabled === "boolean";
+  }
+  function isTrackingStateChangedMessage(value) {
+    return isRecord2(value) && value.type === "tracking_state_changed" && isTrackingState(value.state);
+  }
+  function isGetTrackingStateResponse(value) {
+    if (!isRecord2(value) || !isRecord2(value.state) || !isTrackingState(value.state))
+      return false;
+    const continuity = value.state.continuity;
+    return isRecord2(continuity) && typeof continuity.phase === "string" && TRACKING_PHASES.has(continuity.phase) && typeof continuity.is_tracked === "boolean";
+  }
+
   // extension/content/favicon-replacer.js
   var originalFaviconHref = null;
   var flickerInterval = null;
@@ -2326,14 +2352,14 @@
     chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
       if (sender.id !== chrome.runtime.id)
         return false;
-      if (message.type === "tracking_state_changed") {
-        const newState = message.state;
-        updateFavicon(newState);
+      if (isTrackingStateChangedMessage(message)) {
+        updateFavicon(message.state);
       }
       return false;
     });
-    chrome.runtime.sendMessage({ type: "get_tracking_state" }, (response) => {
-      if (response && response.state) {
+    const request = { type: "get_tracking_state" };
+    chrome.runtime.sendMessage(request, (response) => {
+      if (isGetTrackingStateResponse(response)) {
         updateFavicon(response.state);
       }
     });

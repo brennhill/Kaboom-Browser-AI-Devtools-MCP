@@ -9,10 +9,12 @@
  * Adds flickering animation when AI Pilot is active.
  */
 
-interface TrackingState {
-  isTracked: boolean
-  aiPilotEnabled: boolean
-}
+import {
+  isGetTrackingStateResponse,
+  isTrackingStateChangedMessage,
+  type GetTrackingStateMessage,
+  type TrackingState
+} from '../types/runtime/tracking.js'
 
 /**
  * Original favicon href (to restore when tracking stops)
@@ -32,12 +34,11 @@ let flickerInterval: number | null = null
 // #lizard forgives
 export function initFaviconReplacer(): void {
   // Listen for tracking state updates from background
-  chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
+  chrome.runtime.onMessage.addListener((message: unknown, sender, _sendResponse) => {
     // Only accept messages from the extension itself (background script)
     if (sender.id !== chrome.runtime.id) return false
-    if (message.type === 'tracking_state_changed') {
-      const newState: TrackingState = message.state
-      updateFavicon(newState)
+    if (isTrackingStateChangedMessage(message)) {
+      updateFavicon(message.state)
     }
     // Explicitly return false so Chrome doesn't prematurely resolve
     // sendMessage promises from other listeners (e.g. DOM_QUERY, A11Y_QUERY).
@@ -45,8 +46,9 @@ export function initFaviconReplacer(): void {
   })
 
   // Request initial tracking state
-  chrome.runtime.sendMessage({ type: 'get_tracking_state' }, (response: { state?: TrackingState }) => {
-    if (response && response.state) {
+  const request: GetTrackingStateMessage = { type: 'get_tracking_state' }
+  chrome.runtime.sendMessage(request, (response: unknown) => {
+    if (isGetTrackingStateResponse(response)) {
       updateFavicon(response.state)
     }
   })

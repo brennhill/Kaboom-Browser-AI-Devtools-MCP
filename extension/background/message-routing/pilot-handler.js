@@ -11,22 +11,24 @@ export async function broadcastTrackingState(untrackedTabId) {
         const [aiPilotEnabled, trackedTab] = await Promise.all([readPilotPreference(), readTrackedTab()]);
         const trackedTabId = trackedTab.id;
         if (trackedTabId) {
-            chrome.tabs
-                .sendMessage(trackedTabId, {
+            const trackedMessage = {
                 type: 'tracking_state_changed',
                 state: { isTracked: true, aiPilotEnabled }
-            })
+            };
+            chrome.tabs
+                .sendMessage(trackedTabId, trackedMessage)
                 .catch(() => {
                 // EXPECTED_ABSENCE: content scripts disappear during navigation; storage
                 // remains authoritative and logging this would flag normal reinjection.
             });
         }
         if (untrackedTabId && untrackedTabId !== trackedTabId) {
-            chrome.tabs
-                .sendMessage(untrackedTabId, {
+            const untrackedMessage = {
                 type: 'tracking_state_changed',
                 state: { isTracked: false, aiPilotEnabled: false }
-            })
+            };
+            chrome.tabs
+                .sendMessage(untrackedTabId, untrackedMessage)
                 .catch(() => {
                 // EXPECTED_ABSENCE: a missing recipient is normal for an untracked or
                 // closed tab; logging it would misleadingly imply tracking is unhealthy.

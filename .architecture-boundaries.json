@@ -4,6 +4,11 @@
   "forbid_reexports": true,
   "forbidden_source_files": ["src/types/index.ts", "src/background/index.ts", "src/background/ui/tab-state.ts"],
   "forbidden_import_suffixes": ["types/index.js", "background/index.js", "background/ui/tab-state.js"],
+  "canonical_type_owners": {
+    "TrackingState": "src/types/runtime/tracking.ts",
+    "TrackingStateChangedMessage": "src/types/runtime/tracking.ts",
+    "GetTrackingStateResponse": "src/types/runtime/tracking.ts"
+  },
   "export_exceptions": {
     "src/lib/constants.ts": {
       "max": 64,

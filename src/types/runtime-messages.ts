@@ -22,7 +22,8 @@ import type {
   GetTrackingStateMessage,
   TrackingContentReadyMessage,
   TrackingReadinessProbeMessage,
-  TrackingContinuityChangedMessage
+  TrackingContinuityChangedMessage,
+  TrackingStateChangedMessage
 } from './runtime/tracking.js'
 import type { DomQueryResult } from './capture/dom.js'
 import type { A11yAuditResult } from './capture/accessibility.js'
@@ -536,17 +537,6 @@ interface DrawModeStopMessage {
 
 interface GetAnnotationsMessage {
   readonly type: 'kaboom_get_annotations'
-}
-
-/**
- * Tracking state change notification (background to content)
- */
-export interface TrackingStateChangedMessage {
-  readonly type: 'tracking_state_changed'
-  readonly state: {
-    readonly isTracked: boolean
-    readonly aiPilotEnabled: boolean
-  }
 }
 
 /**

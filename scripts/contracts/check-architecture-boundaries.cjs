@@ -29,6 +29,10 @@ function exportCount(source) {
     ).length
 }
 
+function escapePattern(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function importedFeature(specifier, file) {
   if (!specifier.startsWith('.')) return null
   const resolved = path.resolve(path.dirname(file), specifier)
@@ -110,6 +114,16 @@ for (const file of files) {
     }
   }
   dependencyGraph.set(file, dependencies)
+
+  for (const [contract, canonicalOwner] of Object.entries(config.canonical_type_owners || {})) {
+    const name = escapePattern(contract)
+    const declaration = new RegExp(
+      `(?:^|\\n)\\s*(?:export\\s+)?(?:(?:interface|class|enum)\\s+${name}\\b|type\\s+${name}\\s*=)`
+    )
+    if (declaration.test(source) && relative !== canonicalOwner) {
+      violations.push(`${relative}: ${contract} must be declared only by ${canonicalOwner}`)
+    }
+  }
 
   const reexportPattern = /export\s+(?:type\s+)?(?:\{[^}]*\}|\*)\s+from\s+['"]([^'"]+)['"]/g
   while ((match = reexportPattern.exec(source)) !== null) {

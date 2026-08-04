@@ -16,6 +16,7 @@ function fixture(files, overrides = {}) {
     forbidden_imports: { content: ['background'], background: ['content'] },
     forbidden_source_files: [],
     forbidden_import_suffixes: [],
+    canonical_type_owners: {},
     forbid_reexports: false,
     enforce_zero_cycles: true,
     ...overrides
@@ -107,4 +108,18 @@ test('rejects every internal re-export when strict ownership is enabled', () => 
   )
   assert.equal(result.status, 1)
   assert.match(result.stderr, /internal re-export is prohibited/)
+})
+
+test('rejects canonical contract declarations outside their owner module', () => {
+  const result = check(
+    fixture(
+      {
+        'src/types/runtime/tracking.ts': 'export interface TrackingState { readonly active: boolean }\n',
+        'src/content/favicon.ts': 'interface TrackingState { active: boolean }\nexport const icon = 1\n'
+      },
+      { canonical_type_owners: { TrackingState: 'src/types/runtime/tracking.ts' } }
+    )
+  )
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /TrackingState must be declared only by src\/types\/runtime\/tracking\.ts/)
 })

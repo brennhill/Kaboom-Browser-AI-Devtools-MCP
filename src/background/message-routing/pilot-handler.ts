@@ -6,7 +6,7 @@ import { StorageKey } from '../../lib/constants.js'
 import { readLocalState } from '../../lib/storage/validated.js'
 import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
 import { reportStateRecovery } from '../runtime-state/state-recovery.js'
-import type { TrackingContinuitySnapshot } from '../../types/runtime/tracking.js'
+import type { TrackingContinuitySnapshot, TrackingStateChangedMessage } from '../../types/runtime/tracking.js'
 import type { MessageHandlerOwner } from './types.js'
 
 export interface PilotHandlerDependencies {
@@ -21,22 +21,24 @@ export async function broadcastTrackingState(untrackedTabId?: number | null): Pr
     const [aiPilotEnabled, trackedTab] = await Promise.all([readPilotPreference(), readTrackedTab()])
     const trackedTabId = trackedTab.id
     if (trackedTabId) {
+      const trackedMessage: TrackingStateChangedMessage = {
+        type: 'tracking_state_changed',
+        state: { isTracked: true, aiPilotEnabled }
+      }
       chrome.tabs
-        .sendMessage(trackedTabId, {
-          type: 'tracking_state_changed',
-          state: { isTracked: true, aiPilotEnabled }
-        })
+        .sendMessage(trackedTabId, trackedMessage)
         .catch(() => {
           // EXPECTED_ABSENCE: content scripts disappear during navigation; storage
           // remains authoritative and logging this would flag normal reinjection.
         })
     }
     if (untrackedTabId && untrackedTabId !== trackedTabId) {
+      const untrackedMessage: TrackingStateChangedMessage = {
+        type: 'tracking_state_changed',
+        state: { isTracked: false, aiPilotEnabled: false }
+      }
       chrome.tabs
-        .sendMessage(untrackedTabId, {
-          type: 'tracking_state_changed',
-          state: { isTracked: false, aiPilotEnabled: false }
-        })
+        .sendMessage(untrackedTabId, untrackedMessage)
         .catch(() => {
           // EXPECTED_ABSENCE: a missing recipient is normal for an untracked or
           // closed tab; logging it would misleadingly imply tracking is unhealthy.

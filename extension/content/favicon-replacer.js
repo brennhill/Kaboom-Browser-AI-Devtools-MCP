@@ -3,6 +3,12 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 /**
+ * @fileoverview Favicon Replacer - Visual indicator for tracked tabs
+ * Replaces the page's favicon with the Kaboom flame icon when tab tracking is enabled.
+ * Adds flickering animation when AI Pilot is active.
+ */
+import { isGetTrackingStateResponse, isTrackingStateChangedMessage } from '../types/runtime/tracking.js';
+/**
  * Original favicon href (to restore when tracking stops)
  */
 let originalFaviconHref = null;
@@ -22,17 +28,17 @@ export function initFaviconReplacer() {
         // Only accept messages from the extension itself (background script)
         if (sender.id !== chrome.runtime.id)
             return false;
-        if (message.type === 'tracking_state_changed') {
-            const newState = message.state;
-            updateFavicon(newState);
+        if (isTrackingStateChangedMessage(message)) {
+            updateFavicon(message.state);
         }
         // Explicitly return false so Chrome doesn't prematurely resolve
         // sendMessage promises from other listeners (e.g. DOM_QUERY, A11Y_QUERY).
         return false;
     });
     // Request initial tracking state
-    chrome.runtime.sendMessage({ type: 'get_tracking_state' }, (response) => {
-        if (response && response.state) {
+    const request = { type: 'get_tracking_state' };
+    chrome.runtime.sendMessage(request, (response) => {
+        if (isGetTrackingStateResponse(response)) {
             updateFavicon(response.state);
         }
     });
