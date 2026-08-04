@@ -39,6 +39,36 @@ func filterByEvent(beacons []map[string]any, event string) []map[string]any {
 	return out
 }
 
+func TestE2E_IncidentLifecycleEmitsDistinctBoundedTransitions(t *testing.T) {
+	received := captureBeacon(t)
+	store := incident.NewStore(4, QueueReliability)
+	key, err := store.Detect(incident.Report{Code: incident.CodeStateRecoveryFailed, CorrelationID: "local-only", Generation: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !store.Retry(key, 1, 1) || !store.Recover(key, 1) {
+		t.Fatal("canonical recovery lifecycle did not advance")
+	}
+
+	seen := make(map[string]int)
+	for range 3 {
+		body := waitForEvent(t, received, "app_error")
+		bucket, _ := body["attempt_bucket"].(string)
+		outcome, _ := body["outcome"].(string)
+		seen[outcome+":"+bucket]++
+		for _, forbidden := range []string{"correlation_id", "generation", "detail", "history"} {
+			if _, exists := body[forbidden]; exists {
+				t.Fatalf("lifecycle telemetry leaked %q: %#v", forbidden, body)
+			}
+		}
+	}
+	for _, transition := range []string{"pending:0", "pending:1", "recovered:1"} {
+		if seen[transition] != 1 {
+			t.Fatalf("transition counts = %#v, want exactly one %s", seen, transition)
+		}
+	}
+}
+
 // requireEnvelope checks all required shared envelope fields are present and valid.
 func requireEnvelope(t *testing.T, body map[string]any, label string) {
 	t.Helper()

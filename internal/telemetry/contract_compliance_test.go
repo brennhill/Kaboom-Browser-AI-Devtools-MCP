@@ -156,6 +156,7 @@ func TestContract_AppErrorUsesFixedPrivacyBoundedSchema(t *testing.T) {
 		"event": true, "iid": true, "sid": true, "ts": true, "v": true,
 		"os": true, "channel": true, "llm": true, "error_kind": true,
 		"error_code": true, "severity": true, "source": true, "retryable": true,
+		"outcome": true, "attempt_bucket": true, "latency_bucket": true,
 	}
 	for field := range body {
 		if !allowed[field] {
@@ -170,15 +171,44 @@ func TestContract_ReliabilityProjectionUsesAppErrorAllowlist(t *testing.T) {
 		Code: incident.CodeStateRecoveryFailed, Subsystem: incident.SubsystemState,
 		Stage: incident.StageRecovery, Severity: incident.SeverityError,
 		Retryable: true, Outcome: incident.OutcomePending, AttemptBucket: incident.AttemptZero,
+		LatencyBucket: incident.LatencyUnderSecond,
 	})
 	body := waitForEvent(t, received, "app_error")
 	if body["error_code"] != "STATE_RECOVERY_FAILED" || body["source"] != "state" || body["severity"] != "error" || body["retryable"] != true {
 		t.Fatalf("reliability app_error = %#v", body)
 	}
-	for _, forbidden := range []string{"stage", "outcome", "detail", "fix", "correlation_id", "generation"} {
+	if body["outcome"] != "pending" || body["attempt_bucket"] != "0" || body["latency_bucket"] != "under_1s" {
+		t.Fatalf("reliability lifecycle buckets = %#v", body)
+	}
+	for _, forbidden := range []string{"stage", "detail", "fix", "correlation_id", "generation"} {
 		if _, ok := body[forbidden]; ok {
 			t.Fatalf("reliability event leaked %q: %#v", forbidden, body)
 		}
+	}
+}
+
+func TestContract_ReliabilityRecoveryTransitionIsQueryable(t *testing.T) {
+	received := captureBeacon(t)
+	ReportReliability(incident.ReliabilityEvent{
+		Code: incident.CodeStateRecoveryFailed, Outcome: incident.OutcomeRecovered,
+		AttemptBucket: incident.AttemptTwoThree, LatencyBucket: incident.LatencyFiveToThirty,
+	})
+	body := waitForEvent(t, received, "app_error")
+	if body["outcome"] != "recovered" || body["attempt_bucket"] != "2_3" || body["latency_bucket"] != "5s_30s" {
+		t.Fatalf("recovery transition = %#v", body)
+	}
+}
+
+func TestContract_ReliabilityRejectsUnknownLifecycleDimensions(t *testing.T) {
+	received := captureBeacon(t)
+	QueueReliability(incident.ReliabilityEvent{
+		Code: incident.CodeStateRecoveryFailed, Outcome: incident.Outcome("private-state"),
+		AttemptBucket: incident.AttemptOne, LatencyBucket: incident.LatencyUnderSecond,
+	})
+	select {
+	case body := <-received:
+		t.Fatalf("invalid lifecycle dimension reached telemetry: %#v", body)
+	case <-time.After(20 * time.Millisecond):
 	}
 }
 
@@ -188,6 +218,7 @@ func TestContract_ReliabilityProjectionCannotOverrideRegistryClassification(t *t
 		Code: incident.CodeDaemonPanic, Subsystem: incident.SubsystemInstaller,
 		Severity: incident.SeverityWarning, Retryable: true,
 		Outcome: incident.OutcomePending, AttemptBucket: incident.AttemptZero,
+		LatencyBucket: incident.LatencyUnderSecond,
 	})
 	body := waitForEvent(t, received, "app_error")
 	if body["source"] != "daemon" || body["severity"] != "fatal" {

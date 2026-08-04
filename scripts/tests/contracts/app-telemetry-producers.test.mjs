@@ -36,6 +36,9 @@ test('runtime errors use the closed incident registry', async () => {
   assert.doesNotMatch(beacon, /classifyAppError|normalizeAppErrorCode/)
   assert.match(registry, /PrivacyBoundedProductMetadata/)
   assert.match(registry, /CodeBridgeSpawnTimeout/)
+  assert.match(beacon, /"outcome":\s+string\(event\.Outcome\)/)
+  assert.match(beacon, /"attempt_bucket":\s+string\(event\.AttemptBucket\)/)
+  assert.match(beacon, /"latency_bucket":\s+string\(event\.LatencyBucket\)/)
 })
 
 test('canonical contract names exactly match the structured-event allowlist', async () => {

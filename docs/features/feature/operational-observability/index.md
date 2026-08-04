@@ -66,6 +66,11 @@ saturation, recovered delivery panics, and pending work; a panicking transport
 cannot kill the worker or strand shutdown accounting. The daemon attaches the
 canonical incident store and warms identity before opening its HTTP listener,
 preventing first-request initialization from bypassing recovery diagnostics.
+The analytics projection now preserves every distinct bounded lifecycle
+transition: initial failure (`pending:0`), retry attempt buckets, recovery, and
+exhaustion, together with a closed latency bucket. This makes recovery
+effectiveness queryable by the existing version, platform, client, and
+registry-owned subsystem dimensions without exporting local correlation data.
 
 All legacy runtime `app_error` producers now use the same closed registry.
 Callers cannot provide arbitrary categories, sources, severities, retryability,

@@ -70,7 +70,7 @@ type reliabilityDispatcher struct {
 	window      time.Duration
 	now         func() time.Time
 	mu          sync.Mutex
-	lastByCode  map[incident.Code]time.Time
+	lastByEvent map[reliabilityRateKey]time.Time
 	once        sync.Once
 	pending     sync.WaitGroup
 	pendingNow  atomic.Int64
@@ -79,15 +79,23 @@ type reliabilityDispatcher struct {
 	panics      atomic.Uint64
 }
 
+type reliabilityRateKey struct {
+	code          incident.Code
+	outcome       incident.Outcome
+	attemptBucket incident.AttemptBucket
+	latencyBucket incident.LatencyBucket
+}
+
 func newReliabilityDispatcher(capacity int, window time.Duration, now func() time.Time, deliver func(incident.ReliabilityEvent)) *reliabilityDispatcher {
 	if capacity < 1 {
 		capacity = 1
 	}
-	return &reliabilityDispatcher{queue: make(chan incident.ReliabilityEvent, capacity), deliver: deliver, window: window, now: now, lastByCode: make(map[incident.Code]time.Time)}
+	return &reliabilityDispatcher{queue: make(chan incident.ReliabilityEvent, capacity), deliver: deliver, window: window, now: now, lastByEvent: make(map[reliabilityRateKey]time.Time)}
 }
 
 func (d *reliabilityDispatcher) Enqueue(event incident.ReliabilityEvent) bool {
-	admittedAt, admitted := d.admit(event.Code)
+	key := rateKey(event)
+	admittedAt, admitted := d.admit(key)
 	if !admitted {
 		d.rateLimited.Add(1)
 		deliveryCounters.suppressed.Add(1)
@@ -107,7 +115,7 @@ func (d *reliabilityDispatcher) Enqueue(event incident.ReliabilityEvent) bool {
 	case d.queue <- event:
 		return true
 	default:
-		d.releaseAdmission(event.Code, admittedAt)
+		d.releaseAdmission(key, admittedAt)
 		d.pending.Done()
 		d.pendingNow.Add(-1)
 		d.saturated.Add(1)
@@ -117,27 +125,27 @@ func (d *reliabilityDispatcher) Enqueue(event incident.ReliabilityEvent) bool {
 	}
 }
 
-func (d *reliabilityDispatcher) admit(code incident.Code) (time.Time, bool) {
+func (d *reliabilityDispatcher) admit(key reliabilityRateKey) (time.Time, bool) {
 	if d.window <= 0 {
 		return time.Time{}, true
 	}
 	now := d.now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if last, ok := d.lastByCode[code]; ok && now.Sub(last) < d.window {
+	if last, ok := d.lastByEvent[key]; ok && !now.Before(last) && now.Sub(last) < d.window {
 		return time.Time{}, false
 	}
-	d.lastByCode[code] = now
+	d.lastByEvent[key] = now
 	return now, true
 }
 
-func (d *reliabilityDispatcher) releaseAdmission(code incident.Code, admittedAt time.Time) {
+func (d *reliabilityDispatcher) releaseAdmission(key reliabilityRateKey, admittedAt time.Time) {
 	if d.window <= 0 {
 		return
 	}
 	d.mu.Lock()
-	if d.lastByCode[code].Equal(admittedAt) {
-		delete(d.lastByCode, code)
+	if d.lastByEvent[key].Equal(admittedAt) {
+		delete(d.lastByEvent, key)
 	}
 	d.mu.Unlock()
 }
@@ -166,7 +174,7 @@ func (d *reliabilityDispatcher) Diagnostics() ReliabilityDispatcherSnapshot {
 func (d *reliabilityDispatcher) resetForTest() {
 	d.WaitIdle()
 	d.mu.Lock()
-	clear(d.lastByCode)
+	clear(d.lastByEvent)
 	d.mu.Unlock()
 	d.rateLimited.Store(0)
 	d.saturated.Store(0)
@@ -243,26 +251,24 @@ func buildEnvelope(event string) map[string]any {
 
 // AppError fires a structured app_error event from a fixed privacy-bounded schema.
 func AppError(code incident.Code) {
-	QueueReliability(incident.ReliabilityEvent{Code: code, Outcome: incident.OutcomePending, AttemptBucket: incident.AttemptZero})
+	QueueReliability(incident.ReliabilityEvent{Code: code, Outcome: incident.OutcomePending, AttemptBucket: incident.AttemptZero, LatencyBucket: incident.LatencyUnderSecond})
 }
 
 // ReportReliability consumes the canonical privacy-safe incident projection.
-// The current app_error wire contract records initial detection; recovery and
-// retry aggregation remain local until the versioned reliability summary
-// contract lands.
 func ReportReliability(event incident.ReliabilityEvent) {
-	if event.Outcome != incident.OutcomePending || event.AttemptBucket != incident.AttemptZero {
-		return
-	}
-	definition, ok := reliabilityDefinition(event.Code)
+	definition, ok := validateReliabilityEvent(event)
 	if !ok {
 		return
 	}
 	fields := map[string]any{
-		"event":      "app_error",
-		"error_code": strings.ToUpper(string(event.Code)),
-		"severity":   string(definition.Severity), "source": string(definition.Subsystem),
-		"error_kind": string(definition.ErrorKind),
+		"event":          "app_error",
+		"error_code":     strings.ToUpper(string(event.Code)),
+		"severity":       string(definition.Severity),
+		"source":         string(definition.Subsystem),
+		"error_kind":     string(definition.ErrorKind),
+		"outcome":        string(event.Outcome),
+		"attempt_bucket": string(event.AttemptBucket),
+		"latency_bucket": string(event.LatencyBucket),
 	}
 	if definition.Retryable {
 		fields["retryable"] = true
@@ -282,10 +288,37 @@ func reliabilityDefinition(code incident.Code) (incident.Definition, bool) {
 // and startup identity loading. This avoids recursively entering GetInstallID
 // when the incident itself describes install-identity recovery.
 func QueueReliability(event incident.ReliabilityEvent) {
-	if _, ok := reliabilityDefinition(event.Code); !ok {
+	if _, ok := validateReliabilityEvent(event); !ok {
 		return
 	}
 	reliabilityEvents.Enqueue(event)
+}
+
+func rateKey(event incident.ReliabilityEvent) reliabilityRateKey {
+	return reliabilityRateKey{code: event.Code, outcome: event.Outcome, attemptBucket: event.AttemptBucket, latencyBucket: event.LatencyBucket}
+}
+
+func validateReliabilityEvent(event incident.ReliabilityEvent) (incident.Definition, bool) {
+	definition, ok := reliabilityDefinition(event.Code)
+	if !ok || !validOutcome(event.Outcome) || !validAttemptBucket(event.AttemptBucket) || !validLatencyBucket(event.LatencyBucket) {
+		if ok {
+			slog.Error("rejected invalid reliability transition", "component", "telemetry_registry")
+		}
+		return incident.Definition{}, false
+	}
+	return definition, true
+}
+
+func validOutcome(value incident.Outcome) bool {
+	return value == incident.OutcomePending || value == incident.OutcomeRecovered || value == incident.OutcomeExhausted
+}
+
+func validAttemptBucket(value incident.AttemptBucket) bool {
+	return value == incident.AttemptZero || value == incident.AttemptOne || value == incident.AttemptTwoThree || value == incident.AttemptFourPlus
+}
+
+func validLatencyBucket(value incident.LatencyBucket) bool {
+	return value == incident.LatencyUnderSecond || value == incident.LatencyOneToFive || value == incident.LatencyFiveToThirty || value == incident.LatencyOverThirty
 }
 
 // BeaconUsageSummary fires a structured usage_summary beacon.

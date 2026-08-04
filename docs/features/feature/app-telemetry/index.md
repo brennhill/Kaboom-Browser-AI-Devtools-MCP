@@ -73,6 +73,11 @@ registry owns every bounded analytics dimension and privacy classification;
 the former free-form category classifier and normalizer were deleted in the
 same migration. Unknown codes emit nothing, and contract tests prove private
 or caller-authored fields cannot enter the envelope.
+Canonical retry, recovery, and exhaustion transitions use the same event with
+closed outcome, attempt, and latency buckets. Rate limiting keys include all
+four dimensions, so repeated identical transitions collapse while a recovery
+cannot be hidden by its preceding detection. Correlation IDs, generations,
+history, and local evidence never cross the analytics boundary.
 
 This is the sole exception to Kaboom's local-data policy. It reports anonymous
 install activity and product-command usage using random install/session

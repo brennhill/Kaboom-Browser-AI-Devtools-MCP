@@ -107,6 +107,35 @@ func TestReliabilityDispatcherRateLimitsPerCodeWithoutBlocking(t *testing.T) {
 	}
 }
 
+func TestReliabilityDispatcherDoesNotCollapseDistinctTransitionBuckets(t *testing.T) {
+	delivered := make(chan incident.ReliabilityEvent, 2)
+	dispatcher := newReliabilityDispatcher(2, time.Minute, time.Now, func(event incident.ReliabilityEvent) { delivered <- event })
+	detected := incident.ReliabilityEvent{Code: incident.CodeStateRecoveryFailed, Outcome: incident.OutcomePending, AttemptBucket: incident.AttemptZero}
+	recovered := incident.ReliabilityEvent{Code: incident.CodeStateRecoveryFailed, Outcome: incident.OutcomeRecovered, AttemptBucket: incident.AttemptOne, LatencyBucket: incident.LatencyOneToFive}
+	if !dispatcher.Enqueue(detected) || !dispatcher.Enqueue(recovered) {
+		t.Fatal("distinct lifecycle transitions were incorrectly rate limited")
+	}
+	dispatcher.WaitIdle()
+	if got := len(delivered); got != 2 {
+		t.Fatalf("delivered %d transitions, want 2", got)
+	}
+}
+
+func TestReliabilityDispatcherClockRollbackStartsFreshWindow(t *testing.T) {
+	now := time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)
+	dispatcher := newReliabilityDispatcher(2, time.Minute, func() time.Time { return now }, func(incident.ReliabilityEvent) {})
+	event := incident.ReliabilityEvent{Code: incident.CodeStateRecoveryFailed}
+	if !dispatcher.Enqueue(event) {
+		t.Fatal("first event was rejected")
+	}
+	dispatcher.WaitIdle()
+	now = now.Add(-time.Hour)
+	if !dispatcher.Enqueue(event) {
+		t.Fatal("clock rollback incorrectly extended the old rate window")
+	}
+	dispatcher.WaitIdle()
+}
+
 func TestReliabilityDispatcherSaturationDoesNotConsumeRateWindow(t *testing.T) {
 	resetDeliveryDiagnostics()
 	entered := make(chan struct{})

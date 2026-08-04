@@ -311,6 +311,9 @@ Use `tool_call` with `outcome = error` for normal user-invoked tool failures.
 | `severity` | string | yes | `fatal` | One of `warning`, `error`, `fatal` |
 | `source` | string | no | `daemon` | Runtime origin |
 | `retryable` | boolean | no | `true` | Whether the app could retry automatically |
+| `outcome` | string | yes | `recovered` | `pending`, `recovered`, or `exhausted` |
+| `attempt_bucket` | string | yes | `2_3` | `0`, `1`, `2_3`, or `4_plus` |
+| `latency_bucket` | string | yes | `5s_30s` | `under_1s`, `1s_5s`, `5s_30s`, or `over_30s` |
 
 Recommended `error_kind` values:
 
@@ -351,7 +354,10 @@ Example:
   "error_kind": "internal",
   "error_code": "DAEMON_PANIC",
   "severity": "fatal",
-  "source": "daemon"
+  "source": "daemon",
+  "outcome": "pending",
+  "attempt_bucket": "0",
+  "latency_bucket": "under_1s"
 }
 ```
 
@@ -448,11 +454,11 @@ Blob layout in `kaboomTelemetry`:
 | `blob12` | channel |
 | `blob13` | llm (MCP client name) |
 | `blob14` | outcome |
-| `blob15` | async outcome |
+| `blob15` | async outcome, or `app_error.attempt_bucket` |
 | `blob16` | error kind |
 | `blob17` | error code |
 | `blob18` | severity, or joined validation errors for `malformed` rows |
-| `blob19` | screen |
+| `blob19` | screen, or `app_error.latency_bucket` |
 | `blob20` | workspace bucket |
 
 Double layout in `kaboomTelemetry`:
@@ -479,6 +485,9 @@ Notes:
 
 - `tool_call`, `first_tool_call`, `session_start`, `session_end`, and `app_error` all write `count = 1`.
 - `session_start.reason`, `session_end.reason`, and `app_error.source` are stored in `blob9`.
+- `app_error.outcome` uses `blob14`, `attempt_bucket` uses `blob15`, and
+  `latency_bucket` uses `blob19`; these fields are bounded enums and never carry
+  correlation identifiers or local evidence.
 - `ts` is stored as `double1` and should be used for v2 time filtering.
 - `malformed` rows use `error_kind = malformed_payload`, `error_code = json_parse_failed`, `contract_validation_failed`, or `body_read_failed`, and `source = ingest`.
 - `malformed` rows store only a preview in `blob8`; the full raw payload is archived in R2 under `telemetry-malformed/...` and the archive key is stored in `blob11` when archival succeeds.
@@ -497,7 +506,7 @@ Notes:
 | Session depth | `session_end.tool_calls` |
 | Session length | `session_end.duration_s` |
 | Install-level drilldown | all rows filtered by `iid` |
-| Product/runtime failures | `app_error` |
+| Product/runtime failures and recovery effectiveness | `app_error`, grouped by `error_code`, `outcome`, `attempt_bucket`, and `latency_bucket` |
 
 ## Reference Payloads
 
