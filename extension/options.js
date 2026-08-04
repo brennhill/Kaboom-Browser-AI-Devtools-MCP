@@ -84,11 +84,23 @@ bootstrapTheme();
  * Sync the terminal dev root to the daemon's active_codebase config.
  * Best-effort — failure doesn't block the save flow.
  */
-function syncDevRootToDaemon(serverUrl, devRoot) {
-    fetch(`${serverUrl}/config/active-codebase`, buildDaemonJSONRequestInit({ path: devRoot }, { method: 'PUT', signal: AbortSignal.timeout(3000) })).catch(() => {
+async function syncDevRootToDaemon(serverUrl, devRoot) {
+    try {
+        const response = await fetch(`${serverUrl}/config/active-codebase`, buildDaemonJSONRequestInit({ path: devRoot }, { method: 'PUT', signal: AbortSignal.timeout(3000) }));
+        if (!response.ok) {
+            reportStateRecovery({
+                name: 'active_codebase_sync',
+                detail: `Daemon rejected the active codebase update with HTTP ${response.status}; the local preference remains saved.`,
+                fix: 'Start or update the Kaboom daemon, then save extension settings again.'
+            });
+            return;
+        }
+        resolveStateRecovery('active_codebase_sync');
+    }
+    catch {
         // EXPECTED_ABSENCE: an offline daemon is normal while editing local options;
         // logging it would misleadingly mark the locally saved preference failed.
-    });
+    }
 }
 /**
  * Load the active_codebase from the daemon and update the dev root input if empty.
@@ -203,7 +215,7 @@ export function saveOptions() {
         [StorageKey.TERMINAL_AI_COMMAND]: terminalAICommand,
         [StorageKey.TERMINAL_DEV_ROOT]: terminalDevRoot
     })
-        .then(() => {
+        .then(async () => {
         // Show saved message
         const message = document.getElementById('saved-message');
         message?.classList.add('show');
@@ -215,7 +227,7 @@ export function saveOptions() {
         chrome.runtime.sendMessage({ type: 'set_debug_mode', enabled: debugMode });
         // Sync terminal dev root to daemon so MCP and terminal use the same CWD
         if (terminalDevRoot) {
-            syncDevRootToDaemon(serverUrl, terminalDevRoot);
+            await syncDevRootToDaemon(serverUrl, terminalDevRoot);
         }
         // Hide message after 2 seconds
         setTimeout(() => {

@@ -98,6 +98,7 @@ test_paths:
   - tests/extension/branding/logo-motion.test.js
   - tests/extension/popup-shell/popup-status.test.js
   - tests/extension/popup-shell/popup-tab-tracking-sync.test.js
+  - tests/extension/popup-shell/options.test.js
   - tests/extension/pilot/pilot-toggle.test.js
   - tests/extension/pilot/command-lifecycle.test.js
   - tests/extension/branding/version-check-branding.test.js
@@ -179,6 +180,9 @@ last_verified_date: 2026-03-28
   schema and shared by runtime messages, the tracker, and the daemon. Failed-sync
   restoration rejects unknown keys without recording their values and leaves a
   bounded local Doctor diagnostic until a clean restoration proves recovery.
+- Options persist locally even when the daemon is absent. A reachable daemon
+  that rejects an active-codebase update is a distinct failure: the redacted
+  HTTP status is reported to Doctor, while the private filesystem path is not.
 
 ## Specs
 

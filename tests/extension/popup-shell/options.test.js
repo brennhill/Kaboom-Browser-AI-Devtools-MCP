@@ -413,3 +413,45 @@ describe('Options Debug Mode Toggle', () => {
     )
   })
 })
+
+describe('Options daemon synchronization', () => {
+  beforeEach(() => {
+    globalThis.document = createMockDocument()
+    mockChrome.runtime.sendMessage = mock.fn()
+    mockChrome.storage.local.get = mock.fn((keys, cb) => cb({}))
+    mockChrome.storage.local.set = mock.fn((data, cb) => cb && cb())
+  })
+
+  test('reports a resolved daemon rejection to Doctor without exposing the saved path', async () => {
+    document.getElementById('terminal-dev-root').value = '/private/project'
+    globalThis.fetch = mock.fn(() => Promise.resolve({ ok: false, status: 500 }))
+
+    await saveOptions()
+
+    const report = mockChrome.runtime.sendMessage.mock.calls.find(
+      (call) =>
+        call.arguments[0].type === 'report_state_recovery' &&
+        call.arguments[0].diagnostic.name === 'active_codebase_sync'
+    )?.arguments[0]
+    assert.equal(report?.lifecycle, 'active')
+    assert.equal(report?.diagnostic.name, 'active_codebase_sync')
+    assert.doesNotMatch(JSON.stringify(report), /private\/project/)
+  })
+
+  test('treats an unavailable daemon as expected absence while preserving the local save', async () => {
+    document.getElementById('terminal-dev-root').value = '/local/project'
+    globalThis.fetch = mock.fn(() => Promise.reject(new Error('offline')))
+
+    await saveOptions()
+
+    assert.ok(mockChrome.storage.local.set.mock.calls.length > 0)
+    assert.equal(
+      mockChrome.runtime.sendMessage.mock.calls.some(
+        (call) =>
+          call.arguments[0].type === 'report_state_recovery' &&
+          call.arguments[0].diagnostic.name === 'active_codebase_sync'
+      ),
+      false
+    )
+  })
+})

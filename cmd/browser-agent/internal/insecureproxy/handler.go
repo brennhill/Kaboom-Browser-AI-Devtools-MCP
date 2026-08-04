@@ -5,6 +5,8 @@
 package insecureproxy
 
 import (
+	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -28,9 +30,10 @@ const (
 type JSONResponder func(http.ResponseWriter, int, any)
 
 type Handler struct {
-	capture *capture.Capture
-	respond JSONResponder
-	client  *http.Client
+	capture       *capture.Capture
+	respond       JSONResponder
+	client        *http.Client
+	responseLimit int64
 }
 
 func New(cap *capture.Capture, respond JSONResponder) *Handler {
@@ -41,7 +44,22 @@ func New(cap *capture.Capture, respond JSONResponder) *Handler {
 			Timeout:   insecureProxyTimeout,
 			Transport: uploadsec.NewSSRFSafeTransport(func() bool { return false }),
 		},
+		responseLimit: insecureProxyMaxResponseBytes,
 	}
+}
+
+var errResponseTooLarge = errors.New("upstream response exceeds insecure proxy limit")
+
+func stageResponseBody(body io.Reader, limit int64) ([]byte, error) {
+	var staged bytes.Buffer
+	read, err := io.Copy(&staged, io.LimitReader(body, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if read > limit {
+		return nil, errResponseTooLarge
+	}
+	return staged.Bytes(), nil
 }
 
 var insecureProxyStripHeaders = map[string]bool{
@@ -105,6 +123,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer upstreamResp.Body.Close() //nolint:errcheck
+	if upstreamResp.ContentLength > h.responseLimit {
+		h.respond(w, http.StatusBadGateway, map[string]string{"error": "Target response exceeds proxy size limit"})
+		return
+	}
+	responseBody, err := stageResponseBody(upstreamResp.Body, h.responseLimit)
+	if err != nil {
+		message := "Failed to read target response"
+		if errors.Is(err, errResponseTooLarge) {
+			message = "Target response exceeds proxy size limit"
+		}
+		h.respond(w, http.StatusBadGateway, map[string]string{"error": message})
+		return
+	}
 
 	for key, values := range upstreamResp.Header {
 		if insecureProxyStripHeaders[strings.ToLower(key)] {
@@ -123,5 +154,5 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Kaboom-Production-Parity", "true")
 	}
 	w.WriteHeader(upstreamResp.StatusCode)
-	_, _ = io.Copy(w, io.LimitReader(upstreamResp.Body, insecureProxyMaxResponseBytes))
+	_, _ = w.Write(responseBody)
 }

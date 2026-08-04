@@ -4,7 +4,7 @@ feature_id: feature-csp-safe-execution
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-04
 code_paths:
   - src/background/exec/csp-safe/types.ts
   - src/background/exec/csp-safe/parser.ts
@@ -58,3 +58,9 @@ Tier 2 is the big win: content scripts in ISOLATED world are exempt from page CS
 - `execute_js` must return plain JSON-compatible values.
 - Host objects with prototype getters (for example DOMRect-like values) are serialized via `toJSON()` when available, then prototype getter introspection fallback.
 - This prevents empty `{}` payloads for geometry/style-like values returned from page context.
+
+## Insecure Proxy Response Contract
+
+- The opt-in local proxy stages each upstream response before committing its status or headers.
+- Declared and streamed bodies above the fixed 50 MiB ceiling fail with HTTP 502; Kaboom never returns a successful truncated response or partial upstream body.
+- CSP headers are stripped only after the response passes the size and read checks.

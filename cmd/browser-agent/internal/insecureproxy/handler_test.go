@@ -15,6 +15,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (fn roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return fn(req) }
+
 func testRespond(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -106,3 +110,76 @@ func TestInsecureProxyEndpoint_RequiresInsecureMode(t *testing.T) {
 		t.Fatalf("GET /insecure-proxy status = %d, want 403 when mode is normal", rr.Code)
 	}
 }
+
+func TestInsecureProxyRejectsDeclaredOversizedResponseBeforeReadingOrCommittingSuccess(t *testing.T) {
+	t.Parallel()
+	read := false
+	cap := capture.NewCapture()
+	cap.Extension().SetSecurityMode("insecure_proxy", nil)
+	handler := New(cap, testRespond)
+	handler.responseLimit = 4
+	handler.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			Header:        http.Header{"Content-Length": []string{"5"}, "X-Upstream": []string{"present"}},
+			ContentLength: 5,
+			Body:          &readTrackingBody{Reader: strings.NewReader("abcde"), read: &read},
+		}, nil
+	})}
+
+	req := httptest.NewRequest(http.MethodGet, "/insecure-proxy?target=https://example.test/large", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want 502", rr.Code)
+	}
+	if read {
+		t.Fatal("declared oversized body must be rejected before reading")
+	}
+	if rr.Header().Get("X-Upstream") != "" {
+		t.Fatal("upstream headers must not be committed on rejection")
+	}
+}
+
+func TestInsecureProxyRejectsChunkedOversizedResponseBeforeCommittingSuccess(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	cap.Extension().SetSecurityMode("insecure_proxy", nil)
+	handler := New(cap, testRespond)
+	handler.responseLimit = 4
+	handler.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			Header:        http.Header{"X-Upstream": []string{"present"}},
+			ContentLength: -1,
+			Body:          io.NopCloser(strings.NewReader("abcde")),
+		}, nil
+	})}
+
+	req := httptest.NewRequest(http.MethodGet, "/insecure-proxy?target=https://example.test/chunked", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want 502", rr.Code)
+	}
+	if rr.Header().Get("X-Upstream") != "" {
+		t.Fatal("upstream headers must not be committed on streamed rejection")
+	}
+	if strings.Contains(rr.Body.String(), "abcd") {
+		t.Fatal("partial upstream body must never be returned")
+	}
+}
+
+type readTrackingBody struct {
+	*strings.Reader
+	read *bool
+}
+
+func (body *readTrackingBody) Read(p []byte) (int, error) {
+	*body.read = true
+	return body.Reader.Read(p)
+}
+
+func (*readTrackingBody) Close() error { return nil }
