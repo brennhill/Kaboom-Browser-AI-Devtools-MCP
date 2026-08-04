@@ -132,8 +132,9 @@ func TestE2E_SessionEnd_NoOpWhenIdle(t *testing.T) {
 
 func TestE2E_OptOut_NoBeaconsSent(t *testing.T) {
 	t.Setenv("KABOOM_TELEMETRY", "off")
+	waitForBeaconDeliveryIdle()
+	reliabilityEvents.WaitIdle()
 	drainSem()
-	time.Sleep(10 * time.Millisecond)
 
 	var called bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +153,8 @@ func TestE2E_OptOut_NoBeaconsSent(t *testing.T) {
 		ToolStats: []ToolStat{{Tool: "observe:page", Family: "observe", Name: "page", Count: 1}},
 	})
 
-	time.Sleep(200 * time.Millisecond)
+	reliabilityEvents.WaitIdle()
+	waitForBeaconDeliveryIdle()
 	if called {
 		t.Fatal("no beacons should be sent when KABOOM_TELEMETRY=off")
 	}

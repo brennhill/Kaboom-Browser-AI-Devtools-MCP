@@ -204,6 +204,7 @@ var deliveryCounters struct {
 	dropped       atomic.Uint64
 	suppressed    atomic.Uint64
 	lastStatus    atomic.Int64
+	pending       sync.WaitGroup
 }
 
 // DeliveryDiagnostics returns aggregate transport outcomes without event data.
@@ -408,7 +409,9 @@ func fireBeacon(payload map[string]any) {
 
 	select {
 	case sem <- struct{}{}:
+		deliveryCounters.pending.Add(1)
 		util.SafeGo(func() {
+			defer deliveryCounters.pending.Done()
 			defer func() { <-sem }()
 
 			resp, err := beaconClient.Post(ep, "application/json", bytes.NewReader(data))
@@ -435,6 +438,14 @@ func fireBeacon(payload map[string]any) {
 		deliveryCounters.dropped.Add(1)
 		callOnFireBeacon(false)
 	}
+}
+
+// waitForBeaconDeliveryIdle waits until every request scheduled before this
+// call has reached a terminal transport outcome. Production delivery remains
+// asynchronous; lifecycle tests and orderly local diagnostics use this seam
+// instead of observing the semaphore or sleeping.
+func waitForBeaconDeliveryIdle() {
+	deliveryCounters.pending.Wait()
 }
 
 func shouldSendToEndpoint(ep string, testBinary bool) bool {

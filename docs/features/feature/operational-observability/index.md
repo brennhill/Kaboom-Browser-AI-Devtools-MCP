@@ -87,6 +87,9 @@ saturation, recovered delivery panics, and pending work; a panicking transport
 cannot kill the worker or strand shutdown accounting. The daemon attaches the
 canonical incident store and warms identity before opening its HTTP listener,
 preventing first-request initialization from bypassing recovery diagnostics.
+Beacon HTTP work has separate in-flight accounting, so delivery diagnostics
+can establish an exact idle boundary without inspecting or mutating the
+capacity semaphore.
 The analytics projection now preserves every distinct bounded lifecycle
 transition: initial failure (`pending:0`), retry attempt buckets, recovery, and
 exhaustion, together with a closed latency bucket. This makes recovery

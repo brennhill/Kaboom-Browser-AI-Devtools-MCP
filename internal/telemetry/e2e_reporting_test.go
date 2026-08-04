@@ -267,9 +267,11 @@ func TestE2E_SlowServer_DoesNotBlockCaller(t *testing.T) {
 	drainSem()
 	t.Cleanup(drainSem)
 
-	// Server that takes 5 seconds to respond — far longer than the 2s timeout.
+	requestStarted := make(chan struct{})
+	releaseRequest := make(chan struct{})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(5 * time.Second)
+		close(requestStarted)
+		<-releaseRequest
 		w.WriteHeader(http.StatusOK)
 	}))
 	t.Cleanup(srv.Close)
@@ -286,6 +288,13 @@ func TestE2E_SlowServer_DoesNotBlockCaller(t *testing.T) {
 	if elapsed > 100*time.Millisecond {
 		t.Errorf("RecordToolCall blocked for %v with slow server — should return immediately", elapsed)
 	}
+	select {
+	case <-requestStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("telemetry request did not reach the blocked test transport")
+	}
+	close(releaseRequest)
+	waitForBeaconDeliveryIdle()
 }
 
 // ---------- E2E: JSON serialization roundtrip ----------

@@ -442,8 +442,12 @@ func TestGetSessionID_DoesNotExtendSession(t *testing.T) {
 	before := session.lastSeen
 	session.mu.Unlock()
 
-	// Small delay so time.Now() would differ if GetSessionID touches.
-	time.Sleep(2 * time.Millisecond)
+	// Use a sentinel value so any accidental refresh is observable without
+	// relying on wall-clock separation.
+	before = time.Unix(123, 456)
+	session.mu.Lock()
+	session.lastSeen = before
+	session.mu.Unlock()
 
 	_ = GetSessionID()
 

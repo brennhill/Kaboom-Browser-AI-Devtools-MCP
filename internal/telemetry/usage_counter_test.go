@@ -435,6 +435,7 @@ found:
 
 func TestEmitSessionEnd_NoOpWhenNoCalls(t *testing.T) {
 	tracker := NewUsageTracker()
+	waitForBeaconDeliveryIdle()
 
 	var called bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -446,7 +447,7 @@ func TestEmitSessionEnd_NoOpWhenNoCalls(t *testing.T) {
 	defer resetEndpoint()
 
 	tracker.EmitSessionEnd("test")
-	time.Sleep(50 * time.Millisecond)
+	waitForBeaconDeliveryIdle()
 	if called {
 		t.Fatal("EmitSessionEnd should not fire when no calls were made")
 	}

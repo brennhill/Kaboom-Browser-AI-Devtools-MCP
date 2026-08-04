@@ -99,6 +99,13 @@ also reports rate-limited incidents, queue saturation, recovered delivery
 panics, and current pending work. No event or identity data is included in
 these diagnostics.
 
+The asynchronous beacon transport owns explicit in-flight lifecycle
+accounting. Tests and local shutdown diagnostics wait on that boundary instead
+of draining semaphore tokens or sleeping; blocked-transport fixtures release
+requests through channels. This makes opt-out, rejection, timeout, and no-op
+producer checks deterministic without changing fire-and-forget production
+delivery.
+
 ## Specifications
 
 - [Product specification](product-spec.md)

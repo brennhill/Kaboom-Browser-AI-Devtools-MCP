@@ -265,15 +265,43 @@ func TestBeaconDeliveryRecordsNetworkFailureWithoutPayload(t *testing.T) {
 
 func waitForDeliveryCount(t *testing.T, want uint64) {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		got := DeliveryDiagnostics()
-		if got.Accepted+got.Rejected+got.NetworkErrors+got.Dropped+got.Suppressed >= want {
-			return
-		}
-		time.Sleep(time.Millisecond)
+	waitForBeaconDeliveryIdle()
+	got := DeliveryDiagnostics()
+	if got.Accepted+got.Rejected+got.NetworkErrors+got.Dropped+got.Suppressed < want {
+		t.Fatalf("got fewer than %d delivery decisions: %+v", want, got)
 	}
-	t.Fatalf("timed out waiting for %d delivery decisions: %+v", want, DeliveryDiagnostics())
+}
+
+func TestWaitForBeaconDeliveryIdleTracksScheduledRequests(t *testing.T) {
+	requestStarted := make(chan struct{})
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		close(requestStarted)
+		<-release
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer srv.Close()
+	overrideEndpoint(srv.URL)
+	defer resetEndpoint()
+
+	emitTestSessionStart()
+	<-requestStarted
+	idle := make(chan struct{})
+	go func() {
+		waitForBeaconDeliveryIdle()
+		close(idle)
+	}()
+	select {
+	case <-idle:
+		t.Fatal("delivery reported idle while its HTTP request was still blocked")
+	default:
+	}
+	close(release)
+	select {
+	case <-idle:
+	case <-time.After(time.Second):
+		t.Fatal("delivery did not report idle after the request completed")
+	}
 }
 
 func TestBeacon_DisabledByEnv(t *testing.T) {
@@ -342,12 +370,12 @@ func TestBeacon_IgnoresHTTPFailure(t *testing.T) {
 	if elapsed > 100*time.Millisecond {
 		t.Fatalf("event emission blocked for %v on unreachable server, expected fire-and-forget", elapsed)
 	}
-	// The goroutine will fail in the background — that's fine. Give it time to clean up.
-	time.Sleep(50 * time.Millisecond)
+	waitForBeaconDeliveryIdle()
 }
 
 // drainSem empties the semaphore so tests start from a clean state.
 func drainSem() {
+	waitForBeaconDeliveryIdle()
 	for {
 		select {
 		case <-sem:
@@ -453,8 +481,8 @@ func TestBeacon_LLMFieldInEnvelope(t *testing.T) {
 // #14: Opt-out tests for canonical events and BeaconUsageSummary.
 func TestCanonicalBeacon_DisabledByEnv(t *testing.T) {
 	t.Setenv("KABOOM_TELEMETRY", "off")
+	waitForBeaconDeliveryIdle()
 	drainSem()
-	time.Sleep(10 * time.Millisecond) // let stale goroutines finish
 
 	fired := make(chan bool, 1)
 	setOnFireBeacon(func(sent bool) {
@@ -482,8 +510,8 @@ func TestCanonicalBeacon_DisabledByEnv(t *testing.T) {
 
 func TestBeaconUsageSummary_DisabledByEnv(t *testing.T) {
 	t.Setenv("KABOOM_TELEMETRY", "off")
+	waitForBeaconDeliveryIdle()
 	drainSem()
-	time.Sleep(10 * time.Millisecond) // let stale goroutines finish
 
 	fired := make(chan bool, 1)
 	setOnFireBeacon(func(sent bool) {
@@ -541,6 +569,7 @@ func TestCanonicalBeacon_DisabledByEnv_CaseInsensitive(t *testing.T) {
 
 // L1: BeaconUsageSummary with nil snapshot — should not fire.
 func TestBeaconUsageSummary_NilSnapshot(t *testing.T) {
+	waitForBeaconDeliveryIdle()
 	var called bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
@@ -552,7 +581,7 @@ func TestBeaconUsageSummary_NilSnapshot(t *testing.T) {
 	defer resetEndpoint()
 
 	BeaconUsageSummary(5, nil)
-	time.Sleep(50 * time.Millisecond)
+	waitForBeaconDeliveryIdle()
 
 	if called {
 		t.Fatal("BeaconUsageSummary should not fire with nil snapshot")
