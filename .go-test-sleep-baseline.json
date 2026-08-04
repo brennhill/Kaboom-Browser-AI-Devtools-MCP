@@ -62,7 +62,6 @@
     "internal/queries/dispatcher_test.go": 2,
     "internal/queries/expire_signal_test.go": 4,
     "internal/security/csp/csp_store_test.go": 1,
-    "internal/security/diff/diff_test.go": 3,
     "internal/server/main_handlers_edge_test.go": 1,
     "internal/server/main_handlers_test.go": 1,
     "internal/session/clientreg/clientreg_test.go": 2,

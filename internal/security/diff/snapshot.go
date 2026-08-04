@@ -33,7 +33,7 @@ func (m *Manager) TakeSnapshot(name string, bodies []types.NetworkBody) (*Snapsh
 	}
 	m.evictOldest()
 
-	snapshot := newEmptySnapshot(name)
+	snapshot := m.newEmptySnapshot(name)
 	populateSnapshotFromBodies(snapshot, bodies)
 
 	m.snapshots[name] = snapshot
@@ -59,7 +59,7 @@ func (m *Manager) ListSnapshots() []SnapshotListEntry {
 		entries = append(entries, SnapshotListEntry{
 			Name:    snapshot.Name,
 			TakenAt: snapshot.TakenAt.Format(time.RFC3339),
-			Age:     formatDuration(time.Since(snapshot.TakenAt)),
+			Age:     formatDuration(m.now().Sub(snapshot.TakenAt)),
 			Expired: m.isExpired(snapshot),
 		})
 	}
@@ -79,10 +79,10 @@ func validateSnapshotName(name string) error {
 	return nil
 }
 
-func newEmptySnapshot(name string) *Snapshot {
+func (m *Manager) newEmptySnapshot(name string) *Snapshot {
 	return &Snapshot{
 		Name:      name,
-		TakenAt:   time.Now(),
+		TakenAt:   m.now(),
 		Headers:   make(map[string]map[string]string),
 		Cookies:   make(map[string][]Cookie),
 		Auth:      make(map[string]bool),
@@ -131,7 +131,7 @@ func populateCookies(snapshot *Snapshot, origin string, body types.NetworkBody) 
 }
 
 func (m *Manager) isExpired(snapshot *Snapshot) bool {
-	return time.Since(snapshot.TakenAt) > m.ttl
+	return m.now().Sub(snapshot.TakenAt) > m.ttl
 }
 
 func (m *Manager) removeFromOrder(name string) {
@@ -169,7 +169,7 @@ func (m *Manager) resolveSnapshot(name string) (*Snapshot, error) {
 
 func (m *Manager) resolveToSnapshot(toName string, currentBodies []types.NetworkBody) (*Snapshot, error) {
 	if toName == "" || toName == "current" {
-		snapshot := newEmptySnapshot("current")
+		snapshot := m.newEmptySnapshot("current")
 		populateSnapshotFromBodies(snapshot, currentBodies)
 		return snapshot, nil
 	}

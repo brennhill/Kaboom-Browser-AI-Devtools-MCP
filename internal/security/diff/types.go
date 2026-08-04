@@ -36,6 +36,7 @@ type Manager struct {
 	order     []string // insertion order for LRU eviction
 	maxSnaps  int
 	ttl       time.Duration
+	now       func() time.Time
 }
 
 // Snapshot captures normalized security posture at one instant.
@@ -134,5 +135,6 @@ func NewManager() *Manager {
 		order:     make([]string, 0),
 		maxSnaps:  5,
 		ttl:       4 * time.Hour,
+		now:       time.Now,
 	}
 }

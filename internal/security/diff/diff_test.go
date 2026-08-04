@@ -11,6 +11,17 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
+type diffTestClock struct{ now time.Time }
+
+func (c *diffTestClock) Now() time.Time              { return c.now }
+func (c *diffTestClock) Advance(delta time.Duration) { c.now = c.now.Add(delta) }
+
+func useDiffTestClock(mgr *Manager) *diffTestClock {
+	clock := &diffTestClock{now: time.Unix(100, 0)}
+	mgr.now = clock.Now
+	return clock
+}
+
 func mustTakeSnapshot(t *testing.T, mgr *Manager, name string, bodies []types.NetworkBody) {
 	t.Helper()
 	if _, err := mgr.TakeSnapshot(name, bodies); err != nil {
@@ -199,6 +210,7 @@ func TestSnapshotMaxCount(t *testing.T) {
 func TestSnapshotTTL(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
+	clock := useDiffTestClock(mgr)
 	mgr.ttl = time.Millisecond // Very short TTL for testing
 
 	bodies := []types.NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
@@ -207,7 +219,7 @@ func TestSnapshotTTL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(2 * time.Millisecond)
 
 	_, err = mgr.Compare("old", "current", bodies)
 	if err == nil {
@@ -221,7 +233,6 @@ func TestSecurityDiffListSnapshots(t *testing.T) {
 	bodies := []types.NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
 
 	_, _ = mgr.TakeSnapshot("alpha", bodies)
-	time.Sleep(time.Millisecond)
 	_, _ = mgr.TakeSnapshot("beta", bodies)
 
 	list := mgr.ListSnapshots()
@@ -399,6 +410,7 @@ func TestSecurityDiffSnapshotOverwrite(t *testing.T) {
 func TestSecurityDiffExpiredSnapshot(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
+	clock := useDiffTestClock(mgr)
 	mgr.ttl = 1 * time.Millisecond // Very short TTL
 
 	bodies := []types.NetworkBody{
@@ -407,7 +419,7 @@ func TestSecurityDiffExpiredSnapshot(t *testing.T) {
 	}
 
 	mustTakeSnapshot(t, mgr, "old", bodies)
-	time.Sleep(5 * time.Millisecond) // Wait for expiry
+	clock.Advance(5 * time.Millisecond)
 
 	list := mgr.ListSnapshots()
 	for _, s := range list {

@@ -4,7 +4,7 @@ feature_id: feature-security-hardening
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
@@ -141,6 +141,9 @@ imports `httpsec`.
 - `internal/security/csp/csp_helpers_test.go` — resource classification and URL extraction.
 - `internal/security/csp/boundary_test.go` — session-only whitelist overrides are applied, warned about, audited, and never persisted.
 - `internal/security/diff/diff_test.go` — snapshot lifecycle and retention with shared setup helpers.
+- Security-diff retention owns a private clock boundary. Snapshot timestamps,
+  ages, TTL checks, and current comparisons share that source; tests advance a
+  fixed clock and never sleep to manufacture ordering or expiration.
 - `internal/security/diff/compare_test.go` — regression/improvement comparison and extraction.
 - `internal/security/diff/tool_test.go` — tool dispatch and summary behavior.
 - `internal/security/scan/scan_test.go` — scanner orchestration, filtering, serialization, and fuzz safety.
