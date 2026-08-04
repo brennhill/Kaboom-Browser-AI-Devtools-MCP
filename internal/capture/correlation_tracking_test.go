@@ -72,7 +72,7 @@ func TestCorrelationIDExpiration(t *testing.T) {
 		CorrelationID: correlationID,
 	}
 
-	capture.Queries().CreatePendingQueryWithTimeout(query, 120*time.Millisecond, "")
+	capture.Queries().CreatePendingQueryWithTimeout(query, 5*time.Second, "")
 
 	// Command starts as "pending"
 	cmd, found := capture.Queries().GetCommandResult(correlationID)
@@ -83,15 +83,10 @@ func TestCorrelationIDExpiration(t *testing.T) {
 		t.Errorf("Expected status 'pending', got '%s'", cmd.Status)
 	}
 
-	// Wait for expiration with polling to avoid long fixed sleep.
-	deadline := time.Now().Add(800 * time.Millisecond)
-	for time.Now().Before(deadline) {
-		cmd, found = capture.Queries().GetCommandResult(correlationID)
-		if found && cmd.Status == "expired" {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+	// Correlation tracking owns the lifecycle projection, not timer scheduling;
+	// drive the canonical expiration transition explicitly. Dedicated query
+	// expiration tests cover deadline detection and cleanup signaling.
+	capture.Queries().ExpireCommand(correlationID)
 
 	// Command should be "expired" and moved to failedCommands
 	cmd, found = capture.Queries().GetCommandResult(correlationID)
@@ -144,14 +139,8 @@ func TestCorrelationIDListCommands(t *testing.T) {
 		Params:        json.RawMessage(`{"script":"test"}`),
 		CorrelationID: "expired_1",
 	}
-	capture.Queries().CreatePendingQueryWithTimeout(expiredQuery, 120*time.Millisecond, "")
-	deadline := time.Now().Add(800 * time.Millisecond)
-	for time.Now().Before(deadline) {
-		if len(capture.Queries().GetFailedCommands()) == 1 {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+	capture.Queries().CreatePendingQueryWithTimeout(expiredQuery, 5*time.Second, "")
+	capture.Queries().ExpireCommand("expired_1")
 
 	// Check counts
 	pending := capture.Queries().GetPendingCommands()

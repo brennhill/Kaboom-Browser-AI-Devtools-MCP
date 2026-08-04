@@ -358,3 +358,6 @@ this one bounded delivery contract.
 - `internal/capture/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
 - Additional capture contract tests (`settings_path_test`, `coverage_gaps_part2_test`, `api_contract_test`) now reuse shared helper assertions to keep endpoint/status checks consistent.
 - `src/background/sync/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.
+- Correlation-view tests drive canonical command terminal transitions directly;
+  deadline scheduling and cleanup signaling remain isolated in the query
+  expiration suite, so lifecycle projection tests never poll wall-clock time.
