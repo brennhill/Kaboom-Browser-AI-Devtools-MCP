@@ -553,7 +553,10 @@ export async function startRecording(
  * @param truncated — true if auto-stopped due to memory guard or tab close
  */
 // #lizard forgives
-export async function stopRecording(truncated: boolean = false, connectionGeneration?: number): Promise<{
+export async function stopRecording(
+  truncated: boolean = false,
+  connectionGeneration?: number
+): Promise<{
   status: string
   name: string
   duration_seconds?: number

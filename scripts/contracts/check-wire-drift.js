@@ -64,6 +64,24 @@ const WIRE_PAIRS = [
       { go: 'WireQANetwork', ts: 'WireQANetwork' },
       { go: 'WireQACookie', ts: 'WireQACookie' }
     ]
+  },
+  {
+    go: 'internal/types/wire_extension_log.go',
+    ts: 'src/types/wire/wire-extension-log.ts',
+    types: [{ go: 'ExtensionLog', ts: 'ExtensionLog' }]
+  },
+  {
+    go: 'internal/capture/wire_sync.go',
+    ts: 'src/types/wire/wire-sync.ts',
+    types: [
+      { go: 'SyncRequest', ts: 'SyncRequest' },
+      { go: 'SyncSettings', ts: 'SyncSettings' },
+      { go: 'SyncCommandResult', ts: 'SyncCommandResult' },
+      { go: 'SyncInProgress', ts: 'SyncInProgress' },
+      { go: 'SyncFeaturesUsed', ts: 'SyncFeaturesUsed' },
+      { go: 'SyncResponse', ts: 'SyncResponse' },
+      { go: 'SyncCommand', ts: 'SyncCommand' }
+    ]
   }
 ]
 
@@ -110,7 +128,7 @@ function extractGoFields(content, typeName) {
 function extractTsFields(content, typeName) {
   // Match: export interface TypeName { ... }
   // Handle multi-line with nested types
-  const interfaceStart = content.indexOf(`interface ${typeName}`)
+  const interfaceStart = content.search(new RegExp(`interface\\s+${typeName}\\s*\\{`))
   if (interfaceStart === -1) return null
 
   // Find the opening brace

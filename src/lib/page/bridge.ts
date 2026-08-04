@@ -40,28 +40,28 @@ export function postLog(payload: BridgePayload): void {
   const { level, type, args, error, stack, ...otherFields } = payload
 
   postAuthenticatedPageMessage({
-      type: 'kaboom_log',
-      payload: {
-        // Enriched fields (these are the source of truth)
-        ts: new Date().toISOString(),
-        url: window.location.href,
-        message:
-          payload.message ||
-          payload.error ||
-          (payload.args?.[0] !== null && payload.args?.[0] !== undefined ? String(payload.args[0]) : ''),
-        source: payload.filename ? `${payload.filename}:${payload.lineno || 0}` : '',
-        // Core fields from payload
-        level,
-        ...(type ? { type } : {}),
-        ...(args ? { args } : {}),
-        ...(error ? { error } : {}),
-        ...(stack ? { stack } : {}),
-        // Optional enrichments
-        ...(enrichments.length > 0 ? { _enrichments: enrichments } : {}),
-        ...(context && payload.level === 'error' ? { _context: context } : {}),
-        ...(actions && actions.length > 0 ? { _actions: actions } : {}),
-        // Any other fields from payload (excluding the ones we destructured)
-        ...otherFields
-      }
-    })
+    type: 'kaboom_log',
+    payload: {
+      // Enriched fields (these are the source of truth)
+      ts: new Date().toISOString(),
+      url: window.location.href,
+      message:
+        payload.message ||
+        payload.error ||
+        (payload.args?.[0] !== null && payload.args?.[0] !== undefined ? String(payload.args[0]) : ''),
+      source: payload.filename ? `${payload.filename}:${payload.lineno || 0}` : '',
+      // Core fields from payload
+      level,
+      ...(type ? { type } : {}),
+      ...(args ? { args } : {}),
+      ...(error ? { error } : {}),
+      ...(stack ? { stack } : {}),
+      // Optional enrichments
+      ...(enrichments.length > 0 ? { _enrichments: enrichments } : {}),
+      ...(context && payload.level === 'error' ? { _context: context } : {}),
+      ...(actions && actions.length > 0 ? { _actions: actions } : {}),
+      // Any other fields from payload (excluding the ones we destructured)
+      ...otherFields
+    }
+  })
 }

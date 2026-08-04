@@ -64,9 +64,7 @@ test('rejects runtime, new, expired, and untracked high-risk vulnerabilities', (
   assert.notEqual(
     run({
       audit: highAudit,
-      exceptions: [
-        { ...validException, expires: '2026-08-02' }
-      ]
+      exceptions: [{ ...validException, expires: '2026-08-02' }]
     }).status,
     0
   )
@@ -80,9 +78,7 @@ test('rejects runtime, new, expired, and untracked high-risk vulnerabilities', (
   assert.notEqual(
     run({
       audit: highAudit,
-      exceptions: [
-        { ...validException, advisories: ['different'] }
-      ]
+      exceptions: [{ ...validException, advisories: ['different'] }]
     }).status,
     0
   )

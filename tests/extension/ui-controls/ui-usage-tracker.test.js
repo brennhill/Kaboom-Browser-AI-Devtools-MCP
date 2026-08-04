@@ -129,4 +129,21 @@ describe('restoreUIFeatures', () => {
     m.restoreUIFeatures({})
     assert.strictEqual(m.drainUIFeatures(), undefined)
   })
+
+  test('rejects unknown restored keys and leaves bounded local Doctor evidence', async () => {
+    const logs = await import('../../../extension/background/runtime-state/log-queue.js')
+    logs.clearExtensionLogsForTesting()
+    await logs.initializeExtensionLogQueue({ read: async () => undefined, write: async () => {} })
+    const m = await loadModule()
+
+    m.restoreUIFeatures({ screenshot: true, invented_private_key: true })
+
+    assert.deepStrictEqual(m.drainUIFeatures(), { screenshot: true })
+    const incident = logs
+      .getExtensionLogQueueSnapshot()
+      .find((entry) => entry.category === 'state_recovery' && entry.data?.name === 'ui_feature_restore_schema')
+    assert.ok(incident)
+    assert.match(incident.data.detail, /rejected 1 feature usage entry/)
+    assert.strictEqual(JSON.stringify(incident).includes('invented_private_key'), false)
+  })
 })

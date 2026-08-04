@@ -92,6 +92,8 @@ mkdirSync(dirname(outputPath), { recursive: true })
 writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`, { encoding: 'utf8', flag: 'w' })
 process.stdout.write(`Mutation score: ${score}% (${killed}/${results.length} killed)\n`)
 if (score < config.minimum_score) {
-  process.stderr.write(`Mutation score is below the ${config.minimum_score}% gate; survivors: ${report.survivors.join(', ')}\n`)
+  process.stderr.write(
+    `Mutation score is below the ${config.minimum_score}% gate; survivors: ${report.survivors.join(', ')}\n`
+  )
   process.exitCode = 1
 }

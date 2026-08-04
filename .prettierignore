@@ -15,6 +15,7 @@ server/
 docs/
 demo/
 .github/
+.beads/
 extension/
 *.go
 go.mod

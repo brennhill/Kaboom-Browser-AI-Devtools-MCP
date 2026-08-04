@@ -18,11 +18,12 @@ code_paths:
   - internal/capture/events.go
   - internal/capture/extension_logs.go
   - internal/capture/extension_state.go
-  - internal/capture/feature_usage.go
+  - internal/capture/featureusage/observer.go
   - internal/capture/handlers.go
   - internal/util/media.go
   - internal/queries/dispatcher_queries.go
   - internal/capture/sync.go
+  - internal/capture/wire_sync.go
   - internal/capture/test_helpers.go
   - internal/circuit/breaker.go
   - internal/debuglog/logger.go
@@ -31,6 +32,7 @@ code_paths:
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go
   - internal/types/log.go
+  - internal/types/wire_extension_log.go
   - internal/types/network.go
   - src/background.ts
   - src/inject.ts
@@ -58,6 +60,8 @@ code_paths:
   - src/background/sync/batcher-instances.ts
   - src/background/sync/sync-manager.ts
   - src/background/sync/sync-client.ts
+  - src/types/wire/wire-sync.ts
+  - src/types/wire/wire-extension-log.ts
   - src/background/sync/install-identity.ts
   - src/content/page-telemetry.ts
   - src/content/window-message-listener.ts
@@ -85,6 +89,7 @@ test_paths:
   - cmd/browser-agent/tools_configure_network_recording_handler_test.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
   - internal/capture/sync_test.go
+  - internal/capture/sync_test_helpers_test.go
   - internal/capture/sync_command_lifecycle_test.go
   - internal/capture/sync_waterfall_test.go
   - internal/capture/websocket_test.go
@@ -97,7 +102,7 @@ test_paths:
   - internal/capture/api_contract_test.go
   - internal/capture/extension_log_store_test.go
   - internal/capture/accessor_unit_test.go
-  - internal/capture/feature_usage_test.go
+  - internal/capture/featureusage/observer_test.go
   - internal/capture/client_registry_owner_test.go
   - internal/capture/extension_state_test_helpers_test.go
   - internal/capture/buffer_clear_test.go
@@ -123,6 +128,9 @@ test_paths:
   - tests/extension/sync/batcher-instances.test.js
   - tests/extension/performance/rate-limit.test.js
   - tests/extension/sync/sync-manager.test.js
+  - tests/extension/ui-controls/ui-usage-tracker.test.js
+  - scripts/contracts/sync-wire-generated.test.cjs
+  - scripts/contracts/testdata/sync-roundtrip.json
   - tests/extension/misc/integration.test.cjs
   - tests/extension/capture/observe-screenshot.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
@@ -308,6 +316,14 @@ heartbeat, result, long-poll response, or command is rejected before it can
 mutate current state, and the rejection is retained as a correlated lifecycle
 diagnostic. Daemon handoffs also invalidate in-flight extension responses so an
 old server cannot dispatch work after the client changes endpoints.
+
+The complete `/sync` request/response graph now has one Go wire owner in
+`internal/capture/wire_sync.go`; extension diagnostic entries have their one
+nested owner in `internal/types/wire_extension_log.go`. TypeScript contracts and
+the OpenAPI sync components are generated from those structs, and CI compares
+the generated OpenAPI client plus a shared bidirectional JSON fixture. The old
+hand-maintained optionality checker and duplicate TypeScript interfaces were
+deleted rather than retained as compatibility surfaces.
 
 Disposable network-body, WebSocket, enhanced-action, and extension-diagnostic
 streams enforce their declared capacity on every ingestion. Their canonical

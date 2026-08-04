@@ -4,6 +4,7 @@
 package capture
 
 import (
+	"encoding/json"
 	"net/http"
 	"sync"
 	"testing"
@@ -26,10 +27,10 @@ func TestHandleSync_FeaturesUsedInvokesCallback(t *testing.T) {
 
 	req := SyncRequest{
 		ExtSessionID: "analytics_test",
-		FeaturesUsed: map[string]bool{
-			"screenshot":  true,
-			"annotations": true,
-			"video":       false,
+		FeaturesUsed: &SyncFeaturesUsed{
+			Screenshot:  true,
+			Annotations: true,
+			Video:       false,
 		},
 	}
 
@@ -89,7 +90,7 @@ func TestHandleSync_FeaturesUsedNoCallback_NoPanic(t *testing.T) {
 
 	req := SyncRequest{
 		ExtSessionID: "analytics_test_no_cb",
-		FeaturesUsed: map[string]bool{"screenshot": true},
+		FeaturesUsed: &SyncFeaturesUsed{Screenshot: true},
 	}
 
 	w := runSyncRequest(t, cap, req)
@@ -98,18 +99,18 @@ func TestHandleSync_FeaturesUsedNoCallback_NoPanic(t *testing.T) {
 	}
 }
 
-func TestFilterFeaturesUsed_AllowsKnownKeys(t *testing.T) {
+func TestEnabledFeatures_MapsCanonicalSchema(t *testing.T) {
 	t.Parallel()
-	raw := map[string]bool{
-		"screenshot":       true,
-		"annotations":      true,
-		"video":            false,
-		"dom_action":       true,
-		"action_recording": true,
+	raw := &SyncFeaturesUsed{
+		Screenshot:      true,
+		Annotations:     true,
+		Video:           false,
+		DOMAction:       true,
+		ActionRecording: true,
 	}
-	filtered := filterFeaturesUsed(raw)
-	if len(filtered) != 5 {
-		t.Fatalf("Expected 5 keys, got %d: %v", len(filtered), filtered)
+	filtered := enabledFeatures(raw)
+	if len(filtered) != 4 {
+		t.Fatalf("Expected 4 enabled keys, got %d: %v", len(filtered), filtered)
 	}
 	// action_recording is wire-synced with the UIFeature union on the extension
 	// side; if this drops, an extension release will silently lose the metric.
@@ -118,40 +119,12 @@ func TestFilterFeaturesUsed_AllowsKnownKeys(t *testing.T) {
 	}
 }
 
-func TestFilterFeaturesUsed_RejectsUnknownKeys(t *testing.T) {
+func TestEnabledFeatures_Empty_ReturnsNil(t *testing.T) {
 	t.Parallel()
-	raw := map[string]bool{
-		"screenshot":    true,
-		"evil_key":      true,
-		"another_bogus": true,
-	}
-	filtered := filterFeaturesUsed(raw)
-	if len(filtered) != 1 {
-		t.Fatalf("Expected 1 key (screenshot only), got %d: %v", len(filtered), filtered)
-	}
-	if !filtered["screenshot"] {
-		t.Error("Expected screenshot=true in filtered output")
-	}
-	if _, ok := filtered["evil_key"]; ok {
-		t.Error("evil_key should have been filtered out")
-	}
-}
-
-func TestFilterFeaturesUsed_AllUnknown_ReturnsNil(t *testing.T) {
-	t.Parallel()
-	raw := map[string]bool{"bogus": true, "nonsense": true}
-	filtered := filterFeaturesUsed(raw)
-	if filtered != nil {
-		t.Errorf("Expected nil for all-unknown keys, got %v", filtered)
-	}
-}
-
-func TestFilterFeaturesUsed_Empty_ReturnsNil(t *testing.T) {
-	t.Parallel()
-	if filterFeaturesUsed(nil) != nil {
+	if enabledFeatures(nil) != nil {
 		t.Error("Expected nil for nil input")
 	}
-	if filterFeaturesUsed(map[string]bool{}) != nil {
+	if enabledFeatures(&SyncFeaturesUsed{}) != nil {
 		t.Error("Expected nil for empty input")
 	}
 }
@@ -168,12 +141,9 @@ func TestHandleSync_FeaturesUsedUnknownKeysFiltered(t *testing.T) {
 		mu.Unlock()
 	})
 
-	req := SyncRequest{
-		ExtSessionID: "allowlist_test",
-		FeaturesUsed: map[string]bool{
-			"screenshot": true,
-			"evil_key":   true,
-		},
+	var req SyncRequest
+	if err := json.Unmarshal([]byte(`{"ext_session_id":"allowlist_test","features_used":{"screenshot":true,"evil_key":true}}`), &req); err != nil {
+		t.Fatalf("decode sync fixture: %v", err)
 	}
 
 	w := runSyncRequest(t, cap, req)

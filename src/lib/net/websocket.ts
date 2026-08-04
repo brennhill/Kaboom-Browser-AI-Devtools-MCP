@@ -86,17 +86,17 @@ function postLifecycleEvent(
   extra?: { code?: number; reason?: string; ts?: string }
 ): void {
   postAuthenticatedPageMessage({
-      type: 'kaboom_ws',
-      payload: {
-        type: 'websocket',
-        event,
-        id: connectionId,
-        url: urlString,
-        ts: extra?.ts || new Date().toISOString(),
-        ...(extra?.code !== undefined && { code: extra.code }),
-        ...(extra?.reason !== undefined && { reason: extra.reason })
-      }
-    } as KaboomWsMessage)
+    type: 'kaboom_ws',
+    payload: {
+      type: 'websocket',
+      event,
+      id: connectionId,
+      url: urlString,
+      ts: extra?.ts || new Date().toISOString(),
+      ...(extra?.code !== undefined && { code: extra.code }),
+      ...(extra?.reason !== undefined && { reason: extra.reason })
+    }
+  } as KaboomWsMessage)
 }
 
 /** Post a WebSocket message event */
@@ -113,19 +113,19 @@ function postMessageEvent(
   const { data: truncatedData, truncated } = truncateWsMessage(formatted)
 
   postAuthenticatedPageMessage({
-      type: 'kaboom_ws',
-      payload: {
-        type: 'websocket',
-        event: 'message',
-        id: connectionId,
-        url: urlString,
-        direction,
-        data: truncatedData,
-        size,
-        truncated: truncated || undefined,
-        ts: new Date().toISOString()
-      }
-    } as KaboomWsMessage)
+    type: 'kaboom_ws',
+    payload: {
+      type: 'websocket',
+      event: 'message',
+      id: connectionId,
+      url: urlString,
+      direction,
+      data: truncatedData,
+      size,
+      truncated: truncated || undefined,
+      ts: new Date().toISOString()
+    }
+  } as KaboomWsMessage)
 }
 
 /** Attach message and send capture to a WebSocket instance */

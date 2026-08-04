@@ -451,6 +451,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    '/performance-trace/start': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start a local Chrome CPU trace artifact */
+        post: operations['startPerformanceTrace'];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/performance-trace/chunk': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Append an ordered Chrome trace event batch */
+        post: operations['appendPerformanceTraceChunk'];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/performance-trace/finish': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish a completed local Chrome trace artifact */
+        post: operations['finishPerformanceTrace'];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/performance-trace/abort': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remove an incomplete local Chrome trace artifact */
+        post: operations['abortPerformanceTrace'];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     '/performance-snapshots': {
         parameters: {
             query?: never;
@@ -1492,6 +1560,11 @@ export interface components {
             params?: Record<string, never>;
             /** @description Links this query to the originating MCP tool call for result routing */
             correlation_id?: string;
+            /**
+             * Format: int64
+             * @description Daemon-owned connection generation that must still be current when this command executes
+             */
+            connection_generation?: number;
         };
         /** @description Legacy query result format. Used internally when processing results from the extension. Newer code uses AsyncCommandResult or SyncCommandResult instead. */
         QueryResult: {
@@ -1580,67 +1653,28 @@ export interface components {
         };
         /** @description Extension-to-server sync payload. The Chrome extension sends its current state on each poll interval. Contains settings, internal logs, and results from async commands. This is the upstream half of the bidirectional sync protocol. */
         SyncRequest: {
-            /** @description Extension session identifier for reconnection tracking */
-            session_id?: string;
-            /** @description Chrome extension version string */
+            ext_session_id: string;
+            connection_generation?: number;
             extension_version?: string;
-            /** @description Current extension settings and tracking state */
-            settings?: {
-                /** @description Whether AI Web Pilot is enabled */
-                pilot_enabled?: boolean;
-                /** @description Whether the extension is actively tracking a tab */
-                tracking_enabled?: boolean;
-                /** @description Chrome tab ID being tracked (0 if none) */
-                tracked_tab_id?: number;
-                /** @description URL of the tracked tab */
-                tracked_tab_url?: string;
-                /** @description Title of the tracked tab */
-                tracked_tab_title?: string;
-                /** @description Whether console log capture is enabled */
-                capture_logs?: boolean;
-                /** @description Whether network capture is enabled */
-                capture_network?: boolean;
-                /** @description Whether WebSocket capture is enabled */
-                capture_websocket?: boolean;
-                /** @description Whether user action capture is enabled */
-                capture_actions?: boolean;
-            };
-            /** @description ID of the last command acknowledged by the extension (for delivery tracking) */
+            settings?: components['schemas']['SyncSettings'];
+            extension_logs?: components['schemas']['ExtensionLog'][];
             last_command_ack?: string;
-            /** @description Internal extension debug logs for server-side troubleshooting */
-            extension_logs?: {
-                /**
-                 * Format: date-time
-                 * @description When the log was emitted
-                 */
-                timestamp?: string;
-                /** @description Log level (info, warn, error) */
-                level?: string;
-                /** @description Log message text */
-                message?: string;
-                /** @description Source context (e.g. 'background', 'content-script') */
-                context?: string;
-            }[];
-            /** @description Results from async commands the extension has executed since last sync */
             command_results?: components['schemas']['SyncCommandResult'][];
+            in_progress?: components['schemas']['SyncInProgress'][];
+            features_used?: components['schemas']['SyncFeaturesUsed'];
         };
         /** @description Server-to-extension sync response. Delivers pending commands, capture overrides, and timing for the next poll. This is the downstream half of the bidirectional sync protocol. */
         SyncResponse: {
-            /** @description Acknowledgement that the sync request was processed */
-            ack?: boolean;
-            /** @description Pending commands for the extension to execute (DOM queries, screenshots, browser actions) */
-            commands?: components['schemas']['PendingQuery'][];
-            /** @description Suggested delay before next sync poll in milliseconds (adaptive based on activity) */
-            next_poll_ms?: number;
-            /**
-             * Format: date-time
-             * @description Server timestamp for clock synchronization
-             */
-            server_time?: string;
-            /** @description Server version string for compatibility checks */
+            ack: boolean;
+            connection_generation: number;
+            commands: components['schemas']['SyncCommand'][];
+            next_poll_ms: number;
+            server_time: string;
             server_version?: string;
-            /** @description Server-side overrides for extension capture settings */
-            capture_overrides?: Record<string, never>;
+            install_id?: string;
+            capture_overrides: {
+                [key: string]: string;
+            };
         };
         /** @description Aggregated capture snapshot for CI/testing integration. Contains all telemetry data across buffers with computed statistics. Used by test frameworks to assert on browser behavior during test runs. */
         SnapshotResponse: {
@@ -1718,18 +1752,12 @@ export interface components {
         };
         /** @description Result of an async command returned by the extension via the /sync endpoint's command_results field. Structurally identical to AsyncCommandResult but delivered inline with the sync payload instead of via POST /query-result. */
         SyncCommandResult: {
-            /** @description Query ID matching the original PendingQuery */
             id: string;
-            /** @description Links back to the originating MCP tool call */
             correlation_id?: string;
-            /**
-             * @description Execution outcome
-             * @enum {string}
-             */
-            status: 'complete' | 'error' | 'timeout';
-            /** @description Command result data on success */
+            connection_generation?: number;
+            /** @enum {string} */
+            status: 'complete' | 'error' | 'timeout' | 'cancelled';
             result?: unknown;
-            /** @description Error message when status is 'error' */
             error?: string;
         };
         /** @description Extension connection status snapshot. Represents the Chrome extension's current tracking state as reported in sync payloads. Used internally by the server to track extension connectivity. */
@@ -1752,6 +1780,58 @@ export interface components {
              * @description When this status was captured
              */
             timestamp?: string;
+        };
+        ExtensionLog: {
+            /** Format: date-time */
+            timestamp: string;
+            level: string;
+            message: string;
+            source: string;
+            category?: string;
+            data?: unknown;
+        };
+        SyncSettings: {
+            pilot_enabled: boolean;
+            tracking_enabled: boolean;
+            tracked_tab_id: number;
+            tracked_tab_url: string;
+            tracked_tab_title: string;
+            /** @enum {string} */
+            tab_status?: 'loading' | 'complete';
+            tracked_tab_active?: boolean;
+            capture_logs: boolean;
+            capture_network: boolean;
+            capture_websocket: boolean;
+            capture_actions: boolean;
+            csp_restricted: boolean;
+            csp_level: string;
+        };
+        SyncInProgress: {
+            id: string;
+            correlation_id?: string;
+            connection_generation: number;
+            type?: string;
+            /** @enum {string} */
+            status?: 'running' | 'pending';
+            progress_pct?: number;
+            started_at?: string;
+            updated_at?: string;
+        };
+        SyncFeaturesUsed: {
+            screenshot?: boolean;
+            annotations?: boolean;
+            video?: boolean;
+            dom_action?: boolean;
+            action_recording?: boolean;
+        };
+        SyncCommand: {
+            id: string;
+            type: string;
+            params: unknown;
+            tab_id?: number;
+            correlation_id?: string;
+            trace_id?: string;
+            connection_generation: number;
         };
     };
     responses: never;
@@ -2364,6 +2444,78 @@ export interface operations {
                 content: {
                     'application/json': components['schemas']['IngestResponse'];
                 };
+            };
+        };
+    };
+    startPerformanceTrace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trace artifact opened */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    appendPerformanceTraceChunk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trace events appended */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    finishPerformanceTrace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trace artifact metadata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    abortPerformanceTrace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trace artifact removed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

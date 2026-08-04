@@ -72,6 +72,39 @@ Performance snapshots with before/after comparison and regression detection.
 analyze({what: "performance"})
 ```
 
+### `performance_trace`
+
+Start or stop a targetable Chrome CPU trace for the selected tab. Starting can
+optionally reload with warm or cold cache behavior; stopping returns the bounded
+trace artifact and flamechart analysis.
+
+```js
+analyze({what: "performance_trace", action: "start", tab_id: 123, cache: "cold"})
+analyze({what: "performance_trace", action: "stop", tab_id: 123})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `action` | string (required) | `start` or `stop` |
+| `tab_id` | number | Exact tab to profile |
+| `cache` | string | `warm` or `cold`; valid when starting a trace |
+
+### `react_profile`
+
+Start or stop opt-in React commit and render profiling for the selected tab.
+The target application must expose compatible React profiling hooks; otherwise
+the result reports the capability gap explicitly.
+
+```js
+analyze({what: "react_profile", action: "start", tab_id: 123})
+analyze({what: "react_profile", action: "stop", tab_id: 123})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `action` | string (required) | `start` or `stop` |
+| `tab_id` | number | Exact tab to profile |
+
 ---
 
 ## Accessibility

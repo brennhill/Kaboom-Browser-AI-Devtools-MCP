@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -65,4 +67,44 @@ func runQueryResultRequest(t *testing.T, cap *Capture, payload string) *httptest
 	w := httptest.NewRecorder()
 	NewHTTPHandlers(cap).HandleQueryResult(w, req)
 	return w
+}
+
+func TestSyncWireSharedFixtureRoundTrips(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile("../../scripts/contracts/testdata/sync-roundtrip.json")
+	if err != nil {
+		t.Fatalf("read shared sync fixture: %v", err)
+	}
+	var fixture struct {
+		Request  json.RawMessage `json:"request"`
+		Response json.RawMessage `json:"response"`
+	}
+	if err := json.Unmarshal(raw, &fixture); err != nil {
+		t.Fatalf("decode shared sync fixture: %v", err)
+	}
+
+	assertJSONRoundTrip[SyncRequest](t, fixture.Request)
+	assertJSONRoundTrip[SyncResponse](t, fixture.Response)
+}
+
+func assertJSONRoundTrip[T any](t *testing.T, raw json.RawMessage) {
+	t.Helper()
+	var decoded T
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("decode %T: %v", decoded, err)
+	}
+	roundTrip, err := json.Marshal(decoded)
+	if err != nil {
+		t.Fatalf("encode %T: %v", decoded, err)
+	}
+	var want, got any
+	if err := json.Unmarshal(raw, &want); err != nil {
+		t.Fatalf("normalize source fixture: %v", err)
+	}
+	if err := json.Unmarshal(roundTrip, &got); err != nil {
+		t.Fatalf("normalize round trip: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("wire round trip drift:\n got: %s\nwant: %s", roundTrip, raw)
+	}
 }

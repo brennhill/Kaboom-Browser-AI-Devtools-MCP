@@ -28,7 +28,9 @@ const WIRE_PAIRS = [
   { go: 'internal/types/wire_websocket_event.go', ts: 'src/types/wire/wire-websocket-event.ts' },
   { go: 'internal/performance/wire_performance.go', ts: 'src/types/wire/wire-performance-snapshot.ts' },
   { go: 'internal/qafixture/wire_fixture.go', ts: 'src/types/wire/wire-qa-fixture.ts' },
-  { go: 'internal/perftrace/wire_trace.go', ts: 'src/types/wire/wire-performance-trace.ts' }
+  { go: 'internal/perftrace/wire_trace.go', ts: 'src/types/wire/wire-performance-trace.ts' },
+  { go: 'internal/types/wire_extension_log.go', ts: 'src/types/wire/wire-extension-log.ts' },
+  { go: 'internal/capture/wire_sync.go', ts: 'src/types/wire/wire-sync.ts' }
 ]
 
 /**
@@ -40,7 +42,23 @@ const TYPE_OVERRIDES = {
   'WireWebSocketEvent.direction': "'incoming' | 'outgoing'",
   // json.RawMessage values are arbitrary valid JSON on the TypeScript side.
   'WireQAFixture.seed_data': 'Readonly<Record<string, unknown>>',
-  'WirePerformanceTraceChunkRequest.events': 'readonly unknown[]'
+  'WirePerformanceTraceChunkRequest.events': 'readonly unknown[]',
+  'ExtensionLog.timestamp': 'string',
+  'ExtensionLog.data': 'unknown',
+  'SyncRequest.extension_logs': 'readonly ExtensionLog[]',
+  'SyncSettings.tab_status': "'loading' | 'complete'",
+  'SyncCommandResult.status': "'complete' | 'error' | 'timeout' | 'cancelled'",
+  'SyncCommandResult.result': 'unknown',
+  'SyncInProgress.status': "'running' | 'pending'",
+  'SyncCommand.params': 'unknown'
+}
+
+const FILE_IMPORTS = {
+  'wire_sync.go': ["import type { ExtensionLog } from './wire-extension-log.js'"]
+}
+
+const KEY_UNIONS = {
+  SyncFeaturesUsed: { constant: 'SYNC_UI_FEATURES', type: 'SyncUIFeature' }
 }
 
 /**
@@ -81,6 +99,14 @@ const FILE_DESCRIPTIONS = {
   'wire_trace.go': {
     overview: 'Wire types for Chrome performance trace streaming',
     description: 'Canonical TypeScript definitions for the local trace artifact lifecycle.'
+  },
+  'wire_extension_log.go': {
+    overview: 'Wire type for extension diagnostics',
+    description: 'Canonical TypeScript definition for redacted extension diagnostics sent through sync.'
+  },
+  'wire_sync.go': {
+    overview: 'Wire types for extension-daemon synchronization',
+    description: 'Canonical TypeScript definitions for the complete /sync request and response graph.'
   }
 }
 
@@ -225,6 +251,8 @@ function mapGoTypeToTS(goType, structName, jsonTag) {
       return { tsType: 'number', nullable: false }
     case 'int64':
       return { tsType: 'number', nullable: false }
+    case 'uint64':
+      return { tsType: 'number', nullable: false }
     case 'float64':
       return { tsType: 'number', nullable: false }
     case 'bool':
@@ -331,18 +359,90 @@ function generateTSFile(goContent, goPath, _tsPath) {
   lines.push(' * Changes here MUST be mirrored in the Go counterpart. Run `make check-wire-drift`.')
   lines.push(' */')
 
+  const imports = FILE_IMPORTS[goBase] || []
+  if (imports.length > 0) {
+    lines.push('')
+    lines.push(...imports)
+  }
+
   // Generate each interface
   for (const goStruct of structs) {
     lines.push('')
     const comment = extractStructComment(goContent, goStruct.name)
     const iface = generateInterface(goStruct, comment)
     lines.push(iface)
+    const keyUnion = KEY_UNIONS[goStruct.name]
+    if (keyUnion) {
+      const keys = goStruct.fields.map((field) => `'${field.jsonTag}'`).join(', ')
+      lines.push('')
+      lines.push(`export const ${keyUnion.constant} = [${keys}] as const`)
+      lines.push(`export type ${keyUnion.type} = (typeof ${keyUnion.constant})[number]`)
+    }
   }
 
   // Trailing newline
   lines.push('')
 
   return lines.join('\n')
+}
+
+const OPENAPI_TYPE_OVERRIDES = {
+  'SyncSettings.tab_status': { type: 'string', enum: ['loading', 'complete'] },
+  'SyncCommandResult.status': { type: 'string', enum: ['complete', 'error', 'timeout', 'cancelled'] },
+  'SyncInProgress.status': { type: 'string', enum: ['running', 'pending'] }
+}
+
+function openAPISchemaForType(goType) {
+  if (goType.startsWith('*')) return openAPISchemaForType(goType.slice(1))
+  if (goType.startsWith('[]')) return { type: 'array', items: openAPISchemaForType(goType.slice(2)) }
+  if (goType.startsWith('map['))
+    return { type: 'object', additionalProperties: openAPISchemaForType(goType.replace(/^map\[[^\]]+\]/, '')) }
+  if (goType === 'string') return { type: 'string' }
+  if (goType === 'bool') return { type: 'boolean' }
+  if (['int', 'int64', 'uint64'].includes(goType)) return { type: 'integer' }
+  if (goType === 'float64') return { type: 'number' }
+  if (goType === 'json.RawMessage' || goType === 'any') return {}
+  if (goType === 'time.Time') return { type: 'string', format: 'date-time' }
+  const reference = goType.includes('.') ? goType.split('.').at(-1) : goType
+  return { $ref: `#/components/schemas/${reference}` }
+}
+
+function openAPISchemaForStruct(goStruct, existing = {}) {
+  const properties = {}
+  const required = []
+  for (const field of goStruct.fields) {
+    properties[field.jsonTag] =
+      OPENAPI_TYPE_OVERRIDES[`${goStruct.name}.${field.jsonTag}`] || openAPISchemaForType(field.goType)
+    if (!field.omitempty && !field.goType.startsWith('*')) required.push(field.jsonTag)
+  }
+  return { ...existing, type: 'object', properties, ...(required.length > 0 ? { required } : {}) }
+}
+
+function synchronizeSyncOpenAPI(checkOnly) {
+  const openAPIPath = path.join(ROOT, 'cmd/browser-agent/openapi.json')
+  const document = JSON.parse(fs.readFileSync(openAPIPath, 'utf8'))
+  const sources = ['internal/types/wire_extension_log.go', 'internal/capture/wire_sync.go']
+  let changed = false
+  for (const source of sources) {
+    const structs = parseAllGoStructs(fs.readFileSync(path.join(ROOT, source), 'utf8'))
+    for (const goStruct of structs) {
+      const existing = document.components.schemas[goStruct.name] || {}
+      const generated = openAPISchemaForStruct(goStruct, existing)
+      if (JSON.stringify(existing) !== JSON.stringify(generated)) {
+        changed = true
+        document.components.schemas[goStruct.name] = generated
+      }
+    }
+  }
+  if (checkOnly) {
+    if (changed)
+      console.error('DRIFT: cmd/browser-agent/openapi.json sync schemas differ from canonical Go wire structs')
+    else console.log('OK: cmd/browser-agent/openapi.json sync schemas')
+    return changed
+  }
+  fs.writeFileSync(openAPIPath, `${JSON.stringify(document, null, 2)}\n`)
+  console.log('GENERATED: cmd/browser-agent/openapi.json sync schemas')
+  return false
 }
 
 // ============================================
@@ -400,6 +500,8 @@ for (const pair of WIRE_PAIRS) {
     generatedCount++
   }
 }
+
+if (synchronizeSyncOpenAPI(isCheck)) driftCount++
 
 if (isCheck) {
   if (driftCount > 0) {

@@ -28,6 +28,9 @@ code_paths:
   - src/background/sync/version-check.ts
   - src/background/sync/server.ts
   - src/background/sync/sync-manager.ts
+  - src/background/sync/sync-client.ts
+  - src/background/ui/ui-usage-tracker.ts
+  - src/types/wire/wire-sync.ts
   - src/background/orchestration/connection-monitor.ts
   - src/types/runtime/state.ts
   - src/background/message-handlers.ts
@@ -103,6 +106,7 @@ test_paths:
   - tests/extension/sync/sync-client-resilience.test.js
   - tests/extension/sync/sync-client.test.js
   - tests/extension/sync/sync-manager.test.js
+  - tests/extension/ui-controls/ui-usage-tracker.test.js
   - tests/extension/sync/background-batching.test.js
   - tests/extension/reliability/server.test.js
   - tests/extension/reliability/diagnostic-log-queue.test.js
@@ -171,6 +175,10 @@ last_verified_date: 2026-03-28
   command is cancelled, the registry rejects its completion and suppresses any
   late terminal result, preserving the original correlation and connection
   generation for the daemon's timeout evidence.
+- UI-originated feature telemetry keys are generated from the canonical Go sync
+  schema and shared by runtime messages, the tracker, and the daemon. Failed-sync
+  restoration rejects unknown keys without recording their values and leaves a
+  bounded local Doctor diagnostic until a clean restoration proves recovery.
 
 ## Specs
 

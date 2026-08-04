@@ -79,7 +79,10 @@ function withConnectionStatus<T>(
   }
 }
 
-function pressureLifecycle(deps: BatcherDeps, stream: string): Pick<BatcherConfig, 'onPressure' | 'onPressureRecovered'> {
+function pressureLifecycle(
+  deps: BatcherDeps,
+  stream: string
+): Pick<BatcherConfig, 'onPressure' | 'onPressureRecovered'> {
   const name = `telemetry_${stream}_pressure`
   return {
     onPressure: (event) => {

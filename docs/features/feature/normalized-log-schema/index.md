@@ -4,11 +4,18 @@ feature_id: feature-normalized-log-schema
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-04
 code_paths:
-test_paths: []
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+  - internal/types/log.go
+  - internal/types/wire_extension_log.go
+  - internal/capture/extension_logs.go
+  - src/types/wire/wire-extension-log.ts
+test_paths:
+  - internal/capture/extension_log_store_test.go
+  - internal/capture/sync_test_helpers_test.go
+  - scripts/contracts/sync-wire-generated.test.cjs
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # Normalized Log Schema
@@ -34,4 +41,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Extension diagnostic entries have one Go wire owner. The generated TypeScript
+shape is embedded in the canonical `/sync` graph, while the capture store owns
+normalization, redaction, and retention after ingestion. A shared JSON fixture
+must round-trip through Go and match the generated extension feature contract.

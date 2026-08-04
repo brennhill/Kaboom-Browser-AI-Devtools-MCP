@@ -8,6 +8,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -87,8 +88,8 @@ type Capture struct {
 	// Lifecycle Event Callbacks
 	// ============================================
 
-	lifecycle    *lifecycle.Observer   // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has its own lock.
-	featureUsage *FeatureUsageObserver // Optional extension feature-usage consumer. Independently synchronized.
+	lifecycle    *lifecycle.Observer    // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has its own lock.
+	featureUsage *featureusage.Observer // Optional extension feature-usage consumer. Independently synchronized.
 }
 
 // NewCapture creates a fully initialized Capture with all subcomponents wired.
@@ -105,7 +106,7 @@ func NewCapture() *Capture {
 		diagnosticLogs:   newDiagnosticLogStore(logRedactor.Redact),
 		recordingManager: recording.NewRecordingManager(),
 		lifecycle:        lifecycle.NewObserver(),
-		featureUsage:     newFeatureUsageObserver(),
+		featureUsage:     featureusage.New(),
 		clients:          newClientRegistryOwner(),
 	}
 	c.queryDispatcher = queries.NewQueryDispatcher()
@@ -136,7 +137,7 @@ func (c *Capture) Lifecycle() *lifecycle.Observer {
 }
 
 // FeatureUsage returns the canonical independently synchronized usage observer.
-func (c *Capture) FeatureUsage() *FeatureUsageObserver {
+func (c *Capture) FeatureUsage() *featureusage.Observer {
 	return c.featureUsage
 }
 

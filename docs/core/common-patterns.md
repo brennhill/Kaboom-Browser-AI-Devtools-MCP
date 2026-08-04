@@ -165,6 +165,10 @@ Use this as a hard checklist during design, coding, and review.
   bounds, correlates, and reports. Boundary payloads have one canonical wire
   owner; handler-local transport types and manually synchronized enums are
   prohibited.
+- Wire contracts flow in one direction: canonical Go structs generate
+  TypeScript and OpenAPI schemas, shared fixtures prove both directions, and CI
+  byte-compares downstream generated clients. Optionality overrides and parallel
+  hand-maintained allowlists are prohibited.
 - Every bounded resource declares its capacity, overflow policy, retry or
   recovery policy, dropped count, and Doctor visibility. Silent eviction and
   recovery that depends on unrelated new activity are prohibited.

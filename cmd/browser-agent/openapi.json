@@ -375,7 +375,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["category", "tokens_before", "tokens_after"],
+                "required": [
+                  "category",
+                  "tokens_before",
+                  "tokens_after"
+                ],
                 "properties": {
                   "category": {
                     "type": "string",
@@ -919,38 +923,78 @@
     },
     "/performance-trace/start": {
       "post": {
-        "tags": ["Media"],
+        "tags": [
+          "Media"
+        ],
         "summary": "Start a local Chrome CPU trace artifact",
         "operationId": "startPerformanceTrace",
-        "security": [{"extensionClient": []}],
-        "responses": {"201": {"description": "Trace artifact opened"}}
+        "security": [
+          {
+            "extensionClient": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Trace artifact opened"
+          }
+        }
       }
     },
     "/performance-trace/chunk": {
       "post": {
-        "tags": ["Media"],
+        "tags": [
+          "Media"
+        ],
         "summary": "Append an ordered Chrome trace event batch",
         "operationId": "appendPerformanceTraceChunk",
-        "security": [{"extensionClient": []}],
-        "responses": {"202": {"description": "Trace events appended"}}
+        "security": [
+          {
+            "extensionClient": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Trace events appended"
+          }
+        }
       }
     },
     "/performance-trace/finish": {
       "post": {
-        "tags": ["Media"],
+        "tags": [
+          "Media"
+        ],
         "summary": "Publish a completed local Chrome trace artifact",
         "operationId": "finishPerformanceTrace",
-        "security": [{"extensionClient": []}],
-        "responses": {"200": {"description": "Trace artifact metadata"}}
+        "security": [
+          {
+            "extensionClient": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trace artifact metadata"
+          }
+        }
       }
     },
     "/performance-trace/abort": {
       "post": {
-        "tags": ["Media"],
+        "tags": [
+          "Media"
+        ],
         "summary": "Remove an incomplete local Chrome trace artifact",
         "operationId": "abortPerformanceTrace",
-        "security": [{"extensionClient": []}],
-        "responses": {"200": {"description": "Trace artifact removed"}}
+        "security": [
+          {
+            "extensionClient": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trace artifact removed"
+          }
+        }
       }
     },
     "/performance-snapshots": {
@@ -3371,99 +3415,45 @@
         },
         "properties": {
           "ext_session_id": {
-            "type": "string",
-            "description": "Extension session identifier for reconnection tracking"
+            "type": "string"
           },
           "connection_generation": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 1,
-            "description": "Last daemon-owned connection generation acknowledged by this extension runtime; omitted only during bootstrap"
+            "type": "integer"
           },
           "extension_version": {
-            "type": "string",
-            "description": "Chrome extension version string"
+            "type": "string"
           },
           "settings": {
-            "type": "object",
-            "description": "Current extension settings and tracking state",
-            "properties": {
-              "pilot_enabled": {
-                "type": "boolean",
-                "description": "Whether AI Web Pilot is enabled"
-              },
-              "tracking_enabled": {
-                "type": "boolean",
-                "description": "Whether the extension is actively tracking a tab"
-              },
-              "tracked_tab_id": {
-                "type": "integer",
-                "description": "Chrome tab ID being tracked (0 if none)"
-              },
-              "tracked_tab_url": {
-                "type": "string",
-                "description": "URL of the tracked tab"
-              },
-              "tracked_tab_title": {
-                "type": "string",
-                "description": "Title of the tracked tab"
-              },
-              "capture_logs": {
-                "type": "boolean",
-                "description": "Whether console log capture is enabled"
-              },
-              "capture_network": {
-                "type": "boolean",
-                "description": "Whether network capture is enabled"
-              },
-              "capture_websocket": {
-                "type": "boolean",
-                "description": "Whether WebSocket capture is enabled"
-              },
-              "capture_actions": {
-                "type": "boolean",
-                "description": "Whether user action capture is enabled"
-              }
-            }
-          },
-          "last_command_ack": {
-            "type": "string",
-            "description": "ID of the last command acknowledged by the extension (for delivery tracking)"
+            "$ref": "#/components/schemas/SyncSettings"
           },
           "extension_logs": {
             "type": "array",
-            "description": "Internal extension debug logs for server-side troubleshooting",
             "items": {
-              "type": "object",
-              "properties": {
-                "timestamp": {
-                  "type": "string",
-                  "format": "date-time",
-                  "description": "When the log was emitted"
-                },
-                "level": {
-                  "type": "string",
-                  "description": "Log level (info, warn, error)"
-                },
-                "message": {
-                  "type": "string",
-                  "description": "Log message text"
-                },
-                "context": {
-                  "type": "string",
-                  "description": "Source context (e.g. 'background', 'content-script')"
-                }
-              }
+              "$ref": "#/components/schemas/ExtensionLog"
             }
+          },
+          "last_command_ack": {
+            "type": "string"
           },
           "command_results": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SyncCommandResult"
-            },
-            "description": "Results from async commands the extension has executed since last sync"
+            }
+          },
+          "in_progress": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncInProgress"
+            }
+          },
+          "features_used": {
+            "$ref": "#/components/schemas/SyncFeaturesUsed"
           }
-        }
+        },
+        "required": [
+          "ext_session_id"
+        ]
       },
       "SyncResponse": {
         "type": "object",
@@ -3473,40 +3463,44 @@
         },
         "properties": {
           "ack": {
-            "type": "boolean",
-            "description": "Acknowledgement that the sync request was processed"
+            "type": "boolean"
           },
           "connection_generation": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 1,
-            "description": "Authoritative generation for this extension-daemon connection"
+            "type": "integer"
           },
           "commands": {
             "type": "array",
-            "description": "Pending commands for the extension to execute (DOM queries, screenshots, browser actions)",
             "items": {
-              "$ref": "#/components/schemas/PendingQuery"
+              "$ref": "#/components/schemas/SyncCommand"
             }
           },
           "next_poll_ms": {
-            "type": "integer",
-            "description": "Suggested delay before next sync poll in milliseconds (adaptive based on activity)"
+            "type": "integer"
           },
           "server_time": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Server timestamp for clock synchronization"
+            "type": "string"
           },
           "server_version": {
-            "type": "string",
-            "description": "Server version string for compatibility checks"
+            "type": "string"
+          },
+          "install_id": {
+            "type": "string"
           },
           "capture_overrides": {
             "type": "object",
-            "description": "Server-side overrides for extension capture settings"
+            "additionalProperties": {
+              "type": "string"
+            }
           }
-        }
+        },
+        "required": [
+          "ack",
+          "connection_generation",
+          "commands",
+          "next_poll_ms",
+          "server_time",
+          "capture_overrides"
+        ]
       },
       "SnapshotResponse": {
         "type": "object",
@@ -3660,34 +3654,26 @@
         },
         "properties": {
           "id": {
-            "type": "string",
-            "description": "Query ID matching the original PendingQuery"
+            "type": "string"
           },
           "correlation_id": {
-            "type": "string",
-            "description": "Links back to the originating MCP tool call"
+            "type": "string"
           },
           "connection_generation": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 1,
-            "description": "Generation in which this result's command was dispatched; omitted only when it inherits the validated heartbeat generation"
+            "type": "integer"
           },
           "status": {
             "type": "string",
             "enum": [
               "complete",
               "error",
-              "timeout"
-            ],
-            "description": "Execution outcome"
+              "timeout",
+              "cancelled"
+            ]
           },
-          "result": {
-            "description": "Command result data on success"
-          },
+          "result": {},
           "error": {
-            "type": "string",
-            "description": "Error message when status is 'error'"
+            "type": "string"
           }
         },
         "required": [
@@ -3726,6 +3712,182 @@
             "description": "When this status was captured"
           }
         }
+      },
+      "ExtensionLog": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "level": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "timestamp",
+          "level",
+          "message",
+          "source"
+        ]
+      },
+      "SyncSettings": {
+        "type": "object",
+        "properties": {
+          "pilot_enabled": {
+            "type": "boolean"
+          },
+          "tracking_enabled": {
+            "type": "boolean"
+          },
+          "tracked_tab_id": {
+            "type": "integer"
+          },
+          "tracked_tab_url": {
+            "type": "string"
+          },
+          "tracked_tab_title": {
+            "type": "string"
+          },
+          "tab_status": {
+            "type": "string",
+            "enum": [
+              "loading",
+              "complete"
+            ]
+          },
+          "tracked_tab_active": {
+            "type": "boolean"
+          },
+          "capture_logs": {
+            "type": "boolean"
+          },
+          "capture_network": {
+            "type": "boolean"
+          },
+          "capture_websocket": {
+            "type": "boolean"
+          },
+          "capture_actions": {
+            "type": "boolean"
+          },
+          "csp_restricted": {
+            "type": "boolean"
+          },
+          "csp_level": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pilot_enabled",
+          "tracking_enabled",
+          "tracked_tab_id",
+          "tracked_tab_url",
+          "tracked_tab_title",
+          "capture_logs",
+          "capture_network",
+          "capture_websocket",
+          "capture_actions",
+          "csp_restricted",
+          "csp_level"
+        ]
+      },
+      "SyncInProgress": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "correlation_id": {
+            "type": "string"
+          },
+          "connection_generation": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "pending"
+            ]
+          },
+          "progress_pct": {
+            "type": "number"
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "connection_generation"
+        ]
+      },
+      "SyncFeaturesUsed": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean"
+          },
+          "annotations": {
+            "type": "boolean"
+          },
+          "video": {
+            "type": "boolean"
+          },
+          "dom_action": {
+            "type": "boolean"
+          },
+          "action_recording": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SyncCommand": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "params": {},
+          "tab_id": {
+            "type": "integer"
+          },
+          "correlation_id": {
+            "type": "string"
+          },
+          "trace_id": {
+            "type": "string"
+          },
+          "connection_generation": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "params",
+          "connection_generation"
+        ]
       }
     }
   }

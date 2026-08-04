@@ -52,129 +52,6 @@ func extractBrowserName(ua string) string {
 }
 
 // =============================================================================
-// Request/Response Types
-// =============================================================================
-
-// SyncRequest is the authoritative extension heartbeat payload for /sync.
-//
-// Invariants:
-// - ExtSessionID is stable per extension runtime and changes on reload/update.
-// - CommandResults and InProgress are best-effort snapshots; server must tolerate partial batches.
-//
-// Failure semantics:
-// - Missing optional fields are treated as "no update" rather than protocol errors.
-type SyncRequest struct {
-	// Session identification
-	ExtSessionID         string `json:"ext_session_id"`
-	ConnectionGeneration uint64 `json:"connection_generation,omitempty"`
-
-	// Extension version for compatibility checking
-	ExtensionVersion string `json:"extension_version,omitempty"`
-
-	// Extension settings (replaces /settings POST)
-	Settings *SyncSettings `json:"settings,omitempty"`
-
-	// Extension logs batch (replaces /extension-logs POST)
-	ExtensionLogs []types.ExtensionLog `json:"extension_logs,omitempty"`
-
-	// Ack last processed command ID (for reliable delivery)
-	LastCommandAck string `json:"last_command_ack,omitempty"`
-
-	// Command results batch (replaces multiple result POST endpoints)
-	CommandResults []SyncCommandResult `json:"command_results,omitempty"`
-
-	// Active commands currently executing in the extension.
-	// Used to reconcile server/extension state and detect silent command loss.
-	InProgress []SyncInProgress `json:"in_progress,omitempty"`
-
-	// Feature usage flags from the extension (boolean "was this used since last sync").
-	// Only UI-originated actions; see allowedFeatureKeys for the accepted set.
-	FeaturesUsed map[string]bool `json:"features_used,omitempty"`
-}
-
-// SyncSettings contains extension settings from the sync request.
-type SyncSettings struct {
-	PilotEnabled     bool   `json:"pilot_enabled"`
-	TrackingEnabled  bool   `json:"tracking_enabled"`
-	TrackedTabID     int    `json:"tracked_tab_id"`
-	TrackedTabURL    string `json:"tracked_tab_url"`
-	TrackedTabTitle  string `json:"tracked_tab_title"`
-	TabStatus        string `json:"tab_status,omitempty"`
-	TrackedTabActive *bool  `json:"tracked_tab_active,omitempty"`
-	CaptureLogs      bool   `json:"capture_logs"`
-	CaptureNetwork   bool   `json:"capture_network"`
-	CaptureWebSocket bool   `json:"capture_websocket"`
-	CaptureActions   bool   `json:"capture_actions"`
-	CspRestricted    bool   `json:"csp_restricted"`
-	CspLevel         string `json:"csp_level"`
-}
-
-// SyncCommandResult is a command result from the extension.
-type SyncCommandResult struct {
-	ID                   string          `json:"id"`
-	CorrelationID        string          `json:"correlation_id,omitempty"`
-	ConnectionGeneration uint64          `json:"connection_generation,omitempty"`
-	Status               string          `json:"status"` // "complete", "error", "timeout", "cancelled"
-	Result               json.RawMessage `json:"result,omitempty"`
-	Error                string          `json:"error,omitempty"`
-}
-
-// SyncInProgress represents extension-reported active command execution state.
-//
-// Invariants:
-// - Either ID or CorrelationID must be present after normalization.
-// - Status is normalized to lower-case running/pending vocabulary.
-type SyncInProgress struct {
-	ID                   string   `json:"id"`
-	CorrelationID        string   `json:"correlation_id,omitempty"`
-	ConnectionGeneration uint64   `json:"connection_generation,omitempty"`
-	Type                 string   `json:"type,omitempty"`
-	Status               string   `json:"status,omitempty"` // running | pending
-	ProgressPct          *float64 `json:"progress_pct,omitempty"`
-	StartedAt            string   `json:"started_at,omitempty"`
-	UpdatedAt            string   `json:"updated_at,omitempty"`
-}
-
-// SyncResponse is the response body for /sync.
-type SyncResponse struct {
-	// Server acknowledged the sync
-	Ack bool `json:"ack"`
-
-	// ConnectionGeneration identifies the currently authoritative extension runtime.
-	ConnectionGeneration uint64 `json:"connection_generation"`
-
-	// Commands for extension to execute (replaces /pending-queries GET)
-	Commands []SyncCommand `json:"commands"`
-
-	// Server-controlled poll interval (dynamic backoff)
-	NextPollMs int `json:"next_poll_ms"`
-
-	// Server time for drift detection
-	ServerTime string `json:"server_time"`
-
-	// Server version for compatibility
-	ServerVersion string `json:"server_version,omitempty"`
-
-	// InstallID is the server's persistent anonymous install identifier.
-	// The extension adopts this as the single source of truth for all analytics.
-	InstallID string `json:"install_id,omitempty"`
-
-	// Capture overrides from AI (empty for now, placeholder for future feature)
-	CaptureOverrides map[string]string `json:"capture_overrides"`
-}
-
-// SyncCommand is a command from server to extension.
-type SyncCommand struct {
-	ID                   string          `json:"id"`
-	Type                 string          `json:"type"`
-	Params               json.RawMessage `json:"params"`
-	TabID                int             `json:"tab_id,omitempty"`
-	CorrelationID        string          `json:"correlation_id,omitempty"`
-	TraceID              string          `json:"trace_id,omitempty"`
-	ConnectionGeneration uint64          `json:"connection_generation"`
-}
-
-// =============================================================================
 // Handler
 // =============================================================================
 
@@ -182,33 +59,30 @@ type SyncCommand struct {
 //
 // Invariants:
 // - Connection state is updated before command/result reconciliation.
-// allowedFeatureKeys is the set of known UI-originated feature keys.
-// Only these are forwarded to the usage counter to prevent unbounded cardinality.
-// WIRE-SYNCED: mirror of the `UIFeature` union in src/background/ui-usage-tracker.ts
-// — add a key to BOTH or it is silently dropped here (CLAUDE.md rule 12).
-var allowedFeatureKeys = map[string]bool{
-	"screenshot":       true,
-	"annotations":      true,
-	"video":            true,
-	"dom_action":       true,
-	"action_recording": true,
-}
-
-// filterFeaturesUsed returns only the allowed keys from the raw features map.
-func filterFeaturesUsed(raw map[string]bool) map[string]bool {
-	if len(raw) == 0 {
+func enabledFeatures(raw *SyncFeaturesUsed) map[string]bool {
+	if raw == nil {
 		return nil
 	}
-	filtered := make(map[string]bool, len(allowedFeatureKeys))
-	for key, val := range raw {
-		if allowedFeatureKeys[key] {
-			filtered[key] = val
-		}
+	enabled := make(map[string]bool, 5)
+	if raw.Screenshot {
+		enabled["screenshot"] = true
 	}
-	if len(filtered) == 0 {
+	if raw.Annotations {
+		enabled["annotations"] = true
+	}
+	if raw.Video {
+		enabled["video"] = true
+	}
+	if raw.DOMAction {
+		enabled["dom_action"] = true
+	}
+	if raw.ActionRecording {
+		enabled["action_recording"] = true
+	}
+	if len(enabled) == 0 {
 		return nil
 	}
-	return filtered
+	return enabled
 }
 
 // - Lifecycle callbacks are emitted out-of-lock via util.SafeGo.
@@ -253,7 +127,7 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 		state.connectionGeneration,
 		func() {
 			// Only known UI-originated keys are forwarded to prevent unbounded cardinality.
-			if filtered := filterFeaturesUsed(req.FeaturesUsed); len(filtered) > 0 {
+			if filtered := enabledFeatures(req.FeaturesUsed); len(filtered) > 0 {
 				h.capture.FeatureUsage().Notify(filtered)
 			}
 			h.processSyncCommandResults(req.CommandResults, clientID, state.connectionGeneration)

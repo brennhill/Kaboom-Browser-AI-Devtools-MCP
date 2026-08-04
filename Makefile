@@ -22,7 +22,7 @@ PLATFORMS := \
 
 .PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-performance test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly mutation-test \
 	dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
-	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-ts-json-casing check-invariants check-schema ci \
+	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-ts-json-casing check-openapi-types check-invariants check-schema ci \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
@@ -376,8 +376,15 @@ check-wire-drift:
 check-ts-json-casing:
 	@node scripts/contracts/check-ts-json-casing.js
 
-check-invariants: check-wire-drift check-ts-json-casing
-	@node scripts/contracts/check-sync-wire-drift.js
+check-openapi-types:
+	@tmp_dir=$$(mktemp -d); tmp_file="$$tmp_dir/openapi-types.ts"; trap 'rm -f "$$tmp_file"; rmdir "$$tmp_dir"' EXIT; \
+		npx --no-install openapi-typescript cmd/browser-agent/openapi.json -o "$$tmp_file" >/dev/null; \
+		npx prettier --config .prettierrc --write "$$tmp_file" >/dev/null; \
+		cmp -s "$$tmp_file" src/generated/openapi-types.ts || { \
+			echo "OpenAPI TypeScript output is stale; regenerate src/generated/openapi-types.ts." >&2; exit 1; \
+		}
+
+check-invariants: check-wire-drift check-ts-json-casing check-openapi-types
 
 check-schema:
 	@npm run docs:lint:reference-schema-sync

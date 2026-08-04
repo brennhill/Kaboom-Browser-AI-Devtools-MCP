@@ -2,61 +2,8 @@
  * Purpose: Unified sync client that replaces multiple polling loops with a single /sync endpoint, handling settings, commands, and extension logs.
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
-/** Settings to send to server */
-export interface SyncSettings {
-    pilot_enabled: boolean;
-    tracking_enabled: boolean;
-    tracked_tab_id: number;
-    tracked_tab_url: string;
-    tracked_tab_title: string;
-    tab_status?: 'loading' | 'complete';
-    tracked_tab_active?: boolean;
-    capture_logs: boolean;
-    capture_network: boolean;
-    capture_websocket: boolean;
-    capture_actions: boolean;
-    csp_restricted: boolean;
-    csp_level: string;
-}
-/** Extension log entry */
-export interface SyncExtensionLog {
-    timestamp: string;
-    level: string;
-    message: string;
-    source: string;
-    category: string;
-    data?: unknown;
-}
-/** Command result to send to server */
-export interface SyncCommandResult {
-    id: string;
-    correlation_id?: string;
-    status: 'complete' | 'error' | 'timeout' | 'cancelled';
-    result?: unknown;
-    error?: string;
-    connection_generation?: number;
-}
-/** Active command metadata sent on each sync heartbeat */
-export interface SyncInProgress {
-    id: string;
-    correlation_id?: string;
-    type?: string;
-    status?: 'running' | 'pending';
-    progress_pct?: number;
-    started_at?: string;
-    updated_at?: string;
-    connection_generation: number;
-}
-/** Command from server */
-export interface SyncCommand {
-    id: string;
-    type: string;
-    params: unknown;
-    tab_id?: number;
-    correlation_id?: string;
-    trace_id?: string;
-    connection_generation: number;
-}
+import type { ExtensionLog } from '../../types/wire/wire-extension-log.js';
+import type { SyncCommand, SyncCommandResult, SyncSettings } from '../../types/wire/wire-sync.js';
 /** Sync state */
 export interface SyncState {
     connected: boolean;
@@ -73,7 +20,7 @@ export interface SyncClientCallbacks {
     commandTimeoutMs?: number;
     uploadCommandTimeoutMs?: number;
     getSettings: () => Promise<SyncSettings>;
-    getExtensionLogs: () => SyncExtensionLog[];
+    getExtensionLogs: () => ExtensionLog[];
     acknowledgeExtensionLogs: (sentCount: number) => void;
     debugLog?: (category: string, message: string, data?: unknown) => void;
 }

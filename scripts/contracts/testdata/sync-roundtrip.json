@@ -1,0 +1,81 @@
+{
+  "request": {
+    "ext_session_id": "fixture-session",
+    "connection_generation": 7,
+    "extension_version": "0.9.0",
+    "settings": {
+      "pilot_enabled": true,
+      "tracking_enabled": true,
+      "tracked_tab_id": 42,
+      "tracked_tab_url": "https://example.test/page",
+      "tracked_tab_title": "Fixture",
+      "tab_status": "complete",
+      "tracked_tab_active": true,
+      "capture_logs": true,
+      "capture_network": true,
+      "capture_websocket": false,
+      "capture_actions": true,
+      "csp_restricted": false,
+      "csp_level": "none"
+    },
+    "extension_logs": [
+      {
+        "timestamp": "2026-08-04T12:00:00Z",
+        "level": "warn",
+        "message": "fixture diagnostic",
+        "source": "background",
+        "category": "sync",
+        "data": { "correlation_id": "fixture-correlation" }
+      }
+    ],
+    "last_command_ack": "command-previous",
+    "command_results": [
+      {
+        "id": "command-complete",
+        "correlation_id": "fixture-correlation",
+        "connection_generation": 7,
+        "status": "complete",
+        "result": { "success": true }
+      }
+    ],
+    "in_progress": [
+      {
+        "id": "command-running",
+        "correlation_id": "fixture-running",
+        "connection_generation": 7,
+        "type": "dom_action",
+        "status": "running",
+        "progress_pct": 50,
+        "started_at": "2026-08-04T12:00:00Z",
+        "updated_at": "2026-08-04T12:00:01Z"
+      }
+    ],
+    "features_used": {
+      "screenshot": true,
+      "annotations": true,
+      "video": true,
+      "dom_action": true,
+      "action_recording": true
+    }
+  },
+  "response": {
+    "ack": true,
+    "connection_generation": 7,
+    "commands": [
+      {
+        "id": "command-next",
+        "type": "highlight",
+        "params": { "selector": "#target" },
+        "tab_id": 42,
+        "correlation_id": "fixture-next",
+        "trace_id": "trace-fixture",
+        "connection_generation": 7
+      }
+    ],
+    "next_poll_ms": 200,
+    "server_time": "2026-08-04T12:00:02Z",
+    "server_version": "0.9.0",
+    "install_id": "fixture-install",
+    "capture_overrides": {}
+  }
+}

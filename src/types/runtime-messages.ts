@@ -169,15 +169,11 @@ export interface CaptureScreenshotMessage {
  * points (keyboard, context menu) call `trackUIFeature` directly and do not need
  * it. AI/MCP paths deliberately never send it.
  *
- * WIRE-SYNCED: `feature` must equal the `UIFeature` union in
- * src/background/ui-usage-tracker.ts and the Go `allowedFeatureKeys` in
- * internal/capture/sync.go. Kept as a literal here (not `import type { UIFeature }`)
- * to avoid a types/ → background/ import edge; add a key to all three or the
- * daemon silently drops it (CLAUDE.md rule 12).
+ * The canonical feature key union is generated from the Go /sync wire schema.
  */
 export interface TrackUiFeatureMessage {
   readonly type: 'track_ui_feature'
-  readonly feature: 'screenshot' | 'annotations' | 'video' | 'dom_action' | 'action_recording'
+  readonly feature: import('./wire/wire-sync.js').SyncUIFeature
 }
 
 /**

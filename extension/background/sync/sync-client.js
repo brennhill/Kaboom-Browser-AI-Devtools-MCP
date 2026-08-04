@@ -134,14 +134,13 @@ export class SyncClient {
         const current = this.inProgressById.get(commandId);
         if (!current)
             return;
+        const progress = typeof progressPct === 'number' && Number.isFinite(progressPct) ? { progress_pct: clampPercent(progressPct) } : {};
         const next = {
             ...current,
             status,
-            updated_at: new Date(this.runtime.now()).toISOString()
+            updated_at: new Date(this.runtime.now()).toISOString(),
+            ...progress
         };
-        if (typeof progressPct === 'number' && Number.isFinite(progressPct)) {
-            next.progress_pct = clampPercent(progressPct);
-        }
         this.inProgressById.set(commandId, next);
     }
     // =============================================================================
@@ -163,31 +162,19 @@ export class SyncClient {
             // Build request
             const settings = await this.callbacks.getSettings();
             const logs = this.callbacks.getExtensionLogs();
+            const resultsSentCount = this.pendingResults.length;
+            features = drainUIFeatures();
             const request = {
                 ext_session_id: this.extSessionId,
                 connection_generation: this.connectionGeneration || undefined,
                 extension_version: this.extensionVersion || undefined,
                 settings,
-                in_progress: this.getInProgressSnapshot()
+                in_progress: this.getInProgressSnapshot(),
+                ...(logs.length > 0 ? { extension_logs: logs } : {}),
+                ...(resultsSentCount > 0 ? { command_results: this.pendingResults.slice(0, resultsSentCount) } : {}),
+                ...(this.state.lastCommandAck ? { last_command_ack: this.state.lastCommandAck } : {}),
+                ...(features ? { features_used: features } : {})
             };
-            // Include logs if any
-            if (logs.length > 0) {
-                request.extension_logs = logs;
-            }
-            // Include pending command results
-            const resultsSentCount = this.pendingResults.length;
-            if (resultsSentCount > 0) {
-                request.command_results = this.pendingResults.slice(0, resultsSentCount);
-            }
-            // Include last command ack
-            if (this.state.lastCommandAck) {
-                request.last_command_ack = this.state.lastCommandAck;
-            }
-            // Include UI-originated feature usage (screenshot button, draw mode, etc.)
-            features = drainUIFeatures();
-            if (features) {
-                request.features_used = features;
-            }
             // Make request with timeout to prevent hanging forever (8s: server holds up to 5s + margin)
             const response = await this.runtime.request(`${this.serverUrl}/sync`, buildDaemonJSONRequestInit(request, {
                 extensionVersion: this.extensionVersion || undefined
