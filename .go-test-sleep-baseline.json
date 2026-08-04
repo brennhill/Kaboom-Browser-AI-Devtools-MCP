@@ -43,7 +43,6 @@
     "cmd/browser-agent/waterfall_ondemand_test.go": 6,
     "internal/analysis/apicontract/branch_coverage_test.go": 1,
     "internal/analysis/apicontract/contract_report_test.go": 1,
-    "internal/audit/audit_query_test.go": 4,
     "internal/capture/async_queue_integration_test.go": 1,
     "internal/capture/async_queue_reliability_test.go": 6,
     "internal/capture/capture_stress_test.go": 4,

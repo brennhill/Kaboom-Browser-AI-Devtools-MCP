@@ -2,10 +2,7 @@
 // Why: Separates session tracking from entry recording to keep client normalization self-contained.
 package audit
 
-import (
-	"strings"
-	"time"
-)
+import "strings"
 
 // IdentifyClient normalizes the client name from the MCP initialize message.
 // Known clients are lowercased; unknown names are preserved as-is.
@@ -38,7 +35,7 @@ func (at *AuditTrail) CreateAuditSession(client ClientIdentifier) *AuditSessionI
 	info := &AuditSessionInfo{
 		ID:        sessionID,
 		ClientID:  clientID,
-		StartedAt: time.Now(),
+		StartedAt: at.now(),
 		ToolCalls: 0,
 	}
 

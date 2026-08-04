@@ -31,6 +31,7 @@ type AuditTrail struct {
 	config            AuditConfig
 	redactions        []RedactionEvent
 	redactionPatterns []*redactionPattern
+	now               func() time.Time
 }
 
 // SessionInfo tracks metadata for an MCP session.

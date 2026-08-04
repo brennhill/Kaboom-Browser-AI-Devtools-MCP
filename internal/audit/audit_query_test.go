@@ -10,6 +10,17 @@ import (
 	"time"
 )
 
+type auditTestClock struct{ now time.Time }
+
+func (c *auditTestClock) Now() time.Time              { return c.now }
+func (c *auditTestClock) Advance(delta time.Duration) { c.now = c.now.Add(delta) }
+
+func useAuditTestClock(trail *AuditTrail) *auditTestClock {
+	clock := &auditTestClock{now: time.Unix(100, 0)}
+	trail.now = clock.Now
+	return clock
+}
+
 // ============================================
 // Test: Query with no filter returns latest (default limit 100)
 // ============================================
@@ -105,13 +116,14 @@ func TestAuditTrail_QuerySince(t *testing.T) {
 		Enabled:      true,
 		RedactParams: false,
 	})
+	clock := useAuditTestClock(trail)
 
 	// Record entries with slight delays to ensure distinct timestamps
 	trail.Record(AuditEntry{AuditSessionID: "s1", ToolName: "observe", Success: true})
-	time.Sleep(10 * time.Millisecond)
+	clock.Advance(time.Second)
 
-	cutoff := time.Now()
-	time.Sleep(10 * time.Millisecond)
+	cutoff := clock.Now()
+	clock.Advance(time.Second)
 
 	trail.Record(AuditEntry{AuditSessionID: "s1", ToolName: "analyze", Success: true})
 	trail.Record(AuditEntry{AuditSessionID: "s1", ToolName: "generate", Success: true})
@@ -177,11 +189,12 @@ func TestAuditTrail_ReverseChronologicalOrder(t *testing.T) {
 		Enabled:      true,
 		RedactParams: false,
 	})
+	clock := useAuditTestClock(trail)
 
 	trail.Record(AuditEntry{AuditSessionID: "s1", ToolName: "first", Success: true})
-	time.Sleep(5 * time.Millisecond)
+	clock.Advance(time.Second)
 	trail.Record(AuditEntry{AuditSessionID: "s1", ToolName: "second", Success: true})
-	time.Sleep(5 * time.Millisecond)
+	clock.Advance(time.Second)
 	trail.Record(AuditEntry{AuditSessionID: "s1", ToolName: "third", Success: true})
 
 	results := trail.Query(AuditFilter{})

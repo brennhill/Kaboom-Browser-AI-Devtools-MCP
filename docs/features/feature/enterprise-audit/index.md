@@ -4,7 +4,7 @@ feature_id: feature-enterprise-audit
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-04
 code_paths:
   - internal/session/runtime_reader.go
   - cmd/browser-agent/tools_core.go
@@ -15,6 +15,10 @@ code_paths:
   - internal/analysis/thirdparty/reputation.go
   - internal/analysis/thirdparty/summary.go
   - internal/audit/audit_trail.go
+  - internal/audit/audit_types.go
+  - internal/audit/audit_recording.go
+  - internal/audit/audit_query.go
+  - internal/audit/audit_session.go
 test_paths:
   - internal/audit/audit_trail_test.go
   - internal/audit/audit_query_test.go
@@ -63,3 +67,7 @@ Callers use the canonical `AuditEntry`, `AuditTrail`, `AuditFilter`, and
 The runtime session projection receives the canonical performance-entry reader
 as an injected function, so its capture interface no longer requires a
 performance compatibility method.
+
+The audit trail owns one private clock for entry timestamps and session starts.
+Query cutoff and ordering tests advance a controlled clock, so audit filtering
+is exact and does not rely on sleeps to create timestamp separation.

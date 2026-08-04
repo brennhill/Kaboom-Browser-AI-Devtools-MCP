@@ -22,6 +22,7 @@ func NewAuditTrail(config AuditConfig) *AuditTrail {
 		auditSessions: make(map[string]*AuditSessionInfo),
 		config:        config,
 		redactions:    make([]RedactionEvent, 0),
+		now:           time.Now,
 	}
 
 	if config.RedactParams {
@@ -43,7 +44,7 @@ func (at *AuditTrail) Record(entry AuditEntry) {
 
 	// Assign ID and timestamp
 	entry.ID = generateAuditID()
-	entry.Timestamp = time.Now()
+	entry.Timestamp = at.now()
 
 	// Redact parameters if configured
 	if at.config.RedactParams && entry.Parameters != "" {
