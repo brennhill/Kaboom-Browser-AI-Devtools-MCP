@@ -1,4 +1,4 @@
-// media.go — Shared media file helpers (filename sanitization, data URL decoding).
+// media.go — Owns shared media, string, map, and URL normalization helpers.
 package util
 
 import (
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -47,4 +48,69 @@ func BuildScreenshotFilename(pageURL, correlationID string) string {
 		return fmt.Sprintf("%s-%s-%s.jpg", SanitizeForFilename(hostname), ts, SanitizeForFilename(correlationID))
 	}
 	return fmt.Sprintf("%s-%s.jpg", SanitizeForFilename(hostname), ts)
+}
+
+// Truncate returns s unchanged if len(s) <= maxLen. Otherwise, it truncates
+// and appends "..." so the total output length equals maxLen.
+func Truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return "..."[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// SortedMapKeys returns the keys of a string-keyed map in sorted order.
+func SortedMapKeys[T any](m map[string]T) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// ExtractURLPath extracts the path portion from a URL string, stripping query parameters.
+// Returns "/" if the URL has no path component.
+// Returns the input unchanged if it cannot be parsed.
+func ExtractURLPath(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	path := parsed.Path
+	if path == "" {
+		return "/"
+	}
+	return path
+}
+
+// ExtractOrigin extracts the origin (scheme://host[:port]) from a URL.
+// Returns empty string for data: URLs, blob: URLs (after extracting nested origin),
+// and malformed URLs.
+func ExtractOrigin(rawURL string) string {
+	// Handle data: URLs
+	if strings.HasPrefix(rawURL, "data:") {
+		return ""
+	}
+
+	// Handle blob: URLs - extract the nested origin
+	// blob:https://example.com/uuid -> https://example.com
+	rawURL = strings.TrimPrefix(rawURL, "blob:")
+
+	// Parse URL
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+
+	// URL must have a scheme and host
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return ""
+	}
+
+	// Reconstruct origin: scheme://host[:port]
+	return parsed.Scheme + "://" + parsed.Host
 }

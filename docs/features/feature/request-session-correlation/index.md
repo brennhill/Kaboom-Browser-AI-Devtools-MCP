@@ -4,7 +4,7 @@ feature_id: feature-request-session-correlation
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-04
 code_paths:
   - internal/capture/model.go
   - internal/capture/capture.go
@@ -19,7 +19,7 @@ code_paths:
   - internal/session/snapdiff/types.go
   - internal/session/snapdiff/network.go
   - internal/types/snapshot.go
-  - internal/util/url.go
+  - internal/util/media.go
 test_paths:
   - cmd/browser-agent/server_routes_clients_test.go
   - internal/session/clientreg/clientreg_test.go

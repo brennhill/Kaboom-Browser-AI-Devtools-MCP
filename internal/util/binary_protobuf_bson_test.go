@@ -1,12 +1,9 @@
-// Purpose: Tests for protobuf and BSON binary format detection.
-
-// binary_protobuf_bson_test.go — Coverage tests for protobuf, BSON, and varint detection.
-// Targets uncovered branches in wire types, field validation, length-delimited
-// parsing, BSON document validation, and end-to-end DetectBinaryFormat paths.
+// binary_protobuf_bson_test.go — Tests binary formats, invariants, and fuzz safety.
 package util
 
 import (
 	"testing"
+	"testing/quick"
 )
 
 // ---------------------------------------------------------------------------
@@ -464,4 +461,236 @@ func TestDetectBinaryFormat_NoMatchReturnsNil(t *testing.T) {
 	if result != nil {
 		t.Errorf("DetectBinaryFormat(no-match binary) = %+v, want nil", result)
 	}
+}
+
+// TestPropertyConfidenceBounds verifies that for any []byte, if DetectBinaryFormat
+// returns non-nil, Confidence is in [0.0, 1.0].
+func TestPropertyConfidenceBounds(t *testing.T) {
+	f := func(data []byte) bool {
+		result := DetectBinaryFormat(data)
+
+		if result == nil {
+			return true // nil result is valid
+		}
+
+		// Confidence must be in [0.0, 1.0]
+		return result.Confidence >= 0.0 && result.Confidence <= 1.0
+	}
+
+	cfg := &quick.Config{MaxCount: 1000}
+	if err := quick.Check(f, cfg); err != nil {
+		t.Error(err)
+	}
+}
+
+// TestPropertyNameValidity verifies that if non-nil, Name is one of the
+// expected format names.
+func TestPropertyNameValidity(t *testing.T) {
+	validNames := map[string]bool{
+		"messagepack": true,
+		"protobuf":    true,
+		"cbor":        true,
+		"bson":        true,
+	}
+
+	f := func(data []byte) bool {
+		result := DetectBinaryFormat(data)
+
+		if result == nil {
+			return true // nil result is valid
+		}
+
+		// Name must be one of the valid format names
+		return validNames[result.Name]
+	}
+
+	cfg := &quick.Config{MaxCount: 1000}
+	if err := quick.Check(f, cfg); err != nil {
+		t.Error(err)
+	}
+}
+
+// TestPropertyASCIIImmunity verifies that for any string of only printable ASCII
+// (0x20-0x7e), if it's long enough (>10 bytes), DetectBinaryFormat returns nil.
+func TestPropertyASCIIImmunity(t *testing.T) {
+	f := func(data []byte) bool {
+		// Filter to only printable ASCII (0x20-0x7e)
+		filtered := make([]byte, 0, len(data))
+		for _, b := range data {
+			if b >= 0x20 && b <= 0x7e {
+				filtered = append(filtered, b)
+			}
+		}
+
+		// If not long enough, skip this test case
+		if len(filtered) <= 10 {
+			return true // Vacuously true
+		}
+
+		// DetectBinaryFormat should return nil for pure ASCII
+		result := DetectBinaryFormat(filtered)
+		return result == nil
+	}
+
+	cfg := &quick.Config{MaxCount: 1000}
+	if err := quick.Check(f, cfg); err != nil {
+		t.Error(err)
+	}
+}
+
+// TestPropertyEmptyInputReturnsNil verifies that empty input always returns nil.
+func TestPropertyEmptyInputReturnsNil(t *testing.T) {
+	result := DetectBinaryFormat([]byte{})
+	if result != nil {
+		t.Errorf("DetectBinaryFormat([]) = %+v, want nil", result)
+	}
+
+	result = DetectBinaryFormat(nil)
+	if result != nil {
+		t.Errorf("DetectBinaryFormat(nil) = %+v, want nil", result)
+	}
+}
+
+// TestPropertyDeterminism verifies that DetectBinaryFormat always returns
+// the same result for the same input.
+func TestPropertyDeterminism(t *testing.T) {
+	f := func(data []byte) bool {
+		first := DetectBinaryFormat(data)
+		second := DetectBinaryFormat(data)
+
+		// Both nil or both non-nil with same values
+		if first == nil && second == nil {
+			return true
+		}
+
+		if first == nil || second == nil {
+			return false
+		}
+
+		return first.Name == second.Name && first.Confidence == second.Confidence
+	}
+
+	cfg := &quick.Config{MaxCount: 1000}
+	if err := quick.Check(f, cfg); err != nil {
+		t.Error(err)
+	}
+}
+
+// TestPropertyConfidenceNonNegative verifies that confidence is never negative.
+func TestPropertyConfidenceNonNegative(t *testing.T) {
+	f := func(data []byte) bool {
+		result := DetectBinaryFormat(data)
+
+		if result == nil {
+			return true
+		}
+
+		return result.Confidence >= 0.0
+	}
+
+	cfg := &quick.Config{MaxCount: 1000}
+	if err := quick.Check(f, cfg); err != nil {
+		t.Error(err)
+	}
+}
+
+func FuzzDetectBinaryFormat(f *testing.F) {
+	// MessagePack seeds
+	f.Add([]byte{0xc0})             // nil
+	f.Add([]byte{0x80})             // fixmap
+	f.Add([]byte{0x90})             // fixarray
+	f.Add([]byte{0xde, 0x00, 0x01}) // map16
+	f.Add([]byte{0x91, 0x01})       // array[1]
+	f.Add([]byte{0xcc, 0xff})       // uint8
+
+	// CBOR seeds
+	f.Add([]byte{0xf4})             // false
+	f.Add([]byte{0xf5})             // true
+	f.Add([]byte{0xf6})             // null
+	f.Add([]byte{0xa1, 0x61, 0x31}) // {"a": "1"}
+
+	// Protobuf seeds
+	f.Add([]byte{0x08, 0x01})                               // field 1, varint=1
+	f.Add([]byte{0x0a, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f}) // field 1, "hello"
+	f.Add([]byte{0x10, 0x96, 0x01})                         // field 2, varint=150
+
+	// BSON seeds
+	f.Add([]byte{0x05, 0x00, 0x00, 0x00, 0x00})                                                 // minimal empty document
+	f.Add([]byte{0x0c, 0x00, 0x00, 0x00, 0x02, 0x61, 0x00, 0x02, 0x00, 0x00, 0x00, 0x62, 0x00}) // {"a":"b"}
+
+	// Non-binary seeds (should return nil)
+	f.Add([]byte{0x89, 0x50, 0x4e, 0x47}) // PNG magic
+	f.Add([]byte("Hello world"))          // ASCII text
+	f.Add([]byte(`{"key":"value"}`))      // JSON
+	f.Add([]byte{})                       // empty
+	f.Add([]byte("a"))                    // single char
+	f.Add([]byte{0x00})                   // null byte
+	f.Add([]byte{0xff, 0xff, 0xff, 0xff}) // all high bits
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Call the function
+		result := DetectBinaryFormat(data)
+
+		// Invariant 1: Empty data → nil result
+		if len(data) == 0 {
+			if result != nil {
+				t.Errorf("Expected nil for empty data, got %+v", result)
+			}
+			return
+		}
+
+		// If result is nil, no further checks needed
+		if result == nil {
+			return
+		}
+
+		// Invariant 2: Confidence must be in [0.0, 1.0]
+		if result.Confidence < 0.0 || result.Confidence > 1.0 {
+			t.Errorf("Confidence out of range [0.0, 1.0]: %f for data: %v", result.Confidence, data)
+		}
+
+		// Invariant 3: Name must be one of the known formats
+		validNames := map[string]bool{
+			"messagepack": true,
+			"protobuf":    true,
+			"cbor":        true,
+			"bson":        true,
+		}
+		if !validNames[result.Name] {
+			t.Errorf("Invalid format name: %q (data: %v)", result.Name, data)
+		}
+
+		// Invariant 4: Pure printable ASCII (>90% threshold) should return nil
+		// This matches the isLikelyText logic
+		if len(data) >= 10 {
+			printableCount := 0
+			for _, b := range data {
+				if b >= 0x20 && b <= 0x7e {
+					printableCount++
+				}
+			}
+			printableRatio := float64(printableCount) / float64(len(data))
+			if printableRatio > 0.90 {
+				t.Errorf("High printable ASCII ratio (%.2f) should return nil, got %+v (data: %q)",
+					printableRatio, result, string(data))
+			}
+		}
+
+		// Invariant 5: Determinism - calling twice with same input returns same result
+		result2 := DetectBinaryFormat(data)
+		if result2 == nil {
+			t.Errorf("Determinism violation: first call returned %+v, second returned nil", result)
+			return
+		}
+
+		if result.Name != result2.Name {
+			t.Errorf("Determinism violation in Name: %q != %q", result.Name, result2.Name)
+		}
+		if result.Confidence != result2.Confidence {
+			t.Errorf("Determinism violation in Confidence: %f != %f", result.Confidence, result2.Confidence)
+		}
+		if result.Details != result2.Details {
+			t.Errorf("Determinism violation in Details: %q != %q", result.Details, result2.Details)
+		}
+	})
 }

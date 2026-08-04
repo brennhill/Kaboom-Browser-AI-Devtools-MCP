@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/openapi.json
   - cmd/browser-agent/tools_configure.go
@@ -20,7 +20,7 @@ code_paths:
   - internal/capture/extension_state.go
   - internal/capture/feature_usage.go
   - internal/capture/handlers.go
-  - internal/util/url.go
+  - internal/util/media.go
   - internal/queries/dispatcher_queries.go
   - internal/capture/sync.go
   - internal/capture/test_helpers.go
