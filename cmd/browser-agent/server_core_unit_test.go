@@ -16,11 +16,8 @@ func TestConfigPathsInitializeLocalStateAndUploadBoundary(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv(state.StateDirEnv, "")
-	previousSecurity := uploadSecurityConfig
-	t.Cleanup(func() { uploadSecurityConfig = previousSecurity })
-
-	initUploadSecurity(false, "", multiFlag{"private-*"})
-	if uploadSecurityConfig == nil {
+	security := initUploadSecurity(false, "", multiFlag{"private-*"})
+	if security == nil {
 		t.Fatal("default upload security was not initialized")
 	}
 	if _, err := os.Stat(filepath.Join(home, "kaboom-upload-dir")); err != nil {
@@ -34,13 +31,25 @@ func TestConfigPathsInitializeLocalStateAndUploadBoundary(t *testing.T) {
 	}
 
 	explicit := filepath.Join(t.TempDir(), "explicit")
-	if err := applyParallelModeStateDir(true, &explicit); err != nil || explicit == "" {
+	var warnings []string
+	if err := applyParallelModeStateDir(true, &explicit, &warnings); err != nil || explicit == "" {
 		t.Fatalf("explicit parallel state directory = %q, err=%v", explicit, err)
 	}
 	logFile := ""
-	resolveDefaultLogFile(&logFile)
+	resolveDefaultLogFile(&logFile, &warnings)
 	if logFile == "" || !strings.HasSuffix(logFile, "kaboom.jsonl") {
 		t.Fatalf("default log file = %q", logFile)
+	}
+}
+
+func TestServerRuntimeConfigurationIsInstanceOwned(t *testing.T) {
+	first := &Server{}
+	second := &Server{}
+	first.applyRuntimeConfig(&serverConfig{uploadAutomation: true})
+	second.applyRuntimeConfig(&serverConfig{uploadAutomation: false})
+
+	if !first.uploadAutomation || second.uploadAutomation {
+		t.Fatal("upload automation configuration leaked between server instances")
 	}
 }
 

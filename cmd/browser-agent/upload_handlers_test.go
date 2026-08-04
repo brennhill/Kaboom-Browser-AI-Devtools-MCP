@@ -221,13 +221,11 @@ func newUploadHTTPServer(t *testing.T, osAutomationEnabled bool) *httptest.Serve
 	// Allow private IPs in tests (httptest.NewServer uses 127.0.0.1)
 	uploadsec.SetSkipSSRFCheck(true)
 	t.Cleanup(func() { uploadsec.SetSkipSSRFCheck(false) })
-	// Set permissive upload security for HTTP handler tests
-	prev := uploadSecurityConfig
-	uploadSecurityConfig = uploadsec.NewSecurity("/", nil)
-	t.Cleanup(func() { uploadSecurityConfig = prev })
+	// Set permissive upload security for HTTP handler tests.
+	security := uploadsec.NewSecurity("/", nil)
 
 	mux := http.NewServeMux()
-	handlers := uploadapi.NewHandlers(uploadSecurityConfig, osAutomationEnabled, agenthttp.JSON)
+	handlers := uploadapi.NewHandlers(security, osAutomationEnabled, agenthttp.JSON)
 	mux.HandleFunc("/api/file/read", handlers.HandleFileRead)
 	mux.HandleFunc("/api/file/dialog/inject", handlers.HandleFileDialogInject)
 	mux.HandleFunc("/api/form/submit", handlers.HandleFormSubmit)

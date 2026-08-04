@@ -46,6 +46,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
 	uploadapi "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -113,7 +114,14 @@ type Server struct {
 
 	// Push drain authentication token. When non-empty, /push/drain requires
 	// Authorization: Bearer <token>. Set via --push-drain-token flag.
-	pushDrainToken string
+	pushDrainToken   string
+	uploadAutomation bool
+	uploadSecurity   *uploadsec.Security
+}
+
+func (s *Server) applyRuntimeConfig(config *serverConfig) {
+	s.uploadAutomation = config.uploadAutomation
+	s.uploadSecurity = config.uploadSecurity
 }
 
 // AddWarning stores a unique one-shot warning for the next tool response.
@@ -494,7 +502,7 @@ func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux,
 	if captured != nil {
 		registerCaptureRoutes(mux, server, captured)
 	}
-	registerUploadRoutes(mux)
+	registerUploadRoutes(mux, server)
 	registerPerformanceTraceRoutes(mux)
 	return mux, registerCoreRoutes(mux, server, captured)
 }
@@ -604,8 +612,8 @@ func handleClientByID(w http.ResponseWriter, r *http.Request, captured *capture.
 	}
 }
 
-func registerUploadRoutes(mux *http.ServeMux) {
-	handlers := uploadapi.NewHandlers(uploadSecurityConfig, osUploadAutomationFlag, httpapi.JSON)
+func registerUploadRoutes(mux *http.ServeMux, server *Server) {
+	handlers := uploadapi.NewHandlers(server.uploadSecurity, server.uploadAutomation, httpapi.JSON)
 	mux.HandleFunc("/api/file/read", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleFileRead)))
 	mux.HandleFunc("/api/file/dialog/inject", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleFileDialogInject)))
 	mux.HandleFunc("/api/form/submit", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleFormSubmit)))

@@ -178,6 +178,9 @@ Each server owns an application runtime for its start epoch, release checker,
 binary-upgrade provider, and update-warning cooldown. These collaborators are
 never shared between server instances, so parallel tests and multiple composed
 runtimes cannot suppress or overwrite one another's lifecycle state.
+Validated upload policy, OS-automation permission, and startup warnings flow
+from parsed configuration into the target server instance. Flag parsing no
+longer mutates package state later consumed by unrelated server instances.
 
 Persisted restart timestamps are validated before they become incident
 generations. Invalid negative values take the existing fail-open corruption

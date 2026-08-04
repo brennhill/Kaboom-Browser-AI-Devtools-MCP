@@ -19,7 +19,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // version is set at build time via -ldflags "-X main.version=..."
@@ -101,14 +100,6 @@ const (
 	healthCheckRetryInterval = 100 * time.Millisecond // Retry interval between health check attempts
 )
 
-var (
-	// Upload automation security flags (set by CLI flags, consumed by ToolHandler)
-	osUploadAutomationFlag bool                // --enable-os-upload-automation (Stage 4 only)
-	uploadSecurityConfig   *uploadsec.Security // validated upload security config
-
-	startupWarnings []string
-)
-
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -127,7 +118,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "[Kaboom] Error creating server: %v\n", err)
 		os.Exit(1)
 	}
-	for _, warning := range startupWarnings {
+	server.applyRuntimeConfig(cfg)
+	for _, warning := range cfg.startupWarnings {
 		server.AddWarning(warning)
 	}
 

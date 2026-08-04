@@ -51,15 +51,18 @@ func (f *multiFlag) Set(value string) error {
 
 // serverConfig holds the parsed command-line flags for the server.
 type serverConfig struct {
-	port         int
-	logFile      string
-	maxEntries   int
-	apiKey       string
-	stateDir     string
-	clientID     string
-	bridgeMode   bool
-	daemonMode   bool
-	parallelMode bool
+	port             int
+	logFile          string
+	maxEntries       int
+	apiKey           string
+	stateDir         string
+	clientID         string
+	bridgeMode       bool
+	daemonMode       bool
+	parallelMode     bool
+	uploadAutomation bool
+	uploadSecurity   *uploadsec.Security
+	startupWarnings  []string
 }
 
 type runtimeMode string
@@ -122,32 +125,35 @@ type setupCheckOptions struct {
 func parseAndValidateFlags() *serverConfig {
 	f := registerFlags()
 
-	osUploadAutomationFlag = *f.enableOsUploadAutomation
 	uploadsec.SetSSRFAllowedHosts(f.ssrfAllowedHosts)
-	initUploadSecurity(*f.enableOsUploadAutomation, *f.uploadDir, f.uploadDenyPatterns)
+	uploadSecurity := initUploadSecurity(*f.enableOsUploadAutomation, *f.uploadDir, f.uploadDenyPatterns)
 	validatePort(*f.port)
 	normalizeStateDir(f.stateDir)
-	if err := applyParallelModeStateDir(*f.parallelMode, f.stateDir); err != nil {
+	var warnings []string
+	if err := applyParallelModeStateDir(*f.parallelMode, f.stateDir, &warnings); err != nil {
 		diag.Printf("[Kaboom] Invalid --parallel setup: %v\n", err)
 		os.Exit(1)
 	}
 	handleEarlyExitModes(f)
-	resolveDefaultLogFile(f.logFile)
+	resolveDefaultLogFile(f.logFile, &warnings)
 
 	return &serverConfig{
-		port:         *f.port,
-		logFile:      *f.logFile,
-		maxEntries:   *f.maxEntries,
-		apiKey:       *f.apiKey,
-		stateDir:     *f.stateDir,
-		clientID:     *f.clientID,
-		bridgeMode:   *f.bridgeMode,
-		daemonMode:   *f.daemonMode,
-		parallelMode: *f.parallelMode,
+		port:             *f.port,
+		logFile:          *f.logFile,
+		maxEntries:       *f.maxEntries,
+		apiKey:           *f.apiKey,
+		stateDir:         *f.stateDir,
+		clientID:         *f.clientID,
+		bridgeMode:       *f.bridgeMode,
+		daemonMode:       *f.daemonMode,
+		parallelMode:     *f.parallelMode,
+		uploadAutomation: *f.enableOsUploadAutomation,
+		uploadSecurity:   uploadSecurity,
+		startupWarnings:  warnings,
 	}
 }
 
-func initUploadSecurity(enabled bool, dir string, denyPatterns multiFlag) {
+func initUploadSecurity(enabled bool, dir string, denyPatterns multiFlag) *uploadsec.Security {
 	if dir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -155,8 +161,7 @@ func initUploadSecurity(enabled bool, dir string, denyPatterns multiFlag) {
 				diag.Printf("[Kaboom] Cannot determine home directory for default upload dir: %v\n", err)
 				os.Exit(1)
 			}
-			uploadSecurityConfig = &uploadsec.Security{}
-			return
+			return &uploadsec.Security{}
 		}
 		dir = filepath.Join(home, "kaboom-upload-dir")
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -164,8 +169,7 @@ func initUploadSecurity(enabled bool, dir string, denyPatterns multiFlag) {
 				diag.Printf("[Kaboom] Cannot create default upload dir %s: %v\n", dir, err)
 				os.Exit(1)
 			}
-			uploadSecurityConfig = &uploadsec.Security{}
-			return
+			return &uploadsec.Security{}
 		}
 	}
 	security, err := uploadsec.ValidateUploadDir(dir, denyPatterns)
@@ -173,7 +177,7 @@ func initUploadSecurity(enabled bool, dir string, denyPatterns multiFlag) {
 		diag.Printf("[Kaboom] Upload security validation failed: %v\n", err)
 		os.Exit(1)
 	}
-	uploadSecurityConfig = security
+	return security
 }
 
 func validatePort(port int) {
@@ -199,7 +203,7 @@ func normalizeStateDir(stateDir *string) {
 	}
 }
 
-func applyParallelModeStateDir(parallel bool, stateDir *string) error {
+func applyParallelModeStateDir(parallel bool, stateDir *string, warnings *[]string) error {
 	if !parallel || strings.TrimSpace(*stateDir) != "" {
 		return nil
 	}
@@ -215,18 +219,18 @@ func applyParallelModeStateDir(parallel bool, stateDir *string) error {
 	if err := os.Setenv(state.StateDirEnv, *stateDir); err != nil {
 		return fmt.Errorf("failed to set %s: %w", state.StateDirEnv, err)
 	}
-	startupWarnings = append(startupWarnings, fmt.Sprintf("parallel_mode_state_dir_auto: %s", *stateDir))
+	*warnings = append(*warnings, fmt.Sprintf("parallel_mode_state_dir_auto: %s", *stateDir))
 	return nil
 }
 
-func resolveDefaultLogFile(logFile *string) {
+func resolveDefaultLogFile(logFile *string, warnings *[]string) {
 	if *logFile != "" {
 		return
 	}
 	defaultLogFile, err := state.DefaultLogFile()
 	if err != nil {
 		fallback := filepath.Join(os.TempDir(), "kaboom", "logs", "kaboom.jsonl")
-		startupWarnings = append(startupWarnings, fmt.Sprintf("state_dir_unwritable: %v; falling back to %s", err, fallback))
+		*warnings = append(*warnings, fmt.Sprintf("state_dir_unwritable: %v; falling back to %s", err, fallback))
 		*logFile = fallback
 		return
 	}

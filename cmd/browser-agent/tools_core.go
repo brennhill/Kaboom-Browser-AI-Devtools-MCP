@@ -459,7 +459,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	})
 	handler.auditRecorder = audit.NewRecorder(handler.auditTrail)
 
-	handler.uploadSecurity = uploadSecurityConfig
+	handler.uploadSecurity = server.uploadSecurity
 	handler.recordingInteractHandler = screenrec.NewInteractHandler(buildScreenrecDeps(handler))
 	analyzeDeps := buildAnalyzeDeps(handler)
 	observeDeps := buildObserveReadDeps(handler)

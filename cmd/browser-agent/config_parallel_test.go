@@ -16,7 +16,8 @@ func TestApplyParallelModeStateDir_AutoGeneratesWhenMissing(t *testing.T) {
 	t.Setenv(state.StateDirEnv, stateRoot)
 
 	stateDir := ""
-	if err := applyParallelModeStateDir(true, &stateDir); err != nil {
+	var warnings []string
+	if err := applyParallelModeStateDir(true, &stateDir, &warnings); err != nil {
 		t.Fatalf("applyParallelModeStateDir() error = %v", err)
 	}
 	if strings.TrimSpace(stateDir) == "" {
@@ -30,7 +31,8 @@ func TestApplyParallelModeStateDir_AutoGeneratesWhenMissing(t *testing.T) {
 func TestApplyParallelModeStateDir_PreservesExplicitStateDir(t *testing.T) {
 	explicit := filepath.Join(t.TempDir(), "isolated")
 	stateDir := explicit
-	if err := applyParallelModeStateDir(true, &stateDir); err != nil {
+	var warnings []string
+	if err := applyParallelModeStateDir(true, &stateDir, &warnings); err != nil {
 		t.Fatalf("applyParallelModeStateDir() error = %v", err)
 	}
 	if stateDir != explicit {
@@ -40,7 +42,8 @@ func TestApplyParallelModeStateDir_PreservesExplicitStateDir(t *testing.T) {
 
 func TestApplyParallelModeStateDir_NoopWhenDisabled(t *testing.T) {
 	stateDir := ""
-	if err := applyParallelModeStateDir(false, &stateDir); err != nil {
+	var warnings []string
+	if err := applyParallelModeStateDir(false, &stateDir, &warnings); err != nil {
 		t.Fatalf("applyParallelModeStateDir() error = %v", err)
 	}
 	if stateDir != "" {
