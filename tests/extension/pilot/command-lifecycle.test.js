@@ -231,4 +231,39 @@ describe('Command lifecycle contracts', () => {
     assert.strictEqual(queued[0].error, 'stale_connection_generation')
     assert.notDeepStrictEqual(queued[0].result, { success: true, generation: 1 })
   })
+
+  test('cancellation reaches the handler and suppresses every late terminal result', async () => {
+    const { registry, pending } = await setupHarness()
+    const queryType = makeType('cancel_in_flight')
+    const controller = new AbortController()
+    let releaseHandler
+    let markHandlerEntered
+    let mutations = 0
+    const handlerEntered = new Promise((resolve) => {
+      markHandlerEntered = resolve
+    })
+    registry.registerCommand(queryType, async (ctx) => {
+      markHandlerEntered()
+      await new Promise((resolve) => {
+        releaseHandler = resolve
+      })
+      ctx.signal.throwIfAborted()
+      mutations++
+      ctx.sendResult({ unexpected: true })
+    })
+
+    const { queued, syncClient } = createSyncClientSink()
+    const dispatch = pending.handlePendingQuery(
+      { id: 'q-cancelled', type: queryType, correlation_id: 'corr-cancelled', params: {} },
+      syncClient,
+      controller.signal
+    )
+    await handlerEntered
+    controller.abort()
+    releaseHandler()
+
+    await assert.rejects(dispatch, { name: 'AbortError' })
+    assert.strictEqual(mutations, 0)
+    assert.strictEqual(queued.length, 0)
+  })
 })

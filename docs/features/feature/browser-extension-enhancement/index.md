@@ -165,6 +165,12 @@ last_verified_date: 2026-03-28
   condition is normal and why logging would be misleading. The structural gate
   scans source modules and canonical DOM generator templates (rather than their
   generated output), including nested catches and concise Promise fallbacks.
+- Remote command cancellation is part of the command-handler contract. The sync
+  timeout aborts the same signal passed through the manager and registry to the
+  handler; handlers checkpoint that signal before post-await mutation. Once a
+  command is cancelled, the registry rejects its completion and suppresses any
+  late terminal result, preserving the original correlation and connection
+  generation for the daemon's timeout evidence.
 
 ## Specs
 

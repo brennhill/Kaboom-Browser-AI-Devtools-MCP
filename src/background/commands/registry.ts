@@ -127,7 +127,8 @@ function pickErrorHint(payload: unknown, fallback = 'command_failed'): string {
 function createDispatchLifecycle(
   query: PendingQuery,
   syncClient: SyncClient,
-  wrapResult: (result: unknown) => unknown
+  wrapResult: (result: unknown) => unknown,
+  signal: AbortSignal
 ): DispatchLifecycle {
   let terminalSent = false
 
@@ -141,6 +142,15 @@ function createDispatchLifecycle(
   }
 
   const sendOnce = (fn: () => void, metadata: Record<string, unknown>, allowStale = false): void => {
+    if (signal.aborted) {
+      debugLog(DebugCategory.CONNECTION, 'Ignoring terminal response from cancelled command', {
+        query_id: query.id,
+        query_type: query.type,
+        correlation_id: query.correlation_id || null,
+        ...metadata
+      })
+      return
+    }
     if (terminalSent) {
       debugLog(DebugCategory.CONNECTION, 'Ignoring duplicate terminal command response', {
         query_id: query.id,
@@ -286,7 +296,7 @@ export async function dispatch(query: PendingQuery, syncClient: SyncClient, sign
     if (!target) return result
     return withTargetContext(result, target)
   }
-  const lifecycle = createDispatchLifecycle(query, syncClient, wrapResult)
+  const lifecycle = createDispatchLifecycle(query, syncClient, wrapResult, signal)
 
   if (rejectSupersededCommand(query, lifecycle, 'command_dispatch')) return
 
@@ -399,6 +409,7 @@ export async function dispatch(query: PendingQuery, syncClient: SyncClient, sign
       )
     }
   } catch (err) {
+    if (signal.aborted) throw err
     const errMsg = errorMessage(err, 'Unexpected error handling query')
     debugLog(DebugCategory.CONNECTION, 'Error handling pending query', {
       type: query.type,

@@ -68,7 +68,7 @@ function pickErrorHint(payload, fallback = 'command_failed') {
     }
     return fallback;
 }
-function createDispatchLifecycle(query, syncClient, wrapResult) {
+function createDispatchLifecycle(query, syncClient, wrapResult, signal) {
     let terminalSent = false;
     const sendRawError = (payload, errorHint) => {
         const wrapped = wrapResult(payload);
@@ -79,6 +79,15 @@ function createDispatchLifecycle(query, syncClient, wrapResult) {
         sendResult(syncClient, query.id, wrapped);
     };
     const sendOnce = (fn, metadata, allowStale = false) => {
+        if (signal.aborted) {
+            debugLog(DebugCategory.CONNECTION, 'Ignoring terminal response from cancelled command', {
+                query_id: query.id,
+                query_type: query.type,
+                correlation_id: query.correlation_id || null,
+                ...metadata
+            });
+            return;
+        }
         if (terminalSent) {
             debugLog(DebugCategory.CONNECTION, 'Ignoring duplicate terminal command response', {
                 query_id: query.id,
@@ -192,7 +201,7 @@ export async function dispatch(query, syncClient, signal) {
             return result;
         return withTargetContext(result, target);
     };
-    const lifecycle = createDispatchLifecycle(query, syncClient, wrapResult);
+    const lifecycle = createDispatchLifecycle(query, syncClient, wrapResult, signal);
     if (rejectSupersededCommand(query, lifecycle, 'command_dispatch'))
         return;
     const handler = handlers.get(queryType);
@@ -286,6 +295,8 @@ export async function dispatch(query, syncClient, signal) {
         }
     }
     catch (err) {
+        if (signal.aborted)
+            throw err;
         const errMsg = errorMessage(err, 'Unexpected error handling query');
         debugLog(DebugCategory.CONNECTION, 'Error handling pending query', {
             type: query.type,
