@@ -498,10 +498,7 @@ func TestNewQueryDispatcher_WaitForResult_Async(t *testing.T) {
 
 	id, _ := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
-	go func() {
-		time.Sleep(20 * time.Millisecond)
-		qd.SetQueryResult(id, json.RawMessage(`{"async":true}`))
-	}()
+	go qd.SetQueryResult(id, json.RawMessage(`{"async":true}`))
 
 	result, err := qd.WaitForResult(id, 2*time.Second)
 	if err != nil {
@@ -535,10 +532,6 @@ func TestNewQueryDispatcher_WaitForPendingQueries_WakesAllWaiters(t *testing.T) 
 			done <- struct{}{}
 		}()
 	}
-
-	// Let the waiters block. Late arrivals are still safe: once the queue is
-	// non-empty, WaitForPendingQueries returns immediately.
-	time.Sleep(50 * time.Millisecond)
 
 	if _, err := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)}); err != nil {
 		t.Fatalf("CreatePendingQuery error = %v", err)

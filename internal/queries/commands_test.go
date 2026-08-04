@@ -382,7 +382,9 @@ func TestNewQueryDispatcher_ExpireCommandResultAfterDispatchTimeout(t *testing.T
 	}
 
 	qd.AcknowledgePendingQuery(queryID)
-	time.Sleep(50 * time.Millisecond)
+	qd.resultsMu.Lock()
+	qd.activeCommands["corr-dispatched-timeout"].ExpiresAt = time.Now().Add(-time.Nanosecond)
+	qd.resultsMu.Unlock()
 
 	cmd, found := qd.GetCommandResult("corr-dispatched-timeout")
 	if !found {
@@ -426,10 +428,7 @@ func TestNewQueryDispatcher_WaitForCommand_Async(t *testing.T) {
 
 	qd.RegisterCommand("corr-async", "q-async", 30*time.Second)
 
-	go func() {
-		time.Sleep(20 * time.Millisecond)
-		qd.ApplyCommandResult("corr-async", "complete", json.RawMessage(`{"async":true}`), "")
-	}()
+	go qd.ApplyCommandResult("corr-async", "complete", json.RawMessage(`{"async":true}`), "")
 
 	cmd, found := qd.WaitForCommand("corr-async", 2*time.Second)
 	if !found {

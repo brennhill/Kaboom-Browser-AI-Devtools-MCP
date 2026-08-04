@@ -8,6 +8,7 @@ package queries
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 )
@@ -30,9 +31,6 @@ func TestExpireCommand_SignalsWaiters(t *testing.T) {
 		result, found = qd.WaitForCommand(correlationID, 15*time.Second)
 		close(done)
 	}()
-
-	// Give the waiter time to block
-	time.Sleep(50 * time.Millisecond)
 
 	// Expire the command — should signal the waiter
 	qd.ExpireCommand(correlationID)
@@ -67,8 +65,6 @@ func TestExpireCommandWithReason_SignalsWaiters(t *testing.T) {
 		result, _ = qd.WaitForCommand(correlationID, 15*time.Second)
 		close(done)
 	}()
-
-	time.Sleep(50 * time.Millisecond)
 
 	// Expire with a custom reason
 	qd.expireCommandWithReason(correlationID, "extension_disconnected")
@@ -118,8 +114,6 @@ func TestExpireAllPendingQueries_SignalsWaiters(t *testing.T) {
 		qd.WaitForCommand("corr-b", 15*time.Second)
 		close(doneB)
 	}()
-
-	time.Sleep(50 * time.Millisecond)
 
 	// Expire all pending queries
 	qd.ExpireAllPendingQueries("extension_disconnected")
@@ -182,12 +176,22 @@ func TestExpireAndComplete_ConcurrentRace(t *testing.T) {
 			close(done)
 		}()
 
-		// Let waiter reach the select
-		time.Sleep(10 * time.Millisecond)
-
 		// Fire both concurrently — exactly one should win
-		go qd.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"ok":true}`), "")
-		go qd.ExpireCommand(correlationID)
+		start := make(chan struct{})
+		var operations sync.WaitGroup
+		operations.Add(2)
+		go func() {
+			defer operations.Done()
+			<-start
+			qd.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"ok":true}`), "")
+		}()
+		go func() {
+			defer operations.Done()
+			<-start
+			qd.ExpireCommand(correlationID)
+		}()
+		close(start)
+		operations.Wait()
 
 		// Waiter must unblock well before its 10s timeout
 		select {

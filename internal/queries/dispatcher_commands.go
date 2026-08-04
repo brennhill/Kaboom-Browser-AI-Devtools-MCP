@@ -256,6 +256,15 @@ func (qd *QueryDispatcher) WaitForCommand(correlationID string, timeout time.Dur
 		ch := qd.commandNotify
 		qd.resultsMu.RUnlock()
 
+		// Recheck after subscribing. A terminal transition can occur between the
+		// initial state read and notification-channel snapshot; without this
+		// check the waiter can subscribe to the replacement channel and miss the
+		// transition that already completed its command.
+		cmd, found = qd.GetCommandResult(correlationID)
+		if !found || cmd.Status != "pending" {
+			return cmd, found
+		}
+
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
 			return qd.GetCommandResult(correlationID)

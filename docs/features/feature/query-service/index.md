@@ -65,6 +65,12 @@ entry and release with channels, allowing disconnect races to be reproduced
 without sleeps while production remains wired to the query dispatcher's
 notification-based wait.
 
+Command waiters subscribe to the current notification generation and then
+recheck lifecycle state before blocking. This prevents a completion or expiry
+between the initial read and channel snapshot from becoming a missed wakeup.
+The expiration/completion race suite runs from explicit barriers with no
+wall-clock sleeps.
+
 ## TL;DR
 
 - Status: proposed
