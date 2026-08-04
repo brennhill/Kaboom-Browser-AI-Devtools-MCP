@@ -135,6 +135,24 @@ Use this as a hard checklist during design, coding, and review.
 - Do not include raw errors when they may contain user state. Prefer stable
   operation names, error categories, correlation IDs, and redacted remediation.
 
+## 15) Canonical Operational Incident Pattern
+
+- Report an operational failure once through `internal/incident`; derive Doctor
+  presentation and privacy-safe analytics from that canonical incident.
+- Use only registry-owned incident codes. Feature callers provide correlation,
+  numeric connection generation, and redacted local evidence; they do not author
+  Doctor prose, analytics dimensions, or arbitrary outbound maps.
+- Treat recovery as an explicit state machine: `detected → retrying → recovered`
+  or `detected → retrying → exhausted`. Transitions must be idempotent and reject
+  stale generations.
+- Keep detailed evidence local. The analytics projection deliberately excludes
+  correlation IDs, generations, paths, URLs, messages, fixes, and local evidence.
+- Instrument ownership boundaries rather than helpers: daemon lifecycle,
+  extension connection, tracking/readiness, command resolution, state recovery,
+  and bounded queues.
+- Bound incident history and storage. Capacity eviction is single-pass and every
+  dropped incident increments an observable pressure counter.
+
 ## Review Checklist
 
 - [ ] Storage access follows helper/module boundaries.
@@ -149,3 +167,4 @@ Use this as a hard checklist during design, coding, and review.
 - [ ] Unit + e2e/smoke tests reflect current behavior and pass.
 - [ ] Migrations are complete: no compatibility facade, alias-only module, old caller, stale test, or stale documentation remains.
 - [ ] Every catch leaves redacted evidence, or carries an explicit `EXPECTED_ABSENCE:` rationale.
+- [ ] Operational failures use a registered incident code and canonical lifecycle projection rather than parallel log/Doctor/analytics calls.

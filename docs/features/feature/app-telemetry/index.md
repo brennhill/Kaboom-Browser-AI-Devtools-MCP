@@ -4,7 +4,7 @@ feature_id: feature-app-telemetry
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - internal/telemetry/beacon.go
   - internal/telemetry/install_id.go
@@ -15,6 +15,9 @@ code_paths:
   - internal/statefile/statefile.go
   - cmd/browser-agent/internal/operationalapi/handler.go
   - internal/statediag/collector.go
+  - internal/incident/registry.go
+  - internal/incident/store.go
+  - internal/incident/projections.go
 test_paths:
   - tests/architecture/user-state-loaders.test.cjs
   - internal/telemetry/beacon_test.go
@@ -28,6 +31,7 @@ test_paths:
   - internal/telemetry/usage_counter_test.go
   - cmd/browser-agent/internal/operationalapi/debug_test.go
   - internal/statediag/collector_test.go
+  - internal/incident/store_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/tests/contracts/app-telemetry-producers.test.mjs
