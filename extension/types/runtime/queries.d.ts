@@ -10,7 +10,7 @@
 /**
  * Query types from server
  */
-export type QueryType = 'dom' | 'a11y' | 'execute' | 'highlight' | 'page_info' | 'tabs' | 'browser_action' | 'waterfall' | 'dom_action' | 'state_capture' | 'state_save' | 'state_load' | 'state_list' | 'state_delete' | 'subtitle' | 'screenshot' | 'screen_recording_start' | 'screen_recording_stop' | 'link_health' | 'draw_mode' | 'upload' | 'cdp_action' | 'explore_page' | 'get_readable' | 'get_markdown' | 'page_summary' | 'environment_transaction_snapshot' | 'environment_transaction_apply' | 'environment_transaction_restore';
+export type QueryType = 'dom' | 'a11y' | 'execute' | 'highlight' | 'page_info' | 'tabs' | 'browser_action' | 'waterfall' | 'dom_action' | 'state_capture' | 'state_save' | 'state_load' | 'state_list' | 'state_delete' | 'subtitle' | 'screenshot' | 'screen_recording_start' | 'screen_recording_stop' | 'link_health' | 'draw_mode' | 'upload' | 'cdp_action' | 'explore_page' | 'get_readable' | 'get_markdown' | 'page_summary' | 'environment_transaction_snapshot' | 'environment_transaction_apply' | 'environment_transaction_restore' | 'performance_trace';
 /**
  * Pending query from server
  */

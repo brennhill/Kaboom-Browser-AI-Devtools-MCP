@@ -10,6 +10,11 @@ var analyzeModeSpecs = map[string]modeParamSpec{
 	"performance": {
 		Hint: "Page load performance metrics and bottleneck analysis",
 	},
+	"performance_trace": {
+		Hint:     "Record a full Chrome CPU flamechart trace to a local DevTools/Perfetto-importable JSON artifact",
+		Required: []string{"action"},
+		Optional: []string{"tab_id", "background"},
+	},
 	"accessibility": {
 		Hint:     "WCAG/axe accessibility audit with violation details. summary=true returns counts + top issues",
 		Optional: []string{"selector", "scope", "tags", "force_refresh", "frame", "summary"},

@@ -1,64 +1,66 @@
 ---
 doc_type: feature_index
 feature_id: feature-performance-trace
-status: proposed
+status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace.go
+  - cmd/browser-agent/internal/cli/cli_tool_parsers_observe_analyze.go
+  - cmd/browser-agent/server.go
+  - internal/perftrace/http.go
+  - internal/perftrace/manager.go
+  - internal/perftrace/wire_trace.go
+  - internal/schema/analyze.go
+  - internal/state/paths.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
-  - internal/performance/diff.go
-  - internal/tools/observe/session.go
-  - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/commands/analyze.ts
-test_paths: []
-last_verified_version: 0.8.6
-last_verified_date: 2026-06-29
+  - src/background/dom/cdp/performance-trace.ts
+  - src/types/runtime/queries.ts
+  - src/types/wire/wire-performance-trace.ts
+test_paths:
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace_test.go
+  - cmd/browser-agent/tools_schema_parity_test.go
+  - internal/perftrace/http_test.go
+  - internal/perftrace/manager_test.go
+  - tests/extension/performance-trace/performance-trace.test.js
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # Performance Trace
 
 ## TL;DR
 
-- Status: proposed
-- Tool: analyze
-- Mode/Action: performance_trace (action: start | stop | analyze)
-- Location: `docs/features/feature/performance-trace`
+- Status: shipped
+- Tool: `analyze`
+- Mode: `performance_trace`
+- Actions: `start`, `stop`
 
 ## Overview
 
-Performance Trace adds `analyze({what: "performance_trace"})`, a mode that records a Chrome
-DevTools Protocol (CDP) performance trace of the tracked tab and returns structured insights:
-long tasks, layout shifts, forced reflows, script-evaluation time by source, and a main-thread
-time breakdown. An `action` parameter controls the lifecycle: `start` begins recording, `stop`
-ends it and returns insights, and `analyze` drills into a specific insight.
+Performance Trace records the tracked tab with Chrome's tracing backend and preserves the full
+CPU flamechart event stream as a local JSON artifact. The result is importable through Chrome
+DevTools' Performance panel or Perfetto. Large traces are streamed to the daemon in ordered,
+bounded batches and are never returned inline through MCP.
 
-This is the on-demand, deep counterpart to the passive `observe({what: "vitals"})` telemetry.
-Web Vitals are captured continuously; a performance trace reveals exactly what blocks the main
-thread during a recording window. Raw traces are ten to fifty megabytes, so the daemon distills
-them into a sub-five-kilobyte summary the agent can act on.
+Use `analyze({"what":"performance_trace","action":"start"})`, reproduce the slow behavior,
+then call `analyze({"what":"performance_trace","action":"stop"})`. The stop response includes
+the artifact path, byte count, event count, and chunk count. The passive
+`observe({"what":"vitals"})` mode remains the lower-cost choice for continuous metrics.
+
+Captured trace data remains local. It is not included in anonymous product-usage telemetry.
 
 ## Specs
 
-- Product Spec: [product-spec.md](./product-spec.md)
-- Tech Spec: [tech-spec.md](./tech-spec.md)
-- QA Plan: [qa-plan.md](./qa-plan.md)
+- [Product spec](./product-spec.md)
+- [Technical spec](./tech-spec.md)
+- [QA plan](./qa-plan.md)
 
 ## Requirement IDs
 
 - FEATURE_PERFORMANCE_TRACE_001
 - FEATURE_PERFORMANCE_TRACE_002
 - FEATURE_PERFORMANCE_TRACE_003
-
-## Related Code
-
-- Analyze dispatch registry: `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
-- Mode hints and parameter specs: `internal/tools/configure/capabilities/modespecs_analyze.go`
-- Performance metrics and Web Vitals: `internal/performance/diff.go`
-- Passive vitals counterpart: `internal/tools/observe/session.go` (GetWebVitals)
-- CDP attach/detach lifecycle: `src/background/dom/cdp/cdp-dispatch.ts`
-
-## Code and Tests
-
-Add concrete implementation and test links here as this feature evolves.

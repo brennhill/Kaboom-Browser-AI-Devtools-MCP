@@ -27,7 +27,8 @@ const WIRE_PAIRS = [
   { go: 'internal/types/wire_network.go', ts: 'src/types/wire/wire-network.ts' },
   { go: 'internal/types/wire_websocket_event.go', ts: 'src/types/wire/wire-websocket-event.ts' },
   { go: 'internal/performance/wire_performance.go', ts: 'src/types/wire/wire-performance-snapshot.ts' },
-  { go: 'internal/qafixture/wire_fixture.go', ts: 'src/types/wire/wire-qa-fixture.ts' }
+  { go: 'internal/qafixture/wire_fixture.go', ts: 'src/types/wire/wire-qa-fixture.ts' },
+  { go: 'internal/perftrace/wire_trace.go', ts: 'src/types/wire/wire-performance-trace.ts' }
 ]
 
 /**
@@ -38,7 +39,8 @@ const TYPE_OVERRIDES = {
   // direction is a string in Go but a union type in TS
   'WireWebSocketEvent.direction': "'incoming' | 'outgoing'",
   // json.RawMessage values are arbitrary valid JSON on the TypeScript side.
-  'WireQAFixture.seed_data': 'Readonly<Record<string, unknown>>'
+  'WireQAFixture.seed_data': 'Readonly<Record<string, unknown>>',
+  'WirePerformanceTraceChunkRequest.events': 'readonly unknown[]'
 }
 
 /**
@@ -75,6 +77,10 @@ const FILE_DESCRIPTIONS = {
   'wire_fixture.go': {
     overview: 'Wire types for deterministic QA fixtures',
     description: 'Canonical TypeScript definitions for the versioned QA fixture command payload.'
+  },
+  'wire_trace.go': {
+    overview: 'Wire types for Chrome performance trace streaming',
+    description: 'Canonical TypeScript definitions for the local trace artifact lifecycle.'
   }
 }
 

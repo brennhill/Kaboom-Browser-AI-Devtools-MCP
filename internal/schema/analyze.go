@@ -16,7 +16,7 @@ func analyzeToolSchema() mcp.MCPTool {
 				"what": map[string]any{
 					"type":        "string",
 					"description": "Analysis mode to run against the page",
-					"enum":        []string{"dom", "performance", "accessibility", "error_clusters", "navigation_patterns", "security_audit", "third_party_audit", "link_health", "link_validation", "page_summary", "annotations", "annotation_detail", "api_validation", "draw_history", "draw_session", "computed_styles", "forms", "form_state", "form_validation", "data_table", "visual_baseline", "visual_diff", "visual_baselines", "navigation", "page_structure", "audit", "feature_gates", "page_issues", "verification"},
+					"enum":        []string{"dom", "performance", "performance_trace", "accessibility", "error_clusters", "navigation_patterns", "security_audit", "third_party_audit", "link_health", "link_validation", "page_summary", "annotations", "annotation_detail", "api_validation", "draw_history", "draw_session", "computed_styles", "forms", "form_state", "form_validation", "data_table", "visual_baseline", "visual_diff", "visual_baselines", "navigation", "page_structure", "audit", "feature_gates", "page_issues", "verification"},
 				},
 				"telemetry_mode": map[string]any{
 					"type":        "string",
@@ -39,6 +39,11 @@ func analyzeToolSchema() mcp.MCPTool {
 					"type":        "string",
 					"description": "Operation selector (api_validation: analyze/report/clear; annotations: flush; verification: define/evaluate)",
 					"enum":        []string{"analyze", "report", "clear", "flush", "define", "evaluate"},
+				},
+				"action": map[string]any{
+					"type":        "string",
+					"description": "Trace lifecycle action (performance_trace: start or stop)",
+					"enum":        []string{"start", "stop"},
 				},
 				"contract": map[string]any{
 					"type":        "object",

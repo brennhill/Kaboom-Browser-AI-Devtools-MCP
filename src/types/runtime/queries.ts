@@ -42,6 +42,7 @@ export type QueryType =
   | 'environment_transaction_snapshot'
   | 'environment_transaction_apply'
   | 'environment_transaction_restore'
+  | 'performance_trace'
 
 /**
  * Pending query from server

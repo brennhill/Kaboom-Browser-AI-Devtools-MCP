@@ -37,6 +37,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/perftrace"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -491,7 +492,21 @@ func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux,
 		registerCaptureRoutes(mux, server, captured)
 	}
 	registerUploadRoutes(mux)
+	registerPerformanceTraceRoutes(mux)
 	return mux, registerCoreRoutes(mux, server, captured)
+}
+
+func registerPerformanceTraceRoutes(mux *http.ServeMux) {
+	dir, err := state.PerformanceTracesDir()
+	if err != nil {
+		diag.Printf("[Kaboom] performance trace state path unavailable; using process-local temporary storage: %v\n", err)
+		dir = filepath.Join(os.TempDir(), "kaboom-performance-traces")
+	}
+	handler := perftrace.NewHTTPHandler(perftrace.NewManager(dir))
+	mux.HandleFunc("/performance-trace/start", httpguard.CORS(httpguard.ExtensionOnly(handler.HandleStart)))
+	mux.HandleFunc("/performance-trace/chunk", httpguard.CORS(httpguard.ExtensionOnly(handler.HandleChunk)))
+	mux.HandleFunc("/performance-trace/finish", httpguard.CORS(httpguard.ExtensionOnly(handler.HandleFinish)))
+	mux.HandleFunc("/performance-trace/abort", httpguard.CORS(httpguard.ExtensionOnly(handler.HandleAbort)))
 }
 
 func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) {

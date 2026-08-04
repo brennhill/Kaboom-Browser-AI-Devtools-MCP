@@ -95,6 +95,11 @@ func EvidenceDir() (string, error) {
 	return InRoot("evidence")
 }
 
+// PerformanceTracesDir returns the local-only Chrome trace artifact directory.
+func PerformanceTracesDir() (string, error) {
+	return InRoot("performance-traces")
+}
+
 // SettingsFile returns the extension settings cache file path.
 func SettingsFile() (string, error) {
 	return InRoot("settings", "extension-settings.json")

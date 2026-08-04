@@ -13,6 +13,17 @@ import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { domFrameProbe } from '../dom/primitives/dom-frame-probe.js'
 import { normalizeFrameArg, resolveMatchedFrameIds } from '../exec/frame-targeting.js'
+import {
+  createDefaultPerformanceTraceController,
+  type PerformanceTraceController
+} from '../dom/cdp/performance-trace.js'
+
+let performanceTraceController: PerformanceTraceController | undefined
+
+function getPerformanceTraceController(): PerformanceTraceController {
+  performanceTraceController ??= createDefaultPerformanceTraceController()
+  return performanceTraceController
+}
 
 // =============================================================================
 // FRAME ROUTING TYPES
@@ -449,6 +460,29 @@ registerPassthrough('computed_styles', 'computed_styles_query', 'Computed styles
 registerPassthrough('form_discovery', 'form_discovery_query', 'Form discovery failed')
 registerPassthrough('form_state', 'form_state_query', 'Form state extraction failed')
 registerPassthrough('data_table', 'data_table_query', 'Data table extraction failed')
+
+registerCommand('performance_trace', async (ctx) => {
+  const action = typeof ctx.params.action === 'string' ? ctx.params.action : ''
+  try {
+    if (action === 'start') {
+      ctx.sendResult(await getPerformanceTraceController().start(ctx.tabId))
+      return
+    }
+    if (action === 'stop') {
+      ctx.sendResult(await getPerformanceTraceController().stop(ctx.tabId))
+      return
+    }
+    ctx.sendResult({
+      error: 'invalid_performance_trace_action',
+      message: 'performance_trace requires action=start or action=stop'
+    })
+  } catch (error) {
+    ctx.sendResult({
+      error: 'performance_trace_failed',
+      message: errorMessage(error, 'Performance trace command failed')
+    })
+  }
+})
 
 // =============================================================================
 // DRAW MODE

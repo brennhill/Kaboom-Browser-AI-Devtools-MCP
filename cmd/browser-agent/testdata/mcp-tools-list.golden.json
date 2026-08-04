@@ -254,6 +254,14 @@
     "description": "Trigger active analysis. Creates async queries the extension executes.\n\nSynchronous Mode (Default): Tools block until the extension returns a result (up to 15s). Set background:true to return immediately with a correlation_id, then poll with observe(what='command_result', correlation_id=...).\n\nDraw Mode: Use annotations to get all annotations from the last draw mode session. Use annotation_detail with correlation_id to get full computed styles and DOM detail for a specific annotation.\n\nUse summary:true on supported modes for compact token-efficient responses.",
     "inputSchema": {
       "properties": {
+        "action": {
+          "description": "Trace lifecycle action (performance_trace: start or stop)",
+          "enum": [
+            "start",
+            "stop"
+          ],
+          "type": "string"
+        },
         "annot_session": {
           "description": "Named session for multi-page annotation review (applies to annotations). Accumulates annotations across pages.",
           "type": "string"
@@ -458,6 +466,7 @@
           "enum": [
             "dom",
             "performance",
+            "performance_trace",
             "accessibility",
             "error_clusters",
             "navigation_patterns",

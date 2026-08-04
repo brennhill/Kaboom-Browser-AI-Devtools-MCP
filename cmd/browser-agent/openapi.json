@@ -917,6 +917,42 @@
         }
       }
     },
+    "/performance-trace/start": {
+      "post": {
+        "tags": ["Media"],
+        "summary": "Start a local Chrome CPU trace artifact",
+        "operationId": "startPerformanceTrace",
+        "security": [{"extensionClient": []}],
+        "responses": {"201": {"description": "Trace artifact opened"}}
+      }
+    },
+    "/performance-trace/chunk": {
+      "post": {
+        "tags": ["Media"],
+        "summary": "Append an ordered Chrome trace event batch",
+        "operationId": "appendPerformanceTraceChunk",
+        "security": [{"extensionClient": []}],
+        "responses": {"202": {"description": "Trace events appended"}}
+      }
+    },
+    "/performance-trace/finish": {
+      "post": {
+        "tags": ["Media"],
+        "summary": "Publish a completed local Chrome trace artifact",
+        "operationId": "finishPerformanceTrace",
+        "security": [{"extensionClient": []}],
+        "responses": {"200": {"description": "Trace artifact metadata"}}
+      }
+    },
+    "/performance-trace/abort": {
+      "post": {
+        "tags": ["Media"],
+        "summary": "Remove an incomplete local Chrome trace artifact",
+        "operationId": "abortPerformanceTrace",
+        "security": [{"extensionClient": []}],
+        "responses": {"200": {"description": "Trace artifact removed"}}
+      }
+    },
     "/performance-snapshots": {
       "post": {
         "tags": [
