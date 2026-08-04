@@ -187,6 +187,14 @@ Use this as a hard checklist during design, coding, and review.
 - CI workflows invoke canonical Make targets. A workflow contract must fail if
   a required architecture, lifecycle, performance, coverage, or security gate
   is defined locally but omitted from hosted CI.
+- `make check-go-architecture` rejects growth in mutable Go package state and
+  exported declarations against the reviewed per-file baseline. New files have
+  no allowance. After removing debt, run `make go-architecture-baseline-update`;
+  it can only lower or delete allowances. Intentional public API growth requires
+  a manual baseline edit in the same reviewed change, with its ownership and
+  necessity documented in the relevant feature index. Immutable sentinel errors
+  and compiled regular expressions are explicitly classified by the checker;
+  do not broaden that classification merely to make a mutable registry pass.
 
 ## Review Checklist
 
@@ -207,6 +215,7 @@ Use this as a hard checklist during design, coding, and review.
 - [ ] Migrations are complete: no compatibility facade, alias-only module, old caller, stale test, or stale documentation remains.
 - [ ] Every catch leaves redacted evidence, or carries an explicit `EXPECTED_ABSENCE:` rationale.
 - [ ] Operational failures use a registered incident code and canonical lifecycle projection rather than parallel log/Doctor/analytics calls.
+- [ ] Mutable Go state and exported surfaces did not grow, or their reviewed ownership rationale accompanies the baseline change.
 
 ### Isolate wall-clock performance gates
 

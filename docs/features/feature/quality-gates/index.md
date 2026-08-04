@@ -24,6 +24,8 @@ code_paths:
   - scripts/check-folder-size.cjs
   - scripts/check-dormant-tests.sh
   - scripts/contracts/check_go_test_determinism.go
+  - scripts/contracts/goarchitecture/main.go
+  - .go-architecture-baseline.json
   - .go-test-sleep-baseline.json
   - scripts/test-js-sharded.sh
   - scripts/build/run-go-coverage.sh
@@ -46,6 +48,7 @@ test_paths:
   - scripts/check-file-length.test.mjs
   - scripts/check-folder-size.test.mjs
   - scripts/contracts/check_go_test_determinism_test.go
+  - scripts/contracts/goarchitecture/main_test.go
   - scripts/tests/contracts/go-coverage-profile.test.mjs
   - internal/testsync/testsync_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
@@ -85,6 +88,12 @@ new or increased `time.Sleep` usage on a per-file basis. The checked-in baseline
 is a ratchet for existing wall-clock debt, not a general exemption: removing a
 sleep lowers the next baseline, while new tests must use controlled channels,
 fake clocks, or explicit process/transport seams.
+
+The same target inventories mutable Go package variables and exported Go
+declarations per production file. New files begin with a zero allowance, and
+existing allowances can only be reduced automatically. This turns instance
+ownership and minimal public interfaces into deterministic merge gates instead
+of review-only preferences.
 
 Prettier checks authored source and configuration while excluding the three
 minified action-family DOM primitives whose canonical representation is owned

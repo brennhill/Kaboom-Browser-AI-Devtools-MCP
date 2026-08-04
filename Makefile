@@ -27,7 +27,7 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
-	verify-llm check-folder-size check-structure check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism test-determinism-baseline-update \
+	verify-llm check-folder-size check-structure check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism test-determinism-baseline-update check-go-architecture go-architecture-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -204,9 +204,18 @@ check-test-determinism:
 test-determinism-baseline-update:
 	@go run ./scripts/contracts --update
 
+# Prevent mutable package state and public Go APIs from growing unnoticed.
+check-go-architecture:
+	@go test ./scripts/contracts/goarchitecture
+	@go run ./scripts/contracts/goarchitecture
+
+# Only lowers existing allowances; intentional growth requires reviewed baseline edits.
+go-architecture-baseline-update:
+	@go run ./scripts/contracts/goarchitecture --update
+
 # All structural gates: physical size, dependency direction, public surface,
 # cycles, dormant tests, and high-risk extension duplication.
-check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism lint-boundaries lint-silent-catches lint-circular check-duplicates
+check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture lint-boundaries lint-silent-catches lint-circular check-duplicates
 
 validate-architecture:
 	@bash scripts/validate-architecture.sh

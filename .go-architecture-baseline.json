@@ -1,0 +1,1957 @@
+{
+  "version": 1,
+  "files": {
+    "cmd/browser-agent/config.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/handler.go": {
+      "mutable_globals": 2,
+      "exports": 9
+    },
+    "cmd/browser-agent/internal/appruntime/runtime.go": {
+      "mutable_globals": 0,
+      "exports": 15
+    },
+    "cmd/browser-agent/internal/asynccommand/handler.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "cmd/browser-agent/internal/asyncresult/enrichment.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/asyncresult/enrichment_csp.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/asyncresult/enrichment_recovery.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/asyncresult/lifecycle.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/asyncresult/normalization.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/asyncresult/transients.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/binarywatch/watcher.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/bridge/bridge.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/bridge/bridge_fastpath.go": {
+      "mutable_globals": 6,
+      "exports": 8
+    },
+    "cmd/browser-agent/internal/bridge/bridge_fingerprint.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/bridge/bridge_push_relay.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/bridge/bridge_startup.go": {
+      "mutable_globals": 6,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/bridge/bridge_startup_state.go": {
+      "mutable_globals": 2,
+      "exports": 0
+    },
+    "cmd/browser-agent/internal/bridge/bridge_transport.go": {
+      "mutable_globals": 2,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/bridge/runner.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/bridge/stdioisolate/isolation.go": {
+      "mutable_globals": 4,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/ciapi/handlers.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/ciapi/snapshot.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/ciapi/types.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/cli/cli.go": {
+      "mutable_globals": 1,
+      "exports": 9
+    },
+    "cmd/browser-agent/internal/cli/cli_commands.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/cli/cli_flag_parsing.go": {
+      "mutable_globals": 0,
+      "exports": 15
+    },
+    "cmd/browser-agent/internal/cli/cli_output.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/cli/cli_tool_parsers_generate_configure.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/cli/cli_tool_parsers_interact.go": {
+      "mutable_globals": 1,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/cli/cli_tool_parsers_observe_analyze.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/cli/cli_transport.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/connectmode/runner.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/daemonlife/deps.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/daemonlife/install_epoch.go": {
+      "mutable_globals": 2,
+      "exports": 0
+    },
+    "cmd/browser-agent/internal/daemonlife/lifecycle.go": {
+      "mutable_globals": 3,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/daemonlife/lock_file.go": {
+      "mutable_globals": 1,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/daemonlife/startup_throttle.go": {
+      "mutable_globals": 1,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/dashboard/handler.go": {
+      "mutable_globals": 5,
+      "exports": 9
+    },
+    "cmd/browser-agent/internal/exitdiag/recorder.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/health/command_execution_readiness.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/health/deps.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/health/doctor.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/health/doctor_live_checks.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/health/metrics.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "cmd/browser-agent/internal/health/response_builders.go": {
+      "mutable_globals": 0,
+      "exports": 10
+    },
+    "cmd/browser-agent/internal/health/response_types.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "cmd/browser-agent/internal/httpapi/response.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/httpguard/apikey.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/httpguard/middleware.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/insecureproxy/handler.go": {
+      "mutable_globals": 1,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/launchmode/launch_mode.go": {
+      "mutable_globals": 3,
+      "exports": 9
+    },
+    "cmd/browser-agent/internal/logstore/accessors.go": {
+      "mutable_globals": 0,
+      "exports": 14
+    },
+    "cmd/browser-agent/internal/logstore/async.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/logstore/persistence.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/logstore/seed.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/logstore/store.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/logstore/validate.go": {
+      "mutable_globals": 1,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/mcphttp/handler.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/mediaapi/draw_mode.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/mediaapi/handler.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/mediaapi/screenshots.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/nativeinstall/installer.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/noiseautorun/autorun.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "cmd/browser-agent/internal/operationalapi/handler.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "cmd/browser-agent/internal/playbooks/interact_failure_playbooks.go": {
+      "mutable_globals": 1,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/playbooks/playbooks.go": {
+      "mutable_globals": 2,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/playbooks/playbooks_accessibility.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "cmd/browser-agent/internal/playbooks/playbooks_automation.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "cmd/browser-agent/internal/playbooks/playbooks_demos.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/playbooks/playbooks_guides.go": {
+      "mutable_globals": 2,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/playbooks/playbooks_performance.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "cmd/browser-agent/internal/playbooks/playbooks_resolver.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/playbooks/playbooks_security.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "cmd/browser-agent/internal/playbooks/resource_catalog.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/procctl/argv0.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/procctl/pidfile.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/procctl/port.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/procctl/stop.go": {
+      "mutable_globals": 1,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/pushapi/handler.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "cmd/browser-agent/internal/pushapi/runtime.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "cmd/browser-agent/internal/replay/contract.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/screenrec/deps.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/screenrec/handlers.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/screenrec/observe.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/screenrec/paths.go": {
+      "mutable_globals": 1,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/screenrec/reveal.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/screenrec/save.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/screenrec/types.go": {
+      "mutable_globals": 1,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/sequencehandler/handler.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "cmd/browser-agent/internal/sequencehandler/replay.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/summarypref/cache.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/terminal/deps.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/terminal/dirs.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/terminal/handlers.go": {
+      "mutable_globals": 0,
+      "exports": 19
+    },
+    "cmd/browser-agent/internal/terminal/intent_handlers.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/terminal/intent_store.go": {
+      "mutable_globals": 0,
+      "exports": 13
+    },
+    "cmd/browser-agent/internal/terminal/relay.go": {
+      "mutable_globals": 1,
+      "exports": 19
+    },
+    "cmd/browser-agent/internal/terminal/server.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/terminal/static.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/terminal/supervisor/supervisor.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/terminal/ws.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/testgenhandler/classify.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/testgenhandler/generate.go": {
+      "mutable_globals": 3,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/testgenhandler/handler.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/testgenhandler/heal.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/testgenhandler/provider_adapter.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/testpages/http.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/testpages/websocket.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolanalyze/analyzedispatch/react_profile.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolanalyze/annotation_hints.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/toolanalyze/annotations_projects.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/toolanalyze/audit_scoring.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go": {
+      "mutable_globals": 1,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolanalyze/deps.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolanalyze/inspect/dom.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolanalyze/inspect/forms.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "cmd/browser-agent/internal/toolanalyze/link_validation.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolanalyze/navigation.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/toolanalyze/page_issues_summary.go": {
+      "mutable_globals": 1,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/toolanalyze/pageissues/handler.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolanalyze/security.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolanalyze/security_summaries.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolanalyze/verificationhandler/handler.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolanalyze/visual/handler.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/toolcatalog/catalog.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "cmd/browser-agent/internal/toolconfigure/auditlog/handler.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "cmd/browser-agent/internal/toolconfigure/capabilities.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolconfigure/clear.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolconfigure/deps.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolconfigure/dispatcher.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/toolconfigure/jitter.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolconfigure/netrecord/filters.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolconfigure/netrecord/state.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/toolconfigure/noise_actions.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolconfigure/qafixture/handler.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "cmd/browser-agent/internal/toolconfigure/qafixture/startup.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolconfigure/security_mode.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolconfigure/sequence_types.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "cmd/browser-agent/internal/toolconfigure/session.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/toolconfigure/telemetry.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolconfigure/tutorial/handlers.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/toolconfigure/tutorial/playbooks.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/toolconfigure/tutorial/snippets.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolgenerate/annotations/handlers.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/toolgenerate/annotations/issues.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolgenerate/annotations/report.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolgenerate/annotations/visual.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/toolgenerate/artifacts_har_impl.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolgenerate/artifacts_pr_summary_impl.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolgenerate/artifacts_security_impl.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolgenerate/artifacts_test_impl.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolgenerate/deps.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolgenerate/dispatcher.go": {
+      "mutable_globals": 2,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/toolgenerate/validation_dispatch.go": {
+      "mutable_globals": 3,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/toolguard/guards.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "cmd/browser-agent/internal/toolinteract/action_owners.go": {
+      "mutable_globals": 0,
+      "exports": 19
+    },
+    "cmd/browser-agent/internal/toolinteract/action_runtime.go": {
+      "mutable_globals": 1,
+      "exports": 11
+    },
+    "cmd/browser-agent/internal/toolinteract/elemindex/registry.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/toolinteract/interact_batch.go": {
+      "mutable_globals": 1,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/toolinteract/interact_browser.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolinteract/interact_dom.go": {
+      "mutable_globals": 1,
+      "exports": 7
+    },
+    "cmd/browser-agent/internal/toolinteract/interact_evidence.go": {
+      "mutable_globals": 1,
+      "exports": 7
+    },
+    "cmd/browser-agent/internal/toolinteract/interact_page.go": {
+      "mutable_globals": 0,
+      "exports": 13
+    },
+    "cmd/browser-agent/internal/toolinteract/interact_storage.go": {
+      "mutable_globals": 1,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/toolinteract/interact_workflow.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/toolinteract/interactstate/state.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "cmd/browser-agent/internal/toolinteract/interactupload/upload.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "cmd/browser-agent/internal/toolmodule/registry.go": {
+      "mutable_globals": 0,
+      "exports": 14
+    },
+    "cmd/browser-agent/internal/toolobserve/deps.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolobserve/dispatcher.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "cmd/browser-agent/internal/toolobserve/inbox.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolobserve/page_inventory.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolobserve/registry.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolobserve/response.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolobserve/site_menus.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolrecording/handler.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "cmd/browser-agent/internal/toolrecording/helpers.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolresp/rate_limiter.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "cmd/browser-agent/internal/toolresp/toolresp.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/toolrouting/routing.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/internal/versioncheck/checker.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "cmd/browser-agent/internal/wsframe/frame.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "cmd/browser-agent/main.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "cmd/browser-agent/main_connection_mcp.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "cmd/browser-agent/main_connection_recovery.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/server.go": {
+      "mutable_globals": 1,
+      "exports": 7
+    },
+    "cmd/browser-agent/tools_configure.go": {
+      "mutable_globals": 1,
+      "exports": 2
+    },
+    "cmd/browser-agent/tools_configure_support.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "cmd/browser-agent/tools_core.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "cmd/browser-agent/tools_interact_dispatch.go": {
+      "mutable_globals": 3,
+      "exports": 0
+    },
+    "cmd/hooks/main.go": {
+      "mutable_globals": 2,
+      "exports": 0
+    },
+    "internal/a11ysummary/summary.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/analysis/apicontract/contract.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/analysis/apicontract/learning.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/analysis/apicontract/report.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/analysis/apicontract/runtime_handler.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/analysis/apicontract/validation.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/analysis/thirdparty/audit.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "internal/analysis/thirdparty/reputation.go": {
+      "mutable_globals": 2,
+      "exports": 0
+    },
+    "internal/annotation/draw_sessions_handler.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/annotation/store.go": {
+      "mutable_globals": 0,
+      "exports": 13
+    },
+    "internal/annotation/store_clear.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/annotation/store_details.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/annotation/store_named.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/annotation/store_results.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/annotation/store_sessions.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/annotation/store_wait.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/audit/audit_query.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/audit/audit_recording.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/audit/audit_session.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/audit/audit_types.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/audit/recorder.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/bridge/conn.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/bridge/stdio.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/bridge/timeout.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/buffers/filter.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/buffers/ring_buffer.go": {
+      "mutable_globals": 0,
+      "exports": 13
+    },
+    "internal/buffers/ring_buffer_filter.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/capture/accessors.go": {
+      "mutable_globals": 0,
+      "exports": 22
+    },
+    "internal/capture/capture.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/capture/events.go": {
+      "mutable_globals": 0,
+      "exports": 24
+    },
+    "internal/capture/extension_logs.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/capture/extension_state.go": {
+      "mutable_globals": 0,
+      "exports": 43
+    },
+    "internal/capture/featureusage/observer.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/capture/handlers.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "internal/capture/model.go": {
+      "mutable_globals": 2,
+      "exports": 16
+    },
+    "internal/capture/sync.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/capture/test_helpers.go": {
+      "mutable_globals": 0,
+      "exports": 14
+    },
+    "internal/capture/wire_sync.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/capture/wsconn/status.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/capture/wsconn/tracker.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/circuit/breaker.go": {
+      "mutable_globals": 0,
+      "exports": 15
+    },
+    "internal/configdiscovery/mcp.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/debuglog/logger.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/diag/debug_file.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/diag/output.go": {
+      "mutable_globals": 2,
+      "exports": 5
+    },
+    "internal/export/export_har.go": {
+      "mutable_globals": 0,
+      "exports": 13
+    },
+    "internal/export/export_sarif.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/export/export_sarif_types.go": {
+      "mutable_globals": 1,
+      "exports": 14
+    },
+    "internal/flakerepro/runner.go": {
+      "mutable_globals": 0,
+      "exports": 14
+    },
+    "internal/hook/blast_radius.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/hook/compress_output.go": {
+      "mutable_globals": 1,
+      "exports": 3
+    },
+    "internal/hook/convention_detect.go": {
+      "mutable_globals": 2,
+      "exports": 4
+    },
+    "internal/hook/convention_discover.go": {
+      "mutable_globals": 3,
+      "exports": 3
+    },
+    "internal/hook/decision_guard.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/hook/eval/eval.go": {
+      "mutable_globals": 1,
+      "exports": 10
+    },
+    "internal/hook/protocol.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "internal/hook/quality_gate.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "internal/hook/session_store.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/hook/session_track.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/identity/mcp.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/incident/projections.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/incident/registry.go": {
+      "mutable_globals": 1,
+      "exports": 49
+    },
+    "internal/incident/store.go": {
+      "mutable_globals": 0,
+      "exports": 36
+    },
+    "internal/incident/support.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/issuereport/handler.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/issuereport/sanitize.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/issuereport/submit.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "internal/issuereport/templates.go": {
+      "mutable_globals": 1,
+      "exports": 2
+    },
+    "internal/issuereport/types.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "internal/lifecycle/observer.go": {
+      "mutable_globals": 1,
+      "exports": 18
+    },
+    "internal/mcp/errors.go": {
+      "mutable_globals": 0,
+      "exports": 27
+    },
+    "internal/mcp/protocol.go": {
+      "mutable_globals": 0,
+      "exports": 10
+    },
+    "internal/mcp/response.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "internal/mcp/response_clamp.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/mcp/response_content.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/mcp/types.go": {
+      "mutable_globals": 0,
+      "exports": 15
+    },
+    "internal/mcp/validation.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/menus/discover.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/menus/menus.go": {
+      "mutable_globals": 2,
+      "exports": 12
+    },
+    "internal/noise/noise.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "internal/noise/noise_detect.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/noise/noise_filter.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/noise/noise_rules.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/noise/noise_stats.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/pagination/cursor.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/pagination/pagination.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/pagination/pagination_actions.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/pagination/pagination_logs.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/pagination/pagination_websocket.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/performance/diff.go": {
+      "mutable_globals": 1,
+      "exports": 6
+    },
+    "internal/performance/diff_resource.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/performance/diff_summary.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/performance/navigation/critical_path.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/performance/tracecorr/correlate.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/performance/types.go": {
+      "mutable_globals": 1,
+      "exports": 25
+    },
+    "internal/performance/wire_performance.go": {
+      "mutable_globals": 0,
+      "exports": 15
+    },
+    "internal/perftrace/http.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/perftrace/manager.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/perftrace/wire_trace.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/persistence/persistence_context.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/persistence/persistence_crud.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/persistence/persistence_dirty.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/persistence/persistence_handler.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/persistence/persistence_stats.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/persistence/persistence_store.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "internal/persistence/persistence_types.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/pty/clock.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/pty/diag.go": {
+      "mutable_globals": 2,
+      "exports": 5
+    },
+    "internal/pty/fanout.go": {
+      "mutable_globals": 0,
+      "exports": 10
+    },
+    "internal/pty/manager.go": {
+      "mutable_globals": 0,
+      "exports": 18
+    },
+    "internal/pty/session.go": {
+      "mutable_globals": 4,
+      "exports": 24
+    },
+    "internal/pty/session_unsupported.go": {
+      "mutable_globals": 0,
+      "exports": 24
+    },
+    "internal/pty/upload/upload.go": {
+      "mutable_globals": 1,
+      "exports": 4
+    },
+    "internal/pty/writebuf.go": {
+      "mutable_globals": 3,
+      "exports": 9
+    },
+    "internal/push/inbox.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/push/router.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "internal/push/sampling.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/push/types.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/qafixture/registry.go": {
+      "mutable_globals": 0,
+      "exports": 14
+    },
+    "internal/qafixture/registry_store.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/qafixture/transaction.go": {
+      "mutable_globals": 0,
+      "exports": 15
+    },
+    "internal/qafixture/wire_fixture.go": {
+      "mutable_globals": 2,
+      "exports": 10
+    },
+    "internal/queries/dispatcher.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/queries/dispatcher_commands.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "internal/queries/dispatcher_queries.go": {
+      "mutable_globals": 1,
+      "exports": 11
+    },
+    "internal/queries/dispatcher_results.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "internal/queries/dispatcher_trace.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/queries/testing_helpers.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/queries/types.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/recording/actionlog/recorder.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/recording/logdiff/compare.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/recording/logdiff/helpers.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/recording/logdiff/report.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/recording/logdiff/types.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/recording/manager.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "internal/recording/manager_storage.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/recording/manager_store.go": {
+      "mutable_globals": 0,
+      "exports": 10
+    },
+    "internal/recording/playback/fragile.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/recording/playback/session.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/recording/playback/types.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/recording/testing_helpers.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/recording/types.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/redaction/redaction_engine.go": {
+      "mutable_globals": 3,
+      "exports": 7
+    },
+    "internal/redaction/redaction_map.go": {
+      "mutable_globals": 2,
+      "exports": 1
+    },
+    "internal/reproduction/reproduction.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "internal/reproduction/reproduction_kaboom.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/reproduction/reproduction_playwright.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/reproduction/reproduction_selectors.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/reproduction/reproduction_utils.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/schema/configure/tool.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/schema/interact/actions.go": {
+      "mutable_globals": 2,
+      "exports": 2
+    },
+    "internal/schema/interact/tool.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/schema/schema.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/security/csp/audit.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/security/csp/generate.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/security/csp/helpers.go": {
+      "mutable_globals": 4,
+      "exports": 0
+    },
+    "internal/security/csp/store.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/security/csp/tooling.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/security/csp/types.go": {
+      "mutable_globals": 1,
+      "exports": 7
+    },
+    "internal/security/diff/compare.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/security/diff/snapshot.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/security/diff/tool.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/security/diff/types.go": {
+      "mutable_globals": 2,
+      "exports": 8
+    },
+    "internal/security/httpsec/cookie.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/security/httpsec/url.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/security/netflag/data.go": {
+      "mutable_globals": 5,
+      "exports": 1
+    },
+    "internal/security/netflag/netflag.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/security/policy/audit.go": {
+      "mutable_globals": 2,
+      "exports": 3
+    },
+    "internal/security/policy/mode.go": {
+      "mutable_globals": 3,
+      "exports": 3
+    },
+    "internal/security/policy/policy.go": {
+      "mutable_globals": 1,
+      "exports": 6
+    },
+    "internal/security/scan/checks_headers.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/security/scan/credentials_patterns.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/security/scan/scan.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/security/scan/types.go": {
+      "mutable_globals": 1,
+      "exports": 6
+    },
+    "internal/security/sri/generate.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/security/sri/tooling.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/security/sri/types.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/server/log_accessor.go": {
+      "mutable_globals": 1,
+      "exports": 9
+    },
+    "internal/server/main_handlers.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/session/clientreg/registry.go": {
+      "mutable_globals": 0,
+      "exports": 10
+    },
+    "internal/session/clientreg/state.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "internal/session/comparison.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/session/runtime_reader.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "internal/session/snapdiff/errors.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/session/snapdiff/network.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/session/snapdiff/performance.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/session/snapdiff/types.go": {
+      "mutable_globals": 0,
+      "exports": 13
+    },
+    "internal/session/snapshot-manager.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/session/tool-handler.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/session/types.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/state/paths.go": {
+      "mutable_globals": 0,
+      "exports": 14
+    },
+    "internal/statediag/collector.go": {
+      "mutable_globals": 0,
+      "exports": 16
+    },
+    "internal/statediag/store.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/statefault/fault.go": {
+      "mutable_globals": 1,
+      "exports": 20
+    },
+    "internal/statefault/store.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/statefile/statefile.go": {
+      "mutable_globals": 0,
+      "exports": 16
+    },
+    "internal/streaming/alertbuf/anomaly.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/streaming/alertbuf/buffer.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/streaming/alertbuf/ci.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/streaming/alertbuf/process.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/streaming/alertbuf/types.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/streaming/stream.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/streaming/stream_dedup.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/streaming/stream_emit.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/streaming/stream_filters.go": {
+      "mutable_globals": 1,
+      "exports": 3
+    },
+    "internal/streaming/stream_rate_limit.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/streaming/types.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/telemetry/beacon.go": {
+      "mutable_globals": 10,
+      "exports": 13
+    },
+    "internal/telemetry/install_id.go": {
+      "mutable_globals": 13,
+      "exports": 10
+    },
+    "internal/telemetry/usage_counter.go": {
+      "mutable_globals": 3,
+      "exports": 12
+    },
+    "internal/testgen/classify.go": {
+      "mutable_globals": 3,
+      "exports": 5
+    },
+    "internal/testgen/generate.go": {
+      "mutable_globals": 2,
+      "exports": 11
+    },
+    "internal/testgen/heal/batch.go": {
+      "mutable_globals": 1,
+      "exports": 4
+    },
+    "internal/testgen/heal/paths.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/testgen/heal/repair.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/testgen/heal/selectors.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/testgen/heal/summary.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/testgen/heal/types.go": {
+      "mutable_globals": 0,
+      "exports": 13
+    },
+    "internal/testgen/helpers.go": {
+      "mutable_globals": 1,
+      "exports": 6
+    },
+    "internal/testgen/types.go": {
+      "mutable_globals": 0,
+      "exports": 21
+    },
+    "internal/testsync/testsync.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/tools/analyze/computed_styles.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/tools/analyze/forms.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/tools/analyze/imagediff/grid.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/tools/analyze/imagediff/imagediff.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/tools/analyze/imagediff/imageio.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/tools/analyze/link_validation.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/tools/analyze/visual_diff.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/tools/configure/audit.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/tools/configure/boundaries.go": {
+      "mutable_globals": 0,
+      "exports": 10
+    },
+    "internal/tools/configure/capabilities/capabilities.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/tools/configure/capabilities/modespecs.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/tools/configure/capabilities/modespecs_analyze.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/tools/configure/capabilities/modespecs_configure.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/tools/configure/capabilities/modespecs_generate.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/tools/configure/capabilities/modespecs_interact.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/tools/configure/capabilities/modespecs_observe.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/tools/configure/rewrite.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/tools/generate/csp.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/tools/generate/test_script.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/tools/interact/selector.go": {
+      "mutable_globals": 4,
+      "exports": 8
+    },
+    "internal/tools/interact/state.go": {
+      "mutable_globals": 1,
+      "exports": 15
+    },
+    "internal/tools/interact/workflow.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "internal/tools/observe/correlation.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/tools/observe/deps.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/tools/observe/errorcluster/cluster.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/tools/observe/filtering.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/tools/observe/hints/hints.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/tools/observe/idbquery/execute.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/tools/observe/logs.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/tools/observe/metadata.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/tools/observe/network.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/tools/observe/page_state.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/tools/observe/session.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/tools/observe/summarized_logs.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/tracking/stats_endpoint.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/tracking/token_tracker.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/types/alert.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/types/buffer.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/types/log.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/types/network.go": {
+      "mutable_globals": 0,
+      "exports": 19
+    },
+    "internal/types/snapshot.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/types/wire_enhanced_action.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/types/wire_extension_log.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/types/wire_network.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/types/wire_websocket_event.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/upload/form_submit.go": {
+      "mutable_globals": 1,
+      "exports": 2
+    },
+    "internal/upload/form_submit_errors.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/upload/form_submit_stream.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/upload/form_submit_validation.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/upload/handlers.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/upload/httpapi/handlers.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "internal/upload/osauto/dialog.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/upload/osauto/inject.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/upload/types.go": {
+      "mutable_globals": 1,
+      "exports": 17
+    },
+    "internal/upload/uploadsec/denylist.go": {
+      "mutable_globals": 2,
+      "exports": 7
+    },
+    "internal/upload/uploadsec/hardlink_unix.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/upload/uploadsec/hardlink_windows.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/upload/uploadsec/input.go": {
+      "mutable_globals": 1,
+      "exports": 8
+    },
+    "internal/upload/uploadsec/path.go": {
+      "mutable_globals": 0,
+      "exports": 10
+    },
+    "internal/upload/uploadsec/ssrf.go": {
+      "mutable_globals": 4,
+      "exports": 10
+    },
+    "internal/util/binary.go": {
+      "mutable_globals": 2,
+      "exports": 2
+    },
+    "internal/util/media.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/util/proc_unix.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/util/proc_windows.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/util/response.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/verification/contract.go": {
+      "mutable_globals": 0,
+      "exports": 14
+    },
+    "internal/verification/evidence.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/verification/store.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/workflowverify/runner.go": {
+      "mutable_globals": 0,
+      "exports": 13
+    }
+  }
+}
