@@ -185,6 +185,9 @@ Daemon process discovery, liveness, shutdown, termination, and port-release
 collaborators are owned by each server. Recovery-policy tests inject one
 server's host boundary and can run without swapping process-wide function
 variables or affecting concurrent instances.
+Doctor CLI discovery and authentication probes use an explicit command runtime.
+Tests inject per-call lookup and subprocess functions, so provider diagnostics
+are deterministic and cannot race through mutable health-package globals.
 
 Persisted restart timestamps are validated before they become incident
 generations. Invalid negative values take the existing fail-open corruption

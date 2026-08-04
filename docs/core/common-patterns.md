@@ -161,6 +161,9 @@ Use this as a hard checklist during design, coding, and review.
 - Drive asynchronous lifecycle tests with injected clocks, schedulers,
   transports, storage, and randomness. Tests advance named events; they do not
   sleep and hope that a race occurs.
+- Inject command execution, process discovery, and filesystem behavior through
+  instance-owned runtimes. Never swap package variables to fake operating-system
+  behavior; parallel tests must not share mutable seams.
 - Every accepted operation has exactly one terminal outcome. Delivery retries
   must never execute an in-flight command twice, and timeout/cancellation must
   preserve the command ID, correlation ID, and connection generation.

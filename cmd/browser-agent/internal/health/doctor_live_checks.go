@@ -17,12 +17,20 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
-var doctorLookPath = exec.LookPath
+type doctorCommandRuntime struct {
+	lookPath      func(string) (string, error)
+	commandOutput func(time.Duration, string, ...string) ([]byte, error)
+}
 
-var doctorCommandOutput = func(timeout time.Duration, name string, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	return exec.CommandContext(ctx, name, args...).CombinedOutput()
+func defaultDoctorCommandRuntime() doctorCommandRuntime {
+	return doctorCommandRuntime{
+		lookPath: exec.LookPath,
+		commandOutput: func(timeout time.Duration, name string, args ...string) ([]byte, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+			return exec.CommandContext(ctx, name, args...).CombinedOutput()
+		},
+	}
 }
 
 // DoctorCheck represents a single diagnostic check result.
@@ -83,6 +91,10 @@ func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Capture, ver string, e
 
 // RunDoctorChecks runs all live diagnostic checks against the capture instance.
 func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
+	return runDoctorChecks(cap, defaultDoctorCommandRuntime())
+}
+
+func runDoctorChecks(cap *capture.Capture, runtime doctorCommandRuntime) []DoctorCheck {
 	checks := make([]DoctorCheck, 0, 11)
 	snap := capture.NewHealthReader(cap).Snapshot()
 
@@ -195,7 +207,7 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 		cmdExecCheck.Fix = "Inspect observe(what:\"failed_commands\") for recent expiry/timeout/error events and verify extension polling (/sync). If degradation persists, reload the extension or run configure(action:\"restart\")."
 	}
 	checks = append(checks, cmdExecCheck)
-	checks = append(checks, runAIAuthDoctorCheck("claude"), runAIAuthDoctorCheck("codex"))
+	checks = append(checks, runAIAuthDoctorCheck(runtime, "claude"), runAIAuthDoctorCheck(runtime, "codex"))
 	checks = append(checks, extensionStateRecoveryChecks(cap)...)
 	if diagnosticCheck, ok := extensionDiagnosticLifecycleCheck(cap); ok {
 		checks = append(checks, diagnosticCheck)
@@ -366,10 +378,10 @@ func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
 	return checks
 }
 
-func runAIAuthDoctorCheck(tool string) DoctorCheck {
+func runAIAuthDoctorCheck(runtime doctorCommandRuntime, tool string) DoctorCheck {
 	name := tool + "_auth"
 	displayName := strings.ToUpper(tool[:1]) + tool[1:]
-	if _, err := doctorLookPath(tool); err != nil {
+	if _, err := runtime.lookPath(tool); err != nil {
 		return DoctorCheck{
 			Name: name, Status: "pass",
 			Detail: displayName + " CLI is not installed (optional)",
@@ -380,7 +392,7 @@ func runAIAuthDoctorCheck(tool string) DoctorCheck {
 	if tool == "codex" {
 		args = []string{"login", "status"}
 	}
-	output, err := doctorCommandOutput(2*time.Second, tool, args...)
+	output, err := runtime.commandOutput(2*time.Second, tool, args...)
 	normalized := strings.ToLower(string(output))
 	compact := strings.NewReplacer(" ", "", "\n", "", "\t", "").Replace(normalized)
 	if strings.Contains(normalized, "keychain") {

@@ -125,22 +125,20 @@ func TestDoctorStateRecoveryDefaultsAndBoundsHistory(t *testing.T) {
 }
 
 func TestAIAuthDoctorCheckClassifiesAbsentUnauthenticatedAndUnknown(t *testing.T) {
-	previousLookPath, previousOutput := doctorLookPath, doctorCommandOutput
-	t.Cleanup(func() { doctorLookPath, doctorCommandOutput = previousLookPath, previousOutput })
-
-	doctorLookPath = func(string) (string, error) { return "", errors.New("missing") }
-	if check := runAIAuthDoctorCheck("codex"); check.Status != "pass" {
+	runtime := defaultDoctorCommandRuntime()
+	runtime.lookPath = func(string) (string, error) { return "", errors.New("missing") }
+	if check := runAIAuthDoctorCheck(runtime, "codex"); check.Status != "pass" {
 		t.Fatalf("absent optional CLI = %#v", check)
 	}
-	doctorLookPath = func(tool string) (string, error) { return "/bin/" + tool, nil }
-	doctorCommandOutput = func(time.Duration, string, ...string) ([]byte, error) {
+	runtime.lookPath = func(tool string) (string, error) { return "/bin/" + tool, nil }
+	runtime.commandOutput = func(time.Duration, string, ...string) ([]byte, error) {
 		return []byte("not logged in"), errors.New("exit 1")
 	}
-	if check := runAIAuthDoctorCheck("codex"); check.Status != "warn" || !strings.Contains(check.Detail, "not authenticated") {
+	if check := runAIAuthDoctorCheck(runtime, "codex"); check.Status != "warn" || !strings.Contains(check.Detail, "not authenticated") {
 		t.Fatalf("unauthenticated CLI = %#v", check)
 	}
-	doctorCommandOutput = func(time.Duration, string, ...string) ([]byte, error) { return []byte("authenticated"), nil }
-	if check := runAIAuthDoctorCheck("claude"); check.Status != "warn" || !strings.Contains(check.Detail, "could not be determined") {
+	runtime.commandOutput = func(time.Duration, string, ...string) ([]byte, error) { return []byte("authenticated"), nil }
+	if check := runAIAuthDoctorCheck(runtime, "claude"); check.Status != "warn" || !strings.Contains(check.Detail, "could not be determined") {
 		t.Fatalf("unknown provider = %#v", check)
 	}
 }

@@ -643,43 +643,33 @@ func TestHandleDoctorHTTP_Degraded(t *testing.T) {
 }
 
 func TestAIAuthDoctorCheckClassifiesSubscriptionAndAPIBilling(t *testing.T) {
-	originalLookPath := doctorLookPath
-	originalOutput := doctorCommandOutput
-	t.Cleanup(func() {
-		doctorLookPath = originalLookPath
-		doctorCommandOutput = originalOutput
-	})
-	doctorLookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
-	doctorCommandOutput = func(_ time.Duration, name string, _ ...string) ([]byte, error) {
+	runtime := defaultDoctorCommandRuntime()
+	runtime.lookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
+	runtime.commandOutput = func(_ time.Duration, name string, _ ...string) ([]byte, error) {
 		if name == "claude" {
 			return []byte(`{"loggedIn":true,"authMethod":"claude.ai","subscriptionType":"max"}`), nil
 		}
 		return []byte("Logged in using an API key"), nil
 	}
 
-	claude := runAIAuthDoctorCheck("claude")
+	claude := runAIAuthDoctorCheck(runtime, "claude")
 	if claude.Status != "pass" || !strings.Contains(claude.Detail, "subscription") {
 		t.Fatalf("Claude check = %+v, want subscription pass", claude)
 	}
-	codex := runAIAuthDoctorCheck("codex")
+	codex := runAIAuthDoctorCheck(runtime, "codex")
 	if codex.Status != "warn" || !strings.Contains(codex.Detail, "API billing") {
 		t.Fatalf("Codex check = %+v, want API billing warning", codex)
 	}
 }
 
 func TestAIAuthDoctorCheckSurfacesKeychainFailureWithoutAccountData(t *testing.T) {
-	originalLookPath := doctorLookPath
-	originalOutput := doctorCommandOutput
-	t.Cleanup(func() {
-		doctorLookPath = originalLookPath
-		doctorCommandOutput = originalOutput
-	})
-	doctorLookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
-	doctorCommandOutput = func(_ time.Duration, _ string, _ ...string) ([]byte, error) {
+	runtime := defaultDoctorCommandRuntime()
+	runtime.lookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
+	runtime.commandOutput = func(_ time.Duration, _ string, _ ...string) ([]byte, error) {
 		return []byte(`Keychain Not Found: cannot store "private-user@example.com"`), errors.New("exit 1")
 	}
 
-	check := runAIAuthDoctorCheck("claude")
+	check := runAIAuthDoctorCheck(runtime, "claude")
 	if check.Status != "fail" || !strings.Contains(strings.ToLower(check.Detail), "keychain") {
 		t.Fatalf("check = %+v, want keychain failure", check)
 	}
