@@ -66,6 +66,22 @@ const (
 
 type hookRunner func(string, hook.Input, string, string) string
 
+type fixtureRuntime struct {
+	run     hookRunner
+	measure func(func() string) (string, time.Duration)
+}
+
+func wallClockFixtureRuntime() fixtureRuntime {
+	return fixtureRuntime{
+		run: runHook,
+		measure: func(run func() string) (string, time.Duration) {
+			start := time.Now()
+			output := run()
+			return output, time.Since(start)
+		},
+	}
+}
+
 // fixtureDirs are the subdirectories of testdata/ that contain eval fixtures.
 // Hook infrastructure dirs test specific hook behaviors.
 // Principle dirs (u01-u10) test the 10 universal principles across
@@ -127,16 +143,16 @@ func LoadFixtures(dir string) ([]*Fixture, error) {
 // scheduler contention as hook latency. Production SLOs belong to the serial
 // performance evaluation below.
 func runContractFixture(fix *Fixture, repoRoot string) *Result {
-	return runFixture(fix, repoRoot, contractEvaluation, runHook)
+	return runFixture(fix, repoRoot, contractEvaluation, wallClockFixtureRuntime())
 }
 
 // runPerformanceFixture validates the real hook implementation and its
 // wall-clock production latency budget.
 func runPerformanceFixture(fix *Fixture, repoRoot string) *Result {
-	return runFixture(fix, repoRoot, performanceEvaluation, runHook)
+	return runFixture(fix, repoRoot, performanceEvaluation, wallClockFixtureRuntime())
 }
 
-func runFixture(fix *Fixture, repoRoot string, mode evaluationMode, runner hookRunner) *Result {
+func runFixture(fix *Fixture, repoRoot string, mode evaluationMode, runtime fixtureRuntime) *Result {
 	result := &Result{Fixture: fix}
 
 	// Resolve project root.
@@ -178,9 +194,9 @@ func runFixture(fix *Fixture, repoRoot string, mode evaluationMode, runner hookR
 	}
 
 	// Run the hook and measure latency.
-	start := time.Now()
-	output := runner(fix.Hook, input, projectRoot, sessionDir)
-	elapsed := time.Since(start)
+	output, elapsed := runtime.measure(func() string {
+		return runtime.run(fix.Hook, input, projectRoot, sessionDir)
+	})
 
 	result.Output = output
 	result.LatencyMs = elapsed.Milliseconds()

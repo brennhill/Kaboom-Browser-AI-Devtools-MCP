@@ -120,9 +120,11 @@ func TestEval_ProductionLatency(t *testing.T) {
 
 func TestEval_ContractIgnoresSchedulerDelay(t *testing.T) {
 	fix := &Fixture{Expect: Expectation{MaxLatencyMs: 1}}
-	result := runFixture(fix, "", contractEvaluation, func(string, hook.Input, string, string) string {
-		time.Sleep(5 * time.Millisecond)
-		return ""
+	result := runFixture(fix, "", contractEvaluation, fixtureRuntime{
+		run: func(string, hook.Input, string, string) string { return "" },
+		measure: func(run func() string) (string, time.Duration) {
+			return run(), 5 * time.Millisecond
+		},
 	})
 	if !result.Passed {
 		t.Fatalf("contract evaluation failed on scheduler delay: %v", result.Failures)
@@ -134,9 +136,11 @@ func TestEval_PerformanceEnforcesLatencyBudget(t *testing.T) {
 		t.Skip("race instrumentation intentionally disables wall-clock SLO assertions")
 	}
 	fix := &Fixture{Expect: Expectation{MaxLatencyMs: 1}}
-	result := runFixture(fix, "", performanceEvaluation, func(string, hook.Input, string, string) string {
-		time.Sleep(5 * time.Millisecond)
-		return ""
+	result := runFixture(fix, "", performanceEvaluation, fixtureRuntime{
+		run: func(string, hook.Input, string, string) string { return "" },
+		measure: func(run func() string) (string, time.Duration) {
+			return run(), 5 * time.Millisecond
+		},
 	})
 	if result.Passed || len(result.Failures) != 1 || !strings.HasPrefix(result.Failures[0], "latency ") {
 		t.Fatalf("performance evaluation failures = %v, want latency failure", result.Failures)
@@ -235,12 +239,14 @@ func TestRunFixtureUsesExplicitRootAndUnknownHookIsSilent(t *testing.T) {
 		Input:  FixtureInput{ToolName: "Read", ToolInput: json.RawMessage(`{}`)},
 		Expect: Expectation{HasOutput: false},
 	}
-	result := runFixture(fix, "/repository", contractEvaluation, func(name string, _ hook.Input, root, _ string) string {
+	runtime := wallClockFixtureRuntime()
+	runtime.run = func(name string, _ hook.Input, root, _ string) string {
 		if name != "unknown" || root != "/explicit/project" {
 			t.Fatalf("runner inputs = %q, %q", name, root)
 		}
 		return runHook(name, hook.Input{}, root, "")
-	})
+	}
+	result := runFixture(fix, "/repository", contractEvaluation, runtime)
 	if !result.Passed || result.Output != "" {
 		t.Fatalf("unknown hook result = %#v", result)
 	}
