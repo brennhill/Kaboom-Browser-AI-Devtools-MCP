@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -103,7 +104,7 @@ func TestHandleSubtitle_InvalidJSON(t *testing.T) {
 func TestHandleListInteractive_PilotEnabled(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"list_interactive"}`)
 	if !ok {
@@ -157,7 +158,7 @@ func TestHandleListInteractive_PilotDisabled(t *testing.T) {
 func TestHandleListInteractive_WithTabID(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"list_interactive","tab_id":42}`)
 	if !ok {
@@ -200,7 +201,7 @@ func TestHandleListInteractive_InvalidJSON(t *testing.T) {
 func TestHandlePilotHighlight_Success(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"highlight","selector":"#main"}`)
 	if !ok {
@@ -257,7 +258,7 @@ func TestHandlePilotHighlight_PilotDisabledWithSelector(t *testing.T) {
 func TestHandlePilotHighlight_WithTabID(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"highlight","selector":".btn","tab_id":99}`)
 	if !ok {

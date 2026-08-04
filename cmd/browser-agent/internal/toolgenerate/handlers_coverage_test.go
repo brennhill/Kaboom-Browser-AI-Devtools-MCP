@@ -6,9 +6,11 @@ package toolgenerate
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -86,7 +88,7 @@ func TestHandleExportHAR(t *testing.T) {
 
 	t.Run("with bodies", func(t *testing.T) {
 		d := newGenDeps()
-		d.cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+		d.cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 			{URL: "https://example.com/api", Method: "GET", Status: 200},
 		})
 		resp := HandleExportHAR(d.deps(), genReq(), json.RawMessage(`{"method":"GET"}`))
@@ -128,13 +130,13 @@ func TestHandlePRSummary(t *testing.T) {
 
 	t.Run("with activity", func(t *testing.T) {
 		d := newGenDeps()
-		d.cap.Extension().SetTrackingStatusForTest(1, "https://example.com/dash")
-		d.cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
+		capturefixture.Track(d.cap, 1, "https://example.com/dash")
+		d.cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 			{Type: "click", Timestamp: time.Now().UnixMilli()},
 			{Type: "click", Timestamp: time.Now().UnixMilli()},
 			{Type: "navigate", Timestamp: time.Now().UnixMilli()},
 		})
-		d.cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+		d.cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 			{URL: "https://example.com/ok", Method: "GET", Status: 200},
 			{URL: "https://example.com/bad", Method: "GET", Status: 500},
 		})
@@ -218,7 +220,7 @@ func TestHandleGenerateCSP(t *testing.T) {
 	t.Run("valid modes with bodies", func(t *testing.T) {
 		for _, mode := range []string{"strict", "moderate", "report_only", ""} {
 			d := newGenDeps()
-			d.cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+			d.cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 				{URL: "https://cdn.example.com/app.js", Method: "GET", Status: 200},
 			})
 			args := `{"mode":"` + mode + `"}`
@@ -256,8 +258,8 @@ func TestHandleGenerateSRI(t *testing.T) {
 
 	t.Run("with bodies", func(t *testing.T) {
 		d := newGenDeps()
-		d.cap.Extension().SetTrackingStatusForTest(1, "https://example.com")
-		d.cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+		capturefixture.Track(d.cap, 1, "https://example.com")
+		d.cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 			{URL: "https://cdn.example.com/lib.js", Method: "GET", Status: 200, ContentType: "application/javascript"},
 		})
 		resp := HandleGenerateSRI(d.deps(), genReq(), json.RawMessage(`{}`))
@@ -282,7 +284,7 @@ func TestHandleGenerateTest(t *testing.T) {
 
 	t.Run("with actions", func(t *testing.T) {
 		d := newGenDeps()
-		d.cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
+		d.cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 			{Type: "navigate", ToURL: "https://example.com", Timestamp: time.Now().UnixMilli()},
 			{Type: "click", Selectors: map[string]any{"css": "#btn"}, Timestamp: time.Now().UnixMilli()},
 		})

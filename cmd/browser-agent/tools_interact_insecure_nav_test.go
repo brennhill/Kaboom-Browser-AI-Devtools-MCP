@@ -7,12 +7,14 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
 func TestHandleBrowserActionNavigate_InsecureSchemeRequiresSecurityMode(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"navigate","url":"kaboom-insecure://https://example.com"}`)
 	if !ok {
@@ -33,7 +35,7 @@ func TestHandleBrowserActionNavigate_InsecureSchemeRequiresSecurityMode(t *testi
 func TestHandleBrowserActionNavigate_RewritesKaboomInsecureURL(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	enable := callConfigureRaw(env.handler, `{"what":"security_mode","mode":"insecure_proxy","confirm":true}`)
 	enableResult := parseToolResult(t, enable)
@@ -76,7 +78,7 @@ func TestHandleBrowserActionNavigate_RewritesKaboomInsecureURL(t *testing.T) {
 func TestHandleBrowserActionNewTab_RewritesKaboomInsecureURL(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	enable := callConfigureRaw(env.handler, `{"what":"security_mode","mode":"insecure_proxy","confirm":true}`)
 	if parseToolResult(t, enable).IsError {

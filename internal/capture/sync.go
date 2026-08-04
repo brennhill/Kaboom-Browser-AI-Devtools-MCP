@@ -327,7 +327,7 @@ func (r *ExtensionRuntime) updateSyncConnectionState(req SyncRequest, clientID s
 		}
 	}
 	state.connectionGeneration = r.state.connectionGeneration
-	state.wasDisconnected = !r.state.lastSyncSeen.IsZero() && now.Sub(r.state.lastSyncSeen) >= extensionDisconnectThreshold
+	state.wasDisconnected = !r.state.lastSyncSeen.IsZero() && !extensionStateConnected(r.state, now)
 	state.isReconnect = state.wasDisconnected
 
 	r.state.lastPollAt = now

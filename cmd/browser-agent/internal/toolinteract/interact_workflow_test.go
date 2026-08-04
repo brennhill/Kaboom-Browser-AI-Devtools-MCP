@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -130,7 +131,7 @@ func TestHandleNavigateAndDocument_InvalidJSON(t *testing.T) {
 func TestHandleNavigateAndDocument_TabMismatch(t *testing.T) {
 	h, fs := newFakeWorkflowActions(t)
 	// tracked tab is 1; request tab_id 2 should mismatch.
-	fs.cap.Extension().SetTrackingStatusForTest(1, "https://example.com/page")
+	capturefixture.Track(fs.cap, 1, "https://example.com/page")
 	args := `{"selector":"#link","tab_id":2,"wait_for_url_change":false,"wait_for_stable":false}`
 	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)), mcp.ErrInvalidParam)
 }
@@ -146,13 +147,13 @@ func TestHandleNavigateAndDocument_ClickError(t *testing.T) {
 
 func TestHandleNavigateAndDocument_NoResultAfterNavigationContinues(t *testing.T) {
 	h, fs := newFakeWorkflowActions(t)
-	fs.cap.Extension().SetTrackingStatusForTest(1, "https://example.test/before")
+	capturefixture.Track(fs.cap, 1, "https://example.test/before")
 	noResult := mcp.Fail(testReq(), mcp.ErrExtError, "Command failed: no_result", "retry")
 	if !clickLostToNavigation(noResult) {
 		t.Fatalf("clickLostToNavigation did not classify response: %+v", noResult)
 	}
 	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
-		fs.cap.Extension().SetTrackingStatusForTest(1, "https://example.test/after")
+		capturefixture.Track(fs.cap, 1, "https://example.test/after")
 		return noResult
 	}
 

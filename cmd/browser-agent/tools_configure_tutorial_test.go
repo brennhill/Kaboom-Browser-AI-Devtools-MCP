@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
 func seedSyncSettings(t *testing.T, env *configureTestEnv, settingsJSON string) {
@@ -91,8 +92,7 @@ func TestToolsConfigureTutorial_ContextAware_PilotDisabled(t *testing.T) {
 
 func TestToolsConfigureTutorial_ContextAware_AssumedPilotDoesNotReportPilotDisabled(t *testing.T) {
 	t.Parallel()
-	env := newConfigureTestEnv(t)
-	env.capture.Extension().SetPilotUnknownForTest()
+	env := newConfigureTestEnvWithAssumedPilot(t)
 
 	result, ok := env.callConfigure(t, `{"what":"tutorial"}`)
 	if !ok {
@@ -118,7 +118,7 @@ func TestToolsConfigureTutorial_ContextAware_AssumedPilotDoesNotReportPilotDisab
 func TestToolsConfigureTutorial_ContextAware_NoTrackedTab(t *testing.T) {
 	t.Parallel()
 	env := newConfigureTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 	seedSyncSettings(t, env, `{"pilot_enabled":true,"tracking_enabled":false,"tracked_tab_id":0,"tracked_tab_url":"","tracked_tab_title":""}`)
 
 	result, ok := env.callConfigure(t, `{"what":"tutorial"}`)
@@ -150,7 +150,7 @@ func TestToolsConfigureTutorial_ContextAware_NoTrackedTab(t *testing.T) {
 func TestToolsConfigureTutorial_IncludesSafeAutomationLoop(t *testing.T) {
 	t.Parallel()
 	env := newConfigureTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 	seedSyncSettings(t, env, `{"pilot_enabled":true,"tracking_enabled":true,"tracked_tab_id":11,"tracked_tab_url":"https://example.com","tracked_tab_title":"Example"}`)
 
 	result, ok := env.callConfigure(t, `{"what":"tutorial"}`)
@@ -198,7 +198,7 @@ func TestToolsConfigureTutorial_IncludesSafeAutomationLoop(t *testing.T) {
 func TestToolsConfigureTutorial_IncludesCSPFallbackPlaybook(t *testing.T) {
 	t.Parallel()
 	env := newConfigureTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 	seedSyncSettings(t, env, `{"pilot_enabled":true,"tracking_enabled":true,"tracked_tab_id":17,"tracked_tab_url":"https://example.com","tracked_tab_title":"Example"}`)
 
 	result, ok := env.callConfigure(t, `{"what":"tutorial"}`)
@@ -279,7 +279,7 @@ func TestToolsConfigureTutorial_SnippetsAvoidAmbiguousGlobalSubmit(t *testing.T)
 func TestToolsConfigureTutorial_IncludesFailureRecoveryPlaybooks(t *testing.T) {
 	t.Parallel()
 	env := newConfigureTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 	seedSyncSettings(t, env, `{"pilot_enabled":true,"tracking_enabled":true,"tracked_tab_id":19,"tracked_tab_url":"https://example.com","tracked_tab_title":"Example"}`)
 
 	result, ok := env.callConfigure(t, `{"what":"tutorial"}`)

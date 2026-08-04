@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -71,9 +72,9 @@ func TestInteract_NavigateAndDocument_ModeSpec_Present(t *testing.T) {
 func TestNavigateAndDocument_URLChangeTimeout(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
-	env.capture.Extension().SimulateExtensionConnectForTest()
-	env.capture.Extension().SetTrackingStatusForTest(42, "https://example.com/old")
+	capturefixture.SetPilot(env.capture, true)
+	capturefixture.Connect(env.capture)
+	capturefixture.Track(env.capture, 42, "https://example.com/old")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","wait_for_url_change":true,"wait_for_stable":false,"timeout_ms":50}`)
@@ -119,8 +120,8 @@ func TestNavigateAndDocument_URLChangeTimeout(t *testing.T) {
 func TestNavigateAndDocument_AppendsPageContext(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
-	env.capture.Extension().SimulateExtensionConnectForTest()
+	capturefixture.SetPilot(env.capture, true)
+	capturefixture.Connect(env.capture)
 	env.capture.Extension().UpdateTrackedTab(42, "https://example.com/old", "Old")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
@@ -199,9 +200,9 @@ func TestNavigateAndDocument_AppendsPageContext(t *testing.T) {
 func TestNavigateAndDocument_TabIDMismatchReturnsError(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
-	env.capture.Extension().SimulateExtensionConnectForTest()
-	env.capture.Extension().SetTrackingStatusForTest(42, "https://example.com/old")
+	capturefixture.SetPilot(env.capture, true)
+	capturefixture.Connect(env.capture)
+	capturefixture.Track(env.capture, 42, "https://example.com/old")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","tab_id":99,"wait_for_url_change":true,"wait_for_stable":false}`)
@@ -225,8 +226,8 @@ func TestNavigateAndDocument_TabIDMismatchReturnsError(t *testing.T) {
 func TestNavigateAndDocument_TabIDRequiresTracking(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
-	env.capture.Extension().SimulateExtensionConnectForTest()
+	capturefixture.SetPilot(env.capture, true)
+	capturefixture.Connect(env.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","tab_id":42,"wait_for_url_change":true,"wait_for_stable":false}`)
@@ -242,9 +243,9 @@ func TestNavigateAndDocument_TabIDRequiresTracking(t *testing.T) {
 func TestNavigateAndDocument_TimeoutBudgetExhaustedBeforeStable(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
-	env.capture.Extension().SimulateExtensionConnectForTest()
-	env.capture.Extension().SetTrackingStatusForTest(42, "https://example.com/old")
+	capturefixture.SetPilot(env.capture, true)
+	capturefixture.Connect(env.capture)
+	capturefixture.Track(env.capture, 42, "https://example.com/old")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","timeout_ms":40,"wait_for_url_change":false,"wait_for_stable":true}`)
@@ -303,11 +304,11 @@ func TestNavigateAndDocument_TimeoutBudgetExhaustedBeforeStable(t *testing.T) {
 func TestInteract_NavigateAndDocument_IncludeScreenshot(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
 	capture.NewSyncHandler(env.capture).HandleSync(httptest.NewRecorder(), httpReq)
-	env.capture.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	capturefixture.Track(env.capture, 42, "https://example.com")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate_and_document","selector":"button","wait_for_url_change":false,"wait_for_stable":false,"include_screenshot":true}`)

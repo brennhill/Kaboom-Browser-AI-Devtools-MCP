@@ -500,7 +500,7 @@ func TestObserveNetworkBodies_EndToEnd(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add network body using test helper (simulates browser extension POST)
-	cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{
 			URL:          "https://api.example.com/users",
 			Method:       "GET",

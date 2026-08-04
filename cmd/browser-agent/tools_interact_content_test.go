@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
 // ============================================
@@ -26,7 +27,7 @@ func newContentTestEnv(t *testing.T) *interactTestEnv {
 	}
 	t.Cleanup(func() { server.Close() })
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(true) // content extraction requires pilot
+	capturefixture.SetPilot(cap, true) // content extraction requires pilot
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
@@ -36,7 +37,7 @@ func newContentTestEnv(t *testing.T) *interactTestEnv {
 	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Simulate tab tracking
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	capturefixture.Track(cap, 42, "https://example.com")
 
 	return &interactTestEnv{handler: handler, server: server, capture: cap}
 }

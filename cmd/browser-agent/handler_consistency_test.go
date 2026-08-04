@@ -10,12 +10,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -118,7 +120,7 @@ func TestCorrelationID_AsyncCommands(t *testing.T) {
 
 	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mcpHandler := NewToolHandler(srv, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 

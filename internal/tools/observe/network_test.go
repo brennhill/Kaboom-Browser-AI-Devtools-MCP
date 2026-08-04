@@ -18,7 +18,7 @@ func TestNetworkBodyHandlerFiltersTransformsAndExplainsEmptyResults(t *testing.T
 	t.Parallel()
 	cap := capture.NewCapture()
 	t.Cleanup(cap.Close)
-	cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.test/api/users", Method: "GET", Status: 200, Timestamp: time.Now().Format(time.RFC3339), ResponseBody: `{"data":{"id":7}}`},
 		{URL: "https://example.test/api/admin", Method: "POST", Status: 503, Timestamp: time.Now().Format(time.RFC3339), ResponseBody: `{"error":"down"}`},
 	})
@@ -60,7 +60,7 @@ func TestWebSocketHandlerFiltersAndSummarizesTraffic(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
 	t.Cleanup(cap.Close)
-	cap.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
+	cap.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 		{ID: "one", URL: "wss://example.test/socket", Direction: "incoming", Event: "message", Timestamp: time.Now().Format(time.RFC3339)},
 		{ID: "two", URL: "wss://other.test/socket", Direction: "outgoing", Event: "message", Timestamp: time.Now().Format(time.RFC3339)},
 	})
@@ -84,7 +84,7 @@ func TestWaterfallAndWebSocketStatusHandlersExposeOperationalShapes(t *testing.T
 		{URL: "https://example.test/app.js", InitiatorType: "script", Duration: 12, Timestamp: time.Now()},
 		{URL: "https://other.test/image.png", InitiatorType: "img", Duration: 5, Timestamp: time.Now()},
 	}, "https://example.test")
-	cap.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
+	cap.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 		{ID: "active", URL: "wss://example.test/socket", Event: "open", Timestamp: time.Now().Format(time.RFC3339)},
 		{ID: "closed", URL: "wss://other.test/socket", Event: "open", Timestamp: time.Now().Add(-time.Second).Format(time.RFC3339)},
 		{ID: "closed", URL: "wss://other.test/socket", Event: "close", Timestamp: time.Now().Format(time.RFC3339)},

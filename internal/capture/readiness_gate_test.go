@@ -35,7 +35,7 @@ func TestWaitForExtensionConnected_ConnectsPartway(t *testing.T) {
 	// Simulate connection after 150ms
 	go func() {
 		time.Sleep(150 * time.Millisecond)
-		c.Extension().SimulateExtensionConnectForTest()
+		connectForTest(c)
 	}()
 
 	start := time.Now()
@@ -68,7 +68,7 @@ func TestWaitForExtensionConnected_ZeroTimeout(t *testing.T) {
 func TestWaitForExtensionConnected_ZeroTimeout_AlreadyConnected(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
-	c.Extension().SimulateExtensionConnectForTest()
+	connectForTest(c)
 
 	ok := c.Extension().WaitForExtensionConnected(context.Background(), 0)
 	if !ok {
@@ -105,20 +105,16 @@ func TestWaitForExtensionConnected_ContextCancelled(t *testing.T) {
 	}
 }
 
-// P2-3: Connect-then-disconnect during wait — lastSyncSeen is still recent so returns true.
-// NOTE: This test mutates a package-level var (extensionDisconnectThreshold)
-// via SetExtensionDisconnectThresholdForTesting, so it must NOT use t.Parallel().
+// P2-3: Connect-then-disconnect during wait returns after observing connection.
 func TestWaitForExtensionConnected_ConnectsThenDisconnects(t *testing.T) {
+	t.Parallel()
 	c := NewCapture()
-	// Use a short disconnect threshold so the test can verify disconnect detection.
-	restore := SetExtensionDisconnectThresholdForTesting(500 * time.Millisecond)
-	defer restore()
 
 	// Simulate connect at 50ms — early enough that the first poll tick (100ms)
 	// reliably sees the connected state.
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		c.Extension().SimulateExtensionConnectForTest()
+		connectForTest(c)
 	}()
 
 	// Simulate disconnect at 400ms — gives at least 3 poll ticks (100ms each)
@@ -127,7 +123,7 @@ func TestWaitForExtensionConnected_ConnectsThenDisconnects(t *testing.T) {
 	// aligned with the disconnect.
 	go func() {
 		time.Sleep(400 * time.Millisecond)
-		c.Extension().SimulateExtensionDisconnectForTest()
+		c.Extension().MarkDisconnected()
 	}()
 
 	// Start waiting — extension connects at 50ms. The poll at ~100ms should catch
@@ -169,7 +165,7 @@ func TestWaitForExtensionConnected_NegativeTimeout(t *testing.T) {
 func TestWaitForExtensionConnected_NegativeTimeout_AlreadyConnected(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
-	c.Extension().SimulateExtensionConnectForTest()
+	connectForTest(c)
 
 	ok := c.Extension().WaitForExtensionConnected(context.Background(), -1*time.Second)
 	if !ok {

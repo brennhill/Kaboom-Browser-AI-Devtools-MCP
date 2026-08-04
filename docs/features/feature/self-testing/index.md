@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - .github/workflows/ci.yml
   - scripts/smoke-test.sh
@@ -37,6 +37,7 @@ code_paths:
   - cmd/browser-agent/internal/wsframe/frame.go
   - internal/statefault/fault.go
   - internal/statefault/store.go
+  - internal/capturefixture/sync.go
 test_paths:
   - tests/extension/contracts/tooling-contracts.test.js
   - cmd/browser-agent/bridge_faststart_extended_test.go
@@ -89,6 +90,7 @@ test_paths:
   - internal/statefault/fault_test.go
   - internal/statefault/boundary_test.go
   - internal/statefault/store_test.go
+  - internal/capturefixture/sync_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -115,6 +117,13 @@ last_verified_date: 2026-03-05
 - FEATURE_SELF_TESTING_003
 
 ## Code and Tests
+
+`internal/capturefixture` is the reviewed exception to the zero-new-export
+ratchet for this change. Its eight narrow helpers are test-only consumers of
+canonical capture boundaries: sync-backed settings and connection state,
+cached Pilot state, tracked-tab updates, and explicit disconnect lifecycle.
+The package is not imported by release binaries and replaces a larger set of
+unsafe mutation methods that previously compiled into `internal/capture`.
 
 - Smoke runner lifecycle and post-run daemon availability: `scripts/smoke-test.sh`, `scripts/smoke-tests/framework-smoke.sh`
 - Smoke module contracts for push/upload/framework resilience/stability: `scripts/smoke-tests/14-browser-push.sh`, `scripts/smoke-tests/15-file-upload.sh`, `scripts/smoke-tests/29-framework-selector-resilience.sh`, `scripts/smoke-tests/30-stability-shutdown.sh`

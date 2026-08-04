@@ -919,7 +919,7 @@
     },
     "internal/capture/extension_state.go": {
       "mutable_globals": 0,
-      "exports": 43
+      "exports": 42
     },
     "internal/capture/featureusage/observer.go": {
       "mutable_globals": 0,
@@ -930,16 +930,12 @@
       "exports": 9
     },
     "internal/capture/model.go": {
-      "mutable_globals": 2,
+      "mutable_globals": 0,
       "exports": 16
     },
     "internal/capture/sync.go": {
       "mutable_globals": 0,
       "exports": 4
-    },
-    "internal/capture/test_helpers.go": {
-      "mutable_globals": 0,
-      "exports": 14
     },
     "internal/capture/wire_sync.go": {
       "mutable_globals": 0,
@@ -952,6 +948,10 @@
     "internal/capture/wsconn/tracker.go": {
       "mutable_globals": 0,
       "exports": 5
+    },
+    "internal/capturefixture/sync.go": {
+      "mutable_globals": 0,
+      "exports": 8
     },
     "internal/circuit/breaker.go": {
       "mutable_globals": 0,

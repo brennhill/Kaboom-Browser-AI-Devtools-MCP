@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -24,7 +25,7 @@ func TestRichAction_AnalyzeInPendingQueryParams(t *testing.T) {
 	env := newInteractTestEnv(t)
 
 	// Enable pilot so the request gets queued (not rejected at pilot check)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","analyze":true,"background":true}`)
 	if !ok {
@@ -57,7 +58,7 @@ func TestRichAction_AnalyzeInPendingQueryParams(t *testing.T) {
 
 func TestRichAction_AnalyzeFalseNotForwarded(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","analyze":false,"background":true}`)
 	if !ok {
@@ -86,7 +87,7 @@ func TestRichAction_AnalyzeFalseNotForwarded(t *testing.T) {
 
 func TestRichAction_AnalyzeOmittedByDefault(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	if !ok {
@@ -115,7 +116,7 @@ func TestRichAction_AnalyzeOmittedByDefault(t *testing.T) {
 
 func TestRichAction_AnalyzeOnNavigationAction(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	// refresh doesn't use analyze (it always returns perf_diff)
 	// but should not reject it either
@@ -131,7 +132,7 @@ func TestRichAction_AnalyzeOnNavigationAction(t *testing.T) {
 
 func TestRichAction_FrameSelectorInPendingQueryParams(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#submit","frame":"iframe[name='payment']","sync":false}`)
 	if !ok {
@@ -158,7 +159,7 @@ func TestRichAction_FrameSelectorInPendingQueryParams(t *testing.T) {
 
 func TestRichAction_FrameIndexInPendingQueryParams(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#submit","frame":0,"sync":false}`)
 	if !ok {
@@ -343,7 +344,7 @@ func TestRichAction_SchemaDescriptionMentionsPerf(t *testing.T) {
 
 func TestRichAction_CorrelationID_HasAction(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","analyze":true,"background":true}`)
 	if !ok || result.IsError {
@@ -369,7 +370,7 @@ func TestRichAction_CorrelationID_HasAction(t *testing.T) {
 
 func TestRichAction_AnalyzeFieldsSurfacedTopLevel(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	// Click with analyze:true
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","analyze":true,"background":true}`)
@@ -443,7 +444,7 @@ func TestRichAction_AnalyzeFieldsSurfacedTopLevel(t *testing.T) {
 
 func TestRichAction_NoAnalyzeFieldsWhenAbsent(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	var resultData map[string]any
@@ -484,7 +485,7 @@ func TestRichAction_NoAnalyzeFieldsWhenAbsent(t *testing.T) {
 
 func TestRichAction_MatchedDiagnosticsSurfacedTopLevel(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"text=Submit","background":true}`)
 	var resultData map[string]any
@@ -550,7 +551,7 @@ func TestRichAction_MatchedDiagnosticsSurfacedTopLevel(t *testing.T) {
 
 func TestRichAction_TargetContextSurfacedTopLevel(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","tab_id":77,"background":true}`)
 	var resultData map[string]any
@@ -624,7 +625,7 @@ func TestRichAction_TargetContextSurfacedTopLevel(t *testing.T) {
 
 func TestRichAction_DomSummaryPassthrough(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	// Click with analyze:true
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","analyze":true,"background":true}`)

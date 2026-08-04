@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -48,7 +49,7 @@ func newInteractTestEnv(t *testing.T) *interactTestEnv {
 		t.Fatalf("NewServer failed: %v", err)
 	}
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false) // explicit default for legacy pilot-disabled tests
+	capturefixture.SetPilot(cap, false) // explicit default for legacy pilot-disabled tests
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
@@ -58,7 +59,7 @@ func newInteractTestEnv(t *testing.T) *interactTestEnv {
 	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Simulate tab tracking so tests don't hit the tab tracking gate.
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	capturefixture.Track(cap, 42, "https://example.com")
 
 	return &interactTestEnv{handler: handler, server: server, capture: cap}
 }

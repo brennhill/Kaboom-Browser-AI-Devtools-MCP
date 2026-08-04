@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -54,7 +55,7 @@ func TestBuildExtensionLogEntriesFiltersLevelAndLimit(t *testing.T) {
 func TestGetBrowserLogsAppliesCurrentPageFiltersAndIncludesExtensionLogs(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SetTrackingStatusForTest(7, "https://app.example.test")
+	capturefixture.Track(cap, 7, "https://app.example.test")
 	cap.ExtensionLogs().Add([]types.ExtensionLog{
 		{Level: "info", Message: "extension info", Timestamp: time.Now()},
 		{Level: "error", Message: "extension error", Timestamp: time.Now()},
@@ -153,7 +154,7 @@ func TestGetBrowserLogsRejectsMalformedCursor(t *testing.T) {
 func TestGetBrowserErrorsScopesTrackedPageAndSummarizesNoise(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SetTrackingStatusForTest(7, "https://app.example.test")
+	capturefixture.Track(cap, 7, "https://app.example.test")
 	entries := []types.LogEntry{
 		{"level": "error", "source": "console", "url": "https://app.example.test/page", "tabId": float64(7), "message": "kept", "ts": "2026-07-29T10:00:00Z"},
 		{"level": "error", "source": "console", "url": "https://app.example.test/page", "tabId": float64(7), "message": "noise"},

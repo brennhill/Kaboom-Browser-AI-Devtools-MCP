@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -69,7 +70,7 @@ func (e *gateTestEnv) simulateConnection(t *testing.T) {
 // enablePilot turns on pilot for tests that need it.
 func (e *gateTestEnv) enablePilot(t *testing.T) {
 	t.Helper()
-	e.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(e.capture, true)
 }
 
 // extractErrorCode parses the structured error code from a JSONRPCResponse result.
@@ -130,6 +131,7 @@ func TestRequireExtension_Disconnected(t *testing.T) {
 func TestRequireExtension_Connected(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
+	env.enablePilot(t)
 	env.simulateConnection(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
@@ -146,7 +148,7 @@ func TestRequireExtension_Connected(t *testing.T) {
 func TestRequireCSPClear_MainWorldBlocked(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.Guards.RequireCSPClear(req, "main")
@@ -162,7 +164,7 @@ func TestRequireCSPClear_MainWorldBlocked(t *testing.T) {
 func TestRequireCSPClear_AutoWorldPasses(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.Guards.RequireCSPClear(req, "auto")
@@ -174,7 +176,7 @@ func TestRequireCSPClear_AutoWorldPasses(t *testing.T) {
 func TestRequireCSPClear_IsolatedWorldPasses(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.Guards.RequireCSPClear(req, "isolated")
@@ -186,7 +188,7 @@ func TestRequireCSPClear_IsolatedWorldPasses(t *testing.T) {
 func TestRequireCSPClear_PageBlocked(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "page_blocked")
+	capturefixture.SetCSP(env.capture, true, "page_blocked")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.Guards.RequireCSPClear(req, "main")
@@ -198,7 +200,7 @@ func TestRequireCSPClear_PageBlocked(t *testing.T) {
 func TestRequireCSPClear_None(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetCSPStatusForTest(false, "none")
+	capturefixture.SetCSP(env.capture, false, "none")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.Guards.RequireCSPClear(req, "main")
@@ -211,7 +213,7 @@ func TestRequireCSPClear_NotRestricted(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
 	// restricted=false takes precedence even with a non-none level
-	env.capture.Extension().SetCSPStatusForTest(false, "script_exec")
+	capturefixture.SetCSP(env.capture, false, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.Guards.RequireCSPClear(req, "main")
@@ -243,9 +245,10 @@ func TestNavigate_ExtDisconnected_FastFail(t *testing.T) {
 func TestExecuteJS_CSP_MainWorld_FastFail(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
+	env.enablePilot(t)
 	env.simulateConnection(t)
 	env.simulateTabTracking(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
@@ -260,9 +263,10 @@ func TestExecuteJS_CSP_MainWorld_FastFail(t *testing.T) {
 func TestExecuteJS_CSP_AutoWorld_PassesThrough(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
+	env.enablePilot(t)
 	env.simulateConnection(t)
 	env.simulateTabTracking(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","sync":false}`)
@@ -340,7 +344,7 @@ func TestRequireTabTracking_TabTracked(t *testing.T) {
 // simulateTabTracking sets tracking state so tab-tracking gates pass.
 func (e *gateTestEnv) simulateTabTracking(t *testing.T) {
 	t.Helper()
-	e.capture.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	capturefixture.Track(e.capture, 42, "https://example.com")
 }
 
 func TestRequireTabTracking_NoRecoveryToolCall(t *testing.T) {
@@ -469,7 +473,7 @@ func TestGateOrder_ParamValidation_BeforeExtension(t *testing.T) {
 func TestGateOrder_Pilot_BeforeExtension(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(false)
+	capturefixture.SetPilot(env.capture, false)
 	// Extension NOT connected + pilot disabled
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
@@ -510,7 +514,7 @@ func TestGateOrder_TabTracking_BeforeCSP(t *testing.T) {
 	env.enablePilot(t)
 	env.simulateConnection(t)
 	// No tab tracking + CSP restricted — tab tracking gate should fire before CSP
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
@@ -531,7 +535,8 @@ func TestGateOrder_Extension_BeforeCSP(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.enablePilot(t)
 	// Extension NOT connected + CSP restricted
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
+	capturefixture.Disconnect(env.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
@@ -575,7 +580,7 @@ func extractStructuredError(t *testing.T, resp mcp.JSONRPCResponse) mcp.Structur
 func TestRequirePilot_RecoveryToolCall(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(false)
+	capturefixture.SetPilot(env.capture, false)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.Guards.RequirePilot(req)
@@ -621,7 +626,7 @@ func TestRequireExtension_RecoveryToolCall(t *testing.T) {
 func TestRequireCSPClear_RecoveryToolCall(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.Guards.RequireCSPClear(req, "main")
@@ -675,7 +680,7 @@ func TestRequireExtension_ConnectsDuringWait(t *testing.T) {
 func TestDiagnosticHint_IncludesCSP(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	hint := env.handler.Guards.DiagnosticHintString()
 	if !strings.Contains(hint, "csp=") {
@@ -699,9 +704,10 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 
 	t.Run("1_no_script_missing_param", func(t *testing.T) {
 		env := newGateTestEnv(t)
-		env.capture.Extension().SetPilotEnabled(false)
+		capturefixture.SetPilot(env.capture, false)
 		// No script param, pilot off, ext off, no tab, CSP on
-		env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+		capturefixture.SetCSP(env.capture, true, "script_exec")
+		capturefixture.Disconnect(env.capture)
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","world":"main","sync":false}`)
@@ -715,9 +721,10 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 
 	t.Run("2_script_present_pilot_disabled", func(t *testing.T) {
 		env := newGateTestEnv(t)
-		env.capture.Extension().SetPilotEnabled(false)
+		capturefixture.SetPilot(env.capture, false)
 		// Script present, pilot off, ext off, no tab, CSP on
-		env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+		capturefixture.SetCSP(env.capture, true, "script_exec")
+		capturefixture.Disconnect(env.capture)
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
@@ -733,7 +740,8 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		env := newGateTestEnv(t)
 		env.enablePilot(t)
 		// Pilot on, ext off, no tab, CSP on
-		env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+		capturefixture.SetCSP(env.capture, true, "script_exec")
+		capturefixture.Disconnect(env.capture)
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
@@ -754,7 +762,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		env.enablePilot(t)
 		env.simulateConnection(t)
 		// Ext on, no tab, CSP on
-		env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+		capturefixture.SetCSP(env.capture, true, "script_exec")
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
@@ -775,7 +783,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		env.enablePilot(t)
 		env.simulateConnection(t)
 		env.simulateTabTracking(t)
-		env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+		capturefixture.SetCSP(env.capture, true, "script_exec")
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)

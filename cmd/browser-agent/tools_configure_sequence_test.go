@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 )
 
@@ -363,7 +364,7 @@ func TestReplaySequence_OverrideStepsLengthMismatch(t *testing.T) {
 func TestReplaySequence_QueuesPendingAsyncCommands(t *testing.T) {
 	t.Parallel()
 	env := newSequenceTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 	mockConnectedTrackedTab(t, env.capture)
 
 	callConfigureRaw(env.handler, `{

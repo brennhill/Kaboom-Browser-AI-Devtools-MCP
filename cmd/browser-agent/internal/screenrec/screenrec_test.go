@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -118,7 +119,7 @@ func newVideoTestEnv(t *testing.T) *videoTestEnv {
 	t.Helper()
 
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false) // explicit default for pilot-disabled recording tests
+	capturefixture.SetPilot(cap, false) // explicit default for pilot-disabled recording tests
 	mockConnectedTrackedTab(t, cap)
 	return &videoTestEnv{handler: NewInteractHandler(testDeps(cap)), capture: cap}
 }
@@ -599,7 +600,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatal("expected screen_recording_start to fail when pilot is disabled")
 	}
 
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	invalidAudio := env.handler.HandleRecordStart(req, json.RawMessage(`{"audio":"speaker"}`))
 	invalidAudioResult := parseToolResult(t, invalidAudio)
@@ -699,7 +700,7 @@ func mockConnectedTrackedTab(t *testing.T, cap *capture.Capture) {
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
 	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	capturefixture.Track(cap, 42, "https://example.com")
 }
 
 func parseToolResult(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {

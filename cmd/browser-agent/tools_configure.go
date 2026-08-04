@@ -474,7 +474,7 @@ func getHealthResponse(hm *health.Metrics, cap *capture.Capture, server *Server,
 		serverDeps = &serverDepsAdapter{s: server}
 	}
 	var upgrade health.UpgradeProvider
-	if server != nil && server.runtime.Upgrade() != nil {
+	if server != nil && server.runtime != nil && server.runtime.Upgrade() != nil {
 		upgrade = server.runtime.Upgrade()
 	}
 	response := hm.GetHealth(cap, serverDeps, upgrade, getLaunchModeInfo, alerts, ver)

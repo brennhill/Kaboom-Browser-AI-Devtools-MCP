@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -19,7 +20,7 @@ import (
 func TestHandleBrowserActionNavigate_Success(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"navigate","url":"https://example.com/page"}`)
 	if !ok {
@@ -78,7 +79,7 @@ func TestHandleBrowserActionNavigate_InvalidJSON(t *testing.T) {
 func TestHandlePilotExecuteJS_Success(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"execute_js","script":"document.title"}`)
 	if !ok {

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -76,6 +77,6 @@ func TestToolResponsePostProcessing_AddsSecurityModeMetadataAndWarning(t *testin
 func makeTestCapture(t *testing.T) *capture.Capture {
 	t.Helper()
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	return cap
 }

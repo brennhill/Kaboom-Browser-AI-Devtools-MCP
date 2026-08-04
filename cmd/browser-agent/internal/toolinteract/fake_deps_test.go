@@ -5,8 +5,6 @@ package toolinteract
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,6 +12,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -140,9 +142,9 @@ type fakeCapabilities struct {
 // newFakeState builds a fakeState with pilot enabled, a tracked tab, and a connected extension.
 func newFakeState() *fakeState {
 	c := capture.NewCapture()
-	c.Extension().SetPilotEnabled(true)
-	c.Extension().SetTrackingStatusForTest(1, "https://example.com/page")
-	c.Extension().SimulateExtensionConnectForTest()
+	capturefixture.SetPilot(c, true)
+	capturefixture.Track(c, 1, "https://example.com/page")
+	capturefixture.Connect(c)
 	return &fakeState{cap: c, listenPort: 7890}
 }
 

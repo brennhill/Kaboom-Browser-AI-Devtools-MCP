@@ -8,6 +8,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/noiseautorun"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
 // ============================================
@@ -18,7 +19,7 @@ import (
 // by directly calling the capture connection state API, avoiding the 5-second
 // long-poll in HandleSync. This makes tests fast and deterministic.
 func simulateExtensionConnect(cap *capture.Capture) {
-	cap.SimulateSyncForTest("test-sess-1", "test-client")
+	capturefixture.Connect(cap)
 }
 
 func waitForNoiseFirstConnectCallback() {
@@ -36,7 +37,7 @@ func TestNoiseAutoDetectOnFirstSync_TriggersOnce(t *testing.T) {
 	t.Cleanup(func() { server.Close() })
 
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false)
+	capturefixture.SetPilot(cap, false)
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
@@ -65,7 +66,7 @@ func TestNoiseAutoDetectOnFirstSync_DoesNotRepeat(t *testing.T) {
 	t.Cleanup(func() { server.Close() })
 
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false)
+	capturefixture.SetPilot(cap, false)
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
@@ -120,7 +121,7 @@ func TestNoiseAutoDetectOnFirstSync_EmitsLogEntry(t *testing.T) {
 	t.Cleanup(func() { server.Close() })
 
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false)
+	capturefixture.SetPilot(cap, false)
 	mcpHandler := NewToolHandler(server, cap)
 	_ = mcpHandler.tools.Executor.(*ToolHandler)
 

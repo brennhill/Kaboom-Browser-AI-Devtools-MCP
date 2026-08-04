@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -222,14 +223,15 @@ func TestHealthEndpointExposesDroppedCount(t *testing.T) {
 
 	// Create a server with a channel of size 1 and NO async worker,
 	// so the channel stays full when we manually fill it.
-	tinyLogSrv := &Server{
-		logs: logstore.New(logstore.Config{
-			LogFile:    filepath.Join(t.TempDir(), "drop.jsonl"),
-			MaxEntries: 100,
-			ChanSize:   1,
-			AddWarning: func(string) {},
-		}),
-	}
+	tinyLogSrv := newTestServerForHandlers(t)
+	previousLogs := tinyLogSrv.logs
+	t.Cleanup(func() { previousLogs.Shutdown(2 * time.Second) })
+	tinyLogSrv.logs = logstore.New(logstore.Config{
+		LogFile:    filepath.Join(t.TempDir(), "drop.jsonl"),
+		MaxEntries: 100,
+		ChanSize:   1,
+		AddWarning: func(string) {},
+	})
 
 	tinyMux, _ := setupHTTPRoutes(tinyLogSrv, cap)
 
@@ -339,7 +341,7 @@ func TestSetupHTTPRoutes_NilCaptureDoesNotPanic(t *testing.T) {
 
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			t.Fatalf("setupHTTPRoutes panicked with nil capture: %v", recovered)
+			t.Fatalf("setupHTTPRoutes panicked with nil capture: %v\n%s", recovered, debug.Stack())
 		}
 	}()
 

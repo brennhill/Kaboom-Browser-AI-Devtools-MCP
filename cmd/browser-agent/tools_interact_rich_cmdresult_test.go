@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -19,7 +20,7 @@ import (
 
 func TestCommandResult_ExpiredSetsIsError(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	// Queue a command
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -58,7 +59,7 @@ func TestCommandResult_ExpiredSetsIsError(t *testing.T) {
 
 func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	// Queue a command
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -97,7 +98,7 @@ func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
 
 func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	if !ok || result.IsError {
@@ -134,7 +135,7 @@ func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
 
 func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"execute_js","script":"(() => 1)()","background":true}`)
 	if !ok || result.IsError {
@@ -172,7 +173,7 @@ func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
 
 func TestCommandResult_ErrorStatusCSPFailureIncludesRetryHint(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"navigate","url":"https://example.com","background":true}`)
 	if !ok || result.IsError {
@@ -261,7 +262,7 @@ func TestCommandResult_InteractFailureCodesIncludeRecoveryRetryGuidance(t *testi
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			env := newInteractTestEnv(t)
-			env.capture.Extension().SetPilotEnabled(true)
+			capturefixture.SetPilot(env.capture, true)
 
 			result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 			if !ok || result.IsError {
@@ -304,7 +305,7 @@ func TestCommandResult_InteractFailureCodesIncludeRecoveryRetryGuidance(t *testi
 
 func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	// Queue a command
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -340,7 +341,7 @@ func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
 
 func TestCommandResult_ExpiredHasFinalTrue(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	var resultData map[string]any
@@ -467,7 +468,7 @@ func TestCommandResult_AnnotationNotFoundHasFinalTrue(t *testing.T) {
 
 func TestCommandResult_ExpiredIncludesDiagnosticHint(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	if !ok || result.IsError {

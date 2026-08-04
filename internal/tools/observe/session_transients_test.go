@@ -29,7 +29,7 @@ func (m *mockTransientDeps) deps() Deps {
 }
 
 func seedTransientActions(c *capture.Capture) {
-	c.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1000, URL: "https://example.com"},
 		{Type: "transient", Timestamp: 2000, URL: "https://example.com", Classification: "toast", Value: "Saved", Role: "status"},
 		{Type: "transient", Timestamp: 3000, URL: "https://example.com", Classification: "alert", Value: "Error occurred", Role: "alert"},

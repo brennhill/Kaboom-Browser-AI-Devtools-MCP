@@ -119,7 +119,7 @@ func newGenerateContractEnv(t *testing.T) *generateContractEnv {
 func TestContractGenerate_Reproduction(t *testing.T) {
 	env := newGenerateContractEnv(t)
 	// Seed actions so reproduction has data to generate from
-	env.capture.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
+	env.capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, URL: "https://example.com", ToURL: "https://example.com"},
 		{Type: "click", Timestamp: 2000, URL: "https://example.com", Selectors: map[string]any{"text": "Go"}},
 	})

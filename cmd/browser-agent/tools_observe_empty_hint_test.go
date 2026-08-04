@@ -128,7 +128,7 @@ func TestGetNetworkBodies_NonEmpty_NoHint(t *testing.T) {
 
 	env := newToolTestEnv(t)
 
-	env.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+	env.capture.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{
 			URL:          "https://api.github.com/repos",
 			Method:       "GET",
@@ -162,7 +162,7 @@ func TestGetNetworkBodies_EmptyWithURLFilter_HintMentionsFilter(t *testing.T) {
 	env := newToolTestEnv(t)
 
 	// Add a body that won't match the filter
-	env.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+	env.capture.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{
 			URL:          "https://api.example.com/users",
 			Method:       "GET",
@@ -239,7 +239,7 @@ func TestGetWSEvents_NonEmpty_NoHint(t *testing.T) {
 
 	env := newToolTestEnv(t)
 
-	env.capture.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
+	env.capture.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 		{
 			URL:       "wss://stream.example.com/ws",
 			Type:      "message",

@@ -46,7 +46,7 @@ func TestLoadSettingsFromDiskStaleAndMalformedAreIgnored(t *testing.T) {
 	}
 
 	// Malformed JSON should be ignored without changing state.
-	c.Extension().SetPilotEnabled(true)
+	setPilotForTest(c, true)
 	if err := os.WriteFile(path, []byte("{not-json"), 0o600); err != nil {
 		t.Fatalf("WriteFile(malformed) error = %v", err)
 	}

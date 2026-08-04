@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -16,7 +17,7 @@ import (
 func TestRuntimeStateReaderProjectsCanonicalTelemetry(t *testing.T) {
 	cap := capture.NewCapture()
 	t.Cleanup(cap.Close)
-	cap.Extension().SetTrackingStatusForTest(4, "https://tracked.example.test")
+	capturefixture.Track(cap, 4, "https://tracked.example.test")
 	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{{
 		Method:       "GET",
 		URL:          "https://api.example.test/data",

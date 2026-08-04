@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 )
@@ -42,6 +43,14 @@ type configureTestEnv struct {
 }
 
 func newConfigureTestEnv(t *testing.T) *configureTestEnv {
+	return newConfigureTestEnvWithPilotDefault(t, true)
+}
+
+func newConfigureTestEnvWithAssumedPilot(t *testing.T) *configureTestEnv {
+	return newConfigureTestEnvWithPilotDefault(t, false)
+}
+
+func newConfigureTestEnvWithPilotDefault(t *testing.T, explicitDisabled bool) *configureTestEnv {
 	t.Helper()
 	logFile := filepath.Join(t.TempDir(), "test-configure.jsonl")
 	server, err := NewServer(logFile, 100)
@@ -50,7 +59,9 @@ func newConfigureTestEnv(t *testing.T) *configureTestEnv {
 	}
 	t.Cleanup(func() { server.Close() })
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false) // explicit default for configure context tests
+	if explicitDisabled {
+		capturefixture.SetPilot(cap, false) // explicit default for configure context tests
+	}
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	handler.noiseConfig = noise.NewNoiseConfig()

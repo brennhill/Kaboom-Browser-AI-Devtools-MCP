@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -86,7 +87,7 @@ func createTestToolHandler(t *testing.T) *ToolHandler {
 	}
 
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false) // explicit default for legacy pilot-disabled expectations
+	capturefixture.SetPilot(cap, false) // explicit default for legacy pilot-disabled expectations
 
 	// Create handler using proper constructor
 	mcpHandler := NewToolHandler(server, cap)

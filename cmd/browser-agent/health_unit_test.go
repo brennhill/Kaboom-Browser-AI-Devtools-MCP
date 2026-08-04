@@ -14,6 +14,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
@@ -134,13 +135,7 @@ func TestHealthResponseZeroDroppedCount(t *testing.T) {
 	t.Parallel()
 
 	hm := health.NewMetrics()
-	srv := &Server{
-		logs: logstore.New(logstore.Config{
-			MaxEntries: 100,
-			ChanSize:   10,
-			AddWarning: func(string) {},
-		}),
-	}
+	srv := newTestServerForHandlers(t)
 
 	resp := getHealthResponse(hm, nil, srv, nil, nil, "test")
 
@@ -148,7 +143,6 @@ func TestHealthResponseZeroDroppedCount(t *testing.T) {
 		t.Fatalf("Console.DroppedCount = %d, want 0 for fresh server", resp.Buffers.Console.DroppedCount)
 	}
 
-	srv.logs.Shutdown(10 * time.Millisecond)
 }
 
 func TestHealthResponseExposesMachineReadableResourcePressure(t *testing.T) {
@@ -210,14 +204,14 @@ func TestBuildPilotInfo_ExplicitDisableState(t *testing.T) {
 	t.Parallel()
 
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false)
+	capturefixture.SetPilot(cap, false)
 
 	info := health.BuildPilotInfo(cap)
 	if info.Enabled {
 		t.Fatalf("enabled = true, want false for explicit disable")
 	}
-	if info.Source != "test_helper" {
-		t.Fatalf("source = %q, want test_helper", info.Source)
+	if info.Source != capture.PilotSourceSettingsCache {
+		t.Fatalf("source = %q, want settings_cache", info.Source)
 	}
 }
 

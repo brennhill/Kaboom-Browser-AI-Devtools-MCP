@@ -28,6 +28,7 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		source.Write(contents)
 	}
 	for _, forbidden := range []string{
+		"ForTest",
 		"LifecycleEvent =",
 		"LifecycleListener =",
 		"LifecycleObserver =",

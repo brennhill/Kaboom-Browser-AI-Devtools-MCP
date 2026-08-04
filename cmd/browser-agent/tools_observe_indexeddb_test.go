@@ -10,13 +10,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestObserveIndexedDB_MissingDatabase(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetTrackingStatusForTest(11, "https://app.example.com")
+	capturefixture.Track(cap, 11, "https://app.example.com")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"indexeddb","store":"users"}`))
@@ -33,7 +34,7 @@ func TestObserveIndexedDB_MissingDatabase(t *testing.T) {
 func TestObserveIndexedDB_MissingStore(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetTrackingStatusForTest(11, "https://app.example.com")
+	capturefixture.Track(cap, 11, "https://app.example.com")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"indexeddb","database":"app-cache"}`))
@@ -50,7 +51,7 @@ func TestObserveIndexedDB_MissingStore(t *testing.T) {
 func TestObserveIndexedDB_ReturnsEntries(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetTrackingStatusForTest(12, "https://app.example.com")
+	capturefixture.Track(cap, 12, "https://app.example.com")
 
 	scriptCh := make(chan string, 1)
 	go func() {
@@ -109,7 +110,7 @@ func TestObserveIndexedDB_ReturnsEntries(t *testing.T) {
 func TestObserveStorage_IncludesIndexedDBListing(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetTrackingStatusForTest(13, "https://app.example.com")
+	capturefixture.Track(cap, 13, "https://app.example.com")
 
 	scriptCh := make(chan string, 1)
 	go func() {

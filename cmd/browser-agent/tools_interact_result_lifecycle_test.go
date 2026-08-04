@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -17,7 +18,7 @@ import (
 
 func TestQueuedResponse_HasQueuedAndFinalMarkers(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	var responseData map[string]any
@@ -38,7 +39,7 @@ func TestQueuedResponse_HasQueuedAndFinalMarkers(t *testing.T) {
 
 func TestCommandResult_CompleteHasFinalTrue(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	// Queue async to avoid sync-wait-for-extension
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -72,7 +73,7 @@ func TestCommandResult_CompleteHasFinalTrue(t *testing.T) {
 
 func TestCommandResult_ErrorHasFinalTrue(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	var resultData map[string]any
@@ -109,7 +110,7 @@ func TestCommandResult_ErrorHasFinalTrue(t *testing.T) {
 
 func TestCommandResult_EffectiveContextSurfaced(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","tab_id":42,"background":true}`)
 	var resultData map[string]any
@@ -159,7 +160,7 @@ func TestCommandResult_EffectiveContextSurfaced(t *testing.T) {
 
 func TestCommandResult_CompleteHasQueuedFalse(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	var resultData map[string]any

@@ -454,7 +454,7 @@ func TestToolsObserveActions_ResponseFields(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: time.Now().UnixMilli(), URL: "https://example.com"},
 	})
 

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -46,7 +47,7 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 	t.Run("extension error", func(t *testing.T) {
 		cap := capture.NewCapture()
 		defer cap.Close()
-		cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+		capturefixture.Track(cap, 1, "https://example.test")
 		go completeNextPageStateQuery(t, cap, json.RawMessage(`{"error":"storage denied"}`))
 		resp := GetStorage(pageStateDeps(cap), req, json.RawMessage(`{}`))
 		if result := decodePageStateToolResult(t, resp); !result.IsError || !strings.Contains(result.Content[0].Text, "storage denied") {
@@ -57,7 +58,7 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 	t.Run("invalid result", func(t *testing.T) {
 		cap := capture.NewCapture()
 		defer cap.Close()
-		cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+		capturefixture.Track(cap, 1, "https://example.test")
 		go completeNextPageStateQuery(t, cap, json.RawMessage(`not-json`))
 		resp := GetStorage(pageStateDeps(cap), req, json.RawMessage(`{}`))
 		if result := decodePageStateToolResult(t, resp); !result.IsError || !strings.Contains(result.Content[0].Text, "invalid_json") {
@@ -68,7 +69,7 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 	t.Run("queue full", func(t *testing.T) {
 		cap := capture.NewCapture()
 		defer cap.Close()
-		cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+		capturefixture.Track(cap, 1, "https://example.test")
 		for i := 0; i < queries.MaxPendingQueries; i++ {
 			if _, err := cap.Queries().CreatePendingQuery(queries.PendingQuery{Type: "occupied"}); err != nil {
 				t.Fatalf("fill queue: %v", err)
@@ -84,7 +85,7 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 func TestGetStorageFiltersSuccessfulCapture(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()
-	cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+	capturefixture.Track(cap, 1, "https://example.test")
 	result := json.RawMessage(`{
 		"url":"https://example.test",
 		"localStorage":{"token":"secret","theme":"dark"},
@@ -106,7 +107,7 @@ func TestGetStorageFiltersSuccessfulCapture(t *testing.T) {
 func TestGetStorageReturnsAllRawStorageFamilies(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()
-	cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+	capturefixture.Track(cap, 1, "https://example.test")
 	go completeNextPageStateQuery(t, cap, json.RawMessage(`{
 		"url":"https://example.test",
 		"localStorage":{"theme":"dark"},
@@ -169,7 +170,7 @@ func TestGetScreenshotValidatesAndPersistsSuccessfulCapture(t *testing.T) {
 	t.Run("validation", func(t *testing.T) {
 		cap := capture.NewCapture()
 		defer cap.Close()
-		cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+		capturefixture.Track(cap, 1, "https://example.test")
 		for _, args := range []json.RawMessage{json.RawMessage(`{"format":"gif"}`), json.RawMessage(`{"quality":101}`)} {
 			if result := decodePageStateToolResult(t, GetScreenshot(pageStateDeps(cap), req, args)); !result.IsError {
 				t.Fatalf("GetScreenshot(%s) accepted invalid options", args)
@@ -180,7 +181,7 @@ func TestGetScreenshotValidatesAndPersistsSuccessfulCapture(t *testing.T) {
 	t.Run("save image", func(t *testing.T) {
 		cap := capture.NewCapture()
 		defer cap.Close()
-		cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+		capturefixture.Track(cap, 1, "https://example.test")
 		go completeNextPageStateQuery(t, cap, json.RawMessage(`{"data_url":"data:image/png;base64,aGVsbG8=","width":10}`))
 		path := filepath.Join(t.TempDir(), "nested", "shot.png")
 		args, _ := json.Marshal(map[string]any{
@@ -213,7 +214,7 @@ func TestGetIndexedDBValidatesTrackingAndReturnsRows(t *testing.T) {
 	if result := decodePageStateToolResult(t, GetIndexedDB(pageStateDeps(cap), req, json.RawMessage(`{"database":"app","store":"users"}`))); !result.IsError {
 		t.Fatal("GetIndexedDB accepted an untracked tab")
 	}
-	cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+	capturefixture.Track(cap, 1, "https://example.test")
 	go completeNextPageStateQuery(t, cap, json.RawMessage(`{"success":true,"result":{"entries":[{"id":1}],"count":9,"object_stores":["users"]}}`))
 	result := decodePageStateToolResult(t, GetIndexedDB(pageStateDeps(cap), req, json.RawMessage(`{"database":"app","store":"users","limit":3}`)))
 	if result.IsError || !strings.Contains(result.Content[0].Text, `"count":9`) || !strings.Contains(result.Content[0].Text, "object_stores") {
@@ -230,7 +231,7 @@ func TestGetScreenshotReportsExtensionAndPersistenceErrors(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cap := capture.NewCapture()
 			defer cap.Close()
-			cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+			capturefixture.Track(cap, 1, "https://example.test")
 			go completeNextPageStateQuery(t, cap, payload)
 			if result := decodePageStateToolResult(t, GetScreenshot(pageStateDeps(cap), req, json.RawMessage(`{}`))); !result.IsError {
 				t.Fatalf("GetScreenshot accepted %s", name)
@@ -239,7 +240,7 @@ func TestGetScreenshotReportsExtensionAndPersistenceErrors(t *testing.T) {
 	}
 	cap := capture.NewCapture()
 	defer cap.Close()
-	cap.Extension().SetTrackingStatusForTest(1, "https://example.test")
+	capturefixture.Track(cap, 1, "https://example.test")
 	go completeNextPageStateQuery(t, cap, json.RawMessage(`{"data_url":"data:image/png;base64,aGVsbG8="}`))
 	result := decodePageStateToolResult(t, GetScreenshot(pageStateDeps(cap), req, json.RawMessage(`{"save_to":"bad.txt"}`)))
 	if result.IsError || !strings.Contains(result.Content[0].Text, "save_to_error") {
@@ -396,7 +397,7 @@ func TestBuildA11ySummary_TopIssuesLimitedTo5(t *testing.T) {
 func TestRunA11yAudit_TimeoutReturnsPartialResults(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	capturefixture.Track(cap, 1, "https://example.com")
 
 	deps := &mockA11yDeps{
 		cap:     cap,
@@ -457,7 +458,7 @@ func TestRunA11yAudit_TimeoutReturnsPartialResults(t *testing.T) {
 func TestRunA11yAudit_AlreadyRunningReturnsPartialResults(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	capturefixture.Track(cap, 1, "https://example.com")
 
 	deps := &mockA11yDeps{
 		cap:     cap,
@@ -550,7 +551,7 @@ func TestParseDataURL_EmptyString(t *testing.T) {
 func TestRunA11yAudit_ResultWithErrorFieldReturnsGracefully(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	capturefixture.Track(cap, 1, "https://example.com")
 
 	// Simulate extension returning partial results with an error field
 	partialResult := map[string]any{

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -472,9 +473,9 @@ func findCheck(t *testing.T, checks []DoctorCheck, name string) DoctorCheck {
 
 func TestRunDoctorChecks_HealthyState(t *testing.T) {
 	c := newTestCapture(t)
-	c.Extension().SimulateExtensionConnectForTest()
-	c.Extension().SetPilotEnabled(true)
-	c.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	capturefixture.Connect(c)
+	capturefixture.SetPilot(c, true)
+	capturefixture.Track(c, 42, "https://example.com")
 
 	checks := RunDoctorChecks(c)
 	if got := findCheck(t, checks, "extension_connected").Status; got != "pass" {
@@ -512,7 +513,7 @@ func TestRunDoctorChecks_DegradedDefaults(t *testing.T) {
 
 func TestRunDoctorChecks_PilotExplicitlyDisabled(t *testing.T) {
 	c := newTestCapture(t)
-	c.Extension().SetPilotEnabled(false) // explicitly disabled
+	capturefixture.SetPilot(c, false) // explicitly disabled
 
 	pilot := findCheck(t, RunDoctorChecks(c), "pilot_enabled")
 	if pilot.Status != "warn" {
@@ -600,9 +601,9 @@ func TestHandleDoctorHTTP_Unhealthy(t *testing.T) {
 
 func TestHandleDoctorHTTP_Healthy(t *testing.T) {
 	c := newTestCapture(t)
-	c.Extension().SimulateExtensionConnectForTest()
-	c.Extension().SetPilotEnabled(true)
-	c.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	capturefixture.Connect(c)
+	capturefixture.SetPilot(c, true)
+	capturefixture.Track(c, 1, "https://example.com")
 
 	w := httptest.NewRecorder()
 	HandleDoctorHTTP(w, c, "1.0")
@@ -624,8 +625,8 @@ func TestHandleDoctorHTTP_Healthy(t *testing.T) {
 
 func TestHandleDoctorHTTP_Degraded(t *testing.T) {
 	c := newTestCapture(t)
-	c.Extension().SimulateExtensionConnectForTest()
-	c.Extension().SetPilotEnabled(true)
+	capturefixture.Connect(c)
+	capturefixture.SetPilot(c, true)
 	// No tracked tab -> tracked_tab warn (no fail) -> degraded.
 
 	w := httptest.NewRecorder()
@@ -772,7 +773,7 @@ func TestBuildPilotInfo(t *testing.T) {
 	}
 
 	c := newTestCapture(t)
-	c.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(c, true)
 	info := BuildPilotInfo(c)
 	if !info.Enabled {
 		t.Error("pilot should be enabled")

@@ -36,11 +36,9 @@ const (
 
 const ExtensionReadinessTimeout = 5 * time.Second
 
-const extensionReadinessPollInterval = 200 * time.Millisecond
-
-var (
-	extensionDisconnectThreshold = 10 * time.Second
-	readinessGatePollInterval    = 100 * time.Millisecond
+const (
+	extensionReadinessPollInterval = 200 * time.Millisecond
+	extensionDisconnectThreshold   = 10 * time.Second
 )
 
 type SecurityFlag struct {

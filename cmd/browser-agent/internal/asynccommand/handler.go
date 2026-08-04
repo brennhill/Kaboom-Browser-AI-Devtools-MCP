@@ -40,6 +40,7 @@ type WaitConfig struct {
 	Initial      time.Duration
 	Retry        time.Duration
 	PollInterval time.Duration
+	Command      func(string, time.Duration) (*queries.CommandResult, bool)
 }
 
 // Handler owns the complete asynchronous command lifecycle.
@@ -50,11 +51,18 @@ type Handler struct {
 
 // New constructs an asynchronous command lifecycle owner.
 func New(deps Deps) *Handler {
+	waitForCommand := func(string, time.Duration) (*queries.CommandResult, bool) {
+		return nil, false
+	}
+	if deps.Capture != nil {
+		waitForCommand = deps.Capture.Queries().WaitForCommand
+	}
 	return &Handler{
 		deps: deps,
 		Wait: WaitConfig{
 			Initial: 15 * time.Second, Retry: 5 * time.Second,
 			PollInterval: 500 * time.Millisecond,
+			Command:      waitForCommand,
 		},
 	}
 }
@@ -336,7 +344,7 @@ func (h *Handler) waitForCommandWithConnectivity(correlationID string, timeout t
 			waitStep = remaining
 		}
 		stepStart := time.Now()
-		cmd, found := h.deps.Capture.Queries().WaitForCommand(correlationID, waitStep)
+		cmd, found := h.Wait.Command(correlationID, waitStep)
 		waited += time.Since(stepStart).Milliseconds()
 		if !found {
 			return nil, false, false, waited

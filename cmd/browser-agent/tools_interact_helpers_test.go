@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -35,7 +36,7 @@ func newInteractHelpersTestEnv(t *testing.T) *interactHelpersTestEnv {
 	t.Cleanup(func() { server.Close() })
 	server.sessionProjectPath = t.TempDir()
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false) // explicit default for state/pilot-disabled test branches
+	capturefixture.SetPilot(cap, false) // explicit default for state/pilot-disabled test branches
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
@@ -45,7 +46,7 @@ func newInteractHelpersTestEnv(t *testing.T) *interactHelpersTestEnv {
 	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Simulate tab tracking so tests don't hit the tab tracking gate.
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	capturefixture.Track(cap, 42, "https://example.com")
 
 	return &interactHelpersTestEnv{handler: handler, server: server, capture: cap}
 }
@@ -53,7 +54,7 @@ func newInteractHelpersTestEnv(t *testing.T) *interactHelpersTestEnv {
 // enablePilot activates pilot mode using the test helper.
 func (e *interactHelpersTestEnv) enablePilot(t *testing.T) {
 	t.Helper()
-	e.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(e.capture, true)
 }
 
 // ============================================

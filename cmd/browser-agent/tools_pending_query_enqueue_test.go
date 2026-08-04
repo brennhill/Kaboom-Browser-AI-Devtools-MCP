@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -48,7 +49,7 @@ func TestInteractNavigate_QueueFullFailsFast(t *testing.T) {
 	t.Parallel()
 
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 	mockConnectedTrackedTab(t, env.capture)
 	saturatePendingQueryQueue(t, env.capture)
 
@@ -60,7 +61,7 @@ func TestInteractNavigate_QueueFullFailsFast(t *testing.T) {
 
 func TestInteractNavigate_QueueRecoversWithoutDiscardingAcceptedCommands(t *testing.T) {
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 	mockConnectedTrackedTab(t, env.capture)
 	saturatePendingQueryQueue(t, env.capture)
 

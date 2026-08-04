@@ -18,6 +18,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolcatalog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
@@ -41,7 +42,7 @@ func makeToolHandler(t *testing.T) (*ToolHandler, *Server, *capture.Capture) {
 	t.Cleanup(func() { server.Close() })
 	server.sessionProjectPath = t.TempDir()
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
+	capturefixture.SetPilot(cap, false) // keep legacy test default: explicitly disabled unless test opts in
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	return handler, server, cap
@@ -68,7 +69,7 @@ func newToolTestEnv(t *testing.T) *toolTestEnv {
 	t.Cleanup(func() { server.Close() })
 	server.sessionProjectPath = t.TempDir()
 	cap := capture.NewCapture()
-	cap.Extension().SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
+	capturefixture.SetPilot(cap, false) // keep legacy test default: explicitly disabled unless test opts in
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	return &toolTestEnv{handler: handler, server: server, capture: cap}
@@ -81,7 +82,7 @@ func mockConnectedTrackedTab(t *testing.T, cap *capture.Capture) {
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
 	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	capturefixture.Track(cap, 42, "https://example.com")
 }
 
 // ============================================

@@ -24,7 +24,6 @@ const (
 	PilotSourceAssumedStartup = "assumed_startup"
 	PilotSourceExtensionSync  = "extension_sync"
 	PilotSourceSettingsCache  = "settings_cache"
-	PilotSourceTestHelper     = "test_helper"
 
 	SecurityModeNormal        = "normal"
 	SecurityModeInsecureProxy = "insecure_proxy"
@@ -157,7 +156,13 @@ func (r *ExtensionRuntime) Disconnected() (neverSynced bool, disconnected bool) 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	neverSynced = r.state.lastSyncSeen.IsZero()
-	return neverSynced, !neverSynced && time.Since(r.state.lastSyncSeen) >= extensionDisconnectThreshold
+	return neverSynced, !neverSynced && !extensionStateConnected(r.state, time.Now())
+}
+
+func extensionStateConnected(state ExtensionState, now time.Time) bool {
+	return state.lastExtensionConnected &&
+		!state.lastSyncSeen.IsZero() &&
+		now.Sub(state.lastSyncSeen) < extensionDisconnectThreshold
 }
 
 type pilotStatusSnapshot struct {
@@ -198,7 +203,15 @@ func (r *ExtensionRuntime) WaitForExtensionConnected(ctx context.Context, timeou
 func (r *ExtensionRuntime) IsExtensionConnected() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return !r.state.lastSyncSeen.IsZero() && time.Since(r.state.lastSyncSeen) < extensionDisconnectThreshold
+	return extensionStateConnected(r.state, time.Now())
+}
+
+// MarkDisconnected records an authoritative transport loss while preserving
+// the last settings snapshot for diagnostics and reconnect recovery.
+func (r *ExtensionRuntime) MarkDisconnected() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.lastExtensionConnected = false
 }
 
 // GetExtensionStatus returns a detached connection snapshot.
@@ -210,7 +223,7 @@ func (r *ExtensionRuntime) GetExtensionStatus() map[string]any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	connected := !r.state.lastSyncSeen.IsZero() && time.Since(r.state.lastSyncSeen) < extensionDisconnectThreshold
+	connected := extensionStateConnected(r.state, time.Now())
 
 	lastSeen := ""
 	if !r.state.lastSyncSeen.IsZero() {
@@ -319,7 +332,7 @@ func (r *ExtensionRuntime) GetPilotStatus() any {
 		"authoritative":       snap.Authoritative,
 		"state":               snap.State,
 		"source":              snap.Source,
-		"extension_connected": !r.state.lastSyncSeen.IsZero() && time.Since(r.state.lastSyncSeen) < extensionDisconnectThreshold,
+		"extension_connected": extensionStateConnected(r.state, time.Now()),
 		"extension_last_seen": lastSeen,
 		"in_progress_count":   len(inProgress),
 		"in_progress":         inProgress,
@@ -426,13 +439,6 @@ func (r *ExtensionRuntime) IsTrackedTabActive() (bool, bool) {
 		return false, false
 	}
 	return *r.state.trackedTabActive, true
-}
-
-// SetTrackedTabActiveForTest sets the tracked tab active state for testing.
-func (r *ExtensionRuntime) SetTrackedTabActiveForTest(active bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.state.trackedTabActive = &active
 }
 
 // GetCSPStatus returns the last reported CSP restriction level for the tracked page.

@@ -93,6 +93,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_RecentSync(t *testing.T) {
 
 	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
 		state.lastSyncSeen = time.Now()
+		state.lastExtensionConnected = true
 	})
 
 	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
@@ -111,6 +112,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_Disconnected(t *testing.T) 
 
 	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
 		state.lastSyncSeen = time.Now().Add(-20 * time.Second)
+		state.lastExtensionConnected = true
 	})
 
 	c.Queries().CreatePendingQuery(queries.PendingQuery{

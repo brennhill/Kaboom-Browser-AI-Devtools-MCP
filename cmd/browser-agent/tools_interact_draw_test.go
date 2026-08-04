@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -31,7 +32,7 @@ func TestHandleDrawModeStart_Success(t *testing.T) {
 	h := createTestToolHandler(t)
 
 	// Enable pilot
-	h.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(h.capture, true)
 	mockConnectedTrackedTab(t, h.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
@@ -47,7 +48,7 @@ func TestHandleDrawModeStart_Success(t *testing.T) {
 
 func TestHandleDrawModeStart_WithSession(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(h.capture, true)
 	mockConnectedTrackedTab(t, h.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}

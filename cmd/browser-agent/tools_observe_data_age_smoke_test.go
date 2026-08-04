@@ -6,10 +6,12 @@
 package main
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -19,10 +21,10 @@ import (
 func TestSmoke_ObservePage_DataAgeMs_IsNumeric(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SimulateExtensionConnectForTest()
-	cap.Extension().SetPilotEnabled(true)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
-	cap.Extension().SetTabStatusForTest("complete")
+	capturefixture.Connect(cap)
+	capturefixture.SetPilot(cap, true)
+	capturefixture.Track(cap, 42, "https://example.com")
+	capturefixture.SetTabStatus(cap, "complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -95,7 +97,7 @@ func TestSmoke_ObserveNetworkBodies_DataAgeMs_Present(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{
 			URL:       "https://api.example.com/smoke",
 			Method:    "GET",
@@ -134,7 +136,7 @@ func TestSmoke_ObserveActions_DataAgeMs_Present(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/smoke"},
 	})
 
@@ -198,10 +200,10 @@ func TestSmoke_ObserveErrors_DataAgeMs_NoData_Sentinel(t *testing.T) {
 func TestSmoke_ObservePage_DataAgeMs_RecentValue(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SimulateExtensionConnectForTest()
-	cap.Extension().SetPilotEnabled(true)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
-	cap.Extension().SetTabStatusForTest("complete")
+	capturefixture.Connect(cap)
+	capturefixture.SetPilot(cap, true)
+	capturefixture.Track(cap, 42, "https://example.com")
+	capturefixture.SetTabStatus(cap, "complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -249,11 +251,11 @@ func TestSmoke_ObservePage_DataAgeMs_RecentValue(t *testing.T) {
 func TestSmoke_ObservePage_IsActive_PresentWhenKnown(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SimulateExtensionConnectForTest()
-	cap.Extension().SetPilotEnabled(true)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
-	cap.Extension().SetTabStatusForTest("complete")
-	cap.Extension().SetTrackedTabActiveForTest(true)
+	capturefixture.Connect(cap)
+	capturefixture.SetPilot(cap, true)
+	capturefixture.Track(cap, 42, "https://example.com")
+	capturefixture.SetTabStatus(cap, "complete")
+	capturefixture.SetTrackedTabActive(cap, true)
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -274,11 +276,11 @@ func TestSmoke_ObservePage_IsActive_PresentWhenKnown(t *testing.T) {
 func TestSmoke_ObservePage_IsActive_FalseWhenInactive(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SimulateExtensionConnectForTest()
-	cap.Extension().SetPilotEnabled(true)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
-	cap.Extension().SetTabStatusForTest("complete")
-	cap.Extension().SetTrackedTabActiveForTest(false)
+	capturefixture.Connect(cap)
+	capturefixture.SetPilot(cap, true)
+	capturefixture.Track(cap, 42, "https://example.com")
+	capturefixture.SetTabStatus(cap, "complete")
+	capturefixture.SetTrackedTabActive(cap, false)
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -299,10 +301,10 @@ func TestSmoke_ObservePage_IsActive_FalseWhenInactive(t *testing.T) {
 func TestSmoke_ObservePage_IsActive_AbsentWhenUnknown(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SimulateExtensionConnectForTest()
-	cap.Extension().SetPilotEnabled(true)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
-	cap.Extension().SetTabStatusForTest("complete")
+	capturefixture.Connect(cap)
+	capturefixture.SetPilot(cap, true)
+	capturefixture.Track(cap, 42, "https://example.com")
+	capturefixture.SetTabStatus(cap, "complete")
 	// Do NOT call SetTrackedTabActiveForTest — state is unknown
 
 	resp := callObserveRaw(h, "page")

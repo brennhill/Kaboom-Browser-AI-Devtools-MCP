@@ -484,6 +484,7 @@ func TestUpdateSyncConnectionState_NoReconnectForShortPollGap(t *testing.T) {
 		state.lastPollAt = now.Add(-6 * time.Second)
 		state.lastSyncSeen = now.Add(-6 * time.Second)
 		state.lastExtensionConnected = true
+		state.lastExtensionConnected = true
 	})
 
 	state := cap.extension.updateSyncConnectionState(
@@ -509,6 +510,7 @@ func TestUpdateSyncConnectionState_ReconnectAfterDisconnectThreshold(t *testing.
 	mutateExtensionStateForTest(cap.Extension(), func(state *ExtensionState) {
 		state.lastPollAt = now.Add(-12 * time.Second)
 		state.lastSyncSeen = now.Add(-12 * time.Second)
+		state.lastExtensionConnected = true
 		state.lastExtensionConnected = true
 	})
 

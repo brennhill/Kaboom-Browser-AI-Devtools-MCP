@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination"
 )
 
 func TestBuildResponseMetadata_DataAgeMs_FreshData(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	newestEntry := time.Now().Add(-500 * time.Millisecond)
 	meta := BuildResponseMetadata(cap, newestEntry)
@@ -26,7 +27,7 @@ func TestBuildResponseMetadata_DataAgeMs_FreshData(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_ZeroForVeryFresh(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	newestEntry := time.Now()
 	meta := BuildResponseMetadata(cap, newestEntry)
@@ -40,7 +41,7 @@ func TestBuildResponseMetadata_DataAgeMs_ZeroForVeryFresh(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_StaleData(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	newestEntry := time.Now().Add(-30 * time.Second)
 	meta := BuildResponseMetadata(cap, newestEntry)
@@ -54,7 +55,7 @@ func TestBuildResponseMetadata_DataAgeMs_StaleData(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_NoData(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	meta := BuildResponseMetadata(cap, time.Time{})
 
@@ -70,7 +71,7 @@ func TestBuildResponseMetadata_DataAgeMs_NoData(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_FutureTimestamp(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	// Simulate NTP clock adjustment: newestEntry is in the future relative to now.
 	newestEntry := time.Now().Add(5 * time.Second)
@@ -91,7 +92,7 @@ func TestBuildResponseMetadata_DataAgeMs_FutureTimestamp(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_InPaginatedMetadata(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	newestEntry := time.Now().Add(-2 * time.Second)
 	pMeta := &pagination.CursorPaginationMetadata{

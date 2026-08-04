@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -56,7 +57,7 @@ func TestCSP_BlockedActions_None_Omitted(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.simulateConnection(t)
 	env.simulateTabTracking(t)
-	env.capture.Extension().SetCSPStatusForTest(false, "none")
+	capturefixture.SetCSP(env.capture, false, "none")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
@@ -82,7 +83,7 @@ func TestCSP_BlockedActions_ScriptExec(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.simulateConnection(t)
 	env.simulateTabTracking(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
@@ -126,7 +127,7 @@ func TestCSP_BlockedActions_PageBlocked(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.simulateConnection(t)
 	env.simulateTabTracking(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "page_blocked")
+	capturefixture.SetCSP(env.capture, true, "page_blocked")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
@@ -188,7 +189,7 @@ func TestCSP_Page_IncludesBlockedActions(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.simulateConnection(t)
 	env.simulateTabTracking(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
@@ -225,7 +226,7 @@ func TestCSP_Navigate_IncludesBlockedActions(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.enablePilot(t)
 	env.simulateConnection(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
@@ -292,7 +293,7 @@ func TestCSP_Navigate_OmitsBlockedActions_WhenClear(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.enablePilot(t)
 	env.simulateConnection(t)
-	env.capture.Extension().SetCSPStatusForTest(false, "none")
+	capturefixture.SetCSP(env.capture, false, "none")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)

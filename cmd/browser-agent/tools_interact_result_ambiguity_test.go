@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -17,7 +18,7 @@ import (
 
 func TestCommandResult_AmbiguousTarget_CandidatesPromotedToTopLevel(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"text=About","background":true}`)
 	if !ok || result.IsError {
@@ -79,7 +80,7 @@ func TestCommandResult_AmbiguousTarget_CandidatesPromotedToTopLevel(t *testing.T
 
 func TestCommandResult_AmbiguousTarget_SuggestedElementID(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"text=Submit","background":true}`)
 	if !ok || result.IsError {
@@ -128,7 +129,7 @@ func TestCommandResult_AmbiguousTarget_SuggestedElementID(t *testing.T) {
 
 func TestCommandResult_AmbiguousTarget_RetryGuidanceMentionsCandidates(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"text=OK","background":true}`)
 	if !ok || result.IsError {
@@ -179,7 +180,7 @@ func TestCommandResult_AmbiguousTarget_RetryGuidanceMentionsCandidates(t *testin
 
 func TestCommandResult_AmbiguousTarget_NoCandidates_NoSuggestedElementID(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"text=OK","background":true}`)
 	if !ok || result.IsError {

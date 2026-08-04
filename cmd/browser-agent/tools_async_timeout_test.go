@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -26,7 +27,7 @@ func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 	cap.Queries().RegisterCommand(correlationID, "q-timeout-ms-123", 60*time.Second)
 
 	// Connect extension (fast path — no long-poll)
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	// Complete the command after 200ms
 	go func() {
@@ -57,7 +58,7 @@ func TestMaybeWaitForCommand_TimeoutMs_ShortTimeout(t *testing.T) {
 	cap.Queries().RegisterCommand(correlationID, "q-short-123", 60*time.Second)
 
 	// Connect extension (fast path — no long-poll)
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	// Set a very short timeout_ms — command will not complete in time
 	start := time.Now()
@@ -147,7 +148,7 @@ func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
 
 	// Connect extension (fast path — no long-poll)
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	// Complete the link_health command after a short delay
 	go func() {
@@ -206,7 +207,7 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
 
 	// Connect extension (fast path — no long-poll)
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	// Complete the command after 200ms
 	go func() {

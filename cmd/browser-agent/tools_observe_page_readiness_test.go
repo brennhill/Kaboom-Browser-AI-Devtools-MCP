@@ -5,6 +5,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
 func TestToolsObservePilot_ResponseFields(t *testing.T) {
@@ -33,10 +35,10 @@ func TestToolsObservePage_PageReadyForCommands_AllConditionsMet(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 
 	// Set up all conditions for page_ready_for_commands=true
-	cap.Extension().SimulateExtensionConnectForTest()
-	cap.Extension().SetPilotEnabled(true)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
-	cap.Extension().SetTabStatusForTest("complete")
+	capturefixture.Connect(cap)
+	capturefixture.SetPilot(cap, true)
+	capturefixture.Track(cap, 42, "https://example.com")
+	capturefixture.SetTabStatus(cap, "complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -66,10 +68,10 @@ func TestToolsObservePage_PageReadyForCommands_ExtensionDisconnected(t *testing.
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.Extension().SimulateExtensionDisconnectForTest()
-	cap.Extension().SetPilotEnabled(true)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
-	cap.Extension().SetTabStatusForTest("complete")
+	capturefixture.SetPilot(cap, true)
+	capturefixture.Track(cap, 42, "https://example.com")
+	capturefixture.SetTabStatus(cap, "complete")
+	capturefixture.Disconnect(cap)
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -84,10 +86,10 @@ func TestToolsObservePage_PageReadyForCommands_PilotDisabled(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.Extension().SimulateExtensionConnectForTest()
-	cap.Extension().SetPilotEnabled(false)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
-	cap.Extension().SetTabStatusForTest("complete")
+	capturefixture.Connect(cap)
+	capturefixture.SetPilot(cap, false)
+	capturefixture.Track(cap, 42, "https://example.com")
+	capturefixture.SetTabStatus(cap, "complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -102,10 +104,10 @@ func TestToolsObservePage_PageReadyForCommands_NoTrackedTab(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.Extension().SimulateExtensionConnectForTest()
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.Connect(cap)
+	capturefixture.SetPilot(cap, true)
 	// No tracked tab set
-	cap.Extension().SetTabStatusForTest("complete")
+	capturefixture.SetTabStatus(cap, "complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -120,10 +122,10 @@ func TestToolsObservePage_PageReadyForCommands_TabLoading(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.Extension().SimulateExtensionConnectForTest()
-	cap.Extension().SetPilotEnabled(true)
-	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
-	cap.Extension().SetTabStatusForTest("loading")
+	capturefixture.Connect(cap)
+	capturefixture.SetPilot(cap, true)
+	capturefixture.Track(cap, 42, "https://example.com")
+	capturefixture.SetTabStatus(cap, "loading")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -140,7 +142,7 @@ func TestToolsObservePage_PageReadyForCommands_TabLoading(t *testing.T) {
 func TestToolsObservePage_DataAgeMs_Present(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)

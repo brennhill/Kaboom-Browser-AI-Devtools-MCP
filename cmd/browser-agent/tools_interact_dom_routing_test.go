@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
 // ============================================
@@ -117,7 +119,7 @@ func TestToolsInteractDOMPrimitives_SuccessWithPilot(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.action, func(t *testing.T) {
 			h, _, cap := makeToolHandler(t)
-			cap.Extension().SetPilotEnabled(true)
+			capturefixture.SetPilot(cap, true)
 			mockConnectedTrackedTab(t, cap)
 
 			resp := callInteractRaw(h, tc.args)
@@ -150,7 +152,7 @@ func TestToolsInteractDOMPrimitives_SuccessWithPilot(t *testing.T) {
 func TestToolsInteractDOMPrimitive_ScopeRectQueues(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mockConnectedTrackedTab(t, cap)
 
 	resp := callInteractRaw(h, `{"what":"click","selector":".compose","scope_rect":{"x":120,"y":240,"width":300,"height":180}}`)
@@ -189,7 +191,7 @@ func TestToolsInteractDOMPrimitive_ScopeRectQueues(t *testing.T) {
 func TestToolsInteractDOMPrimitive_NearParamsConvertToScopeRect(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mockConnectedTrackedTab(t, cap)
 
 	resp := callInteractRaw(h, `{"what":"list_interactive","near_x":500,"near_y":300,"near_radius":150}`)
@@ -229,7 +231,7 @@ func TestToolsInteractDOMPrimitive_NearParamsConvertToScopeRect(t *testing.T) {
 func TestToolsInteractDOMPrimitive_NearParamsDoNotOverrideScopeRect(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mockConnectedTrackedTab(t, cap)
 
 	// Explicit scope_rect takes precedence over near params

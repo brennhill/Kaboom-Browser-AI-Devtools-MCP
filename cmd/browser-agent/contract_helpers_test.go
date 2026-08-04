@@ -78,7 +78,7 @@ func (s *scenario) loadNetworkData(t *testing.T) {
 		},
 	}, "https://app.example.com/dashboard")
 
-	s.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+	s.capture.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{
 			URL: "https://api.example.com/users", Method: "GET", Status: 200,
 			ResponseBody: `{"users":[{"id":1,"name":"Alice"}]}`,

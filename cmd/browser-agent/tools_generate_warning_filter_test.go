@@ -20,7 +20,7 @@ func TestGenerateTestFromContext_NoWarningsForDispatchParams(t *testing.T) {
 	t.Parallel()
 
 	h := newTestToolHandler()
-	h.capture.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
+	h.capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, URL: "https://example.com", ToURL: "https://example.com"},
 		{Type: "click", Timestamp: 1200, URL: "https://example.com", Selectors: map[string]any{"text": "Login"}},
 	})
@@ -54,7 +54,7 @@ func TestHandleGenerateTestFromContext_FiltersOnlyDispatchWarnings(t *testing.T)
 	t.Parallel()
 
 	h := newTestToolHandler()
-	h.capture.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
+	h.capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, URL: "https://example.com", ToURL: "https://example.com"},
 		{Type: "click", Timestamp: 1200, URL: "https://example.com", Selectors: map[string]any{"text": "Login"}},
 	})

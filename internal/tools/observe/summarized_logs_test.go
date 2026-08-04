@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -18,7 +19,7 @@ import (
 func TestGetSummarizedLogsFiltersAndBuildsWireResponse(t *testing.T) {
 	cap := capture.NewCapture()
 	t.Cleanup(cap.Close)
-	cap.Extension().SetTrackingStatusForTest(7, "https://app.example.test")
+	capturefixture.Track(cap, 7, "https://app.example.test")
 	entries := []types.LogEntry{
 		{"type": "lifecycle", "message": "ignored"},
 		{"level": "warn", "message": "noisy", "tabId": float64(7), "url": "https://app.example.test", "ts": "2026-01-01T00:00:00Z"},

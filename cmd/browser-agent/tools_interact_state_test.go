@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
@@ -104,7 +105,7 @@ func TestCaptureState_Status_ExtensionDisconnected(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 	env.enablePilot(t)
-	env.capture.Extension().SimulateExtensionDisconnectForTest()
+	capturefixture.Disconnect(env.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	result := env.handler.stateInteractHandler.CaptureState(req)
@@ -413,7 +414,7 @@ func TestSaveState_StateCapture_SkippedExtensionDisconnected(t *testing.T) {
 	env.enablePilot(t)
 	requireSessionStore(t, env)
 	// Force extension to appear disconnected despite test env default connection.
-	env.capture.Extension().SimulateExtensionDisconnectForTest()
+	capturefixture.Disconnect(env.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteractHandler.HandleStateSave(req, json.RawMessage(`{"snapshot_name":"no_ext"}`))
@@ -638,7 +639,7 @@ func TestLoadState_StateRestore_SkippedExtensionDisconnected(t *testing.T) {
 	env.enablePilot(t)
 	requireSessionStore(t, env)
 	// Force extension to appear disconnected despite test env default connection.
-	env.capture.Extension().SimulateExtensionDisconnectForTest()
+	capturefixture.Disconnect(env.capture)
 
 	stateData := map[string]any{
 		"url":             "https://example.com/form",
@@ -694,7 +695,7 @@ func TestLoadState_IncludeURL_SkipsNavigationWhenExtensionDisconnected(t *testin
 	env.enablePilot(t)
 	requireSessionStore(t, env)
 	// Force extension to appear disconnected despite test env default connection.
-	env.capture.Extension().SimulateExtensionDisconnectForTest()
+	capturefixture.Disconnect(env.capture)
 
 	stateData := map[string]any{
 		"url":      "https://example.com/restore-target",

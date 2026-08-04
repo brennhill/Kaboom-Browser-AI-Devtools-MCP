@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -21,7 +22,7 @@ func setEvidenceCaptureForTest(t *testing.T, capture func(string) toolinteract.E
 
 func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	calls := 0
 	shots := []toolinteract.EvidenceShot{
@@ -81,7 +82,7 @@ func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
 
 func TestCommandResult_EvidenceOnMutationSkipsReadOnlyAction(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	calls := 0
 	setEvidenceCaptureForTest(t, func(_ string) toolinteract.EvidenceShot {
@@ -132,7 +133,7 @@ func TestCommandResult_EvidenceOnMutationSkipsReadOnlyAction(t *testing.T) {
 
 func TestCommandResult_EvidencePartialWhenAfterCaptureFails(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	calls := 0
 	shots := []toolinteract.EvidenceShot{

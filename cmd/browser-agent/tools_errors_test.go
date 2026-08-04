@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -218,7 +219,7 @@ func TestSmoke_RequireExtension_ErrorContainsDiagnosticHint(t *testing.T) {
 func TestSmoke_RequirePilot_ErrorContainsDiagnosticHint(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(false)
+	capturefixture.SetPilot(env.capture, false)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.Guards.RequirePilot(req)
@@ -258,7 +259,7 @@ func TestSmoke_RequireTabTracking_ErrorContainsDiagnosticHint(t *testing.T) {
 func TestSmoke_RequireCSPClear_ErrorContainsDiagnosticHint(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.capture.Extension().SetCSPStatusForTest(true, "script_exec")
+	capturefixture.SetCSP(env.capture, true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.Guards.RequireCSPClear(req, "main")

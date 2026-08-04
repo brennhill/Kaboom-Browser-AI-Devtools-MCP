@@ -32,7 +32,7 @@ func setupHARTestHandler(t *testing.T) *ToolHandler {
 func TestToolExportHAR_ReturnsHARJSON(t *testing.T) {
 	t.Parallel()
 	handler := setupHARTestHandler(t)
-	handler.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+	handler.capture.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{Timestamp: "2026-01-23T10:30:00.000Z", Method: "GET", URL: "https://example.com/api", Status: 200, Duration: 50},
 	})
 
@@ -69,7 +69,7 @@ func TestToolExportHAR_ReturnsHARJSON(t *testing.T) {
 func TestToolExportHAR_SaveToFile(t *testing.T) {
 	t.Parallel()
 	handler := setupHARTestHandler(t)
-	handler.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+	handler.capture.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{Timestamp: "2026-01-23T10:30:00.000Z", Method: "GET", URL: "https://example.com/api", Status: 200},
 	})
 
@@ -118,7 +118,7 @@ func TestToolExportHAR_SaveToFile(t *testing.T) {
 func TestToolExportHAR_Filters(t *testing.T) {
 	t.Parallel()
 	handler := setupHARTestHandler(t)
-	handler.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
+	handler.capture.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{Timestamp: "2026-01-23T10:30:00.000Z", Method: "GET", URL: "https://example.com/api", Status: 200},
 		{Timestamp: "2026-01-23T10:30:01.000Z", Method: "POST", URL: "https://example.com/api", Status: 500},
 		{Timestamp: "2026-01-23T10:30:02.000Z", Method: "GET", URL: "https://example.com/static", Status: 200},

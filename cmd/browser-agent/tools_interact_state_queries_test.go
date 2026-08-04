@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
 // ============================================
@@ -85,7 +87,7 @@ func TestToolsInteractListStates_ResponseFields(t *testing.T) {
 func TestToolsInteractListInteractive_ResponseFields(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mockConnectedTrackedTab(t, cap)
 
 	resp := callInteractRaw(h, `{"what":"list_interactive"}`)
@@ -121,7 +123,7 @@ func TestToolsInteractListInteractive_ResponseFields(t *testing.T) {
 func TestToolsInteractGetText_StructuredPassthrough(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mockConnectedTrackedTab(t, cap)
 
 	resp := callInteractRaw(h, `{"what":"get_text","selector":".accordion","structured":true}`)

@@ -10,13 +10,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -47,7 +49,7 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 	}
 	t.Cleanup(srv.Close)
 	cap := capture.NewCapture()
-	cap.Extension().SetTrackingStatusForTest(42, "https://tracked.test")
+	capturefixture.Track(cap, 42, "https://tracked.test")
 
 	// Seed baseline data before first call; first response should still report zero deltas.
 	srv.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "baseline error"}})

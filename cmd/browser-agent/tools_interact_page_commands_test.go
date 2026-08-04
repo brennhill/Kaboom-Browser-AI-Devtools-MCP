@@ -4,8 +4,12 @@
 package main
 
 import (
+	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
 // ============================================
@@ -48,7 +52,7 @@ func TestToolsInteractHighlight_PilotDisabled(t *testing.T) {
 func TestToolsInteractHighlight_Success(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mockConnectedTrackedTab(t, cap)
 
 	resp := callInteractRaw(h, `{"what":"highlight","selector":".btn"}`)
@@ -163,7 +167,7 @@ func TestToolsInteractExecuteJS_DefaultWorld(t *testing.T) {
 func TestToolsInteractExecuteJS_Success(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mockConnectedTrackedTab(t, cap)
 
 	resp := callInteractRaw(h, `{"what":"execute_js","script":"document.title"}`)
@@ -210,9 +214,13 @@ func TestToolsInteractNavigate_MissingURL(t *testing.T) {
 
 func TestToolsInteractNavigate_AssumedEnabledWhenPilotStatusUncertain(t *testing.T) {
 	t.Parallel()
-	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotUnknownForTest()
-	mockConnectedTrackedTab(t, cap)
+	h, server, cap := makeToolHandler(t)
+	cap = capture.NewCapture()
+	mcpHandler := NewToolHandler(server, cap)
+	h = mcpHandler.tools.Executor.(*ToolHandler)
+	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
+	cap.Extension().UpdateTrackedTab(42, "https://example.com", "")
 
 	resp := callInteractRaw(h, `{"what":"navigate","url":"https://example.com"}`)
 	result := parseToolResult(t, resp)
@@ -229,7 +237,7 @@ func TestToolsInteractNavigate_AssumedEnabledWhenPilotStatusUncertain(t *testing
 func TestToolsInteractNavigate_Success(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mockConnectedTrackedTab(t, cap)
 
 	resp := callInteractRaw(h, `{"what":"navigate","url":"https://example.com"}`)
@@ -285,7 +293,7 @@ func TestToolsInteractBrowserActions_PilotRequired(t *testing.T) {
 func TestToolsInteractBrowserActions_SuccessWithPilot(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(cap, true)
 	mockConnectedTrackedTab(t, cap)
 
 	actions := []struct {

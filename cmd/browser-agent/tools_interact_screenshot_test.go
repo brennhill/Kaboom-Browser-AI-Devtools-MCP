@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -37,9 +38,9 @@ func TestInteract_IncludeScreenshot_Schema(t *testing.T) {
 func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
-	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
-	env.capture.Extension().SimulateExtensionConnectForTest()
+	capturefixture.SetPilot(env.capture, true)
+	capturefixture.Track(env.capture, 1, "https://example.com")
+	capturefixture.Connect(env.capture)
 
 	args := json.RawMessage(`{"what":"click","selector":"button","include_screenshot":true}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
@@ -153,9 +154,9 @@ func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 func TestInteract_IncludeScreenshot_DefaultFalse(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
-	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
-	env.capture.Extension().SimulateExtensionConnectForTest()
+	capturefixture.SetPilot(env.capture, true)
+	capturefixture.Track(env.capture, 1, "https://example.com")
+	capturefixture.Connect(env.capture)
 
 	args := json.RawMessage(`{"what":"click","selector":"button"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}

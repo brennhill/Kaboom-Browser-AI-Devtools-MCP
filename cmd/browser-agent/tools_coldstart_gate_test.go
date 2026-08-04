@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -24,7 +25,7 @@ func TestRequireExtension_ColdStart_WaitsForConnection(t *testing.T) {
 	// Simulate extension connecting after 100ms
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		env.capture.Extension().SimulateExtensionConnectForTest()
+		capturefixture.Connect(env.capture)
 	}()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
@@ -103,7 +104,7 @@ func TestMaybeWaitForCommand_ExtensionConnected_WaitsForResult(t *testing.T) {
 	cap.Queries().RegisterCommand(correlationID, "q-connected-result", 15*time.Second)
 
 	// Extension is already connected (requireExtension would have passed)
-	cap.Extension().SimulateExtensionConnectForTest()
+	capturefixture.Connect(cap)
 
 	// Complete the command after 100ms
 	go func() {

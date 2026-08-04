@@ -24,7 +24,7 @@ code_paths:
   - internal/queries/dispatcher_queries.go
   - internal/capture/sync.go
   - internal/capture/wire_sync.go
-  - internal/capture/test_helpers.go
+  - internal/capturefixture/sync.go
   - internal/circuit/breaker.go
   - internal/debuglog/logger.go
   - internal/lifecycle/observer.go
@@ -90,6 +90,7 @@ test_paths:
   - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
   - internal/capture/sync_test.go
   - internal/capture/sync_test_helpers_test.go
+  - internal/capturefixture/sync_test.go
   - internal/capture/sync_command_lifecycle_test.go
   - internal/capture/sync_waterfall_test.go
   - internal/capture/websocket_test.go

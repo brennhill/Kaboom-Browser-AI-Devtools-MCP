@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
@@ -21,7 +22,7 @@ import (
 func TestGetScreenshot_InlineImageInResponse(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	capturefixture.Track(env.capture, 1, "https://example.com")
 
 	// Simulate extension returning screenshot result with data_url
 	fakeImageData := []byte("fake-png-image-data-for-test")
@@ -124,7 +125,7 @@ func TestGetScreenshot_InlineImageInResponse(t *testing.T) {
 func TestGetScreenshot_InlineImage_PNGFormat(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	capturefixture.Track(env.capture, 1, "https://example.com")
 
 	fakeImageData := []byte("fake-png-data")
 	base64Data := base64.StdEncoding.EncodeToString(fakeImageData)
@@ -196,7 +197,7 @@ func TestGetScreenshot_InlineImage_PNGFormat(t *testing.T) {
 func TestGetScreenshot_NoDataURL_StillReturnsTextResult(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	capturefixture.Track(env.capture, 1, "https://example.com")
 
 	screenshotResult := map[string]any{
 		"filename": "example.com-20240101-120000.jpg",
@@ -257,7 +258,7 @@ func TestGetScreenshot_NoDataURL_StillReturnsTextResult(t *testing.T) {
 func TestGetScreenshot_SaveTo_WritesFileAndReturnsPath(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	capturefixture.Track(env.capture, 1, "https://example.com")
 
 	fakeImageData := []byte("save-to-test-image")
 	base64Data := base64.StdEncoding.EncodeToString(fakeImageData)
@@ -334,7 +335,7 @@ func TestGetScreenshot_SaveTo_WritesFileAndReturnsPath(t *testing.T) {
 func TestGetScreenshot_SaveTo_InvalidExtensionReturnsSaveError(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	capturefixture.Track(env.capture, 1, "https://example.com")
 
 	fakeImageData := []byte("save-to-test-image")
 	base64Data := base64.StdEncoding.EncodeToString(fakeImageData)

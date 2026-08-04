@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -25,7 +26,7 @@ import (
 func TestInteract_AutoDismissOverlays_DispatchesPendingQuery(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"auto_dismiss_overlays"}`)
 	if !ok {
@@ -103,7 +104,7 @@ func TestInteract_AutoDismissOverlays_NoSelectorRequired(t *testing.T) {
 func TestInteract_Navigate_AutoDismiss_Composes(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"navigate","url":"https://example.com","auto_dismiss":true}`)
 	if !ok {
@@ -141,7 +142,7 @@ func TestInteract_Navigate_AutoDismiss_Composes(t *testing.T) {
 func TestInteract_Navigate_AutoDismiss_False_NoDismissQuery(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	_, ok := env.callInteract(t, `{"what":"navigate","url":"https://example.com","auto_dismiss":false}`)
 	if !ok {
@@ -170,7 +171,7 @@ func TestInteract_Navigate_AutoDismiss_False_NoDismissQuery(t *testing.T) {
 func TestInteract_WaitForStable_DispatchesPendingQuery(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"wait_for_stable"}`)
 	if !ok {
@@ -200,7 +201,7 @@ func TestInteract_WaitForStable_DispatchesPendingQuery(t *testing.T) {
 func TestInteract_WaitForStable_DefaultTimeout(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	// Call without explicit stability_ms — should use default 500
 	result, ok := env.callInteract(t, `{"what":"wait_for_stable"}`)
@@ -243,7 +244,7 @@ func TestInteract_WaitForStable_DefaultTimeout(t *testing.T) {
 func TestInteract_WaitForStable_CustomParams(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"wait_for_stable","stability_ms":1000,"timeout_ms":10000}`)
 	if !ok {
@@ -297,7 +298,7 @@ func TestInteract_WaitForStable_PilotDisabled(t *testing.T) {
 func TestInteract_Navigate_WaitForStable_Composes(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"navigate","url":"https://example.com","wait_for_stable":true}`)
 	if !ok {
@@ -335,7 +336,7 @@ func TestInteract_Navigate_WaitForStable_Composes(t *testing.T) {
 func TestInteract_Navigate_WaitForStable_False_NoStableQuery(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	_, ok := env.callInteract(t, `{"what":"navigate","url":"https://example.com","wait_for_stable":false}`)
 	if !ok {
@@ -363,7 +364,7 @@ func TestInteract_Navigate_WaitForStable_False_NoStableQuery(t *testing.T) {
 func TestInteract_Click_WaitForStable_Composes(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.Extension().SetPilotEnabled(true)
+	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","wait_for_stable":true}`)
 	if !ok {

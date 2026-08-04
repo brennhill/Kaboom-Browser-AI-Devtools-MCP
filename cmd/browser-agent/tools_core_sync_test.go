@@ -14,6 +14,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -169,9 +170,6 @@ func TestMaybeWaitForCommand_TimeoutGracefulFallback(t *testing.T) {
 }
 
 func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T) {
-	restoreThreshold := capture.SetExtensionDisconnectThresholdForTesting(200 * time.Millisecond)
-	defer restoreThreshold()
-
 	cap := capture.NewCapture()
 	handler := newSyncTestHandler(cap)
 	handler.asyncCommands.Wait.Initial = 500 * time.Millisecond
@@ -189,8 +187,21 @@ func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
 	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
-
-	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":true}`), "Queued")
+	waiting := make(chan struct{})
+	release := make(chan struct{})
+	handler.asyncCommands.Wait.Command = func(correlationID string, _ time.Duration) (*queries.CommandResult, bool) {
+		close(waiting)
+		<-release
+		return cap.Queries().GetCommandResult(correlationID)
+	}
+	responses := make(chan mcp.JSONRPCResponse, 1)
+	go func() {
+		responses <- handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":true}`), "Queued")
+	}()
+	<-waiting
+	capturefixture.Disconnect(cap)
+	close(release)
+	resp := <-responses
 	result := parseMCPResponseData(t, resp.Result)
 
 	if result["status"] != "error" {

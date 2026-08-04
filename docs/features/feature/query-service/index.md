@@ -4,7 +4,7 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -59,6 +59,11 @@ last_verified_date: 2026-03-05
 ---
 
 # Query Service
+
+Command completion owns an injected wait operation. Lifecycle tests coordinate
+entry and release with channels, allowing disconnect races to be reproduced
+without sleeps while production remains wired to the query dispatcher's
+notification-based wait.
 
 ## TL;DR
 
