@@ -13,6 +13,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
@@ -45,23 +46,9 @@ func TestGetScreenshot_InlineImageInResponse(t *testing.T) {
 	}()
 
 	// Wait for the pending query to be created, then set the result
-	var queryID string
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "screenshot" {
-				queryID = q.ID
-				break
-			}
-		}
-		if queryID != "" {
-			break
-		}
-	}
-	if queryID == "" {
-		t.Fatal("no screenshot query found in pending queries")
-	}
+	queryID := waitForPendingQuery(t, env.capture, func(query queries.PendingQueryResponse) bool {
+		return query.Type == "screenshot"
+	}).ID
 
 	resultJSON, _ := json.Marshal(screenshotResult)
 	env.capture.Queries().SetQueryResult(queryID, resultJSON)
@@ -145,23 +132,9 @@ func TestGetScreenshot_InlineImage_PNGFormat(t *testing.T) {
 		close(done)
 	}()
 
-	var queryID string
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "screenshot" {
-				queryID = q.ID
-				break
-			}
-		}
-		if queryID != "" {
-			break
-		}
-	}
-	if queryID == "" {
-		t.Fatal("no screenshot query found")
-	}
+	queryID := waitForPendingQuery(t, env.capture, func(query queries.PendingQueryResponse) bool {
+		return query.Type == "screenshot"
+	}).ID
 
 	resultJSON, _ := json.Marshal(screenshotResult)
 	env.capture.Queries().SetQueryResult(queryID, resultJSON)
@@ -214,23 +187,9 @@ func TestGetScreenshot_NoDataURL_StillReturnsTextResult(t *testing.T) {
 		close(done)
 	}()
 
-	var queryID string
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "screenshot" {
-				queryID = q.ID
-				break
-			}
-		}
-		if queryID != "" {
-			break
-		}
-	}
-	if queryID == "" {
-		t.Fatal("no screenshot query found")
-	}
+	queryID := waitForPendingQuery(t, env.capture, func(query queries.PendingQueryResponse) bool {
+		return query.Type == "screenshot"
+	}).ID
 
 	resultJSON, _ := json.Marshal(screenshotResult)
 	env.capture.Queries().SetQueryResult(queryID, resultJSON)
@@ -279,23 +238,9 @@ func TestGetScreenshot_SaveTo_WritesFileAndReturnsPath(t *testing.T) {
 		close(done)
 	}()
 
-	var queryID string
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "screenshot" {
-				queryID = q.ID
-				break
-			}
-		}
-		if queryID != "" {
-			break
-		}
-	}
-	if queryID == "" {
-		t.Fatal("no screenshot query found")
-	}
+	queryID := waitForPendingQuery(t, env.capture, func(query queries.PendingQueryResponse) bool {
+		return query.Type == "screenshot"
+	}).ID
 
 	resultJSON, _ := json.Marshal(screenshotResult)
 	env.capture.Queries().SetQueryResult(queryID, resultJSON)
@@ -356,23 +301,9 @@ func TestGetScreenshot_SaveTo_InvalidExtensionReturnsSaveError(t *testing.T) {
 		close(done)
 	}()
 
-	var queryID string
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "screenshot" {
-				queryID = q.ID
-				break
-			}
-		}
-		if queryID != "" {
-			break
-		}
-	}
-	if queryID == "" {
-		t.Fatal("no screenshot query found")
-	}
+	queryID := waitForPendingQuery(t, env.capture, func(query queries.PendingQueryResponse) bool {
+		return query.Type == "screenshot"
+	}).ID
 
 	resultJSON, _ := json.Marshal(screenshotResult)
 	env.capture.Queries().SetQueryResult(queryID, resultJSON)

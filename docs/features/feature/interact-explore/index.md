@@ -106,6 +106,7 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
+  - cmd/browser-agent/tools_interact_screenshot_test.go
   - cmd/browser-agent/tools_interact_page_commands_test.go
   - cmd/browser-agent/tools_interact_dom_routing_test.go
   - cmd/browser-agent/tools_interact_state_queries_test.go
@@ -176,6 +177,10 @@ reject missing or mismatched response envelopes instead of waiting for the
 command timeout.
 Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
 `interact` screenshot compatibility action has been removed.
+`include_screenshot` remains a composable response enrichment after a real
+interact action. Tests acknowledge the action query exactly as the extension
+does, then await the screenshot query through the canonical pending-query
+notification barrier; no polling sleeps or undelivered-query shortcuts remain.
 State snapshot handlers accept only the canonical `snapshot_name` parameter;
 the former generic `name` request alias has been removed.
 State dispatch and tests use the composed `stateInteractHandler` directly; the

@@ -171,6 +171,10 @@ canonical `mcp.Fail` response boundary; queue saturation guidance is built once
 with the canonical `pending_commands` recovery call.
 Live-page command tests wait on the query dispatcher's canonical pending-query
 notification before returning extension results; they do not poll queue state.
+Screenshot response tests share that notification helper for inline JPEG/PNG,
+text-only, save-to, and validation flows. Completion remains bounded by an
+independent failure timeout, but query creation is never inferred from elapsed
+wall-clock time.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

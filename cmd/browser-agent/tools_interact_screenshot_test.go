@@ -53,61 +53,22 @@ func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 	}()
 
 	// Wait for the DOM action query to be created and complete it
-	var domQueryID string
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "dom_action" {
-				domQueryID = q.CorrelationID
-				break
-			}
-		}
-		if domQueryID != "" {
-			break
-		}
-	}
-	if domQueryID == "" {
-		t.Fatal("no dom_action query found in pending queries")
-	}
+	domQuery := waitForPendingQuery(t, env.capture, func(query queries.PendingQueryResponse) bool {
+		return query.Type == "dom_action"
+	})
 
 	// Complete the DOM action
 	actionResult, _ := json.Marshal(map[string]any{
 		"success": true,
 		"message": "Clicked button",
 	})
-	env.capture.Queries().ApplyCommandResult(domQueryID, "complete", actionResult, "")
+	env.capture.Queries().AcknowledgePendingQuery(domQuery.ID)
+	env.capture.Queries().ApplyCommandResult(domQuery.CorrelationID, "complete", actionResult, "")
 
 	// Wait for the screenshot query to be created (triggered after action completion)
-	var screenshotQueryID string
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "screenshot" {
-				screenshotQueryID = q.ID
-				break
-			}
-		}
-		if screenshotQueryID != "" {
-			break
-		}
-	}
-	if screenshotQueryID == "" {
-		// The test response may have already returned if screenshot wasn't triggered.
-		// Check if we need to wait longer or if the implementation is missing.
-		select {
-		case <-done:
-			// Response came back - check if it has an image block
-			var result mcp.MCPToolResult
-			if err := json.Unmarshal(resp.Result, &result); err != nil {
-				t.Fatalf("failed to parse result: %v", err)
-			}
-			t.Fatalf("no screenshot query was created after action completion. Result blocks: %d", len(result.Content))
-		case <-time.After(2 * time.Second):
-			t.Fatal("no screenshot query found and handler still blocking")
-		}
-	}
+	screenshotQueryID := waitForPendingQuery(t, env.capture, func(query queries.PendingQueryResponse) bool {
+		return query.Type == "screenshot"
+	}).ID
 
 	// Complete the screenshot query with fake image data
 	fakeImageData := []byte("fake-screenshot-after-click")
@@ -169,27 +130,14 @@ func TestInteract_IncludeScreenshot_DefaultFalse(t *testing.T) {
 	}()
 
 	// Wait for the DOM action query
-	var domQueryID string
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "dom_action" {
-				domQueryID = q.CorrelationID
-				break
-			}
-		}
-		if domQueryID != "" {
-			break
-		}
-	}
-	if domQueryID == "" {
-		t.Fatal("no dom_action query found")
-	}
+	domQuery := waitForPendingQuery(t, env.capture, func(query queries.PendingQueryResponse) bool {
+		return query.Type == "dom_action"
+	})
 
 	// Complete the DOM action
 	actionResult, _ := json.Marshal(map[string]any{"success": true})
-	env.capture.Queries().ApplyCommandResult(domQueryID, "complete", actionResult, "")
+	env.capture.Queries().AcknowledgePendingQuery(domQuery.ID)
+	env.capture.Queries().ApplyCommandResult(domQuery.CorrelationID, "complete", actionResult, "")
 
 	select {
 	case <-done:
@@ -218,6 +166,3 @@ func contentBlockTypes(blocks []mcp.MCPContentBlock) []string {
 	}
 	return types
 }
-
-// Ensure unused imports don't cause compilation errors.
-var _ = queries.PendingQuery{}

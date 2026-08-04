@@ -328,6 +328,7 @@ func TestInteract_NavigateAndDocument_IncludeScreenshot(t *testing.T) {
 		_ = json.Unmarshal(q.Params, &payload)
 		return payload["action"] == "click"
 	})
+	env.capture.Queries().AcknowledgePendingQuery(clickQuery.ID)
 	env.capture.Queries().ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	screenshotQuery := waitForPendingQuery(t, env.capture, func(q queries.PendingQueryResponse) bool {
@@ -365,14 +366,17 @@ func TestInteract_NavigateAndDocument_IncludeScreenshot(t *testing.T) {
 
 func waitForPendingQuery(t *testing.T, cap *capture.Capture, match func(queries.PendingQueryResponse) bool) queries.PendingQueryResponse {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		for _, q := range cap.Queries().GetPendingQueries() {
-			if match(q) {
-				return q
-			}
+	for _, query := range cap.Queries().GetPendingQueries() {
+		if match(query) {
+			return query
 		}
-		time.Sleep(10 * time.Millisecond)
+		t.Fatalf("unexpected pending query type %q before awaited query was enqueued", query.Type)
+	}
+	cap.Queries().WaitForPendingQueries(3 * time.Second)
+	for _, query := range cap.Queries().GetPendingQueries() {
+		if match(query) {
+			return query
+		}
 	}
 	t.Fatal("timed out waiting for pending query")
 	return queries.PendingQueryResponse{}
