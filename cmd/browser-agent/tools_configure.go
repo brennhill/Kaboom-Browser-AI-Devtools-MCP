@@ -29,6 +29,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
@@ -142,12 +143,16 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return handleConfigureRestart(req)
 		},
 		"doctor": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+			checks := recoveryDoctorChecks(h.stateRecovery)
+			if h.server != nil {
+				checks = append(checks, incidentDoctorChecks(h.server.incidents)...)
+			}
 			return handleConfigureDoctor(
 				h.healthMetrics,
 				h.capture,
 				h.alertBuffer,
 				h.Guards.DiagnosticHintString,
-				recoveryDoctorChecks(h.stateRecovery),
+				checks,
 				req,
 			)
 		},
@@ -366,6 +371,63 @@ func recoveryDoctorChecks(diagnostics recoveryDiagnostics) []health.DoctorCheck 
 		})
 	}
 	return checks
+}
+
+func incidentDoctorChecks(diagnostics *incident.Store) []health.DoctorCheck {
+	if diagnostics == nil {
+		return nil
+	}
+	views := diagnostics.DoctorSnapshot()
+	checks := make([]health.DoctorCheck, 0, len(views)+1)
+	for _, view := range views {
+		status := "warn"
+		if view.State == incident.StateRecovered {
+			status = "pass"
+		} else if view.State == incident.StateExhausted || view.Severity == incident.SeverityFatal {
+			status = "fail"
+		}
+		detail := view.Detail
+		if view.LocalDetail != "" {
+			detail += " Local context: " + view.LocalDetail
+		}
+		history := make([]health.DoctorTransition, 0, len(view.History))
+		for _, transition := range view.History {
+			history = append(history, health.DoctorTransition{
+				Lifecycle: string(transition.State), At: transition.At.Format(time.RFC3339Nano),
+				Event: string(transition.State), CorrelationID: view.CorrelationID, Outcome: string(incidentOutcome(transition.State)),
+			})
+		}
+		recoveredAt := ""
+		if view.State == incident.StateRecovered {
+			recoveredAt = formatDiagnosticTime(view.ResolvedAt)
+		}
+		checks = append(checks, health.DoctorCheck{
+			Name: string(view.Code), CorrelationID: view.CorrelationID, Status: status,
+			Detail: detail, Fix: view.Fix, Lifecycle: string(view.State),
+			FirstSeenAt: formatDiagnosticTime(view.DetectedAt), LastSeenAt: formatDiagnosticTime(view.UpdatedAt),
+			RecoveredAt: recoveredAt, RecoveryAttempt: int(view.Attempts),
+			RecoveryOutcome: string(incidentOutcome(view.State)), History: history,
+		})
+	}
+	stats := diagnostics.Stats()
+	if stats.Dropped > 0 {
+		checks = append(checks, health.DoctorCheck{
+			Name: "operational_incident_retention", Status: "warn", Lifecycle: "capacity",
+			Detail: fmt.Sprintf("Doctor retained %d operational incidents and dropped %d entries at its %d-entry bound.", stats.Active+stats.Terminal, stats.Dropped, stats.Capacity),
+			Fix:    "Inspect recurring incidents and resource pressure before increasing retention.", Occurrences: int(stats.Dropped),
+		})
+	}
+	return checks
+}
+
+func incidentOutcome(state incident.State) incident.Outcome {
+	if state == incident.StateRecovered {
+		return incident.OutcomeRecovered
+	}
+	if state == incident.StateExhausted {
+		return incident.OutcomeExhausted
+	}
+	return incident.OutcomePending
 }
 
 func formatDiagnosticTime(value time.Time) string {

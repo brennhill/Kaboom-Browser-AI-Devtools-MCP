@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -26,6 +26,7 @@ code_paths:
   - cmd/browser-agent/internal/toolmodule/registry.go
   - cmd/browser-agent/internal/toolcatalog/catalog.go
   - cmd/browser-agent/server.go
+  - internal/incident/projections.go
   - cmd/browser-agent/internal/health/response_builders.go
   - cmd/browser-agent/internal/health/response_types.go
   - cmd/browser-agent/internal/playbooks/resource_catalog.go
@@ -76,6 +77,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/noise_doctor_test.go
   - tests/architecture/user-state-loaders.test.cjs
   - internal/statediag/collector_test.go
   - cmd/browser-agent/cli_modes_subprocess_test.go

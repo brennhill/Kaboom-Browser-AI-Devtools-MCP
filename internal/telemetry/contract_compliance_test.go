@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 )
 
 // captureBeacon sets up a test server and returns a channel that receives beacon payloads.
@@ -158,6 +160,24 @@ func TestContract_AppErrorUsesFixedPrivacyBoundedSchema(t *testing.T) {
 	for field := range body {
 		if !allowed[field] {
 			t.Errorf("app_error transmitted non-contract field %q", field)
+		}
+	}
+}
+
+func TestContract_ReliabilityProjectionUsesAppErrorAllowlist(t *testing.T) {
+	received := captureBeacon(t)
+	ReportReliability(incident.ReliabilityEvent{
+		Code: incident.CodeStateRecoveryFailed, Subsystem: incident.SubsystemState,
+		Stage: incident.StageRecovery, Severity: incident.SeverityError,
+		Retryable: true, Outcome: incident.OutcomePending, AttemptBucket: incident.AttemptZero,
+	})
+	body := waitForEvent(t, received, "app_error")
+	if body["error_code"] != "STATE_RECOVERY_FAILED" || body["source"] != "state" || body["severity"] != "error" || body["retryable"] != true {
+		t.Fatalf("reliability app_error = %#v", body)
+	}
+	for _, forbidden := range []string{"stage", "outcome", "detail", "fix", "correlation_id", "generation"} {
+		if _, ok := body[forbidden]; ok {
+			t.Fatalf("reliability event leaked %q: %#v", forbidden, body)
 		}
 	}
 }

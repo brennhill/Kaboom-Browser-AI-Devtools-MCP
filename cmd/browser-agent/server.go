@@ -36,10 +36,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
 	uploadapi "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -104,6 +106,7 @@ type Server struct {
 	// Token savings tracker for output compression hooks.
 	tokenTracker  *tracking.TokenTracker
 	stateRecovery stateRecoveryDiagnostics
+	incidents     *incident.Store
 
 	// Push drain authentication token. When non-empty, /push/drain requires
 	// Authorization: Bearer <token>. Set via --push-drain-token flag.
@@ -189,6 +192,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		tokenTracker:       tracking.NewTokenTracker(),
 		intentStore:        terminal.NewIntentStore(),
 		stateRecovery:      stateRecovery,
+		incidents:          incident.NewStore(100, telemetry.QueueReliability),
 	}
 
 	// Create log store with warning callback wired to server
@@ -663,6 +667,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 		var extraChecks []health.DoctorCheck
 		if handler, ok := mcpHandler.tools.Executor.(*ToolHandler); ok {
 			extraChecks = recoveryDoctorChecks(handler.stateRecovery)
+			extraChecks = append(extraChecks, incidentDoctorChecks(server.incidents)...)
 		}
 		health.HandleDoctorHTTP(w, captured, version, extraChecks...)
 	}))

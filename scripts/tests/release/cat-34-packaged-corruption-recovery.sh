@@ -111,7 +111,7 @@ doctor_active="$(packaged_call "configure" '{"what":"doctor"}')"
 begin_test "34.3" "Doctor reports active recoveries" \
     "Inspect recovery diagnostics after every corrupt loader ran" \
     "Operators need named, actionable state-family failures"
-active_names="install_identity_state session_metadata_state response_mode_state saved_sequence_state event_recording_state"
+active_names="session_metadata_state response_mode_state saved_sequence_state event_recording_state"
 for name in $active_names; do
     if printf '%s' "$doctor_active" | grep -q "$name" &&
         printf '%s' "$doctor_active" | grep -q 'lifecycle.*active'; then
@@ -120,6 +120,13 @@ for name in $active_names; do
         fail "$name was not visible as an active Doctor recovery"
     fi
 done
+if printf '%s' "$doctor_active" | grep -q "state_recovery_failed" &&
+    printf '%s' "$doctor_active" | grep -q 'correlation_id.*install_identity' &&
+    printf '%s' "$doctor_active" | grep -q 'lifecycle.*recovered'; then
+    pass "install identity recovery is visible through the canonical incident lifecycle"
+else
+    fail "install identity recovery was not visible through its canonical code and correlation"
+fi
 if printf '%s' "$doctor_active" | grep -q "restart_history_state" &&
     printf '%s' "$doctor_active" | grep -q 'lifecycle.*recovered'; then
     pass "restart_history_state records its automatic active-to-recovered transition"

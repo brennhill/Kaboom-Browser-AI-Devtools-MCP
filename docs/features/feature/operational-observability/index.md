@@ -15,6 +15,10 @@ test_paths:
   - internal/incident/store_test.go
   - internal/statediag/collector_test.go
   - internal/telemetry/contract_compliance_test.go
+  - internal/telemetry/beacon_test.go
+  - tests/architecture/user-state-loaders.test.cjs
+  - tests/cli/contracts/packaged-recovery-uat.test.cjs
+  - scripts/tests/release/cat-34-packaged-corruption-recovery.sh
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
 ---
@@ -38,6 +42,26 @@ Recovery follows an idempotent, generation-aware state machine. Stale
 transitions cannot alter current health. Incident storage and history are
 bounded, use single-pass eviction, and expose dropped-entry counts rather than
 silently losing pressure signals.
+
+The allowed graph is explicit: incidents may resolve directly from `detected`
+to `recovered` or `exhausted`; only retryable incidents may enter `retrying`.
+This represents immediate success and terminal failures without inventing retry
+attempts. Fatal detections are Doctor failures even before their terminal
+transition. Internal identity uses the full correlation value's local SHA-256
+digest; its separately redacted and bounded display form cannot merge distinct
+incidents. Doctor history derives each row's outcome from that transition and
+reserves `recovered_at` for actual recovery.
+
+The installation-identity recovery boundary is the first complete production
+migration. Its failures enter the canonical store, appear through the Doctor
+projection, and emit only the allowlisted initial `app_error` projection. The
+obsolete `install_identity_state` calls into `statediag` were removed together.
+Telemetry projection uses one fixed-capacity asynchronous dispatcher outside
+lifecycle locks, so install-ID loading cannot recursively enter itself and a
+failure storm cannot create unbounded goroutines. Saturation increments the
+payload-free delivery drop counter. The daemon attaches the canonical incident
+store and warms identity before opening its HTTP listener, preventing first-
+request initialization from bypassing recovery diagnostics.
 
 Migration is performed one ownership boundary at a time and remains atomic
 within that boundary: callers move completely to the canonical incident and its

@@ -2,12 +2,14 @@
 package incident
 
 import (
+	"crypto/sha256"
 	"errors"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 )
 
 var ErrUnknownCode = errors.New("unknown operational incident code")
@@ -52,7 +54,6 @@ const (
 // LocalEvidence never crosses the analytics projection boundary.
 type LocalEvidence struct {
 	Detail string `json:"detail,omitempty"`
-	Fix    string `json:"fix,omitempty"`
 }
 
 type Report struct {
@@ -101,19 +102,22 @@ type Stats struct {
 	Dropped  uint64
 }
 
+type Observer func(ReliabilityEvent)
+
 type Store struct {
-	mu       sync.RWMutex
-	items    map[string]Incident
-	capacity int
-	dropped  uint64
-	now      func() time.Time
+	mu        sync.RWMutex
+	items     map[string]Incident
+	capacity  int
+	dropped   uint64
+	now       func() time.Time
+	observers []Observer
 }
 
-func NewStore(capacity int) *Store {
+func NewStore(capacity int, observers ...Observer) *Store {
 	if capacity < 1 {
 		capacity = 1
 	}
-	return &Store{items: make(map[string]Incident), capacity: capacity, now: time.Now}
+	return &Store{items: make(map[string]Incident), capacity: capacity, now: time.Now, observers: append([]Observer(nil), observers...)}
 }
 
 func (s *Store) Detect(report Report) (string, error) {
@@ -123,18 +127,20 @@ func (s *Store) Detect(report Report) (string, error) {
 	key := incidentKey(report.Code, report.CorrelationID)
 	now := s.now().UTC()
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if current, ok := s.items[key]; ok && report.Generation <= current.Generation {
+		s.mu.Unlock()
 		return key, nil
 	}
 	incident := Incident{
 		Code: report.Code, CorrelationID: compactLocal(report.CorrelationID), Generation: report.Generation,
 		State: StateDetected, DetectedAt: now, UpdatedAt: now,
-		LocalEvidence: LocalEvidence{Detail: compactLocal(report.Evidence.Detail), Fix: compactLocal(report.Evidence.Fix)},
+		LocalEvidence: LocalEvidence{Detail: compactLocal(report.Evidence.Detail)},
 		History:       []Transition{{State: StateDetected, At: now}},
 	}
 	s.items[key] = incident
 	s.evictOneLocked(key)
+	s.mu.Unlock()
+	s.publish(incident)
 	return key, nil
 }
 
@@ -153,17 +159,24 @@ func (s *Store) Exhaust(key string, generation uint64) bool {
 func (s *Store) transition(key string, generation uint64, next State, attempt uint) bool {
 	now := s.now().UTC()
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	current, ok := s.items[key]
 	if !ok || generation != current.Generation || terminal(current.State) {
+		s.mu.Unlock()
+		return false
+	}
+	definition, registered := Lookup(current.Code)
+	if !registered || !allowedTransition(current.State, next, definition.Retryable) {
+		s.mu.Unlock()
 		return false
 	}
 	if next == StateRetrying {
 		if attempt == 0 || attempt <= current.Attempts {
+			s.mu.Unlock()
 			return false
 		}
 		current.Attempts = attempt
 	} else if current.State == next {
+		s.mu.Unlock()
 		return false
 	}
 	current.State = next
@@ -173,6 +186,8 @@ func (s *Store) transition(key string, generation uint64, next State, attempt ui
 	}
 	current.History = appendBounded(current.History, Transition{State: next, At: now, Attempts: current.Attempts})
 	s.items[key] = current
+	s.mu.Unlock()
+	s.publish(current)
 	return true
 }
 
@@ -183,6 +198,22 @@ func (s *Store) Analytics(key string) (ReliabilityEvent, bool) {
 	if !ok {
 		return ReliabilityEvent{}, false
 	}
+	return reliabilityProjection(current)
+}
+
+func (s *Store) publish(current Incident) {
+	event, ok := reliabilityProjection(current)
+	if !ok {
+		return
+	}
+	for _, observer := range s.observers {
+		if observer != nil {
+			observer(event)
+		}
+	}
+}
+
+func reliabilityProjection(current Incident) (ReliabilityEvent, bool) {
 	definition, ok := Lookup(current.Code)
 	if !ok {
 		return ReliabilityEvent{}, false
@@ -197,18 +228,26 @@ func (s *Store) Analytics(key string) (ReliabilityEvent, bool) {
 
 func (s *Store) Snapshot() []Incident {
 	s.mu.RLock()
-	result := make([]Incident, 0, len(s.items))
-	for _, current := range s.items {
+	type keyedIncident struct {
+		key      string
+		incident Incident
+	}
+	keyed := make([]keyedIncident, 0, len(s.items))
+	for key, current := range s.items {
 		current.History = append([]Transition(nil), current.History...)
-		result = append(result, current)
+		keyed = append(keyed, keyedIncident{key: key, incident: current})
 	}
 	s.mu.RUnlock()
-	sort.Slice(result, func(i, j int) bool {
-		if result[i].DetectedAt.Equal(result[j].DetectedAt) {
-			return incidentKey(result[i].Code, result[i].CorrelationID) < incidentKey(result[j].Code, result[j].CorrelationID)
+	sort.Slice(keyed, func(i, j int) bool {
+		if keyed[i].incident.DetectedAt.Equal(keyed[j].incident.DetectedAt) {
+			return keyed[i].key < keyed[j].key
 		}
-		return result[i].DetectedAt.Before(result[j].DetectedAt)
+		return keyed[i].incident.DetectedAt.Before(keyed[j].incident.DetectedAt)
 	})
+	result := make([]Incident, len(keyed))
+	for index := range keyed {
+		result[index] = keyed[index].incident
+	}
 	return result
 }
 
@@ -248,9 +287,20 @@ func (s *Store) evictOneLocked(keep string) {
 }
 
 func incidentKey(code Code, correlationID string) string {
-	return string(code) + "\x00" + compactLocal(correlationID)
+	digest := sha256.Sum256([]byte(correlationID))
+	return string(code) + "\x00" + string(digest[:])
 }
 func terminal(state State) bool { return state == StateRecovered || state == StateExhausted }
+
+func allowedTransition(current, next State, retryable bool) bool {
+	if current == StateDetected {
+		return (next == StateRetrying && retryable) || next == StateRecovered || next == StateExhausted
+	}
+	if current == StateRetrying {
+		return next == StateRetrying || next == StateRecovered || next == StateExhausted
+	}
+	return false
+}
 
 func outcome(state State) Outcome {
 	if state == StateRecovered {
@@ -296,10 +346,8 @@ func appendBounded(history []Transition, transition Transition) []Transition {
 	return append(history, transition)
 }
 
-var localSecret = regexp.MustCompile(`(?i)(token|secret|password|api[_-]?key)=([^\s&#,;]+)`)
-
 func compactLocal(value string) string {
-	value = localSecret.ReplaceAllString(strings.TrimSpace(value), "$1=[REDACTED]")
+	value = redaction.RedactSensitiveText(strings.TrimSpace(value))
 	if len(value) > 500 {
 		return value[:500]
 	}

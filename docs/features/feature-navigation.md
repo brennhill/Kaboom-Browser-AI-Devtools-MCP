@@ -6,7 +6,7 @@ tags: [features, navigation, index, lookup]
 relates-to: [FEATURE-INDEX.md, README.md]
 canonical: true
 last-verified: 2026-03-05
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-04
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-03
 ---
@@ -15,7 +15,7 @@ last_verified_date: 2026-04-03
 
 **For LLM Agents:** Quick lookup to find feature documentation folders and their key files.
 
-**Last updated:** 2026-04-03
+**Last updated:** 2026-08-04
 
 ---
 
@@ -45,7 +45,6 @@ Features with active code implementations referencing their feature docs.
 | flake-detection | `feature/flake-detection/` | index.md | Scheduled shuffled/race/pressure campaigns with one-command replay evidence |
 | annotated-screenshots | `feature/annotated-screenshots/` | product-spec.md, qa-plan.md, tech-spec.md | Draw-mode annotation overlay for visual feedback |
 | app-telemetry | `feature/app-telemetry/` | index.md | Privacy-bounded app event, session, and usage-summary reporting |
-| operational-observability | `feature/operational-observability/` | index.md | Typed local incidents, recovery lifecycle, Doctor views, and privacy-safe reliability projections |
 | api-key-auth | `feature/api-key-auth/` | product-spec.md, qa-plan.md, tech-spec.md | API key authentication for daemon access |
 | api-schema | `feature/api-schema/` | product-spec.md, qa-plan.md, tech-spec.md | Schema validation for API requests and responses |
 | backend-log-streaming | `feature/backend-log-streaming/` | product-spec.md, qa-plan.md, tech-spec.md | Real-time backend log streaming to browser context |
@@ -163,6 +162,12 @@ Features that are documented but not yet implemented in code.
 | workflow-integration | `feature/workflow-integration/` | product-spec.md, qa-plan.md, tech-spec.md | Workflow tool integration (GitHub, Jira) |
 
 ---
+
+### In-progress Features
+
+| Feature | Folder | Files | Purpose |
+|---------|--------|-------|---------|
+| operational-observability | `feature/operational-observability/` | index.md | Typed local incidents, recovery lifecycle, Doctor views, and privacy-safe reliability projections |
 
 ## Summary
 

@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -45,8 +46,44 @@ var endpoint = defaultEndpoint
 // A dropped beacon is harmless — telemetry is best-effort.
 const maxConcurrentBeacons = 50
 
+// maxPendingReliabilityEvents bounds incident projections waiting for the
+// telemetry transport. Reliability telemetry is best-effort and must never
+// create unbounded goroutines under a failure storm.
+const maxPendingReliabilityEvents = 64
+
 // sem caps the number of concurrent beacon goroutines to prevent runaway growth.
 var sem = make(chan struct{}, maxConcurrentBeacons)
+
+type reliabilityDispatcher struct {
+	queue   chan incident.ReliabilityEvent
+	deliver func(incident.ReliabilityEvent)
+	once    sync.Once
+}
+
+func newReliabilityDispatcher(capacity int, deliver func(incident.ReliabilityEvent)) *reliabilityDispatcher {
+	if capacity < 1 {
+		capacity = 1
+	}
+	return &reliabilityDispatcher{queue: make(chan incident.ReliabilityEvent, capacity), deliver: deliver}
+}
+
+func (d *reliabilityDispatcher) Enqueue(event incident.ReliabilityEvent) bool {
+	d.once.Do(func() {
+		util.SafeGo(func() {
+			for pending := range d.queue {
+				d.deliver(pending)
+			}
+		})
+	})
+	select {
+	case d.queue <- event:
+		return true
+	default:
+		return false
+	}
+}
+
+var reliabilityEvents = newReliabilityDispatcher(maxPendingReliabilityEvents, ReportReliability)
 
 // beaconClient is a shared HTTP client for all beacons. Reuses connections.
 var beaconClient = &http.Client{Timeout: 2 * time.Second}
@@ -126,6 +163,33 @@ func AppError(category string) {
 		fields["retryable"] = true
 	}
 	fireStructuredBeacon(fields)
+}
+
+// ReportReliability consumes the canonical privacy-safe incident projection.
+// The current app_error wire contract records initial detection; recovery and
+// retry aggregation remain local until the versioned reliability summary
+// contract lands.
+func ReportReliability(event incident.ReliabilityEvent) {
+	if event.Outcome != incident.OutcomePending || event.AttemptBucket != incident.AttemptZero {
+		return
+	}
+	fireStructuredBeacon(map[string]any{
+		"event": "app_error", "error_kind": "internal",
+		"error_code": strings.ToUpper(string(event.Code)),
+		"severity":   string(event.Severity), "source": string(event.Subsystem),
+		"retryable": event.Retryable,
+	})
+}
+
+// QueueReliability keeps analytics transport outside incident lifecycle locks
+// and startup identity loading. This avoids recursively entering GetInstallID
+// when the incident itself describes install-identity recovery.
+func QueueReliability(event incident.ReliabilityEvent) {
+	if reliabilityEvents.Enqueue(event) {
+		return
+	}
+	deliveryCounters.dropped.Add(1)
+	callOnFireBeacon(false)
 }
 
 func classifyAppError(category string) (errorKind string, severity string, source string, retryable bool) {

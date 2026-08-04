@@ -480,8 +480,10 @@ func TestInteractAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 func TestInteractAudit_EmptyState_ReturnsEmptyNotError(t *testing.T) {
 	env := newInteractTestEnv(t)
 
-	// State management actions should work without data
-	// NOTE: highlight is excluded because it requires pilot to be enabled
+	// Read/create state actions should work without prior data. Deleting an
+	// unknown snapshot is intentionally a caller-visible miss and is covered by
+	// the interactstate contract tests.
+	// NOTE: highlight is excluded because it requires pilot to be enabled.
 	actions := []struct {
 		name string
 		args string
@@ -489,7 +491,6 @@ func TestInteractAudit_EmptyState_ReturnsEmptyNotError(t *testing.T) {
 		{"save_state", `{"what":"save_state","snapshot_name":"test"}`},
 		{"load_state", `{"what":"load_state","snapshot_name":"test"}`},
 		{"list_states", `{"what":"list_states"}`},
-		{"delete_state", `{"what":"delete_state","snapshot_name":"test"}`},
 	}
 
 	for _, tc := range actions {

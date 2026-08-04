@@ -12,10 +12,34 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
+
+func TestInstallIdentityIncidentTelemetryCannotDeadlockWarmup(t *testing.T) {
+	resetInstallIDState()
+	overrideKaboomDir(t.TempDir())
+	t.Cleanup(resetKaboomDir)
+	installIdentityFiles = faultIdentityFilesystem{readErr: fs.ErrPermission}
+	t.Cleanup(func() { installIdentityFiles = localIdentityFilesystem{} })
+	diagnostics := incident.NewStore(10, QueueReliability)
+	done := make(chan struct{})
+	go func() {
+		Warm(diagnostics)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("install identity warmup deadlocked while publishing its incident")
+	}
+	views := diagnostics.DoctorSnapshot()
+	if len(views) != 1 || views[0].Code != incident.CodeStateRecoveryFailed || views[0].CorrelationID != "install_identity" {
+		t.Fatalf("warmup diagnostics = %#v, want retained install identity incident", views)
+	}
+}
 
 var hexPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
 
@@ -48,7 +72,7 @@ func TestInstallIdentityCanonicalFaultsSuppressUnstableTelemetry(t *testing.T) {
 			resetInstallIDState()
 			overrideKaboomDir(t.TempDir())
 			t.Cleanup(resetKaboomDir)
-			diagnostics := statediag.NewCollector()
+			diagnostics := incident.NewStore(10)
 			stateRecovery = diagnostics
 			scenario := statefault.New(kind, private)
 			if kind == statefault.Read {
@@ -61,11 +85,11 @@ func TestInstallIdentityCanonicalFaultsSuppressUnstableTelemetry(t *testing.T) {
 			if id := GetInstallID(); id != "" {
 				t.Fatalf("GetInstallID() = %q, want telemetry suppression", id)
 			}
-			got := diagnostics.Snapshot()
-			if len(got) != 1 || got[0].Name != "install_identity_state" {
+			got := diagnostics.DoctorSnapshot()
+			if len(got) != 1 || got[0].Code != incident.CodeStateRecoveryFailed {
 				t.Fatalf("diagnostics = %#v, want redacted identity incident", got)
 			}
-			if strings.Contains(got[0].Detail, private) {
+			if strings.Contains(got[0].LocalDetail, private) {
 				t.Fatal("diagnostic leaked private state")
 			}
 		})
@@ -102,7 +126,7 @@ func TestFirstToolCallMarkerWriteFaultSuppressesEvent(t *testing.T) {
 	t.Cleanup(resetKaboomDir)
 	resetInstallIDState()
 	resetFirstToolCallState()
-	diagnostics := statediag.NewCollector()
+	diagnostics := incident.NewStore(10)
 	stateRecovery = diagnostics
 	if id := GetInstallID(); id == "" {
 		t.Fatal("failed to establish install identity")
@@ -113,7 +137,7 @@ func TestFirstToolCallMarkerWriteFaultSuppressesEvent(t *testing.T) {
 	if markFirstToolCallEmittedForInstall() {
 		t.Fatal("first-tool-call telemetry must be suppressed when its durable marker fails")
 	}
-	if got := diagnostics.Snapshot(); len(got) != 1 || got[0].Name != "install_identity_state" {
+	if got := diagnostics.DoctorSnapshot(); len(got) != 1 || got[0].Code != incident.CodeStateRecoveryFailed {
 		t.Fatalf("diagnostics = %#v, want marker persistence incident", got)
 	}
 }
@@ -297,7 +321,7 @@ func TestGetInstallID_ReadFailure(t *testing.T) {
 	resetInstallIDState()
 	overrideKaboomDir(dir)
 	defer resetKaboomDir()
-	diagnostics := statediag.NewCollector()
+	diagnostics := incident.NewStore(10)
 	stateRecovery = diagnostics
 
 	// Create a directory where the install_id file would be, making ReadFile fail.
@@ -311,8 +335,8 @@ func TestGetInstallID_ReadFailure(t *testing.T) {
 	if id != "" {
 		t.Fatalf("GetInstallID() = %q, want telemetry-suppressing empty ID on read failure", id)
 	}
-	got := diagnostics.Snapshot()
-	if len(got) != 1 || got[0].Name != "install_identity_state" || got[0].Fix == "" {
+	got := diagnostics.DoctorSnapshot()
+	if len(got) != 1 || got[0].Code != incident.CodeStateRecoveryFailed || got[0].Fix == "" {
 		t.Fatalf("diagnostics = %#v, want actionable install identity warning", got)
 	}
 }
@@ -322,7 +346,7 @@ func TestGetInstallIDReplacesMalformedIdentityOnce(t *testing.T) {
 	resetInstallIDState()
 	overrideKaboomDir(dir)
 	defer resetKaboomDir()
-	diagnostics := statediag.NewCollector()
+	diagnostics := incident.NewStore(10)
 	stateRecovery = diagnostics
 
 	idPath := filepath.Join(dir, "install_id")
@@ -339,8 +363,8 @@ func TestGetInstallIDReplacesMalformedIdentityOnce(t *testing.T) {
 	if second != first {
 		t.Fatalf("replacement rotated across restart: first=%q second=%q", first, second)
 	}
-	got := diagnostics.Snapshot()
-	if len(got) != 1 || got[0].Name != "install_identity_state" {
+	got := diagnostics.DoctorSnapshot()
+	if len(got) != 1 || got[0].Code != incident.CodeStateRecoveryFailed {
 		t.Fatalf("diagnostics = %#v, want one identity recovery", got)
 	}
 }

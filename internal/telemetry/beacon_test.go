@@ -9,9 +9,40 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 )
+
+func TestReliabilityDispatcherBoundsPendingWork(t *testing.T) {
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var delivered atomic.Uint64
+	dispatcher := newReliabilityDispatcher(2, func(incident.ReliabilityEvent) {
+		if delivered.Add(1) == 1 {
+			close(entered)
+		}
+		<-release
+	})
+	event := incident.ReliabilityEvent{Code: incident.CodeStateRecoveryFailed}
+	if !dispatcher.Enqueue(event) {
+		t.Fatal("first reliability event was dropped")
+	}
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("dispatcher did not begin delivery")
+	}
+	if !dispatcher.Enqueue(event) || !dispatcher.Enqueue(event) {
+		t.Fatal("bounded pending queue rejected available capacity")
+	}
+	if dispatcher.Enqueue(event) {
+		t.Fatal("dispatcher accepted work beyond its fixed capacity")
+	}
+	close(release)
+}
 
 func emitTestSessionStart() {
 	fireStructuredBeacon(map[string]any{

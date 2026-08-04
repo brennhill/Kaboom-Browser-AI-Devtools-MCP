@@ -6,9 +6,27 @@ import (
 	"encoding/json"
 	"os"
 	"regexp"
+	"sync"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+var (
+	builtinEngineOnce            sync.Once
+	builtinEngine                *RedactionEngine
+	diagnosticQuotedCredential   = regexp.MustCompile(`(?i)(["']?(?:token|secret|password|api[_-]?key|authorization)["']?\s*[:=]\s*)["'][^"'\r\n]*["']`)
+	diagnosticUnquotedCredential = regexp.MustCompile(`(?i)["']?(?:token|secret|password|api[_-]?key|authorization)["']?\s*[:=]\s*[^\s,;&}{]+`)
+)
+
+// RedactSensitiveText applies the canonical built-in secret patterns without
+// loading project configuration. Operational diagnostics use this boundary so
+// they cannot accidentally depend on workspace-specific redaction settings.
+func RedactSensitiveText(input string) string {
+	builtinEngineOnce.Do(func() { builtinEngine = NewRedactionEngine("") })
+	builtin := builtinEngine.Redact(input)
+	quoted := diagnosticQuotedCredential.ReplaceAllString(builtin, "$1\"[REDACTED:structured-credential]\"")
+	return diagnosticUnquotedCredential.ReplaceAllString(quoted, "[REDACTED:structured-credential]")
+}
 
 // NewRedactionEngine creates a new engine with built-in patterns and optional
 // custom patterns loaded from the given config file path.

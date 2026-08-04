@@ -154,6 +154,9 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	// dark too). Never refuses to start; an upgrade/epoch takeover resets the counter.
 	daemonlife.ApplyStartupRestartThrottle(daemonlifeDeps(server), port)
 
+	// Identity and its canonical diagnostics must be ready before the listener can
+	// expose any telemetry-producing request path.
+	telemetry.Warm(server.incidents)
 	srv, httpDone, err := startHTTPServer(server, port, apiKey, mux)
 	if err != nil {
 		return err
@@ -221,8 +224,6 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		"terminal_port": termPort,
 	})
 	server.logLifecycle("mcp_transport_ready", port, nil)
-
-	telemetry.Warm(server.stateRecovery) // Pre-load install ID and session off the hot path.
 
 	// Start periodic usage beacon loop (structured tool stats every 5 minutes).
 	if tracker := mcpHandler.GetUsageTracker(); tracker != nil {

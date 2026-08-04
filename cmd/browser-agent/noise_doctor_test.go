@@ -7,8 +7,42 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
+
+func TestIncidentDoctorChecksProjectCanonicalLifecycle(t *testing.T) {
+	t.Parallel()
+	store := incident.NewStore(2)
+	key, err := store.Detect(incident.Report{Code: incident.CodeStateRecoveryFailed, CorrelationID: "install_identity", Generation: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.Retry(key, 1, 1)
+	store.Exhaust(key, 1)
+	checks := incidentDoctorChecks(store)
+	if len(checks) != 1 || checks[0].Name != string(incident.CodeStateRecoveryFailed) || checks[0].Status != "fail" {
+		t.Fatalf("incident Doctor checks = %#v", checks)
+	}
+	if checks[0].CorrelationID != "install_identity" || checks[0].RecoveryAttempt != 1 || checks[0].RecoveryOutcome != "exhausted" || len(checks[0].History) != 3 {
+		t.Fatalf("incident Doctor lifecycle = %#v", checks[0])
+	}
+	if checks[0].RecoveredAt != "" || checks[0].History[0].Outcome != "pending" || checks[0].History[1].Outcome != "pending" || checks[0].History[2].Outcome != "exhausted" {
+		t.Fatalf("incident Doctor transition outcomes = %#v", checks[0])
+	}
+}
+
+func TestIncidentDoctorChecksTreatFatalDetectionAsFailure(t *testing.T) {
+	t.Parallel()
+	store := incident.NewStore(1)
+	if _, err := store.Detect(incident.Report{Code: incident.CodeDaemonRestartLoop, CorrelationID: "restart", Generation: 1}); err != nil {
+		t.Fatal(err)
+	}
+	check := incidentDoctorChecks(store)[0]
+	if check.Status != "fail" || check.RecoveryOutcome != "pending" {
+		t.Fatalf("fatal detected Doctor check = %#v", check)
+	}
+}
 
 func TestRecoveryDoctorChecks(t *testing.T) {
 	t.Parallel()

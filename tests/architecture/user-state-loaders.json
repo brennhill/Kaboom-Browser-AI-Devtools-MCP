@@ -53,7 +53,7 @@
       "path": "internal/telemetry/install_id.go",
       "owner": "anonymous install identity",
       "fallback": "replace malformed identity atomically or suppress telemetry after I/O failure",
-      "doctor": "install_identity_state"
+      "doctor": "state_recovery_failed (correlation_id=install_identity)"
     },
     {
       "path": "cmd/browser-agent/internal/summarypref/cache.go",

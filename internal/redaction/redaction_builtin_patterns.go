@@ -14,11 +14,11 @@ var builtinPatterns = []struct {
 	},
 	{
 		name:    "bearer-token",
-		pattern: `Bearer [A-Za-z0-9\-._~+/]+=*`,
+		pattern: `(?i)Bearer[ \t]+[A-Za-z0-9\-._~+/]+=*`,
 	},
 	{
 		name:    "basic-auth",
-		pattern: `Basic [A-Za-z0-9+/]+=*`,
+		pattern: `(?i)Basic[ \t]+[A-Za-z0-9+/]+=*`,
 	},
 	{
 		name:    "jwt",

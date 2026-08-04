@@ -3,7 +3,9 @@ package incident
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -27,6 +29,110 @@ func TestStoreRejectsUnknownCodesAndStaleGenerations(t *testing.T) {
 	}
 }
 
+func TestStoreEnforcesLifecycleGraphAndRetryability(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		code       Code
+		transition func(*Store, string) bool
+		want       bool
+	}{
+		{"detected can recover without a retry", CodeContentReadinessTimeout, func(s *Store, key string) bool { return s.Recover(key, 1) }, true},
+		{"detected can exhaust without a retry", CodeContentReadinessTimeout, func(s *Store, key string) bool { return s.Exhaust(key, 1) }, true},
+		{"non-retryable cannot retry", CodeDaemonRestartLoop, func(s *Store, key string) bool { return s.Retry(key, 1, 1) }, false},
+		{"non-retryable can exhaust", CodeDaemonRestartLoop, func(s *Store, key string) bool { return s.Exhaust(key, 1) }, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			store := NewStore(2)
+			key, err := store.Detect(Report{Code: test.code, CorrelationID: test.name, Generation: 1})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := test.transition(store, key); got != test.want {
+				t.Fatalf("transition = %t, want %t", got, test.want)
+			}
+		})
+	}
+}
+
+func TestCorrelationIdentityDoesNotUseRedactedOrTruncatedDisplayText(t *testing.T) {
+	t.Parallel()
+	store := NewStore(4)
+	first, err := store.Detect(Report{Code: CodeStateRecoveryFailed, CorrelationID: "token=alpha", Generation: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := store.Detect(Report{Code: CodeStateRecoveryFailed, CorrelationID: "token=beta", Generation: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	longPrefix := strings.Repeat("x", 500)
+	third, _ := store.Detect(Report{Code: CodeStateRecoveryFailed, CorrelationID: longPrefix + "a", Generation: 1})
+	fourth, _ := store.Detect(Report{Code: CodeStateRecoveryFailed, CorrelationID: longPrefix + "b", Generation: 1})
+	if first == second || third == fourth || len(store.Snapshot()) != 4 {
+		t.Fatalf("incident identities collided: %q %q %q %q", first, second, third, fourth)
+	}
+}
+
+func TestLocalEvidenceRedactsSupportedSecretForms(t *testing.T) {
+	t.Parallel()
+	secrets := []string{
+		"Bearer bearer-secret",
+		"authorization: bearer header-secret",
+		"Authorization:\tBearer   tab-secret",
+		`{"token":"json secret with spaces"}`,
+		"Cookie: session=abcdefghijklmnop",
+		"api-key: colon-secret",
+		"password=equals-secret",
+	}
+	for index, secret := range secrets {
+		store := NewStore(1)
+		key, err := store.Detect(Report{Code: CodeStateRecoveryFailed, CorrelationID: fmt.Sprintf("redact-%d", index), Generation: 1, Evidence: LocalEvidence{Detail: secret}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		view, _ := store.Doctor(key)
+		for _, private := range []string{"bearer-secret", "header-secret", "tab-secret", "json secret with spaces", "abcdefghijklmnop", "colon-secret", "equals-secret"} {
+			if strings.Contains(view.LocalDetail, private) {
+				t.Fatalf("secret %q leaked from %q as %q", private, secret, view.LocalDetail)
+			}
+		}
+	}
+}
+
+func TestStoreConcurrentTransitionsRemainMonotonic(t *testing.T) {
+	t.Parallel()
+	store := NewStore(8)
+	key, err := store.Detect(Report{Code: CodeContentReadinessTimeout, CorrelationID: "concurrent", Generation: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const attempts = 32
+	start := make(chan struct{})
+	var workers sync.WaitGroup
+	for attempt := 1; attempt <= attempts; attempt++ {
+		workers.Add(1)
+		go func(value uint) {
+			defer workers.Done()
+			<-start
+			store.Retry(key, 4, value)
+		}(uint(attempt))
+	}
+	close(start)
+	workers.Wait()
+	got := store.Snapshot()[0]
+	if got.State != StateRetrying || got.Attempts != attempts {
+		t.Fatalf("concurrent retry state = %#v", got)
+	}
+	if !store.Recover(key, 4) {
+		t.Fatal("current generation did not recover")
+	}
+	if store.Exhaust(key, 4) || store.Retry(key, 4, attempts+1) {
+		t.Fatal("terminal incident accepted a later transition")
+	}
+}
+
 func TestStoreTransitionsAreIdempotentAndRecoveryResolvesIncident(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 8, 4, 8, 0, 0, 0, time.UTC)
@@ -34,7 +140,7 @@ func TestStoreTransitionsAreIdempotentAndRecoveryResolvesIncident(t *testing.T) 
 	store.now = func() time.Time { return now }
 	key, err := store.Detect(Report{
 		Code: CodeExtensionReconnectExhausted, CorrelationID: "connect-1", Generation: 3,
-		Evidence: LocalEvidence{Detail: "socket reset", Fix: "reload extension"},
+		Evidence: LocalEvidence{Detail: "socket reset"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +169,7 @@ func TestAnalyticsProjectionIsClosedAndContainsNoLocalEvidence(t *testing.T) {
 	store := NewStore(2)
 	key, err := store.Detect(Report{
 		Code: CodeStateRecoveryFailed, CorrelationID: "private-correlation", Generation: 1,
-		Evidence: LocalEvidence{Detail: "https://private.test token=secret", Fix: "/Users/private/file"},
+		Evidence: LocalEvidence{Detail: "https://private.test token=secret"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -130,7 +236,7 @@ func TestDoctorProjectionCombinesLocalEvidenceWithRegistryPresentation(t *testin
 	store := NewStore(2)
 	key, err := store.Detect(Report{
 		Code: CodeContentReadinessTimeout, CorrelationID: "nav-42", Generation: 7,
-		Evidence: LocalEvidence{Detail: "attempt token=private", Fix: "local reload context"},
+		Evidence: LocalEvidence{Detail: "attempt token=private"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +248,31 @@ func TestDoctorProjectionCombinesLocalEvidenceWithRegistryPresentation(t *testin
 	if view.Code != CodeContentReadinessTimeout || view.CorrelationID != "nav-42" || view.Generation != 7 || view.State != StateDetected {
 		t.Fatalf("Doctor identity = %#v", view)
 	}
-	if view.Detail == "" || view.Fix == "" || !strings.Contains(view.LocalDetail, "token=[REDACTED]") || view.LocalFix != "local reload context" {
+	if view.Detail == "" || view.Fix == "" || !strings.Contains(view.LocalDetail, "[REDACTED:") {
 		t.Fatalf("Doctor presentation = %#v", view)
+	}
+}
+
+func TestStorePublishesProjectionsAfterCommittedTransitions(t *testing.T) {
+	t.Parallel()
+	var eventsMu sync.Mutex
+	var events []ReliabilityEvent
+	store := NewStore(2, func(event ReliabilityEvent) {
+		eventsMu.Lock()
+		events = append(events, event)
+		eventsMu.Unlock()
+	})
+	key, err := store.Detect(Report{Code: CodeContentReadinessTimeout, CorrelationID: "publish", Generation: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.Retry(key, 1, 1)
+	store.Recover(key, 1)
+	if len(events) != 3 || events[0].Outcome != OutcomePending || events[2].Outcome != OutcomeRecovered {
+		t.Fatalf("published events = %#v", events)
+	}
+	views := store.DoctorSnapshot()
+	if len(views) != 1 || views[0].State != StateRecovered || views[0].CorrelationID != "publish" {
+		t.Fatalf("Doctor snapshot = %#v", views)
 	}
 }

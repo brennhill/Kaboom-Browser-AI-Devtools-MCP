@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
 
@@ -85,7 +85,12 @@ var firstToolCallOnce sync.Once
 
 // cachedFirstToolCallInstallID is the install ID that has already emitted first_tool_call.
 var cachedFirstToolCallInstallID string
-var stateRecovery statediag.Reporter
+var (
+	stateRecovery              *incident.Store
+	stateRecoveryMu            sync.Mutex
+	installIdentityIncidentKey string
+	installIdentityGeneration  uint64
+)
 
 // defaultKaboomDir resolves the installation root. Installation identity must
 // not follow KABOOM_STATE_DIR or XDG_STATE_HOME: those roots isolate runtime
@@ -100,8 +105,10 @@ func defaultKaboomDir() string {
 
 // Warm pre-loads install ID and session state so the first tool call
 // doesn't incur filesystem I/O on the hot path. Call at daemon startup.
-func Warm(diagnostics statediag.Reporter) {
+func Warm(diagnostics *incident.Store) {
+	stateRecoveryMu.Lock()
 	stateRecovery = diagnostics
+	stateRecoveryMu.Unlock()
 	GetInstallID()
 	TouchSession()
 }
@@ -125,7 +132,7 @@ func loadOrGenerateInstallID() string {
 	if err == nil {
 		id := strings.TrimSpace(string(data))
 		if validInstallID(id) {
-			statediag.Resolve(stateRecovery, "install_identity_state")
+			resolveInstallIDRecovery()
 			return id
 		}
 		reportInstallIDRecovery("Installation identity was malformed; a new stable identity replaced it.")
@@ -143,12 +150,12 @@ func loadOrGenerateInstallID() string {
 	// hard-link create. Concurrent processes can generate candidates, but only
 	// one candidate can become install_id and every process returns that winner.
 	if createErr := installIdentityFiles.CreateExclusive(kaboomDir, idPath, []byte(id)); createErr == nil {
-		statediag.Resolve(stateRecovery, "install_identity_state")
+		resolveInstallIDRecovery()
 		return id
 	}
 	if winner, readErr := installIdentityFiles.ReadFile(idPath); readErr == nil {
 		if persisted := strings.TrimSpace(string(winner)); validInstallID(persisted) {
-			statediag.Resolve(stateRecovery, "install_identity_state")
+			resolveInstallIDRecovery()
 			return persisted
 		}
 	}
@@ -163,7 +170,7 @@ func replaceInstallID(idPath string) string {
 		reportInstallIDRecovery("Installation identity recovery could not be persisted; anonymous telemetry is disabled for this process.")
 		return ""
 	}
-	statediag.Resolve(stateRecovery, "install_identity_state")
+	resolveInstallIDRecovery()
 	return id
 }
 
@@ -176,14 +183,29 @@ func validInstallID(id string) bool {
 }
 
 func reportInstallIDRecovery(detail string) {
+	stateRecoveryMu.Lock()
+	defer stateRecoveryMu.Unlock()
 	if stateRecovery == nil {
 		return
 	}
-	stateRecovery.Report(statediag.Diagnostic{
-		Name:   "install_identity_state",
-		Detail: detail,
-		Fix:    "Check permissions for ~/.kaboom/install_id, then restart Kaboom.",
+	installIdentityGeneration++
+	key, err := stateRecovery.Detect(incident.Report{
+		Code: incident.CodeStateRecoveryFailed, CorrelationID: "install_identity",
+		Generation: installIdentityGeneration, Evidence: incident.LocalEvidence{Detail: detail},
 	})
+	if err != nil {
+		return
+	}
+	installIdentityIncidentKey = key
+}
+
+func resolveInstallIDRecovery() {
+	stateRecoveryMu.Lock()
+	defer stateRecoveryMu.Unlock()
+	if stateRecovery == nil || installIdentityIncidentKey == "" {
+		return
+	}
+	stateRecovery.Recover(installIdentityIncidentKey, installIdentityGeneration)
 }
 
 func loadFirstToolCallInstallID() string {
@@ -223,7 +245,7 @@ func markFirstToolCallEmittedForInstall() bool {
 		return false
 	}
 	cachedFirstToolCallInstallID = installID
-	statediag.Resolve(stateRecovery, "install_identity_state")
+	resolveInstallIDRecovery()
 	return true
 }
 
@@ -251,6 +273,8 @@ func resetInstallIDState() {
 	installIDOnce = sync.Once{}
 	cachedInstallID = ""
 	stateRecovery = nil
+	installIdentityIncidentKey = ""
+	installIdentityGeneration = 0
 	installIdentityFiles = localIdentityFilesystem{}
 }
 
