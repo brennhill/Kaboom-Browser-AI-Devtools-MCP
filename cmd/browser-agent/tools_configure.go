@@ -410,7 +410,7 @@ func incidentDoctorChecks(diagnostics *incident.Store) []health.DoctorCheck {
 			Name: string(view.Code), CorrelationID: view.CorrelationID, Fingerprint: view.Fingerprint, Status: status,
 			Detail: detail, Fix: view.Fix, Lifecycle: string(view.State),
 			FirstSeenAt: formatDiagnosticTime(view.DetectedAt), LastSeenAt: formatDiagnosticTime(view.UpdatedAt),
-			RecoveredAt: recoveredAt, RecoveryAttempt: int(view.Attempts),
+			RecoveredAt: recoveredAt, RecoveryAttempt: boundedDiagnosticInt(uint64(view.Attempts)),
 			RecoveryOutcome: string(incidentOutcome(view.State)), History: history,
 		})
 	}
@@ -419,10 +419,18 @@ func incidentDoctorChecks(diagnostics *incident.Store) []health.DoctorCheck {
 		checks = append(checks, health.DoctorCheck{
 			Name: "operational_incident_retention", Status: "warn", Lifecycle: "capacity",
 			Detail: fmt.Sprintf("Doctor retained %d operational incidents and dropped %d entries at its %d-entry bound.", stats.Active+stats.Terminal, stats.Dropped, stats.Capacity),
-			Fix:    "Inspect recurring incidents and resource pressure before increasing retention.", Occurrences: int(stats.Dropped),
+			Fix:    "Inspect recurring incidents and resource pressure before increasing retention.", Occurrences: boundedDiagnosticInt(stats.Dropped),
 		})
 	}
 	return checks
+}
+
+func boundedDiagnosticInt(value uint64) int {
+	const maxInt = int(^uint(0) >> 1)
+	if value > uint64(maxInt) {
+		return maxInt
+	}
+	return int(value)
 }
 
 func incidentOutcome(state incident.State) incident.Outcome {

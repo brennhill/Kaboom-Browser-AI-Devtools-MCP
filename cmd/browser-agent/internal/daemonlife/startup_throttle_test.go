@@ -428,3 +428,18 @@ func TestClearRestartHistoryOnCleanShutdown(t *testing.T) {
 		t.Fatalf("clearing an absent history must not log a failure, got %+v", *evt)
 	}
 }
+
+func TestLoadRestartHistoryRejectsNegativeTimestamp(t *testing.T) {
+	path := restartHistoryPath(t.TempDir())
+	if err := os.WriteFile(path, []byte(`{"version":"0.9.0","install_epoch":1,"port":7890,"restart_unixnano":[-1]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := loadRestartHistory(path)
+	if err == nil {
+		t.Fatal("negative persisted timestamp must be classified as corrupt state")
+	}
+	if len(got.Timestamps) != 0 {
+		t.Fatalf("corrupt history = %+v, want empty fail-open fallback", got)
+	}
+}

@@ -112,6 +112,11 @@ func loadRestartHistory(path string) (restartHistory, error) {
 	if err := json.Unmarshal(b, &h); err != nil {
 		return restartHistory{}, err
 	}
+	for _, timestamp := range h.Timestamps {
+		if timestamp < 0 {
+			return restartHistory{}, errors.New("restart history contains an invalid timestamp")
+		}
+	}
 	return h, nil
 }
 
@@ -207,7 +212,10 @@ func reportPriorUncleanRun(d Deps, previous restartHistory, port int, installEpo
 		return
 	}
 	lastStart := previous.Timestamps[len(previous.Timestamps)-1]
-	generation := uint64(lastStart)
+	if lastStart < 0 {
+		return
+	}
+	generation := uint64(lastStart) // #nosec G115 -- negative persisted values are rejected above and by loadRestartHistory.
 	key, err := d.Incidents.Detect(incident.Report{
 		Code:          incident.CodeUncleanDaemonExit,
 		CorrelationID: fmt.Sprintf("%s:%d:%d:%d", d.Version, previous.InstallEpoch, port, lastStart),

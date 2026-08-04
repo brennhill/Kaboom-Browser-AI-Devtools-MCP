@@ -4,6 +4,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"regexp"
 	"testing"
 	"time"
@@ -11,6 +12,16 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
+
+func TestBoundedDiagnosticIntSaturatesUntrustedCounters(t *testing.T) {
+	t.Parallel()
+	if got := boundedDiagnosticInt(7); got != 7 {
+		t.Fatalf("boundedDiagnosticInt(7) = %d, want 7", got)
+	}
+	if got := boundedDiagnosticInt(math.MaxUint64); got != math.MaxInt {
+		t.Fatalf("boundedDiagnosticInt(MaxUint64) = %d, want %d", got, math.MaxInt)
+	}
+}
 
 func TestIncidentDoctorChecksProjectCanonicalLifecycle(t *testing.T) {
 	t.Parallel()

@@ -171,6 +171,16 @@ last_verified_date: 2026-03-29
 
 # MCP Persistent Server
 
+Persisted restart timestamps are validated before they become incident
+generations. Invalid negative values take the existing fail-open corruption
+recovery path and are surfaced through local Doctor diagnostics.
+
+The MCP initialize instructions explicitly designate Kaboom as the live-browser
+control surface. Agents must recover Kaboom connectivity instead of silently
+switching to Chrome DevTools, Playwright, or a sandboxed browser; another browser
+tool is appropriate only when the user requests it or Kaboom reports a concrete
+capability gap.
+
 Fast-start compatibility tests use the canonical server startup budget
 (5 seconds normally, 30 seconds under the race detector or coverage
 instrumentation). This wider setup ceiling only absorbs instrumentation

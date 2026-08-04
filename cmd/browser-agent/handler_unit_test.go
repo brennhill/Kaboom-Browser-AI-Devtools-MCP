@@ -20,6 +20,21 @@ type testLimiter struct {
 	allowed bool
 }
 
+func TestServerInstructionsRequireKaboomForBrowserWork(t *testing.T) {
+	t.Parallel()
+	for _, required := range []string{
+		"USE KABOOM",
+		"DO NOT use Chrome DevTools",
+		"DO NOT use Playwright",
+		"user explicitly requests",
+		"capability gap",
+	} {
+		if !strings.Contains(serverInstructions, required) {
+			t.Errorf("server instructions missing %q", required)
+		}
+	}
+}
+
 func (l testLimiter) Allow() bool { return l.allowed }
 
 type testRedactor struct {

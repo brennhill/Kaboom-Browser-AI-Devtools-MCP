@@ -4,7 +4,7 @@ feature_id: feature-config-profiles
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
@@ -32,6 +32,7 @@ test_paths:
   - cmd/browser-agent/tools_configure_capabilities_test.go
   - cmd/browser-agent/tools_configure_jitter_test.go
   - cmd/browser-agent/tools_configure_noise_test.go
+  - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/tools_interface_check_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/tools_configure_session_test.go
@@ -55,6 +56,9 @@ that owns executable modules and input schemas.
 The response-mode preference cache uses the canonical persisted-state fault
 fixtures to prove disabled fallback, redacted Doctor recovery, and a fresh load
 after daemon restart; normal first-run absence remains explicitly non-incident.
+Doctor projections saturate internal unsigned counters at the JSON contract's
+signed integer bound so corrupt or extreme state cannot wrap into misleading
+negative attempts or occurrence counts.
 
 ## TL;DR
 
