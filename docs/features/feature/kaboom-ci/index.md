@@ -4,7 +4,7 @@ feature_id: feature-kaboom-ci
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - Makefile
   - .github/workflows/architecture-validation.yml
@@ -29,6 +29,7 @@ code_paths:
   - scripts/ci/run-targeted-mutations.mjs
   - scripts/test-js-sharded.sh
   - package.json
+  - package-lock.json
 test_paths:
   - scripts/security/check-npm-audit.test.mjs
   - tests/extension/contracts/tooling-contracts.test.js
@@ -78,6 +79,10 @@ last_verified_date: 2026-08-03
   the daily scheduled workflow reruns the same canonical check so newly
   disclosed vulnerabilities surface without a source change. Active workflows
   pin the patched Go 1.25.12 toolchain declared by `go.mod`.
+- The current build dependency graph has no audit exceptions. Patched direct
+  tooling and narrowly pinned transitive overrides keep the complete npm audit
+  clean; the empty policy remains checked in so future exceptions cannot appear
+  without the policy's owner, scope, expiry, and issue-link review.
 - Pull requests replay the committed seeds for critical fixture, transaction,
   Doctor, runtime-message, generation, redaction, and scanner state machines.
   A scheduled bounded mutation campaign uses the same target inventory and

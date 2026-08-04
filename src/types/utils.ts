@@ -125,8 +125,7 @@ export interface DebouncedFunction<T extends (...args: unknown[]) => unknown> {
  * Result type for operations that can fail
  */
 export type Result<T, E = Error> =
-  | { readonly success: true; readonly value: T }
-  | { readonly success: false; readonly error: E }
+  { readonly success: true; readonly value: T } | { readonly success: false; readonly error: E }
 
 /**
  * Async result type

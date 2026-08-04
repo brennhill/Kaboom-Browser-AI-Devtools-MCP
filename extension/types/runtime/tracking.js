@@ -15,7 +15,7 @@ function isRecord(value) {
     return typeof value === 'object' && value !== null;
 }
 function isTrackingState(value) {
-    return (isRecord(value) && typeof value.isTracked === 'boolean' && typeof value.aiPilotEnabled === 'boolean');
+    return isRecord(value) && typeof value.isTracked === 'boolean' && typeof value.aiPilotEnabled === 'boolean';
 }
 export function isTrackingStateChangedMessage(value) {
     return isRecord(value) && value.type === 'tracking_state_changed' && isTrackingState(value.state);

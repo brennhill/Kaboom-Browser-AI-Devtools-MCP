@@ -152,8 +152,7 @@ function isStaleContextError(reason: string): boolean {
 export async function openTerminalPanel(): Promise<boolean> {
   try {
     const result = (await chrome.runtime.sendMessage({ type: 'open_terminal_panel' })) as
-      | { success?: boolean; error?: string }
-      | undefined
+      { success?: boolean; error?: string } | undefined
     if (result?.success === true) return true
     reportPanelOpenFailure(result?.error ?? 'the background service worker sent no response')
     return false
@@ -206,8 +205,7 @@ function sendTerminalWrite(text: string, allowRetry: boolean): void {
   let pending: Promise<{ received?: boolean } | undefined> | undefined
   try {
     pending = chrome.runtime.sendMessage({ type: 'terminal_panel_write', text }) as
-      | Promise<{ received?: boolean } | undefined>
-      | undefined
+      Promise<{ received?: boolean } | undefined> | undefined
   } catch (err) {
     // Synchronous throw = extension context invalidated; the content script is
     // orphaned and only a page reload restores it. The panel state is unknown, so

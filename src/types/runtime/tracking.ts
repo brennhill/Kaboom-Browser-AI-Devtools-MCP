@@ -78,9 +78,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isTrackingState(value: unknown): value is TrackingState {
-  return (
-    isRecord(value) && typeof value.isTracked === 'boolean' && typeof value.aiPilotEnabled === 'boolean'
-  )
+  return isRecord(value) && typeof value.isTracked === 'boolean' && typeof value.aiPilotEnabled === 'boolean'
 }
 
 export function isTrackingStateChangedMessage(value: unknown): value is TrackingStateChangedMessage {

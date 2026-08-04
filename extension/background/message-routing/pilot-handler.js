@@ -15,9 +15,7 @@ export async function broadcastTrackingState(untrackedTabId) {
                 type: 'tracking_state_changed',
                 state: { isTracked: true, aiPilotEnabled }
             };
-            chrome.tabs
-                .sendMessage(trackedTabId, trackedMessage)
-                .catch(() => {
+            chrome.tabs.sendMessage(trackedTabId, trackedMessage).catch(() => {
                 // EXPECTED_ABSENCE: content scripts disappear during navigation; storage
                 // remains authoritative and logging this would flag normal reinjection.
             });
@@ -27,9 +25,7 @@ export async function broadcastTrackingState(untrackedTabId) {
                 type: 'tracking_state_changed',
                 state: { isTracked: false, aiPilotEnabled: false }
             };
-            chrome.tabs
-                .sendMessage(untrackedTabId, untrackedMessage)
-                .catch(() => {
+            chrome.tabs.sendMessage(untrackedTabId, untrackedMessage).catch(() => {
                 // EXPECTED_ABSENCE: a missing recipient is normal for an untracked or
                 // closed tab; logging it would misleadingly imply tracking is unhealthy.
             });

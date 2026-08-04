@@ -1,10 +1,5 @@
 export type WorkflowCategory =
-  | 'Automation'
-  | 'Debugging'
-  | 'Demo Recording'
-  | 'Interactive Development'
-  | 'Reliability'
-  | 'Quality'
+  'Automation' | 'Debugging' | 'Demo Recording' | 'Interactive Development' | 'Reliability' | 'Quality'
 
 export interface WorkflowPreset {
   id: string

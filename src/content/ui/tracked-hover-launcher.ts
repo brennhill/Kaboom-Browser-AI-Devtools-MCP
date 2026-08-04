@@ -51,8 +51,7 @@ let trackedEnabled = false
 let hiddenUntilPopupOpen = false
 let hideTimer: ReturnType<typeof setTimeout> | null = null
 let recordingStorageListener:
-  | ((changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void)
-  | null = null
+  ((changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void) | null = null
 let recordingStorageUnsubscribe: (() => void) | null = null
 let runtimeListenerInstalled = false
 let annotationListenerInstalled = false
@@ -252,8 +251,7 @@ const ANNOTATION_TERMINAL_NUDGE =
 
 function handleAnnotationsReady(event: Event): void {
   const detail = (event as CustomEvent).detail as
-    | { annotations?: AnnotationDetail[]; page_url?: string; nonce?: string }
-    | undefined
+    { annotations?: AnnotationDetail[]; page_url?: string; nonce?: string } | undefined
   // Provenance gate: only act on events carrying the per-session token we
   // published to extension-only storage. `window` is shared with the page, so a
   // hostile page can dispatch this event — but it cannot read chrome.storage, so
