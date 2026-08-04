@@ -20,7 +20,7 @@ func TestReliabilityDispatcherBoundsPendingWork(t *testing.T) {
 	entered := make(chan struct{})
 	release := make(chan struct{})
 	var delivered atomic.Uint64
-	dispatcher := newReliabilityDispatcher(2, func(incident.ReliabilityEvent) {
+	dispatcher := newReliabilityDispatcher(2, 0, time.Now, func(incident.ReliabilityEvent) {
 		if delivered.Add(1) == 1 {
 			close(entered)
 		}
@@ -48,7 +48,7 @@ func TestReliabilityDispatcherBoundsPendingWork(t *testing.T) {
 func TestReliabilityDispatcherSurvivesDeliveryPanic(t *testing.T) {
 	delivered := make(chan struct{}, 1)
 	var calls atomic.Uint64
-	dispatcher := newReliabilityDispatcher(2, func(incident.ReliabilityEvent) {
+	dispatcher := newReliabilityDispatcher(2, 0, time.Now, func(incident.ReliabilityEvent) {
 		if calls.Add(1) == 1 {
 			panic("synthetic delivery failure")
 		}
@@ -73,6 +73,72 @@ func TestReliabilityDispatcherSurvivesDeliveryPanic(t *testing.T) {
 	case <-done:
 	case <-time.After(time.Second):
 		t.Fatal("panicking delivery stranded pending work")
+	}
+}
+
+func TestReliabilityDispatcherRateLimitsPerCodeWithoutBlocking(t *testing.T) {
+	resetDeliveryDiagnostics()
+	now := time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)
+	delivered := make(chan incident.ReliabilityEvent, 2)
+	dispatcher := newReliabilityDispatcher(2, time.Minute, func() time.Time { return now }, func(event incident.ReliabilityEvent) {
+		delivered <- event
+	})
+	event := incident.ReliabilityEvent{Code: incident.CodeStateRecoveryFailed}
+	if !dispatcher.Enqueue(event) {
+		t.Fatal("first event was rejected")
+	}
+	if dispatcher.Enqueue(event) {
+		t.Fatal("duplicate event inside its rate window was accepted")
+	}
+	now = now.Add(time.Minute)
+	if !dispatcher.Enqueue(event) {
+		t.Fatal("event after its rate window was rejected")
+	}
+	dispatcher.WaitIdle()
+	if got := len(delivered); got != 2 {
+		t.Fatalf("delivered %d events, want 2", got)
+	}
+	stats := dispatcher.Diagnostics()
+	if stats.RateLimited != 1 || stats.Saturated != 0 || stats.Pending != 0 {
+		t.Fatalf("dispatcher diagnostics = %+v", stats)
+	}
+	if got := DeliveryDiagnostics(); got.Suppressed != 1 || got.Dropped != 0 {
+		t.Fatalf("delivery diagnostics = %+v, want one intentional suppression", got)
+	}
+}
+
+func TestReliabilityDispatcherSaturationDoesNotConsumeRateWindow(t *testing.T) {
+	resetDeliveryDiagnostics()
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	dispatcher := newReliabilityDispatcher(1, time.Minute, time.Now, func(event incident.ReliabilityEvent) {
+		if event.Code == incident.CodeDaemonPanic {
+			close(entered)
+			<-release
+		}
+	})
+	if !dispatcher.Enqueue(incident.ReliabilityEvent{Code: incident.CodeDaemonPanic}) {
+		t.Fatal("active event was rejected")
+	}
+	<-entered
+	if !dispatcher.Enqueue(incident.ReliabilityEvent{Code: incident.CodeBridgeConnectionError}) {
+		t.Fatal("queued event was rejected")
+	}
+	target := incident.ReliabilityEvent{Code: incident.CodeStateRecoveryFailed}
+	if dispatcher.Enqueue(target) {
+		t.Fatal("event beyond queue capacity was accepted")
+	}
+	close(release)
+	dispatcher.WaitIdle()
+	if !dispatcher.Enqueue(target) {
+		t.Fatal("saturated event incorrectly consumed its rate window")
+	}
+	dispatcher.WaitIdle()
+	if got := dispatcher.Diagnostics(); got.Saturated != 1 || got.Pending != 0 {
+		t.Fatalf("dispatcher diagnostics = %+v", got)
+	}
+	if got := DeliveryDiagnostics(); got.Dropped != 1 || got.Suppressed != 0 {
+		t.Fatalf("delivery diagnostics = %+v, want one pressure drop", got)
 	}
 }
 

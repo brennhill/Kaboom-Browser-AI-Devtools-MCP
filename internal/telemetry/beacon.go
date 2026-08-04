@@ -52,25 +52,48 @@ const maxConcurrentBeacons = 50
 // telemetry transport. Reliability telemetry is best-effort and must never
 // create unbounded goroutines under a failure storm.
 const maxPendingReliabilityEvents = 64
+const reliabilityRateWindow = 5 * time.Minute
+
+type ReliabilityDispatcherSnapshot struct {
+	RateLimited uint64 `json:"rate_limited"`
+	Saturated   uint64 `json:"saturated"`
+	Panics      uint64 `json:"panics"`
+	Pending     int64  `json:"pending"`
+}
 
 // sem caps the number of concurrent beacon goroutines to prevent runaway growth.
 var sem = make(chan struct{}, maxConcurrentBeacons)
 
 type reliabilityDispatcher struct {
-	queue   chan incident.ReliabilityEvent
-	deliver func(incident.ReliabilityEvent)
-	once    sync.Once
-	pending sync.WaitGroup
+	queue       chan incident.ReliabilityEvent
+	deliver     func(incident.ReliabilityEvent)
+	window      time.Duration
+	now         func() time.Time
+	mu          sync.Mutex
+	lastByCode  map[incident.Code]time.Time
+	once        sync.Once
+	pending     sync.WaitGroup
+	pendingNow  atomic.Int64
+	rateLimited atomic.Uint64
+	saturated   atomic.Uint64
+	panics      atomic.Uint64
 }
 
-func newReliabilityDispatcher(capacity int, deliver func(incident.ReliabilityEvent)) *reliabilityDispatcher {
+func newReliabilityDispatcher(capacity int, window time.Duration, now func() time.Time, deliver func(incident.ReliabilityEvent)) *reliabilityDispatcher {
 	if capacity < 1 {
 		capacity = 1
 	}
-	return &reliabilityDispatcher{queue: make(chan incident.ReliabilityEvent, capacity), deliver: deliver}
+	return &reliabilityDispatcher{queue: make(chan incident.ReliabilityEvent, capacity), deliver: deliver, window: window, now: now, lastByCode: make(map[incident.Code]time.Time)}
 }
 
 func (d *reliabilityDispatcher) Enqueue(event incident.ReliabilityEvent) bool {
+	admittedAt, admitted := d.admit(event.Code)
+	if !admitted {
+		d.rateLimited.Add(1)
+		deliveryCounters.suppressed.Add(1)
+		callOnFireBeacon(false)
+		return false
+	}
 	d.once.Do(func() {
 		util.SafeGo(func() {
 			for pending := range d.queue {
@@ -79,20 +102,55 @@ func (d *reliabilityDispatcher) Enqueue(event incident.ReliabilityEvent) bool {
 		})
 	})
 	d.pending.Add(1)
+	d.pendingNow.Add(1)
 	select {
 	case d.queue <- event:
 		return true
 	default:
+		d.releaseAdmission(event.Code, admittedAt)
 		d.pending.Done()
+		d.pendingNow.Add(-1)
+		d.saturated.Add(1)
+		deliveryCounters.dropped.Add(1)
+		callOnFireBeacon(false)
 		return false
 	}
 }
 
+func (d *reliabilityDispatcher) admit(code incident.Code) (time.Time, bool) {
+	if d.window <= 0 {
+		return time.Time{}, true
+	}
+	now := d.now()
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if last, ok := d.lastByCode[code]; ok && now.Sub(last) < d.window {
+		return time.Time{}, false
+	}
+	d.lastByCode[code] = now
+	return now, true
+}
+
+func (d *reliabilityDispatcher) releaseAdmission(code incident.Code, admittedAt time.Time) {
+	if d.window <= 0 {
+		return
+	}
+	d.mu.Lock()
+	if d.lastByCode[code].Equal(admittedAt) {
+		delete(d.lastByCode, code)
+	}
+	d.mu.Unlock()
+}
+
 func (d *reliabilityDispatcher) deliverOne(event incident.ReliabilityEvent) {
-	defer d.pending.Done()
+	defer func() {
+		d.pendingNow.Add(-1)
+		d.pending.Done()
+	}()
 	defer func() {
 		if recover() != nil {
 			deliveryCounters.dropped.Add(1)
+			d.panics.Add(1)
 			slog.Error("reliability event delivery panicked", "component", "telemetry_dispatcher", "stack", string(debug.Stack()))
 		}
 	}()
@@ -101,19 +159,34 @@ func (d *reliabilityDispatcher) deliverOne(event incident.ReliabilityEvent) {
 
 func (d *reliabilityDispatcher) WaitIdle() { d.pending.Wait() }
 
-var reliabilityEvents = newReliabilityDispatcher(maxPendingReliabilityEvents, ReportReliability)
+func (d *reliabilityDispatcher) Diagnostics() ReliabilityDispatcherSnapshot {
+	return ReliabilityDispatcherSnapshot{RateLimited: d.rateLimited.Load(), Saturated: d.saturated.Load(), Panics: d.panics.Load(), Pending: d.pendingNow.Load()}
+}
+
+func (d *reliabilityDispatcher) resetForTest() {
+	d.WaitIdle()
+	d.mu.Lock()
+	clear(d.lastByCode)
+	d.mu.Unlock()
+	d.rateLimited.Store(0)
+	d.saturated.Store(0)
+	d.panics.Store(0)
+}
+
+var reliabilityEvents = newReliabilityDispatcher(maxPendingReliabilityEvents, reliabilityRateWindow, time.Now, ReportReliability)
 
 // beaconClient is a shared HTTP client for all beacons. Reuses connections.
 var beaconClient = &http.Client{Timeout: 2 * time.Second}
 
 // DeliverySnapshot exposes payload-free telemetry transport outcomes.
 type DeliverySnapshot struct {
-	Accepted      uint64 `json:"accepted"`
-	Rejected      uint64 `json:"rejected"`
-	NetworkErrors uint64 `json:"network_errors"`
-	Dropped       uint64 `json:"dropped"`
-	Suppressed    uint64 `json:"suppressed"`
-	LastStatus    int    `json:"last_status"`
+	Accepted      uint64                        `json:"accepted"`
+	Rejected      uint64                        `json:"rejected"`
+	NetworkErrors uint64                        `json:"network_errors"`
+	Dropped       uint64                        `json:"dropped"`
+	Suppressed    uint64                        `json:"suppressed"`
+	LastStatus    int                           `json:"last_status"`
+	Reliability   ReliabilityDispatcherSnapshot `json:"reliability"`
 }
 
 var deliveryCounters struct {
@@ -134,10 +207,12 @@ func DeliveryDiagnostics() DeliverySnapshot {
 		Dropped:       deliveryCounters.dropped.Load(),
 		Suppressed:    deliveryCounters.suppressed.Load(),
 		LastStatus:    int(deliveryCounters.lastStatus.Load()),
+		Reliability:   reliabilityEvents.Diagnostics(),
 	}
 }
 
 func resetDeliveryDiagnostics() {
+	reliabilityEvents.resetForTest()
 	deliveryCounters.accepted.Store(0)
 	deliveryCounters.rejected.Store(0)
 	deliveryCounters.networkErrors.Store(0)
@@ -168,21 +243,7 @@ func buildEnvelope(event string) map[string]any {
 
 // AppError fires a structured app_error event from a fixed privacy-bounded schema.
 func AppError(code incident.Code) {
-	definition, ok := reliabilityDefinition(code)
-	if !ok {
-		return
-	}
-	fields := map[string]any{
-		"event":      "app_error",
-		"error_kind": string(definition.ErrorKind),
-		"error_code": strings.ToUpper(string(code)),
-		"severity":   string(definition.Severity),
-		"source":     string(definition.Subsystem),
-	}
-	if definition.Retryable {
-		fields["retryable"] = true
-	}
-	fireStructuredBeacon(fields)
+	QueueReliability(incident.ReliabilityEvent{Code: code, Outcome: incident.OutcomePending, AttemptBucket: incident.AttemptZero})
 }
 
 // ReportReliability consumes the canonical privacy-safe incident projection.
@@ -221,11 +282,10 @@ func reliabilityDefinition(code incident.Code) (incident.Definition, bool) {
 // and startup identity loading. This avoids recursively entering GetInstallID
 // when the incident itself describes install-identity recovery.
 func QueueReliability(event incident.ReliabilityEvent) {
-	if reliabilityEvents.Enqueue(event) {
+	if _, ok := reliabilityDefinition(event.Code); !ok {
 		return
 	}
-	deliveryCounters.dropped.Add(1)
-	callOnFireBeacon(false)
+	reliabilityEvents.Enqueue(event)
 }
 
 // BeaconUsageSummary fires a structured usage_summary beacon.
@@ -350,6 +410,9 @@ func shouldSendToEndpoint(ep string, testBinary bool) bool {
 
 // overrideEndpoint sets a custom endpoint for testing.
 func overrideEndpoint(url string) {
+	// Test endpoints represent isolated telemetry runs; retain no rate-window
+	// state from the preceding fixture.
+	reliabilityEvents.resetForTest()
 	beaconMu.Lock()
 	endpoint = url
 	beaconMu.Unlock()

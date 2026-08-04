@@ -58,10 +58,14 @@ projection, and emit only the allowlisted initial `app_error` projection. The
 obsolete `install_identity_state` calls into `statediag` were removed together.
 Telemetry projection uses one fixed-capacity asynchronous dispatcher outside
 lifecycle locks, so install-ID loading cannot recursively enter itself and a
-failure storm cannot create unbounded goroutines. Saturation increments the
-payload-free delivery drop counter. The daemon attaches the canonical incident
-store and warms identity before opening its HTTP listener, preventing first-
-request initialization from bypassing recovery diagnostics.
+failure storm cannot create unbounded goroutines. A five-minute per-code window
+collapses repeated incidents without retaining correlation or payload data.
+Queue saturation does not consume that window, so a dropped event can retry
+after pressure drains. Payload-free diagnostics expose rate limiting,
+saturation, recovered delivery panics, and pending work; a panicking transport
+cannot kill the worker or strand shutdown accounting. The daemon attaches the
+canonical incident store and warms identity before opening its HTTP listener,
+preventing first-request initialization from bypassing recovery diagnostics.
 
 All legacy runtime `app_error` producers now use the same closed registry.
 Callers cannot provide arbitrary categories, sources, severities, retryability,

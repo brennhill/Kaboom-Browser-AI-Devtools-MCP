@@ -83,8 +83,10 @@ delivery with `KABOOM_TELEMETRY=off`.
 
 `/health` and `/diagnostics` expose payload-free `telemetry_delivery` counters
 for accepted `202` responses, rejected non-`202` responses, network errors,
-drops, suppressions, and the last HTTP status. No event or identity data is
-included in these diagnostics.
+drops, suppressions, and the last HTTP status. Its nested reliability snapshot
+also reports rate-limited incidents, queue saturation, recovered delivery
+panics, and current pending work. No event or identity data is included in
+these diagnostics.
 
 ## Specifications
 

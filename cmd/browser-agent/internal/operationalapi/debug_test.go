@@ -32,6 +32,9 @@ func TestHealthPayloadIncludesPayloadFreeTelemetryDeliveryDiagnostics(t *testing
 	if !ok {
 		t.Fatalf("telemetry_delivery type = %T, want telemetry.DeliverySnapshot", payload["telemetry_delivery"])
 	}
+	if delivery.Reliability.RateLimited != 0 || delivery.Reliability.Saturated != 0 || delivery.Reliability.Panics != 0 || delivery.Reliability.Pending != 0 {
+		t.Fatalf("unexpected reliability dispatcher state: %+v", delivery.Reliability)
+	}
 	encoded, err := json.Marshal(delivery)
 	if err != nil {
 		t.Fatalf("marshal delivery diagnostics: %v", err)
