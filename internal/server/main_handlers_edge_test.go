@@ -288,6 +288,10 @@ func TestOldestAndNewestLogTime(t *testing.T) {
 	t.Parallel()
 
 	s, _ := newTestServer(t, 10)
+	firstAt := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+	secondAt := firstAt.Add(time.Second)
+	now := firstAt
+	s.now = func() time.Time { return now }
 	if got := s.GetOldestLogTime(); !got.IsZero() {
 		t.Fatalf("GetOldestLogTime() on empty server = %v, want zero", got)
 	}
@@ -296,7 +300,7 @@ func TestOldestAndNewestLogTime(t *testing.T) {
 	}
 
 	s.addEntries([]types.LogEntry{{"id": "a"}})
-	time.Sleep(2 * time.Millisecond)
+	now = secondAt
 	s.addEntries([]types.LogEntry{{"id": "b"}})
 
 	oldest := s.GetOldestLogTime()
@@ -306,5 +310,8 @@ func TestOldestAndNewestLogTime(t *testing.T) {
 	}
 	if newest.Before(oldest) {
 		t.Fatalf("newest before oldest: oldest=%v newest=%v", oldest, newest)
+	}
+	if oldest != firstAt || newest != secondAt {
+		t.Fatalf("timestamp bounds = %v..%v, want %v..%v", oldest, newest, firstAt, secondAt)
 	}
 }

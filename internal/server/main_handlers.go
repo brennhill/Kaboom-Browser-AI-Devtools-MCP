@@ -24,6 +24,7 @@ type Server struct {
 	logTotalAdded int64                  // monotonic counter of total entries ever added
 	onEntries     func([]types.LogEntry) // optional callback when entries are added (e.g., for clustering)
 	TTL           time.Duration          // TTL for read-time filtering (0 means unlimited)
+	now           func() time.Time
 }
 
 // NewServer creates a new server instance
@@ -32,6 +33,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		logFile:    logFile,
 		maxEntries: maxEntries,
 		entries:    make([]types.LogEntry, 0),
+		now:        time.Now,
 	}
 
 	// Ensure log directory exists.

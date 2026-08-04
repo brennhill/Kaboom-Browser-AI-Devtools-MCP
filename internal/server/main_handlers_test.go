@@ -99,8 +99,12 @@ func TestGetLogSnapshot_AndTimestampCopies(t *testing.T) {
 	t.Parallel()
 
 	s, _ := newTestServer(t, 10)
+	firstAt := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+	secondAt := firstAt.Add(time.Second)
+	now := firstAt
+	s.now = func() time.Time { return now }
 	s.addEntries([]types.LogEntry{{"id": "a"}})
-	time.Sleep(2 * time.Millisecond)
+	now = secondAt
 	s.addEntries([]types.LogEntry{{"id": "b"}})
 
 	snapshot := s.GetLogSnapshot()
@@ -115,6 +119,9 @@ func TestGetLogSnapshot_AndTimestampCopies(t *testing.T) {
 	}
 	if snapshot.LastAddedAt.Before(snapshot.OldestAddedAt) {
 		t.Fatalf("newest timestamp before oldest: oldest=%v newest=%v", snapshot.OldestAddedAt, snapshot.LastAddedAt)
+	}
+	if snapshot.OldestAddedAt != firstAt || snapshot.LastAddedAt != secondAt {
+		t.Fatalf("timestamp bounds = %v..%v, want %v..%v", snapshot.OldestAddedAt, snapshot.LastAddedAt, firstAt, secondAt)
 	}
 
 	times := s.GetLogTimestamps()

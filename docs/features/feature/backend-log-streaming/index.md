@@ -361,3 +361,5 @@ this one bounded delivery contract.
 - Correlation-view tests drive canonical command terminal transitions directly;
   deadline scheduling and cleanup signaling remain isolated in the query
   expiration suite, so lifecycle projection tests never poll wall-clock time.
+- Internal log timestamp bounds use the server's private clock boundary;
+  snapshot and accessor tests assert exact instants without scheduler delays.

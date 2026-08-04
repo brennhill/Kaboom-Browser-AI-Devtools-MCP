@@ -24,7 +24,7 @@ func (s *Server) addEntries(newEntries []types.LogEntry) int {
 		defer s.mu.Unlock()
 
 		s.logTotalAdded += int64(len(newEntries))
-		now := time.Now()
+		now := s.now()
 		for range newEntries {
 			s.logAddedAt = append(s.logAddedAt, now)
 		}
