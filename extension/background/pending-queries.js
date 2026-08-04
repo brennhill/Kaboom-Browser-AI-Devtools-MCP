@@ -12,7 +12,7 @@ import './commands/analyze-feature-gates.js';
 import './commands/interact.js';
 import './commands/interact-content.js';
 import './commands/interact-explore.js';
-export async function handlePendingQuery(query, syncClient) {
-    return dispatch(query, syncClient);
+export async function handlePendingQuery(query, syncClient, signal = new AbortController().signal) {
+    return dispatch(query, syncClient, signal);
 }
 //# sourceMappingURL=pending-queries.js.map

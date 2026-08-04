@@ -172,6 +172,13 @@ signatures for duplicate-delivery protection. In-progress commands remain in
 their separate active map until completion. The short terminal window prevents
 a restarted daemon's reused query IDs from being mistaken for stale commands;
 durable event recordings are owned independently by `RecordingManager`.
+The sync lifecycle receives its clock, scheduler, retry randomness, and HTTP
+transport through one explicit runtime boundary. Deterministic tests advance
+polls and command deadlines directly, without wall-clock sleeps. Every repeated
+daemon delivery is checked against the full in-progress set before the bounded
+acknowledged history, and transport-created timeout results preserve the
+original correlation ID and connection generation while aborting the command
+execution signal.
 Daemon HTTP reachability and extension sync-heartbeat state are tracked as
 separate signals. A missing or stale heartbeat remains visible to Doctor and
 the connection log, but cannot label a daemon that answered `/health` as

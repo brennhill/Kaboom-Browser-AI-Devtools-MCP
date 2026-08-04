@@ -35,6 +35,7 @@ import {
 export interface CommandContext {
   query: PendingQuery
   syncClient: SyncClient
+  signal: AbortSignal
   tabId: number
   params: QueryParamsObject
   target: TargetResolution | undefined
@@ -259,7 +260,8 @@ function createDispatchLifecycle(
   }
 }
 
-export async function dispatch(query: PendingQuery, syncClient: SyncClient): Promise<void> {
+export async function dispatch(query: PendingQuery, syncClient: SyncClient, signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted()
   // Wait for initialization to complete (max 2s) so pilot cache is populated
   await Promise.race([initReady, new Promise((r) => setTimeout(r, 2000))])
 
@@ -374,6 +376,7 @@ export async function dispatch(query: PendingQuery, syncClient: SyncClient): Pro
   const ctx: CommandContext = {
     query,
     syncClient,
+    signal,
     tabId,
     params: paramsObj,
     target,
@@ -383,7 +386,9 @@ export async function dispatch(query: PendingQuery, syncClient: SyncClient): Pro
   }
 
   try {
+    signal.throwIfAborted()
     await handler(ctx)
+    signal.throwIfAborted()
     if (!lifecycle.sent()) {
       lifecycle.sendError(
         {

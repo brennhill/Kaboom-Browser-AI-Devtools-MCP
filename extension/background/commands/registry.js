@@ -168,7 +168,8 @@ function createDispatchLifecycle(query, syncClient, wrapResult) {
         sent: () => terminalSent
     };
 }
-export async function dispatch(query, syncClient) {
+export async function dispatch(query, syncClient, signal) {
+    signal.throwIfAborted();
     // Wait for initialization to complete (max 2s) so pilot cache is populated
     await Promise.race([initReady, new Promise((r) => setTimeout(r, 2000))]);
     debugLog(DebugCategory.CONNECTION, 'handlePendingQuery ENTER', {
@@ -265,6 +266,7 @@ export async function dispatch(query, syncClient) {
     const ctx = {
         query,
         syncClient,
+        signal,
         tabId,
         params: paramsObj,
         target,
@@ -273,7 +275,9 @@ export async function dispatch(query, syncClient) {
         actionToast
     };
     try {
+        signal.throwIfAborted();
         await handler(ctx);
+        signal.throwIfAborted();
         if (!lifecycle.sent()) {
             lifecycle.sendError({
                 error: 'no_result',

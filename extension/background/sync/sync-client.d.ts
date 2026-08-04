@@ -66,7 +66,7 @@ export interface SyncState {
 }
 /** Callbacks for sync client */
 export interface SyncClientCallbacks {
-    onCommand: (command: SyncCommand) => Promise<void>;
+    onCommand: (command: SyncCommand, signal: AbortSignal) => Promise<void>;
     onConnectionChange: (connected: boolean) => void;
     onCaptureOverrides?: (overrides: Record<string, string>) => void;
     onVersionMismatch?: (extensionVersion: string, serverVersion: string) => void;
@@ -76,6 +76,14 @@ export interface SyncClientCallbacks {
     getExtensionLogs: () => SyncExtensionLog[];
     acknowledgeExtensionLogs: (sentCount: number) => void;
     debugLog?: (category: string, message: string, data?: unknown) => void;
+}
+/** Controllable runtime boundary for deterministic sync lifecycle tests. */
+export interface SyncRuntime {
+    now: () => number;
+    random: () => number;
+    setTimer: (callback: () => void, delayMs: number) => ReturnType<typeof setTimeout>;
+    clearTimer: (handle: ReturnType<typeof setTimeout>) => void;
+    request: (url: string, init: RequestInit, timeoutMs: number) => Promise<Response>;
 }
 export declare class SyncClient {
     private serverUrl;
@@ -92,7 +100,8 @@ export declare class SyncClient {
     private extensionVersion;
     private connectionGeneration;
     private lifecycleEpoch;
-    constructor(serverUrl: string, extSessionId: string, callbacks: SyncClientCallbacks, extensionVersion?: string);
+    private runtime;
+    constructor(serverUrl: string, extSessionId: string, callbacks: SyncClientCallbacks, extensionVersion?: string, runtime?: SyncRuntime);
     /** Get current sync state */
     getState(): SyncState;
     /** Check if connected */

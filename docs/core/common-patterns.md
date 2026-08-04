@@ -153,11 +153,37 @@ Use this as a hard checklist during design, coding, and review.
 - Bound incident history and storage. Capacity eviction is single-pass and every
   dropped incident increments an observable pressure counter.
 
+## 16) Deterministic Lifecycle and Boundary Contracts
+
+- Drive asynchronous lifecycle tests with injected clocks, schedulers,
+  transports, storage, and randomness. Tests advance named events; they do not
+  sleep and hope that a race occurs.
+- Every accepted operation has exactly one terminal outcome. Delivery retries
+  must never execute an in-flight command twice, and timeout/cancellation must
+  preserve the command ID, correlation ID, and connection generation.
+- Every cross-context or cross-process boundary authenticates, validates,
+  bounds, correlates, and reports. Boundary payloads have one canonical wire
+  owner; handler-local transport types and manually synchronized enums are
+  prohibited.
+- Every bounded resource declares its capacity, overflow policy, retry or
+  recovery policy, dropped count, and Doctor visibility. Silent eviction and
+  recovery that depends on unrelated new activity are prohibited.
+- Prefer deterministic operation budgets (visited nodes, serialized bytes,
+  transitions, retries, and retained entries) over wall-clock assertions.
+  Hardware latency budgets run separately in an isolated CI lane.
+- CI workflows invoke canonical Make targets. A workflow contract must fail if
+  a required architecture, lifecycle, performance, coverage, or security gate
+  is defined locally but omitted from hosted CI.
+
 ## Review Checklist
 
 - [ ] Storage access follows helper/module boundaries.
 - [ ] Multi-entry-point behavior uses a shared helper path.
 - [ ] Runtime message contract is typed and synchronized.
+- [ ] Async behavior is covered by event-driven lifecycle tests with controlled time and transport.
+- [ ] Every accepted operation has one correlated terminal outcome and cancellation reaches its owner.
+- [ ] Boundary ingress is authenticated, runtime-validated, size-bounded, and locally diagnosable.
+- [ ] Every bounded queue exposes pressure, loss, and autonomous recovery behavior.
 - [ ] UX labels/toasts/badges come from shared utilities.
 - [ ] Tool mode dispatch and alias handling stay in shared registry/dispatch helpers.
 - [ ] Async extension work uses shared enqueue helpers (no one-off queue paths).

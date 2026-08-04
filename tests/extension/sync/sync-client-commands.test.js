@@ -7,6 +7,7 @@ import { test, describe, mock, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert'
 import {
   SyncClient,
+  createManualSyncRuntime,
   createMockCallbacks,
   installFetchMock,
   makeSyncResponse,
@@ -291,6 +292,45 @@ describe('SyncClient — Command dispatch', () => {
     assert.strictEqual(callbacks.onCommand.mock.calls.length, 7)
   })
 
+  test('does not redispatch any command that is still in flight when a full batch is repeated', async () => {
+    const commands = Array.from({ length: 15 }, (_, index) => ({
+      id: `cmd-running-${index + 1}`,
+      type: 'browser_action',
+      params: {}
+    }))
+    const releases = []
+    callbacks.onCommand = mock.fn(
+      () =>
+        new Promise((resolve) => {
+          releases.push(resolve)
+        })
+    )
+    let pollCount = 0
+    globalThis.fetch = mock.fn(() => {
+      pollCount++
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            makeSyncResponse({
+              commands: pollCount <= 2 ? commands : [],
+              next_poll_ms: pollCount < 2 ? 10 : 60000
+            })
+          )
+      })
+    })
+
+    const scheduler = createManualSyncRuntime()
+    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks, '', scheduler.runtime)
+    client.start()
+    await scheduler.runNext()
+    await scheduler.runNext()
+
+    assert.ok(pollCount >= 2, 'expected the daemon batch to be delivered twice')
+    assert.strictEqual(callbacks.onCommand.mock.calls.length, commands.length)
+    for (const release of releases) release()
+  })
+
   test('should keep syncing while async command handlers are still running', async () => {
     let fetchCalls = 0
     globalThis.fetch = mock.fn(() => {
@@ -341,7 +381,9 @@ describe('SyncClient — Command dispatch', () => {
           json: () =>
             Promise.resolve(
               makeSyncResponse({
-                commands: [{ id: 'cmd-hang', type: 'browser_action', params: {} }],
+                commands: [
+                  { id: 'cmd-hang', type: 'browser_action', correlation_id: 'corr-hang', params: {} }
+                ],
                 next_poll_ms: 10
               })
             )
@@ -353,12 +395,15 @@ describe('SyncClient — Command dispatch', () => {
       })
     })
 
-    callbacks.onCommand = mock.fn(async () => {
+    let receivedSignal
+    callbacks.onCommand = mock.fn(async (_command, signal) => {
+      receivedSignal = signal
       await new Promise(() => {})
     })
     callbacks.commandTimeoutMs = 50
 
-    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks)
+    const scheduler = createManualSyncRuntime()
+    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks, '', scheduler.runtime)
     const queued = []
     const originalQueue = client.queueCommandResult.bind(client)
     client.queueCommandResult = (result) => {
@@ -367,17 +412,15 @@ describe('SyncClient — Command dispatch', () => {
     }
     client.start()
 
-    for (let i = 0; i < 40 && queued.length === 0; i++) {
-      await tick(10)
-    }
+    for (let i = 0; i < 10 && queued.length === 0; i++) await scheduler.runNext()
 
     assert.ok(queued.length > 0, 'expected a timeout error result to be queued')
     assert.strictEqual(queued[0].id, 'cmd-hang')
-    assert.strictEqual(queued[0].status, 'error')
+    assert.strictEqual(queued[0].correlation_id, 'corr-hang')
+    assert.strictEqual(queued[0].status, 'timeout')
     assert.ok(String(queued[0].error).includes('timed out'))
-    for (let i = 0; i < 20 && fetchCalls < 2; i++) {
-      await tick(10)
-    }
+    assert.strictEqual(receivedSignal.aborted, true)
+    for (let i = 0; i < 5 && fetchCalls < 2; i++) await scheduler.runNext()
     assert.ok(fetchCalls >= 2, `expected sync loop to continue after timeout, got ${fetchCalls} fetch call(s)`)
   })
 

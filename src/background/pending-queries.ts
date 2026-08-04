@@ -20,6 +20,10 @@ import './commands/interact.js'
 import './commands/interact-content.js'
 import './commands/interact-explore.js'
 
-export async function handlePendingQuery(query: PendingQuery, syncClient: SyncClient): Promise<void> {
-  return dispatch(query, syncClient)
+export async function handlePendingQuery(
+  query: PendingQuery,
+  syncClient: SyncClient,
+  signal: AbortSignal = new AbortController().signal
+): Promise<void> {
+  return dispatch(query, syncClient, signal)
 }

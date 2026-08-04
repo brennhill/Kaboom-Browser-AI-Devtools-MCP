@@ -9,6 +9,7 @@ import { actionToast } from './helpers.js';
 export interface CommandContext {
     query: PendingQuery;
     syncClient: SyncClient;
+    signal: AbortSignal;
     tabId: number;
     params: QueryParamsObject;
     target: TargetResolution | undefined;
@@ -21,5 +22,5 @@ export interface CommandContext {
 }
 export type CommandHandler = (ctx: CommandContext) => Promise<void>;
 export declare function registerCommand(type: string, handler: CommandHandler): void;
-export declare function dispatch(query: PendingQuery, syncClient: SyncClient): Promise<void>;
+export declare function dispatch(query: PendingQuery, syncClient: SyncClient, signal: AbortSignal): Promise<void>;
 //# sourceMappingURL=registry.d.ts.map

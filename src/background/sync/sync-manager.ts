@@ -102,7 +102,7 @@ export function startSyncClient(deps: SyncManagerDeps): void {
     {
       // Handle commands from server
       // #lizard forgives
-      onCommand: async (command: SyncCommand) => {
+      onCommand: async (command: SyncCommand, signal: AbortSignal) => {
         deps.debugLog(DebugCategory.CONNECTION, 'Processing sync command', { type: command.type, id: command.id })
         if (isQueryProcessing(command.id)) {
           deps.debugLog(DebugCategory.CONNECTION, 'Skipping already processing command', { id: command.id })
@@ -110,7 +110,7 @@ export function startSyncClient(deps: SyncManagerDeps): void {
         }
         addProcessingQuery(command.id)
         try {
-          await handlePendingQueryImpl(command as unknown as PendingQuery, syncClient!)
+          await handlePendingQueryImpl(command as unknown as PendingQuery, syncClient!, signal)
         } catch (err) {
           deps.debugLog(DebugCategory.CONNECTION, 'Error processing sync command', {
             type: command.type,

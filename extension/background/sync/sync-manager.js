@@ -43,7 +43,7 @@ export function startSyncClient(deps) {
     syncClient = createSyncClient(deps.getServerUrl(), deps.getExtSessionId(), {
         // Handle commands from server
         // #lizard forgives
-        onCommand: async (command) => {
+        onCommand: async (command, signal) => {
             deps.debugLog(DebugCategory.CONNECTION, 'Processing sync command', { type: command.type, id: command.id });
             if (isQueryProcessing(command.id)) {
                 deps.debugLog(DebugCategory.CONNECTION, 'Skipping already processing command', { id: command.id });
@@ -51,7 +51,7 @@ export function startSyncClient(deps) {
             }
             addProcessingQuery(command.id);
             try {
-                await handlePendingQueryImpl(command, syncClient);
+                await handlePendingQueryImpl(command, syncClient, signal);
             }
             catch (err) {
                 deps.debugLog(DebugCategory.CONNECTION, 'Error processing sync command', {

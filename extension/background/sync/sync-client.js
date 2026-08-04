@@ -14,6 +14,13 @@ import { setConnectionGeneration } from '../runtime-state/connection-generation.
 const BASE_POLL_MS = 1000;
 const DEFAULT_COMMAND_TIMEOUT_MS = 65000;
 const ACKNOWLEDGED_COMMAND_HISTORY_LIMIT = 5;
+const defaultSyncRuntime = {
+    now: () => Date.now(),
+    random: () => Math.random(),
+    setTimer: (callback, delayMs) => setTimeout(callback, delayMs),
+    clearTimer: (handle) => clearTimeout(handle),
+    request: (url, init, timeoutMs) => fetchWithTimeout(url, init, timeoutMs)
+};
 // =============================================================================
 // SYNC CLIENT CLASS
 // =============================================================================
@@ -32,11 +39,13 @@ export class SyncClient {
     extensionVersion;
     connectionGeneration = 0;
     lifecycleEpoch = 0;
-    constructor(serverUrl, extSessionId, callbacks, extensionVersion = '') {
+    runtime;
+    constructor(serverUrl, extSessionId, callbacks, extensionVersion = '', runtime = defaultSyncRuntime) {
         this.serverUrl = serverUrl;
         this.extSessionId = extSessionId;
         this.callbacks = callbacks;
         this.extensionVersion = extensionVersion;
+        this.runtime = runtime;
         this.state = {
             connected: false,
             lastSyncAt: 0,
@@ -66,7 +75,7 @@ export class SyncClient {
         this.running = false;
         this.lifecycleEpoch++;
         if (this.intervalId) {
-            clearTimeout(this.intervalId);
+            this.runtime.clearTimer(this.intervalId);
             this.intervalId = null;
         }
         this.log('Stopped sync client');
@@ -96,7 +105,7 @@ export class SyncClient {
             return;
         }
         if (this.intervalId) {
-            clearTimeout(this.intervalId);
+            this.runtime.clearTimer(this.intervalId);
         }
         this.scheduleNextSync(0);
     }
@@ -110,7 +119,7 @@ export class SyncClient {
             this.flushRequested = true;
         }
         else if (this.running && this.intervalId) {
-            clearTimeout(this.intervalId);
+            this.runtime.clearTimer(this.intervalId);
             this.scheduleNextSync(0);
         }
     }
@@ -129,7 +138,7 @@ export class SyncClient {
         const next = {
             ...current,
             status,
-            updated_at: new Date().toISOString()
+            updated_at: new Date(this.runtime.now()).toISOString()
         };
         if (typeof progressPct === 'number' && Number.isFinite(progressPct)) {
             next.progress_pct = clampPercent(progressPct);
@@ -142,7 +151,7 @@ export class SyncClient {
     scheduleNextSync(delayMs) {
         if (!this.running)
             return;
-        this.intervalId = setTimeout(() => this.doSync(), delayMs);
+        this.intervalId = this.runtime.setTimer(() => void this.doSync(), delayMs);
     }
     async doSync() {
         if (!this.running)
@@ -181,7 +190,7 @@ export class SyncClient {
                 request.features_used = features;
             }
             // Make request with timeout to prevent hanging forever (8s: server holds up to 5s + margin)
-            const response = await fetchWithTimeout(`${this.serverUrl}/sync`, buildDaemonJSONRequestInit(request, {
+            const response = await this.runtime.request(`${this.serverUrl}/sync`, buildDaemonJSONRequestInit(request, {
                 extensionVersion: this.extensionVersion || undefined
             }), 8000);
             if (!response.ok) {
@@ -250,6 +259,14 @@ export class SyncClient {
                         continue;
                     }
                     const signature = this.getCommandSignature(command);
+                    if (command.id && this.inProgressById.has(command.id)) {
+                        this.log('Skipping command already in flight', {
+                            id: command.id,
+                            correlation_id: command.correlation_id,
+                            type: command.type
+                        });
+                        continue;
+                    }
                     if (command.id && this.processedCommandSignatures.has(signature)) {
                         this.log('Skipping already processed command', {
                             id: command.id,
@@ -314,7 +331,7 @@ export class SyncClient {
     onSuccess() {
         const wasDisconnected = !this.state.connected;
         this.state.connected = true;
-        this.state.lastSyncAt = Date.now();
+        this.state.lastSyncAt = this.runtime.now();
         this.state.consecutiveFailures = 0;
         if (wasDisconnected) {
             this.log('Connected');
@@ -340,7 +357,7 @@ export class SyncClient {
     retryDelayMs() {
         const exponent = Math.min(Math.max(this.state.consecutiveFailures - 1, 0), 5);
         const capped = Math.min(BASE_POLL_MS * 2 ** exponent, 30000);
-        const jitter = 0.75 + Math.random() * 0.5;
+        const jitter = 0.75 + this.runtime.random() * 0.5;
         return Math.round(capped * jitter);
     }
     log(message, data) {
@@ -371,12 +388,18 @@ export class SyncClient {
     async dispatchCommand(command) {
         this.markInProgress(command);
         const timeoutMs = this.commandTimeoutFor(command);
+        const controller = new AbortController();
         let timeoutHandle = null;
+        let timedOut = false;
         try {
             await Promise.race([
-                Promise.resolve(this.callbacks.onCommand(command)),
+                Promise.resolve(this.callbacks.onCommand(command, controller.signal)),
                 new Promise((_, reject) => {
-                    timeoutHandle = setTimeout(() => reject(new Error(`Command ${command.id || '(unknown)'} (${command.type || 'unknown'}) timed out after ${timeoutMs}ms`)), timeoutMs);
+                    timeoutHandle = this.runtime.setTimer(() => {
+                        timedOut = true;
+                        controller.abort();
+                        reject(new Error(`Command ${command.id || '(unknown)'} (${command.type || 'unknown'}) timed out after ${timeoutMs}ms`));
+                    }, timeoutMs);
                 })
             ]);
             this.log('Command completed OK', { id: command.id });
@@ -386,13 +409,15 @@ export class SyncClient {
             this.log('Command execution FAILED', { id: command.id, error: message });
             this.queueCommandResult({
                 id: command.id,
-                status: 'error',
-                error: message
+                correlation_id: command.correlation_id,
+                status: timedOut ? 'timeout' : 'error',
+                error: message,
+                connection_generation: command.connection_generation
             });
         }
         finally {
             if (timeoutHandle) {
-                clearTimeout(timeoutHandle);
+                this.runtime.clearTimer(timeoutHandle);
             }
             this.clearInProgressById(command.id);
             // Ack after dispatch completes (success or failure) — not on bare receipt
@@ -402,7 +427,7 @@ export class SyncClient {
         }
     }
     markInProgress(command) {
-        const now = new Date().toISOString();
+        const now = new Date(this.runtime.now()).toISOString();
         const current = this.inProgressById.get(command.id);
         this.inProgressById.set(command.id, {
             id: command.id,
@@ -426,7 +451,7 @@ export class SyncClient {
         }
         return Array.from(this.inProgressById.values()).map((entry) => ({
             ...entry,
-            updated_at: entry.updated_at || new Date().toISOString()
+            updated_at: entry.updated_at || new Date(this.runtime.now()).toISOString()
         }));
     }
 }

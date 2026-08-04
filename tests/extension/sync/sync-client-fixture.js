@@ -94,3 +94,52 @@ export function installFetchMock(responseBody = makeSyncResponse(), options = {}
 export function tick(ms = 20) {
   return new Promise((r) => setTimeout(r, ms))
 }
+
+/** Deterministic clock, scheduler, and transport for sync lifecycle contracts. */
+export function createManualSyncRuntime(startMs = 1_700_000_000_000) {
+  let now = startMs
+  let nextTimerId = 1
+  const timers = new Map()
+
+  const settle = async () => {
+    for (let i = 0; i < 12; i++) await Promise.resolve()
+  }
+
+  const runtime = {
+    now: () => now,
+    random: () => 0.5,
+    setTimer(callback, delayMs) {
+      const id = nextTimerId++
+      timers.set(id, { callback, dueAt: now + Math.max(0, delayMs) })
+      return id
+    },
+    clearTimer(id) {
+      timers.delete(id)
+    },
+    request(url, init) {
+      return globalThis.fetch(url, init)
+    }
+  }
+
+  const runNext = async () => {
+    const next = [...timers.entries()].sort((left, right) => {
+      const dueDelta = left[1].dueAt - right[1].dueAt
+      return dueDelta || left[0] - right[0]
+    })[0]
+    if (!next) return false
+    const [id, timer] = next
+    timers.delete(id)
+    now = timer.dueAt
+    timer.callback()
+    await settle()
+    return true
+  }
+
+  return {
+    runtime,
+    runNext,
+    settle,
+    pendingTimers: () => timers.size,
+    now: () => now
+  }
+}

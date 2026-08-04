@@ -121,7 +121,7 @@ describe('SyncClient upload hang timeout', () => {
     }
 
     assert.ok(
-      queued[0]?.status === 'error' && typeof queued[0]?.error === 'string',
+      queued[0]?.status === 'timeout' && typeof queued[0]?.error === 'string',
       `expected timeout error result, got: ${JSON.stringify(queued[0])}`
     )
     assert.ok(queued[0].error.includes('timed out'), `expected timeout wording, got: ${queued[0].error}`)
