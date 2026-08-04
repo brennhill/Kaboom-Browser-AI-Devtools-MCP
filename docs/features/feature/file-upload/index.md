@@ -74,3 +74,6 @@ execution seam used by deterministic transport tests. If a transport rejects
 before consuming the streaming body, the pipe reader closes with that error
 before the handler waits for its writer, guaranteeing the writer unblocks and
 the request returns a visible failure instead of hanging.
+The HTTP adapter passes the inbound request context through that same stage, so
+client disconnects and server cancellation terminate the outbound upload and
+its multipart writer instead of leaving ten-minute background work behind.

@@ -21,7 +21,7 @@ type JSONResponder func(w http.ResponseWriter, status int, data any)
 var (
 	fileReadFn      = upload.HandleFileRead
 	dialogInjectFn  = upload.HandleDialogInject
-	formSubmitFn    = upload.HandleFormSubmit
+	formSubmitFn    = upload.HandleFormSubmitCtx
 	osAutomationFn  = osauto.HandleOSAutomation
 	dismissDialogFn = osauto.DismissFileDialog
 )
@@ -121,7 +121,7 @@ func HandleFormSubmitHTTP(w http.ResponseWriter, r *http.Request, securityConfig
 		return
 	}
 
-	resp := formSubmitFn(req, securityConfig)
+	resp := formSubmitFn(r.Context(), req, securityConfig)
 	if resp.Success {
 		jsonResponse(w, http.StatusOK, resp)
 	} else {

@@ -3,6 +3,8 @@
 package httpapi
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,7 +21,7 @@ import (
 type stageStubs struct {
 	fileRead     func(upload.FileReadRequest, *uploadsec.Security, bool) upload.FileReadResponse
 	dialogInject func(upload.FileDialogInjectRequest, *uploadsec.Security) upload.StageResponse
-	formSubmit   func(upload.FormSubmitRequest, *uploadsec.Security) upload.StageResponse
+	formSubmit   func(context.Context, upload.FormSubmitRequest, *uploadsec.Security) upload.StageResponse
 	osAutomation func(upload.OSAutomationInjectRequest, *uploadsec.Security) upload.StageResponse
 	dismiss      func() upload.StageResponse
 }
@@ -148,7 +150,7 @@ func TestHandleFileDialogInjectHTTP_InvalidJSON(t *testing.T) {
 
 func TestHandleFormSubmitHTTP_Success(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		formSubmit: func(_ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
+		formSubmit: func(_ context.Context, _ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
 			return upload.StageResponse{Success: true, Stage: 3, Status: "ok"}
 		},
 	})
@@ -161,7 +163,7 @@ func TestHandleFormSubmitHTTP_Success(t *testing.T) {
 
 func TestHandleFormSubmitHTTP_Failure(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		formSubmit: func(_ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
+		formSubmit: func(_ context.Context, _ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
 			return upload.StageResponse{Success: false, Error: "blocked url"}
 		},
 	})
@@ -169,6 +171,24 @@ func TestHandleFormSubmitHTTP_Failure(t *testing.T) {
 	HandleFormSubmitHTTP(w, req, nil, testJSONResponder)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("failure should return 400, got %d", w.Code)
+	}
+}
+
+func TestHandleFormSubmitHTTPPropagatesRequestCancellation(t *testing.T) {
+	withStubbedStageFns(t, stageStubs{
+		formSubmit: func(ctx context.Context, _ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
+			if !errors.Is(ctx.Err(), context.Canceled) {
+				t.Fatalf("form submission context error = %v, want context canceled", ctx.Err())
+			}
+			return upload.StageResponse{Success: false, Error: ctx.Err().Error()}
+		},
+	})
+	w, req := postJSON("/api/form/submit", `{"form_action":"https://h/x","file_path":"/x/a"}`)
+	ctx, cancel := context.WithCancel(req.Context())
+	cancel()
+	HandleFormSubmitHTTP(w, req.WithContext(ctx), nil, testJSONResponder)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("canceled submission should return 400, got %d", w.Code)
 	}
 }
 
