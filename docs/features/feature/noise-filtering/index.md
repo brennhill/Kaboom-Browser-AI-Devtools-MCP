@@ -79,6 +79,11 @@ wiring, and telemetry adaptation are owned together by
 required `mcp.NoiseFilterer` method and initialization wiring. Automatic URL
 classification imports the canonical `internal/util` path normalizer directly;
 there is no capture-layer pass-through.
+Runner time, dispatch, and delayed execution cross one private runtime boundary.
+Tests drive callbacks and first-connect timers explicitly, while production uses
+panic-safe goroutines and timers. A detector panic clears pending state through
+a deferred lifecycle transition, so future navigation detection cannot remain
+permanently wedged.
 Configure noise handlers receive their owner callbacks through the explicit
 configure dependency value; no noise-specific ToolHandler adapter surface
 remains.

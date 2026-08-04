@@ -5,7 +5,6 @@
 package noiseautorun
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,17 +21,22 @@ import (
 func TestNoiseAutoRunner_ScheduleRunsOnce(t *testing.T) {
 	t.Parallel()
 
-	var runCount atomic.Int32
-	runner := NewRunner(func() {
-		runCount.Add(1)
-	}, 50*time.Millisecond)
+	now := time.Unix(100, 0)
+	var dispatched []func()
+	runCount := 0
+	runner := newRunner(func() { runCount++ }, 50*time.Millisecond, runnerRuntime{
+		now:      func() time.Time { return now },
+		dispatch: func(run func()) { dispatched = append(dispatched, run) },
+		delay:    func(_ time.Duration, run func()) { dispatched = append(dispatched, run) },
+	})
 
 	runner.Schedule()
+	if len(dispatched) != 1 {
+		t.Fatalf("dispatched callbacks = %d, want 1", len(dispatched))
+	}
+	dispatched[0]()
 
-	// Wait for debounce + execution
-	time.Sleep(150 * time.Millisecond)
-
-	if got := runCount.Load(); got != 1 {
+	if got := runCount; got != 1 {
 		t.Errorf("run count = %d, want 1", got)
 	}
 }
@@ -40,20 +44,26 @@ func TestNoiseAutoRunner_ScheduleRunsOnce(t *testing.T) {
 func TestNoiseAutoRunner_DebouncesRapidSchedules(t *testing.T) {
 	t.Parallel()
 
-	var runCount atomic.Int32
-	runner := NewRunner(func() {
-		runCount.Add(1)
-	}, 100*time.Millisecond)
+	now := time.Unix(100, 0)
+	var dispatched []func()
+	runCount := 0
+	runner := newRunner(func() { runCount++ }, 100*time.Millisecond, runnerRuntime{
+		now:      func() time.Time { return now },
+		dispatch: func(run func()) { dispatched = append(dispatched, run) },
+		delay:    func(_ time.Duration, run func()) { dispatched = append(dispatched, run) },
+	})
 
 	// Schedule 5 times rapidly — should only run once within debounce window
 	for i := 0; i < 5; i++ {
 		runner.Schedule()
 	}
 
-	// Wait for debounce + execution
-	time.Sleep(250 * time.Millisecond)
+	if len(dispatched) != 1 {
+		t.Fatalf("dispatched callbacks = %d, want one coalesced run", len(dispatched))
+	}
+	dispatched[0]()
 
-	if got := runCount.Load(); got != 1 {
+	if got := runCount; got != 1 {
 		t.Errorf("run count after rapid schedules = %d, want 1", got)
 	}
 }
@@ -61,18 +71,32 @@ func TestNoiseAutoRunner_DebouncesRapidSchedules(t *testing.T) {
 func TestNoiseAutoRunner_RunsAgainAfterDebounceExpires(t *testing.T) {
 	t.Parallel()
 
-	var runCount atomic.Int32
-	runner := NewRunner(func() {
-		runCount.Add(1)
-	}, 50*time.Millisecond)
+	now := time.Unix(100, 0)
+	var immediate []func()
+	var delayed []func()
+	var delays []time.Duration
+	runCount := 0
+	runner := newRunner(func() { runCount++ }, 50*time.Millisecond, runnerRuntime{
+		now:      func() time.Time { return now },
+		dispatch: func(run func()) { immediate = append(immediate, run) },
+		delay: func(delay time.Duration, run func()) {
+			delays = append(delays, delay)
+			delayed = append(delayed, run)
+		},
+	})
 
 	runner.Schedule()
-	time.Sleep(100 * time.Millisecond) // Wait for first run
+	immediate[0]()
 
+	now = now.Add(20 * time.Millisecond)
 	runner.Schedule()
-	time.Sleep(100 * time.Millisecond) // Wait for second run
+	if len(delayed) != 1 || len(delays) != 1 || delays[0] != 30*time.Millisecond {
+		t.Fatalf("delayed schedule = (%d callbacks, %v), want one callback after 30ms", len(delayed), delays)
+	}
+	now = now.Add(30 * time.Millisecond)
+	delayed[0]()
 
-	if got := runCount.Load(); got != 2 {
+	if got := runCount; got != 2 {
 		t.Errorf("run count = %d, want 2 (one per debounce window)", got)
 	}
 }
@@ -83,7 +107,34 @@ func TestNoiseAutoRunner_NilFuncDoesNotPanic(t *testing.T) {
 	// Should not panic with nil function
 	runner := NewRunner(nil, 50*time.Millisecond)
 	runner.Schedule() // Should be a no-op
-	time.Sleep(100 * time.Millisecond)
+}
+
+func TestNoiseAutoRunner_PanicDoesNotLeaveRunnerPending(t *testing.T) {
+	t.Parallel()
+
+	now := time.Unix(100, 0)
+	var dispatched []func()
+	runner := newRunner(func() { panic("detector failed") }, time.Second, runnerRuntime{
+		now:      func() time.Time { return now },
+		dispatch: func(run func()) { dispatched = append(dispatched, run) },
+		delay:    func(_ time.Duration, run func()) { dispatched = append(dispatched, run) },
+	})
+
+	runner.Schedule()
+	var recovered any
+	func() {
+		defer func() { recovered = recover() }()
+		dispatched[0]()
+	}()
+	if recovered != "detector failed" {
+		t.Fatalf("recovered panic = %v, want detector failure", recovered)
+	}
+
+	now = now.Add(time.Second)
+	runner.Schedule()
+	if len(dispatched) != 2 {
+		t.Fatalf("dispatched callbacks = %d, want runner to recover scheduling after panic", len(dispatched))
+	}
 }
 
 func TestNoiseAutoDetectEnabled_DefaultOff(t *testing.T) {
@@ -114,17 +165,25 @@ func TestWireFirstConnectRunsOnceAndHonorsShutdown(t *testing.T) {
 			if shutDown {
 				close(shutdown)
 			}
-			var calls atomic.Int32
-			WireFirstConnect(cap, shutdown, func() { calls.Add(1) })
+			timer := make(chan time.Time, 1)
+			done := make(chan struct{})
+			calls := 0
+			wireFirstConnect(cap, shutdown, func() { calls++ }, firstConnectRuntime{
+				launch: func(run func()) { go func() { defer close(done); run() }() },
+				after:  func(time.Duration) <-chan time.Time { return timer },
+			})
 			cap.Lifecycle().Emit(lifecycle.EventExtensionDisconnected, nil)
 			cap.Lifecycle().Emit(lifecycle.EventExtensionConnected, nil)
 			cap.Lifecycle().Emit(lifecycle.EventExtensionConnected, nil)
-			time.Sleep(50 * time.Millisecond)
-			want := int32(1)
+			if !shutDown {
+				timer <- time.Unix(101, 0)
+			}
+			<-done
+			want := 1
 			if shutDown {
 				want = 0
 			}
-			if got := calls.Load(); got != want {
+			if got := calls; got != want {
 				t.Fatalf("first-connect calls = %d, want %d", got, want)
 			}
 		})

@@ -44,13 +44,39 @@ type Runner struct {
 	mu       sync.Mutex
 	run      func()
 	interval time.Duration
+	runtime  runnerRuntime
 	lastRun  time.Time
 	pending  bool
 }
 
+type runnerRuntime struct {
+	now      func() time.Time
+	dispatch func(func())
+	delay    func(time.Duration, func())
+}
+
+func productionRunnerRuntime() runnerRuntime {
+	return runnerRuntime{
+		now:      time.Now,
+		dispatch: util.SafeGo,
+		delay: func(delay time.Duration, run func()) {
+			util.SafeGo(func() {
+				timer := time.NewTimer(delay)
+				defer timer.Stop()
+				<-timer.C
+				run()
+			})
+		},
+	}
+}
+
 // NewRunner constructs a debounced runner.
 func NewRunner(run func(), interval time.Duration) *Runner {
-	return &Runner{run: run, interval: interval}
+	return newRunner(run, interval, productionRunnerRuntime())
+}
+
+func newRunner(run func(), interval time.Duration, runtime runnerRuntime) *Runner {
+	return &Runner{run: run, interval: interval, runtime: runtime}
 }
 
 // Schedule requests a run, coalescing requests while one is pending.
@@ -58,18 +84,15 @@ func (runner *Runner) Schedule() {
 	if runner.run == nil {
 		return
 	}
-	immediate, delay, shouldRun := runner.plan(time.Now())
+	immediate, delay, shouldRun := runner.plan(runner.runtime.now())
 	if !shouldRun {
 		return
 	}
 	if immediate {
-		util.SafeGo(runner.execute)
+		runner.runtime.dispatch(runner.execute)
 		return
 	}
-	util.SafeGo(func() {
-		time.Sleep(delay)
-		runner.execute()
-	})
+	runner.runtime.delay(delay, runner.execute)
 }
 
 func (runner *Runner) plan(now time.Time) (immediate bool, delay time.Duration, shouldRun bool) {
@@ -87,11 +110,13 @@ func (runner *Runner) plan(now time.Time) (immediate bool, delay time.Duration, 
 }
 
 func (runner *Runner) execute() {
+	defer func() {
+		runner.mu.Lock()
+		defer runner.mu.Unlock()
+		runner.lastRun = runner.runtime.now()
+		runner.pending = false
+	}()
 	runner.run()
-	runner.mu.Lock()
-	defer runner.mu.Unlock()
-	runner.lastRun = time.Now()
-	runner.pending = false
 }
 
 // WireNavigation installs debounced detection on navigation events when enabled.
@@ -106,6 +131,18 @@ func WireNavigation(store *capture.Capture, detect func()) {
 
 // WireFirstConnect invokes detect once after the first extension connection.
 func WireFirstConnect(store *capture.Capture, shutdown <-chan struct{}, detect func()) {
+	wireFirstConnect(store, shutdown, detect, firstConnectRuntime{
+		launch: util.SafeGo,
+		after:  time.After,
+	})
+}
+
+type firstConnectRuntime struct {
+	launch func(func())
+	after  func(time.Duration) <-chan time.Time
+}
+
+func wireFirstConnect(store *capture.Capture, shutdown <-chan struct{}, detect func(), runtime firstConnectRuntime) {
 	if store == nil || detect == nil {
 		return
 	}
@@ -115,9 +152,9 @@ func WireFirstConnect(store *capture.Capture, shutdown <-chan struct{}, detect f
 			return
 		}
 		once.Do(func() {
-			util.SafeGo(func() {
+			runtime.launch(func() {
 				select {
-				case <-time.After(FirstConnectDelay()):
+				case <-runtime.after(FirstConnectDelay()):
 				case <-shutdown:
 					return
 				}
