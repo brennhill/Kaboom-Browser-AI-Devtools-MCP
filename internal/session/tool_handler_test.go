@@ -8,8 +8,10 @@ package session
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -218,6 +220,15 @@ func TestSessionHandleTool_CompareMissingParams(t *testing.T) {
 	_, err = sm.HandleTool(json.RawMessage(`{"action":"compare","compare_b":"b"}`))
 	if err == nil {
 		t.Fatal("Expected error for compare without compare_a")
+	}
+}
+
+func TestSessionHandleToolRejectsNegativePerformanceBudget(t *testing.T) {
+	t.Parallel()
+	sm := NewSessionManager(10, &mockCaptureState{pageURL: "http://localhost:3000"})
+	_, err := sm.HandleTool(json.RawMessage(`{"action":"compare","compare_a":"a","compare_b":"b","performance_budgets":{"lcp":-1}}`))
+	if err == nil || !strings.Contains(err.Error(), "non-negative") {
+		t.Fatalf("negative budget error = %v", err)
 	}
 }
 

@@ -114,6 +114,7 @@ func ParseConfigureArgs(action string, args []string) (map[string]any, error) {
 		"--compare-a":            {MCPKey: "compare_a", Kind: FlagString},
 		"--compare-b":            {MCPKey: "compare_b", Kind: FlagString},
 		"--url":                  {MCPKey: "url", Kind: FlagString},
+		"--performance-budgets":  {MCPKey: "performance_budgets", Kind: FlagJSON},
 		// Testing
 		"--severity-min": {MCPKey: "severity_min", Kind: FlagString},
 		"--test-id":      {MCPKey: "test_id", Kind: FlagString},

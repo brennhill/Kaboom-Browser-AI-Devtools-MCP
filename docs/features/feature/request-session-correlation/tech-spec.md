@@ -7,12 +7,27 @@ relates-to: [product-spec.md, ../backend-log-streaming/tech-spec.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-request-session-correlation
-last_reviewed: 2026-07-05
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+last_reviewed: 2026-08-04
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # Request/Session Correlation — Technical Specification
+
+## Performance-aware comparisons
+
+Snapshot capture retains a bounded page-scoped performance sample set alongside
+the latest sample. `diff_sessions` compares FCP, LCP, INP, CLS, load, request
+count, transfer size, total blocking time, duplicate endpoints, and the inferred
+dominant critical-path segment. For three or more samples per side it reports
+median and interpolated p75; smaller sets are explicitly
+`insufficient_samples`.
+
+Compare accepts `performance_budgets`, a metric-to-maximum-absolute-regression
+map. Unknown or unavailable metrics receive an `unavailable` verdict.
+Stored samples use the canonical deep-clone operation, including Web Vitals
+attribution, so callers cannot mutate retained baselines through aliased slices
+or pointers.
 
 ## Architecture
 

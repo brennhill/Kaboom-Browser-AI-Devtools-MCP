@@ -380,3 +380,68 @@ func TestDiffPerformance_Improvement(t *testing.T) {
 		t.Error("Expected no regression when transfer size decreased")
 	}
 }
+
+func TestPerformanceWithBudgetsComparesVitalsExecutionAndRepeatedSamples(t *testing.T) {
+	beforeLCP, afterLCP := 2000.0, 2350.0
+	beforeINP, afterINP := 120.0, 240.0
+	before := &types.NamedSnapshot{
+		Performance: &performance.PerformanceSnapshot{
+			Timing:    performance.PerformanceTiming{LargestContentfulPaint: &beforeLCP, InteractionToNextPaint: &beforeINP},
+			LongTasks: performance.LongTaskMetrics{TotalBlockingTime: 80},
+		},
+		PerformanceSamples: []performance.PerformanceSnapshot{
+			{Timing: performance.PerformanceTiming{Load: 100}}, {Timing: performance.PerformanceTiming{Load: 200}},
+			{Timing: performance.PerformanceTiming{Load: 300}}, {Timing: performance.PerformanceTiming{Load: 400}},
+		},
+	}
+	after := &types.NamedSnapshot{
+		Performance: &performance.PerformanceSnapshot{
+			Timing:    performance.PerformanceTiming{LargestContentfulPaint: &afterLCP, InteractionToNextPaint: &afterINP},
+			LongTasks: performance.LongTaskMetrics{TotalBlockingTime: 180},
+		},
+		PerformanceSamples: []performance.PerformanceSnapshot{
+			{Timing: performance.PerformanceTiming{Load: 200}}, {Timing: performance.PerformanceTiming{Load: 300}},
+			{Timing: performance.PerformanceTiming{Load: 400}}, {Timing: performance.PerformanceTiming{Load: 500}},
+		},
+	}
+	diff := PerformanceWithBudgets(before, after, map[string]float64{"lcp": 300, "inp": 150})
+	if diff.LCP == nil || diff.INP == nil || diff.ExecutionCost == nil {
+		t.Fatalf("rich metrics missing: %+v", diff)
+	}
+	if diff.Budgets["lcp"].Status != "fail" || diff.Budgets["inp"].Status != "pass" {
+		t.Fatalf("budget verdicts = %+v", diff.Budgets)
+	}
+	if diff.Statistics == nil || diff.Statistics.Before.Load.Median != 250 || diff.Statistics.Before.Load.P75 != 325 {
+		t.Fatalf("sample statistics = %+v", diff.Statistics)
+	}
+}
+
+func TestPerformanceStatisticsReportInsufficientSamples(t *testing.T) {
+	snapshot := &types.NamedSnapshot{Performance: &performance.PerformanceSnapshot{Timing: performance.PerformanceTiming{Load: 100}}}
+	diff := Performance(snapshot, snapshot)
+	if diff.Statistics == nil || diff.Statistics.Status != "insufficient_samples" {
+		t.Fatalf("single-sample confidence = %+v", diff.Statistics)
+	}
+}
+
+func TestPerformanceStatisticsRetainMeasuredZeroCLS(t *testing.T) {
+	zero, one, two := 0.0, 0.1, 0.2
+	snapshot := &types.NamedSnapshot{
+		Performance:        &performance.PerformanceSnapshot{CLS: &two},
+		PerformanceSamples: []performance.PerformanceSnapshot{{CLS: &zero}, {CLS: &one}, {CLS: &two}},
+	}
+	diff := Performance(snapshot, snapshot)
+	if diff.Statistics.Before.CLS.SampleCount != 3 || diff.Statistics.Before.CLS.Median != 0.1 {
+		t.Fatalf("zero CLS was treated as missing: %+v", diff.Statistics.Before.CLS)
+	}
+}
+
+func TestDominantSegmentTieIsDeterministic(t *testing.T) {
+	fcp := 100.0
+	name, duration := dominantSegment(performance.PerformanceSnapshot{
+		Timing: performance.PerformanceTiming{TimeToFirstByte: 100, FirstContentfulPaint: &fcp},
+	})
+	if name != "navigation_ttfb" || duration != 100 {
+		t.Fatalf("tie winner = %s %.0f", name, duration)
+	}
+}

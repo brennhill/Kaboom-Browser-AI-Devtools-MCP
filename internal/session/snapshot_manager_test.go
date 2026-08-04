@@ -15,6 +15,35 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
 
+type performanceSampleCapture struct {
+	*mockCaptureState
+	samples []performance.PerformanceSnapshot
+}
+
+func (capture *performanceSampleCapture) GetPerformanceSamples() []performance.PerformanceSnapshot {
+	return capture.samples
+}
+
+func TestSessionManagerCapturesRepeatedPerformanceSamplesForCurrentPage(t *testing.T) {
+	t.Parallel()
+	latest := &performance.PerformanceSnapshot{URL: "/app", Timing: performance.PerformanceTiming{Load: 300}}
+	reader := &performanceSampleCapture{
+		mockCaptureState: &mockCaptureState{performance: latest, pageURL: "/app"},
+		samples: []performance.PerformanceSnapshot{
+			{URL: "/other", Timing: performance.PerformanceTiming{Load: 50}},
+			{URL: "/app", Timing: performance.PerformanceTiming{Load: 100}},
+			{URL: "/app", Timing: performance.PerformanceTiming{Load: 300}},
+		},
+	}
+	snapshot, err := NewSessionManager(10, reader).Capture("profile", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.PerformanceSamples) != 2 || snapshot.PerformanceSamples[0].Timing.Load != 100 {
+		t.Fatalf("page-scoped performance samples = %+v", snapshot.PerformanceSamples)
+	}
+}
+
 // ============================================
 // NewSessionManager
 // ============================================

@@ -154,6 +154,17 @@ func (r *runtimeStateReader) GetPerformance() *performance.PerformanceSnapshot {
 	return best
 }
 
+func (r *runtimeStateReader) GetPerformanceSamples() []performance.PerformanceSnapshot {
+	if r.performanceEntries == nil {
+		return nil
+	}
+	samples := r.performanceEntries()
+	if len(samples) > 20 {
+		samples = samples[len(samples)-20:]
+	}
+	return append([]performance.PerformanceSnapshot(nil), samples...)
+}
+
 func (r *runtimeStateReader) GetCurrentPageURL() string {
 	if r.capture == nil {
 		return ""

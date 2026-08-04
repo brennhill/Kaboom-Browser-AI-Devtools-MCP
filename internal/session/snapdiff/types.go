@@ -36,10 +36,18 @@ type ErrorDiff struct {
 
 // NetworkDiff holds the network comparison between two snapshots.
 type NetworkDiff struct {
-	NewErrors        []types.SnapshotNetworkRequest `json:"new_errors"`
-	StatusChanges    []NetworkChange                `json:"status_changes"`
-	NewEndpoints     []types.SnapshotNetworkRequest `json:"new_endpoints"`
-	MissingEndpoints []types.SnapshotNetworkRequest `json:"missing_endpoints"`
+	NewErrors         []types.SnapshotNetworkRequest `json:"new_errors"`
+	StatusChanges     []NetworkChange                `json:"status_changes"`
+	NewEndpoints      []types.SnapshotNetworkRequest `json:"new_endpoints"`
+	MissingEndpoints  []types.SnapshotNetworkRequest `json:"missing_endpoints"`
+	DuplicateRequests []DuplicateRequestChange       `json:"duplicate_requests"`
+}
+
+type DuplicateRequestChange struct {
+	Method string `json:"method"`
+	URL    string `json:"url"`
+	Before int    `json:"before"`
+	After  int    `json:"after"`
 }
 
 // NetworkChange represents a status code change for the same endpoint.
@@ -53,9 +61,52 @@ type NetworkChange struct {
 
 // PerformanceDiff holds performance metric comparisons.
 type PerformanceDiff struct {
-	LoadTime     *MetricChange `json:"load_time,omitempty"`
-	RequestCount *MetricChange `json:"request_count,omitempty"`
-	TransferSize *MetricChange `json:"transfer_size,omitempty"`
+	LoadTime      *MetricChange            `json:"load_time,omitempty"`
+	FCP           *MetricChange            `json:"fcp,omitempty"`
+	LCP           *MetricChange            `json:"lcp,omitempty"`
+	INP           *MetricChange            `json:"inp,omitempty"`
+	CLS           *MetricChange            `json:"cls,omitempty"`
+	RequestCount  *MetricChange            `json:"request_count,omitempty"`
+	TransferSize  *MetricChange            `json:"transfer_size,omitempty"`
+	ExecutionCost *MetricChange            `json:"execution_cost,omitempty"`
+	CriticalPath  *CriticalPathChange      `json:"critical_path,omitempty"`
+	Statistics    *PerformanceStatistics   `json:"statistics,omitempty"`
+	Budgets       map[string]BudgetVerdict `json:"budgets,omitempty"`
+}
+
+type CriticalPathChange struct {
+	BeforeSegment string  `json:"before_segment"`
+	BeforeMs      float64 `json:"before_ms"`
+	AfterSegment  string  `json:"after_segment"`
+	AfterMs       float64 `json:"after_ms"`
+}
+
+type Distribution struct {
+	SampleCount int     `json:"sample_count"`
+	Median      float64 `json:"median"`
+	P75         float64 `json:"p75"`
+}
+
+type SnapshotStatistics struct {
+	Load          Distribution `json:"load"`
+	FCP           Distribution `json:"fcp"`
+	LCP           Distribution `json:"lcp"`
+	INP           Distribution `json:"inp"`
+	CLS           Distribution `json:"cls"`
+	TransferSize  Distribution `json:"transfer_size"`
+	ExecutionCost Distribution `json:"execution_cost"`
+}
+
+type PerformanceStatistics struct {
+	Status string             `json:"status"`
+	Before SnapshotStatistics `json:"before"`
+	After  SnapshotStatistics `json:"after"`
+}
+
+type BudgetVerdict struct {
+	AllowedRegression float64 `json:"allowed_regression"`
+	ActualRegression  float64 `json:"actual_regression"`
+	Status            string  `json:"status"`
 }
 
 // MetricChange holds before/after values for a numeric metric.

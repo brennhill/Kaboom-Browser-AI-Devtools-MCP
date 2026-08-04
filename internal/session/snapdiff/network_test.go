@@ -26,6 +26,28 @@ func assertNetworkDiffEmpty(t *testing.T, diff NetworkDiff) {
 	}
 }
 
+func TestNetworkReportsDuplicateRequestCountChanges(t *testing.T) {
+	t.Parallel()
+	request := types.SnapshotNetworkRequest{Method: "GET", URL: "https://app.test/api/projects", Status: 200}
+	before := &types.NamedSnapshot{NetworkRequests: []types.SnapshotNetworkRequest{request}}
+	after := &types.NamedSnapshot{NetworkRequests: []types.SnapshotNetworkRequest{request, request, request}}
+	diff := Network(before, after)
+	if len(diff.DuplicateRequests) != 1 || diff.DuplicateRequests[0].Before != 1 || diff.DuplicateRequests[0].After != 3 {
+		t.Fatalf("duplicate changes = %+v", diff.DuplicateRequests)
+	}
+}
+
+func TestNetworkReportsResolvedDuplicates(t *testing.T) {
+	t.Parallel()
+	request := types.SnapshotNetworkRequest{Method: "GET", URL: "https://app.test/api/projects", Status: 200}
+	before := &types.NamedSnapshot{NetworkRequests: []types.SnapshotNetworkRequest{request, request}}
+	after := &types.NamedSnapshot{NetworkRequests: []types.SnapshotNetworkRequest{request}}
+	diff := Network(before, after)
+	if len(diff.DuplicateRequests) != 1 || diff.DuplicateRequests[0].Before != 2 || diff.DuplicateRequests[0].After != 1 {
+		t.Fatalf("resolved duplicate = %+v", diff.DuplicateRequests)
+	}
+}
+
 // ============================================
 // buildEndpointMap
 // ============================================

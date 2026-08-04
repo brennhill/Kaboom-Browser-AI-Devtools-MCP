@@ -309,7 +309,7 @@ func (s *PerformanceStore) appendSnapshots(snapshots []performance.PerformanceSn
 			s.snapshotOrder = append(s.snapshotOrder, key)
 			s.snapshotAdded[key] = time.Now()
 		}
-		s.snapshots[key] = clonePerformanceSnapshot(snapshot)
+		s.snapshots[key] = performance.CloneSnapshot(snapshot)
 
 		if len(s.snapshots) > maxPerformanceSnapshots && len(s.snapshotOrder) > 0 {
 			oldestKey := s.snapshotOrder[0]
@@ -328,7 +328,7 @@ func (s *PerformanceStore) snapshotsList() []performance.PerformanceSnapshot {
 	}
 	out := make([]performance.PerformanceSnapshot, 0, len(s.snapshots))
 	for _, snapshot := range s.snapshots {
-		out = append(out, clonePerformanceSnapshot(snapshot))
+		out = append(out, performance.CloneSnapshot(snapshot))
 	}
 	return out
 }
@@ -336,7 +336,7 @@ func (s *PerformanceStore) snapshotsList() []performance.PerformanceSnapshot {
 // snapshotByURL returns one snapshot by URL key.
 func (s *PerformanceStore) snapshotByURL(url string) (performance.PerformanceSnapshot, bool) {
 	snap, ok := s.snapshots[url]
-	return clonePerformanceSnapshot(snap), ok
+	return performance.CloneSnapshot(snap), ok
 }
 
 // storeBeforeSnapshot keeps a pre-action snapshot for perf diff correlation.
@@ -348,7 +348,7 @@ func (s *PerformanceStore) storeBeforeSnapshot(correlationID string, snapshot pe
 		s.beforeOrder = append(s.beforeOrder, correlationID)
 		s.beforeAdded[correlationID] = time.Now()
 	}
-	s.beforeSnapshots[correlationID] = clonePerformanceSnapshot(snapshot)
+	s.beforeSnapshots[correlationID] = performance.CloneSnapshot(snapshot)
 	if len(s.beforeSnapshots) <= maxBeforeSnapshots {
 		return
 	}
@@ -373,38 +373,7 @@ func (s *PerformanceStore) takeBeforeSnapshot(correlationID string) (performance
 			}
 		}
 	}
-	return clonePerformanceSnapshot(snap), ok
-}
-
-func clonePerformanceSnapshot(snapshot performance.PerformanceSnapshot) performance.PerformanceSnapshot {
-	snapshot.Resources = append([]performance.ResourceEntry(nil), snapshot.Resources...)
-	snapshot.Network.SlowestRequests = append([]performance.SlowRequest(nil), snapshot.Network.SlowestRequests...)
-	if snapshot.Network.ByType != nil {
-		byType := make(map[string]performance.TypeSummary, len(snapshot.Network.ByType))
-		for key, value := range snapshot.Network.ByType {
-			byType[key] = value
-		}
-		snapshot.Network.ByType = byType
-	}
-	snapshot.CLS = cloneFloat64(snapshot.CLS)
-	snapshot.Timing.FirstContentfulPaint = cloneFloat64(snapshot.Timing.FirstContentfulPaint)
-	snapshot.Timing.LargestContentfulPaint = cloneFloat64(snapshot.Timing.LargestContentfulPaint)
-	snapshot.Timing.InteractionToNextPaint = cloneFloat64(snapshot.Timing.InteractionToNextPaint)
-	if snapshot.UserTiming != nil {
-		userTiming := *snapshot.UserTiming
-		userTiming.Marks = append([]performance.UserTimingEntry(nil), snapshot.UserTiming.Marks...)
-		userTiming.Measures = append([]performance.UserTimingEntry(nil), snapshot.UserTiming.Measures...)
-		snapshot.UserTiming = &userTiming
-	}
-	return snapshot
-}
-
-func cloneFloat64(value *float64) *float64 {
-	if value == nil {
-		return nil
-	}
-	clone := *value
-	return &clone
+	return performance.CloneSnapshot(snap), ok
 }
 
 // clear resets performance snapshot/baseline/before-snapshot state.

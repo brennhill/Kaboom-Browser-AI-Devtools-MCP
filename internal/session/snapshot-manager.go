@@ -75,6 +75,19 @@ func (sm *SessionManager) captureCurrentState(name, urlFilter string) *types.Nam
 	network := sm.reader.GetNetworkRequests()
 	ws := sm.reader.GetWSConnections()
 	perf := sm.reader.GetPerformance()
+	var perfSamples []performance.PerformanceSnapshot
+	if sampleReader, ok := sm.reader.(interface {
+		GetPerformanceSamples() []performance.PerformanceSnapshot
+	}); ok {
+		for _, sample := range sampleReader.GetPerformanceSamples() {
+			if perf == nil || perf.URL == "" || sample.URL == perf.URL {
+				perfSamples = append(perfSamples, sample)
+			}
+		}
+	}
+	if len(perfSamples) == 0 && perf != nil {
+		perfSamples = append(perfSamples, *perf)
+	}
 	pageURL := sm.reader.GetCurrentPageURL()
 
 	// Apply URL filter to network requests
@@ -102,7 +115,7 @@ func (sm *SessionManager) captureCurrentState(name, urlFilter string) *types.Nam
 	// Deep copy performance snapshot if present
 	var perfCopy *performance.PerformanceSnapshot
 	if perf != nil {
-		p := *perf
+		p := performance.CloneSnapshot(*perf)
 		perfCopy = &p
 	}
 
@@ -116,7 +129,16 @@ func (sm *SessionManager) captureCurrentState(name, urlFilter string) *types.Nam
 		NetworkRequests:      network,
 		WebSocketConnections: ws,
 		Performance:          perfCopy,
+		PerformanceSamples:   clonePerformanceSamples(perfSamples),
 	}
+}
+
+func clonePerformanceSamples(samples []performance.PerformanceSnapshot) []performance.PerformanceSnapshot {
+	clones := make([]performance.PerformanceSnapshot, len(samples))
+	for index, sample := range samples {
+		clones[index] = performance.CloneSnapshot(sample)
+	}
+	return clones
 }
 
 // List returns all stored snapshots in insertion order.

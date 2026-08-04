@@ -113,6 +113,26 @@ func TestSnapshotJSON_VitalsAttributionDeserialize(t *testing.T) {
 	}
 }
 
+func TestCloneSnapshotDeepCopiesVitalsAttribution(t *testing.T) {
+	value := 1.0
+	original := PerformanceSnapshot{
+		CLS: &value,
+		VitalsAttribution: &WireVitalsAttribution{
+			LCP:       &WireLCPAttribution{Element: WireElementDescriptor{Tag: "img", Classes: []string{"hero"}}},
+			CLS:       WireCLSAttribution{Shifts: []WireLayoutShiftAttribution{{Nodes: []WireElementDescriptor{{Tag: "div", Classes: []string{"banner"}}}}}},
+			LongTasks: []WireLongTaskAttribution{{SourceStack: []string{"at app"}}},
+		},
+	}
+	clone := CloneSnapshot(original)
+	clone.VitalsAttribution.LCP.Element.Classes[0] = "changed"
+	clone.VitalsAttribution.CLS.Shifts[0].Nodes[0].Classes[0] = "changed"
+	clone.VitalsAttribution.LongTasks[0].SourceStack[0] = "changed"
+	*clone.CLS = 2
+	if original.VitalsAttribution.LCP.Element.Classes[0] != "hero" || original.VitalsAttribution.CLS.Shifts[0].Nodes[0].Classes[0] != "banner" || original.VitalsAttribution.LongTasks[0].SourceStack[0] != "at app" || *original.CLS != 1 {
+		t.Fatalf("clone aliases original: %+v", original)
+	}
+}
+
 func TestSnapshotJSON_UserTimingRoundTrip(t *testing.T) {
 	t.Parallel()
 

@@ -12,11 +12,12 @@ import (
 
 // diffSessionsParams defines the MCP tool input schema.
 type diffSessionsParams struct {
-	Action    string `json:"action"`
-	Name      string `json:"name,omitempty"`
-	CompareA  string `json:"compare_a,omitempty"`
-	CompareB  string `json:"compare_b,omitempty"`
-	URLFilter string `json:"url,omitempty"`
+	Action             string             `json:"action"`
+	Name               string             `json:"name,omitempty"`
+	CompareA           string             `json:"compare_a,omitempty"`
+	CompareB           string             `json:"compare_b,omitempty"`
+	URLFilter          string             `json:"url,omitempty"`
+	PerformanceBudgets map[string]float64 `json:"performance_budgets,omitempty"`
 }
 
 // handleCapture handles the "capture" action for diff_sessions.
@@ -46,7 +47,12 @@ func (sm *SessionManager) handleCompare(p diffSessionsParams) (any, error) {
 	if p.CompareA == "" || p.CompareB == "" {
 		return nil, fmt.Errorf("'compare_a' and 'compare_b' are required for compare action")
 	}
-	diff, err := sm.Compare(p.CompareA, p.CompareB)
+	for name, allowed := range p.PerformanceBudgets {
+		if allowed < 0 {
+			return nil, fmt.Errorf("performance budget %q must be non-negative", name)
+		}
+	}
+	diff, err := sm.CompareWithBudgets(p.CompareA, p.CompareB, p.PerformanceBudgets)
 	if err != nil {
 		return nil, err
 	}

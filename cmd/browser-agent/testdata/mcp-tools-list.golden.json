@@ -1129,6 +1129,13 @@
           "description": "Regex pattern (single-rule flattening helper for noise_action=add)",
           "type": "string"
         },
+        "performance_budgets": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Allowed absolute regression by metric for diff_sessions compare (load, fcp, lcp, inp, cls, request_count, transfer_size, execution_cost)",
+          "type": "object"
+        },
         "reason": {
           "description": "Why this is noise",
           "type": "string"

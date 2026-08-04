@@ -7,8 +7,8 @@ owners: []
 last_reviewed: 2026-08-04
 code_paths:
   - internal/capture/model.go
+  - internal/capture/accessors.go
   - internal/capture/capture.go
-  - internal/capture/model.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/server.go
   - internal/session/clientreg/registry.go
@@ -18,6 +18,10 @@ code_paths:
   - internal/session/comparison.go
   - internal/session/snapdiff/types.go
   - internal/session/snapdiff/network.go
+  - internal/session/snapdiff/performance.go
+  - internal/performance/types.go
+  - internal/session/runtime_reader.go
+  - internal/session/tool-handler.go
   - internal/types/snapshot.go
   - internal/util/media.go
 test_paths:
@@ -27,12 +31,14 @@ test_paths:
   - internal/session/sessions_test.go
   - internal/session/sessions_compare_regression_test.go
   - internal/session/sessions_tool_handler_test.go
+  - internal/session/tool_handler_test.go
   - internal/session/comparison_test.go
   - internal/session/snapdiff/errors_test.go
   - internal/session/snapdiff/network_test.go
   - internal/session/snapdiff/performance_test.go
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+  - internal/performance/wire_performance_test.go
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 > **2026-07-26:** the `verify_fix` half of this feature was removed as dead code.
@@ -72,3 +78,8 @@ directly from `internal/util`, without routing through capture.
 Client-session registry wiring is owned by `Capture.Clients()`; runtime routes
 consume the installed registry directly without Capture set/get forwarding
 methods.
+
+Named snapshots retain up to 20 recent performance samples for the same page.
+Comparisons report Core Web Vitals, transfer and execution cost, duplicate
+requests, critical-path changes, median/p75 distributions, sample sufficiency,
+and optional absolute regression-budget verdicts.

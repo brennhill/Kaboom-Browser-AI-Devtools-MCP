@@ -34,6 +34,11 @@ func runtimeProperties() map[string]any {
 			"type":        "string",
 			"description": "URL filter for snapshot capture (diff_sessions)",
 		},
+		"performance_budgets": map[string]any{
+			"type":                 "object",
+			"description":          "Allowed absolute regression by metric for diff_sessions compare (load, fcp, lcp, inp, cls, request_count, transfer_size, execution_cost)",
+			"additionalProperties": map[string]any{"type": "number"},
+		},
 		"recording_id": map[string]any{
 			"type":        "string",
 			"description": "Recording ID (event_recording_stop, playback)",

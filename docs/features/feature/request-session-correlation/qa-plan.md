@@ -7,9 +7,9 @@ relates-to: [product-spec.md, tech-spec.md]
 last-verified: 2026-03-05
 doc_type: qa-plan
 feature_id: feature-request-session-correlation
-last_reviewed: 2026-07-05
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+last_reviewed: 2026-08-04
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # Request/Session Correlation — QA Plan

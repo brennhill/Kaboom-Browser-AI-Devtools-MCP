@@ -45,13 +45,22 @@ func Errors(a, b *types.NamedSnapshot) ErrorDiff {
 
 // countPerfRegressions counts how many performance metrics regressed.
 func countPerfRegressions(perf PerformanceDiff) int {
-	count := 0
-	for _, mc := range []*MetricChange{perf.LoadTime, perf.RequestCount, perf.TransferSize} {
+	regressed := make(map[string]bool)
+	metrics := map[string]*MetricChange{
+		"load": perf.LoadTime, "fcp": perf.FCP, "lcp": perf.LCP, "inp": perf.INP, "cls": perf.CLS,
+		"request_count": perf.RequestCount, "transfer_size": perf.TransferSize, "execution_cost": perf.ExecutionCost,
+	}
+	for name, mc := range metrics {
 		if mc != nil && mc.Regression {
-			count++
+			regressed[name] = true
 		}
 	}
-	return count
+	for name, budget := range perf.Budgets {
+		if budget.Status == "fail" {
+			regressed[name] = true
+		}
+	}
+	return len(regressed)
 }
 
 // hasStatusRegression returns true if any status change went from OK to error.

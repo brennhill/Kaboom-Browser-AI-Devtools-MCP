@@ -66,7 +66,7 @@ var configureModeSpecs = map[string]modeParamSpec{
 	},
 	"diff_sessions": {
 		Hint:     "Compare two session snapshots to find state differences",
-		Optional: []string{"verif_session_action", "name", "compare_a", "compare_b", "url"},
+		Optional: []string{"verif_session_action", "name", "compare_a", "compare_b", "url", "performance_budgets"},
 	},
 	"audit_log": {
 		Hint:     "View tool call audit trail with timing and results",

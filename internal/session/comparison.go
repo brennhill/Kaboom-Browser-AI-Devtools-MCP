@@ -14,6 +14,10 @@ import (
 
 // Compare diffs two snapshots. Use "current" as b to compare against live state.
 func (sm *SessionManager) Compare(a, b string) (*snapdiff.Result, error) {
+	return sm.CompareWithBudgets(a, b, nil)
+}
+
+func (sm *SessionManager) CompareWithBudgets(a, b string, budgets map[string]float64) (*snapdiff.Result, error) {
 	sm.mu.RLock()
 	snapA, existsA := sm.snaps[a]
 	sm.mu.RUnlock()
@@ -43,7 +47,7 @@ func (sm *SessionManager) Compare(a, b string) (*snapdiff.Result, error) {
 
 	result.Errors = snapdiff.Errors(snapA, snapB)
 	result.Network = snapdiff.Network(snapA, snapB)
-	result.Performance = snapdiff.Performance(snapA, snapB)
+	result.Performance = snapdiff.PerformanceWithBudgets(snapA, snapB, budgets)
 	result.Summary = snapdiff.Summarize(result)
 
 	return result, nil

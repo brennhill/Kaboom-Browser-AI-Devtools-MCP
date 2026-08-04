@@ -27,6 +27,73 @@ type PerformanceSnapshot struct {
 	UserTiming        *UserTimingData        `json:"user_timing,omitempty"`
 }
 
+// CloneSnapshot returns a deep copy safe for storage and caller mutation.
+func CloneSnapshot(snapshot PerformanceSnapshot) PerformanceSnapshot {
+	snapshot.Resources = append([]ResourceEntry(nil), snapshot.Resources...)
+	snapshot.Network.SlowestRequests = append([]SlowRequest(nil), snapshot.Network.SlowestRequests...)
+	if snapshot.Network.ByType != nil {
+		byType := make(map[string]TypeSummary, len(snapshot.Network.ByType))
+		for key, item := range snapshot.Network.ByType {
+			byType[key] = item
+		}
+		snapshot.Network.ByType = byType
+	}
+	snapshot.CLS = cloneFloat(snapshot.CLS)
+	snapshot.Timing.FirstContentfulPaint = cloneFloat(snapshot.Timing.FirstContentfulPaint)
+	snapshot.Timing.LargestContentfulPaint = cloneFloat(snapshot.Timing.LargestContentfulPaint)
+	snapshot.Timing.InteractionToNextPaint = cloneFloat(snapshot.Timing.InteractionToNextPaint)
+	if snapshot.UserTiming != nil {
+		userTiming := *snapshot.UserTiming
+		userTiming.Marks = append([]UserTimingEntry(nil), snapshot.UserTiming.Marks...)
+		userTiming.Measures = append([]UserTimingEntry(nil), snapshot.UserTiming.Measures...)
+		snapshot.UserTiming = &userTiming
+	}
+	snapshot.VitalsAttribution = cloneVitalsAttribution(snapshot.VitalsAttribution)
+	return snapshot
+}
+
+func cloneFloat(value *float64) *float64 {
+	if value == nil {
+		return nil
+	}
+	copy := *value
+	return &copy
+}
+
+func cloneVitalsAttribution(source *WireVitalsAttribution) *WireVitalsAttribution {
+	if source == nil {
+		return nil
+	}
+	clone := *source
+	if source.LCP != nil {
+		lcp := *source.LCP
+		lcp.Element = cloneElement(source.LCP.Element)
+		clone.LCP = &lcp
+	}
+	if source.INP != nil {
+		inp := *source.INP
+		inp.Target = cloneElement(source.INP.Target)
+		clone.INP = &inp
+	}
+	clone.CLS.Shifts = append([]WireLayoutShiftAttribution(nil), source.CLS.Shifts...)
+	for index := range clone.CLS.Shifts {
+		clone.CLS.Shifts[index].Nodes = append([]WireElementDescriptor(nil), source.CLS.Shifts[index].Nodes...)
+		for nodeIndex := range clone.CLS.Shifts[index].Nodes {
+			clone.CLS.Shifts[index].Nodes[nodeIndex] = cloneElement(source.CLS.Shifts[index].Nodes[nodeIndex])
+		}
+	}
+	clone.LongTasks = append([]WireLongTaskAttribution(nil), source.LongTasks...)
+	for index := range clone.LongTasks {
+		clone.LongTasks[index].SourceStack = append([]string(nil), source.LongTasks[index].SourceStack...)
+	}
+	return &clone
+}
+
+func cloneElement(source WireElementDescriptor) WireElementDescriptor {
+	source.Classes = append([]string(nil), source.Classes...)
+	return source
+}
+
 // UserTimingData holds captured performance.mark() and performance.measure() entries.
 type UserTimingData struct {
 	Marks    []UserTimingEntry `json:"marks"`
