@@ -207,11 +207,8 @@ func TestMCPHandlerHandleRequestCorePaths(t *testing.T) {
 }
 
 func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
-	origLastNotify := updateNotifyLastShown
-	updateNotifyLastShown = time.Now()
-	t.Cleanup(func() { updateNotifyLastShown = origLastNotify })
-
 	h := NewMCPHandler(nil, "v-test")
+	h.runtime.SetUpdateLastShown(time.Now())
 	th := &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},

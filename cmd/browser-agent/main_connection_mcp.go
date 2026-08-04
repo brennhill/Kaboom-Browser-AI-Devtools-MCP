@@ -90,9 +90,9 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	releaseChecker.Start(ctx)
+	server.runtime.ReleaseChecker().Start(ctx)
 	server.startScreenshotRateLimiterCleanup(ctx)
-	binaryUpgradeState = binarywatch.Start(ctx, version,
+	server.runtime.SetUpgrade(binarywatch.Start(ctx, version,
 		func(newVersion string) {
 			server.logLifecycle("binary_upgrade_detected", port, map[string]any{
 				"current_version": version, "new_version": newVersion,
@@ -100,8 +100,8 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 			server.AddWarning("UPGRADE DETECTED: v" + newVersion + " installed. Auto-restart in ~5s.")
 		},
 		func() {
-			if binaryUpgradeState != nil {
-				if _, newVersion, _ := binaryUpgradeState.UpgradeInfo(); newVersion != "" {
+			if server.runtime.Upgrade() != nil {
+				if _, newVersion, _ := server.runtime.Upgrade().UpgradeInfo(); newVersion != "" {
 					if markerPath, err := state.UpgradeMarkerFile(); err == nil {
 						_ = binarywatch.WriteMarker(version, newVersion, markerPath)
 					}
@@ -111,7 +111,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 			process, _ := os.FindProcess(os.Getpid())
 			_ = process.Signal(syscall.SIGTERM)
 		},
-	)
+	))
 	if markerPath, err := state.UpgradeMarkerFile(); err == nil {
 		if marker, markerErr := binarywatch.ReadAndClearMarker(markerPath); markerErr == nil && marker != nil {
 			server.AddWarning(fmt.Sprintf("Upgraded from v%s to v%s", marker.FromVersion, marker.ToVersion))
@@ -451,7 +451,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	server.logLifecycle("shutdown", port, map[string]any{
 		"signal":          shutdownSignal.String(),
 		"shutdown_source": shutdownSource,
-		"uptime_seconds":  time.Since(startTime).Seconds(),
+		"uptime_seconds":  time.Since(server.runtime.StartedAt()).Seconds(),
 	})
 	if shutdownSource != "http_listener_died" {
 		daemonlife.ClearRestartHistoryOnCleanShutdown(daemonlifeDeps(server), port)
@@ -460,7 +460,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 		"port":            port,
 		"signal":          shutdownSignal.String(),
 		"shutdown_source": shutdownSource,
-		"uptime_seconds":  time.Since(startTime).Seconds(),
+		"uptime_seconds":  time.Since(server.runtime.StartedAt()).Seconds(),
 		"unexpected":      shutdownSource == "http_listener_died",
 	}); diagPath != "" && shutdownSource == "http_listener_died" {
 		diag.Printf("[Kaboom] Shutdown diagnostics written to: %s\n", diagPath)

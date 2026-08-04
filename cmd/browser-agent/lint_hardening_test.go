@@ -30,6 +30,10 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		t.Fatalf("list browser-agent root files: %v", err)
 	}
 	for _, forbidden := range []string{
+		"var releaseChecker ",
+		"var binaryUpgradeState ",
+		"var startTime ",
+		"var updateNotifyLastShown ",
 		"type JSONRPCRequest =",
 		"type JSONRPCResponse =",
 		"type MCPToolResult =",

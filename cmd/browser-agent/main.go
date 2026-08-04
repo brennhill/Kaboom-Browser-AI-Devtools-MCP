@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/versioncheck"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -33,14 +31,6 @@ var exitDiagnostics = exitdiag.New(exitdiag.Options{Version: version})
 type upgradeInfoProvider interface {
 	UpgradeInfo() (pending bool, version string, detectedAt time.Time)
 }
-
-var binaryUpgradeState upgradeInfoProvider
-
-var releaseChecker = versioncheck.New(versioncheck.Options{
-	CurrentVersion: version,
-	ReleaseURL:     os.Getenv("KABOOM_RELEASES_URL"),
-	HTTPClient:     &http.Client{Timeout: 10 * time.Second},
-})
 
 // daemonProcessArgv0 binds the build-time version to the process-title builder in
 // internal/procctl. It lives beside `version` because that is the only reason it
@@ -101,9 +91,6 @@ func buildBridgeRunner() *bridge.Runner {
 }
 
 func initBridge() { bridgeRunner = buildBridgeRunner() }
-
-// startTime tracks when the server started for uptime calculation
-var startTime = time.Now()
 
 const (
 	defaultPort     = 7890

@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/dashboard"
@@ -57,6 +58,7 @@ type stateRecoveryDiagnostics interface {
 
 // Server holds the server state.
 type Server struct {
+	runtime    *appruntime.Runtime
 	listenPort int
 	mu         sync.RWMutex
 	// sessionProjectPath is resolved once at server construction so handlers do
@@ -184,6 +186,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	}
 
 	s := &Server{
+		runtime:            appruntime.New(version),
 		listenPort:         defaultPort,
 		sessionProjectPath: sessionProjectPath,
 		warningSeen:        make(map[string]struct{}),
@@ -619,7 +622,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 		Logs:      server.logs,
 		Capture:   captured,
 		Version:   version,
-		StartedAt: startTime,
+		StartedAt: server.runtime.StartedAt(),
 		TerminalStatus: func() operationalapi.TerminalStatus {
 			status := server.getTerminalStatus()
 			return operationalapi.TerminalStatus{
@@ -630,19 +633,19 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 				BlockedCommand: status.BlockedByCommand,
 			}
 		},
-		AvailableVersion: releaseChecker.Available,
+		AvailableVersion: server.runtime.ReleaseChecker().Available,
 		UpgradeInfo: func() *health.UpgradeInfo {
-			if binaryUpgradeState == nil {
+			if server.runtime.Upgrade() == nil {
 				return nil
 			}
-			return health.BuildUpgradeInfo(binaryUpgradeState)
+			return health.BuildUpgradeInfo(server.runtime.Upgrade())
 		},
 		UsageTracker:    mcpHandler.GetUsageTracker,
 		MaxPostBodySize: maxPostBodySize,
 	})
 
 	mux.HandleFunc("/api/status", httpguard.CORS(dashboard.Status(dashboard.StatusOptions{
-		Version: version, StartedAt: startTime, Capture: captured, JSONResponse: httpapi.JSON,
+		Version: version, StartedAt: server.runtime.StartedAt(), Capture: captured, JSONResponse: httpapi.JSON,
 		Logs: func() (int, int) {
 			return server.logs.EntryCount(), server.logs.MaxEntries()
 		},

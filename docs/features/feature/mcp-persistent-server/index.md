@@ -19,6 +19,7 @@ code_paths:
   - cmd/browser-agent/internal/toolrouting/routing.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/handler.go
+  - cmd/browser-agent/internal/appruntime/runtime.go
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/tools_core.go
@@ -98,6 +99,8 @@ test_paths:
   - cmd/browser-agent/internal/toolresp/toolresp_test.go
   - cmd/browser-agent/tools_errors_test.go
   - cmd/browser-agent/health_unit_test.go
+  - cmd/browser-agent/handler_warning_test.go
+  - cmd/browser-agent/internal/appruntime/runtime_test.go
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/handler_unit_test.go
   - cmd/browser-agent/handler_unit_telemetry_test.go
@@ -170,6 +173,11 @@ last_verified_date: 2026-03-29
 ---
 
 # MCP Persistent Server
+
+Each server owns an application runtime for its start epoch, release checker,
+binary-upgrade provider, and update-warning cooldown. These collaborators are
+never shared between server instances, so parallel tests and multiple composed
+runtimes cannot suppress or overwrite one another's lifecycle state.
 
 Persisted restart timestamps are validated before they become incident
 generations. Invalid negative values take the existing fail-open corruption

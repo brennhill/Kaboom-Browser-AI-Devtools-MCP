@@ -16,9 +16,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func useReleaseChecker(t *testing.T, tag string) {
+func releaseCheckerForTag(t *testing.T, tag string) *versioncheck.Checker {
 	t.Helper()
-	original := releaseChecker
 	checker := versioncheck.New(versioncheck.Options{CurrentVersion: version})
 	if tag != "" {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -30,23 +29,26 @@ func useReleaseChecker(t *testing.T, tag string) {
 		checker.Check()
 		server.Close()
 	}
-	releaseChecker = checker
-	t.Cleanup(func() { releaseChecker = original })
+	return checker
+}
+
+func warningHandler(t *testing.T, tag string) *MCPHandler {
+	t.Helper()
+	handler := NewMCPHandler(nil, version)
+	handler.runtime.SetReleaseChecker(releaseCheckerForTag(t, tag))
+	return handler
 }
 
 func TestMaybeAddUpgradeWarning_NoPending(t *testing.T) {
 
-	// No upgrade state set — response should pass through unchanged.
-	orig := binaryUpgradeState
-	binaryUpgradeState = nil
-	defer func() { binaryUpgradeState = orig }()
+	handler := warningHandler(t, "")
 
 	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("hello"),
 	}
-	got := maybeAddUpgradeWarning(resp)
+	got := handler.maybeAddUpgradeWarning(resp)
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
@@ -57,14 +59,14 @@ func TestMaybeAddUpgradeWarning_NoPending(t *testing.T) {
 }
 
 func TestMaybeAddUpdateAvailableWarning_NoUpdate(t *testing.T) {
-	useReleaseChecker(t, "")
+	handler := warningHandler(t, "")
 
 	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("hello"),
 	}
-	got := maybeAddUpdateAvailableWarning(resp)
+	got := handler.maybeAddUpdateAvailableWarning(resp)
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
@@ -75,22 +77,15 @@ func TestMaybeAddUpdateAvailableWarning_NoUpdate(t *testing.T) {
 }
 
 func TestMaybeAddUpdateAvailableWarning_NewerAvailable(t *testing.T) {
-	// Not parallel: modifies package-level state
-	useReleaseChecker(t, "v99.0.0")
-
-	origLastNotify := updateNotifyLastShown
-	updateNotifyLastShown = time.Time{} // reset cooldown
-
-	defer func() {
-		updateNotifyLastShown = origLastNotify
-	}()
+	t.Parallel()
+	handler := warningHandler(t, "v99.0.0")
 
 	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("data"),
 	}
-	got := maybeAddUpdateAvailableWarning(resp)
+	got := handler.maybeAddUpdateAvailableWarning(resp)
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
@@ -105,23 +100,16 @@ func TestMaybeAddUpdateAvailableWarning_NewerAvailable(t *testing.T) {
 }
 
 func TestMaybeAddUpdateAvailableWarning_DailyCooldown(t *testing.T) {
-	// Not parallel: modifies package-level state
-	useReleaseChecker(t, "v99.0.0")
-
-	// Set last shown to now — should suppress the warning
-	origLastNotify := updateNotifyLastShown
-	updateNotifyLastShown = time.Now()
-
-	defer func() {
-		updateNotifyLastShown = origLastNotify
-	}()
+	t.Parallel()
+	handler := warningHandler(t, "v99.0.0")
+	handler.runtime.SetUpdateLastShown(time.Now())
 
 	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("data"),
 	}
-	got := maybeAddUpdateAvailableWarning(resp)
+	got := handler.maybeAddUpdateAvailableWarning(resp)
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
@@ -131,23 +119,34 @@ func TestMaybeAddUpdateAvailableWarning_DailyCooldown(t *testing.T) {
 	}
 }
 
+func TestUpdateWarningCooldownIsIsolatedPerApplicationRuntime(t *testing.T) {
+	t.Parallel()
+	first := warningHandler(t, "v99.0.0")
+	second := warningHandler(t, "v99.0.0")
+	response := mcp.JSONRPCResponse{JSONRPC: "2.0", ID: 1, Result: mcp.TextResponse("data")}
+
+	first.maybeAddUpdateAvailableWarning(response)
+	got := second.maybeAddUpdateAvailableWarning(response)
+
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(got.Result, &result); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Content[0].Text, "UPDATE AVAILABLE") {
+		t.Fatal("one application runtime suppressed another runtime's warning")
+	}
+}
+
 func TestMaybeAddUpdateAvailableWarning_SameVersionNoWarning(t *testing.T) {
-	// Not parallel: modifies package-level state
-	useReleaseChecker(t, "v"+version)
-
-	origLastNotify := updateNotifyLastShown
-	updateNotifyLastShown = time.Time{}
-
-	defer func() {
-		updateNotifyLastShown = origLastNotify
-	}()
+	t.Parallel()
+	handler := warningHandler(t, "v"+version)
 
 	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("data"),
 	}
-	got := maybeAddUpdateAvailableWarning(resp)
+	got := handler.maybeAddUpdateAvailableWarning(resp)
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
@@ -158,18 +157,16 @@ func TestMaybeAddUpdateAvailableWarning_SameVersionNoWarning(t *testing.T) {
 }
 
 func TestMaybeAddUpgradeWarning_WithPending(t *testing.T) {
-	// Not parallel: modifies package-level binaryUpgradeState
-	orig := binaryUpgradeState
-	defer func() { binaryUpgradeState = orig }()
-
-	binaryUpgradeState = fixedUpgradeInfo{pending: true, version: "0.8.0", detectedAt: time.Now()}
+	t.Parallel()
+	handler := warningHandler(t, "")
+	handler.runtime.SetUpgrade(fixedUpgradeInfo{pending: true, version: "0.8.0", detectedAt: time.Now()})
 
 	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("data here"),
 	}
-	got := maybeAddUpgradeWarning(resp)
+	got := handler.maybeAddUpgradeWarning(resp)
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)

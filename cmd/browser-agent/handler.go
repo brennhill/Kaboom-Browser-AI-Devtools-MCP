@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
@@ -61,6 +62,7 @@ type MCPHandler struct {
 	server  *Server
 	tools   ToolBackend
 	version string
+	runtime *appruntime.Runtime
 
 	telemetryMu      sync.Mutex
 	telemetryCursors map[string]passiveTelemetryCursor
@@ -95,9 +97,14 @@ type RedactionEngine interface {
 
 // NewMCPHandler creates a new MCP handler.
 func NewMCPHandler(server *Server, version string) *MCPHandler {
+	runtime := appruntime.New(version)
+	if server != nil && server.runtime != nil {
+		runtime = server.runtime
+	}
 	return &MCPHandler{
 		server:           server,
 		version:          version,
+		runtime:          runtime,
 		telemetryCursors: make(map[string]passiveTelemetryCursor),
 	}
 }
@@ -341,8 +348,8 @@ func (h *MCPHandler) applyToolResponsePostProcessing(resp mcp.JSONRPCResponse, c
 	}
 	resp = h.maybeAddSecurityModeWarning(resp)
 	resp = h.maybeAddVersionWarning(resp)
-	resp = maybeAddUpdateAvailableWarning(resp)
-	resp = maybeAddUpgradeWarning(resp)
+	resp = h.maybeAddUpdateAvailableWarning(resp)
+	resp = h.maybeAddUpgradeWarning(resp)
 	resp = h.maybeAddPendingIntents(resp)
 	return h.maybeAddTelemetrySummary(resp, clientID, toolName, telemetryModeOverride)
 }
@@ -405,52 +412,41 @@ func (h *MCPHandler) maybeAddVersionWarning(resp mcp.JSONRPCResponse) mcp.JSONRP
 	return prependWarningToResponse(resp, warning)
 }
 
-var (
-	updateNotifyLastShown time.Time
-	updateNotifyMu        sync.Mutex
-)
-
-func maybeAddUpdateAvailableWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
+func (h *MCPHandler) maybeAddUpdateAvailableWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	if resp.Result == nil {
 		return resp
 	}
-	if binaryUpgradeState != nil {
-		if pending, _, _ := binaryUpgradeState.UpgradeInfo(); pending {
+	if h.runtime.Upgrade() != nil {
+		if pending, _, _ := h.runtime.Upgrade().UpgradeInfo(); pending {
 			return resp
 		}
 	}
-	availableVersion := releaseChecker.Available()
-	if availableVersion == "" || !daemonlife.IsNewerVersion(availableVersion, version) {
+	availableVersion := h.runtime.ReleaseChecker().Available()
+	if availableVersion == "" || !daemonlife.IsNewerVersion(availableVersion, h.runtime.Version()) {
 		return resp
 	}
-	updateNotifyMu.Lock()
-	recentlyShown := !updateNotifyLastShown.IsZero() && time.Since(updateNotifyLastShown) < 24*time.Hour
-	if !recentlyShown {
-		updateNotifyLastShown = time.Now()
-	}
-	updateNotifyMu.Unlock()
-	if recentlyShown {
+	if !h.runtime.ClaimUpdateWarning(time.Now(), 24*time.Hour) {
 		return resp
 	}
 	warning := fmt.Sprintf(
 		"UPDATE AVAILABLE: Kaboom v%s is available (current: v%s). Run: npm install -g kaboom-agentic-browser@latest\n\n",
-		availableVersion, version,
+		availableVersion, h.runtime.Version(),
 	)
 	return prependWarningToResponse(resp, warning)
 }
 
-func maybeAddUpgradeWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	if binaryUpgradeState == nil || resp.Result == nil {
+func (h *MCPHandler) maybeAddUpgradeWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
+	if h.runtime.Upgrade() == nil || resp.Result == nil {
 		return resp
 	}
-	pending, newVersion, detectedAt := binaryUpgradeState.UpgradeInfo()
+	pending, newVersion, detectedAt := h.runtime.Upgrade().UpgradeInfo()
 	if !pending {
 		return resp
 	}
 	elapsed := time.Since(detectedAt).Truncate(time.Second)
 	warning := fmt.Sprintf(
 		"NOTICE: Kaboom v%s detected on disk (current: v%s, detected %s ago). Auto-restart imminent. Your next tool call will use the new version.\n\n",
-		newVersion, version, elapsed,
+		newVersion, h.runtime.Version(), elapsed,
 	)
 	return prependWarningToResponse(resp, warning)
 }
