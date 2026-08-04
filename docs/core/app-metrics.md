@@ -207,6 +207,8 @@ Emit when a session closes or rotates.
 | `reason` | string | yes | `timeout` | One of `timeout`, `shutdown`, `restart`, `crash`, `background` |
 | `duration_s` | integer | yes | `1500` | Non-negative integer. `0` is valid for very short sessions. |
 | `tool_calls` | integer | yes | `28` | Positive integer |
+| `error_count` | integer | yes | `2` | Failed tool calls in this session |
+| `outcome` | string | yes | `error` | `success` when `error_count` is zero, otherwise `error` |
 | `active_window_m` | integer | no | `25` | Optional active minutes estimate |
 
 Example:
@@ -222,7 +224,9 @@ Example:
   "channel": "stable",
   "reason": "shutdown",
   "duration_s": 1500,
-  "tool_calls": 28
+  "tool_calls": 28,
+  "error_count": 2,
+  "outcome": "error"
 }
 ```
 
@@ -505,8 +509,20 @@ Notes:
 | First-use funnel | `first_tool_call` |
 | Session depth | `session_end.tool_calls` |
 | Session length | `session_end.duration_s` |
+| Failure-free command rate | `tool_call` rows grouped by `outcome` |
+| Failure-free completed session rate | `session_end` rows grouped by `outcome` |
+| Daily/monthly active installs | distinct valid `iid` across accepted activity rows in the selected window |
+| Crash-free active installs | active `iid` values with no fatal `app_error` or `UNCLEAN_DAEMON_EXIT` in the selected window |
+| Crash-free active sessions | active `sid` values with no fatal `app_error`; report unclean-exit recovery sessions separately because abrupt termination cannot emit a final row |
 | Install-level drilldown | all rows filtered by `iid` |
 | Product/runtime failures and recovery effectiveness | `app_error`, grouped by `error_code`, `outcome`, `attempt_bucket`, and `latency_bucket` |
+
+“Raw installs” means package-store/download or installer completion data and is
+not inferred from telemetry identities. `first_tool_call` measures activated
+installs; daily/monthly active installs measure distinct stable `iid` values
+with accepted activity in the selected window. Keeping these denominators
+separate prevents reinstalls, downloads that never run, and dormant installs
+from inflating active-install health.
 
 ## Reference Payloads
 

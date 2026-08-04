@@ -45,6 +45,7 @@ type UsageTracker struct {
 	tools         map[string]*toolAccum // key: "family:name"
 	asyncOutcomes map[string]int        // "complete", "timeout", etc.
 	sessionCalls  int                   // total calls this session
+	sessionErrors int                   // failed calls in the current session
 	sessionStart  time.Time             // when session started (for duration calc)
 
 	// now is the clock used for session start/duration. Defaults to time.Now;
@@ -95,6 +96,10 @@ func (u *UsageTracker) RecordToolCall(key string, elapsed time.Duration, isError
 	ms := elapsed.Milliseconds()
 	family, name := splitKey(key)
 
+	// Rotate before accounting so the command that discovers inactivity belongs
+	// to the new session whose ID is emitted on its tool_call row.
+	TouchSession()
+
 	u.mu.Lock()
 	acc := u.tools[key]
 	if acc == nil {
@@ -108,14 +113,11 @@ func (u *UsageTracker) RecordToolCall(key string, elapsed time.Duration, isError
 	}
 	if isError {
 		acc.errCount++
+		u.sessionErrors++
 	}
 	u.sessionCalls++
 	u.mu.Unlock()
 
-	// TouchSession may rotate the session (firing session_end callback which
-	// resets u.sessionStart). Check for new session AFTER touch so post-timeout
-	// rotation is detected.
-	TouchSession()
 	firstEver := markFirstToolCallEmittedForInstall()
 
 	u.mu.Lock()
@@ -235,8 +237,10 @@ func (u *UsageTracker) SwapAndReset() *UsageSnapshot {
 func (u *UsageTracker) EmitSessionEnd(reason string) {
 	u.mu.Lock()
 	calls := u.sessionCalls
+	errors := u.sessionErrors
 	start := u.sessionStart
 	u.sessionCalls = 0
+	u.sessionErrors = 0
 	u.sessionStart = time.Time{}
 	u.mu.Unlock()
 
@@ -245,12 +249,18 @@ func (u *UsageTracker) EmitSessionEnd(reason string) {
 	}
 
 	durationS := sessionDurationSeconds(start, u.now())
+	outcome := "success"
+	if errors > 0 {
+		outcome = "error"
+	}
 
 	fireStructuredBeacon(map[string]any{
-		"event":      "session_end",
-		"reason":     reason,
-		"duration_s": durationS,
-		"tool_calls": calls,
+		"event":       "session_end",
+		"reason":      reason,
+		"duration_s":  durationS,
+		"tool_calls":  calls,
+		"error_count": errors,
+		"outcome":     outcome,
 	})
 }
 

@@ -4,12 +4,12 @@ scope: feature/app-telemetry
 ai-priority: medium
 tags: [telemetry, privacy, reliability]
 relates-to: [index.md, tech-spec.md, qa-plan.md, ../../../core/app-metrics.md]
-last-verified: 2026-07-28
+last-verified: 2026-08-04
 doc_type: product-spec
 feature_id: feature-app-telemetry
-last_reviewed: 2026-07-28
-last_verified_version: 0.8.8
-last_verified_date: 2026-07-28
+last_reviewed: 2026-08-04
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # App Telemetry — Product Specification
@@ -23,8 +23,9 @@ are in the [app telemetry contract](../../../core/app-metrics.md).
 
 ## User and Product Outcomes
 
-- Maintainers can measure active installs, tool adoption, session depth,
-  latency, error rates, and asynchronous outcomes.
+- Maintainers can measure daily/monthly active installs, crash-free installs
+  and sessions, failure-free commands, tool adoption, session depth, latency,
+  error rates, and asynchronous outcomes.
 - A stable anonymous install identifier distinguishes installations without
   identifying a person.
 - A short-lived session identifier groups activity and rotates after
@@ -53,7 +54,8 @@ outbound transmission in this feature.
 3. A tool invocation emits a `tool_call`; the first invocation for an install
    also emits `first_tool_call`.
 4. Active sessions emit `session_start` and `session_end` at the lifecycle
-   boundaries defined in the canonical contract.
+   boundaries defined in the canonical contract. Session-end rows include
+   bounded call/error counts and a derived success/error outcome.
 5. Active tool and asynchronous outcome counters are summarized every five
    minutes; idle windows emit no summary.
 6. Known application failures emit normalized `app_error` events.

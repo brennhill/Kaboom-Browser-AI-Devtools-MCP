@@ -33,7 +33,7 @@ package-level state.
 | Aggregation | `usage_counter_test.go` | Counts, errors, latency, async outcomes, atomic swap/reset, concurrent increments, session depth |
 | Reporting loop | `e2e_usage_summary_test.go` | Active-window emission, idle skip, opt-out, cancellation |
 | End-to-end events | `e2e_reporting_test.go` | Success/error tool calls, first use, distinct incident lifecycle transitions, slow ingest, JSON round trips |
-| End-to-end sessions | `e2e_session_test.go` | Start/end reasons, timeout, shutdown, idle behavior, full lifecycle, opt-out |
+| End-to-end sessions | `e2e_session_test.go` | Start/end reasons, timeout-boundary attribution, aggregate outcomes/error counts, shutdown, idle behavior, full lifecycle, opt-out |
 | End-to-end summaries | `e2e_usage_summary_test.go` | Full payload, empty omission, nil snapshots, accumulation and reset |
 
 ## Required Scenarios

@@ -501,6 +501,7 @@ func TestEmitSessionEnd_DurationFromInjectedClock(t *testing.T) {
 	tracker.mu.Lock()
 	tracker.sessionStart = base
 	tracker.sessionCalls = 3
+	tracker.sessionErrors = 2
 	tracker.mu.Unlock()
 
 	tracker.EmitSessionEnd("timeout")
@@ -517,6 +518,12 @@ func TestEmitSessionEnd_DurationFromInjectedClock(t *testing.T) {
 			}
 			if body["tool_calls"] != float64(3) {
 				t.Fatalf("tool_calls = %v, want 3", body["tool_calls"])
+			}
+			if body["error_count"] != float64(2) || body["outcome"] != "error" {
+				t.Fatalf("session health = %#v, want two errors", body)
+			}
+			if tracker.SessionDepth() != 0 {
+				t.Fatalf("session counters were not reset: depth=%d", tracker.SessionDepth())
 			}
 			return
 		case <-time.After(3 * time.Second):

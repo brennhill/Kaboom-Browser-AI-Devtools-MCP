@@ -78,6 +78,12 @@ closed outcome, attempt, and latency buckets. Rate limiting keys include all
 four dimensions, so repeated identical transitions collapse while a recovery
 cannot be hidden by its preceding detection. Correlation IDs, generations,
 history, and local evidence never cross the analytics boundary.
+Session rotation happens before accounting for the command that discovers an
+inactivity timeout, so that command and its counters share the same new `sid`.
+Session-end rows expose only aggregate tool/error counts and a bounded outcome;
+these support failure-free session metrics while per-call rows support
+failure-free command rates. Active-install and crash-free rates are derived by
+distinct anonymous `iid`/`sid`, version, platform, channel, and client.
 
 This is the sole exception to Kaboom's local-data policy. It reports anonymous
 install activity and product-command usage using random install/session

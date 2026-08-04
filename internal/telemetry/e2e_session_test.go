@@ -79,6 +79,9 @@ func TestE2E_SessionEnd_Timeout(t *testing.T) {
 	if calls, ok := body["tool_calls"].(float64); !ok || calls != 3 {
 		t.Errorf("tool_calls = %v, want 3", body["tool_calls"])
 	}
+	if body["outcome"] != "success" || body["error_count"] != float64(0) {
+		t.Fatalf("session health = %#v, want success with zero errors", body)
+	}
 	if _, ok := body["duration_s"].(float64); !ok {
 		t.Errorf("duration_s missing or not a number: %v", body["duration_s"])
 	}
@@ -89,7 +92,7 @@ func TestE2E_SessionEnd_Shutdown(t *testing.T) {
 	resetSessionState()
 
 	tracker := NewUsageTracker()
-	tracker.RecordToolCall("observe:page", 0, false)
+	tracker.RecordToolCall("observe:page", 0, true)
 
 	tracker.EmitSessionEnd("shutdown")
 
@@ -101,6 +104,9 @@ func TestE2E_SessionEnd_Shutdown(t *testing.T) {
 	}
 	if calls, ok := body["tool_calls"].(float64); !ok || calls != 1 {
 		t.Errorf("tool_calls = %v, want 1", body["tool_calls"])
+	}
+	if body["outcome"] != "error" || body["error_count"] != float64(1) {
+		t.Fatalf("session health = %#v, want error with one failure", body)
 	}
 }
 
@@ -242,8 +248,8 @@ func TestE2E_FullSessionLifecycle(t *testing.T) {
 	if ends[0]["reason"] != "timeout" {
 		t.Errorf("phase 3: session_end reason = %v, want timeout", ends[0]["reason"])
 	}
-	if calls, ok := ends[0]["tool_calls"].(float64); !ok || calls != 4 {
-		t.Errorf("phase 3: session_end tool_calls = %v, want 4 (3 prior + 1 that triggered rotation)", ends[0]["tool_calls"])
+	if calls, ok := ends[0]["tool_calls"].(float64); !ok || calls != 3 {
+		t.Errorf("phase 3: session_end tool_calls = %v, want 3 (the triggering call belongs to the new session)", ends[0]["tool_calls"])
 	}
 
 	// Must have session_start for new session.
@@ -268,6 +274,9 @@ func TestE2E_FullSessionLifecycle(t *testing.T) {
 	}
 	if newCalls[0]["sid"] != newSID {
 		t.Errorf("phase 3: tool_call sid = %v, want %v (new session)", newCalls[0]["sid"], newSID)
+	}
+	if tracker.SessionDepth() != 1 {
+		t.Fatalf("phase 3: new session depth = %d, want triggering call counted once", tracker.SessionDepth())
 	}
 
 	// === Phase 4: Usage summary ===
