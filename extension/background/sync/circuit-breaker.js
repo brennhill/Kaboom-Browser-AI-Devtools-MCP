@@ -11,6 +11,7 @@ export function createCircuitBreaker(sendFn, options = {}) {
     const resetTimeout = options.resetTimeout ?? 30000;
     const initialBackoff = options.initialBackoff ?? 1000;
     const maxBackoff = options.maxBackoff ?? 30000;
+    const now = options.now ?? Date.now;
     let state = 'closed';
     let consecutiveFailures = 0;
     let totalFailures = 0;
@@ -29,7 +30,7 @@ export function createCircuitBreaker(sendFn, options = {}) {
     function recordTransition(from, to, reason) {
         if (from === to)
             return;
-        transitionHistory.push({ from, to, reason, timestamp: Date.now() });
+        transitionHistory.push({ from, to, reason, timestamp: now() });
         if (transitionHistory.length > maxHistorySize) {
             transitionHistory.shift();
         }
@@ -45,7 +46,7 @@ export function createCircuitBreaker(sendFn, options = {}) {
     }
     function getState() {
         const oldState = state;
-        if (state === 'open' && Date.now() - lastFailureTime >= resetTimeout) {
+        if (state === 'open' && now() - lastFailureTime >= resetTimeout) {
             state = 'half-open';
             recordTransition(oldState, state, 'reset_timeout_elapsed');
         }
@@ -94,7 +95,7 @@ export function createCircuitBreaker(sendFn, options = {}) {
         const oldState = state;
         consecutiveFailures++;
         totalFailures++;
-        lastFailureTime = Date.now();
+        lastFailureTime = now();
         probeInFlight = false;
         if (consecutiveFailures >= maxFailures && state !== 'open') {
             state = 'open';
@@ -137,7 +138,7 @@ export function createCircuitBreaker(sendFn, options = {}) {
         const oldState = state;
         consecutiveFailures++;
         totalFailures++;
-        lastFailureTime = Date.now();
+        lastFailureTime = now();
         if (consecutiveFailures >= maxFailures && state !== 'open') {
             state = 'open';
             recordTransition(oldState, 'open', `consecutive_failures_${consecutiveFailures}`);

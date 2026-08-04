@@ -90,6 +90,127 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
     assert.deepStrictEqual(sent, [[{ id: 1 }], [{ id: 2 }]])
   })
 
+  test('autonomously retries retained entries when an open circuit becomes probeable', async () => {
+    let now = 0
+    let nextTimer = 1
+    const timers = new Map()
+    const runtime = {
+      now: () => now,
+      setTimeout: (callback, delay) => {
+        const id = nextTimer++
+        timers.set(id, { callback, due: now + delay })
+        return id
+      },
+      clearTimeout: (id) => timers.delete(id)
+    }
+    const advance = async (milliseconds) => {
+      now += milliseconds
+      const due = [...timers.entries()].filter(([, timer]) => timer.due <= now)
+      for (const [id, timer] of due) {
+        timers.delete(id)
+        timer.callback()
+      }
+      await Promise.resolve()
+      await Promise.resolve()
+    }
+    let available = false
+    const delivered = []
+    const sendFn = mock.fn(async (entries) => {
+      if (!available) throw new Error('offline')
+      delivered.push(...entries)
+    })
+    const { batcher, circuitBreaker } = createBatcherWithCircuitBreaker(sendFn, {
+      debounceMs: 10,
+      retryBudget: 1,
+      maxFailures: 1,
+      resetTimeout: 50,
+      runtime
+    })
+
+    batcher.add({ id: 'retained' })
+    await batcher.flush()
+    assert.strictEqual(circuitBreaker.getState(), 'open')
+    assert.deepStrictEqual(batcher.getPending(), [{ id: 'retained' }])
+
+    available = true
+    await advance(49)
+    assert.deepStrictEqual(delivered, [])
+    await advance(1)
+    await batcher.flush()
+
+    assert.deepStrictEqual(delivered, [{ id: 'retained' }])
+    assert.deepStrictEqual(batcher.getPending(), [])
+    assert.strictEqual(circuitBreaker.getState(), 'closed')
+  })
+
+  test('reports exact accepted, delivered, retained, and dropped entry conservation', async () => {
+    const pressureEvents = []
+    const delivered = []
+    const { batcher, getPressureStats } = createBatcherWithCircuitBreaker(
+      async (entries) => delivered.push(...entries),
+      {
+        debounceMs: 60000,
+        maxBatchSize: 50,
+        maxPendingEntries: 3,
+        onPressure: (event) => pressureEvents.push(event)
+      }
+    )
+
+    batcher.add({ id: 1 })
+    batcher.add({ id: 2 })
+    batcher.add({ id: 3 })
+    batcher.add({ id: 4 })
+
+    assert.deepStrictEqual(batcher.getPending(), [{ id: 1 }, { id: 2 }, { id: 3 }])
+    assert.deepStrictEqual(getPressureStats(), {
+      accepted: 4,
+      delivered: 0,
+      dropped: 1,
+      pending: 3,
+      capacity: 3,
+      saturated: true
+    })
+    assert.deepStrictEqual(pressureEvents, [
+      { reason: 'capacity', dropped: 1, pending: 3, capacity: 3, total_dropped: 1 }
+    ])
+
+    await batcher.flush()
+    const stats = getPressureStats()
+    assert.strictEqual(stats.accepted, stats.delivered + stats.dropped + stats.pending)
+    assert.deepStrictEqual(delivered, [{ id: 1 }, { id: 2 }, { id: 3 }])
+  })
+
+  test('accounts for requeue overflow when arrivals race a failed in-flight batch', async () => {
+    let rejectSend
+    const sendFailed = new Promise((_, reject) => {
+      rejectSend = reject
+    })
+    const pressureEvents = []
+    const { batcher, getPressureStats } = createBatcherWithCircuitBreaker(() => sendFailed, {
+      debounceMs: 60000,
+      maxBatchSize: 2,
+      maxPendingEntries: 3,
+      retryBudget: 1,
+      maxFailures: 1,
+      resetTimeout: 60000,
+      onPressure: (event) => pressureEvents.push(event)
+    })
+
+    batcher.add({ id: 1 })
+    batcher.add({ id: 2 })
+    batcher.add({ id: 3 })
+    batcher.add({ id: 4 })
+    rejectSend(new Error('offline'))
+    await batcher.flush()
+
+    assert.deepStrictEqual(batcher.getPending(), [{ id: 1 }, { id: 2 }, { id: 3 }])
+    assert.deepStrictEqual(pressureEvents, [
+      { reason: 'requeue_overflow', dropped: 1, pending: 3, capacity: 3, total_dropped: 1 }
+    ])
+    const stats = getPressureStats()
+    assert.strictEqual(stats.accepted, stats.delivered + stats.dropped + stats.pending)
+  })
+
   // Spec scenario 13: Single 429 -> backoff 100ms before next attempt
   test('13: Single 429 triggers 100ms backoff before next attempt', async () => {
     const sendFn = mock.fn(() => {
@@ -262,17 +383,12 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
     }
     assert.strictEqual(circuitBreaker.getState(), 'open')
 
-    // Wait for reset timeout
-    await new Promise((r) => setTimeout(r, 150))
-    assert.strictEqual(circuitBreaker.getState(), 'half-open')
-
-    // Next flush should send a probe
+    // Recovery no longer needs another page event: the retained batch is the probe.
     shouldFail = false
     const callCountBefore = sendFn.mock.calls.length
-    batcher.add({ type: 'log', message: 'probe' })
-    await batcher.flush()
-
+    await new Promise((r) => setTimeout(r, 150))
     assert.strictEqual(sendFn.mock.calls.length, callCountBefore + 1)
+    assert.strictEqual(circuitBreaker.getState(), 'closed')
   })
 
   // Spec scenario 20: Probe succeeds -> circuit closes, buffer drains
@@ -297,12 +413,9 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
     }
     assert.strictEqual(circuitBreaker.getState(), 'open')
 
-    // Wait for half-open
-    await new Promise((r) => setTimeout(r, 150))
-
-    // Probe succeeds
+    // The scheduled half-open probe succeeds and drains without a new event.
     shouldFail = false
-    batcher.add({ type: 'log', message: 'probe-success' })
+    await new Promise((r) => setTimeout(r, 150))
     await batcher.flush()
 
     assert.strictEqual(circuitBreaker.getState(), 'closed')
@@ -327,14 +440,12 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
     }
     assert.strictEqual(circuitBreaker.getState(), 'open')
 
-    // Wait for half-open
+    // The autonomous half-open probe fails and immediately re-opens the circuit.
+    const callsBeforeProbe = sendFn.mock.calls.length
     await new Promise((r) => setTimeout(r, 150))
-    assert.strictEqual(circuitBreaker.getState(), 'half-open')
-
-    // Probe fails - circuit re-opens
-    batcher.add({ type: 'log', message: 'probe-fail' })
-    await batcher.flush()
+    assert.ok(sendFn.mock.calls.length > callsBeforeProbe)
     assert.strictEqual(circuitBreaker.getState(), 'open')
+    assert.ok(batcher.getPending().length > 0)
   })
 
   // Spec scenario 22: During backoff, data still captured to local buffer

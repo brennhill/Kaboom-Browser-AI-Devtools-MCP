@@ -15,7 +15,12 @@ import type { WireNetworkBody as NetworkBodyPayload } from '../../types/wire/wir
 import type { WireEnhancedAction as EnhancedAction } from '../../types/wire/wire-enhanced-action.js'
 import type { WirePerformanceSnapshot as PerformanceSnapshot } from '../../types/wire/wire-performance-snapshot.js'
 
-import { createBatcherWithCircuitBreaker, type BatcherWithCircuitBreaker, type Batcher } from './batchers.js'
+import {
+  createBatcherWithCircuitBreaker,
+  type BatcherWithCircuitBreaker,
+  type Batcher,
+  type BatcherConfig
+} from './batchers.js'
 import type { CircuitBreaker } from './circuit-breaker.js'
 import {
   updateBadge,
@@ -27,6 +32,7 @@ import {
 } from './server.js'
 import { checkContextAnnotations } from '../caches/snapshots.js'
 import { errorMessage } from '../../lib/error-utils.js'
+import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js'
 
 // =============================================================================
 // TYPES
@@ -73,6 +79,32 @@ function withConnectionStatus<T>(
   }
 }
 
+function pressureLifecycle(deps: BatcherDeps, stream: string): Pick<BatcherConfig, 'onPressure' | 'onPressureRecovered'> {
+  const name = `telemetry_${stream}_pressure`
+  return {
+    onPressure: (event) => {
+      deps.debugLog('error', 'Telemetry buffer pressure dropped entries', {
+        stream,
+        reason: event.reason,
+        dropped_count: event.dropped,
+        total_dropped: event.total_dropped,
+        pending_count: event.pending,
+        capacity: event.capacity
+      })
+      reportStateRecovery({
+        name,
+        detail: `${stream} telemetry exceeded its local delivery buffer; ${event.dropped} entr${event.dropped === 1 ? 'y was' : 'ies were'} dropped.`,
+        fix: 'Restore the daemon connection and inspect local extension diagnostics.',
+        correlation_id: name,
+        expected_next_transition: 'buffer_delivery_recovered',
+        recovery_attempt: event.total_dropped,
+        recovery_outcome: 'fallback'
+      })
+    },
+    onPressureRecovered: () => resolveStateRecovery(name)
+  }
+}
+
 // =============================================================================
 // FACTORY
 // =============================================================================
@@ -111,29 +143,29 @@ export function createBatcherInstances(deps: BatcherDeps, sharedCircuitBreaker: 
         })
       }
     ),
-    { sharedCircuitBreaker }
+    { sharedCircuitBreaker, ...pressureLifecycle(deps, 'console') }
   )
 
   const wsBatcherWithCB = createBatcherWithCircuitBreaker<WebSocketEvent>(
     withConnectionStatus(deps, (events) => sendWSEventsToServer(deps.getServerUrl(), events, deps.debugLog)),
-    { debounceMs: 200, maxBatchSize: 100, sharedCircuitBreaker }
+    { debounceMs: 200, maxBatchSize: 100, sharedCircuitBreaker, ...pressureLifecycle(deps, 'websocket') }
   )
 
   const enhancedActionBatcherWithCB = createBatcherWithCircuitBreaker<EnhancedAction>(
     withConnectionStatus(deps, (actions) => sendEnhancedActionsToServer(deps.getServerUrl(), actions, deps.debugLog)),
-    { debounceMs: 200, maxBatchSize: 50, sharedCircuitBreaker }
+    { debounceMs: 200, maxBatchSize: 50, sharedCircuitBreaker, ...pressureLifecycle(deps, 'action') }
   )
 
   const networkBodyBatcherWithCB = createBatcherWithCircuitBreaker<NetworkBodyPayload>(
     withConnectionStatus(deps, (bodies) => sendNetworkBodiesToServer(deps.getServerUrl(), bodies, deps.debugLog)),
-    { debounceMs: 200, maxBatchSize: 50, sharedCircuitBreaker }
+    { debounceMs: 200, maxBatchSize: 50, sharedCircuitBreaker, ...pressureLifecycle(deps, 'network_body') }
   )
 
   const perfBatcherWithCB = createBatcherWithCircuitBreaker<PerformanceSnapshot>(
     withConnectionStatus(deps, (snapshots) =>
       sendPerformanceSnapshotsToServer(deps.getServerUrl(), snapshots, deps.debugLog)
     ),
-    { debounceMs: 500, maxBatchSize: 10, sharedCircuitBreaker }
+    { debounceMs: 500, maxBatchSize: 10, sharedCircuitBreaker, ...pressureLifecycle(deps, 'performance') }
   )
 
   return {

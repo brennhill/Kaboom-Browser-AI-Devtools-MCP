@@ -9,7 +9,7 @@
  * debounced batching of server requests.
  */
 
-import type { MemoryPressureState, CircuitBreakerState, CircuitBreakerStats } from '../../types/runtime/state.js'
+import type { CircuitBreakerState, CircuitBreakerStats } from '../../types/runtime/state.js'
 import type { TimeoutId } from '../../types/utils.js'
 import { createCircuitBreaker, type CircuitBreaker } from './circuit-breaker.js'
 import { MAX_PENDING_BUFFER } from '../caches/cache-limits.js'
@@ -42,6 +42,30 @@ export interface BatcherWithCircuitBreaker<T> {
     reset: () => void
   }
   getConnectionStatus: () => { connected: boolean }
+  getPressureStats: () => BatcherPressureStats
+}
+
+export interface BatcherPressureStats {
+  accepted: number
+  delivered: number
+  dropped: number
+  pending: number
+  capacity: number
+  saturated: boolean
+}
+
+export interface BatcherPressureEvent {
+  reason: 'capacity' | 'requeue_overflow' | 'clear'
+  dropped: number
+  pending: number
+  capacity: number
+  total_dropped: number
+}
+
+export interface BatcherRuntime {
+  now: () => number
+  setTimeout: (callback: () => void, delay: number) => TimeoutId
+  clearTimeout: (id: TimeoutId) => void
 }
 
 /** Batcher configuration options */
@@ -52,13 +76,10 @@ export interface BatcherConfig {
   maxFailures?: number
   resetTimeout?: number
   sharedCircuitBreaker?: CircuitBreaker
-}
-
-/** Log batcher options */
-export interface LogBatcherOptions {
-  debounceMs?: number
-  maxBatchSize?: number
-  memoryPressureGetter?: () => MemoryPressureState
+  maxPendingEntries?: number
+  onPressure?: (event: BatcherPressureEvent) => void
+  onPressureRecovered?: () => void
+  runtime?: BatcherRuntime
 }
 
 /**
@@ -73,6 +94,17 @@ export function createBatcherWithCircuitBreaker<T>(
   const retryBudget = options.retryBudget ?? RATE_LIMIT_CONFIG.retryBudget
   const maxFailures = options.maxFailures ?? RATE_LIMIT_CONFIG.maxFailures
   const resetTimeout = options.resetTimeout ?? RATE_LIMIT_CONFIG.resetTimeout
+  const capacity = options.maxPendingEntries ?? MAX_PENDING_BUFFER
+  const runtime: BatcherRuntime = options.runtime ?? {
+    now: Date.now,
+    setTimeout: (callback, delay) => {
+      const id = setTimeout(callback, delay)
+      const nodeTimer = id as unknown as { unref?: () => void }
+      nodeTimer.unref?.()
+      return id
+    },
+    clearTimeout: (id) => clearTimeout(id)
+  }
   const backoffSchedule = RATE_LIMIT_CONFIG.backoffSchedule
 
   const localConnectionStatus = { connected: true }
@@ -84,7 +116,8 @@ export function createBatcherWithCircuitBreaker<T>(
       maxFailures,
       resetTimeout,
       initialBackoff: 0,
-      maxBackoff: 0
+      maxBackoff: 0,
+      now: runtime.now
     })
 
   function getScheduledBackoff(failures: number): number {
@@ -130,10 +163,39 @@ export function createBatcherWithCircuitBreaker<T>(
 
   let pending: T[] = []
   let timeoutId: TimeoutId | null = null
+  let recoveryTimeoutId: TimeoutId | null = null
   let flushPromise: Promise<void> | null = null
+  let accepted = 0
+  let delivered = 0
+  let dropped = 0
+  let pressureActive = false
+
+  function reportDrop(reason: BatcherPressureEvent['reason'], count: number): void {
+    if (count <= 0) return
+    dropped += count
+    pressureActive = true
+    options.onPressure?.({ reason, dropped: count, pending: pending.length, capacity, total_dropped: dropped })
+  }
+
+  function resolvePressureAfterDelivery(): void {
+    if (!pressureActive || pending.length >= capacity) return
+    pressureActive = false
+    options.onPressureRecovered?.()
+  }
+
+  function scheduleRecovery(): void {
+    if (recoveryTimeoutId !== null || pending.length === 0) return
+    recoveryTimeoutId = runtime.setTimeout(() => {
+      recoveryTimeoutId = null
+      void flushWithCircuitBreaker()
+    }, resetTimeout)
+  }
 
   function requeueEntries(entries: T[]): void {
-    pending = entries.concat(pending).slice(0, MAX_PENDING_BUFFER)
+    const combined = entries.concat(pending)
+    pending = combined.slice(0, capacity)
+    reportDrop('requeue_overflow', combined.length - pending.length)
+    if (cb.getState() === 'open') scheduleRecovery()
   }
 
   async function retryWithBackoff(entries: T[]): Promise<boolean> {
@@ -145,13 +207,15 @@ export function createBatcherWithCircuitBreaker<T>(
       const backoff = getScheduledBackoff(stats.consecutiveFailures)
       if (backoff > 0) {
         await new Promise<void>((r) => {
-          setTimeout(r, backoff)
+          runtime.setTimeout(r, backoff)
         })
       }
 
       try {
         await attemptSend(entries)
+        delivered += entries.length
         localConnectionStatus.connected = true
+        resolvePressureAfterDelivery()
         return true
       } catch {
         localConnectionStatus.connected = false
@@ -179,7 +243,7 @@ export function createBatcherWithCircuitBreaker<T>(
     pending = []
 
     if (timeoutId) {
-      clearTimeout(timeoutId)
+      runtime.clearTimeout(timeoutId)
       timeoutId = null
     }
     if (cb.getState() === 'open') {
@@ -189,7 +253,9 @@ export function createBatcherWithCircuitBreaker<T>(
 
     try {
       await attemptSend(entries)
+      delivered += entries.length
       localConnectionStatus.connected = true
+      resolvePressureAfterDelivery()
       return true
     } catch {
       localConnectionStatus.connected = false
@@ -211,7 +277,7 @@ export function createBatcherWithCircuitBreaker<T>(
 
   const scheduleFlush = (): void => {
     if (timeoutId) return
-    timeoutId = setTimeout(() => {
+    timeoutId = runtime.setTimeout(() => {
       timeoutId = null
       flushWithCircuitBreaker()
     }, debounceMs)
@@ -219,7 +285,11 @@ export function createBatcherWithCircuitBreaker<T>(
 
   const batcher: Batcher<T> = {
     add(entry: T): void {
-      if (pending.length >= MAX_PENDING_BUFFER) return
+      accepted++
+      if (pending.length >= capacity) {
+        reportDrop('capacity', 1)
+        return
+      }
       pending.push(entry)
       if (pending.length >= maxBatchSize) {
         flushWithCircuitBreaker()
@@ -233,10 +303,15 @@ export function createBatcherWithCircuitBreaker<T>(
     },
 
     clear(): void {
+      reportDrop('clear', pending.length)
       pending = []
       if (timeoutId) {
-        clearTimeout(timeoutId)
+        runtime.clearTimeout(timeoutId)
         timeoutId = null
+      }
+      if (recoveryTimeoutId !== null) {
+        runtime.clearTimeout(recoveryTimeoutId)
+        recoveryTimeoutId = null
       }
     },
 
@@ -248,77 +323,14 @@ export function createBatcherWithCircuitBreaker<T>(
   return {
     batcher,
     circuitBreaker: wrappedCircuitBreaker,
-    getConnectionStatus: () => ({ ...localConnectionStatus })
-  }
-}
-
-/**
- * Create a simple log batcher without circuit breaker
- */
-export function createLogBatcher<T>(flushFn: (entries: T[]) => void, options: LogBatcherOptions = {}): Batcher<T> {
-  const debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS
-  const maxBatchSize = options.maxBatchSize ?? DEFAULT_MAX_BATCH_SIZE
-  const memoryPressureGetter = options.memoryPressureGetter ?? null
-
-  let pending: T[] = []
-  let timeoutId: TimeoutId | null = null
-
-  const getEffectiveMaxBatchSize = (): number => {
-    if (memoryPressureGetter) {
-      const state = memoryPressureGetter()
-      if (state.reducedCapacities) {
-        return Math.floor(maxBatchSize / 2)
-      }
-    }
-    return maxBatchSize
-  }
-
-  const flush = (): void => {
-    if (pending.length === 0) return
-
-    const entries = pending
-    pending = []
-
-    if (timeoutId) {
-      clearTimeout(timeoutId)
-      timeoutId = null
-    }
-
-    flushFn(entries)
-  }
-
-  const scheduleFlush = (): void => {
-    if (timeoutId) return
-
-    timeoutId = setTimeout(() => {
-      timeoutId = null
-      flush()
-    }, debounceMs)
-  }
-
-  return {
-    add(entry: T): void {
-      if (pending.length >= MAX_PENDING_BUFFER) return
-      pending.push(entry)
-
-      const effectiveMax = getEffectiveMaxBatchSize()
-      if (pending.length >= effectiveMax) {
-        flush()
-      } else {
-        scheduleFlush()
-      }
-    },
-
-    flush(): void {
-      flush()
-    },
-
-    clear(): void {
-      pending = []
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-        timeoutId = null
-      }
-    }
+    getConnectionStatus: () => ({ ...localConnectionStatus }),
+    getPressureStats: () => ({
+      accepted,
+      delivered,
+      dropped,
+      pending: pending.length,
+      capacity,
+      saturated: dropped > 0
+    })
   }
 }

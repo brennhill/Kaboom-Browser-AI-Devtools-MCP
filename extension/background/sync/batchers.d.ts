@@ -7,7 +7,8 @@
  * @fileoverview Batchers - Batcher creation and circuit breaker integration for
  * debounced batching of server requests.
  */
-import type { MemoryPressureState, CircuitBreakerState, CircuitBreakerStats } from '../../types/runtime/state.js';
+import type { CircuitBreakerState, CircuitBreakerStats } from '../../types/runtime/state.js';
+import type { TimeoutId } from '../../types/utils.js';
 import { type CircuitBreaker } from './circuit-breaker.js';
 /** Rate limit configuration */
 export declare const RATE_LIMIT_CONFIG: {
@@ -34,6 +35,27 @@ export interface BatcherWithCircuitBreaker<T> {
     getConnectionStatus: () => {
         connected: boolean;
     };
+    getPressureStats: () => BatcherPressureStats;
+}
+export interface BatcherPressureStats {
+    accepted: number;
+    delivered: number;
+    dropped: number;
+    pending: number;
+    capacity: number;
+    saturated: boolean;
+}
+export interface BatcherPressureEvent {
+    reason: 'capacity' | 'requeue_overflow' | 'clear';
+    dropped: number;
+    pending: number;
+    capacity: number;
+    total_dropped: number;
+}
+export interface BatcherRuntime {
+    now: () => number;
+    setTimeout: (callback: () => void, delay: number) => TimeoutId;
+    clearTimeout: (id: TimeoutId) => void;
 }
 /** Batcher configuration options */
 export interface BatcherConfig {
@@ -43,19 +65,13 @@ export interface BatcherConfig {
     maxFailures?: number;
     resetTimeout?: number;
     sharedCircuitBreaker?: CircuitBreaker;
-}
-/** Log batcher options */
-export interface LogBatcherOptions {
-    debounceMs?: number;
-    maxBatchSize?: number;
-    memoryPressureGetter?: () => MemoryPressureState;
+    maxPendingEntries?: number;
+    onPressure?: (event: BatcherPressureEvent) => void;
+    onPressureRecovered?: () => void;
+    runtime?: BatcherRuntime;
 }
 /**
  * Creates a batcher wired with circuit breaker logic for rate limiting.
  */
 export declare function createBatcherWithCircuitBreaker<T>(sendFn: (entries: T[]) => Promise<unknown>, options?: BatcherConfig): BatcherWithCircuitBreaker<T>;
-/**
- * Create a simple log batcher without circuit breaker
- */
-export declare function createLogBatcher<T>(flushFn: (entries: T[]) => void, options?: LogBatcherOptions): Batcher<T>;
 //# sourceMappingURL=batchers.d.ts.map

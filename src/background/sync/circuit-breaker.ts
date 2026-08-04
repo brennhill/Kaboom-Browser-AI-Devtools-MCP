@@ -24,6 +24,7 @@ export interface CircuitBreakerOptions {
   initialBackoff?: number
   maxBackoff?: number
   onStateChange?: CircuitBreakerStateChangeCallback
+  now?: () => number
 }
 
 /** Transition history entry */
@@ -64,6 +65,7 @@ export function createCircuitBreaker(
   const resetTimeout = options.resetTimeout ?? 30000
   const initialBackoff = options.initialBackoff ?? 1000
   const maxBackoff = options.maxBackoff ?? 30000
+  const now = options.now ?? Date.now
 
   let state: CircuitBreakerState = 'closed'
   let consecutiveFailures = 0
@@ -85,7 +87,7 @@ export function createCircuitBreaker(
   function recordTransition(from: CircuitBreakerState, to: CircuitBreakerState, reason: string): void {
     if (from === to) return
 
-    transitionHistory.push({ from, to, reason, timestamp: Date.now() })
+    transitionHistory.push({ from, to, reason, timestamp: now() })
     if (transitionHistory.length > maxHistorySize) {
       transitionHistory.shift()
     }
@@ -102,7 +104,7 @@ export function createCircuitBreaker(
 
   function getState(): CircuitBreakerState {
     const oldState = state
-    if (state === 'open' && Date.now() - lastFailureTime >= resetTimeout) {
+    if (state === 'open' && now() - lastFailureTime >= resetTimeout) {
       state = 'half-open'
       recordTransition(oldState, state, 'reset_timeout_elapsed')
     }
@@ -156,7 +158,7 @@ export function createCircuitBreaker(
     const oldState = state
     consecutiveFailures++
     totalFailures++
-    lastFailureTime = Date.now()
+    lastFailureTime = now()
     probeInFlight = false
 
     if (consecutiveFailures >= maxFailures && state !== 'open') {
@@ -207,7 +209,7 @@ export function createCircuitBreaker(
     const oldState = state
     consecutiveFailures++
     totalFailures++
-    lastFailureTime = Date.now()
+    lastFailureTime = now()
     if (consecutiveFailures >= maxFailures && state !== 'open') {
       state = 'open'
       recordTransition(oldState, 'open', `consecutive_failures_${consecutiveFailures}`)

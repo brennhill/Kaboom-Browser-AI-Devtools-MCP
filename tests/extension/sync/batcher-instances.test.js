@@ -25,6 +25,8 @@ const mockSendEnhancedActionsToServer = mock.fn(() => Promise.resolve())
 const mockSendNetworkBodiesToServer = mock.fn(() => Promise.resolve())
 const mockSendPerformanceSnapshotsToServer = mock.fn(() => Promise.resolve())
 const mockCheckContextAnnotations = mock.fn()
+const mockReportStateRecovery = mock.fn()
+const mockResolveStateRecovery = mock.fn()
 
 mock.module('../../../extension/background/sync/batchers.js', {
   namedExports: {
@@ -46,6 +48,13 @@ mock.module('../../../extension/background/sync/server.js', {
 mock.module('../../../extension/background/caches/snapshots.js', {
   namedExports: {
     checkContextAnnotations: mockCheckContextAnnotations
+  }
+})
+
+mock.module('../../../extension/background/runtime-state/state-recovery.js', {
+  namedExports: {
+    reportStateRecovery: mockReportStateRecovery,
+    resolveStateRecovery: mockResolveStateRecovery
   }
 })
 
@@ -78,6 +87,8 @@ function resetMocks() {
   mockCreateBatcherWithCircuitBreaker.mock.resetCalls()
   mockSendLogsToServer.mock.resetCalls()
   mockCheckContextAnnotations.mock.resetCalls()
+  mockReportStateRecovery.mock.resetCalls()
+  mockResolveStateRecovery.mock.resetCalls()
 }
 
 // ---------------------------------------------------------------------------
@@ -121,6 +132,31 @@ describe('createBatcherInstances — factory shape', () => {
       const opts = call.arguments[1]
       assert.strictEqual(opts.sharedCircuitBreaker, cb)
     }
+  })
+
+  test('wires every stream pressure transition to structured logs and Doctor recovery', () => {
+    const deps = createMockDeps()
+    createBatcherInstances(deps, createMockCircuitBreaker())
+
+    for (const call of mockCreateBatcherWithCircuitBreaker.mock.calls) {
+      const options = call.arguments[1]
+      options.onPressure({ reason: 'capacity', dropped: 2, pending: 1000, capacity: 1000, total_dropped: 2 })
+      options.onPressureRecovered()
+    }
+
+    assert.strictEqual(deps.debugLog.mock.calls.length, 5)
+    assert.strictEqual(mockReportStateRecovery.mock.calls.length, 5)
+    assert.strictEqual(mockResolveStateRecovery.mock.calls.length, 5)
+    assert.deepStrictEqual(
+      mockReportStateRecovery.mock.calls.map((call) => call.arguments[0].name),
+      [
+        'telemetry_console_pressure',
+        'telemetry_websocket_pressure',
+        'telemetry_action_pressure',
+        'telemetry_network_body_pressure',
+        'telemetry_performance_pressure'
+      ]
+    )
   })
 })
 

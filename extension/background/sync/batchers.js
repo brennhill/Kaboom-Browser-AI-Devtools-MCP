@@ -23,6 +23,17 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
     const retryBudget = options.retryBudget ?? RATE_LIMIT_CONFIG.retryBudget;
     const maxFailures = options.maxFailures ?? RATE_LIMIT_CONFIG.maxFailures;
     const resetTimeout = options.resetTimeout ?? RATE_LIMIT_CONFIG.resetTimeout;
+    const capacity = options.maxPendingEntries ?? MAX_PENDING_BUFFER;
+    const runtime = options.runtime ?? {
+        now: Date.now,
+        setTimeout: (callback, delay) => {
+            const id = setTimeout(callback, delay);
+            const nodeTimer = id;
+            nodeTimer.unref?.();
+            return id;
+        },
+        clearTimeout: (id) => clearTimeout(id)
+    };
     const backoffSchedule = RATE_LIMIT_CONFIG.backoffSchedule;
     const localConnectionStatus = { connected: true };
     const isSharedCB = !!options.sharedCircuitBreaker;
@@ -31,7 +42,8 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
             maxFailures,
             resetTimeout,
             initialBackoff: 0,
-            maxBackoff: 0
+            maxBackoff: 0,
+            now: runtime.now
         });
     function getScheduledBackoff(failures) {
         if (failures <= 0)
@@ -71,9 +83,39 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
     }
     let pending = [];
     let timeoutId = null;
+    let recoveryTimeoutId = null;
     let flushPromise = null;
+    let accepted = 0;
+    let delivered = 0;
+    let dropped = 0;
+    let pressureActive = false;
+    function reportDrop(reason, count) {
+        if (count <= 0)
+            return;
+        dropped += count;
+        pressureActive = true;
+        options.onPressure?.({ reason, dropped: count, pending: pending.length, capacity, total_dropped: dropped });
+    }
+    function resolvePressureAfterDelivery() {
+        if (!pressureActive || pending.length >= capacity)
+            return;
+        pressureActive = false;
+        options.onPressureRecovered?.();
+    }
+    function scheduleRecovery() {
+        if (recoveryTimeoutId !== null || pending.length === 0)
+            return;
+        recoveryTimeoutId = runtime.setTimeout(() => {
+            recoveryTimeoutId = null;
+            void flushWithCircuitBreaker();
+        }, resetTimeout);
+    }
     function requeueEntries(entries) {
-        pending = entries.concat(pending).slice(0, MAX_PENDING_BUFFER);
+        const combined = entries.concat(pending);
+        pending = combined.slice(0, capacity);
+        reportDrop('requeue_overflow', combined.length - pending.length);
+        if (cb.getState() === 'open')
+            scheduleRecovery();
     }
     async function retryWithBackoff(entries) {
         let retriesLeft = retryBudget - 1;
@@ -83,12 +125,14 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
             const backoff = getScheduledBackoff(stats.consecutiveFailures);
             if (backoff > 0) {
                 await new Promise((r) => {
-                    setTimeout(r, backoff);
+                    runtime.setTimeout(r, backoff);
                 });
             }
             try {
                 await attemptSend(entries);
+                delivered += entries.length;
                 localConnectionStatus.connected = true;
+                resolvePressureAfterDelivery();
                 return true;
             }
             catch {
@@ -115,7 +159,7 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
         const entries = pending;
         pending = [];
         if (timeoutId) {
-            clearTimeout(timeoutId);
+            runtime.clearTimeout(timeoutId);
             timeoutId = null;
         }
         if (cb.getState() === 'open') {
@@ -124,7 +168,9 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
         }
         try {
             await attemptSend(entries);
+            delivered += entries.length;
             localConnectionStatus.connected = true;
+            resolvePressureAfterDelivery();
             return true;
         }
         catch {
@@ -147,15 +193,18 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
     const scheduleFlush = () => {
         if (timeoutId)
             return;
-        timeoutId = setTimeout(() => {
+        timeoutId = runtime.setTimeout(() => {
             timeoutId = null;
             flushWithCircuitBreaker();
         }, debounceMs);
     };
     const batcher = {
         add(entry) {
-            if (pending.length >= MAX_PENDING_BUFFER)
+            accepted++;
+            if (pending.length >= capacity) {
+                reportDrop('capacity', 1);
                 return;
+            }
             pending.push(entry);
             if (pending.length >= maxBatchSize) {
                 flushWithCircuitBreaker();
@@ -168,10 +217,15 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
             await flushWithCircuitBreaker();
         },
         clear() {
+            reportDrop('clear', pending.length);
             pending = [];
             if (timeoutId) {
-                clearTimeout(timeoutId);
+                runtime.clearTimeout(timeoutId);
                 timeoutId = null;
+            }
+            if (recoveryTimeoutId !== null) {
+                runtime.clearTimeout(recoveryTimeoutId);
+                recoveryTimeoutId = null;
             }
         },
         getPending() {
@@ -181,69 +235,15 @@ export function createBatcherWithCircuitBreaker(sendFn, options = {}) {
     return {
         batcher,
         circuitBreaker: wrappedCircuitBreaker,
-        getConnectionStatus: () => ({ ...localConnectionStatus })
-    };
-}
-/**
- * Create a simple log batcher without circuit breaker
- */
-export function createLogBatcher(flushFn, options = {}) {
-    const debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS;
-    const maxBatchSize = options.maxBatchSize ?? DEFAULT_MAX_BATCH_SIZE;
-    const memoryPressureGetter = options.memoryPressureGetter ?? null;
-    let pending = [];
-    let timeoutId = null;
-    const getEffectiveMaxBatchSize = () => {
-        if (memoryPressureGetter) {
-            const state = memoryPressureGetter();
-            if (state.reducedCapacities) {
-                return Math.floor(maxBatchSize / 2);
-            }
-        }
-        return maxBatchSize;
-    };
-    const flush = () => {
-        if (pending.length === 0)
-            return;
-        const entries = pending;
-        pending = [];
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-        }
-        flushFn(entries);
-    };
-    const scheduleFlush = () => {
-        if (timeoutId)
-            return;
-        timeoutId = setTimeout(() => {
-            timeoutId = null;
-            flush();
-        }, debounceMs);
-    };
-    return {
-        add(entry) {
-            if (pending.length >= MAX_PENDING_BUFFER)
-                return;
-            pending.push(entry);
-            const effectiveMax = getEffectiveMaxBatchSize();
-            if (pending.length >= effectiveMax) {
-                flush();
-            }
-            else {
-                scheduleFlush();
-            }
-        },
-        flush() {
-            flush();
-        },
-        clear() {
-            pending = [];
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-                timeoutId = null;
-            }
-        }
+        getConnectionStatus: () => ({ ...localConnectionStatus }),
+        getPressureStats: () => ({
+            accepted,
+            delivered,
+            dropped,
+            pending: pending.length,
+            capacity,
+            saturated: dropped > 0
+        })
     };
 }
 //# sourceMappingURL=batchers.js.map

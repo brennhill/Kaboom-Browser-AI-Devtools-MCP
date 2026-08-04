@@ -121,6 +121,7 @@ test_paths:
   - tests/extension/reliability/diagnostic-log-queue.test.js
   - tests/extension/sync/background-batching.test.js
   - tests/extension/sync/batcher-instances.test.js
+  - tests/extension/performance/rate-limit.test.js
   - tests/extension/sync/sync-manager.test.js
   - tests/extension/misc/integration.test.cjs
   - tests/extension/capture/observe-screenshot.test.js
@@ -312,6 +313,13 @@ Disposable network-body, WebSocket, enhanced-action, and extension-diagnostic
 streams enforce their declared capacity on every ingestion. Their canonical
 owners expose current size, capacity, cumulative drops, and oldest age so
 pressure and recovery are observable without competing with active commands.
+Extension telemetry batchers retain failed batches and schedule one
+lifecycle-cancellable half-open probe even when no new page event arrives.
+Each stream accounts exactly for received entries as delivered, retained, or
+dropped; capacity and requeue overflow emit redacted structured diagnostics and
+a correlated Doctor incident, which resolves after delivery recovers. The dead
+non-circuit log batcher was removed so every production telemetry stream shares
+this one bounded delivery contract.
 
 ## Specs
 

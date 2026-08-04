@@ -76,7 +76,6 @@ const mockChrome = {
 globalThis.chrome = mockChrome
 
 // Import after mocking
-import { createLogBatcher } from '../../../extension/background/sync/batchers.js'
 import { sendLogsToServer, checkServerHealth, updateBadge } from '../../../extension/background/sync/server.js'
 import { formatLogEntry, shouldCaptureLog } from '../../../extension/background/sync/log-processing.js'
 import {
@@ -85,91 +84,6 @@ import {
   getContextWarning,
   resetContextWarning
 } from '../../../extension/background/caches/snapshots.js'
-
-describe('Log Batcher', () => {
-  beforeEach(() => {
-    mock.reset()
-  })
-
-  test('should batch logs and call flush after debounce', async () => {
-    const flushFn = mock.fn()
-    const batcher = createLogBatcher(flushFn, { debounceMs: 50 })
-
-    batcher.add({ level: 'error', msg: 'test1' })
-    batcher.add({ level: 'error', msg: 'test2' })
-
-    // Should not have flushed yet
-    assert.strictEqual(flushFn.mock.calls.length, 0)
-
-    // Wait for debounce
-    await new Promise((r) => setTimeout(r, 100))
-
-    // Should have flushed once with both entries
-    assert.strictEqual(flushFn.mock.calls.length, 1)
-    const flushedBatch = flushFn.mock.calls[0].arguments[0]
-    assert.strictEqual(flushedBatch.length, 2)
-    assert.strictEqual(flushedBatch[0].level, 'error')
-    assert.strictEqual(flushedBatch[0].msg, 'test1')
-    assert.strictEqual(flushedBatch[1].level, 'error')
-    assert.strictEqual(flushedBatch[1].msg, 'test2')
-  })
-
-  test('should flush immediately when batch size reached', () => {
-    const flushFn = mock.fn()
-    const batcher = createLogBatcher(flushFn, { debounceMs: 1000, maxBatchSize: 3 })
-
-    batcher.add({ msg: '1' })
-    batcher.add({ msg: '2' })
-    assert.strictEqual(flushFn.mock.calls.length, 0)
-
-    batcher.add({ msg: '3' })
-    assert.strictEqual(flushFn.mock.calls.length, 1)
-    const flushedBatch = flushFn.mock.calls[0].arguments[0]
-    assert.strictEqual(flushedBatch.length, 3)
-    assert.strictEqual(flushedBatch[0].msg, '1')
-    assert.strictEqual(flushedBatch[1].msg, '2')
-    assert.strictEqual(flushedBatch[2].msg, '3')
-  })
-
-  test('should clear pending logs on flush', async () => {
-    const flushFn = mock.fn()
-    const batcher = createLogBatcher(flushFn, { debounceMs: 50 })
-
-    batcher.add({ msg: 'test' })
-    await new Promise((r) => setTimeout(r, 100))
-
-    // Add another after flush
-    batcher.add({ msg: 'test2' })
-    await new Promise((r) => setTimeout(r, 100))
-
-    // Each batch should be separate
-    assert.strictEqual(flushFn.mock.calls.length, 2)
-    assert.strictEqual(flushFn.mock.calls[0].arguments[0].length, 1)
-    assert.strictEqual(flushFn.mock.calls[0].arguments[0][0].msg, 'test')
-    assert.strictEqual(flushFn.mock.calls[1].arguments[0].length, 1)
-    assert.strictEqual(flushFn.mock.calls[1].arguments[0][0].msg, 'test2')
-  })
-
-  test('should handle manual flush', () => {
-    const flushFn = mock.fn()
-    const batcher = createLogBatcher(flushFn, { debounceMs: 10000 })
-
-    batcher.add({ msg: 'test' })
-    batcher.flush()
-
-    assert.strictEqual(flushFn.mock.calls.length, 1)
-    assert.strictEqual(flushFn.mock.calls[0].arguments[0].length, 1)
-    assert.strictEqual(flushFn.mock.calls[0].arguments[0][0].msg, 'test')
-  })
-
-  test('should not flush if empty', () => {
-    const flushFn = mock.fn()
-    const batcher = createLogBatcher(flushFn, { debounceMs: 50 })
-
-    batcher.flush()
-    assert.strictEqual(flushFn.mock.calls.length, 0)
-  })
-})
 
 describe('sendLogsToServer', () => {
   beforeEach(() => {

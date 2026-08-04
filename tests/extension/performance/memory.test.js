@@ -71,7 +71,6 @@ import {
   MEMORY_AVG_NETWORK_BODY_SIZE,
   MEMORY_AVG_ACTION_SIZE
 } from '../../../extension/background/caches/cache-limits.js'
-import { createLogBatcher } from '../../../extension/background/sync/batchers.js'
 
 describe('Memory Enforcement: Constants', () => {
   test('soft limit should be 20MB', () => {
@@ -610,66 +609,5 @@ describe('Memory Enforcement: Hard limit disables network body batcher', () => {
     assert.strictEqual(result.action, 'disable_network_capture')
     assert.strictEqual(result.level, 'hard')
     assert.ok(result.estimatedMemory >= MEMORY_HARD_LIMIT, 'Estimated memory should be at or above hard limit')
-  })
-})
-
-describe('Memory Enforcement: Batcher interaction with memory pressure', () => {
-  beforeEach(() => {
-    resetMemoryPressureState()
-  })
-
-  test('createLogBatcher should accept memoryPressureGetter option', () => {
-    const flushFn = mock.fn()
-    const batcher = createLogBatcher(flushFn, {
-      debounceMs: 50,
-      maxBatchSize: 50,
-      memoryPressureGetter: getMemoryPressureState
-    })
-
-    assert.ok(batcher)
-    assert.ok(batcher.add)
-    assert.ok(batcher.flush)
-  })
-
-  test('batcher with reduced capacities should halve maxBatchSize', () => {
-    // Trigger soft limit to set reducedCapacities
-    const softBuffers = {
-      logEntries: Array(42000).fill({ level: 'error' }),
-      wsEvents: [],
-      networkBodies: [],
-      enhancedActions: []
-    }
-    checkMemoryPressure(softBuffers)
-
-    const flushFn = mock.fn()
-    const batcher = createLogBatcher(flushFn, {
-      debounceMs: 10000,
-      maxBatchSize: 50,
-      memoryPressureGetter: getMemoryPressureState
-    })
-
-    // Add 25 entries (half of 50) - should trigger flush at reduced capacity
-    for (let i = 0; i < 25; i++) {
-      batcher.add({ msg: `entry-${i}` })
-    }
-
-    assert.strictEqual(flushFn.mock.calls.length, 1, 'Expected flush at halved capacity (25)')
-    assert.strictEqual(flushFn.mock.calls[0].arguments[0].length, 25)
-  })
-
-  test('batcher without memoryPressureGetter should work normally', () => {
-    const flushFn = mock.fn()
-    const batcher = createLogBatcher(flushFn, {
-      debounceMs: 10000,
-      maxBatchSize: 50
-    })
-
-    // Add 50 entries - should flush at normal capacity
-    for (let i = 0; i < 50; i++) {
-      batcher.add({ msg: `entry-${i}` })
-    }
-
-    assert.strictEqual(flushFn.mock.calls.length, 1)
-    assert.strictEqual(flushFn.mock.calls[0].arguments[0].length, 50)
   })
 })

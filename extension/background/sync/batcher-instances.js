@@ -7,6 +7,7 @@ import { createBatcherWithCircuitBreaker } from './batchers.js';
 import { updateBadge, sendLogsToServer, sendWSEventsToServer, sendEnhancedActionsToServer, sendNetworkBodiesToServer, sendPerformanceSnapshotsToServer } from './server.js';
 import { checkContextAnnotations } from '../caches/snapshots.js';
 import { errorMessage } from '../../lib/error-utils.js';
+import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js';
 // =============================================================================
 // CONNECTION STATUS WRAPPER
 // =============================================================================
@@ -31,6 +32,31 @@ function withConnectionStatus(deps, sendFn, onSuccess) {
         }
     };
 }
+function pressureLifecycle(deps, stream) {
+    const name = `telemetry_${stream}_pressure`;
+    return {
+        onPressure: (event) => {
+            deps.debugLog('error', 'Telemetry buffer pressure dropped entries', {
+                stream,
+                reason: event.reason,
+                dropped_count: event.dropped,
+                total_dropped: event.total_dropped,
+                pending_count: event.pending,
+                capacity: event.capacity
+            });
+            reportStateRecovery({
+                name,
+                detail: `${stream} telemetry exceeded its local delivery buffer; ${event.dropped} entr${event.dropped === 1 ? 'y was' : 'ies were'} dropped.`,
+                fix: 'Restore the daemon connection and inspect local extension diagnostics.',
+                correlation_id: name,
+                expected_next_transition: 'buffer_delivery_recovered',
+                recovery_attempt: event.total_dropped,
+                recovery_outcome: 'fallback'
+            });
+        },
+        onPressureRecovered: () => resolveStateRecovery(name)
+    };
+}
 /**
  * Create all batcher instances wired to the shared circuit breaker.
  * Called once from index.ts during module initialization.
@@ -46,11 +72,11 @@ export function createBatcherInstances(deps, sharedCircuitBreaker) {
             entries: typedResult.entries || status.entries + entries.length,
             errorCount: status.errorCount + entries.filter((e) => e.level === 'error').length
         });
-    }), { sharedCircuitBreaker });
-    const wsBatcherWithCB = createBatcherWithCircuitBreaker(withConnectionStatus(deps, (events) => sendWSEventsToServer(deps.getServerUrl(), events, deps.debugLog)), { debounceMs: 200, maxBatchSize: 100, sharedCircuitBreaker });
-    const enhancedActionBatcherWithCB = createBatcherWithCircuitBreaker(withConnectionStatus(deps, (actions) => sendEnhancedActionsToServer(deps.getServerUrl(), actions, deps.debugLog)), { debounceMs: 200, maxBatchSize: 50, sharedCircuitBreaker });
-    const networkBodyBatcherWithCB = createBatcherWithCircuitBreaker(withConnectionStatus(deps, (bodies) => sendNetworkBodiesToServer(deps.getServerUrl(), bodies, deps.debugLog)), { debounceMs: 200, maxBatchSize: 50, sharedCircuitBreaker });
-    const perfBatcherWithCB = createBatcherWithCircuitBreaker(withConnectionStatus(deps, (snapshots) => sendPerformanceSnapshotsToServer(deps.getServerUrl(), snapshots, deps.debugLog)), { debounceMs: 500, maxBatchSize: 10, sharedCircuitBreaker });
+    }), { sharedCircuitBreaker, ...pressureLifecycle(deps, 'console') });
+    const wsBatcherWithCB = createBatcherWithCircuitBreaker(withConnectionStatus(deps, (events) => sendWSEventsToServer(deps.getServerUrl(), events, deps.debugLog)), { debounceMs: 200, maxBatchSize: 100, sharedCircuitBreaker, ...pressureLifecycle(deps, 'websocket') });
+    const enhancedActionBatcherWithCB = createBatcherWithCircuitBreaker(withConnectionStatus(deps, (actions) => sendEnhancedActionsToServer(deps.getServerUrl(), actions, deps.debugLog)), { debounceMs: 200, maxBatchSize: 50, sharedCircuitBreaker, ...pressureLifecycle(deps, 'action') });
+    const networkBodyBatcherWithCB = createBatcherWithCircuitBreaker(withConnectionStatus(deps, (bodies) => sendNetworkBodiesToServer(deps.getServerUrl(), bodies, deps.debugLog)), { debounceMs: 200, maxBatchSize: 50, sharedCircuitBreaker, ...pressureLifecycle(deps, 'network_body') });
+    const perfBatcherWithCB = createBatcherWithCircuitBreaker(withConnectionStatus(deps, (snapshots) => sendPerformanceSnapshotsToServer(deps.getServerUrl(), snapshots, deps.debugLog)), { debounceMs: 500, maxBatchSize: 10, sharedCircuitBreaker, ...pressureLifecycle(deps, 'performance') });
     return {
         logBatcherWithCB,
         logBatcher: logBatcherWithCB.batcher,

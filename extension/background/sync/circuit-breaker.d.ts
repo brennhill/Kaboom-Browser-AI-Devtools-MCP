@@ -16,6 +16,7 @@ export interface CircuitBreakerOptions {
     initialBackoff?: number;
     maxBackoff?: number;
     onStateChange?: CircuitBreakerStateChangeCallback;
+    now?: () => number;
 }
 /** Transition history entry */
 export interface CircuitBreakerTransition {

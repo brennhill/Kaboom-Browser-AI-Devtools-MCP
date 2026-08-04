@@ -78,7 +78,6 @@ const mockChrome = {
 globalThis.chrome = mockChrome
 
 // Import after mocking
-import { createLogBatcher } from '../../../extension/background/sync/batchers.js'
 import { sendEnhancedActionsToServer } from '../../../extension/background/sync/server.js'
 import {
   createErrorSignature,
@@ -592,37 +591,6 @@ describe('Enhanced Actions Server Communication', () => {
       () => sendEnhancedActionsToServer('http://localhost:7890', actions),
       (err) => err.message.includes('500')
     )
-  })
-
-  test('enhanced action batcher should batch and send actions', async () => {
-    const flushFn = mock.fn()
-    const batcher = createLogBatcher(flushFn, { debounceMs: 50, maxBatchSize: 50 })
-
-    const action1 = { type: 'click', timestamp: 1000, url: 'http://localhost:3000', selectors: { id: 'btn' } }
-    const action2 = {
-      type: 'input',
-      timestamp: 1001,
-      url: 'http://localhost:3000',
-      selectors: { id: 'input' },
-      value: 'hi'
-    }
-
-    batcher.add(action1)
-    batcher.add(action2)
-
-    // Wait for debounce
-    await new Promise((r) => setTimeout(r, 100))
-
-    assert.strictEqual(flushFn.mock.calls.length, 1)
-    const flushedActions = flushFn.mock.calls[0].arguments[0]
-    assert.strictEqual(flushedActions.length, 2)
-    assert.strictEqual(flushedActions[0].type, 'click')
-    assert.strictEqual(flushedActions[0].timestamp, 1000)
-    assert.strictEqual(flushedActions[0].url, 'http://localhost:3000')
-    assert.deepStrictEqual(flushedActions[0].selectors, { id: 'btn' })
-    assert.strictEqual(flushedActions[1].type, 'input')
-    assert.strictEqual(flushedActions[1].timestamp, 1001)
-    assert.strictEqual(flushedActions[1].value, 'hi')
   })
 
   test('message handler should process enhanced_action messages via batcher', () => {
