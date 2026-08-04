@@ -75,3 +75,8 @@ Doctor input.
 Operational evidence also applies case-insensitive Bearer and Basic patterns,
 accepts horizontal whitespace in authorization schemes, and redacts complete
 quoted structured credential values so whitespace cannot expose a suffix.
+Built-in patterns use correctness-preserving literal and numeric prefilters;
+fixed-format AWS, Bearer, and SSN candidates use allocation-bounded scanners.
+Custom patterns remain unrestricted. This avoids repeatedly running impossible
+regular expressions over large captured payloads while preserving the same
+redaction results and the documented 5 KB/100 KB latency budgets.

@@ -22,6 +22,10 @@ type compiledPattern struct {
 	regex       *regexp.Regexp
 	replacement string
 	validate    func(match string) bool // optional post-match validation (e.g., Luhn)
+	hints       []string
+	foldHints   bool
+	minDigits   int
+	fastReplace func(string, string) string
 }
 
 // RedactionEngine applies a set of compiled patterns to text.

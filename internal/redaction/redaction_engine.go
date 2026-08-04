@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -46,6 +47,10 @@ func NewRedactionEngine(configPath string) *RedactionEngine {
 			regex:       re,
 			replacement: "[REDACTED:" + bp.name + "]",
 			validate:    bp.validate,
+			hints:       bp.hints,
+			foldHints:   bp.foldHints,
+			minDigits:   bp.minDigits,
+			fastReplace: bp.fastReplace,
 		})
 	}
 
@@ -97,6 +102,13 @@ func (e *RedactionEngine) Redact(input string) string {
 
 	result := input
 	for _, p := range e.patterns {
+		if !patternMayMatch(result, p) {
+			continue
+		}
+		if p.fastReplace != nil {
+			result = p.fastReplace(result, p.replacement)
+			continue
+		}
 		if p.validate != nil {
 			// For patterns with validation, we need to check each match
 			result = p.regex.ReplaceAllStringFunc(result, func(match string) string {
@@ -110,6 +122,188 @@ func (e *RedactionEngine) Redact(input string) string {
 		}
 	}
 	return result
+}
+
+func redactSSN(input, replacement string) string {
+	var output strings.Builder
+	last := 0
+	for start := 0; start+11 <= len(input); start++ {
+		if !isSSNAt(input, start) {
+			continue
+		}
+		if output.Cap() == 0 {
+			output.Grow(len(input))
+		}
+		output.WriteString(input[last:start])
+		output.WriteString(replacement)
+		last = start + 11
+		start += 10
+	}
+	if last == 0 {
+		return input
+	}
+	output.WriteString(input[last:])
+	return output.String()
+}
+
+func redactAWSKey(input, replacement string) string {
+	return replaceFixedCandidates(input, replacement, 20, func(candidate string) bool {
+		if !strings.HasPrefix(candidate, "AKIA") {
+			return false
+		}
+		for index := 4; index < len(candidate); index++ {
+			char := candidate[index]
+			if !((char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')) {
+				return false
+			}
+		}
+		return true
+	})
+}
+
+func redactBearerToken(input, replacement string) string {
+	var output strings.Builder
+	last := 0
+	for start := 0; start+7 <= len(input); start++ {
+		if !equalASCIIFold(input[start:start+6], "bearer") || (input[start+6] != ' ' && input[start+6] != '\t') {
+			continue
+		}
+		end := start + 6
+		for end < len(input) && (input[end] == ' ' || input[end] == '\t') {
+			end++
+		}
+		tokenStart := end
+		for end < len(input) && isBearerBaseChar(input[end]) {
+			end++
+		}
+		if end == tokenStart {
+			continue
+		}
+		for end < len(input) && input[end] == '=' {
+			end++
+		}
+		if output.Cap() == 0 {
+			output.Grow(len(input))
+		}
+		output.WriteString(input[last:start])
+		output.WriteString(replacement)
+		last = end
+		start = end - 1
+	}
+	if last == 0 {
+		return input
+	}
+	output.WriteString(input[last:])
+	return output.String()
+}
+
+func replaceFixedCandidates(input, replacement string, width int, valid func(string) bool) string {
+	var output strings.Builder
+	last := 0
+	for start := 0; start+width <= len(input); start++ {
+		if !valid(input[start : start+width]) {
+			continue
+		}
+		if output.Cap() == 0 {
+			output.Grow(len(input))
+		}
+		output.WriteString(input[last:start])
+		output.WriteString(replacement)
+		last = start + width
+		start += width - 1
+	}
+	if last == 0 {
+		return input
+	}
+	output.WriteString(input[last:])
+	return output.String()
+}
+
+func equalASCIIFold(input, lower string) bool {
+	if len(input) != len(lower) {
+		return false
+	}
+	for index := range len(lower) {
+		char := input[index]
+		if char >= 'A' && char <= 'Z' {
+			char += 'a' - 'A'
+		}
+		if char != lower[index] {
+			return false
+		}
+	}
+	return true
+}
+
+func isBearerBaseChar(char byte) bool {
+	return char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9' || strings.ContainsRune("-._~+/", rune(char))
+}
+
+func isSSNAt(input string, start int) bool {
+	if start > 0 && isASCIIWord(input[start-1]) || start+11 < len(input) && isASCIIWord(input[start+11]) {
+		return false
+	}
+	for _, offset := range [...]int{0, 1, 2, 4, 5, 7, 8, 9, 10} {
+		if input[start+offset] < '0' || input[start+offset] > '9' {
+			return false
+		}
+	}
+	return input[start+3] == '-' && input[start+6] == '-'
+}
+
+func isASCIIWord(char byte) bool {
+	return char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9' || char == '_'
+}
+
+func patternMayMatch(input string, pattern compiledPattern) bool {
+	if pattern.minDigits > 0 && !containsAtLeastDigits(input, pattern.minDigits) {
+		return false
+	}
+	if len(pattern.hints) == 0 {
+		return true
+	}
+	for _, hint := range pattern.hints {
+		if (!pattern.foldHints && strings.Contains(input, hint)) || (pattern.foldHints && containsASCIIFold(input, hint)) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsAtLeastDigits(input string, minimum int) bool {
+	count := 0
+	for index := range len(input) {
+		if input[index] >= '0' && input[index] <= '9' {
+			count++
+			if count >= minimum {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func containsASCIIFold(input, lowerHint string) bool {
+	if len(lowerHint) == 0 {
+		return true
+	}
+	for start := 0; start+len(lowerHint) <= len(input); start++ {
+		matched := true
+		for offset := range len(lowerHint) {
+			char := input[start+offset]
+			if char >= 'A' && char <= 'Z' {
+				char += 'a' - 'A'
+			}
+			if char != lowerHint[offset] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 // RedactJSON applies redaction to every string-bearing field within a canonical

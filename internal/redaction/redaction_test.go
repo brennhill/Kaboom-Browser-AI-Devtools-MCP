@@ -31,6 +31,11 @@ func TestRedactBearerToken(t *testing.T) {
 			want:  `{"token": "[REDACTED:bearer-token]"}`,
 		},
 		{
+			name:  "case insensitive bearer with repeated horizontal whitespace",
+			input: "authorization: bEaReR\t  abc123def456",
+			want:  "authorization: [REDACTED:bearer-token]",
+		},
+		{
 			name:  "no bearer keyword",
 			input: `Authorization: Basic dXNlcjpwYXNz`,
 			want:  `Authorization: [REDACTED:basic-auth]`,
