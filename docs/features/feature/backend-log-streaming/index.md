@@ -369,3 +369,6 @@ this one bounded delivery contract.
 - SyncHandler owns a private pending-query wait boundary. Handler tests control
   the wait and prove the required resnapshot; QueryDispatcher tests exclusively
   own timer and wakeup behavior.
+- Query cleanup lifecycle coverage lives with the canonical QueryDispatcher;
+  the former Capture-level goroutine-count and duplicate result-wait tests were
+  deleted rather than preserved as a cross-owner test facade.

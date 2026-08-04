@@ -71,6 +71,12 @@ between the initial read and channel snapshot from becoming a missed wakeup.
 The expiration/completion race suite runs from explicit barriers with no
 wall-clock sleeps.
 
+Dispatcher cleanup has one owned stop channel and one completion channel.
+`Close` is concurrent-safe and returns only after the periodic worker exits;
+there is no nullable stop-function lifecycle or cross-package goroutine-count
+test. Result timeout, cancellation, wakeup, TTL, and cleanup ownership are all
+verified in this package.
+
 ## TL;DR
 
 - Status: proposed

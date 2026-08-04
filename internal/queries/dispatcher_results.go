@@ -240,25 +240,25 @@ func (qd *QueryDispatcher) waitForResultContext(ctx context.Context, id string, 
 // startResultCleanup starts periodic TTL/lifecycle reconciliation.
 //
 // Invariants:
-// - Returned stop func is single-use and owned by QueryDispatcher.Close.
+//   - cleanupDone closes only after the worker has stopped, making Close a
+//     deterministic completion barrier.
 //
 // Failure semantics:
 // - Cleanup failures are contained (no panic path); next ticker cycle retries.
-func (qd *QueryDispatcher) startResultCleanup() func() {
-	stop := make(chan struct{})
+func (qd *QueryDispatcher) startResultCleanup() {
 	util.SafeGo(func() {
+		defer close(qd.cleanupDone)
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
 				qd.cleanExpiredResults()
-			case <-stop:
+			case <-qd.cleanupStop:
 				return
 			}
 		}
 	})
-	return func() { close(stop) }
 }
 
 // cleanExpiredResults prunes stale query results and reconciles orphaned commands.

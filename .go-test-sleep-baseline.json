@@ -42,7 +42,6 @@
     "internal/capture/async_queue_reliability_test.go": 6,
     "internal/capture/capture_stress_test.go": 4,
     "internal/capture/extension_state_unit_test.go": 1,
-    "internal/capture/queries_lifecycle_test.go": 11,
     "internal/capture/readiness_gate_test.go": 4,
     "internal/pty/session_test.go": 4
   }

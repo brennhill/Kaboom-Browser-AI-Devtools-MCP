@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -580,5 +581,38 @@ func TestNewQueryDispatcher_SetGetQueryTimeout(t *testing.T) {
 	qd.SetQueryTimeout(10 * time.Second)
 	if got := qd.GetQueryTimeout(); got != 10*time.Second {
 		t.Errorf("timeout after set = %v, want 10s", got)
+	}
+}
+
+func TestQueryDispatcherCloseWaitsForCleanupAndIsConcurrentSafe(t *testing.T) {
+	t.Parallel()
+
+	qd := NewQueryDispatcher()
+	const closers = 8
+	start := make(chan struct{})
+	var closed sync.WaitGroup
+	closed.Add(closers)
+	for i := 0; i < closers; i++ {
+		go func() {
+			defer closed.Done()
+			<-start
+			qd.Close()
+		}()
+	}
+	close(start)
+	closed.Wait()
+
+	select {
+	case <-qd.cleanupDone:
+		// Close is a completion barrier, not a best-effort stop request.
+	default:
+		t.Fatal("Close returned before the cleanup worker exited")
+	}
+}
+
+func TestQueryResultTTLSupportsMultiStepAgents(t *testing.T) {
+	t.Parallel()
+	if QueryResultTTL != 5*time.Minute {
+		t.Fatalf("QueryResultTTL = %v, want 5m", QueryResultTTL)
 	}
 }

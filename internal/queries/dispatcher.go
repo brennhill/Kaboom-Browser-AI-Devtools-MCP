@@ -66,7 +66,9 @@ type QueryDispatcher struct {
 	commandNotify   chan struct{} // closed on a terminal ApplyCommandResult, then recreated
 	queryNotify     chan struct{} // closed when pending queries are enqueued, then recreated (protected by mu)
 
-	stopCleanup func()
+	cleanupStop     chan struct{}
+	cleanupDone     chan struct{}
+	cleanupStopOnce sync.Once
 }
 
 // NewQueryDispatcher creates a dispatcher with active cleanup lifecycle.
@@ -84,9 +86,11 @@ func NewQueryDispatcher() *QueryDispatcher {
 		terminalHistory: make([]*CommandResult, 0, terminalCommandHistoryLimit),
 		commandNotify:   make(chan struct{}),
 		queryNotify:     make(chan struct{}),
+		cleanupStop:     make(chan struct{}),
+		cleanupDone:     make(chan struct{}),
 	}
 	qd.queryCond = sync.NewCond(&qd.mu)
-	qd.stopCleanup = qd.startResultCleanup()
+	qd.startResultCleanup()
 	return qd
 }
 
@@ -99,10 +103,8 @@ func NewQueryDispatcher() *QueryDispatcher {
 // - Does not clear in-memory queues/results; it only ends cleanup lifecycle.
 // - Waiters continue using timeout semantics after close.
 func (qd *QueryDispatcher) Close() {
-	if qd.stopCleanup != nil {
-		qd.stopCleanup()
-		qd.stopCleanup = nil
-	}
+	qd.cleanupStopOnce.Do(func() { close(qd.cleanupStop) })
+	<-qd.cleanupDone
 }
 
 // QuerySnapshot contains a point-in-time view of query state for health reporting.
