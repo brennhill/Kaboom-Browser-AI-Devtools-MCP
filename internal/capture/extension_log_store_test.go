@@ -5,6 +5,7 @@
 package capture
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
@@ -67,16 +68,20 @@ func TestExtensionLogStore_EntriesReturnsDetachedCopy(t *testing.T) {
 	t.Parallel()
 
 	store := newExtensionLogStore(nil)
-	store.Add([]types.ExtensionLog{{Level: "info", Message: "one"}, {Level: "warn", Message: "two"}})
+	input := json.RawMessage(`{"status":"original"}`)
+	store.Add([]types.ExtensionLog{{Level: "info", Message: "one", Data: input}, {Level: "warn", Message: "two"}})
+	input[11] = 'X'
 
 	snap := store.Entries()
 	if len(snap) != 2 {
 		t.Fatalf("snapshot len = %d, want 2", len(snap))
 	}
 	snap[0].Message = "mutated"
+	snap[0].Data[11] = 'Y'
 
-	if got := store.Entries()[0].Message; got != "one" {
-		t.Fatalf("buffer should remain unchanged, got %q", got)
+	fresh := store.Entries()[0]
+	if fresh.Message != "one" || string(fresh.Data) != `{"status":"original"}` {
+		t.Fatalf("buffer should remain detached, got %+v", fresh)
 	}
 }
 

@@ -155,6 +155,11 @@ URL-path normalization consumers import `internal/util.ExtractURLPath`
 directly; the capture-package pass-through and its duplicate tests are deleted.
 Capture APIs and their callers use the canonical wire contracts from
 `internal/types` directly; `internal/capture` does not re-export wire types.
+Capture stores take ownership of nested mutable values at ingestion and return
+deeply detached snapshots. Response-header maps, test-ID slices, WebSocket
+sampling metadata, extension-log JSON, enhanced-action selector trees, and
+performance collections cannot be mutated through caller-owned backing memory
+or through a later read.
 HTTP ingestion, query-result, recording-storage, performance, WebSocket, and
 circuit-health routes are owned by `capture.HTTPHandlers`. Server registration
 and tests construct that owner directly; the corresponding `Capture.Handle*`

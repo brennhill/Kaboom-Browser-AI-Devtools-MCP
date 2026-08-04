@@ -20,7 +20,7 @@ func (s *TelemetryStore) AddNetworkBodiesForTest(bodies []types.NetworkBody) {
 	now := time.Now()
 	for _, body := range bodies {
 		s.buffers.networkBodies.push(networkBodyEntry{
-			Body:    body,
+			Body:    cloneNetworkBody(body),
 			AddedAt: now,
 		})
 		s.buffers.networkTotalAdded++
@@ -38,7 +38,7 @@ func (s *TelemetryStore) AddWebSocketEventsForTest(events []types.WebSocketEvent
 	now := time.Now()
 	for _, event := range events {
 		s.buffers.wsEvents.push(wsEventEntry{
-			Event:   event,
+			Event:   cloneWebSocketEvent(event),
 			AddedAt: now,
 		})
 		s.buffers.wsTotalAdded++
@@ -53,7 +53,7 @@ func (s *TelemetryStore) AddEnhancedActionsForTest(actions []types.EnhancedActio
 	now := time.Now()
 	for _, action := range actions {
 		s.buffers.enhancedActions.push(enhancedActionEntry{
-			Action:  action,
+			Action:  cloneEnhancedAction(action),
 			AddedAt: now,
 		})
 		s.buffers.actionTotalAdded++

@@ -269,7 +269,7 @@ func (s *BufferStore) networkBodiesCopy() []types.NetworkBody {
 	}
 	out := make([]types.NetworkBody, s.networkBodies.len())
 	for i := range out {
-		out[i] = s.networkBodies.at(i).Body
+		out[i] = cloneNetworkBody(s.networkBodies.at(i).Body)
 	}
 	return out
 }
@@ -280,7 +280,7 @@ func (s *BufferStore) webSocketEventsCopy() []types.WebSocketEvent {
 	}
 	out := make([]types.WebSocketEvent, s.wsEvents.len())
 	for i := range out {
-		out[i] = s.wsEvents.at(i).Event
+		out[i] = cloneWebSocketEvent(s.wsEvents.at(i).Event)
 	}
 	return out
 }
@@ -291,7 +291,7 @@ func (s *BufferStore) enhancedActionsCopy() []types.EnhancedAction {
 	}
 	out := make([]types.EnhancedAction, s.enhancedActions.len())
 	for i := range out {
-		out[i] = s.enhancedActions.at(i).Action
+		out[i] = cloneEnhancedAction(s.enhancedActions.at(i).Action)
 	}
 	return out
 }
@@ -324,8 +324,9 @@ func (s *BufferStore) appendEnhancedActions(actions []types.EnhancedAction, now 
 	s.actionTotalAdded += int64(len(actions))
 	hasNavigation := false
 	for i := range actions {
+		action := cloneEnhancedAction(actions[i])
 		_, overwritten := s.enhancedActions.push(enhancedActionEntry{
-			Action:  actions[i],
+			Action:  action,
 			AddedAt: now,
 		})
 		if overwritten {
@@ -344,15 +345,16 @@ func (s *BufferStore) appendNetworkBodies(bodies []types.NetworkBody, now time.T
 		if bodies[i].Status >= 400 {
 			s.networkErrorTotalAdded++
 		}
+		body := cloneNetworkBody(bodies[i])
 		evicted, overwritten := s.networkBodies.push(networkBodyEntry{
-			Body:    bodies[i],
+			Body:    body,
 			AddedAt: now,
 		})
 		if overwritten {
 			s.networkDropped++
 			s.networkBodyMemoryTotal -= nbEntryMemory(&evicted.Body)
 		}
-		s.networkBodyMemoryTotal += nbEntryMemory(&bodies[i])
+		s.networkBodyMemoryTotal += nbEntryMemory(&body)
 	}
 	s.evictNetworkForMemory()
 }
@@ -360,18 +362,19 @@ func (s *BufferStore) appendNetworkBodies(bodies []types.NetworkBody, now time.T
 func (s *BufferStore) appendWebSocketEvents(events []types.WebSocketEvent, now time.Time, onEvent func(types.WebSocketEvent)) {
 	s.wsTotalAdded += int64(len(events))
 	for i := range events {
+		event := cloneWebSocketEvent(events[i])
 		if onEvent != nil {
-			onEvent(events[i])
+			onEvent(event)
 		}
 		evicted, overwritten := s.wsEvents.push(wsEventEntry{
-			Event:   events[i],
+			Event:   event,
 			AddedAt: now,
 		})
 		if overwritten {
 			s.wsDropped++
 			s.wsMemoryTotal -= wsEventMemory(&evicted.Event)
 		}
-		s.wsMemoryTotal += wsEventMemory(&events[i])
+		s.wsMemoryTotal += wsEventMemory(&event)
 	}
 	s.evictWebSocketForMemory()
 }
@@ -612,14 +615,16 @@ func detectAndSetBinaryFormat(body *types.NetworkBody) {
 
 func (s *TelemetryStore) AddNetworkBodies(bodies []types.NetworkBody) {
 	activeTestIDs := s.extension.GetActiveTestIDs()
+	prepared := make([]types.NetworkBody, len(bodies))
 	for i := range bodies {
-		bodies[i].TestIDs = activeTestIDs
-		detectAndSetBinaryFormat(&bodies[i])
+		prepared[i] = bodies[i]
+		prepared[i].TestIDs = append([]string(nil), activeTestIDs...)
+		detectAndSetBinaryFormat(&prepared[i])
 	}
 	now := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.buffers.appendNetworkBodies(bodies, now)
+	s.buffers.appendNetworkBodies(prepared, now)
 }
 
 func detectWSBinaryFormat(event *types.WebSocketEvent) {
@@ -634,14 +639,16 @@ func detectWSBinaryFormat(event *types.WebSocketEvent) {
 
 func (s *TelemetryStore) AddWebSocketEvents(events []types.WebSocketEvent) {
 	activeTestIDs := s.extension.GetActiveTestIDs()
+	prepared := make([]types.WebSocketEvent, len(events))
 	for i := range events {
-		events[i].TestIDs = activeTestIDs
-		detectWSBinaryFormat(&events[i])
+		prepared[i] = events[i]
+		prepared[i].TestIDs = append([]string(nil), activeTestIDs...)
+		detectWSBinaryFormat(&prepared[i])
 	}
 	now := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.buffers.appendWebSocketEvents(events, now, s.wsConnections.TrackEvent)
+	s.buffers.appendWebSocketEvents(prepared, now, s.wsConnections.TrackEvent)
 }
 
 func matchesWSEventFilter(event *types.WebSocketEvent, filter types.WebSocketEventFilter) bool {
@@ -686,7 +693,7 @@ func (s *TelemetryStore) GetWebSocketEvents(filter types.WebSocketEventFilter) [
 		if !matchesWSEventFilter(&entry.Event, filter) {
 			continue
 		}
-		filtered = append(filtered, entry.Event)
+		filtered = append(filtered, cloneWebSocketEvent(entry.Event))
 		if len(filtered) >= limit {
 			break
 		}
@@ -729,14 +736,16 @@ func (s *TelemetryStore) GetWebSocketStatus(filter types.WebSocketStatusFilter) 
 
 func (s *TelemetryStore) AddEnhancedActions(actions []types.EnhancedAction) {
 	activeTestIDs := s.extension.GetActiveTestIDs()
+	prepared := make([]types.EnhancedAction, len(actions))
+	copy(prepared, actions)
 	navigationCallback := func() func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-		for i := range actions {
-			actions[i].TestIDs = activeTestIDs
+		for i := range prepared {
+			prepared[i].TestIDs = append([]string(nil), activeTestIDs...)
 		}
-		if s.buffers.appendEnhancedActions(actions, time.Now()) {
+		if s.buffers.appendEnhancedActions(prepared, time.Now()) {
 			return s.navigationCallback
 		}
 		return nil

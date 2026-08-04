@@ -73,6 +73,53 @@ func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
 	}
 }
 
+func TestCaptureNestedSnapshotsDetachAtIngestAndRead(t *testing.T) {
+	t.Parallel()
+
+	c := NewCapture()
+	c.Extension().SetTestBoundaryStart("test-original")
+	sampled := &types.SamplingInfo{Rate: "1:1"}
+	bodies := []types.NetworkBody{{URL: "https://example.test", ResponseHeaders: map[string]string{"x-test": "original"}, TestIDs: []string{"test-original"}}}
+	events := []types.WebSocketEvent{{ID: "ws", Sampled: sampled, TestIDs: []string{"test-original"}}}
+	actions := []types.EnhancedAction{{Type: "click", Selectors: map[string]any{"css": "#original"}, TestIDs: []string{"test-original"}}}
+
+	c.Telemetry().AddNetworkBodies(bodies)
+	c.Telemetry().AddWebSocketEvents(events)
+	c.Telemetry().AddEnhancedActions(actions)
+	bodies[0].ResponseHeaders["x-test"] = "input-mutated"
+	bodies[0].TestIDs[0] = "input-mutated"
+	events[0].Sampled.Rate = "input-mutated"
+	events[0].TestIDs[0] = "input-mutated"
+	actions[0].Selectors["css"] = "input-mutated"
+	actions[0].TestIDs[0] = "input-mutated"
+
+	storedBodies := c.Telemetry().GetNetworkBodies()
+	storedEvents := c.Telemetry().GetAllWebSocketEvents()
+	storedActions := c.Telemetry().GetAllEnhancedActions()
+	if storedBodies[0].ResponseHeaders["x-test"] != "original" || storedBodies[0].TestIDs[0] != "test-original" {
+		t.Fatalf("network body retained caller-owned nested state: %+v", storedBodies[0])
+	}
+	if storedEvents[0].Sampled.Rate != "1:1" || storedEvents[0].TestIDs[0] != "test-original" {
+		t.Fatalf("WebSocket event retained caller-owned nested state: %+v", storedEvents[0])
+	}
+	if storedActions[0].Selectors["css"] != "#original" || storedActions[0].TestIDs[0] != "test-original" {
+		t.Fatalf("enhanced action retained caller-owned nested state: %+v", storedActions[0])
+	}
+
+	storedBodies[0].ResponseHeaders["x-test"] = "output-mutated"
+	storedEvents[0].Sampled.Rate = "output-mutated"
+	storedActions[0].Selectors["css"] = "output-mutated"
+	if c.Telemetry().GetNetworkBodies()[0].ResponseHeaders["x-test"] != "original" {
+		t.Fatal("network body snapshot aliases retained headers")
+	}
+	if c.Telemetry().GetAllWebSocketEvents()[0].Sampled.Rate != "1:1" {
+		t.Fatal("WebSocket snapshot aliases retained sampling metadata")
+	}
+	if c.Telemetry().GetAllEnhancedActions()[0].Selectors["css"] != "#original" {
+		t.Fatal("enhanced action snapshot aliases retained selectors")
+	}
+}
+
 func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	c := NewCapture()
 	now := time.Now().Add(-2 * time.Second)

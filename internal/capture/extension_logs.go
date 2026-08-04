@@ -7,6 +7,7 @@
 package capture
 
 import (
+	"bytes"
 	"encoding/json"
 	"sync"
 	"time"
@@ -55,6 +56,7 @@ func (s *ExtensionLogStore) addAt(logs []types.ExtensionLog, now time.Time) {
 
 	prepared := make([]types.ExtensionLog, len(logs))
 	for index, log := range logs {
+		log.Data = bytes.Clone(log.Data)
 		if log.Timestamp.IsZero() {
 			log.Timestamp = now
 		}
@@ -84,7 +86,10 @@ func (s *ExtensionLogStore) Entries() []types.ExtensionLog {
 	defer s.mu.RUnlock()
 
 	out := make([]types.ExtensionLog, len(s.logs))
-	copy(out, s.logs)
+	for index, log := range s.logs {
+		log.Data = bytes.Clone(log.Data)
+		out[index] = log
+	}
 	return out
 }
 

@@ -36,14 +36,29 @@ func TestPerformanceStore_SnapshotsListDetached(t *testing.T) {
 		snapshotOrder:   make([]string, 0),
 		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 	}
-	store.appendSnapshots([]performance.PerformanceSnapshot{{URL: "https://app.local"}})
+	input := performance.PerformanceSnapshot{
+		URL:       "https://app.local",
+		Resources: []performance.ResourceEntry{{URL: "original"}},
+		Network:   performance.NetworkSummary{ByType: map[string]performance.TypeSummary{"script": {Count: 1}}},
+		UserTiming: &performance.UserTimingData{
+			Marks: []performance.UserTimingEntry{{Name: "original"}},
+		},
+	}
+	store.appendSnapshots([]performance.PerformanceSnapshot{input})
+	input.Resources[0].URL = "input-mutated"
+	input.Network.ByType["script"] = performance.TypeSummary{Count: 99}
+	input.UserTiming.Marks[0].Name = "input-mutated"
 
 	list := store.snapshotsList()
 	if len(list) != 1 {
 		t.Fatalf("list len = %d, want 1", len(list))
 	}
 	list[0].URL = "mutated"
-	if got, _ := store.snapshotByURL("https://app.local"); got.URL != "https://app.local" {
+	list[0].Resources[0].URL = "output-mutated"
+	list[0].Network.ByType["script"] = performance.TypeSummary{Count: 88}
+	list[0].UserTiming.Marks[0].Name = "output-mutated"
+	if got, _ := store.snapshotByURL("https://app.local"); got.URL != "https://app.local" ||
+		got.Resources[0].URL != "original" || got.Network.ByType["script"].Count != 1 || got.UserTiming.Marks[0].Name != "original" {
 		t.Fatalf("store mutated through snapshotsList: %+v", got)
 	}
 }
