@@ -2,7 +2,10 @@
 package incident
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -25,6 +28,7 @@ type DoctorView struct {
 	Detail        string
 	Fix           string
 	LocalDetail   string
+	Fingerprint   string
 }
 
 func (s *Store) Doctor(key string) (DoctorView, bool) {
@@ -74,5 +78,12 @@ func doctorProjection(current Incident, definition Definition) DoctorView {
 		History: append([]Transition(nil), current.History...),
 		Detail:  definition.DoctorDetail, Fix: definition.DoctorFix,
 		LocalDetail: current.LocalEvidence.Detail,
+		Fingerprint: doctorFingerprint(current.Code, definition),
 	}
+}
+
+func doctorFingerprint(code Code, definition Definition) string {
+	canonical := string(code) + "\x00" + string(definition.Subsystem) + "\x00" + string(definition.Stage) + "\x00" + string(definition.Severity) + "\x00" + strconv.FormatBool(definition.Retryable)
+	digest := sha256.Sum256([]byte(canonical))
+	return hex.EncodeToString(digest[:8])
 }

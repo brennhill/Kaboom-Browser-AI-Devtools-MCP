@@ -29,6 +29,7 @@ var doctorCommandOutput = func(timeout time.Duration, name string, args ...strin
 type DoctorCheck struct {
 	Name                     string             `json:"name"`
 	CorrelationID            string             `json:"correlation_id,omitempty"`
+	Fingerprint              string             `json:"fingerprint,omitempty"`
 	Status                   string             `json:"status"` // "pass", "warn", "fail"
 	Detail                   string             `json:"detail"`
 	Fix                      string             `json:"fix,omitempty"`

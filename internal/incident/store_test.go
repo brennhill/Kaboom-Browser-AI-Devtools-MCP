@@ -290,3 +290,23 @@ func TestStorePublishesProjectionsAfterCommittedTransitions(t *testing.T) {
 		t.Fatalf("Doctor snapshot = %#v", views)
 	}
 }
+
+func TestDoctorFingerprintUsesOnlyRegistryOwnedFields(t *testing.T) {
+	t.Parallel()
+	store := NewStore(4)
+	first, _ := store.Detect(Report{Code: CodeStateRecoveryFailed, CorrelationID: "private-one", Generation: 1, Evidence: LocalEvidence{Detail: "secret-one"}})
+	second, _ := store.Detect(Report{Code: CodeStateRecoveryFailed, CorrelationID: "private-two", Generation: 1, Evidence: LocalEvidence{Detail: "secret-two"}})
+	other, _ := store.Detect(Report{Code: CodeQueueSaturated, CorrelationID: "private-three", Generation: 1})
+	firstView, _ := store.Doctor(first)
+	secondView, _ := store.Doctor(second)
+	otherView, _ := store.Doctor(other)
+	if firstView.Fingerprint == "" || firstView.Fingerprint != secondView.Fingerprint {
+		t.Fatalf("same registered incident class did not group: %q vs %q", firstView.Fingerprint, secondView.Fingerprint)
+	}
+	if firstView.Fingerprint == otherView.Fingerprint {
+		t.Fatal("different registered incident classes shared a fingerprint")
+	}
+	if strings.Contains(firstView.Fingerprint, "private") || strings.Contains(firstView.Fingerprint, "secret") {
+		t.Fatalf("fingerprint leaked local values: %q", firstView.Fingerprint)
+	}
+}

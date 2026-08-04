@@ -402,7 +402,7 @@ func incidentDoctorChecks(diagnostics *incident.Store) []health.DoctorCheck {
 			recoveredAt = formatDiagnosticTime(view.ResolvedAt)
 		}
 		checks = append(checks, health.DoctorCheck{
-			Name: string(view.Code), CorrelationID: view.CorrelationID, Status: status,
+			Name: string(view.Code), CorrelationID: view.CorrelationID, Fingerprint: view.Fingerprint, Status: status,
 			Detail: detail, Fix: view.Fix, Lifecycle: string(view.State),
 			FirstSeenAt: formatDiagnosticTime(view.DetectedAt), LastSeenAt: formatDiagnosticTime(view.UpdatedAt),
 			RecoveredAt: recoveredAt, RecoveryAttempt: int(view.Attempts),

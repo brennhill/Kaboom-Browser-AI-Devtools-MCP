@@ -38,6 +38,13 @@ Doctor and analytics are separate projections of that incident:
   It cannot contain local evidence, correlation IDs, generations, URLs, paths,
   captured data, or arbitrary caller-provided strings.
 
+Each canonical Doctor projection also carries a 16-character local grouping
+fingerprint derived only from registry-owned code, subsystem, stage, severity,
+and retryability. Correlation IDs, generations, timestamps, paths, evidence,
+and prose do not influence it, so recurring incident classes group stably
+without encoding user or project data. The fingerprint is not sent in product
+telemetry.
+
 Recovery follows an idempotent, generation-aware state machine. Stale
 transitions cannot alter current health. Incident storage and history are
 bounded, use single-pass eviction, and expose dropped-entry counts rather than

@@ -4,6 +4,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -26,6 +27,9 @@ func TestIncidentDoctorChecksProjectCanonicalLifecycle(t *testing.T) {
 	}
 	if checks[0].CorrelationID != "install_identity" || checks[0].RecoveryAttempt != 1 || checks[0].RecoveryOutcome != "exhausted" || len(checks[0].History) != 3 {
 		t.Fatalf("incident Doctor lifecycle = %#v", checks[0])
+	}
+	if !regexp.MustCompile(`^[0-9a-f]{16}$`).MatchString(checks[0].Fingerprint) || checks[0].Fingerprint == "install_identity" {
+		t.Fatalf("incident Doctor fingerprint = %q", checks[0].Fingerprint)
 	}
 	if checks[0].RecoveredAt != "" || checks[0].History[0].Outcome != "pending" || checks[0].History[1].Outcome != "pending" || checks[0].History[2].Outcome != "exhausted" {
 		t.Fatalf("incident Doctor transition outcomes = %#v", checks[0])
