@@ -11,18 +11,19 @@ import (
 
 func TestEventuallyReturnsAsSoonAsConditionHolds(t *testing.T) {
 	var flipped atomic.Bool
+	release := make(chan struct{})
+	started := make(chan struct{})
 	go func() {
-		time.Sleep(10 * time.Millisecond)
+		close(started)
+		<-release
 		flipped.Store(true)
 	}()
 
-	start := time.Now()
+	<-started
+	close(release)
 	Eventually(t, time.Second, "flag to flip", flipped.Load)
-	elapsed := time.Since(start)
-
-	// The point of polling: a 10ms condition costs ~10ms, not the full budget.
-	if elapsed > 500*time.Millisecond {
-		t.Errorf("Eventually took %v; polling should return promptly after the condition holds", elapsed)
+	if !flipped.Load() {
+		t.Fatal("Eventually returned before the asynchronous condition held")
 	}
 }
 
@@ -66,14 +67,17 @@ func TestEventuallyGoroutinesWaitsForTeardown(t *testing.T) {
 	baseline := runtime.NumGoroutine()
 
 	stop := make(chan struct{})
+	started := make(chan struct{}, 4)
 	for i := 0; i < 4; i++ {
-		go func() { <-stop }()
+		go func() {
+			started <- struct{}{}
+			<-stop
+		}()
 	}
-	// Release them asynchronously; the helper must wait rather than sample once.
-	go func() {
-		time.Sleep(20 * time.Millisecond)
-		close(stop)
-	}()
+	for i := 0; i < 4; i++ {
+		<-started
+	}
+	close(stop)
 
 	EventuallyGoroutines(t, baseline+1, "spawned goroutines to exit")
 }

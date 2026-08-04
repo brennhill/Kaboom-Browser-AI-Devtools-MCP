@@ -89,6 +89,11 @@ is a ratchet for existing wall-clock debt, not a general exemption: removing a
 sleep lowers the next baseline, while new tests must use controlled channels,
 fake clocks, or explicit process/transport seams.
 
+The shared asynchronous test helpers verify goroutine readiness and teardown
+through channel barriers. Their own tests never delay the scheduler and then
+guess whether work completed; each assertion follows an observed lifecycle
+transition.
+
 The same target inventories mutable Go package variables and exported Go
 declarations per production file. New files begin with a zero allowance, and
 existing allowances can only be reduced automatically. This turns instance
