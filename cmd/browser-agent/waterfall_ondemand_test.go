@@ -10,7 +10,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -19,7 +19,28 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func respondToNextWaterfallQuery(cap *capture.Capture, result any) <-chan error {
+	done := make(chan error, 1)
+	go func() {
+		cap.Queries().WaitForPendingQueries(time.Second)
+		for _, query := range cap.Queries().GetPendingQueries() {
+			if query.Type != "waterfall" {
+				continue
+			}
+			resultBytes, err := json.Marshal(result)
+			if err == nil {
+				cap.Queries().SetQueryResult(query.ID, resultBytes)
+			}
+			done <- err
+			return
+		}
+		done <- fmt.Errorf("waterfall query was not enqueued")
+	}()
+	return done
+}
 
 // ============================================
 // On-Demand Waterfall Tests
@@ -35,6 +56,7 @@ func TestWaterfallOnDemand_FreshDataNoQuery(t *testing.T) {
 		t.Fatalf("Failed to create server: %v", err)
 	}
 	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
 	handler := NewToolHandler(server, cap)
 	th := handler.tools.Executor.(*ToolHandler)
 
@@ -79,9 +101,6 @@ func TestWaterfallOnDemand_FreshDataNoQuery(t *testing.T) {
 // TestWaterfallOnDemand_StaleDataCreatesQuery verifies that stale data (>1s old)
 // triggers a waterfall query to the extension.
 func TestWaterfallOnDemand_StaleDataCreatesQuery(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skips slow waterfall test in short mode")
-	}
 	t.Parallel()
 
 	server, err := NewServer(t.TempDir()+"/test-waterfall-stale.jsonl", 1000)
@@ -89,6 +108,7 @@ func TestWaterfallOnDemand_StaleDataCreatesQuery(t *testing.T) {
 		t.Fatalf("Failed to create server: %v", err)
 	}
 	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
 	handler := NewToolHandler(server, cap)
 	th := handler.tools.Executor.(*ToolHandler)
 
@@ -97,57 +117,24 @@ func TestWaterfallOnDemand_StaleDataCreatesQuery(t *testing.T) {
 		{URL: "https://old.example.com/stale", PageURL: "https://example.com"},
 	}
 	cap.Telemetry().NetworkWaterfall().Add(entries, "https://example.com")
-
-	// Wait for data to become stale (>1s)
-	time.Sleep(1100 * time.Millisecond)
-
-	// Track query creation in a goroutine that will respond
-	var queryCreated bool
-	var queryMu sync.Mutex
-
-	// Simulate extension responding to the query
-	go func() {
-		// Wait a bit for query to be created
-		time.Sleep(50 * time.Millisecond)
-
-		// Check if a waterfall query was created
-		pending := cap.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "waterfall" {
-				queryMu.Lock()
-				queryCreated = true
-				queryMu.Unlock()
-
-				// Simulate extension response
-				result := map[string]any{
-					"entries": []map[string]any{
-						{
-							"url":            "https://fresh.example.com/new",
-							"initiator_type": "fetch",
-							"duration":       150.5,
-							"start_time":     100.0,
-							"transfer_size":  1024,
-						},
-					},
-					"page_url": "https://example.com/page",
-				}
-				resultBytes, _ := json.Marshal(result)
-				cap.Queries().SetQueryResult(q.ID, resultBytes)
-				return
-			}
-		}
-	}()
+	addedAt := cap.Telemetry().NetworkWaterfall().Entries()[0].Timestamp
+	deps := buildObserveReadDeps(th)
+	deps.Now = func() time.Time { return addedAt.Add(time.Second) }
+	responded := respondToNextWaterfallQuery(cap, map[string]any{
+		"entries": []map[string]any{{
+			"url":            "https://fresh.example.com/new",
+			"initiator_type": "fetch",
+			"duration":       150.5,
+			"start_time":     100.0,
+			"transfer_size":  1024,
+		}},
+		"page_url": "https://example.com/page",
+	})
 
 	// Call observe network_waterfall - should create query and wait
-	resp := observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
-
-	// Verify query was created
-	queryMu.Lock()
-	wasCreated := queryCreated
-	queryMu.Unlock()
-
-	if !wasCreated {
-		t.Error("Expected waterfall query to be created for stale data")
+	resp := observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	if err := <-responded; err != nil {
+		t.Fatal(err)
 	}
 
 	// Verify fresh data was returned
@@ -181,47 +168,21 @@ func TestWaterfallOnDemand_EmptyBufferCreatesQuery(t *testing.T) {
 		t.Fatalf("Failed to create server: %v", err)
 	}
 	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
 	handler := NewToolHandler(server, cap)
 	th := handler.tools.Executor.(*ToolHandler)
 
 	// Don't add any entries - buffer is empty
 
-	// Track query creation
-	var queryCreated bool
-	var queryMu sync.Mutex
-
-	// Simulate extension responding
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-
-		pending := cap.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "waterfall" {
-				queryMu.Lock()
-				queryCreated = true
-				queryMu.Unlock()
-
-				// Return empty entries (no network activity)
-				result := map[string]any{
-					"entries":  []map[string]any{},
-					"page_url": "https://example.com",
-				}
-				resultBytes, _ := json.Marshal(result)
-				cap.Queries().SetQueryResult(q.ID, resultBytes)
-				return
-			}
-		}
-	}()
+	responded := respondToNextWaterfallQuery(cap, map[string]any{
+		"entries":  []map[string]any{},
+		"page_url": "https://example.com",
+	})
 
 	// Call observe network_waterfall
 	_ = observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
-
-	queryMu.Lock()
-	wasCreated := queryCreated
-	queryMu.Unlock()
-
-	if !wasCreated {
-		t.Error("Expected waterfall query to be created for empty buffer")
+	if err := <-responded; err != nil {
+		t.Fatal(err)
 	}
 
 	t.Log("✅ Empty buffer triggered query")
@@ -240,6 +201,7 @@ func TestWaterfallOnDemand_TimeoutHandling(t *testing.T) {
 		t.Fatalf("Failed to create server: %v", err)
 	}
 	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
 	handler := NewToolHandler(server, cap)
 	th := handler.tools.Executor.(*ToolHandler)
 	deps := buildObserveReadDeps(th)
@@ -272,9 +234,6 @@ func TestWaterfallOnDemand_TimeoutHandling(t *testing.T) {
 // TestWaterfallOnDemand_ConcurrentRequests verifies that concurrent requests
 // don't cause data races or deadlocks.
 func TestWaterfallOnDemand_ConcurrentRequests(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skips slow waterfall test in short mode")
-	}
 	t.Parallel()
 
 	server, err := NewServer(t.TempDir()+"/test-waterfall-concurrent.jsonl", 1000)
@@ -282,28 +241,11 @@ func TestWaterfallOnDemand_ConcurrentRequests(t *testing.T) {
 		t.Fatalf("Failed to create server: %v", err)
 	}
 	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
 	handler := NewToolHandler(server, cap)
 	th := handler.tools.Executor.(*ToolHandler)
-
-	// Simulate extension responding to queries
-	go func() {
-		for i := 0; i < 100; i++ {
-			time.Sleep(10 * time.Millisecond)
-			pending := cap.Queries().GetPendingQueries()
-			for _, q := range pending {
-				if q.Type == "waterfall" {
-					result := map[string]any{
-						"entries": []map[string]any{
-							{"url": "https://example.com/resource", "duration": 100.0},
-						},
-						"page_url": "https://example.com",
-					}
-					resultBytes, _ := json.Marshal(result)
-					cap.Queries().SetQueryResult(q.ID, resultBytes)
-				}
-			}
-		}
-	}()
+	deps := buildObserveReadDeps(th)
+	deps.WaterfallRefreshTimeout = time.Nanosecond
 
 	// Run 10 concurrent requests
 	var wg sync.WaitGroup
@@ -314,7 +256,7 @@ func TestWaterfallOnDemand_ConcurrentRequests(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			resp := observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+			resp := observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 			var result map[string]any
 			if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -324,7 +266,7 @@ func TestWaterfallOnDemand_ConcurrentRequests(t *testing.T) {
 
 			content, ok := result["content"].([]any)
 			if !ok || len(content) == 0 {
-				errors <- err
+				errors <- fmt.Errorf("response content is missing: %#v", result["content"])
 			}
 		}()
 	}
@@ -351,6 +293,7 @@ func TestWaterfallQueryType_ExistsInPendingQueries(t *testing.T) {
 	t.Parallel()
 
 	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
 
 	// Create a waterfall query
 	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
@@ -382,9 +325,6 @@ func TestWaterfallQueryType_ExistsInPendingQueries(t *testing.T) {
 
 // TestWaterfallStalenessThreshold verifies the 1-second staleness threshold.
 func TestWaterfallStalenessThreshold(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skips slow waterfall test in short mode")
-	}
 	t.Parallel()
 
 	server, err := NewServer(t.TempDir()+"/test-waterfall-threshold.jsonl", 1000)
@@ -392,6 +332,7 @@ func TestWaterfallStalenessThreshold(t *testing.T) {
 		t.Fatalf("Failed to create server: %v", err)
 	}
 	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
 	handler := NewToolHandler(server, cap)
 	th := handler.tools.Executor.(*ToolHandler)
 
@@ -400,33 +341,26 @@ func TestWaterfallStalenessThreshold(t *testing.T) {
 		{URL: "https://example.com/test", PageURL: "https://example.com"},
 	}
 	cap.Telemetry().NetworkWaterfall().Add(entries, "https://example.com")
+	addedAt := cap.Telemetry().NetworkWaterfall().Entries()[0].Timestamp
+	deps := buildObserveReadDeps(th)
+	deps.Now = func() time.Time { return addedAt.Add(time.Second - time.Nanosecond) }
 
 	// Immediately query - should NOT create new query (data is fresh)
 	pendingBefore := len(cap.Queries().GetPendingQueries())
-	_ = observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	_ = observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 	pendingAfter := len(cap.Queries().GetPendingQueries())
 
 	if pendingAfter > pendingBefore {
 		t.Error("Query created for fresh data (<1s old) - threshold may be wrong")
 	}
 
-	// Wait just over 1 second
-	time.Sleep(1100 * time.Millisecond)
-
-	// Now query - SHOULD create new query (data is stale)
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		pending := cap.Queries().GetPendingQueries()
-		for _, q := range pending {
-			if q.Type == "waterfall" {
-				result := map[string]any{"entries": []any{}, "page_url": "https://example.com"}
-				resultBytes, _ := json.Marshal(result)
-				cap.Queries().SetQueryResult(q.ID, resultBytes)
-			}
-		}
-	}()
-
-	_ = observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	// At exactly one second the entry is stale and must trigger a refresh.
+	deps.Now = func() time.Time { return addedAt.Add(time.Second) }
+	responded := respondToNextWaterfallQuery(cap, map[string]any{"entries": []any{}, "page_url": "https://example.com"})
+	_ = observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	if err := <-responded; err != nil {
+		t.Fatal(err)
+	}
 
 	t.Log("✅ 1-second staleness threshold verified")
 }

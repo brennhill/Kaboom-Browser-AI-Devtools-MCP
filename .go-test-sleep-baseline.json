@@ -33,7 +33,6 @@
     "cmd/browser-agent/tools_observe_commands_test.go": 1,
     "cmd/browser-agent/tools_observe_indexeddb_test.go": 2,
     "cmd/browser-agent/tools_observe_screenshot_test.go": 5,
-    "cmd/browser-agent/waterfall_ondemand_test.go": 6,
     "internal/analysis/apicontract/branch_coverage_test.go": 1,
     "internal/analysis/apicontract/contract_report_test.go": 1,
     "internal/capture/capture_stress_test.go": 4,

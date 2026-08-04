@@ -112,6 +112,23 @@ func TestWaterfallAndWebSocketStatusHandlersExposeOperationalShapes(t *testing.T
 	}
 }
 
+func TestRefreshWaterfallFreshnessUsesInjectedClock(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{URL: "https://example.test/app.js"}}, "https://example.test")
+	addedAt := cap.Telemetry().NetworkWaterfall().Entries()[0].Timestamp
+
+	deps := pageStateDeps(cap)
+	deps.Now = func() time.Time { return addedAt.Add(time.Second) }
+	deps.WaterfallRefreshTimeout = time.Nanosecond
+	_ = GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 10}, nil)
+
+	if depth := cap.Queries().QueueDepth(); depth != 1 {
+		t.Fatalf("queue depth = %d, want one waterfall refresh at exact staleness threshold", depth)
+	}
+}
+
 func TestWaterfallSummaryEntry_CompactFields(t *testing.T) {
 	t.Parallel()
 	entry := types.NetworkWaterfallEntry{

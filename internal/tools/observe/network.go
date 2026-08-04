@@ -222,7 +222,11 @@ func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 		refreshTimeout = waterfallRefreshTimeoutDefault
 	}
 	allEntries := cap.Telemetry().NetworkWaterfall().Entries()
-	if len(allEntries) > 0 && time.Since(allEntries[len(allEntries)-1].Timestamp) < 1*time.Second {
+	now := time.Now()
+	if deps.Now != nil {
+		now = deps.Now()
+	}
+	if len(allEntries) > 0 && now.Sub(allEntries[len(allEntries)-1].Timestamp) < time.Second {
 		return allEntries
 	}
 

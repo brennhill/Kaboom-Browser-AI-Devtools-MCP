@@ -88,6 +88,7 @@ test_paths:
   - cmd/browser-agent/internal/mcphttp/handler_test.go
   - internal/tools/observe/page_state_storage_test.go
   - internal/tools/observe/page_state_screenshot_test.go
+
   - internal/tools/observe/hints/hints_test.go
   - tests/extension/injection/inject-console-network-exceptions.test.js
   - tests/extension/network-http/network-bodies-fixture.js
@@ -121,6 +122,13 @@ from the modules that own those APIs.
 On-demand waterfall refresh uses an explicit dependency-owned timeout budget:
 production retains the bounded five-second extension wait, while deterministic
 tests provide a short budget without sleeping or mutating global timing state.
+Network-waterfall freshness crosses that dependency boundary through an
+injected clock. Tests place the clock immediately before and exactly at the
+one-second threshold, then use the query dispatcher's notification barrier to
+deliver extension results. On-demand, empty-buffer, threshold, and concurrent
+coverage therefore use no scheduler sleeps; concurrent-response validation also
+fails explicitly when a content block is absent instead of accidentally sending
+a nil error.
 Queued observation modes receive command admission and completion functions
 from `internal/asynccommand.Handler`; observe owns no host interface and the
 composition root provides no forwarding methods.

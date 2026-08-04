@@ -24,6 +24,8 @@ type Deps struct {
 	// WaterfallRefreshTimeout bounds the on-demand extension query. Zero uses
 	// the production default; tests provide a short deterministic budget.
 	WaterfallRefreshTimeout time.Duration
+	// Now owns freshness decisions. Nil uses the production clock.
+	Now func() time.Time
 }
 
 // MaxObserveLimit caps the limit parameter to prevent oversized responses.
