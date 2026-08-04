@@ -19,6 +19,7 @@ import {
 
 import type { PendingRequest } from '../../types/capture/network.js'
 import { reportPageCaptureFailure } from '../diagnostics/page-capture.js'
+import { postAuthenticatedPageMessage } from '../page/channel.js'
 
 import {
   MAX_WATERFALL_ENTRIES,
@@ -684,7 +685,7 @@ export function adoptEarlyBodies(): void {
       }
     }
 
-    window.postMessage(message, window.location.origin)
+    postAuthenticatedPageMessage(message)
   }
 
   if (adopted > 0) {

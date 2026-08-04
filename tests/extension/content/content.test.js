@@ -109,11 +109,11 @@ describe('Content Window Message Bridge', () => {
 
     assert.ok(messageHandler, 'message listener should be installed')
 
-    const payload = { url: 'https://api.example.com/users', status: 200 }
+    const payload = { method: 'GET', url: 'https://api.example.com/users', status: 200 }
     messageHandler({
       source: globalThis.window,
       origin: globalThis.window.location.origin,
-      data: { type: 'kaboom_network_body', payload }
+      data: { type: 'kaboom_network_body', _nonce: getPageNonce(), payload }
     })
 
     const forwarded = runtimeSendMessage.mock.calls
@@ -123,6 +123,51 @@ describe('Content Window Message Bridge', () => {
     assert.ok(forwarded, 'expected forwarded network_body message')
     assert.deepStrictEqual(forwarded.payload, payload)
     assert.strictEqual(forwarded.tabId, 42)
+  })
+
+  test('rejects forged telemetry with missing or incorrect page nonce', async () => {
+    await initTabTracking()
+    initWindowMessageListener()
+
+    for (const nonce of [undefined, 'wrong-page-nonce']) {
+      messageHandler({
+        source: globalThis.window,
+        origin: globalThis.window.location.origin,
+        data: { type: 'kaboom_log', ...(nonce ? { _nonce: nonce } : {}), payload: { message: 'forged' } }
+      })
+    }
+
+    const forwarded = runtimeSendMessage.mock.calls.filter((call) => call.arguments[0]?.type === 'log')
+    assert.strictEqual(forwarded.length, 0)
+  })
+
+  test('rejects oversized and deeply nested telemetry with bounded redacted diagnostics', async () => {
+    await initTabTracking()
+    initWindowMessageListener()
+    const secret = 'private-page-value'
+    const deep = { value: secret }
+    let cursor = deep
+    for (let depth = 0; depth < 20; depth++) {
+      cursor.next = { value: depth }
+      cursor = cursor.next
+    }
+
+    for (const payload of [
+      { ts: '2026-08-04T00:00:00Z', level: 'error', message: secret.repeat(300_000) },
+      { ts: '2026-08-04T00:00:00Z', level: 'error', details: deep }
+    ]) {
+      messageHandler({
+        source: globalThis.window,
+        origin: globalThis.window.location.origin,
+        data: { type: 'kaboom_log', _nonce: getPageNonce(), payload }
+      })
+    }
+
+    const forwarded = runtimeSendMessage.mock.calls.map((call) => call.arguments[0])
+    assert.strictEqual(forwarded.filter((message) => message?.type === 'log').length, 0)
+    const diagnostics = forwarded.filter((message) => message?.type === 'capture_diagnostic')
+    assert.strictEqual(diagnostics.length, 2)
+    assert.ok(diagnostics.every((message) => !JSON.stringify(message).includes(secret)))
   })
 
   test('drops captured events when tab is not tracked', async () => {

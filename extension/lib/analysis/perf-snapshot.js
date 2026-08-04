@@ -8,6 +8,7 @@
  * to build comprehensive performance snapshots.
  */
 import { MAX_LONG_TASKS, MAX_SLOWEST_REQUESTS, MAX_URL_LENGTH } from '../constants.js';
+import { postAuthenticatedPageMessage } from '../page/channel.js';
 import { getVitalsAttribution, recordCLSAttribution, recordINPAttribution, recordLCPAttribution, recordLongTaskAttribution, resetVitalsAttribution } from './vitals-attribution.js';
 // Performance snapshot state
 let perfSnapshotEnabled = true;
@@ -269,7 +270,7 @@ export function sendPerformanceSnapshot() {
     const snapshot = capturePerformanceSnapshot();
     if (!snapshot)
         return;
-    window.postMessage({ type: 'kaboom_performance_snapshot', payload: snapshot }, window.location.origin);
+    postAuthenticatedPageMessage({ type: 'kaboom_performance_snapshot', payload: snapshot });
 }
 // Debounce timer for snapshot re-sends triggered by user timing changes
 let snapshotResendTimer = null;

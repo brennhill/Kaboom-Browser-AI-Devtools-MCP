@@ -75,9 +75,11 @@ test('injected highlight responses preserve the authenticated request nonce', ()
   const response = source.match(
     /type:\s*['"]kaboom_highlight_response['"][\s\S]{0,240}?requestId[\s\S]{0,240}?result[\s\S]{0,240}/
   )
+  const channel = fs.readFileSync(new URL('../../../extension/lib/page/channel.js', import.meta.url), 'utf8')
 
   assert.ok(response, 'expected the injected highlight response envelope')
-  assert.match(source, /function postResponse[\s\S]{0,180}?_nonce:\s*pageNonce/)
+  assert.match(source, /function postResponse[\s\S]{0,180}?postAuthenticatedPageMessage\(data\)/)
+  assert.match(channel, /window\.postMessage\(\{\s*\.\.\.message,\s*_nonce:/)
   assert.match(response[0], /postResponse/, 'highlight must use the canonical authenticated response owner')
 })
 

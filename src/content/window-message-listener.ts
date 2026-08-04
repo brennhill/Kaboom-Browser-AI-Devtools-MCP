@@ -22,6 +22,23 @@ import {
 import { MESSAGE_MAP, safeSendMessage } from './message-forwarding.js'
 import { getIsTrackedTab, getCurrentTabId } from './tab-tracking.js'
 import { getPageNonce } from './script-injection.js'
+import { validatePageTelemetry, type PageTelemetryRejection } from './page-telemetry.js'
+
+const reportedTelemetryRejections = new Set<PageTelemetryRejection>()
+
+function reportTelemetryRejection(reason: PageTelemetryRejection): void {
+  if (reportedTelemetryRejections.has(reason)) return
+  reportedTelemetryRejections.add(reason)
+  safeSendMessage({
+    type: 'capture_diagnostic',
+    payload: {
+      category: 'page_telemetry_validation',
+      message: 'Authenticated page telemetry was rejected before extension ingestion.',
+      error_type: reason
+    },
+    tabId: getCurrentTabId() ?? undefined
+  })
+}
 
 /**
  * Initialize consolidated window message listener
@@ -54,9 +71,16 @@ export function initWindowMessageListener(): void {
     // they are responses to explicit commands from the background script.
     if (!getIsTrackedTab()) return
 
+    if (event.data._nonce !== getPageNonce()) return
+
     if (messageType && messageType in MESSAGE_MAP && payload && typeof payload === 'object') {
       const mappedType = MESSAGE_MAP[messageType]
       if (mappedType) {
+        const rejection = validatePageTelemetry(messageType, payload)
+        if (rejection) {
+          reportTelemetryRejection(rejection)
+          return
+        }
         safeSendMessage({
           type: mappedType,
           payload,

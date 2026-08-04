@@ -3,6 +3,8 @@
  * Docs: docs/features/feature/system-doctor/index.md
  */
 
+import { postAuthenticatedPageMessage } from '../page/channel.js'
+
 export interface PageCaptureDiagnostic {
   category: string
   message: string
@@ -18,7 +20,7 @@ export function reportPageCaptureFailure(category: string, error: unknown): void
   console.error(`[KaBOOM!][${diagnostic.category}] ${diagnostic.message}`, { error_type: diagnostic.error_type })
   if (typeof window !== 'undefined') {
     try {
-      window.postMessage({ type: 'kaboom_capture_diagnostic', payload: diagnostic }, window.location.origin)
+      postAuthenticatedPageMessage({ type: 'kaboom_capture_diagnostic', payload: diagnostic })
     } catch (forwardError) {
       console.error('[KaBOOM!][page_capture] Failed to forward local Doctor diagnostic', {
         error_type: forwardError instanceof Error ? forwardError.name.slice(0, 64) : 'UnknownError'

@@ -2,6 +2,7 @@
  * Purpose: Surface redacted injected-world capture failures to local extension diagnostics.
  * Docs: docs/features/feature/system-doctor/index.md
  */
+import { postAuthenticatedPageMessage } from '../page/channel.js';
 export function reportPageCaptureFailure(category, error) {
     const diagnostic = {
         category: category.slice(0, 64),
@@ -11,7 +12,7 @@ export function reportPageCaptureFailure(category, error) {
     console.error(`[KaBOOM!][${diagnostic.category}] ${diagnostic.message}`, { error_type: diagnostic.error_type });
     if (typeof window !== 'undefined') {
         try {
-            window.postMessage({ type: 'kaboom_capture_diagnostic', payload: diagnostic }, window.location.origin);
+            postAuthenticatedPageMessage({ type: 'kaboom_capture_diagnostic', payload: diagnostic });
         }
         catch (forwardError) {
             console.error('[KaBOOM!][page_capture] Failed to forward local Doctor diagnostic', {

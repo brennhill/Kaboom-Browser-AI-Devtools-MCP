@@ -4,6 +4,7 @@
  */
 import { completeRequestAttribution, enrichWaterfallEntries, recordRequestAttribution, resetRequestAttribution } from './request-attribution.js';
 import { reportPageCaptureFailure } from '../diagnostics/page-capture.js';
+import { postAuthenticatedPageMessage } from '../page/channel.js';
 import { MAX_WATERFALL_ENTRIES, WATERFALL_TIME_WINDOW_MS, REQUEST_BODY_MAX, RESPONSE_BODY_MAX, BODY_READ_TIMEOUT_MS, SENSITIVE_HEADER_PATTERNS, BINARY_CONTENT_TYPES } from '../constants.js';
 // =============================================================================
 // MODULE STATE
@@ -513,7 +514,7 @@ export function adoptEarlyBodies() {
                 duration: 0 // Duration unknown for early-captured bodies
             }
         };
-        window.postMessage(message, window.location.origin);
+        postAuthenticatedPageMessage(message);
     }
     if (adopted > 0) {
         console.log(`[KaBOOM!] Adopted ${adopted} early network body(ies)`);

@@ -8,6 +8,7 @@
  */
 import { getContextAnnotations } from './context.js';
 import { getActionBuffer } from './actions.js';
+import { postAuthenticatedPageMessage } from './channel.js';
 /**
  * Post a log message to the content script
  */
@@ -24,7 +25,7 @@ export function postLog(payload) {
         enrichments.push('userActions');
     // Extract fields we want from payload (exclude ts, message, source, url to avoid overwriting enrichments)
     const { level, type, args, error, stack, ...otherFields } = payload;
-    window.postMessage({
+    postAuthenticatedPageMessage({
         type: 'kaboom_log',
         payload: {
             // Enriched fields (these are the source of truth)
@@ -47,6 +48,6 @@ export function postLog(payload) {
             // Any other fields from payload (excluding the ones we destructured)
             ...otherFields
         }
-    }, window.location.origin);
+    });
 }
 //# sourceMappingURL=bridge.js.map

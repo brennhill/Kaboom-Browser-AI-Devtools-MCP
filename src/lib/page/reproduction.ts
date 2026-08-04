@@ -17,6 +17,7 @@ import {
   CLICKABLE_TAGS
 } from '../constants.js'
 import { isSensitiveInput } from './serialize.js'
+import { postAuthenticatedPageMessage } from './channel.js'
 
 // Action types
 type EnhancedActionType = 'click' | 'input' | 'keypress' | 'navigate' | 'select' | 'scroll' | 'transient'
@@ -348,11 +349,8 @@ export function recordEnhancedAction(
   }
 
   // Emit to content script for server relay
-  if (typeof window !== 'undefined' && window.postMessage) {
-    window.postMessage(
-      { type: 'kaboom_enhanced_action', payload: action } as KaboomEnhancedActionMessage,
-      window.location.origin
-    )
+  if (typeof window !== 'undefined') {
+    postAuthenticatedPageMessage({ type: 'kaboom_enhanced_action', payload: action } as KaboomEnhancedActionMessage)
   }
 
   return action

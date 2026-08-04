@@ -9,6 +9,7 @@
  */
 import { ENHANCED_ACTION_BUFFER_SIZE, CSS_PATH_MAX_DEPTH, SELECTOR_TEXT_MAX_LENGTH, SCRIPT_MAX_SIZE, CLICKABLE_TAGS } from '../constants.js';
 import { isSensitiveInput } from './serialize.js';
+import { postAuthenticatedPageMessage } from './channel.js';
 // Enhanced action buffer (separate from v3 action buffer)
 let enhancedActionBuffer = [];
 /**
@@ -242,8 +243,8 @@ export function recordEnhancedAction(type, element, opts = {}) {
         enhancedActionBuffer.shift();
     }
     // Emit to content script for server relay
-    if (typeof window !== 'undefined' && window.postMessage) {
-        window.postMessage({ type: 'kaboom_enhanced_action', payload: action }, window.location.origin);
+    if (typeof window !== 'undefined') {
+        postAuthenticatedPageMessage({ type: 'kaboom_enhanced_action', payload: action });
     }
     return action;
 }

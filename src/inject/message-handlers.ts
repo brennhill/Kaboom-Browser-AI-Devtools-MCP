@@ -23,6 +23,7 @@ import { highlightElement } from './state.js'
 
 import { executeJavaScript } from './execute-js.js'
 import { errorMessage } from '../lib/error-utils.js'
+import { getInjectedPageNonce, postAuthenticatedPageMessage } from '../lib/page/channel.js'
 import {
   isValidSettingPayload,
   handleSetting,
@@ -31,18 +32,9 @@ import {
   type StateCommandMessageData
 } from './settings.js'
 
-/** Read the page nonce set by the content script on the inject script element */
-let pageNonce = ''
-if (typeof document !== 'undefined' && typeof document.querySelector === 'function') {
-  const nonceEl = document.querySelector('script[data-kaboom-nonce]')
-  if (nonceEl) {
-    pageNonce = nonceEl.getAttribute('data-kaboom-nonce') || ''
-  }
-}
-
 /** Send a nonce-authenticated response back to the content script */
 function postResponse(data: Record<string, unknown>): void {
-  window.postMessage({ ...data, _nonce: pageNonce }, window.location.origin)
+  postAuthenticatedPageMessage(data)
 }
 
 /**
@@ -201,6 +193,7 @@ export function installMessageListener(
   captureStateFn: () => BrowserStateSnapshot,
   restoreStateFn: (state: BrowserStateSnapshot, includeUrl: boolean) => unknown
 ): void {
+  const pageNonce = getInjectedPageNonce()
   if (typeof window === 'undefined') return
 
   const messageHandlers: Record<string, (data: PageMessageData) => void> = {

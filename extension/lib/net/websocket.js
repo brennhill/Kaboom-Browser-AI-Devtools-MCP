@@ -2,6 +2,7 @@
  * Purpose: Wraps the WebSocket constructor to intercept lifecycle events and messages, delegating tracking and sampling to websocket-tracking.ts.
  * Docs: docs/features/feature/observe/index.md
  */
+import { postAuthenticatedPageMessage } from '../page/channel.js';
 import { getSize, formatPayload, truncateWsMessage, createConnectionTracker, setWebSocketCaptureModeInternal, getWebSocketCaptureModeInternal, resetCaptureModeForTesting } from './websocket-tracking.js';
 // =============================================================================
 // MODULE STATE (instrumentation-specific)
@@ -28,7 +29,7 @@ function snapshotDeferredPayload(data) {
 }
 /** Post a WebSocket lifecycle event (open/close/error) */
 function postLifecycleEvent(event, connectionId, urlString, extra) {
-    window.postMessage({
+    postAuthenticatedPageMessage({
         type: 'kaboom_ws',
         payload: {
             type: 'websocket',
@@ -39,7 +40,7 @@ function postLifecycleEvent(event, connectionId, urlString, extra) {
             ...(extra?.code !== undefined && { code: extra.code }),
             ...(extra?.reason !== undefined && { reason: extra.reason })
         }
-    }, window.location.origin);
+    });
 }
 /** Post a WebSocket message event */
 function postMessageEvent(connectionId, urlString, direction, data, tracker) {
@@ -47,7 +48,7 @@ function postMessageEvent(connectionId, urlString, direction, data, tracker) {
     const size = getSize(data);
     const formatted = formatPayload(data);
     const { data: truncatedData, truncated } = truncateWsMessage(formatted);
-    window.postMessage({
+    postAuthenticatedPageMessage({
         type: 'kaboom_ws',
         payload: {
             type: 'websocket',
@@ -60,7 +61,7 @@ function postMessageEvent(connectionId, urlString, direction, data, tracker) {
             truncated: truncated || undefined,
             ts: new Date().toISOString()
         }
-    }, window.location.origin);
+    });
 }
 /** Attach message and send capture to a WebSocket instance */
 function attachMessageCapture(ws, connectionId, urlString, tracker) {

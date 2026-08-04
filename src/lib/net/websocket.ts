@@ -12,6 +12,7 @@
  */
 
 import type { WebSocketCaptureMode } from '../../types/capture/websocket.js'
+import { postAuthenticatedPageMessage } from '../page/channel.js'
 
 import {
   type WebSocketMessageData,
@@ -84,8 +85,7 @@ function postLifecycleEvent(
   urlString: string,
   extra?: { code?: number; reason?: string; ts?: string }
 ): void {
-  window.postMessage(
-    {
+  postAuthenticatedPageMessage({
       type: 'kaboom_ws',
       payload: {
         type: 'websocket',
@@ -96,9 +96,7 @@ function postLifecycleEvent(
         ...(extra?.code !== undefined && { code: extra.code }),
         ...(extra?.reason !== undefined && { reason: extra.reason })
       }
-    } as KaboomWsMessage,
-    window.location.origin
-  )
+    } as KaboomWsMessage)
 }
 
 /** Post a WebSocket message event */
@@ -114,8 +112,7 @@ function postMessageEvent(
   const formatted = formatPayload(data)
   const { data: truncatedData, truncated } = truncateWsMessage(formatted)
 
-  window.postMessage(
-    {
+  postAuthenticatedPageMessage({
       type: 'kaboom_ws',
       payload: {
         type: 'websocket',
@@ -128,9 +125,7 @@ function postMessageEvent(
         truncated: truncated || undefined,
         ts: new Date().toISOString()
       }
-    } as KaboomWsMessage,
-    window.location.origin
-  )
+    } as KaboomWsMessage)
 }
 
 /** Attach message and send capture to a WebSocket instance */

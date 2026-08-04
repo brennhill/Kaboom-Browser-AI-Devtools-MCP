@@ -100,6 +100,23 @@ var INJECT_FORWARDED_SETTINGS = /* @__PURE__ */ new Set([
   SettingName.SERVER_URL
 ]);
 
+// extension/lib/page/channel.js
+var cachedNonce;
+function getInjectedPageNonce() {
+  if (cachedNonce !== void 0)
+    return cachedNonce;
+  if (typeof document === "undefined" || typeof document.querySelector !== "function") {
+    cachedNonce = "";
+    return cachedNonce;
+  }
+  const nonceElement = document.querySelector("script[data-kaboom-nonce]");
+  cachedNonce = nonceElement?.getAttribute("data-kaboom-nonce") || "";
+  return cachedNonce;
+}
+function postAuthenticatedPageMessage(message) {
+  window.postMessage({ ...message, _nonce: getInjectedPageNonce() }, window.location.origin);
+}
+
 // extension/lib/diagnostics/page-capture.js
 function reportPageCaptureFailure(category, error) {
   const diagnostic = {
@@ -110,7 +127,7 @@ function reportPageCaptureFailure(category, error) {
   console.error(`[KaBOOM!][${diagnostic.category}] ${diagnostic.message}`, { error_type: diagnostic.error_type });
   if (typeof window !== "undefined") {
     try {
-      window.postMessage({ type: "kaboom_capture_diagnostic", payload: diagnostic }, window.location.origin);
+      postAuthenticatedPageMessage({ type: "kaboom_capture_diagnostic", payload: diagnostic });
     } catch (forwardError) {
       console.error("[KaBOOM!][page_capture] Failed to forward local Doctor diagnostic", {
         error_type: forwardError instanceof Error ? forwardError.name.slice(0, 64) : "UnknownError"
@@ -421,7 +438,7 @@ function sendPerformanceSnapshot() {
   const snapshot = capturePerformanceSnapshot();
   if (!snapshot)
     return;
-  window.postMessage({ type: "kaboom_performance_snapshot", payload: snapshot }, window.location.origin);
+  postAuthenticatedPageMessage({ type: "kaboom_performance_snapshot", payload: snapshot });
 }
 var snapshotResendTimer = null;
 function scheduleSnapshotResend() {
@@ -709,8 +726,8 @@ function recordEnhancedAction(type, element, opts = {}) {
   if (enhancedActionBuffer.length > ENHANCED_ACTION_BUFFER_SIZE) {
     enhancedActionBuffer.shift();
   }
-  if (typeof window !== "undefined" && window.postMessage) {
-    window.postMessage({ type: "kaboom_enhanced_action", payload: action }, window.location.origin);
+  if (typeof window !== "undefined") {
+    postAuthenticatedPageMessage({ type: "kaboom_enhanced_action", payload: action });
   }
   return action;
 }
@@ -1410,7 +1427,7 @@ function adoptEarlyBodies() {
         // Duration unknown for early-captured bodies
       }
     };
-    window.postMessage(message, window.location.origin);
+    postAuthenticatedPageMessage(message);
   }
   if (adopted > 0) {
     console.log(`[KaBOOM!] Adopted ${adopted} early network body(ies)`);
@@ -3714,7 +3731,7 @@ function snapshotDeferredPayload(data) {
   return data;
 }
 function postLifecycleEvent(event, connectionId, urlString, extra) {
-  window.postMessage({
+  postAuthenticatedPageMessage({
     type: "kaboom_ws",
     payload: {
       type: "websocket",
@@ -3725,14 +3742,14 @@ function postLifecycleEvent(event, connectionId, urlString, extra) {
       ...extra?.code !== void 0 && { code: extra.code },
       ...extra?.reason !== void 0 && { reason: extra.reason }
     }
-  }, window.location.origin);
+  });
 }
 function postMessageEvent(connectionId, urlString, direction, data, tracker) {
   tracker.recordSampledMessage(direction, data);
   const size = getSize(data);
   const formatted = formatPayload(data);
   const { data: truncatedData, truncated } = truncateWsMessage(formatted);
-  window.postMessage({
+  postAuthenticatedPageMessage({
     type: "kaboom_ws",
     payload: {
       type: "websocket",
@@ -3745,7 +3762,7 @@ function postMessageEvent(connectionId, urlString, direction, data, tracker) {
       truncated: truncated || void 0,
       ts: (/* @__PURE__ */ new Date()).toISOString()
     }
-  }, window.location.origin);
+  });
 }
 function attachMessageCapture(ws, connectionId, urlString, tracker) {
   ws.addEventListener("message", (event) => {
@@ -3874,7 +3891,7 @@ function postLog(payload) {
   if (actions && actions.length > 0)
     enrichments.push("userActions");
   const { level, type, args, error, stack, ...otherFields } = payload;
-  window.postMessage({
+  postAuthenticatedPageMessage({
     type: "kaboom_log",
     payload: {
       // Enriched fields (these are the source of truth)
@@ -3895,7 +3912,7 @@ function postLog(payload) {
       // Any other fields from payload (excluding the ones we destructured)
       ...otherFields
     }
-  }, window.location.origin);
+  });
 }
 
 // extension/lib/page/console.js
@@ -4339,15 +4356,8 @@ function handleStateCommand(data, captureStateFn, restoreStateFn, respond) {
 }
 
 // extension/inject/message-handlers.js
-var pageNonce = "";
-if (typeof document !== "undefined" && typeof document.querySelector === "function") {
-  const nonceEl = document.querySelector("script[data-kaboom-nonce]");
-  if (nonceEl) {
-    pageNonce = nonceEl.getAttribute("data-kaboom-nonce") || "";
-  }
-}
 function postResponse(data) {
-  window.postMessage({ ...data, _nonce: pageNonce }, window.location.origin);
+  postAuthenticatedPageMessage(data);
 }
 async function handleLinkHealthQuery(data) {
   try {
@@ -4373,6 +4383,7 @@ function handleLinkHealthMessage(data) {
   });
 }
 function installMessageListener(captureStateFn, restoreStateFn) {
+  const pageNonce = getInjectedPageNonce();
   if (typeof window === "undefined")
     return;
   const messageHandlers = {

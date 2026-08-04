@@ -59,7 +59,10 @@ code_paths:
   - src/background/sync/sync-manager.ts
   - src/background/sync/sync-client.ts
   - src/background/sync/install-identity.ts
+  - src/content/page-telemetry.ts
+  - src/content/window-message-listener.ts
   - src/lib/daemon-http.ts
+  - src/lib/page/channel.ts
   - src/lib/storage/recovery.ts
   - src/lib/storage/fault.ts
   - src/lib/storage/validated.ts
@@ -184,6 +187,12 @@ daemon acknowledgement. The client does not truncate older terminal outcomes:
 the daemon's bounded delivery capacity limits how much new work can be accepted
 between successful syncs, while lossless retention prevents an already-executed
 mutation from later appearing safe to retry.
+Every injected telemetry producer uses the canonical authenticated page
+channel. The content boundary rejects missing or incorrect nonces, malformed
+wire shapes, cyclic/deep structures, excessive collections, and payloads above
+the byte budget before they reach background queues. Rejections produce only a
+deduplicated, redacted local diagnostic; captured page values are never copied
+into the diagnostic.
 Daemon HTTP reachability and extension sync-heartbeat state are tracked as
 separate signals. A missing or stale heartbeat remains visible to Doctor and
 the connection log, but cannot label a daemon that answered `/health` as
