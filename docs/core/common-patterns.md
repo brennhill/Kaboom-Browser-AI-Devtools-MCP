@@ -168,3 +168,12 @@ Use this as a hard checklist during design, coding, and review.
 - [ ] Migrations are complete: no compatibility facade, alias-only module, old caller, stale test, or stale documentation remains.
 - [ ] Every catch leaves redacted evidence, or carries an explicit `EXPECTED_ABSENCE:` rationale.
 - [ ] Operational failures use a registered incident code and canonical lifecycle projection rather than parallel log/Doctor/analytics calls.
+
+### Isolate wall-clock performance gates
+
+Wall-clock SLO assertions must not run inside parallel unit-test shards, where
+unrelated CPU contention makes a correct implementation fail nondeterministically.
+Keep deterministic correctness, allocation, and race coverage in the normal
+lane; run unchanged latency thresholds through `make test-performance`, which
+sets both package and test parallelism to one. Do not “fix” load sensitivity by
+raising a product SLO.

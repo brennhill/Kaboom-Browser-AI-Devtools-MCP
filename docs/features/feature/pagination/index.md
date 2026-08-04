@@ -4,7 +4,7 @@ feature_id: feature-pagination
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-04
 code_paths:
   - internal/pagination/pagination.go
   - internal/pagination/pagination_actions.go
@@ -12,6 +12,7 @@ code_paths:
   - internal/pagination/pagination_logs.go
   - internal/pagination/cursor.go
   - internal/types/log.go
+  - Makefile
 test_paths:
   - internal/pagination/pagination_test.go
   - internal/pagination/pagination_actions_test.go
@@ -19,8 +20,9 @@ test_paths:
   - internal/pagination/pagination_coverage_test.go
   - internal/pagination/pagination_bench_test.go
   - internal/pagination/test_helpers_test.go
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+  - internal/pagination/cursor_slo_test.go
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # Pagination
@@ -55,3 +57,7 @@ last_verified_date: 2026-03-05
 - Action and WebSocket pagination tests consume `internal/types.EnhancedAction`
   and `internal/types.WebSocketEvent` directly; pagination does not re-export
   canonical entry contracts.
+- Cursor construction uses direct integer formatting rather than general
+  formatting, keeping the hot path below its 500 ns budget. Wall-clock cursor
+  SLOs run through `make test-performance` with package and test parallelism
+  disabled; the normal parallel unit lane skips only those timing assertions.

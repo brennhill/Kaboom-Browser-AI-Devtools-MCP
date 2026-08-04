@@ -16,6 +16,7 @@ code_paths:
   - internal/security/scan/credentials.go
   - internal/security/scan/credentials_patterns.go
   - src/background/runtime-state/log-queue.ts
+  - Makefile
 test_paths:
   - internal/capture/http_debug_redaction_test.go
   - internal/redaction/no_facade_test.go
@@ -80,3 +81,6 @@ fixed-format AWS, Bearer, and SSN candidates use allocation-bounded scanners.
 Custom patterns remain unrestricted. This avoids repeatedly running impossible
 regular expressions over large captured payloads while preserving the same
 redaction results and the documented 5 KB/100 KB latency budgets.
+Those wall-clock budgets run in the serial `make test-performance` lane rather
+than competing with the eight-package unit shard. The normal short/race lanes
+continue to run all deterministic redaction correctness and safety tests.

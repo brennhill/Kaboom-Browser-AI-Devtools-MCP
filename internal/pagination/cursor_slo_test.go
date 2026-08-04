@@ -13,6 +13,9 @@ import (
 // TestSLOParseCursor validates that ParseCursor completes in < 1μs average.
 // This SLO ensures cursor parsing doesn't add latency to pagination-heavy operations.
 func TestSLOParseCursor(t *testing.T) {
+	if testing.Short() {
+		t.Skip("wall-clock SLO runs in the isolated performance lane")
+	}
 	if raceDetectorEnabled {
 		t.Skip("SLO test skipped under race detector (significantly slower execution)")
 	}
@@ -45,6 +48,9 @@ func TestSLOParseCursor(t *testing.T) {
 // TestSLOBuildCursor validates that BuildCursor completes in < 500ns average.
 // This SLO ensures cursor generation is negligible overhead in response paths.
 func TestSLOBuildCursor(t *testing.T) {
+	if testing.Short() {
+		t.Skip("wall-clock SLO runs in the isolated performance lane")
+	}
 	if raceDetectorEnabled {
 		t.Skip("SLO test skipped under race detector (significantly slower execution)")
 	}

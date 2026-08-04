@@ -165,7 +165,9 @@ func BenchmarkRedactSmallInput(b *testing.B) {
 }
 
 func TestRedactPerformanceSmall(t *testing.T) {
-	t.Parallel()
+	if testing.Short() {
+		t.Skip("wall-clock SLO runs in the isolated performance lane")
+	}
 	if raceEnabled {
 		t.Skip("Performance SLO test skipped under race detector")
 	}
@@ -193,7 +195,9 @@ func TestRedactPerformanceSmall(t *testing.T) {
 }
 
 func TestRedactPerformanceLarge(t *testing.T) {
-	t.Parallel()
+	if testing.Short() {
+		t.Skip("wall-clock SLO runs in the isolated performance lane")
+	}
 	if raceEnabled {
 		t.Skip("Performance SLO test skipped under race detector")
 	}

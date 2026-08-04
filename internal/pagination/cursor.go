@@ -65,9 +65,9 @@ func ParseCursor(cursorStr string) (Cursor, error) {
 func BuildCursor(timestamp string, sequence int64) string {
 	if timestamp == "" {
 		// Return sequence-only cursor for logs without timestamps
-		return fmt.Sprintf(":%d", sequence)
+		return ":" + strconv.FormatInt(sequence, 10)
 	}
-	return fmt.Sprintf("%s:%d", timestamp, sequence)
+	return timestamp + ":" + strconv.FormatInt(sequence, 10)
 }
 
 // IsOlder returns true if this entry is older than the cursor (for backward pagination).

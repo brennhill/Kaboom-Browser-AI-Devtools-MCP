@@ -20,7 +20,7 @@ PLATFORMS := \
 	linux-arm64 \
 	windows-amd64
 
-.PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly mutation-test \
+.PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-performance test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly mutation-test \
 	dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
 	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-ts-json-casing check-invariants check-schema ci \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench \
@@ -87,6 +87,7 @@ compile-ts: validate-versions generate-wire-types generate-dom-primitives genera
 # "All tests" (documented contract): file-length gate + Go (-short) + JS suites.
 test: check-file-length
 	$(MAKE) test-go-quick
+	$(MAKE) test-performance
 	$(MAKE) test-js
 
 test-long:
@@ -116,6 +117,11 @@ test-go-long:
 test-go-sharded:
 	@set -e; trap 'bash ./scripts/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
 	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) GO_TEST_SHARDS=$(GO_TEST_SHARDS) GO_TEST_COUNT=$(GO_TEST_COUNT) KABOOM_CMD_PKG=$(CMD_PKG) ./scripts/test-go-sharded.sh --package $(CMD_PKG) -- -parallel $(GO_TEST_PARALLEL)
+
+# Wall-clock SLOs must run without cross-package or intra-package contention.
+# Unit lanes retain deterministic correctness/race coverage under -short.
+test-performance:
+	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) GOMAXPROCS=1 go test -count=1 -p 1 -parallel 1 -run '^(TestSLO|TestRedactPerformance)' ./internal/pagination ./internal/redaction
 
 test-race:
 	go test -race -v ./...
