@@ -142,10 +142,15 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 		"restart": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 			return handleConfigureRestart(req)
 		},
-		"doctor": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+		"doctor": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			checks := recoveryDoctorChecks(h.stateRecovery)
+			var incidentViews []incident.DoctorView
 			if h.server != nil {
+				incidentViews = h.server.incidents.DoctorSnapshot()
 				checks = append(checks, incidentDoctorChecks(h.server.incidents)...)
+			}
+			if response, handled := handleDoctorSupportAction(req, args, incidentViews); handled {
+				return response
 			}
 			return handleConfigureDoctor(
 				h.healthMetrics,

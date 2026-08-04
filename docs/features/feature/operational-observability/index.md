@@ -9,10 +9,15 @@ code_paths:
   - internal/incident/registry.go
   - internal/incident/store.go
   - internal/incident/projections.go
+  - internal/incident/support.go
   - internal/statediag/collector.go
   - internal/telemetry/beacon.go
+  - cmd/browser-agent/tools_configure_support.go
+  - internal/schema/configure/properties_core.go
 test_paths:
   - internal/incident/store_test.go
+  - internal/incident/support_test.go
+  - cmd/browser-agent/tools_configure_support_test.go
   - internal/statediag/collector_test.go
   - internal/telemetry/contract_compliance_test.go
   - internal/telemetry/beacon_test.go
@@ -44,6 +49,15 @@ and retryability. Correlation IDs, generations, timestamps, paths, evidence,
 and prose do not influence it, so recurring incident classes group stably
 without encoding user or project data. The fingerprint is not sent in product
 telemetry.
+
+Support bundles are an explicit two-step local workflow on the existing
+`configure` tool. `preview_support_bundle` returns the exact redacted JSON
+artifact and a content-derived confirmation token. `export_support_bundle`
+requires that current token and a user-selected path, then writes the same
+bytes with owner-only permissions. Any incident transition invalidates the
+preview. Kaboom never uploads the bundle, echoes the local path, or includes
+correlation IDs, generations, timestamps, evidence, URLs, content, logs, or
+recordings.
 
 Recovery follows an idempotent, generation-aware state machine. Stale
 transitions cannot alter current health. Incident storage and history are

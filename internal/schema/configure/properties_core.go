@@ -25,6 +25,16 @@ func coreProperties() map[string]any {
 			"type":        "boolean",
 			"description": "Required true when enabling insecure_proxy mode.",
 		},
+		"doctor_action": map[string]any{
+			"type": "string", "enum": []string{"preview_support_bundle", "export_support_bundle"},
+			"description": "Preview an exact privacy-bounded local Doctor artifact, or export it after confirming the preview token.",
+		},
+		"confirmation_token": map[string]any{
+			"type": "string", "description": "Exact token returned by preview_support_bundle; required for export_support_bundle.",
+		},
+		"output_path": map[string]any{
+			"type": "string", "description": "Explicit local destination for an approved Doctor support-bundle export.",
+		},
 		"telemetry_mode": map[string]any{
 			"type":        "string",
 			"description": "Telemetry metadata mode: off, auto, full. configure(what='telemetry') sets global default. Any tools/call may override per request with telemetry_mode.",

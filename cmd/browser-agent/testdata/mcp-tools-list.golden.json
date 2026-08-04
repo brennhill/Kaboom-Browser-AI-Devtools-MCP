@@ -810,6 +810,10 @@
           "description": "Required true when enabling insecure_proxy mode.",
           "type": "boolean"
         },
+        "confirmation_token": {
+          "description": "Exact token returned by preview_support_bundle; required for export_support_bundle.",
+          "type": "string"
+        },
         "continue_on_error": {
           "description": "Continue replay if a step fails (default true)",
           "type": "boolean"
@@ -820,6 +824,14 @@
         },
         "description": {
           "description": "Human-readable description for saved sequence",
+          "type": "string"
+        },
+        "doctor_action": {
+          "description": "Preview an exact privacy-bounded local Doctor artifact, or export it after confirming the preview token.",
+          "enum": [
+            "preview_support_bundle",
+            "export_support_bundle"
+          ],
           "type": "string"
         },
         "domain": {
@@ -1076,6 +1088,10 @@
         },
         "original_id": {
           "description": "Original recording ID (log_diff)",
+          "type": "string"
+        },
+        "output_path": {
+          "description": "Explicit local destination for an approved Doctor support-bundle export.",
           "type": "string"
         },
         "override_steps": {
