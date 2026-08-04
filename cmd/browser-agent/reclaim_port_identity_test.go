@@ -16,13 +16,6 @@ import (
 	"time"
 )
 
-// swapProcessCommand installs a fake process-command lookup and returns a restore func.
-func swapProcessCommand(f func(int) string) func() {
-	old := daemonProcessCommand
-	daemonProcessCommand = f
-	return func() { daemonProcessCommand = old }
-}
-
 func TestReclaimPort_NeverKillsAForeignProcess(t *testing.T) {
 	logFile := filepath.Join(t.TempDir(), "foreign.log")
 	server, err := NewServer(logFile, 200)
@@ -32,17 +25,15 @@ func TestReclaimPort_NeverKillsAForeignProcess(t *testing.T) {
 
 	const port = 7891
 	var killed []int
-	restore := swapReclaimDeps(
+	setReclaimDeps(server,
 		func(int) ([]int, error) { return []int{4242}, nil },
 		func(pid int, _ bool) { killed = append(killed, pid) },
 		func(int, time.Duration) bool { return true },
 		func(int) bool { return true }, // still running: we did not free it
 	)
-	defer restore()
-	restoreCmd := swapProcessCommand(func(int) string {
+	server.daemonHost.processCommand = func(int) string {
 		return "/opt/homebrew/opt/postgresql@16/bin/postgres -D /opt/homebrew/var/postgresql@16"
-	})
-	defer restoreCmd()
+	}
 
 	if reclaimPort(server, port, "terminal") {
 		t.Fatal("a port held by a foreign process must not be reported as freed")
@@ -83,17 +74,15 @@ func TestReclaimPort_StillKillsOurOwnDaemon(t *testing.T) {
 
 	const port = 7890
 	var killed []int
-	restore := swapReclaimDeps(
+	setReclaimDeps(server,
 		func(int) ([]int, error) { return []int{4242}, nil },
 		func(pid int, _ bool) { killed = append(killed, pid) },
 		func(int, time.Duration) bool { return true },
 		func(int) bool { return false },
 	)
-	defer restore()
 	// A leftover daemon reports our own executable path — the whole point of the
 	// feature. The identity check must not disable the reclaim it exists for.
-	restoreCmd := swapProcessCommand(func(int) string { return self + " --daemon --port 7890" })
-	defer restoreCmd()
+	server.daemonHost.processCommand = func(int) string { return self + " --daemon --port 7890" }
 
 	if !reclaimPort(server, port, "main") {
 		t.Fatal("reclaimPort should free a port held by our own leftover daemon")
@@ -112,17 +101,15 @@ func TestReclaimPort_UnknownCommandIsNotKilled(t *testing.T) {
 	}
 
 	var killed []int
-	restore := swapReclaimDeps(
+	setReclaimDeps(server,
 		func(int) ([]int, error) { return []int{4242}, nil },
 		func(pid int, _ bool) { killed = append(killed, pid) },
 		func(int, time.Duration) bool { return true },
 		func(int) bool { return true },
 	)
-	defer restore()
 	// `ps` failed / the process vanished. We cannot prove it is ours, so we must
 	// not kill it: an unidentifiable process is treated as foreign, never as ours.
-	restoreCmd := swapProcessCommand(func(int) string { return "" })
-	defer restoreCmd()
+	server.daemonHost.processCommand = func(int) string { return "" }
 
 	reclaimPort(server, 7891, "terminal")
 	if len(killed) != 0 {

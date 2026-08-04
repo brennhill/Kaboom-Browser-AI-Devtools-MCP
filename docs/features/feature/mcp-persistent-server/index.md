@@ -181,6 +181,10 @@ runtimes cannot suppress or overwrite one another's lifecycle state.
 Validated upload policy, OS-automation permission, and startup warnings flow
 from parsed configuration into the target server instance. Flag parsing no
 longer mutates package state later consumed by unrelated server instances.
+Daemon process discovery, liveness, shutdown, termination, and port-release
+collaborators are owned by each server. Recovery-policy tests inject one
+server's host boundary and can run without swapping process-wide function
+variables or affecting concurrent instances.
 
 Persisted restart timestamps are validated before they become incident
 generations. Invalid negative values take the existing fail-open corruption

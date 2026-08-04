@@ -133,29 +133,29 @@ func terminatePIDQuiet(pid int, force bool) {
 // daemonlife owns the single-instance POLICY, this package owns the mechanics.
 // reclaimPort and identifyPortHolder below use them directly; daemonlife receives
 // them through daemonlifeDeps below.
-var (
-	// daemonProcessCommand looks up a PID's command line.
-	daemonProcessCommand = procctl.GetProcessCommand
-	// daemonIsProcessAlive reports whether a PID is still running.
-	daemonIsProcessAlive = procctl.IsProcessAlive
-	// daemonIsServerRunning reports whether something is accepting on a port.
-	daemonIsServerRunning = corebridge.IsServerRunning
-	// daemonTryShutdown asks the daemon on a port to shut down over HTTP.
-	daemonTryShutdown = tryShutdownViaHTTP
-	// daemonWaitForPortRelease blocks until a port is free or the timeout elapses.
-	daemonWaitForPortRelease = waitForPortRelease
-	// daemonTerminatePID signals a PID (SIGTERM, or SIGKILL when force is set).
-	daemonTerminatePID = terminatePIDQuiet
-	// daemonFindProcessOnPort lists the PIDs holding a port.
-	daemonFindProcessOnPort = procctl.FindProcessOnPort
-)
+type daemonHost struct {
+	processCommand     func(int) string
+	isProcessAlive     func(int) bool
+	isServerRunning    func(int) bool
+	tryShutdown        func(int) bool
+	waitForPortRelease func(int, time.Duration) bool
+	terminatePID       func(int, bool)
+	findProcessOnPort  func(int) ([]int, error)
+}
+
+func newDaemonHost() daemonHost {
+	return daemonHost{
+		processCommand: procctl.GetProcessCommand, isProcessAlive: procctl.IsProcessAlive,
+		isServerRunning: corebridge.IsServerRunning, tryShutdown: tryShutdownViaHTTP,
+		waitForPortRelease: waitForPortRelease, terminatePID: terminatePIDQuiet,
+		findProcessOnPort: procctl.FindProcessOnPort,
+	}
+}
 
 // ourDaemonBinaryNames are the binary names this project ships or builds. A
 // leftover daemon may come from a different install path or an older version, so
 // matching only our own absolute executable path would miss the very zombies this
 // reclaim exists to clear.
-var ourDaemonBinaryNames = []string{"kaboom-agentic-browser", "browser-agent"}
-
 // processLooksLikeOurDaemon reports whether `cmdline` is one of OUR daemons.
 //
 // This is deliberately an allow-list on the executable, not a heuristic on the
@@ -180,7 +180,7 @@ func processLooksLikeOurDaemon(cmdline, ownExecPath string) bool {
 	if ownExecPath != "" && base == filepath.Base(ownExecPath) {
 		return true
 	}
-	for _, name := range ourDaemonBinaryNames {
+	for _, name := range [...]string{"kaboom-agentic-browser", "browser-agent"} {
 		// `go test` runs the package binary as "<name>.test", which is still ours.
 		if base == name || base == name+".test" || base == name+".exe" {
 			return true
@@ -191,12 +191,12 @@ func processLooksLikeOurDaemon(cmdline, ownExecPath string) bool {
 
 // isOurDaemonPID reports whether pid is one of our daemons, per the command-line
 // allow-list above. Unknown => false (never kill what we cannot identify).
-func isOurDaemonPID(pid int) bool {
+func isOurDaemonPID(host daemonHost, pid int) bool {
 	ownExec, err := os.Executable()
 	if err != nil {
 		ownExec = ""
 	}
-	return processLooksLikeOurDaemon(daemonProcessCommand(pid), ownExec)
+	return processLooksLikeOurDaemon(host.processCommand(pid), ownExec)
 }
 
 // reclaimPort clears anything already listening on `port` so daemon startup is
@@ -214,9 +214,10 @@ func isOurDaemonPID(pid int) bool {
 // startup, and the terminal supervisor repeated that before each restart attempt.
 // A process we cannot positively identify as ours is left alone and logged.
 func reclaimPort(server *Server, port int, purpose string) bool {
-	owners, err := daemonFindProcessOnPort(port)
+	host := server.daemonHost
+	owners, err := host.findProcessOnPort(port)
 	if err != nil || len(owners) == 0 {
-		return !daemonIsServerRunning(port)
+		return !host.isServerRunning(port)
 	}
 	self := os.Getpid()
 	killed := make([]int, 0, len(owners))
@@ -224,11 +225,11 @@ func reclaimPort(server *Server, port int, purpose string) bool {
 		if pid <= 0 || pid == self {
 			continue
 		}
-		if !isOurDaemonPID(pid) {
+		if !isOurDaemonPID(host, pid) {
 			// Someone else's process holds the port. Killing it would be destructive
 			// and is never our call — log loudly so "the port is busy" is diagnosable
 			// instead of silently doing nothing (rule 25).
-			cmdline := daemonProcessCommand(pid)
+			cmdline := host.processCommand(pid)
 			server.logLifecycle("port_reclaim_skipped_foreign", port, map[string]any{
 				"purpose": purpose, "owner_pid": pid, "owner_command": cmdline,
 			})
@@ -237,19 +238,19 @@ func reclaimPort(server *Server, port int, purpose string) bool {
 			continue
 		}
 		server.logLifecycle("port_reclaim_terminating", port, map[string]any{"purpose": purpose, "owner_pid": pid})
-		daemonTerminatePID(pid, false)
+		host.terminatePID(pid, false)
 		killed = append(killed, pid)
 	}
 	if len(killed) == 0 {
-		return !daemonIsServerRunning(port)
+		return !host.isServerRunning(port)
 	}
-	if !daemonWaitForPortRelease(port, 2*time.Second) {
+	if !host.waitForPortRelease(port, 2*time.Second) {
 		for _, pid := range killed {
-			daemonTerminatePID(pid, true) // force
+			host.terminatePID(pid, true) // force
 		}
-		daemonWaitForPortRelease(port, 2*time.Second)
+		host.waitForPortRelease(port, 2*time.Second)
 	}
-	freed := !daemonIsServerRunning(port)
+	freed := !host.isServerRunning(port)
 	server.logLifecycle("port_reclaimed", port, map[string]any{"purpose": purpose, "killed_pids": killed, "freed": freed})
 	return freed
 }
@@ -257,8 +258,8 @@ func reclaimPort(server *Server, port int, purpose string) bool {
 // identifyPortHolder returns the PID and command line of whatever is listening on
 // port, or (0, "") if that cannot be determined. Best effort and never fatal: it
 // exists purely to turn "port busy" into something the user can act on.
-func identifyPortHolder(port int) (int, string) {
-	owners, err := daemonFindProcessOnPort(port)
+func identifyPortHolder(host daemonHost, port int) (int, string) {
+	owners, err := host.findProcessOnPort(port)
 	if err != nil || len(owners) == 0 {
 		return 0, ""
 	}
@@ -267,7 +268,7 @@ func identifyPortHolder(port int) (int, string) {
 		if pid <= 0 || pid == self {
 			continue
 		}
-		return pid, daemonProcessCommand(pid)
+		return pid, host.processCommand(pid)
 	}
 	return 0, ""
 }
@@ -288,11 +289,11 @@ func daemonlifeDeps(server *Server) daemonlife.Deps {
 		Recovery:  server.stateRecovery,
 		Incidents: server.incidents,
 
-		IsProcessAlive:     daemonIsProcessAlive,
-		IsServerRunning:    daemonIsServerRunning,
-		TryShutdown:        daemonTryShutdown,
-		WaitForPortRelease: daemonWaitForPortRelease,
-		TerminatePID:       daemonTerminatePID,
+		IsProcessAlive:     server.daemonHost.isProcessAlive,
+		IsServerRunning:    server.daemonHost.isServerRunning,
+		TryShutdown:        server.daemonHost.tryShutdown,
+		WaitForPortRelease: server.daemonHost.waitForPortRelease,
+		TerminatePID:       server.daemonHost.terminatePID,
 		FetchHealth:        fetchDaemonHealth,
 		ReadPIDFile:        procctl.ReadPIDFile,
 		RemovePIDFile:      procctl.RemovePIDFile,

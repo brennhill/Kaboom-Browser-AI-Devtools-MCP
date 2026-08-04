@@ -117,6 +117,7 @@ type Server struct {
 	pushDrainToken   string
 	uploadAutomation bool
 	uploadSecurity   *uploadsec.Security
+	daemonHost       daemonHost
 }
 
 func (s *Server) applyRuntimeConfig(config *serverConfig) {
@@ -195,6 +196,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 
 	s := &Server{
 		runtime:            appruntime.New(version),
+		daemonHost:         newDaemonHost(),
 		listenPort:         defaultPort,
 		sessionProjectPath: sessionProjectPath,
 		warningSeen:        make(map[string]struct{}),

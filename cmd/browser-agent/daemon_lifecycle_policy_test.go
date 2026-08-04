@@ -135,24 +135,24 @@ func TestEnforceDaemonStartupPolicy_DefaultTakeover(t *testing.T) {
 		t.Fatalf("NewServer() error = %v", err)
 	}
 
-	oldIsAlive := daemonIsProcessAlive
-	oldIsServerRunning := daemonIsServerRunning
-	oldTryShutdown := daemonTryShutdown
-	oldWaitRelease := daemonWaitForPortRelease
-	oldTerminate := daemonTerminatePID
+	oldIsAlive := server.daemonHost.isProcessAlive
+	oldIsServerRunning := server.daemonHost.isServerRunning
+	oldTryShutdown := server.daemonHost.tryShutdown
+	oldWaitRelease := server.daemonHost.waitForPortRelease
+	oldTerminate := server.daemonHost.terminatePID
 	defer func() {
-		daemonIsProcessAlive = oldIsAlive
-		daemonIsServerRunning = oldIsServerRunning
-		daemonTryShutdown = oldTryShutdown
-		daemonWaitForPortRelease = oldWaitRelease
-		daemonTerminatePID = oldTerminate
+		server.daemonHost.isProcessAlive = oldIsAlive
+		server.daemonHost.isServerRunning = oldIsServerRunning
+		server.daemonHost.tryShutdown = oldTryShutdown
+		server.daemonHost.waitForPortRelease = oldWaitRelease
+		server.daemonHost.terminatePID = oldTerminate
 	}()
 
-	daemonIsProcessAlive = func(pid int) bool { return pid == existingPID }
-	daemonIsServerRunning = func(port int) bool { return port == existingPort }
-	daemonTryShutdown = func(port int) bool { return port == existingPort }
+	server.daemonHost.isProcessAlive = func(pid int) bool { return pid == existingPID }
+	server.daemonHost.isServerRunning = func(port int) bool { return port == existingPort }
+	server.daemonHost.tryShutdown = func(port int) bool { return port == existingPort }
 	waitCalls := 0
-	daemonWaitForPortRelease = func(port int, _ time.Duration) bool {
+	server.daemonHost.waitForPortRelease = func(port int, _ time.Duration) bool {
 		if port != existingPort {
 			return false
 		}
@@ -160,7 +160,7 @@ func TestEnforceDaemonStartupPolicy_DefaultTakeover(t *testing.T) {
 		return waitCalls >= 2
 	}
 	terminatedPIDs := make([]int, 0, 2)
-	daemonTerminatePID = func(pid int, _ bool) {
+	server.daemonHost.terminatePID = func(pid int, _ bool) {
 		terminatedPIDs = append(terminatedPIDs, pid)
 	}
 
@@ -233,18 +233,18 @@ func TestEnforceDaemonStartupPolicy_SafetyGuardRejectsPIDMismatch(t *testing.T) 
 	}
 	defer server.logs.Shutdown(2 * time.Second)
 
-	oldIsAlive := daemonIsProcessAlive
-	oldIsServerRunning := daemonIsServerRunning
-	oldTerminate := daemonTerminatePID
+	oldIsAlive := server.daemonHost.isProcessAlive
+	oldIsServerRunning := server.daemonHost.isServerRunning
+	oldTerminate := server.daemonHost.terminatePID
 	defer func() {
-		daemonIsProcessAlive = oldIsAlive
-		daemonIsServerRunning = oldIsServerRunning
-		daemonTerminatePID = oldTerminate
+		server.daemonHost.isProcessAlive = oldIsAlive
+		server.daemonHost.isServerRunning = oldIsServerRunning
+		server.daemonHost.terminatePID = oldTerminate
 	}()
-	daemonIsProcessAlive = func(pid int) bool { return pid == existingPID }
-	daemonIsServerRunning = func(port int) bool { return port == existingPort }
+	server.daemonHost.isProcessAlive = func(pid int) bool { return pid == existingPID }
+	server.daemonHost.isServerRunning = func(port int) bool { return port == existingPort }
 	terminated := false
-	daemonTerminatePID = func(_ int, _ bool) { terminated = true }
+	server.daemonHost.terminatePID = func(_ int, _ bool) { terminated = true }
 
 	err = daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), 7901, daemonlife.LaunchOptions{})
 	if err == nil {
@@ -276,19 +276,19 @@ func TestEnforceDaemonStartupPolicy_ParallelRequiresIsolatedStateDir(t *testing.
 	}
 	defer server.logs.Shutdown(2 * time.Second)
 
-	oldIsAlive := daemonIsProcessAlive
-	oldTerminate := daemonTerminatePID
-	oldTryShutdown := daemonTryShutdown
+	oldIsAlive := server.daemonHost.isProcessAlive
+	oldTerminate := server.daemonHost.terminatePID
+	oldTryShutdown := server.daemonHost.tryShutdown
 	defer func() {
-		daemonIsProcessAlive = oldIsAlive
-		daemonTerminatePID = oldTerminate
-		daemonTryShutdown = oldTryShutdown
+		server.daemonHost.isProcessAlive = oldIsAlive
+		server.daemonHost.terminatePID = oldTerminate
+		server.daemonHost.tryShutdown = oldTryShutdown
 	}()
-	daemonIsProcessAlive = func(pid int) bool { return pid == 30303 }
+	server.daemonHost.isProcessAlive = func(pid int) bool { return pid == 30303 }
 	terminated := false
 	shutdownCalled := false
-	daemonTerminatePID = func(_ int, _ bool) { terminated = true }
-	daemonTryShutdown = func(_ int) bool {
+	server.daemonHost.terminatePID = func(_ int, _ bool) { terminated = true }
+	server.daemonHost.tryShutdown = func(_ int) bool {
 		shutdownCalled = true
 		return false
 	}
@@ -328,18 +328,18 @@ func TestEnforceDaemonStartupPolicy_ReclaimsStaleLockOnPIDMismatchWhenPortIdle(t
 		t.Fatalf("NewServer() error = %v", err)
 	}
 
-	oldIsAlive := daemonIsProcessAlive
-	oldIsServerRunning := daemonIsServerRunning
-	oldTerminate := daemonTerminatePID
+	oldIsAlive := server.daemonHost.isProcessAlive
+	oldIsServerRunning := server.daemonHost.isServerRunning
+	oldTerminate := server.daemonHost.terminatePID
 	defer func() {
-		daemonIsProcessAlive = oldIsAlive
-		daemonIsServerRunning = oldIsServerRunning
-		daemonTerminatePID = oldTerminate
+		server.daemonHost.isProcessAlive = oldIsAlive
+		server.daemonHost.isServerRunning = oldIsServerRunning
+		server.daemonHost.terminatePID = oldTerminate
 	}()
-	daemonIsProcessAlive = func(pid int) bool { return pid == existingPID }
-	daemonIsServerRunning = func(port int) bool { return false }
+	server.daemonHost.isProcessAlive = func(pid int) bool { return pid == existingPID }
+	server.daemonHost.isServerRunning = func(port int) bool { return false }
 	terminated := false
-	daemonTerminatePID = func(_ int, _ bool) { terminated = true }
+	server.daemonHost.terminatePID = func(_ int, _ bool) { terminated = true }
 
 	if err := daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), 7931, daemonlife.LaunchOptions{}); err != nil {
 		t.Fatalf("daemonlife.EnforceStartupPolicy() error = %v, want stale lock reclaimed", err)

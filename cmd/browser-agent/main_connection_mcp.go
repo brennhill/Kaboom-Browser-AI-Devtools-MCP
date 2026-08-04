@@ -185,7 +185,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		// lines below go to /dev/null for a bridge-spawned daemon (spawned with
 		// Stdout/Stderr = nil so it cannot die of SIGPIPE), making the health payload
 		// the only place a user or agent can learn what happened.
-		blockingPID, blockingCmd := identifyPortHolder(termPort)
+		blockingPID, blockingCmd := identifyPortHolder(server.daemonHost, termPort)
 		server.setTerminalUnavailable(termPort, termErr.Error(), blockingPID, blockingCmd)
 
 		diag.Printf("[Kaboom] WARNING: terminal server failed to start on port %d: %v\n", termPort, termErr)
@@ -362,7 +362,7 @@ func preflightPortCheck(server *Server, port int) error {
 	testAddr := fmt.Sprintf("127.0.0.1:%d", port)
 	testLn, err := net.Listen("tcp", testAddr)
 	if err != nil {
-		blockingPID, blockingCmd := identifyPortHolder(port)
+		blockingPID, blockingCmd := identifyPortHolder(server.daemonHost, port)
 		server.logLifecycle("port_conflict_detected", port, map[string]any{
 			"error":          err.Error(),
 			"blocked_by_pid": blockingPID,

@@ -55,14 +55,14 @@ func TestDaemonlifeDeps_ReadsSeamsAtCallTime(t *testing.T) {
 	}
 	defer server.logs.Shutdown(2 * time.Second)
 
-	oldAlive := daemonIsProcessAlive
-	defer func() { daemonIsProcessAlive = oldAlive }()
+	oldAlive := server.daemonHost.isProcessAlive
+	defer func() { server.daemonHost.isProcessAlive = oldAlive }()
 
-	daemonIsProcessAlive = func(int) bool { return true }
+	server.daemonHost.isProcessAlive = func(int) bool { return true }
 	if !daemonlifeDeps(server).IsProcessAlive(1) {
 		t.Fatal("IsProcessAlive should reflect the stub installed before the call")
 	}
-	daemonIsProcessAlive = func(int) bool { return false }
+	server.daemonHost.isProcessAlive = func(int) bool { return false }
 	if daemonlifeDeps(server).IsProcessAlive(1) {
 		t.Fatal("Deps must be rebuilt per call; a stub swapped later was not picked up")
 	}
