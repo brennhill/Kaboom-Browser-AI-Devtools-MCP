@@ -80,6 +80,9 @@ directly from `internal/util`, without routing through capture.
 Client-session registry wiring is owned by `Capture.Clients()`; runtime routes
 consume the installed registry directly without Capture set/get forwarding
 methods.
+Each client state owns a private activity clock used by `Touch`; tests advance
+that source explicitly. Concurrent register/unregister coverage starts all
+workers through a barrier rather than delaying between operations.
 
 The runtime retains a bounded chronological history independently from its
 latest-by-URL index. Named snapshots retain up to 20 recent performance

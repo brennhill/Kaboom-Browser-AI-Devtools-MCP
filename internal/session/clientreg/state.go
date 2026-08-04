@@ -46,6 +46,7 @@ type ClientState struct {
 	// Per-client checkpoint namespace prefix (clientId + ":")
 	// Checkpoints are stored as "clientId:checkpointName" in the global store
 	CheckpointPrefix string
+	now              func() time.Time
 }
 
 // NewClientState creates a new client state for the given CWD.
@@ -58,6 +59,7 @@ func NewClientState(cwd string) *ClientState {
 		CreatedAt:        now,
 		LastSeenAt:       now,
 		CheckpointPrefix: id + ":",
+		now:              time.Now,
 	}
 }
 
@@ -65,7 +67,7 @@ func NewClientState(cwd string) *ClientState {
 func (cs *ClientState) Touch() {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
-	cs.LastSeenAt = time.Now()
+	cs.LastSeenAt = cs.now()
 }
 
 // GetLastSeen returns when this client was last active.

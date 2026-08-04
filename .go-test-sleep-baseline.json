@@ -60,7 +60,6 @@
     "internal/security/csp/csp_store_test.go": 1,
     "internal/server/main_handlers_edge_test.go": 1,
     "internal/server/main_handlers_test.go": 1,
-    "internal/session/clientreg/clientreg_test.go": 2,
     "internal/testsync/testsync_test.go": 2,
     "internal/tools/observe/page_state_test.go": 1
   }

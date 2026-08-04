@@ -77,7 +77,7 @@ func TestClientState_Touch(t *testing.T) {
 	cs := NewClientState("/test")
 	before := cs.GetLastSeen()
 
-	time.Sleep(1 * time.Millisecond)
+	cs.now = func() time.Time { return before.Add(time.Second) }
 	cs.Touch()
 
 	after := cs.GetLastSeen()
@@ -433,19 +433,21 @@ func TestClientRegistry_ConcurrentRegisterUnregister(t *testing.T) {
 	t.Parallel()
 	r := NewClientRegistry()
 	var wg sync.WaitGroup
+	start := make(chan struct{})
 
 	// Rapid register/unregister cycles
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
+			<-start
 			cwd := string(rune('a' + (i % 5)))
 			cs := r.Register(cwd)
-			time.Sleep(time.Millisecond)
 			r.Unregister(cs.ID)
 		}(i)
 	}
 
+	close(start)
 	wg.Wait()
 	// If we get here without panic/deadlock, test passes
 }
