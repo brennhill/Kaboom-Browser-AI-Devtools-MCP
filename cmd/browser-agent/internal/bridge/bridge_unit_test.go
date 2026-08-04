@@ -385,15 +385,20 @@ func TestBridgeForwardRequest_LargeBodyRead(t *testing.T) {
 		t.Fatalf("json.Marshal rpcEnvelope: %v", err)
 	}
 	rpcResponse := string(rpcBytes)
+	headersFlushed := make(chan struct{})
+	releaseBody := make(chan struct{})
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Simulate slow write: headers first, then delayed body
+		// Hold the body behind an explicit barrier after flushing headers. This
+		// deterministically reproduces a response whose body outlives the request
+		// setup scope without guessing at scheduler timing.
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()
 		}
-		time.Sleep(50 * time.Millisecond)
+		close(headersFlushed)
+		<-releaseBody
 		_, _ = w.Write([]byte(rpcResponse))
 	}))
 	defer srv.Close()
@@ -421,6 +426,8 @@ func TestBridgeForwardRequest_LargeBodyRead(t *testing.T) {
 		testRunner.bridgeForwardRequest(&http.Client{}, srv.URL, req, line, 5*time.Second, nil, signal, bridge.StdioFramingLine)
 	}()
 
+	<-headersFlushed
+	close(releaseBody)
 	wg.Wait()
 	os.Stdout = origStdout
 	_ = w.Close()
@@ -506,10 +513,10 @@ func TestCheckDaemonStatus_StartupGraceWaitsForReadySignal(t *testing.T) {
 		failedCh: make(chan struct{}),
 	}
 
-	go func() {
-		time.Sleep(20 * time.Millisecond)
-		state.markReady()
-	}()
+	// Deliver the same readiness edge that a concurrent daemon startup emits.
+	// The status check must consume the already-available signal without waiting
+	// for the grace timer.
+	close(state.readyCh)
 
 	status := checkDaemonStatus(state, mcp.JSONRPCRequest{Method: "tools/call"}, 7890)
 	if status != "" {

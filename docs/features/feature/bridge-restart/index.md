@@ -4,7 +4,7 @@ feature_id: feature-bridge-restart
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/internal/bridge/runner.go
   - cmd/browser-agent/internal/bridge/bridge.go
@@ -21,6 +21,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - internal/schema/configure/tool.go
 test_paths:
+  - cmd/browser-agent/internal/bridge/bridge_unit_test.go
   - cmd/browser-agent/internal/bridge/runner_isolation_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/bridge_test.go
@@ -71,3 +72,8 @@ last_verified_date: 2026-03-05
 | `cmd/browser-agent/bridge_test.go` | Unit tests for `extractToolAction()` |
 | `cmd/browser-agent/bridge_startup_contention_test.go` | Multi-client startup convergence integration test |
 | `cmd/browser-agent/bridge_fastpath_unit_test.go` | Fast-path + startup fallback regression tests (no indefinite wait on startup state drift) |
+
+Bridge transport tests synchronize delayed response bodies with a header/body
+barrier, and startup-grace tests deliver readiness through the canonical signal
+channel. They verify cancellation ownership and readiness consumption without
+scheduler delays.
