@@ -6,12 +6,34 @@ package capture
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+type stressStartGate struct {
+	ready sync.WaitGroup
+	start chan struct{}
+}
+
+func newStressStartGate(participants int) *stressStartGate {
+	gate := &stressStartGate{start: make(chan struct{})}
+	gate.ready.Add(participants)
+	return gate
+}
+
+func (gate *stressStartGate) awaitRelease() {
+	gate.ready.Done()
+	<-gate.start
+}
+
+func (gate *stressStartGate) release() {
+	gate.ready.Wait()
+	close(gate.start)
+}
 
 // TestStressCaptureSystemConcurrent verifies thread-safety of the Capture system
 // under heavy concurrent load. Launches multiple goroutines adding WebSocket events,
@@ -34,12 +56,14 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 		defer c.Close()
 
 		var wg sync.WaitGroup
+		gate := newStressStartGate(numWSWriters + numNetWriters + numActionWriters + numReaders)
 
 		// Launch WebSocket event writers
 		for writerID := 0; writerID < numWSWriters; writerID++ {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				gate.awaitRelease()
 				for i := 0; i < eventsPerWriter; i++ {
 					events := []types.WebSocketEvent{
 						{
@@ -62,6 +86,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				gate.awaitRelease()
 				for i := 0; i < bodiesPerWriter; i++ {
 					bodies := []types.NetworkBody{
 						{
@@ -85,6 +110,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				gate.awaitRelease()
 				for i := 0; i < actionsPerWriter; i++ {
 					actions := []types.EnhancedAction{
 						{
@@ -106,6 +132,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				gate.awaitRelease()
 				for i := 0; i < readsPerReader; i++ {
 					// Read from all three buffers
 					_ = c.Telemetry().GetAllWebSocketEvents()
@@ -114,12 +141,13 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 
 					// Yield to allow writers to interleave
 					if i%5 == 0 {
-						time.Sleep(1 * time.Microsecond)
+						runtime.Gosched()
 					}
 				}
 			}(readerID)
 		}
 
+		gate.release()
 		// Wait for all goroutines to complete
 		wg.Wait()
 
@@ -188,12 +216,14 @@ func TestStressCaptureWithClears(t *testing.T) {
 		defer c.Close()
 
 		var wg sync.WaitGroup
+		gate := newStressStartGate(numWriters + numReaders + numClearers)
 
 		// Launch writers
 		for writerID := 0; writerID < numWriters; writerID++ {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				gate.awaitRelease()
 				for i := 0; i < writesPerWriter; i++ {
 					// Alternate between different buffer types
 					switch i % 3 {
@@ -219,6 +249,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				gate.awaitRelease()
 				for i := 0; i < readsPerReader; i++ {
 					switch i % 3 {
 					case 0:
@@ -228,7 +259,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 					case 2:
 						_ = c.Telemetry().GetAllEnhancedActions()
 					}
-					time.Sleep(1 * time.Microsecond)
+					runtime.Gosched()
 				}
 			}(readerID)
 		}
@@ -238,13 +269,15 @@ func TestStressCaptureWithClears(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				gate.awaitRelease()
 				for i := 0; i < clearsPerClearer; i++ {
-					time.Sleep(5 * time.Millisecond)
+					runtime.Gosched()
 					NewStateResetter(c).ClearAll()
 				}
 			}(clearID)
 		}
 
+		gate.release()
 		wg.Wait()
 
 		// Verify buffers are in valid state after concurrent clears
@@ -289,12 +322,14 @@ func TestStressCaptureSnapshot(t *testing.T) {
 		defer c.Close()
 
 		var wg sync.WaitGroup
+		gate := newStressStartGate(numWriters + numSnappers)
 
 		// Launch writers
 		for writerID := 0; writerID < numWriters; writerID++ {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				gate.awaitRelease()
 				for i := 0; i < writesPerWriter; i++ {
 					c.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 						{ID: fmt.Sprintf("ws-%d-%d", id, i), Event: "message"},
@@ -314,13 +349,15 @@ func TestStressCaptureSnapshot(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				gate.awaitRelease()
 				for i := 0; i < snapsPerSnapper; i++ {
 					_ = c.Telemetry().GetSnapshot()
-					time.Sleep(500 * time.Microsecond)
+					runtime.Gosched()
 				}
 			}(snapperID)
 		}
 
+		gate.release()
 		wg.Wait()
 
 		// Final snapshot check

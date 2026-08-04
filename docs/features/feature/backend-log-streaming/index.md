@@ -110,6 +110,7 @@ test_paths:
   - internal/capture/extension_state_test_helpers_test.go
   - internal/capture/buffer_clear_test.go
   - internal/capture/bounded_ring_test.go
+  - internal/capture/capture_stress_test.go
   - internal/capture/capture_bench_test.go
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
@@ -175,6 +176,10 @@ deeply detached snapshots. Response-header maps, test-ID slices, WebSocket
 sampling metadata, extension-log JSON, enhanced-action selector trees, and
 performance collections cannot be mutated through caller-owned backing memory
 or through a later read.
+Concurrent capture stress tests release all readers, writers, clearers, and
+snapshotters through an explicit start barrier. Scheduler yields broaden the
+interleavings under the race detector without using elapsed time as a
+correctness signal.
 HTTP ingestion, query-result, recording-storage, performance, WebSocket, and
 circuit-health routes are owned by `capture.HTTPHandlers`. Server registration
 and tests construct that owner directly; the corresponding `Capture.Handle*`
