@@ -8,7 +8,6 @@
     "cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go": 1,
     "cmd/browser-agent/internal/bridge/bridge_unit_test.go": 2,
     "cmd/browser-agent/internal/health/health_test.go": 1,
-    "cmd/browser-agent/internal/logstore/store_test.go": 2,
     "cmd/browser-agent/internal/noiseautorun/autorun_test.go": 6,
     "cmd/browser-agent/internal/terminal/handlers_logging_test.go": 1,
     "cmd/browser-agent/internal/terminal/relay_close_test.go": 2,

@@ -142,10 +142,9 @@ func TestStoreFileRotationOnSizeExceeded(t *testing.T) {
 	}
 	ls.AddEntries(entries)
 
-	// Let async worker process and rotate
-	time.Sleep(50 * time.Millisecond)
-
-	// Write a second small batch so a new main file is created after rotation
+	// Queue a second small batch so the worker creates a new main file after
+	// rotating the first batch. The single-worker FIFO is the ordering contract;
+	// Shutdown drains both accepted batches before returning.
 	ls.AddEntries([]types.LogEntry{{"level": "info", "message": "after-rotation"}})
 	ls.Shutdown(2 * time.Second)
 
@@ -184,13 +183,13 @@ func TestStoreFileRotationCreatesOldFile(t *testing.T) {
 	}
 	ls.AddEntries(batch1)
 
-	// Let the async logger process
-	time.Sleep(50 * time.Millisecond)
-
 	batch2 := []types.LogEntry{
 		{"level": "info", "message": strings.Repeat("d", 200)},
 	}
 	ls.AddEntries(batch2)
+	// Shutdown is the deterministic persistence barrier: it drains the FIFO
+	// before returning, so the rotation and subsequent main-file append have
+	// both completed here.
 	ls.Shutdown(2 * time.Second)
 
 	// Old file should exist

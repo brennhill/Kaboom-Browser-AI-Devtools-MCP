@@ -4,7 +4,7 @@ feature_id: feature-backend-log-ingestion
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/internal/logstore/async.go
   - cmd/browser-agent/internal/logstore/store.go
@@ -49,3 +49,8 @@ Queue admission, clear generations, and shutdown use one lifecycle boundary:
 clearing invalidates already queued batches before truncating persistence, and
 shutdown stops new producers before the worker drains accepted batches. This
 prevents cleared logs from being resurrected and avoids send/close races.
+
+Persistence tests use graceful shutdown as the canonical completion barrier.
+Because the store owns one FIFO writer, a returned shutdown proves every
+accepted batch—including rotation followed by a new-file append—has completed;
+tests never infer persistence from an elapsed delay.
