@@ -4,7 +4,7 @@ feature_id: feature-deployment-watchdog
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/internal/binarywatch/watcher.go
   - cmd/browser-agent/config.go
@@ -56,6 +56,7 @@ route, and generated TypeScript contracts come directly from
 `cmd/browser-agent/openapi.json`.
 Operational health handlers consume the canonical `capture.HealthReader`;
 `Capture` no longer exposes a health forwarding method.
-Binary-upgrade polling and grace-period waits accept controlled channels in
-tests, so upgrade detection is verified without wall-clock sleeps while
-production continues to use real tickers and timers.
+Binary-upgrade polling, baseline capture, cancellation, and grace-period waits
+have explicit private runtime signals in tests. Upgrade detection and watcher
+shutdown are therefore verified without wall-clock sleeps while production
+continues to use real tickers and timers.

@@ -37,6 +37,8 @@ type binaryWatcherConfig struct {
 	now                   func() time.Time
 	ticks                 <-chan time.Time
 	after                 func(time.Duration) <-chan time.Time
+	onBaselineCached      func()
+	onStopped             func()
 }
 
 func normalizedBinaryWatcherConfig(cfg binaryWatcherConfig) binaryWatcherConfig {
@@ -248,9 +250,15 @@ func startBinaryWatcherWithConfig(
 	}
 
 	util.SafeGo(func() {
+		if cfg.onStopped != nil {
+			defer cfg.onStopped()
+		}
 		// Cache initial binary state
 		if _, err := state.binaryChanged(); err != nil {
 			return
+		}
+		if cfg.onBaselineCached != nil {
+			cfg.onBaselineCached()
 		}
 
 		ticks := cfg.ticks

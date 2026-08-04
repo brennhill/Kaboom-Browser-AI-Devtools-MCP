@@ -211,14 +211,16 @@ func TestStartBinaryWatcher_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var called bool
-	s := Start(ctx, "0.7.5", func(string) { called = true }, func() {})
+	stopped := make(chan struct{})
+	s := startBinaryWatcherWithConfig(ctx, "0.7.5", func(string) { called = true }, func() {}, binaryWatcherConfig{
+		onStopped: func() { close(stopped) },
+	})
 	if s == nil {
 		t.Fatal("Start returned nil")
 	}
 
 	cancel()
-	// Give goroutine time to exit
-	time.Sleep(50 * time.Millisecond)
+	<-stopped
 
 	if called {
 		t.Fatal("onUpgrade should not be called without binary change")
@@ -249,6 +251,7 @@ func TestStartBinaryWatcher_DetectsUpgrade(t *testing.T) {
 	grace := make(chan time.Time, 1)
 	upgraded := make(chan string, 1)
 	shutdown := make(chan struct{}, 1)
+	baselineCached := make(chan struct{})
 
 	s := startBinaryWatcherWithConfig(ctx, "0.7.5",
 		func(newVer string) {
@@ -264,28 +267,16 @@ func TestStartBinaryWatcher_DetectsUpgrade(t *testing.T) {
 			verifyVersion:         func(string, time.Duration) (string, error) { return "0.8.0", nil },
 			ticks:                 ticks,
 			after:                 func(time.Duration) <-chan time.Time { return grace },
+			onBaselineCached:      func() { close(baselineCached) },
 		},
 	)
 	if s == nil {
 		t.Fatal("Start returned nil")
 	}
 
-	// Wait until watcher caches baseline file state to avoid a race where the
-	// first watcher read observes the upgraded file as its initial snapshot.
-	cacheDeadline := time.Now().Add(2 * time.Second)
-	cached := false
-	for time.Now().Before(cacheDeadline) {
-		s.mu.Lock()
-		cached = !s.lastModTime.IsZero()
-		s.mu.Unlock()
-		if cached {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if !cached {
-		t.Fatal("watcher did not cache baseline binary state before upgrade write")
-	}
+	// The baseline transition is explicit, so the replacement can never race
+	// the watcher's initial snapshot.
+	<-baselineCached
 
 	// Now replace binary with newer version
 	updatedScript := []byte("#!/bin/sh\n# upgraded build marker\necho 'kaboom v0.8.0'\n")
