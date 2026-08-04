@@ -230,17 +230,23 @@ describe('Network Waterfall - parseResourceTiming', () => {
     assert.deepStrictEqual(result.server_timing, [{ name: 'db', duration_ms: 24, description: 'query' }])
   })
 
+  test('does not fabricate TLS time for a non-TLS connection', async () => {
+    const { parseResourceTiming } = await import('../../../extension/lib/net/network.js')
+    const result = parseResourceTiming(createMockResourceTiming({ secureConnectionStart: 0, connectEnd: 130 }))
+    assert.equal(result.tls_ms, undefined)
+  })
+
   test('attributes and groups identical concurrent requests', async () => {
     const { getNetworkWaterfall, resetForTesting } = await import('../../../extension/lib/net/network.js')
     const { recordRequestAttribution, completeRequestAttribution } = await import(
       '../../../extension/lib/net/request-attribution.js'
     )
     resetForTesting()
-    recordRequestAttribution('http://localhost:3000/api/data', {
+	const attributionID = recordRequestAttribution('http://localhost:3000/api/data', {
       stack: 'Error\n    at DesignShell (http://localhost:3000/src/DesignShell.tsx:12:4)\n    at routeLoader (http://localhost:3000/src/routes.ts:4:2)',
       priority: 'high'
     })
-    completeRequestAttribution('http://localhost:3000/api/data', {
+	completeRequestAttribution(attributionID, {
       status: 200,
       server_timing: 'app;dur=42',
       request_id: 'req-123',
@@ -258,8 +264,43 @@ describe('Network Waterfall - parseResourceTiming', () => {
     assert.equal(results[0].request_id, 'req-123')
     assert.equal(results[0].traceparent, '00-abc-def-01')
     assert.equal(results[0].content_encoding, 'br')
+	assert.equal(results[0].source_map_status, 'original_source')
+	assert.equal(results[0].initiator_provenance, 'error_stack')
+	assert.equal(results[0].initiator_confidence, 'heuristic')
     assert.equal(results[0].duplicate_count, 2)
     assert.equal(results[1].duplicate_group_id, results[0].duplicate_group_id)
+  })
+
+	test('labels generated stacks unmapped instead of claiming source-map resolution', async () => {
+		const { getNetworkWaterfall, resetForTesting } = await import('../../../extension/lib/net/network.js')
+		const { recordRequestAttribution, completeRequestAttribution } = await import(
+			'../../../extension/lib/net/request-attribution.js'
+		)
+		resetForTesting()
+		const id = recordRequestAttribution('http://localhost:3000/app.js', {
+			stack: 'Error\n at render (http://localhost:3000/assets/app.abc.js:1:40)'
+		})
+		completeRequestAttribution(id, { status: 200 })
+		globalThis.performance._addEntry(createMockResourceTiming({ name: 'http://localhost:3000/app.js' }))
+		assert.equal(getNetworkWaterfall()[0].source_map_status, 'unmapped')
+	})
+
+  test('does not swap metadata when identical requests complete out of order', async () => {
+    const { getNetworkWaterfall, resetForTesting } = await import('../../../extension/lib/net/network.js')
+    const { recordRequestAttribution, completeRequestAttribution } = await import(
+      '../../../extension/lib/net/request-attribution.js'
+    )
+    resetForTesting()
+    const first = recordRequestAttribution('http://localhost:3000/api/data', { stack: 'Error\n at FirstCaller (/src/first.ts:1:1)' })
+    const second = recordRequestAttribution('http://localhost:3000/api/data', { stack: 'Error\n at SecondCaller (/src/second.ts:1:1)' })
+    completeRequestAttribution(second, { request_id: 'second-response' })
+    completeRequestAttribution(first, { request_id: 'first-response' })
+    globalThis.performance._addEntry(createMockResourceTiming({ startTime: 100 }))
+    globalThis.performance._addEntry(createMockResourceTiming({ startTime: 101 }))
+
+    const results = getNetworkWaterfall()
+    assert.equal(results[0].request_id, 'first-response')
+    assert.equal(results[1].request_id, 'second-response')
   })
 
   test('preserves an outgoing traceparent when the response does not echo it', async () => {
@@ -427,6 +468,18 @@ describe('Network Waterfall - getNetworkWaterfall', () => {
     assert.ok(Array.isArray(waterfall))
     assert.strictEqual(waterfall.length, 0)
   })
+
+	test('forwards unexpected resource timing failures to local Doctor diagnostics', async () => {
+		const { getNetworkWaterfall } = await import('../../../extension/lib/net/network.js')
+		globalThis.performance.getEntriesByType = () => { throw new TypeError('private page detail') }
+		assert.deepStrictEqual(getNetworkWaterfall(), [])
+		const diagnostic = globalThis.window.postMessage.mock.calls.find(
+			(call) => call.arguments[0]?.type === 'kaboom_capture_diagnostic'
+		)?.arguments[0]
+		assert.equal(diagnostic.payload.category, 'network_waterfall')
+		assert.equal(diagnostic.payload.error_type, 'TypeError')
+		assert.equal(JSON.stringify(diagnostic).includes('private page detail'), false)
+	})
 })
 
 describe('Network Waterfall - Pending Requests', () => {

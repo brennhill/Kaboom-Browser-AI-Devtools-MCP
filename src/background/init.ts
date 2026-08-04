@@ -97,7 +97,8 @@ import { loadServerInstallId } from './sync/install-identity.js'
 import {
   getExtensionLogQueueMetrics,
   initializeExtensionLogQueue,
-  recordExtensionDiagnosticLifecycle
+  recordExtensionDiagnosticLifecycle,
+  pushExtensionLog
 } from './runtime-state/log-queue.js'
 import { initializeEnvironmentTransactionRuntime } from './environment-transaction/runtime.js'
 
@@ -280,7 +281,16 @@ async function initializeExtensionAsync(): Promise<void> {
           addPerformance: (snapshot) => perfBatcher.add(snapshot),
           handleLog: handleLogMessage,
           isNetworkBodyCaptureDisabled,
-          debugLog
+          debugLog,
+          addDiagnostic: (payload) =>
+            pushExtensionLog({
+              timestamp: new Date().toISOString(),
+              level: 'warn',
+              message: payload.message,
+              source: 'inject',
+              category: payload.category,
+              data: { error_type: payload.error_type }
+            })
         }),
         createStatusMessageHandler({
           getConnectionStatus,

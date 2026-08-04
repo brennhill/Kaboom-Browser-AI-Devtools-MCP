@@ -4,15 +4,17 @@
  * Docs: docs/features/feature/query-service/index.md
  */
 
-import type { LogEntry, ScreenshotLogEntry } from './capture/telemetry.js'
+import type { ScreenshotLogEntry } from './capture/telemetry.js'
 import type { WebSocketCaptureMode } from './capture/websocket.js'
-import type { WireWebSocketEvent as WebSocketEvent } from './wire/wire-websocket-event.js'
+import type { WireNetworkWaterfallEntry as WaterfallEntry } from './wire/wire-network.js'
 import type {
-  WireNetworkBody as NetworkBodyPayload,
-  WireNetworkWaterfallEntry as WaterfallEntry
-} from './wire/wire-network.js'
-import type { WireEnhancedAction as EnhancedAction } from './wire/wire-enhanced-action.js'
-import type { WirePerformanceSnapshot as PerformanceSnapshot } from './wire/wire-performance-snapshot.js'
+  WsEventMessage,
+  EnhancedActionMessage,
+  NetworkBodyMessage,
+  PerformanceSnapshotMessage,
+  CaptureDiagnosticMessage,
+  LogMessage
+} from './runtime/telemetry-messages.js'
 import type { LogLevelFilter } from './capture/telemetry.js'
 import type { ConnectionStatus } from './runtime/state.js'
 import type { BrowserStateSnapshot, StateAction } from './runtime/state.js'
@@ -43,46 +45,21 @@ export interface GetTabIdResponse {
 /**
  * WebSocket event message from content script
  */
-export interface WsEventMessage {
-  readonly type: 'ws_event'
-  readonly payload: WebSocketEvent
-  readonly tabId?: number
-}
 /**
  * Enhanced action message from content script
  */
-export interface EnhancedActionMessage {
-  readonly type: 'enhanced_action'
-  readonly payload: EnhancedAction
-  readonly tabId?: number
-}
 
 /**
  * Network body message from content script
  */
-export interface NetworkBodyMessage {
-  readonly type: 'network_body'
-  readonly payload: NetworkBodyPayload
-  readonly tabId?: number
-}
 
 /**
  * Performance snapshot message from content script
  */
-export interface PerformanceSnapshotMessage {
-  readonly type: 'performance_snapshot'
-  readonly payload: PerformanceSnapshot
-  readonly tabId?: number
-}
 
 /**
  * Log message from content script
  */
-export interface LogMessage {
-  readonly type: 'log'
-  readonly payload: LogEntry
-  readonly tabId?: number
-}
 
 /**
  * Get extension status message
@@ -249,6 +226,7 @@ export type BackgroundMessage =
   | EnhancedActionMessage
   | NetworkBodyMessage
   | PerformanceSnapshotMessage
+  | CaptureDiagnosticMessage
   | LogMessage
   | GetStatusMessage
   | ClearLogsMessage
@@ -665,6 +643,7 @@ export type PageMessageType =
   | 'kaboom_network_body'
   | 'kaboom_enhanced_action'
   | 'kaboom_performance_snapshot'
+  | 'kaboom_capture_diagnostic'
   | 'kaboom_inject_bridge_pong'
   | 'kaboom_highlight_response'
   | 'kaboom_execute_js_result'

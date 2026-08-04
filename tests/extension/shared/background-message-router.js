@@ -16,6 +16,7 @@ export function composeBackgroundHandlers(deps) {
       addEnhancedAction: deps.addToEnhancedActionBatcher, addNetworkBody: deps.addToNetworkBodyBatcher,
       addPerformance: deps.addToPerfBatcher, handleLog: deps.handleLogMessage,
       isNetworkBodyCaptureDisabled: deps.isNetworkBodyCaptureDisabled, debugLog: deps.debugLog
+      ,addDiagnostic: deps.addDiagnostic
     }),
     createStatusMessageHandler({
       getConnectionStatus: deps.getConnectionStatus, getServerUrl: deps.getServerUrl,

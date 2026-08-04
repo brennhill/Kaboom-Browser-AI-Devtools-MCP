@@ -243,6 +243,14 @@ func (s *PerformanceStore) Entries() []performance.PerformanceSnapshot {
 	return s.snapshotsList()
 }
 
+// Samples returns bounded chronological per-navigation snapshots, including
+// repeated captures of the same URL.
+func (s *PerformanceStore) Samples() []performance.PerformanceSnapshot {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.samplesList()
+}
+
 // ByURL returns the performance snapshot stored for a URL.
 func (s *PerformanceStore) ByURL(url string) (performance.PerformanceSnapshot, bool) {
 	s.mu.RLock()
@@ -266,12 +274,14 @@ func (s *PerformanceStore) TakeBefore(correlationID string) (performance.Perform
 
 const (
 	maxPerformanceSnapshots = 100
+	maxPerformanceSamples   = 100
 	maxBeforeSnapshots      = 50
 )
 
 // PerformancePressure describes retained page snapshots and active pre-action baselines.
 type PerformancePressure struct {
 	Snapshots       PressureStats `json:"snapshots"`
+	Samples         PressureStats `json:"samples"`
 	BeforeSnapshots PressureStats `json:"before_snapshots"`
 }
 
@@ -282,8 +292,17 @@ func (s *PerformanceStore) Pressure() PerformancePressure {
 	now := time.Now()
 	return PerformancePressure{
 		Snapshots:       pressureForKeys(s.snapshotOrder, s.snapshotAdded, s.snapshotDropped, maxPerformanceSnapshots, now),
+		Samples:         pressureForSamples(s.sampleAdded, s.sampleDropped, maxPerformanceSamples, now),
 		BeforeSnapshots: pressureForKeys(s.beforeOrder, s.beforeAdded, s.beforeDropped, maxBeforeSnapshots, now),
 	}
+}
+
+func pressureForSamples(added []time.Time, dropped int64, capacity int, now time.Time) PressureStats {
+	stats := PressureStats{Size: len(added), Capacity: capacity, Dropped: dropped}
+	if len(added) > 0 {
+		stats.OldestAge = now.Sub(added[0])
+	}
+	return stats
 }
 
 func pressureForKeys(order []string, added map[string]time.Time, dropped int64, capacity int, now time.Time) PressureStats {
@@ -309,7 +328,15 @@ func (s *PerformanceStore) appendSnapshots(snapshots []performance.PerformanceSn
 			s.snapshotOrder = append(s.snapshotOrder, key)
 			s.snapshotAdded[key] = time.Now()
 		}
-		s.snapshots[key] = performance.CloneSnapshot(snapshot)
+		cloned := performance.CloneSnapshot(snapshot)
+		s.snapshots[key] = cloned
+		s.samples = append(s.samples, performance.CloneSnapshot(snapshot))
+		s.sampleAdded = append(s.sampleAdded, time.Now())
+		if len(s.samples) > maxPerformanceSamples {
+			s.samples = s.samples[1:]
+			s.sampleAdded = s.sampleAdded[1:]
+			s.sampleDropped++
+		}
 
 		if len(s.snapshots) > maxPerformanceSnapshots && len(s.snapshotOrder) > 0 {
 			oldestKey := s.snapshotOrder[0]
@@ -319,6 +346,14 @@ func (s *PerformanceStore) appendSnapshots(snapshots []performance.PerformanceSn
 			s.snapshotDropped++
 		}
 	}
+}
+
+func (s *PerformanceStore) samplesList() []performance.PerformanceSnapshot {
+	out := make([]performance.PerformanceSnapshot, len(s.samples))
+	for index, snapshot := range s.samples {
+		out[index] = performance.CloneSnapshot(snapshot)
+	}
+	return out
 }
 
 // snapshotsList returns a detached list copy.
@@ -382,6 +417,8 @@ func (s *PerformanceStore) clear() {
 	defer s.mu.Unlock()
 	s.snapshots = make(map[string]performance.PerformanceSnapshot)
 	s.snapshotOrder = make([]string, 0)
+	s.samples = make([]performance.PerformanceSnapshot, 0)
+	s.sampleAdded = make([]time.Time, 0)
 	s.beforeSnapshots = make(map[string]performance.PerformanceSnapshot)
 	s.snapshotAdded = make(map[string]time.Time)
 	s.beforeOrder = nil

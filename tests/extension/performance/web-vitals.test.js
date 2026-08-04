@@ -133,7 +133,9 @@ describe('Web Vitals Capture', () => {
               domInteractive: 450
             }
           ]
-        : []
+        : type === 'resource'
+          ? [{ name: 'https://private.example/hero.png', requestStart: 200, responseEnd: 450 }]
+          : []
     )
     const mod = await import('../../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
@@ -151,10 +153,22 @@ describe('Web Vitals Capture', () => {
 
     const attribution = mod.capturePerformanceSnapshot().vitals_attribution.lcp
     assert.deepStrictEqual(attribution.element, { tag: 'img', id: 'hero', classes: ['cover', 'wide'] })
-    assert.equal(attribution.resource_load_delay_ms, 350)
-    assert.equal(attribution.resource_load_duration_ms, 0)
+    assert.equal(attribution.resource_load_delay_ms, 100)
+    assert.equal(attribution.resource_load_duration_ms, 250)
+    assert.equal(attribution.resource_timing_status, 'available')
     assert.equal(attribution.element.text, undefined)
     assert.equal(attribution.resource_url, undefined)
+  })
+
+  test('marks LCP resource phases unavailable when no matching resource timing exists', async () => {
+    const mod = await import('../../../extension/lib/analysis/perf-snapshot.js')
+    mod.installPerfObservers()
+    const lcpObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('largest-contentful-paint'))
+    lcpObs._emit([{ startTime: 600, renderTime: 600, element: { tagName: 'H1' } }])
+    const attribution = mod.getVitalsAttribution().lcp
+    assert.equal(attribution.resource_timing_status, 'unavailable')
+    assert.equal(attribution.resource_load_delay_ms, undefined)
+    assert.equal(attribution.resource_load_duration_ms, undefined)
   })
 
   test('CLS accumulates layout shifts (ignores input-driven)', async () => {

@@ -9,6 +9,7 @@ import type { WirePerformanceSnapshot as PerformanceSnapshot } from '../../types
 import type { WireWebSocketEvent as WebSocketEvent } from '../../types/wire/wire-websocket-event.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import type { MessageHandlerOwner } from './types.js'
+import type { CaptureDiagnosticMessage } from '../../types/runtime/telemetry-messages.js'
 
 export interface TelemetryHandlerDependencies {
   addLog: (entry: LogEntry) => void
@@ -19,6 +20,7 @@ export interface TelemetryHandlerDependencies {
   handleLog: (payload: LogEntry, sender: ChromeMessageSender, tabId?: number) => Promise<void>
   isNetworkBodyCaptureDisabled: () => boolean
   debugLog: (category: string, message: string, data?: unknown) => void
+  addDiagnostic: (payload: CaptureDiagnosticMessage['payload']) => void
 }
 
 export function createTelemetryMessageHandler(deps: TelemetryHandlerDependencies): MessageHandlerOwner {
@@ -26,6 +28,9 @@ export function createTelemetryMessageHandler(deps: TelemetryHandlerDependencies
     feature: 'telemetry',
     handle(message, sender) {
       switch (message.type) {
+        case 'capture_diagnostic':
+          deps.addDiagnostic(message.payload)
+          return false
         case 'ws_event':
           deps.addWebSocket(message.payload)
           return false

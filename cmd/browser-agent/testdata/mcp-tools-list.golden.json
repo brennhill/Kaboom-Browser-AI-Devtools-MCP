@@ -1134,6 +1134,18 @@
             "type": "number"
           },
           "description": "Allowed absolute regression by metric for diff_sessions compare (load, fcp, lcp, inp, cls, request_count, transfer_size, execution_cost)",
+          "propertyNames": {
+            "enum": [
+              "cls",
+              "execution_cost",
+              "fcp",
+              "inp",
+              "lcp",
+              "load",
+              "request_count",
+              "transfer_size"
+            ]
+          },
           "type": "object"
         },
         "reason": {

@@ -15,8 +15,8 @@ func TestCorrelateLinksTraceparentToBackendBreakdown(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "traces.json")
 	payload := `{"spans":[
-      {"trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"a","name":"edge","start_time_unix_nano":1000000,"end_time_unix_nano":11000000,"attributes":{"service.name":"edge"}},
-      {"trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"b","parent_span_id":"a","name":"SELECT projects","start_time_unix_nano":3000000,"end_time_unix_nano":8000000,"attributes":{"db.system":"postgresql"}}
+		{"trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"aaaaaaaaaaaaaaaa","name":"edge","start_time_unix_nano":1000000,"end_time_unix_nano":11000000,"attributes":{"service.name":"edge"}},
+		{"trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"bbbbbbbbbbbbbbbb","parent_span_id":"aaaaaaaaaaaaaaaa","name":"SELECT projects","start_time_unix_nano":3000000,"end_time_unix_nano":8000000,"attributes":{"db.system":"postgresql"}}
     ]}`
 	if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
 		t.Fatal(err)
@@ -30,6 +30,27 @@ func TestCorrelateLinksTraceparentToBackendBreakdown(t *testing.T) {
 	}
 	if result.Requests[0].Breakdown["sql"] != 5 {
 		t.Fatalf("SQL breakdown = %+v", result.Requests[0].Breakdown)
+	}
+	if result.Requests[0].Breakdown["edge"] != 5 || result.Requests[0].DurationMs != 10 {
+		t.Fatalf("exclusive breakdown = %+v total=%v", result.Requests[0].Breakdown, result.Requests[0].DurationMs)
+	}
+}
+
+func TestCorrelateRejectsMalformedAndUnsupportedTraceDocuments(t *testing.T) {
+	directory := t.TempDir()
+	for name, payload := range map[string]string{
+		"unsupported": `{"message":"not a trace export"}`,
+		"bad-time":    `{"spans":[{"trace_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","span_id":"bbbbbbbbbbbbbbbb","start_time_unix_nano":"oops","end_time_unix_nano":"2"}]}`,
+		"bad-id":      `{"spans":[{"trace_id":"not-hex","span_id":"short","start_time_unix_nano":"1","end_time_unix_nano":"2"}]}`,
+	} {
+		path := filepath.Join(directory, name+".json")
+		if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		result := CorrelateFile(path, []types.NetworkWaterfallEntry{{Traceparent: "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-cccccccccccccccc-01"}})
+		if result.Status != "source_error" {
+			t.Fatalf("%s result = %+v", name, result)
+		}
 	}
 }
 
@@ -48,7 +69,7 @@ func TestCorrelateDistinguishesMissingAndAmbiguousEvidence(t *testing.T) {
 		t.Fatalf("unmatched = %+v", unmatched)
 	}
 	ambiguousPath := filepath.Join(directory, "ambiguous.json")
-	ambiguousPayload := `{"spans":[{"trace_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","span_id":"a","name":"one","start_time_unix_nano":1,"end_time_unix_nano":2,"attributes":{"http.request_id":"req-7"}},{"trace_id":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","span_id":"b","name":"two","start_time_unix_nano":1,"end_time_unix_nano":2,"attributes":{"http.request_id":"req-7"}}]}`
+	ambiguousPayload := `{"spans":[{"trace_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","span_id":"aaaaaaaaaaaaaaaa","name":"one","start_time_unix_nano":1,"end_time_unix_nano":2,"attributes":{"http.request_id":"req-7"}},{"trace_id":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","span_id":"bbbbbbbbbbbbbbbb","name":"two","start_time_unix_nano":1,"end_time_unix_nano":2,"attributes":{"http.request_id":"req-7"}}]}`
 	if err := os.WriteFile(ambiguousPath, []byte(ambiguousPayload), 0o600); err != nil {
 		t.Fatal(err)
 	}

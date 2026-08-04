@@ -166,40 +166,42 @@ type NetworkBodyFilter struct {
 // from the browser's PerformanceResourceTiming API.
 // Wire fields: see WireNetworkWaterfallEntry in wire_network.go
 type NetworkWaterfallEntry struct {
-	Name             string             `json:"name"`
-	URL              string             `json:"url"`
-	InitiatorType    string             `json:"initiator_type"`
-	Duration         float64            `json:"duration"`
-	StartTime        float64            `json:"start_time"`
-	FetchStart       float64            `json:"fetch_start"`
-	ResponseEnd      float64            `json:"response_end"`
-	TransferSize     int                `json:"transfer_size"`
-	DecodedBodySize  int                `json:"decoded_body_size"`
-	EncodedBodySize  int                `json:"encoded_body_size"`
-	PageURL          string             `json:"page_url,omitempty"`
-	Timestamp        time.Time          `json:"timestamp,omitempty"` // Server-side timestamp
-	QueueingMs       float64            `json:"queueing_ms,omitempty"`
-	DNSMs            float64            `json:"dns_ms,omitempty"`
-	TLSMs            float64            `json:"tls_ms,omitempty"`
-	ConnectMs        float64            `json:"connect_ms,omitempty"`
-	TTFBMs           float64            `json:"ttfb_ms,omitempty"`
-	DownloadMs       float64            `json:"download_ms,omitempty"`
-	Priority         string             `json:"priority,omitempty"`
-	Protocol         string             `json:"protocol,omitempty"`
-	CacheSource      string             `json:"cache_source,omitempty"`
-	CompressionRatio float64            `json:"compression_ratio,omitempty"`
-	ContentEncoding  string             `json:"content_encoding,omitempty"`
-	Status           int                `json:"status,omitempty"`
-	ServerTiming     []WireServerTiming `json:"server_timing,omitempty"`
-	RequestID        string             `json:"request_id,omitempty"`
-	Traceparent      string             `json:"traceparent,omitempty"`
-	InitiatorStack   []string           `json:"initiator_stack,omitempty"`
-	ReactComponent   string             `json:"react_component,omitempty"`
-	RouteLoader      string             `json:"route_loader,omitempty"`
-	StoreAction      string             `json:"store_action,omitempty"`
-	SourceMapStatus  string             `json:"source_map_status,omitempty"`
-	DuplicateGroupID string             `json:"duplicate_group_id,omitempty"`
-	DuplicateCount   int                `json:"duplicate_count,omitempty"`
+	Name                string             `json:"name"`
+	URL                 string             `json:"url"`
+	InitiatorType       string             `json:"initiator_type"`
+	Duration            float64            `json:"duration"`
+	StartTime           float64            `json:"start_time"`
+	FetchStart          float64            `json:"fetch_start"`
+	ResponseEnd         float64            `json:"response_end"`
+	TransferSize        int                `json:"transfer_size"`
+	DecodedBodySize     int                `json:"decoded_body_size"`
+	EncodedBodySize     int                `json:"encoded_body_size"`
+	PageURL             string             `json:"page_url,omitempty"`
+	Timestamp           time.Time          `json:"timestamp,omitempty"` // Server-side timestamp
+	QueueingMs          float64            `json:"queueing_ms,omitempty"`
+	DNSMs               float64            `json:"dns_ms,omitempty"`
+	TLSMs               float64            `json:"tls_ms,omitempty"`
+	ConnectMs           float64            `json:"connect_ms,omitempty"`
+	TTFBMs              float64            `json:"ttfb_ms,omitempty"`
+	DownloadMs          float64            `json:"download_ms,omitempty"`
+	Priority            string             `json:"priority,omitempty"`
+	Protocol            string             `json:"protocol,omitempty"`
+	CacheSource         string             `json:"cache_source,omitempty"`
+	CompressionRatio    float64            `json:"compression_ratio,omitempty"`
+	ContentEncoding     string             `json:"content_encoding,omitempty"`
+	Status              int                `json:"status,omitempty"`
+	ServerTiming        []WireServerTiming `json:"server_timing,omitempty"`
+	RequestID           string             `json:"request_id,omitempty"`
+	Traceparent         string             `json:"traceparent,omitempty"`
+	InitiatorStack      []string           `json:"initiator_stack,omitempty"`
+	ReactComponent      string             `json:"react_component,omitempty"`
+	RouteLoader         string             `json:"route_loader,omitempty"`
+	StoreAction         string             `json:"store_action,omitempty"`
+	SourceMapStatus     string             `json:"source_map_status,omitempty"`
+	InitiatorProvenance string             `json:"initiator_provenance,omitempty"`
+	InitiatorConfidence string             `json:"initiator_confidence,omitempty"`
+	DuplicateGroupID    string             `json:"duplicate_group_id,omitempty"`
+	DuplicateCount      int                `json:"duplicate_count,omitempty"`
 }
 
 // NetworkWaterfallPayload is POSTed by the extension.

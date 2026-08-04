@@ -72,10 +72,11 @@ export interface WireElementDescriptor {
 export interface WireLCPAttribution {
   readonly element?: WireElementDescriptor
   readonly time_to_first_byte_ms: number
-  readonly resource_load_delay_ms: number
-  readonly resource_load_duration_ms: number
+  readonly resource_load_delay_ms?: number | null
+  readonly resource_load_duration_ms?: number | null
   readonly element_render_delay_ms: number
   readonly attribution_status: string
+  readonly resource_timing_status: string
 }
 
 export interface WireINPAttribution {

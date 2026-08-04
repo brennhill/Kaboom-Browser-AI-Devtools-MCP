@@ -3,6 +3,7 @@
  * Docs: docs/features/feature/observe/index.md
  */
 import { completeRequestAttribution, enrichWaterfallEntries, recordRequestAttribution, resetRequestAttribution } from './request-attribution.js';
+import { reportPageCaptureFailure } from '../diagnostics/page-capture.js';
 import { MAX_WATERFALL_ENTRIES, WATERFALL_TIME_WINDOW_MS, REQUEST_BODY_MAX, RESPONSE_BODY_MAX, BODY_READ_TIMEOUT_MS, SENSITIVE_HEADER_PATTERNS, BINARY_CONTENT_TYPES } from '../constants.js';
 // =============================================================================
 // MODULE STATE
@@ -42,7 +43,7 @@ export function parseResourceTiming(timing) {
         decoded_body_size: timing.decodedBodySize || 0,
         queueing_ms: phaseDuration(timing.startTime, timing.fetchStart),
         dns_ms: phaseDuration(timing.domainLookupStart, timing.domainLookupEnd),
-        tls_ms: phaseDuration(timing.secureConnectionStart, timing.connectEnd),
+        tls_ms: timing.secureConnectionStart > 0 ? phaseDuration(timing.secureConnectionStart, timing.connectEnd) : undefined,
         connect_ms: phaseDuration(timing.connectStart, timing.connectEnd),
         ttfb_ms: phaseDuration(timing.requestStart, timing.responseStart),
         download_ms: phaseDuration(timing.responseStart, timing.responseEnd),
@@ -99,7 +100,8 @@ export function getNetworkWaterfall(options = {}) {
         }
         return enrichWaterfallEntries(entries.map(parseResourceTiming));
     }
-    catch {
+    catch (error) {
+        reportPageCaptureFailure('network_waterfall', error);
         return [];
     }
 }
@@ -407,14 +409,14 @@ export function wrapXHRWithBodies() {
         const url = this.__kaboomUrl || '';
         const method = this.__kaboomMethod || 'GET';
         if (shouldCaptureUrl(url) && networkBodyCaptureEnabled) {
-            recordRequestAttribution(url, { stack: new Error().stack });
+            const attributionID = recordRequestAttribution(url, { stack: new Error().stack });
             const startTime = Date.now();
             const requestBody = typeof body === 'string' ? body : null;
             this.addEventListener('load', function () {
                 try {
                     const duration = Date.now() - startTime;
                     const contentType = this.getResponseHeader('content-type') || '';
-                    completeRequestAttribution(url, {
+                    completeRequestAttribution(attributionID, {
                         status: this.status,
                         server_timing: this.getResponseHeader('server-timing'),
                         request_id: this.getResponseHeader('x-request-id'),
@@ -527,7 +529,7 @@ export function wrapFetchWithBodies(fetchFn) {
         const { url, method, requestBody } = extractFetchInfo(input, init);
         if (!shouldCaptureUrl(url))
             return fetchFn(input, init);
-        recordRequestAttribution(url, {
+        const attributionID = recordRequestAttribution(url, {
             stack: new Error().stack,
             priority: init?.priority,
             traceparent: requestHeader(input, init, 'traceparent') ?? undefined
@@ -536,7 +538,7 @@ export function wrapFetchWithBodies(fetchFn) {
         const response = await fetchFn(input, init);
         const duration = Date.now() - startTime;
         const contentType = response.headers?.get?.('content-type') || '';
-        completeRequestAttribution(url, {
+        completeRequestAttribution(attributionID, {
             status: response.status,
             server_timing: response.headers?.get?.('server-timing'),
             request_id: response.headers?.get?.('x-request-id'),

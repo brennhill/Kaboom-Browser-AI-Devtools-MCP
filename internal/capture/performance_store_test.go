@@ -30,6 +30,28 @@ func TestPerformanceStore_AppendSnapshotsEvictsOldest(t *testing.T) {
 	}
 }
 
+func TestPerformanceStore_RetainsBoundedRepeatedSamples(t *testing.T) {
+	store := newPerformanceStore()
+	for i := 0; i < maxPerformanceSamples+3; i++ {
+		store.appendSnapshots([]performance.PerformanceSnapshot{{
+			URL: "https://app.local/repeated", Timestamp: itoa(i),
+			Timing: performance.PerformanceTiming{Load: float64(i)},
+		}})
+	}
+
+	samples := store.samplesList()
+	if len(samples) != maxPerformanceSamples {
+		t.Fatalf("sample count = %d, want %d", len(samples), maxPerformanceSamples)
+	}
+	if samples[0].Timing.Load != 3 || samples[len(samples)-1].Timing.Load != float64(maxPerformanceSamples+2) {
+		t.Fatalf("retained samples = first %.0f last %.0f", samples[0].Timing.Load, samples[len(samples)-1].Timing.Load)
+	}
+	pressure := store.Pressure()
+	if pressure.Samples.Size != maxPerformanceSamples || pressure.Samples.Dropped != 3 {
+		t.Fatalf("sample pressure = %#v", pressure.Samples)
+	}
+}
+
 func TestPerformanceStore_SnapshotsListDetached(t *testing.T) {
 	store := PerformanceStore{
 		snapshots:       make(map[string]performance.PerformanceSnapshot),

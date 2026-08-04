@@ -20,12 +20,12 @@ func (h *HTTPHandler) HandleStart(w http.ResponseWriter, r *http.Request) {
 	if !decodePOST(w, r, &req, 4096) {
 		return
 	}
-	started, err := h.manager.Start(req.TabID)
+	started, recovered, err := h.manager.StartReplacing(req.TabID, req.ReplaceActive)
 	if err != nil {
 		writeError(w, http.StatusConflict, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, WirePerformanceTraceStartResponse{TraceID: started.TraceID})
+	writeJSON(w, http.StatusCreated, WirePerformanceTraceStartResponse{TraceID: started.TraceID, Recovered: recovered})
 }
 
 func (h *HTTPHandler) HandleChunk(w http.ResponseWriter, r *http.Request) {

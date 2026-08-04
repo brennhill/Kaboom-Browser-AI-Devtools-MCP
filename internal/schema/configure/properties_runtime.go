@@ -2,6 +2,8 @@
 // Why: Separates runtime-specific properties from core dispatch properties.
 package configure
 
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+
 func runtimeProperties() map[string]any {
 	return map[string]any{
 		"buffer": map[string]any{
@@ -38,6 +40,7 @@ func runtimeProperties() map[string]any {
 			"type":                 "object",
 			"description":          "Allowed absolute regression by metric for diff_sessions compare (load, fcp, lcp, inp, cls, request_count, transfer_size, execution_cost)",
 			"additionalProperties": map[string]any{"type": "number"},
+			"propertyNames":        map[string]any{"enum": performance.BudgetMetricNames()},
 		},
 		"recording_id": map[string]any{
 			"type":        "string",

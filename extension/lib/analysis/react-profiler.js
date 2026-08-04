@@ -8,6 +8,7 @@ const MAX_COMPONENTS = 200;
 const MAX_CHANGED_KEYS = 20;
 let activeHook = null;
 let originalCommitHook;
+let installedCommitHook;
 let commits = [];
 let components = new Map();
 let droppedCommits = 0;
@@ -21,8 +22,10 @@ export function startReactProfile() {
     resetEvidence();
     activeHook = hook;
     originalCommitHook = hook.onCommitFiberRoot;
-    hook.onCommitFiberRoot = function (rendererID, root, priority) {
+    installedCommitHook = function (rendererID, root, priority) {
         originalCommitHook?.call(hook, rendererID, root, priority);
+        if (activeHook !== hook)
+            return;
         try {
             captureCommit(rendererID, root);
         }
@@ -32,12 +35,15 @@ export function startReactProfile() {
             });
         }
     };
+    hook.onCommitFiberRoot = installedCommitHook;
     return { status: 'recording' };
 }
 export function stopReactProfile() {
     if (!activeHook)
         return { status: 'not_recording' };
-    activeHook.onCommitFiberRoot = originalCommitHook;
+    if (activeHook.onCommitFiberRoot === installedCommitHook) {
+        activeHook.onCommitFiberRoot = originalCommitHook;
+    }
     const result = {
         status: 'complete',
         renderers: rendererEvidence(activeHook),
@@ -48,17 +54,21 @@ export function stopReactProfile() {
         suspense: { pending_boundary_commits: pendingBoundaryCommits },
         zustand: { status: 'unavailable', reason: 'zustand_does_not_expose_subscription_invalidations' },
         data_readiness: { status: 'suspense_only', reason: 'application_data_contract_not_exposed' },
-        dropped_commits: droppedCommits
+        dropped_commits: droppedCommits,
+        timing_semantics: 'subtree_inclusive_actual_duration'
     };
     activeHook = null;
     originalCommitHook = undefined;
+    installedCommitHook = undefined;
     return result;
 }
 export function resetReactProfilerForTesting() {
-    if (activeHook)
-        activeHook.onCommitFiberRoot = originalCommitHook;
+    const hook = activeHook;
+    if (hook && hook.onCommitFiberRoot === installedCommitHook)
+        hook.onCommitFiberRoot = originalCommitHook;
     activeHook = null;
     originalCommitHook = undefined;
+    installedCommitHook = undefined;
     resetEvidence();
 }
 function captureCommit(rendererID, root) {

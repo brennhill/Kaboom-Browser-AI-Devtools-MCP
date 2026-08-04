@@ -5,22 +5,22 @@
 const MAX_ATTRIBUTIONS = 200;
 const MAX_STACK_FRAMES = 12;
 const attributions = [];
+let nextCorrelationID = 0;
 export function recordRequestAttribution(url, start = {}) {
     if (!url)
-        return;
-    attributions.push({ url: normalizeURL(url), ...start, complete: false });
+        return '';
+    const correlationID = `network-${++nextCorrelationID}`;
+    attributions.push({ correlation_id: correlationID, url: normalizeURL(url), ...start, complete: false });
     if (attributions.length > MAX_ATTRIBUTIONS)
         attributions.splice(0, attributions.length - MAX_ATTRIBUTIONS);
+    return correlationID;
 }
-export function completeRequestAttribution(url, finish) {
-    const normalized = normalizeURL(url);
-    for (let index = attributions.length - 1; index >= 0; index--) {
-        const candidate = attributions[index];
-        if (candidate && candidate.url === normalized && !candidate.complete) {
-            Object.assign(candidate, finish, { complete: true });
-            return;
-        }
-    }
+export function completeRequestAttribution(correlationID, finish) {
+    if (!correlationID)
+        return;
+    const candidate = attributions.find((entry) => entry.correlation_id === correlationID);
+    if (candidate && !candidate.complete)
+        Object.assign(candidate, finish, { complete: true });
 }
 export function enrichWaterfallEntries(entries) {
     const enriched = entries.map((entry) => enrichEntry(entry, consumeAttribution(entry.url)));
@@ -29,6 +29,7 @@ export function enrichWaterfallEntries(entries) {
 }
 export function resetRequestAttribution() {
     attributions.length = 0;
+    nextCorrelationID = 0;
 }
 function consumeAttribution(url) {
     const normalized = normalizeURL(url);
@@ -53,7 +54,9 @@ function enrichEntry(entry, attribution) {
         ...(stack.length > 0
             ? {
                 initiator_stack: stack,
-                source_map_status: stack.some(isOriginalSourceFrame) ? 'mapped_or_source' : 'browser_stack'
+                source_map_status: stack.some(isOriginalSourceFrame) ? 'original_source' : 'unmapped',
+                initiator_provenance: 'error_stack',
+                initiator_confidence: 'heuristic'
             }
             : {}),
         ...semantic
@@ -73,7 +76,7 @@ function cleanStack(raw) {
         .slice(0, MAX_STACK_FRAMES);
 }
 function isOriginalSourceFrame(frame) {
-    return /(?:\/src\/|\.(?:tsx?|jsx?)(?::\d+){1,2}\)?$)/.test(frame);
+    return /(?:\/src\/|\.(?:tsx?|jsx)(?::\d+){1,2}\)?$)/.test(frame);
 }
 function semanticInitiator(stack) {
     let reactComponent;

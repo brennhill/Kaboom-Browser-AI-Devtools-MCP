@@ -4,9 +4,11 @@
 package tracecorr
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -24,6 +26,8 @@ type Span struct {
 	Category     string            `json:"category"`
 	DurationMs   float64           `json:"duration_ms"`
 	Attributes   map[string]string `json:"-"`
+	startNano    int64
+	endNano      int64
 }
 
 type RequestCorrelation struct {
@@ -96,7 +100,7 @@ func CorrelateFile(path string, entries []types.NetworkWaterfallEntry) Result {
 	}
 	spans, err := parseSpans(data)
 	if err != nil {
-		return Result{Status: "source_error", Source: path, Error: "invalid_trace_json"}
+		return Result{Status: "source_error", Source: path, Error: bounded(err.Error(), 128)}
 	}
 	byTrace := make(map[string][]Span)
 	byRequestID := make(map[string]map[string]struct{})
@@ -172,21 +176,31 @@ type sourceError struct{ message string }
 func (e *sourceError) Error() string { return e.message }
 
 func parseSpans(data []byte) ([]Span, error) {
+	var shape map[string]json.RawMessage
+	if err := json.Unmarshal(data, &shape); err != nil {
+		return nil, err
+	}
+	_, hasCompact := shape["spans"]
+	_, hasOTLP := shape["resourceSpans"]
+	if !hasCompact && !hasOTLP {
+		return nil, &sourceError{message: "unsupported_trace_schema"}
+	}
 	var document sourceDocument
 	if err := json.Unmarshal(data, &document); err != nil {
 		return nil, err
 	}
 	spans := make([]Span, 0, len(document.Spans))
 	for _, raw := range document.Spans {
-		start := numericJSON(raw.StartTimeUnixNano)
-		end := numericJSON(raw.EndTimeUnixNano)
-		if raw.TraceID == "" || raw.SpanID == "" || end < start {
-			continue
+		start, startOK := numericJSON(raw.StartTimeUnixNano)
+		end, endOK := numericJSON(raw.EndTimeUnixNano)
+		if !startOK || !endOK || !validHexID(raw.TraceID, 32) || !validHexID(raw.SpanID, 16) || (raw.ParentSpanID != "" && !validHexID(raw.ParentSpanID, 16)) || end < start {
+			return nil, &sourceError{message: "invalid_trace_span"}
 		}
 		spans = append(spans, Span{
 			TraceID: normalizeHex(raw.TraceID), SpanID: normalizeHex(raw.SpanID), ParentSpanID: normalizeHex(raw.ParentSpanID),
 			Name: bounded(raw.Name, 256), Service: bounded(raw.Attributes["service.name"], 128),
 			Category: classifySpan(raw.Name, raw.Attributes), DurationMs: float64(end-start) / 1_000_000, Attributes: raw.Attributes,
+			startNano: start, endNano: end,
 		})
 	}
 	var otlp otlpDocument
@@ -201,15 +215,16 @@ func parseSpans(data []byte) ([]Span, error) {
 				for key, value := range otlpAttributes(raw.Attributes) {
 					attributes[key] = value
 				}
-				start := numericJSON(raw.StartTimeUnixNano)
-				end := numericJSON(raw.EndTimeUnixNano)
-				if raw.TraceID == "" || raw.SpanID == "" || end < start {
-					continue
+				start, startOK := numericJSON(raw.StartTimeUnixNano)
+				end, endOK := numericJSON(raw.EndTimeUnixNano)
+				if !startOK || !endOK || !validHexID(raw.TraceID, 32) || !validHexID(raw.SpanID, 16) || (raw.ParentSpanID != "" && !validHexID(raw.ParentSpanID, 16)) || end < start {
+					return nil, &sourceError{message: "invalid_trace_span"}
 				}
 				spans = append(spans, Span{
 					TraceID: normalizeHex(raw.TraceID), SpanID: normalizeHex(raw.SpanID), ParentSpanID: normalizeHex(raw.ParentSpanID),
 					Name: bounded(raw.Name, 256), Service: bounded(attributes["service.name"], 128),
 					Category: classifySpan(raw.Name, attributes), DurationMs: float64(end-start) / 1_000_000, Attributes: attributes,
+					startNano: start, endNano: end,
 				})
 			}
 		}
@@ -249,12 +264,50 @@ func summarize(spans []Span) (map[string]float64, float64) {
 	breakdown := make(map[string]float64)
 	var total float64
 	for _, span := range spans {
-		breakdown[span.Category] += span.DurationMs
+		exclusive := span.DurationMs - childIntervalDuration(span, spans)
+		if exclusive < 0 {
+			exclusive = 0
+		}
+		breakdown[span.Category] += exclusive
 		if span.ParentSpanID == "" && span.DurationMs > total {
 			total = span.DurationMs
 		}
 	}
 	return breakdown, total
+}
+
+func childIntervalDuration(parent Span, spans []Span) float64 {
+	type interval struct{ start, end int64 }
+	intervals := make([]interval, 0)
+	for _, span := range spans {
+		if span.ParentSpanID != parent.SpanID {
+			continue
+		}
+		start, end := span.startNano, span.endNano
+		if start < parent.startNano {
+			start = parent.startNano
+		}
+		if end > parent.endNano {
+			end = parent.endNano
+		}
+		if end > start {
+			intervals = append(intervals, interval{start, end})
+		}
+	}
+	sort.Slice(intervals, func(i, j int) bool { return intervals[i].start < intervals[j].start })
+	var covered int64
+	for index := 0; index < len(intervals); {
+		start, end := intervals[index].start, intervals[index].end
+		index++
+		for index < len(intervals) && intervals[index].start <= end {
+			if intervals[index].end > end {
+				end = intervals[index].end
+			}
+			index++
+		}
+		covered += end - start
+	}
+	return float64(covered) / 1_000_000
 }
 
 func classifySpan(name string, attributes map[string]string) string {
@@ -275,10 +328,18 @@ func traceIDFromTraceparent(value string) string {
 	return normalizeHex(parts[1])
 }
 
-func numericJSON(value json.RawMessage) int64 {
+func numericJSON(value json.RawMessage) (int64, bool) {
 	raw := strings.Trim(string(value), `"`)
-	number, _ := strconv.ParseInt(raw, 10, 64)
-	return number
+	number, err := strconv.ParseInt(raw, 10, 64)
+	return number, err == nil
+}
+
+func validHexID(value string, length int) bool {
+	if len(value) != length {
+		return false
+	}
+	_, err := hex.DecodeString(value)
+	return err == nil
 }
 
 func normalizeHex(value string) string { return strings.ToLower(strings.TrimSpace(value)) }

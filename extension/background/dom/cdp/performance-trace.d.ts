@@ -35,6 +35,7 @@ export interface PerformanceTraceStarted {
     build_sha: string;
     cache: 'warm' | 'cold';
     reloaded: boolean;
+    recovered: boolean;
 }
 export interface PerformanceTraceFinished extends WirePerformanceTraceResult {
     import_with: string;

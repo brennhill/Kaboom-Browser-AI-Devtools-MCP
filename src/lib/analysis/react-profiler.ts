@@ -61,6 +61,7 @@ export interface ReactProfileResult {
   zustand: { status: 'unavailable'; reason: 'zustand_does_not_expose_subscription_invalidations' }
   data_readiness: { status: 'suspense_only'; reason: 'application_data_contract_not_exposed' }
   dropped_commits: number
+  timing_semantics: 'subtree_inclusive_actual_duration'
 }
 
 declare global {
@@ -71,6 +72,7 @@ declare global {
 
 let activeHook: ReactDevtoolsHook | null = null
 let originalCommitHook: CommitHook | undefined
+let installedCommitHook: CommitHook | undefined
 let commits: CommitEvidence[] = []
 let components = new Map<string, ComponentEvidence>()
 let droppedCommits = 0
@@ -83,8 +85,9 @@ export function startReactProfile(): { status: 'recording' } | { status: 'unsupp
   resetEvidence()
   activeHook = hook
   originalCommitHook = hook.onCommitFiberRoot
-  hook.onCommitFiberRoot = function (rendererID, root, priority): void {
+  installedCommitHook = function (rendererID, root, priority): void {
     originalCommitHook?.call(hook, rendererID, root, priority)
+    if (activeHook !== hook) return
     try {
       captureCommit(rendererID, root)
     } catch (error) {
@@ -93,12 +96,15 @@ export function startReactProfile(): { status: 'recording' } | { status: 'unsupp
       })
     }
   }
+  hook.onCommitFiberRoot = installedCommitHook
   return { status: 'recording' }
 }
 
 export function stopReactProfile(): ReactProfileResult | { status: 'not_recording' } {
   if (!activeHook) return { status: 'not_recording' }
-  activeHook.onCommitFiberRoot = originalCommitHook
+  if (activeHook.onCommitFiberRoot === installedCommitHook) {
+    activeHook.onCommitFiberRoot = originalCommitHook
+  }
   const result: ReactProfileResult = {
     status: 'complete',
     renderers: rendererEvidence(activeHook),
@@ -109,17 +115,21 @@ export function stopReactProfile(): ReactProfileResult | { status: 'not_recordin
     suspense: { pending_boundary_commits: pendingBoundaryCommits },
     zustand: { status: 'unavailable', reason: 'zustand_does_not_expose_subscription_invalidations' },
     data_readiness: { status: 'suspense_only', reason: 'application_data_contract_not_exposed' },
-    dropped_commits: droppedCommits
+    dropped_commits: droppedCommits,
+    timing_semantics: 'subtree_inclusive_actual_duration'
   }
   activeHook = null
   originalCommitHook = undefined
+  installedCommitHook = undefined
   return result
 }
 
 export function resetReactProfilerForTesting(): void {
-  if (activeHook) activeHook.onCommitFiberRoot = originalCommitHook
+  const hook = activeHook
+  if (hook && hook.onCommitFiberRoot === installedCommitHook) hook.onCommitFiberRoot = originalCommitHook
   activeHook = null
   originalCommitHook = undefined
+  installedCommitHook = undefined
   resetEvidence()
 }
 

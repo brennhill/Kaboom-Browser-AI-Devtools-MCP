@@ -100,6 +100,25 @@ var INJECT_FORWARDED_SETTINGS = /* @__PURE__ */ new Set([
   SettingName.SERVER_URL
 ]);
 
+// extension/lib/diagnostics/page-capture.js
+function reportPageCaptureFailure(category, error) {
+  const diagnostic = {
+    category: category.slice(0, 64),
+    message: "Page capture subsystem failed; include System Doctor output in a bug report.",
+    error_type: error instanceof Error ? error.name.slice(0, 64) : "UnknownError"
+  };
+  console.error(`[KaBOOM!][${diagnostic.category}] ${diagnostic.message}`, { error_type: diagnostic.error_type });
+  if (typeof window !== "undefined") {
+    try {
+      window.postMessage({ type: "kaboom_capture_diagnostic", payload: diagnostic }, window.location.origin);
+    } catch (forwardError) {
+      console.error("[KaBOOM!][page_capture] Failed to forward local Doctor diagnostic", {
+        error_type: forwardError instanceof Error ? forwardError.name.slice(0, 64) : "UnknownError"
+      });
+    }
+  }
+}
+
 // extension/lib/analysis/vitals-attribution.js
 var MAX_CLASSES = 4;
 var MAX_SHIFTS = 10;
@@ -153,16 +172,29 @@ function getVitalsAttribution(responseStart = 0) {
 function buildLCPAttribution(entry, responseStart) {
   const loadTime = finite(entry.loadTime);
   const renderTime = finite(entry.renderTime || entry.startTime);
-  const resourceStart = loadTime > 0 ? loadTime : renderTime;
+  const resource = matchingResourceTiming(entry.url);
   const element = describeElement(entry.element);
   return {
     ...element ? { element } : {},
     time_to_first_byte_ms: finite(responseStart),
-    resource_load_delay_ms: Math.max(0, resourceStart - finite(responseStart)),
-    resource_load_duration_ms: Math.max(0, loadTime - resourceStart),
-    element_render_delay_ms: Math.max(0, renderTime - (loadTime || resourceStart)),
-    attribution_status: element ? "available" : "element_unavailable"
+    ...resource ? {
+      resource_load_delay_ms: Math.max(0, finite(resource.requestStart) - finite(responseStart)),
+      resource_load_duration_ms: Math.max(0, finite(resource.responseEnd) - finite(resource.requestStart))
+    } : {},
+    element_render_delay_ms: Math.max(0, renderTime - (resource ? finite(resource.responseEnd) : loadTime)),
+    attribution_status: element ? "available" : "element_unavailable",
+    resource_timing_status: resource ? "available" : "unavailable"
   };
+}
+function matchingResourceTiming(url) {
+  if (!url || typeof performance === "undefined")
+    return void 0;
+  try {
+    return performance.getEntriesByType("resource").find((entry) => entry.name === url);
+  } catch (error) {
+    reportPageCaptureFailure("web_vitals", error);
+    return void 0;
+  }
 }
 function buildINPAttribution(entry) {
   const processingStart = finite(entry.processingStart);
@@ -951,22 +983,22 @@ function installNavigationCapture() {
 var MAX_ATTRIBUTIONS = 200;
 var MAX_STACK_FRAMES = 12;
 var attributions = [];
+var nextCorrelationID = 0;
 function recordRequestAttribution(url, start = {}) {
   if (!url)
-    return;
-  attributions.push({ url: normalizeURL(url), ...start, complete: false });
+    return "";
+  const correlationID = `network-${++nextCorrelationID}`;
+  attributions.push({ correlation_id: correlationID, url: normalizeURL(url), ...start, complete: false });
   if (attributions.length > MAX_ATTRIBUTIONS)
     attributions.splice(0, attributions.length - MAX_ATTRIBUTIONS);
+  return correlationID;
 }
-function completeRequestAttribution(url, finish) {
-  const normalized = normalizeURL(url);
-  for (let index = attributions.length - 1; index >= 0; index--) {
-    const candidate = attributions[index];
-    if (candidate && candidate.url === normalized && !candidate.complete) {
-      Object.assign(candidate, finish, { complete: true });
-      return;
-    }
-  }
+function completeRequestAttribution(correlationID, finish) {
+  if (!correlationID)
+    return;
+  const candidate = attributions.find((entry) => entry.correlation_id === correlationID);
+  if (candidate && !candidate.complete)
+    Object.assign(candidate, finish, { complete: true });
 }
 function enrichWaterfallEntries(entries) {
   const enriched = entries.map((entry) => enrichEntry(entry, consumeAttribution(entry.url)));
@@ -995,7 +1027,9 @@ function enrichEntry(entry, attribution) {
     ...attribution.server_timing ? { server_timing: parseServerTiming(attribution.server_timing) } : {},
     ...stack.length > 0 ? {
       initiator_stack: stack,
-      source_map_status: stack.some(isOriginalSourceFrame) ? "mapped_or_source" : "browser_stack"
+      source_map_status: stack.some(isOriginalSourceFrame) ? "original_source" : "unmapped",
+      initiator_provenance: "error_stack",
+      initiator_confidence: "heuristic"
     } : {},
     ...semantic
   };
@@ -1006,7 +1040,7 @@ function cleanStack(raw) {
   return raw.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("at ") && !line.includes("kaboom") && !line.includes("request-attribution") && !line.includes("/lib/net/network.") && !line.includes("/inject/observers.")).slice(0, MAX_STACK_FRAMES);
 }
 function isOriginalSourceFrame(frame) {
-  return /(?:\/src\/|\.(?:tsx?|jsx?)(?::\d+){1,2}\)?$)/.test(frame);
+  return /(?:\/src\/|\.(?:tsx?|jsx)(?::\d+){1,2}\)?$)/.test(frame);
 }
 function semanticInitiator(stack) {
   let reactComponent;
@@ -1107,7 +1141,7 @@ function parseResourceTiming(timing) {
     decoded_body_size: timing.decodedBodySize || 0,
     queueing_ms: phaseDuration(timing.startTime, timing.fetchStart),
     dns_ms: phaseDuration(timing.domainLookupStart, timing.domainLookupEnd),
-    tls_ms: phaseDuration(timing.secureConnectionStart, timing.connectEnd),
+    tls_ms: timing.secureConnectionStart > 0 ? phaseDuration(timing.secureConnectionStart, timing.connectEnd) : void 0,
     connect_ms: phaseDuration(timing.connectStart, timing.connectEnd),
     ttfb_ms: phaseDuration(timing.requestStart, timing.responseStart),
     download_ms: phaseDuration(timing.responseStart, timing.responseEnd),
@@ -1153,7 +1187,8 @@ function getNetworkWaterfall(options = {}) {
       entries = entries.slice(-MAX_WATERFALL_ENTRIES);
     }
     return enrichWaterfallEntries(entries.map(parseResourceTiming));
-  } catch {
+  } catch (error) {
+    reportPageCaptureFailure("network_waterfall", error);
     return [];
   }
 }
@@ -1300,14 +1335,14 @@ function wrapXHRWithBodies() {
     const url = this.__kaboomUrl || "";
     const method = this.__kaboomMethod || "GET";
     if (shouldCaptureUrl(url) && networkBodyCaptureEnabled) {
-      recordRequestAttribution(url, { stack: new Error().stack });
+      const attributionID = recordRequestAttribution(url, { stack: new Error().stack });
       const startTime = Date.now();
       const requestBody = typeof body === "string" ? body : null;
       this.addEventListener("load", function() {
         try {
           const duration = Date.now() - startTime;
           const contentType = this.getResponseHeader("content-type") || "";
-          completeRequestAttribution(url, {
+          completeRequestAttribution(attributionID, {
             status: this.status,
             server_timing: this.getResponseHeader("server-timing"),
             request_id: this.getResponseHeader("x-request-id"),
@@ -1390,7 +1425,7 @@ function wrapFetchWithBodies(fetchFn) {
     const { url, method, requestBody } = extractFetchInfo(input, init);
     if (!shouldCaptureUrl(url))
       return fetchFn(input, init);
-    recordRequestAttribution(url, {
+    const attributionID = recordRequestAttribution(url, {
       stack: new Error().stack,
       priority: init?.priority,
       traceparent: requestHeader(input, init, "traceparent") ?? void 0
@@ -1399,7 +1434,7 @@ function wrapFetchWithBodies(fetchFn) {
     const response = await fetchFn(input, init);
     const duration = Date.now() - startTime;
     const contentType = response.headers?.get?.("content-type") || "";
-    completeRequestAttribution(url, {
+    completeRequestAttribution(attributionID, {
       status: response.status,
       server_timing: response.headers?.get?.("server-timing"),
       request_id: response.headers?.get?.("x-request-id"),
@@ -1882,6 +1917,7 @@ var MAX_COMPONENTS = 200;
 var MAX_CHANGED_KEYS = 20;
 var activeHook = null;
 var originalCommitHook;
+var installedCommitHook;
 var commits = [];
 var components = /* @__PURE__ */ new Map();
 var droppedCommits = 0;
@@ -1895,8 +1931,10 @@ function startReactProfile() {
   resetEvidence();
   activeHook = hook;
   originalCommitHook = hook.onCommitFiberRoot;
-  hook.onCommitFiberRoot = function(rendererID, root, priority) {
+  installedCommitHook = function(rendererID, root, priority) {
     originalCommitHook?.call(hook, rendererID, root, priority);
+    if (activeHook !== hook)
+      return;
     try {
       captureCommit(rendererID, root);
     } catch (error) {
@@ -1905,12 +1943,15 @@ function startReactProfile() {
       });
     }
   };
+  hook.onCommitFiberRoot = installedCommitHook;
   return { status: "recording" };
 }
 function stopReactProfile() {
   if (!activeHook)
     return { status: "not_recording" };
-  activeHook.onCommitFiberRoot = originalCommitHook;
+  if (activeHook.onCommitFiberRoot === installedCommitHook) {
+    activeHook.onCommitFiberRoot = originalCommitHook;
+  }
   const result = {
     status: "complete",
     renderers: rendererEvidence(activeHook),
@@ -1919,10 +1960,12 @@ function stopReactProfile() {
     suspense: { pending_boundary_commits: pendingBoundaryCommits },
     zustand: { status: "unavailable", reason: "zustand_does_not_expose_subscription_invalidations" },
     data_readiness: { status: "suspense_only", reason: "application_data_contract_not_exposed" },
-    dropped_commits: droppedCommits
+    dropped_commits: droppedCommits,
+    timing_semantics: "subtree_inclusive_actual_duration"
   };
   activeHook = null;
   originalCommitHook = void 0;
+  installedCommitHook = void 0;
   return result;
 }
 function captureCommit(rendererID, root) {

@@ -19,7 +19,7 @@ func TestBuildCriticalPathOrdersEvidenceAndMarksUnavailablePhases(t *testing.T) 
 			TimeToFirstByte: 80, FirstContentfulPaint: floatPointer(500), LargestContentfulPaint: floatPointer(900),
 		},
 		UserTiming: &performance.UserTimingData{
-			Measures: []performance.UserTimingEntry{{Name: "store-update", StartTime: 330, Duration: 20}},
+			Measures: []performance.UserTimingEntry{{Name: "store-update", StartTime: 380, Duration: 20}},
 		},
 	}
 	waterfall := []types.NetworkWaterfallEntry{
@@ -27,7 +27,7 @@ func TestBuildCriticalPathOrdersEvidenceAndMarksUnavailablePhases(t *testing.T) 
 		{URL: "https://app.test/api/projects", StartTime: 200, Duration: 170, ResponseEnd: 370, QueueingMs: 15},
 	}
 	result := BuildCriticalPath(snapshot, waterfall)
-	if result.DominantSegment != "first_contentful_paint" {
+	if result.DominantSegment != "largest_contentful_paint" {
 		t.Fatalf("dominant segment = %q", result.DominantSegment)
 	}
 	if result.Phases[1].Name != "authentication" || result.Phases[1].Status != "available" {
@@ -41,6 +41,28 @@ func TestBuildCriticalPathOrdersEvidenceAndMarksUnavailablePhases(t *testing.T) 
 	}
 	if result.Gaps[1].Status != "available" || result.Gaps[1].DurationMs == nil || *result.Gaps[1].DurationMs != 10 {
 		t.Fatalf("auth-to-backend gap = %+v", result.Gaps[1])
+	}
+}
+
+func TestBuildCriticalPathRejectsOutOfOrderLongestCandidates(t *testing.T) {
+	snapshot := performance.PerformanceSnapshot{
+		Timing: performance.PerformanceTiming{TimeToFirstByte: 50, FirstContentfulPaint: floatPointer(400)},
+		UserTiming: &performance.UserTimingData{Measures: []performance.UserTimingEntry{
+			{Name: "state-before-backend", StartTime: 70, Duration: 200},
+			{Name: "state-after-backend", StartTime: 230, Duration: 10},
+		}},
+	}
+	waterfall := []types.NetworkWaterfallEntry{
+		{URL: "/api/unrelated-slow", InitiatorType: "fetch", StartTime: 20, Duration: 300, ResponseEnd: 320},
+		{URL: "/auth/token", StartTime: 60, Duration: 40, ResponseEnd: 100},
+		{URL: "/api/data", InitiatorType: "fetch", StartTime: 110, Duration: 100, ResponseEnd: 210},
+	}
+	result := BuildCriticalPath(snapshot, waterfall)
+	if got := *result.Phases[2].StartMs; got != 110 {
+		t.Fatalf("backend start = %.0f, want causal request at 110", got)
+	}
+	if got := *result.Phases[3].StartMs; got != 230 {
+		t.Fatalf("state start = %.0f, want causal timing at 230", got)
 	}
 }
 

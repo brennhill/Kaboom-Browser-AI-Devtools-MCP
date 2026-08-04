@@ -40,7 +40,7 @@ function fixture(completionParams = {}) {
   }
   const postJSON = mock.fn(async (path, payload) => {
     requests.push({ path, payload })
-    if (path === '/performance-trace/start') return { trace_id: 'trace-1' }
+    if (path === '/performance-trace/start') return { trace_id: 'trace-1', recovered: true }
     if (path === '/performance-trace/finish') {
       return {
         trace_id: 'trace-1',
@@ -73,6 +73,7 @@ describe('Chrome performance trace controller', () => {
       build_sha: 'build-abc123',
       cache: 'warm',
       reloaded: false
+      ,recovered: true
     })
 
     f.emit({ tabId: 41 }, 'Tracing.dataCollected', {

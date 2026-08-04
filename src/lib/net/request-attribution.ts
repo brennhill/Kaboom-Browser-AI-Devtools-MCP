@@ -23,27 +23,26 @@ export interface RequestAttributionFinish {
 }
 
 interface RequestAttribution extends RequestAttributionStart, RequestAttributionFinish {
+  correlation_id: string
   url: string
   complete: boolean
 }
 
 const attributions: RequestAttribution[] = []
+let nextCorrelationID = 0
 
-export function recordRequestAttribution(url: string, start: RequestAttributionStart = {}): void {
-  if (!url) return
-  attributions.push({ url: normalizeURL(url), ...start, complete: false })
+export function recordRequestAttribution(url: string, start: RequestAttributionStart = {}): string {
+  if (!url) return ''
+  const correlationID = `network-${++nextCorrelationID}`
+  attributions.push({ correlation_id: correlationID, url: normalizeURL(url), ...start, complete: false })
   if (attributions.length > MAX_ATTRIBUTIONS) attributions.splice(0, attributions.length - MAX_ATTRIBUTIONS)
+  return correlationID
 }
 
-export function completeRequestAttribution(url: string, finish: RequestAttributionFinish): void {
-  const normalized = normalizeURL(url)
-  for (let index = attributions.length - 1; index >= 0; index--) {
-    const candidate = attributions[index]
-    if (candidate && candidate.url === normalized && !candidate.complete) {
-      Object.assign(candidate, finish, { complete: true })
-      return
-    }
-  }
+export function completeRequestAttribution(correlationID: string, finish: RequestAttributionFinish): void {
+  if (!correlationID) return
+  const candidate = attributions.find((entry) => entry.correlation_id === correlationID)
+  if (candidate && !candidate.complete) Object.assign(candidate, finish, { complete: true })
 }
 
 export function enrichWaterfallEntries(entries: WireNetworkWaterfallEntry[]): WireNetworkWaterfallEntry[] {
@@ -54,6 +53,7 @@ export function enrichWaterfallEntries(entries: WireNetworkWaterfallEntry[]): Wi
 
 export function resetRequestAttribution(): void {
   attributions.length = 0
+  nextCorrelationID = 0
 }
 
 function consumeAttribution(url: string): RequestAttribution | undefined {
@@ -81,7 +81,9 @@ function enrichEntry(
     ...(stack.length > 0
       ? {
           initiator_stack: stack,
-          source_map_status: stack.some(isOriginalSourceFrame) ? 'mapped_or_source' : 'browser_stack'
+          source_map_status: stack.some(isOriginalSourceFrame) ? 'original_source' : 'unmapped',
+          initiator_provenance: 'error_stack',
+          initiator_confidence: 'heuristic'
         }
       : {}),
     ...semantic
@@ -105,7 +107,7 @@ function cleanStack(raw: string | undefined): string[] {
 }
 
 function isOriginalSourceFrame(frame: string): boolean {
-  return /(?:\/src\/|\.(?:tsx?|jsx?)(?::\d+){1,2}\)?$)/.test(frame)
+  return /(?:\/src\/|\.(?:tsx?|jsx)(?::\d+){1,2}\)?$)/.test(frame)
 }
 
 function semanticInitiator(stack: string[]): Partial<WireNetworkWaterfallEntry> {

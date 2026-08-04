@@ -24,6 +24,8 @@ last_verified_date: 2026-08-04
 Pass `trace_source` to `analyze({what:"performance"})` to correlate captured
 browser `traceparent` headers with a local OpenTelemetry JSON export. Trace data
 is read locally and is never sent to product telemetry or any external service.
+Category breakdowns use exclusive time so nested spans are not double-counted.
+Malformed identifiers, timestamps, and unsupported export shapes fail loudly.
 
 ## Specs
 

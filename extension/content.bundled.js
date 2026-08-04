@@ -730,7 +730,8 @@
     kaboom_ws: "ws_event",
     kaboom_network_body: "network_body",
     kaboom_enhanced_action: "enhanced_action",
-    kaboom_performance_snapshot: "performance_snapshot"
+    kaboom_performance_snapshot: "performance_snapshot",
+    kaboom_capture_diagnostic: "capture_diagnostic"
   };
   var contextValid = true;
   function safeSendMessage(msg) {

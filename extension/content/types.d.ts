@@ -12,6 +12,7 @@ import type { WireWebSocketEvent as WebSocketEvent } from '../types/wire/wire-we
 import type { WireNetworkBody as NetworkBodyPayload } from '../types/wire/wire-network.js';
 import type { WireEnhancedAction as EnhancedAction } from '../types/wire/wire-enhanced-action.js';
 import type { WirePerformanceSnapshot as PerformanceSnapshot } from '../types/wire/wire-performance-snapshot.js';
+import type { CaptureDiagnosticMessage } from '../types/runtime/telemetry-messages.js';
 /**
  * Pending request statistics
  */
@@ -117,5 +118,5 @@ export interface PerformanceSnapshotMessageToBackground {
     payload: PerformanceSnapshot;
     tabId: number | null;
 }
-export type BackgroundMessageFromContent = LogMessageToBackground | WsEventMessageToBackground | NetworkBodyMessageToBackground | EnhancedActionMessageToBackground | PerformanceSnapshotMessageToBackground;
+export type BackgroundMessageFromContent = LogMessageToBackground | WsEventMessageToBackground | NetworkBodyMessageToBackground | EnhancedActionMessageToBackground | PerformanceSnapshotMessageToBackground | CaptureDiagnosticMessage;
 //# sourceMappingURL=types.d.ts.map

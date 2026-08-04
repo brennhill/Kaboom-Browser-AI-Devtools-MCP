@@ -62,6 +62,8 @@ export interface WireNetworkWaterfallEntry {
   readonly route_loader?: string
   readonly store_action?: string
   readonly source_map_status?: string
+  readonly initiator_provenance?: string
+  readonly initiator_confidence?: string
   readonly duplicate_group_id?: string
   readonly duplicate_count?: number
 }

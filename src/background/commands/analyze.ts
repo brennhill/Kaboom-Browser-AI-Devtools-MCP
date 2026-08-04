@@ -13,6 +13,7 @@ import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { domFrameProbe } from '../dom/primitives/dom-frame-probe.js'
 import { normalizeFrameArg, resolveMatchedFrameIds } from '../exec/frame-targeting.js'
+import { recordExtensionDiagnosticLifecycle } from '../runtime-state/log-queue.js'
 import {
   createDefaultPerformanceTraceController,
   type PerformanceTraceController
@@ -470,12 +471,21 @@ registerCommand('performance_trace', async (ctx) => {
         ctx.sendResult({ error: 'invalid_performance_trace_cache', message: 'cache must be warm or cold' })
         return
       }
-      ctx.sendResult(
-        await getPerformanceTraceController().start(ctx.tabId, {
-          reload: ctx.params.reload === true,
-          cache
-        })
-      )
+      const started = await getPerformanceTraceController().start(ctx.tabId, {
+        reload: ctx.params.reload === true,
+        cache
+      })
+      if (started.recovered) {
+        recordExtensionDiagnosticLifecycle(
+          'performance_trace_recovered',
+          ctx.query.correlation_id || ctx.query.id || '',
+          {
+            trace_id: started.trace_id,
+            tab_id: started.tab_id
+          }
+        )
+      }
+      ctx.sendResult(started)
       return
     }
     if (action === 'stop') {

@@ -9,6 +9,27 @@
 // Deviations from snake_case MUST be tagged with // SPEC:<spec-name> at the field level.
 package performance
 
+import "sort"
+
+var budgetMetrics = map[string]struct{}{
+	"load": {}, "fcp": {}, "lcp": {}, "inp": {}, "cls": {},
+	"request_count": {}, "transfer_size": {}, "execution_cost": {},
+}
+
+func IsBudgetMetric(name string) bool {
+	_, ok := budgetMetrics[name]
+	return ok
+}
+
+func BudgetMetricNames() []string {
+	names := make([]string, 0, len(budgetMetrics))
+	for name := range budgetMetrics {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 // ============================================
 // Performance Budget Types
 // ============================================

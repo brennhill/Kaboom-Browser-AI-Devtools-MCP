@@ -84,6 +84,7 @@ export interface PerformanceTraceStarted {
   build_sha: string
   cache: 'warm' | 'cold'
   reloaded: boolean
+  recovered: boolean
 }
 
 export interface PerformanceTraceFinished extends WirePerformanceTraceResult {
@@ -104,7 +105,9 @@ export class PerformanceTraceController {
     if (this.active) throw new Error(`performance trace already active for tab ${this.active.tabId}`)
     const cache = options.cache ?? 'warm'
     if (cache !== 'warm' && cache !== 'cold') throw new Error('performance trace cache must be warm or cold')
-    const opened = requireStartResponse(await this.deps.postJSON('/performance-trace/start', { tab_id: tabId }))
+    const opened = requireStartResponse(
+      await this.deps.postJSON('/performance-trace/start', { tab_id: tabId, replace_active: true })
+    )
     const active: ActiveTrace = {
       traceId: opened.trace_id,
       tabId,
@@ -140,7 +143,8 @@ export class PerformanceTraceController {
         tab_id: tabId,
         ...active.metadata,
         cache,
-        reloaded: options.reload === true
+        reloaded: options.reload === true,
+        recovered: opened.recovered === true
       }
     } catch (error) {
       await this.abortActive(errorMessage(error, 'Chrome tracing failed to start'))

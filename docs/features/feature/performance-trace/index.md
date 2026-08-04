@@ -54,6 +54,10 @@ the artifact path, byte count, event count, and chunk count. The passive
 
 Captured trace data remains local. It is not included in anonymous product-usage telemetry.
 
+Trace artifacts have a five-minute and 512 MiB hard ceiling. A new MV3 worker
+atomically recovers any orphaned partial trace before starting, and that
+recovery is retained in the local Doctor diagnostic timeline.
+
 ## Specs
 
 - [Product spec](./product-spec.md)

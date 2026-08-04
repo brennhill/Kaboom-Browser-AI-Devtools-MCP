@@ -8,6 +8,8 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
 
 // diffSessionsParams defines the MCP tool input schema.
@@ -48,6 +50,9 @@ func (sm *SessionManager) handleCompare(p diffSessionsParams) (any, error) {
 		return nil, fmt.Errorf("'compare_a' and 'compare_b' are required for compare action")
 	}
 	for name, allowed := range p.PerformanceBudgets {
+		if !performance.IsBudgetMetric(name) {
+			return nil, fmt.Errorf("unknown performance budget %q", name)
+		}
 		if allowed < 0 {
 			return nil, fmt.Errorf("performance budget %q must be non-negative", name)
 		}

@@ -33,10 +33,13 @@ concurrent-request groups. Missing browser evidence is omitted rather than repor
 - Queueing, DNS, connect, TLS, TTFB, and download durations
 - Protocol, cache source, compression ratio, response status, and Server-Timing
 - Bounded `x-request-id` and `traceparent` correlation values
-- Browser-provided/original-source stack frames with route-loader, React-component, and store-action hints
+- Browser stack frames explicitly labeled `original_source` or `unmapped`, with heuristic provenance/confidence for route-loader, React-component, and store-action hints
 - Stable grouping for identical requests whose execution windows overlap
 
 Captured URLs, stacks, and correlation values remain local and never enter product telemetry.
+Concurrent identical requests retain a private correlation ID so out-of-order
+responses cannot exchange attribution. Unexpected capture failures are routed
+as redacted local Doctor diagnostics.
 
 ## Specs
 

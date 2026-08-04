@@ -1,7 +1,3 @@
-/**
- * Purpose: Build bounded, content-free attribution for browser Web Vitals entries.
- * Docs: docs/features/feature/web-vitals/index.md
- */
 export interface ElementDescriptor {
     tag: string;
     id?: string;
@@ -11,10 +7,11 @@ export interface ElementDescriptor {
 export interface LCPAttribution {
     element?: ElementDescriptor;
     time_to_first_byte_ms: number;
-    resource_load_delay_ms: number;
-    resource_load_duration_ms: number;
+    resource_load_delay_ms?: number;
+    resource_load_duration_ms?: number;
     element_render_delay_ms: number;
     attribution_status: 'available' | 'element_unavailable';
+    resource_timing_status: 'available' | 'unavailable';
 }
 export interface INPAttribution {
     event_type: string;

@@ -4,6 +4,9 @@ export function createTelemetryMessageHandler(deps) {
         feature: 'telemetry',
         handle(message, sender) {
             switch (message.type) {
+                case 'capture_diagnostic':
+                    deps.addDiagnostic(message.payload);
+                    return false;
                 case 'ws_event':
                     deps.addWebSocket(message.payload);
                     return false;

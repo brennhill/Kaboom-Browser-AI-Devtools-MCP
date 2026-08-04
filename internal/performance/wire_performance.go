@@ -59,10 +59,11 @@ type WireElementDescriptor struct {
 type WireLCPAttribution struct {
 	Element                WireElementDescriptor `json:"element,omitempty"`
 	TimeToFirstByteMs      float64               `json:"time_to_first_byte_ms"`
-	ResourceLoadDelayMs    float64               `json:"resource_load_delay_ms"`
-	ResourceLoadDurationMs float64               `json:"resource_load_duration_ms"`
+	ResourceLoadDelayMs    *float64              `json:"resource_load_delay_ms,omitempty"`
+	ResourceLoadDurationMs *float64              `json:"resource_load_duration_ms,omitempty"`
 	ElementRenderDelayMs   float64               `json:"element_render_delay_ms"`
 	AttributionStatus      string                `json:"attribution_status"`
+	ResourceTimingStatus   string                `json:"resource_timing_status"`
 }
 
 type WireINPAttribution struct {

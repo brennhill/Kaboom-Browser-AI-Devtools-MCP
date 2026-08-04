@@ -66,6 +66,7 @@ export interface ReactProfileResult {
         reason: 'application_data_contract_not_exposed';
     };
     dropped_commits: number;
+    timing_semantics: 'subtree_inclusive_actual_duration';
 }
 declare global {
     interface Window {

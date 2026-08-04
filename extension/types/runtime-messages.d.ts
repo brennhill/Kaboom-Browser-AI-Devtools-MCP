@@ -3,12 +3,8 @@
  * Why: Keeps inter-context communication explicit and compatible as message surfaces evolve.
  * Docs: docs/features/feature/query-service/index.md
  */
-import type { LogEntry } from './capture/telemetry.js';
 import type { WebSocketCaptureMode } from './capture/websocket.js';
-import type { WireWebSocketEvent as WebSocketEvent } from './wire/wire-websocket-event.js';
-import type { WireNetworkBody as NetworkBodyPayload } from './wire/wire-network.js';
-import type { WireEnhancedAction as EnhancedAction } from './wire/wire-enhanced-action.js';
-import type { WirePerformanceSnapshot as PerformanceSnapshot } from './wire/wire-performance-snapshot.js';
+import type { WsEventMessage, EnhancedActionMessage, NetworkBodyMessage, PerformanceSnapshotMessage, CaptureDiagnosticMessage, LogMessage } from './runtime/telemetry-messages.js';
 import type { LogLevelFilter } from './capture/telemetry.js';
 import type { ConnectionStatus } from './runtime/state.js';
 import type { BrowserStateSnapshot, StateAction } from './runtime/state.js';
@@ -26,43 +22,18 @@ export interface GetTabIdResponse {
 /**
  * WebSocket event message from content script
  */
-export interface WsEventMessage {
-    readonly type: 'ws_event';
-    readonly payload: WebSocketEvent;
-    readonly tabId?: number;
-}
 /**
  * Enhanced action message from content script
  */
-export interface EnhancedActionMessage {
-    readonly type: 'enhanced_action';
-    readonly payload: EnhancedAction;
-    readonly tabId?: number;
-}
 /**
  * Network body message from content script
  */
-export interface NetworkBodyMessage {
-    readonly type: 'network_body';
-    readonly payload: NetworkBodyPayload;
-    readonly tabId?: number;
-}
 /**
  * Performance snapshot message from content script
  */
-export interface PerformanceSnapshotMessage {
-    readonly type: 'performance_snapshot';
-    readonly payload: PerformanceSnapshot;
-    readonly tabId?: number;
-}
 /**
  * Log message from content script
  */
-export interface LogMessage {
-    readonly type: 'log';
-    readonly payload: LogEntry;
-    readonly tabId?: number;
-}
 /**
  * Get extension status message
  */
@@ -192,7 +163,7 @@ export interface VersionMismatchMessage {
 /**
  * Union of all background-bound messages
  */
-export type BackgroundMessage = GetTabIdMessage | WsEventMessage | EnhancedActionMessage | NetworkBodyMessage | PerformanceSnapshotMessage | LogMessage | GetStatusMessage | ClearLogsMessage | ReportStateRecoveryMessage | SetLogLevelMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | GetAiWebPilotEnabledMessage | GetTrackingStateMessage | TrackingContentReadyMessage | TrackingContinuityChangedMessage | GetDiagnosticStateMessage | CaptureScreenshotMessage | TrackUiFeatureMessage | GetDebugLogMessage | ClearDebugLogMessage | SetServerUrlMessage | DrawModeCaptureScreenshotMessage | DrawModeCompletedMessage | PushChatMessage | ScreenRecordingStartMessage | ScreenRecordingStopMessage | RecordingGestureGrantedMessage | RecordingGestureDeniedMessage | OpenPopupForRecordingMessage | OpenTerminalPanelMessage | CloseTerminalPanelMessage | QaScanRequestedMessage;
+export type BackgroundMessage = GetTabIdMessage | WsEventMessage | EnhancedActionMessage | NetworkBodyMessage | PerformanceSnapshotMessage | CaptureDiagnosticMessage | LogMessage | GetStatusMessage | ClearLogsMessage | ReportStateRecoveryMessage | SetLogLevelMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | GetAiWebPilotEnabledMessage | GetTrackingStateMessage | TrackingContentReadyMessage | TrackingContinuityChangedMessage | GetDiagnosticStateMessage | CaptureScreenshotMessage | TrackUiFeatureMessage | GetDebugLogMessage | ClearDebugLogMessage | SetServerUrlMessage | DrawModeCaptureScreenshotMessage | DrawModeCompletedMessage | PushChatMessage | ScreenRecordingStartMessage | ScreenRecordingStopMessage | RecordingGestureGrantedMessage | RecordingGestureDeniedMessage | OpenPopupForRecordingMessage | OpenTerminalPanelMessage | CloseTerminalPanelMessage | QaScanRequestedMessage;
 /**
  * Draw mode: content script requests screenshot capture
  */
@@ -497,7 +468,7 @@ export interface ShowTrackedHoverLauncherMessage {
  */
 export type ContentMessage = ContentPingMessage | TrackingReadinessProbeMessage | HighlightMessage | ExecuteJsMessage | ExecuteQueryMessage | DomQueryMessage | A11yQueryMessage | GetNetworkWaterfallMessage | LinkHealthMessage | ComputedStylesQueryMessage | FormDiscoveryQueryMessage | FormStateQueryMessage | DataTableQueryMessage | ManageStateMessage | ActionToastMessage | SubtitleMessage | RecordingWatermarkMessage | ShowTrackedHoverLauncherMessage | DrawModeStartMessage | DrawModeStopMessage | GetAnnotationsMessage | TrackingStateChangedMessage | ToggleChatMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | SetServerUrlMessage;
 /** Page-to-content postMessage types. */
-export type PageMessageType = 'kaboom_log' | 'kaboom_ws' | 'kaboom_network_body' | 'kaboom_enhanced_action' | 'kaboom_performance_snapshot' | 'kaboom_inject_bridge_pong' | 'kaboom_highlight_response' | 'kaboom_execute_js_result' | 'kaboom_a11y_query_response' | 'kaboom_dom_query_response' | 'kaboom_state_response' | 'kaboom_waterfall_response' | 'kaboom_link_health_response' | 'kaboom_computed_styles_response' | 'kaboom_form_discovery_response' | 'kaboom_form_state_response' | 'kaboom_data_table_response';
+export type PageMessageType = 'kaboom_log' | 'kaboom_ws' | 'kaboom_network_body' | 'kaboom_enhanced_action' | 'kaboom_performance_snapshot' | 'kaboom_capture_diagnostic' | 'kaboom_inject_bridge_pong' | 'kaboom_highlight_response' | 'kaboom_execute_js_result' | 'kaboom_a11y_query_response' | 'kaboom_dom_query_response' | 'kaboom_state_response' | 'kaboom_waterfall_response' | 'kaboom_link_health_response' | 'kaboom_computed_styles_response' | 'kaboom_form_discovery_response' | 'kaboom_form_state_response' | 'kaboom_data_table_response';
 /** Content-to-page postMessage types. */
 export type ContentToPageMessageType = 'kaboom_setting' | 'kaboom_inject_bridge_ping' | 'kaboom_highlight_request' | 'kaboom_execute_js' | 'kaboom_a11y_query' | 'kaboom_dom_query' | 'kaboom_state_command' | 'kaboom_get_waterfall' | 'kaboom_link_health_query' | 'kaboom_computed_styles_query' | 'kaboom_form_discovery_query' | 'kaboom_form_state_query' | 'kaboom_data_table_query';
 export interface PageMessageEventData {

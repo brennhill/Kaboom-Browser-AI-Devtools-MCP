@@ -25,6 +25,8 @@ code_paths:
   - internal/types/snapshot.go
   - internal/util/media.go
 test_paths:
+  - cmd/browser-agent/testdata/mcp-tools-list.golden.json
+  - internal/capture/performance_store_test.go
   - cmd/browser-agent/server_routes_clients_test.go
   - internal/session/clientreg/clientreg_test.go
   - internal/session/snapshot_manager_test.go
@@ -79,7 +81,9 @@ Client-session registry wiring is owned by `Capture.Clients()`; runtime routes
 consume the installed registry directly without Capture set/get forwarding
 methods.
 
-Named snapshots retain up to 20 recent performance samples for the same page.
+The runtime retains a bounded chronological history independently from its
+latest-by-URL index. Named snapshots retain up to 20 recent performance
+samples for the same page, and Doctor exposes sample pressure and drops.
 Comparisons report Core Web Vitals, transfer and execution cost, duplicate
 requests, critical-path changes, median/p75 distributions, sample sufficiency,
 and optional absolute regression-budget verdicts.

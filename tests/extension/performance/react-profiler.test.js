@@ -107,3 +107,17 @@ test('page-owned fiber failures are logged and never break React commits', async
     console.error = originalError
   }
 })
+
+test('stop preserves a hook installed by another profiler during capture', async () => {
+	const original = () => undefined
+	const replacement = () => undefined
+	const hook = { renderers: new Map(), onCommitFiberRoot: original }
+	globalThis.window = { __REACT_DEVTOOLS_GLOBAL_HOOK__: hook }
+	const profiler = await import('../../../extension/lib/analysis/react-profiler.js')
+	profiler.resetReactProfilerForTesting()
+	profiler.startReactProfile()
+	hook.onCommitFiberRoot = replacement
+	const result = profiler.stopReactProfile()
+	assert.equal(hook.onCommitFiberRoot, replacement)
+	assert.equal(result.timing_semantics, 'subtree_inclusive_actual_duration')
+})

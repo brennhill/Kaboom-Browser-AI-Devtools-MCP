@@ -44,7 +44,7 @@ import { setLocal } from '../lib/storage/local.js';
 import { readTrackedTab } from '../lib/tabs/tracked-tab-storage.js';
 import { markStateVersion, setSessionAccessLevel, wasServiceWorkerRestarted } from '../lib/storage/session.js';
 import { loadServerInstallId } from './sync/install-identity.js';
-import { getExtensionLogQueueMetrics, initializeExtensionLogQueue, recordExtensionDiagnosticLifecycle } from './runtime-state/log-queue.js';
+import { getExtensionLogQueueMetrics, initializeExtensionLogQueue, recordExtensionDiagnosticLifecycle, pushExtensionLog } from './runtime-state/log-queue.js';
 import { initializeEnvironmentTransactionRuntime } from './environment-transaction/runtime.js';
 /**
  * Initialize the extension on startup
@@ -212,7 +212,15 @@ async function initializeExtensionAsync() {
                     addPerformance: (snapshot) => perfBatcher.add(snapshot),
                     handleLog: handleLogMessage,
                     isNetworkBodyCaptureDisabled,
-                    debugLog
+                    debugLog,
+                    addDiagnostic: (payload) => pushExtensionLog({
+                        timestamp: new Date().toISOString(),
+                        level: 'warn',
+                        message: payload.message,
+                        source: 'inject',
+                        category: payload.category,
+                        data: { error_type: payload.error_type }
+                    })
                 }),
                 createStatusMessageHandler({
                     getConnectionStatus,

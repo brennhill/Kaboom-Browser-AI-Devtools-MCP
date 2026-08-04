@@ -15,8 +15,8 @@ export interface RequestAttributionFinish {
     traceparent?: string | null;
     content_encoding?: string | null;
 }
-export declare function recordRequestAttribution(url: string, start?: RequestAttributionStart): void;
-export declare function completeRequestAttribution(url: string, finish: RequestAttributionFinish): void;
+export declare function recordRequestAttribution(url: string, start?: RequestAttributionStart): string;
+export declare function completeRequestAttribution(correlationID: string, finish: RequestAttributionFinish): void;
 export declare function enrichWaterfallEntries(entries: WireNetworkWaterfallEntry[]): WireNetworkWaterfallEntry[];
 export declare function resetRequestAttribution(): void;
 //# sourceMappingURL=request-attribution.d.ts.map

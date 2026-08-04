@@ -36,3 +36,6 @@ last_verified_date: 2026-08-04
 The profiler is off unless explicitly started. It records bounded commit and
 component timing evidence through React's DevTools hook and restores the
 original hook when stopped. It records changed property names, never values.
+Restoration is ownership-aware, so a profiler installed later is never
+overwritten. Reported `actualDuration` values are explicitly labeled as
+subtree-inclusive rather than exclusive component CPU time.

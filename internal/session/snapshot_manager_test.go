@@ -8,11 +8,12 @@ package session
 
 import (
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 type performanceSampleCapture struct {
@@ -41,6 +42,21 @@ func TestSessionManagerCapturesRepeatedPerformanceSamplesForCurrentPage(t *testi
 	}
 	if len(snapshot.PerformanceSamples) != 2 || snapshot.PerformanceSamples[0].Timing.Load != 100 {
 		t.Fatalf("page-scoped performance samples = %+v", snapshot.PerformanceSamples)
+	}
+}
+
+func TestRuntimeReaderUsesRepeatedStoreHistory(t *testing.T) {
+	store := capture.NewCapture()
+	for i := 1; i <= 3; i++ {
+		store.Performance().Add([]performance.PerformanceSnapshot{{URL: "/app", Timestamp: fmt.Sprintf("2026-08-04T00:00:0%dZ", i), Timing: performance.PerformanceTiming{Load: float64(i * 100)}}})
+	}
+	reader := NewRuntimeStateReader(nil, store.Performance().Samples, store)
+	snapshot, err := NewSessionManager(10, reader).Capture("profile", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.PerformanceSamples) != 3 {
+		t.Fatalf("performance sample count = %d, want 3", len(snapshot.PerformanceSamples))
 	}
 }
 

@@ -39,15 +39,20 @@ type CriticalPath struct {
 func BuildCriticalPath(snapshot performance.PerformanceSnapshot, waterfall []types.NetworkWaterfallEntry) CriticalPath {
 	ordered := append([]types.NetworkWaterfallEntry(nil), waterfall...)
 	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].StartTime < ordered[j].StartTime })
-	phases := []Phase{
-		metricPhase("navigation_ttfb", 0, snapshot.Timing.TimeToFirstByte, "navigation timing"),
-		requestPhase("authentication", selectRequest(ordered, isAuthenticationRequest)),
-		requestPhase("backend_response", selectRequest(ordered, isApplicationRequest)),
-		timingPhase("state_update", selectUserTiming(snapshot.UserTiming, []string{"state", "store", "dispatch", "update"})),
-		timingPhase("react_commit", selectUserTiming(snapshot.UserTiming, []string{"react", "commit", "render"})),
-		milestonePhase("first_contentful_paint", snapshot.Timing.FirstContentfulPaint, nil),
-		milestonePhase("largest_contentful_paint", snapshot.Timing.LargestContentfulPaint, snapshot.Timing.FirstContentfulPaint),
-	}
+	ttfb := metricPhase("navigation_ttfb", 0, snapshot.Timing.TimeToFirstByte, "navigation timing")
+	cursor := phaseEnd(ttfb, 0)
+	auth := requestPhase("authentication", selectRequestAfter(ordered, isAuthenticationRequest, cursor))
+	cursor = phaseEnd(auth, cursor)
+	backend := requestPhase("backend_response", selectRequestAfter(ordered, isApplicationRequest, cursor))
+	cursor = phaseEnd(backend, cursor)
+	state := timingPhase("state_update", selectUserTimingAfter(snapshot.UserTiming, []string{"state", "store", "dispatch", "update"}, cursor))
+	cursor = phaseEnd(state, cursor)
+	react := timingPhase("react_commit", selectUserTimingAfter(snapshot.UserTiming, []string{"react", "commit", "render"}, cursor))
+	cursor = phaseEnd(react, cursor)
+	fcp := milestonePhase("first_contentful_paint", snapshot.Timing.FirstContentfulPaint, ptr(cursor))
+	cursor = phaseEnd(fcp, cursor)
+	lcp := milestonePhase("largest_contentful_paint", snapshot.Timing.LargestContentfulPaint, ptr(cursor))
+	phases := []Phase{ttfb, auth, backend, state, react, fcp, lcp}
 	result := CriticalPath{Status: "complete", URL: snapshot.URL, Phases: phases, Gaps: buildGaps(phases)}
 	for _, phase := range phases {
 		if phase.Status == "unavailable" {
@@ -115,6 +120,9 @@ func milestonePhase(name string, value, prior *float64) Phase {
 	if value == nil {
 		return unavailablePhase(name)
 	}
+	if prior != nil && *prior > *value {
+		return Phase{Name: name, Status: "unavailable", Evidence: "milestone_precedes_prior_causal_phase"}
+	}
 	start := 0.0
 	if prior != nil && *prior <= *value {
 		start = *prior
@@ -127,16 +135,14 @@ func unavailablePhase(name string) Phase {
 	return Phase{Name: name, Status: "unavailable", Evidence: "browser_or_application_evidence_unavailable"}
 }
 
-func selectRequest(entries []types.NetworkWaterfallEntry, match func(types.NetworkWaterfallEntry) bool) *types.NetworkWaterfallEntry {
-	var selected *types.NetworkWaterfallEntry
+func selectRequestAfter(entries []types.NetworkWaterfallEntry, match func(types.NetworkWaterfallEntry) bool, after float64) *types.NetworkWaterfallEntry {
 	for index := range entries {
 		entry := &entries[index]
-		if !match(*entry) || (selected != nil && entry.Duration <= selected.Duration) {
-			continue
+		if match(*entry) && entry.StartTime >= after {
+			return entry
 		}
-		selected = entry
 	}
-	return selected
+	return nil
 }
 
 func isAuthenticationRequest(entry types.NetworkWaterfallEntry) bool {
@@ -148,18 +154,25 @@ func isApplicationRequest(entry types.NetworkWaterfallEntry) bool {
 	return !isAuthenticationRequest(entry) && (entry.InitiatorType == "fetch" || entry.InitiatorType == "xmlhttprequest" || strings.Contains(entry.URL, "/api/"))
 }
 
-func selectUserTiming(data *performance.UserTimingData, names []string) *performance.UserTimingEntry {
+func selectUserTimingAfter(data *performance.UserTimingData, names []string, after float64) *performance.UserTimingEntry {
 	if data == nil {
 		return nil
 	}
 	var selected *performance.UserTimingEntry
 	for index := range data.Measures {
 		entry := &data.Measures[index]
-		if containsAny(strings.ToLower(entry.Name), names) && (selected == nil || entry.Duration > selected.Duration) {
+		if entry.StartTime >= after && containsAny(strings.ToLower(entry.Name), names) && (selected == nil || entry.StartTime < selected.StartTime) {
 			selected = entry
 		}
 	}
 	return selected
+}
+
+func phaseEnd(phase Phase, fallback float64) float64 {
+	if phase.EndMs != nil && *phase.EndMs >= fallback {
+		return *phase.EndMs
+	}
+	return fallback
 }
 
 func requestEvidence(entry types.NetworkWaterfallEntry) string {

@@ -6,9 +6,11 @@
  */
 export interface WirePerformanceTraceStartRequest {
     readonly tab_id: number;
+    readonly replace_active?: boolean;
 }
 export interface WirePerformanceTraceStartResponse {
     readonly trace_id: string;
+    readonly recovered?: boolean;
 }
 export interface WirePerformanceTraceChunkRequest {
     readonly trace_id: string;

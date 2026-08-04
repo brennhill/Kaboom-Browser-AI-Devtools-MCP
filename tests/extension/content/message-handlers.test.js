@@ -30,6 +30,7 @@ function getInstalledHandler(depsOverrides = {}) {
     addToNetworkBodyBatcher: mock.fn(),
     addToPerfBatcher: mock.fn(),
     addToLogBatcher: mock.fn(),
+    addDiagnostic: mock.fn(),
     handleLogMessage: mock.fn(() => Promise.resolve()),
     handleClearLogs: mock.fn(() => Promise.resolve({ success: true })),
     isNetworkBodyCaptureDisabled: mock.fn(() => false),
@@ -111,6 +112,12 @@ describe('sender validation', () => {
 // ============================================
 
 describe('message routing', () => {
+  test('capture diagnostics are routed to the local Doctor queue', () => {
+    const { handler, deps } = getInstalledHandler()
+    const payload = { category: 'network_waterfall', message: 'capture failed', error_type: 'TypeError' }
+    handler({ type: 'capture_diagnostic', payload }, contentScriptSender, mock.fn())
+    assert.deepStrictEqual(deps.addDiagnostic.mock.calls[0].arguments[0], payload)
+  })
   test('GET_TAB_ID returns sender tab id', () => {
     const { handler } = getInstalledHandler()
     const sendResponse = mock.fn()

@@ -232,6 +232,14 @@ func TestSessionHandleToolRejectsNegativePerformanceBudget(t *testing.T) {
 	}
 }
 
+func TestSessionHandleToolRejectsUnknownPerformanceBudget(t *testing.T) {
+	sm := NewSessionManager(10, &mockCaptureState{})
+	_, err := sm.HandleTool(json.RawMessage(`{"action":"compare","compare_a":"a","compare_b":"b","performance_budgets":{"largest_paint_typo":10}}`))
+	if err == nil || !strings.Contains(err.Error(), "largest_paint_typo") {
+		t.Fatalf("unknown budget error = %v", err)
+	}
+}
+
 func TestSessionHandleTool_CompareNonExistentSnapshots(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}

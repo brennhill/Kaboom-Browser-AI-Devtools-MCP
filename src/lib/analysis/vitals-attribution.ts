@@ -2,6 +2,7 @@
  * Purpose: Build bounded, content-free attribution for browser Web Vitals entries.
  * Docs: docs/features/feature/web-vitals/index.md
  */
+import { reportPageCaptureFailure } from '../diagnostics/page-capture.js'
 
 const MAX_CLASSES = 4
 const MAX_SHIFTS = 10
@@ -18,10 +19,11 @@ export interface ElementDescriptor {
 export interface LCPAttribution {
   element?: ElementDescriptor
   time_to_first_byte_ms: number
-  resource_load_delay_ms: number
-  resource_load_duration_ms: number
+  resource_load_delay_ms?: number
+  resource_load_duration_ms?: number
   element_render_delay_ms: number
   attribution_status: 'available' | 'element_unavailable'
+  resource_timing_status: 'available' | 'unavailable'
 }
 
 export interface INPAttribution {
@@ -64,6 +66,7 @@ interface LCPEntryLike extends PerformanceEntry {
   element?: ElementLike | null
   loadTime?: number
   renderTime?: number
+  url?: string
 }
 
 interface LayoutShiftEntryLike extends PerformanceEntry {
@@ -138,15 +141,30 @@ export function getVitalsAttribution(responseStart = 0): VitalsAttribution {
 function buildLCPAttribution(entry: LCPEntryLike, responseStart: number): LCPAttribution {
   const loadTime = finite(entry.loadTime)
   const renderTime = finite(entry.renderTime || entry.startTime)
-  const resourceStart = loadTime > 0 ? loadTime : renderTime
+  const resource = matchingResourceTiming(entry.url)
   const element = describeElement(entry.element)
   return {
     ...(element ? { element } : {}),
     time_to_first_byte_ms: finite(responseStart),
-    resource_load_delay_ms: Math.max(0, resourceStart - finite(responseStart)),
-    resource_load_duration_ms: Math.max(0, loadTime - resourceStart),
-    element_render_delay_ms: Math.max(0, renderTime - (loadTime || resourceStart)),
-    attribution_status: element ? 'available' : 'element_unavailable'
+    ...(resource
+      ? {
+          resource_load_delay_ms: Math.max(0, finite(resource.requestStart) - finite(responseStart)),
+          resource_load_duration_ms: Math.max(0, finite(resource.responseEnd) - finite(resource.requestStart))
+        }
+      : {}),
+    element_render_delay_ms: Math.max(0, renderTime - (resource ? finite(resource.responseEnd) : loadTime)),
+    attribution_status: element ? 'available' : 'element_unavailable',
+    resource_timing_status: resource ? 'available' : 'unavailable'
+  }
+}
+
+function matchingResourceTiming(url: string | undefined): PerformanceResourceTiming | undefined {
+  if (!url || typeof performance === 'undefined') return undefined
+  try {
+    return (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).find((entry) => entry.name === url)
+  } catch (error) {
+    reportPageCaptureFailure('web_vitals', error)
+    return undefined
   }
 }
 

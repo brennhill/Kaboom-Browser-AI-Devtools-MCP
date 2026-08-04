@@ -8,6 +8,7 @@ import type { WireNetworkBody as NetworkBodyPayload } from '../../types/wire/wir
 import type { WirePerformanceSnapshot as PerformanceSnapshot } from '../../types/wire/wire-performance-snapshot.js';
 import type { WireWebSocketEvent as WebSocketEvent } from '../../types/wire/wire-websocket-event.js';
 import type { MessageHandlerOwner } from './types.js';
+import type { CaptureDiagnosticMessage } from '../../types/runtime/telemetry-messages.js';
 export interface TelemetryHandlerDependencies {
     addLog: (entry: LogEntry) => void;
     addWebSocket: (event: WebSocketEvent) => void;
@@ -17,6 +18,7 @@ export interface TelemetryHandlerDependencies {
     handleLog: (payload: LogEntry, sender: ChromeMessageSender, tabId?: number) => Promise<void>;
     isNetworkBodyCaptureDisabled: () => boolean;
     debugLog: (category: string, message: string, data?: unknown) => void;
+    addDiagnostic: (payload: CaptureDiagnosticMessage['payload']) => void;
 }
 export declare function createTelemetryMessageHandler(deps: TelemetryHandlerDependencies): MessageHandlerOwner;
 //# sourceMappingURL=telemetry-handler.d.ts.map

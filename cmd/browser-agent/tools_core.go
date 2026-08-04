@@ -439,7 +439,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	var inProgress func() []capture.SyncInProgress
 	var captureReader session.RuntimeCaptureReader
 	if handler.capture != nil {
-		performanceEntries = handler.capture.Performance().Entries
+		performanceEntries = handler.capture.Performance().Samples
 		queryStore = handler.capture.Queries()
 		inProgress = handler.capture.Extension().GetInProgressCommands
 		captureReader = handler.capture

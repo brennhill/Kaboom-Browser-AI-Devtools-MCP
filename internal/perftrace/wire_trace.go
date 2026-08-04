@@ -5,11 +5,13 @@ package perftrace
 import "encoding/json"
 
 type WirePerformanceTraceStartRequest struct {
-	TabID int `json:"tab_id"`
+	TabID         int  `json:"tab_id"`
+	ReplaceActive bool `json:"replace_active,omitempty"`
 }
 
 type WirePerformanceTraceStartResponse struct {
-	TraceID string `json:"trace_id"`
+	TraceID   string `json:"trace_id"`
+	Recovered bool   `json:"recovered,omitempty"`
 }
 
 type WirePerformanceTraceChunkRequest struct {

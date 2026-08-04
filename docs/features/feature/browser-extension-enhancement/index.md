@@ -4,8 +4,12 @@ feature_id: feature-browser-extension-enhancement
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
+  - src/lib/diagnostics/page-capture.ts
+  - src/types/runtime/telemetry-messages.ts
+  - src/content/message-forwarding.ts
+  - src/background/message-routing/telemetry-handler.ts
   - cmd/browser-agent/tools_configure.go
   - scripts/contracts/check-silent-catches.cjs
   - src/background/
@@ -74,6 +78,7 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - tests/extension/content/message-handlers.test.js
   - cmd/browser-agent/noise_doctor_test.go
   - scripts/contracts/check-silent-catches.test.cjs
   - tests/architecture/async-failure-evidence.test.cjs

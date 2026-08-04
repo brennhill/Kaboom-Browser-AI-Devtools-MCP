@@ -4,9 +4,12 @@ package perftrace
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestManagerWritesImportableTraceArtifact(t *testing.T) {
@@ -56,6 +59,67 @@ func TestManagerWritesImportableTraceArtifact(t *testing.T) {
 	}
 	if len(trace.TraceEvents) != 2 || trace.TraceEvents[1]["name"] != "FunctionCall" {
 		t.Fatalf("trace events = %#v", trace.TraceEvents)
+	}
+}
+
+func TestManagerEnforcesTotalBytesAndDuration(t *testing.T) {
+	now := time.Unix(100, 0)
+	m := newManagerWithLimits(t.TempDir(), 48, time.Second, func() time.Time { return now })
+	started, err := m.Start(42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Append(WirePerformanceTraceChunkRequest{TraceID: started.TraceID, Sequence: 0, Events: []json.RawMessage{json.RawMessage(`{"payload":"` + strings.Repeat("x", 64) + `"}`)}}); !errors.Is(err, ErrTraceSizeLimit) {
+		t.Fatalf("size error = %v", err)
+	}
+	now = now.Add(2 * time.Second)
+	if err := m.Append(WirePerformanceTraceChunkRequest{TraceID: started.TraceID, Sequence: 0}); !errors.Is(err, ErrTraceDurationLimit) {
+		t.Fatalf("duration error = %v", err)
+	}
+}
+
+func TestManagerReplacesOrphanedActiveTrace(t *testing.T) {
+	m := NewManager(t.TempDir())
+	first, err := m.Start(7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, recovered, err := m.StartReplacing(8, true)
+	if err != nil || !recovered || second.TraceID == first.TraceID {
+		t.Fatalf("replacement = %+v recovered=%v err=%v", second, recovered, err)
+	}
+	if _, err := os.Stat(first.PartialPath); !os.IsNotExist(err) {
+		t.Fatalf("orphan partial remains: %v", err)
+	}
+}
+
+func TestManagerDoesNotDiscardActiveTraceForInvalidReplacement(t *testing.T) {
+	m := NewManager(t.TempDir())
+	first, err := m.Start(7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := m.StartReplacing(0, true); err == nil {
+		t.Fatal("invalid replacement succeeded")
+	}
+	if err := m.Abort(first.TraceID); err != nil {
+		t.Fatalf("original trace was discarded: %v", err)
+	}
+}
+
+func TestManagerRecoversPartialArtifactAfterDaemonRestart(t *testing.T) {
+	dir := t.TempDir()
+	partial := filepath.Join(dir, "cpu-stale.json.partial")
+	if err := os.WriteFile(partial, []byte("partial"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	m := NewManager(dir)
+	_, recovered, err := m.StartReplacing(8, true)
+	if err != nil || !recovered {
+		t.Fatalf("recovered=%v err=%v", recovered, err)
+	}
+	if _, err := os.Stat(partial); !os.IsNotExist(err) {
+		t.Fatalf("stale partial remains: %v", err)
 	}
 }
 
