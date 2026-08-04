@@ -11,6 +11,7 @@ const MAX_STACK_FRAMES = 12
 export interface RequestAttributionStart {
   stack?: string
   priority?: string
+  traceparent?: string | null
 }
 
 export interface RequestAttributionFinish {

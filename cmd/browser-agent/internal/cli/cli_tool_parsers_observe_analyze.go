@@ -82,6 +82,7 @@ func ParseAnalyzeArgs(what string, args []string) (map[string]any, error) {
 		"--action":              {MCPKey: "action", Kind: FlagString},
 		"--reload":              {MCPKey: "reload", Kind: FlagBool},
 		"--cache":               {MCPKey: "cache", Kind: FlagString},
+		"--trace-source":        {MCPKey: "trace_source", Kind: FlagString},
 		"--operation":           {MCPKey: "operation", Kind: FlagString},
 		"--ignore-endpoints":    {MCPKey: "ignore_endpoints", Kind: FlagStringList},
 		"--scope":               {MCPKey: "scope", Kind: FlagString},

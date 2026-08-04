@@ -8,7 +8,8 @@ var analyzeModeSpecs = map[string]modeParamSpec{
 		Optional: []string{"selector", "frame", "tab_id"},
 	},
 	"performance": {
-		Hint: "Page load performance metrics and bottleneck analysis",
+		Hint:     "Page load metrics, ordered critical-path analysis, and optional local backend trace correlation",
+		Optional: []string{"trace_source"},
 	},
 	"performance_trace": {
 		Hint:     "Record a full Chrome CPU flamechart trace to a local DevTools/Perfetto-importable JSON artifact",

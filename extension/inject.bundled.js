@@ -1392,7 +1392,8 @@ function wrapFetchWithBodies(fetchFn) {
       return fetchFn(input, init);
     recordRequestAttribution(url, {
       stack: new Error().stack,
-      priority: init?.priority
+      priority: init?.priority,
+      traceparent: requestHeader(input, init, "traceparent") ?? void 0
     });
     const startTime = Date.now();
     const response = await fetchFn(input, init);
@@ -1402,7 +1403,7 @@ function wrapFetchWithBodies(fetchFn) {
       status: response.status,
       server_timing: response.headers?.get?.("server-timing"),
       request_id: response.headers?.get?.("x-request-id"),
-      traceparent: response.headers?.get?.("traceparent"),
+      traceparent: response.headers?.get?.("traceparent") ?? requestHeader(input, init, "traceparent"),
       content_encoding: response.headers?.get?.("content-encoding")
     });
     const cloned = response.clone ? response.clone() : null;
@@ -1423,6 +1424,22 @@ function wrapFetchWithBodies(fetchFn) {
     });
     return response;
   };
+}
+function requestHeader(input, init, name) {
+  const headers = init?.headers ?? (typeof Request !== "undefined" && input instanceof Request ? input.headers : void 0);
+  if (!headers)
+    return null;
+  if (typeof Headers !== "undefined" && headers instanceof Headers)
+    return headers.get(name);
+  if (Array.isArray(headers)) {
+    const match = headers.find(([key]) => key.toLowerCase() === name);
+    return match?.[1] ?? null;
+  }
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === name)
+      return String(value);
+  }
+  return null;
 }
 
 // extension/lib/analysis/performance.js

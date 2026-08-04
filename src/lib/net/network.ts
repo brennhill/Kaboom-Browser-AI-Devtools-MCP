@@ -702,7 +702,8 @@ export function wrapFetchWithBodies(fetchFn: FetchLike): FetchLike {
 
     recordRequestAttribution(url, {
       stack: new Error().stack,
-      priority: (init as (RequestInit & { priority?: string }) | undefined)?.priority
+      priority: (init as (RequestInit & { priority?: string }) | undefined)?.priority,
+      traceparent: requestHeader(input, init, 'traceparent') ?? undefined
     })
 
     const startTime = Date.now()
@@ -713,7 +714,7 @@ export function wrapFetchWithBodies(fetchFn: FetchLike): FetchLike {
       status: response.status,
       server_timing: response.headers?.get?.('server-timing'),
       request_id: response.headers?.get?.('x-request-id'),
-      traceparent: response.headers?.get?.('traceparent'),
+      traceparent: response.headers?.get?.('traceparent') ?? requestHeader(input, init, 'traceparent'),
       content_encoding: response.headers?.get?.('content-encoding')
     })
     const cloned = response.clone ? response.clone() : null
@@ -756,4 +757,19 @@ export function wrapFetchWithBodies(fetchFn: FetchLike): FetchLike {
 
     return response
   }
+}
+
+function requestHeader(input: RequestInfo | URL, init: RequestInit | undefined, name: string): string | null {
+  const headers =
+    init?.headers ?? (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined)
+  if (!headers) return null
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) return headers.get(name)
+  if (Array.isArray(headers)) {
+    const match = headers.find(([key]) => key.toLowerCase() === name)
+    return match?.[1] ?? null
+  }
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === name) return String(value)
+  }
+  return null
 }

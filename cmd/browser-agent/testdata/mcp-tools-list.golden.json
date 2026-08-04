@@ -462,6 +462,10 @@
           "description": "Timeout in milliseconds. Applies to: link_health (default 10000), page_summary (default 5000), annotations (default 15000, max 600000).",
           "type": "number"
         },
+        "trace_source": {
+          "description": "Local OpenTelemetry JSON file to correlate with browser requests (performance only; never uploaded)",
+          "type": "string"
+        },
         "url": {
           "description": "Annotation URL scope filter (annotations). Supports exact URL, project base URL, or wildcard patterns such as http://localhost:3000/*.",
           "type": "string"

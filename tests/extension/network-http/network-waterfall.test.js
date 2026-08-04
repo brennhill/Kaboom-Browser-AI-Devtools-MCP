@@ -262,6 +262,26 @@ describe('Network Waterfall - parseResourceTiming', () => {
     assert.equal(results[1].duplicate_group_id, results[0].duplicate_group_id)
   })
 
+  test('preserves an outgoing traceparent when the response does not echo it', async () => {
+    const { getNetworkWaterfall, resetForTesting, wrapFetchWithBodies } = await import(
+      '../../../extension/lib/net/network.js'
+    )
+    resetForTesting()
+    const wrapped = wrapFetchWithBodies(async () => ({
+      status: 204,
+      headers: { get: () => null },
+      clone: () => null
+    }))
+    await wrapped('http://localhost:3000/api/data', {
+      headers: { traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01' }
+    })
+    globalThis.performance._addEntry(createMockResourceTiming())
+    assert.equal(
+      getNetworkWaterfall()[0].traceparent,
+      '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'
+    )
+  })
+
   test('should include transfer size information', async () => {
     const { parseResourceTiming } = await import('../../../extension/lib/net/network.js')
 

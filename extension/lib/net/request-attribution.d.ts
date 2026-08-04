@@ -6,6 +6,7 @@ import type { WireNetworkWaterfallEntry } from '../../types/wire/wire-network.js
 export interface RequestAttributionStart {
     stack?: string;
     priority?: string;
+    traceparent?: string | null;
 }
 export interface RequestAttributionFinish {
     status?: number;

@@ -4,11 +4,34 @@
 package observe
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestCheckPerformanceIncludesCriticalPathAndTraceState(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	t.Cleanup(captured.Close)
+	captured.Performance().Add([]performance.PerformanceSnapshot{{
+		URL: "/app", Timing: performance.PerformanceTiming{TimeToFirstByte: 75},
+	}})
+	response := decodePageStateToolResult(t, CheckPerformance(
+		Deps{Capture: captured},
+		mcp.JSONRPCRequest{ID: json.RawMessage(`1`)},
+		json.RawMessage(`{}`),
+	))
+	text := response.Content[0].Text
+	if !strings.Contains(text, `"critical_path"`) || !strings.Contains(text, `"backend_trace":{"status":"not_configured"}`) {
+		t.Fatalf("performance analysis missing correlated models: %s", text)
+	}
+}
 
 func TestBuildVitalsMapIncludesActionableAttribution(t *testing.T) {
 	t.Parallel()

@@ -7,13 +7,15 @@ package observe
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	performance_navigation "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance/navigation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance/tracecorr"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // GetEnhancedActions returns captured user actions (clicks, inputs, navigations).
@@ -160,12 +162,24 @@ func ObservePilot(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSON
 }
 
 // CheckPerformance returns performance snapshots from the capture buffer.
-func CheckPerformance(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func CheckPerformance(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params struct {
+		TraceSource string `json:"trace_source"`
+	}
+	mcp.LenientUnmarshal(args, &params)
 	snapshots := deps.Capture.Performance().Entries()
-	return mcp.Succeed(req, "Performance", map[string]any{
+	response := map[string]any{
 		"snapshots": snapshots,
 		"count":     len(snapshots),
-	})
+	}
+	waterfall := deps.Capture.Telemetry().NetworkWaterfall().Entries()
+	if len(snapshots) > 0 {
+		response["critical_path"] = performance_navigation.BuildCriticalPath(snapshots[len(snapshots)-1], waterfall)
+	} else {
+		response["critical_path"] = performance_navigation.BuildCriticalPath(performance.PerformanceSnapshot{}, waterfall)
+	}
+	response["backend_trace"] = tracecorr.CorrelateFile(params.TraceSource, waterfall)
+	return mcp.Succeed(req, "Performance", response)
 }
 
 type historyEntry struct {

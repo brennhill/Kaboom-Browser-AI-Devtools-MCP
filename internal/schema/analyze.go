@@ -54,6 +54,10 @@ func analyzeToolSchema() mcp.MCPTool {
 					"description": "Browser cache policy for performance_trace start",
 					"enum":        []string{"warm", "cold"},
 				},
+				"trace_source": map[string]any{
+					"type":        "string",
+					"description": "Local OpenTelemetry JSON file to correlate with browser requests (performance only; never uploaded)",
+				},
 				"contract": map[string]any{
 					"type":        "object",
 					"description": "Versioned QA contract with contract_id and assertions (verification)",
