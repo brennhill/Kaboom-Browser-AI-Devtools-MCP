@@ -23,12 +23,16 @@ import (
 // SyncHandler owns the extension heartbeat, command transport, and
 // disconnect-reconciliation boundary.
 type SyncHandler struct {
-	capture *Capture
+	capture               *Capture
+	waitForPendingQueries func(time.Duration)
 }
 
 // NewSyncHandler binds extension sync transport to canonical capture owners.
 func NewSyncHandler(capture *Capture) *SyncHandler {
-	return &SyncHandler{capture: capture}
+	return &SyncHandler{
+		capture:               capture,
+		waitForPendingQueries: capture.Queries().WaitForPendingQueries,
+	}
 }
 
 // extractBrowserName returns a generic browser name from a User-Agent string.
@@ -169,7 +173,7 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 
 	pendingQueries := h.capture.Queries().GetPendingQueries()
 	if len(pendingQueries) == 0 {
-		h.capture.Queries().WaitForPendingQueries(syncLongPollTimeout())
+		h.waitForPendingQueries(syncLongPollTimeout())
 		pendingQueries = h.capture.Queries().GetPendingQueries()
 	}
 	if currentGeneration, current := h.capture.extension.isCurrentSyncGeneration(

@@ -44,7 +44,6 @@
     "internal/capture/extension_state_unit_test.go": 1,
     "internal/capture/queries_lifecycle_test.go": 11,
     "internal/capture/readiness_gate_test.go": 4,
-    "internal/capture/sync_longpoll_test.go": 1,
     "internal/pty/session_test.go": 4
   }
 }

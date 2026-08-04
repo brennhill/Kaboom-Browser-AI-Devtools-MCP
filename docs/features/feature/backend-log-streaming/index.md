@@ -366,3 +366,6 @@ this one bounded delivery contract.
 - Enhanced-action navigation callbacks cross one private dispatch boundary.
   Production uses the panic-safe goroutine runner; tests execute synchronously
   to prove callback cardinality, negative cases, and lock release exactly.
+- SyncHandler owns a private pending-query wait boundary. Handler tests control
+  the wait and prove the required resnapshot; QueryDispatcher tests exclusively
+  own timer and wakeup behavior.
