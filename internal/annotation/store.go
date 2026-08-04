@@ -111,6 +111,7 @@ type Store struct {
 
 	detailTTL  time.Duration
 	sessionTTL time.Duration
+	now        func() time.Time
 	done       chan struct{} // signals cleanup goroutine to stop
 	closeOnce  sync.Once     // ensures Close() is safe to call concurrently
 
@@ -131,6 +132,7 @@ func NewStore(detailTTL time.Duration) *Store {
 		named:         make(map[string]*namedSessionEntry),
 		detailTTL:     detailTTL,
 		sessionTTL:    2 * time.Hour,
+		now:           time.Now,
 		done:          make(chan struct{}),
 		sessionNotify: make(chan struct{}),
 	}

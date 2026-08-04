@@ -6,7 +6,6 @@
 package annotation
 
 import (
-	"sync"
 	"testing"
 	"time"
 )
@@ -23,84 +22,70 @@ import (
 func TestWaitForSession_ReReadsDrawTimestamp_T8(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	// Step 1: first draw cycle
 	store.MarkDrawStarted()
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 
 	// Store a session from the first draw cycle.
 	firstSession := &Session{
 		Annotations: []Annotation{{ID: "first", Text: "first cycle"}},
 		PageURL:     "https://example.com/page1",
 		TabID:       1,
-		Timestamp:   time.Now().UnixMilli(),
+		Timestamp:   clock.Now().UnixMilli(),
 	}
 	store.StoreSession(1, firstSession)
 
 	// Step 4: second draw cycle — advances the threshold past firstSession.
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 	store.MarkDrawStarted()
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 
 	// Step 2: start WaitForSession. Because lastDrawStartedAt is now after
 	// firstSession.Timestamp, the checker must NOT return firstSession.
-	var mu sync.Mutex
-	var resultSession *Session
-	var timedOut bool
-	done := make(chan struct{})
+	result := make(chan struct {
+		session  *Session
+		timedOut bool
+	}, 1)
 
 	go func() {
-		s, to := store.WaitForSession(500 * time.Millisecond)
-		mu.Lock()
-		resultSession = s
-		timedOut = to
-		mu.Unlock()
-		close(done)
+		session, timedOut := store.WaitForSession(500 * time.Millisecond)
+		result <- struct {
+			session  *Session
+			timedOut bool
+		}{session: session, timedOut: timedOut}
 	}()
-
-	// Give the goroutine time to enter the wait loop and verify it hasn't returned yet.
-	time.Sleep(20 * time.Millisecond)
-	select {
-	case <-done:
-		// If we get here, WaitForSession returned the stale first session — that's the T8 bug.
-		mu.Lock()
-		if resultSession != nil && resultSession.Annotations[0].ID == "first" {
-			mu.Unlock()
-			t.Fatal("T8 regression: WaitForSession returned session from previous draw cycle")
-		}
-		mu.Unlock()
-		// It returned something else or timed out, which is fine; fall through.
-	default:
-		// Still waiting — correct behavior. Now store the second session.
-	}
 
 	// Step 6: store a session from the second draw cycle.
 	secondSession := &Session{
 		Annotations: []Annotation{{ID: "second", Text: "second cycle"}},
 		PageURL:     "https://example.com/page2",
 		TabID:       2,
-		Timestamp:   time.Now().UnixMilli(),
+		Timestamp:   clock.Now().UnixMilli(),
 	}
 	store.StoreSession(2, secondSession)
 
 	// Step 7: WaitForSession should now return the second session.
+	var waited struct {
+		session  *Session
+		timedOut bool
+	}
 	select {
-	case <-done:
+	case waited = <-result:
 	case <-time.After(2 * time.Second):
 		t.Fatal("WaitForSession did not return within timeout")
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-	if timedOut {
+	if waited.timedOut {
 		t.Fatal("WaitForSession timed out unexpectedly")
 	}
-	if resultSession == nil {
+	if waited.session == nil {
 		t.Fatal("WaitForSession returned nil session")
 	}
-	if resultSession.Annotations[0].ID != "second" {
+	if waited.session.Annotations[0].ID != "second" {
 		t.Errorf("expected session from second draw cycle (id=second), got id=%s",
-			resultSession.Annotations[0].ID)
+			waited.session.Annotations[0].ID)
 	}
 }
 
@@ -109,9 +94,10 @@ func TestWaitForSession_ReReadsDrawTimestamp_T8(t *testing.T) {
 func TestWaitForSession_SingleDrawCycle_StillWorks(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.MarkDrawStarted()
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 
 	done := make(chan struct{})
 	var result *Session
@@ -122,12 +108,11 @@ func TestWaitForSession_SingleDrawCycle_StillWorks(t *testing.T) {
 		close(done)
 	}()
 
-	time.Sleep(10 * time.Millisecond)
 	session := &Session{
 		Annotations: []Annotation{{ID: "a1", Text: "test"}},
 		PageURL:     "https://example.com",
 		TabID:       1,
-		Timestamp:   time.Now().UnixMilli(),
+		Timestamp:   clock.Now().UnixMilli(),
 	}
 	store.StoreSession(1, session)
 

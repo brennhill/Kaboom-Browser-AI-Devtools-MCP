@@ -43,8 +43,9 @@ func (s *Store) AppendToNamedSession(name string, session *Session) {
 			s.named[name] = entry
 		}
 		entry.Session.Pages = append(entry.Session.Pages, session)
-		entry.Session.UpdatedAt = time.Now().UnixMilli()
-		entry.ExpiresAt = time.Now().Add(s.sessionTTL)
+		now := s.now()
+		entry.Session.UpdatedAt = now.UnixMilli()
+		entry.ExpiresAt = now.Add(s.sessionTTL)
 		// Evict oldest named sessions if over cap.
 		if len(s.named) > MaxNamedSessions {
 			s.evictOldestNamedSessionLocked()
@@ -97,7 +98,7 @@ func (s *Store) GetNamedSession(name string) *NamedSession {
 	if !ok {
 		return nil
 	}
-	if time.Now().After(entry.ExpiresAt) {
+	if s.now().After(entry.ExpiresAt) {
 		return nil
 	}
 	// Return a copy so callers can safely iterate Pages without holding the lock.
@@ -111,7 +112,7 @@ func (s *Store) GetNamedSession(name string) *NamedSession {
 func (s *Store) ListNamedSessions() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	now := time.Now()
+	now := s.now()
 	names := make([]string, 0, len(s.named))
 	for name, entry := range s.named {
 		if !now.After(entry.ExpiresAt) {

@@ -13,7 +13,7 @@ func (s *Store) StoreDetail(correlationID string, detail Detail) {
 	defer s.mu.Unlock()
 	s.details[correlationID] = &detailEntry{
 		Detail:    detail,
-		ExpiresAt: time.Now().Add(s.detailTTL),
+		ExpiresAt: s.now().Add(s.detailTTL),
 	}
 	if len(s.details) > MaxDetails {
 		s.evictOldestDetailLocked()
@@ -28,7 +28,7 @@ func (s *Store) GetDetail(correlationID string) (*Detail, bool) {
 	if !ok {
 		return nil, false
 	}
-	if time.Now().After(entry.ExpiresAt) {
+	if s.now().After(entry.ExpiresAt) {
 		return nil, false
 	}
 	return &entry.Detail, true
@@ -40,7 +40,7 @@ func (s *Store) GetDetail(correlationID string) (*Detail, bool) {
 func (s *Store) FindAnnotationTimestamp(correlationID string) int64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	now := time.Now()
+	now := s.now()
 
 	// Search all anonymous sessions
 	for _, entry := range s.sessions {

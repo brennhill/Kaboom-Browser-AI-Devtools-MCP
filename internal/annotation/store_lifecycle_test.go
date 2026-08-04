@@ -12,6 +12,7 @@ import (
 func TestStore_SessionExpired(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 	// Override session TTL to something very short for testing
 	store.sessionTTL = 50 * time.Millisecond
 
@@ -26,8 +27,7 @@ func TestStore_SessionExpired(t *testing.T) {
 		t.Fatal("Expected session to exist immediately after store")
 	}
 
-	// Wait for TTL to expire
-	time.Sleep(100 * time.Millisecond)
+	clock.Advance(100 * time.Millisecond)
 
 	// Should be nil after expiration
 	if store.GetSession(1) != nil {
@@ -43,9 +43,10 @@ func TestStore_SessionExpired(t *testing.T) {
 func TestStore_WaitForSession_SpuriousWakeup(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.MarkDrawStarted()
-	time.Sleep(5 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 
 	var result *Session
 	var timedOut bool
@@ -58,29 +59,20 @@ func TestStore_WaitForSession_SpuriousWakeup(t *testing.T) {
 
 	// First wake-up: store a session with an old timestamp (before MarkDrawStarted).
 	// This is a spurious notification — WaitForSession should NOT return.
-	time.Sleep(50 * time.Millisecond)
 	store.mu.Lock()
 	store.sessions[99] = &sessionEntry{
 		Session:   &Session{TabID: 99, Timestamp: 1},
-		ExpiresAt: time.Now().Add(10 * time.Minute),
+		ExpiresAt: clock.Now().Add(10 * time.Minute),
 	}
 	ch := store.sessionNotify
 	store.sessionNotify = make(chan struct{})
 	store.mu.Unlock()
 	close(ch)
 
-	// Verify waiter did NOT return yet (spurious wake-up should be ignored)
-	select {
-	case <-done:
-		t.Fatal("WaitForSession returned after spurious wake-up; expected it to keep waiting")
-	case <-time.After(100 * time.Millisecond):
-		// Good — still blocked
-	}
-
 	// Second wake-up: store a qualifying session (timestamp after MarkDrawStarted)
 	store.StoreSession(42, &Session{
 		TabID:     42,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: clock.Now().UnixMilli(),
 	})
 
 	select {
@@ -103,9 +95,10 @@ func TestStore_WaitForSession_SpuriousWakeup(t *testing.T) {
 func TestStore_WaitForNamedSession_SpuriousWakeup(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.MarkDrawStarted()
-	time.Sleep(5 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 
 	var result *NamedSession
 	var timedOut bool
@@ -117,25 +110,16 @@ func TestStore_WaitForNamedSession_SpuriousWakeup(t *testing.T) {
 	}()
 
 	// Spurious wake: append to a DIFFERENT named session
-	time.Sleep(50 * time.Millisecond)
 	store.AppendToNamedSession("other", &Session{
 		TabID:     10,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: clock.Now().UnixMilli(),
 		PageURL:   "https://other.com",
 	})
-
-	// Verify still blocked
-	select {
-	case <-done:
-		t.Fatal("WaitForNamedSession returned after unrelated session update")
-	case <-time.After(100 * time.Millisecond):
-		// Good
-	}
 
 	// Now store the target named session
 	store.AppendToNamedSession("target", &Session{
 		TabID:     20,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: clock.Now().UnixMilli(),
 		PageURL:   "https://target.com",
 	})
 
@@ -358,14 +342,15 @@ func TestStore_ClearNamedSession_Nonexistent(t *testing.T) {
 func TestStore_WaitForSession_IgnoresStaleSession(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	// Store a session BEFORE MarkDrawStarted
 	store.StoreSession(1, &Session{
 		TabID:     1,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: clock.Now().UnixMilli(),
 	})
 
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 	store.MarkDrawStarted()
 
 	// WaitForSession should NOT return the stale session

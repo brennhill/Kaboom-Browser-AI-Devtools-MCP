@@ -24,7 +24,7 @@ func (s *Store) cleanupLoop() {
 func (s *Store) evictExpiredEntries() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	now := time.Now()
+	now := s.now()
 	for id, entry := range s.details {
 		if now.After(entry.ExpiresAt) {
 			delete(s.details, id)

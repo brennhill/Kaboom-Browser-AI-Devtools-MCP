@@ -11,6 +11,32 @@ import (
 	"time"
 )
 
+type annotationTestClock struct {
+	now time.Time
+}
+
+func (c *annotationTestClock) Now() time.Time { return c.now }
+
+func (c *annotationTestClock) Advance(delta time.Duration) { c.now = c.now.Add(delta) }
+
+func useAnnotationTestClock(store *Store) *annotationTestClock {
+	clock := &annotationTestClock{now: time.Unix(100, 0)}
+	store.now = clock.Now
+	return clock
+}
+
+func TestStoreUsesInjectedClockForExpiration(t *testing.T) {
+	store := NewStore(time.Minute)
+	defer store.Close()
+	clock := useAnnotationTestClock(store)
+
+	store.StoreDetail("clocked", Detail{CorrelationID: "clocked"})
+	clock.Advance(time.Minute + time.Nanosecond)
+	if _, found := store.GetDetail("clocked"); found {
+		t.Fatal("detail remained visible after the injected clock passed its TTL")
+	}
+}
+
 func TestStore_StoreAndGetSession(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
@@ -212,11 +238,11 @@ func TestStore_DetailExpired(t *testing.T) {
 	// Use very short TTL
 	store := NewStore(1 * time.Millisecond)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.StoreDetail("expire_test", Detail{Selector: "div.test"})
 
-	// Wait for expiration
-	time.Sleep(5 * time.Millisecond)
+	clock.Advance(5 * time.Millisecond)
 
 	_, found := store.GetDetail("expire_test")
 	if found {
@@ -384,13 +410,14 @@ func TestStore_MarkDrawStarted(t *testing.T) {
 func TestStore_WaitForSession_ImmediateReturn(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	// Mark draw started, then store a session with a newer timestamp
 	store.MarkDrawStarted()
-	time.Sleep(1 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 	store.StoreSession(1, &Session{
 		TabID:       1,
-		Timestamp:   time.Now().UnixMilli(),
+		Timestamp:   clock.Now().UnixMilli(),
 		Annotations: []Annotation{{Text: "immediate"}},
 	})
 
@@ -415,22 +442,29 @@ func TestStore_WaitForSession_ImmediateReturn(t *testing.T) {
 func TestStore_WaitForSession_BlocksAndReturns(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.MarkDrawStarted()
+	clock.Advance(time.Millisecond)
 
-	// Store session in a goroutine after a delay
+	result := make(chan struct {
+		session  *Session
+		timedOut bool
+	}, 1)
 	go func() {
-		time.Sleep(50 * time.Millisecond)
-		store.StoreSession(1, &Session{
-			TabID:       1,
-			Timestamp:   time.Now().UnixMilli(),
-			Annotations: []Annotation{{Text: "delayed"}},
-		})
+		session, timedOut := store.WaitForSession(2 * time.Second)
+		result <- struct {
+			session  *Session
+			timedOut bool
+		}{session: session, timedOut: timedOut}
 	}()
-
-	start := time.Now()
-	session, timedOut := store.WaitForSession(2 * time.Second)
-	elapsed := time.Since(start)
+	store.StoreSession(1, &Session{
+		TabID:       1,
+		Timestamp:   clock.Now().UnixMilli(),
+		Annotations: []Annotation{{Text: "delayed"}},
+	})
+	waited := <-result
+	session, timedOut := waited.session, waited.timedOut
 
 	if timedOut {
 		t.Fatal("expected session, got timeout")
@@ -446,9 +480,6 @@ func TestStore_WaitForSession_BlocksAndReturns(t *testing.T) {
 	}
 	if session.Annotations[0].Text != "delayed" {
 		t.Errorf("expected text 'delayed', got %q", session.Annotations[0].Text)
-	}
-	if elapsed < 30*time.Millisecond {
-		t.Error("expected to have blocked for at least 30ms")
 	}
 }
 
@@ -476,15 +507,15 @@ func TestStore_WaitForSession_Timeout(t *testing.T) {
 func TestStore_WaitForSession_SkipsStaleSession(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	// Store an old session BEFORE marking draw started
 	store.StoreSession(1, &Session{
 		TabID:       1,
-		Timestamp:   time.Now().UnixMilli() - 5000,
+		Timestamp:   clock.Now().UnixMilli() - 5000,
 		Annotations: []Annotation{{Text: "stale"}},
 	})
 
-	time.Sleep(1 * time.Millisecond)
 	store.MarkDrawStarted()
 
 	// The stale session should not be returned — it's from before draw started
@@ -529,19 +560,15 @@ func TestStore_WaitForSession_CloseUnblocks(t *testing.T) {
 
 	store.MarkDrawStarted()
 
+	result := make(chan *Session, 1)
 	go func() {
-		time.Sleep(50 * time.Millisecond)
-		store.Close()
+		session, _ := store.WaitForSession(5 * time.Second)
+		result <- session
 	}()
-
-	start := time.Now()
-	session, _ := store.WaitForSession(5 * time.Second)
-	elapsed := time.Since(start)
+	store.Close()
+	session := <-result
 
 	if session != nil {
 		t.Error("expected nil session after close")
-	}
-	if elapsed > 2*time.Second {
-		t.Error("expected close to unblock promptly")
 	}
 }

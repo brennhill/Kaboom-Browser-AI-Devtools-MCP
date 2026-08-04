@@ -30,7 +30,7 @@ func (s *Store) StoreSession(tabID int, session *Session) {
 		defer s.mu.Unlock()
 		s.sessions[tabID] = &sessionEntry{
 			Session:   session,
-			ExpiresAt: time.Now().Add(s.sessionTTL),
+			ExpiresAt: s.now().Add(s.sessionTTL),
 		}
 		// Evict oldest sessions if over cap.
 		if len(s.sessions) > MaxSessions {
@@ -71,7 +71,7 @@ func (s *Store) StoreSession(tabID int, session *Session) {
 func (s *Store) MarkDrawStarted() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.lastDrawStartedAt = time.Now().UnixMilli()
+	s.lastDrawStartedAt = s.now().UnixMilli()
 }
 
 // WaitForSession blocks until a session newer than the last MarkDrawStarted arrives,
@@ -103,7 +103,7 @@ func (s *Store) WaitForSession(timeout time.Duration) (*Session, bool) {
 func (s *Store) getSessionSince(sinceTs int64) *Session {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	now := time.Now()
+	now := s.now()
 	var latest *sessionEntry
 	for _, entry := range s.sessions {
 		if now.After(entry.ExpiresAt) {
@@ -130,7 +130,7 @@ func (s *Store) GetSession(tabID int) *Session {
 	if entry == nil {
 		return nil
 	}
-	if time.Now().After(entry.ExpiresAt) {
+	if s.now().After(entry.ExpiresAt) {
 		return nil
 	}
 	return entry.Session
@@ -140,7 +140,7 @@ func (s *Store) GetSession(tabID int) *Session {
 func (s *Store) GetLatestSession() *Session {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	now := time.Now()
+	now := s.now()
 	var latest *sessionEntry
 	for _, entry := range s.sessions {
 		if now.After(entry.ExpiresAt) {

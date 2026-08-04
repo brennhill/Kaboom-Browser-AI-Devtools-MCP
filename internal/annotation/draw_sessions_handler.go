@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -117,7 +116,7 @@ func hydrateDrawSession(store *Store, raw []byte) {
 			PageURL: persisted.PageURL, TabID: persisted.TabID, Timestamp: persisted.Timestamp,
 		}
 		if session.Timestamp == 0 {
-			session.Timestamp = time.Now().UnixMilli()
+			session.Timestamp = store.now().UnixMilli()
 		}
 		store.StoreSession(session.TabID, session)
 		name := strings.TrimSpace(persisted.AnnotSessionName)

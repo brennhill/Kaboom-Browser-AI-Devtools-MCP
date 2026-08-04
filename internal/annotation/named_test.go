@@ -18,9 +18,10 @@ func TestGetNamedSessionSinceDraw_ReturnsSessionUpdatedAfterDraw(t *testing.T) {
 	t.Parallel()
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.MarkDrawStarted()
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 
 	store.AppendToNamedSession("review", &Session{
 		TabID:       1,
@@ -48,13 +49,14 @@ func TestGetNamedSessionSinceDraw_ReturnsNilWhenUpdatedBeforeDraw(t *testing.T) 
 	t.Parallel()
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.AppendToNamedSession("old-review", &Session{
 		TabID:     1,
 		Timestamp: time.Now().UnixMilli(),
 	})
 
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 	store.MarkDrawStarted()
 
 	ns := store.GetNamedSessionSinceDraw("old-review")
@@ -125,9 +127,10 @@ func TestGetNamedSessionSinceDraw_MultiplePages(t *testing.T) {
 	t.Parallel()
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.MarkDrawStarted()
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(time.Millisecond)
 
 	store.AppendToNamedSession("multi", &Session{
 		TabID:   1,

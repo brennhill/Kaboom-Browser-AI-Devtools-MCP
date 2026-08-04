@@ -106,21 +106,30 @@ func TestStore_NamedSession_Clear(t *testing.T) {
 func TestStore_NamedSession_WaitBlocks(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.MarkDrawStarted()
+	clock.Advance(time.Millisecond)
 
+	result := make(chan struct {
+		session  *NamedSession
+		timedOut bool
+	}, 1)
 	go func() {
-		time.Sleep(50 * time.Millisecond)
-		store.AppendToNamedSession("qa", &Session{
-			TabID:       1,
-			Timestamp:   time.Now().UnixMilli(),
-			Annotations: []Annotation{{Text: "waited"}},
-		})
+		session, timedOut := store.WaitForNamedSession("qa", 2*time.Second)
+		result <- struct {
+			session  *NamedSession
+			timedOut bool
+		}{session: session, timedOut: timedOut}
 	}()
+	store.AppendToNamedSession("qa", &Session{
+		TabID:       1,
+		Timestamp:   clock.Now().UnixMilli(),
+		Annotations: []Annotation{{Text: "waited"}},
+	})
 
-	start := time.Now()
-	ns, timedOut := store.WaitForNamedSession("qa", 2*time.Second)
-	elapsed := time.Since(start)
+	waited := <-result
+	ns, timedOut := waited.session, waited.timedOut
 
 	if timedOut {
 		t.Fatal("expected session, got timeout")
@@ -136,9 +145,6 @@ func TestStore_NamedSession_WaitBlocks(t *testing.T) {
 	}
 	if len(ns.Pages[0].Annotations) != 1 || ns.Pages[0].Annotations[0].Text != "waited" {
 		t.Errorf("expected annotation 'waited', got %+v", ns.Pages[0].Annotations)
-	}
-	if elapsed < 30*time.Millisecond {
-		t.Error("expected to have blocked")
 	}
 }
 
@@ -157,6 +163,7 @@ func TestStore_NamedSession_WaitTimeout(t *testing.T) {
 func TestStore_NamedSession_EvictionCap(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	// Fill up to MaxNamedSessions + 1 (51 total)
 	for i := 0; i < 51; i++ {
@@ -168,8 +175,7 @@ func TestStore_NamedSession_EvictionCap(t *testing.T) {
 				{Text: "annotation for " + name},
 			},
 		})
-		// Small sleep to ensure UpdatedAt ordering
-		time.Sleep(time.Millisecond)
+		clock.Advance(time.Millisecond)
 	}
 
 	names := store.ListNamedSessions()

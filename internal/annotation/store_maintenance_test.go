@@ -153,6 +153,7 @@ func TestStore_MultipleEvictions(t *testing.T) {
 func TestStore_AppendToNamedSession_UpdatesTTL(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.AppendToNamedSession("ttl-test", &Session{TabID: 1})
 
@@ -160,7 +161,7 @@ func TestStore_AppendToNamedSession_UpdatesTTL(t *testing.T) {
 	firstExpiry := store.named["ttl-test"].ExpiresAt
 	store.mu.RUnlock()
 
-	time.Sleep(2 * time.Millisecond)
+	clock.Advance(2 * time.Millisecond)
 
 	store.AppendToNamedSession("ttl-test", &Session{TabID: 2})
 
@@ -269,20 +270,30 @@ func TestStore_GetLatestSession_AllExpired(t *testing.T) {
 func TestStore_WaitForNamedSession_Returns(t *testing.T) {
 	store := NewStore(10 * time.Minute)
 	defer store.Close()
+	clock := useAnnotationTestClock(store)
 
 	store.MarkDrawStarted()
+	clock.Advance(time.Millisecond)
 
+	result := make(chan struct {
+		session  *NamedSession
+		timedOut bool
+	}, 1)
 	go func() {
-		time.Sleep(20 * time.Millisecond)
-		store.AppendToNamedSession("wait-test", &Session{
-			TabID:       1,
-			PageURL:     "https://example.com/waited",
-			Timestamp:   time.Now().UnixMilli(),
-			Annotations: []Annotation{{Text: "waited"}},
-		})
+		session, timedOut := store.WaitForNamedSession("wait-test", 2*time.Second)
+		result <- struct {
+			session  *NamedSession
+			timedOut bool
+		}{session: session, timedOut: timedOut}
 	}()
-
-	ns, timedOut := store.WaitForNamedSession("wait-test", 2*time.Second)
+	store.AppendToNamedSession("wait-test", &Session{
+		TabID:       1,
+		PageURL:     "https://example.com/waited",
+		Timestamp:   clock.Now().UnixMilli(),
+		Annotations: []Annotation{{Text: "waited"}},
+	})
+	waited := <-result
+	ns, timedOut := waited.session, waited.timedOut
 	if timedOut {
 		t.Fatal("expected named session but got timeout")
 	}
@@ -310,12 +321,20 @@ func TestStore_Close_UnblocksWait(t *testing.T) {
 
 	store.MarkDrawStarted()
 
+	result := make(chan struct {
+		session  *Session
+		timedOut bool
+	}, 1)
 	go func() {
-		time.Sleep(20 * time.Millisecond)
-		store.Close()
+		session, timedOut := store.WaitForSession(5 * time.Second)
+		result <- struct {
+			session  *Session
+			timedOut bool
+		}{session: session, timedOut: timedOut}
 	}()
-
-	session, timedOut := store.WaitForSession(5 * time.Second)
+	store.Close()
+	waited := <-result
+	session, timedOut := waited.session, waited.timedOut
 	if session != nil {
 		t.Error("expected nil session after close")
 	}

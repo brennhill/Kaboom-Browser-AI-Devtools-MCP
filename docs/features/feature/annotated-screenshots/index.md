@@ -4,7 +4,7 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - src/content/draw-mode/lifecycle-overlay.js
   - src/content/draw-mode/input-rendering.js
@@ -15,6 +15,11 @@ code_paths:
   - scripts/build/generate-draw-mode.js
   - extension/content/draw-mode.js
   - internal/annotation/store.go
+  - internal/annotation/store_cleanup.go
+  - internal/annotation/store_details.go
+  - internal/annotation/store_named.go
+  - internal/annotation/store_sessions.go
+  - internal/annotation/store_wait.go
   - internal/annotation/store_results.go
   - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
@@ -104,6 +109,9 @@ last_verified_date: 2026-03-05
 
 ### Go (store + handler)
 - `internal/annotation/store.go` — `Detail` struct with ParentContext, Siblings, CSSFramework fields; session TTL = 2 hours
+- Store time ownership is injected through its private clock boundary. Production
+  uses the wall clock, while package tests advance a controlled clock for TTL,
+  draw-generation, and eviction behavior without sleeps or timing races.
 - `internal/annotation/store_clear.go` — `ClearAll()` resets anonymous sessions, named sessions, details, and waiters (used by `configure(what:"clear", buffer:"all")` to prevent stale replay)
 - `internal/annotation/draw_sessions_handler.go` — persisted draw history, traversal-safe loading, and annotation-store hydration
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` — detail response enrichment, error correlation, LLM hints, and cross-project scope safety metadata (`projects`, `scope_ambiguous`, `scope_warning`, `filter_applied`)
@@ -124,6 +132,9 @@ last_verified_date: 2026-03-05
 - `tests/extension/draw-mode/draw-mode.test.js` — activation, annotation CRUD, persistence, and export
 - `tests/extension/draw-mode/draw-mode-fixture.js` — shared DOM, Chrome, timer, and module fixtures
 - `internal/annotation/store_maintenance_test.go` — `TestStore_SessionTTL_Is2Hours`
+- Annotation store tests synchronize waiters through store notifications and use
+  the controlled clock for timestamp ordering and expiration; no test relies on
+  `time.Sleep` for correctness.
 - `internal/annotation/draw_sessions_handler_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
 - `cmd/browser-agent/tools_analyze_annotations_test.go` — enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, hints tests
 - `internal/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
