@@ -115,6 +115,8 @@ test_paths:
   - cmd/browser-agent/internal/playbooks/resource_catalog_test.go
   - cmd/browser-agent/internal/playbooks/playbooks_resolver_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
+  - cmd/browser-agent/stdio_silence_test.go
+  - scripts/smoke-mcp-transport.sh
   - cmd/browser-agent/mcp_protocol_test.go
   - cmd/browser-agent/mcp_initialize_test.go
   - cmd/browser-agent/mcp_transport_handler_test.go
@@ -216,6 +218,12 @@ HTTP 200 can never carry an empty or partially encoded protocol response.
 `MCPHandler` owns its capture, tool schemas, limiter, redactor, usage tracker,
 and execution backend through one `ToolBackend` value. The executor contract has
 only `HandleToolCall`; no transport-policy getter remains on `ToolHandler`.
+
+Stdio isolation tests exercise the built bridge rather than the Go test binary.
+They close stdin and await the bridge's process-exit barrier, so transport
+purity is proven without wall-clock sleeps or forced termination. The focused
+smoke runner explicitly enables the integration build tag and therefore cannot
+silently report success after running zero transport tests.
 The execution modules, examples, and validation schemas used by that call path
 are constructed once in `internal/toolcatalog.Catalog`; the composition root
 does not maintain parallel lazy registries.

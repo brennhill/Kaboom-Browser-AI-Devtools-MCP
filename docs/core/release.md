@@ -151,7 +151,7 @@ non-JSON-RPC output breaks LLM communication.
 
 ```bash
 go test ./cmd/browser-agent -run "TestToolHandler.*Stdout" -v
-go test ./cmd/browser-agent -run "TestStdioSilence" -v
+go test -tags=integration ./cmd/browser-agent -run "TestStdioIsolation" -v
 ```
 
 See: `.claude/refs/mcp-stdio-invariant.md`

@@ -74,6 +74,7 @@ describe('Tooling contracts', () => {
   test('subprocess lifecycle tests run in the explicit Go integration job', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
     const coverageRunner = readFileSync('scripts/build/run-go-coverage.sh', 'utf8')
+    const transportSmoke = readFileSync('scripts/smoke-mcp-transport.sh', 'utf8')
     assert.match(workflow, /name: Go Integration Checks/)
     assert.match(workflow, /run-go-integration\.sh -race -count=1/)
     assert.match(
@@ -84,6 +85,11 @@ describe('Tooling contracts', () => {
     assert.match(
       workflow,
       /TestFastStart_ResourceWorkflowSoak[\s\S]*-tags=integration|go test -race -tags=integration[\s\S]*TestFastStart_ResourceWorkflowSoak/
+    )
+    assert.match(
+      transportSmoke,
+      /go test[\s\S]*-tags=integration[\s\S]*TestStdioIsolation_/,
+      'the focused transport smoke gate must compile and execute its integration-tagged tests'
     )
 
     for (const path of [

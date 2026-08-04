@@ -17,7 +17,6 @@
     "cmd/browser-agent/server_persistence_test.go": 6,
     "cmd/browser-agent/server_reliability_integration_test.go": 3,
     "cmd/browser-agent/server_reliability_test.go": 3,
-    "cmd/browser-agent/stdio_silence_test.go": 9,
     "cmd/browser-agent/test_daemon_cleanup_test.go": 1,
     "cmd/browser-agent/tools_analyze_annotations_core_test.go": 1,
     "cmd/browser-agent/tools_analyze_annotations_wait_test.go": 2,

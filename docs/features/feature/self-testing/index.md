@@ -158,6 +158,10 @@ unsafe mutation methods that previously compiled into `internal/capture`.
   parallel CI jobs. Subprocess suites carry the `integration` build tag, while
   the named integration job runs every tagged transport, persistence,
   contention, reliability, and stdio contract plus the fast-start soak.
+- The focused MCP transport smoke gate also enables the `integration` build
+  tag. Its real bridge processes close stdin and await the explicit process-exit
+  barrier; permanently skipped test-binary simulations and timing sleeps are
+  not accepted as transport coverage.
 - Category daemon lifecycle and result-file contract: `scripts/tests/framework/framework.sh`
 - User-state guard: `scripts/tests/framework/uat-user-state.sh` snapshots the
   prior daemon executable, LaunchAgent lifecycle, version, and tracked tab
