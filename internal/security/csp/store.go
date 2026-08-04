@@ -10,6 +10,7 @@ func NewGenerator() *Generator {
 	return &Generator{
 		origins: make(map[string]*OriginEntry),
 		pages:   make(map[string]bool),
+		now:     time.Now,
 	}
 }
 
@@ -26,7 +27,7 @@ func (g *Generator) RecordOrigin(origin, resourceType, pageURL string) {
 	defer g.mu.Unlock()
 
 	key := origin + "|" + resourceType
-	now := time.Now()
+	now := g.now()
 
 	entry, exists := g.origins[key]
 	if !exists {

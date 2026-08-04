@@ -35,6 +35,7 @@ type Generator struct {
 	mu      sync.RWMutex
 	origins map[string]*OriginEntry // key: "origin|resourceType"
 	pages   map[string]bool         // all unique page URLs observed
+	now     func() time.Time
 }
 
 // Params defines the input parameters for CSP generation.

@@ -137,6 +137,8 @@ imports `httpsec`.
 - `internal/security/policy/boundary_test.go` — LLM trust boundary: MCP mode detection and blocked config mutations.
 - `internal/security/csp/csp_test.go` — generated CSP policy and directive behavior.
 - `internal/security/csp/csp_store_test.go` — origin observation accumulation and timestamps.
+- CSP observation time comes from the generator's private clock boundary, so
+  timestamp ordering is tested with exact instants instead of elapsed sleeps.
 - `internal/security/csp/csp_tooling_test.go` — CSP tool parameter handling and dispatch.
 - `internal/security/csp/csp_helpers_test.go` — resource classification and URL extraction.
 - `internal/security/csp/boundary_test.go` — session-only whitelist overrides are applied, warned about, audited, and never persisted.

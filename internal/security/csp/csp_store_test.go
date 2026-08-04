@@ -172,9 +172,11 @@ func TestCSPFirstSeenTimestamp(t *testing.T) {
 func TestCSPLastSeenUpdates(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
+	current := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+	gen.now = func() time.Time { return current }
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
-	time.Sleep(time.Millisecond)
+	current = current.Add(time.Millisecond)
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 
 	gen.mu.RLock()
