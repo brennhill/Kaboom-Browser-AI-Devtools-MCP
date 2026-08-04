@@ -187,6 +187,11 @@ workflow, storage, and batch owners. A small action runtime owns only shared
 command lifecycle policy. The former broad `InteractActionHandler` and
 `toolinteract.Deps` surfaces are deleted and structurally prohibited; no
 forwarding facade remains.
+The browser/tab owner exposes one `Handle(action, request, args)` boundary.
+Action-specific implementations, insecure-navigation rewriting, and tracking
+continuations are private; an AST contract test rejects any new exported
+`BrowserActions` method so registry callers cannot couple to implementation
+details.
 Composition also supplies evidence and query callbacks directly; dead or
 one-line ToolHandler forwarding methods are structurally prohibited.
 Summary response-mode behavior belongs to `summarypref.Cache`; async formatting

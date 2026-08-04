@@ -53,7 +53,7 @@ func TestInteractNavigate_QueueFullFailsFast(t *testing.T) {
 	saturatePendingQueryQueue(t, env.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.browserActions.HandleBrowserActionNavigateImpl(req, json.RawMessage(`{"url":"https://example.com"}`))
+	resp := env.handler.browserActions.Handle("navigate", req, json.RawMessage(`{"url":"https://example.com"}`))
 	result := parseToolResult(t, resp)
 	assertStructuredErrorCode(t, "interact navigate queue full", result, mcp.ErrQueueFull)
 }
@@ -66,7 +66,7 @@ func TestInteractNavigate_QueueRecoversWithoutDiscardingAcceptedCommands(t *test
 
 	env.capture.Queries().ExpireAllPendingQueries("pressure_fixture_released")
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.browserActions.HandleBrowserActionNavigateImpl(req, json.RawMessage(`{"url":"https://example.com","sync":false}`))
+	resp := env.handler.browserActions.Handle("navigate", req, json.RawMessage(`{"url":"https://example.com","sync":false}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("first healthy command after pressure recovery failed: %+v", result)

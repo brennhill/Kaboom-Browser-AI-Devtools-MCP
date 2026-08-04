@@ -85,7 +85,7 @@ func TestHandleSubtitle_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{invalid}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.browserActions.HandleSubtitleImpl(req, args)
+	resp := env.handler.browserActions.Handle("subtitle", req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -282,7 +282,7 @@ func TestHandlePilotHighlight_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{bad}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.browserActions.HandleHighlightImpl(req, args)
+	resp := env.handler.browserActions.Handle("highlight", req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

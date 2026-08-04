@@ -145,6 +145,29 @@ func TestMCPToolBackendIsExecutionOnly(t *testing.T) {
 	}
 }
 
+func TestBrowserActionsExposeOnlyCanonicalDispatch(t *testing.T) {
+	path := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolinteract", "interact_browser.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	if err != nil {
+		t.Fatalf("parse browser actions: %v", err)
+	}
+	for _, declaration := range parsed.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if !ok || function.Recv == nil || !function.Name.IsExported() {
+			continue
+		}
+		receiver := function.Recv.List[0].Type
+		pointer, ok := receiver.(*ast.StarExpr)
+		if !ok {
+			continue
+		}
+		name, ok := pointer.X.(*ast.Ident)
+		if ok && name.Name == "BrowserActions" && function.Name.Name != "Handle" {
+			t.Errorf("BrowserActions exports implementation method %s; route through Handle", function.Name.Name)
+		}
+	}
+}
+
 func TestObserveDispatcherDoesNotRequireHostInterfaces(t *testing.T) {
 	for relativePath, forbidden := range map[string]string{
 		"cmd/browser-agent/internal/toolobserve/deps.go":       "type Deps interface {",

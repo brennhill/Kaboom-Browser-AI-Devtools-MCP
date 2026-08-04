@@ -223,7 +223,7 @@ func (h *WorkflowActions) HandleNavigateAndWaitFor(req mcp.JSONRPCRequest, args 
 		"tab_id": params.TabID,
 	})
 	stepStart := time.Now()
-	navResp := h.browser.HandleBrowserActionNavigateImpl(req, navArgs)
+	navResp := h.browser.Handle("navigate", req, navArgs)
 	trace = append(trace, act.WorkflowStep{
 		Action:   "navigate",
 		Status:   act.ResponseStatus(navResp),

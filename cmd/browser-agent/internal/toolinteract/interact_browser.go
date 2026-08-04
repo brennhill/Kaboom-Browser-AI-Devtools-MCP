@@ -3,9 +3,9 @@
 // highlight and execute_js, plus subtitles and the shared
 // queueBrowserAction helper they all funnel through.
 // Why one file: this was four files by topic, but the call graph makes it one —
-// every handler here funnels through queueBrowserAction, and ApplySwitchTabTracking
+// every handler here funnels through queueBrowserAction, and applySwitchTabTracking
 // (formerly interact_tracking.go) has exactly one caller,
-// HandleBrowserActionSwitchTabImpl, so it is a private continuation of switch_tab
+// handleSwitchTab, so it is a private continuation of switch_tab
 // rather than a tracking subsystem of its own.
 // Docs: docs/features/feature/interact-explore/index.md
 
@@ -25,9 +25,40 @@ import (
 
 const defaultPort = 7890
 
-// stashPerfSnapshotImpl saves the current performance snapshot as a "before" baseline
+// Handle is the sole cross-package browser-action boundary. Action-family
+// implementations remain private so callers cannot couple to orchestration details.
+func (h *BrowserActions) Handle(action string, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	switch action {
+	case "subtitle":
+		return h.handleSubtitle(req, args)
+	case "navigate":
+		return h.handleNavigate(req, args)
+	case "refresh":
+		return h.handleRefresh(req, args)
+	case "back":
+		return h.handleBack(req, args)
+	case "forward":
+		return h.handleForward(req, args)
+	case "new_tab":
+		return h.handleNewTab(req, args)
+	case "switch_tab":
+		return h.handleSwitchTab(req, args)
+	case "activate_tab":
+		return h.handleActivateTab(req, args)
+	case "close_tab":
+		return h.handleCloseTab(req, args)
+	case "highlight":
+		return h.handleHighlight(req, args)
+	case "execute_js":
+		return h.handleExecuteJS(req, args)
+	default:
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Unsupported browser action", "Use a registered interact action", mcp.WithParam("action"))
+	}
+}
+
+// stashPerfSnapshot saves the current performance snapshot as a "before" baseline
 // for perf_diff computation, keyed by correlation ID.
-func (h *BrowserActions) stashPerfSnapshotImpl(correlationID string) {
+func (h *BrowserActions) stashPerfSnapshot(correlationID string) {
 	_, _, trackedURL := h.deps.Capture().Extension().GetTrackingStatus()
 	u, err := url.Parse(trackedURL)
 	if err != nil || u.Path == "" {
@@ -38,7 +69,7 @@ func (h *BrowserActions) stashPerfSnapshotImpl(correlationID string) {
 	}
 }
 
-func (h *BrowserActions) ResolveNavigateURLImpl(rawURL string) (string, error) {
+func (h *BrowserActions) resolveNavigateURL(rawURL string) (string, error) {
 	trimmed := strings.TrimSpace(rawURL)
 	const insecurePrefix = "kaboom-insecure://"
 	if !strings.HasPrefix(strings.ToLower(trimmed), insecurePrefix) {
@@ -120,7 +151,7 @@ func (h *BrowserActions) queueBrowserAction(req mcp.JSONRPCRequest, args json.Ra
 	return cmd.execute(req, args)
 }
 
-func (h *BrowserActions) HandleSubtitleImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleSubtitle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Text *string `json:"text"`
 	}
@@ -146,7 +177,7 @@ func (h *BrowserActions) HandleSubtitleImpl(req mcp.JSONRPCRequest, args json.Ra
 		execute(req, args)
 }
 
-func (h *BrowserActions) HandleBrowserActionNavigateImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleNavigate(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		URL            string `json:"url"`
 		TabID          int    `json:"tab_id,omitempty"`
@@ -159,7 +190,7 @@ func (h *BrowserActions) HandleBrowserActionNavigateImpl(req mcp.JSONRPCRequest,
 	if resp, blocked := toolresp.RequireString(req, params.URL, "url", "Add the 'url' parameter and call again"); blocked {
 		return resp
 	}
-	resolvedURL, err := h.ResolveNavigateURLImpl(params.URL)
+	resolvedURL, err := h.resolveNavigateURL(params.URL)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidParam,
 			err.Error(),
@@ -181,7 +212,7 @@ func (h *BrowserActions) HandleBrowserActionNavigateImpl(req mcp.JSONRPCRequest,
 		queryParams(actionPayload).
 		tabID(params.TabID).
 		guards(h.deps.RequirePilot, h.deps.RequireExtension).
-		preEnqueue(h.stashPerfSnapshotImpl).
+		preEnqueue(h.stashPerfSnapshot).
 		recordAction("navigate", resolvedURL, map[string]any{
 			"target_url":    resolvedURL,
 			"requested_url": params.URL,
@@ -201,7 +232,7 @@ func (h *BrowserActions) HandleBrowserActionNavigateImpl(req mcp.JSONRPCRequest,
 	return resp
 }
 
-func (h *BrowserActions) HandleBrowserActionRefreshImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleRefresh(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID int `json:"tab_id,omitempty"`
 	}
@@ -216,13 +247,13 @@ func (h *BrowserActions) HandleBrowserActionRefreshImpl(req mcp.JSONRPCRequest, 
 		buildParams(map[string]any{"action": "refresh"}).
 		tabID(params.TabID).
 		guards(h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking).
-		preEnqueue(h.stashPerfSnapshotImpl).
+		preEnqueue(h.stashPerfSnapshot).
 		recordAction("refresh", "", nil).
 		queuedMessage("Refresh queued").
 		execute(req, args)
 }
 
-func (h *BrowserActions) HandleBrowserActionBackImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleBack(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.queueBrowserAction(req, args, browserActionOpts{
 		action:         "back",
 		correlationPfx: "back",
@@ -230,7 +261,7 @@ func (h *BrowserActions) HandleBrowserActionBackImpl(req mcp.JSONRPCRequest, arg
 	})
 }
 
-func (h *BrowserActions) HandleBrowserActionForwardImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleForward(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.queueBrowserAction(req, args, browserActionOpts{
 		action:         "forward",
 		correlationPfx: "forward",
@@ -238,7 +269,7 @@ func (h *BrowserActions) HandleBrowserActionForwardImpl(req mcp.JSONRPCRequest, 
 	})
 }
 
-func (h *BrowserActions) HandleBrowserActionNewTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleNewTab(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		URL string `json:"url"`
 	}
@@ -248,7 +279,7 @@ func (h *BrowserActions) HandleBrowserActionNewTabImpl(req mcp.JSONRPCRequest, a
 
 	resolvedURL := params.URL
 	if params.URL != "" {
-		rewriteURL, err := h.ResolveNavigateURLImpl(params.URL)
+		rewriteURL, err := h.resolveNavigateURL(params.URL)
 		if err != nil {
 			return mcp.Fail(req, mcp.ErrInvalidParam,
 				err.Error(),
@@ -280,7 +311,7 @@ func (h *BrowserActions) HandleBrowserActionNewTabImpl(req mcp.JSONRPCRequest, a
 		execute(req, args)
 }
 
-func (h *BrowserActions) HandleBrowserActionSwitchTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleSwitchTab(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID      int   `json:"tab_id,omitempty"`
 		TabIndex   *int  `json:"tab_index,omitempty"`
@@ -334,13 +365,13 @@ func (h *BrowserActions) HandleBrowserActionSwitchTabImpl(req mcp.JSONRPCRequest
 	// Server-side update only occurs in sync mode because MaybeWaitForCommand
 	// returns immediately when sync=false, so GetCommandResult has no result yet.
 	if setTracked && correlationID != "" {
-		h.ApplySwitchTabTracking(correlationID)
+		h.applySwitchTabTracking(correlationID)
 	}
 
 	return resp
 }
 
-func (h *BrowserActions) HandleActivateTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleActivateTab(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.queueBrowserAction(req, args, browserActionOpts{
 		action:         "activate_tab",
 		correlationPfx: "activate",
@@ -348,7 +379,7 @@ func (h *BrowserActions) HandleActivateTabImpl(req mcp.JSONRPCRequest, args json
 	})
 }
 
-func (h *BrowserActions) HandleBrowserActionCloseTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleCloseTab(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID int `json:"tab_id,omitempty"`
 	}
@@ -373,7 +404,7 @@ func (h *BrowserActions) HandleBrowserActionCloseTabImpl(req mcp.JSONRPCRequest,
 	})
 }
 
-func (h *BrowserActions) HandleHighlightImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleHighlight(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Selector   string `json:"selector"`
 		DurationMs int    `json:"duration_ms,omitempty"`
@@ -399,7 +430,7 @@ func (h *BrowserActions) HandleHighlightImpl(req mcp.JSONRPCRequest, args json.R
 		execute(req, args)
 }
 
-func (h *BrowserActions) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) handleExecuteJS(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Script    string `json:"script"`
 		TimeoutMs int    `json:"timeout_ms,omitempty"`
@@ -442,7 +473,7 @@ func (h *BrowserActions) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args json.R
 // (background=true), server-side tracking is NOT immediately updated.
 // The extension-side persistTrackedTab handles async retarget via the
 // next /sync heartbeat. See issue #271.
-func (h *BrowserActions) ApplySwitchTabTracking(correlationID string) {
+func (h *BrowserActions) applySwitchTabTracking(correlationID string) {
 	cmd, found := h.deps.Capture().Queries().GetCommandResult(correlationID)
 	if !found || cmd == nil || cmd.Status != "complete" {
 		return

@@ -77,7 +77,7 @@ func getInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
 func buildInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
 	handlers := map[string]toolrouting.Handler[*ToolHandler]{
 		"highlight": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleHighlightImpl(req, args)
+			return th.browserActions.Handle("highlight", req, args)
 		},
 		"save_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteractHandler.HandleStateSave(req, args)
@@ -107,31 +107,31 @@ func buildInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
 			return th.storageActions.HandleDeleteCookie(req, args)
 		},
 		"execute_js": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleExecuteJSImpl(req, args)
+			return th.browserActions.Handle("execute_js", req, args)
 		},
 		"navigate": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleBrowserActionNavigateImpl(req, args)
+			return th.browserActions.Handle("navigate", req, args)
 		},
 		"refresh": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleBrowserActionRefreshImpl(req, args)
+			return th.browserActions.Handle("refresh", req, args)
 		},
 		"back": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleBrowserActionBackImpl(req, args)
+			return th.browserActions.Handle("back", req, args)
 		},
 		"forward": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleBrowserActionForwardImpl(req, args)
+			return th.browserActions.Handle("forward", req, args)
 		},
 		"new_tab": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleBrowserActionNewTabImpl(req, args)
+			return th.browserActions.Handle("new_tab", req, args)
 		},
 		"switch_tab": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleBrowserActionSwitchTabImpl(req, args)
+			return th.browserActions.Handle("switch_tab", req, args)
 		},
 		"close_tab": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleBrowserActionCloseTabImpl(req, args)
+			return th.browserActions.Handle("close_tab", req, args)
 		},
 		"subtitle": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleSubtitleImpl(req, args)
+			return th.browserActions.Handle("subtitle", req, args)
 		},
 		"list_interactive": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.domActions.HandleListInteractive(req, args)
@@ -152,7 +152,7 @@ func buildInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
 			return th.domActions.HandleHardwareClick(req, args)
 		},
 		"activate_tab": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.browserActions.HandleActivateTabImpl(req, args)
+			return th.browserActions.Handle("activate_tab", req, args)
 		},
 		"get_readable": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.pageActions.HandleGetReadable(req, args)

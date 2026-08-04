@@ -66,7 +66,7 @@ type commandBuilder struct {
 
 	// Pre-enqueue callback (optional). Called after correlation ID is generated
 	// but before the query is enqueued. Used for side effects that need the
-	// correlation ID (e.g. stashPerfSnapshotImpl).
+	// correlation ID (e.g. stashPerfSnapshot).
 	preEnqueueFn func(correlationID string)
 
 	// Post-enqueue callback (optional). Called after the query is successfully
@@ -141,7 +141,7 @@ func (b *commandBuilder) guardsWithOpts(opts []func(*mcp.StructuredError), fns .
 }
 
 // preEnqueue registers a callback invoked after correlation ID generation but before enqueue.
-// Useful for side effects like stashPerfSnapshotImpl that need the correlation ID.
+// Useful for side effects like stashPerfSnapshot that need the correlation ID.
 func (b *commandBuilder) preEnqueue(fn func(correlationID string)) *commandBuilder {
 	b.preEnqueueFn = fn
 	return b

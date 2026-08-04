@@ -73,6 +73,9 @@ Use this as a hard checklist during design, coding, and review.
 - Mode/action registration belongs in the tool registry files (`tools_*_registry.go`), not ad-hoc `switch` blocks in entrypoint files.
 - Tool routing is canonical-only: every top-level tool call uses `what`, and
   registries must not add alternate selector or mode names.
+- Action-family owners expose one dispatcher method across package boundaries;
+  individual `handle*` implementations remain private. AST contract tests
+  should ratchet the allowed exported receiver surface.
 
 ## 8) Pending Query + Async Command Pattern
 
