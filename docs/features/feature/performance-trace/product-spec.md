@@ -25,7 +25,7 @@ that raw trace inline would also overwhelm an MCP response.
 Start recording:
 
 ```json
-{"what":"performance_trace","action":"start"}
+{"what":"performance_trace","action":"start","tab_id":42,"reload":true,"cache":"cold"}
 ```
 
 Stop and publish the artifact:
@@ -47,9 +47,11 @@ The stop response contains:
 }
 ```
 
-`action` is required. `tab_id` and the standard `background` command option are optional. Page
-reload and automatic stop are intentionally not implicit: the caller controls the exact capture
-window with ordinary Kaboom navigation and interaction commands.
+`action` is required. `tab_id`, `reload`, `cache` (`warm` or `cold`), and the standard
+`background` command option are optional. Reload is never implicit. Both start and stop results
+report the resolved tab ID, current URL, Chrome navigation/loader ID, and the application's build
+SHA when it exposes one through a standard build meta/global marker; unavailable values are
+reported explicitly rather than omitted.
 
 ## Requirements
 
@@ -60,6 +62,7 @@ window with ordinary Kaboom navigation and interaction commands.
 5. Surface debugger detachments, trace data loss, timeouts, and local storage failures.
 6. Remove partial artifacts when a start or stop fails.
 7. Never transmit trace content outside the local daemon.
+8. Target background tabs by stable tab ID and retain that identity across reload/navigation.
 
 ## Non-goals
 

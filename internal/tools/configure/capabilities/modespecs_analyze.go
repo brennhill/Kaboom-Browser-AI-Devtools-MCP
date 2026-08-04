@@ -13,7 +13,7 @@ var analyzeModeSpecs = map[string]modeParamSpec{
 	"performance_trace": {
 		Hint:     "Record a full Chrome CPU flamechart trace to a local DevTools/Perfetto-importable JSON artifact",
 		Required: []string{"action"},
-		Optional: []string{"tab_id", "background"},
+		Optional: []string{"tab_id", "reload", "cache", "background"},
 	},
 	"accessibility": {
 		Hint:     "WCAG/axe accessibility audit with violation details. summary=true returns counts + top issues",

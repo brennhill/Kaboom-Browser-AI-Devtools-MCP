@@ -124,7 +124,11 @@ func (m *Manager) Finish(req WirePerformanceTraceFinishRequest) (WirePerformance
 	if err := os.Rename(trace.partialPath, trace.finalPath); err != nil {
 		return WirePerformanceTraceResult{}, fmt.Errorf("publish performance trace artifact: %w", err)
 	}
-	result := WirePerformanceTraceResult{TraceID: trace.id, ArtifactPath: trace.finalPath, EventCount: trace.eventCount, ChunkCount: trace.nextSeq, Bytes: trace.bytes}
+	result := WirePerformanceTraceResult{
+		TraceID: trace.id, ArtifactPath: trace.finalPath, EventCount: trace.eventCount,
+		ChunkCount: trace.nextSeq, Bytes: trace.bytes, TabID: req.TabID, URL: req.URL,
+		NavigationID: req.NavigationID, BuildSHA: req.BuildSHA,
+	}
 	m.active = nil
 	return result, nil
 }

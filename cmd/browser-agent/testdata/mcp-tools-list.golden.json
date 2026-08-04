@@ -274,6 +274,14 @@
           "description": "Baseline name to compare against (visual_diff)",
           "type": "string"
         },
+        "cache": {
+          "description": "Browser cache policy for performance_trace start",
+          "enum": [
+            "warm",
+            "cold"
+          ],
+          "type": "string"
+        },
         "categories": {
           "description": "Categories to include (audit: performance, accessibility, security, best_practices; page_issues: console_errors, network_failures, accessibility, security)",
           "items": {
@@ -391,6 +399,10 @@
             "evaluate"
           ],
           "type": "string"
+        },
+        "reload": {
+          "description": "Reload the exact target tab after tracing starts (performance_trace start; default false)",
+          "type": "boolean"
         },
         "results": {
           "description": "Assertion results using PASS, FAIL, BLOCKED, UNVERIFIED, or FLAKY (verification evaluate)",

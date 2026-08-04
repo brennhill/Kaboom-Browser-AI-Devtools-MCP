@@ -60,12 +60,30 @@ interface ActiveTrace {
   abortPromise?: Promise<unknown>
   debuggerDetached?: boolean
   detachExpected?: boolean
+  metadata: PerformanceTraceTargetMetadata
+  navigation?: { resolve: () => void }
+}
+
+export interface PerformanceTraceStartOptions {
+  reload?: boolean
+  cache?: 'warm' | 'cold'
+}
+
+interface PerformanceTraceTargetMetadata {
+  url: string
+  navigation_id: string
+  build_sha: string
 }
 
 export interface PerformanceTraceStarted {
   status: 'recording'
   trace_id: string
   tab_id: number
+  url: string
+  navigation_id: string
+  build_sha: string
+  cache: 'warm' | 'cold'
+  reloaded: boolean
 }
 
 export interface PerformanceTraceFinished extends WirePerformanceTraceResult {
@@ -82,19 +100,48 @@ export class PerformanceTraceController {
     deps.debuggerApi.onDetach.addListener((source, reason) => this.onDetach(source, reason))
   }
 
-  async start(tabId: number): Promise<PerformanceTraceStarted> {
+  async start(tabId: number, options: PerformanceTraceStartOptions = {}): Promise<PerformanceTraceStarted> {
     if (this.active) throw new Error(`performance trace already active for tab ${this.active.tabId}`)
+    const cache = options.cache ?? 'warm'
+    if (cache !== 'warm' && cache !== 'cold') throw new Error('performance trace cache must be warm or cold')
     const opened = requireStartResponse(await this.deps.postJSON('/performance-trace/start', { tab_id: tabId }))
-    const active: ActiveTrace = { traceId: opened.trace_id, tabId, sequence: 0, uploads: Promise.resolve() }
+    const active: ActiveTrace = {
+      traceId: opened.trace_id,
+      tabId,
+      sequence: 0,
+      uploads: Promise.resolve(),
+      metadata: { url: 'unavailable', navigation_id: 'unavailable', build_sha: 'unavailable' }
+    }
     this.active = active
     try {
       await this.deps.debuggerApi.attach({ tabId }, CDP_VERSION)
+      await this.deps.debuggerApi.sendCommand({ tabId }, 'Page.enable')
+      await this.deps.debuggerApi.sendCommand({ tabId }, 'Network.enable')
+      await this.deps.debuggerApi.sendCommand({ tabId }, 'Network.setCacheDisabled', {
+        cacheDisabled: cache === 'cold'
+      })
       await this.deps.debuggerApi.sendCommand({ tabId }, 'Tracing.start', {
         categories: TRACE_CATEGORIES,
         options: 'record-as-much-as-possible',
         transferMode: 'ReportEvents'
       })
-      return { status: 'recording', trace_id: active.traceId, tab_id: tabId }
+      if (cache === 'cold') await this.deps.debuggerApi.sendCommand({ tabId }, 'Network.clearBrowserCache')
+      if (options.reload === true) {
+        const navigation = new Promise<void>((resolve) => {
+          active.navigation = { resolve }
+        })
+        await this.deps.debuggerApi.sendCommand({ tabId }, 'Page.reload', { ignoreCache: cache === 'cold' })
+        await withBoundedTimeout(navigation, this.completionTimeoutMs, 'Reload navigation did not start before timeout')
+      }
+      active.metadata = await this.readTargetMetadata(tabId)
+      return {
+        status: 'recording',
+        trace_id: active.traceId,
+        tab_id: tabId,
+        ...active.metadata,
+        cache,
+        reloaded: options.reload === true
+      }
     } catch (error) {
       await this.abortActive(errorMessage(error, 'Chrome tracing failed to start'))
       throw error
@@ -121,11 +168,17 @@ export class PerformanceTraceController {
       await completion
       await active.uploads
       if (active.failure) throw active.failure
+      active.metadata = await this.readTargetMetadata(tabId)
+      await this.deps.debuggerApi.sendCommand({ tabId }, 'Network.setCacheDisabled', { cacheDisabled: false })
       active.detachExpected = true
       await this.deps.debuggerApi.detach({ tabId })
       active.debuggerDetached = true
       const result = requireTraceResult(
-        await this.deps.postJSON('/performance-trace/finish', { trace_id: active.traceId })
+        await this.deps.postJSON('/performance-trace/finish', {
+          trace_id: active.traceId,
+          tab_id: tabId,
+          ...active.metadata
+        })
       )
       this.active = undefined
       return {
@@ -151,6 +204,17 @@ export class PerformanceTraceController {
   private onEvent(source: Debuggee, method: string, params?: object): void {
     const active = this.active
     if (!active || source.tabId !== active.tabId) return
+    if (method === 'Page.frameNavigated') {
+      const frame = (params as { frame?: { parentId?: unknown; url?: unknown; loaderId?: unknown } } | undefined)?.frame
+      if (frame && frame.parentId === undefined) {
+        if (typeof frame.url === 'string') active.metadata.url = frame.url
+        if (typeof frame.loaderId === 'string' && frame.loaderId.length > 0)
+          active.metadata.navigation_id = frame.loaderId
+        active.navigation?.resolve()
+        active.navigation = undefined
+      }
+      return
+    }
     if (method === 'Tracing.tracingComplete') {
       if ((params as { dataLossOccurred?: unknown } | undefined)?.dataLossOccurred === true) {
         active.failure = new Error('Chrome lost trace data before the CPU flamechart completed')
@@ -234,6 +298,23 @@ export class PerformanceTraceController {
       })
     }
   }
+
+  private async readTargetMetadata(tabId: number): Promise<PerformanceTraceTargetMetadata> {
+    const frameTree = (await this.deps.debuggerApi.sendCommand({ tabId }, 'Page.getFrameTree')) as
+      | { frameTree?: { frame?: { url?: unknown; loaderId?: unknown } } }
+      | undefined
+    const frame = frameTree?.frameTree?.frame
+    const evaluated = (await this.deps.debuggerApi.sendCommand({ tabId }, 'Runtime.evaluate', {
+      expression:
+        'document.querySelector(\'meta[name="build-sha"],meta[name="build_sha"],meta[name="commit-sha"]\')?.getAttribute(\'content\') || globalThis.__BUILD_SHA__ || globalThis.__COMMIT_SHA__ || document.documentElement.dataset.buildSha || \'unavailable\'',
+      returnByValue: true
+    })) as { result?: { value?: unknown } } | undefined
+    return {
+      url: typeof frame?.url === 'string' && frame.url.length > 0 ? frame.url : 'unavailable',
+      navigation_id: typeof frame?.loaderId === 'string' && frame.loaderId.length > 0 ? frame.loaderId : 'unavailable',
+      build_sha: normalizeBuildSHA(evaluated?.result?.value)
+    }
+  }
 }
 
 export function createPerformanceTraceController(deps: ControllerDeps): PerformanceTraceController {
@@ -287,4 +368,23 @@ function requireTraceResult(value: unknown): WirePerformanceTraceResult {
     throw new Error('performance trace daemon returned an invalid artifact response')
   }
   return candidate as WirePerformanceTraceResult
+}
+
+function normalizeBuildSHA(value: unknown): string {
+  if (typeof value !== 'string' || value.trim().length === 0) return 'unavailable'
+  return value.trim().slice(0, 128)
+}
+
+async function withBoundedTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_resolve, reject) => {
+        timeout = globalThis.setTimeout(() => reject(new Error(message)), timeoutMs)
+      })
+    ])
+  } finally {
+    if (timeout !== undefined) globalThis.clearTimeout(timeout)
+  }
 }

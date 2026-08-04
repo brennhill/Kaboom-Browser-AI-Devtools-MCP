@@ -18,6 +18,12 @@ uses `Tracing.start` in `ReportEvents` mode with the same timeline and V8 CPU pr
 used by Chrome's Performance tooling. `Tracing.dataCollected` events are serialized into batches
 below the local request bound and uploaded in sequence.
 
+The command registry resolves an explicit `tab_id` before CDP attachment, so the tab does not
+need to be foregrounded. A cold capture enables the Network domain, disables and clears the
+browser cache, begins tracing, and only then reloads that exact CDP target. The controller waits
+for the main-frame navigation event with a bounded timeout rather than sleeping. It reads the
+main frame URL/loader ID and a bounded build marker from the page before returning metadata.
+
 The daemon's performance-trace manager opens a mode-0600 partial file beneath Kaboom's state
 directory. It validates the trace identifier, sequence number, and every event before an
 append-only write. `Tracing.tracingComplete` means Chrome has delivered all pending batches; the

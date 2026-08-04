@@ -24,6 +24,9 @@ last_verified_date: 2026-08-04
 | Bounds | Oversized request bodies are rejected with HTTP 413. |
 | Concurrency | Concurrent start, stale ID, out-of-order sequence, and wrong-tab stop fail. |
 | Chrome lifecycle | Attach, start, data collection, end, completion, and detach are deterministic. |
+| Targeting | An explicit background `tab_id` is used for every CDP command without activating the tab. |
+| Reload/cache | Cold cache is disabled and cleared after tracing begins and before the target reload. |
+| Attribution | Start and stop report tab, URL, navigation ID, and bounded build SHA values. |
 | Failure recovery | Debugger detach removes the partial artifact and returns an actionable error. |
 | Data integrity | Chrome's `dataLossOccurred` flag fails the capture instead of publishing incomplete evidence. |
 | Wire contract | Generated Go/TypeScript fields pass `make check-wire-drift`. |
@@ -31,7 +34,7 @@ last_verified_date: 2026-08-04
 ## Connected UAT
 
 1. Track a normal HTTP or HTTPS tab with the extension connected.
-2. Call `analyze({"what":"performance_trace","action":"start"})`.
+2. Call `analyze({"what":"performance_trace","action":"start","tab_id":ID,"reload":true,"cache":"cold"})`.
 3. Exercise page load and the CPU-intensive interaction to investigate.
 4. Call `analyze({"what":"performance_trace","action":"stop"})`.
 5. Confirm the returned path exists and contains a non-empty `traceEvents` array.

@@ -28,12 +28,18 @@ func TestManagerWritesImportableTraceArtifact(t *testing.T) {
 		t.Fatalf("Append second chunk: %v", err)
 	}
 
-	result, err := m.Finish(WirePerformanceTraceFinishRequest{TraceID: started.TraceID})
+	result, err := m.Finish(WirePerformanceTraceFinishRequest{
+		TraceID: started.TraceID, TabID: 42, URL: "https://app.test/design",
+		NavigationID: "nav-123", BuildSHA: "build-abc123",
+	})
 	if err != nil {
 		t.Fatalf("Finish: %v", err)
 	}
 	if result.EventCount != 2 || result.ChunkCount != 2 {
 		t.Fatalf("unexpected result: %+v", result)
+	}
+	if result.TabID != 42 || result.URL != "https://app.test/design" || result.NavigationID != "nav-123" || result.BuildSHA != "build-abc123" {
+		t.Fatalf("missing target metadata: %+v", result)
 	}
 	if filepath.Ext(result.ArtifactPath) != ".json" {
 		t.Fatalf("artifact path = %q", result.ArtifactPath)

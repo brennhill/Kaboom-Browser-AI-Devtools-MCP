@@ -17,12 +17,16 @@ func HandlePerformanceTrace(d toolanalyze.Deps, req mcp.JSONRPCRequest, args jso
 	var params struct {
 		Action string `json:"action"`
 		TabID  int    `json:"tab_id"`
+		Cache  string `json:"cache"`
 	}
 	if err := json.Unmarshal(args, &params); err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 	if params.Action != "start" && params.Action != "stop" {
 		return mcp.Fail(req, mcp.ErrInvalidParam, "performance_trace requires action=start or action=stop", "Choose one supported trace lifecycle action")
+	}
+	if params.Cache != "" && params.Cache != "warm" && params.Cache != "cold" {
+		return mcp.Fail(req, mcp.ErrInvalidParam, "performance_trace cache must be warm or cold", "Choose a supported cache policy", mcp.WithParam("cache"))
 	}
 
 	correlationID := toolresp.NewCorrelationID("performance-trace")

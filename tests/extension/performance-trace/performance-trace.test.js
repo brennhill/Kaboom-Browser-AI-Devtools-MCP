@@ -18,6 +18,21 @@ function fixture(completionParams = {}) {
       if (method === 'Tracing.end') {
         queueMicrotask(() => eventListener({ tabId: 41 }, 'Tracing.tracingComplete', completionParams))
       }
+      if (method === 'Page.getFrameTree') {
+        return { frameTree: { frame: { url: 'https://app.test/design', loaderId: 'nav-123' } } }
+      }
+      if (method === 'Runtime.evaluate') {
+        return { result: { value: 'build-abc123' } }
+      }
+      if (method === 'Page.reload') {
+        queueMicrotask(() =>
+          eventListener(
+            { tabId: 41 },
+            'Page.frameNavigated',
+            { frame: { url: 'https://app.test/design', loaderId: 'nav-reloaded' } }
+          )
+        )
+      }
       return {}
     }),
     onEvent: { addListener: (listener) => (eventListener = listener) },
@@ -32,7 +47,11 @@ function fixture(completionParams = {}) {
         artifact_path: '/tmp/cpu-trace.json',
         event_count: 2,
         chunk_count: 1,
-        bytes: 128
+        bytes: 128,
+        tab_id: payload.tab_id,
+        url: payload.url,
+        navigation_id: payload.navigation_id,
+        build_sha: payload.build_sha
       }
     }
     return { accepted: true }
@@ -45,7 +64,16 @@ describe('Chrome performance trace controller', () => {
   test('captures full trace events and returns a local importable artifact', async () => {
     const f = fixture()
     const started = await f.controller.start(41)
-    assert.deepEqual(started, { status: 'recording', trace_id: 'trace-1', tab_id: 41 })
+    assert.deepEqual(started, {
+      status: 'recording',
+      trace_id: 'trace-1',
+      tab_id: 41,
+      url: 'https://app.test/design',
+      navigation_id: 'nav-123',
+      build_sha: 'build-abc123',
+      cache: 'warm',
+      reloaded: false
+    })
 
     f.emit({ tabId: 41 }, 'Tracing.dataCollected', {
       value: [
@@ -58,10 +86,27 @@ describe('Chrome performance trace controller', () => {
     assert.equal(f.debuggerApi.attach.mock.calls.length, 1)
     assert.equal(f.debuggerApi.detach.mock.calls.length, 1)
     assert.equal(finished.artifact_path, '/tmp/cpu-trace.json')
+    assert.equal(finished.tab_id, 41)
+    assert.equal(finished.url, 'https://app.test/design')
+    assert.equal(finished.navigation_id, 'nav-123')
+    assert.equal(finished.build_sha, 'build-abc123')
     assert.equal(finished.import_with, 'Chrome DevTools Performance panel or https://ui.perfetto.dev')
     const chunk = f.requests.find((request) => request.path === '/performance-trace/chunk')
     assert.equal(chunk.payload.sequence, 0)
     assert.equal(chunk.payload.events.length, 2)
+  })
+
+  test('targets a background tab and applies cold-cache reload after tracing starts', async () => {
+    const f = fixture()
+    const started = await f.controller.start(41, { reload: true, cache: 'cold' })
+    assert.equal(started.cache, 'cold')
+    assert.equal(started.reloaded, true)
+
+    const methods = f.debuggerApi.sendCommand.mock.calls.map((call) => call.arguments[1])
+    assert.ok(methods.indexOf('Tracing.start') < methods.indexOf('Network.clearBrowserCache'))
+    assert.ok(methods.indexOf('Network.clearBrowserCache') < methods.indexOf('Page.reload'))
+    assert.ok(methods.includes('Network.setCacheDisabled'))
+    assert.equal(f.debuggerApi.attach.mock.calls[0].arguments[0].tabId, 41)
   })
 
   test('rejects concurrent starts and wrong-tab stops', async () => {

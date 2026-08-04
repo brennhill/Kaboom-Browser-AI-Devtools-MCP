@@ -465,7 +465,17 @@ registerCommand('performance_trace', async (ctx) => {
   const action = typeof ctx.params.action === 'string' ? ctx.params.action : ''
   try {
     if (action === 'start') {
-      ctx.sendResult(await getPerformanceTraceController().start(ctx.tabId))
+      const cache = ctx.params.cache
+      if (cache !== undefined && cache !== 'warm' && cache !== 'cold') {
+        ctx.sendResult({ error: 'invalid_performance_trace_cache', message: 'cache must be warm or cold' })
+        return
+      }
+      ctx.sendResult(
+        await getPerformanceTraceController().start(ctx.tabId, {
+          reload: ctx.params.reload === true,
+          cache
+        })
+      )
       return
     }
     if (action === 'stop') {

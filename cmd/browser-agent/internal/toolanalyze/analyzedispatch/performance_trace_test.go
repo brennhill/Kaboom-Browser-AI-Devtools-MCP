@@ -45,3 +45,10 @@ func TestPerformanceTraceRejectsInvalidAction(t *testing.T) {
 		t.Fatal("invalid action succeeded")
 	}
 }
+
+func TestPerformanceTraceRejectsInvalidCachePolicy(t *testing.T) {
+	resp := HandlePerformanceTrace(toolanalyze.Deps{}, mcp.JSONRPCRequest{ID: json.RawMessage(`1`)}, json.RawMessage(`{"action":"start","cache":"magic"}`))
+	if !bytes.Contains(resp.Result, []byte(`"isError":true`)) {
+		t.Fatal("invalid cache policy succeeded")
+	}
+}

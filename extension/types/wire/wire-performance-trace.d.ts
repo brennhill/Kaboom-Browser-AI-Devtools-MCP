@@ -17,6 +17,10 @@ export interface WirePerformanceTraceChunkRequest {
 }
 export interface WirePerformanceTraceFinishRequest {
     readonly trace_id: string;
+    readonly tab_id: number;
+    readonly url: string;
+    readonly navigation_id: string;
+    readonly build_sha: string;
 }
 export interface WirePerformanceTraceResult {
     readonly trace_id: string;
@@ -24,6 +28,10 @@ export interface WirePerformanceTraceResult {
     readonly event_count: number;
     readonly chunk_count: number;
     readonly bytes: number;
+    readonly tab_id: number;
+    readonly url: string;
+    readonly navigation_id: string;
+    readonly build_sha: string;
 }
 export interface WirePerformanceTraceAbortRequest {
     readonly trace_id: string;

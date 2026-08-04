@@ -45,6 +45,15 @@ func analyzeToolSchema() mcp.MCPTool {
 					"description": "Trace lifecycle action (performance_trace: start or stop)",
 					"enum":        []string{"start", "stop"},
 				},
+				"reload": map[string]any{
+					"type":        "boolean",
+					"description": "Reload the exact target tab after tracing starts (performance_trace start; default false)",
+				},
+				"cache": map[string]any{
+					"type":        "string",
+					"description": "Browser cache policy for performance_trace start",
+					"enum":        []string{"warm", "cold"},
+				},
 				"contract": map[string]any{
 					"type":        "object",
 					"description": "Versioned QA contract with contract_id and assertions (verification)",

@@ -80,6 +80,8 @@ func ParseAnalyzeArgs(what string, args []string) (map[string]any, error) {
 		"--tab-id":   {MCPKey: "tab_id", Kind: FlagInt},
 		// Analysis control
 		"--action":              {MCPKey: "action", Kind: FlagString},
+		"--reload":              {MCPKey: "reload", Kind: FlagBool},
+		"--cache":               {MCPKey: "cache", Kind: FlagString},
 		"--operation":           {MCPKey: "operation", Kind: FlagString},
 		"--ignore-endpoints":    {MCPKey: "ignore_endpoints", Kind: FlagStringList},
 		"--scope":               {MCPKey: "scope", Kind: FlagString},

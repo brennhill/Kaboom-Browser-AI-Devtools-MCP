@@ -19,7 +19,11 @@ type WirePerformanceTraceChunkRequest struct {
 }
 
 type WirePerformanceTraceFinishRequest struct {
-	TraceID string `json:"trace_id"`
+	TraceID      string `json:"trace_id"`
+	TabID        int    `json:"tab_id"`
+	URL          string `json:"url"`
+	NavigationID string `json:"navigation_id"`
+	BuildSHA     string `json:"build_sha"`
 }
 
 type WirePerformanceTraceResult struct {
@@ -28,6 +32,10 @@ type WirePerformanceTraceResult struct {
 	EventCount   int64  `json:"event_count"`
 	ChunkCount   int    `json:"chunk_count"`
 	Bytes        int64  `json:"bytes"`
+	TabID        int    `json:"tab_id"`
+	URL          string `json:"url"`
+	NavigationID string `json:"navigation_id"`
+	BuildSHA     string `json:"build_sha"`
 }
 
 type WirePerformanceTraceAbortRequest struct {

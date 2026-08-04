@@ -17,6 +17,7 @@ code_paths:
   - internal/state/paths.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - src/background/commands/analyze.ts
+  - src/background/commands/helpers.ts
   - src/background/dom/cdp/performance-trace.ts
   - src/types/runtime/queries.ts
   - src/types/wire/wire-performance-trace.ts
