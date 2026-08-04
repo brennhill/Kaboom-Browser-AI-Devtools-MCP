@@ -37,15 +37,9 @@ function injectToastAnimationStyles() {
     style.textContent = TOAST_ANIMATION_CSS;
     document.head.appendChild(style);
 }
-/** Truncate text to maxLen characters with ellipsis */
-function truncateText(text, maxLen) {
-    if (text.length <= maxLen)
-        return text;
-    return text.slice(0, maxLen - 1) + '\u2026';
-}
 /**
  * Show a brief visual toast overlay for AI actions.
- * Supports color-coded states and structured content with truncation.
+ * Supports color-coded states and fully readable structured content.
  * For audio-related toasts, adds animated arrow pointing to extension icon.
  */
 // #lizard forgives
@@ -77,9 +71,9 @@ export function showActionToast(text, detail, state = 'trying', durationMs = 300
         });
         toast.appendChild(icon);
     }
-    // Build content: label + truncated detail
+    // Build content without truncation: status and recovery guidance must remain actionable.
     const label = document.createElement('span');
-    label.textContent = truncateText(text, 30);
+    label.textContent = text;
     Object.assign(label.style, { fontWeight: '700' });
     toast.appendChild(label);
     if (detail) {
@@ -88,7 +82,7 @@ export function showActionToast(text, detail, state = 'trying', durationMs = 300
         Object.assign(sep.style, { opacity: '0.6', margin: '0 4px' });
         toast.appendChild(sep);
         const det = document.createElement('span');
-        det.textContent = truncateText(detail, 50);
+        det.textContent = detail;
         Object.assign(det.style, { fontWeight: '400', opacity: '0.9' });
         toast.appendChild(det);
     }
@@ -123,9 +117,11 @@ export function showActionToast(text, detail, state = 'trying', durationMs = 300
         pointerEvents: 'none',
         opacity: '0',
         transition: 'opacity 0.2s ease-in',
-        maxWidth: isAudioPrompt ? '320px' : '500px',
-        whiteSpace: isAudioPrompt ? 'normal' : 'nowrap',
-        overflow: isAudioPrompt ? 'visible' : 'hidden',
+        width: 'max-content',
+        maxWidth: isAudioPrompt ? 'min(320px, calc(100vw - 32px))' : 'min(500px, calc(100vw - 32px))',
+        whiteSpace: 'normal',
+        overflow: 'visible',
+        overflowWrap: 'anywhere',
         display: 'flex',
         alignItems: 'center',
         gap: '0',

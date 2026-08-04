@@ -1518,11 +1518,6 @@
     style.textContent = TOAST_ANIMATION_CSS;
     document.head.appendChild(style);
   }
-  function truncateText(text, maxLen) {
-    if (text.length <= maxLen)
-      return text;
-    return text.slice(0, maxLen - 1) + "\u2026";
-  }
   function showActionToast(text, detail, state = "trying", durationMs = 3e3) {
     const existing = document.getElementById("kaboom-action-toast");
     if (existing)
@@ -1549,7 +1544,7 @@
       toast.appendChild(icon);
     }
     const label = document.createElement("span");
-    label.textContent = truncateText(text, 30);
+    label.textContent = text;
     Object.assign(label.style, { fontWeight: "700" });
     toast.appendChild(label);
     if (detail) {
@@ -1558,7 +1553,7 @@
       Object.assign(sep.style, { opacity: "0.6", margin: "0 4px" });
       toast.appendChild(sep);
       const det = document.createElement("span");
-      det.textContent = truncateText(detail, 50);
+      det.textContent = detail;
       Object.assign(det.style, { fontWeight: "400", opacity: "0.9" });
       toast.appendChild(det);
     }
@@ -1592,9 +1587,11 @@
       pointerEvents: "none",
       opacity: "0",
       transition: "opacity 0.2s ease-in",
-      maxWidth: isAudioPrompt ? "320px" : "500px",
-      whiteSpace: isAudioPrompt ? "normal" : "nowrap",
-      overflow: isAudioPrompt ? "visible" : "hidden",
+      width: "max-content",
+      maxWidth: isAudioPrompt ? "min(320px, calc(100vw - 32px))" : "min(500px, calc(100vw - 32px))",
+      whiteSpace: "normal",
+      overflow: "visible",
+      overflowWrap: "anywhere",
       display: "flex",
       alignItems: "center",
       gap: "0",

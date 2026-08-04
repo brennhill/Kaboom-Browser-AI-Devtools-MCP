@@ -70,5 +70,11 @@ describe('terminal widget session branding', () => {
     assert.match(command, /Continue with API billing\? \[y\/N\]/)
     assert.match(command, /Logged in using ChatGPT/)
     assert.match(command, /KABOOM_EXECUTION_PROVIDER=subscription/)
+    const environmentDetection = command.indexOf('kaboom_execution_provider=api')
+    const codexAuthentication = command.indexOf('codex login status')
+    assert.ok(environmentDetection >= 0 && environmentDetection < codexAuthentication,
+      'environment credentials may provide a fallback before Codex authentication is known')
+    assert.strictEqual(command.match(/if \[ -n /g)?.length, 1,
+      'the generic environment fallback must run once, before authoritative Codex authentication')
   })
 })

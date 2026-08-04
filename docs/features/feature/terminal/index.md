@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -144,6 +144,9 @@ last_verified_date: 2026-03-28
   `claude auth status`, and Claude's own `API Usage Billing` output remains a
   fallback warning. Only the provider classification is surfaced—never account
   identifiers or credential values.
+- Saved CLI authentication is authoritative over unrelated API environment
+  variables: a confirmed Codex ChatGPT or Claude subscription is not downgraded
+  to API billing merely because another provider's credential is exported.
 - Header minimize control hides the side panel while preserving the current PTY session
 - The current side panel rollout is terminal-only; xterm fills the available panel height
 - Terminal startup failure guidance now consistently points users at the Kaboom daemon command: `npx kaboom-agentic-browser`

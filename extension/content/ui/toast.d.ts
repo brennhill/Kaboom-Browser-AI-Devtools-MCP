@@ -4,7 +4,7 @@
  */
 /**
  * Show a brief visual toast overlay for AI actions.
- * Supports color-coded states and structured content with truncation.
+ * Supports color-coded states and fully readable structured content.
  * For audio-related toasts, adds animated arrow pointing to extension icon.
  */
 export declare function showActionToast(text: string, detail?: string, state?: 'trying' | 'success' | 'warning' | 'error' | 'audio', durationMs?: number): void;

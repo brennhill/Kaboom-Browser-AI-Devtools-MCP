@@ -114,7 +114,7 @@ describe('showActionToast', () => {
     assert.ok(toast.style.background.includes('#22c55e'), 'should use success gradient')
   })
 
-  test('truncates text longer than 30 characters', () => {
+  test('preserves and wraps long status text instead of clipping it', () => {
     const longText = 'A'.repeat(35)
     showActionToast(longText)
 
@@ -126,11 +126,13 @@ describe('showActionToast', () => {
       .map((c) => c.arguments[0])
       .find((child) => child.tag === 'span' && child.style.fontWeight === '700')
     assert.ok(label, 'should have a label span')
-    assert.ok(label.textContent.length <= 30, `label should be truncated, got ${label.textContent.length} chars`)
-    assert.ok(label.textContent.endsWith('\u2026'), 'should end with ellipsis')
+    assert.strictEqual(label.textContent, longText)
+    assert.strictEqual(toast.style.whiteSpace, 'normal')
+    assert.strictEqual(toast.style.overflow, 'visible')
+    assert.strictEqual(toast.style.overflowWrap, 'anywhere')
   })
 
-  test('truncates detail longer than 50 characters', () => {
+  test('preserves long detail so billing and recovery guidance remains actionable', () => {
     const longDetail = 'B'.repeat(55)
     showActionToast('Short', longDetail)
 
@@ -141,8 +143,7 @@ describe('showActionToast', () => {
       .map((c) => c.arguments[0])
       .find((child) => child.tag === 'span' && child.style.opacity === '0.9')
     assert.ok(detail, 'should have a detail span')
-    assert.ok(detail.textContent.length <= 50, `detail should be truncated, got ${detail.textContent.length} chars`)
-    assert.ok(detail.textContent.endsWith('\u2026'), 'should end with ellipsis')
+    assert.strictEqual(detail.textContent, longDetail)
   })
 
   test('does not truncate short text', () => {

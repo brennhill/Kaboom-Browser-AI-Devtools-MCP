@@ -41,15 +41,9 @@ function injectToastAnimationStyles(): void {
   document.head.appendChild(style)
 }
 
-/** Truncate text to maxLen characters with ellipsis */
-function truncateText(text: string, maxLen: number): string {
-  if (text.length <= maxLen) return text
-  return text.slice(0, maxLen - 1) + '\u2026'
-}
-
 /**
  * Show a brief visual toast overlay for AI actions.
- * Supports color-coded states and structured content with truncation.
+ * Supports color-coded states and fully readable structured content.
  * For audio-related toasts, adds animated arrow pointing to extension icon.
  */
 // #lizard forgives
@@ -92,9 +86,9 @@ export function showActionToast(
     toast.appendChild(icon)
   }
 
-  // Build content: label + truncated detail
+  // Build content without truncation: status and recovery guidance must remain actionable.
   const label = document.createElement('span')
-  label.textContent = truncateText(text, 30)
+  label.textContent = text
   Object.assign(label.style, { fontWeight: '700' })
   toast.appendChild(label)
 
@@ -105,7 +99,7 @@ export function showActionToast(
     toast.appendChild(sep)
 
     const det = document.createElement('span')
-    det.textContent = truncateText(detail, 50)
+    det.textContent = detail
     Object.assign(det.style, { fontWeight: '400', opacity: '0.9' })
     toast.appendChild(det)
   }
@@ -142,9 +136,11 @@ export function showActionToast(
     pointerEvents: 'none',
     opacity: '0',
     transition: 'opacity 0.2s ease-in',
-    maxWidth: isAudioPrompt ? '320px' : '500px',
-    whiteSpace: isAudioPrompt ? 'normal' : ('nowrap' as const),
-    overflow: isAudioPrompt ? 'visible' : 'hidden',
+    width: 'max-content',
+    maxWidth: isAudioPrompt ? 'min(320px, calc(100vw - 32px))' : 'min(500px, calc(100vw - 32px))',
+    whiteSpace: 'normal',
+    overflow: 'visible',
+    overflowWrap: 'anywhere',
     display: 'flex',
     alignItems: 'center',
     gap: '0',

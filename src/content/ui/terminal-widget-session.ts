@@ -120,7 +120,6 @@ export function buildAIInitCommand(aiCommand: string): string {
     `kaboom_execution_provider=unknown;` +
     ` if [ -n "${presenceCheck}" ]; then kaboom_execution_provider=api; fi;` +
     authCheck +
-    ` if [ -n "${presenceCheck}" ]; then kaboom_execution_provider=api; fi;` +
     providerMarkers +
     apiPrompt +
     ` unset kaboom_execution_provider kaboom_api_confirm claude_auth_status codex_auth_status`
