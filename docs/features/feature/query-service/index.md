@@ -42,6 +42,7 @@ test_paths:
   - internal/queries/command_trace_test.go
   - internal/queries/expire_signal_test.go
   - internal/queries/result_ownership_test.go
+  - internal/capture/async_queue_integration_test.go
   - internal/queries/no_facade_test.go
   - internal/capture/no_facade_test.go
   - internal/capture/sync_handler_owner_test.go
@@ -124,6 +125,10 @@ accepted unresolved command to make room for disposable history.
 - Query IDs include a per-dispatcher process/time/sequence prefix, so a restarted
   daemon cannot reuse an ID that an attached extension still remembers for
   duplicate-delivery protection.
+- Queue capacity and concurrent admission are tested inside `internal/queries`
+  with an explicit start barrier and exact accepted/rejected counts. The former
+  Capture-level polling/jitter simulation and duplicate wall-clock expiration
+  loop were deleted; Capture retains only end-to-end composition coverage.
 - Query and command state is accessed through the canonical
   `Capture.Queries()` owner. The former Capture forwarding layer and test-only
   pending-query facade have been deleted; disconnect-aware queue reconciliation

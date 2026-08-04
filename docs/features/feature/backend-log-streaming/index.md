@@ -92,6 +92,7 @@ test_paths:
   - internal/capture/sync_test_helpers_test.go
   - internal/capturefixture/sync_test.go
   - internal/capture/sync_command_lifecycle_test.go
+  - internal/capture/async_queue_integration_test.go
   - internal/capture/sync_waterfall_test.go
   - internal/capture/websocket_test.go
   - internal/capture/websocket_status_test.go
@@ -372,3 +373,7 @@ this one bounded delivery contract.
 - Query cleanup lifecycle coverage lives with the canonical QueryDispatcher;
   the former Capture-level goroutine-count and duplicate result-wait tests were
   deleted rather than preserved as a cross-owner test facade.
+- Capture queue integration tests prove only the Capture-to-QueryDispatcher
+  composition. Queue concurrency, capacity, timeout, and cleanup semantics live
+  with `internal/queries`; the duplicate jitter-driven reliability suite was
+  removed so capture tests no longer depend on scheduler timing.

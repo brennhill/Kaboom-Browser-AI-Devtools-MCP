@@ -269,6 +269,64 @@ func TestNewQueryDispatcher_CreatePendingQuery_QueueFull_RejectsNew(t *testing.T
 	}
 }
 
+func TestNewQueryDispatcher_CreatePendingQuery_ConcurrentCapacityIsBounded(t *testing.T) {
+	t.Parallel()
+
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+
+	const attempts = 64
+	start := make(chan struct{})
+	type outcome struct {
+		id  string
+		err error
+	}
+	outcomes := make(chan outcome, attempts)
+	var ready sync.WaitGroup
+	ready.Add(attempts)
+
+	for i := 0; i < attempts; i++ {
+		go func(index int) {
+			ready.Done()
+			<-start
+			id, err := qd.CreatePendingQuery(PendingQuery{
+				Type:   "execute",
+				Params: json.RawMessage(fmt.Sprintf(`{"index":%d}`, index)),
+			})
+			outcomes <- outcome{id: id, err: err}
+		}(i)
+	}
+	ready.Wait()
+	close(start)
+
+	accepted := make(map[string]struct{}, MaxPendingQueries)
+	rejected := 0
+	for i := 0; i < attempts; i++ {
+		result := <-outcomes
+		switch result.err {
+		case nil:
+			if result.id == "" {
+				t.Fatal("accepted concurrent query returned an empty ID")
+			}
+			accepted[result.id] = struct{}{}
+		case ErrQueueFull:
+			rejected++
+		default:
+			t.Fatalf("CreatePendingQuery error = %v, want nil or ErrQueueFull", result.err)
+		}
+	}
+
+	if len(accepted) != MaxPendingQueries {
+		t.Fatalf("accepted unique IDs = %d, want queue capacity %d", len(accepted), MaxPendingQueries)
+	}
+	if rejected != attempts-MaxPendingQueries {
+		t.Fatalf("rejected = %d, want %d", rejected, attempts-MaxPendingQueries)
+	}
+	if pending := qd.GetPendingQueries(); len(pending) != MaxPendingQueries {
+		t.Fatalf("pending len = %d, want bounded capacity %d", len(pending), MaxPendingQueries)
+	}
+}
+
 func TestNewQueryDispatcher_CreatePendingQuery_QueueFull_FailsCorrelatedCommand(t *testing.T) {
 	t.Parallel()
 
