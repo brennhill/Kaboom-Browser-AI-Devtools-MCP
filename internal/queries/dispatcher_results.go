@@ -97,7 +97,7 @@ func (qd *QueryDispatcher) setQueryResultWithClient(id string, result json.RawMe
 
 		// Store result.
 		qd.queryResults[id] = QueryResultEntry{
-			Result:    result,
+			Result:    cloneJSON(result),
 			ClientID:  clientID,
 			CreatedAt: time.Now(),
 		}
@@ -119,11 +119,9 @@ func (qd *QueryDispatcher) setQueryResultWithClient(id string, result json.RawMe
 			}
 		}
 		qd.pendingQueries = remaining
+		qd.queryCond.Broadcast()
 		return corr
 	}()
-
-	// Wake up waiters
-	qd.queryCond.Broadcast()
 
 	// Mark command as complete if it has a correlation ID
 	if markComplete && correlationID != "" {
@@ -180,16 +178,15 @@ func (qd *QueryDispatcher) WaitForResultContext(ctx context.Context, id string, 
 }
 
 // WaitForResultWithClient waits for one result under client-isolated view.
-// Uses a single wakeup goroutine (not per-iteration) to avoid goroutine explosion.
+// Uses event-driven result, cancellation, and deadline notifications.
 //
 // Flow:
 // 1. Check if result already exists
 // 2. If not, wait on condition variable
-// 3. Recheck periodically (10ms intervals)
+// 3. Recheck after a result, cancellation, or deadline notification
 // 4. Return result or timeout error
 //
 // Invariants:
-// - done channel is always closed before Unlock (defer LIFO) to stop ticker goroutine.
 // - qd.queryCond.Wait is called only with qd.mu held.
 //
 // Failure semantics:
@@ -201,26 +198,18 @@ func (qd *QueryDispatcher) WaitForResultWithClient(id string, timeout time.Durat
 
 func (qd *QueryDispatcher) waitForResultContext(ctx context.Context, id string, timeout time.Duration, clientID string) (json.RawMessage, error) {
 	deadline := time.Now().Add(timeout)
-
-	// Single wakeup goroutine: broadcasts every 10ms to recheck condition.
-	// Replaces per-iteration goroutine spawn that caused ~3000 goroutines per 30s call.
-	done := make(chan struct{})
-	util.SafeGo(func() {
-		ticker := time.NewTicker(10 * time.Millisecond)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				qd.queryCond.Broadcast()
-			case <-done:
-				return
-			}
-		}
-	})
+	wake := func() {
+		qd.mu.Lock()
+		qd.queryCond.Broadcast()
+		qd.mu.Unlock()
+	}
+	timeoutTimer := time.AfterFunc(timeout, wake)
+	cancelWake := context.AfterFunc(ctx, wake)
+	defer timeoutTimer.Stop()
+	defer cancelWake()
 
 	qd.mu.Lock()
 	defer qd.mu.Unlock()
-	defer close(done) // Stop wakeup goroutine on return (runs before Unlock per LIFO)
 
 	for {
 		if err := ctx.Err(); err != nil {

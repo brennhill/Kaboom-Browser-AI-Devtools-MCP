@@ -174,6 +174,7 @@ func copyCommandResultWithTrace(src *CommandResult) *CommandResult {
 		return nil
 	}
 	cp := *src
+	cp.Result = cloneJSON(src.Result)
 	if len(src.TraceEvents) > 0 {
 		cp.TraceEvents = make([]CommandTraceEvent, len(src.TraceEvents))
 		copy(cp.TraceEvents, src.TraceEvents)

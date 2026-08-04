@@ -79,7 +79,7 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 			Query: PendingQueryResponse{
 				ID:            id,
 				Type:          query.Type,
-				Params:        query.Params,
+				Params:        cloneJSON(query.Params),
 				TabID:         query.TabID,
 				CorrelationID: query.CorrelationID,
 				TraceID:       deriveTraceID(query.TraceID, query.CorrelationID, id),
@@ -177,7 +177,9 @@ func (qd *QueryDispatcher) snapshotPendingQueries(clientID string) pendingQueryS
 		if clientID != "" && pending.ClientID != clientID {
 			continue
 		}
-		result = append(result, pending.Query)
+		query := pending.Query
+		query.Params = cloneJSON(pending.Query.Params)
+		result = append(result, query)
 		if pending.Query.CorrelationID != "" {
 			sentCorrelationIDs = append(sentCorrelationIDs, pending.Query.CorrelationID)
 		}

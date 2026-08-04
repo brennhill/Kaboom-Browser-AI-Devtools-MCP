@@ -4,9 +4,14 @@
 package queries
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 )
+
+func cloneJSON(value json.RawMessage) json.RawMessage {
+	return bytes.Clone(value)
+}
 
 // ============================================
 // Query Types

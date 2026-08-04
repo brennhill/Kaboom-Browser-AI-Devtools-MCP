@@ -41,6 +41,7 @@ test_paths:
   - internal/queries/commands_test.go
   - internal/queries/command_trace_test.go
   - internal/queries/expire_signal_test.go
+  - internal/queries/result_ownership_test.go
   - internal/queries/no_facade_test.go
   - internal/capture/no_facade_test.go
   - internal/capture/sync_handler_owner_test.go
@@ -90,8 +91,13 @@ accepted unresolved command to make room for disposable history.
   - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
 - Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
 - Synchronous result consumers may bind waits to a caller context; cancellation
-  wakes the canonical query condition immediately instead of waiting for the
-  command timeout, while preserving one-time result consumption.
+  and deadlines wake the canonical query condition through event-driven
+  notifications instead of periodic polling, while preserving one-time result
+  consumption.
+- Raw JSON parameters and results are copied when they enter dispatcher-owned
+  state and when command snapshots leave it. Callers and extension pollers
+  cannot mutate queued commands or retained lifecycle history through shared
+  slice backing arrays.
 - Live command lifecycle storage keeps every pending command until it reaches a
   terminal state or expires. Completed and failed commands then share one
   five-entry terminal-history ring, preventing long browser sessions from

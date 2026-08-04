@@ -119,7 +119,7 @@ func (qd *QueryDispatcher) ApplyCommandResult(correlationID string, status strin
 		}
 
 		cmd.Status = normalizedStatus
-		cmd.Result = result
+		cmd.Result = cloneJSON(result)
 		cmd.Error = err
 		eventAt := time.Now()
 		stage := traceStageFromStatus(normalizedStatus)
