@@ -34,9 +34,10 @@ describe('SyncClient — Command dispatch', () => {
     ]
     installFetchMock(makeSyncResponse({ commands, next_poll_ms: 60000 }))
 
-    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks)
+    const scheduler = createManualSyncRuntime()
+    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks, '', scheduler.runtime)
     client.start()
-    await tick(50)
+    await scheduler.runNext()
 
     assert.strictEqual(callbacks.onCommand.mock.calls.length, 2)
     assert.deepStrictEqual(callbacks.onCommand.mock.calls[0].arguments[0], {
@@ -502,10 +503,11 @@ describe('SyncClient — Command result queuing', () => {
     assert.strictEqual(body.command_results[0].connection_generation, 1)
   })
 
-  test('should cap pending results queue at 200', () => {
+  test('retains every distinct terminal result until the daemon acknowledges it', () => {
     installFetchMock(makeSyncResponse({ next_poll_ms: 60000 }))
+    const scheduler = createManualSyncRuntime()
     // Don't start — we just want to test queuing without running syncs
-    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks)
+    client = new SyncClient('http://localhost:7777', 'sess-1', callbacks, '', scheduler.runtime)
 
     // Queue 250 results
     for (let i = 0; i < 250; i++) {
@@ -513,18 +515,17 @@ describe('SyncClient — Command result queuing', () => {
       client.queueCommandResult({ id: `cmd-${i}`, status: 'complete' })
     }
 
-    // The internal queue should be capped at 200
-    // We can verify by checking that the oldest entries were dropped
-    // (We test this indirectly — the code splices to keep last 200)
-    // Start a sync to verify the body
+    // Start a sync to verify conservation across prolonged outage pressure.
     const mockFetch = installFetchMock(makeSyncResponse({ next_poll_ms: 60000 }))
     client.start()
 
     // Wait for sync
-    return tick(50).then(() => {
+    return scheduler.runNext().then(() => {
       client.stop()
       const body = JSON.parse(mockFetch.mock.calls[0].arguments[1].body)
-      assert.ok(body.command_results.length <= 200, `Expected <=200 results, got ${body.command_results.length}`)
+      assert.strictEqual(body.command_results.length, 250)
+      assert.strictEqual(body.command_results[0].id, 'cmd-0')
+      assert.strictEqual(body.command_results[249].id, 'cmd-249')
     })
   })
 

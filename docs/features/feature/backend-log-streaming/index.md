@@ -179,6 +179,11 @@ daemon delivery is checked against the full in-progress set before the bounded
 acknowledged history, and transport-created timeout results preserve the
 original correlation ID and connection generation while aborting the command
 execution signal.
+Terminal command results remain owned by the sync client until a successful
+daemon acknowledgement. The client does not truncate older terminal outcomes:
+the daemon's bounded delivery capacity limits how much new work can be accepted
+between successful syncs, while lossless retention prevents an already-executed
+mutation from later appearing safe to retry.
 Daemon HTTP reachability and extension sync-heartbeat state are tracked as
 separate signals. A missing or stale heartbeat remains visible to Doctor and
 the connection log, but cannot label a daemon that answered `/health` as

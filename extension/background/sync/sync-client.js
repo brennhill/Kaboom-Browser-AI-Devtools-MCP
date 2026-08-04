@@ -88,11 +88,10 @@ export class SyncClient {
             ...result,
             connection_generation: result.connection_generation || activeGeneration || this.connectionGeneration || undefined
         });
-        // Cap queue size to prevent memory leak if server is unreachable
-        const MAX_PENDING_RESULTS = 200;
-        if (this.pendingResults.length > MAX_PENDING_RESULTS) {
-            this.pendingResults = this.pendingResults.slice(-MAX_PENDING_RESULTS);
-        }
+        // Terminal ownership is lossless until the daemon acknowledges the batch.
+        // The daemon delivers at most its bounded pending-command capacity per
+        // successful sync, and an outage cannot deliver additional commands, so
+        // destructive client-side truncation is both unnecessary and unsafe.
         this.flush();
     }
     /** Trigger an immediate sync to deliver queued results with minimal latency */
