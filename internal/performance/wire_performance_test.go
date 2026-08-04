@@ -95,6 +95,24 @@ func TestSnapshotJSON_AllWebVitalsDeserialize(t *testing.T) {
 	}
 }
 
+func TestSnapshotJSON_VitalsAttributionDeserialize(t *testing.T) {
+	t.Parallel()
+	payload := `{"url":"/","timing":{},"network":{},"long_tasks":{},"vitals_attribution":{"lcp":{"element":{"tag":"img","id":"hero"},"resource_load_delay_ms":30},"inp":{"event_type":"click","input_delay_ms":4},"cls":{"shifts":[{"value":0.1,"nodes":[{"tag":"div","id":"banner"}]}]},"long_tasks":[{"name":"self","duration":80,"source_stack_status":"unavailable"}]}}`
+	var snapshot PerformanceSnapshot
+	if err := json.Unmarshal([]byte(payload), &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.VitalsAttribution == nil || snapshot.VitalsAttribution.LCP == nil || snapshot.VitalsAttribution.LCP.Element.ID != "hero" {
+		t.Fatalf("LCP attribution missing: %+v", snapshot.VitalsAttribution)
+	}
+	if snapshot.VitalsAttribution.INP == nil || snapshot.VitalsAttribution.INP.EventType != "click" {
+		t.Fatalf("INP attribution missing: %+v", snapshot.VitalsAttribution)
+	}
+	if len(snapshot.VitalsAttribution.CLS.Shifts) != 1 || len(snapshot.VitalsAttribution.LongTasks) != 1 {
+		t.Fatalf("bounded attribution missing: %+v", snapshot.VitalsAttribution)
+	}
+}
+
 func TestSnapshotJSON_UserTimingRoundTrip(t *testing.T) {
 	t.Parallel()
 

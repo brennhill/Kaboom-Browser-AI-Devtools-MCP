@@ -8,6 +8,7 @@
  * to build comprehensive performance snapshots.
  */
 import { MAX_LONG_TASKS, MAX_SLOWEST_REQUESTS, MAX_URL_LENGTH } from '../constants.js';
+import { getVitalsAttribution, recordCLSAttribution, recordINPAttribution, recordLCPAttribution, recordLongTaskAttribution, resetVitalsAttribution } from './vitals-attribution.js';
 // Performance snapshot state
 let perfSnapshotEnabled = true;
 let longTaskEntries = [];
@@ -115,6 +116,7 @@ export function capturePerformanceSnapshot() {
         network,
         long_tasks: longTasks,
         cumulative_layout_shift: getCLS(),
+        vitals_attribution: getVitalsAttribution(nav.responseStart),
         user_timing: userTiming
     };
 }
@@ -127,6 +129,7 @@ export function installPerfObservers() {
     lcpValue = null;
     clsValue = 0;
     inpValue = null;
+    resetVitalsAttribution();
     // Long task observer
     // #lizard forgives
     longTaskObserver = new PerformanceObserver((list) => {
@@ -134,6 +137,7 @@ export function installPerfObservers() {
         for (const entry of entries) {
             if (longTaskEntries.length < MAX_LONG_TASKS) {
                 longTaskEntries.push(entry);
+                recordLongTaskAttribution(entry);
             }
         }
     });
@@ -154,6 +158,7 @@ export function installPerfObservers() {
             const lastEntry = entries[entries.length - 1];
             if (lastEntry) {
                 lcpValue = lastEntry.startTime;
+                recordLCPAttribution(lastEntry);
             }
         }
     });
@@ -165,6 +170,7 @@ export function installPerfObservers() {
             const clsEntry = entry;
             if (!clsEntry.hadRecentInput) {
                 clsValue += clsEntry.value || 0;
+                recordCLSAttribution(entry);
             }
         }
     });
@@ -177,6 +183,7 @@ export function installPerfObservers() {
             if (inpEntry.interactionId) {
                 if (inpValue === null || inpEntry.duration > inpValue) {
                     inpValue = inpEntry.duration;
+                    recordINPAttribution(entry);
                 }
             }
         }
@@ -252,6 +259,7 @@ export function getCLS() {
 export function getINP() {
     return inpValue;
 }
+export { getVitalsAttribution };
 /**
  * Send performance snapshot via postMessage to content script
  */

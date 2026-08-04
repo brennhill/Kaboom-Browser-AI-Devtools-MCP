@@ -121,6 +121,42 @@ describe('Web Vitals Capture', () => {
     assert.strictEqual(mod.getLCP(), 2400)
   })
 
+  test('snapshot attributes LCP phases without capturing element text', async () => {
+    globalThis.performance.getEntriesByType = mock.fn((type) =>
+      type === 'navigation'
+        ? [
+            {
+              requestStart: 10,
+              responseStart: 100,
+              domContentLoadedEventEnd: 500,
+              loadEventEnd: 900,
+              domInteractive: 450
+            }
+          ]
+        : []
+    )
+    const mod = await import('../../../extension/lib/analysis/perf-snapshot.js')
+    mod.installPerfObservers()
+    const lcpObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('largest-contentful-paint'))
+    lcpObs._emit([
+      {
+        startTime: 600,
+        loadTime: 450,
+        renderTime: 600,
+        element: { tagName: 'IMG', id: 'hero', classList: ['cover', 'wide'], getAttribute: () => null },
+        size: 120000,
+        url: 'https://private.example/hero.png'
+      }
+    ])
+
+    const attribution = mod.capturePerformanceSnapshot().vitals_attribution.lcp
+    assert.deepStrictEqual(attribution.element, { tag: 'img', id: 'hero', classes: ['cover', 'wide'] })
+    assert.equal(attribution.resource_load_delay_ms, 350)
+    assert.equal(attribution.resource_load_duration_ms, 0)
+    assert.equal(attribution.element.text, undefined)
+    assert.equal(attribution.resource_url, undefined)
+  })
+
   test('CLS accumulates layout shifts (ignores input-driven)', async () => {
     const mod = await import('../../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
@@ -137,6 +173,24 @@ describe('Web Vitals Capture', () => {
     // Only non-input shifts are accumulated: 0.02 + 0.03 = 0.05
     const cls = mod.getCLS()
     assert.ok(Math.abs(cls - 0.05) < 0.001, `CLS should be ~0.05, got ${cls}`)
+  })
+
+  test('CLS attribution retains only bounded shifting node descriptors', async () => {
+    const mod = await import('../../../extension/lib/analysis/perf-snapshot.js')
+    mod.installPerfObservers()
+    const clsObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('layout-shift'))
+    clsObs._emit([
+      {
+        value: 0.04,
+        hadRecentInput: false,
+        sources: [{ node: { tagName: 'DIV', id: 'banner', classList: ['notice'], getAttribute: () => null } }]
+      }
+    ])
+    assert.deepStrictEqual(mod.getVitalsAttribution().cls.shifts[0].nodes[0], {
+      tag: 'div',
+      id: 'banner',
+      classes: ['notice']
+    })
   })
 
   test('installPerfObservers propagates observer errors', async () => {
@@ -233,6 +287,50 @@ describe('Web Vitals Capture', () => {
     ])
 
     assert.strictEqual(mod.getINP(), 200)
+  })
+
+  test('INP attribution reports target and event phase breakdown', async () => {
+    const mod = await import('../../../extension/lib/analysis/perf-snapshot.js')
+    mod.installPerfObservers()
+    const eventObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('event'))
+    eventObs._emit([
+      {
+        name: 'click',
+        startTime: 100,
+        processingStart: 125,
+        processingEnd: 175,
+        duration: 120,
+        interactionId: 7,
+        target: {
+          tagName: 'BUTTON',
+          id: 'save',
+          classList: [],
+          textContent: 'Save private project',
+          getAttribute: () => null
+        }
+      }
+    ])
+    assert.deepStrictEqual(mod.getVitalsAttribution().inp, {
+      event_type: 'click',
+      target: { tag: 'button', id: 'save' },
+      input_delay_ms: 25,
+      processing_ms: 50,
+      presentation_delay_ms: 45,
+      interaction_id: 7
+    })
+  })
+
+  test('long task attribution is bounded and explicitly reports unavailable source stacks', async () => {
+    const mod = await import('../../../extension/lib/analysis/perf-snapshot.js')
+    mod.installPerfObservers()
+    const observer = MockPerformanceObserver._instances.find((obs) => obs._types.includes('longtask'))
+    observer._emit([{ name: 'self', startTime: 20, duration: 90, attribution: [] }])
+    assert.deepStrictEqual(mod.getVitalsAttribution().long_tasks[0], {
+      name: 'self',
+      start_time: 20,
+      duration: 90,
+      source_stack_status: 'unavailable'
+    })
   })
 
   test('INP ignores entries without interactionId', async () => {

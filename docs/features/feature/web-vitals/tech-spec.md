@@ -7,9 +7,9 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-web-vitals
-last_reviewed: 2026-07-05
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+last_reviewed: 2026-08-04
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 > **[MIGRATION NOTICE]**
@@ -119,6 +119,19 @@ This breakdown tells the AI whether the problem is a slow handler (optimize the 
 ---
 
 ## Data Model
+
+### Actionable attribution
+
+The performance snapshot includes a `vitals_attribution` object. LCP reports
+its element descriptor and TTFB/load/render phases; CLS reports up to ten
+shifts with five affected nodes each; INP reports its target, event type, and
+input/processing/presentation phases. Long tasks report bounded timing entries
+and an explicit `source_stack_status`; the standard browser observer does not
+provide JavaScript source stacks, so it reports `unavailable` rather than
+inventing attribution. CPU trace analysis can supply stacks separately.
+
+Element descriptors contain only bounded tag, id, class, and semantic role.
+They never contain text, input values, arbitrary attributes, or resource URLs.
 
 ### Vital Entry
 

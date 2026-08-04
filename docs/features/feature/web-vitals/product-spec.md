@@ -6,9 +6,9 @@ mode: vitals
 version: 0.7.12
 doc_type: product-spec
 feature_id: feature-web-vitals
-last_reviewed: 2026-07-05
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+last_reviewed: 2026-08-04
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # Product Spec: Web Vitals

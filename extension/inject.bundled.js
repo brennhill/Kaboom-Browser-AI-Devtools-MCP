@@ -100,6 +100,108 @@ var INJECT_FORWARDED_SETTINGS = /* @__PURE__ */ new Set([
   SettingName.SERVER_URL
 ]);
 
+// extension/lib/analysis/vitals-attribution.js
+var MAX_CLASSES = 4;
+var MAX_SHIFTS = 10;
+var MAX_SHIFT_NODES = 5;
+var MAX_LONG_TASKS2 = 20;
+var lcpEntry = null;
+var inpEntry = null;
+var clsShifts = [];
+var longTasks = [];
+function resetVitalsAttribution() {
+  lcpEntry = null;
+  inpEntry = null;
+  clsShifts.length = 0;
+  longTasks.length = 0;
+}
+function recordLCPAttribution(entry) {
+  lcpEntry = entry;
+}
+function recordINPAttribution(entry) {
+  inpEntry = entry;
+}
+function recordCLSAttribution(entry) {
+  const shift = entry;
+  if (clsShifts.length >= MAX_SHIFTS)
+    return;
+  const nodes = (shift.sources ?? []).slice(0, MAX_SHIFT_NODES).map((source) => describeElement(source.node)).filter((node) => node !== void 0);
+  clsShifts.push({ value: finite(shift.value), start_time: finite(shift.startTime), nodes });
+}
+function recordLongTaskAttribution(entry) {
+  if (longTasks.length >= MAX_LONG_TASKS2)
+    return;
+  const task = entry;
+  longTasks.push({
+    name: bounded(task.name || "longtask", 64),
+    start_time: finite(task.startTime),
+    duration: finite(task.duration),
+    source_stack_status: "unavailable"
+  });
+}
+function getVitalsAttribution(responseStart = 0) {
+  return {
+    ...lcpEntry ? { lcp: buildLCPAttribution(lcpEntry, responseStart) } : {},
+    ...inpEntry ? { inp: buildINPAttribution(inpEntry) } : {},
+    cls: {
+      shifts: clsShifts.map((shift) => ({ ...shift, nodes: shift.nodes.map((node) => ({ ...node })) })),
+      attribution_status: clsShifts.some((shift) => shift.nodes.length > 0) ? "available" : "nodes_unavailable"
+    },
+    long_tasks: longTasks.map((task) => ({ ...task }))
+  };
+}
+function buildLCPAttribution(entry, responseStart) {
+  const loadTime = finite(entry.loadTime);
+  const renderTime = finite(entry.renderTime || entry.startTime);
+  const resourceStart = loadTime > 0 ? loadTime : renderTime;
+  const element = describeElement(entry.element);
+  return {
+    ...element ? { element } : {},
+    time_to_first_byte_ms: finite(responseStart),
+    resource_load_delay_ms: Math.max(0, resourceStart - finite(responseStart)),
+    resource_load_duration_ms: Math.max(0, loadTime - resourceStart),
+    element_render_delay_ms: Math.max(0, renderTime - (loadTime || resourceStart)),
+    attribution_status: element ? "available" : "element_unavailable"
+  };
+}
+function buildINPAttribution(entry) {
+  const processingStart = finite(entry.processingStart);
+  const processingEnd = finite(entry.processingEnd);
+  const startTime = finite(entry.startTime);
+  const duration = finite(entry.duration);
+  const target = describeElement(entry.target);
+  return {
+    event_type: bounded(entry.name || "event", 64),
+    ...target ? { target } : {},
+    input_delay_ms: Math.max(0, processingStart - startTime),
+    processing_ms: Math.max(0, processingEnd - processingStart),
+    presentation_delay_ms: Math.max(0, startTime + duration - processingEnd),
+    interaction_id: finite(entry.interactionId)
+  };
+}
+function describeElement(element) {
+  if (!element)
+    return void 0;
+  const tag = element.tagName?.toLowerCase();
+  if (!tag)
+    return void 0;
+  const id = bounded(element.id ?? "", 128);
+  const classes = Array.from(element.classList ?? []).filter((name) => typeof name === "string" && name.length > 0).slice(0, MAX_CLASSES).map((name) => bounded(name, 64));
+  const role = bounded(element.getAttribute?.("role") ?? "", 64);
+  return {
+    tag: bounded(tag, 32),
+    ...id ? { id } : {},
+    ...classes.length > 0 ? { classes } : {},
+    ...role ? { role } : {}
+  };
+}
+function finite(value) {
+  return Number.isFinite(value) ? Number(value) : 0;
+}
+function bounded(value, max) {
+  return value.slice(0, max);
+}
+
 // extension/lib/analysis/perf-snapshot.js
 var perfSnapshotEnabled = true;
 var longTaskEntries = [];
@@ -176,7 +278,7 @@ function capturePerformanceSnapshot() {
     dom_interactive: nav.domInteractive
   };
   const network = aggregateResourceTiming();
-  const longTasks = getLongTaskMetrics();
+  const longTasks2 = getLongTaskMetrics();
   const marks = performance.getEntriesByType("mark") || [];
   const measures = performance.getEntriesByType("measure") || [];
   const userTiming = marks.length > 0 || measures.length > 0 ? {
@@ -188,8 +290,9 @@ function capturePerformanceSnapshot() {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
     timing,
     network,
-    long_tasks: longTasks,
+    long_tasks: longTasks2,
     cumulative_layout_shift: getCLS(),
+    vitals_attribution: getVitalsAttribution(nav.responseStart),
     user_timing: userTiming
   };
 }
@@ -199,11 +302,13 @@ function installPerfObservers() {
   lcpValue = null;
   clsValue = 0;
   inpValue = null;
+  resetVitalsAttribution();
   longTaskObserver = new PerformanceObserver((list) => {
     const entries = list.getEntries();
     for (const entry of entries) {
       if (longTaskEntries.length < MAX_LONG_TASKS) {
         longTaskEntries.push(entry);
+        recordLongTaskAttribution(entry);
       }
     }
   });
@@ -222,6 +327,7 @@ function installPerfObservers() {
       const lastEntry = entries[entries.length - 1];
       if (lastEntry) {
         lcpValue = lastEntry.startTime;
+        recordLCPAttribution(lastEntry);
       }
     }
   });
@@ -231,16 +337,18 @@ function installPerfObservers() {
       const clsEntry = entry;
       if (!clsEntry.hadRecentInput) {
         clsValue += clsEntry.value || 0;
+        recordCLSAttribution(entry);
       }
     }
   });
   clsObserver.observe({ type: "layout-shift", buffered: true });
   inpObserver = new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
-      const inpEntry = entry;
-      if (inpEntry.interactionId) {
-        if (inpValue === null || inpEntry.duration > inpValue) {
-          inpValue = inpEntry.duration;
+      const inpEntry2 = entry;
+      if (inpEntry2.interactionId) {
+        if (inpValue === null || inpEntry2.duration > inpValue) {
+          inpValue = inpEntry2.duration;
+          recordINPAttribution(entry);
         }
       }
     }

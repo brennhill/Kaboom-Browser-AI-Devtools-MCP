@@ -10,6 +10,15 @@
  */
 
 import { MAX_LONG_TASKS, MAX_SLOWEST_REQUESTS, MAX_URL_LENGTH } from '../constants.js'
+import {
+  getVitalsAttribution,
+  recordCLSAttribution,
+  recordINPAttribution,
+  recordLCPAttribution,
+  recordLongTaskAttribution,
+  resetVitalsAttribution,
+  type VitalsAttribution
+} from './vitals-attribution.js'
 
 interface ResourceByType {
   count: number
@@ -59,6 +68,7 @@ interface PerformanceSnapshotData {
   network: ResourceTimingSummary
   long_tasks: LongTaskMetrics
   cumulative_layout_shift: number
+  vitals_attribution: VitalsAttribution
   user_timing?: {
     marks: UserTimingEntry[]
     measures: UserTimingEntry[]
@@ -182,6 +192,7 @@ export function capturePerformanceSnapshot(): PerformanceSnapshotData | null {
     network,
     long_tasks: longTasks,
     cumulative_layout_shift: getCLS(),
+    vitals_attribution: getVitalsAttribution(nav.responseStart),
     user_timing: userTiming
   }
 }
@@ -195,6 +206,7 @@ export function installPerfObservers(): void {
   lcpValue = null
   clsValue = 0
   inpValue = null
+  resetVitalsAttribution()
 
   // Long task observer
   // #lizard forgives
@@ -203,6 +215,7 @@ export function installPerfObservers(): void {
     for (const entry of entries) {
       if (longTaskEntries.length < MAX_LONG_TASKS) {
         longTaskEntries.push(entry)
+        recordLongTaskAttribution(entry)
       }
     }
   })
@@ -225,6 +238,7 @@ export function installPerfObservers(): void {
       const lastEntry = entries[entries.length - 1]
       if (lastEntry) {
         lcpValue = lastEntry.startTime
+        recordLCPAttribution(lastEntry)
       }
     }
   })
@@ -237,6 +251,7 @@ export function installPerfObservers(): void {
       const clsEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
       if (!clsEntry.hadRecentInput) {
         clsValue += clsEntry.value || 0
+        recordCLSAttribution(entry)
       }
     }
   })
@@ -250,6 +265,7 @@ export function installPerfObservers(): void {
       if (inpEntry.interactionId) {
         if (inpValue === null || inpEntry.duration > inpValue) {
           inpValue = inpEntry.duration
+          recordINPAttribution(entry)
         }
       }
     }
@@ -331,6 +347,8 @@ export function getCLS(): number {
 export function getINP(): number | null {
   return inpValue
 }
+
+export { getVitalsAttribution }
 
 /**
  * Send performance snapshot via postMessage to content script

@@ -7,12 +7,16 @@ relates-to: [product-spec.md, tech-spec.md]
 last-verified: 2026-03-05
 doc_type: qa-plan
 feature_id: feature-web-vitals
-last_reviewed: 2026-07-05
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+last_reviewed: 2026-08-04
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # QA Plan: Web Vitals Capture
+
+Automated contract coverage verifies bounded LCP, CLS, INP, and long-task
+attribution; content and resource URLs are excluded; and unsupported source
+stacks are explicitly labeled unavailable.
 
 > QA plan for the Web Vitals Capture feature. Covers data leak analysis, LLM clarity, simplicity assessment, code-level testing, and step-by-step UAT verification.
 

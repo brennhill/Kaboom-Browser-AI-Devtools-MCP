@@ -60,6 +60,60 @@ export interface WireLongTaskMetrics {
 }
 
 /**
+ * WireElementDescriptor identifies an element without capturing its text or attributes.
+ */
+export interface WireElementDescriptor {
+  readonly tag: string
+  readonly id?: string
+  readonly classes?: readonly string[]
+  readonly role?: string
+}
+
+export interface WireLCPAttribution {
+  readonly element?: WireElementDescriptor
+  readonly time_to_first_byte_ms: number
+  readonly resource_load_delay_ms: number
+  readonly resource_load_duration_ms: number
+  readonly element_render_delay_ms: number
+  readonly attribution_status: string
+}
+
+export interface WireINPAttribution {
+  readonly event_type: string
+  readonly target?: WireElementDescriptor
+  readonly input_delay_ms: number
+  readonly processing_ms: number
+  readonly presentation_delay_ms: number
+  readonly interaction_id: number
+}
+
+export interface WireLayoutShiftAttribution {
+  readonly value: number
+  readonly start_time: number
+  readonly nodes: readonly WireElementDescriptor[]
+}
+
+export interface WireCLSAttribution {
+  readonly shifts: readonly WireLayoutShiftAttribution[]
+  readonly attribution_status: string
+}
+
+export interface WireLongTaskAttribution {
+  readonly name: string
+  readonly start_time: number
+  readonly duration: number
+  readonly source_stack?: readonly string[]
+  readonly source_stack_status: string
+}
+
+export interface WireVitalsAttribution {
+  readonly lcp?: WireLCPAttribution
+  readonly inp?: WireINPAttribution
+  readonly cls: WireCLSAttribution
+  readonly long_tasks: readonly WireLongTaskAttribution[]
+}
+
+/**
  * WireUserTimingEntry represents a single performance mark or measure.
  */
 export interface WireUserTimingEntry {
@@ -86,6 +140,7 @@ export interface WirePerformanceSnapshot {
   readonly network: WireNetworkSummary
   readonly long_tasks: WireLongTaskMetrics
   readonly cumulative_layout_shift?: number | null
+  readonly vitals_attribution?: WireVitalsAttribution
   readonly user_timing?: WireUserTimingData
   // server-only: resources — added by Go daemon for causal diffing
 }

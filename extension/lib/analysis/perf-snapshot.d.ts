@@ -2,6 +2,7 @@
  * Purpose: Observes web vitals (FCP, LCP, CLS, INP), long tasks, and resource timing to build comprehensive performance snapshots.
  * Docs: docs/features/feature/performance-audit/index.md
  */
+import { getVitalsAttribution, type VitalsAttribution } from './vitals-attribution.js';
 interface ResourceByType {
     count: number;
     size: number;
@@ -44,6 +45,7 @@ interface PerformanceSnapshotData {
     network: ResourceTimingSummary;
     long_tasks: LongTaskMetrics;
     cumulative_layout_shift: number;
+    vitals_attribution: VitalsAttribution;
     user_timing?: {
         marks: UserTimingEntry[];
         measures: UserTimingEntry[];
@@ -89,6 +91,7 @@ export declare function getCLS(): number;
  * Get Interaction to Next Paint value
  */
 export declare function getINP(): number | null;
+export { getVitalsAttribution };
 /**
  * Send performance snapshot via postMessage to content script
  */
@@ -106,5 +109,4 @@ export declare function isPerformanceSnapshotEnabled(): boolean;
  * Enable or disable performance snapshot capture
  */
 export declare function setPerformanceSnapshotEnabled(enabled: boolean): void;
-export {};
 //# sourceMappingURL=perf-snapshot.d.ts.map

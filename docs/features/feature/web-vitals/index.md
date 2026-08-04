@@ -4,11 +4,18 @@ feature_id: feature-web-vitals
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-04
 code_paths:
-test_paths: []
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+  - src/lib/analysis/perf-snapshot.ts
+  - src/lib/analysis/vitals-attribution.ts
+  - internal/performance/wire_performance.go
+  - internal/performance/types.go
+  - internal/tools/observe/session.go
+test_paths:
+  - tests/extension/performance/web-vitals.test.js
+  - internal/performance/wire_performance_test.go
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # Web Vitals
@@ -34,4 +41,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Kaboom reports bounded element descriptors and phase timings for LCP and INP,
+bounded shifting-node evidence for CLS, and long-task attribution with an
+explicit availability status. Element text, values, arbitrary attributes, and
+resource URLs are never included in attribution payloads.

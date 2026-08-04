@@ -254,6 +254,9 @@ func buildVitalsMap(snapshots []performance.PerformanceSnapshot) map[string]any 
 	if latest.CLS != nil {
 		vitals["cls"] = *latest.CLS
 	}
+	if latest.VitalsAttribution != nil {
+		vitals["attribution"] = latest.VitalsAttribution
+	}
 	return vitals
 }
 

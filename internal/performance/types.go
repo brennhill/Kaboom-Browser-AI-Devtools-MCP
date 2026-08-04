@@ -16,14 +16,15 @@ package performance
 // PerformanceSnapshot represents a captured performance snapshot from a page load.
 // Wire fields: see WirePerformanceSnapshot in wire_performance.go
 type PerformanceSnapshot struct {
-	URL        string            `json:"url"`
-	Timestamp  string            `json:"timestamp"`
-	Timing     PerformanceTiming `json:"timing"`
-	Network    NetworkSummary    `json:"network"`
-	LongTasks  LongTaskMetrics   `json:"long_tasks"`
-	CLS        *float64          `json:"cumulative_layout_shift,omitempty"` // snake_case (from browser LayoutShift)
-	Resources  []ResourceEntry   `json:"resources,omitempty"`
-	UserTiming *UserTimingData   `json:"user_timing,omitempty"`
+	URL               string                 `json:"url"`
+	Timestamp         string                 `json:"timestamp"`
+	Timing            PerformanceTiming      `json:"timing"`
+	Network           NetworkSummary         `json:"network"`
+	LongTasks         LongTaskMetrics        `json:"long_tasks"`
+	CLS               *float64               `json:"cumulative_layout_shift,omitempty"` // snake_case (from browser LayoutShift)
+	VitalsAttribution *WireVitalsAttribution `json:"vitals_attribution,omitempty"`
+	Resources         []ResourceEntry        `json:"resources,omitempty"`
+	UserTiming        *UserTimingData        `json:"user_timing,omitempty"`
 }
 
 // UserTimingData holds captured performance.mark() and performance.measure() entries.

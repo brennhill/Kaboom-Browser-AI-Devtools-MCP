@@ -4,10 +4,29 @@
 package observe
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 )
+
+func TestBuildVitalsMapIncludesActionableAttribution(t *testing.T) {
+	t.Parallel()
+	snapshots := []performance.PerformanceSnapshot{{
+		URL: "/app",
+		VitalsAttribution: &performance.WireVitalsAttribution{
+			LCP: &performance.WireLCPAttribution{
+				Element:           performance.WireElementDescriptor{Tag: "img", ID: "hero"},
+				AttributionStatus: "available",
+			},
+		},
+	}}
+	result := buildVitalsMap(snapshots)
+	attribution, ok := result["attribution"].(*performance.WireVitalsAttribution)
+	if !ok || attribution.LCP == nil || attribution.LCP.Element.ID != "hero" {
+		t.Fatalf("actionable attribution missing: %#v", result)
+	}
+}
 
 func TestBuildHistoryEntries_Limit(t *testing.T) {
 	t.Parallel()
