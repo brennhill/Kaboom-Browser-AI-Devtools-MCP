@@ -4,7 +4,7 @@ feature_id: feature-file-upload
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
@@ -69,3 +69,8 @@ DNS while exercising production URL validation.
 Multipart writer panics are recovered at the goroutine boundary and returned
 through the existing writer-error channel, so callers receive a failed
 submission instead of a process crash or silent partial request.
+Stage 3 owns its HTTP client privately and injects it only at the internal
+execution seam used by deterministic transport tests. If a transport rejects
+before consuming the streaming body, the pipe reader closes with that error
+before the handler waits for its writer, guaranteeing the writer unblocks and
+the request returns a visible failure instead of hanging.

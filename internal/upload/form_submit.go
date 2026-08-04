@@ -17,9 +17,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
-// UploadHTTPClient is a shared client for Stage 3 form submissions.
+// uploadHTTPClient is the canonical shared client for Stage 3 form submissions.
 // Reuses connections via the default transport pool.
-var UploadHTTPClient = &http.Client{
+var uploadHTTPClient = &http.Client{
 	Timeout:   10 * time.Minute, // Large file uploads can take a while
 	Transport: uploadsec.DefaultSSRFTransport(),
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -38,7 +38,7 @@ func HandleFormSubmit(req FormSubmitRequest, sec *uploadsec.Security) StageRespo
 	return HandleFormSubmitCtx(context.Background(), req, sec)
 }
 
-func ExecuteFormSubmit(ctx context.Context, req FormSubmitRequest, file *os.File, info os.FileInfo, writer *multipart.Writer, pr *io.PipeReader, pw *io.PipeWriter, start time.Time) StageResponse {
+func executeFormSubmitWithClient(ctx context.Context, client *http.Client, req FormSubmitRequest, file *os.File, info os.FileInfo, writer *multipart.Writer, pr *io.PipeReader, pw *io.PipeWriter, start time.Time) StageResponse {
 	writeErrCh := runFormWriter(func() error {
 		return StreamMultipartForm(pw, writer, req, file)
 	})
@@ -56,8 +56,9 @@ func ExecuteFormSubmit(ctx context.Context, req FormSubmitRequest, file *os.File
 	}
 
 	// #nosec G704 -- req.FormAction is pre-validated by uploadsec.ValidateFormActionURL and redirect callback revalidates
-	httpResp, err := UploadHTTPClient.Do(httpReq)
+	httpResp, err := client.Do(httpReq)
 	if err != nil {
+		_ = pr.CloseWithError(err)
 		<-writeErrCh
 		return StageResponse{
 			Success: false, Stage: 3,
@@ -116,5 +117,5 @@ func HandleFormSubmitCtx(ctx context.Context, req FormSubmitRequest, sec *upload
 	pr, pw := io.Pipe()
 	writer := multipart.NewWriter(pw)
 
-	return ExecuteFormSubmit(ctx, req, file, info, writer, pr, pw, start)
+	return executeFormSubmitWithClient(ctx, uploadHTTPClient, req, file, info, writer, pr, pw, start)
 }
