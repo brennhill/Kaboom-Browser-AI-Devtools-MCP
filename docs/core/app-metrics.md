@@ -517,6 +517,22 @@ Notes:
 | Install-level drilldown | all rows filtered by `iid` |
 | Product/runtime failures and recovery effectiveness | `app_error`, grouped by `error_code`, `outcome`, `attempt_bucket`, and `latency_bucket` |
 
+## Release Health Comparison
+
+The authenticated `kaboom-metrics` `/release-health` surface selects the two
+highest valid stable semantic versions observed in the chosen range. It
+compares matching OS, channel, and MCP-client segments; a late event from an
+older install therefore cannot redefine which release is current.
+
+Comparative alerts require at least 20 completed sessions in both releases and
+at least three current failures. An existing failure rate must rise by at least
+five percentage points and 2×. Repeated codes absent from the baseline are
+reported as new. The alert set covers crash-free installs, sessions without a
+successful command, daemon restart loops, content-readiness and reconnect
+exhaustion, malformed ingest rows, compatibility failures, and all other
+canonical `app_error` codes. These calculations use only the bounded fields in
+this contract.
+
 “Raw installs” means package-store/download or installer completion data and is
 not inferred from telemetry identities. `first_tool_call` measures activated
 installs; daily/monthly active installs measure distinct stable `iid` values

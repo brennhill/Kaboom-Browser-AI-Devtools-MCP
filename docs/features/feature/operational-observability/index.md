@@ -93,6 +93,15 @@ exhaustion, together with a closed latency bucket. This makes recovery
 effectiveness queryable by the existing version, platform, client, and
 registry-owned subsystem dimensions without exporting local correlation data.
 
+The authenticated release-health dashboard is owned by the adjacent
+`kaboom-metrics` analytics boundary. It compares the newest valid stable
+semantic version with its predecessor by OS, channel, and MCP client. Alerts
+cover crash-free-install regression, sessions without successful commands,
+restart loops, readiness/reconnect exhaustion, malformed telemetry, and new or
+spiking canonical error codes. Both releases need at least 20 sessions in a
+segment, failures must repeat at least three times, and existing rates must
+increase by both five percentage points and 2×, which bounds low-volume noise.
+
 All legacy runtime `app_error` producers now use the same closed registry.
 Callers cannot provide arbitrary categories, sources, severities, retryability,
 or maps; each registered code carries an explicit
