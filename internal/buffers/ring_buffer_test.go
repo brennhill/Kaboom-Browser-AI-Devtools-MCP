@@ -268,12 +268,12 @@ func TestRingBuffer_SequentialCursorReads(t *testing.T) {
 func TestRingBuffer_FindPositionAtTime(t *testing.T) {
 	t.Parallel()
 	rb := NewRingBuffer[string](10)
+	writeTime := time.Unix(100, 0)
+	rb.now = func() time.Time { return writeTime }
 
-	before := time.Now()
-	time.Sleep(time.Millisecond)
+	before := writeTime.Add(-time.Nanosecond)
 	rb.Write([]string{"a", "b", "c"})
-	time.Sleep(time.Millisecond)
-	after := time.Now()
+	after := writeTime.Add(time.Nanosecond)
 
 	// Position at time before any writes should return 0
 	pos := rb.FindPositionAtTime(before)
@@ -460,12 +460,14 @@ func TestRingBuffer_ConcurrentWriteAndRead(t *testing.T) {
 	t.Parallel()
 	rb := NewRingBuffer[int](100)
 	var wg sync.WaitGroup
+	start := make(chan struct{})
 
 	// Concurrent writers
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
+			<-start
 			for j := 0; j < 100; j++ {
 				rb.WriteOne(i*100 + j)
 			}
@@ -477,14 +479,15 @@ func TestRingBuffer_ConcurrentWriteAndRead(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			<-start
 			cursor := BufferCursor{}
 			for j := 0; j < 50; j++ {
 				_, cursor = rb.ReadFrom(cursor)
-				time.Sleep(time.Microsecond)
 			}
 		}()
 	}
 
+	close(start)
 	wg.Wait()
 
 	// Buffer should have entries and not have panicked

@@ -35,6 +35,7 @@ type RingBuffer[T any] struct {
 	entries  []T
 	addedAt  []time.Time // Parallel slice: when each entry was added
 	capacity int
+	now      func() time.Time
 
 	// Position tracking
 	totalAdded int64 // Monotonic counter of all entries ever added
@@ -47,6 +48,7 @@ func NewRingBuffer[T any](capacity int) *RingBuffer[T] {
 		entries:  make([]T, 0, capacity),
 		addedAt:  make([]time.Time, 0, capacity),
 		capacity: capacity,
+		now:      time.Now,
 	}
 }
 
@@ -60,7 +62,7 @@ func (rb *RingBuffer[T]) Write(entries []T) int {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
 
-	now := time.Now()
+	now := rb.now()
 	written := 0
 
 	for _, entry := range entries {
@@ -75,7 +77,7 @@ func (rb *RingBuffer[T]) Write(entries []T) int {
 func (rb *RingBuffer[T]) WriteOne(entry T) {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
-	rb.writeOneLocked(entry, time.Now())
+	rb.writeOneLocked(entry, rb.now())
 }
 
 // writeOneLocked adds one entry, must be called with mu held.
@@ -99,7 +101,7 @@ func (rb *RingBuffer[T]) ReadFrom(cursor BufferCursor) ([]T, BufferCursor) {
 	defer rb.mu.RUnlock()
 
 	if len(rb.entries) == 0 {
-		return nil, BufferCursor{Position: rb.totalAdded, Timestamp: time.Now()}
+		return nil, BufferCursor{Position: rb.totalAdded, Timestamp: rb.now()}
 	}
 
 	oldestPosition := rb.totalAdded - int64(len(rb.entries))
@@ -114,7 +116,7 @@ func (rb *RingBuffer[T]) ReadFrom(cursor BufferCursor) ([]T, BufferCursor) {
 
 	entriesAvailable := rb.totalAdded - startPosition
 	if entriesAvailable <= 0 {
-		return nil, BufferCursor{Position: rb.totalAdded, Timestamp: time.Now()}
+		return nil, BufferCursor{Position: rb.totalAdded, Timestamp: rb.now()}
 	}
 
 	startIndex := rb.positionToIndex(startPosition)
@@ -125,7 +127,7 @@ func (rb *RingBuffer[T]) ReadFrom(cursor BufferCursor) ([]T, BufferCursor) {
 		result = append(result, rb.entries[idx])
 	}
 
-	return result, BufferCursor{Position: rb.totalAdded, Timestamp: time.Now()}
+	return result, BufferCursor{Position: rb.totalAdded, Timestamp: rb.now()}
 }
 
 // ReadAll returns all entries currently in the buffer, oldest first.

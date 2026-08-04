@@ -27,12 +27,14 @@ func TestStressRingBufferConcurrent(t *testing.T) {
 
 		rb := NewRingBuffer[int](capacity)
 		var wg sync.WaitGroup
+		start := make(chan struct{})
 
 		// Launch writer goroutines
 		for writerID := 0; writerID < numWriters; writerID++ {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				<-start
 				for i := 0; i < writesPerWriter; i++ {
 					value := id*1000 + i
 					rb.WriteOne(value)
@@ -45,12 +47,9 @@ func TestStressRingBufferConcurrent(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				<-start
 				for i := 0; i < readsPerReader; i++ {
 					_ = rb.ReadAll()
-					// Small yield to allow other goroutines to interleave
-					if i%10 == 0 {
-						time.Sleep(1 * time.Microsecond)
-					}
 				}
 			}(readerID)
 		}
@@ -60,14 +59,14 @@ func TestStressRingBufferConcurrent(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				<-start
 				for i := 0; i < clearsPerClear; i++ {
-					// Sleep to avoid clearing too aggressively
-					time.Sleep(2 * time.Millisecond)
 					rb.Clear()
 				}
 			}(clearID)
 		}
 
+		close(start)
 		// Wait for all goroutines to complete
 		wg.Wait()
 
@@ -107,12 +106,14 @@ func TestStressRingBufferCursorConcurrent(t *testing.T) {
 
 		rb := NewRingBuffer[int](capacity)
 		var wg sync.WaitGroup
+		start := make(chan struct{})
 
 		// Launch writer goroutines
 		for writerID := 0; writerID < numWriters; writerID++ {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				<-start
 				for i := 0; i < writesPerWriter; i++ {
 					value := id*1000 + i
 					rb.WriteOne(value)
@@ -125,18 +126,16 @@ func TestStressRingBufferCursorConcurrent(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
+				<-start
 				cursor := BufferCursor{Position: 0, Timestamp: time.Now()}
 				for i := 0; i < readsPerReader; i++ {
 					_, newCursor := rb.ReadFrom(cursor)
 					cursor = newCursor
-					// Yield to allow writers to interleave
-					if i%10 == 0 {
-						time.Sleep(1 * time.Microsecond)
-					}
 				}
 			}(readerID)
 		}
 
+		close(start)
 		wg.Wait()
 
 		// Verify final state
@@ -152,10 +151,10 @@ func TestStressRingBufferCursorConcurrent(t *testing.T) {
 func TestStressRingBufferBatchWrites(t *testing.T) {
 	t.Run("batch_write_stress", func(t *testing.T) {
 		const (
-			capacity       = 100
-			numWriters     = 20
+			capacity        = 100
+			numWriters      = 20
 			batchesPerWrite = 50
-			batchSize      = 10
+			batchSize       = 10
 		)
 
 		rb := NewRingBuffer[int](capacity)
