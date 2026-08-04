@@ -312,6 +312,7 @@ type syncConnectionState struct {
 func (r *ExtensionRuntime) updateSyncConnectionState(req SyncRequest, clientID string, now time.Time) syncConnectionState {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	wasActuallyConnected := extensionStateConnected(r.state, now)
 
 	state := syncConnectionState{
 		wasConnected:      r.state.lastExtensionConnected,
@@ -338,6 +339,9 @@ func (r *ExtensionRuntime) updateSyncConnectionState(req SyncRequest, clientID s
 	r.state.lastExtensionConnected = true
 	r.state.lastSyncSeen = now
 	r.state.lastSyncClientID = clientID
+	if !wasActuallyConnected {
+		r.signalConnectionChangeLocked()
+	}
 	if req.ExtSessionID != "" && req.ExtSessionID != r.state.extSessionID {
 		r.state.extSessionID = req.ExtSessionID
 		r.state.extSessionChangedAt = now

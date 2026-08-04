@@ -92,6 +92,7 @@ test_paths:
   - internal/capture/sync_test_helpers_test.go
   - internal/capturefixture/sync_test.go
   - internal/capture/sync_command_lifecycle_test.go
+  - internal/capture/readiness_gate_test.go
   - internal/capture/async_queue_integration_test.go
   - internal/capture/sync_waterfall_test.go
   - internal/capture/websocket_test.go
@@ -370,6 +371,10 @@ this one bounded delivery contract.
 - SyncHandler owns a private pending-query wait boundary. Handler tests control
   the wait and prove the required resnapshot; QueryDispatcher tests exclusively
   own timer and wakeup behavior.
+- Extension readiness uses a lock-owned generation notification shared by sync
+  connection and authoritative disconnect transitions. Waiters cannot miss a
+  reconnect between checking state and blocking, and cancellation no longer
+  waits for a periodic polling tick.
 - Query cleanup lifecycle coverage lives with the canonical QueryDispatcher;
   the former Capture-level goroutine-count and duplicate result-wait tests were
   deleted rather than preserved as a cross-owner test facade.

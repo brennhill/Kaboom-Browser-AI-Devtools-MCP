@@ -10,53 +10,65 @@ import (
 	"time"
 )
 
+func requireReadinessResult(t *testing.T, result <-chan bool, want bool) {
+	t.Helper()
+	select {
+	case connected := <-result:
+		if connected != want {
+			t.Fatalf("readiness result = %t, want %t", connected, want)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("readiness wait did not complete")
+	}
+}
+
+func TestWaitForExtensionConnected_ConnectionTransitionClosesGeneration(t *testing.T) {
+	t.Parallel()
+	c := NewCapture()
+	t.Cleanup(c.Close)
+	connected, notify := c.Extension().connectionReadinessSnapshot()
+	if connected {
+		t.Fatal("fresh extension runtime started connected")
+	}
+
+	connectForTest(c)
+	select {
+	case <-notify:
+	default:
+		t.Fatal("connection transition did not close readiness generation")
+	}
+	if !c.Extension().WaitForExtensionConnected(context.Background(), time.Second) {
+		t.Fatal("connected runtime did not satisfy readiness wait")
+	}
+}
+
 func TestWaitForExtensionConnected_NeverConnects(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 	// Extension never connects — should timeout
+	t.Cleanup(c.Close)
 
-	timeout := 200 * time.Millisecond
-	start := time.Now()
-	ok := c.Extension().WaitForExtensionConnected(context.Background(), timeout)
-	elapsed := time.Since(start)
+	ok := c.Extension().WaitForExtensionConnected(context.Background(), time.Millisecond)
 
 	if ok {
 		t.Fatal("expected WaitForExtensionConnected to return false when extension never connects")
-	}
-	if elapsed < timeout-20*time.Millisecond {
-		t.Fatalf("expected to wait at least %v, only waited %v", timeout, elapsed)
 	}
 }
 
 func TestWaitForExtensionConnected_ConnectsPartway(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
-
-	// Simulate connection after 150ms
-	go func() {
-		time.Sleep(150 * time.Millisecond)
-		connectForTest(c)
-	}()
-
-	start := time.Now()
-	ok := c.Extension().WaitForExtensionConnected(context.Background(), 2*time.Second)
-	elapsed := time.Since(start)
-
-	if !ok {
-		t.Fatal("expected WaitForExtensionConnected to return true after mid-wait connection")
-	}
-	// Should have detected connection between 150ms and 350ms (150ms + poll interval slack)
-	if elapsed < 100*time.Millisecond {
-		t.Fatalf("detected connection too fast (%v), connection fires at 150ms", elapsed)
-	}
-	if elapsed > 500*time.Millisecond {
-		t.Fatalf("took too long to detect connection (%v), expected within 500ms", elapsed)
-	}
+	t.Cleanup(c.Close)
+	result := make(chan bool, 1)
+	go func() { result <- c.Extension().WaitForExtensionConnected(context.Background(), 2*time.Second) }()
+	connectForTest(c)
+	requireReadinessResult(t, result, true)
 }
 
 func TestWaitForExtensionConnected_ZeroTimeout(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
+	t.Cleanup(c.Close)
 
 	// Zero timeout should behave like a single check
 	ok := c.Extension().WaitForExtensionConnected(context.Background(), 0)
@@ -68,6 +80,7 @@ func TestWaitForExtensionConnected_ZeroTimeout(t *testing.T) {
 func TestWaitForExtensionConnected_ZeroTimeout_AlreadyConnected(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
+	t.Cleanup(c.Close)
 	connectForTest(c)
 
 	ok := c.Extension().WaitForExtensionConnected(context.Background(), 0)
@@ -80,67 +93,28 @@ func TestWaitForExtensionConnected_ZeroTimeout_AlreadyConnected(t *testing.T) {
 func TestWaitForExtensionConnected_ContextCancelled(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
+	t.Cleanup(c.Close)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Cancel context after 100ms
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		cancel()
-	}()
-
-	start := time.Now()
-	ok := c.Extension().WaitForExtensionConnected(ctx, 5*time.Second)
-	elapsed := time.Since(start)
-
-	if ok {
-		t.Fatal("expected false when context is cancelled and extension never connected")
-	}
-	// Should return within ~150ms (100ms cancel + poll interval slack), not 5s
-	if elapsed > 500*time.Millisecond {
-		t.Fatalf("context cancellation should stop wait promptly, took %v", elapsed)
-	}
-	if elapsed < 50*time.Millisecond {
-		t.Fatalf("should have waited for context cancel, only waited %v", elapsed)
-	}
+	result := make(chan bool, 1)
+	go func() { result <- c.Extension().WaitForExtensionConnected(ctx, 5*time.Second) }()
+	cancel()
+	requireReadinessResult(t, result, false)
 }
 
 // P2-3: Connect-then-disconnect during wait returns after observing connection.
 func TestWaitForExtensionConnected_ConnectsThenDisconnects(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
-
-	// Simulate connect at 50ms — early enough that the first poll tick (100ms)
-	// reliably sees the connected state.
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		connectForTest(c)
-	}()
-
-	// Simulate disconnect at 400ms — gives at least 3 poll ticks (100ms each)
-	// to detect the connection before it goes away. The previous 200ms delay
-	// left only a ~100ms window which caused flaky failures when the poll tick
-	// aligned with the disconnect.
-	go func() {
-		time.Sleep(400 * time.Millisecond)
-		c.Extension().MarkDisconnected()
-	}()
-
-	// Start waiting — extension connects at 50ms. The poll at ~100ms should catch
-	// the connected state. Even though disconnect fires at 400ms, the poll at
-	// ~100ms should see the connection well before the disconnect.
-	start := time.Now()
-	ok := c.Extension().WaitForExtensionConnected(context.Background(), 2*time.Second)
-	elapsed := time.Since(start)
-
-	if !ok {
-		t.Fatal("expected WaitForExtensionConnected to return true — lastSyncSeen was recent when polled")
-	}
-	if elapsed < 30*time.Millisecond {
-		t.Fatalf("detected connection too fast (%v), connection fires at 50ms", elapsed)
-	}
-	if elapsed > 500*time.Millisecond {
-		t.Fatalf("took too long to detect connection (%v)", elapsed)
+	t.Cleanup(c.Close)
+	result := make(chan bool, 1)
+	go func() { result <- c.Extension().WaitForExtensionConnected(context.Background(), 2*time.Second) }()
+	connectForTest(c)
+	requireReadinessResult(t, result, true)
+	c.Extension().MarkDisconnected()
+	if c.Extension().IsExtensionConnected() {
+		t.Fatal("extension remained connected after authoritative disconnect")
 	}
 }
 
@@ -148,23 +122,20 @@ func TestWaitForExtensionConnected_ConnectsThenDisconnects(t *testing.T) {
 func TestWaitForExtensionConnected_NegativeTimeout(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
+	t.Cleanup(c.Close)
 
 	// Not connected — negative timeout should return false instantly
-	start := time.Now()
 	ok := c.Extension().WaitForExtensionConnected(context.Background(), -1*time.Second)
-	elapsed := time.Since(start)
 
 	if ok {
 		t.Fatal("expected false with negative timeout and no connection")
-	}
-	if elapsed > 50*time.Millisecond {
-		t.Fatalf("negative timeout should be instant, took %v", elapsed)
 	}
 }
 
 func TestWaitForExtensionConnected_NegativeTimeout_AlreadyConnected(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
+	t.Cleanup(c.Close)
 	connectForTest(c)
 
 	ok := c.Extension().WaitForExtensionConnected(context.Background(), -1*time.Second)

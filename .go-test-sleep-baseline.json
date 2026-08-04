@@ -34,7 +34,6 @@
     "internal/analysis/apicontract/contract_report_test.go": 1,
     "internal/capture/capture_stress_test.go": 4,
     "internal/capture/extension_state_unit_test.go": 1,
-    "internal/capture/readiness_gate_test.go": 4,
     "internal/pty/session_test.go": 4
   }
 }

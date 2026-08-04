@@ -88,12 +88,14 @@ type ExtensionState struct {
 
 // ExtensionRuntime owns live browser-extension state and its synchronization.
 type ExtensionRuntime struct {
-	mu    sync.RWMutex
-	state ExtensionState
+	mu               sync.RWMutex
+	state            ExtensionState
+	connectionNotify chan struct{}
 }
 
 func newExtensionRuntime() *ExtensionRuntime {
 	return &ExtensionRuntime{
+		connectionNotify: make(chan struct{}),
 		state: ExtensionState{
 			activeTestIDs:          make(map[string]bool),
 			missingInProgressSince: make(map[string]time.Time),
@@ -173,29 +175,44 @@ type pilotStatusSnapshot struct {
 	Source            string
 }
 
-// WaitForExtensionConnected polls until the extension connects, the timeout elapses,
-// or ctx is cancelled. Returns true if connected within the window, false otherwise.
-// A zero or negative timeout returns false immediately (no polling).
-// Poll interval is extensionReadinessPollInterval (200ms). ctx cancellation is
-// honoured between polls.
+// WaitForExtensionConnected blocks until the extension connects, the timeout
+// elapses, or ctx is cancelled. Connection transitions close and rotate a
+// generation channel under the state lock, preventing missed wakeups.
+// A zero or negative timeout performs one state check without waiting.
 func (r *ExtensionRuntime) WaitForExtensionConnected(ctx context.Context, timeout time.Duration) bool {
-	if r.IsExtensionConnected() {
+	connected, notify := r.connectionReadinessSnapshot()
+	if connected {
 		return true
 	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	ticker := time.NewTicker(extensionReadinessPollInterval)
-	defer ticker.Stop()
+	if timeout <= 0 {
+		return false
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return false
-		case <-ticker.C:
-			if r.IsExtensionConnected() {
+		case <-timer.C:
+			return false
+		case <-notify:
+			connected, notify = r.connectionReadinessSnapshot()
+			if connected {
 				return true
 			}
 		}
 	}
+}
+
+func (r *ExtensionRuntime) connectionReadinessSnapshot() (bool, <-chan struct{}) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return extensionStateConnected(r.state, time.Now()), r.connectionNotify
+}
+
+func (r *ExtensionRuntime) signalConnectionChangeLocked() {
+	close(r.connectionNotify)
+	r.connectionNotify = make(chan struct{})
 }
 
 // IsExtensionConnected returns true if the extension has synced within the
@@ -211,7 +228,11 @@ func (r *ExtensionRuntime) IsExtensionConnected() bool {
 func (r *ExtensionRuntime) MarkDisconnected() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if !r.state.lastExtensionConnected {
+		return
+	}
 	r.state.lastExtensionConnected = false
+	r.signalConnectionChangeLocked()
 }
 
 // GetExtensionStatus returns a detached connection snapshot.
