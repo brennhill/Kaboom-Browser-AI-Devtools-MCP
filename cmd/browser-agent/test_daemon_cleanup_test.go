@@ -17,7 +17,6 @@ import (
 // Some tests spawn client processes that in turn spawn detached daemons.
 // We run cleanup before and after tests to prevent stale daemons from accumulating.
 func TestMain(m *testing.M) {
-	initBridge()
 	cleanupGoTestDaemons()
 	code := m.Run()
 	cleanupGoTestDaemons()

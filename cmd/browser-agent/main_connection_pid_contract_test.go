@@ -38,7 +38,7 @@ func TestCleanupStalePIDFile_AliveUnrelatedProcessDoesNotBlock(t *testing.T) {
 	t.Setenv(state.StateDirEnv, stateRoot)
 
 	port := freePortForTest(t)
-	if bridgeRunner.IsServerRunning(port) {
+	if bridgeRuntime().IsServerRunning(port) {
 		t.Fatalf("test precondition failed: port %d unexpectedly in use", port)
 	}
 

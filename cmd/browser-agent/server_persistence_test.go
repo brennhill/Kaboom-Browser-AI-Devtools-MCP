@@ -65,7 +65,7 @@ func TestServerPersistence_StaysAliveWithOpenStdin(t *testing.T) {
 	}()
 
 	// Wait for server to start
-	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start on port %d", port)
 	}
 
@@ -125,7 +125,7 @@ func TestServerPersistence_HealthResponseTime(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -186,7 +186,7 @@ func TestServerPersistence_SurvivesStdinClose(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -243,7 +243,7 @@ func TestServerPersistence_PersistModeKeepsAlive(t *testing.T) {
 		t.Fatalf("Failed to send initialize request: %v", err)
 	}
 
-	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -298,7 +298,7 @@ func TestServerPersistence_MultipleHealthChecksUnderLoad(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -353,7 +353,7 @@ func TestServerPersistence_StdinNoDataExtendedPeriod(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 

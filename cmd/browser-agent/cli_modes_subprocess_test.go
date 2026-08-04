@@ -86,7 +86,7 @@ func TestCLIExplicitStateAndUploadConfiguration(t *testing.T) {
 			})
 			deadline := time.Now().Add(5 * time.Second)
 			for time.Now().Before(deadline) {
-				if bridgeRunner.IsServerRunning(port) {
+				if bridgeRuntime().IsServerRunning(port) {
 					return
 				}
 				time.Sleep(25 * time.Millisecond)

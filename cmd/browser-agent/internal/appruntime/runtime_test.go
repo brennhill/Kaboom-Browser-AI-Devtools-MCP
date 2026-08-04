@@ -35,6 +35,26 @@ func TestRuntimeOwnsUpgradeProvider(t *testing.T) {
 	}
 }
 
+func TestBridgeRunnerIsPerRuntime(t *testing.T) {
+	t.Parallel()
+	first := New("0.9.0")
+	second := New("0.9.0")
+	first.SetBridgeRunner(fakeBridge{id: "first"})
+	second.SetBridgeRunner(fakeBridge{id: "second"})
+
+	if first.BridgeRunner().LaunchFingerprint()["id"] == second.BridgeRunner().LaunchFingerprint()["id"] {
+		t.Fatal("bridge runner leaked between application runtimes")
+	}
+}
+
 type fixedUpgrade struct{ version string }
 
 func (f fixedUpgrade) UpgradeInfo() (bool, string, time.Time) { return true, f.version, time.Time{} }
+
+type fakeBridge struct{ id string }
+
+func (f fakeBridge) IsServerRunning(int) bool              { return false }
+func (f fakeBridge) WaitForServer(int, time.Duration) bool { return false }
+func (f fakeBridge) EnsureIOIsolation(string) error        { return nil }
+func (f fakeBridge) LaunchFingerprint() map[string]any     { return map[string]any{"id": f.id} }
+func (f fakeBridge) RunMode(int, string, int)              {}

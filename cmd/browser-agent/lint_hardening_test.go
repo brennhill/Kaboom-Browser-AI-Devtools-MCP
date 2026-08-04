@@ -37,6 +37,8 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"osUploadAutomationFlag ",
 		"uploadSecurityConfig ",
 		"\n\tstartupWarnings []string",
+		"var bridgeRunner ",
+		"var exitDiagnostics ",
 		"type JSONRPCRequest =",
 		"type JSONRPCResponse =",
 		"type MCPToolResult =",

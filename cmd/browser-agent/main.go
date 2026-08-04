@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/exitdiag"
@@ -25,12 +26,6 @@ import (
 // Fallback used for `go run` and `make dev` (no ldflags).
 var version = "0.9.0"
 
-var exitDiagnostics = exitdiag.New(exitdiag.Options{Version: version})
-
-type upgradeInfoProvider interface {
-	UpgradeInfo() (pending bool, version string, detectedAt time.Time)
-}
-
 // daemonProcessArgv0 binds the build-time version to the process-title builder in
 // internal/procctl. It lives beside `version` because that is the only reason it
 // exists — the bridge lifecycle collaborator and CLI config both take a plain
@@ -39,13 +34,13 @@ func daemonProcessArgv0(exePath string) string {
 	return procctl.Argv0ForVersion(exePath, version)
 }
 
-func cliRuntimeConfig() cli.RuntimeConfig {
+func cliRuntimeConfig(runtime *appruntime.Runtime) cli.RuntimeConfig {
 	return cli.RuntimeConfig{
 		DefaultPort: defaultPort, MaxPostBodySize: maxPostBodySize,
 		DiagnosticOutput: diag.Sink(),
-		IsServerRunning:  bridgeRunner.IsServerRunning,
+		IsServerRunning:  runtime.BridgeRunner().IsServerRunning,
 		WaitForServer: func(port int, timeout time.Duration) bool {
-			return bridgeRunner.WaitForServer(port, timeout)
+			return runtime.BridgeRunner().WaitForServer(port, timeout)
 		},
 		DaemonProcessArgv0: daemonProcessArgv0,
 	}
@@ -56,12 +51,9 @@ func init() {
 	if telemetry.Version == "dev" {
 		telemetry.Version = version
 	}
-	bridgeRunner = buildBridgeRunner()
 }
 
-var bridgeRunner *bridge.Runner
-
-func buildBridgeRunner() *bridge.Runner {
+func buildBridgeRunner(exitDiagnostics *exitdiag.Recorder) *bridge.Runner {
 	debugLogger := diag.NewDebugFileFromEnv()
 	return bridge.NewRunner(
 		bridge.Identity{Version: version, ServerName: identity.MCPServerName, ServerInstructions: serverInstructions},
@@ -89,7 +81,9 @@ func buildBridgeRunner() *bridge.Runner {
 	)
 }
 
-func initBridge() { bridgeRunner = buildBridgeRunner() }
+func bridgeRuntime() *bridge.Runner {
+	return buildBridgeRunner(exitdiag.New(exitdiag.Options{Version: version}))
+}
 
 const (
 	defaultPort     = 7890
@@ -101,14 +95,16 @@ const (
 )
 
 func main() {
+	runtime := appruntime.New(version)
+	runtime.SetBridgeRunner(buildBridgeRunner(runtime.ExitDiagnostics()))
 	defer func() {
 		if r := recover(); r != nil {
-			exitDiagnostics.Recover(r)
+			runtime.ExitDiagnostics().Recover(r)
 		}
 	}()
 
 	if len(os.Args) >= 2 && cli.IsCLIMode(os.Args[1:]) {
-		os.Exit(cli.Run(os.Args[1:], cliRuntimeConfig()))
+		os.Exit(cli.Run(os.Args[1:], cliRuntimeConfig(runtime)))
 	}
 
 	cfg := parseAndValidateFlags()
@@ -118,12 +114,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "[Kaboom] Error creating server: %v\n", err)
 		os.Exit(1)
 	}
+	server.runtime = runtime
 	server.applyRuntimeConfig(cfg)
 	for _, warning := range cfg.startupWarnings {
 		server.AddWarning(warning)
 	}
 
-	initBridge()
 	dispatchMode(server, cfg)
 }
 

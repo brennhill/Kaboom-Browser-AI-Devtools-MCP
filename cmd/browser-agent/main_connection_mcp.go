@@ -398,7 +398,7 @@ func startHTTPServer(server *Server, port int, apiKey string, mux *http.ServeMux
 		httpReady <- nil
 		// #nosec G114 -- localhost-only MCP background server
 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
-			_ = exitDiagnostics.Append("http_listener_error", map[string]any{
+			_ = server.runtime.ExitDiagnostics().Append("http_listener_error", map[string]any{
 				"port":  port,
 				"error": err.Error(),
 			})
@@ -456,7 +456,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	if shutdownSource != "http_listener_died" {
 		daemonlife.ClearRestartHistoryOnCleanShutdown(daemonlifeDeps(server), port)
 	}
-	if diagPath := exitDiagnostics.Append("daemon_shutdown", map[string]any{
+	if diagPath := server.runtime.ExitDiagnostics().Append("daemon_shutdown", map[string]any{
 		"port":            port,
 		"signal":          shutdownSignal.String(),
 		"shutdown_source": shutdownSource,

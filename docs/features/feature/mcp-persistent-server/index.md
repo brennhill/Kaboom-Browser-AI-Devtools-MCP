@@ -175,7 +175,7 @@ last_verified_date: 2026-03-29
 # MCP Persistent Server
 
 Each server owns an application runtime for its start epoch, release checker,
-binary-upgrade provider, and update-warning cooldown. These collaborators are
+binary-upgrade provider, exit diagnostics, bridge runner, and update-warning cooldown. These collaborators are
 never shared between server instances, so parallel tests and multiple composed
 runtimes cannot suppress or overwrite one another's lifecycle state.
 Validated upload policy, OS-automation permission, and startup warnings flow

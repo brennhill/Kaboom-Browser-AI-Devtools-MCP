@@ -261,7 +261,7 @@ func handleEarlyExitModes(flags *parsedFlags) {
 		os.Exit(0)
 	}
 	if *flags.stopMode {
-		procctl.Stop(*flags.port, bridgeRunner.IsServerRunning)
+		procctl.Stop(*flags.port, bridgeRuntime().IsServerRunning)
 		os.Exit(0)
 	}
 	if *flags.installMode {
@@ -346,7 +346,7 @@ func dispatchMode(server *Server, config *serverConfig) {
 		server.logLifecycle("daemon_mode_start", config.port, nil)
 		if err := runMCPMode(server, config.port, config.apiKey, daemonlife.LaunchOptions{Parallel: config.parallelMode}); err != nil {
 			telemetry.AppError(incident.CodeDaemonStartFailed)
-			diagnosticPath := exitDiagnostics.Append("daemon_start_failed", map[string]any{
+			diagnosticPath := server.runtime.ExitDiagnostics().Append("daemon_start_failed", map[string]any{
 				"port":  config.port,
 				"error": err.Error(),
 			})
@@ -357,11 +357,11 @@ func dispatchMode(server *Server, config *serverConfig) {
 			os.Exit(1)
 		}
 	case modeBridge:
-		if err := bridgeRunner.EnsureIOIsolation(config.logFile); err != nil {
+		if err := server.runtime.BridgeRunner().EnsureIOIsolation(config.logFile); err != nil {
 			bridge.SendStartupError("Bridge stdio isolation failed: " + err.Error())
 			os.Exit(1)
 		}
-		server.logLifecycle("bridge_mode_start", config.port, bridgeRunner.LaunchFingerprint())
+		server.logLifecycle("bridge_mode_start", config.port, server.runtime.BridgeRunner().LaunchFingerprint())
 		if config.bridgeMode {
 			diag.Println("[Kaboom] Starting in bridge mode (stdio -> HTTP)")
 		} else if isTTY && mcpConfigPath != "" {
@@ -373,8 +373,8 @@ func dispatchMode(server *Server, config *serverConfig) {
 			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDOUT")
 			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDERR")
 		}
-		bridgeRunner.RunMode(config.port, config.logFile, config.maxEntries)
+		server.runtime.BridgeRunner().RunMode(config.port, config.logFile, config.maxEntries)
 	default:
-		bridgeRunner.RunMode(config.port, config.logFile, config.maxEntries)
+		server.runtime.BridgeRunner().RunMode(config.port, config.logFile, config.maxEntries)
 	}
 }

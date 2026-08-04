@@ -55,7 +55,7 @@ func TestMCPProtocol_InitializeResponse(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -125,7 +125,7 @@ func TestMCPProtocol_ToolsListStructure(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !bridgeRunner.WaitForServer(port, serverStartTimeout) {
+	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 

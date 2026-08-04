@@ -33,7 +33,7 @@ func TestRunBridgeModeWithExistingServer(t *testing.T) {
 
 	output := captureStdout(t, func() {
 		withTestStdin(t, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`+"\n", func() {
-			bridgeRunner.RunMode(port, "", 0)
+			bridgeRuntime().RunMode(port, "", 0)
 		})
 	})
 	if !strings.Contains(output, `"protocolVersion":"2025-06-18"`) {
