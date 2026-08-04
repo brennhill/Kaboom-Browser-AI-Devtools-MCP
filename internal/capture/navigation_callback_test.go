@@ -6,11 +6,14 @@ package capture
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func runNavigationCallbacksSynchronously(c *Capture) {
+	c.Telemetry().dispatchCallback = func(callback func()) { callback() }
+}
 
 // ============================================
 // SetNavigationCallback Tests
@@ -21,6 +24,7 @@ func TestNavigationCallback_FiredOnNavigationAction(t *testing.T) {
 
 	c := NewCapture()
 	t.Cleanup(c.Close)
+	runNavigationCallbacksSynchronously(c)
 
 	var called atomic.Int32
 	c.Telemetry().SetNavigationCallback(func() {
@@ -30,9 +34,6 @@ func TestNavigationCallback_FiredOnNavigationAction(t *testing.T) {
 	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
-
-	// Give the goroutine time to fire
-	time.Sleep(50 * time.Millisecond)
 
 	if got := called.Load(); got != 1 {
 		t.Errorf("navigation callback called %d times, want 1", got)
@@ -44,6 +45,7 @@ func TestNavigationCallback_NotFiredOnNonNavigationAction(t *testing.T) {
 
 	c := NewCapture()
 	t.Cleanup(c.Close)
+	runNavigationCallbacksSynchronously(c)
 
 	var called atomic.Int32
 	c.Telemetry().SetNavigationCallback(func() {
@@ -56,8 +58,6 @@ func TestNavigationCallback_NotFiredOnNonNavigationAction(t *testing.T) {
 		{Type: "scroll", Timestamp: time.Now().UnixMilli()},
 	})
 
-	time.Sleep(50 * time.Millisecond)
-
 	if got := called.Load(); got != 0 {
 		t.Errorf("navigation callback called %d times for non-navigation actions, want 0", got)
 	}
@@ -68,6 +68,7 @@ func TestNavigationCallback_FiredOnceForMultipleNavigationsInBatch(t *testing.T)
 
 	c := NewCapture()
 	t.Cleanup(c.Close)
+	runNavigationCallbacksSynchronously(c)
 
 	var called atomic.Int32
 	c.Telemetry().SetNavigationCallback(func() {
@@ -81,8 +82,6 @@ func TestNavigationCallback_FiredOnceForMultipleNavigationsInBatch(t *testing.T)
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 
-	time.Sleep(50 * time.Millisecond)
-
 	if got := called.Load(); got != 1 {
 		t.Errorf("navigation callback called %d times for batch with 2 navigations, want 1", got)
 	}
@@ -93,6 +92,7 @@ func TestNavigationCallback_NotSetDoesNotPanic(t *testing.T) {
 
 	c := NewCapture()
 	t.Cleanup(c.Close)
+	runNavigationCallbacksSynchronously(c)
 
 	// No callback set — should not panic
 	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
@@ -118,34 +118,25 @@ func TestNavigationCallback_FiredOutsideLock(t *testing.T) {
 
 	c := NewCapture()
 	t.Cleanup(c.Close)
+	runNavigationCallbacksSynchronously(c)
 
 	// Verify the callback is invoked outside the telemetry lock by attempting
 	// to acquire the lock inside the callback (would deadlock if still held).
-	var wg sync.WaitGroup
-	wg.Add(1)
+	called := false
 	c.Telemetry().SetNavigationCallback(func() {
-		defer wg.Done()
 		// This would deadlock if callback ran while the telemetry owner held its lock.
 		count := len(c.Telemetry().GetAllEnhancedActions())
 		if count == 0 {
 			t.Error("expected actions to be stored before callback fires")
 		}
+		called = true
 	})
 
 	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		// Success — callback completed without deadlock
-	case <-time.After(2 * time.Second):
-		t.Fatal("navigation callback appears to deadlock (possibly called inside lock)")
+	if !called {
+		t.Fatal("navigation callback did not complete outside the telemetry lock")
 	}
 }

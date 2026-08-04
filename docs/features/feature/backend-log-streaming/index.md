@@ -363,3 +363,6 @@ this one bounded delivery contract.
   expiration suite, so lifecycle projection tests never poll wall-clock time.
 - Internal log timestamp bounds use the server's private clock boundary;
   snapshot and accessor tests assert exact instants without scheduler delays.
+- Enhanced-action navigation callbacks cross one private dispatch boundary.
+  Production uses the panic-safe goroutine runner; tests execute synchronously
+  to prove callback cardinality, negative cases, and lock release exactly.

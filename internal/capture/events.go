@@ -203,6 +203,7 @@ type TelemetryStore struct {
 	networkWaterfall   *NetworkWaterfallStore
 	extension          *ExtensionRuntime
 	navigationCallback func()
+	dispatchCallback   func(func())
 	ttl                time.Duration
 }
 
@@ -212,6 +213,7 @@ func newTelemetryStore(extension *ExtensionRuntime) *TelemetryStore {
 		wsConnections:    wsconn.NewTracker(),
 		networkWaterfall: newNetworkWaterfallStore(DefaultNetworkWaterfallCapacity),
 		extension:        extension,
+		dispatchCallback: util.SafeGo,
 	}
 }
 
@@ -751,6 +753,6 @@ func (s *TelemetryStore) AddEnhancedActions(actions []types.EnhancedAction) {
 		return nil
 	}()
 	if navigationCallback != nil {
-		util.SafeGo(navigationCallback)
+		s.dispatchCallback(navigationCallback)
 	}
 }
