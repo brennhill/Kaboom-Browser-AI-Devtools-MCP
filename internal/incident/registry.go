@@ -14,18 +14,43 @@ const (
 	CodeStaleCommandResultRejected  Code = "stale_command_result_rejected"
 	CodeQueueSaturated              Code = "queue_saturated"
 	CodeStateRecoveryFailed         Code = "state_recovery_failed"
+	CodeDaemonPanic                 Code = "daemon_panic"
+	CodeDaemonStartFailed           Code = "daemon_start_failed"
+	CodeToolRateLimited             Code = "tool_rate_limited"
+	CodeBridgeConnectionError       Code = "bridge_connection_error"
+	CodeBridgePortBlocked           Code = "bridge_port_blocked"
+	CodeBridgeSpawnBuildError       Code = "bridge_spawn_build_error"
+	CodeBridgeSpawnStartError       Code = "bridge_spawn_start_error"
+	CodeBridgeSpawnTimeout          Code = "bridge_spawn_timeout"
+	CodeBridgeExitError             Code = "bridge_exit_error"
+	CodeExtensionDisconnect         Code = "extension_disconnect"
+	CodeInstallConfigError          Code = "install_config_error"
 )
 
 type Subsystem string
 
 const (
-	SubsystemDaemon   Subsystem = "daemon"
-	SubsystemBridge   Subsystem = "bridge"
-	SubsystemTracking Subsystem = "tracking"
-	SubsystemCommand  Subsystem = "command"
-	SubsystemQueue    Subsystem = "queue"
-	SubsystemState    Subsystem = "state"
+	SubsystemDaemon    Subsystem = "daemon"
+	SubsystemBridge    Subsystem = "bridge"
+	SubsystemTracking  Subsystem = "tracking"
+	SubsystemCommand   Subsystem = "command"
+	SubsystemQueue     Subsystem = "queue"
+	SubsystemState     Subsystem = "state"
+	SubsystemStartup   Subsystem = "startup"
+	SubsystemExtension Subsystem = "extension"
+	SubsystemInstaller Subsystem = "installer"
 )
+
+type ErrorKind string
+
+const (
+	ErrorKindInternal    ErrorKind = "internal"
+	ErrorKindIntegration ErrorKind = "integration"
+)
+
+type PrivacyClass string
+
+const PrivacyBoundedProductMetadata PrivacyClass = "bounded_product_metadata"
 
 type Stage string
 
@@ -54,19 +79,36 @@ type Definition struct {
 	Stage        Stage
 	Severity     Severity
 	Retryable    bool
+	ErrorKind    ErrorKind
+	Privacy      PrivacyClass
 	DoctorDetail string
 	DoctorFix    string
 }
 
 var definitions = map[Code]Definition{
-	CodeUncleanDaemonExit:           {SubsystemDaemon, StageLifecycle, SeverityFatal, true, "The previous daemon run did not record a clean shutdown.", "Restart Kaboom and inspect the correlated local incident timeline if this repeats."},
-	CodeDaemonRestartLoop:           {SubsystemDaemon, StageLifecycle, SeverityFatal, false, "Kaboom repeatedly restarted inside the protected startup window.", "Inspect System Doctor before starting another daemon."},
-	CodeExtensionReconnectExhausted: {SubsystemBridge, StageReconnect, SeverityError, true, "The extension exhausted its bounded reconnect attempts.", "Reload the extension and tracked page, then retry."},
-	CodeTrackedTabRecoveryFailed:    {SubsystemTracking, StageTracking, SeverityError, true, "Kaboom could not restore the previously tracked tab.", "Select the intended tab in the extension and retry."},
-	CodeContentReadinessTimeout:     {SubsystemBridge, StageReadiness, SeverityError, true, "The content script did not acknowledge readiness before the deadline.", "Reload the tracked page and retry the command."},
-	CodeStaleCommandResultRejected:  {SubsystemCommand, StageResolution, SeverityWarning, true, "A result from an obsolete connection generation was rejected.", "Retry if the current command did not complete."},
-	CodeQueueSaturated:              {SubsystemQueue, StageCapacity, SeverityWarning, true, "A bounded operational queue reached capacity.", "Wait for active work to drain, then retry."},
-	CodeStateRecoveryFailed:         {SubsystemState, StageRecovery, SeverityError, true, "Persisted state could not be recovered safely.", "Reset the affected state through System Doctor and retry."},
+	CodeUncleanDaemonExit:           definition(SubsystemDaemon, StageLifecycle, SeverityFatal, true, ErrorKindInternal, "The previous daemon run did not record a clean shutdown.", "Restart Kaboom and inspect the correlated local incident timeline if this repeats."),
+	CodeDaemonRestartLoop:           definition(SubsystemDaemon, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "Kaboom repeatedly restarted inside the protected startup window.", "Inspect System Doctor before starting another daemon."),
+	CodeExtensionReconnectExhausted: definition(SubsystemBridge, StageReconnect, SeverityError, true, ErrorKindIntegration, "The extension exhausted its bounded reconnect attempts.", "Reload the extension and tracked page, then retry."),
+	CodeTrackedTabRecoveryFailed:    definition(SubsystemTracking, StageTracking, SeverityError, true, ErrorKindIntegration, "Kaboom could not restore the previously tracked tab.", "Select the intended tab in the extension and retry."),
+	CodeContentReadinessTimeout:     definition(SubsystemBridge, StageReadiness, SeverityError, true, ErrorKindIntegration, "The content script did not acknowledge readiness before the deadline.", "Reload the tracked page and retry the command."),
+	CodeStaleCommandResultRejected:  definition(SubsystemCommand, StageResolution, SeverityWarning, true, ErrorKindInternal, "A result from an obsolete connection generation was rejected.", "Retry if the current command did not complete."),
+	CodeQueueSaturated:              definition(SubsystemQueue, StageCapacity, SeverityWarning, true, ErrorKindInternal, "A bounded operational queue reached capacity.", "Wait for active work to drain, then retry."),
+	CodeStateRecoveryFailed:         definition(SubsystemState, StageRecovery, SeverityError, true, ErrorKindInternal, "Persisted state could not be recovered safely.", "Reset the affected state through System Doctor and retry."),
+	CodeDaemonPanic:                 definition(SubsystemDaemon, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "The daemon recovered a panic.", "Inspect local crash diagnostics and restart Kaboom."),
+	CodeDaemonStartFailed:           definition(SubsystemStartup, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "The daemon could not start.", "Inspect local startup diagnostics and retry."),
+	CodeToolRateLimited:             definition(SubsystemDaemon, StageCapacity, SeverityWarning, true, ErrorKindIntegration, "A tool call exceeded the bounded request rate.", "Retry after the reported backoff."),
+	CodeBridgeConnectionError:       definition(SubsystemBridge, StageReconnect, SeverityError, true, ErrorKindIntegration, "The MCP bridge could not connect.", "Retry the connection or inspect System Doctor."),
+	CodeBridgePortBlocked:           definition(SubsystemBridge, StageLifecycle, SeverityError, false, ErrorKindIntegration, "The bridge port is owned by another process.", "Free the configured port and retry."),
+	CodeBridgeSpawnBuildError:       definition(SubsystemBridge, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "The bridge daemon binary could not be built.", "Inspect local build diagnostics."),
+	CodeBridgeSpawnStartError:       definition(SubsystemBridge, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "The bridge daemon process could not start.", "Inspect local process diagnostics."),
+	CodeBridgeSpawnTimeout:          definition(SubsystemBridge, StageReadiness, SeverityError, true, ErrorKindInternal, "The spawned daemon did not become ready before its deadline.", "Retry after inspecting System Doctor."),
+	CodeBridgeExitError:             definition(SubsystemBridge, StageLifecycle, SeverityError, false, ErrorKindInternal, "The bridge exited unexpectedly.", "Inspect local bridge diagnostics."),
+	CodeExtensionDisconnect:         definition(SubsystemExtension, StageReconnect, SeverityWarning, false, ErrorKindIntegration, "The extension disconnected.", "Reload the extension if it does not reconnect."),
+	CodeInstallConfigError:          definition(SubsystemInstaller, StageRecovery, SeverityError, false, ErrorKindInternal, "Installation configuration could not be updated.", "Inspect local installer diagnostics and retry."),
+}
+
+func definition(subsystem Subsystem, stage Stage, severity Severity, retryable bool, kind ErrorKind, detail, fix string) Definition {
+	return Definition{Subsystem: subsystem, Stage: stage, Severity: severity, Retryable: retryable, ErrorKind: kind, Privacy: PrivacyBoundedProductMetadata, DoctorDetail: detail, DoctorFix: fix}
 }
 
 func Lookup(code Code) (Definition, bool) {

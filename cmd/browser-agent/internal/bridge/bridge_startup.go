@@ -23,6 +23,7 @@ import (
 	"time"
 
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -444,7 +445,7 @@ func (r *Runner) tryConnectToExisting(state *daemonState, port int) bool {
 	if serviceName == "" {
 		serviceName = "unknown"
 	}
-	telemetry.AppError("bridge_port_blocked")
+	telemetry.AppError(incident.CodeBridgePortBlocked)
 	state.markFailed(fmt.Sprintf("port %d is occupied by non-kaboom service %q", port, serviceName))
 	return true // fatally blocked
 }

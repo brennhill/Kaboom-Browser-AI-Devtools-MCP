@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 )
 
 // collectAll drains all beacons from the channel within a deadline.
@@ -170,24 +172,24 @@ func TestE2E_FirstToolCall_FiredOncePerInstall(t *testing.T) {
 
 func TestE2E_AppError_AllCategories(t *testing.T) {
 	categories := []struct {
-		category string
+		category incident.Code
 		wantKind string
 		wantSev  string
 		wantSrc  string
 	}{
-		{"daemon_panic", "internal", "fatal", "daemon"},
-		{"bridge_connection_error", "integration", "error", "bridge"},
-		{"extension_disconnect", "integration", "warning", "extension"},
-		{"install_config_error", "internal", "error", "installer"},
+		{incident.CodeDaemonPanic, "internal", "fatal", "daemon"},
+		{incident.CodeBridgeConnectionError, "integration", "error", "bridge"},
+		{incident.CodeExtensionDisconnect, "integration", "warning", "extension"},
+		{incident.CodeInstallConfigError, "internal", "error", "installer"},
 	}
 
 	for _, tc := range categories {
-		t.Run(tc.category, func(t *testing.T) {
+		t.Run(string(tc.category), func(t *testing.T) {
 			received := captureBeacon(t)
 			AppError(tc.category)
 
 			body := waitForEvent(t, received, "app_error")
-			requireEnvelope(t, body, "app_error/"+tc.category)
+			requireEnvelope(t, body, "app_error/"+string(tc.category))
 
 			if body["error_kind"] != tc.wantKind {
 				t.Errorf("error_kind = %v, want %v", body["error_kind"], tc.wantKind)

@@ -29,6 +29,15 @@ test('generic Go lifecycle beacon surface stays deleted', async () => {
   assert.doesNotMatch(content, /func BeaconEvent\b|func sendBeacon\b/)
 })
 
+test('runtime errors use the closed incident registry', async () => {
+  const beacon = await source('internal/telemetry/beacon.go')
+  const registry = await source('internal/incident/registry.go')
+  assert.match(beacon, /func AppError\(code incident\.Code\)/)
+  assert.doesNotMatch(beacon, /classifyAppError|normalizeAppErrorCode/)
+  assert.match(registry, /PrivacyBoundedProductMetadata/)
+  assert.match(registry, /CodeBridgeSpawnTimeout/)
+})
+
 test('canonical contract names exactly match the structured-event allowlist', async () => {
   const content = await source('internal/telemetry/usage_counter.go')
   const match = content.match(

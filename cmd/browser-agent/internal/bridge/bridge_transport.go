@@ -25,6 +25,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
@@ -139,7 +140,7 @@ func (r *Runner) bridgeShutdown(wg *sync.WaitGroup, readErr error, responseSent 
 		// The extra map below (for the exit diagnostic recorder) intentionally includes
 		// more detail because it writes to a local file, not to telemetry.
 		if stats.parseErrors > 0 || stats.methodNotFound > 0 || (readErr != nil && !errors.Is(readErr, io.EOF)) {
-			telemetry.AppError("bridge_exit_error")
+			telemetry.AppError(incident.CodeBridgeExitError)
 		}
 		reason := "stdin_eof"
 		if readErr != nil && !errors.Is(readErr, io.EOF) {

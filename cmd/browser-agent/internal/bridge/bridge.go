@@ -23,6 +23,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/stdioisolate"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -237,7 +238,7 @@ func (r *Runner) bridgeForwardRequest(client *http.Client, endpoint string, req 
 	}
 	defer activeCancel()
 	if err != nil {
-		telemetry.AppError("bridge_connection_error")
+		telemetry.AppError(incident.CodeBridgeConnectionError)
 		message := "Server connection error: " + err.Error()
 		if req.Method == "tools/call" {
 			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{

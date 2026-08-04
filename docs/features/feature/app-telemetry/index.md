@@ -8,8 +8,6 @@ last_reviewed: 2026-08-04
 code_paths:
   - internal/telemetry/beacon.go
   - internal/telemetry/install_id.go
-  - internal/telemetry/session.go
-  - internal/telemetry/usage_beacon.go
   - internal/telemetry/usage_counter.go
   - internal/statefault/fault.go
   - internal/statefile/statefile.go
@@ -26,8 +24,6 @@ test_paths:
   - internal/telemetry/e2e_session_test.go
   - internal/telemetry/e2e_usage_summary_test.go
   - internal/telemetry/install_id_test.go
-  - internal/telemetry/session_test.go
-  - internal/telemetry/usage_beacon_test.go
   - internal/telemetry/usage_counter_test.go
   - cmd/browser-agent/internal/operationalapi/debug_test.go
   - internal/statediag/collector_test.go
@@ -35,8 +31,8 @@ test_paths:
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/tests/contracts/app-telemetry-producers.test.mjs
-last_verified_version: 0.8.8
-last_verified_date: 2026-07-28
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # App Telemetry
@@ -46,9 +42,10 @@ identity, opt-out, and aggregation contract in
 [`docs/core/app-metrics.md`](../../../core/app-metrics.md).
 
 The event suite owns individual beacon envelopes and payloads. The session
-suite owns activity boundaries, shutdown, timeout, and opt-out behavior. The
-usage-summary suite owns counter aggregation, snapshot/reset semantics, and
-summary beacons.
+identity module owns activity boundaries, shutdown, timeout, and opt-out
+behavior. The usage aggregation module owns counter aggregation,
+snapshot/reset semantics, scheduling, and summary beacons. These
+change-coupled owners keep the package within the ten-file architecture limit.
 Install identity is installation-scoped at `~/.kaboom/install_id`, independent
 of project/UAT runtime-state roots, and concurrent first starts atomically
 converge on one persisted value.
@@ -70,6 +67,12 @@ service-worker lifecycle paths do not send independent envelopes because they
 cannot satisfy the canonical install/session identity contract. The generic
 lifecycle event surface is deleted; every emitted event is one of the six
 documented canonical event types.
+
+Runtime `app_error` producers accept only a canonical `incident.Code`. The
+registry owns every bounded analytics dimension and privacy classification;
+the former free-form category classifier and normalizer were deleted in the
+same migration. Unknown codes emit nothing, and contract tests prove private
+or caller-authored fields cannot enter the envelope.
 
 This is the sole exception to Kaboom's local-data policy. It reports anonymous
 install activity and product-command usage using random install/session

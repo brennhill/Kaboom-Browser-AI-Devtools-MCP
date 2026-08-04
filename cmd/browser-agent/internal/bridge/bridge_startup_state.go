@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -296,12 +297,12 @@ func spawnDaemonAsync(state *daemonState) {
 	util.SafeGo(func() {
 		cmd, err := state.buildDaemonCmd()
 		if err != nil {
-			telemetry.AppError("bridge_spawn_build_error")
+			telemetry.AppError(incident.CodeBridgeSpawnBuildError)
 			state.markFailed(err.Error())
 			return
 		}
 		if err := cmd.Start(); err != nil {
-			telemetry.AppError("bridge_spawn_start_error")
+			telemetry.AppError(incident.CodeBridgeSpawnStartError)
 			state.markFailed("Failed to start daemon: " + err.Error())
 			return
 		}
@@ -310,7 +311,7 @@ func spawnDaemonAsync(state *daemonState) {
 		if state.runner.WaitForServer(state.port, daemonStartupReadyTimeout) {
 			state.markReady()
 		} else {
-			telemetry.AppError("bridge_spawn_timeout")
+			telemetry.AppError(incident.CodeBridgeSpawnTimeout)
 			state.markFailed(fmt.Sprintf("Daemon started but not responding on port %d after %s", state.port, daemonStartupReadyTimeout))
 		}
 	})

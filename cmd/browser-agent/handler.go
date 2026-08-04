@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
@@ -263,7 +264,7 @@ func (h *MCPHandler) handleToolsCall(req mcp.JSONRPCRequest) mcp.JSONRPCResponse
 	}
 	h.warnUnknownToolArguments(params.Name, params.Arguments)
 	if err := h.checkToolRateLimit(); err != nil {
-		telemetry.AppError("tool_rate_limited")
+		telemetry.AppError(incident.CodeToolRateLimited)
 		return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Error: err}
 	}
 	resp, handled := h.tools.Executor.HandleToolCall(req, params.Name, params.Arguments)

@@ -4,12 +4,12 @@ scope: feature/app-telemetry
 ai-priority: medium
 tags: [telemetry, testing, privacy]
 relates-to: [index.md, product-spec.md, tech-spec.md, ../../../core/app-metrics.md]
-last-verified: 2026-07-28
+last-verified: 2026-08-04
 doc_type: qa-plan
 feature_id: feature-app-telemetry
-last_reviewed: 2026-07-28
-last_verified_version: 0.8.8
-last_verified_date: 2026-07-28
+last_reviewed: 2026-08-04
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # App Telemetry — QA Plan
@@ -29,9 +29,9 @@ package-level state.
 | Transport and envelope | `beacon_test.go` | Fire-and-forget behavior, timeout tolerance, bounded concurrency, response cleanup, required IDs and version |
 | Canonical payload contract | `contract_compliance_test.go` | Required/omitted fields, error normalization, authoritative fields, concurrent lifecycle behavior |
 | Install identity | `install_id_test.go` | Generation, persistence, state-directory selection, whitespace handling, read-failure recovery |
-| Session identity | `session_test.go` | Format, stability, timeout rotation, activity refresh, concurrent access |
+| Session identity | `install_id_test.go` | Format, stability, timeout rotation, activity refresh, concurrent access |
 | Aggregation | `usage_counter_test.go` | Counts, errors, latency, async outcomes, atomic swap/reset, concurrent increments, session depth |
-| Reporting loop | `usage_beacon_test.go` | Active-window emission, idle skip, opt-out, cancellation |
+| Reporting loop | `e2e_usage_summary_test.go` | Active-window emission, idle skip, opt-out, cancellation |
 | End-to-end events | `e2e_reporting_test.go` | Success/error tool calls, first use, app errors, slow ingest, JSON round trips |
 | End-to-end sessions | `e2e_session_test.go` | Start/end reasons, timeout, shutdown, idle behavior, full lifecycle, opt-out |
 | End-to-end summaries | `e2e_usage_summary_test.go` | Full payload, empty omission, nil snapshots, accumulation and reset |

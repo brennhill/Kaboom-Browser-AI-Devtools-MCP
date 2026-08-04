@@ -322,6 +322,21 @@ Recommended `error_kind` values:
 - `integration`
 - `unknown`
 
+Kaboom producers do not pass free-form values for these fields. Every runtime
+failure uses a code from `internal/incident/registry.go`, which owns its source,
+stage, severity, retryability, error kind, Doctor guidance, and
+`bounded_product_metadata` privacy classification. Unknown codes are rejected
+before an envelope is built. The current stable codes are:
+
+`unclean_daemon_exit`, `daemon_restart_loop`,
+`extension_reconnect_exhausted`, `tracked_tab_recovery_failed`,
+`content_readiness_timeout`, `stale_command_result_rejected`,
+`queue_saturated`, `state_recovery_failed`, `daemon_panic`,
+`daemon_start_failed`, `tool_rate_limited`, `bridge_connection_error`,
+`bridge_port_blocked`, `bridge_spawn_build_error`,
+`bridge_spawn_start_error`, `bridge_spawn_timeout`, `bridge_exit_error`,
+`extension_disconnect`, and `install_config_error`.
+
 Example:
 
 ```json

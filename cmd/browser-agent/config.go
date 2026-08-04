@@ -21,6 +21,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -340,7 +341,7 @@ func dispatchMode(server *Server, config *serverConfig) {
 	case modeDaemon:
 		server.logLifecycle("daemon_mode_start", config.port, nil)
 		if err := runMCPMode(server, config.port, config.apiKey, daemonlife.LaunchOptions{Parallel: config.parallelMode}); err != nil {
-			telemetry.AppError("daemon_start_failed")
+			telemetry.AppError(incident.CodeDaemonStartFailed)
 			diagnosticPath := exitDiagnostics.Append("daemon_start_failed", map[string]any{
 				"port":  config.port,
 				"error": err.Error(),

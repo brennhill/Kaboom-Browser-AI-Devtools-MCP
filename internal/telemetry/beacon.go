@@ -6,10 +6,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -58,6 +60,7 @@ type reliabilityDispatcher struct {
 	queue   chan incident.ReliabilityEvent
 	deliver func(incident.ReliabilityEvent)
 	once    sync.Once
+	pending sync.WaitGroup
 }
 
 func newReliabilityDispatcher(capacity int, deliver func(incident.ReliabilityEvent)) *reliabilityDispatcher {
@@ -71,17 +74,32 @@ func (d *reliabilityDispatcher) Enqueue(event incident.ReliabilityEvent) bool {
 	d.once.Do(func() {
 		util.SafeGo(func() {
 			for pending := range d.queue {
-				d.deliver(pending)
+				d.deliverOne(pending)
 			}
 		})
 	})
+	d.pending.Add(1)
 	select {
 	case d.queue <- event:
 		return true
 	default:
+		d.pending.Done()
 		return false
 	}
 }
+
+func (d *reliabilityDispatcher) deliverOne(event incident.ReliabilityEvent) {
+	defer d.pending.Done()
+	defer func() {
+		if recover() != nil {
+			deliveryCounters.dropped.Add(1)
+			slog.Error("reliability event delivery panicked", "component", "telemetry_dispatcher", "stack", string(debug.Stack()))
+		}
+	}()
+	d.deliver(event)
+}
+
+func (d *reliabilityDispatcher) WaitIdle() { d.pending.Wait() }
 
 var reliabilityEvents = newReliabilityDispatcher(maxPendingReliabilityEvents, ReportReliability)
 
@@ -149,17 +167,19 @@ func buildEnvelope(event string) map[string]any {
 }
 
 // AppError fires a structured app_error event from a fixed privacy-bounded schema.
-func AppError(category string) {
-	errorKind, severity, source, retryable := classifyAppError(category)
-
+func AppError(code incident.Code) {
+	definition, ok := reliabilityDefinition(code)
+	if !ok {
+		return
+	}
 	fields := map[string]any{
 		"event":      "app_error",
-		"error_kind": errorKind,
-		"error_code": normalizeAppErrorCode(category),
-		"severity":   severity,
-		"source":     source,
+		"error_kind": string(definition.ErrorKind),
+		"error_code": strings.ToUpper(string(code)),
+		"severity":   string(definition.Severity),
+		"source":     string(definition.Subsystem),
 	}
-	if retryable {
+	if definition.Retryable {
 		fields["retryable"] = true
 	}
 	fireStructuredBeacon(fields)
@@ -173,12 +193,28 @@ func ReportReliability(event incident.ReliabilityEvent) {
 	if event.Outcome != incident.OutcomePending || event.AttemptBucket != incident.AttemptZero {
 		return
 	}
-	fireStructuredBeacon(map[string]any{
-		"event": "app_error", "error_kind": "internal",
+	definition, ok := reliabilityDefinition(event.Code)
+	if !ok {
+		return
+	}
+	fields := map[string]any{
+		"event":      "app_error",
 		"error_code": strings.ToUpper(string(event.Code)),
-		"severity":   string(event.Severity), "source": string(event.Subsystem),
-		"retryable": event.Retryable,
-	})
+		"severity":   string(definition.Severity), "source": string(definition.Subsystem),
+		"error_kind": string(definition.ErrorKind),
+	}
+	if definition.Retryable {
+		fields["retryable"] = true
+	}
+	fireStructuredBeacon(fields)
+}
+
+func reliabilityDefinition(code incident.Code) (incident.Definition, bool) {
+	definition, ok := incident.Lookup(code)
+	if !ok {
+		slog.Error("rejected unknown reliability event", "component", "telemetry_registry")
+	}
+	return definition, ok
 }
 
 // QueueReliability keeps analytics transport outside incident lifecycle locks
@@ -190,38 +226,6 @@ func QueueReliability(event incident.ReliabilityEvent) {
 	}
 	deliveryCounters.dropped.Add(1)
 	callOnFireBeacon(false)
-}
-
-func classifyAppError(category string) (errorKind string, severity string, source string, retryable bool) {
-	switch category {
-	case "daemon_panic":
-		return "internal", "fatal", "daemon", false
-	case "daemon_start_failed":
-		return "internal", "fatal", "startup", false
-	case "tool_rate_limited":
-		return "integration", "warning", "daemon", true
-	case "bridge_connection_error":
-		return "integration", "error", "bridge", true
-	case "bridge_port_blocked":
-		return "integration", "error", "bridge", false
-	case "bridge_spawn_build_error", "bridge_spawn_start_error":
-		return "internal", "fatal", "bridge", false
-	case "bridge_spawn_timeout":
-		return "internal", "error", "bridge", true
-	case "bridge_exit_error":
-		return "internal", "error", "bridge", false
-	case "extension_disconnect":
-		return "integration", "warning", "extension", false
-	case "install_config_error":
-		return "internal", "error", "installer", false
-	default:
-		return "unknown", "error", "daemon", false
-	}
-}
-
-func normalizeAppErrorCode(category string) string {
-	replacer := strings.NewReplacer("-", "_", " ", "_")
-	return strings.ToUpper(replacer.Replace(strings.TrimSpace(category)))
 }
 
 // BeaconUsageSummary fires a structured usage_summary beacon.

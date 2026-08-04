@@ -132,7 +132,7 @@ func TestContract_ToolCallV2Envelope(t *testing.T) {
 // 'detail' field, which is not in the contract and silently dropped by the ingest.
 func TestContract_AppErrorNoDetailField(t *testing.T) {
 	received := captureBeacon(t)
-	AppError("daemon_panic")
+	AppError(incident.CodeDaemonPanic)
 
 	body := waitForEvent(t, received, "app_error")
 
@@ -149,7 +149,7 @@ func TestContract_AppErrorNoDetailField(t *testing.T) {
 
 func TestContract_AppErrorUsesFixedPrivacyBoundedSchema(t *testing.T) {
 	received := captureBeacon(t)
-	AppError("daemon_panic")
+	AppError(incident.CodeDaemonPanic)
 
 	body := waitForEvent(t, received, "app_error")
 	allowed := map[string]bool{
@@ -182,6 +182,22 @@ func TestContract_ReliabilityProjectionUsesAppErrorAllowlist(t *testing.T) {
 	}
 }
 
+func TestContract_ReliabilityProjectionCannotOverrideRegistryClassification(t *testing.T) {
+	received := captureBeacon(t)
+	ReportReliability(incident.ReliabilityEvent{
+		Code: incident.CodeDaemonPanic, Subsystem: incident.SubsystemInstaller,
+		Severity: incident.SeverityWarning, Retryable: true,
+		Outcome: incident.OutcomePending, AttemptBucket: incident.AttemptZero,
+	})
+	body := waitForEvent(t, received, "app_error")
+	if body["source"] != "daemon" || body["severity"] != "fatal" {
+		t.Fatalf("caller classification overrode registry: %#v", body)
+	}
+	if _, ok := body["retryable"]; ok {
+		t.Fatalf("caller retryability overrode registry: %#v", body)
+	}
+}
+
 // TestContract_UsageSummaryNoSessionDepth is a compile-time check:
 // UsageSnapshot no longer has a SessionDepth field, so it cannot be sent.
 // Intentionally left as a named test for documentation — verifies via beacon_test.go
@@ -191,63 +207,57 @@ func TestContract_ReliabilityProjectionUsesAppErrorAllowlist(t *testing.T) {
 // produce valid error_kind, severity, and source fields.
 func TestContract_AppErrorClassifiesNewCategories(t *testing.T) {
 	cases := []struct {
-		category  string
+		code      incident.Code
 		wantKind  string
 		wantSev   string
 		wantSrc   string
 		wantRetry bool
 	}{
 		// Existing
-		{"daemon_panic", "internal", "fatal", "daemon", false},
-		{"daemon_start_failed", "internal", "fatal", "startup", false},
-		{"tool_rate_limited", "integration", "warning", "daemon", true},
+		{incident.CodeDaemonPanic, "internal", "fatal", "daemon", false},
+		{incident.CodeDaemonStartFailed, "internal", "fatal", "startup", false},
+		{incident.CodeToolRateLimited, "integration", "warning", "daemon", true},
 		// New: bridge errors
-		{"bridge_connection_error", "integration", "error", "bridge", true},
-		{"bridge_port_blocked", "integration", "error", "bridge", false},
-		{"bridge_spawn_build_error", "internal", "fatal", "bridge", false},
-		{"bridge_spawn_start_error", "internal", "fatal", "bridge", false},
-		{"bridge_spawn_timeout", "internal", "error", "bridge", true},
-		{"bridge_exit_error", "internal", "error", "bridge", false},
+		{incident.CodeBridgeConnectionError, "integration", "error", "bridge", true},
+		{incident.CodeBridgePortBlocked, "integration", "error", "bridge", false},
+		{incident.CodeBridgeSpawnBuildError, "internal", "fatal", "bridge", false},
+		{incident.CodeBridgeSpawnStartError, "internal", "fatal", "bridge", false},
+		{incident.CodeBridgeSpawnTimeout, "internal", "error", "bridge", true},
+		{incident.CodeBridgeExitError, "internal", "error", "bridge", false},
 		// New: extension/install errors
-		{"extension_disconnect", "integration", "warning", "extension", false},
-		{"install_config_error", "internal", "error", "installer", false},
+		{incident.CodeExtensionDisconnect, "integration", "warning", "extension", false},
+		{incident.CodeInstallConfigError, "internal", "error", "installer", false},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.category, func(t *testing.T) {
-			kind, sev, src, retry := classifyAppError(tc.category)
-			if kind != tc.wantKind {
-				t.Errorf("error_kind = %q, want %q", kind, tc.wantKind)
+		t.Run(string(tc.code), func(t *testing.T) {
+			definition, ok := incident.Lookup(tc.code)
+			if !ok {
+				t.Fatal("registered reliability code missing")
 			}
-			if sev != tc.wantSev {
-				t.Errorf("severity = %q, want %q", sev, tc.wantSev)
+			if string(definition.ErrorKind) != tc.wantKind {
+				t.Errorf("error_kind = %q, want %q", definition.ErrorKind, tc.wantKind)
 			}
-			if src != tc.wantSrc {
-				t.Errorf("source = %q, want %q", src, tc.wantSrc)
+			if string(definition.Severity) != tc.wantSev {
+				t.Errorf("severity = %q, want %q", definition.Severity, tc.wantSev)
 			}
-			if retry != tc.wantRetry {
-				t.Errorf("retryable = %v, want %v", retry, tc.wantRetry)
+			if string(definition.Subsystem) != tc.wantSrc {
+				t.Errorf("source = %q, want %q", definition.Subsystem, tc.wantSrc)
+			}
+			if definition.Retryable != tc.wantRetry || definition.Privacy != incident.PrivacyBoundedProductMetadata {
+				t.Errorf("retry/privacy = %v/%q", definition.Retryable, definition.Privacy)
 			}
 		})
 	}
 }
 
-// TestContract_AppErrorCodeNormalization verifies error_code is uppercase with underscores.
-func TestContract_AppErrorCodeNormalization(t *testing.T) {
-	cases := []struct {
-		category string
-		wantCode string
-	}{
-		{"daemon_panic", "DAEMON_PANIC"},
-		{"bridge_connection_error", "BRIDGE_CONNECTION_ERROR"},
-		{"bridge-spawn-failed", "BRIDGE_SPAWN_FAILED"},
-		{"install config error", "INSTALL_CONFIG_ERROR"},
-	}
-	for _, tc := range cases {
-		code := normalizeAppErrorCode(tc.category)
-		if code != tc.wantCode {
-			t.Errorf("normalizeAppErrorCode(%q) = %q, want %q", tc.category, code, tc.wantCode)
-		}
+func TestContract_AppErrorRejectsUnknownCode(t *testing.T) {
+	received := captureBeacon(t)
+	AppError(incident.Code("invented_runtime_failure"))
+	select {
+	case event := <-received:
+		t.Fatalf("unknown reliability code emitted telemetry: %#v", event)
+	case <-time.After(20 * time.Millisecond):
 	}
 }
 
@@ -256,7 +266,7 @@ func TestContract_AppErrorCodeNormalization(t *testing.T) {
 func TestContract_AppErrorSendsAllRequiredFields(t *testing.T) {
 	received := captureBeacon(t)
 
-	AppError("bridge_connection_error")
+	AppError(incident.CodeBridgeConnectionError)
 
 	body := waitForEvent(t, received, "app_error")
 
@@ -368,13 +378,11 @@ func TestContract_BeaconUsageSummaryDRY(t *testing.T) {
 	}
 }
 
-// TestContract_AppErrorSignature verifies AppError takes only (category, props),
-// with no misleading unused parameters.
+// TestContract_AppErrorSignature verifies AppError accepts only a typed code.
 func TestContract_AppErrorSignature(t *testing.T) {
 	received := captureBeacon(t)
 
-	// Call with nil props — should work without extra params.
-	AppError("daemon_panic")
+	AppError(incident.CodeDaemonPanic)
 
 	body := waitForEvent(t, received, "app_error")
 	if body["error_code"] != "DAEMON_PANIC" {
@@ -415,11 +423,11 @@ func TestContract_BeaconUsageSummaryHasV2Envelope(t *testing.T) {
 
 func TestContract_AppErrorFieldsComeFromClassification(t *testing.T) {
 	received := captureBeacon(t)
-	AppError("daemon_panic")
+	AppError(incident.CodeDaemonPanic)
 
 	body := waitForEvent(t, received, "app_error")
 
-	// Contract fields must reflect classifyAppError, not caller props.
+	// Contract fields must reflect the canonical registry, not caller data.
 	if body["error_kind"] != "internal" {
 		t.Errorf("error_kind = %v, want internal (props overwrote contract field)", body["error_kind"])
 	}

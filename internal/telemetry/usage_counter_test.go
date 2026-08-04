@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 )
 
 func TestUsageTracker_Increment(t *testing.T) {
@@ -539,7 +541,7 @@ func TestAppError_PayloadStructure(t *testing.T) {
 	overrideEndpoint(srv.URL)
 	defer resetEndpoint()
 
-	AppError("daemon_panic")
+	AppError(incident.CodeDaemonPanic)
 
 	for {
 		select {
@@ -591,19 +593,12 @@ func TestAppError_UnknownCategory(t *testing.T) {
 	overrideEndpoint(srv.URL)
 	defer resetEndpoint()
 
-	AppError("test_error")
-
-	for {
-		select {
-		case body := <-received:
-			if body["event"] == "app_error" {
-				goto done
-			}
-		case <-time.After(2 * time.Second):
-			t.Fatal("app_error beacon not received")
-		}
+	AppError(incident.Code("test_error"))
+	select {
+	case body := <-received:
+		t.Fatalf("unknown app_error category emitted: %#v", body)
+	case <-time.After(20 * time.Millisecond):
 	}
-done:
 }
 
 func TestUsageTracker_SessionDepth(t *testing.T) {

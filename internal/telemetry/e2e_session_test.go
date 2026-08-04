@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 )
 
 func TestE2E_SessionStart_FirstActivity(t *testing.T) {
@@ -139,7 +141,7 @@ func TestE2E_OptOut_NoBeaconsSent(t *testing.T) {
 	resetSessionState()
 	tracker := NewUsageTracker()
 	tracker.RecordToolCall("observe:page", 0, false)
-	AppError("daemon_panic")
+	AppError(incident.CodeDaemonPanic)
 	BeaconUsageSummary(5, &UsageSnapshot{
 		ToolStats: []ToolStat{{Tool: "observe:page", Family: "observe", Name: "page", Count: 1}},
 	})

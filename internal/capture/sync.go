@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -266,7 +267,7 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if state.wasDisconnected {
-		telemetry.AppError("extension_disconnect")
+		telemetry.AppError(incident.CodeExtensionDisconnect)
 		h.capture.queryDispatcher.ExpireAllPendingQueries("extension_disconnected")
 		util.SafeGo(func() {
 			h.capture.Lifecycle().Emit(lifecycle.EventExtensionDisconnected, map[string]any{

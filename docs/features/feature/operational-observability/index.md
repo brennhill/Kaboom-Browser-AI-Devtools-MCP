@@ -63,6 +63,12 @@ payload-free delivery drop counter. The daemon attaches the canonical incident
 store and warms identity before opening its HTTP listener, preventing first-
 request initialization from bypassing recovery diagnostics.
 
+All legacy runtime `app_error` producers now use the same closed registry.
+Callers cannot provide arbitrary categories, sources, severities, retryability,
+or maps; each registered code carries an explicit
+`bounded_product_metadata` privacy classification, and unknown codes are
+discarded before telemetry envelope construction.
+
 Migration is performed one ownership boundary at a time and remains atomic
 within that boundary: callers move completely to the canonical incident and its
 projections, and their obsolete parallel reporting calls are deleted together.

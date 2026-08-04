@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
@@ -121,7 +122,7 @@ func (r *Recorder) Recover(recovered any) {
 	stack := make([]byte, 4096)
 	stack = stack[:runtime.Stack(stack, false)]
 
-	telemetry.AppError("daemon_panic")
+	telemetry.AppError(incident.CodeDaemonPanic)
 	fmt.Fprintln(r.stderr, "\n[Kaboom] FATAL ERROR")
 
 	logFile, err := state.DefaultLogFile()

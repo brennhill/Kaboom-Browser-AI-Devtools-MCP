@@ -21,6 +21,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -220,7 +221,7 @@ func runInstaller(forceCleanup func() error, startDaemon func(string), targetArg
 		// its config directory is safe to create before Codex's first launch.
 		codexPath := codexConfigPath(home)
 		if err := mergeCodexConfig(codexPath, exe); err != nil {
-			telemetry.AppError("install_config_error")
+			telemetry.AppError(incident.CodeInstallConfigError)
 			diag.Printf("  ⚠️  Codex: %v\n", err)
 		} else {
 			clientsConfigured++
@@ -239,7 +240,7 @@ func runInstaller(forceCleanup func() error, startDaemon func(string), targetArg
 				}
 
 				if err := mergeJSONConfig(path, cfg.key, exe, cfg.isCustom); err != nil {
-					telemetry.AppError("install_config_error")
+					telemetry.AppError(incident.CodeInstallConfigError)
 					diag.Printf("  ⚠️  %s: %v\n", cfg.name, err)
 				} else {
 					clientsConfigured++

@@ -4,12 +4,12 @@ scope: feature/app-telemetry
 ai-priority: medium
 tags: [telemetry, architecture, privacy]
 relates-to: [index.md, product-spec.md, qa-plan.md, ../../../core/app-metrics.md]
-last-verified: 2026-07-29
+last-verified: 2026-08-04
 doc_type: tech-spec
 feature_id: feature-app-telemetry
-last_reviewed: 2026-07-29
-last_verified_version: 0.8.8
-last_verified_date: 2026-07-29
+last_reviewed: 2026-08-04
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 ---
 
 # App Telemetry — Technical Specification
@@ -20,11 +20,9 @@ The `internal/telemetry` package is divided by behavior that changes together:
 
 | Module | Responsibility |
 |---|---|
-| `beacon.go` | Envelope construction, error classification, opt-out, bounded asynchronous HTTP delivery |
-| `install_id.go` | Local install ID persistence and once-per-install first-tool marker |
-| `session.go` | Session ID generation, inactivity rotation, and rotation callbacks |
-| `usage_counter.go` | Thread-safe per-tool aggregation and session event construction |
-| `usage_beacon.go` | Five-minute summary scheduling and shutdown handling |
+| `beacon.go` | Envelope construction, typed incident projection, opt-out, bounded asynchronous HTTP delivery |
+| `install_id.go` | Local install/session identity, inactivity rotation, and once-per-install first-tool marker |
+| `usage_counter.go` | Thread-safe per-tool aggregation, session event construction, and periodic summary scheduling |
 
 These are direct modules, not compatibility facades. Callers use the canonical
 telemetry APIs and the package owns its synchronization and local state.

@@ -231,6 +231,20 @@ func TestRegistryProvidesDoctorPresentationWithoutCallerProse(t *testing.T) {
 	}
 }
 
+func TestRegistryClassifiesEveryCodeForPrivacyAndAnalytics(t *testing.T) {
+	t.Parallel()
+	if len(definitions) != 19 {
+		t.Fatalf("registered code count = %d, want 19", len(definitions))
+	}
+	for code, definition := range definitions {
+		if code == "" || definition.Subsystem == "" || definition.Stage == "" || definition.Severity == "" ||
+			definition.ErrorKind == "" || definition.Privacy != PrivacyBoundedProductMetadata ||
+			definition.DoctorDetail == "" || definition.DoctorFix == "" {
+			t.Errorf("incomplete definition for %q: %#v", code, definition)
+		}
+	}
+}
+
 func TestDoctorProjectionCombinesLocalEvidenceWithRegistryPresentation(t *testing.T) {
 	t.Parallel()
 	store := NewStore(2)

@@ -42,6 +42,38 @@ func TestReliabilityDispatcherBoundsPendingWork(t *testing.T) {
 		t.Fatal("dispatcher accepted work beyond its fixed capacity")
 	}
 	close(release)
+	dispatcher.WaitIdle()
+}
+
+func TestReliabilityDispatcherSurvivesDeliveryPanic(t *testing.T) {
+	delivered := make(chan struct{}, 1)
+	var calls atomic.Uint64
+	dispatcher := newReliabilityDispatcher(2, func(incident.ReliabilityEvent) {
+		if calls.Add(1) == 1 {
+			panic("synthetic delivery failure")
+		}
+		delivered <- struct{}{}
+	})
+	event := incident.ReliabilityEvent{Code: incident.CodeStateRecoveryFailed}
+	if !dispatcher.Enqueue(event) || !dispatcher.Enqueue(event) {
+		t.Fatal("dispatcher unexpectedly rejected work")
+	}
+
+	select {
+	case <-delivered:
+	case <-time.After(time.Second):
+		t.Fatal("delivery worker did not continue after a panicking delivery")
+	}
+	done := make(chan struct{})
+	go func() {
+		dispatcher.WaitIdle()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("panicking delivery stranded pending work")
+	}
 }
 
 func emitTestSessionStart() {
