@@ -12,6 +12,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
@@ -33,8 +34,9 @@ type Deps struct {
 	// Version is the host binary's version, the primary takeover comparand.
 	Version string
 	// Warnf writes an operator-facing warning to the host's diagnostic sink.
-	Warnf    func(format string, args ...any)
-	Recovery statediag.Reporter
+	Warnf     func(format string, args ...any)
+	Recovery  statediag.Reporter
+	Incidents *incident.Store
 
 	// IsProcessAlive reports whether a PID is still running.
 	IsProcessAlive func(pid int) bool

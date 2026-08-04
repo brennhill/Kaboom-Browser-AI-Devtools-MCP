@@ -147,6 +147,10 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		}
 	}
 
+	// Identity and its canonical diagnostics must be ready before lifecycle
+	// assessment can publish an incident or the listener can accept a request.
+	telemetry.Warm(server.incidents)
+
 	// Crash-loop self-defense: if this SAME install (version + epoch) has restarted
 	// too many times too fast, log loudly and back off a bounded amount before binding
 	// so a pathological loop degrades gracefully instead of hammering launchd (which
@@ -154,9 +158,6 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	// dark too). Never refuses to start; an upgrade/epoch takeover resets the counter.
 	daemonlife.ApplyStartupRestartThrottle(daemonlifeDeps(server), port)
 
-	// Identity and its canonical diagnostics must be ready before the listener can
-	// expose any telemetry-producing request path.
-	telemetry.Warm(server.incidents)
 	srv, httpDone, err := startHTTPServer(server, port, apiKey, mux)
 	if err != nil {
 		return err

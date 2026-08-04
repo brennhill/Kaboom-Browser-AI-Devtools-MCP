@@ -30,6 +30,7 @@ test('upgrade regression exercises a packed artifact with validated replacement 
   assert.match(source, /same_version_reinstall/, 'must report the same-version reinstall scenario')
   assert.match(source, /identity_continuity/, 'must report preserved install identity and user state')
   assert.match(source, /KABOOM_UAT_EVIDENCE/, 'must support a machine-readable evidence destination')
+  assert.match(source, /unclean_daemon_exit/, 'crash recovery must verify the canonical Doctor incident')
   assert.match(source, /\.failure\s*=\s*\{[\s\S]*stage:\s*currentStage/, 'failure evidence must identify the replay stage')
   assert.match(source, /replay_command/, 'failure evidence must retain exact replay instructions')
   for (const scenario of [

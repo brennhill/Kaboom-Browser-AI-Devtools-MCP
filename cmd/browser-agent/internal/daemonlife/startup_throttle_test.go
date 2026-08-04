@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
@@ -17,6 +18,17 @@ type faultLifecycleFilesystem struct {
 	writeErr  error
 	removeErr error
 }
+
+type retainedLifecycleFilesystem struct{ data []byte }
+
+func (f *retainedLifecycleFilesystem) ReadFile(string) ([]byte, error) {
+	return append([]byte(nil), f.data...), nil
+}
+func (f *retainedLifecycleFilesystem) WriteFile(_ string, data []byte) error {
+	f.data = append([]byte(nil), data...)
+	return nil
+}
+func (*retainedLifecycleFilesystem) Remove(string) error { return fs.ErrPermission }
 
 func (f faultLifecycleFilesystem) ReadFile(string) ([]byte, error) {
 	if f.readErr != nil {
@@ -323,6 +335,74 @@ func TestCleanShutdownResetsRestartThrottle(t *testing.T) {
 	*fakeNow = base.Add(time.Duration(restartThrottleMax+2) * time.Second)
 	if d := ApplyStartupRestartThrottle(deps, 7890); d != 0 {
 		t.Fatalf("after a clean shutdown, a rapid restart must not be throttled, got %s", d)
+	}
+}
+
+func TestStartupReportsPriorUncleanRunOnceForMatchingDaemon(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("KABOOM_STATE_DIR", dir)
+	base := time.Unix(1_700_000_000, 0)
+	fakeNow := freezeClock(t, base)
+	stubInstallEpoch(t, 777)
+	deps, _ := newTestDeps(t)
+	deps.Version = "9.9.9"
+	deps.Incidents = incident.NewStore(4)
+	_ = ApplyStartupRestartThrottle(deps, 7890)
+
+	*fakeNow = base.Add(time.Second)
+	_ = ApplyStartupRestartThrottle(deps, 7890)
+	views := deps.Incidents.DoctorSnapshot()
+	if len(views) != 1 || views[0].Code != incident.CodeUncleanDaemonExit || views[0].State != incident.StateExhausted {
+		t.Fatalf("unclean exit incidents = %#v", views)
+	}
+
+	ClearRestartHistoryOnCleanShutdown(deps, 7890)
+	*fakeNow = base.Add(2 * time.Second)
+	_ = ApplyStartupRestartThrottle(deps, 7890)
+	if got := len(deps.Incidents.DoctorSnapshot()); got != 1 {
+		t.Fatalf("clean restart added incident: got %d", got)
+	}
+}
+
+func TestStartupDoesNotReportUpgradeOrDifferentPortAsUnclean(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("KABOOM_STATE_DIR", dir)
+	base := time.Unix(1_700_000_000, 0)
+	freezeClock(t, base)
+	stubInstallEpoch(t, 777)
+	deps, _ := newTestDeps(t)
+	deps.Version = "9.9.9"
+	deps.Incidents = incident.NewStore(4)
+	if err := saveRestartHistory(restartHistoryPath(dir), restartHistory{Version: "8.0.0", InstallEpoch: 777, Port: 7890, Timestamps: []int64{base.UnixNano()}}); err != nil {
+		t.Fatal(err)
+	}
+	_ = ApplyStartupRestartThrottle(deps, 7890)
+	if got := len(deps.Incidents.DoctorSnapshot()); got != 0 {
+		t.Fatalf("upgrade produced unclean incident: %#v", deps.Incidents.DoctorSnapshot())
+	}
+}
+
+func TestCleanShutdownMarkerPreventsFalseCrashWhenRemovalFails(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("KABOOM_STATE_DIR", dir)
+	base := time.Unix(1_700_000_000, 0)
+	freezeClock(t, base)
+	stubInstallEpoch(t, 777)
+	deps, _ := newTestDeps(t)
+	deps.Version = "9.9.9"
+	deps.Incidents = incident.NewStore(4)
+	_ = ApplyStartupRestartThrottle(deps, 7890)
+
+	data, err := os.ReadFile(restartHistoryPath(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := &retainedLifecycleFilesystem{data: data}
+	installLifecycleFault(t, files)
+	ClearRestartHistoryOnCleanShutdown(deps, 7890)
+	_ = ApplyStartupRestartThrottle(deps, 7890)
+	if got := len(deps.Incidents.DoctorSnapshot()); got != 0 {
+		t.Fatalf("clean shutdown removal failure produced incident: %#v", deps.Incidents.DoctorSnapshot())
 	}
 }
 

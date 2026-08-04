@@ -110,7 +110,7 @@ last_verified_date: 2026-03-05
 - `UpgradeMarkerFile()`: path correctness
 
 **Test Files:**
-- `cmd/browser-agent/internal/daemonlife/version_compare_test.go`
+- `cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go`
 - `cmd/browser-agent/internal/binarywatch/watcher_test.go`
 - `cmd/browser-agent/handler_unit_test.go`
 - `internal/state/paths_coverage_test.go`
@@ -137,7 +137,7 @@ last_verified_date: 2026-03-05
 
 | Test Type | File | Status | Notes |
 |-----------|------|--------|-------|
-| Unit (version) | `cmd/browser-agent/internal/daemonlife/version_compare_test.go` | Passing | 3 test functions |
+| Unit (version) | `cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go` | Passing | 3 test functions |
 | Unit (watcher) | `cmd/browser-agent/internal/binarywatch/watcher_test.go` | Passing | 14 test functions |
 | Unit (handler) | `cmd/browser-agent/handler_unit_test.go` | Passing | 2 upgrade test functions |
 | Unit (paths) | `internal/state/paths_coverage_test.go` | Passing | 2 test functions |

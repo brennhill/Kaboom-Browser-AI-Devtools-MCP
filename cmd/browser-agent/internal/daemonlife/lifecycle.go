@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -17,6 +19,57 @@ import (
 // LaunchOptions describes how this daemon instance was launched.
 type LaunchOptions struct {
 	Parallel bool
+}
+
+// ParseVersionParts splits an optionally v-prefixed semantic version into integers.
+func ParseVersionParts(value string) []int {
+	value = strings.TrimPrefix(value, "v")
+	if value == "" {
+		return nil
+	}
+	segments := strings.Split(value, ".")
+	parts := make([]int, 0, len(segments))
+	for _, segment := range segments {
+		part, err := strconv.Atoi(segment)
+		if err != nil {
+			break
+		}
+		parts = append(parts, part)
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+	return parts
+}
+
+func sameNonEmptyVersion(a, b string) bool {
+	return a != "" && b != "" && !IsNewerVersion(a, b) && !IsNewerVersion(b, a)
+}
+
+// IsNewerVersion reports whether candidate is strictly newer than current.
+func IsNewerVersion(candidate, current string) bool {
+	candidateParts := ParseVersionParts(candidate)
+	currentParts := ParseVersionParts(current)
+	if candidateParts == nil || currentParts == nil {
+		return false
+	}
+	count := len(candidateParts)
+	if len(currentParts) > count {
+		count = len(currentParts)
+	}
+	for index := 0; index < count; index++ {
+		candidatePart, currentPart := 0, 0
+		if index < len(candidateParts) {
+			candidatePart = candidateParts[index]
+		}
+		if index < len(currentParts) {
+			currentPart = currentParts[index]
+		}
+		if candidatePart != currentPart {
+			return candidatePart > currentPart
+		}
+	}
+	return false
 }
 
 type daemonLockRecord struct {

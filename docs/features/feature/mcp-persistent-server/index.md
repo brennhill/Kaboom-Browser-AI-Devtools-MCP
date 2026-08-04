@@ -39,7 +39,6 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/lock_file.go
   - cmd/browser-agent/internal/daemonlife/install_epoch.go
   - cmd/browser-agent/internal/daemonlife/startup_throttle.go
-  - cmd/browser-agent/internal/daemonlife/version_compare.go
   - cmd/browser-agent/internal/daemonlife/deps.go
   - internal/statediag/collector.go
   - internal/statefault/fault.go
@@ -78,6 +77,9 @@ code_paths:
   - internal/util/proc_windows.go
 test_paths:
   - cmd/browser-agent/noise_doctor_test.go
+  - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
+  - scripts/release/install-upgrade-regression.contract.test.mjs
+  - scripts/release/install-upgrade-regression.mjs
   - tests/architecture/user-state-loaders.test.cjs
   - internal/statediag/collector_test.go
   - cmd/browser-agent/cli_modes_subprocess_test.go
@@ -151,7 +153,6 @@ test_paths:
   - cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go
   - cmd/browser-agent/internal/daemonlife/install_epoch_test.go
   - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
-  - cmd/browser-agent/internal/daemonlife/version_compare_test.go
   - cmd/browser-agent/internal/daemonlife/helpers_test.go
   - cmd/browser-agent/daemon_lifecycle_policy_test.go
   - cmd/browser-agent/daemon_lifecycle_wiring_test.go
@@ -222,6 +223,14 @@ does not maintain parallel lazy registries.
 > snapshots, pending commands, alerts, notification queues, recordings, and
 > the correlated Doctor timeline. Active obligations remain distinct from
 > recoverable history, and historical drops do not falsely degrade health.
+
+> **2026-08-04:** The canonical restart-history owner now classifies an
+> unfinished matching daemon run as `unclean_daemon_exit` on the next launch.
+> Clean shutdown, version upgrades, install-epoch changes, and other ports do
+> not create incidents. Clean shutdown is durably marked before best-effort
+> history cleanup, so a failed removal cannot masquerade as a crash. Packaged
+> lifecycle UAT kills the daemon, restarts it,
+> and requires the correlated terminal Doctor incident before passing.
 
 > **2026-07-27:** Removed the unreachable `main_connection_diag.go`
 > connection-probing path and its dedicated tests. No production caller invoked

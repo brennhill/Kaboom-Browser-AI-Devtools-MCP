@@ -281,10 +281,11 @@ func (l lifecycleLogger) LogLifecycle(event string, port int, fields map[string]
 // daemonlifeDeps binds the recovery process and port seams to daemonlife.
 func daemonlifeDeps(server *Server) daemonlife.Deps {
 	return daemonlife.Deps{
-		Log:      lifecycleLogger{server: server},
-		Version:  version,
-		Warnf:    diag.Printf,
-		Recovery: server.stateRecovery,
+		Log:       lifecycleLogger{server: server},
+		Version:   version,
+		Warnf:     diag.Printf,
+		Recovery:  server.stateRecovery,
+		Incidents: server.incidents,
 
 		IsProcessAlive:     daemonIsProcessAlive,
 		IsServerRunning:    daemonIsServerRunning,

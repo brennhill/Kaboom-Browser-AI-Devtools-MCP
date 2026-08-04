@@ -97,6 +97,15 @@ async function waitForPortHealth(port, timeoutMs = 20000) {
   return null
 }
 
+async function expectDoctorIncident(port, code, correlation) {
+  const response = await fetch(`http://127.0.0.1:${port}/doctor`)
+  if (!response.ok) fail('Doctor incident query failed', `status=${response.status}`)
+  const payload = JSON.stringify(await response.json())
+  if (!payload.includes(code) || !payload.includes(correlation)) {
+    fail('expected Doctor incident was absent', `code=${code} correlation=${correlation}`)
+  }
+}
+
 async function waitForChildExit(child, timeoutMs = 10000) {
   if (!child) return true
   if (child.exitCode !== null || child.signalCode !== null) return true
@@ -501,6 +510,7 @@ async function main() {
     await crashDaemon(daemon)
     daemon = startDaemon(newBinary, port, envWithShims)
     await expectDaemonIdentity(port, version)
+    await expectDoctorIncident(port, 'unclean_daemon_exit', `:${port}:`)
     evidence.scenarios.push({ name: 'daemon_crash_recovery', status: 'passed' })
     stopDaemon(newBinary, port, envWithShims)
     await waitForChildExit(daemon, 12000)

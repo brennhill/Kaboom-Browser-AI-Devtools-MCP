@@ -14,10 +14,12 @@ package daemonlife
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"path/filepath"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
@@ -49,10 +51,11 @@ const (
 // throttled every subsequent start into "Server failed to start". Production always
 // binds the same port, so a genuine crash loop still accumulates.
 type restartHistory struct {
-	Version      string  `json:"version"`
-	InstallEpoch int64   `json:"install_epoch"`
-	Port         int     `json:"port"`
-	Timestamps   []int64 `json:"restart_unixnano"`
+	Version       string  `json:"version"`
+	InstallEpoch  int64   `json:"install_epoch"`
+	Port          int     `json:"port"`
+	Timestamps    []int64 `json:"restart_unixnano"`
+	CleanShutdown bool    `json:"clean_shutdown,omitempty"`
 }
 
 // daemonThrottleSleep is the injectable sleep used by the startup restart throttle.
@@ -134,6 +137,12 @@ func ClearRestartHistoryOnCleanShutdown(d Deps, port int) {
 		return
 	}
 	path := restartHistoryPath(stateDir)
+	if history, loadErr := loadRestartHistory(path); loadErr == nil && len(history.Timestamps) > 0 {
+		history.CleanShutdown = true
+		if saveErr := saveRestartHistory(path, history); saveErr != nil {
+			d.Log.LogLifecycle("restart_history_clean_marker_failed", port, map[string]any{"reason": "state_write_failed"})
+		}
+	}
 	if err := daemonLifecycleFiles.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		d.Log.LogLifecycle("restart_history_clear_failed", port, map[string]any{"reason": "state_remove_failed"})
 		if d.Recovery != nil {
@@ -164,7 +173,9 @@ func ApplyStartupRestartThrottle(d Deps, port int) time.Duration {
 			})
 		}
 	}
-	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), d.Version, daemonInstallEpoch(d.Recovery), port)
+	installEpoch := daemonInstallEpoch(d.Recovery)
+	reportPriorUncleanRun(d, prev, port, installEpoch)
+	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), d.Version, installEpoch, port)
 	if err := saveRestartHistory(path, next); err != nil {
 		d.Log.LogLifecycle("restart_history_write_failed", port, map[string]any{"reason": "state_write_failed"})
 		if d.Recovery != nil {
@@ -188,4 +199,22 @@ func ApplyStartupRestartThrottle(d Deps, port int) time.Duration {
 		len(next.Timestamps), restartThrottleWindow, delay)
 	daemonThrottleSleep(delay)
 	return delay
+}
+
+func reportPriorUncleanRun(d Deps, previous restartHistory, port int, installEpoch int64) {
+	if d.Incidents == nil || previous.CleanShutdown || len(previous.Timestamps) == 0 || previous.Version != d.Version ||
+		previous.InstallEpoch != installEpoch || previous.Port != port {
+		return
+	}
+	lastStart := previous.Timestamps[len(previous.Timestamps)-1]
+	generation := uint64(lastStart)
+	key, err := d.Incidents.Detect(incident.Report{
+		Code:          incident.CodeUncleanDaemonExit,
+		CorrelationID: fmt.Sprintf("%s:%d:%d:%d", d.Version, previous.InstallEpoch, port, lastStart),
+		Generation:    generation,
+		Evidence:      incident.LocalEvidence{Detail: "The prior daemon start had no matching clean-shutdown transition."},
+	})
+	if err == nil {
+		d.Incidents.Exhaust(key, generation)
+	}
 }
