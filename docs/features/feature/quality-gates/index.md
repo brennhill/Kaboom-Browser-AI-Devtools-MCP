@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-04
 code_paths:
   - kaboom-code-standards.md
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
@@ -23,6 +23,8 @@ code_paths:
   - scripts/check-file-length.sh
   - scripts/check-folder-size.cjs
   - scripts/check-dormant-tests.sh
+  - scripts/contracts/check_go_test_determinism.go
+  - .go-test-sleep-baseline.json
   - scripts/test-js-sharded.sh
   - scripts/build/run-go-coverage.sh
   - scripts/build/merge-go-coverage.mjs
@@ -43,6 +45,7 @@ test_paths:
   - internal/tracking/stats_endpoint_test.go
   - scripts/check-file-length.test.mjs
   - scripts/check-folder-size.test.mjs
+  - scripts/contracts/check_go_test_determinism_test.go
   - scripts/tests/contracts/go-coverage-profile.test.mjs
   - internal/testsync/testsync_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
@@ -75,6 +78,12 @@ Automated code quality enforcement that catches architectural drift, duplicate c
 Convention scanning applies extension, generated-file, size, and directory
 filters through one shared source-walk boundary so detection and discovery
 cannot drift.
+
+`make check-structure` parses Go tests with the standard Go AST and rejects any
+new or increased `time.Sleep` usage on a per-file basis. The checked-in baseline
+is a ratchet for existing wall-clock debt, not a general exemption: removing a
+sleep lowers the next baseline, while new tests must use controlled channels,
+fake clocks, or explicit process/transport seams.
 
 Prettier checks authored source and configuration while excluding the three
 minified action-family DOM primitives whose canonical representation is owned
