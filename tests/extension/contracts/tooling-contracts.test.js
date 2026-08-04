@@ -141,6 +141,7 @@ describe('Tooling contracts', () => {
     assert.match(makefile, /^validate-architecture:/m)
     assert.match(makefile, /^verify-llm: check-invariants check-schema$/m)
     assert.match(ci, /name: Wire drift gate[^\n]*\n\s*run: make check-invariants/)
+    assert.match(ci, /name: Deterministic performance SLO gate\s*\n\s*run: make test-performance/)
     assert.match(architecture, /name: Run architecture validation\s*\n\s*run: make validate-architecture/)
     assert.match(versions, /name: Validate all versions match VERSION file\s*\n\s*run: make validate-versions/)
     assert.match(release, /name: Wire drift gate[^\n]*\n\s*run: make check-invariants/)

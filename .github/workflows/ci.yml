@@ -187,6 +187,9 @@ jobs:
       - name: Hardening lint
         run: make lint-hardening
 
+      - name: Deterministic performance SLO gate
+        run: make test-performance
+
       - name: Go tests with race detection
         run: go test -race -v ./cmd/browser-agent/... ./internal/...
 

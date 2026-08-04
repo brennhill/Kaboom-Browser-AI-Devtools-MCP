@@ -53,6 +53,7 @@ test_paths:
   - scripts/docs/features/check-feature-paths.test.mjs
   - tests/cli/contracts/root-metadata-branding.test.cjs
   - tests/site/gokaboom-domain-contract.test.js
+  - tests/extension/contracts/tooling-contracts.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -96,6 +97,11 @@ canonical block topology; differently shaped copies emitted by other test
 binaries are projected onto that topology and merged by maximum execution
 count. Cross-package behavior is therefore retained without adding phantom
 denominator blocks for the same source statement.
+
+Hosted CI invokes the canonical isolated `make test-performance` target rather
+than copying its environment or test selection into workflow YAML. The tooling
+contract fails if that SLO lane is removed, preventing a locally defined
+performance gate from silently disappearing from pull requests.
 
 ## Architecture
 
