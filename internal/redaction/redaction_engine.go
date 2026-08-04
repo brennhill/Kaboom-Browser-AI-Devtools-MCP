@@ -1,5 +1,4 @@
-// Purpose: Creates and runs the redaction engine, compiling built-in and custom regex patterns.
-// Why: Separates engine construction and string redaction from pattern definitions and key matching.
+// redaction_engine.go — Owns compiled patterns, configuration, and string redaction.
 package redaction
 
 import (
@@ -11,6 +10,111 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+// RedactionPattern represents a single redaction rule.
+type RedactionPattern struct {
+	Name        string `json:"name"`
+	Pattern     string `json:"pattern"`
+	Replacement string `json:"replacement,omitempty"`
+}
+
+// RedactionConfig represents the JSON configuration file structure.
+type RedactionConfig struct {
+	Patterns []RedactionPattern `json:"patterns"`
+}
+
+// compiledPattern holds a pre-compiled regex and its replacement string.
+type compiledPattern struct {
+	name        string
+	regex       *regexp.Regexp
+	replacement string
+	validate    func(match string) bool // optional post-match validation (e.g., Luhn)
+	hints       []string
+	foldHints   bool
+	minDigits   int
+	fastReplace func(string, string) string
+}
+
+// RedactionEngine applies a set of compiled patterns to text.
+// It is safe for concurrent use after construction.
+type RedactionEngine struct {
+	patterns []compiledPattern
+}
+
+// builtinPatterns defines the always-active redaction rules.
+var builtinPatterns = []struct {
+	name        string
+	pattern     string
+	validate    func(string) bool
+	hints       []string
+	foldHints   bool
+	minDigits   int
+	fastReplace func(string, string) string
+}{
+	{
+		name:        "aws-key",
+		pattern:     `AKIA[0-9A-Z]{16}`,
+		hints:       []string{"AKIA"},
+		fastReplace: redactAWSKey,
+	},
+	{
+		name:    "bearer-token",
+		pattern: `(?i)Bearer[ \t]+[A-Za-z0-9\-._~+/]+=*`,
+		hints:   []string{"bearer"}, foldHints: true, fastReplace: redactBearerToken,
+	},
+	{
+		name:    "basic-auth",
+		pattern: `(?i)Basic[ \t]+[A-Za-z0-9+/]+=*`,
+		hints:   []string{"basic"}, foldHints: true,
+	},
+	{
+		name:    "jwt",
+		pattern: `eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+`,
+		hints:   []string{"eyJ"},
+	},
+	{
+		name:    "github-pat",
+		pattern: `(ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{36,})`,
+		hints:   []string{"ghp_", "github_pat_"},
+	},
+	{
+		name:    "private-key",
+		pattern: `-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----`,
+		hints:   []string{"-----BEGIN "},
+	},
+	{
+		name:      "credit-card",
+		pattern:   `\b([0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4})\b`,
+		validate:  luhnValidateMatch,
+		minDigits: 16,
+	},
+	{
+		name:        "ssn",
+		pattern:     `\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b`,
+		minDigits:   9,
+		fastReplace: redactSSN,
+	},
+	{
+		name:    "api-key",
+		pattern: `(?i)(api[_-]?key|apikey|secret[_-]?key)\s*[:=]\s*\S+`,
+		hints:   []string{"key"}, foldHints: true,
+	},
+	{
+		name:    "session-cookie",
+		pattern: `(?i)(session|sid|token)\s*=\s*[A-Za-z0-9+/=_-]{16,}`,
+		hints:   []string{"session", "sid", "token"}, foldHints: true,
+	},
+	{
+		name:    "openai-key",
+		pattern: `sk-[A-Za-z0-9_-]{16,}`,
+		hints:   []string{"sk-"},
+	},
+	{
+		name:    "slack-token",
+		pattern: `xox[baprs]-[A-Za-z0-9-]{10,}`,
+		hints:   []string{"xox"},
+	},
+}
 
 var (
 	builtinEngineOnce            sync.Once
@@ -345,4 +449,39 @@ func (e *RedactionEngine) redactStructuredText(input string) string {
 		return e.Redact(input)
 	}
 	return string(redacted)
+}
+
+// luhnValid checks if a numeric string passes the Luhn algorithm.
+func luhnValid(number string) bool {
+	// Strip non-digit characters
+	digits := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, number)
+
+	if len(digits) < 13 || len(digits) > 19 {
+		return false
+	}
+
+	sum := 0
+	alt := false
+	for i := len(digits) - 1; i >= 0; i-- {
+		n := int(digits[i] - '0')
+		if alt {
+			n *= 2
+			if n > 9 {
+				n -= 9
+			}
+		}
+		sum += n
+		alt = !alt
+	}
+	return sum%10 == 0
+}
+
+// luhnValidateMatch is the validation function used by the credit-card pattern.
+func luhnValidateMatch(match string) bool {
+	return luhnValid(match)
 }

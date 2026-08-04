@@ -10,24 +10,20 @@ code_paths:
   - internal/mcp/types.go
   - internal/redaction/redaction.go
   - internal/redaction/redaction_engine.go
-  - internal/redaction/redaction_builtin_patterns.go
   - internal/redaction/redaction_map.go
-  - internal/redaction/redaction_types.go
   - internal/security/scan/credentials.go
   - internal/security/scan/credentials_patterns.go
   - src/background/runtime-state/log-queue.ts
   - Makefile
 test_paths:
   - internal/capture/http_debug_redaction_test.go
-  - internal/redaction/no_facade_test.go
   - internal/redaction/redaction_test.go
-  - internal/redaction/redaction_config_test.go
   - internal/redaction/redaction_engine_test.go
-  - internal/redaction/redaction_coverage_test.go
   - internal/redaction/redaction_fuzz_test.go
-  - internal/redaction/redaction_map_test.go
   - internal/redaction/redaction_property_test.go
   - internal/redaction/redaction_unit_test.go
+  - internal/redaction/race_disabled_test.go
+  - internal/redaction/race_enabled_test.go
   - internal/incident/store_test.go
   - internal/security/scan/unit_test.go
   - internal/security/scan/coverage_part2_test.go
@@ -63,6 +59,14 @@ The redaction package consumes the canonical `internal/mcp` result and content
 block wire types directly. It owns only `RedactionEngine`, `RedactionConfig`,
 and `RedactionPattern`; duplicate or alias compatibility types are prohibited
 and guarded by a package regression test.
+
+The package is organized by change coupling rather than primitive size. The
+engine owner contains configuration, compiled types, built-in patterns, string
+redaction, and Luhn validation; the structured owner contains sensitive-key
+classification and recursive map traversal. Behavior/configuration,
+engine/edge/performance, structured-wire, property/fuzz, and race-build tests
+live with their corresponding concerns. The package contains exactly ten files
+and every file remains below 800 lines.
 
 Deterministic property suites exercise canonical MCP text and image blocks,
 nested metadata, errors, diagnostics, malformed envelopes, and extension runtime
