@@ -17,8 +17,6 @@
     "cmd/browser-agent/server_reliability_integration_test.go": 3,
     "cmd/browser-agent/server_reliability_test.go": 3,
     "cmd/browser-agent/test_daemon_cleanup_test.go": 1,
-    "cmd/browser-agent/tools_analyze_annotations_core_test.go": 1,
-    "cmd/browser-agent/tools_analyze_annotations_wait_test.go": 2,
     "cmd/browser-agent/tools_async_timeout_test.go": 3,
     "cmd/browser-agent/tools_coldstart_gate_test.go": 2,
     "cmd/browser-agent/tools_configure_handler_test.go": 1,

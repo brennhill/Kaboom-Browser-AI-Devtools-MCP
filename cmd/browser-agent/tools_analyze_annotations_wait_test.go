@@ -20,12 +20,11 @@ func TestToolGetAnnotations_WaitTrue_ImmediateIfDataReady(t *testing.T) {
 	defer h.annotationStore.Close()
 
 	h.annotationStore.MarkDrawStarted()
-	time.Sleep(2 * time.Millisecond) // ensure session timestamp > draw start
 
 	// Store session BEFORE calling wait — should return immediately
 	h.annotationStore.StoreSession(1, &annotation.Session{
 		TabID:       1,
-		Timestamp:   time.Now().UnixMilli(),
+		Timestamp:   time.Now().Add(time.Second).UnixMilli(),
 		Annotations: []annotation.Annotation{{Text: "already-done"}},
 		PageURL:     "https://example.com",
 	})
@@ -41,27 +40,31 @@ func TestToolGetAnnotations_WaitTrue_ImmediateIfDataReady(t *testing.T) {
 	}
 }
 
-func TestToolGetAnnotations_WaitTrue_BlocksAndReturnsSessionWithinTimeout(t *testing.T) {
+func TestToolGetAnnotations_WaitTrue_ReturnsConcurrentSessionWithinTimeout(t *testing.T) {
 	h := createTestToolHandler(t)
 	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.MarkDrawStarted()
 
+	response := make(chan mcp.JSONRPCResponse, 1)
+	started := make(chan struct{})
 	go func() {
-		time.Sleep(15 * time.Millisecond)
-		h.annotationStore.StoreSession(1, &annotation.Session{
-			TabID:       1,
-			Timestamp:   time.Now().UnixMilli(),
-			Annotations: []annotation.Annotation{{Text: "arrived-during-blocking-wait"}},
-			PageURL:     "https://example.com",
-		})
+		close(started)
+		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+		args := json.RawMessage(`{"what":"annotations","background":false,"timeout_ms":250}`)
+		response <- h.annotationAnalysis.GetAnnotations(req, args)
 	}()
+	<-started
 
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what":"annotations","background":false,"timeout_ms":250}`)
+	h.annotationStore.StoreSession(1, &annotation.Session{
+		TabID:       1,
+		Timestamp:   time.Now().Add(time.Second).UnixMilli(),
+		Annotations: []annotation.Annotation{{Text: "arrived-during-blocking-wait"}},
+		PageURL:     "https://example.com",
+	})
 
-	resp := h.annotationAnalysis.GetAnnotations(req, args)
+	resp := <-response
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "arrived-during-blocking-wait") {

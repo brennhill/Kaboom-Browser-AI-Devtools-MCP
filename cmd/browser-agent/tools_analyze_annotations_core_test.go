@@ -301,10 +301,9 @@ func TestToolGetAnnotations_WaitTrue_ImmediateReturn(t *testing.T) {
 
 	// Mark draw started, then store session
 	h.annotationStore.MarkDrawStarted()
-	time.Sleep(1 * time.Millisecond)
 	h.annotationStore.StoreSession(1, &annotation.Session{
 		TabID:       1,
-		Timestamp:   time.Now().UnixMilli(),
+		Timestamp:   time.Now().Add(time.Second).UnixMilli(),
 		Annotations: []annotation.Annotation{{Text: "wait-immediate"}},
 		PageURL:     "https://example.com",
 	})

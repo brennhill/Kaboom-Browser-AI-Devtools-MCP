@@ -4,7 +4,7 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -140,5 +140,8 @@ Tool dispatch uses only the canonical `what` selector and canonical mode names;
 
 Annotation execution uses only `background`: false blocks for the bounded wait,
 while true returns immediately. The former inverse `wait` parameter is removed.
+Annotation wait tests order completed sessions with explicit future timestamps
+and coordinate concurrent delivery with channels. They do not depend on the
+host clock or scheduler delays to make a session newer than draw activation.
 
 Queue saturation for extension-dispatched analyze actions now fails fast with a structured `queue_full` response (via shared enqueue helper), instead of entering async wait/poll flow.
