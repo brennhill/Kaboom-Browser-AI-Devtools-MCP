@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - internal/capture/accessors.go
   - internal/queries/dispatcher_queries.go
@@ -161,6 +161,8 @@ capture/upload has one implementation for both normal capture and CDP fallback.
 Live-page storage, IndexedDB, screenshot, and accessibility failures use the
 canonical `mcp.Fail` response boundary; queue saturation guidance is built once
 with the canonical `pending_commands` recovery call.
+Live-page command tests wait on the query dispatcher's canonical pending-query
+notification before returning extension results; they do not poll queue state.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

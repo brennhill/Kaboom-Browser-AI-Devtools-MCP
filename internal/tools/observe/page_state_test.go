@@ -22,16 +22,13 @@ import (
 
 func completeNextPageStateQuery(t *testing.T, cap *capture.Capture, result json.RawMessage) {
 	t.Helper()
-	deadline := time.Now().Add(time.Second)
-	for time.Now().Before(deadline) {
-		pending := cap.Queries().GetPendingQueries()
-		if len(pending) > 0 {
-			cap.Queries().SetQueryResultWithClient(pending[0].ID, result, "")
-			return
-		}
-		time.Sleep(time.Millisecond)
+	cap.Queries().WaitForPendingQueries(time.Second)
+	pending := cap.Queries().GetPendingQueries()
+	if len(pending) == 0 {
+		t.Error("page-state query was not enqueued")
+		return
 	}
-	t.Error("page-state query was not enqueued")
+	cap.Queries().SetQueryResultWithClient(pending[0].ID, result, "")
 }
 
 func pageStateDeps(cap *capture.Capture) Deps {
