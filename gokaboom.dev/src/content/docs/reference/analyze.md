@@ -1,8 +1,8 @@
 ---
 title: "Analyze — Active Analysis"
-description: "Complete reference for the analyze tool. 27 modes for DOM queries, accessibility audits, security scans, link health, visual annotations, visual regression, form analysis, performance snapshots, and more."
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+description: "Complete reference for the analyze tool. 28 modes for DOM queries, accessibility audits, security scans, link health, visual annotations, verification contracts, visual regression, form analysis, performance snapshots, and more."
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-04
 normalized_tags: ['reference', 'analyze']
 ---
 
@@ -25,6 +25,7 @@ analyze({what: "performance"})                                       // Performa
 analyze({what: "error_clusters"})                                    // Group similar errors
 analyze({what: "page_summary"})                                      // Page structure
 analyze({what: "annotations", annot_session: "review"})             // Draw mode results
+analyze({what: "verification", operation: "define", contract: {...}}) // Define QA contract
 ```
 
 ## Common Parameters
@@ -440,3 +441,30 @@ Detect feature flags and feature gates on the page — A/B test variants, featur
 ```js
 analyze({what: "feature_gates"})
 ```
+
+## Verification Contracts
+
+### `verification`
+
+Define or evaluate a versioned QA contract. Missing, modified, or stale required evidence produces `UNVERIFIED`; it can never be treated as a pass.
+
+```js
+analyze({
+  what: "verification",
+  operation: "define",
+  contract: {
+    schema_version: "1",
+    contract_id: "checkout",
+    assertions: [{id: "total", description: "Total remains visible"}]
+  }
+})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `operation` | string (required) | `define` validates the contract; `evaluate` calculates its verdict |
+| `contract` | object (required) | Versioned contract with `contract_id` and unique assertions |
+| `results` | array | Assertion results for `evaluate` |
+| `evidence` | array | New compact evidence submissions with five-tool provenance |
+| `evidence_catalog` | array | Previously generated content-addressed evidence artifacts |
+| `max_age_seconds` | number | Maximum evidence age; defaults to 24 hours |
