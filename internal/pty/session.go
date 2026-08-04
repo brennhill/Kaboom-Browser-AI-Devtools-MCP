@@ -48,10 +48,17 @@ type IdleConfig struct {
 	Callback func(sessionID string)
 }
 
+type ptyFile interface {
+	Read([]byte) (int, error)
+	Write([]byte) (int, error)
+	Close() error
+	Fd() uintptr
+}
+
 // Session wraps a PTY master + child process for interactive terminal I/O.
 type Session struct {
 	ID         string
-	ptmx       *os.File
+	ptmx       ptyFile
 	cmd        *exec.Cmd
 	mu         sync.Mutex
 	closed     bool
@@ -310,7 +317,10 @@ func (s *Session) Close() error {
 	// Signal the child to terminate.
 	s.signalChild(syscall.SIGTERM)
 	// Close PTY master — this also signals EOF to the child.
-	err := s.ptmx.Close()
+	var err error
+	if s.ptmx != nil {
+		err = s.ptmx.Close()
+	}
 
 	// Wait for the reaper goroutine (started in Spawn) with a timeout. If
 	// SIGTERM + PTY close aren't enough, escalate to SIGKILL. Without this

@@ -4,12 +4,41 @@ package pty
 
 import (
 	"fmt"
-	"runtime"
+	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 )
+
+type blockingPTY struct {
+	entered chan struct{}
+	closed  chan struct{}
+	once    sync.Once
+}
+
+func newBlockingPTY(entries int) *blockingPTY {
+	return &blockingPTY{entered: make(chan struct{}, entries), closed: make(chan struct{})}
+}
+
+func (pty *blockingPTY) block() (int, error) {
+	pty.entered <- struct{}{}
+	<-pty.closed
+	return 0, os.ErrClosed
+}
+
+func (pty *blockingPTY) Read([]byte) (int, error)  { return pty.block() }
+func (pty *blockingPTY) Write([]byte) (int, error) { return pty.block() }
+func (pty *blockingPTY) Close() error {
+	pty.once.Do(func() { close(pty.closed) })
+	return nil
+}
+func (pty *blockingPTY) Fd() uintptr { return 0 }
+
+func sessionWithBlockingPTY(pty *blockingPTY) *Session {
+	return &Session{ptmx: pty, cmd: &exec.Cmd{}, done: make(chan struct{}), reaped: closedChan()}
+}
 
 func readUntilContains(t *testing.T, sess *Session, needle string, timeout time.Duration) string {
 	t.Helper()
@@ -194,13 +223,8 @@ func TestSession_Pid(t *testing.T) {
 // T1 regression: Read/Write during concurrent Close must return ErrSessionClosed,
 // not a raw OS error from a potentially recycled file descriptor.
 func TestSession_ReadDuringClose_ReturnsErrSessionClosed(t *testing.T) {
-	sess, err := Spawn(SpawnConfig{
-		Cmd:  "/bin/sh",
-		Args: []string{"-c", "exec cat"},
-	})
-	if err != nil {
-		t.Fatalf("spawn: %v", err)
-	}
+	pty := newBlockingPTY(1)
+	sess := sessionWithBlockingPTY(pty)
 
 	// Start a goroutine that reads forever; it will unblock when Close() closes the fd.
 	readErr := make(chan error, 1)
@@ -215,8 +239,7 @@ func TestSession_ReadDuringClose_ReturnsErrSessionClosed(t *testing.T) {
 		}
 	}()
 
-	// Give the goroutine time to enter the blocking Read syscall.
-	time.Sleep(50 * time.Millisecond)
+	<-pty.entered
 
 	// Close the session — the read should unblock with ErrSessionClosed.
 	if err := sess.Close(); err != nil {
@@ -345,15 +368,9 @@ func TestSession_AppendScrollback_NoEvictionBelowMax(t *testing.T) {
 
 // T1 regression: concurrent Read/Write/Close must not panic or deadlock.
 func TestSession_ConcurrentReadWriteClose(t *testing.T) {
-	sess, err := Spawn(SpawnConfig{
-		Cmd:  "/bin/sh",
-		Args: []string{"-c", "exec cat"},
-	})
-	if err != nil {
-		t.Fatalf("spawn: %v", err)
-	}
-
 	const goroutines = 10
+	pty := newBlockingPTY(2 * goroutines)
+	sess := sessionWithBlockingPTY(pty)
 	var wg sync.WaitGroup
 
 	// Spawn readers.
@@ -362,12 +379,7 @@ func TestSession_ConcurrentReadWriteClose(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			buf := make([]byte, 64)
-			for {
-				_, err := sess.Read(buf)
-				if err != nil {
-					return
-				}
-			}
+			_, _ = sess.Read(buf)
 		}()
 	}
 
@@ -376,18 +388,13 @@ func TestSession_ConcurrentReadWriteClose(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for {
-				_, err := sess.Write([]byte("x"))
-				if err != nil {
-					return
-				}
-				runtime.Gosched()
-			}
+			_, _ = sess.Write([]byte("x"))
 		}()
 	}
 
-	// Let them run briefly, then close.
-	time.Sleep(50 * time.Millisecond)
+	for i := 0; i < 2*goroutines; i++ {
+		<-pty.entered
+	}
 	if err := sess.Close(); err != nil {
 		t.Fatalf("close: %v", err)
 	}
@@ -454,98 +461,6 @@ func TestSession_AltScreen_LastSequenceWins(t *testing.T) {
 	sess.AppendScrollback([]byte("\x1b[?1049l some data \x1b[?1049h"))
 	if !sess.AltScreenActive() {
 		t.Fatal("expected alt-screen active when enter is last")
-	}
-}
-
-// --- Idle detection (improvement 5) ---
-
-func TestSession_IdleDetection(t *testing.T) {
-	sess, err := Spawn(SpawnConfig{
-		Cmd:  "/bin/sh",
-		Args: []string{"-c", "exec cat"},
-	})
-	if err != nil {
-		t.Fatalf("spawn: %v", err)
-	}
-	defer sess.Close()
-
-	idleCh := make(chan string, 1)
-	sess.SetIdleConfig(IdleConfig{
-		Timeout:  50 * time.Millisecond,
-		Callback: func(id string) { idleCh <- id },
-	})
-
-	// Produce output to start the idle timer.
-	sess.AppendScrollback([]byte("output"))
-
-	select {
-	case id := <-idleCh:
-		if id != sess.ID {
-			t.Fatalf("expected session ID %q, got %q", sess.ID, id)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for idle callback")
-	}
-}
-
-func TestSession_IdleDetection_ResetOnOutput(t *testing.T) {
-	sess, err := Spawn(SpawnConfig{
-		Cmd:  "/bin/sh",
-		Args: []string{"-c", "exec cat"},
-	})
-	if err != nil {
-		t.Fatalf("spawn: %v", err)
-	}
-	defer sess.Close()
-
-	callCount := 0
-	var countMu sync.Mutex
-	sess.SetIdleConfig(IdleConfig{
-		Timeout: 100 * time.Millisecond,
-		Callback: func(id string) {
-			countMu.Lock()
-			callCount++
-			countMu.Unlock()
-		},
-	})
-
-	// Keep producing output faster than the timeout.
-	for i := 0; i < 5; i++ {
-		sess.AppendScrollback([]byte("data"))
-		time.Sleep(30 * time.Millisecond)
-	}
-
-	countMu.Lock()
-	c := callCount
-	countMu.Unlock()
-	if c != 0 {
-		t.Fatalf("expected 0 idle callbacks during active output, got %d", c)
-	}
-}
-
-func TestSession_IdleDetection_DisabledByZeroTimeout(t *testing.T) {
-	sess, err := Spawn(SpawnConfig{
-		Cmd:  "/bin/sh",
-		Args: []string{"-c", "exec cat"},
-	})
-	if err != nil {
-		t.Fatalf("spawn: %v", err)
-	}
-	defer sess.Close()
-
-	called := false
-	sess.SetIdleConfig(IdleConfig{
-		Timeout:  50 * time.Millisecond,
-		Callback: func(id string) { called = true },
-	})
-	// Disable by setting zero timeout.
-	sess.SetIdleConfig(IdleConfig{})
-
-	sess.AppendScrollback([]byte("data"))
-	time.Sleep(100 * time.Millisecond)
-
-	if called {
-		t.Fatal("idle callback should not fire after disabling")
 	}
 }
 

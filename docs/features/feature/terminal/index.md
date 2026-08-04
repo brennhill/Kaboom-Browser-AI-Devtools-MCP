@@ -46,6 +46,7 @@ code_paths:
   - src/sidepanel.ts
   - internal/pty/manager.go
   - internal/pty/session.go
+  - internal/pty/clock.go
   - internal/pty/writebuf.go
   - internal/pty/fanout.go
   - internal/pty/diag.go
@@ -94,6 +95,7 @@ test_paths:
   - internal/pty/manager_fake_spawn_test.go
   - internal/pty/manager_selfheal_test.go
   - internal/pty/session_test.go
+  - internal/pty/session_idle_clock_test.go
   - internal/pty/writebuf_test.go
   - internal/pty/upload/upload_test.go
   - internal/pty/diag_test.go
@@ -174,6 +176,12 @@ last_verified_date: 2026-03-28
 - **Duplicate fanout ids are rejected, not swallowed:** `Fanout.Subscribe` overwrote an existing id's map entry without closing the old channel, orphaning that subscriber's goroutine on a channel nothing would write to or close (and the incumbent's `Unsubscribe` then closed the *new* subscriber's channel). The guard lived in one caller (`WaitForPromptViaRelay`'s unique ids); per rule 19 it now lives in the primitive — a duplicate id returns `pty.ErrDuplicateSubscriber` and the incumbent is untouched.
 - **"Terminal gone" ≠ "terminal behind":** `WriteBuffer.Write` returned `ErrWriteBufferFull` both when the buffer overflowed the backpressure cap AND when it was closed, so no caller could tell a session that ended from one that is wedged. Writing to a closed buffer now returns `pty.ErrWriteBufferClosed`. The WS upstream loop no longer discards the error either — a refused keystroke frame logs `terminal_input_dropped` with `reason: session_ended | backpressure | write_error` (`writeDropReason`).
 - **Idle timer cannot outlive the session:** `AppendScrollback` never checked whether the session was closed, so a chunk landing after `Close` armed a fresh 30s timer nothing would stop, and `Close`'s `idleTimer.Stop()` could not un-fire a timer whose deadline had already passed. Either way the callback logged "session X is idle" for a shell that had already exited. `Session` now carries an `idleStopped` flag (under `scrollMu`, so the idle path never has to take `mu` and invert Close's lock order): `AppendScrollback` refuses to re-arm, and the callback (`fireIdle`) re-reads the flag at fire time.
+- **PTY I/O shutdown is deterministic:** `Session` depends on the minimal
+  read/write/close/fd PTY boundary implemented by `os.File` in production.
+  Tests use a blocking fake to prove in-flight and concurrent reads/writes have
+  entered I/O before `Close` releases them as `ErrSessionClosed`; no scheduling
+  sleep is needed. Idle reset/disable behavior lives exclusively with the
+  injected fake-clock suite rather than duplicate real-timer tests.
 - **Bounded reap in the relay:** `Relay.reapExitCode` called `sess.Wait()`, which blocked on the reaper channel with no timeout. It runs *before* readLoop's deferred `fanout.Close()`, so an unreapable child parked readLoop forever — the fanout never closed and every WebSocket pump hung on a channel that would never close. `Session.Wait(timeout)` now mirrors `Close`'s bound (`terminal.ReapTimeout`, 2s), returns `pty.ErrReapTimeout` and logs `pty_session_reap_timeout` with `phase: wait`; teardown then proceeds with exit code -1 (unknown).
 - **No re-lookup after Start:** `HandleTerminalStart` used to do `sess, _ := mgr.Get(result.SessionID)` and then dereference `sess` (`SetIdleConfig`, `NewRelay`). A `/terminal/stop` landing in that window removed the session from the map, so the swallowed error became a nil-pointer panic in the handler. `pty.StartResult` now carries the spawned `Session`, so there is no second lookup and no window.
 - **PTY failures are no longer silent (rule 25):** signalling, closing and flushing were all discarded with `_ =`. `internal/pty` now has one structured sink (`pty.SetDiagnosticHook`, wired to the daemon log in `RegisterRoutes`) and emits `pty_session_signal_failed`, `pty_session_reap_timeout` (child survived SIGKILL + both bounded waits), `pty_session_close_failed` (Start/StopAll discarded these) and `pty_writebuffer_write_failed` (stranded stdin bytes, with the undelivered byte count). Control flow is unchanged; an already-exited child (`os.ErrProcessDone`) is still treated as the expected case and is not logged.
