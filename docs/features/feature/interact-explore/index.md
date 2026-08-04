@@ -301,6 +301,11 @@ Interact action metadata now has a single canonical registry in `internal/schema
 
 Extension-dispatched interact actions now use shared enqueue fail-fast handling: when queue capacity is saturated, responses return structured `queue_full` immediately rather than entering async wait mode.
 
+State-save interaction tests use a shared event-driven capture responder for
+form, storage, redaction, legacy-shape, and failure results. The responder owns
+serialization errors and query-type validation; no state workflow test polls
+command creation by sleeping.
+
 Content-to-page requests have one lifecycle owner. Each request timer is cleared
 on response, explicit deletion, pagehide, beforeunload, or content-script
 shutdown; page lifecycle cancellation resolves the pending callback. The dead

@@ -28,7 +28,6 @@
     "cmd/browser-agent/tools_interact_nav_test.go": 1,
     "cmd/browser-agent/tools_interact_navigate_document_test.go": 1,
     "cmd/browser-agent/tools_interact_rich_perfdiff_test.go": 1,
-    "cmd/browser-agent/tools_interact_state_test.go": 5,
     "cmd/browser-agent/tools_observe_commands_test.go": 1,
     "cmd/browser-agent/tools_observe_indexeddb_test.go": 2,
     "internal/analysis/apicontract/branch_coverage_test.go": 1,

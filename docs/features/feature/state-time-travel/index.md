@@ -78,6 +78,11 @@ last_verified_date: 2026-03-05
 - Snapshot read and schema failures never restore partial state. They retain a
   safe list entry and report the redacted `page_snapshot_state` recovery to
   System Doctor.
+- State-capture tests share one extension-response driver that waits on the
+  query dispatcher's notification barrier, validates the expected capture
+  command, and propagates JSON encoding failures. Form, storage, redaction,
+  legacy-shape, and execution-failure scenarios no longer infer readiness from
+  wall-clock sleeps.
 - Canonical public action schemas:
   - `internal/schema/interact/actions.go`
 - Tests:

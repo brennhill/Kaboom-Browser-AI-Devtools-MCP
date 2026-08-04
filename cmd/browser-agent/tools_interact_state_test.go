@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -49,6 +50,26 @@ func simulateExtensionConnection(t *testing.T, env *interactHelpersTestEnv) {
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
 	capture.NewSyncHandler(env.capture).HandleSync(httptest.NewRecorder(), httpReq)
+}
+
+func respondToStateCapture(env *interactHelpersTestEnv, result map[string]any) <-chan error {
+	done := make(chan error, 1)
+	go func() {
+		env.capture.Queries().WaitForPendingQueries(time.Second)
+		for _, query := range env.capture.Queries().GetPendingQueries() {
+			if query.Type != "execute" || !strings.HasPrefix(query.CorrelationID, "state_capture_") {
+				continue
+			}
+			payload, err := json.Marshal(result)
+			if err == nil {
+				env.capture.Queries().ApplyCommandResult(query.CorrelationID, "complete", payload, "")
+			}
+			done <- err
+			return
+		}
+		done <- fmt.Errorf("state capture query was not enqueued")
+	}()
+	return done
 }
 
 func requireSessionStore(t *testing.T, env *interactHelpersTestEnv) {
@@ -128,26 +149,19 @@ func TestSaveState_StateCapture_Captured(t *testing.T) {
 	simulateExtensionConnection(t, env)
 	requireSessionStore(t, env)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.Queries().GetPendingQueries()
-		for _, q := range queries {
-			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
-				result, _ := json.Marshal(map[string]any{
-					"success": true,
-					"result": map[string]any{
-						"form_values":     map[string]any{"username": "john", "remember": true},
-						"scroll_position": map[string]any{"x": 0.0, "y": 150.0},
-					},
-				})
-				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
-				return
-			}
-		}
-	}()
+	responded := respondToStateCapture(env, map[string]any{
+		"success": true,
+		"result": map[string]any{
+			"form_values":     map[string]any{"username": "john", "remember": true},
+			"scroll_position": map[string]any{"x": 0.0, "y": 150.0},
+		},
+	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteractHandler.HandleStateSave(req, json.RawMessage(`{"snapshot_name":"form_test"}`))
+	if err := <-responded; err != nil {
+		t.Fatal(err)
+	}
 	data := extractResponseData(t, resp)
 
 	if data["state_capture"] != "captured" {
@@ -176,29 +190,22 @@ func TestSaveState_CapturesStorage(t *testing.T) {
 	simulateExtensionConnection(t, env)
 	requireSessionStore(t, env)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.Queries().GetPendingQueries()
-		for _, q := range queries {
-			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
-				result, _ := json.Marshal(map[string]any{
-					"success": true,
-					"result": map[string]any{
-						"form_values":     map[string]any{"email": "test@test.com"},
-						"scroll_position": map[string]any{"x": 0.0, "y": 0.0},
-						"local_storage":   map[string]any{"theme": "dark", "lang": "en"},
-						"session_storage": map[string]any{"cart_id": "abc123"},
-						"cookies":         map[string]any{"_ga": "GA1.2.123", "prefs": "compact"},
-					},
-				})
-				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
-				return
-			}
-		}
-	}()
+	responded := respondToStateCapture(env, map[string]any{
+		"success": true,
+		"result": map[string]any{
+			"form_values":     map[string]any{"email": "test@test.com"},
+			"scroll_position": map[string]any{"x": 0.0, "y": 0.0},
+			"local_storage":   map[string]any{"theme": "dark", "lang": "en"},
+			"session_storage": map[string]any{"cart_id": "abc123"},
+			"cookies":         map[string]any{"_ga": "GA1.2.123", "prefs": "compact"},
+		},
+	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteractHandler.HandleStateSave(req, json.RawMessage(`{"snapshot_name":"storage_test"}`))
+	if err := <-responded; err != nil {
+		t.Fatal(err)
+	}
 	data := extractResponseData(t, resp)
 
 	if data["state_capture"] != "captured" {
@@ -273,31 +280,24 @@ func TestSaveState_ServerRedaction_RedactsSensitiveFormValues(t *testing.T) {
 	rawAPIKey := "dev-api-key"
 	rawTokenLike := "sk-" + "1234567890abcdef1234567890abcdef"
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.Queries().GetPendingQueries()
-		for _, q := range queries {
-			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
-				result, _ := json.Marshal(map[string]any{
-					"success": true,
-					"result": map[string]any{
-						"form_values": map[string]any{
-							"user_password": rawPassword,
-							"authToken":     rawToken,
-							"apiKeyInput":   rawAPIKey,
-							"notes":         rawTokenLike,
-							"display_name":  "alice",
-						},
-					},
-				})
-				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
-				return
-			}
-		}
-	}()
+	responded := respondToStateCapture(env, map[string]any{
+		"success": true,
+		"result": map[string]any{
+			"form_values": map[string]any{
+				"user_password": rawPassword,
+				"authToken":     rawToken,
+				"apiKeyInput":   rawAPIKey,
+				"notes":         rawTokenLike,
+				"display_name":  "alice",
+			},
+		},
+	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteractHandler.HandleStateSave(req, json.RawMessage(`{"snapshot_name":"redaction_server_side"}`))
+	if err := <-responded; err != nil {
+		t.Fatal(err)
+	}
 	data := extractResponseData(t, resp)
 	if data["status"] != "saved" {
 		t.Fatalf("status = %v, want \"saved\"", data["status"])
@@ -343,34 +343,27 @@ func TestSaveState_ServerRedaction_RedactsLegacyFormValueShapes(t *testing.T) {
 	rawLegacySecret := "legacy-raw-secret"
 	rawLegacyToken := "sk-" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.Queries().GetPendingQueries()
-		for _, q := range queries {
-			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
-				result, _ := json.Marshal(map[string]any{
-					"success": true,
-					"result": map[string]any{
-						// Legacy/malformed shape: array instead of object.
-						"form_values": []any{
-							map[string]any{"authToken": rawLegacySecret},
-							rawLegacyToken,
-							map[string]any{
-								"nested": []any{
-									map[string]any{"user_password": "deep-legacy-secret"},
-								},
-							},
-						},
+	responded := respondToStateCapture(env, map[string]any{
+		"success": true,
+		"result": map[string]any{
+			// Legacy/malformed shape: array instead of object.
+			"form_values": []any{
+				map[string]any{"authToken": rawLegacySecret},
+				rawLegacyToken,
+				map[string]any{
+					"nested": []any{
+						map[string]any{"user_password": "deep-legacy-secret"},
 					},
-				})
-				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
-				return
-			}
-		}
-	}()
+				},
+			},
+		},
+	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteractHandler.HandleStateSave(req, json.RawMessage(`{"snapshot_name":"redaction_legacy_shape"}`))
+	if err := <-responded; err != nil {
+		t.Fatal(err)
+	}
 	data := extractResponseData(t, resp)
 	if data["status"] != "saved" {
 		t.Fatalf("status = %v, want \"saved\"", data["status"])
@@ -435,24 +428,17 @@ func TestSaveState_StateCapture_SkippedErrorOnExecuteFailure(t *testing.T) {
 	simulateExtensionConnection(t, env)
 	requireSessionStore(t, env)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.Queries().GetPendingQueries()
-		for _, q := range queries {
-			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
-				result, _ := json.Marshal(map[string]any{
-					"success": false,
-					"error":   "execution_error",
-					"message": "script failed",
-				})
-				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
-				return
-			}
-		}
-	}()
+	responded := respondToStateCapture(env, map[string]any{
+		"success": false,
+		"error":   "execution_error",
+		"message": "script failed",
+	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteractHandler.HandleStateSave(req, json.RawMessage(`{"snapshot_name":"capture_failure"}`))
+	if err := <-responded; err != nil {
+		t.Fatal(err)
+	}
 	data := extractResponseData(t, resp)
 
 	if data["state_capture"] != "skipped_error" {

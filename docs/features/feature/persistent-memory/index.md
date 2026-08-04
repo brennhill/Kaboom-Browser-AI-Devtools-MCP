@@ -86,3 +86,7 @@ last_verified_date: 2026-03-05
   that explicit root. Stateful test factories replace it with an isolated
   temporary project before handler construction, preventing parallel tests from
   racing over developer state or each other's quota scans.
+- Persisted page-state tests answer capture commands through the canonical
+  pending-query notification barrier. Sensitive-value and legacy-shape
+  redaction coverage therefore cannot race command creation, and responder
+  serialization or missing-command failures are surfaced explicitly.
