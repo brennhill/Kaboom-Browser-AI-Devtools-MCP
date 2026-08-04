@@ -448,6 +448,9 @@ close first, map self-removal runs next, and only then does the relay completion
 channel close. Tests and callers can therefore assert session-end postconditions
 without polling scheduler time; WebSocket replay completion likewise proves the
 downstream subscription is ready before a test stops its session.
+Manager self-heal tests likewise synchronize on the evicted session's `done`
+transition and the child reaper's completion, proving replacement publication
+and dead-process recovery without polling manager or process state.
 
 ### Manager (`internal/pty/manager.go`)
 

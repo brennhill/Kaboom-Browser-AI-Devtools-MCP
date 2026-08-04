@@ -149,21 +149,19 @@ func TestManager_Start_DoesNotHoldLockDuringEvictedClose(t *testing.T) {
 		_, _ = m.Start(StartConfig{ID: "s1"}) // self-heal: evicts + closes the first session
 	}()
 
-	// Poll from a separate goroutine: with the lock held across Close, this call
-	// blocks rather than returning, so the deadline below is the only way out.
-	swapped := make(chan struct{})
+	// The evicted session closes done at the start of Close. By this point the
+	// replacement must already be registered and the manager lock released.
+	<-first.Session.done
+	readResult := make(chan string, 1)
 	go func() {
-		for {
-			if tok := m.GetTokenForSession("s1"); tok != "" && tok != first.Token {
-				close(swapped)
-				return
-			}
-			time.Sleep(time.Millisecond)
-		}
+		readResult <- m.GetTokenForSession("s1")
 	}()
 
 	select {
-	case <-swapped:
+	case token := <-readResult:
+		if token == "" || token == first.Token {
+			t.Fatalf("replacement token = %q, want a new published token", token)
+		}
 	case <-time.After(time.Second):
 		t.Fatal("Start held m.mu across the evicted session's Close: manager reads blocked > 1s")
 	}

@@ -8,21 +8,7 @@ package pty
 import (
 	"errors"
 	"testing"
-	"time"
 )
-
-// waitUntil polls cond until true or the deadline elapses.
-func waitUntil(t *testing.T, cond func() bool, within time.Duration) {
-	t.Helper()
-	deadline := time.Now().Add(within)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("condition not met within %s", within)
-}
 
 // A live session must NOT be self-healed: a second Start of the same ID returns
 // ErrSessionExists (the client uses that 409 to reconnect to the running shell).
@@ -52,7 +38,10 @@ func TestManager_Start_SelfHealsDeadRealSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after first Start: %v", err)
 	}
-	waitUntil(t, func() bool { return !sess.IsAlive() }, 3*time.Second)
+	<-sess.reaped
+	if sess.IsAlive() {
+		t.Fatal("reaped session still reports alive")
+	}
 
 	res2, err := m.Start(StartConfig{ID: "s1", Cmd: "/bin/sh", Args: []string{"-c", "exec cat"}})
 	if err != nil {
