@@ -9,7 +9,6 @@ package terminal
 import (
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
@@ -60,16 +59,11 @@ func TestMap_DropsRelayWhenTheSessionEndsOnItsOwn(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = sess.Close() })
 
-	m.GetOrCreate("gone", sess, "")
-
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if m.Get("gone") == nil {
-			return // the dead relay evicted itself
-		}
-		time.Sleep(10 * time.Millisecond)
+	relay := m.GetOrCreate("gone", sess, "")
+	<-relay.done
+	if m.Get("gone") != nil {
+		t.Fatal("a relay whose session exited was never removed from the Map — the entry, its goroutine and its fd leak")
 	}
-	t.Fatal("a relay whose session exited was never removed from the Map — the entry, its goroutine and its fd leak")
 }
 
 // Self-removal must not evict a relay that has already been replaced: the old
@@ -83,12 +77,9 @@ func TestMap_DeadRelayDoesNotEvictItsReplacement(t *testing.T) {
 	m.GetOrCreate("id", dead, "")
 	replacement := m.ReplaceRelay("id", fresh, "dir") // closes the old relay
 
-	// Give the old relay's readLoop time to exit and run its self-removal.
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if m.Get("id") != replacement {
-			t.Fatal("the dead relay's self-removal evicted its replacement")
-		}
-		time.Sleep(10 * time.Millisecond)
+	// ReplaceRelay closes the old relay and its completion barrier includes the
+	// self-removal callback, so the postcondition is immediately authoritative.
+	if m.Get("id") != replacement {
+		t.Fatal("the dead relay's self-removal evicted its replacement")
 	}
 }

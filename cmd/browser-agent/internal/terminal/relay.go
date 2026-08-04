@@ -68,12 +68,12 @@ func (r *Relay) readLoop() {
 	// Defers unwind bottom-up: write buffer, then fanout, then r.done, then the
 	// Map's self-removal — so by the time onExit runs (and by the time Close's wait
 	// on r.done returns) the relay is fully torn down.
+	defer close(r.done)
 	defer func() {
 		if r.onExit != nil {
 			r.onExit(r)
 		}
 	}()
-	defer close(r.done)
 	defer r.fanout.Close()
 	defer r.writeBuf.Close()
 	buf := make([]byte, ReadBufSize)

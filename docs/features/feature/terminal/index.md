@@ -443,6 +443,12 @@ If the user re-focuses and types again during the auto-submit window, Enter is d
 
 ## PTY Layer
 
+Relay completion is a strict teardown barrier: the write buffer and fanout
+close first, map self-removal runs next, and only then does the relay completion
+channel close. Tests and callers can therefore assert session-end postconditions
+without polling scheduler time; WebSocket replay completion likewise proves the
+downstream subscription is ready before a test stops its session.
+
 ### Manager (`internal/pty/manager.go`)
 
 - Manages a map of `sessionID → *Session` and `token → sessionID`

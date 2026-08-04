@@ -14,18 +14,12 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 func waitForTrue(t *testing.T, cond func() bool, within time.Duration) {
 	t.Helper()
-	deadline := time.Now().Add(within)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("condition not met within %s", within)
+	testsync.Eventually(t, within, "terminal condition", cond)
 }
 
 // A slow-subscriber drop must NOT mark the relay ended; a real session end must.
@@ -58,7 +52,10 @@ func TestRelay_EndedDistinguishesSessionEndFromDrop(t *testing.T) {
 
 	// A genuine session end must mark it ended.
 	_ = sess.Close()
-	waitForTrue(t, relay.Ended, 3*time.Second)
+	<-relay.done
+	if !relay.Ended() {
+		t.Fatal("relay completion must retain the genuine session-end state")
+	}
 }
 
 // End-to-end: stopping a connected session sends the browser an `exited` frame
@@ -88,11 +85,9 @@ func TestHandleTerminalWS_SessionEndSendsExited(t *testing.T) {
 		t.Fatalf("expected replay_end, got op=%#x payload=%q", op, payload)
 	}
 
-	// End the session while connected.
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		_ = mgr.Stop("end")
-	}()
+	// replay_end proves the downstream subscriber is installed, so stopping the
+	// session now deterministically closes that subscription.
+	_ = mgr.Stop("end")
 
 	// Expect an "exited" text frame within a few seconds.
 	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
