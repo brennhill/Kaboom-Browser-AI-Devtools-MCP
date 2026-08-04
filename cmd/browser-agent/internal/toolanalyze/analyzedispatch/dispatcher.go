@@ -80,6 +80,7 @@ func NewDispatcher(config Config) *Dispatcher {
 		},
 		"page_issues": wrapLocal(config.Analyze, pageissues.Handle), "feature_gates": mode(config.FeatureGates),
 		"performance_trace": wrapLocal(config.Analyze, HandlePerformanceTrace),
+		"react_profile":     wrapLocal(config.Analyze, HandleReactProfile),
 		"verification": func(_ struct{}, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return verificationhandler.Handle(req, args)
 		},

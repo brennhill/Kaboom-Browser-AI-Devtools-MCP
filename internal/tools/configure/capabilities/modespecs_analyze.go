@@ -15,6 +15,11 @@ var analyzeModeSpecs = map[string]modeParamSpec{
 		Required: []string{"action"},
 		Optional: []string{"tab_id", "reload", "cache", "background"},
 	},
+	"react_profile": {
+		Hint:     "Opt-in React commit profiling; start, exercise the page, then stop to retrieve bounded component evidence",
+		Required: []string{"action"},
+		Optional: []string{"tab_id", "background"},
+	},
 	"accessibility": {
 		Hint:     "WCAG/axe accessibility audit with violation details. summary=true returns counts + top issues",
 		Optional: []string{"selector", "scope", "tags", "force_refresh", "frame", "summary"},

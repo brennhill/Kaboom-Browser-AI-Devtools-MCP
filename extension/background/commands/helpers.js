@@ -210,6 +210,7 @@ const TARGETED_QUERY_TYPES = new Set([
     'navigation',
     'feature_gates',
     'performance_trace',
+    'react_profile',
     'environment_transaction_snapshot',
     'environment_transaction_apply',
     'environment_transaction_restore'

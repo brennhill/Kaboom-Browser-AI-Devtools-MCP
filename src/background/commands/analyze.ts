@@ -494,6 +494,32 @@ registerCommand('performance_trace', async (ctx) => {
   }
 })
 
+registerCommand('react_profile', async (ctx) => {
+  const action = typeof ctx.params.action === 'string' ? ctx.params.action : ''
+  if (action !== 'start' && action !== 'stop') {
+    ctx.sendResult({
+      error: 'invalid_react_profile_action',
+      message: 'react_profile requires action=start or action=stop'
+    })
+    return
+  }
+  try {
+    const execution = await chrome.scripting.executeScript({
+      target: { tabId: ctx.tabId },
+      world: 'MAIN',
+      func: (profileAction: string) => {
+        const api = window.__kaboom
+        if (!api) return { status: 'unsupported', reason: 'kaboom_page_api_unavailable' }
+        return profileAction === 'start' ? api.startReactProfile() : api.stopReactProfile()
+      },
+      args: [action]
+    })
+    ctx.sendResult(execution[0]?.result ?? { status: 'unsupported', reason: 'no_main_world_result' })
+  } catch (error) {
+    ctx.sendResult({ error: 'react_profile_failed', message: errorMessage(error, 'React profile command failed') })
+  }
+})
+
 // =============================================================================
 // DRAW MODE
 // =============================================================================

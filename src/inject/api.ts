@@ -37,6 +37,7 @@ import {
   setAiContextEnabled,
   setAiContextStateSnapshot
 } from '../lib/ai-context/ai-context-enrichment.js'
+import { startReactProfile, stopReactProfile, type ReactProfileResult } from '../lib/analysis/react-profiler.js'
 
 /**
  * KaboomAPI interface exposed on window.__kaboom
@@ -63,6 +64,8 @@ export interface KaboomAPI {
   generateScript(opts?: Record<string, unknown>): string
   getSelectors(element: Element): SelectorStrategies
   setInputValue(selector: string, value: string | boolean): boolean
+  startReactProfile(): { status: 'recording' } | { status: 'unsupported'; reason: string }
+  stopReactProfile(): ReactProfileResult | { status: 'not_recording' }
   version: string
 }
 
@@ -212,6 +215,9 @@ export function installKaboomAPI(): void {
     getMeasures(options?: { since?: number }): PerformanceMeasure[] {
       return getPerformanceMeasures(options) as unknown as PerformanceMeasure[]
     },
+
+    startReactProfile,
+    stopReactProfile,
 
     // === AI Context ===
 

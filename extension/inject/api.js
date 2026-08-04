@@ -8,6 +8,7 @@ import { getActionBuffer, clearActionBuffer, setActionCaptureEnabled } from '../
 import { getNetworkWaterfall, setNetworkWaterfallEnabled } from '../lib/net/network.js';
 import { getPerformanceMarks, getPerformanceMeasures, setPerformanceMarksEnabled } from '../lib/analysis/performance.js';
 import { enrichErrorWithAiContext, setAiContextEnabled, setAiContextStateSnapshot } from '../lib/ai-context/ai-context-enrichment.js';
+import { startReactProfile, stopReactProfile } from '../lib/analysis/react-profiler.js';
 function setWithNativeSetter(element, proto, prop, val) {
     const setter = Object.getOwnPropertyDescriptor(proto.prototype, prop)?.set;
     if (setter)
@@ -132,6 +133,8 @@ export function installKaboomAPI() {
         getMeasures(options) {
             return getPerformanceMeasures(options);
         },
+        startReactProfile,
+        stopReactProfile,
         // === AI Context ===
         /**
          * Enrich an error entry with AI context

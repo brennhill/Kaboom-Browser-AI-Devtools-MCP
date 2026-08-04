@@ -1823,10 +1823,10 @@ function extractComponentAncestry() {
   if (!framework || framework.framework !== "react" || !framework.key)
     return null;
   const fiber = document.activeElement[framework.key];
-  const components = getReactComponentAncestry(fiber);
-  if (!components || components.length === 0)
+  const components2 = getReactComponentAncestry(fiber);
+  if (!components2 || components2.length === 0)
     return null;
-  return { framework: "react", components };
+  return { framework: "react", components: components2 };
 }
 function applyAiContext(enriched, context) {
   enriched._aiContext = context;
@@ -1856,6 +1856,157 @@ function setAiContextEnabled(enabled) {
 }
 function setAiContextStateSnapshot(enabled) {
   aiContextStateSnapshotEnabled = enabled;
+}
+
+// extension/lib/analysis/react-profiler.js
+var MAX_COMMITS = 100;
+var MAX_FIBERS_PER_COMMIT = 5e3;
+var MAX_COMPONENTS = 200;
+var MAX_CHANGED_KEYS = 20;
+var activeHook = null;
+var originalCommitHook;
+var commits = [];
+var components = /* @__PURE__ */ new Map();
+var droppedCommits = 0;
+var pendingBoundaryCommits = 0;
+function startReactProfile() {
+  if (activeHook)
+    return { status: "recording" };
+  const hook = typeof window !== "undefined" ? window.__REACT_DEVTOOLS_GLOBAL_HOOK__ : void 0;
+  if (!hook)
+    return { status: "unsupported", reason: "react_devtools_hook_unavailable" };
+  resetEvidence();
+  activeHook = hook;
+  originalCommitHook = hook.onCommitFiberRoot;
+  hook.onCommitFiberRoot = function(rendererID, root, priority) {
+    originalCommitHook?.call(hook, rendererID, root, priority);
+    try {
+      captureCommit(rendererID, root);
+    } catch (error) {
+      console.error("[KaBOOM!][react_profile] Commit attribution failed", {
+        error: error instanceof Error ? error.message.slice(0, 256) : "unknown_error"
+      });
+    }
+  };
+  return { status: "recording" };
+}
+function stopReactProfile() {
+  if (!activeHook)
+    return { status: "not_recording" };
+  activeHook.onCommitFiberRoot = originalCommitHook;
+  const result = {
+    status: "complete",
+    renderers: rendererEvidence(activeHook),
+    commits: commits.map((commit) => ({ ...commit })),
+    components: [...components.values()].map((component) => ({ ...component, changed_props: [...component.changed_props] })).sort((left, right) => right.total_duration_ms - left.total_duration_ms),
+    suspense: { pending_boundary_commits: pendingBoundaryCommits },
+    zustand: { status: "unavailable", reason: "zustand_does_not_expose_subscription_invalidations" },
+    data_readiness: { status: "suspense_only", reason: "application_data_contract_not_exposed" },
+    dropped_commits: droppedCommits
+  };
+  activeHook = null;
+  originalCommitHook = void 0;
+  return result;
+}
+function captureCommit(rendererID, root) {
+  if (commits.length >= MAX_COMMITS) {
+    droppedCommits++;
+    return;
+  }
+  const current = root.current;
+  const traversal = traverseFibers(current?.child ?? null);
+  if (traversal.pendingSuspense > 0)
+    pendingBoundaryCommits++;
+  commits.push({
+    renderer_id: rendererID,
+    duration_ms: finite2(current?.actualDuration),
+    rendered_components: traversal.rendered,
+    pending_suspense_boundaries: traversal.pendingSuspense,
+    truncated: traversal.truncated
+  });
+}
+function traverseFibers(first) {
+  const stack = first ? [first] : [];
+  let visited = 0;
+  let rendered = 0;
+  let pendingSuspense = 0;
+  while (stack.length > 0 && visited < MAX_FIBERS_PER_COMMIT) {
+    const fiber = stack.pop();
+    if (!fiber)
+      continue;
+    visited++;
+    if (fiber.sibling)
+      stack.push(fiber.sibling);
+    if (fiber.child)
+      stack.push(fiber.child);
+    if (fiber.tag === 13 && fiber.memoizedState != null)
+      pendingSuspense++;
+    const duration = finite2(fiber.actualDuration);
+    const name = componentName(fiber);
+    if (duration <= 0 || !name)
+      continue;
+    rendered++;
+    recordComponent(name, duration, fiber);
+  }
+  return { rendered, pendingSuspense, truncated: stack.length > 0 };
+}
+function recordComponent(name, duration, fiber) {
+  const existing = components.get(name);
+  const changedProps = changedKeys(fiber.alternate?.memoizedProps, fiber.memoizedProps);
+  const changedState = fiber.alternate != null && fiber.alternate.memoizedState !== fiber.memoizedState;
+  if (existing) {
+    existing.render_count++;
+    existing.total_duration_ms = round(existing.total_duration_ms + duration);
+    existing.changed_props = [.../* @__PURE__ */ new Set([...existing.changed_props, ...changedProps])].slice(0, MAX_CHANGED_KEYS);
+    existing.changed_state ||= changedState;
+    return;
+  }
+  if (components.size >= MAX_COMPONENTS)
+    return;
+  components.set(name, {
+    name,
+    render_count: 1,
+    total_duration_ms: round(duration),
+    changed_props: changedProps,
+    changed_state: changedState
+  });
+}
+function changedKeys(before, after) {
+  if (!isRecord(before) || !isRecord(after))
+    return [];
+  const keys = /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)]);
+  return [...keys].filter((key) => before[key] !== after[key]).slice(0, MAX_CHANGED_KEYS);
+}
+function componentName(fiber) {
+  const type = fiber.type ?? fiber.elementType;
+  if (typeof type === "string")
+    return bounded2(type, 128);
+  return bounded2(type?.displayName ?? type?.name ?? "", 128);
+}
+function rendererEvidence(hook) {
+  return [...(hook.renderers ?? /* @__PURE__ */ new Map()).entries()].slice(0, 20).map(([id, renderer]) => ({
+    id,
+    package: bounded2(renderer.rendererPackageName ?? "unknown", 128),
+    version: bounded2(renderer.version ?? "unknown", 64)
+  }));
+}
+function resetEvidence() {
+  commits = [];
+  components = /* @__PURE__ */ new Map();
+  droppedCommits = 0;
+  pendingBoundaryCommits = 0;
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function finite2(value) {
+  return Number.isFinite(value) ? round(Number(value)) : 0;
+}
+function round(value) {
+  return Math.round(value * 1e3) / 1e3;
+}
+function bounded2(value, max) {
+  return value.slice(0, max);
 }
 
 // extension/inject/api.js
@@ -1977,6 +2128,8 @@ function installKaboomAPI() {
     getMeasures(options) {
       return getPerformanceMeasures(options);
     },
+    startReactProfile,
+    stopReactProfile,
     // === AI Context ===
     /**
      * Enrich an error entry with AI context

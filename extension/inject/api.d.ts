@@ -7,6 +7,7 @@ import type { ActionEntry, SelectorStrategies } from '../types/capture/actions.j
 import type { WireEnhancedAction as EnhancedAction } from '../types/wire/wire-enhanced-action.js';
 import type { WireNetworkWaterfallEntry as WaterfallEntry } from '../types/wire/wire-network.js';
 import type { PerformanceMark, PerformanceMeasure } from '../types/capture/performance.js';
+import { type ReactProfileResult } from '../lib/analysis/react-profiler.js';
 /**
  * KaboomAPI interface exposed on window.__kaboom
  */
@@ -39,6 +40,15 @@ export interface KaboomAPI {
     generateScript(opts?: Record<string, unknown>): string;
     getSelectors(element: Element): SelectorStrategies;
     setInputValue(selector: string, value: string | boolean): boolean;
+    startReactProfile(): {
+        status: 'recording';
+    } | {
+        status: 'unsupported';
+        reason: string;
+    };
+    stopReactProfile(): ReactProfileResult | {
+        status: 'not_recording';
+    };
     version: string;
 }
 declare global {

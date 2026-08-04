@@ -255,7 +255,7 @@
     "inputSchema": {
       "properties": {
         "action": {
-          "description": "Trace lifecycle action (performance_trace: start or stop)",
+          "description": "Profiling lifecycle action (performance_trace or react_profile: start or stop)",
           "enum": [
             "start",
             "stop"
@@ -479,6 +479,7 @@
             "dom",
             "performance",
             "performance_trace",
+            "react_profile",
             "accessibility",
             "error_clusters",
             "navigation_patterns",
