@@ -4,7 +4,7 @@ feature_id: feature-rate-limiting
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-04
 code_paths:
   - internal/circuit/breaker.go
   - internal/lifecycle/observer.go
@@ -50,3 +50,6 @@ The circuit breaker publishes state transitions through the canonical
 `lifecycle.Observer` owned by Capture. Runtime subscribers and capture
 publishers use `Capture.Lifecycle()` directly; Capture does not duplicate the
 observer's subscribe or emit API.
+
+Lifecycle callback tests await the emitted transition itself. They never delay
+the scheduler and infer that the asynchronous callback probably ran.

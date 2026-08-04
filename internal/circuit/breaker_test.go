@@ -147,14 +147,11 @@ func TestCircuitBreaker_ConcurrentRecordEvents(t *testing.T) {
 
 func TestCircuitBreaker_LifecycleCallback(t *testing.T) {
 	t.Parallel()
-	var events []lifecycle.Event
-	var mu sync.Mutex
+	events := make(chan lifecycle.Event, 1)
 
 	cb := NewCircuitBreaker(
 		func(event lifecycle.Event, data map[string]any) {
-			mu.Lock()
-			events = append(events, event)
-			mu.Unlock()
+			events <- event
 		},
 	)
 
@@ -167,16 +164,13 @@ func TestCircuitBreaker_LifecycleCallback(t *testing.T) {
 	}
 	cb.mu.Unlock()
 
-	// Wait briefly for goroutine-based callbacks
-	time.Sleep(50 * time.Millisecond)
-
-	mu.Lock()
-	defer mu.Unlock()
-	if len(events) == 0 {
+	select {
+	case event := <-events:
+		if event != lifecycle.EventCircuitOpened {
+			t.Fatalf("Expected circuit_opened event, got %s", event)
+		}
+	case <-time.After(time.Second):
 		t.Fatal("Expected lifecycle callback for circuit_opened")
-	}
-	if events[0] != lifecycle.EventCircuitOpened {
-		t.Fatalf("Expected circuit_opened event, got %s", events[0])
 	}
 }
 
