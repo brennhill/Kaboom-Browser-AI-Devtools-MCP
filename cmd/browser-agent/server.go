@@ -587,21 +587,12 @@ func handleClientByID(w http.ResponseWriter, r *http.Request, captured *capture.
 }
 
 func registerUploadRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/api/file/read", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		uploadapi.HandleFileReadHTTP(w, r, uploadSecurityConfig, httpapi.JSON)
-	})))
-	mux.HandleFunc("/api/file/dialog/inject", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		uploadapi.HandleFileDialogInjectHTTP(w, r, uploadSecurityConfig, httpapi.JSON)
-	})))
-	mux.HandleFunc("/api/form/submit", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		uploadapi.HandleFormSubmitHTTP(w, r, uploadSecurityConfig, httpapi.JSON)
-	})))
-	mux.HandleFunc("/api/os-automation/inject", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		uploadapi.HandleOSAutomationHTTP(w, r, osUploadAutomationFlag, uploadSecurityConfig, httpapi.JSON)
-	})))
-	mux.HandleFunc("/api/os-automation/dismiss", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		uploadapi.HandleOSAutomationDismissHTTP(w, r, osUploadAutomationFlag, httpapi.JSON)
-	})))
+	handlers := uploadapi.NewHandlers(uploadSecurityConfig, osUploadAutomationFlag, httpapi.JSON)
+	mux.HandleFunc("/api/file/read", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleFileRead)))
+	mux.HandleFunc("/api/file/dialog/inject", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleFileDialogInject)))
+	mux.HandleFunc("/api/form/submit", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleFormSubmit)))
+	mux.HandleFunc("/api/os-automation/inject", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleOSAutomation)))
+	mux.HandleFunc("/api/os-automation/dismiss", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleOSAutomationDismiss)))
 }
 
 func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) *MCPHandler {

@@ -21,10 +21,14 @@ import (
 // handleOSAutomationDismiss
 // ============================================
 
+func uploadDismissHandler(enabled bool) *uploadapi.Handlers {
+	return uploadapi.NewHandlers(nil, enabled, agenthttp.JSON)
+}
+
 func TestHandleOSAutomationDismiss_MethodNotAllowed_GET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	uploadapi.HandleOSAutomationDismissHTTP(w, req, true, agenthttp.JSON)
+	uploadDismissHandler(true).HandleOSAutomationDismiss(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -51,7 +55,7 @@ func TestHandleOSAutomationDismiss_MethodNotAllowed_GET(t *testing.T) {
 func TestHandleOSAutomationDismiss_MethodNotAllowed_PUT(t *testing.T) {
 	req := httptest.NewRequest("PUT", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	uploadapi.HandleOSAutomationDismissHTTP(w, req, true, agenthttp.JSON)
+	uploadDismissHandler(true).HandleOSAutomationDismiss(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -64,7 +68,7 @@ func TestHandleOSAutomationDismiss_MethodNotAllowed_PUT(t *testing.T) {
 func TestHandleOSAutomationDismiss_MethodNotAllowed_DELETE(t *testing.T) {
 	req := httptest.NewRequest("DELETE", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	uploadapi.HandleOSAutomationDismissHTTP(w, req, true, agenthttp.JSON)
+	uploadDismissHandler(true).HandleOSAutomationDismiss(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -77,7 +81,7 @@ func TestHandleOSAutomationDismiss_MethodNotAllowed_DELETE(t *testing.T) {
 func TestHandleOSAutomationDismiss_Disabled(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	uploadapi.HandleOSAutomationDismissHTTP(w, req, false, agenthttp.JSON)
+	uploadDismissHandler(false).HandleOSAutomationDismiss(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -104,7 +108,7 @@ func TestHandleOSAutomationDismiss_Disabled(t *testing.T) {
 func TestHandleOSAutomationDismiss_Enabled_POST(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	uploadapi.HandleOSAutomationDismissHTTP(w, req, true, agenthttp.JSON)
+	uploadDismissHandler(true).HandleOSAutomationDismiss(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()

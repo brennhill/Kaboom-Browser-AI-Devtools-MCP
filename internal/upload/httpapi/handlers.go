@@ -5,6 +5,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -17,43 +18,67 @@ import (
 // JSONResponder writes a JSON response with the given HTTP status code.
 type JSONResponder func(w http.ResponseWriter, status int, data any)
 
-// Internal function variables for HTTP handler delegation (testable via replacement).
-var (
-	fileReadFn      = upload.HandleFileRead
-	dialogInjectFn  = upload.HandleDialogInject
-	formSubmitFn    = upload.HandleFormSubmitCtx
-	osAutomationFn  = osauto.HandleOSAutomation
-	dismissDialogFn = osauto.DismissFileDialog
-)
+type stageFunctions struct {
+	fileRead      func(upload.FileReadRequest, *uploadsec.Security, bool) upload.FileReadResponse
+	dialogInject  func(upload.FileDialogInjectRequest, *uploadsec.Security) upload.StageResponse
+	formSubmit    func(context.Context, upload.FormSubmitRequest, *uploadsec.Security) upload.StageResponse
+	osAutomation  func(upload.OSAutomationInjectRequest, *uploadsec.Security) upload.StageResponse
+	dismissDialog func() upload.StageResponse
+}
+
+func defaultStageFunctions() stageFunctions {
+	return stageFunctions{
+		fileRead: upload.HandleFileRead, dialogInject: upload.HandleDialogInject,
+		formSubmit: upload.HandleFormSubmitCtx, osAutomation: osauto.HandleOSAutomation,
+		dismissDialog: osauto.DismissFileDialog,
+	}
+}
+
+// Handlers owns upload HTTP configuration and stage dependencies.
+type Handlers struct {
+	security            *uploadsec.Security
+	osAutomationEnabled bool
+	respond             JSONResponder
+	stages              stageFunctions
+}
+
+// NewHandlers constructs the canonical production upload HTTP owner.
+func NewHandlers(security *uploadsec.Security, osAutomationEnabled bool, respond JSONResponder) *Handlers {
+	return newHandlersWithStages(security, osAutomationEnabled, respond, defaultStageFunctions())
+}
+
+func newHandlersWithStages(security *uploadsec.Security, osAutomationEnabled bool, respond JSONResponder, stages stageFunctions) *Handlers {
+	return &Handlers{security: security, osAutomationEnabled: osAutomationEnabled, respond: respond, stages: stages}
+}
 
 // ============================================
 // Stage 1: File Read (POST /api/file/read)
 // ============================================
 
-// HandleFileReadHTTP serves stage-1 file metadata reads for upload workflows.
+// Handlers.HandleFileRead serves stage-1 file metadata reads for upload workflows.
 //
 // Failure semantics:
 // - Invalid JSON/body size violations return 400.
 // - File-not-found maps to 404; permission errors map to 403; other validation errors map to 400.
-func HandleFileReadHTTP(w http.ResponseWriter, r *http.Request, securityConfig *uploadsec.Security, jsonResponse JSONResponder) {
+func (h *Handlers) HandleFileRead(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		h.respond(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024) // 1MB max for request body
 	var req upload.FileReadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonResponse(w, http.StatusBadRequest, upload.FileReadResponse{
+		h.respond(w, http.StatusBadRequest, upload.FileReadResponse{
 			Success: false,
 			Error:   "Invalid JSON: " + err.Error(),
 		})
 		return
 	}
 
-	resp := fileReadFn(req, securityConfig, false)
+	resp := h.stages.fileRead(req, h.security, false)
 	if resp.Success {
-		jsonResponse(w, http.StatusOK, resp)
+		h.respond(w, http.StatusOK, resp)
 	} else {
 		status := http.StatusBadRequest
 		if strings.Contains(resp.Error, "not found") || strings.Contains(resp.Error, "no such file") {
@@ -61,7 +86,7 @@ func HandleFileReadHTTP(w http.ResponseWriter, r *http.Request, securityConfig *
 		} else if strings.Contains(resp.Error, "permission") {
 			status = http.StatusForbidden
 		}
-		jsonResponse(w, status, resp)
+		h.respond(w, status, resp)
 	}
 }
 
@@ -69,31 +94,31 @@ func HandleFileReadHTTP(w http.ResponseWriter, r *http.Request, securityConfig *
 // Stage 2: File Dialog Injection (POST /api/file/dialog/inject)
 // ============================================
 
-// HandleFileDialogInjectHTTP serves stage-2 dialog injection preparation.
+// Handlers.HandleFileDialogInject serves stage-2 dialog injection preparation.
 //
 // Failure semantics:
 // - Invalid payloads return 400; stage implementation errors are returned as validation failures.
-func HandleFileDialogInjectHTTP(w http.ResponseWriter, r *http.Request, securityConfig *uploadsec.Security, jsonResponse JSONResponder) {
+func (h *Handlers) HandleFileDialogInject(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		h.respond(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
 	var req upload.FileDialogInjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonResponse(w, http.StatusBadRequest, upload.StageResponse{
+		h.respond(w, http.StatusBadRequest, upload.StageResponse{
 			Success: false,
 			Error:   "Invalid JSON: " + err.Error(),
 		})
 		return
 	}
 
-	resp := dialogInjectFn(req, securityConfig)
+	resp := h.stages.dialogInject(req, h.security)
 	if resp.Success {
-		jsonResponse(w, http.StatusOK, resp)
+		h.respond(w, http.StatusOK, resp)
 	} else {
-		jsonResponse(w, http.StatusBadRequest, resp)
+		h.respond(w, http.StatusBadRequest, resp)
 	}
 }
 
@@ -101,31 +126,31 @@ func HandleFileDialogInjectHTTP(w http.ResponseWriter, r *http.Request, security
 // Stage 3: Form Submission (POST /api/form/submit)
 // ============================================
 
-// HandleFormSubmitHTTP serves stage-3 submit orchestration for upload flows.
+// Handlers.HandleFormSubmit serves stage-3 submit orchestration for upload flows.
 //
 // Failure semantics:
 // - Request decode errors return 400; internal stage failures are returned as 400 to keep client retry semantics explicit.
-func HandleFormSubmitHTTP(w http.ResponseWriter, r *http.Request, securityConfig *uploadsec.Security, jsonResponse JSONResponder) {
+func (h *Handlers) HandleFormSubmit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		h.respond(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 10*1024*1024) // 10MB max for form metadata
 	var req upload.FormSubmitRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonResponse(w, http.StatusBadRequest, upload.StageResponse{
+		h.respond(w, http.StatusBadRequest, upload.StageResponse{
 			Success: false,
 			Error:   "Invalid JSON: " + err.Error(),
 		})
 		return
 	}
 
-	resp := formSubmitFn(r.Context(), req, securityConfig)
+	resp := h.stages.formSubmit(r.Context(), req, h.security)
 	if resp.Success {
-		jsonResponse(w, http.StatusOK, resp)
+		h.respond(w, http.StatusOK, resp)
 	} else {
-		jsonResponse(w, http.StatusBadRequest, resp)
+		h.respond(w, http.StatusBadRequest, resp)
 	}
 }
 
@@ -133,22 +158,22 @@ func HandleFormSubmitHTTP(w http.ResponseWriter, r *http.Request, securityConfig
 // Stage 4: OS Automation (POST /api/os-automation/inject)
 // ============================================
 
-// HandleOSAutomationHTTP serves stage-4 OS automation bridge.
+// Handlers.HandleOSAutomation serves stage-4 OS automation bridge.
 //
 // Invariants:
 // - Execution is gated by explicit osAutomationEnabled runtime flag.
 //
 // Failure semantics:
 // - Disabled mode returns 403 and does not attempt automation primitives.
-func HandleOSAutomationHTTP(w http.ResponseWriter, r *http.Request, osAutomationEnabled bool, securityConfig *uploadsec.Security, jsonResponse JSONResponder) {
+func (h *Handlers) HandleOSAutomation(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		h.respond(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
-	if !osAutomationEnabled {
-		jsonResponse(w, http.StatusForbidden, upload.StageResponse{
+	if !h.osAutomationEnabled {
+		h.respond(w, http.StatusForbidden, upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "OS-level upload automation is disabled. Start server with --enable-os-upload-automation flag.",
@@ -159,7 +184,7 @@ func HandleOSAutomationHTTP(w http.ResponseWriter, r *http.Request, osAutomation
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
 	var req upload.OSAutomationInjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonResponse(w, http.StatusBadRequest, upload.StageResponse{
+		h.respond(w, http.StatusBadRequest, upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "Invalid JSON: " + err.Error(),
@@ -167,28 +192,28 @@ func HandleOSAutomationHTTP(w http.ResponseWriter, r *http.Request, osAutomation
 		return
 	}
 
-	resp := osAutomationFn(req, securityConfig)
+	resp := h.stages.osAutomation(req, h.security)
 	if resp.Success {
-		jsonResponse(w, http.StatusOK, resp)
+		h.respond(w, http.StatusOK, resp)
 	} else {
-		jsonResponse(w, http.StatusBadRequest, resp)
+		h.respond(w, http.StatusBadRequest, resp)
 	}
 }
 
-// HandleOSAutomationDismissHTTP sends Escape to close an orphaned native file dialog.
+// Handlers.HandleOSAutomationDismiss sends Escape to close an orphaned native file dialog.
 //
 // Failure semantics:
 // - Disabled mode returns 403.
 // - Automation transport failures return 500 because the request passed validation but could not complete.
-func HandleOSAutomationDismissHTTP(w http.ResponseWriter, r *http.Request, osAutomationEnabled bool, jsonResponse JSONResponder) {
+func (h *Handlers) HandleOSAutomationDismiss(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		h.respond(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
-	if !osAutomationEnabled {
-		jsonResponse(w, http.StatusForbidden, upload.StageResponse{
+	if !h.osAutomationEnabled {
+		h.respond(w, http.StatusForbidden, upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "OS automation is disabled.",
@@ -196,10 +221,10 @@ func HandleOSAutomationDismissHTTP(w http.ResponseWriter, r *http.Request, osAut
 		return
 	}
 
-	resp := dismissDialogFn()
+	resp := h.stages.dismissDialog()
 	if resp.Success {
-		jsonResponse(w, http.StatusOK, resp)
+		h.respond(w, http.StatusOK, resp)
 	} else {
-		jsonResponse(w, http.StatusInternalServerError, resp)
+		h.respond(w, http.StatusInternalServerError, resp)
 	}
 }

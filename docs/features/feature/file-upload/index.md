@@ -28,6 +28,7 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go
   - internal/upload/httpapi/contracts_test.go
   - internal/upload/httpapi/handlers_test.go
+  - internal/upload/httpapi/handler_instances_test.go
   - cmd/browser-agent/upload_integration_test.go
   - cmd/browser-agent/upload_handlers_test.go
   - internal/upload/handlers_test.go
@@ -77,3 +78,7 @@ the request returns a visible failure instead of hanging.
 The HTTP adapter passes the inbound request context through that same stage, so
 client disconnects and server cancellation terminate the outbound upload and
 its multipart writer instead of leaving ten-minute background work behind.
+All five upload endpoints are methods on one immutable `httpapi.Handlers`
+owner. Security policy, OS-automation enablement, response encoding, and stage
+dependencies are fixed per instance; no mutable package globals or free-handler
+facades remain. Tests can therefore run independently with isolated fakes.

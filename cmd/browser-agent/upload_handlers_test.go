@@ -227,18 +227,11 @@ func newUploadHTTPServer(t *testing.T, osAutomationEnabled bool) *httptest.Serve
 	t.Cleanup(func() { uploadSecurityConfig = prev })
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/file/read", func(w http.ResponseWriter, r *http.Request) {
-		uploadapi.HandleFileReadHTTP(w, r, uploadSecurityConfig, agenthttp.JSON)
-	})
-	mux.HandleFunc("/api/file/dialog/inject", func(w http.ResponseWriter, r *http.Request) {
-		uploadapi.HandleFileDialogInjectHTTP(w, r, uploadSecurityConfig, agenthttp.JSON)
-	})
-	mux.HandleFunc("/api/form/submit", func(w http.ResponseWriter, r *http.Request) {
-		uploadapi.HandleFormSubmitHTTP(w, r, uploadSecurityConfig, agenthttp.JSON)
-	})
-	mux.HandleFunc("/api/os-automation/inject", func(w http.ResponseWriter, r *http.Request) {
-		uploadapi.HandleOSAutomationHTTP(w, r, osAutomationEnabled, uploadSecurityConfig, agenthttp.JSON)
-	})
+	handlers := uploadapi.NewHandlers(uploadSecurityConfig, osAutomationEnabled, agenthttp.JSON)
+	mux.HandleFunc("/api/file/read", handlers.HandleFileRead)
+	mux.HandleFunc("/api/file/dialog/inject", handlers.HandleFileDialogInject)
+	mux.HandleFunc("/api/form/submit", handlers.HandleFormSubmit)
+	mux.HandleFunc("/api/os-automation/inject", handlers.HandleOSAutomation)
 
 	return httptest.NewServer(mux)
 }
