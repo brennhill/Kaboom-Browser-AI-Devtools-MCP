@@ -1,7 +1,12 @@
+// capabilities.go — Capability package contract and response assembly.
 // Purpose: Builds describe_capabilities responses by introspecting tool schemas, modes, and per-mode parameter sets.
 // Docs: docs/features/feature/config-profiles/index.md
 // Docs: docs/features/describe_capabilities.md
 
+// Package capabilities turns MCP tool schemas into the machine-readable
+// metadata returned by configure(action="describe_capabilities"). Schema
+// introspection belongs to schema.go; static mode parameters remain partitioned
+// one-to-one by Kaboom's five fixed tools; this file owns the public assembly.
 package capabilities
 
 import (

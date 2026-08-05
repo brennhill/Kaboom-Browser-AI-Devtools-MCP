@@ -5,11 +5,29 @@
 package capabilities
 
 import (
+	"os"
 	"sort"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+func TestCapabilitiesPackageRespectsTenFileBoundary(t *testing.T) {
+	t.Parallel()
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("capabilities package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
 
 func TestBuildCapabilitiesMap_Empty(t *testing.T) {
 	t.Parallel()

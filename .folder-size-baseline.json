@@ -43,7 +43,6 @@
     "internal/security/csp": 13,
     "internal/security/scan": 17,
     "internal/session": 16,
-    "internal/tools/configure/capabilities": 11,
     "internal/tools/observe": 22,
     "scripts": 58,
     "scripts/smoke-tests": 35,
