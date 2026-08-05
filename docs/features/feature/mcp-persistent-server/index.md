@@ -227,6 +227,8 @@ smoke runner explicitly enables the integration build tag and therefore cannot
 silently report success after running zero transport tests.
 Health-metric uptime tests position the private start timestamp directly and
 assert the resulting duration; they do not wait for wall-clock time to pass.
+Synchronous MCP completion tests establish connection first, then deliver the
+result without assuming whether completion or waiter subscription wins.
 The execution modules, examples, and validation schemas used by that call path
 are constructed once in `internal/toolcatalog.Catalog`; the composition root
 does not maintain parallel lazy registries.

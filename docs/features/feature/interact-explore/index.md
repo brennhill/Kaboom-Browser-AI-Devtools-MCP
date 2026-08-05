@@ -185,6 +185,8 @@ notification barrier; no polling sleeps or undelivered-query shortcuts remain.
 Browser-action completion helpers use that same dispatcher notification rather
 than polling. Rich-result timing accepts zero at millisecond resolution and
 asserts only the public nonnegative timing contract.
+Extension-gate interaction coverage uses the readiness transition itself as its
+synchronization event; it no longer sleeps before connecting.
 State snapshot handlers accept only the canonical `snapshot_name` parameter;
 the former generic `name` request alias has been removed.
 State dispatch and tests use the composed `stateInteractHandler` directly; the

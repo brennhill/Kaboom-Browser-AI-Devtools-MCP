@@ -659,21 +659,23 @@ func TestRequireCSPClear_RecoveryToolCall(t *testing.T) {
 // if the extension connects within the wait window, the gate passes instead of failing.
 func TestRequireExtension_ConnectsDuringWait(t *testing.T) {
 	t.Parallel()
-	// 500ms window: goroutine connects at 150ms, caught on the 200ms poll tick.
 	env := newGateTestEnvWithTimeout(t, 500*time.Millisecond)
 
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		time.Sleep(150 * time.Millisecond)
-		env.simulateConnection(t)
-	}()
-
+	type gateResult struct {
+		resp    mcp.JSONRPCResponse
+		blocked bool
+	}
+	done := make(chan gateResult, 1)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.Guards.RequireExtension(req)
-	<-done // ensure goroutine finished before test returns
-	if blocked {
-		t.Fatalf("expected requireExtension to pass after late connection, got blocked: %v", resp)
+	go func() {
+		resp, blocked := env.handler.Guards.RequireExtension(req)
+		done <- gateResult{resp: resp, blocked: blocked}
+	}()
+	env.simulateConnection(t)
+
+	result := <-done
+	if result.blocked {
+		t.Fatalf("expected requireExtension to pass after late connection, got blocked: %v", result.resp)
 	}
 }
 

@@ -40,3 +40,6 @@ poll interval or scheduler sleep participates in command readiness.
 Async timeout adapter tests likewise coordinate command enqueue and completion
 through the query dispatcher; elapsed wall time is reserved for the timeout
 contract itself, not used to schedule successful completion.
+Cold-start gate tests race an explicit connection transition against the
+readiness waiter and require a successful result. They do not delay connection
+to approximate waiter registration or assert scheduler-dependent elapsed bands.

@@ -22,25 +22,17 @@ func TestRequireExtension_ColdStart_WaitsForConnection(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.handler.Guards.SetExtensionReadinessTimeout(500 * time.Millisecond)
 
-	// Simulate extension connecting after 100ms
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		capturefixture.Connect(env.capture)
-	}()
-
+	type gateResult struct{ blocked bool }
+	result := make(chan gateResult, 1)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	start := time.Now()
-	_, blocked := env.handler.Guards.RequireExtension(req)
-	elapsed := time.Since(start)
+	go func() {
+		_, blocked := env.handler.Guards.RequireExtension(req)
+		result <- gateResult{blocked: blocked}
+	}()
+	capturefixture.Connect(env.capture)
 
-	if blocked {
+	if (<-result).blocked {
 		t.Fatal("expected requireExtension to pass after waiting for connection")
-	}
-	if elapsed < 50*time.Millisecond {
-		t.Fatalf("expected some wait time, got %v", elapsed)
-	}
-	if elapsed > 450*time.Millisecond {
-		t.Fatalf("waited too long: %v (connection fires at 100ms)", elapsed)
 	}
 }
 
@@ -106,26 +98,17 @@ func TestMaybeWaitForCommand_ExtensionConnected_WaitsForResult(t *testing.T) {
 	// Extension is already connected (requireExtension would have passed)
 	capturefixture.Connect(cap)
 
-	// Complete the command after 100ms
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		cap.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
-	}()
-
+	response := make(chan mcp.JSONRPCResponse, 1)
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
-	start := time.Now()
-	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
-	elapsed := time.Since(start)
+	go func() {
+		response <- handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
+	}()
+	cap.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
+	resp := <-response
 
 	result := parseMCPResponseData(t, resp.Result)
 	if result["status"] != "complete" {
 		t.Errorf("expected status complete, got %v", result["status"])
-	}
-	if elapsed < 50*time.Millisecond {
-		t.Fatalf("expected some wait for command completion, got %v", elapsed)
-	}
-	if elapsed > 2*time.Second {
-		t.Fatalf("took too long: %v (result at 100ms)", elapsed)
 	}
 }
 
