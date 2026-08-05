@@ -4,7 +4,7 @@ feature_id: feature-playback-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/recording/types.go
   - internal/recording/manager.go
@@ -33,8 +33,8 @@ test_paths:
   - internal/capture/httpingest/handlers_test.go
   - tests/architecture/user-state-loaders.test.cjs
   - internal/capture/testhelpers_test.go
-  - internal/capture/recording_playback_integration_test.go
-  - internal/capture/recording_logdiff_integration_test.go
+  - internal/capture/recordingtest/recording_playback_integration_test.go
+  - internal/capture/recordingtest/recording_logdiff_integration_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
@@ -46,7 +46,7 @@ test_paths:
   - internal/recording/state_path_test.go
   - internal/recording/playback/playback_test.go
   - internal/recording/logdiff/logdiff_test.go
-  - internal/capture/recording_manager_test.go
+  - internal/capture/recordingtest/recording_manager_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

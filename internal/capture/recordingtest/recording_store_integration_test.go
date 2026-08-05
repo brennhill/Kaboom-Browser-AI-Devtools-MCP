@@ -1,7 +1,7 @@
 // recording_store_integration_test.go — Recording metadata, persistence, privacy, and query tests.
 // Docs: docs/features/feature/flow-recording/index.md
 
-package capture
+package recordingtest
 
 import (
 	"strings"
@@ -30,7 +30,7 @@ func TestRecordingCreateMetadata(t *testing.T) {
 	}
 
 	// Verify recording exists in memory
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if recording == nil {
 		t.Errorf("Expected recording to exist in memory")
 	}
@@ -88,7 +88,7 @@ func TestRecordingAddActions(t *testing.T) {
 	}
 
 	// Verify all actions added
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if len(recording.Actions) != 5 {
 		t.Errorf("Expected 5 actions, got: %d", len(recording.Actions))
 	}
@@ -197,7 +197,7 @@ func TestRecordingSensitiveDataRedaction(t *testing.T) {
 	}
 
 	// Verify text was redacted
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if len(recording.Actions) != 1 {
 		t.Fatalf("Expected 1 action, got: %d", len(recording.Actions))
 	}
@@ -225,7 +225,7 @@ func TestRecordingSensitiveDataOptIn(t *testing.T) {
 	}
 
 	// Verify flag is set
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if !recording.SensitiveDataEnabled {
 		t.Errorf("Expected sensitive_data_enabled=true")
 	}
@@ -275,7 +275,7 @@ func TestRecordingStorageQuotaEnforcement(t *testing.T) {
 
 	// Simulate storage being at max capacity
 	// Set recordingStorageUsed to 1GB (recording.go constant: recordingStorageMax = 1GB)
-	capture.recordingManager.SetRecordingStorageUsed(1024 * 1024 * 1024) // 1GB
+	capture.Recordings().SetRecordingStorageUsed(1024 * 1024 * 1024) // 1GB
 
 	// Try to start a new recording when storage is full
 	recordingID, err := capture.Recordings().StartRecording("over-quota", "https://example.com", false)
@@ -296,7 +296,7 @@ func TestRecordingStorageQuotaEnforcement(t *testing.T) {
 	}
 
 	// Verify activeRecordingID is empty (no recording started)
-	if capture.recordingManager.GetActiveRecordingID() != "" {
+	if capture.Recordings().GetActiveRecordingID() != "" {
 		t.Errorf("Expected activeRecordingID to be empty when over quota")
 	}
 }
@@ -313,7 +313,7 @@ func TestRecordingStorageWarning(t *testing.T) {
 
 	// Simulate storage at 80% capacity (warning threshold)
 	// recording.go constant: recordingWarningLevel = 800MB
-	capture.recordingManager.SetRecordingStorageUsed(800 * 1024 * 1024) // 800MB (80% of 1GB)
+	capture.Recordings().SetRecordingStorageUsed(800 * 1024 * 1024) // 800MB (80% of 1GB)
 
 	// Try to start a recording when at warning level
 	// The operation should proceed (non-blocking) but a warning should be logged
@@ -330,7 +330,7 @@ func TestRecordingStorageWarning(t *testing.T) {
 	}
 
 	// Verify recording is active
-	if capture.recordingManager.GetActiveRecordingID() != recordingID {
+	if capture.Recordings().GetActiveRecordingID() != recordingID {
 		t.Errorf("Expected active recording to be set")
 	}
 

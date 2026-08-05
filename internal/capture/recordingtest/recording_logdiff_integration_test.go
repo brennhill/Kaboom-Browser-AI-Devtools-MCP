@@ -1,7 +1,7 @@
 // recording_logdiff_integration_test.go — Recorded log comparison and categorization tests.
 // Docs: docs/features/feature/flow-recording/index.md
 
-package capture
+package recordingtest
 
 import (
 	"testing"

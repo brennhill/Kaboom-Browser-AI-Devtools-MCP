@@ -1,7 +1,7 @@
 // recording_extension_lifecycle_test.go — Extension recording start, stop, and naming tests.
 // Docs: docs/features/feature/flow-recording/index.md
 
-package capture
+package recordingtest
 
 import (
 	"fmt"
@@ -33,16 +33,16 @@ func TestExtensionStartRecording(t *testing.T) {
 	}
 
 	// Verify recording created in memory and ready for action capture
-	if capture.recordingManager.GetActiveRecordingID() == "" {
+	if capture.Recordings().GetActiveRecordingID() == "" {
 		t.Errorf("Expected active recording ID to be set")
 	}
 
-	if capture.recordingManager.GetActiveRecordingID() != recordingID {
-		t.Errorf("Expected active recording to be %s, got: %s", recordingID, capture.recordingManager.GetActiveRecordingID())
+	if capture.Recordings().GetActiveRecordingID() != recordingID {
+		t.Errorf("Expected active recording to be %s, got: %s", recordingID, capture.Recordings().GetActiveRecordingID())
 	}
 
 	// Verify recording state is initialized
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if recording == nil {
 		t.Errorf("Expected recording to exist in memory")
 	}
@@ -107,7 +107,7 @@ func TestExtensionStopRecording(t *testing.T) {
 	}
 
 	// Verify recording is no longer active
-	if capture.recordingManager.GetActiveRecordingID() != "" {
+	if capture.Recordings().GetActiveRecordingID() != "" {
 		t.Errorf("Expected active recording to be cleared after stop")
 	}
 

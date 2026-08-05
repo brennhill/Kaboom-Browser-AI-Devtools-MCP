@@ -1,7 +1,7 @@
 // recording_playback_integration_test.go — Recording playback and selector-recovery tests.
 // Docs: docs/features/feature/playback-engine/index.md
 
-package capture
+package recordingtest
 
 import (
 	"testing"

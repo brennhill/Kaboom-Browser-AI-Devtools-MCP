@@ -2,9 +2,10 @@
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 // recording_manager_test.go — Tests for Capture recording-manager ownership.
-package capture
+package recordingtest
 
 import (
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
