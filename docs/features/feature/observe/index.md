@@ -72,6 +72,7 @@ test_paths:
   - cmd/browser-agent/tools_observe_screenshot_test.go
   - cmd/browser-agent/tools_observe_analysis_test.go
   - cmd/browser-agent/tools_observe_commands_test.go
+  - cmd/browser-agent/tools_observe_indexeddb_test.go
   - extension/background/commands/observe.fullpage.test.js
   - internal/a11ysummary/summary_test.go
   - internal/capture/websocket_test.go
@@ -149,6 +150,9 @@ authenticated response resolves that incident even when it contains no entries.
 Failed-command projection tests transition commands explicitly; deadline
 scheduling remains owned by the query-dispatcher suite rather than a sleep in
 the observe adapter test.
+IndexedDB responders block on the canonical pending-query notification and
+complete each state or execute query exactly once. They no longer poll the
+queue on a wall-clock interval.
 
 ## TL;DR
 - Status: shipped

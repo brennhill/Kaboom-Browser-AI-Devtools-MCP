@@ -55,20 +55,17 @@ func TestObserveIndexedDB_ReturnsEntries(t *testing.T) {
 
 	scriptCh := make(chan string, 1)
 	go func() {
-		deadline := time.Now().Add(1200 * time.Millisecond)
-		for time.Now().Before(deadline) {
-			for _, q := range cap.Queries().GetPendingQueries() {
-				if q.Type != "execute" {
-					continue
-				}
-				var params map[string]any
-				_ = json.Unmarshal(q.Params, &params)
-				script, _ := params["script"].(string)
-				scriptCh <- script
-				cap.Queries().SetQueryResult(q.ID, json.RawMessage(`{"success":true,"result":{"ok":true,"database":"app-cache","store":"users","entries":[{"key":"u1","value":{"id":"u1","name":"Alice"}}],"count":1,"limit":10}}`))
-				return
+		cap.Queries().WaitForPendingQueries(time.Second)
+		for _, q := range cap.Queries().GetPendingQueries() {
+			if q.Type != "execute" {
+				continue
 			}
-			time.Sleep(10 * time.Millisecond)
+			var params map[string]any
+			_ = json.Unmarshal(q.Params, &params)
+			script, _ := params["script"].(string)
+			scriptCh <- script
+			cap.Queries().SetQueryResult(q.ID, json.RawMessage(`{"success":true,"result":{"ok":true,"database":"app-cache","store":"users","entries":[{"key":"u1","value":{"id":"u1","name":"Alice"}}],"count":1,"limit":10}}`))
+			return
 		}
 		scriptCh <- ""
 	}()
@@ -114,10 +111,11 @@ func TestObserveStorage_IncludesIndexedDBListing(t *testing.T) {
 
 	scriptCh := make(chan string, 1)
 	go func() {
-		deadline := time.Now().Add(1500 * time.Millisecond)
 		handledState := false
 		handledExec := false
-		for time.Now().Before(deadline) {
+		for !handledState || !handledExec {
+			cap.Queries().WaitForPendingQueries(time.Second)
+			madeProgress := false
 			for _, q := range cap.Queries().GetPendingQueries() {
 				switch q.Type {
 				case "state_capture":
@@ -126,6 +124,7 @@ func TestObserveStorage_IncludesIndexedDBListing(t *testing.T) {
 					}
 					cap.Queries().SetQueryResult(q.ID, json.RawMessage(`{"url":"https://app.example.com","localStorage":{"theme":"dark"},"sessionStorage":{"token":"abc"},"cookies":"debug=true"}`))
 					handledState = true
+					madeProgress = true
 				case "execute":
 					if handledExec {
 						continue
@@ -136,15 +135,14 @@ func TestObserveStorage_IncludesIndexedDBListing(t *testing.T) {
 					scriptCh <- script
 					cap.Queries().SetQueryResult(q.ID, json.RawMessage(`{"success":true,"result":{"supported":true,"databases":[{"name":"app-cache","version":3,"object_stores":["users","settings"]}]}}`))
 					handledExec = true
+					madeProgress = true
 				}
 			}
-
-			if handledState && handledExec {
+			if !madeProgress {
+				scriptCh <- ""
 				return
 			}
-			time.Sleep(10 * time.Millisecond)
 		}
-		scriptCh <- ""
 	}()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}

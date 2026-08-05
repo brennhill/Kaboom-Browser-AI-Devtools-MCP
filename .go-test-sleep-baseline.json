@@ -20,7 +20,6 @@
     "cmd/browser-agent/tools_configure_handler_test.go": 1,
     "cmd/browser-agent/tools_core_sync_test.go": 1,
     "cmd/browser-agent/tools_interact_gate_test.go": 1,
-    "cmd/browser-agent/tools_interact_navigate_document_test.go": 1,
-    "cmd/browser-agent/tools_observe_indexeddb_test.go": 2
+    "cmd/browser-agent/tools_interact_navigate_document_test.go": 1
   }
 }
