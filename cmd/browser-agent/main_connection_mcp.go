@@ -27,6 +27,7 @@ import (
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
@@ -239,7 +240,7 @@ type sessionClientRegistryAdapter struct {
 	reg *clientreg.ClientRegistry
 }
 
-func newSessionClientRegistryAdapter(reg *clientreg.ClientRegistry) capture.ClientRegistry {
+func newSessionClientRegistryAdapter(reg *clientreg.ClientRegistry) clientstore.Registry {
 	if reg == nil {
 		return nil
 	}

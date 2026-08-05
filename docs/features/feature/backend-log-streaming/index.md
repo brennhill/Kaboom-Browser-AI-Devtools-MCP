@@ -14,6 +14,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/netrecord/filters.go
   - internal/capture/accessors.go
   - internal/capture/capture.go
+  - internal/capture/clientstore/owner.go
   - internal/capture/model.go
   - internal/capture/events.go
   - internal/capture/logstore/store.go
@@ -77,6 +78,7 @@ code_paths:
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
+  - internal/capture/clientstore/owner_test.go
   - internal/capture/perfstore/store_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/background-boundaries.test.js
@@ -109,7 +111,6 @@ test_paths:
   - internal/capture/logstore/diagnostic_test.go
   - internal/capture/accessor_unit_test.go
   - internal/capture/featureusage/observer_test.go
-  - internal/capture/client_registry_owner_test.go
   - internal/capture/extension_state_test_helpers_test.go
   - internal/capture/buffer_clear_test.go
   - internal/capture/bounded_ring_test.go
@@ -293,7 +294,7 @@ Extension feature-usage analytics use the independently synchronized
 replacement and notification live together; Capture no longer stores or
 forwards the callback.
 Runtime client-registry installation and lookup use the independently
-synchronized `ClientRegistryOwner` returned by `Capture.Clients()`; the
+synchronized `clientstore.Owner` returned by `Capture.Clients()`; the
 Capture-level set/get facades are deleted. With every mutable field assigned to
 an owner, Capture is now a lock-free composition root. Extension-state tests
 also acquire the extension owner lock rather than the former unrelated Capture

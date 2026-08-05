@@ -39,7 +39,7 @@ type fakeIntentDeps struct {
 func (f *fakeIntentDeps) GetPtyRelays() RelayMap       { return f.relays }
 func (f *fakeIntentDeps) GetIntentStore() *IntentStore { return f.store }
 
-// fakeClientRegistry implements capture.ClientRegistry for AutoDetectCWD tests.
+// fakeClientRegistry implements clientstore.Registry for AutoDetectCWD tests.
 // listResult is returned verbatim from List(); its concrete type selects which
 // branch of AutoDetectCWD executes ([]any fast path vs. JSON-roundtrip default).
 type fakeClientRegistry struct {

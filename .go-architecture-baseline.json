@@ -869,6 +869,10 @@
       "mutable_globals": 0,
       "exports": 14
     },
+    "internal/capture/clientstore/owner.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
     "internal/capture/events.go": {
       "mutable_globals": 0,
       "exports": 24
@@ -891,7 +895,7 @@
     },
     "internal/capture/model.go": {
       "mutable_globals": 0,
-      "exports": 13
+      "exports": 9
     },
     "internal/capture/perfstore/store.go": {
       "mutable_globals": 0,

@@ -16,7 +16,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-// mockClientRegistry implements capture.ClientRegistry for testing.
+// mockClientRegistry implements clientstore.Registry for testing.
 type mockClientRegistry struct {
 	mu      sync.RWMutex
 	clients map[string]map[string]any

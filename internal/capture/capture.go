@@ -8,6 +8,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
@@ -84,7 +85,7 @@ type Capture struct {
 	// Multi-Client Support
 	// ============================================
 
-	clients *ClientRegistryOwner // Runtime client-registry wiring. Registry contents own their own lock.
+	clients *clientstore.Owner // Runtime client-registry wiring. Registry contents own their own lock.
 
 	// ============================================
 	// Lifecycle Event Callbacks
@@ -109,7 +110,7 @@ func NewCapture() *Capture {
 		recordingManager: recording.NewRecordingManager(),
 		lifecycle:        lifecycle.NewObserver(),
 		featureUsage:     featureusage.New(),
-		clients:          newClientRegistryOwner(),
+		clients:          clientstore.New(),
 	}
 	c.queryDispatcher = queries.NewQueryDispatcher()
 	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)
@@ -144,7 +145,7 @@ func (c *Capture) FeatureUsage() *featureusage.Observer {
 }
 
 // Clients returns the canonical client-registry owner.
-func (c *Capture) Clients() *ClientRegistryOwner {
+func (c *Capture) Clients() *clientstore.Owner {
 	return c.clients
 }
 
