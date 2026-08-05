@@ -6,10 +6,27 @@ package toolanalyze
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+func TestToolAnalyzePackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("toolanalyze package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
 
 func az_newReq() mcp.JSONRPCRequest { return mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1} }
 

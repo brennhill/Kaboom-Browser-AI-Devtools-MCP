@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-05
 code_paths:
+  - cmd/browser-agent/internal/toolanalyze/security.go
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_security_impl.go
@@ -48,6 +49,8 @@ code_paths:
   - internal/security/httpsec/url.go
   - internal/security/httpsec/cookie.go
 test_paths:
+  - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
+  - cmd/browser-agent/internal/toolanalyze/toolanalyze_test.go
   - internal/security/diff/diff_test.go
   - internal/security/diff/compare_test.go
   - internal/security/diff/tool_test.go
@@ -96,6 +99,8 @@ Response redaction is owned by the MCP transport configuration and applied after
 tool execution. Tool implementations do not expose a redaction-engine getter.
 Security policy configuration likewise resolves only through the canonical
 state path and does not fall back to historical config directories.
+Analyze-time security handlers and their summary projections share one
+change-coupled owner, and the package enforces its ten-file boundary in tests.
 
 ## Specs
 

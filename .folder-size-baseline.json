@@ -7,7 +7,6 @@
     "cmd/browser-agent/internal/cli": 12,
     "cmd/browser-agent/internal/playbooks": 14,
     "cmd/browser-agent/internal/terminal": 33,
-    "cmd/browser-agent/internal/toolanalyze": 11,
     "cmd/browser-agent/internal/toolconfigure": 13,
     "cmd/browser-agent/internal/toolinteract": 20,
     "docs": 56,

@@ -6,6 +6,7 @@ package toolanalyze
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -78,4 +79,74 @@ func HandleThirdPartyAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 	}
 
 	return mcp.Succeed(req, "Third-party audit complete", result)
+}
+
+// BuildSecurityAuditSummary creates a compact summary from security scan results.
+func BuildSecurityAuditSummary(result scan.Result) map[string]any {
+	bySeverity := make(map[string]int)
+	for _, f := range result.Findings {
+		bySeverity[f.Severity]++
+	}
+
+	topN := 5
+	if len(result.Findings) < topN {
+		topN = len(result.Findings)
+	}
+
+	sorted := make([]scan.Finding, len(result.Findings))
+	copy(sorted, result.Findings)
+	sort.Slice(sorted, func(i, j int) bool {
+		return SeverityOrder[sorted[i].Severity] < SeverityOrder[sorted[j].Severity]
+	})
+
+	topIssues := make([]map[string]any, topN)
+	for i := 0; i < topN; i++ {
+		topIssues[i] = map[string]any{
+			"check":    sorted[i].Check,
+			"severity": sorted[i].Severity,
+			"title":    sorted[i].Title,
+		}
+	}
+
+	return map[string]any{
+		"total":       len(result.Findings),
+		"by_severity": bySeverity,
+		"top_issues":  topIssues,
+	}
+}
+
+// BuildThirdPartySummary creates a compact summary from third-party audit results.
+func BuildThirdPartySummary(result thirdparty.ThirdPartyResult) map[string]any {
+	byRisk := map[string]int{
+		"critical": result.Summary.CriticalRisk,
+		"high":     result.Summary.HighRisk,
+		"medium":   result.Summary.MediumRisk,
+		"low":      result.Summary.LowRisk,
+	}
+
+	topN := 5
+	if len(result.ThirdParties) < topN {
+		topN = len(result.ThirdParties)
+	}
+
+	sorted := make([]thirdparty.ThirdPartyEntry, len(result.ThirdParties))
+	copy(sorted, result.ThirdParties)
+	sort.Slice(sorted, func(i, j int) bool {
+		return SeverityOrder[sorted[i].RiskLevel] < SeverityOrder[sorted[j].RiskLevel]
+	})
+
+	top := make([]map[string]any, topN)
+	for i := 0; i < topN; i++ {
+		top[i] = map[string]any{
+			"origin": sorted[i].Origin,
+			"risk":   sorted[i].RiskLevel,
+			"reason": sorted[i].RiskReason,
+		}
+	}
+
+	return map[string]any{
+		"total_origins": len(result.ThirdParties),
+		"by_risk":       byRisk,
+		"top":           top,
+	}
 }
