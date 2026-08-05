@@ -53,7 +53,7 @@ func Snapshot(logs Logs, captured Capture) http.HandlerFunc {
 		if !sinceTime.IsZero() {
 			entries = FilterLogsSince(entries, sinceTime)
 		}
-		wsEvents := captured.Telemetry().GetAllWebSocketEvents()
+		wsEvents := captured.Telemetry().WebSockets().Snapshot().Events
 		networkBodies := captured.Telemetry().NetworkBodies().Snapshot().Bodies
 		testID := r.URL.Query().Get("test_id")
 		if testID == "" {

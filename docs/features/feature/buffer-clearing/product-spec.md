@@ -216,13 +216,14 @@ configure({what: "clear", buffer: "network"})
 ### Straightforward Parts (5% of work)
 
 - Add `ClearNetworkBuffers()` method to Capture
-- Add `ClearWebSocketBuffers()` method to Capture
+- Clear WebSocket events and connection status through the canonical
+  `Telemetry().WebSockets()` owner
 - Clear enhanced actions through the canonical `Telemetry().Actions()` owner
 - Update MCP tool description
 
 ### Not Required
 
-- ❌ No new storage structures
+- ✅ WebSocket retention and derived status share one canonical owner
 - ❌ No complex state management
 - ❌ No backward compatibility issues
 
@@ -249,7 +250,7 @@ func TestClearNetworkBuffers(t *testing.T) {
 	assert.Equal(t, 0, len(capture.networkBodies))
 }
 
-func TestClearWebSocketBuffers(t *testing.T) {
+func TestWebSocketStoreClear(t *testing.T) {
 	// Similar test for WebSocket buffers
 }
 
@@ -264,7 +265,7 @@ func TestClearAllBuffers(t *testing.T) {
 
 	// Verify all buffers are empty
 	assert.Equal(t, 0, len(capture.networkWaterfall))
-	assert.Equal(t, 0, len(capture.wsEvents))
+	assert.Equal(t, 0, capture.Telemetry().WebSockets().Stats().Count)
 	assert.Equal(t, 0, capture.Telemetry().Actions().Stats().Count)
 	// ...
 }

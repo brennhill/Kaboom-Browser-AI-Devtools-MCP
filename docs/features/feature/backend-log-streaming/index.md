@@ -37,6 +37,7 @@ code_paths:
   - internal/lifecycle/observer.go
   - internal/capture/wsconn/doc.go
   - internal/capture/wsconn/status.go
+  - internal/capture/wsconn/store.go
   - internal/capture/wsconn/tracker.go
   - internal/types/wire_log.go
   - internal/types/network.go
@@ -84,6 +85,7 @@ code_paths:
 test_paths:
   - internal/capture/clientstore/owner_test.go
   - internal/capture/actionstore/store_test.go
+  - internal/capture/wsconn/store_test.go
   - internal/capture/bodystore/store_test.go
   - internal/capture/settingscache/loader_test.go
   - internal/capture/perfstore/store_test.go
@@ -257,9 +259,8 @@ The background entry point exports only the batchers consumed by extension
 startup. Circuit-breaker wrapper instances remain owned by the canonical
 batcher factory and are not re-exported as an unused public surface.
 Count, timestamp, and buffer-memory accessors used only by capture tests are
-gone as well. Behavioral tests now count canonical detached snapshots, while
-package-internal buffer tests inspect the owning `BufferStore` invariants
-directly.
+gone as well. Behavioral tests now inspect canonical detached snapshots and
+allocation-free owner statistics directly.
 Extension runtime logs now live in an independently synchronized
 `ExtensionLogStore` that owns timestamp normalization, redaction, bounded
 retention, snapshots, and clearing. Production and test callers use
@@ -292,10 +293,12 @@ owns bounded retention, deep cloning, error and ingestion totals, timestamps,
 memory-pressure eviction, snapshots, and clearing. Consumers use
 `Capture.Telemetry().NetworkBodies()` directly; the three Telemetry forwarding
 methods and the former shared-buffer fields are deleted. WebSocket events and
-connection state, enhanced actions, navigation callbacks, and the focused body
-and waterfall owners compose `TelemetryStore`. `Capture.ClearAll` remains only
-because it genuinely coordinates telemetry, extension boundaries, performance,
-and extension logs.
+their derived connection state live together in `wsconn.Store`; ingestion,
+retention, filtering, status, memory pressure, and clearing share one lock.
+Consumers use `Capture.Telemetry().WebSockets()` directly, and the former
+Telemetry forwarding methods plus `BufferStore` are deleted. Navigation
+callbacks and the focused action, body, waterfall, and WebSocket owners compose
+`TelemetryStore`; `StateResetter` coordinates the genuinely cross-owner reset.
 Configure network-recording dispatch calls `netrecord.HandleNetworkRecording`
 with the telemetry and recording-state owners directly; the root ToolHandler
 forwarding method is deleted.

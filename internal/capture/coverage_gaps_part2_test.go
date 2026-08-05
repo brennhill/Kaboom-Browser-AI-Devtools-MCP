@@ -27,7 +27,7 @@ func TestGetAllWebSocketEvents_EmptyReturnsEmptySlice(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	result := c.Telemetry().GetAllWebSocketEvents()
+	result := c.Telemetry().WebSockets().Snapshot().Events
 	if result == nil {
 		t.Fatal("expected non-nil empty slice, got nil")
 	}

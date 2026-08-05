@@ -11,10 +11,12 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - internal/capture/bodystore/store.go
   - internal/capture/actionstore/store.go
+  - internal/capture/wsconn/store.go
 test_paths:
   - internal/capture/state_resetter_owner_test.go
   - internal/capture/bodystore/store_test.go
   - internal/capture/actionstore/store_test.go
+  - internal/capture/wsconn/store_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_coverage_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
@@ -55,3 +57,5 @@ has no `ClearAll` forwarding method.
 Enhanced actions are cleared directly through the canonical
 `capture.Telemetry().Actions()` owner; no telemetry compatibility facade is
 retained.
+WebSocket events and derived connection status are cleared atomically through
+`capture.Telemetry().WebSockets().Clear()`.

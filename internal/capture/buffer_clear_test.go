@@ -69,35 +69,27 @@ func TestClearWebSocketBuffers(t *testing.T) {
 
 	// Add WS events
 	capture.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
+		{Event: "open", ID: "conn1", URL: "ws://localhost"},
 		{ID: "conn1", Direction: "outgoing", Data: "test"},
 		{ID: "conn1", Direction: "incoming", Data: "response"},
 	})
 
-	// Add WS connections (open event only — it does not enter the event buffer).
-	capture.telemetry.mu.Lock()
-	capture.telemetry.wsConnections.TrackEvent(types.WebSocketEvent{Event: "open", ID: "conn1", URL: "ws://localhost"})
-	capture.telemetry.mu.Unlock()
-
 	// Clear
-	counts := capture.Telemetry().ClearWebSocketBuffers()
+	counts := capture.Telemetry().WebSockets().Clear()
 
 	// Verify counts
-	if counts.WebSocketEvents != 2 {
-		t.Errorf("Expected WebSocketEvents count = 2, got %d", counts.WebSocketEvents)
+	if counts.Events != 3 {
+		t.Errorf("Expected event count = 3, got %d", counts.Events)
 	}
-	if counts.WebSocketStatus != 1 {
-		t.Errorf("Expected WebSocketStatus count = 1, got %d", counts.WebSocketStatus)
+	if counts.Connections != 1 {
+		t.Errorf("Expected connection count = 1, got %d", counts.Connections)
 	}
 
 	// Verify buffers empty
-	capture.telemetry.mu.RLock()
-	if capture.telemetry.buffers.wsEvents.Len() != 0 {
-		t.Errorf("Expected wsEvents to be empty, got %d entries", capture.telemetry.buffers.wsEvents.Len())
+	state := capture.Telemetry().WebSockets().Stats()
+	if state.Count != 0 || state.ConnectionCount != 0 {
+		t.Errorf("Expected WebSocket state to be empty, got %+v", state)
 	}
-	if capture.telemetry.wsConnections.Count() != 0 {
-		t.Errorf("Expected connections to be empty, got %d entries", capture.telemetry.wsConnections.Count())
-	}
-	capture.telemetry.mu.RUnlock()
 }
 
 // TestActionStoreClear verifies clearing the canonical enhanced-action owner.
@@ -152,9 +144,7 @@ func TestClearAllCapture(t *testing.T) {
 	if len(capture.Telemetry().NetworkWaterfall().Entries()) != 0 {
 		t.Error("Expected networkWaterfall to be empty")
 	}
-	capture.telemetry.mu.RLock()
-	defer capture.telemetry.mu.RUnlock()
-	if capture.telemetry.buffers.wsEvents.Len() != 0 {
+	if capture.Telemetry().WebSockets().Stats().Count != 0 {
 		t.Error("Expected wsEvents to be empty")
 	}
 	if capture.Telemetry().Actions().Stats().Count != 0 {

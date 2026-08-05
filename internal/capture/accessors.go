@@ -1,4 +1,5 @@
-// Purpose: Provides the thread-safe read accessors over buffered counters, timestamps, events and performance snapshots.
+// accessors.go — Aggregates health metadata from canonical capture owners.
+// Purpose: Provides thread-safe diagnostic snapshots without exposing storage.
 // Why: One lock-taking read layer over the stores, rather than four files split by which counter they return.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
@@ -9,24 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
-
-func cloneWebSocketEvent(event types.WebSocketEvent) types.WebSocketEvent {
-	if event.Sampled != nil {
-		sampled := *event.Sampled
-		event.Sampled = &sampled
-	}
-	event.TestIDs = append([]string(nil), event.TestIDs...)
-	return event
-}
-
-// GetWebSocketTotalAdded returns the monotonic total of WebSocket events ever added
-func (s *TelemetryStore) GetWebSocketTotalAdded() int64 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.buffers.webSocketTotal()
-}
 
 // TelemetrySnapshot is an immutable point-in-time view of event-store counters.
 //
@@ -52,20 +36,19 @@ type TelemetrySnapshot struct {
 func (s *TelemetryStore) GetSnapshot() TelemetrySnapshot {
 	network := s.networkBodies.Stats()
 	actions := s.actions.Stats()
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	webSockets := s.webSockets.Stats()
 
 	return TelemetrySnapshot{
 		NetworkTotalAdded:   network.TotalAdded,
-		WebSocketTotalAdded: s.buffers.webSocketTotal(),
+		WebSocketTotalAdded: webSockets.TotalAdded,
 		ActionTotalAdded:    actions.TotalAdded,
 		NetworkCount:        network.Count,
-		WebSocketCount:      s.buffers.webSocketCount(),
+		WebSocketCount:      webSockets.Count,
 		ActionCount:         actions.Count,
 		NetworkCapacity:     network.Pressure.Capacity,
-		WebSocketCapacity:   s.buffers.wsEvents.Capacity(),
+		WebSocketCapacity:   webSockets.Capacity,
 		ActionCapacity:      actions.Capacity,
-		ConnectionCount:     s.wsConnections.Count(),
+		ConnectionCount:     webSockets.ConnectionCount,
 	}
 }
 
@@ -142,11 +125,4 @@ func (r *HealthReader) Snapshot() HealthSnapshot {
 		ActiveTestIDCount:     extensionSnap.ActiveTestIDCount,
 		QueryTimeout:          querySnap.QueryTimeout,
 	}
-}
-
-// GetAllWebSocketEvents returns a copy of all WebSocket events slice (thread-safe)
-func (s *TelemetryStore) GetAllWebSocketEvents() []types.WebSocketEvent {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.buffers.webSocketEventsCopy()
 }

@@ -863,7 +863,7 @@
     },
     "internal/capture/accessors.go": {
       "mutable_globals": 0,
-      "exports": 8
+      "exports": 6
     },
     "internal/capture/actionstore/store.go": {
       "mutable_globals": 0,
@@ -883,7 +883,7 @@
     },
     "internal/capture/events.go": {
       "mutable_globals": 0,
-      "exports": 20
+      "exports": 17
     },
     "internal/capture/extension_state.go": {
       "mutable_globals": 0,
@@ -932,6 +932,10 @@
     "internal/capture/wsconn/status.go": {
       "mutable_globals": 0,
       "exports": 1
+    },
+    "internal/capture/wsconn/store.go": {
+      "mutable_globals": 0,
+      "exports": 11
     },
     "internal/capture/wsconn/tracker.go": {
       "mutable_globals": 0,

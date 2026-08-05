@@ -396,7 +396,7 @@ func collectTimelineEntries(deps core.Deps, inc timelineIncludes) []timelineEntr
 		entries = append(entries, collectTimelineNetwork(cap.Telemetry().NetworkWaterfall().Entries())...)
 	}
 	if inc.ws {
-		entries = append(entries, collectTimelineWebSocket(cap.Telemetry().GetAllWebSocketEvents())...)
+		entries = append(entries, collectTimelineWebSocket(cap.Telemetry().WebSockets().Snapshot().Events)...)
 	}
 	return entries
 }

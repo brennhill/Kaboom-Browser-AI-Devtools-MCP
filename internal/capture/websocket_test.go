@@ -20,8 +20,8 @@ func TestV4WebSocketEventBuffer(t *testing.T) {
 
 	capture.Telemetry().AddWebSocketEvents(events)
 
-	if len(capture.Telemetry().GetAllWebSocketEvents()) != 2 {
-		t.Errorf("Expected 2 events, got %d", len(capture.Telemetry().GetAllWebSocketEvents()))
+	if len(capture.Telemetry().WebSockets().Snapshot().Events) != 2 {
+		t.Errorf("Expected 2 events, got %d", len(capture.Telemetry().WebSockets().Snapshot().Events))
 	}
 }
 
@@ -43,8 +43,8 @@ func TestV4WebSocketEventBufferRotation(t *testing.T) {
 
 	capture.Telemetry().AddWebSocketEvents(events)
 
-	if len(capture.Telemetry().GetAllWebSocketEvents()) != 500 {
-		t.Errorf("Expected 500 events after rotation, got %d", len(capture.Telemetry().GetAllWebSocketEvents()))
+	if len(capture.Telemetry().WebSockets().Snapshot().Events) != 500 {
+		t.Errorf("Expected 500 events after rotation, got %d", len(capture.Telemetry().WebSockets().Snapshot().Events))
 	}
 }
 
@@ -58,7 +58,7 @@ func TestV4WebSocketEventFilterByConnectionID(t *testing.T) {
 		{ID: "uuid-1", Event: "message", Direction: "incoming"},
 	})
 
-	filtered := capture.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{ConnectionID: "uuid-1"})
+	filtered := capture.Telemetry().WebSockets().Events(types.WebSocketEventFilter{ConnectionID: "uuid-1"})
 
 	if len(filtered) != 2 {
 		t.Errorf("Expected 2 events for uuid-1, got %d", len(filtered))
@@ -75,7 +75,7 @@ func TestV4WebSocketEventFilterByURL(t *testing.T) {
 		{ID: "uuid-1", Event: "message", URL: "wss://chat.example.com/ws"},
 	})
 
-	filtered := capture.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{URLFilter: "chat"})
+	filtered := capture.Telemetry().WebSockets().Events(types.WebSocketEventFilter{URLFilter: "chat"})
 
 	if len(filtered) != 2 {
 		t.Errorf("Expected 2 events matching 'chat', got %d", len(filtered))
@@ -92,7 +92,7 @@ func TestV4WebSocketEventFilterByDirection(t *testing.T) {
 		{ID: "uuid-1", Event: "message", Direction: "incoming"},
 	})
 
-	filtered := capture.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{Direction: "incoming"})
+	filtered := capture.Telemetry().WebSockets().Events(types.WebSocketEventFilter{Direction: "incoming"})
 
 	if len(filtered) != 2 {
 		t.Errorf("Expected 2 incoming events, got %d", len(filtered))
@@ -109,7 +109,7 @@ func TestV4WebSocketEventFilterWithLimit(t *testing.T) {
 		})
 	}
 
-	filtered := capture.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{Limit: 5})
+	filtered := capture.Telemetry().WebSockets().Events(types.WebSocketEventFilter{Limit: 5})
 
 	if len(filtered) != 5 {
 		t.Errorf("Expected 5 events with limit, got %d", len(filtered))
@@ -127,7 +127,7 @@ func TestV4WebSocketEventDefaultLimit(t *testing.T) {
 	}
 
 	// Default limit is 50
-	filtered := capture.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{})
+	filtered := capture.Telemetry().WebSockets().Events(types.WebSocketEventFilter{})
 
 	if len(filtered) != 50 {
 		t.Errorf("Expected 50 events with default limit, got %d", len(filtered))
@@ -143,7 +143,7 @@ func TestV4WebSocketEventNewestFirst(t *testing.T) {
 		{Timestamp: "2024-01-15T10:30:05.000Z", ID: "uuid-1", Event: "close"},
 	})
 
-	filtered := capture.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{})
+	filtered := capture.Telemetry().WebSockets().Events(types.WebSocketEventFilter{})
 
 	if len(filtered) == 0 {
 		t.Fatal("Expected events to be returned")

@@ -61,8 +61,8 @@ func clearBuffer(targets ClearTargets, buffer string) (any, bool) {
 		counts := targets.Capture.Telemetry().ClearNetworkBuffers()
 		return map[string]int{"waterfall": counts.NetworkWaterfall, "bodies": counts.NetworkBodies}, true
 	case "websocket":
-		counts := targets.Capture.Telemetry().ClearWebSocketBuffers()
-		return map[string]int{"events": counts.WebSocketEvents, "connections": counts.WebSocketStatus}, true
+		counts := targets.Capture.Telemetry().WebSockets().Clear()
+		return map[string]int{"events": counts.Events, "connections": counts.Connections}, true
 	case "actions":
 		return map[string]int{"actions": targets.Capture.Telemetry().Actions().Clear()}, true
 	case "logs":

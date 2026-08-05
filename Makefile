@@ -128,7 +128,7 @@ test-go-sharded:
 # Wall-clock SLOs must run without cross-package or intra-package contention.
 # Unit lanes retain deterministic correctness/race coverage under -short.
 test-performance:
-	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) GOMAXPROCS=1 go test -count=1 -p 1 -parallel 1 -run '^(TestSLO|TestRedactPerformance)' ./internal/pagination ./internal/redaction
+	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) GOMAXPROCS=1 KABOOM_PERFORMANCE_SLO=1 go test -count=1 -p 1 -parallel 1 -run '^(TestSLO|TestRedactPerformance)' ./internal/pagination ./internal/redaction
 
 test-race:
 	go test -race -v ./...

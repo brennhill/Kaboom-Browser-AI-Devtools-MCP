@@ -128,7 +128,7 @@ func GetWSEvents(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allEvents := deps.Capture.Telemetry().GetAllWebSocketEvents()
+	allEvents := deps.Capture.Telemetry().WebSockets().Snapshot().Events
 	filtered := buffers.ReverseFilterLimit(allEvents, func(evt types.WebSocketEvent) bool {
 		if params.URL != "" && !core.ContainsIgnoreCase(evt.URL, params.URL) {
 			return false
@@ -368,7 +368,7 @@ func GetWSStatus(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		URLFilter:    arguments.URL,
 		ConnectionID: arguments.ConnectionID,
 	}
-	status := deps.Capture.Telemetry().GetWebSocketStatus(filter)
+	status := deps.Capture.Telemetry().WebSockets().Status(filter)
 	metadata := core.BuildResponseMetadata(deps.Capture, time.Now())
 
 	if arguments.Summary {

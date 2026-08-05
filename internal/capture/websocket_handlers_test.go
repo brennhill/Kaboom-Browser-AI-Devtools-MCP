@@ -31,8 +31,8 @@ func TestV4PostWebSocketEventsEndpoint(t *testing.T) {
 		t.Errorf("Expected 200, got %d", rec.Code)
 	}
 
-	if len(capture.Telemetry().GetAllWebSocketEvents()) != 1 {
-		t.Errorf("Expected 1 event stored, got %d", len(capture.Telemetry().GetAllWebSocketEvents()))
+	if len(capture.Telemetry().WebSockets().Snapshot().Events) != 1 {
+		t.Errorf("Expected 1 event stored, got %d", len(capture.Telemetry().WebSockets().Snapshot().Events))
 	}
 }
 
@@ -63,7 +63,7 @@ func TestMCPGetWebSocketEvents(t *testing.T) {
 	})
 
 	// GetAllWebSocketEvents is the accessor the MCP layer calls.
-	all := cap.Telemetry().GetAllWebSocketEvents()
+	all := cap.Telemetry().WebSockets().Snapshot().Events
 	if len(all) != 3 {
 		t.Fatalf("expected 3 events, got %d", len(all))
 	}
@@ -89,25 +89,25 @@ func TestMCPGetWebSocketEventsWithFilter(t *testing.T) {
 	})
 
 	// Filter by connection_id (mirrors MCP args.connection_id).
-	filtered := cap.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{ConnectionID: "ws-1"})
+	filtered := cap.Telemetry().WebSockets().Events(types.WebSocketEventFilter{ConnectionID: "ws-1"})
 	if len(filtered) != 2 {
 		t.Errorf("connection_id filter: expected 2 events, got %d", len(filtered))
 	}
 
 	// Filter by URL substring (mirrors MCP args.url).
-	filtered = cap.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{URLFilter: "feed"})
+	filtered = cap.Telemetry().WebSockets().Events(types.WebSocketEventFilter{URLFilter: "feed"})
 	if len(filtered) != 2 {
 		t.Errorf("url filter: expected 2 events, got %d", len(filtered))
 	}
 
 	// Filter by direction (mirrors MCP args.direction).
-	filtered = cap.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{Direction: "outgoing"})
+	filtered = cap.Telemetry().WebSockets().Events(types.WebSocketEventFilter{Direction: "outgoing"})
 	if len(filtered) != 1 {
 		t.Errorf("direction filter: expected 1 event, got %d", len(filtered))
 	}
 
 	// Combined filters: connection_id + direction.
-	filtered = cap.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{ConnectionID: "ws-1", Direction: "incoming"})
+	filtered = cap.Telemetry().WebSockets().Events(types.WebSocketEventFilter{ConnectionID: "ws-1", Direction: "incoming"})
 	if len(filtered) != 1 {
 		t.Errorf("combined filter: expected 1 event, got %d", len(filtered))
 	}
@@ -124,7 +124,7 @@ func TestMCPGetWebSocketStatus(t *testing.T) {
 	})
 
 	// GetWebSocketStatus is the accessor the MCP observe(websocket_status) layer calls.
-	status := cap.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 
 	if len(status.Connections) != 2 {
 		t.Fatalf("expected 2 active connections, got %d", len(status.Connections))
@@ -156,17 +156,17 @@ func TestMCPGetWebSocketEventsEmpty(t *testing.T) {
 	cap := setupTestCapture(t)
 
 	// No events added — mirrors MCP observe(websocket_events) on fresh capture.
-	all := cap.Telemetry().GetAllWebSocketEvents()
+	all := cap.Telemetry().WebSockets().Snapshot().Events
 	if len(all) != 0 {
 		t.Errorf("expected 0 events on fresh capture, got %d", len(all))
 	}
 
-	filtered := cap.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{})
+	filtered := cap.Telemetry().WebSockets().Events(types.WebSocketEventFilter{})
 	if len(filtered) != 0 {
 		t.Errorf("expected 0 filtered events on fresh capture, got %d", len(filtered))
 	}
 
-	status := cap.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	if len(status.Connections) != 0 {
 		t.Errorf("expected 0 connections on fresh capture, got %d", len(status.Connections))
 	}
@@ -286,7 +286,7 @@ func TestV4ToolGetWSStatus_ConnectionIDFilter(t *testing.T) {
 		{ID: "ws-c", Event: "open", URL: "wss://c.example.com/ws"},
 	})
 
-	status := cap.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{ConnectionID: "ws-b"})
+	status := cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{ConnectionID: "ws-b"})
 
 	if len(status.Connections) != 1 {
 		t.Fatalf("expected 1 connection with connection_id filter, got %d", len(status.Connections))
@@ -307,7 +307,7 @@ func TestV4ToolGetWSStatus_URLFilter(t *testing.T) {
 		{ID: "ws-3", Event: "open", URL: "wss://chat.example.com/live"},
 	})
 
-	status := cap.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{URLFilter: "chat"})
+	status := cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{URLFilter: "chat"})
 
 	if len(status.Connections) != 2 {
 		t.Fatalf("expected 2 connections matching 'chat', got %d", len(status.Connections))
@@ -331,7 +331,7 @@ func TestV4ToolGetWSStatus_BothFilters(t *testing.T) {
 	})
 
 	// When both filters are set, both should apply (connection_id narrows first).
-	status := cap.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{
+	status := cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{
 		ConnectionID: "ws-1",
 		URLFilter:    "chat",
 	})
@@ -461,19 +461,19 @@ func TestV4ToolGetWSStatus_InvalidArgs(t *testing.T) {
 	})
 
 	// Zero-value filter (what the MCP layer falls back to on parse error).
-	status := cap.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	if len(status.Connections) != 1 {
 		t.Fatalf("expected 1 connection with zero-value filter, got %d", len(status.Connections))
 	}
 
 	// Filter with non-matching connection_id returns empty (not an error).
-	status = cap.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{ConnectionID: "nonexistent"})
+	status = cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{ConnectionID: "nonexistent"})
 	if len(status.Connections) != 0 {
 		t.Errorf("expected 0 connections for non-matching ID, got %d", len(status.Connections))
 	}
 
 	// Filter with non-matching URL returns empty (not an error).
-	status = cap.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{URLFilter: "nonexistent"})
+	status = cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{URLFilter: "nonexistent"})
 	if len(status.Connections) != 0 {
 		t.Errorf("expected 0 connections for non-matching URL, got %d", len(status.Connections))
 	}

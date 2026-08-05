@@ -514,7 +514,7 @@ func buildConfigureLocalDeps(h *ToolHandler) toolconfigure.Deps {
 			return entries
 		},
 		NetworkBodies:      func() []types.NetworkBody { return h.capture.Telemetry().NetworkBodies().Snapshot().Bodies },
-		AllWebSocketEvents: func() []types.WebSocketEvent { return h.capture.Telemetry().GetAllWebSocketEvents() },
+		AllWebSocketEvents: func() []types.WebSocketEvent { return h.capture.Telemetry().WebSockets().Snapshot().Events },
 		ToolsList:          schema.AllTools,
 		GetToolModuleExamples: func(toolName string) any {
 			if examples := h.toolCatalog.Examples(toolName); len(examples) > 0 {

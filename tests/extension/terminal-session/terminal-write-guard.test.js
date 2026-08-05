@@ -17,7 +17,9 @@ import {
   state,
   resetAllState,
   TERMINAL_GUARD_MAX_WAIT_MS,
+  TERMINAL_GUARD_POLL_MS,
   TERMINAL_TYPING_IDLE_MS,
+  TERMINAL_WRITE_SUBMIT_DELAY_MS,
   MAX_QUEUED_WRITES,
   MAX_QUEUED_WRITE_BYTES
 } from '../../../extension/content/ui/terminal-widget-types.js'
@@ -164,6 +166,46 @@ describe('terminal write-guard escape hatch', () => {
     assert.equal(state.queuedWrites.length, 0, 'queued write dispatched, not dropped')
     assert.equal(state.queuedWriteInFlight, true, 'write is in flight after reconnect')
     assert.equal(state.guardBlockedSince, 0, 'blocked marker cleared once progress resumes')
+  })
+
+  test('submit re-checks typing focus before Enter and releases after blur', () => {
+    const payloads = []
+    state.visible = true
+    state.iframeEl = {
+      contentWindow: {
+        postMessage(payload) {
+          payloads.push(payload)
+        }
+      }
+    }
+    state.serverUrl = 'http://127.0.0.1:7890'
+    state.terminalConnected = true
+    state.terminalFocused = false
+    state.queuedWrites = ['submit guard command']
+
+    flushQueuedWrites()
+    assert.deepEqual(
+      payloads.filter((payload) => payload.command === 'write').map((payload) => payload.text),
+      ['submit guard command'],
+      'text is dispatched before the delayed submit'
+    )
+
+    state.terminalFocused = true
+    state.lastTypingAt = Date.now()
+    advance(TERMINAL_WRITE_SUBMIT_DELAY_MS)
+    assert.deepEqual(
+      payloads.filter((payload) => payload.command === 'write').map((payload) => payload.text),
+      ['submit guard command'],
+      'focus returning before the submit timer suppresses Enter'
+    )
+
+    state.terminalFocused = false
+    advance(TERMINAL_GUARD_POLL_MS)
+    assert.deepEqual(
+      payloads.filter((payload) => payload.command === 'write').map((payload) => payload.text),
+      ['submit guard command', '\r'],
+      'the queued Enter is released after blur'
+    )
   })
 
   // Regression (kaboom-089): the escape hatch must NOT fire while the terminal is

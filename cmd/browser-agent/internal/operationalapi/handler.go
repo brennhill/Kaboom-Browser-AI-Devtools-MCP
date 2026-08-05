@@ -248,7 +248,7 @@ func appendCaptureDiagnostics(resp map[string]any, cap *capture.Capture) {
 		"query_results":    snap.QueryResultCount,
 	}
 
-	wsStatus := cap.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	wsStatus := cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conns := make([]map[string]any, 0, len(wsStatus.Connections))
 	for _, c := range wsStatus.Connections {
 		conns = append(conns, map[string]any{

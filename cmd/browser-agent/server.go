@@ -459,7 +459,7 @@ func handleTelemetry(server *Server, captured *capture.Capture) http.HandlerFunc
 			}
 			result, count = entries, len(entries)
 		case "websocket_events":
-			entries := captured.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{})
+			entries := captured.Telemetry().WebSockets().Events(types.WebSocketEventFilter{})
 			if limit > 0 && len(entries) > limit {
 				entries = entries[len(entries)-limit:]
 			}
@@ -483,7 +483,7 @@ func handleTelemetry(server *Server, captured *capture.Capture) http.HandlerFunc
 			}
 			result, count = entries, len(entries)
 		case "websocket_status":
-			status := captured.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+			status := captured.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 			httpapi.JSON(w, http.StatusOK, map[string]any{
 				"type": telemetryType, "connections": status.Connections,
 				"closed": status.Closed, "count": len(status.Connections),

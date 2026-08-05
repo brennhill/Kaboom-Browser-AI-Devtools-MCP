@@ -135,7 +135,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 				gate.awaitRelease()
 				for i := 0; i < readsPerReader; i++ {
 					// Read from all three buffers
-					_ = c.Telemetry().GetAllWebSocketEvents()
+					_ = c.Telemetry().WebSockets().Snapshot().Events
 					_ = c.Telemetry().NetworkBodies().Snapshot().Bodies
 					_ = c.Telemetry().Actions().Snapshot().Actions
 
@@ -152,7 +152,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 		wg.Wait()
 
 		// Verify final state invariants
-		wsEvents := c.Telemetry().GetAllWebSocketEvents()
+		wsEvents := c.Telemetry().WebSockets().Snapshot().Events
 		networkBodies := c.Telemetry().NetworkBodies().Snapshot().Bodies
 		actions := c.Telemetry().Actions().Snapshot().Actions
 
@@ -255,7 +255,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 				for i := 0; i < readsPerReader; i++ {
 					switch i % 3 {
 					case 0:
-						_ = c.Telemetry().GetAllWebSocketEvents()
+						_ = c.Telemetry().WebSockets().Snapshot().Events
 					case 1:
 						_ = c.Telemetry().NetworkBodies().Snapshot().Bodies
 					case 2:
@@ -283,7 +283,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 		wg.Wait()
 
 		// Verify buffers are in valid state after concurrent clears
-		wsEvents := c.Telemetry().GetAllWebSocketEvents()
+		wsEvents := c.Telemetry().WebSockets().Snapshot().Events
 		networkBodies := c.Telemetry().NetworkBodies().Snapshot().Bodies
 		actions := c.Telemetry().Actions().Snapshot().Actions
 

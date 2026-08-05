@@ -11,6 +11,7 @@ code_paths:
   - internal/capture/sync.go
   - internal/capture/events.go
   - internal/capture/wsconn/status.go
+  - internal/capture/wsconn/store.go
   - internal/capture/wsconn/tracker.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
@@ -78,6 +79,7 @@ test_paths:
   - internal/capture/websocket_test.go
   - internal/capture/websocket_status_test.go
   - internal/capture/websocket_handlers_test.go
+  - internal/capture/wsconn/store_test.go
   - internal/tools/observe/logs/logs_test.go
   - internal/tools/observe/core/metadata_test.go
   - internal/tools/observe/network/network_test.go
@@ -126,6 +128,12 @@ respective handlers. Callers import those owners directly. The former root
 package has been removed rather than retained as a compatibility facade, and
 cross-family integration is verified by the `contracts` suite. Shared fixture
 construction lives in `testsupport` and is imported only by tests.
+
+WebSocket event retention and the connection state derived from those events
+share one independently synchronized `wsconn.Store`. It owns bounded retention,
+memory pressure, filtering, detached snapshots, status projection, and atomic
+clearing. Observe consumers read that owner directly so event evidence and
+connection status cannot race through separate capture facades.
 
 The background service-worker entrypoint owns startup only. Telemetry tests and
 runtime code import caches, batching, transport, and log processing directly

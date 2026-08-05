@@ -105,7 +105,7 @@ func TestCoverageBoost_PublicMemoryAndBufferGetters(t *testing.T) {
 		ResponseBody: "def",
 	}})
 
-	if got := c.telemetry.buffers.calcWSMemory(); got <= 0 {
+	if got := c.Telemetry().WebSockets().Stats().MemoryBytes; got <= 0 {
 		t.Fatalf("GetWebSocketBufferMemory() = %d, want > 0", got)
 	}
 	if got := c.Telemetry().NetworkBodies().Stats().MemoryBytes; got <= 0 {

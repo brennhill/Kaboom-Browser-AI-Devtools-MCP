@@ -116,7 +116,7 @@ func (r *runtimeStateReader) GetWSConnections() []types.SnapshotWSConnection {
 	if r.capture == nil {
 		return []types.SnapshotWSConnection{}
 	}
-	status := r.capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := r.capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	out := make([]types.SnapshotWSConnection, 0, len(status.Connections))
 	for _, conn := range status.Connections {
 		out = append(out, types.SnapshotWSConnection{

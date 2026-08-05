@@ -163,7 +163,7 @@ func BenchmarkRedactSmallInput(b *testing.B) {
 }
 
 func TestRedactPerformanceSmall(t *testing.T) {
-	if testing.Short() {
+	if testing.Short() || os.Getenv("KABOOM_PERFORMANCE_SLO") != "1" {
 		t.Skip("wall-clock SLO runs in the isolated performance lane")
 	}
 	if raceEnabled {
@@ -193,7 +193,7 @@ func TestRedactPerformanceSmall(t *testing.T) {
 }
 
 func TestRedactPerformanceLarge(t *testing.T) {
-	if testing.Short() {
+	if testing.Short() || os.Getenv("KABOOM_PERFORMANCE_SLO") != "1" {
 		t.Skip("wall-clock SLO runs in the isolated performance lane")
 	}
 	if raceEnabled {

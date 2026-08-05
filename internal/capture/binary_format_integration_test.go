@@ -86,7 +86,7 @@ func TestWebSocketEvent_BinaryFormatIntegration(t *testing.T) {
 	c.Telemetry().AddWebSocketEvents(events)
 
 	// Retrieve and verify binary format was detected
-	result := c.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{Limit: 1})
+	result := c.Telemetry().WebSockets().Events(types.WebSocketEventFilter{Limit: 1})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(result))
 	}
@@ -119,7 +119,7 @@ func TestWebSocketEvent_OpenCloseNoFormat(t *testing.T) {
 	c.Telemetry().AddWebSocketEvents(events)
 
 	// Verify no binary format for non-message events
-	result := c.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{Limit: 10})
+	result := c.Telemetry().WebSockets().Events(types.WebSocketEventFilter{Limit: 10})
 	for _, ev := range result {
 		if ev.BinaryFormat != "" {
 			t.Errorf("expected empty binary_format for %s event, got %q", ev.Event, ev.BinaryFormat)
@@ -145,7 +145,7 @@ func TestWebSocketEvent_TextMessageNoFormat(t *testing.T) {
 	c.Telemetry().AddWebSocketEvents(events)
 
 	// Verify no binary format for text message
-	result := c.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{Limit: 1})
+	result := c.Telemetry().WebSockets().Events(types.WebSocketEventFilter{Limit: 1})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(result))
 	}

@@ -68,6 +68,11 @@ engine/edge/performance, structured-wire, property/fuzz, and race-build tests
 live with their corresponding concerns. The package contains exactly ten files
 and every file remains below 800 lines.
 
+Wall-clock redaction SLOs run only through `make test-performance`, which sets
+an explicit performance-lane marker and serializes packages with one OS thread.
+Normal, race, and coverage lanes retain deterministic correctness coverage
+without evaluating latency while competing with unrelated packages.
+
 Security-audit credential and PII patterns are separately owned together in
 `internal/security/scan/credentials.go`; they share the audit scanner's bounded
 input and evidence-redaction policy rather than the MCP response-redaction

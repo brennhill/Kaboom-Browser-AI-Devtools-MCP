@@ -167,6 +167,11 @@ last_verified_date: 2026-03-28
   retry into a newly opened panel session.
 - Queued submit is reconnect-safe: if WS drops before Enter, submit waits until connection is back
 - Write-guard escape hatch: the genuine wedge — a socket that stays DOWN (`!terminalConnected`) — is bounded by `TERMINAL_GUARD_MAX_WAIT_MS` (derived from the iframe reconnect schedule, see below); the poller gives up LOUDLY (error toast + `resetWriteGuardState`). The typing-defer branch is self-limiting and reachable, so it resets `guardBlockedSince` and never trips the hatch — continuous typing no longer drops a healthy write with a false "terminal not reachable". Momentary blips still queue-and-flush within the window. Queue backlog is bounded (`MAX_QUEUED_WRITES`), and an overflow drop is logged (not silent).
+- Submit re-guard ordering is tested at the canonical write-guard owner with a
+  controlled clock: focus returning before delayed Enter suppresses submission,
+  and blur releases it on the next poll. The former multi-second side-panel
+  duplicate used real timers and was removed so sharded load cannot invert the
+  test's intended event order.
 - **Dead-session self-heal:** nothing removed a PTY session whose child exited on its own, so the next Start returned `ErrSessionExists` (409+old token) and the client reconnected onto a dead fanout → immediate `exited`, wedging the terminal forever. `Manager.Start` now evicts a session that is no longer `IsAlive` and spawns fresh (`StartResult.Replaced`, `terminal_session_healed` log); the handler drops the stale relay.
 - **Slow-drop ≠ exit:** a subscriber dropped for backpressure (big build, backgrounded tab) is no longer reported to the browser as `exited`. `Relay.ended` (set before the deferred `fanout.Close`) distinguishes a genuine end from a fanout drop; a drop closes the connection so the browser reconnects+replays instead of showing a dead terminal.
 - **Full-daemon-restart client recovery:** the iframe caps consecutive failed reconnects (`MAX_RECONNECT_ATTEMPTS`) and, on exhaustion, signals the parent `reconnect_exhausted` instead of looping forever on a dead token; the parent runs `redrawTerminal` (validate-then-rebuild) into a fresh session. Keystrokes typed during a reconnect gap are buffered (bounded) and flushed on `replay_end` rather than dropped.

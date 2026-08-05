@@ -87,27 +87,8 @@ func (s *TelemetryStore) ClearNetworkBuffers() types.BufferClearCounts {
 	}
 }
 
-// ClearWebSocketBuffers clears websocket_events and websocket_status
-func (c *Capture) ClearWebSocketBuffers() BufferClearCounts {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	counts := BufferClearCounts{
-		WebSocketEvents: len(c.wsEvents),
-		WebSocketStatus: len(c.connections),
-	}
-
-	// Clear buffers
-	c.wsEvents = make([]WebSocketEvent, 0)
-	c.wsAddedAt = make([]time.Time, 0)
-	c.connections = make(map[string]WSConnectionInfo)
-
-	// Reset counters
-	c.wsTotalAdded = 0
-	c.wsMemoryTotal = 0
-
-	return counts
-}
+// The canonical owner clears retained events and derived connections together.
+webSocketCounts := targets.Capture.Telemetry().WebSockets().Clear()
 
 // The configure owner clears actions through the canonical action store.
 actionsCleared := targets.Capture.Telemetry().Actions().Clear()
@@ -135,15 +116,15 @@ func (s *Server, c *Capture) ClearLogBuffers() BufferClearCounts {
 // ClearAllBuffers clears all buffers (network, websocket, actions, logs)
 func (s *Server, c *Capture) ClearAllBuffers() BufferClearCounts {
 	networkCounts := c.ClearNetworkBuffers()
-	wsCounts := c.ClearWebSocketBuffers()
+	wsCounts := c.Telemetry().WebSockets().Clear()
 	actionsCleared := c.Telemetry().Actions().Clear()
 	logCounts := ClearLogBuffers(s, c)
 
 	return BufferClearCounts{
 		NetworkWaterfall: networkCounts.NetworkWaterfall,
 		NetworkBodies:    networkCounts.NetworkBodies,
-		WebSocketEvents:  wsCounts.WebSocketEvents,
-		WebSocketStatus:  wsCounts.WebSocketStatus,
+		WebSocketEvents:  wsCounts.Events,
+		WebSocketStatus:  wsCounts.Connections,
 		Actions:          actionsCleared,
 		Logs:             logCounts.Logs,
 		ExtensionLogs:    logCounts.ExtensionLogs,
@@ -178,7 +159,9 @@ func (h *ToolHandler) toolConfigureClear(req JSONRPCRequest, args json.RawMessag
 		bufferName = "network"
 
 	case "websocket":
-		counts = h.capture.ClearWebSocketBuffers()
+		wsCounts := h.capture.Telemetry().WebSockets().Clear()
+		counts.WebSocketEvents = wsCounts.Events
+		counts.WebSocketStatus = wsCounts.Connections
 		bufferName = "websocket"
 
 	case "actions":
@@ -259,31 +242,27 @@ func TestClearNetworkBuffers(t *testing.T) {
 	assert.Equal(t, int64(0), capture.Telemetry().NetworkBodies().Stats().TotalAdded)
 }
 
-func TestClearWebSocketBuffers(t *testing.T) {
+func TestWebSocketStoreClear(t *testing.T) {
 	t.Parallel()
 	capture := setupTestCapture(t)
 
 	// Add WS events
-	capture.AddWSEvents([]WebSocketEvent{
-		{ConnectionID: "conn1", Direction: "outgoing", Data: "test"},
-		{ConnectionID: "conn1", Direction: "incoming", Data: "response"},
+	capture.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
+		{Event: "open", ID: "conn1", URL: "ws://localhost"},
+		{Event: "message", ID: "conn1", Direction: "outgoing", Data: "test"},
+		{Event: "message", ID: "conn1", Direction: "incoming", Data: "response"},
 	})
 
-	// Add WS connections
-	capture.mu.Lock()
-	capture.connections["conn1"] = WSConnectionInfo{ID: "conn1", URL: "ws://localhost"}
-	capture.mu.Unlock()
-
 	// Clear
-	counts := capture.ClearWebSocketBuffers()
+	counts := capture.Telemetry().WebSockets().Clear()
 
 	// Verify counts
-	assert.Equal(t, 2, counts.WebSocketEvents)
-	assert.Equal(t, 1, counts.WebSocketStatus)
+	assert.Equal(t, 3, counts.Events)
+	assert.Equal(t, 1, counts.Connections)
 
 	// Verify buffers empty
-	assert.Equal(t, 0, len(capture.wsEvents))
-	assert.Equal(t, 0, len(capture.connections))
+	assert.Equal(t, 0, capture.Telemetry().WebSockets().Stats().Count)
+	assert.Equal(t, 0, capture.Telemetry().WebSockets().Stats().ConnectionCount)
 }
 
 func TestActionStoreClear(t *testing.T) {
@@ -360,7 +339,7 @@ func TestClearAllBuffers(t *testing.T) {
 
 	// Verify all buffers empty
 	assert.Equal(t, 0, len(capture.networkWaterfall))
-	assert.Equal(t, 0, len(capture.wsEvents))
+	assert.Equal(t, 0, capture.Telemetry().WebSockets().Stats().Count)
 	assert.Equal(t, 0, capture.Telemetry().Actions().Stats().Count)
 	assert.Equal(t, 0, len(server.entries))
 }
@@ -517,7 +496,7 @@ configure({what: "clear", buffer: "network"})
 
 - [ ] Add `BufferClearCounts` struct to types.go
 - [ ] Add `ClearNetworkBuffers()` to Capture
-- [ ] Add `ClearWebSocketBuffers()` to Capture
+- [ ] Clear WebSocket state directly through `Telemetry().WebSockets().Clear()`
 - [ ] Clear actions directly through `Telemetry().Actions().Clear()`
 - [ ] Add `ClearLogBuffers()` helper
 - [ ] Add `ClearAllBuffers()` helper

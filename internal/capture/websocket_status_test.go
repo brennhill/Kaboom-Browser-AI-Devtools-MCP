@@ -19,7 +19,7 @@ func TestV4WebSocketConnectionTracker(t *testing.T) {
 		{ID: "uuid-1", Event: "open", URL: "wss://chat.example.com/ws", Timestamp: "2024-01-15T10:30:00.000Z"},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 
 	if len(status.Connections) != 1 {
 		t.Fatalf("Expected 1 open connection, got %d", len(status.Connections))
@@ -43,7 +43,7 @@ func TestV4WebSocketConnectionClose(t *testing.T) {
 		{ID: "uuid-1", Event: "close", URL: "wss://example.com/ws", CloseCode: 1000, CloseReason: "normal closure"},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 
 	if len(status.Connections) != 0 {
 		t.Errorf("Expected 0 open connections, got %d", len(status.Connections))
@@ -67,7 +67,7 @@ func TestV4WebSocketConnectionError(t *testing.T) {
 		{ID: "uuid-1", Event: "error", URL: "wss://example.com/ws"},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 
 	if len(status.Connections) != 1 {
 		t.Fatalf("Expected 1 connection (in error state), got %d", len(status.Connections))
@@ -89,7 +89,7 @@ func TestV4WebSocketConnectionMessageStats(t *testing.T) {
 		{ID: "uuid-1", Event: "message", Direction: "outgoing", Size: 50},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 
 	if len(status.Connections) != 1 {
 		t.Fatalf("Expected 1 connection, got %d", len(status.Connections))
@@ -123,7 +123,7 @@ func TestV4WebSocketConnectionLastMessage(t *testing.T) {
 		{ID: "uuid-1", Event: "message", Direction: "incoming", Data: `{"type":"world"}`, Timestamp: "2024-01-15T10:30:02.000Z"},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conn := status.Connections[0]
 
 	if conn.LastMessage.Incoming.Preview != `{"type":"world"}` {
@@ -142,7 +142,7 @@ func TestV4WebSocketMaxTrackedConnections(t *testing.T) {
 		})
 	}
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 
 	if len(status.Connections) > 20 {
 		t.Errorf("Expected max 20 active connections, got %d", len(status.Connections))
@@ -162,7 +162,7 @@ func TestV4WebSocketClosedConnectionHistory(t *testing.T) {
 		})
 	}
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 
 	if len(status.Closed) > 10 {
 		t.Errorf("Expected max 10 closed connections in history, got %d", len(status.Closed))
@@ -178,7 +178,7 @@ func TestV4WebSocketStatusFilterByURL(t *testing.T) {
 		{ID: "uuid-2", Event: "open", URL: "wss://feed.example.com/prices"},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{URLFilter: "chat"})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{URLFilter: "chat"})
 
 	if len(status.Connections) != 1 {
 		t.Errorf("Expected 1 connection matching 'chat', got %d", len(status.Connections))
@@ -194,7 +194,7 @@ func TestV4WebSocketStatusFilterByConnectionID(t *testing.T) {
 		{ID: "uuid-2", Event: "open", URL: "wss://b.com"},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{ConnectionID: "uuid-2"})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{ConnectionID: "uuid-2"})
 
 	if len(status.Connections) != 1 {
 		t.Errorf("Expected 1 connection, got %d", len(status.Connections))
@@ -214,7 +214,7 @@ func TestV4WebSocketSamplingInfo(t *testing.T) {
 		{ID: "uuid-1", Event: "message", Direction: "incoming", Sampled: &types.SamplingInfo{Rate: "48.2/s", Logged: "1/5", Window: "5s"}},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conn := status.Connections[0]
 
 	if !conn.Sampling.Active {
@@ -236,7 +236,7 @@ func TestV4ConnectionDurationFormatted(t *testing.T) {
 		},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	if len(status.Connections) != 1 {
 		t.Fatalf("Expected 1 connection, got %d", len(status.Connections))
 	}
@@ -266,7 +266,7 @@ func TestV4ConnectionDurationShortFormat(t *testing.T) {
 		},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conn := status.Connections[0]
 
 	// Should be "3s" or "4s" (within test timing tolerance)
@@ -289,7 +289,7 @@ func TestV4ConnectionDurationHourFormat(t *testing.T) {
 		},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conn := status.Connections[0]
 
 	if !strings.Contains(conn.Duration, "h") {
@@ -315,7 +315,7 @@ func TestV4MessageRateCalculation(t *testing.T) {
 		})
 	}
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	if len(status.Connections) != 1 {
 		t.Fatalf("Expected 1 connection, got %d", len(status.Connections))
 	}
@@ -347,7 +347,7 @@ func TestV4MessageRateZeroWhenNoRecentMessages(t *testing.T) {
 		})
 	}
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conn := status.Connections[0]
 
 	// Rate should be 0 since all messages are outside the 5-second window
@@ -373,7 +373,7 @@ func TestV4MessageRateOutgoing(t *testing.T) {
 		})
 	}
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conn := status.Connections[0]
 
 	if conn.MessageRate.Outgoing.PerSecond < 0.5 {
@@ -402,7 +402,7 @@ func TestV4LastMessageAgeFormatted(t *testing.T) {
 		},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conn := status.Connections[0]
 
 	if conn.LastMessage.Incoming == nil {
@@ -440,7 +440,7 @@ func TestV4LastMessageAgeMinutesFormat(t *testing.T) {
 		},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conn := status.Connections[0]
 
 	if conn.LastMessage.Outgoing == nil {
@@ -473,7 +473,7 @@ func TestV4LastMessageAgeSubSecond(t *testing.T) {
 		},
 	})
 
-	status := capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := capture.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
 	conn := status.Connections[0]
 
 	age := conn.LastMessage.Incoming.Age

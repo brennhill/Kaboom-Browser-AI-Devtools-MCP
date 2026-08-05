@@ -545,7 +545,7 @@ func (h *MCPHandler) currentTelemetryCursor() passiveTelemetryCursor {
 	}
 	current.networkTotal = captured.Telemetry().NetworkBodies().Stats().TotalAdded
 	current.networkErrorTotal = captured.Telemetry().NetworkBodies().Stats().ErrorTotalAdded
-	current.wsTotal = captured.Telemetry().GetWebSocketTotalAdded()
+	current.wsTotal = captured.Telemetry().WebSockets().Stats().TotalAdded
 	current.actionTotal = captured.Telemetry().Actions().Stats().TotalAdded
 	return current
 }

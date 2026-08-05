@@ -52,6 +52,9 @@ last_verified_date: 2026-08-04
 - `internal/pagination/entries_actions_test.go` and `entries_websocket_test.go` validate adapter-specific slicing, eviction recovery, and serialization.
 - `internal/pagination/pagination_test.go` now reuses shared before/after cursor runners and common log-entry fixture builders.
 - Cursor properties live with cursor correctness tests; fuzz, benchmark, and isolated wall-clock SLO coverage live together in `pagination_bench_test.go`.
+- The wall-clock assertions require the explicit marker supplied by
+  `make test-performance`; concurrent coverage and race lanes cannot
+  accidentally evaluate latency budgets under unrelated load.
 - A package boundary regression test enforces the ten-file limit. Every file remains below 800 lines while keeping code that changes together under one owner.
 - Log pagination consumes `internal/types.LogEntry` directly; the package-local
   compatibility alias has been removed.
