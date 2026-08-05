@@ -1,3 +1,5 @@
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fbrennhill%2FKaboom-Browser-AI-Devtools-MCP.svg)](https://mcptoplist.com/server/glama%2Fbrennhill%2FKaboom-Browser-AI-Devtools-MCP)
+
 > ## Branch Policy (Read First)
 > If you want something working, load code and run the server from `STABLE`.
 > `UNSTABLE` makes zero promises on regressions or issues and is treated as work in progress.
