@@ -82,6 +82,7 @@ func WriteFrame(w *bufio.ReadWriter, opcode byte, payload []byte) error {
 		header = append(header, byte(length))
 	case length < 65536:
 		var encoded [2]byte
+		// #nosec G115 -- this branch proves length is within uint16 range.
 		binary.BigEndian.PutUint16(encoded[:], uint16(length))
 		header = append(header, 126)
 		header = append(header, encoded[:]...)

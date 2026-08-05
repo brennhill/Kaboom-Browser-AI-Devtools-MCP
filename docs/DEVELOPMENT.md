@@ -54,10 +54,10 @@ This runs:
 - **gosec** on Go code (HIGH severity threshold)
 - **ESLint security plugin** on JavaScript code
 
-Install gosec if not already installed:
+Install the pinned Go security scanners used by CI:
 
 ```bash
-go install github.com/securego/gosec/v2/cmd/gosec@latest
+make install-security-tools
 ```
 
 ### Testing
@@ -196,10 +196,10 @@ result[key] = value
 
 ### gosec Not Found
 
-Install gosec:
+Install the same pinned scanners used by CI:
 
 ```bash
-go install github.com/securego/gosec/v2/cmd/gosec@latest
+make install-security-tools
 ```
 
 ### Coverage Below 95%

@@ -4,7 +4,7 @@ feature_id: feature-kaboom-ci
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - Makefile
   - .github/workflows/architecture-validation.yml
@@ -18,6 +18,10 @@ code_paths:
   - scripts/build/run-go-coverage.sh
   - scripts/security/check-npm-audit.mjs
   - scripts/security/npm-audit-policy.json
+  - scripts/security/go-tool-versions.env
+  - scripts/security/install-go-tools.sh
+  - scripts/hooks/pre-commit
+  - docs/DEVELOPMENT.md
   - scripts/docs/features/check-feature-bundles.js
   - scripts/docs/site/check-gokaboom-content-contract.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs
@@ -32,6 +36,7 @@ code_paths:
   - package-lock.json
 test_paths:
   - scripts/security/check-npm-audit.test.mjs
+  - scripts/security/go-tool-versions.test.mjs
   - tests/extension/contracts/tooling-contracts.test.js
   - scripts/docs/features/check-feature-bundles.test.mjs
   - cmd/browser-agent/tools_schema_parity_test.go
@@ -79,6 +84,10 @@ last_verified_date: 2026-08-03
   the daily scheduled workflow reruns the same canonical check so newly
   disclosed vulnerabilities surface without a source change. Active workflows
   pin the patched Go 1.25.12 toolchain declared by `go.mod`.
+- Go scanner versions have one shell/Make-compatible source of truth. Local
+  bootstrap, pre-commit guidance, development docs, and hosted CI consume the
+  same installer; a contract test rejects direct workflow installs, `latest`,
+  and silent pre-commit security skips.
 - The current build dependency graph has no audit exceptions. Patched direct
   tooling and narrowly pinned transitive overrides keep the complete npm audit
   clean; the empty policy remains checked in so future exceptions cannot appear

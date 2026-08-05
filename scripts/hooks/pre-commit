@@ -43,8 +43,9 @@ if [ -n "$GO_STAGED" ]; then
         }
         echo "[security] gosec passed"
     else
-        echo "[security] gosec not installed, skipping Go security scan"
-        echo "           Install: go install github.com/securego/gosec/v2/cmd/gosec@latest"
+        echo "[security] gosec is required; refusing to skip the Go security scan"
+        echo "           Install the pinned CI tools: make install-security-tools"
+        exit 1
     fi
 fi
 

@@ -11,6 +11,7 @@ HOOKS_LDFLAGS := -s -w -X main.version=$(VERSION)
 CMD_PKG ?= ./cmd/browser-agent
 CMD_DIR ?= $(patsubst ./%,%,$(CMD_PKG))
 HOOKS_PKG := ./cmd/hooks
+include scripts/security/go-tool-versions.env
 
 # Build targets
 PLATFORMS := \
@@ -26,7 +27,7 @@ PLATFORMS := \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
-	security-check pre-commit verify-all npm-binaries validate-semver \
+	security-check install-security-tools pre-commit verify-all npm-binaries validate-semver \
 	verify-llm check-folder-size check-structure check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture go-architecture-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-dom-primitives \
@@ -465,10 +466,13 @@ install-hooks:
 
 # Run all security checks: source analysis, known Go vulnerabilities, production
 # runtime dependency audit, bounded build-tool exceptions, and JS security lint.
+install-security-tools:
+	@bash scripts/security/install-go-tools.sh
+
 security-check:
 	@echo "Running security checks..."
-	@command -v gosec >/dev/null 2>&1 || { echo "gosec not found. Install: go install github.com/securego/gosec/v2/cmd/gosec@latest"; exit 1; }
-	@command -v govulncheck >/dev/null 2>&1 || { echo "govulncheck not found. Install: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4"; exit 1; }
+	@command -v gosec >/dev/null 2>&1 || { echo "gosec $(GOSEC_VERSION) is required. Run: make install-security-tools"; exit 1; }
+	@command -v govulncheck >/dev/null 2>&1 || { echo "govulncheck $(GOVULNCHECK_VERSION) is required. Run: make install-security-tools"; exit 1; }
 	gosec -quiet -exclude=G104,G114,G204,G301,G304,G306 -severity=high ./cmd/browser-agent/... ./internal/...
 	GOTOOLCHAIN=$(SUPPORTED_GO_TOOLCHAIN) govulncheck ./cmd/browser-agent/... ./internal/...
 	node --test scripts/security/check-npm-audit.test.mjs

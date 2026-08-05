@@ -322,11 +322,8 @@ jobs:
         run: npm ci
 
       - name: Install Go security scanners
-        # Keep gosec pinned for reproducible findings; govulncheck evaluates the
-        # exact patched standard library declared by go.mod.
-        run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@v2.22.7
-          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+        # The script and local Make target consume one reviewed version owner.
+        run: scripts/security/install-go-tools.sh
 
       - name: Canonical security gate
         run: make security-check
