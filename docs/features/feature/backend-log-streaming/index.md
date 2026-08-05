@@ -15,6 +15,7 @@ code_paths:
   - internal/capture/accessors.go
   - internal/capture/capture.go
   - internal/capture/clientstore/owner.go
+  - internal/capture/settingscache/loader.go
   - internal/capture/model.go
   - internal/capture/events.go
   - internal/capture/logstore/store.go
@@ -79,6 +80,7 @@ code_paths:
   - src/lib/page/safe-global-patch.ts
 test_paths:
   - internal/capture/clientstore/owner_test.go
+  - internal/capture/settingscache/loader_test.go
   - internal/capture/perfstore/store_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/background-boundaries.test.js
@@ -104,7 +106,6 @@ test_paths:
   - internal/capture/websocket_handlers_test.go
   - internal/capture/websocket-streaming_test.go
   - internal/capture/sync_test_helpers_test.go
-  - internal/capture/settings_path_test.go
   - internal/capture/coverage_gaps_part2_test.go
   - internal/capture/api_contract_test.go
   - internal/capture/logstore/store_test.go
@@ -299,6 +300,11 @@ Capture-level set/get facades are deleted. With every mutable field assigned to
 an owner, Capture is now a lock-free composition root. Extension-state tests
 also acquire the extension owner lock rather than the former unrelated Capture
 mutex.
+Extension settings cache I/O lives in the focused `settingscache` loader rather
+than the live extension-state lock owner. Missing and stale cache entries are
+explicit expected fallbacks; read, parse, and timestamp corruption fail open to
+safe defaults and emit fixed, redacted Doctor diagnostics. A later valid load
+resolves the same diagnostic lifecycle without retaining raw paths or values.
 Extension connection, pilot, tracked-tab, CSP, security-mode, command-heartbeat,
 test-boundary, and server/extension compatibility state now share the independently synchronized
 `ExtensionRuntime` returned by `Capture.Extension()`. Sync ingestion and every
@@ -378,7 +384,7 @@ implementation or preserving an obsolete compatibility surface.
 - `internal/capture/sync_test.go` reuses those helpers for request ingestion, heartbeats, and connection state.
 - `internal/capture/sync_command_lifecycle_test.go` owns adaptive polling and command-result lifecycle coverage.
 - `internal/capture/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
-- Additional capture contract tests (`settings_path_test`, `coverage_gaps_part2_test`, `api_contract_test`) now reuse shared helper assertions to keep endpoint/status checks consistent.
+- Additional capture contract tests (`coverage_gaps_part2_test`, `api_contract_test`) reuse shared helper assertions to keep endpoint/status checks consistent; canonical settings-path and recovery coverage lives with `settingscache`.
 - `src/background/sync/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.
 - `tests/extension/performance/rate-limit.test.js` deterministically covers autonomous half-open probe success, failure, buffer drain, and reopen transitions without wall-clock sleeps.
 - Correlation-view tests drive canonical command terminal transitions directly;

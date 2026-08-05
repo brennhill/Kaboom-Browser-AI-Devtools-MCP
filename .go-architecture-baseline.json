@@ -879,7 +879,7 @@
     },
     "internal/capture/extension_state.go": {
       "mutable_globals": 0,
-      "exports": 42
+      "exports": 40
     },
     "internal/capture/featureusage/observer.go": {
       "mutable_globals": 0,
@@ -902,6 +902,10 @@
       "exports": 11
     },
     "internal/capture/pressure/stats.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/capture/settingscache/loader.go": {
       "mutable_globals": 0,
       "exports": 1
     },

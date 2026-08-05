@@ -28,6 +28,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/settingscache"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
@@ -275,7 +276,9 @@ func initCapture(server *Server, port int) *capture.Capture {
 	})
 
 	server.logLifecycle("loading_settings", port, nil)
-	cap.Extension().LoadSettingsFromDisk()
+	if err := settingscache.Load(cap.Extension().ApplyCachedPilot, server.stateRecovery); err != nil {
+		server.logLifecycle("settings_load_failed", port, map[string]any{"reason": "settings_loader_boundary_invalid"})
+	}
 	server.logLifecycle("settings_loaded", port, nil)
 	return cap
 }

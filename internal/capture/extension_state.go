@@ -1,19 +1,14 @@
-// extension_state.go — Live extension state and its persisted pilot-settings cache.
-// Purpose: Owns connection readiness, pilot gating, tab tracking, CSP posture, and persistence.
-// Why: These fields share one lock and settings persistence snapshots the same state.
+// extension_state.go — Owns synchronized live extension state transitions.
+// Purpose: Owns connection readiness, pilot gating, tab tracking, and CSP posture.
+// Why: These live fields share one lock and are updated together by extension sync.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package capture
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"os"
 	"sync"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 const (
@@ -558,58 +553,6 @@ func (r *ExtensionRuntime) SetTestBoundaryEnd(id string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.state.activeTestIDs, id)
-}
-
-type PersistedSettings struct {
-	AIWebPilotEnabled *bool     `json:"ai_web_pilot_enabled,omitempty"`
-	Timestamp         time.Time `json:"timestamp"`
-	ExtSessionID      string    `json:"ext_session_id"`
-}
-
-func getSettingsPath() (string, error) {
-	return state.SettingsFile()
-}
-
-func readSettingsData() ([]byte, error) {
-	path, err := getSettingsPath()
-	if err != nil {
-		return nil, fmt.Errorf("could not determine settings path: %w", err)
-	}
-
-	// #nosec G304 -- path is resolved from trusted runtime state, not user input.
-	data, err := os.ReadFile(path)
-	if err == nil {
-		return data, nil
-	}
-	if os.IsNotExist(err) {
-		return nil, nil
-	}
-	return nil, fmt.Errorf("could not read settings file: %w", err)
-}
-
-// LoadSettingsFromDisk refreshes recent pilot state from the canonical settings file.
-func (r *ExtensionRuntime) LoadSettingsFromDisk() {
-	data, err := readSettingsData()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "[Kaboom] %v\n", err)
-		return
-	}
-	if data == nil {
-		return
-	}
-
-	var settings PersistedSettings
-	if err := json.Unmarshal(data, &settings); err != nil {
-		fmt.Fprintf(os.Stderr, "[Kaboom] Could not parse settings file: %v\n", err)
-		return
-	}
-
-	if time.Since(settings.Timestamp) > 5*time.Second {
-		return
-	}
-	if settings.AIWebPilotEnabled != nil {
-		r.ApplyCachedPilot(*settings.AIWebPilotEnabled, settings.Timestamp)
-	}
 }
 
 func (r *ExtensionRuntime) ApplyCachedPilot(enabled bool, updatedAt time.Time) {

@@ -8,6 +8,7 @@ last_reviewed: 2026-08-05
 code_paths:
   - internal/capture/pressure/stats.go
   - internal/capture/perfstore/store.go
+  - internal/capture/settingscache/loader.go
   - internal/incident/registry.go
   - internal/incident/store.go
   - internal/incident/projections.go
@@ -19,6 +20,7 @@ code_paths:
 test_paths:
   - internal/capture/logstore/store_test.go
   - internal/capture/perfstore/store_test.go
+  - internal/capture/settingscache/loader_test.go
   - internal/capture/accessor_unit_test.go
   - internal/incident/store_test.go
   - internal/incident/support_test.go
@@ -76,6 +78,10 @@ capacity, cumulative-drop, and oldest-entry evidence without importing one
 another or duplicating operational types.
 Performance pressure is derived from the store's injected clock, so capacity,
 drop, and age transitions are verified without wall-clock sleeps.
+The extension settings cache follows the same state-recovery contract: expected
+absence and staleness are explicit, while unreadable, malformed, or impossible
+timestamps fail open and create fixed redacted Doctor evidence that resolves on
+the next valid load.
 
 The allowed graph is explicit: incidents may resolve directly from `detected`
 to `recovered` or `exhausted`; only retryable incidents may enter `retrying`.
