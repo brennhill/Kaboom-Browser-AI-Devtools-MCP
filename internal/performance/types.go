@@ -1,9 +1,12 @@
-// Purpose: Declares PerformanceSnapshot, budget threshold, and baseline types for performance monitoring.
+// types.go — Performance domain documentation, snapshots, budgets, and baselines.
+// Purpose: Declares the canonical performance domain model and its package contract.
 // Docs: docs/features/feature/performance-audit/index.md
 
-// types.go — Performance monitoring types
-// Handles performance snapshots, baselines, regression detection, and
-// causal diffing for identifying performance bottlenecks.
+// Package performance provides snapshot models, wire conversion, metric
+// comparison, regression detection, and AI-readable performance summaries.
+// PerformanceSnapshot and BudgetThreshold define the canonical domain model;
+// WirePerformanceTiming owns extension ingestion; ComputeDiff and
+// FormatDiffSummary own baseline comparison and reporting.
 //
 // JSON CONVENTION: All fields MUST use snake_case. See .claude/refs/api-naming-standards.md
 // Deviations from snake_case MUST be tagged with // SPEC:<spec-name> at the field level.

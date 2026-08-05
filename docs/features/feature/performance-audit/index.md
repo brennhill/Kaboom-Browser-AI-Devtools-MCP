@@ -4,7 +4,7 @@ feature_id: feature-performance-audit
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/performance/diff.go
   - internal/performance/types.go
@@ -17,6 +17,7 @@ test_paths:
   - internal/performance/diff_resource_test.go
   - internal/performance/diff_summary_test.go
   - internal/performance/wire_performance_test.go
+  - internal/performance/no_facade_test.go
   - internal/capture/accessor_unit_test.go
   - internal/capture/performance_store_test.go
 last_verified_version: 0.7.12
@@ -52,3 +53,6 @@ oldest age through the common health resource-pressure contract.
 Nested maps, slices, pointer metrics, resource lists, and user-timing entries
 are copied at both write and read boundaries, so comparison callers cannot
 mutate retained baselines outside the store lock.
+Package documentation now lives with the canonical performance domain model in
+`types.go`. The standalone documentation-only file was deleted, and the package
+boundary test holds the change-coupled owner set to ten files.

@@ -12,3 +12,19 @@ func TestPerformancePackageHasNoTypeAliasFacade(t *testing.T) {
 		t.Fatalf("type_aliases.go compatibility facade must not exist (stat error: %v)", err)
 	}
 }
+
+func TestPerformancePackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("internal/performance has %d files; want at most 10 change-coupled owners", files)
+	}
+}
