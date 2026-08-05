@@ -18,6 +18,7 @@ code_paths:
   - internal/capture/capture.go
   - internal/capture/clientstore/owner.go
   - internal/capture/settingscache/loader.go
+  - internal/capture/telemetrystore/store.go
   - internal/capture/events.go
   - internal/capture/logstore/store.go
   - internal/capture/perfstore/store.go
@@ -88,6 +89,7 @@ test_paths:
   - internal/capture/wsconn/store_test.go
   - internal/capture/bodystore/store_test.go
   - internal/capture/settingscache/loader_test.go
+  - internal/capture/telemetrystore/store_test.go
   - internal/capture/perfstore/store_test.go
   - internal/capture/ringstore/store_test.go
   - internal/capture/waterfallstore/store_test.go
@@ -298,7 +300,7 @@ retention, filtering, status, memory pressure, and clearing share one lock.
 Consumers use `Capture.Telemetry().WebSockets()` directly, and the former
 Telemetry forwarding methods plus `BufferStore` are deleted. Navigation
 callbacks and the focused action, body, waterfall, and WebSocket owners compose
-`TelemetryStore`; `StateResetter` coordinates the genuinely cross-owner reset.
+`telemetrystore.Store`; `StateResetter` coordinates the genuinely cross-owner reset.
 Configure network-recording dispatch calls `netrecord.HandleNetworkRecording`
 with the telemetry and recording-state owners directly; the root ToolHandler
 forwarding method is deleted.
@@ -327,7 +329,7 @@ explicit expected fallbacks; read, parse, and timestamp corruption fail open to
 safe defaults and emit fixed, redacted Doctor diagnostics. A later valid load
 resolves the same diagnostic lifecycle without retaining raw paths or values.
 The former mixed `model.go` is deleted. Telemetry capacities and memory budgets
-now live beside `TelemetryStore`, the shared extension-ingest body limit lives
+now live beside `telemetrystore.Store`, the shared extension-ingest body limit lives
 beside the HTTP boundary, disconnect timing lives beside extension state, and
 rate-limit consumers use the canonical circuit contract directly.
 Extension connection, pilot, tracked-tab, CSP, security-mode, command-heartbeat,

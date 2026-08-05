@@ -12,6 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -39,7 +40,7 @@ type Capture struct {
 	// Unified Telemetry Store (Own Lock)
 	// ============================================
 
-	telemetry *TelemetryStore // Event buffers, WebSocket connections, and navigation callback.
+	telemetry *telemetrystore.Store // Event buffers, WebSocket connections, and navigation callback.
 
 	// ============================================
 	// Timings and Performance Data
@@ -113,7 +114,7 @@ func NewCapture() *Capture {
 	}
 	c.queryDispatcher = queries.NewQueryDispatcher()
 	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)
-	c.telemetry = newTelemetryStore(c.extension)
+	c.telemetry = telemetrystore.New(telemetrystore.Dependencies{ActiveTestIDs: c.extension.GetActiveTestIDs})
 
 	return c
 }
@@ -154,7 +155,7 @@ func (c *Capture) Extension() *ExtensionRuntime {
 }
 
 // Telemetry returns the canonical independently synchronized event store.
-func (c *Capture) Telemetry() *TelemetryStore {
+func (c *Capture) Telemetry() *telemetrystore.Store {
 	return c.telemetry
 }
 

@@ -6,19 +6,19 @@ package actionlog
 import (
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // Recorder owns normalization of AI actions before they enter telemetry.
 type Recorder struct {
-	telemetry *capture.TelemetryStore
+	telemetry *telemetrystore.Store
 	now       func() time.Time
 }
 
 // New constructs an AI action recorder for the canonical telemetry store.
-func New(telemetry *capture.TelemetryStore) *Recorder {
+func New(telemetry *telemetrystore.Store) *Recorder {
 	return &Recorder{telemetry: telemetry, now: time.Now}
 }
 

@@ -863,7 +863,7 @@
     },
     "internal/capture/accessors.go": {
       "mutable_globals": 0,
-      "exports": 6
+      "exports": 4
     },
     "internal/capture/actionstore/store.go": {
       "mutable_globals": 0,
@@ -883,7 +883,7 @@
     },
     "internal/capture/events.go": {
       "mutable_globals": 0,
-      "exports": 17
+      "exports": 5
     },
     "internal/capture/extension_state.go": {
       "mutable_globals": 0,
@@ -920,6 +920,10 @@
     "internal/capture/sync.go": {
       "mutable_globals": 0,
       "exports": 4
+    },
+    "internal/capture/telemetrystore/store.go": {
+      "mutable_globals": 0,
+      "exports": 17
     },
     "internal/capture/waterfallstore/store.go": {
       "mutable_globals": 0,

@@ -5,6 +5,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync/atomic"
 	"testing"
@@ -12,7 +13,7 @@ import (
 )
 
 func runNavigationCallbacksSynchronously(c *Capture) {
-	c.Telemetry().dispatchCallback = func(callback func()) { callback() }
+	replaceTelemetryForTest(c, telemetrystore.Dependencies{Dispatch: func(callback func()) { callback() }})
 }
 
 // ============================================

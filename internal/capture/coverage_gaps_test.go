@@ -201,38 +201,38 @@ func TestGetVersionMismatch_InvalidVersionFormat(t *testing.T) {
 
 func TestDetectAndSetBinaryFormat_AlreadySet(t *testing.T) {
 	t.Parallel()
-	body := &types.NetworkBody{BinaryFormat: "png", RequestBody: "some content"}
-	detectAndSetBinaryFormat(body)
-	if body.BinaryFormat != "png" {
-		t.Errorf("BinaryFormat = %q, want png (should not change)", body.BinaryFormat)
+	c := NewCapture()
+	c.Telemetry().AddNetworkBodies([]types.NetworkBody{{BinaryFormat: "png", RequestBody: "some content"}})
+	if got := c.Telemetry().NetworkBodies().Snapshot().Bodies[0].BinaryFormat; got != "png" {
+		t.Errorf("BinaryFormat = %q, want png (should not change)", got)
 	}
 }
 
 func TestDetectAndSetBinaryFormat_EmptyBodies(t *testing.T) {
 	t.Parallel()
-	body := &types.NetworkBody{}
-	detectAndSetBinaryFormat(body)
-	if body.BinaryFormat != "" {
-		t.Errorf("BinaryFormat = %q, want empty for empty bodies", body.BinaryFormat)
+	c := NewCapture()
+	c.Telemetry().AddNetworkBodies([]types.NetworkBody{{}})
+	if got := c.Telemetry().NetworkBodies().Snapshot().Bodies[0].BinaryFormat; got != "" {
+		t.Errorf("BinaryFormat = %q, want empty for empty bodies", got)
 	}
 }
 
 func TestDetectAndSetBinaryFormat_PNG_ResponseBody(t *testing.T) {
 	t.Parallel()
 	pngMagic := "\x89PNG\r\n\x1a\n" + strings.Repeat("\x00", 20)
-	body := &types.NetworkBody{ResponseBody: pngMagic}
-	detectAndSetBinaryFormat(body)
-	if body.BinaryFormat == "" {
+	c := NewCapture()
+	c.Telemetry().AddNetworkBodies([]types.NetworkBody{{ResponseBody: pngMagic}})
+	if c.Telemetry().NetworkBodies().Snapshot().Bodies[0].BinaryFormat == "" {
 		t.Skip("PNG detection not triggered — util.DetectBinaryFormat may need longer header")
 	}
 }
 
 func TestDetectAndSetBinaryFormat_TextBodies(t *testing.T) {
 	t.Parallel()
-	body := &types.NetworkBody{RequestBody: `{"hello":"world"}`, ResponseBody: `{"ok":true}`}
-	detectAndSetBinaryFormat(body)
-	if body.BinaryFormat != "" {
-		t.Errorf("BinaryFormat = %q, want empty for text content", body.BinaryFormat)
+	c := NewCapture()
+	c.Telemetry().AddNetworkBodies([]types.NetworkBody{{RequestBody: `{"hello":"world"}`, ResponseBody: `{"ok":true}`}})
+	if got := c.Telemetry().NetworkBodies().Snapshot().Bodies[0].BinaryFormat; got != "" {
+		t.Errorf("BinaryFormat = %q, want empty for text content", got)
 	}
 }
 

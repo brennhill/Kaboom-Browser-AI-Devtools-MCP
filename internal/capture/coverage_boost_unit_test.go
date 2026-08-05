@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/bodystore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
@@ -121,9 +122,7 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 
 	now := time.Now()
 	c.Telemetry().Actions().Add([]types.EnhancedAction{{Type: "click"}, {Type: "click"}}, now)
-	c.telemetry.mu.Lock()
-	c.extension.state.activeTestIDs["test-1"] = true
-	c.telemetry.mu.Unlock()
+	c.Extension().SetTestBoundaryStart("test-1")
 
 	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "type", Value: "hello"}})
 	if got := len(c.Telemetry().Actions().Snapshot().Actions); got != 3 {
@@ -157,9 +156,7 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 		{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"},
 		{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"},
 	}, now)
-	c.telemetry.mu.Lock()
-	c.extension.state.activeTestIDs["tid"] = true
-	c.telemetry.mu.Unlock()
+	c.Extension().SetTestBoundaryStart("tid")
 
 	c.Telemetry().AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
@@ -177,7 +174,7 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 	}
 
 	c2 := newCoverageCapture(t)
-	c2.telemetry.networkBodies = bodystore.New(100, 1)
+	replaceTelemetryForTest(c2, telemetrystore.Dependencies{NetworkBodies: bodystore.New(100, 1)})
 	huge := strings.Repeat("x", 2)
 	c2.Telemetry().AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
@@ -201,7 +198,7 @@ func TestCoverageBoost_NetworkWaterfallGetters(t *testing.T) {
 		t.Fatalf("GetNetworkWaterfallEntries() initial len = %d, want 0", len(empty))
 	}
 
-	c.telemetry.networkWaterfall = waterfallstore.New(1)
+	replaceTelemetryForTest(c, telemetrystore.Dependencies{Waterfall: waterfallstore.New(1)})
 
 	c.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
 		{Name: "https://one.example"},

@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
 )
 
@@ -161,7 +162,7 @@ func TestNetworkWaterfall_RingBufferEviction(t *testing.T) {
 	capture := NewCapture()
 
 	// Override capacity to test eviction behavior
-	capture.telemetry.networkWaterfall = waterfallstore.New(10)
+	replaceTelemetryForTest(capture, telemetrystore.Dependencies{Waterfall: waterfallstore.New(10)})
 
 	// Add 12 entries which should trigger eviction since we set max to 10
 	for i := 0; i < 12; i++ {

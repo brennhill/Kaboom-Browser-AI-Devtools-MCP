@@ -12,6 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/actionstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/bodystore"
 	pressuremetrics "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
@@ -39,7 +40,7 @@ func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
 		{Type: "click", URL: "https://example.test", Timestamp: 123},
 	})
 
-	snap := c.Telemetry().GetSnapshot()
+	snap := c.Telemetry().Snapshot()
 	if snap.NetworkTotalAdded != 2 || snap.WebSocketTotalAdded != 1 || snap.ActionTotalAdded != 1 {
 		t.Fatalf("snapshot totals = %+v, want 2/1/1", snap)
 	}
@@ -128,12 +129,10 @@ func TestCaptureNestedSnapshotsDetachAtIngestAndRead(t *testing.T) {
 func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	c := NewCapture()
 	now := time.Now().Add(-2 * time.Second)
-	c.telemetry.networkBodies = bodystore.New(100, 8*1024*1024)
-	c.telemetry.networkBodies.Add(make([]types.NetworkBody, 103), now)
-	c.telemetry.actions = actionstore.New(1000)
-	c.telemetry.actions.Add(make([]types.EnhancedAction, 1001), now)
-	c.telemetry.webSockets = wsconn.NewStore(maxWSEvents, wsBufferMemoryLimit)
-	c.telemetry.webSockets.Add(make([]types.WebSocketEvent, maxWSEvents+2), now)
+	replaceTelemetryForTest(c, telemetrystore.Dependencies{NetworkBodies: bodystore.New(100, 8*1024*1024), Actions: actionstore.New(1000), WebSockets: wsconn.NewStore(500, 4*1024*1024)})
+	c.Telemetry().NetworkBodies().Add(make([]types.NetworkBody, 103), now)
+	c.Telemetry().Actions().Add(make([]types.EnhancedAction, 1001), now)
+	c.Telemetry().WebSockets().Add(make([]types.WebSocketEvent, 502), now)
 
 	pressure := c.Telemetry().Pressure()
 	assertPressure := func(name string, got pressuremetrics.Stats, size int, dropped int64) {
@@ -143,9 +142,9 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 		}
 	}
 	assertPressure("network", pressure.Network, 100, 3)
-	assertPressure("websocket", pressure.WebSocket, maxWSEvents, 2)
+	assertPressure("websocket", pressure.WebSocket, 500, 2)
 	assertPressure("actions", pressure.Actions, 1000, 1)
-	c.telemetry.networkWaterfall = waterfallstore.New(3)
+	replaceTelemetryForTest(c, telemetrystore.Dependencies{NetworkBodies: c.Telemetry().NetworkBodies(), Actions: c.Telemetry().Actions(), WebSockets: c.Telemetry().WebSockets(), Waterfall: waterfallstore.New(3)})
 	c.Telemetry().NetworkWaterfall().Add(make([]types.NetworkWaterfallEntry, 7), "https://example.test")
 	if got := c.Telemetry().Pressure().NetworkWaterfall; got.Size != 3 || got.Dropped != 4 {
 		t.Fatalf("network waterfall pressure = %#v, want bounded with four drops", got)

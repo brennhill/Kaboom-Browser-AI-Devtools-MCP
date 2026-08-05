@@ -185,7 +185,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 		}
 
 		// Snapshot counts must match actual buffer lengths
-		snap := c.Telemetry().GetSnapshot()
+		snap := c.Telemetry().Snapshot()
 		if snap.WebSocketCount != len(wsEvents) {
 			t.Errorf("Snapshot.WebSocketCount %d != len(wsEvents) %d", snap.WebSocketCount, len(wsEvents))
 		}
@@ -301,7 +301,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 		}
 
 		// Snapshot must be consistent with buffer contents
-		snap := c.Telemetry().GetSnapshot()
+		snap := c.Telemetry().Snapshot()
 		if snap.WebSocketCount < 0 || snap.NetworkCount < 0 || snap.ActionCount < 0 {
 			t.Errorf("Snapshot has negative counts: ws=%d net=%d act=%d",
 				snap.WebSocketCount, snap.NetworkCount, snap.ActionCount)
@@ -355,7 +355,7 @@ func TestStressCaptureSnapshot(t *testing.T) {
 				defer wg.Done()
 				gate.awaitRelease()
 				for i := 0; i < snapsPerSnapper; i++ {
-					_ = c.Telemetry().GetSnapshot()
+					_ = c.Telemetry().Snapshot()
 					runtime.Gosched()
 				}
 			}(snapperID)
@@ -365,7 +365,7 @@ func TestStressCaptureSnapshot(t *testing.T) {
 		wg.Wait()
 
 		// Final snapshot check
-		snapshot := c.Telemetry().GetSnapshot()
+		snapshot := c.Telemetry().Snapshot()
 		if snapshot.NetworkCount < 0 || snapshot.WebSocketCount < 0 || snapshot.ActionCount < 0 {
 			t.Errorf("Snapshot has negative counts: %+v", snapshot)
 		}

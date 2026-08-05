@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -24,7 +25,7 @@ type Logs interface {
 // Capture is the snapshot/test-boundary surface used by CI endpoints.
 type Capture interface {
 	Extension() *capture.ExtensionRuntime
-	Telemetry() *capture.TelemetryStore
+	Telemetry() *telemetrystore.Store
 }
 
 // Resetter is the coordinated runtime reset surface used by CI endpoints.

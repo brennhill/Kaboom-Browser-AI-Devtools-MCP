@@ -8,49 +8,10 @@ package capture
 import (
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
-
-// TelemetrySnapshot is an immutable point-in-time view of event-store counters.
-//
-// Invariants:
-// - Counts and totals in one snapshot come from the same s.mu critical section.
-type TelemetrySnapshot struct {
-	NetworkTotalAdded   int64
-	WebSocketTotalAdded int64
-	ActionTotalAdded    int64
-	NetworkCount        int
-	WebSocketCount      int
-	ActionCount         int
-	NetworkCapacity     int
-	WebSocketCapacity   int
-	ActionCapacity      int
-	ConnectionCount     int
-}
-
-// GetSnapshot returns a thread-safe capture counter snapshot.
-//
-// Failure semantics:
-// - Snapshot can be stale immediately after return; callers should treat it as diagnostic-only.
-func (s *TelemetryStore) GetSnapshot() TelemetrySnapshot {
-	network := s.networkBodies.Stats()
-	actions := s.actions.Stats()
-	webSockets := s.webSockets.Stats()
-
-	return TelemetrySnapshot{
-		NetworkTotalAdded:   network.TotalAdded,
-		WebSocketTotalAdded: webSockets.TotalAdded,
-		ActionTotalAdded:    actions.TotalAdded,
-		NetworkCount:        network.Count,
-		WebSocketCount:      webSockets.Count,
-		ActionCount:         actions.Count,
-		NetworkCapacity:     network.Pressure.Capacity,
-		WebSocketCapacity:   webSockets.Capacity,
-		ActionCapacity:      actions.Capacity,
-		ConnectionCount:     webSockets.ConnectionCount,
-	}
-}
 
 // HealthSnapshot aggregates capture + dispatcher + circuit health state.
 //
@@ -84,7 +45,7 @@ type HealthReader struct {
 	circuit   *circuit.CircuitBreaker
 	queries   *queries.QueryDispatcher
 	extension *ExtensionRuntime
-	telemetry *TelemetryStore
+	telemetry *telemetrystore.Store
 }
 
 // NewHealthReader binds health aggregation to the canonical runtime owners.
@@ -102,7 +63,7 @@ func (r *HealthReader) Snapshot() HealthSnapshot {
 	circuitOpen, circuitReason, circuitOpenedAt, windowEventCount := r.circuit.GetState()
 	querySnap := r.queries.GetSnapshot()
 	extensionSnap := r.extension.Snapshot()
-	telemetrySnap := r.telemetry.GetSnapshot()
+	telemetrySnap := r.telemetry.Snapshot()
 
 	return HealthSnapshot{
 		WebSocketCount:        telemetrySnap.WebSocketCount,

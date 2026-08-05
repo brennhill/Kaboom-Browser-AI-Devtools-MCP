@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-buffer-clearing
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-05
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -80,7 +80,7 @@ func (c *BufferClearCounts) Total() int {
 
 ```go
 // ClearNetworkBuffers coordinates the two independent network owners.
-func (s *TelemetryStore) ClearNetworkBuffers() types.BufferClearCounts {
+func (s *telemetrystore.Store) ClearNetworkBuffers() types.BufferClearCounts {
 	return types.BufferClearCounts{
 		NetworkWaterfall: s.NetworkWaterfall().Clear(),
 		NetworkBodies:    s.NetworkBodies().Clear(),

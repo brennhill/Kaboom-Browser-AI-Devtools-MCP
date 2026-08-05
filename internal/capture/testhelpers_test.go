@@ -9,10 +9,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	recordingmodel "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/server"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
+
+const maxWSEvents = 500
+const wsBufferMemoryLimit = 4 * 1024 * 1024
 
 func TestMain(m *testing.M) {
 	stateRoot, err := os.MkdirTemp("", "kaboom-capture-tests-*")
@@ -31,6 +35,11 @@ func TestMain(m *testing.M) {
 func setupTestCapture(t *testing.T) *Capture {
 	t.Helper()
 	return NewCapture()
+}
+
+func replaceTelemetryForTest(capture *Capture, deps telemetrystore.Dependencies) {
+	deps.ActiveTestIDs = capture.extension.GetActiveTestIDs
+	capture.telemetry = telemetrystore.New(deps)
 }
 
 func mustStartRecording(t *testing.T, capture *Capture, name, pageURL string, sensitive bool) string {

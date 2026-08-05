@@ -1,6 +1,5 @@
 // Purpose: Defines the ToolHandler struct, shared state (capture, AI client, sequence store), and tool dispatch infrastructure.
 // Why: All five MCP tools share a common handler that owns capture state, extension connectivity, and session context.
-
 package main
 
 import (
@@ -42,6 +41,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -387,7 +387,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		handler.noiseConfig = noise.NewNoiseConfig()
 	}
 	handler.redactionEngine = redaction.NewRedactionEngine("")
-	var actionTelemetry *capture.TelemetryStore
+	var actionTelemetry *telemetrystore.Store
 	if captureStore != nil {
 		actionTelemetry = captureStore.Telemetry()
 	}

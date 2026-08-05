@@ -59,6 +59,8 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"type boundedRing[",
 		"func newBoundedRing[",
 		"type NetworkWaterfallStore struct",
+		"type TelemetryStore struct",
+		"func newTelemetryStore(",
 		"func newNetworkWaterfallStore(",
 		"func (s *TelemetryStore) GetNetworkBodies(",
 		"func (s *TelemetryStore) GetNetworkTotalAdded(",
