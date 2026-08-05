@@ -1,17 +1,81 @@
-// Purpose: Tests for test-generation context-based test creation.
-// Docs: docs/features/feature/test-generation/index.md
-
 // context_test.go — Tests for generateTestFromInteraction and generateTestFromRegression
 // edge cases not covered by internal/testgen/generate_test.go.
+// Docs: docs/features/feature/test-generation/index.md
 package testgenhandler
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestTestgenHandlerPackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("testgenhandler package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
+
+// TestBuildRegressionAssertions_ErrorsWithNetwork keeps the output-helper
+// contract beside the context-generation behavior that consumes it.
+func TestBuildRegressionAssertions_ErrorsWithNetwork(t *testing.T) {
+	t.Parallel()
+
+	errors := []string{"some error"}
+	bodies := []types.NetworkBody{
+		{Method: "GET", URL: "/api/data", Status: 200},
+	}
+	assertions, count := testgen.BuildRegressionAssertions(errors, bodies)
+
+	if count != 1 {
+		t.Fatalf("assertionCount = %d, want 1", count)
+	}
+	joined := strings.Join(assertions, "\n")
+	if !strings.Contains(joined, "Baseline had 1 console errors") {
+		t.Fatal("expected baseline error comment")
+	}
+	if !strings.Contains(joined, "Assert GET /api/data returns 200") {
+		t.Fatal("expected network assertion")
+	}
+}
+
+func TestInsertAssertionsBeforeClose_EmptyAssertions(t *testing.T) {
+	t.Parallel()
+
+	script := "test('test', () => {\n});\n"
+	result := testgen.InsertAssertionsBeforeClose(script, nil)
+
+	if !strings.Contains(result, "});") {
+		t.Fatal("result should still contain closing brace")
+	}
+}
+
+func TestInsertAssertionsBeforeClose_MultipleClosingBraces(t *testing.T) {
+	t.Parallel()
+
+	script := "test('outer', () => {\n  test('inner', () => {\n  });\n});\n"
+	assertions := []string{"  // final assertion"}
+
+	result := testgen.InsertAssertionsBeforeClose(script, assertions)
+
+	lastClose := strings.LastIndex(result, "});")
+	assertIdx := strings.LastIndex(result, "// final assertion")
+	if assertIdx > lastClose {
+		t.Fatal("assertion should appear before the last });")
+	}
+}
 
 // ============================================
 // Tests for generateTestFromInteraction

@@ -34,7 +34,6 @@ test_paths:
   - cmd/browser-agent/tools_generate_validation_test.go
   - cmd/browser-agent/tools_generate_warning_filter_test.go
   - cmd/browser-agent/internal/testgenhandler/context_test.go
-  - cmd/browser-agent/internal/testgenhandler/generate_test.go
   - cmd/browser-agent/internal/testgenhandler/heal_test.go
   - cmd/browser-agent/internal/testgenhandler/classify_test.go
   - cmd/browser-agent/internal/testgenhandler/testhelpers_test.go
@@ -85,5 +84,8 @@ last_verified_date: 2026-03-05
 - Test generation and failure classification engine: `internal/testgen/`
 - Selector healing engine (self-contained subpackage): `internal/testgen/heal/`
 - Generate tool schema contract: `internal/schema/generate.go`
-- Core behavior tests: `cmd/browser-agent/internal/testgenhandler/context_test.go`, `cmd/browser-agent/internal/testgenhandler/generate_test.go`, `cmd/browser-agent/internal/testgenhandler/heal_test.go`, `cmd/browser-agent/internal/testgenhandler/classify_test.go`
+- Core behavior tests: `cmd/browser-agent/internal/testgenhandler/context_test.go`, `cmd/browser-agent/internal/testgenhandler/heal_test.go`, `cmd/browser-agent/internal/testgenhandler/classify_test.go`
+- Context generation and its script-output helpers deliberately share
+  `context_test.go`: they consume the same generated-test contract and fixtures,
+  and the package has an executable ten-file ownership boundary.
 - Schema invariants: `internal/schema/invariants_test.go`
