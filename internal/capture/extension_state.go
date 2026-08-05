@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const extensionDisconnectThreshold = 10 * time.Second
+
 const (
 	PilotStateAssumedEnabled     = "assumed_enabled"
 	PilotStateEnabled            = "enabled"

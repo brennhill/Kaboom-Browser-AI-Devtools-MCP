@@ -743,8 +743,8 @@ func TestBuildBuffersInfo_NilCaptureAndServer(t *testing.T) {
 	if info.Network.Entries != 0 {
 		t.Errorf("Network.Entries: want 0, got %d", info.Network.Entries)
 	}
-	if info.Network.Capacity <= 0 {
-		t.Error("Network.Capacity should be positive")
+	if info.Network.Capacity != 0 {
+		t.Errorf("Network.Capacity: want 0 without capture, got %d", info.Network.Capacity)
 	}
 }
 

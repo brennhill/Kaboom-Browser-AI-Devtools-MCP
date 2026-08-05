@@ -111,6 +111,9 @@ type TelemetrySnapshot struct {
 	NetworkCount        int
 	WebSocketCount      int
 	ActionCount         int
+	NetworkCapacity     int
+	WebSocketCapacity   int
+	ActionCapacity      int
 	ConnectionCount     int
 }
 
@@ -129,6 +132,9 @@ func (s *TelemetryStore) GetSnapshot() TelemetrySnapshot {
 		NetworkCount:        s.buffers.networkCount(),
 		WebSocketCount:      s.buffers.webSocketCount(),
 		ActionCount:         s.buffers.actionCount(),
+		NetworkCapacity:     s.buffers.networkBodies.capacity(),
+		WebSocketCapacity:   s.buffers.wsEvents.capacity(),
+		ActionCapacity:      s.buffers.enhancedActions.capacity(),
 		ConnectionCount:     s.wsConnections.Count(),
 	}
 }
@@ -141,6 +147,9 @@ type HealthSnapshot struct {
 	WebSocketCount        int
 	NetworkBodyCount      int
 	ActionCount           int
+	NetworkCapacity       int
+	WebSocketCapacity     int
+	ActionCapacity        int
 	ConnectionCount       int
 	LastPollTime          time.Time
 	ExtSessionID          string
@@ -186,6 +195,9 @@ func (r *HealthReader) Snapshot() HealthSnapshot {
 		WebSocketCount:        telemetrySnap.WebSocketCount,
 		NetworkBodyCount:      telemetrySnap.NetworkCount,
 		ActionCount:           telemetrySnap.ActionCount,
+		NetworkCapacity:       telemetrySnap.NetworkCapacity,
+		WebSocketCapacity:     telemetrySnap.WebSocketCapacity,
+		ActionCapacity:        telemetrySnap.ActionCapacity,
 		ConnectionCount:       telemetrySnap.ConnectionCount,
 		LastPollTime:          extensionSnap.LastPollAt,
 		ExtSessionID:          extensionSnap.ExtSessionID,

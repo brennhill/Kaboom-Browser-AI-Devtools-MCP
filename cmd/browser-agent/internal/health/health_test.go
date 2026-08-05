@@ -493,7 +493,7 @@ func TestMCPHealthResponse_Construction(t *testing.T) {
 
 func TestBuildResourcePressureChecksDistinguishesDisposableDropsFromActiveSaturation(t *testing.T) {
 	cap := capture.NewCapture()
-	cap.Telemetry().AddNetworkBodies(make([]types.NetworkBody, capture.MaxNetworkBodies+1))
+	cap.Telemetry().AddNetworkBodies(make([]types.NetworkBody, cap.Telemetry().Pressure().Network.Capacity+1))
 	checks := BuildResourcePressureChecks(cap, nil)
 	if len(checks) != 1 || checks[0].Name != "resource_pressure_network" || checks[0].Status != "pass" {
 		t.Fatalf("disposable pressure checks = %#v, want one recovered/pass network check", checks)

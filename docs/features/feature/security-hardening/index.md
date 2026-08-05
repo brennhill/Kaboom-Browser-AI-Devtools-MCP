@@ -36,6 +36,7 @@ code_paths:
   - internal/security/sri/helpers.go
   - internal/security/sri/tooling.go
   - internal/security/netflag/netflag.go
+  - internal/security/netflag/flag.go
   - internal/security/netflag/data.go
   - internal/security/netflag/detectors.go
   - internal/security/netflag/distance.go
@@ -66,6 +67,8 @@ test_paths:
   - internal/security/sri/sri_test.go
   - internal/security/sri/helpers_test.go
   - internal/security/netflag/netflag_test.go
+  - internal/security/netflag/flag_test.go
+  - internal/security/netflag/boundary_test.go
   - internal/security/netflag/detectors_unit_test.go
   - internal/security/httpsec/url_test.go
   - internal/security/httpsec/cookie_test.go
@@ -96,6 +99,9 @@ change-coupled owner, and the package enforces its ten-file boundary in tests.
 Process-local security, telemetry, and action-jitter configuration handlers
 share `runtime_modes.go`; these toggles use the same dependency bundle and
 change together with runtime configuration policy.
+Suspicious-network findings are owned by the leaf `netflag` package. Its
+canonical snake-case `Flag` contract no longer imports or leaks the broad
+capture package into security detection.
 
 ## Specs
 

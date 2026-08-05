@@ -322,7 +322,7 @@ func defaultExtensionReadinessTimeout() time.Duration {
 	if strings.HasSuffix(os.Args[0], ".test") {
 		return testExtensionReadinessTimeout
 	}
-	return capture.ExtensionReadinessTimeout
+	return toolguard.DefaultExtensionReadinessTimeout
 }
 
 func sessionStoreGuard(store *persistence.SessionStore, req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {

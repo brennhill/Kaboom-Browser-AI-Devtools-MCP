@@ -4,16 +4,15 @@
 package netflag
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-func checkSuspiciousTLD(origin string) *capture.SecurityFlag {
+func checkSuspiciousTLD(origin string) *Flag {
 	if _, ok := knownLegitimateOrigins[origin]; ok {
 		return nil
 	}
@@ -29,7 +28,7 @@ func checkSuspiciousTLD(origin string) *capture.SecurityFlag {
 			if rep.Severity == "low" {
 				return nil
 			}
-			return &capture.SecurityFlag{
+			return &Flag{
 				Type:      "suspicious_tld",
 				Severity:  rep.Severity,
 				Origin:    origin,
@@ -42,7 +41,7 @@ func checkSuspiciousTLD(origin string) *capture.SecurityFlag {
 	return nil
 }
 
-func checkNonStandardPort(origin string) *capture.SecurityFlag {
+func checkNonStandardPort(origin string) *Flag {
 	parsed, err := url.Parse(origin)
 	if err != nil {
 		return nil
@@ -64,7 +63,7 @@ func checkNonStandardPort(origin string) *capture.SecurityFlag {
 		}
 	}
 
-	return &capture.SecurityFlag{
+	return &Flag{
 		Type:      "non_standard_port",
 		Severity:  "medium",
 		Origin:    origin,
@@ -73,7 +72,7 @@ func checkNonStandardPort(origin string) *capture.SecurityFlag {
 	}
 }
 
-func checkMixedContent(entry types.NetworkWaterfallEntry, pageURL string) *capture.SecurityFlag {
+func checkMixedContent(entry types.NetworkWaterfallEntry, pageURL string) *Flag {
 	pageParsed, err := url.Parse(pageURL)
 	if err != nil || pageParsed.Scheme != "https" {
 		return nil
@@ -89,7 +88,7 @@ func checkMixedContent(entry types.NetworkWaterfallEntry, pageURL string) *captu
 		severity = "high"
 	}
 
-	return &capture.SecurityFlag{
+	return &Flag{
 		Type:      "mixed_content",
 		Severity:  severity,
 		Origin:    entryParsed.Scheme + "://" + entryParsed.Host,
@@ -100,7 +99,7 @@ func checkMixedContent(entry types.NetworkWaterfallEntry, pageURL string) *captu
 	}
 }
 
-func checkIPAddressOrigin(origin string) *capture.SecurityFlag {
+func checkIPAddressOrigin(origin string) *Flag {
 	parsed, err := url.Parse(origin)
 	if err != nil {
 		return nil
@@ -114,7 +113,7 @@ func checkIPAddressOrigin(origin string) *capture.SecurityFlag {
 		return nil
 	}
 
-	return &capture.SecurityFlag{
+	return &Flag{
 		Type:      "ip_address_origin",
 		Severity:  "medium",
 		Origin:    origin,
@@ -123,7 +122,7 @@ func checkIPAddressOrigin(origin string) *capture.SecurityFlag {
 	}
 }
 
-func checkTyposquatting(origin string) *capture.SecurityFlag {
+func checkTyposquatting(origin string) *Flag {
 	parsed, err := url.Parse(origin)
 	if err != nil {
 		return nil
@@ -133,7 +132,7 @@ func checkTyposquatting(origin string) *capture.SecurityFlag {
 	for _, targetDomain := range typosquatTargetDomains {
 		distance := levenshteinDistance(hostname, targetDomain)
 		if distance > 0 && distance <= 2 {
-			return &capture.SecurityFlag{
+			return &Flag{
 				Type:      "potential_typosquatting",
 				Severity:  "high",
 				Origin:    origin,

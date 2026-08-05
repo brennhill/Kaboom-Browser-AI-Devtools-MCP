@@ -14,6 +14,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
+// DefaultExtensionReadinessTimeout bounds cold-start extension recovery.
+const DefaultExtensionReadinessTimeout = 5 * time.Second
+
 // Check is the canonical browser-runtime precondition function contract.
 type Check func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool)
 
@@ -149,12 +152,12 @@ func (g *Guards) RequirePilot(req mcp.JSONRPCRequest, extraOpts ...func(*mcp.Str
 
 // requireExtension returns (resp, true) if the browser extension is not connected,
 // short-circuiting the caller with a structured error. On cold starts it waits up to
-// ExtensionReadinessTimeout (5s) for the extension to connect before giving up.
+// DefaultExtensionReadinessTimeout for the extension to connect before giving up.
 // Usage: if resp, blocked := g.Guards.RequireExtension(req); blocked { return resp }
 func (g *Guards) RequireExtension(req mcp.JSONRPCRequest, extraOpts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
 	timeout := g.extensionReadinessTimeout
 	if timeout <= 0 {
-		timeout = capture.ExtensionReadinessTimeout
+		timeout = DefaultExtensionReadinessTimeout
 	}
 	// Use shutdownCtx so the wait aborts promptly when the server shuts down,
 	// preventing goroutine leaks. Falls back to context.Background() if the

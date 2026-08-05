@@ -4,9 +4,15 @@
 package capture
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
+
+const (
+	testMaxRequestBodySize  = 8192
+	testMaxResponseBodySize = 16384
 )
 
 // ============================================
@@ -211,7 +217,7 @@ func TestMemory_RunningTotal_WSAccurateAfterRotation(t *testing.T) {
 	c := NewCapture()
 
 	// Fill to capacity, then add more to trigger ring buffer rotation
-	events := make([]types.WebSocketEvent, MaxWSEvents+10)
+	events := make([]types.WebSocketEvent, maxWSEvents+10)
 	for i := range events {
 		events[i] = makeWSEvent(100 + i)
 	}
@@ -223,8 +229,8 @@ func TestMemory_RunningTotal_WSAccurateAfterRotation(t *testing.T) {
 	count := c.telemetry.buffers.wsEvents.len()
 	c.telemetry.mu.RUnlock()
 
-	if count > MaxWSEvents {
-		t.Errorf("expected at most %d events, got %d", MaxWSEvents, count)
+	if count > maxWSEvents {
+		t.Errorf("expected at most %d events, got %d", maxWSEvents, count)
 	}
 	if runningTotal != expected {
 		t.Errorf("after rotation: wsMemoryTotal = %d, brute force = %d", runningTotal, expected)
@@ -236,7 +242,7 @@ func TestMemory_RunningTotal_NBAccurateAfterRotation(t *testing.T) {
 	c := NewCapture()
 
 	// Fill to capacity, then add more to trigger ring buffer rotation
-	bodies := make([]types.NetworkBody, MaxNetworkBodies+5)
+	bodies := make([]types.NetworkBody, maxNetworkBodies+5)
 	for i := range bodies {
 		bodies[i] = makeNetworkBody(100+i, 200+i)
 	}
@@ -248,8 +254,8 @@ func TestMemory_RunningTotal_NBAccurateAfterRotation(t *testing.T) {
 	count := c.telemetry.buffers.networkBodies.len()
 	c.telemetry.mu.RUnlock()
 
-	if count > MaxNetworkBodies {
-		t.Errorf("expected at most %d bodies, got %d", MaxNetworkBodies, count)
+	if count > maxNetworkBodies {
+		t.Errorf("expected at most %d bodies, got %d", maxNetworkBodies, count)
 	}
 	if runningTotal != expected {
 		t.Errorf("after rotation: networkBodyMemoryTotal = %d, brute force = %d", runningTotal, expected)
@@ -285,7 +291,7 @@ func TestMemory_RunningTotal_NBAccurateAfterPerBufferEviction(t *testing.T) {
 	// Add bodies that exceed per-buffer NB memory limit (8MB)
 	bodies := make([]types.NetworkBody, 100)
 	for i := range bodies {
-		bodies[i] = makeNetworkBody(maxRequestBodySize, maxResponseBodySize)
+		bodies[i] = makeNetworkBody(testMaxRequestBodySize, testMaxResponseBodySize)
 	}
 	c.Telemetry().AddNetworkBodies(bodies)
 

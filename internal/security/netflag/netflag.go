@@ -5,29 +5,28 @@
 
 // Package netflag detects suspicious network origins — abusive TLDs, non-standard
 // ports, raw IP origins, typosquatted CDN domains and mixed content — and reports
-// them as capture.SecurityFlag values.
+// them as canonical netflag.Flag values.
 //
-// It is a leaf package: it depends only on capture/util and never on a sibling
+// It is a leaf package: it depends only on types/util and never on a sibling
 // security package. Callers translate its flags into their own finding shapes.
 package netflag
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // Analyze runs the full set of origin/resource checks for one network entry.
-func Analyze(entry types.NetworkWaterfallEntry, pageURL string) []capture.SecurityFlag {
+func Analyze(entry types.NetworkWaterfallEntry, pageURL string) []Flag {
 	origin := util.ExtractOrigin(entry.URL)
 	if origin == "" {
 		return nil
 	}
 
-	var flags []capture.SecurityFlag
+	var flags []Flag
 
 	// Run all detection algorithms
-	checks := []func(string) *capture.SecurityFlag{
+	checks := []func(string) *Flag{
 		checkSuspiciousTLD,
 		checkNonStandardPort,
 		checkIPAddressOrigin,

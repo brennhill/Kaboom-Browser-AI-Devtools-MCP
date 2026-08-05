@@ -21,6 +21,18 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
+const (
+	maxWSEvents        = 500
+	maxNetworkBodies   = 100
+	maxEnhancedActions = 1000
+
+	defaultNetworkWaterfallCapacity = 1000
+	defaultWSLimit                  = 50
+	defaultBodyLimit                = 20
+	wsBufferMemoryLimit             = 4 * 1024 * 1024
+	nbBufferMemoryLimit             = 8 * 1024 * 1024
+)
+
 type boundedRing[T any] struct {
 	storage []T
 	head    int
@@ -214,7 +226,7 @@ func newTelemetryStore(extension *ExtensionRuntime) *TelemetryStore {
 	return &TelemetryStore{
 		buffers:          newBufferStore(),
 		wsConnections:    wsconn.NewTracker(),
-		networkWaterfall: newNetworkWaterfallStore(DefaultNetworkWaterfallCapacity),
+		networkWaterfall: newNetworkWaterfallStore(defaultNetworkWaterfallCapacity),
 		extension:        extension,
 		dispatchCallback: util.SafeGo,
 	}
@@ -229,9 +241,9 @@ func (s *TelemetryStore) SetNavigationCallback(callback func()) {
 
 func newBufferStore() BufferStore {
 	return BufferStore{
-		wsEvents:        newBoundedRing[wsEventEntry](MaxWSEvents),
-		networkBodies:   newBoundedRing[networkBodyEntry](MaxNetworkBodies),
-		enhancedActions: newBoundedRing[enhancedActionEntry](MaxEnhancedActions),
+		wsEvents:        newBoundedRing[wsEventEntry](maxWSEvents),
+		networkBodies:   newBoundedRing[networkBodyEntry](maxNetworkBodies),
+		enhancedActions: newBoundedRing[enhancedActionEntry](maxEnhancedActions),
 	}
 }
 

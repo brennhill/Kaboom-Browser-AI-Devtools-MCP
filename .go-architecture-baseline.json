@@ -615,7 +615,7 @@
     },
     "cmd/browser-agent/internal/toolguard/guards.go": {
       "mutable_globals": 0,
-      "exports": 11
+      "exports": 12
     },
     "cmd/browser-agent/internal/toolinteract/action_owners.go": {
       "mutable_globals": 0,
@@ -892,10 +892,6 @@
     "internal/capture/logstore/store.go": {
       "mutable_globals": 0,
       "exports": 13
-    },
-    "internal/capture/model.go": {
-      "mutable_globals": 0,
-      "exports": 9
     },
     "internal/capture/perfstore/store.go": {
       "mutable_globals": 0,
@@ -1379,6 +1375,10 @@
     },
     "internal/security/netflag/data.go": {
       "mutable_globals": 5,
+      "exports": 1
+    },
+    "internal/security/netflag/flag.go": {
+      "mutable_globals": 0,
       "exports": 1
     },
     "internal/security/netflag/netflag.go": {

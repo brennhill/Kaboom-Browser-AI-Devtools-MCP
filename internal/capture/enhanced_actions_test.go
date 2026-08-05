@@ -192,8 +192,8 @@ func TestNewAddEnhancedActions_RingBufferEviction(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	// Fill beyond MaxEnhancedActions
-	overflow := MaxEnhancedActions + 50
+	// Fill beyond maxEnhancedActions
+	overflow := maxEnhancedActions + 50
 	batch := make([]types.EnhancedAction, overflow)
 	for i := 0; i < overflow; i++ {
 		batch[i] = types.EnhancedAction{
@@ -204,8 +204,8 @@ func TestNewAddEnhancedActions_RingBufferEviction(t *testing.T) {
 
 	c.Telemetry().AddEnhancedActions(batch)
 
-	if got := len(c.Telemetry().GetAllEnhancedActions()); got != MaxEnhancedActions {
-		t.Fatalf("GetEnhancedActionCount() = %d, want %d (max)", got, MaxEnhancedActions)
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != maxEnhancedActions {
+		t.Fatalf("GetEnhancedActionCount() = %d, want %d (max)", got, maxEnhancedActions)
 	}
 
 	// The oldest entries should be evicted; newest should remain
@@ -228,15 +228,15 @@ func TestNewAddEnhancedActions_ExactCapacity(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	batch := make([]types.EnhancedAction, MaxEnhancedActions)
+	batch := make([]types.EnhancedAction, maxEnhancedActions)
 	for i := range batch {
 		batch[i] = types.EnhancedAction{Type: "click", Timestamp: int64(i)}
 	}
 
 	c.Telemetry().AddEnhancedActions(batch)
 
-	if got := len(c.Telemetry().GetAllEnhancedActions()); got != MaxEnhancedActions {
-		t.Fatalf("GetEnhancedActionCount() at exact capacity = %d, want %d", got, MaxEnhancedActions)
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != maxEnhancedActions {
+		t.Fatalf("GetEnhancedActionCount() at exact capacity = %d, want %d", got, maxEnhancedActions)
 	}
 }
 
@@ -247,7 +247,7 @@ func TestNewAddEnhancedActions_IncrementalOverflow(t *testing.T) {
 	t.Cleanup(c.Close)
 
 	// Fill to capacity
-	batch := make([]types.EnhancedAction, MaxEnhancedActions)
+	batch := make([]types.EnhancedAction, maxEnhancedActions)
 	for i := range batch {
 		batch[i] = types.EnhancedAction{Type: "click", Timestamp: int64(i)}
 	}
@@ -256,17 +256,17 @@ func TestNewAddEnhancedActions_IncrementalOverflow(t *testing.T) {
 	// Add 5 more
 	extra := make([]types.EnhancedAction, 5)
 	for i := range extra {
-		extra[i] = types.EnhancedAction{Type: "type", Timestamp: int64(MaxEnhancedActions + i)}
+		extra[i] = types.EnhancedAction{Type: "type", Timestamp: int64(maxEnhancedActions + i)}
 	}
 	c.Telemetry().AddEnhancedActions(extra)
 
-	if got := len(c.Telemetry().GetAllEnhancedActions()); got != MaxEnhancedActions {
-		t.Fatalf("GetEnhancedActionCount() after incremental overflow = %d, want %d", got, MaxEnhancedActions)
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != maxEnhancedActions {
+		t.Fatalf("GetEnhancedActionCount() after incremental overflow = %d, want %d", got, maxEnhancedActions)
 	}
 
 	// Last 5 actions should be "type"
 	actions := c.Telemetry().GetAllEnhancedActions()
-	for i := MaxEnhancedActions - 5; i < MaxEnhancedActions; i++ {
+	for i := maxEnhancedActions - 5; i < maxEnhancedActions; i++ {
 		if actions[i].Type != "type" {
 			t.Errorf("actions[%d].Type = %q, want type (newly added)", i, actions[i].Type)
 		}
@@ -286,7 +286,7 @@ func TestNewAddEnhancedActions_AppendAfterDirectBufferSet(t *testing.T) {
 	// Pre-populate buffer with entries using entry wrapper structs
 	now := time.Now()
 	c.telemetry.mu.Lock()
-	c.telemetry.buffers.enhancedActions = newBoundedRing[enhancedActionEntry](MaxEnhancedActions)
+	c.telemetry.buffers.enhancedActions = newBoundedRing[enhancedActionEntry](maxEnhancedActions)
 	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
 	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "type"}, AddedAt: now})
 	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "navigate"}, AddedAt: now})

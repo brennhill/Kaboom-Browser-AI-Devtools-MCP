@@ -24,7 +24,7 @@ func BenchmarkAddWebSocketEvents(b *testing.B) {
 		},
 	}
 
-	for i := 0; i < MaxWSEvents; i++ {
+	for i := 0; i < maxWSEvents; i++ {
 		cap.Telemetry().AddWebSocketEvents(events)
 	}
 	b.ReportAllocs()
@@ -51,7 +51,7 @@ func BenchmarkAddNetworkBodies(b *testing.B) {
 		},
 	}
 
-	for i := 0; i < MaxNetworkBodies; i++ {
+	for i := 0; i < maxNetworkBodies; i++ {
 		cap.Telemetry().AddNetworkBodies(bodies)
 	}
 	b.ReportAllocs()

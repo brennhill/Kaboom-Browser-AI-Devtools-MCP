@@ -157,14 +157,14 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 		actions := c.Telemetry().GetAllEnhancedActions()
 
 		// Buffer capacity bounds must hold
-		if len(wsEvents) > MaxWSEvents {
-			t.Errorf("WS events %d exceeds MaxWSEvents %d", len(wsEvents), MaxWSEvents)
+		if len(wsEvents) > maxWSEvents {
+			t.Errorf("WS events %d exceeds maxWSEvents %d", len(wsEvents), maxWSEvents)
 		}
-		if len(networkBodies) > MaxNetworkBodies {
-			t.Errorf("Network bodies %d exceeds MaxNetworkBodies %d", len(networkBodies), MaxNetworkBodies)
+		if len(networkBodies) > maxNetworkBodies {
+			t.Errorf("Network bodies %d exceeds maxNetworkBodies %d", len(networkBodies), maxNetworkBodies)
 		}
-		if len(actions) > MaxEnhancedActions {
-			t.Errorf("Enhanced actions %d exceeds MaxEnhancedActions %d", len(actions), MaxEnhancedActions)
+		if len(actions) > maxEnhancedActions {
+			t.Errorf("Enhanced actions %d exceeds maxEnhancedActions %d", len(actions), maxEnhancedActions)
 		}
 
 		// With no clears, buffers must not be empty (we wrote plenty of data)
@@ -286,14 +286,14 @@ func TestStressCaptureWithClears(t *testing.T) {
 		actions := c.Telemetry().GetAllEnhancedActions()
 
 		// Capacity bounds must hold even with concurrent clears
-		if len(wsEvents) > MaxWSEvents {
-			t.Errorf("WS events %d exceeds MaxWSEvents %d after clears", len(wsEvents), MaxWSEvents)
+		if len(wsEvents) > maxWSEvents {
+			t.Errorf("WS events %d exceeds maxWSEvents %d after clears", len(wsEvents), maxWSEvents)
 		}
-		if len(networkBodies) > MaxNetworkBodies {
-			t.Errorf("Network bodies %d exceeds MaxNetworkBodies %d after clears", len(networkBodies), MaxNetworkBodies)
+		if len(networkBodies) > maxNetworkBodies {
+			t.Errorf("Network bodies %d exceeds maxNetworkBodies %d after clears", len(networkBodies), maxNetworkBodies)
 		}
-		if len(actions) > MaxEnhancedActions {
-			t.Errorf("Actions %d exceeds MaxEnhancedActions %d after clears", len(actions), MaxEnhancedActions)
+		if len(actions) > maxEnhancedActions {
+			t.Errorf("Actions %d exceeds maxEnhancedActions %d after clears", len(actions), maxEnhancedActions)
 		}
 
 		// Snapshot must be consistent with buffer contents

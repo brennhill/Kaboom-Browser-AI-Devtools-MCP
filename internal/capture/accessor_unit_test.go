@@ -125,9 +125,9 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	c := NewCapture()
 	now := time.Now().Add(-2 * time.Second)
 	c.telemetry.mu.Lock()
-	c.telemetry.buffers.appendNetworkBodies(make([]types.NetworkBody, MaxNetworkBodies+3), now)
-	c.telemetry.buffers.appendWebSocketEvents(make([]types.WebSocketEvent, MaxWSEvents+2), now, nil)
-	c.telemetry.buffers.appendEnhancedActions(make([]types.EnhancedAction, MaxEnhancedActions+1), now)
+	c.telemetry.buffers.appendNetworkBodies(make([]types.NetworkBody, maxNetworkBodies+3), now)
+	c.telemetry.buffers.appendWebSocketEvents(make([]types.WebSocketEvent, maxWSEvents+2), now, nil)
+	c.telemetry.buffers.appendEnhancedActions(make([]types.EnhancedAction, maxEnhancedActions+1), now)
 	c.telemetry.mu.Unlock()
 
 	pressure := c.Telemetry().Pressure()
@@ -137,11 +137,11 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 			t.Fatalf("%s pressure = %#v, want size/capacity=%d dropped=%d and positive age", name, got, size, dropped)
 		}
 	}
-	assertPressure("network", pressure.Network, MaxNetworkBodies, 3)
-	assertPressure("websocket", pressure.WebSocket, MaxWSEvents, 2)
-	assertPressure("actions", pressure.Actions, MaxEnhancedActions, 1)
-	c.Telemetry().NetworkWaterfall().addAt(make([]types.NetworkWaterfallEntry, DefaultNetworkWaterfallCapacity+4), "https://example.test", now)
-	if got := c.Telemetry().Pressure().NetworkWaterfall; got.Size != DefaultNetworkWaterfallCapacity || got.Dropped != 4 {
+	assertPressure("network", pressure.Network, maxNetworkBodies, 3)
+	assertPressure("websocket", pressure.WebSocket, maxWSEvents, 2)
+	assertPressure("actions", pressure.Actions, maxEnhancedActions, 1)
+	c.Telemetry().NetworkWaterfall().addAt(make([]types.NetworkWaterfallEntry, defaultNetworkWaterfallCapacity+4), "https://example.test", now)
+	if got := c.Telemetry().Pressure().NetworkWaterfall; got.Size != defaultNetworkWaterfallCapacity || got.Dropped != 4 {
 		t.Fatalf("network waterfall pressure = %#v, want bounded with four drops", got)
 	}
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 )
 
@@ -168,11 +169,15 @@ func BuildMemoryInfo(cap *capture.Capture) MemoryInfo {
 // BuildBuffersInfo returns buffer utilization stats from capture and server.
 func BuildBuffersInfo(cap *capture.Capture, server ServerDeps) BuffersInfo {
 	var networkEntries, wsEntries, actionEntries int
+	var networkCapacity, wsCapacity, actionCapacity int
 	if cap != nil {
 		h := capture.NewHealthReader(cap).Snapshot()
 		networkEntries = h.NetworkBodyCount
 		wsEntries = h.WebSocketCount
 		actionEntries = h.ActionCount
+		networkCapacity = h.NetworkCapacity
+		wsCapacity = h.WebSocketCapacity
+		actionCapacity = h.ActionCapacity
 	}
 
 	consoleEntries, consoleCapacity, consoleDropped := getConsoleStats(server)
@@ -186,18 +191,18 @@ func BuildBuffersInfo(cap *capture.Capture, server ServerDeps) BuffersInfo {
 		},
 		Network: BufferStats{
 			Entries:        networkEntries,
-			Capacity:       capture.MaxNetworkBodies,
-			UtilizationPct: CalcUtilization(networkEntries, capture.MaxNetworkBodies),
+			Capacity:       networkCapacity,
+			UtilizationPct: CalcUtilization(networkEntries, networkCapacity),
 		},
 		WebSocket: BufferStats{
 			Entries:        wsEntries,
-			Capacity:       capture.MaxWSEvents,
-			UtilizationPct: CalcUtilization(wsEntries, capture.MaxWSEvents),
+			Capacity:       wsCapacity,
+			UtilizationPct: CalcUtilization(wsEntries, wsCapacity),
 		},
 		Actions: BufferStats{
 			Entries:        actionEntries,
-			Capacity:       capture.MaxEnhancedActions,
-			UtilizationPct: CalcUtilization(actionEntries, capture.MaxEnhancedActions),
+			Capacity:       actionCapacity,
+			UtilizationPct: CalcUtilization(actionEntries, actionCapacity),
 		},
 	}
 }
@@ -212,7 +217,7 @@ func getConsoleStats(server ServerDeps) (int, int, int64) {
 
 // BuildRateLimitInfo returns rate limiting state from capture.
 func BuildRateLimitInfo(cap *capture.Capture) RateLimitingInfo {
-	info := RateLimitingInfo{Threshold: capture.RateLimitThreshold}
+	info := RateLimitingInfo{Threshold: circuit.RateLimitThreshold}
 	if cap != nil {
 		h := capture.NewHealthReader(cap).Snapshot()
 		info.CurrentRate = h.WindowEventCount

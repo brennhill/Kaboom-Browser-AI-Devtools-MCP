@@ -69,7 +69,7 @@ The critical invariant is that the read loop starts before, or concurrently with
 
 **Launch-mode classification (`internal/launchmode/launch_mode.go`).** `launchmode.Classify` receives the daemon flag, terminal interactivity, and detected parent process while inspecting supervisor environment markers to label the launch `persistent` or `likely_transient`. `launchmode.Warning` produces the advisory string; `launchmode.EnforcePersistent` upgrades it to a hard error when `KABOOM_REQUIRE_PERSISTENT` is set.
 
-**Extension readiness guard (`internal/toolguard/guards.go`).** `RequireExtension` blocks a tool call until the extension reports connectivity, waiting up to `capture.ExtensionReadinessTimeout`. This window lets the extension's one-second sync loop reconnect after a cold daemon start before the call fails.
+**Extension readiness guard (`cmd/browser-agent/internal/toolguard/guards.go`).** `RequireExtension` blocks a tool call until the extension reports connectivity, waiting up to `toolguard.DefaultExtensionReadinessTimeout`. This window lets the extension's sync loop reconnect after a cold daemon start before the call fails.
 
 ## Data Flow
 

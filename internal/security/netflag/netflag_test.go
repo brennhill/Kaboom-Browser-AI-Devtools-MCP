@@ -3,7 +3,7 @@
 // Docs: docs/features/feature/security-hardening/index.md
 //
 // These were previously gated behind `//go:build integration` with a note saying
-// NetworkWaterfallEntry/SecurityFlag "aren't available". That note is stale — the
+// NetworkWaterfallEntry/Flag "aren't available". That note is stale — the
 // types are exported from internal/capture and the tests compile and pass in a
 // normal run — so the tag is gone and the detectors are covered by default.
 package netflag
@@ -317,6 +317,6 @@ func TestAnalyzeNetworkSecurity_ReturnsEmptyForSafeOrigins(t *testing.T) {
 // ============================================
 // Storage Tests
 // ============================================
-// NOTE: SecurityFlags storage tests removed — securityFlags field was dead code
-// (never written by production code). The SecurityFlag type is retained for
+// NOTE: Flag storage tests were removed — the old securityFlags field was dead code
+// (never written by production code). The Flag type remains canonical for
 // future use by security analysis functions.

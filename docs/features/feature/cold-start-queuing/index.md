@@ -4,12 +4,15 @@ feature_id: feature-cold-start-queuing
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/asynccommand/handler.go
   - internal/capture/extension_state.go
 test_paths:
+  - cmd/browser-agent/internal/toolguard/guards_test.go
+  - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
   - internal/capture/readiness_gate_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
   - cmd/browser-agent/tools_async_timeout_test.go
@@ -32,6 +35,9 @@ last_verified_date: 2026-03-05
 
 ## Canonical Note
 Readiness wait occurs once at the gate; async/background paths return queued immediately and should not double-block.
+The bounded default is owned by `toolguard`, which applies the policy. Capture
+only owns the live connection transition and wait primitive; it no longer
+exports command-dispatch timeout policy.
 Tests construct the full capture/guard dependency pair through shared fixtures so readiness diagnostics exercise the production object graph.
 Extension connection changes close and rotate a generation notification under
 the extension-state lock. Readiness waiters snapshot state and that channel

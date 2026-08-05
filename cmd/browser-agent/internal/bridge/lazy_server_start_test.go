@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 )
@@ -142,7 +142,7 @@ func TestToolsCall_WaitsDuringStartup_NotInstantError(t *testing.T) {
 }
 
 func TestRequireExtension_WaitsForColdStart(t *testing.T) {
-	if capture.ExtensionReadinessTimeout <= 0 {
-		t.Fatal("ExtensionReadinessTimeout should be > 0 to allow cold-start reconnection")
+	if toolguard.DefaultExtensionReadinessTimeout <= 0 {
+		t.Fatal("DefaultExtensionReadinessTimeout should be > 0 to allow cold-start reconnection")
 	}
 }

@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 )
 
 // ============================================
@@ -69,7 +71,7 @@ func TestNewReadIngestBody_RateLimited(t *testing.T) {
 
 	// Trigger rate limit by recording many events
 	for i := 0; i < 100; i++ {
-		c.Circuit().RecordEvents(RateLimitThreshold)
+		c.Circuit().RecordEvents(circuit.RateLimitThreshold)
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/ingest", strings.NewReader(`{}`))

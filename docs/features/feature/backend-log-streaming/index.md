@@ -16,7 +16,6 @@ code_paths:
   - internal/capture/capture.go
   - internal/capture/clientstore/owner.go
   - internal/capture/settingscache/loader.go
-  - internal/capture/model.go
   - internal/capture/events.go
   - internal/capture/logstore/store.go
   - internal/capture/perfstore/store.go
@@ -305,6 +304,10 @@ than the live extension-state lock owner. Missing and stale cache entries are
 explicit expected fallbacks; read, parse, and timestamp corruption fail open to
 safe defaults and emit fixed, redacted Doctor diagnostics. A later valid load
 resolves the same diagnostic lifecycle without retaining raw paths or values.
+The former mixed `model.go` is deleted. Telemetry capacities and memory budgets
+now live beside `TelemetryStore`, the shared extension-ingest body limit lives
+beside the HTTP boundary, disconnect timing lives beside extension state, and
+rate-limit consumers use the canonical circuit contract directly.
 Extension connection, pilot, tracked-tab, CSP, security-mode, command-heartbeat,
 test-boundary, and server/extension compatibility state now share the independently synchronized
 `ExtensionRuntime` returned by `Capture.Extension()`. Sync ingestion and every

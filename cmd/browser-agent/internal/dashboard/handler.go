@@ -102,11 +102,11 @@ func Status(options StatusOptions) http.HandlerFunc {
 			}
 
 			buffers["network_entries"] = snap.NetworkBodyCount
-			buffers["network_capacity"] = capture.MaxNetworkBodies
+			buffers["network_capacity"] = snap.NetworkCapacity
 			buffers["websocket_entries"] = snap.WebSocketCount
-			buffers["websocket_capacity"] = capture.MaxWSEvents
+			buffers["websocket_capacity"] = snap.WebSocketCapacity
 			buffers["action_entries"] = snap.ActionCount
-			buffers["action_capacity"] = capture.MaxEnhancedActions
+			buffers["action_capacity"] = snap.ActionCapacity
 
 			resp["recent_commands"] = buildRecentCommands(options.Capture.DiagnosticLogs().HTTPEntries())
 		} else {

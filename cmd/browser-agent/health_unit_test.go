@@ -149,7 +149,7 @@ func TestHealthResponseZeroDroppedCount(t *testing.T) {
 func TestHealthResponseExposesMachineReadableResourcePressure(t *testing.T) {
 	hm := health.NewMetrics()
 	cap := capture.NewCapture()
-	cap.Telemetry().AddNetworkBodies(make([]types.NetworkBody, capture.MaxNetworkBodies+2))
+	cap.Telemetry().AddNetworkBodies(make([]types.NetworkBody, cap.Telemetry().Pressure().Network.Capacity+2))
 	cap.ExtensionLogs().Add(make([]types.ExtensionLog, capturelogstore.ExtensionCapacity+1))
 	alerts := alertbuf.NewAlertBuffer()
 	for i := 0; i < alertbuf.AlertBufferCap+3; i++ {

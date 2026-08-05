@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -420,7 +421,7 @@ func TestV4HandleWebSocketEvents_POST_RateLimitAfterRecording(t *testing.T) {
 	t.Parallel()
 	capture := setupTestCapture(t)
 
-	capture.circuit.SetWindowState(time.Now(), RateLimitThreshold-1)
+	capture.circuit.SetWindowState(time.Now(), circuit.RateLimitThreshold-1)
 
 	// 10 events pushes count over threshold
 	events := make([]map[string]any, 10)

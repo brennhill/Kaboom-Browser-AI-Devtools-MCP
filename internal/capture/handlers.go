@@ -19,6 +19,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
+const maxExtensionPostBody = 5 << 20
+
 // HTTPHandlers owns capture's HTTP ingestion, result, storage, performance,
 // and circuit-health request boundary.
 type HTTPHandlers struct {

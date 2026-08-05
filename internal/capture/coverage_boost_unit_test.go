@@ -119,7 +119,7 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 
 	c.telemetry.mu.Lock()
 	now := time.Now()
-	c.telemetry.buffers.enhancedActions = newBoundedRing[enhancedActionEntry](MaxEnhancedActions)
+	c.telemetry.buffers.enhancedActions = newBoundedRing[enhancedActionEntry](maxEnhancedActions)
 	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
 	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
 	c.extension.state.activeTestIDs["test-1"] = true
@@ -139,13 +139,13 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 		t.Fatalf("last action TestIDs = %+v, want [test-1]", last.TestIDs)
 	}
 
-	many := make([]types.EnhancedAction, MaxEnhancedActions+5)
+	many := make([]types.EnhancedAction, maxEnhancedActions+5)
 	for i := range many {
 		many[i] = types.EnhancedAction{Type: "click"}
 	}
 	c.Telemetry().AddEnhancedActions(many)
-	if got := len(c.Telemetry().GetAllEnhancedActions()); got != MaxEnhancedActions {
-		t.Fatalf("GetEnhancedActionCount() after rotation = %d, want %d", got, MaxEnhancedActions)
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != maxEnhancedActions {
+		t.Fatalf("GetEnhancedActionCount() after rotation = %d, want %d", got, maxEnhancedActions)
 	}
 }
 
@@ -154,7 +154,7 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 
 	now := time.Now()
 	c.telemetry.mu.Lock()
-	c.telemetry.buffers.networkBodies = newBoundedRing[networkBodyEntry](MaxNetworkBodies)
+	c.telemetry.buffers.networkBodies = newBoundedRing[networkBodyEntry](maxNetworkBodies)
 	c.telemetry.buffers.networkBodies.push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now})
 	c.telemetry.buffers.networkBodies.push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now})
 	c.extension.state.activeTestIDs["tid"] = true
