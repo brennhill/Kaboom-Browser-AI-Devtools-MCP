@@ -106,7 +106,7 @@ Files with too many lines of code (limit: 600 lines)
 **internal/capture/recording.go** (1 issues)
 - Line 224: Method ListRecordings has a cyclomatic complexity of 9 (limit is 8)
 
-**internal/capture/websocket-streaming_test.go** (1 issues)
+**internal/capture/websockettest/websocket-streaming_test.go** (1 issues)
 - Line 424: Method TestRecordingPersistToDisk has a cyclomatic complexity of 10 (limit is 8)
 
 **internal/pagination/pagination.go** (1 issues)
@@ -229,8 +229,8 @@ Files with too many lines of code (limit: 600 lines)
 **cmd/browser-agent/tools_interact_upload_test.go** (1 issues)
 - Line 1: File cmd/browser-agent/tools_interact_upload_test.go has 549 non-comment lines of code
 
-**internal/capture/websocket_test.go** (1 issues)
-- Line 1: File internal/capture/websocket_test.go has 770 non-comment lines of code
+**internal/capture/websockettest/websocket_test.go** (1 issues)
+- Line 1: File internal/capture/websockettest/websocket_test.go has 770 non-comment lines of code
 
 **internal/queries/tab_targeting_test.go** (1 issues)
 - Line 1: File internal/queries/tab_targeting_test.go has 521 non-comment lines of code
@@ -279,7 +279,7 @@ Files with too many lines of code (limit: 600 lines)
 **internal/capture/correlation_tracking_test.go** (1 issues)
 - Line 100: Method TestCorrelationIDListCommands has 51 lines of code (limit is 50)
 
-**internal/capture/websocket-streaming_test.go** (1 issues)
+**internal/capture/websockettest/websocket-streaming_test.go** (1 issues)
 - Line 1278: Method TestLogDiffCategorize has 59 lines of code (limit is 50)
 
 **internal/pagination/cursor_test.go** (1 issues)

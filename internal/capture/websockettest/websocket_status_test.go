@@ -1,7 +1,7 @@
 // websocket_status_test.go — Tests WebSocket connection tracking and status metrics.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package websockettest
 
 import (
 	"strings"

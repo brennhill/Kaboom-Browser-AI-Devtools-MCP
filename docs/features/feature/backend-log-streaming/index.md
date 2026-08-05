@@ -114,10 +114,10 @@ test_paths:
   - internal/capture/syncruntime/readiness_gate_test.go
   - internal/capture/async_queue_integration_test.go
   - internal/capture/sync_waterfall_test.go
-  - internal/capture/websocket_test.go
-  - internal/capture/websocket_status_test.go
-  - internal/capture/websocket_handlers_test.go
-  - internal/capture/websocket-streaming_test.go
+  - internal/capture/websockettest/websocket_test.go
+  - internal/capture/websockettest/websocket_status_test.go
+  - internal/capture/websockettest/websocket_handlers_test.go
+  - internal/capture/websockettest/websocket-streaming_test.go
   - internal/capture/syncruntime/sync_test_helpers_test.go
   - internal/capture/coverage_gaps_part2_test.go
   - internal/capture/api_contract_test.go

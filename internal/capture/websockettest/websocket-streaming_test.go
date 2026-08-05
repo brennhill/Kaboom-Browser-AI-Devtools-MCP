@@ -1,7 +1,7 @@
 // Purpose: Tests for WebSocket streaming capture and message routing.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package websockettest
 
 import (
 	"fmt"
@@ -40,7 +40,7 @@ func TestRecordingWebSocketConnectionEstablished(t *testing.T) {
 	}
 
 	// Recording should exist and be ready to receive WebSocket events
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if recording == nil {
 		t.Errorf("Expected recording to be created for WS integration")
 	}
@@ -90,7 +90,7 @@ func TestRecordingWebSocketRealTimeStreaming(t *testing.T) {
 	}
 
 	// Verify all events captured
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if len(recording.Actions) != 5 {
 		t.Errorf("Expected 5 actions, got %d", len(recording.Actions))
 	}
@@ -146,7 +146,7 @@ func TestRecordingWebSocketBufferOverflow(t *testing.T) {
 	}
 
 	// Verify all 101 actions are stored (recording stores in memory, no ring buffer limits yet)
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if len(recording.Actions) != 101 {
 		t.Errorf("Expected 101 actions, got %d (ring buffer behavior will limit to 10,000 at WS level)", len(recording.Actions))
 	}
@@ -201,7 +201,7 @@ func TestRecordingWebSocketConnectionDropFallback(t *testing.T) {
 	}
 
 	// Verify all events captured through fallback
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if len(recording.Actions) != 6 {
 		t.Errorf("Expected 6 actions (3 pre-drop + 3 post-fallback), got %d", len(recording.Actions))
 	}
@@ -274,7 +274,7 @@ func TestRecordingWebSocketReconnectBackoff(t *testing.T) {
 	}
 
 	// Verify all events captured across reconnect cycles
-	recording := capture.recordingManager.GetInMemoryRecording(recordingID)
+	recording := capture.Recordings().GetInMemoryRecording(recordingID)
 	if len(recording.Actions) != 6 {
 		t.Errorf("Expected 6 actions across 3 cycles, got %d", len(recording.Actions))
 	}

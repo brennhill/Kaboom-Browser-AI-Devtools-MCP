@@ -1,7 +1,7 @@
 // websocket_test.go — Tests WebSocket event buffering and query filters.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package websockettest
 
 import (
 	"testing"
