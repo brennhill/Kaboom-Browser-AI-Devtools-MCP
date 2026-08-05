@@ -52,14 +52,10 @@ func TestExecuteQAFixtureCommandReturnsExtensionResult(t *testing.T) {
 	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), syncRequest)
 
 	go func() {
-		deadline := time.Now().Add(time.Second)
-		for time.Now().Before(deadline) {
-			pending := cap.Queries().GetPendingQueries()
-			if len(pending) > 0 {
-				cap.Queries().SetQueryResultWithClient(pending[0].ID, json.RawMessage(`{"restored":true}`), "")
-				return
-			}
-			time.Sleep(time.Millisecond)
+		cap.Queries().WaitForPendingQueries(time.Second)
+		pending := cap.Queries().GetPendingQueries()
+		if len(pending) > 0 {
+			cap.Queries().SetQueryResultWithClient(pending[0].ID, json.RawMessage(`{"restored":true}`), "")
 		}
 	}()
 	result, err := executeQAFixtureCommand(context.Background(), &ToolHandler{capture: cap}, "qa_restore", json.RawMessage(`{"fixture":"corrupt"}`), time.Second)

@@ -76,19 +76,17 @@ func TestCaptureEvidenceResultContracts(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			store := capture.NewCapture()
+			t.Cleanup(store.Close)
 			store.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
 			done := make(chan EvidenceShot, 1)
 			go func() { done <- CaptureEvidence(store, "client") }()
-			var queryID string
-			deadline := time.Now().Add(time.Second)
-			for time.Now().Before(deadline) && queryID == "" {
-				for _, query := range store.Queries().GetPendingQueries() {
-					if query.Type == "screenshot" {
-						queryID = query.ID
-						break
-					}
+			store.Queries().WaitForPendingQueries(time.Second)
+			queryID := ""
+			for _, query := range store.Queries().GetPendingQueries() {
+				if query.Type == "screenshot" {
+					queryID = query.ID
+					break
 				}
-				time.Sleep(time.Millisecond)
 			}
 			if queryID == "" {
 				t.Fatal("screenshot query was not queued")

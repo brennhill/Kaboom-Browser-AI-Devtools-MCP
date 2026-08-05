@@ -205,6 +205,9 @@ continuations are private; an AST contract test rejects any new exported
 details.
 Composition also supplies evidence and query callbacks directly; dead or
 one-line ToolHandler forwarding methods are structurally prohibited.
+Evidence screenshot tests await the query dispatcher's enqueue notification,
+complete the exact screenshot query, and close their capture runtime. No
+polling sleep or leaked cleanup goroutine participates in the result contract.
 Summary response-mode behavior belongs to `summarypref.Cache`; async formatting
 and dependency wiring use that owner directly, and the former four-method root
 forwarding layer plus its duplicate tests have been deleted.

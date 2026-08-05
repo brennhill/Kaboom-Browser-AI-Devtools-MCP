@@ -10,13 +10,11 @@
     "cmd/browser-agent/internal/terminal/relay_rebind_test.go": 1,
     "cmd/browser-agent/internal/terminal/supervisor/supervisor_test.go": 1,
     "cmd/browser-agent/internal/terminal/ws_panic_test.go": 1,
-    "cmd/browser-agent/internal/toolinteract/interact_evidence_test.go": 1,
     "cmd/browser-agent/noise_first_connect_test.go": 2,
     "cmd/browser-agent/server_persistence_test.go": 6,
     "cmd/browser-agent/server_reliability_integration_test.go": 3,
     "cmd/browser-agent/server_reliability_test.go": 3,
     "cmd/browser-agent/test_daemon_cleanup_test.go": 1,
-    "cmd/browser-agent/tools_configure_handler_test.go": 1,
     "cmd/browser-agent/tools_interact_navigate_document_test.go": 1
   }
 }
