@@ -352,6 +352,10 @@ func NextWSSubID() string {
 // shell prompt character, then writes the init command. Replaces the old
 // direct-PTY-read approach so the relay's readLoop owns all PTY reads.
 func WaitForPromptViaRelay(relay *Relay, initCmd string) {
+	waitForPromptViaRelay(relay, initCmd, nil)
+}
+
+func waitForPromptViaRelay(relay *Relay, initCmd string, onSubscribed func()) {
 	// A UNIQUE id per call: a constant "init-cmd" makes two concurrent inits on one
 	// relay collide (finding I). Fanout.Subscribe now rejects a duplicate id outright
 	// (ErrDuplicateSubscriber) instead of silently replacing the incumbent, so the
@@ -364,6 +368,9 @@ func WaitForPromptViaRelay(relay *Relay, initCmd string) {
 		return
 	}
 	defer relay.fanout.Unsubscribe(subID)
+	if onSubscribed != nil {
+		onSubscribed()
+	}
 
 	deadline := time.After(InitTimeout)
 	for {

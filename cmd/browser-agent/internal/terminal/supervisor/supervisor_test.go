@@ -16,7 +16,7 @@ import (
 // event recorder wired to logFn.
 func newTestSupervisor(t *testing.T, initialDone <-chan struct{}) (*Supervisor, *supEvents, *int) {
 	t.Helper()
-	ev := &supEvents{}
+	ev := &supEvents{notify: make(chan struct{})}
 	currentPort := 0
 	ts := &Supervisor{
 		deps: Dependencies{
@@ -46,11 +46,14 @@ func closedTimer() <-chan time.Time {
 type supEvents struct {
 	mu     sync.Mutex
 	events []string
+	notify chan struct{}
 }
 
 func (e *supEvents) record(event string, _ map[string]any) {
 	e.mu.Lock()
 	e.events = append(e.events, event)
+	close(e.notify)
+	e.notify = make(chan struct{})
 	e.mu.Unlock()
 }
 
@@ -68,14 +71,30 @@ func (e *supEvents) count(event string) int {
 
 func (e *supEvents) waitFor(t *testing.T, event string, want int) {
 	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if e.count(event) >= want {
+	for {
+		e.mu.Lock()
+		if e.countLocked(event) >= want {
+			e.mu.Unlock()
 			return
 		}
-		time.Sleep(2 * time.Millisecond)
+		notify := e.notify
+		e.mu.Unlock()
+		select {
+		case <-notify:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timed out waiting for %d %q events (got %d)", want, event, e.count(event))
+		}
 	}
-	t.Fatalf("timed out waiting for %d %q events (got %d)", want, event, e.count(event))
+}
+
+func (e *supEvents) countLocked(event string) int {
+	n := 0
+	for _, ev := range e.events {
+		if ev == event {
+			n++
+		}
+	}
+	return n
 }
 
 // TestSupervisor_RestartsAfterUnexpectedDeath verifies that when the terminal

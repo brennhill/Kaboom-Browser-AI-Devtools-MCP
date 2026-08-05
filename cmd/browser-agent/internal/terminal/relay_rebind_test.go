@@ -35,9 +35,7 @@ func TestMap_GetOrCreateRebindsWhenSessionDiffers(t *testing.T) {
 	if err := first.sess.Close(); err != nil {
 		t.Fatalf("close first session: %v", err)
 	}
-	for i := 0; first.sess.IsAlive() && i < 200; i++ {
-		time.Sleep(5 * time.Millisecond)
-	}
+	_ = first.sess.Wait(time.Second)
 	if first.sess.IsAlive() {
 		t.Fatal("first session should be dead before the rebind")
 	}

@@ -92,15 +92,13 @@ func TestHandleTerminalWS_DownstreamPanicDoesNotCrashDaemon(t *testing.T) {
 		t.Fatalf("start: %v", err)
 	}
 
-	var mu sync.Mutex
-	panicLogged := false
+	panicLogged := make(chan struct{})
+	var panicLoggedOnce sync.Once
 	deps := testDeps()
 	deps.WSWriteFrame = panicOnBinaryWriteFrame
 	deps.LogEvent = func(event string, fields map[string]any) {
 		if event == "terminal_ws_panic" {
-			mu.Lock()
-			panicLogged = true
-			mu.Unlock()
+			panicLoggedOnce.Do(func() { close(panicLogged) })
 		}
 	}
 
@@ -139,23 +137,11 @@ func TestHandleTerminalWS_DownstreamPanicDoesNotCrashDaemon(t *testing.T) {
 		t.Fatal("expected the WS connection to be torn down after downstream panic")
 	}
 
-	// Give the recover's structured log a moment.
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		mu.Lock()
-		done := panicLogged
-		mu.Unlock()
-		if done {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	mu.Lock()
-	if !panicLogged {
-		mu.Unlock()
+	select {
+	case <-panicLogged:
+	case <-time.After(2 * time.Second):
 		t.Fatal("expected a structured terminal_ws_panic event to be logged")
 	}
-	mu.Unlock()
 
 	// The PTY session must survive so the browser can reconnect.
 	if sess, gerr := mgr.Get("ws-panic"); gerr != nil || !sess.IsAlive() {

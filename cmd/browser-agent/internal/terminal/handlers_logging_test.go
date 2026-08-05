@@ -122,10 +122,7 @@ func TestHandleTerminalStart_SelfHealsDeadSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get(default): %v", err)
 	}
-	deadline := time.Now().Add(3 * time.Second)
-	for sess.IsAlive() && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
-	}
+	_ = sess.Wait(3 * time.Second)
 	if sess.IsAlive() {
 		t.Fatal("child should have exited")
 	}

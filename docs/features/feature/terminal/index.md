@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -189,6 +189,10 @@ last_verified_date: 2026-03-28
 - **Bounded shutdown:** daemon teardown can no longer hang. `WriteBuffer.Close` is time-bounded (a drain blocked in `ptmx.Write` can't wait forever), shutdown order is `StopAll` (close PTYs) → `CloseAll` (drain write buffers) so the blocked write unblocks, and `Session.Close`'s post-SIGKILL reap wait is bounded.
 - WebSocket frame writes are serialized per-connection and bounded by `WSWriteTimeout`: a stalled reader (backgrounded-tab zero-window, hostile client) can no longer block the downstream pump or ping keepalive for up to `PongTimeout`.
 - Per-connection WS goroutines (downstream pump, ping keepalive, upstream reader) are panic-recovered via `goConnWorker`: a fault tears down only that connection (structured `terminal_ws_panic` log + `closeConn`), never the daemon process. `WriteBuffer.drain` and the init goroutine are `util.SafeGo`-wrapped for the same invariant.
+- Terminal lifecycle tests use owner-specific completion signals: child reaping
+  through `Session.Wait`, a private relay-subscription callback, supervisor event
+  generations, and one-shot panic-log delivery. None poll process, subscriber,
+  or logging state with scheduler sleeps.
 - Single-instance election never kills a healthy same-version daemon: the install hook (`kill-daemon.js`) and the in-process election both retry `/health` within a budget before concluding "down" (a momentary hiccup won't re-trigger a restart storm), and a future-dated lock (clock skew) is treated as brand-new (defer).
 - Upload paths sanitize the session id to a single segment (`sanitizeSessionID`) so a `../` id can't escape the uploads directory.
 - Scrollback buffer capped at 256 KB for memory safety

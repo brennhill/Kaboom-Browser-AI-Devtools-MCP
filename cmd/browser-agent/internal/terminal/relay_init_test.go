@@ -23,20 +23,23 @@ func TestWaitForPromptViaRelay_ConcurrentInitsUseDistinctSubscribers(t *testing.
 	relay := NewRelay(sess, "")
 	t.Cleanup(func() { _ = sess.Close() })
 
+	subscribed := make(chan struct{}, 2)
 	for _, cmd := range []string{"init-one", "init-two"} {
 		c := cmd
-		go func() { WaitForPromptViaRelay(relay, c) }()
+		go func() { waitForPromptViaRelay(relay, c, func() { subscribed <- struct{}{} }) }()
 	}
 
 	// Two concurrent inits must register two distinct subscribers. With the fixed
 	// "init-cmd" id the second Subscribe overwrites the first in the fanout map, so
 	// the count never reaches 2.
-	deadline := time.Now().Add(1500 * time.Millisecond)
-	for time.Now().Before(deadline) {
-		if relay.Fanout().Count() >= 2 {
-			return // distinct subscriber ids — the fix works
+	for i := 0; i < 2; i++ {
+		select {
+		case <-subscribed:
+		case <-time.After(time.Second):
+			t.Fatalf("subscriber %d was not registered", i+1)
 		}
-		time.Sleep(5 * time.Millisecond)
 	}
-	t.Fatalf("two concurrent inits must yield 2 distinct fanout subscribers, got %d (fixed sub id collides)", relay.Fanout().Count())
+	if got := relay.Fanout().Count(); got != 2 {
+		t.Fatalf("two concurrent inits must yield 2 distinct fanout subscribers, got %d (fixed sub id collides)", got)
+	}
 }
