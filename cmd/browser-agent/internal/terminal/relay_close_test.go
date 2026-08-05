@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
 )
 
 // spawnCat starts a `cat` PTY session: it echoes stdin and never exits on its
@@ -35,7 +36,7 @@ func TestRelay_CloseTearsDownSessionFanoutAndReadLoop(t *testing.T) {
 	if sess.IsAlive() {
 		t.Fatal("Relay.Close must close the session — otherwise readLoop stays blocked in sess.Read forever")
 	}
-	if _, err := relay.Fanout().Subscribe("late"); !errors.Is(err, pty.ErrFanoutClosed) {
+	if _, err := relay.Fanout().Subscribe("late"); !errors.Is(err, ptyfanout.ErrFanoutClosed) {
 		t.Fatalf("fanout should be closed after Relay.Close, Subscribe gave %v", err)
 	}
 	if _, err := relay.WriteBuf().Write([]byte("x")); !errors.Is(err, pty.ErrWriteBufferClosed) {

@@ -1,6 +1,6 @@
 // fanout_test.go — Tests for multi-subscriber fan-out.
 
-package pty
+package fanout
 
 import (
 	"errors"

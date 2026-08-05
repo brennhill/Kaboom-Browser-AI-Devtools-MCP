@@ -46,10 +46,8 @@ code_paths:
   - src/sidepanel.ts
   - internal/pty/manager.go
   - internal/pty/session.go
-  - internal/pty/clock.go
   - internal/pty/writebuf.go
-  - internal/pty/fanout.go
-  - internal/pty/diag.go
+  - internal/pty/fanout/fanout.go
   - npm/kaboom-agentic-browser/lib/daemon/kill-daemon.js
   - scripts/tests/framework/framework.sh
   - scripts/tests/workflows/cat-28-terminal.sh
@@ -92,13 +90,10 @@ test_paths:
   - tests/extension/terminal-session/terminal-session-stop.test.js
   - tests/extension/contracts/entry-point-parity.test.js
   - internal/pty/manager_test.go
-  - internal/pty/manager_fake_spawn_test.go
-  - internal/pty/manager_selfheal_test.go
   - internal/pty/session_test.go
-  - internal/pty/session_idle_clock_test.go
-  - internal/pty/writebuf_test.go
+  - internal/pty/runtime_lifecycle_test.go
+  - internal/pty/fanout/fanout_test.go
   - internal/pty/upload/upload_test.go
-  - internal/pty/diag_test.go
   - cmd/browser-agent/internal/terminal/session_end_signal_test.go
   - cmd/browser-agent/internal/terminal/frame_writer_deadline_test.go
   - cmd/browser-agent/internal/terminal/handlers_fanout_test.go
@@ -173,7 +168,7 @@ last_verified_date: 2026-03-28
 - **The terminal port is discovered, not assumed:** the browser derived it as `main_port + 1` and never read `terminal_port` from `/health`, which is what the daemon actually publishes after binding (it logs `terminal_server_bind_failed` when base+1 is taken). Every request then went to a port nothing was listening on and the terminal just looked broken. `resolveTerminalServerUrl()` performs the discovery inside the helper (rule 19 — no caller can forget it), caches it per base URL with a 60s TTL, and falls back to base+1 on any failure (daemon down, non-OK, no `terminal_port`, Windows), so it can only improve on the old assumption. The synchronous `getTerminalServerUrl()` remains for call sites that cannot await (postMessage target origin, `createPanelShell`) and reads the same cache.
 - **Write-guard budget is derived, not guessed:** `TERMINAL_GUARD_MAX_WAIT_MS` was a hand-picked 30s while the iframe does not emit `reconnect_exhausted` until ~45s (delays 1,2,4,8,10,10,10), so the guard discarded queued agent writes 15s *before* the parent's recovery even began — the queue could never survive the outage it exists for. The schedule is now declared in `terminal-widget-types.ts` (`TERMINAL_RECONNECT_BASE_DELAY_MS`, `_MAX_DELAY_MS`, `TERMINAL_MAX_RECONNECT_ATTEMPTS`) and the budget is computed from it (`terminalReconnectExhaustionMs()` + `TERMINAL_GUARD_RECOVERY_GRACE_MS`). Terminal port discovery is owned by `src/lib/terminal-server.ts`, so background, content, and side-panel callers share it without crossing runtime-context boundaries. `terminal-reconnect-budget-contract.test.js` pins those declarations to terminal.html's own literals so the two cannot drift.
 - **`Relay.Close` actually tears the relay down:** it used to close only the write buffer, so readLoop stayed blocked in `sess.Read` — the goroutine, the PTY fd and the open fanout all survived `/terminal/stop` and daemon shutdown. Close now closes the session (which is what breaks readLoop out), waits up to `RelayCloseTimeout` (5s) for the teardown defers, and re-closes the write buffer as defense in depth; every step is idempotent. Relays also evict themselves from the `Map` when their session ends on its own (`onExit` → `removeIfCurrent`, which never evicts a replacement), so an ordinary `exit` no longer leaks a map entry bound to a dead fanout.
-- **Duplicate fanout ids are rejected, not swallowed:** `Fanout.Subscribe` overwrote an existing id's map entry without closing the old channel, orphaning that subscriber's goroutine on a channel nothing would write to or close (and the incumbent's `Unsubscribe` then closed the *new* subscriber's channel). The guard lived in one caller (`WaitForPromptViaRelay`'s unique ids); per rule 19 it now lives in the primitive — a duplicate id returns `pty.ErrDuplicateSubscriber` and the incumbent is untouched.
+- **Duplicate fanout ids are rejected, not swallowed:** `Fanout.Subscribe` overwrote an existing id's map entry without closing the old channel, orphaning that subscriber's goroutine on a channel nothing would write to or close (and the incumbent's `Unsubscribe` then closed the *new* subscriber's channel). The guard lived in one caller (`WaitForPromptViaRelay`'s unique ids); per rule 19 it now lives in the primitive — a duplicate id returns `fanout.ErrDuplicateSubscriber` and the incumbent is untouched.
 - **"Terminal gone" ≠ "terminal behind":** `WriteBuffer.Write` returned `ErrWriteBufferFull` both when the buffer overflowed the backpressure cap AND when it was closed, so no caller could tell a session that ended from one that is wedged. Writing to a closed buffer now returns `pty.ErrWriteBufferClosed`. The WS upstream loop no longer discards the error either — a refused keystroke frame logs `terminal_input_dropped` with `reason: session_ended | backpressure | write_error` (`writeDropReason`).
 - **Idle timer cannot outlive the session:** `AppendScrollback` never checked whether the session was closed, so a chunk landing after `Close` armed a fresh 30s timer nothing would stop, and `Close`'s `idleTimer.Stop()` could not un-fire a timer whose deadline had already passed. Either way the callback logged "session X is idle" for a shell that had already exited. `Session` now carries an `idleStopped` flag (under `scrollMu`, so the idle path never has to take `mu` and invert Close's lock order): `AppendScrollback` refuses to re-arm, and the callback (`fireIdle`) re-reads the flag at fire time.
 - **PTY I/O shutdown is deterministic:** `Session` depends on the minimal
@@ -458,6 +453,14 @@ If the user re-focuses and types again during the auto-submit window, Enter is d
 
 ## PTY Layer
 
+The root PTY package is exactly ten files and owns process/session management,
+platform PTY opening, and buffered input. Subscriber broadcast is an independent
+`internal/pty/fanout` package because it changes with relay backpressure rather
+than process lifecycle. Runtime clock, diagnostic, write-buffer, and reaper
+tests share one lifecycle suite; manager spawn/self-heal tests share the manager
+suite. Package regression coverage prevents the ten-file or 800-line boundaries
+from regressing.
+
 Relay completion is a strict teardown barrier: the write buffer and fanout
 close first, map self-removal runs next, and only then does the relay completion
 channel close. Tests and callers can therefore assert session-end postconditions
@@ -522,3 +525,5 @@ Note: `/config/active-codebase` is on the **main** daemon server (not terminal s
 | `src/lib/constants.ts` | `TERMINAL_PORT_OFFSET`, storage keys |
 | `internal/pty/manager.go` | Session manager: create, get, destroy, token auth |
 | `internal/pty/session.go` | PTY session: spawn, I/O, resize, scrollback, close |
+| `internal/pty/writebuf.go` | Bounded, close-aware PTY input buffering |
+| `internal/pty/fanout/fanout.go` | Subscriber isolation, caps, and slow-consumer backpressure |

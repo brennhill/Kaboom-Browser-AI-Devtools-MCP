@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
 )
 
 // HandleTerminalWS upgrades a GET /terminal/ws request to a WebSocket connection
@@ -126,7 +127,7 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 	// the client's reconnect backoff retries instead of declaring a live terminal
 	// dead (finding A).
 	if subErr != nil {
-		if errors.Is(subErr, pty.ErrFanoutClosed) {
+		if errors.Is(subErr, ptyfanout.ErrFanoutClosed) {
 			exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
 			_ = writeFrame(0x1, exitMsg)
 		}

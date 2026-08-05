@@ -1,7 +1,7 @@
 // fanout.go — Multi-subscriber fan-out for PTY output.
 // Why: Allows multiple WebSocket connections to watch the same terminal session.
 
-package pty
+package fanout
 
 import (
 	"errors"

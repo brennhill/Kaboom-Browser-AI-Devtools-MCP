@@ -1137,15 +1137,7 @@
       "mutable_globals": 0,
       "exports": 6
     },
-    "internal/pty/clock.go": {
-      "mutable_globals": 0,
-      "exports": 2
-    },
-    "internal/pty/diag.go": {
-      "mutable_globals": 2,
-      "exports": 5
-    },
-    "internal/pty/fanout.go": {
+    "internal/pty/fanout/fanout.go": {
       "mutable_globals": 0,
       "exports": 10
     },
@@ -1154,8 +1146,8 @@
       "exports": 18
     },
     "internal/pty/session.go": {
-      "mutable_globals": 4,
-      "exports": 24
+      "mutable_globals": 6,
+      "exports": 31
     },
     "internal/pty/session_unsupported.go": {
       "mutable_globals": 0,

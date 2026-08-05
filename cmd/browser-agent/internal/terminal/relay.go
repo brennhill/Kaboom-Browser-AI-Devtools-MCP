@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -18,7 +19,7 @@ import (
 // The reader loop runs from relay creation until the session closes.
 type Relay struct {
 	sess         *pty.Session
-	fanout       *pty.Fanout
+	fanout       *ptyfanout.Fanout
 	writeBuf     *pty.WriteBuffer
 	workspaceDir string
 	done         chan struct{}
@@ -49,7 +50,7 @@ func NewRelay(sess *pty.Session, workspaceDir string) *Relay {
 func newRelay(sess *pty.Session, workspaceDir string, onExit func(*Relay)) *Relay {
 	return &Relay{
 		sess:         sess,
-		fanout:       pty.NewFanout(),
+		fanout:       ptyfanout.NewFanout(),
 		writeBuf:     pty.NewWriteBuffer(sess),
 		workspaceDir: workspaceDir,
 		done:         make(chan struct{}),
@@ -172,7 +173,7 @@ func (r *Relay) Close() {
 }
 
 // Fanout returns the relay's fanout for subscribing.
-func (r *Relay) Fanout() *pty.Fanout { return r.fanout }
+func (r *Relay) Fanout() *ptyfanout.Fanout { return r.fanout }
 
 // WriteBuf returns the relay's write buffer for writing to the PTY.
 func (r *Relay) WriteBuf() *pty.WriteBuffer { return r.writeBuf }
