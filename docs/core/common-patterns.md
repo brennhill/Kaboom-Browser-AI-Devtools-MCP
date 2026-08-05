@@ -222,7 +222,7 @@ Use this as a hard checklist during design, coding, and review.
 - [ ] Migrations are complete: no compatibility facade, alias-only module, old caller, stale test, or stale documentation remains.
 - [ ] Every catch leaves redacted evidence, or carries an explicit `EXPECTED_ABSENCE:` rationale.
 - [ ] Operational failures use a registered incident code and canonical lifecycle projection rather than parallel log/Doctor/analytics calls.
-- [ ] Mutable Go state and exported surfaces did not grow, or their reviewed ownership rationale accompanies the baseline change.
+- [ ] Mutable Go state and package-level exported surfaces did not grow, or their reviewed ownership rationale accompanies the baseline change.
 
 ### Isolate wall-clock performance gates
 

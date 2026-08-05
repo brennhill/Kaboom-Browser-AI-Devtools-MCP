@@ -11,7 +11,7 @@ code_paths:
   - internal/mcp/protocol.go
   - internal/mcp/types.go
   - cmd/browser-agent/internal/asynccommand/handler.go
-  - internal/types/log.go
+  - internal/types/wire_log.go
   - internal/identity/mcp.go
   - cmd/browser-agent/internal/toolresp/rate_limiter.go
   - cmd/browser-agent/internal/toolresp/toolresp.go

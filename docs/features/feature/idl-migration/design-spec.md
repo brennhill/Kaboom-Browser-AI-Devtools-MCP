@@ -26,7 +26,7 @@ The Go/TS boundary has two distinct contract surfaces:
 **Wire types** (data payloads between extension and daemon):
 - `internal/types/wire_enhanced_action.go` -> `src/types/wire/wire-enhanced-action.ts`
 - `internal/types/wire_network.go` -> `src/types/wire/wire-network.ts`
-- `internal/types/wire_websocket_event.go` -> `src/types/wire/wire-websocket-event.ts`
+- `internal/types/wire_network.go` -> `src/types/wire/wire-network.ts` and `src/types/wire/wire-websocket-event.ts`
 - `internal/performance/wire_performance.go` -> `src/types/wire/wire-performance-snapshot.ts`
 
 These are already partially automated. Go structs are the source of truth.

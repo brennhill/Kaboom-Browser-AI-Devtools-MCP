@@ -27,6 +27,19 @@ func TestEvaluateAllowsReductionsAndDeletedFiles(t *testing.T) {
 	}
 }
 
+func TestEvaluateAllowsExportsToMoveWithinTheirOwningPackage(t *testing.T) {
+	baseline := inventory{
+		"pkg/first.go":  {Exports: 2},
+		"pkg/second.go": {Exports: 1},
+	}
+	current := inventory{
+		"pkg/canonical.go": {Exports: 3},
+	}
+	if violations := evaluate(current, baseline); len(violations) != 0 {
+		t.Fatalf("same-package move violations = %v", violations)
+	}
+}
+
 func TestScanSeparatesMutableGlobalsFromExportedSurface(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "pkg", "state.go")

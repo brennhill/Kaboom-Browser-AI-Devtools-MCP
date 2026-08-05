@@ -1,5 +1,5 @@
 /**
- * @fileoverview Wire type for extension diagnostics — matches internal/types/wire_extension_log.go
+ * @fileoverview Wire type for extension diagnostics — matches internal/types/wire_log.go
  *
  * Canonical TypeScript definition for redacted extension diagnostics sent through sync.
  * Changes here MUST be mirrored in the Go counterpart. Run `make check-wire-drift`.

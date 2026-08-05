@@ -4,7 +4,7 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -65,6 +65,7 @@ test_paths:
   - cmd/browser-agent/tools_analyze_annotation_detail_test.go
   - cmd/browser-agent/tools_analyze_annotation_hints_test.go
   - cmd/browser-agent/tools_analyze_inspect_test.go
+  - cmd/browser-agent/tools_async_timeout_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
   - cmd/browser-agent/internal/toolanalyze/visual/handler_test.go
@@ -127,6 +128,9 @@ from `internal/asynccommand.Handler`; `ToolHandler` no longer implements an
 asynchronous host contract.
 The background service-worker entrypoint owns startup only. Analysis tests and
 runtime code import their focused owner modules rather than an entrypoint facade.
+Synchronous analyze timeout coverage injects a terminal command-completion seam
+after the real queue and correlation registration run. This proves the caller's
+budget and exactly-once response without racing a short-lived queue entry.
 
 Structured extraction modes:
 - `analyze({what:"form_state"})` returns current form values and field metadata.

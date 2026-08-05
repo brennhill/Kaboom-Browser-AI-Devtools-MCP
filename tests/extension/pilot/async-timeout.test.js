@@ -36,7 +36,9 @@ const createMockChrome = () => ({
       return Promise.resolve([{ id: 1, windowId: 1, url: 'http://localhost:3000' }])
     }),
     sendMessage: mock.fn((_tabId, _message) => Promise.resolve({ success: true, result: 'test-result' })),
-    get: mock.fn((tabId) => Promise.resolve({ id: tabId, windowId: 1, url: 'http://localhost:3000' })),
+    get: mock.fn((tabId) =>
+      Promise.resolve({ id: tabId, windowId: 1, url: 'http://localhost:3000', status: 'complete' })
+    ),
     goBack: mock.fn(() => Promise.resolve()),
     goForward: mock.fn(() => Promise.resolve()),
     reload: mock.fn(() => Promise.resolve()),
@@ -168,10 +170,15 @@ describe('Bug #5: Async Execute Command Await', () => {
     }
 
     let resolveExecute
+    let signalExecuteStarted
+    const executeStarted = new Promise((resolve) => {
+      signalExecuteStarted = resolve
+    })
     globalThis.chrome.tabs.sendMessage = mock.fn((_tabId, message) => {
       if (message?.type === 'kaboom_execute_query') {
         return new Promise((resolve) => {
           resolveExecute = resolve
+          signalExecuteStarted()
         })
       }
       return Promise.resolve({ success: true, result: 'ok' })
@@ -183,7 +190,8 @@ describe('Bug #5: Async Execute Command Await', () => {
       handlePendingQueryCompleted = true
     })
 
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    await executeStarted
+    assert.strictEqual(typeof resolveExecute, 'function', 'execute handler did not reach its controlled completion seam')
     assert.strictEqual(handlePendingQueryCompleted, false)
     assert.strictEqual(mockSyncClient.queueCommandResult.mock.calls.length, 0)
 
@@ -413,14 +421,15 @@ describe('Bug #5: Extension Stability Under Load', () => {
       }
     }
 
-    // Should have processed most operations without error
+    // Every operation must settle successfully and produce exactly one result.
     assert.strictEqual(errorCount, 0, `${errorCount} operations failed - extension may be timing out`)
 
     // Results should have been delivered via sync client
     const successCount = mockSyncClient.queueCommandResult.mock.calls.length
-    assert.ok(
-      successCount >= operationCount * 0.5,
-      `Only ${successCount}/${operationCount} operations completed - possible timeout cascade`
+    assert.strictEqual(successCount, operationCount, `Expected exactly ${operationCount} terminal results, got ${successCount}`)
+    assert.deepStrictEqual(
+      mockSyncClient.queueCommandResult.mock.calls.map((call) => call.arguments[0].correlation_id),
+      Array.from({ length: operationCount }, (_, index) => `load-corr-${index}`)
     )
   })
 

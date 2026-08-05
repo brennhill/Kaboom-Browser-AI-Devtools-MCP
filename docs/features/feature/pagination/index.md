@@ -4,14 +4,14 @@ feature_id: feature-pagination
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/pagination/pagination.go
   - internal/pagination/pagination_actions.go
   - internal/pagination/pagination_websocket.go
   - internal/pagination/pagination_logs.go
   - internal/pagination/cursor.go
-  - internal/types/log.go
+  - internal/types/wire_log.go
   - Makefile
 test_paths:
   - internal/pagination/pagination_test.go

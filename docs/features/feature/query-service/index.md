@@ -4,7 +4,7 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -68,6 +68,9 @@ notification-based wait.
 Tool-level synchronous completion tests launch the waiter and deliver results
 through dispatcher state or the pending-query notification. They exercise both
 race orderings without delaying the completion goroutine.
+Analyze integration tests use the command owner's injected completion boundary
+after real queue admission, eliminating scheduler-dependent observation of
+short-lived pending entries while retaining the production queue path.
 
 Command waiters subscribe to the current notification generation and then
 recheck lifecycle state before blocking. This prevents a completion or expiry

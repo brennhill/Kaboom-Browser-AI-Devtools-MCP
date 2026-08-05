@@ -1,9 +1,9 @@
 // THIS FILE IS GENERATED — do not edit by hand.
-// Source: internal/types/wire_websocket_event.go
+// Source: internal/types/wire_network.go
 // Generator: scripts/build/generate-wire-types.js
 
 /**
- * @fileoverview Wire type for WebSocket events — matches internal/types/wire_websocket_event.go
+ * @fileoverview Wire type for WebSocket events — matches internal/types/wire_network.go
  *
  * Canonical TypeScript definition for the WebSocketEvent HTTP payload.
  * Changes here MUST be mirrored in the Go counterpart. Run `make check-wire-drift`.

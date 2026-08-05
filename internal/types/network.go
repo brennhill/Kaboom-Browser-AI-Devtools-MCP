@@ -11,7 +11,7 @@ import "time"
 // ============================================
 
 // WebSocketEvent represents a captured WebSocket event (message, open, close, etc.)
-// Wire fields: see WireWebSocketEvent in wire_websocket_event.go
+// Wire fields: see WireWebSocketEvent in wire_network.go.
 type WebSocketEvent struct {
 	Timestamp        string        `json:"ts,omitempty"`
 	Type             string        `json:"type,omitempty"`

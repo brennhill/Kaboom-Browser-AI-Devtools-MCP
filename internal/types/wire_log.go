@@ -1,10 +1,13 @@
-// Purpose: Defines canonical server and extension log entry structures used across ingestion and diagnostics.
-// Why: Normalizes logging payloads so filtering, redaction, and export logic can rely on stable fields.
+// wire_log.go — Defines canonical server and extension log contracts used across ingestion and diagnostics.
+// Why: Keeps all log payload ownership together so filtering, redaction, and transport cannot drift.
 // Docs: docs/features/feature/normalized-log-schema/index.md
 
 package types
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // ============================================
 // Server Logging
@@ -15,6 +18,16 @@ import "time"
 // any: Console log entries have dynamic fields (level, message, source, tabId, stack, etc.)
 // that vary by log type. A typed struct would require many optional fields.
 type LogEntry map[string]any
+
+// ExtensionLog is one redacted local extension diagnostic sent over /sync.
+type ExtensionLog struct {
+	Timestamp time.Time       `json:"timestamp"`
+	Level     string          `json:"level"`
+	Message   string          `json:"message"`
+	Source    string          `json:"source"`
+	Category  string          `json:"category,omitempty"`
+	Data      json.RawMessage `json:"data,omitempty"`
+}
 
 // ============================================
 // Polling Activity Log

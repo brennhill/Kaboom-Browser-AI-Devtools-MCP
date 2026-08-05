@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -148,14 +147,11 @@ func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 	// Connect extension (fast path — no long-poll)
 	capturefixture.Connect(cap)
 
-	completed := completePendingCommandByPrefix(cap, "link_health_", json.RawMessage(`{"success":true,"healthy":5,"broken":0}`))
+	installCompletedCommandWait(t, handler, "link_health_", json.RawMessage(`{"success":true,"healthy":5,"broken":0}`))
 
 	// sync=true (default) should wait for the result
 	args := json.RawMessage(`{"what":"link_health","domain":"example.com"}`)
 	resp := handler.analyzeDispatcher.Handle(req, args)
-	if err := <-completed; err != "" {
-		t.Fatal(err)
-	}
 
 	result := parseMCPResponseData(t, resp.Result)
 	status, _ := result["status"].(string)
@@ -192,20 +188,25 @@ func TestAnalyze_LinkHealth_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 
 func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 	handler, _, cap := makeToolHandler(t)
-	handler.asyncCommands.Wait.PollInterval = 50 * time.Millisecond
+	// Keep the injected command seam from subdividing the caller's initial
+	// budget; it returns immediately and never waits on this duration.
+	handler.asyncCommands.Wait.PollInterval = time.Hour
 	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
 
 	// Connect extension (fast path — no long-poll)
 	capturefixture.Connect(cap)
 
-	completed := completePendingCommandByPrefix(cap, "dom_", json.RawMessage(`{"success":true,"elements":[]}`))
+	waits := installCompletedCommandWait(t, handler, "dom_", json.RawMessage(`{"success":true,"elements":[]}`))
 
 	// Set timeout_ms=1000 — should be enough to catch the 200ms result
 	args := json.RawMessage(`{"what":"dom","selector":"div","timeout_ms":1000}`)
 	resp := handler.analyzeDispatcher.Handle(req, args)
-	if err := <-completed; err != "" {
-		t.Fatal(err)
+	if len(*waits) != 1 {
+		t.Fatalf("wait calls = %d, want exactly one terminal completion", len(*waits))
+	}
+	if (*waits)[0] < 749*time.Millisecond || (*waits)[0] > 750*time.Millisecond {
+		t.Fatalf("initial wait budget = %v, want the 750ms phase from timeout_ms=1000", (*waits)[0])
 	}
 
 	result := parseMCPResponseData(t, resp.Result)
@@ -215,28 +216,26 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 	}
 }
 
-func completePendingCommandByPrefix(cap *capture.Capture, prefix string, result json.RawMessage) <-chan string {
-	completed := make(chan string, 1)
-	go func() {
-		cap.Queries().WaitForPendingQueries(time.Second)
-		cmd := findPendingCommandByPrefix(cap, prefix)
-		if cmd == nil {
-			completed <- "pending command with prefix " + prefix + " was not enqueued"
-			return
+// installCompletedCommandWait makes command settlement an explicit test seam.
+// The production queue and correlation registration still run; only the
+// scheduler-dependent extension response is replaced with a terminal result.
+func installCompletedCommandWait(t *testing.T, handler *ToolHandler, prefix string, result json.RawMessage) *[]time.Duration {
+	t.Helper()
+	waits := make([]time.Duration, 0, 1)
+	handler.asyncCommands.Wait.Command = func(correlationID string, timeout time.Duration) (*queries.CommandResult, bool) {
+		if !strings.HasPrefix(correlationID, prefix) {
+			t.Fatalf("correlation ID %q does not have prefix %q", correlationID, prefix)
 		}
-		cap.Queries().ApplyCommandResult(cmd.CorrelationID, "complete", result, "")
-		completed <- ""
-	}()
-	return completed
-}
-
-// findPendingCommandByPrefix finds a pending command's correlation ID by prefix
-func findPendingCommandByPrefix(cap *capture.Capture, prefix string) *queries.CommandResult {
-	pending := cap.Queries().GetPendingCommands()
-	for _, cmd := range pending {
-		if cmd != nil && strings.HasPrefix(cmd.CorrelationID, prefix) {
-			return cmd
+		waits = append(waits, timeout)
+		command, found := handler.capture.Queries().GetCommandResult(correlationID)
+		if !found || command == nil {
+			t.Fatalf("command %q was not registered before waiting", correlationID)
 		}
+		completed := *command
+		completed.Status = "complete"
+		completed.Result = append(json.RawMessage(nil), result...)
+		completed.CompletedAt = completed.CreatedAt
+		return &completed, true
 	}
-	return nil
+	return &waits
 }

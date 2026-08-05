@@ -178,6 +178,9 @@ reject missing or mismatched response envelopes instead of waiting for the
 command timeout.
 Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
 `interact` screenshot compatibility action has been removed.
+Pilot navigation lifecycle tests model tab readiness explicitly and use
+controlled completion signals, so consecutive operations prove exactly-once
+settlement without wall-clock sleeps or load-sensitive timeout behavior.
 `include_screenshot` remains a composable response enrichment after a real
 interact action. Tests acknowledge the action query exactly as the extension
 does, then await the screenshot query through the canonical pending-query

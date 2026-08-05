@@ -1,8 +1,22 @@
-// Purpose: Defines canonical wire schema for network body and waterfall telemetry payloads.
+// wire_network.go — Defines canonical wire schemas for HTTP and WebSocket telemetry payloads.
 // Why: Keeps network telemetry transport contracts aligned between browser capture and daemon ingestion.
 // Docs: docs/features/feature/normalized-event-schema/index.md
 
 package types
+
+// WireWebSocketEvent is the canonical wire format for captured WebSocket events.
+type WireWebSocketEvent struct {
+	Timestamp   string `json:"ts,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Event       string `json:"event"`
+	ID          string `json:"id"`
+	URL         string `json:"url,omitempty"`
+	Direction   string `json:"direction,omitempty"`
+	Data        string `json:"data,omitempty"`
+	Size        int    `json:"size,omitempty"`
+	CloseCode   int    `json:"code,omitempty"`
+	CloseReason string `json:"reason,omitempty"`
+}
 
 // WireNetworkBody is the canonical wire format for captured network request/response bodies.
 type WireNetworkBody struct {

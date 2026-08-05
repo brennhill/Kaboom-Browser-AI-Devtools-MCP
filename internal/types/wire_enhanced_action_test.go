@@ -3,9 +3,28 @@ package types
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestTypesPackageRespectsTenFileBoundary(t *testing.T) {
+	t.Parallel()
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read types package: %v", err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("internal/types contains %d files; maximum is 10", files)
+	}
+}
 
 func TestWireEnhancedAction_MarshalRoundTrip(t *testing.T) {
 	t.Parallel()

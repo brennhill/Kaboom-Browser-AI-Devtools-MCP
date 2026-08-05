@@ -4,7 +4,7 @@ feature_id: feature-network-performance-attribution
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/types/network.go
   - internal/types/wire_network.go

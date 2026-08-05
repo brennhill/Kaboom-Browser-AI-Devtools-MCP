@@ -31,8 +31,7 @@ code_paths:
   - internal/capture/wsconn/doc.go
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go
-  - internal/types/log.go
-  - internal/types/wire_extension_log.go
+  - internal/types/wire_log.go
   - internal/types/network.go
   - src/background.ts
   - src/inject.ts
@@ -327,7 +326,7 @@ old server cannot dispatch work after the client changes endpoints.
 
 The complete `/sync` request/response graph now has one Go wire owner in
 `internal/capture/wire_sync.go`; extension diagnostic entries have their one
-nested owner in `internal/types/wire_extension_log.go`. TypeScript contracts and
+nested owner in `internal/types/wire_log.go`. TypeScript contracts and
 the OpenAPI sync components are generated from those structs, and CI compares
 the generated OpenAPI client plus a shared bidirectional JSON fixture. The old
 hand-maintained optionality checker and duplicate TypeScript interfaces were

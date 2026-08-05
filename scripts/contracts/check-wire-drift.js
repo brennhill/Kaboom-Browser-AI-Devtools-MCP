@@ -32,11 +32,12 @@ const WIRE_PAIRS = [
     types: [
       { go: 'WireNetworkBody', ts: 'WireNetworkBody' },
       { go: 'WireNetworkWaterfallEntry', ts: 'WireNetworkWaterfallEntry' },
+      { go: 'WireServerTiming', ts: 'WireServerTiming' },
       { go: 'WireNetworkWaterfallPayload', ts: 'WireNetworkWaterfallPayload' }
     ]
   },
   {
-    go: 'internal/types/wire_websocket_event.go',
+    go: 'internal/types/wire_network.go',
     ts: 'src/types/wire/wire-websocket-event.ts',
     types: [{ go: 'WireWebSocketEvent', ts: 'WireWebSocketEvent' }]
   },
@@ -66,7 +67,7 @@ const WIRE_PAIRS = [
     ]
   },
   {
-    go: 'internal/types/wire_extension_log.go',
+    go: 'internal/types/wire_log.go',
     ts: 'src/types/wire/wire-extension-log.ts',
     types: [{ go: 'ExtensionLog', ts: 'ExtensionLog' }]
   },

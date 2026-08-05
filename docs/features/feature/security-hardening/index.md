@@ -4,7 +4,7 @@ feature_id: feature-security-hardening
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
@@ -24,7 +24,7 @@ code_paths:
   - internal/security/scan/doc.go
   - internal/security/scan/scan.go
   - internal/security/scan/types.go
-  - internal/types/log.go
+  - internal/types/wire_log.go
   - internal/security/scan/checks_cookies.go
   - internal/security/scan/checks_headers.go
   - internal/security/scan/checks_pii.go

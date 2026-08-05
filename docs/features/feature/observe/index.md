@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/capture/accessors.go
   - internal/queries/dispatcher_queries.go
@@ -28,7 +28,7 @@ code_paths:
   - internal/tools/observe/metadata.go
   - internal/tools/observe/logs.go
   - internal/tools/observe/summarized_logs.go
-  - internal/types/log.go
+  - internal/types/wire_log.go
   - internal/tools/observe/network.go
   - internal/tools/observe/session.go
   - internal/tools/observe/correlation.go

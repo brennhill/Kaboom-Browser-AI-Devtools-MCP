@@ -4,10 +4,9 @@ feature_id: feature-normalized-log-schema
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
-  - internal/types/log.go
-  - internal/types/wire_extension_log.go
+  - internal/types/wire_log.go
   - internal/capture/extension_logs.go
   - src/types/wire/wire-extension-log.ts
 test_paths:

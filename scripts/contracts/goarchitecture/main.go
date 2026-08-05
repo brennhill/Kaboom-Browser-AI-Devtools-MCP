@@ -123,18 +123,32 @@ func scan(root string) (inventory, error) {
 }
 
 func evaluate(current, baseline inventory) []string {
+	currentPackages := aggregateByPackage(current)
+	baselinePackages := aggregateByPackage(baseline)
 	violations := make([]string, 0)
-	for path, counts := range current {
-		allowed := baseline[path]
+	for packagePath, counts := range currentPackages {
+		allowed := baselinePackages[packagePath]
 		if counts.MutableGlobals > allowed.MutableGlobals {
-			violations = append(violations, fmt.Sprintf("%s: %d mutable global(s), baseline allows %d", path, counts.MutableGlobals, allowed.MutableGlobals))
+			violations = append(violations, fmt.Sprintf("%s: %d mutable global(s), baseline allows %d", packagePath, counts.MutableGlobals, allowed.MutableGlobals))
 		}
 		if counts.Exports > allowed.Exports {
-			violations = append(violations, fmt.Sprintf("%s: %d export(s), baseline allows %d", path, counts.Exports, allowed.Exports))
+			violations = append(violations, fmt.Sprintf("%s: %d export(s), baseline allows %d", packagePath, counts.Exports, allowed.Exports))
 		}
 	}
 	sort.Strings(violations)
 	return violations
+}
+
+func aggregateByPackage(values inventory) inventory {
+	result := make(inventory)
+	for path, counts := range values {
+		packagePath := filepath.ToSlash(filepath.Dir(path))
+		total := result[packagePath]
+		total.MutableGlobals += counts.MutableGlobals
+		total.Exports += counts.Exports
+		result[packagePath] = total
+	}
+	return result
 }
 
 func readBaseline(path string) (inventory, error) {
@@ -161,21 +175,12 @@ func writeBaseline(path string, values inventory) error {
 }
 
 func lowered(current, baseline inventory) inventory {
-	result := make(inventory)
-	for path, allowed := range baseline {
-		counts, exists := current[path]
-		if !exists {
-			continue
-		}
-		if counts.MutableGlobals < allowed.MutableGlobals {
-			allowed.MutableGlobals = counts.MutableGlobals
-		}
-		if counts.Exports < allowed.Exports {
-			allowed.Exports = counts.Exports
-		}
-		if allowed.MutableGlobals > 0 || allowed.Exports > 0 {
-			result[path] = allowed
-		}
+	if violations := evaluate(current, baseline); len(violations) > 0 {
+		return baseline
+	}
+	result := make(inventory, len(current))
+	for path, counts := range current {
+		result[path] = counts
 	}
 	return result
 }

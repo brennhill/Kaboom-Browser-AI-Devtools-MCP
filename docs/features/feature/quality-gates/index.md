@@ -93,10 +93,12 @@ guess whether work completed; each assertion follows an observed lifecycle
 transition.
 
 The same target inventories mutable Go package variables and exported Go
-declarations per production file. New files begin with a zero allowance, and
-existing allowances can only be reduced automatically. This turns instance
-ownership and minimal public interfaces into deterministic merge gates instead
-of review-only preferences.
+declarations at their actual public boundary: the package. Moving declarations
+between files in one package is surface-neutral, while a new package starts
+with zero allowance and package totals can only ratchet downward. This lets
+atomic file consolidation proceed without disguising genuine API or shared-
+state growth, turning instance ownership and minimal public interfaces into
+deterministic merge gates instead of review-only preferences.
 
 Prettier checks authored source and configuration while excluding the three
 minified action-family DOM primitives whose canonical representation is owned

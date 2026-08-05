@@ -24,12 +24,20 @@ const ROOT = path.resolve(__dirname, '..', '..')
 
 const WIRE_PAIRS = [
   { go: 'internal/types/wire_enhanced_action.go', ts: 'src/types/wire/wire-enhanced-action.ts' },
-  { go: 'internal/types/wire_network.go', ts: 'src/types/wire/wire-network.ts' },
-  { go: 'internal/types/wire_websocket_event.go', ts: 'src/types/wire/wire-websocket-event.ts' },
+  {
+    go: 'internal/types/wire_network.go',
+    ts: 'src/types/wire/wire-network.ts',
+    types: ['WireNetworkBody', 'WireNetworkWaterfallEntry', 'WireServerTiming', 'WireNetworkWaterfallPayload']
+  },
+  {
+    go: 'internal/types/wire_network.go',
+    ts: 'src/types/wire/wire-websocket-event.ts',
+    types: ['WireWebSocketEvent']
+  },
   { go: 'internal/performance/wire_performance.go', ts: 'src/types/wire/wire-performance-snapshot.ts' },
   { go: 'internal/qafixture/wire_fixture.go', ts: 'src/types/wire/wire-qa-fixture.ts' },
   { go: 'internal/perftrace/wire_trace.go', ts: 'src/types/wire/wire-performance-trace.ts' },
-  { go: 'internal/types/wire_extension_log.go', ts: 'src/types/wire/wire-extension-log.ts' },
+  { go: 'internal/types/wire_log.go', ts: 'src/types/wire/wire-extension-log.ts', types: ['ExtensionLog'] },
   { go: 'internal/capture/wire_sync.go', ts: 'src/types/wire/wire-sync.ts' }
 ]
 
@@ -84,7 +92,7 @@ const FILE_DESCRIPTIONS = {
     overview: 'Wire types for network telemetry',
     description: 'Canonical TypeScript definitions for NetworkBody and NetworkWaterfall HTTP payloads.'
   },
-  'wire_websocket_event.go': {
+  'wire_network.go:wire-websocket-event.ts': {
     overview: 'Wire type for WebSocket events',
     description: 'Canonical TypeScript definition for the WebSocketEvent HTTP payload.'
   },
@@ -100,7 +108,7 @@ const FILE_DESCRIPTIONS = {
     overview: 'Wire types for Chrome performance trace streaming',
     description: 'Canonical TypeScript definitions for the local trace artifact lifecycle.'
   },
-  'wire_extension_log.go': {
+  'wire_log.go:wire-extension-log.ts': {
     overview: 'Wire type for extension diagnostics',
     description: 'Canonical TypeScript definition for redacted extension diagnostics sent through sync.'
   },
@@ -332,8 +340,11 @@ function extractStructComment(content, structName) {
 /**
  * Generate the full TS file content for a Go source file.
  */
-function generateTSFile(goContent, goPath, _tsPath) {
-  const structs = parseAllGoStructs(goContent)
+function generateTSFile(goContent, goPath, tsPath, includedTypes) {
+  const parsedStructs = parseAllGoStructs(goContent)
+  const structs = includedTypes
+    ? parsedStructs.filter((goStruct) => includedTypes.includes(goStruct.name))
+    : parsedStructs
   if (structs.length === 0) {
     throw new Error(`No structs found in ${goPath}`)
   }
@@ -348,7 +359,7 @@ function generateTSFile(goContent, goPath, _tsPath) {
 
   // @fileoverview block
   const goBase = path.basename(goPath)
-  const fileDesc = FILE_DESCRIPTIONS[goBase]
+  const fileDesc = FILE_DESCRIPTIONS[`${goBase}:${path.basename(tsPath)}`] || FILE_DESCRIPTIONS[goBase]
   const overview = fileDesc ? `${fileDesc.overview} — matches ${goPath}` : `Wire types — matches ${goPath}`
   const description = fileDesc ? fileDesc.description : 'Canonical TypeScript definitions for the wire payloads.'
 
@@ -421,10 +432,26 @@ function openAPISchemaForStruct(goStruct, existing = {}) {
 function synchronizeSyncOpenAPI(checkOnly) {
   const openAPIPath = path.join(ROOT, 'cmd/browser-agent/openapi.json')
   const document = JSON.parse(fs.readFileSync(openAPIPath, 'utf8'))
-  const sources = ['internal/types/wire_extension_log.go', 'internal/capture/wire_sync.go']
+  const sources = [
+    { path: 'internal/types/wire_log.go', types: ['ExtensionLog'] },
+    {
+      path: 'internal/capture/wire_sync.go',
+      types: [
+        'SyncRequest',
+        'SyncSettings',
+        'SyncCommandResult',
+        'SyncInProgress',
+        'SyncFeaturesUsed',
+        'SyncResponse',
+        'SyncCommand'
+      ]
+    }
+  ]
   let changed = false
   for (const source of sources) {
-    const structs = parseAllGoStructs(fs.readFileSync(path.join(ROOT, source), 'utf8'))
+    const structs = parseAllGoStructs(fs.readFileSync(path.join(ROOT, source.path), 'utf8')).filter((goStruct) =>
+      source.types.includes(goStruct.name)
+    )
     for (const goStruct of structs) {
       const existing = document.components.schemas[goStruct.name] || {}
       const generated = openAPISchemaForStruct(goStruct, existing)
@@ -463,7 +490,7 @@ for (const pair of WIRE_PAIRS) {
   }
 
   const goContent = fs.readFileSync(goPath, 'utf-8')
-  const generated = generateTSFile(goContent, pair.go, pair.ts)
+  const generated = generateTSFile(goContent, pair.go, pair.ts, pair.types)
 
   if (isCheck) {
     // Compare against existing file
