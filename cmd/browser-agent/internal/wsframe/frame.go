@@ -3,6 +3,7 @@
 // testpages_websocket_codec.go, but the production terminal relay consumes the same
 // three functions through terminal.Deps, so it lives in a package with exactly one
 // job: turning bytes into frames and back.
+// Docs: docs/features/feature/self-testing/index.md
 
 package wsframe
 
@@ -80,13 +81,15 @@ func WriteFrame(w *bufio.ReadWriter, opcode byte, payload []byte) error {
 	case length < 126:
 		header = append(header, byte(length))
 	case length < 65536:
-		header = append(header, 126,
-			byte(length>>8), byte(length))
+		var encoded [2]byte
+		binary.BigEndian.PutUint16(encoded[:], uint16(length))
+		header = append(header, 126)
+		header = append(header, encoded[:]...)
 	default:
-		// Full 8-byte big-endian uint64 per RFC 6455 §5.2.
-		header = append(header, 127,
-			byte(length>>56), byte(length>>48), byte(length>>40), byte(length>>32),
-			byte(length>>24), byte(length>>16), byte(length>>8), byte(length))
+		var encoded [8]byte
+		binary.BigEndian.PutUint64(encoded[:], length)
+		header = append(header, 127)
+		header = append(header, encoded[:]...)
 	}
 	if _, err := w.Write(append(header, payload...)); err != nil {
 		return err

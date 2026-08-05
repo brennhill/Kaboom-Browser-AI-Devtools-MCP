@@ -153,6 +153,9 @@ last_verified_date: 2026-03-28
 - PTY failure diagnostics are owned by a platform-neutral package. Manager and
   write-buffer failures therefore compile and remain visible on every target;
   Unix-only session code no longer owns the shared hook or event contract.
+- Folder browsing deliberately accepts cleaned absolute paths because selecting
+  an arbitrary working directory is the feature contract; relative traversal
+  remains rejected before filesystem access.
 - Terminal UAT preserves literal JSON booleans, including `false`, when validating a stopped session.
 - The terminal iframe accepts control messages only from its actual parent window; same-shaped messages from sibling or unrelated frames are ignored before target dispatch.
 - Start failures are never silently dropped: `startSession` classifies each failure (`unreachable` transport / `unavailable` reachable-500 / `sandbox`), and the side panel surfaces `unreachable`/`sandbox` even with no panel body mounted (via toast at daemon-down-at-open), while `unavailable` falls through to the recoverable no-session state. The daemon also logs state-mutating failures (`terminal_session_start_failed`, `terminal_session_stop_failed`) to `~/.kaboom/logs/kaboom.jsonl`.

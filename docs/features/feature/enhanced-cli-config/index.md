@@ -128,6 +128,10 @@ last_verified_date: 2026-03-28
 
 # Enhanced Cli Config
 
+Client configuration replacement is contingent on a successful adjacent
+backup. A backup I/O failure aborts the update and preserves the original file;
+the regression suite deterministically blocks the backup path to enforce this.
+
 ## TL;DR
 
 - Status: proposed

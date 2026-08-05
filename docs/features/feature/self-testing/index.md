@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - .github/workflows/ci.yml
   - scripts/smoke-test.sh
@@ -96,6 +96,10 @@ last_verified_date: 2026-03-05
 ---
 
 # Self Testing
+
+The shared WebSocket codec encodes extended lengths through the standard
+big-endian primitives. Boundary tests cover short, 16-bit, and 64-bit headers,
+while the security gate rejects unchecked narrowing conversions.
 
 ## TL;DR
 

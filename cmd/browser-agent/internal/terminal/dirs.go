@@ -84,6 +84,8 @@ func HandleTerminalDirs(w http.ResponseWriter, r *http.Request, deps Deps) {
 		return
 	}
 
+	// #nosec G703 -- arbitrary absolute directories are the explicit folder-picker
+	// contract; resolveDirRequest rejects relative traversal and cleans the path.
 	info, err := os.Stat(dir)
 	if err != nil {
 		if os.IsNotExist(err) {

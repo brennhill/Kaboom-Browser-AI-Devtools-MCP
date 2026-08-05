@@ -88,6 +88,29 @@ func TestMergeJSONConfig_CreatesBackup(t *testing.T) {
 	}
 }
 
+func TestMergeJSONConfig_StopsWhenBackupCannotBeWritten(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "mcp.json")
+	original := `{"mcpServers":{"other":{"command":"other-mcp"}}}`
+	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(path+".bak", 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := mergeJSONConfig(path, "mcpServers", "/usr/local/bin/kaboom", false); err == nil {
+		t.Fatal("expected backup failure to stop config replacement")
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != original {
+		t.Fatalf("config changed despite backup failure: %s", content)
+	}
+}
+
 func TestMergeJSONConfigPreservesUnrelatedServers(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "mcp.json")

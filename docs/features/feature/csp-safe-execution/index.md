@@ -4,7 +4,7 @@ feature_id: feature-csp-safe-execution
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - src/background/exec/csp-safe/types.ts
   - src/background/exec/csp-safe/parser.ts
@@ -64,3 +64,6 @@ Tier 2 is the big win: content scripts in ISOLATED world are exempt from page CS
 - The opt-in local proxy stages each upstream response before committing its status or headers.
 - Declared and streamed bodies above the fixed 50 MiB ceiling fail with HTTP 502; Kaboom never returns a successful truncated response or partial upstream body.
 - CSP headers are stripped only after the response passes the size and read checks.
+- The outbound request is restricted to parsed HTTP(S) URLs and always crosses
+  the DNS-pinning SSRF-safe transport, including redirects. Security-analyzer
+  annotations name that enforced boundary rather than suppressing it globally.

@@ -98,7 +98,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodGet, target, nil)
+	// #nosec G704 -- targetURL is restricted to HTTP(S), and the client's
+	// DNS-pinning transport rejects every private, loopback, and reserved address.
+	upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodGet, targetURL.String(), nil)
 	if err != nil {
 		h.respond(w, http.StatusBadRequest, map[string]string{"error": "Invalid target URL"})
 		return
@@ -113,6 +115,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Use pooled SSRF-safe client that pins DNS resolution at the dial layer,
 	// preventing redirect-based SSRF bypasses and TOCTOU DNS rebinding.
 	// Reuses the comprehensive denylist from internal/upload/ssrf.go.
+	// #nosec G704 -- New wires NewSSRFSafeTransport, which revalidates redirects
+	// and dials the resolved public IP directly to prevent DNS rebinding.
 	upstreamResp, err := h.client.Do(upstreamReq)
 	if err != nil {
 		if strings.Contains(err.Error(), "ssrf_blocked") {

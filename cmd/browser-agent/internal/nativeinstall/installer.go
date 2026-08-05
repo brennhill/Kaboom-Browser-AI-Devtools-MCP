@@ -388,7 +388,11 @@ func mergeJSONConfig(path, key, exePath string, isCustom bool) error {
 
 	// Back up existing file before overwriting.
 	if existing, err := os.ReadFile(path); err == nil && len(existing) > 0 {
-		_ = os.WriteFile(path+".bak", existing, 0600)
+		// #nosec G703 -- path is an installer-owned client config destination;
+		// mergeJSONConfig intentionally writes that exact file and its adjacent backup.
+		if err := os.WriteFile(path+".bak", existing, 0o600); err != nil {
+			return fmt.Errorf("back up existing config: %w", err)
+		}
 	}
 
 	// Write to a temp file in the same directory and rename into place so a
