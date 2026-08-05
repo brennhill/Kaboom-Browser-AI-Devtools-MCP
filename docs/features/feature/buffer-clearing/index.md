@@ -13,7 +13,7 @@ code_paths:
   - internal/capture/actionstore/store.go
   - internal/capture/wsconn/store.go
 test_paths:
-  - internal/capture/state_resetter_owner_test.go
+  - internal/capture/resetter/resetter_test.go
   - internal/capture/bodystore/store_test.go
   - internal/capture/actionstore/store_test.go
   - internal/capture/wsconn/store_test.go
@@ -52,7 +52,7 @@ last_verified_date: 2026-03-05
 `internal/toolconfigure/clear.go` owns request parsing and the clearing policy
 for capture, log, push inbox, and annotation stores. The root configure registry
 supplies those stores explicitly through `ClearTargets`, including the
-canonical `capture.StateResetter` for coordinated full-state resets. `Capture`
+canonical `resetter.Resetter` for coordinated full-state resets. `Capture`
 has no `ClearAll` forwarding method.
 Enhanced actions are cleared directly through the canonical
 `capture.Telemetry().Actions()` owner; no telemetry compatibility facade is

@@ -4,9 +4,9 @@ feature_id: feature-binary-format-detection
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
-  - internal/capture/events.go
+  - internal/capture/telemetrystore/store.go
   - internal/util/binary.go
 test_paths:
   - internal/util/binary_test.go

@@ -4,7 +4,7 @@ feature_id: feature-ci-infrastructure
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-05
 code_paths:
   - .github/workflows/ci.yml
   - scripts/test-js-sharded.sh
@@ -14,9 +14,9 @@ code_paths:
   - cmd/browser-agent/internal/ciapi/types.go
   - cmd/browser-agent/server.go
 test_paths:
+  - internal/capture/resetter/resetter_test.go
   - tests/extension/contracts/tooling-contracts.test.js
   - tests/extension/misc/integration.test.cjs
-  - internal/capture/state_resetter_owner_test.go
   - cmd/browser-agent/internal/ciapi/snapshot_test.go
   - cmd/browser-agent/ci_test.go
   - cmd/browser-agent/ci_unit_test.go
@@ -51,7 +51,7 @@ last_verified_date: 2026-03-05
 - Route registration: `cmd/browser-agent/server.go`
 - Snapshot, clear, and test-boundary endpoint behavior:
   `cmd/browser-agent/internal/ciapi/handlers.go`
-- The clear route receives `capture.StateResetter` explicitly; snapshot and
+- The clear route receives `resetter.Resetter` explicitly; snapshot and
   test-boundary handlers retain only the narrower capture read surface.
 - Snapshot filtering, statistics, and payload contracts:
   `cmd/browser-agent/internal/ciapi/snapshot.go`,

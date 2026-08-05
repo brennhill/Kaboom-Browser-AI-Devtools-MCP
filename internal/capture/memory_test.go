@@ -80,7 +80,7 @@ func TestStateResetterClearsIndependentBodyAndWebSocketMemoryOwners(t *testing.T
 		t.Fatal("network-body memory is zero before coordinated clear")
 	}
 
-	NewStateResetter(c).ClearAll()
+	resetterForTest(c).ClearAll()
 	wsMemory := c.Telemetry().WebSockets().Stats().MemoryBytes
 	if wsMemory != 0 || c.Telemetry().NetworkBodies().Stats().MemoryBytes != 0 {
 		t.Fatalf("memory after clear: websocket=%d network=%d", wsMemory, c.Telemetry().NetworkBodies().Stats().MemoryBytes)

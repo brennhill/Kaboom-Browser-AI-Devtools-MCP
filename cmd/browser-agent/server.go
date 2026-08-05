@@ -37,6 +37,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
@@ -546,8 +547,12 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	mux.HandleFunc("/recordings/reveal", httpguard.CORS(httpguard.ExtensionOnly(screenrec.HandleReveal)))
 	mux.HandleFunc("/telemetry", httpguard.CORS(handleTelemetry(server, captured)))
 	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Snapshot(server.logs, captured))))
-	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, capture.NewStateResetter(captured)))))
+	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, newRuntimeResetter(captured)))))
 	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(ciapi.TestBoundary(captured))))
+}
+
+func newRuntimeResetter(captured *capture.Capture) *resetter.Resetter {
+	return resetter.New(resetter.Dependencies{Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs()})
 }
 
 func resolveClientRegistry(captured *capture.Capture, w http.ResponseWriter) (clientstore.Registry, bool) {

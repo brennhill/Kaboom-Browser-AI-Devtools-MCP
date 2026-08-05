@@ -9,7 +9,7 @@ code_paths:
   - internal/capture/accessors.go
   - internal/queries/dispatcher_queries.go
   - internal/capture/sync.go
-  - internal/capture/events.go
+  - internal/capture/telemetrystore/store.go
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/store.go
   - internal/capture/wsconn/tracker.go

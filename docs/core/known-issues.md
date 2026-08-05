@@ -148,7 +148,7 @@ origin equality.
   The tests now replace only the delay/fetch time boundary and enforce a 500ms
   ceiling; production timing is unchanged. (`kaboom-00v`)
 - The broad `Capture` behavior was decomposed into change-coupled
-  `httpingest.Handlers`, `SyncHandler`, `HealthReader`, and `StateResetter` owners.
+  `httpingest.Handlers`, `SyncHandler`, `HealthReader`, and `resetter.Resetter` owners.
   `Capture` now exposes only canonical owner accessors and lifecycle close;
   structural tests prohibit the deleted forwarding surfaces.
 - The extension folder split was audited by responsibility and duplication.

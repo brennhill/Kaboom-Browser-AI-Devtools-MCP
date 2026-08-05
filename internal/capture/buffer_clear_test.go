@@ -135,7 +135,7 @@ func TestClearAllCapture(t *testing.T) {
 	capture.ExtensionLogs().Add([]types.ExtensionLog{{Level: "debug", Message: "ext log", Timestamp: time.Now()}})
 
 	// Clear all
-	extensionLogsCleared := NewStateResetter(capture).ClearAll()
+	extensionLogsCleared := resetterForTest(capture).ClearAll()
 	if extensionLogsCleared != 1 {
 		t.Errorf("Expected ClearAll to clear and report 1 extension log, got %d", extensionLogsCleared)
 	}

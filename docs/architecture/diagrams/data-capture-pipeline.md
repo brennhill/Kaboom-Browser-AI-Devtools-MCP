@@ -492,10 +492,10 @@ type BufferStats struct {
 
 **Server-Side Storage:**
 - `internal/capture/capture.go` - Capture struct
-- `internal/capture/events.go` - WS and network event buffers
+- `internal/capture/telemetrystore/store.go` - WS and network ingestion composition
 - `internal/capture/network_waterfall.go` - Waterfall buffer
 - `internal/capture/network_bodies.go` - Body storage
-- `internal/capture/events.go` - Actions buffer
+- `internal/capture/actionstore/store.go` - Actions buffer
 - `internal/capture/extension_logs.go` - Logs buffer
 - `internal/capture/httpingest/handlers.go` - /sync endpoint
 - `internal/capture/memory.go` - Memory tracking

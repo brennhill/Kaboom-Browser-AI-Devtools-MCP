@@ -171,7 +171,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 		"clear": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return toolconfigure.HandleClear(toolconfigure.ClearTargets{
 				Capture:  h.capture,
-				Resetter: capture.NewStateResetter(h.capture),
+				Resetter: newRuntimeResetter(h.capture),
 				ClearLogs: func() int {
 					count := h.server.logs.EntryCount()
 					h.server.logs.ClearEntries()

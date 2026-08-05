@@ -7,6 +7,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
@@ -14,7 +15,7 @@ import (
 // ClearTargets are the stores affected by configure(what="clear").
 type ClearTargets struct {
 	Capture     *capture.Capture
-	Resetter    *capture.StateResetter
+	Resetter    *resetter.Resetter
 	ClearLogs   func() int
 	Inbox       *push.PushInbox
 	Annotations *annotation.Store

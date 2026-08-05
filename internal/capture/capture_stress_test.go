@@ -274,7 +274,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 				gate.awaitRelease()
 				for i := 0; i < clearsPerClearer; i++ {
 					runtime.Gosched()
-					NewStateResetter(c).ClearAll()
+					resetterForTest(c).ClearAll()
 				}
 			}(clearID)
 		}

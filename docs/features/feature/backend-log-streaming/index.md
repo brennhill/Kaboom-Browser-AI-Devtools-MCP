@@ -19,7 +19,7 @@ code_paths:
   - internal/capture/clientstore/owner.go
   - internal/capture/settingscache/loader.go
   - internal/capture/telemetrystore/store.go
-  - internal/capture/events.go
+  - internal/capture/resetter/resetter.go
   - internal/capture/logstore/store.go
   - internal/capture/perfstore/store.go
   - internal/capture/pressure/stats.go
@@ -84,6 +84,7 @@ code_paths:
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
+  - internal/capture/resetter/resetter_test.go
   - internal/capture/httpingest/handlers_test.go
   - internal/capture/clientstore/owner_test.go
   - internal/capture/actionstore/store_test.go
@@ -131,7 +132,6 @@ test_paths:
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
   - internal/capture/health_reader_owner_test.go
-  - internal/capture/state_resetter_owner_test.go
   - internal/capture/sync_handler_owner_test.go
   - internal/circuit/breaker_test.go
   - internal/debuglog/logger_test.go
@@ -247,7 +247,7 @@ DOM-action results already being flushed.
 Aggregate health reads are owned by `capture.HealthReader`; it snapshots the
 independently synchronized telemetry, query, extension, and circuit owners
 without a cross-owner method on `Capture`.
-Coordinated runtime clearing is owned by `capture.StateResetter`; it resets test
+Coordinated runtime clearing is owned by `resetter.Resetter`; it resets test
 boundaries, telemetry, performance snapshots, and extension logs together
 without exposing `ClearAll` on `Capture`.
 The unused `EventBuffers`, `NetworkWaterfallStore`, `ExtensionLogStore`, and
@@ -300,7 +300,7 @@ retention, filtering, status, memory pressure, and clearing share one lock.
 Consumers use `Capture.Telemetry().WebSockets()` directly, and the former
 Telemetry forwarding methods plus `BufferStore` are deleted. Navigation
 callbacks and the focused action, body, waterfall, and WebSocket owners compose
-`telemetrystore.Store`; `StateResetter` coordinates the genuinely cross-owner reset.
+`telemetrystore.Store`; `resetter.Resetter` coordinates the genuinely cross-owner reset.
 Configure network-recording dispatch calls `netrecord.HandleNetworkRecording`
 with the telemetry and recording-state owners directly; the root ToolHandler
 forwarding method is deleted.
