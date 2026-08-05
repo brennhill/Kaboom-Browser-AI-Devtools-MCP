@@ -769,7 +769,10 @@ func initializeInteractActionOwners(h *ToolHandler) {
 	})
 	h.workflowActions = toolinteract.NewWorkflowActions(
 		h.interactRuntime, h.domActions, h.browserActions, h.pageActions,
-		toolinteract.WorkflowDeps{Capture: captureStore, ToolAnalyze: h.analyzeDispatcher.Handle, ToolExportSARIF: h.generateDispatcher.ExportSARIF},
+		toolinteract.WorkflowDeps{
+			Capture: captureStore, ToolAnalyze: h.analyzeDispatcher.Handle,
+			ToolExportSARIF: h.generateDispatcher.ExportSARIF, Now: time.Now,
+		},
 	)
 	h.batchActions = toolinteract.NewBatchActions(h.interactRuntime, toolinteract.BatchDeps{
 		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension, Capture: captureStore,

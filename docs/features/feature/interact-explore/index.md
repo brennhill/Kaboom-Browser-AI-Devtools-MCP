@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
@@ -265,6 +265,11 @@ correlation-logged URL/load transition; an unacknowledged fallback remains an
 error.
 
 `navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow. A page unload may destroy the old content-script context before its click acknowledgement arrives; an exact `no_result` is therefore accepted only when the bounded tracked-URL transition independently confirms that navigation completed. Other click errors still fail normally.
+
+The workflow owns an explicit clock dependency for its total timeout budget.
+Production supplies the system clock; tests advance a controlled clock after
+observing click dispatch and assert exact remaining-stage budgets without
+sleeping or relying on scheduler timing.
 
 Upload-handler unit tests replace native-dialog and verification waits at the
 time boundary. Production backoff remains unchanged, while mocked Chrome and

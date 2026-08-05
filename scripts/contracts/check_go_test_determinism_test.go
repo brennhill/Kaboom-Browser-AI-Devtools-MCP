@@ -1,4 +1,4 @@
-// check_go_test_determinism_test.go — Regression tests for the unit-test wall-clock ratchet.
+// check_go_test_determinism_test.go — Regression tests for the unit-test wall-clock ban.
 package main
 
 import (
@@ -26,28 +26,25 @@ func testThing() {
 	}
 }
 
-func TestEvaluateSleepRatchetRejectsNewAndIncreasedDebt(t *testing.T) {
-	baseline := map[string]int{"internal/existing_test.go": 1}
-	cases := []struct {
-		name   string
-		counts map[string]int
-		fail   bool
-	}{
-		{name: "unchanged", counts: map[string]int{"internal/existing_test.go": 1}},
-		{name: "reduced", counts: map[string]int{}},
-		{name: "increased", counts: map[string]int{"internal/existing_test.go": 2}, fail: true},
-		{name: "new file", counts: map[string]int{"internal/new_test.go": 1}, fail: true},
+func TestSleepViolationsRequireAbsoluteZero(t *testing.T) {
+	if violations := sleepViolations(map[string]int{}); len(violations) != 0 {
+		t.Fatalf("zero sleeps must pass: %v", violations)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			violations := evaluateSleepRatchet(tc.counts, baseline)
-			if tc.fail && len(violations) == 0 {
-				t.Fatal("expected a determinism violation")
-			}
-			if !tc.fail && len(violations) != 0 {
-				t.Fatalf("unexpected violations: %v", violations)
-			}
-		})
+	violations := sleepViolations(map[string]int{
+		"internal/z_test.go": 2,
+		"internal/a_test.go": 1,
+	})
+	want := []string{
+		"internal/a_test.go: 1 time.Sleep call(s)",
+		"internal/z_test.go: 2 time.Sleep call(s)",
+	}
+	if len(violations) != len(want) {
+		t.Fatalf("violations = %v, want %v", violations, want)
+	}
+	for i := range want {
+		if violations[i] != want[i] {
+			t.Fatalf("violations[%d] = %q, want %q", i, violations[i], want[i])
+		}
 	}
 }
 

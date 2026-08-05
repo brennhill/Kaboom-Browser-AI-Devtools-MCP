@@ -27,7 +27,7 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
-	verify-llm check-folder-size check-structure check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism test-determinism-baseline-update check-go-architecture go-architecture-baseline-update \
+	verify-llm check-folder-size check-structure check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture go-architecture-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -196,13 +196,10 @@ folder-baseline-update:
 check-dormant-tests:
 	@bash scripts/check-dormant-tests.sh
 
-# Ratchet wall-clock sleeps out of Go tests. Existing per-file debt may only decrease.
+# Go tests must synchronize on observable events or controlled clocks, never wall time.
 check-test-determinism:
 	@go test ./scripts/contracts
 	@go run ./scripts/contracts
-
-test-determinism-baseline-update:
-	@go run ./scripts/contracts --update
 
 # Prevent mutable package state and public Go APIs from growing unnoticed.
 check-go-architecture:

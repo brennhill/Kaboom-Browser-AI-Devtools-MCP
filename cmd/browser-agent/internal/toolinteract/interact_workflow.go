@@ -275,7 +275,7 @@ func (h *WorkflowActions) HandleNavigateAndWaitFor(req mcp.JSONRPCRequest, args 
 // handleNavigateAndDocument performs click-based navigation, waits for URL/stability,
 // then enriches the response with compact page context (url/title/tab_id).
 func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	workflowStart := time.Now()
+	workflowStart := h.deps.Now()
 	trace := make([]act.WorkflowStep, 0, 4)
 
 	var params struct {
@@ -347,7 +347,7 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 		timeoutMs := params.TimeoutMs
 		if params.TimeoutMs > 0 {
 			var ok bool
-			timeoutMs, ok = remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs)
+			timeoutMs, ok = remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs, h.deps.Now())
 			if !ok {
 				timeoutResp := navigateAndDocumentTimeoutBudgetExceeded(req, "wait_for_url_change")
 				trace = append(trace, act.WorkflowStep{
@@ -405,7 +405,7 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 			waitArgsMap["stability_ms"] = params.StabilityMs
 		}
 		if params.TimeoutMs > 0 {
-			timeoutMs, ok := remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs)
+			timeoutMs, ok := remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs, h.deps.Now())
 			if !ok {
 				timeoutResp := navigateAndDocumentTimeoutBudgetExceeded(req, "wait_for_stable")
 				trace = append(trace, act.WorkflowStep{
@@ -530,11 +530,11 @@ func (h *WorkflowActions) validateNavigateAndDocumentTab(req mcp.JSONRPCRequest,
 
 // remainingNavigateAndDocumentTimeoutMs converts total workflow timeout into
 // remaining stage timeout. Returns false when budget is exhausted.
-func remainingNavigateAndDocumentTimeoutMs(workflowStart time.Time, totalTimeoutMs int) (int, bool) {
+func remainingNavigateAndDocumentTimeoutMs(workflowStart time.Time, totalTimeoutMs int, now time.Time) (int, bool) {
 	if totalTimeoutMs <= 0 {
 		return 0, false
 	}
-	remaining := totalTimeoutMs - int(time.Since(workflowStart).Milliseconds())
+	remaining := totalTimeoutMs - int(now.Sub(workflowStart).Milliseconds())
 	if remaining <= 0 {
 		return 0, false
 	}

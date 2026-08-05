@@ -244,6 +244,9 @@ longer coordinate state. Upgrade coverage waits for the old child process to
 exit before binding its replacement. The permanently skipped goroutine-leak
 test was deleted because it measured the test process, not the daemon it claimed
 to validate.
+The asynchronous log worker captures the exact store created during server
+construction. Replacing a server's store in an isolated test cannot redirect a
+late-starting worker or race with its startup closure.
 The execution modules, examples, and validation schemas used by that call path
 are constructed once in `internal/toolcatalog.Catalog`; the composition root
 does not maintain parallel lazy registries.

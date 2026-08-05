@@ -227,7 +227,8 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	})
 
 	// Start async logger goroutine
-	util.SafeGo(func() { s.logs.RunWorker() })
+	logs := s.logs
+	util.SafeGo(logs.RunWorker)
 
 	// Ensure log directory exists
 	if s.logs.LogFile() != "" {

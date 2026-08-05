@@ -1,8 +1,7 @@
-// check_go_test_determinism.go — Ratchets wall-clock sleeps out of Go tests.
+// check_go_test_determinism.go — Rejects wall-clock sleeps in Go tests.
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -12,13 +11,6 @@ import (
 	"sort"
 	"strings"
 )
-
-const sleepBaselineName = ".go-test-sleep-baseline.json"
-
-type sleepBaseline struct {
-	Version int            `json:"version"`
-	Files   map[string]int `json:"files"`
-}
 
 func scanSleepCounts(root string) (map[string]int, error) {
 	counts := make(map[string]int)
@@ -91,40 +83,13 @@ func ignoredDirectory(name string) bool {
 	}
 }
 
-func evaluateSleepRatchet(counts, baseline map[string]int) []string {
+func sleepViolations(counts map[string]int) []string {
 	var violations []string
 	for path, count := range counts {
-		allowed := baseline[path]
-		if count > allowed {
-			violations = append(violations, fmt.Sprintf("%s: %d time.Sleep call(s), baseline allows %d", path, count, allowed))
-		}
+		violations = append(violations, fmt.Sprintf("%s: %d time.Sleep call(s)", path, count))
 	}
 	sort.Strings(violations)
 	return violations
-}
-
-func loadSleepBaseline(path string) (map[string]int, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var baseline sleepBaseline
-	if err := json.Unmarshal(data, &baseline); err != nil {
-		return nil, err
-	}
-	if baseline.Version != 1 || baseline.Files == nil {
-		return nil, fmt.Errorf("unsupported or incomplete sleep baseline")
-	}
-	return baseline.Files, nil
-}
-
-func writeSleepBaseline(path string, counts map[string]int) error {
-	data, err := json.MarshalIndent(sleepBaseline{Version: 1, Files: counts}, "", "  ")
-	if err != nil {
-		return err
-	}
-	data = append(data, '\n')
-	return os.WriteFile(path, data, 0o644)
 }
 
 func main() {
@@ -133,12 +98,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	update := false
 	for _, arg := range os.Args[1:] {
-		if arg == "--update" {
-			update = true
-			continue
-		}
 		root = arg
 	}
 	counts, err := scanSleepCounts(root)
@@ -146,32 +106,14 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	baselinePath := filepath.Join(root, sleepBaselineName)
-	if update {
-		if err := writeSleepBaseline(baselinePath, counts); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		fmt.Printf("Go test sleep baseline updated: %d file(s) retain wall-clock debt\n", len(counts))
-		return
-	}
-	baseline, err := loadSleepBaseline(baselinePath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "load %s: %v\n", sleepBaselineName, err)
-		os.Exit(1)
-	}
-	violations := evaluateSleepRatchet(counts, baseline)
+	violations := sleepViolations(counts)
 	if len(violations) > 0 {
 		fmt.Fprintln(os.Stderr, "Go test determinism gate failed:")
 		for _, violation := range violations {
 			fmt.Fprintln(os.Stderr, "- "+violation)
 		}
-		fmt.Fprintln(os.Stderr, "Replace wall-clock sleeps with controlled synchronization; baseline updates may only ratchet counts down.")
+		fmt.Fprintln(os.Stderr, "Replace wall-clock sleeps with controlled synchronization, fake clocks, or explicit process/transport seams.")
 		os.Exit(1)
 	}
-	remaining := 0
-	for _, count := range counts {
-		remaining += count
-	}
-	fmt.Printf("Go test determinism ratchet passed (%d existing sleep call(s) across %d file(s); no increase)\n", remaining, len(counts))
+	fmt.Println("Go test determinism gate passed (zero time.Sleep calls)")
 }

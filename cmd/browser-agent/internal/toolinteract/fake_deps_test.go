@@ -328,7 +328,10 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture,
 		deps.InjectCSPBlockedActions, deps.GetListenPort,
 	})
-	workflow := NewWorkflowActions(runtime, dom, browser, page, WorkflowDeps{deps.Capture, deps.ToolAnalyze, deps.ToolExportSARIF})
+	workflow := NewWorkflowActions(runtime, dom, browser, page, WorkflowDeps{
+		Capture: deps.Capture, ToolAnalyze: deps.ToolAnalyze,
+		ToolExportSARIF: deps.ToolExportSARIF, Now: time.Now,
+	})
 	batch := NewBatchActions(runtime, BatchDeps{
 		deps.RequirePilot, deps.RequireExtension, deps.Capture, deps.RecordAIAction, deps.ToolInteract, deps.ReplayMu,
 	})

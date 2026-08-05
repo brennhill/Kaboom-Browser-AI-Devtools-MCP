@@ -50,6 +50,7 @@ type PageDeps struct {
 type WorkflowDeps struct {
 	Capture                      func() *capture.Capture
 	ToolAnalyze, ToolExportSARIF func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	Now                          func() time.Time
 }
 
 type StorageDeps struct {

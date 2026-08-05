@@ -9,9 +9,11 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -246,6 +248,15 @@ func TestNavigateAndDocument_TimeoutBudgetExhaustedBeforeStable(t *testing.T) {
 	capturefixture.SetPilot(env.capture, true)
 	capturefixture.Connect(env.capture)
 	capturefixture.Track(env.capture, 42, "https://example.com/old")
+	clock := &navigateWorkflowClock{now: time.Now()}
+	env.handler.workflowActions = toolinteract.NewWorkflowActions(
+		env.handler.interactRuntime, env.handler.domActions, env.handler.browserActions, env.handler.pageActions,
+		toolinteract.WorkflowDeps{
+			Capture:     func() *capture.Capture { return env.capture },
+			ToolAnalyze: env.handler.analyzeDispatcher.Handle, ToolExportSARIF: env.handler.generateDispatcher.ExportSARIF,
+			Now: clock.Now,
+		},
+	)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","timeout_ms":40,"wait_for_url_change":false,"wait_for_stable":true}`)
@@ -267,7 +278,7 @@ func TestNavigateAndDocument_TimeoutBudgetExhaustedBeforeStable(t *testing.T) {
 	})
 
 	// Consume the entire workflow budget before click completes.
-	time.Sleep(90 * time.Millisecond)
+	clock.Advance(50 * time.Millisecond)
 	env.capture.Queries().ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	select {
@@ -299,6 +310,23 @@ func TestNavigateAndDocument_TimeoutBudgetExhaustedBeforeStable(t *testing.T) {
 			t.Fatal("wait_for_stable should not be queued when workflow timeout budget is exhausted")
 		}
 	}
+}
+
+type navigateWorkflowClock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func (clock *navigateWorkflowClock) Now() time.Time {
+	clock.mu.Lock()
+	defer clock.mu.Unlock()
+	return clock.now
+}
+
+func (clock *navigateWorkflowClock) Advance(delta time.Duration) {
+	clock.mu.Lock()
+	clock.now = clock.now.Add(delta)
+	clock.mu.Unlock()
 }
 
 func TestInteract_NavigateAndDocument_IncludeScreenshot(t *testing.T) {

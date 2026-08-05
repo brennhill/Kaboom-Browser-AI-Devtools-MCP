@@ -226,10 +226,11 @@ func TestFilterNavigateAndDocumentClickArgs(t *testing.T) {
 }
 
 func TestRemainingNavigateAndDocumentTimeoutMs(t *testing.T) {
-	if _, ok := remainingNavigateAndDocumentTimeoutMs(time.Now(), 0); ok {
+	now := time.Unix(100, 0)
+	if _, ok := remainingNavigateAndDocumentTimeoutMs(now, 0, now); ok {
 		t.Fatal("expected not-ok for zero total")
 	}
-	if ms, ok := remainingNavigateAndDocumentTimeoutMs(time.Now(), 5000); !ok || ms <= 0 {
+	if ms, ok := remainingNavigateAndDocumentTimeoutMs(now, 5000, now.Add(time.Second)); !ok || ms != 4000 {
 		t.Fatalf("expected positive remaining, got %d ok=%v", ms, ok)
 	}
 }

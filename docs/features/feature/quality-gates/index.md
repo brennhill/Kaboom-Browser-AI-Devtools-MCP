@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - kaboom-code-standards.md
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
@@ -26,7 +26,6 @@ code_paths:
   - scripts/contracts/check_go_test_determinism.go
   - scripts/contracts/goarchitecture/main.go
   - .go-architecture-baseline.json
-  - .go-test-sleep-baseline.json
   - scripts/test-js-sharded.sh
   - scripts/build/run-go-coverage.sh
   - scripts/build/merge-go-coverage.mjs
@@ -83,11 +82,10 @@ Convention scanning applies extension, generated-file, size, and directory
 filters through one shared source-walk boundary so detection and discovery
 cannot drift.
 
-`make check-structure` parses Go tests with the standard Go AST and rejects any
-new or increased `time.Sleep` usage on a per-file basis. The checked-in baseline
-is a ratchet for existing wall-clock debt, not a general exemption: removing a
-sleep lowers the next baseline, while new tests must use controlled channels,
-fake clocks, or explicit process/transport seams.
+`make check-structure` parses Go tests with the standard Go AST and rejects every
+executable `time.Sleep` call. There is no baseline or update escape hatch: tests
+must synchronize through controlled channels, fake clocks, observable lifecycle
+events, or explicit process/transport seams.
 
 The shared asynchronous test helpers verify goroutine readiness and teardown
 through channel barriers. Their own tests never delay the scheduler and then
