@@ -4,7 +4,7 @@ feature_id: feature-browser-extension-enhancement
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - src/lib/diagnostics/page-capture.ts
   - src/types/runtime/telemetry-messages.ts
@@ -81,6 +81,7 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - tests/extension/network-http/network-waterfall.test.js
   - tests/extension/content/message-handlers.test.js
   - cmd/browser-agent/noise_doctor_test.go
   - scripts/contracts/check-silent-catches.test.cjs
@@ -170,6 +171,11 @@ last_verified_date: 2026-03-28
   condition is normal and why logging would be misleading. The structural gate
   scans source modules and canonical DOM generator templates (rather than their
   generated output), including nested catches and concise Promise fallbacks.
+- Page-world capture distinguishes unavailable browser APIs from unexpected
+  implementation failures. Network-waterfall failures emit a bounded redacted
+  diagnostic over the authenticated page channel, content validates it,
+  background persists it in the local diagnostic queue, and Doctor receives it
+  through `/sync`; private exception messages never cross that boundary.
 - Remote command cancellation is part of the command-handler contract. The sync
   timeout aborts the same signal passed through the manager and registry to the
   handler; handlers checkpoint that signal before post-await mutation. Once a
