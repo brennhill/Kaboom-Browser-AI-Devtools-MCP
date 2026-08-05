@@ -7,10 +7,11 @@ package diff
 
 import (
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // TakeSnapshot captures and stores a named snapshot.
@@ -59,7 +60,7 @@ func (m *Manager) ListSnapshots() []SnapshotListEntry {
 		entries = append(entries, SnapshotListEntry{
 			Name:    snapshot.Name,
 			TakenAt: snapshot.TakenAt.Format(time.RFC3339),
-			Age:     formatDuration(m.now().Sub(snapshot.TakenAt)),
+			Age:     util.FormatDuration(m.now().Sub(snapshot.TakenAt)),
 			Expired: m.isExpired(snapshot),
 		})
 	}

@@ -1,78 +1,27 @@
-// helpers_test.go — Branch tests for cookie-flag diffing and duration formatting.
-// Purpose: Coverage-expansion tests for security diff edge cases and branch paths.
+// helpers_test.go — Branch tests for cookie-flag diffing and package boundaries.
+// Purpose: Security diff edge cases plus its physical module boundary.
 // Docs: docs/features/feature/security-hardening/index.md
 package diff
 
 import (
+	"os"
 	"testing"
-	"time"
 )
 
-// ============================================
-// formatDuration — All time range branches
-// ============================================
-
-func TestFormatDuration_SubSecond(t *testing.T) {
+func TestSecurityDiffPackageRespectsTenFileBoundary(t *testing.T) {
 	t.Parallel()
-	got := formatDuration(500 * time.Millisecond)
-	if got != "0.5s" {
-		t.Errorf("formatDuration(500ms) = %q, want 0.5s", got)
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
 	}
-}
-
-func TestFormatDuration_Seconds(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(30 * time.Second)
-	if got != "30s" {
-		t.Errorf("formatDuration(30s) = %q, want 30s", got)
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
 	}
-}
-
-func TestFormatDuration_MinutesOnly(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(5 * time.Minute)
-	if got != "5m" {
-		t.Errorf("formatDuration(5m) = %q, want 5m", got)
-	}
-}
-
-func TestFormatDuration_MinutesAndSeconds(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(5*time.Minute + 30*time.Second)
-	if got != "5m30s" {
-		t.Errorf("formatDuration(5m30s) = %q, want 5m30s", got)
-	}
-}
-
-func TestFormatDuration_HoursOnly(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(2 * time.Hour)
-	if got != "2h" {
-		t.Errorf("formatDuration(2h) = %q, want 2h", got)
-	}
-}
-
-func TestFormatDuration_HoursAndMinutes(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(2*time.Hour + 15*time.Minute)
-	if got != "2h15m" {
-		t.Errorf("formatDuration(2h15m) = %q, want 2h15m", got)
-	}
-}
-
-func TestFormatDuration_ExactSecondBoundary(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(1 * time.Second)
-	if got != "1s" {
-		t.Errorf("formatDuration(1s) = %q, want 1s", got)
-	}
-}
-
-func TestFormatDuration_JustUnderMinute(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(59 * time.Second)
-	if got != "59s" {
-		t.Errorf("formatDuration(59s) = %q, want 59s", got)
+	if files > 10 {
+		t.Fatalf("internal/security/diff has %d files; want at most 10 change-coupled owners", files)
 	}
 }
 

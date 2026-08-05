@@ -9,6 +9,21 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
+func buildSummary(regressions, improvements []Change) Summary {
+	bySeverity := make(map[string]int)
+	byCategory := make(map[string]int)
+	for _, regression := range regressions {
+		bySeverity[regression.Severity]++
+		byCategory[regression.Category]++
+	}
+	return Summary{
+		TotalRegressions:  len(regressions),
+		TotalImprovements: len(improvements),
+		BySeverity:        bySeverity,
+		ByCategory:        byCategory,
+	}
+}
+
 // Compare computes regressions/improvements between two snapshots.
 //
 // Failure semantics:

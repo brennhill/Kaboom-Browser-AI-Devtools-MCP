@@ -16,7 +16,6 @@ code_paths:
   - internal/security/diff/snapshot.go
   - internal/security/diff/helpers_headers_cookies.go
   - internal/security/diff/helpers_maps_urls.go
-  - internal/security/diff/helpers_summary.go
   - internal/security/diff/tool.go
   - internal/security/policy/policy.go
   - internal/security/policy/mode.go
@@ -148,6 +147,10 @@ imports `httpsec`.
   fixed clock and never sleep to manufacture ordering or expiration.
 - `internal/security/diff/compare_test.go` — regression/improvement comparison and extraction.
 - `internal/security/diff/tool_test.go` — tool dispatch and summary behavior.
+- Security-diff summary construction lives with comparison orchestration in
+  `compare.go`; snapshot age rendering calls the canonical shared duration
+  formatter directly. The former one-function summary/helper owner and its
+  duplicate formatter tests were deleted, keeping the package at ten files.
 - `internal/security/scan/scan_test.go` — scanner orchestration, filtering, serialization, and fuzz safety.
 - `internal/security/scan/scan_sensitive_data_test.go` — credential, PII, and evidence-redaction findings.
 - `internal/security/scan/scan_transport_policy_test.go` — headers, cookies, and transport-policy findings.
