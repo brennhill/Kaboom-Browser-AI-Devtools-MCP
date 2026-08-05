@@ -20,6 +20,7 @@ code_paths:
   - internal/capture/logstore/store.go
   - internal/capture/perfstore/store.go
   - internal/capture/pressure/stats.go
+  - internal/capture/ringstore/store.go
   - internal/capture/extension_state.go
   - internal/capture/featureusage/observer.go
   - internal/capture/handlers.go
@@ -81,6 +82,7 @@ test_paths:
   - internal/capture/clientstore/owner_test.go
   - internal/capture/settingscache/loader_test.go
   - internal/capture/perfstore/store_test.go
+  - internal/capture/ringstore/store_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/contracts/no-dynamic-import-background.test.js
@@ -113,7 +115,6 @@ test_paths:
   - internal/capture/featureusage/observer_test.go
   - internal/capture/extension_state_test_helpers_test.go
   - internal/capture/buffer_clear_test.go
-  - internal/capture/bounded_ring_test.go
   - internal/capture/capture_stress_test.go
   - internal/capture/capture_bench_test.go
   - internal/capture/testhelpers_test.go
@@ -268,8 +269,12 @@ snapshots, and clearing. All ingestion and analysis callers use
 `Capture.Telemetry().NetworkWaterfall()`; the former capture-level access,
 add/get facades, and raw waterfall buffer are deleted.
 Waterfall timings, WebSocket events, network bodies, and enhanced actions use
-fixed-capacity circular storage so steady-state eviction overwrites and releases
-the oldest slot without allocating or copying the retained window.
+the canonical `ringstore.Store` fixed-capacity FIFO. The store owns circular
+retention and slot release while each feature owner retains its surrounding
+lock and counters; steady-state eviction therefore overwrites the oldest slot
+without allocating or copying the retained window. The former private ring
+implementation and root-level tests are deleted rather than retained as a
+parallel storage surface.
 Network bodies, WebSocket events and connection state, enhanced actions,
 navigation callbacks, and the waterfall owner now form one independently
 synchronized `TelemetryStore` returned by `Capture.Telemetry()`. Its consumers

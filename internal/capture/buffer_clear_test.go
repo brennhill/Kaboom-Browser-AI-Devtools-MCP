@@ -27,7 +27,7 @@ func TestClearNetworkBuffers(t *testing.T) {
 	// Verify data exists
 	initialWaterfall := len(capture.Telemetry().NetworkWaterfall().Entries())
 	capture.telemetry.mu.RLock()
-	initialBodies := capture.telemetry.buffers.networkBodies.len()
+	initialBodies := capture.telemetry.buffers.networkBodies.Len()
 	capture.telemetry.mu.RUnlock()
 
 	if initialWaterfall != 2 {
@@ -56,8 +56,8 @@ func TestClearNetworkBuffers(t *testing.T) {
 		t.Errorf("Expected networkWaterfall to be empty, got %d entries", len(entries))
 	}
 	capture.telemetry.mu.RLock()
-	if capture.telemetry.buffers.networkBodies.len() != 0 {
-		t.Errorf("Expected networkBodies to be empty, got %d entries", capture.telemetry.buffers.networkBodies.len())
+	if capture.telemetry.buffers.networkBodies.Len() != 0 {
+		t.Errorf("Expected networkBodies to be empty, got %d entries", capture.telemetry.buffers.networkBodies.Len())
 	}
 	if capture.telemetry.buffers.networkTotalAdded != 0 {
 		t.Errorf("Expected networkTotalAdded = 0, got %d", capture.telemetry.buffers.networkTotalAdded)
@@ -94,8 +94,8 @@ func TestClearWebSocketBuffers(t *testing.T) {
 
 	// Verify buffers empty
 	capture.telemetry.mu.RLock()
-	if capture.telemetry.buffers.wsEvents.len() != 0 {
-		t.Errorf("Expected wsEvents to be empty, got %d entries", capture.telemetry.buffers.wsEvents.len())
+	if capture.telemetry.buffers.wsEvents.Len() != 0 {
+		t.Errorf("Expected wsEvents to be empty, got %d entries", capture.telemetry.buffers.wsEvents.Len())
 	}
 	if capture.telemetry.wsConnections.Count() != 0 {
 		t.Errorf("Expected connections to be empty, got %d entries", capture.telemetry.wsConnections.Count())
@@ -124,8 +124,8 @@ func TestClearActionBuffer(t *testing.T) {
 
 	// Verify buffer empty
 	capture.telemetry.mu.RLock()
-	if capture.telemetry.buffers.enhancedActions.len() != 0 {
-		t.Errorf("Expected enhancedActions to be empty, got %d entries", capture.telemetry.buffers.enhancedActions.len())
+	if capture.telemetry.buffers.enhancedActions.Len() != 0 {
+		t.Errorf("Expected enhancedActions to be empty, got %d entries", capture.telemetry.buffers.enhancedActions.Len())
 	}
 	capture.telemetry.mu.RUnlock()
 }
@@ -159,10 +159,10 @@ func TestClearAllCapture(t *testing.T) {
 	}
 	capture.telemetry.mu.RLock()
 	defer capture.telemetry.mu.RUnlock()
-	if capture.telemetry.buffers.wsEvents.len() != 0 {
+	if capture.telemetry.buffers.wsEvents.Len() != 0 {
 		t.Error("Expected wsEvents to be empty")
 	}
-	if capture.telemetry.buffers.enhancedActions.len() != 0 {
+	if capture.telemetry.buffers.enhancedActions.Len() != 0 {
 		t.Error("Expected enhancedActions to be empty")
 	}
 	if logs := capture.ExtensionLogs().Entries(); len(logs) != 0 {

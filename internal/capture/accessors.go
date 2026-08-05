@@ -132,9 +132,9 @@ func (s *TelemetryStore) GetSnapshot() TelemetrySnapshot {
 		NetworkCount:        s.buffers.networkCount(),
 		WebSocketCount:      s.buffers.webSocketCount(),
 		ActionCount:         s.buffers.actionCount(),
-		NetworkCapacity:     s.buffers.networkBodies.capacity(),
-		WebSocketCapacity:   s.buffers.wsEvents.capacity(),
-		ActionCapacity:      s.buffers.enhancedActions.capacity(),
+		NetworkCapacity:     s.buffers.networkBodies.Capacity(),
+		WebSocketCapacity:   s.buffers.wsEvents.Capacity(),
+		ActionCapacity:      s.buffers.enhancedActions.Capacity(),
 		ConnectionCount:     s.wsConnections.Count(),
 	}
 }

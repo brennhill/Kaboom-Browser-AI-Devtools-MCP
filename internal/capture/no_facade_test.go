@@ -56,6 +56,8 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"type SecurityFlag struct",
 		"RateLimitThreshold =",
 		"ExtensionReadinessTimeout =",
+		"type boundedRing[",
+		"func newBoundedRing[",
 		"getSettingsPath(",
 		"readSettingsData(",
 		"QueryDispatcher =",

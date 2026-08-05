@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/ringstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
@@ -119,9 +120,9 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 
 	c.telemetry.mu.Lock()
 	now := time.Now()
-	c.telemetry.buffers.enhancedActions = newBoundedRing[enhancedActionEntry](maxEnhancedActions)
-	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
-	c.telemetry.buffers.enhancedActions.push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
+	c.telemetry.buffers.enhancedActions = ringstore.New[enhancedActionEntry](maxEnhancedActions)
+	c.telemetry.buffers.enhancedActions.Push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
+	c.telemetry.buffers.enhancedActions.Push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
 	c.extension.state.activeTestIDs["test-1"] = true
 	c.telemetry.mu.Unlock()
 
@@ -154,9 +155,9 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 
 	now := time.Now()
 	c.telemetry.mu.Lock()
-	c.telemetry.buffers.networkBodies = newBoundedRing[networkBodyEntry](maxNetworkBodies)
-	c.telemetry.buffers.networkBodies.push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now})
-	c.telemetry.buffers.networkBodies.push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now})
+	c.telemetry.buffers.networkBodies = ringstore.New[networkBodyEntry](maxNetworkBodies)
+	c.telemetry.buffers.networkBodies.Push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now})
+	c.telemetry.buffers.networkBodies.Push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now})
 	c.extension.state.activeTestIDs["tid"] = true
 	c.telemetry.mu.Unlock()
 

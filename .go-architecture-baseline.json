@@ -901,6 +901,10 @@
       "mutable_globals": 0,
       "exports": 1
     },
+    "internal/capture/ringstore/store.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
     "internal/capture/settingscache/loader.go": {
       "mutable_globals": 0,
       "exports": 1
