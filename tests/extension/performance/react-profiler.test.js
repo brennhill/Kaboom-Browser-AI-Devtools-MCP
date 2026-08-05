@@ -121,3 +121,19 @@ test('stop preserves a hook installed by another profiler during capture', async
 	assert.equal(hook.onCommitFiberRoot, replacement)
 	assert.equal(result.timing_semantics, 'subtree_inclusive_actual_duration')
 })
+
+test('stop restores only the page hook owned when profiling started', async () => {
+	const original = () => undefined
+	const nextPageHook = () => undefined
+	const firstHook = { renderers: new Map(), onCommitFiberRoot: original }
+	const nextHook = { renderers: new Map(), onCommitFiberRoot: nextPageHook }
+	globalThis.window = { __REACT_DEVTOOLS_GLOBAL_HOOK__: firstHook }
+	const profiler = await import('../../../extension/lib/analysis/react-profiler.js')
+	profiler.resetReactProfilerForTesting()
+	profiler.startReactProfile()
+
+	globalThis.window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = nextHook
+	assert.equal(profiler.stopReactProfile().status, 'complete')
+	assert.equal(firstHook.onCommitFiberRoot, original)
+	assert.equal(nextHook.onCommitFiberRoot, nextPageHook)
+})

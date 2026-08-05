@@ -4,7 +4,7 @@ feature_id: feature-react-performance-profiling
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - src/lib/analysis/react-profiler.ts
   - src/inject/api.ts
@@ -37,5 +37,7 @@ The profiler is off unless explicitly started. It records bounded commit and
 component timing evidence through React's DevTools hook and restores the
 original hook when stopped. It records changed property names, never values.
 Restoration is ownership-aware, so a profiler installed later is never
-overwritten. Reported `actualDuration` values are explicitly labeled as
-subtree-inclusive rather than exclusive component CPU time.
+overwritten. Navigation to a page with a new DevTools hook preserves that new
+hook while the profiler restores only the old page callback it still owns.
+Reported `actualDuration` values are explicitly labeled as subtree-inclusive
+rather than exclusive component CPU time.
