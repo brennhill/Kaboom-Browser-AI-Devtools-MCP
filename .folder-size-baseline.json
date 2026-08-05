@@ -4,7 +4,6 @@
   "folders": {
     "cmd/browser-agent": 197,
     "cmd/browser-agent/internal/bridge": 26,
-    "cmd/browser-agent/internal/cli": 12,
     "cmd/browser-agent/internal/playbooks": 14,
     "cmd/browser-agent/internal/terminal": 33,
     "cmd/browser-agent/internal/toolconfigure": 13,

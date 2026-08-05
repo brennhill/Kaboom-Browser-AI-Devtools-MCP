@@ -9,7 +9,7 @@ code_paths:
   - internal/performance/tracecorr/correlate.go
   - internal/tools/observe/session.go
   - src/lib/net/network.ts
-  - cmd/browser-agent/internal/cli/cli_tool_parsers_observe_analyze.go
+  - cmd/browser-agent/internal/cli/parser/observe_analyze.go
 test_paths:
   - internal/performance/tracecorr/correlate_test.go
   - tests/extension/network-http/network-waterfall.test.js

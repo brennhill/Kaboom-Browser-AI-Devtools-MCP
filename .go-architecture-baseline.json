@@ -95,35 +95,35 @@
     },
     "cmd/browser-agent/internal/cli/cli.go": {
       "mutable_globals": 1,
-      "exports": 9
-    },
-    "cmd/browser-agent/internal/cli/cli_commands.go": {
-      "mutable_globals": 0,
-      "exports": 2
-    },
-    "cmd/browser-agent/internal/cli/cli_flag_parsing.go": {
-      "mutable_globals": 0,
-      "exports": 15
+      "exports": 10
     },
     "cmd/browser-agent/internal/cli/cli_output.go": {
       "mutable_globals": 0,
       "exports": 6
     },
-    "cmd/browser-agent/internal/cli/cli_tool_parsers_generate_configure.go": {
-      "mutable_globals": 0,
-      "exports": 2
-    },
-    "cmd/browser-agent/internal/cli/cli_tool_parsers_interact.go": {
-      "mutable_globals": 1,
-      "exports": 5
-    },
-    "cmd/browser-agent/internal/cli/cli_tool_parsers_observe_analyze.go": {
-      "mutable_globals": 0,
-      "exports": 2
-    },
     "cmd/browser-agent/internal/cli/cli_transport.go": {
       "mutable_globals": 0,
       "exports": 4
+    },
+    "cmd/browser-agent/internal/cli/parser/commands.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/cli/parser/flags.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "cmd/browser-agent/internal/cli/parser/generate_configure.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/cli/parser/interact.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/cli/parser/observe_analyze.go": {
+      "mutable_globals": 0,
+      "exports": 2
     },
     "cmd/browser-agent/internal/connectmode/runner.go": {
       "mutable_globals": 0,
@@ -499,11 +499,7 @@
     },
     "cmd/browser-agent/internal/toolanalyze/security.go": {
       "mutable_globals": 0,
-      "exports": 2
-    },
-    "cmd/browser-agent/internal/toolanalyze/security_summaries.go": {
-      "mutable_globals": 0,
-      "exports": 2
+      "exports": 4
     },
     "cmd/browser-agent/internal/toolanalyze/verificationhandler/handler.go": {
       "mutable_globals": 0,
@@ -1829,10 +1825,6 @@
       "mutable_globals": 0,
       "exports": 3
     },
-    "internal/types/log.go": {
-      "mutable_globals": 0,
-      "exports": 3
-    },
     "internal/types/network.go": {
       "mutable_globals": 0,
       "exports": 19
@@ -1845,17 +1837,13 @@
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/types/wire_extension_log.go": {
-      "mutable_globals": 0,
-      "exports": 1
-    },
-    "internal/types/wire_network.go": {
+    "internal/types/wire_log.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "internal/types/wire_websocket_event.go": {
+    "internal/types/wire_network.go": {
       "mutable_globals": 0,
-      "exports": 1
+      "exports": 5
     },
     "internal/upload/form_submit.go": {
       "mutable_globals": 1,

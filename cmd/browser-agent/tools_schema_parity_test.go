@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli/parser"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -176,11 +176,11 @@ func TestCLIParserParity_AllSchemaPropertiesMapped(t *testing.T) {
 	}
 
 	cliParsers := map[string]func(string, []string) (map[string]any, error){
-		"observe":   cli.ParseObserveArgs,
-		"analyze":   cli.ParseAnalyzeArgs,
-		"generate":  cli.ParseGenerateArgs,
-		"configure": cli.ParseConfigureArgs,
-		"interact":  cli.ParseInteractArgs,
+		"observe":   parser.ParseObserveArgs,
+		"analyze":   parser.ParseAnalyzeArgs,
+		"generate":  parser.ParseGenerateArgs,
+		"configure": parser.ParseConfigureArgs,
+		"interact":  parser.ParseInteractArgs,
 	}
 
 	for _, tool := range tools {

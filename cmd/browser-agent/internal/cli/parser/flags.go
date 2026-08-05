@@ -1,8 +1,8 @@
-// cli_flag_parsing.go — Shared CLI flag parsing primitives used by tool-specific command parsers.
+// flags.go — Shared CLI flag parsing primitives used by tool-specific command parsers.
 // Why: Keeps flag decoding/validation logic DRY across observe/analyze/generate/configure/interact parsers.
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
-package cli
+package parser
 
 import (
 	"encoding/json"
@@ -13,11 +13,11 @@ import (
 
 // --- Generic flag parser ---
 
-// CLIFlagKind defines the type of a CLI flag value.
-type CLIFlagKind int
+// cliFlagKind defines the type of a CLI flag value.
+type cliFlagKind int
 
 const (
-	FlagString CLIFlagKind = iota
+	FlagString cliFlagKind = iota
 	FlagInt
 	FlagBool
 	FlagStringList
@@ -26,14 +26,14 @@ const (
 	FlagIntOrString
 )
 
-// CLIFlagSpec maps a CLI flag to an MCP argument key and its value type.
-type CLIFlagSpec struct {
+// cliFlagSpec maps a CLI flag to an MCP argument key and its value type.
+type cliFlagSpec struct {
 	MCPKey string
-	Kind   CLIFlagKind
+	Kind   cliFlagKind
 }
 
-// ParseFlagsBySpec parses CLI args against a spec map and returns MCP argument key-value pairs.
-func ParseFlagsBySpec(args []string, specs map[string]CLIFlagSpec) (map[string]any, error) {
+// parseFlagsBySpec parses CLI args against a spec map and returns MCP argument key-value pairs.
+func parseFlagsBySpec(args []string, specs map[string]cliFlagSpec) (map[string]any, error) {
 	out := make(map[string]any)
 	for i := 0; i < len(args); i++ {
 		flag := args[i]
@@ -45,32 +45,32 @@ func ParseFlagsBySpec(args []string, specs map[string]CLIFlagSpec) (map[string]a
 		case FlagBool:
 			out[spec.MCPKey] = true
 		case FlagString:
-			val, next, err := RequireFlagValue(args, i)
+			val, next, err := requireFlagValue(args, i)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", flag, err)
 			}
 			out[spec.MCPKey] = val
 			i = next
 		case FlagInt:
-			val, next, err := RequireFlagValue(args, i)
+			val, next, err := requireFlagValue(args, i)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", flag, err)
 			}
-			n, err := ParseIntValue(val)
+			n, err := parseIntValue(val)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", flag, err)
 			}
 			out[spec.MCPKey] = n
 			i = next
 		case FlagStringList:
-			val, next, err := RequireFlagValue(args, i)
+			val, next, err := requireFlagValue(args, i)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", flag, err)
 			}
-			out[spec.MCPKey] = ParseCSVList(val)
+			out[spec.MCPKey] = parseCSVList(val)
 			i = next
 		case FlagJSON:
-			val, next, err := RequireFlagValue(args, i)
+			val, next, err := requireFlagValue(args, i)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", flag, err)
 			}
@@ -81,14 +81,14 @@ func ParseFlagsBySpec(args []string, specs map[string]CLIFlagSpec) (map[string]a
 			out[spec.MCPKey] = parsed
 			i = next
 		case FlagJSONOrString:
-			val, next, err := RequireFlagValue(args, i)
+			val, next, err := requireFlagValue(args, i)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", flag, err)
 			}
-			out[spec.MCPKey] = ParseJSONOrString(val)
+			out[spec.MCPKey] = parseJSONOrString(val)
 			i = next
 		case FlagIntOrString:
-			val, next, err := RequireFlagValue(args, i)
+			val, next, err := requireFlagValue(args, i)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", flag, err)
 			}
@@ -105,8 +105,8 @@ func ParseFlagsBySpec(args []string, specs map[string]CLIFlagSpec) (map[string]a
 	return out, nil
 }
 
-// RequireFlagValue returns the next arg as the flag's value, erroring if missing or another flag.
-func RequireFlagValue(args []string, idx int) (string, int, error) {
+// requireFlagValue returns the next arg as the flag's value, erroring if missing or another flag.
+func requireFlagValue(args []string, idx int) (string, int, error) {
 	next := idx + 1
 	if next >= len(args) {
 		return "", idx, fmt.Errorf("cli_parse: no value provided after flag. Add a value after the flag")
@@ -118,8 +118,8 @@ func RequireFlagValue(args []string, idx int) (string, int, error) {
 	return val, next, nil
 }
 
-// ParseIntValue parses a string as an integer.
-func ParseIntValue(s string) (int, error) {
+// parseIntValue parses a string as an integer.
+func parseIntValue(s string) (int, error) {
 	n, err := strconv.Atoi(s)
 	if err != nil {
 		return 0, fmt.Errorf("expected integer, got %q: %w", s, err)
@@ -127,8 +127,8 @@ func ParseIntValue(s string) (int, error) {
 	return n, nil
 }
 
-// ParseCSVList splits a comma-separated string into a trimmed string slice.
-func ParseCSVList(s string) []string {
+// parseCSVList splits a comma-separated string into a trimmed string slice.
+func parseCSVList(s string) []string {
 	parts := strings.Split(s, ",")
 	out := make([]string, 0, len(parts))
 	for _, p := range parts {
@@ -143,27 +143,11 @@ func ParseCSVList(s string) []string {
 	return out
 }
 
-// ParseJSONOrString attempts to parse s as JSON object; returns the raw string on failure.
-func ParseJSONOrString(s string) any {
+// parseJSONOrString attempts to parse s as JSON object; returns the raw string on failure.
+func parseJSONOrString(s string) any {
 	var parsed any
 	if err := json.Unmarshal([]byte(s), &parsed); err == nil {
 		return parsed
 	}
 	return s
-}
-
-// --- Low-level flag parsers ---
-
-// CLIParseFlag extracts a string flag value from args, returning the value and remaining args.
-func CLIParseFlag(args []string, flag string) (string, []string) {
-	for i := 0; i < len(args)-1; i++ {
-		if args[i] == flag {
-			val := args[i+1]
-			remaining := make([]string, 0, len(args)-2)
-			remaining = append(remaining, args[:i]...)
-			remaining = append(remaining, args[i+2:]...)
-			return val, remaining
-		}
-	}
-	return "", args
 }

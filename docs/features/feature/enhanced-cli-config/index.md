@@ -10,9 +10,11 @@ code_paths:
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/internal/cli/cli_output.go
-  - cmd/browser-agent/internal/cli/cli_tool_parsers_generate_configure.go
-  - cmd/browser-agent/internal/cli/cli_tool_parsers_interact.go
-  - cmd/browser-agent/internal/cli/cli_tool_parsers_observe_analyze.go
+  - cmd/browser-agent/internal/cli/parser/commands.go
+  - cmd/browser-agent/internal/cli/parser/flags.go
+  - cmd/browser-agent/internal/cli/parser/generate_configure.go
+  - cmd/browser-agent/internal/cli/parser/interact.go
+  - cmd/browser-agent/internal/cli/parser/observe_analyze.go
   - cmd/browser-agent/internal/health/doctor.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -60,7 +62,8 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/contracts/validate-versions.js
   - docs/mcp-install-guide.md
 test_paths:
-  - cmd/browser-agent/internal/cli/cli_commands_test.go
+  - cmd/browser-agent/internal/cli/parser/commands_test.go
+  - cmd/browser-agent/internal/cli/parser/flags_test.go
   - cmd/browser-agent/internal/cli/cli_coverage_extra_test.go
   - cmd/browser-agent/internal/cli/cli_test.go
   - cmd/browser-agent/internal/nativeinstall/installer_test.go
@@ -69,6 +72,7 @@ test_paths:
   - cmd/browser-agent/tools_interface_check_test.go
   - cmd/browser-agent/main_flags_test.go
   - cmd/browser-agent/main_io_unit_test.go
+  - cmd/browser-agent/tools_schema_parity_test.go
   - cmd/browser-agent/main_helpers_more_test.go
   - cmd/browser-agent/internal/health/health_coverage_test.go
   - cmd/browser-agent/server_reliability_integration_test.go
@@ -160,6 +164,11 @@ Daemon updates are performed through the supported installer and CLI paths
 listed above. The popup no longer exposes a dormant one-click update flow:
 its `/upgrade/nonce` and `/upgrade/install` calls had no server routes or
 OpenAPI contract.
+
+The CLI runtime depends one-way on the canonical `internal/cli/parser`
+subpackage. Tool-family flag contracts no longer share a package with daemon
+startup, transport, or output rendering, and both folders enforce the ten-file
+ownership boundary without compatibility wrappers.
 
 - Native configuration discovery and installation recognize and write only the
   canonical `kaboom-browser-devtools` MCP identity; unrelated server entries

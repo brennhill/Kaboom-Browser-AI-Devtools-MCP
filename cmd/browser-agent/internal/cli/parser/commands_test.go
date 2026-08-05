@@ -1,13 +1,29 @@
-// cli_commands_test.go — Tests for uncovered CLI argument parser branches.
-// Core tests are in cli_test.go; this file covers remaining edge cases.
+// commands_test.go — Tests for CLI argument parser branches.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package cli
+package parser
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestParserPackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("CLI parser package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
 
 // ============================================
 // ParseObserveArgs — uncovered flags
@@ -263,21 +279,5 @@ func TestParseGenerateArgs_UnknownFlag(t *testing.T) {
 	_, err := ParseGenerateArgs("har", []string{"--not-a-flag"})
 	if err == nil {
 		t.Fatal("expected unknown flag error")
-	}
-}
-
-// ============================================
-// CLIParseFlag — missing flag
-// ============================================
-
-func TestCliParseFlag_Missing(t *testing.T) {
-	t.Parallel()
-
-	val, remaining := CLIParseFlag([]string{"--other", "x"}, "--url")
-	if val != "" {
-		t.Fatalf("missing flag should return empty, got %q", val)
-	}
-	if len(remaining) != 2 {
-		t.Fatalf("remaining should be unchanged, len = %d", len(remaining))
 	}
 }

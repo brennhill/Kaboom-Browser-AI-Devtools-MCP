@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-03
 code_paths:
-  - cmd/browser-agent/internal/cli/cli_tool_parsers_generate_configure.go
+  - cmd/browser-agent/internal/cli/parser/generate_configure.go
   - cmd/browser-agent/internal/playbooks/playbooks_guides.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup.go

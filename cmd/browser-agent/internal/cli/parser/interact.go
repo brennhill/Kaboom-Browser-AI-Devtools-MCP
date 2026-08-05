@@ -1,8 +1,8 @@
-// cli_tool_parsers_interact.go — Tool-specific CLI flag-to-MCP argument mapping for interact actions.
+// interact.go — Tool-specific CLI flag-to-MCP argument mapping for interact actions.
 // Why: Isolates interact parser contracts and validation from other tool parsers.
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
-package cli
+package parser
 
 import (
 	"fmt"
@@ -10,27 +10,21 @@ import (
 	"path/filepath"
 )
 
-// InteractActionsRequiringTarget lists actions that need at least one targeting param
-// (--selector, --element-id, --index, or --x/--y for click).
-var InteractActionsRequiringTarget = map[string]bool{
-	"click":         true,
-	"type":          true,
-	"get_text":      true,
-	"get_value":     true,
-	"get_attribute": true,
-	"set_attribute": true,
-	"wait_for":      true,
-	"scroll_to":     true,
-	"focus":         true,
-	"check":         true,
-	"paste":         true,
-	"highlight":     true,
+func actionRequiresTarget(action string) bool {
+	switch action {
+	case "click", "type", "get_text", "get_value", "get_attribute",
+		"set_attribute", "wait_for", "scroll_to", "focus", "check",
+		"paste", "highlight":
+		return true
+	default:
+		return false
+	}
 }
 
 // ParseInteractArgs parses CLI flags for the interact tool into MCP arguments.
 func ParseInteractArgs(action string, args []string) (map[string]any, error) {
 	mcpArgs := map[string]any{"what": action}
-	parsed, err := ParseFlagsBySpec(args, map[string]CLIFlagSpec{
+	parsed, err := parseFlagsBySpec(args, map[string]cliFlagSpec{
 		// Cross-cutting
 		"--telemetry-mode": {MCPKey: "telemetry_mode", Kind: FlagString},
 		"--background":     {MCPKey: "background", Kind: FlagBool},
@@ -124,13 +118,13 @@ func ParseInteractArgs(action string, args []string) (map[string]any, error) {
 	for k, v := range parsed {
 		mcpArgs[k] = v
 	}
-	ParseInteractFilePath(mcpArgs)
+	parseInteractFilePath(mcpArgs)
 
-	return mcpArgs, ValidateInteractArgs(action, mcpArgs)
+	return mcpArgs, validateInteractArgs(action, mcpArgs)
 }
 
-// ParseInteractFilePath extracts --file-path and resolves relative paths to absolute.
-func ParseInteractFilePath(mcpArgs map[string]any) {
+// parseInteractFilePath extracts --file-path and resolves relative paths to absolute.
+func parseInteractFilePath(mcpArgs map[string]any) {
 	filePath, _ := mcpArgs["file_path"].(string)
 	if filePath == "" {
 		return
@@ -143,9 +137,9 @@ func ParseInteractFilePath(mcpArgs map[string]any) {
 	mcpArgs["file_path"] = filePath
 }
 
-// ValidateInteractArgs checks required fields for specific interact actions.
-func ValidateInteractArgs(action string, mcpArgs map[string]any) error {
-	if InteractActionsRequiringTarget[action] && !HasTargetingParam(mcpArgs) {
+// validateInteractArgs checks required fields for specific interact actions.
+func validateInteractArgs(action string, mcpArgs map[string]any) error {
+	if actionRequiresTarget(action) && !hasTargetingParam(mcpArgs) {
 		return fmt.Errorf("interact %s: requires a targeting param (--selector, --element-id, --index, or --x/--y)", action)
 	}
 	if action == "upload" && mcpArgs["selector"] == nil && mcpArgs["element_id"] == nil && mcpArgs["api_endpoint"] == nil {
@@ -160,8 +154,8 @@ func ValidateInteractArgs(action string, mcpArgs map[string]any) error {
 	return nil
 }
 
-// HasTargetingParam checks if at least one element targeting param is present.
-func HasTargetingParam(mcpArgs map[string]any) bool {
+// hasTargetingParam checks if at least one element targeting param is present.
+func hasTargetingParam(mcpArgs map[string]any) bool {
 	for _, key := range []string{"selector", "element_id", "index", "x", "y"} {
 		if mcpArgs[key] != nil {
 			return true

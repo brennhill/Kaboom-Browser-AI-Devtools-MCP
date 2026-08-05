@@ -1,13 +1,13 @@
-// cli_tool_parsers_generate_configure.go — Tool-specific CLI flag-to-MCP argument mapping for generate/configure.
+// generate_configure.go — Tool-specific CLI flag-to-MCP argument mapping for generate/configure.
 // Why: Keeps generate/configure parser contracts isolated from observe/analyze/interact parsers.
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
-package cli
+package parser
 
 // ParseGenerateArgs parses CLI flags for the generate tool into MCP arguments.
 func ParseGenerateArgs(format string, args []string) (map[string]any, error) {
 	mcpArgs := map[string]any{"what": format}
-	parsed, err := ParseFlagsBySpec(args, map[string]CLIFlagSpec{
+	parsed, err := parseFlagsBySpec(args, map[string]cliFlagSpec{
 		"--telemetry-mode":        {MCPKey: "telemetry_mode", Kind: FlagString},
 		"--error-message":         {MCPKey: "error_message", Kind: FlagString},
 		"--last-n":                {MCPKey: "last_n", Kind: FlagInt},
@@ -56,7 +56,7 @@ func ParseGenerateArgs(format string, args []string) (map[string]any, error) {
 // ParseConfigureArgs parses CLI flags for the configure tool into MCP arguments.
 func ParseConfigureArgs(action string, args []string) (map[string]any, error) {
 	mcpArgs := map[string]any{"what": action}
-	parsed, err := ParseFlagsBySpec(args, map[string]CLIFlagSpec{
+	parsed, err := parseFlagsBySpec(args, map[string]cliFlagSpec{
 		// Cross-cutting
 		"--telemetry-mode": {MCPKey: "telemetry_mode", Kind: FlagString},
 		"--mode":           {MCPKey: "mode", Kind: FlagString},

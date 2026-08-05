@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli/parser"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -71,7 +72,7 @@ func Run(args []string, rc RuntimeConfig) int {
 	toolArgs := remaining[2:]
 
 	// Parse tool-specific arguments
-	mcpArgs, err := ParseCLIArgs(tool, action, toolArgs)
+	mcpArgs, err := parser.ParseCLIArgs(tool, action, toolArgs)
 	if err != nil {
 		fmt.Fprintf(output, "Error: %v\n", err)
 		return 2
@@ -86,10 +87,10 @@ func Run(args []string, rc RuntimeConfig) int {
 
 	// Long-running modes get extended timeout
 	timeout := cfg.Timeout
-	if tool == "analyze" && NormalizeAction(action) == "accessibility" {
+	if tool == "analyze" && parser.NormalizeAction(action) == "accessibility" {
 		timeout = 35000
 	}
-	if tool == "observe" && NormalizeAction(action) == "command_result" && timeout < 60000 {
+	if tool == "observe" && parser.NormalizeAction(action) == "command_result" && timeout < 60000 {
 		timeout = 60000
 	}
 
@@ -100,7 +101,7 @@ func Run(args []string, rc RuntimeConfig) int {
 		return 1
 	}
 
-	return FormatResult(output, cfg.Format, tool, NormalizeAction(action), result)
+	return FormatResult(output, cfg.Format, tool, parser.NormalizeAction(action), result)
 }
 
 // ResolveCLIConfig resolves config from defaults < env < flags, stripping global flags.
@@ -157,6 +158,21 @@ func ApplyCLIFlagOverrides(args []string, cfg *CLIConfig) []string {
 	}
 
 	return remaining
+}
+
+// CLIParseFlag extracts a global CLI flag value from args, returning the value
+// and remaining tool-specific arguments.
+func CLIParseFlag(args []string, flag string) (string, []string) {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == flag {
+			val := args[i+1]
+			remaining := make([]string, 0, len(args)-2)
+			remaining = append(remaining, args[:i]...)
+			remaining = append(remaining, args[i+2:]...)
+			return val, remaining
+		}
+	}
+	return "", args
 }
 
 // EnsureDaemon checks if the server is running and spawns it if needed.

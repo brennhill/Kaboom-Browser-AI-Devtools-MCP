@@ -11,17 +11,47 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli/parser"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
+func TestCLIPackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("cli package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
+
+func TestCliParseFlag_Missing(t *testing.T) {
+	t.Parallel()
+
+	val, remaining := CLIParseFlag([]string{"--other", "x"}, "--url")
+	if val != "" {
+		t.Fatalf("missing flag should return empty, got %q", val)
+	}
+	if len(remaining) != 2 {
+		t.Fatalf("remaining should be unchanged, len = %d", len(remaining))
+	}
+}
+
 func TestParseConfigureFixtureRestoreTransactionID(t *testing.T) {
 	t.Parallel()
-	args, err := ParseConfigureArgs("qa_fixture", []string{"--fixture-action", "restore", "--transaction-id", "transaction_1"})
+	args, err := parser.ParseConfigureArgs("qa_fixture", []string{"--fixture-action", "restore", "--transaction-id", "transaction_1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,105 +222,6 @@ func TestFormatResult_JSONAndCSVFormats(t *testing.T) {
 	}
 }
 
-// --- ParseFlagsBySpec ---
-
-func TestParseFlagsBySpec_KindsAndErrors(t *testing.T) {
-	t.Parallel()
-
-	specs := map[string]CLIFlagSpec{
-		"--str":  {MCPKey: "str", Kind: FlagString},
-		"--int":  {MCPKey: "int", Kind: FlagInt},
-		"--json": {MCPKey: "json", Kind: FlagJSON},
-		"--list": {MCPKey: "list", Kind: FlagStringList},
-		"--jos":  {MCPKey: "jos", Kind: FlagJSONOrString},
-		"--ios":  {MCPKey: "ios", Kind: FlagIntOrString},
-		"--bool": {MCPKey: "bool", Kind: FlagBool},
-	}
-
-	tests := []struct {
-		name    string
-		args    []string
-		wantErr bool
-	}{
-		{"unknown flag", []string{"--nope"}, true},
-		{"missing string value", []string{"--str"}, true},
-		{"string value is another flag", []string{"--str", "--bool"}, true},
-		{"invalid int", []string{"--int", "abc"}, true},
-		{"missing int value", []string{"--int"}, true},
-		{"invalid json", []string{"--json", "{bad"}, true},
-		{"missing json value", []string{"--json"}, true},
-		{"missing list value", []string{"--list"}, true},
-		{"missing jos value", []string{"--jos"}, true},
-		{"missing ios value", []string{"--ios"}, true},
-		{"valid string", []string{"--str", "hello"}, false},
-		{"valid int", []string{"--int", "42"}, false},
-		{"valid json object", []string{"--json", `{"a":1}`}, false},
-		{"valid list", []string{"--list", "a,b,c"}, false},
-		{"jos plain string", []string{"--jos", "plain"}, false},
-		{"jos json array", []string{"--jos", `[1,2]`}, false},
-		{"ios integer", []string{"--ios", "42"}, false},
-		{"ios string", []string{"--ios", "top"}, false},
-		{"bool flag", []string{"--bool"}, false},
-	}
-
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			_, err := ParseFlagsBySpec(tc.args, specs)
-			if tc.wantErr && err == nil {
-				t.Fatalf("ParseFlagsBySpec(%v) error = nil, want error", tc.args)
-			}
-			if !tc.wantErr && err != nil {
-				t.Fatalf("ParseFlagsBySpec(%v) error = %v, want nil", tc.args, err)
-			}
-		})
-	}
-}
-
-func TestParseFlagsBySpec_UnsupportedKind(t *testing.T) {
-	t.Parallel()
-
-	specs := map[string]CLIFlagSpec{"--x": {MCPKey: "x", Kind: CLIFlagKind(99)}}
-	if _, err := ParseFlagsBySpec([]string{"--x"}, specs); err == nil {
-		t.Fatal("ParseFlagsBySpec() error = nil, want error for unsupported kind")
-	}
-}
-
-func TestParseFlagsBySpec_ValuesMapCorrectly(t *testing.T) {
-	t.Parallel()
-
-	specs := map[string]CLIFlagSpec{
-		"--ios": {MCPKey: "frame", Kind: FlagIntOrString},
-	}
-	out, err := ParseFlagsBySpec([]string{"--ios", "5"}, specs)
-	if err != nil {
-		t.Fatalf("ParseFlagsBySpec() error = %v", err)
-	}
-	if out["frame"] != 5 {
-		t.Fatalf("frame = %v (%T), want int 5", out["frame"], out["frame"])
-	}
-
-	out, err = ParseFlagsBySpec([]string{"--ios", "main"}, specs)
-	if err != nil {
-		t.Fatalf("ParseFlagsBySpec() error = %v", err)
-	}
-	if out["frame"] != "main" {
-		t.Fatalf("frame = %v, want string main", out["frame"])
-	}
-}
-
-// --- ParseCSVList edge ---
-
-func TestParseCSVList_AllEmptyYieldsEmptySlice(t *testing.T) {
-	t.Parallel()
-
-	got := ParseCSVList("  ,  , ")
-	if len(got) != 0 {
-		t.Fatalf("ParseCSVList() = %v, want empty slice", got)
-	}
-}
-
 // --- Transport encode/decode ---
 
 func TestBuildToolCallBody_MarshalError(t *testing.T) {
@@ -332,11 +263,11 @@ func TestToolParsers_UnknownFlagPropagatesError(t *testing.T) {
 		name string
 		fn   func() (map[string]any, error)
 	}{
-		{"observe", func() (map[string]any, error) { return ParseObserveArgs("errors", []string{"--nope", "x"}) }},
-		{"analyze", func() (map[string]any, error) { return ParseAnalyzeArgs("dom", []string{"--nope", "x"}) }},
-		{"generate", func() (map[string]any, error) { return ParseGenerateArgs("har", []string{"--nope", "x"}) }},
-		{"configure", func() (map[string]any, error) { return ParseConfigureArgs("health", []string{"--nope", "x"}) }},
-		{"interact", func() (map[string]any, error) { return ParseInteractArgs("navigate", []string{"--nope", "x"}) }},
+		{"observe", func() (map[string]any, error) { return parser.ParseObserveArgs("errors", []string{"--nope", "x"}) }},
+		{"analyze", func() (map[string]any, error) { return parser.ParseAnalyzeArgs("dom", []string{"--nope", "x"}) }},
+		{"generate", func() (map[string]any, error) { return parser.ParseGenerateArgs("har", []string{"--nope", "x"}) }},
+		{"configure", func() (map[string]any, error) { return parser.ParseConfigureArgs("health", []string{"--nope", "x"}) }},
+		{"interact", func() (map[string]any, error) { return parser.ParseInteractArgs("navigate", []string{"--nope", "x"}) }},
 	}
 
 	for _, tc := range tests {
@@ -355,10 +286,10 @@ func TestToolParsers_UnknownFlagPropagatesError(t *testing.T) {
 func TestValidateInteractArgs_UploadRequiresTarget(t *testing.T) {
 	t.Parallel()
 
-	if _, err := ParseInteractArgs("upload", nil); err == nil {
+	if _, err := parser.ParseInteractArgs("upload", nil); err == nil {
 		t.Fatal("expected error for upload without a target")
 	}
-	if _, err := ParseInteractArgs("upload", []string{"--api-endpoint", "https://x.test/api"}); err != nil {
+	if _, err := parser.ParseInteractArgs("upload", []string{"--api-endpoint", "https://x.test/api"}); err != nil {
 		t.Fatalf("unexpected error for upload with api-endpoint: %v", err)
 	}
 }

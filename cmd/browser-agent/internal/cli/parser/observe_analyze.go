@@ -1,13 +1,13 @@
-// cli_tool_parsers_observe_analyze.go — Tool-specific CLI flag-to-MCP argument mapping for observe/analyze.
+// observe_analyze.go — Tool-specific CLI flag-to-MCP argument mapping for observe/analyze.
 // Why: Keeps observe/analyze parser contracts isolated from other tool parser families.
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
-package cli
+package parser
 
 // ParseObserveArgs parses CLI flags for the observe tool into MCP arguments.
 func ParseObserveArgs(mode string, args []string) (map[string]any, error) {
 	mcpArgs := map[string]any{"what": mode}
-	parsed, err := ParseFlagsBySpec(args, map[string]CLIFlagSpec{
+	parsed, err := parseFlagsBySpec(args, map[string]cliFlagSpec{
 		// Cross-cutting
 		"--telemetry-mode": {MCPKey: "telemetry_mode", Kind: FlagString},
 		"--limit":          {MCPKey: "limit", Kind: FlagInt},
@@ -68,7 +68,7 @@ func ParseObserveArgs(mode string, args []string) (map[string]any, error) {
 // ParseAnalyzeArgs parses CLI flags for the analyze tool into MCP arguments.
 func ParseAnalyzeArgs(what string, args []string) (map[string]any, error) {
 	mcpArgs := map[string]any{"what": what}
-	parsed, err := ParseFlagsBySpec(args, map[string]CLIFlagSpec{
+	parsed, err := parseFlagsBySpec(args, map[string]cliFlagSpec{
 		// Cross-cutting
 		"--telemetry-mode": {MCPKey: "telemetry_mode", Kind: FlagString},
 		"--background":     {MCPKey: "background", Kind: FlagBool},

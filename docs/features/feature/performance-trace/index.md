@@ -8,7 +8,7 @@ last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace.go
-  - cmd/browser-agent/internal/cli/cli_tool_parsers_observe_analyze.go
+  - cmd/browser-agent/internal/cli/parser/observe_analyze.go
   - cmd/browser-agent/server.go
   - internal/perftrace/http.go
   - internal/perftrace/manager.go

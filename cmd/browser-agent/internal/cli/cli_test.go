@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli/parser"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -148,7 +149,7 @@ func TestNormalizeAction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			t.Parallel()
-			got := NormalizeAction(tt.input)
+			got := parser.NormalizeAction(tt.input)
 			if got != tt.want {
 				t.Errorf("NormalizeAction(%q) = %q, want %q", tt.input, got, tt.want)
 			}
@@ -161,7 +162,7 @@ func TestNormalizeAction(t *testing.T) {
 func TestParseObserveArgsErrors(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseObserveArgs("errors", nil)
+	mcpArgs, err := parser.ParseObserveArgs("errors", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -173,7 +174,7 @@ func TestParseObserveArgsErrors(t *testing.T) {
 func TestParseObserveArgsWithLimit(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseObserveArgs("errors", []string{"--limit", "50"})
+	mcpArgs, err := parser.ParseObserveArgs("errors", []string{"--limit", "50"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -185,7 +186,7 @@ func TestParseObserveArgsWithLimit(t *testing.T) {
 func TestParseObserveArgsLogs(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseObserveArgs("logs", []string{"--min-level", "warn", "--limit", "100"})
+	mcpArgs, err := parser.ParseObserveArgs("logs", []string{"--min-level", "warn", "--limit", "100"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -203,7 +204,7 @@ func TestParseObserveArgsLogs(t *testing.T) {
 func TestParseObserveArgsNetworkWaterfall(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseObserveArgs("network_waterfall", []string{"--url", "api.example.com", "--status-min", "400"})
+	mcpArgs, err := parser.ParseObserveArgs("network_waterfall", []string{"--url", "api.example.com", "--status-min", "400"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -218,7 +219,7 @@ func TestParseObserveArgsNetworkWaterfall(t *testing.T) {
 func TestParseObserveArgsAccessibility(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseObserveArgs("accessibility", []string{"--scope", "form"})
+	mcpArgs, err := parser.ParseObserveArgs("accessibility", []string{"--scope", "form"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -230,7 +231,7 @@ func TestParseObserveArgsAccessibility(t *testing.T) {
 func TestParseObserveArgsWebsocket(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseObserveArgs("websocket_events", []string{"--connection-id", "ws1", "--direction", "sent"})
+	mcpArgs, err := parser.ParseObserveArgs("websocket_events", []string{"--connection-id", "ws1", "--direction", "sent"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -247,7 +248,7 @@ func TestParseObserveArgsWebsocket(t *testing.T) {
 func TestParseGenerateArgsHAR(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseGenerateArgs("har", []string{"--save-to", "out.har"})
+	mcpArgs, err := parser.ParseGenerateArgs("har", []string{"--save-to", "out.har"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -262,7 +263,7 @@ func TestParseGenerateArgsHAR(t *testing.T) {
 func TestParseGenerateArgsTest(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseGenerateArgs("test", []string{"--test-name", "my_test", "--assert-network", "--assert-no-errors"})
+	mcpArgs, err := parser.ParseGenerateArgs("test", []string{"--test-name", "my_test", "--assert-network", "--assert-no-errors"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -280,7 +281,7 @@ func TestParseGenerateArgsTest(t *testing.T) {
 func TestParseGenerateArgsCSP(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseGenerateArgs("csp", []string{"--mode", "strict"})
+	mcpArgs, err := parser.ParseGenerateArgs("csp", []string{"--mode", "strict"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -292,7 +293,7 @@ func TestParseGenerateArgsCSP(t *testing.T) {
 func TestParseGenerateArgsReproduction(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseGenerateArgs("reproduction", []string{"--error-message", "timeout", "--last-n", "5"})
+	mcpArgs, err := parser.ParseGenerateArgs("reproduction", []string{"--error-message", "timeout", "--last-n", "5"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -309,7 +310,7 @@ func TestParseGenerateArgsReproduction(t *testing.T) {
 func TestParseConfigureArgsHealth(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseConfigureArgs("health", nil)
+	mcpArgs, err := parser.ParseConfigureArgs("health", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -321,7 +322,7 @@ func TestParseConfigureArgsHealth(t *testing.T) {
 func TestParseConfigureArgsClear(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseConfigureArgs("clear", []string{"--buffer", "network"})
+	mcpArgs, err := parser.ParseConfigureArgs("clear", []string{"--buffer", "network"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -333,7 +334,7 @@ func TestParseConfigureArgsClear(t *testing.T) {
 func TestParseConfigureArgsNoiseRule(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseConfigureArgs("noise_rule", []string{"--noise-action", "add", "--pattern", "*.png", "--reason", "images"})
+	mcpArgs, err := parser.ParseConfigureArgs("noise_rule", []string{"--noise-action", "add", "--pattern", "*.png", "--reason", "images"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -348,7 +349,7 @@ func TestParseConfigureArgsNoiseRule(t *testing.T) {
 func TestParseConfigureArgsStore(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseConfigureArgs("store", []string{"--key", "session", "--data", `{"id":"123"}`})
+	mcpArgs, err := parser.ParseConfigureArgs("store", []string{"--key", "session", "--data", `{"id":"123"}`})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -369,7 +370,7 @@ func TestParseConfigureArgsStore(t *testing.T) {
 func TestParseInteractArgsClick(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseInteractArgs("click", []string{"--selector", "#btn"})
+	mcpArgs, err := parser.ParseInteractArgs("click", []string{"--selector", "#btn"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -384,7 +385,7 @@ func TestParseInteractArgsClick(t *testing.T) {
 func TestParseInteractArgsClickMissingSelector(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseInteractArgs("click", nil)
+	_, err := parser.ParseInteractArgs("click", nil)
 	if err == nil {
 		t.Fatal("expected error for missing selector")
 	}
@@ -396,7 +397,7 @@ func TestParseInteractArgsClickMissingSelector(t *testing.T) {
 func TestParseInteractArgsNavigate(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseInteractArgs("navigate", []string{"--url", "https://example.com"})
+	mcpArgs, err := parser.ParseInteractArgs("navigate", []string{"--url", "https://example.com"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -411,7 +412,7 @@ func TestParseInteractArgsNavigate(t *testing.T) {
 func TestParseInteractArgsNavigateMissingURL(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseInteractArgs("navigate", nil)
+	_, err := parser.ParseInteractArgs("navigate", nil)
 	if err == nil {
 		t.Fatal("expected error for missing url")
 	}
@@ -423,7 +424,7 @@ func TestParseInteractArgsNavigateMissingURL(t *testing.T) {
 func TestParseInteractArgsType(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseInteractArgs("type", []string{"--selector", "#input", "--text", "hello", "--clear"})
+	mcpArgs, err := parser.ParseInteractArgs("type", []string{"--selector", "#input", "--text", "hello", "--clear"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -441,7 +442,7 @@ func TestParseInteractArgsType(t *testing.T) {
 func TestParseInteractArgsScrollToDirection(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseInteractArgs("scroll_to", []string{"--selector", "#modal-body", "--direction", "bottom"})
+	mcpArgs, err := parser.ParseInteractArgs("scroll_to", []string{"--selector", "#modal-body", "--direction", "bottom"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -456,7 +457,7 @@ func TestParseInteractArgsScrollToDirection(t *testing.T) {
 func TestParseInteractArgsGetTextStructured(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseInteractArgs("get_text", []string{"--selector", ".accordion", "--structured"})
+	mcpArgs, err := parser.ParseInteractArgs("get_text", []string{"--selector", ".accordion", "--structured"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -471,7 +472,7 @@ func TestParseInteractArgsGetTextStructured(t *testing.T) {
 func TestParseInteractArgsExecuteJS(t *testing.T) {
 	t.Parallel()
 
-	mcpArgs, err := ParseInteractArgs("execute_js", []string{"--script", "document.title"})
+	mcpArgs, err := parser.ParseInteractArgs("execute_js", []string{"--script", "document.title"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -483,7 +484,7 @@ func TestParseInteractArgsExecuteJS(t *testing.T) {
 func TestParseInteractArgsExecuteJSMissingScript(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseInteractArgs("execute_js", nil)
+	_, err := parser.ParseInteractArgs("execute_js", nil)
 	if err == nil {
 		t.Fatal("expected error for missing script")
 	}
@@ -495,8 +496,8 @@ func TestParseInteractArgsExecuteJSMissingScript(t *testing.T) {
 func TestParseInteractArgsKebabCase(t *testing.T) {
 	t.Parallel()
 
-	action := NormalizeAction("get-text")
-	mcpArgs, err := ParseInteractArgs(action, []string{"--selector", ".content"})
+	action := parser.NormalizeAction("get-text")
+	mcpArgs, err := parser.ParseInteractArgs(action, []string{"--selector", ".content"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -531,7 +532,7 @@ func TestParseCLIArgsDispatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			mcpArgs, err := ParseCLIArgs(tt.tool, tt.action, tt.args)
+			mcpArgs, err := parser.ParseCLIArgs(tt.tool, tt.action, tt.args)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")

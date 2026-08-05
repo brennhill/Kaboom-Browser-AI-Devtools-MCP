@@ -1,8 +1,8 @@
-// cli_commands.go — Dispatches CLI commands to tool-specific argument parsers.
+// commands.go — Dispatches CLI commands to tool-specific argument parsers.
 // Why: Keeps top-level CLI parser intent explicit while detailed parsing lives in focused modules.
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
-package cli
+package parser
 
 import (
 	"fmt"
