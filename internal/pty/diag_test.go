@@ -140,10 +140,12 @@ func TestSession_WaitReturnsImmediatelyForReapedChild(t *testing.T) {
 func TestManager_StopAllLogsCloseFailure(t *testing.T) {
 	read := captureDiag(t)
 
-	m := newFakeManager() // fake sessions have a nil ptmx, so Close returns ErrInvalid
-	if _, err := m.Start(StartConfig{ID: "s1"}); err != nil {
+	m := newFakeManager()
+	started, err := m.Start(StartConfig{ID: "s1"})
+	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
+	started.Session.ptmx = closeErrorPTY{err: errors.New("close fixture failed")}
 	m.StopAll()
 
 	ev, ok := findEvent(read(), EventSessionCloseFailed)
@@ -186,3 +188,10 @@ func TestWriteBuffer_FlushFailureIsLogged(t *testing.T) {
 type errWriter struct{ err error }
 
 func (w *errWriter) Write(p []byte) (int, error) { return 0, w.err }
+
+type closeErrorPTY struct{ err error }
+
+func (pty closeErrorPTY) Read([]byte) (int, error)    { return 0, nil }
+func (pty closeErrorPTY) Write(p []byte) (int, error) { return len(p), nil }
+func (pty closeErrorPTY) Close() error                { return pty.err }
+func (pty closeErrorPTY) Fd() uintptr                 { return 0 }
