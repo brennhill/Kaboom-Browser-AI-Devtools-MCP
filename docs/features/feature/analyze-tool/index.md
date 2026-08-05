@@ -11,7 +11,7 @@ code_paths:
   - cmd/browser-agent/internal/playbooks/playbooks_guides.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
-  - internal/analysis/apicontract/runtime_handler.go
+  - internal/analysis/apicontract/runtime/handler.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom.go
   - cmd/browser-agent/internal/toolanalyze/visual/handler.go
@@ -58,7 +58,7 @@ test_paths:
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_interface_check_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
-  - internal/analysis/apicontract/runtime_handler_test.go
+  - internal/analysis/apicontract/runtime/handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_analyze_annotations_core_test.go
   - cmd/browser-agent/tools_analyze_annotations_wait_test.go

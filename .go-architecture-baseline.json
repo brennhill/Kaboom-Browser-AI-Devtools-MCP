@@ -805,7 +805,7 @@
       "mutable_globals": 0,
       "exports": 4
     },
-    "internal/analysis/apicontract/runtime_handler.go": {
+    "internal/analysis/apicontract/runtime/handler.go": {
       "mutable_globals": 0,
       "exports": 3
     },

@@ -4,7 +4,7 @@ feature_id: feature-api-schema
 status: superseded
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/capabilities.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
@@ -14,7 +14,7 @@ code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/server.go
   - internal/analysis/apicontract/contract.go
-  - internal/analysis/apicontract/runtime_handler.go
+  - internal/analysis/apicontract/runtime/handler.go
   - internal/analysis/apicontract/report.go
   - internal/analysis/apicontract/endpoint.go
   - internal/analysis/apicontract/learning.go
@@ -42,12 +42,11 @@ test_paths:
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_configure_capabilities_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
-  - internal/analysis/apicontract/runtime_handler_test.go
+  - internal/analysis/apicontract/runtime/handler_test.go
   - internal/analysis/apicontract/contract_test.go
   - internal/analysis/apicontract/contract_actions_test.go
   - internal/analysis/apicontract/contract_analyze_test.go
   - internal/analysis/apicontract/contract_report_test.go
-  - internal/analysis/apicontract/branch_coverage_test.go
   - internal/schema/invariants_test.go
   - internal/schema/interact/schema_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
@@ -66,6 +65,13 @@ last_verified_date: 2026-03-05
 > independently at symbol level and stands; the cited evidence did not.
 
 Note: the API *contract* checking in `internal/analysis/apicontract` is live and unaffected; only the schema-inference half was dead.
+
+The live contract engine is independent of MCP state. Its incremental offset,
+clear lifecycle, and response projection are owned by the one-way
+`internal/analysis/apicontract/runtime` adapter; callers import that canonical
+owner directly, with no compatibility facade. Core shape/observation edge cases
+live beside the core contract tests, and both packages enforce the ten-file
+ownership boundary.
 
 
 # Api Schema

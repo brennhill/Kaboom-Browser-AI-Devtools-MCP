@@ -1,14 +1,31 @@
-// runtime_handler_test.go — Tests API contract runtime MCP operations.
+// handler_test.go — Tests API contract runtime MCP operations.
 
-package apicontract
+package runtime
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"os"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestRuntimePackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("API contract runtime package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
 
 func TestRuntimeHandleRejectsMissingOperation(t *testing.T) {
 	t.Parallel()

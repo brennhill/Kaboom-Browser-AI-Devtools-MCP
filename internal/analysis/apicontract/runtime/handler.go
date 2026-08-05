@@ -1,24 +1,25 @@
-// runtime_handler.go — Owns incremental API-validation state and MCP operations.
+// handler.go — Owns incremental API-validation state and MCP operations.
 // Docs: docs/features/feature/analyze-tool/index.md
 
-package apicontract
+package runtime
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 type Runtime struct {
 	mu        sync.Mutex
-	validator *APIContractValidator
+	validator *apicontract.APIContractValidator
 	offset    int
 }
 
 func NewRuntime() *Runtime {
-	return &Runtime{validator: NewAPIContractValidator()}
+	return &Runtime{validator: apicontract.NewAPIContractValidator()}
 }
 
 func (r *Runtime) Handle(req mcp.JSONRPCRequest, args json.RawMessage, bodies []types.NetworkBody) mcp.JSONRPCResponse {
@@ -79,11 +80,11 @@ func (r *Runtime) Handle(req mcp.JSONRPCRequest, args json.RawMessage, bodies []
 	}
 }
 
-func (r *Runtime) process(bodies []types.NetworkBody) *APIContractValidator {
+func (r *Runtime) process(bodies []types.NetworkBody) *apicontract.APIContractValidator {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.validator == nil {
-		r.validator = NewAPIContractValidator()
+		r.validator = apicontract.NewAPIContractValidator()
 	}
 	if r.offset < 0 || r.offset > len(bodies) {
 		r.offset = len(bodies)
@@ -98,10 +99,10 @@ func (r *Runtime) process(bodies []types.NetworkBody) *APIContractValidator {
 func (r *Runtime) clear(bodyCount int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.validator = NewAPIContractValidator()
+	r.validator = apicontract.NewAPIContractValidator()
 	r.offset = bodyCount
 }
 
-func runtimeFilter(urlFilter string, ignore []string) APIContractFilter {
-	return APIContractFilter{URLFilter: urlFilter, IgnoreEndpoints: ignore}
+func runtimeFilter(urlFilter string, ignore []string) apicontract.APIContractFilter {
+	return apicontract.APIContractFilter{URLFilter: urlFilter, IgnoreEndpoints: ignore}
 }

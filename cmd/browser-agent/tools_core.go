@@ -36,7 +36,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
+	apicontractruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract/runtime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
@@ -104,7 +104,7 @@ type ToolHandler struct {
 	annotationStore *annotation.Store
 
 	// API contract validation state (incremental over captured network bodies).
-	apiContractRuntime *apicontract.Runtime
+	apiContractRuntime *apicontractruntime.Runtime
 
 	// Upload security config (folder-scoped permissions + denylist)
 	uploadSecurity *uploadsec.Security
@@ -433,7 +433,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	}
 	handler.securityScannerImpl = scan.NewScanner()
 	handler.thirdPartyAuditorImpl = thirdparty.NewThirdPartyAuditor()
-	handler.apiContractRuntime = apicontract.NewRuntime()
+	handler.apiContractRuntime = apicontractruntime.NewRuntime()
 	var performanceEntries func() []performance.PerformanceSnapshot
 	var queryStore toolobserve.CommandStore
 	var inProgress func() []capture.SyncInProgress
