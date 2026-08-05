@@ -43,7 +43,7 @@ Ensure every MCP tool command and documented option is valid end-to-end: schema 
 - Analyze command paths:
 - `cmd/browser-agent/tools_analyze_*test.go`
 - Sync endpoint + queue lifecycle:
-- `internal/capture/sync_test.go`
+- `internal/capture/syncruntime/sync_test.go`
 - `internal/capture/async_queue_integration_test.go`
 - `internal/capture/correlation_tracking_test.go`
 

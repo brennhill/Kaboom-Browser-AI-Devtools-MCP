@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 )
 
 func TestHandleSync_FeaturesUsedInvokesCallback(t *testing.T) {
@@ -25,9 +27,9 @@ func TestHandleSync_FeaturesUsedInvokesCallback(t *testing.T) {
 		mu.Unlock()
 	})
 
-	req := SyncRequest{
+	req := syncruntime.SyncRequest{
 		ExtSessionID: "analytics_test",
-		FeaturesUsed: &SyncFeaturesUsed{
+		FeaturesUsed: &syncruntime.SyncFeaturesUsed{
 			Screenshot:  true,
 			Annotations: true,
 			Video:       false,
@@ -67,7 +69,7 @@ func TestHandleSync_FeaturesUsedEmpty_NoCallback(t *testing.T) {
 		mu.Unlock()
 	})
 
-	req := SyncRequest{
+	req := syncruntime.SyncRequest{
 		ExtSessionID: "analytics_test_empty",
 	}
 
@@ -88,44 +90,14 @@ func TestHandleSync_FeaturesUsedNoCallback_NoPanic(t *testing.T) {
 	cap := NewCapture()
 	// No callback set — should not panic.
 
-	req := SyncRequest{
+	req := syncruntime.SyncRequest{
 		ExtSessionID: "analytics_test_no_cb",
-		FeaturesUsed: &SyncFeaturesUsed{Screenshot: true},
+		FeaturesUsed: &syncruntime.SyncFeaturesUsed{Screenshot: true},
 	}
 
 	w := runSyncRequest(t, cap, req)
 	if w.Code != http.StatusOK {
 		t.Fatalf("Expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-}
-
-func TestEnabledFeatures_MapsCanonicalSchema(t *testing.T) {
-	t.Parallel()
-	raw := &SyncFeaturesUsed{
-		Screenshot:      true,
-		Annotations:     true,
-		Video:           false,
-		DOMAction:       true,
-		ActionRecording: true,
-	}
-	filtered := enabledFeatures(raw)
-	if len(filtered) != 4 {
-		t.Fatalf("Expected 4 enabled keys, got %d: %v", len(filtered), filtered)
-	}
-	// action_recording is wire-synced with the UIFeature union on the extension
-	// side; if this drops, an extension release will silently lose the metric.
-	if !filtered["action_recording"] {
-		t.Error("Expected action_recording to be an allowed feature key")
-	}
-}
-
-func TestEnabledFeatures_Empty_ReturnsNil(t *testing.T) {
-	t.Parallel()
-	if enabledFeatures(nil) != nil {
-		t.Error("Expected nil for nil input")
-	}
-	if enabledFeatures(&SyncFeaturesUsed{}) != nil {
-		t.Error("Expected nil for empty input")
 	}
 }
 
@@ -141,7 +113,7 @@ func TestHandleSync_FeaturesUsedUnknownKeysFiltered(t *testing.T) {
 		mu.Unlock()
 	})
 
-	var req SyncRequest
+	var req syncruntime.SyncRequest
 	if err := json.Unmarshal([]byte(`{"ext_session_id":"allowlist_test","features_used":{"screenshot":true,"evil_key":true}}`), &req); err != nil {
 		t.Fatalf("decode sync fixture: %v", err)
 	}
@@ -165,7 +137,7 @@ func TestHandleSync_ResponseContainsInstallID(t *testing.T) {
 	t.Parallel()
 	cap := NewCapture()
 
-	req := SyncRequest{
+	req := syncruntime.SyncRequest{
 		ExtSessionID: "install_id_test",
 	}
 

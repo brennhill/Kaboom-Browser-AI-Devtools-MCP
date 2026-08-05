@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
@@ -45,7 +44,7 @@ func setupBatchHandler(t *testing.T) *ToolHandler {
 	capturefixture.SetPilot(cap, true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
+	newSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	capturefixture.Track(cap, 42, "https://example.com")
 	return h
 }

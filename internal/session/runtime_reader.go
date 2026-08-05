@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 type RuntimeCaptureReader interface {
-	Extension() *capture.ExtensionRuntime
+	Extension() *syncruntime.Runtime
 	Telemetry() *telemetrystore.Store
 }
 

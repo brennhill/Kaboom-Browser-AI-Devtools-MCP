@@ -19,22 +19,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 )
 
-func TestExtractBrowserNameUsesPrivacySafeFamilies(t *testing.T) {
-	t.Parallel()
-	for userAgent, want := range map[string]string{
-		"Mozilla Chrome Brave":   "brave",
-		"Mozilla Chrome Edg/120": "edge",
-		"Mozilla Chrome/120":     "chrome",
-		"Mozilla Firefox/120":    "firefox",
-		"Mozilla Safari/17":      "safari",
-		"custom client":          "unknown",
-	} {
-		if got := extractBrowserName(userAgent); got != want {
-			t.Fatalf("extractBrowserName(%q) = %q, want %q", userAgent, got, want)
-		}
-	}
-}
-
 // ============================================
 // Lifecycle observer
 // ============================================
@@ -154,29 +138,6 @@ func TestGetVersionMismatch_Mismatch(t *testing.T) {
 	_, _, mismatch := c.Extension().VersionMismatch()
 	if !mismatch {
 		t.Error("mismatch = false, want true (6.0 != 5.9)")
-	}
-}
-
-func TestMajorMinor(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		input string
-		want  string
-	}{
-		{"6.0.3", "6.0"},
-		{"1.2.3", "1.2"},
-		{"10.20.30", "10.20"},
-		{"6.0", "6.0"},
-		{"6", ""},
-		{"", ""},
-	}
-
-	for _, tc := range cases {
-		got := majorMinor(tc.input)
-		if got != tc.want {
-			t.Errorf("majorMinor(%q) = %q, want %q", tc.input, got, tc.want)
-		}
 	}
 }
 

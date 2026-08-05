@@ -18,6 +18,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/a11ysummary"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/idbquery"
@@ -76,7 +77,7 @@ func GetPageInfo(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.
 	// Include blocked_actions/blocked_reason when CSP restricts — omit entirely
 	// when CSP is clear to avoid wasting tokens on normal pages. (#262)
 	if cspRestricted {
-		if actions, reason := capture.CSPBlockedActions(cspLevel); actions != nil {
+		if actions, reason := syncruntime.CSPBlockedActions(cspLevel); actions != nil {
 			result["blocked_actions"] = actions
 			result["blocked_reason"] = reason
 		}

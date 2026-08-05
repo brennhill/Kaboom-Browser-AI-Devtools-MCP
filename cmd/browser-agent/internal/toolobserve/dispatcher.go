@@ -19,7 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
@@ -43,7 +43,7 @@ type Config struct {
 	Local                Deps
 	IsExtensionConnected func() bool
 	Commands             CommandStore
-	InProgress           func() []capture.SyncInProgress
+	InProgress           func() []syncruntime.SyncInProgress
 	AnnotationStore      *annotation.Store
 	Annotations          toolrouting.Handler[observecore.Deps]
 	AnnotationDetail     toolrouting.Handler[observecore.Deps]
@@ -176,12 +176,12 @@ func (d *Dispatcher) CommandResult(req mcp.JSONRPCRequest, args json.RawMessage)
 
 func (d *Dispatcher) pendingCommands(_ observecore.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	if d.commands == nil {
-		data := map[string]any{"pending": []*queries.CommandResult{}, "completed": []*queries.CommandResult{}, "failed": []*queries.CommandResult{}, "extension_in_progress": []capture.SyncInProgress{}, "extension_in_progress_count": 0}
+		data := map[string]any{"pending": []*queries.CommandResult{}, "completed": []*queries.CommandResult{}, "failed": []*queries.CommandResult{}, "extension_in_progress": []syncruntime.SyncInProgress{}, "extension_in_progress_count": 0}
 		return mcp.Succeed(req, "Pending: 0, Completed: 0, Failed: 0, Extension in-progress: 0", data)
 	}
 	pending, completed := d.commands.GetPendingCommands(), d.commands.GetCompletedCommands()
 	failed := d.commands.GetFailedCommands()
-	inProgress := []capture.SyncInProgress{}
+	inProgress := []syncruntime.SyncInProgress{}
 	if d.config.InProgress != nil {
 		inProgress = d.config.InProgress()
 	}

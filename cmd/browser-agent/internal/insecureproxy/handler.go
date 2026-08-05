@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
@@ -80,7 +81,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mode, productionParity, rewrites := h.capture.Extension().GetSecurityMode()
-	if mode != capture.SecurityModeInsecureProxy {
+	if mode != syncruntime.SecurityModeInsecureProxy {
 		h.respond(w, http.StatusForbidden, map[string]string{
 			"error": "insecure proxy is disabled; enable configure(what='security_mode', mode='insecure_proxy', confirm=true)",
 		})

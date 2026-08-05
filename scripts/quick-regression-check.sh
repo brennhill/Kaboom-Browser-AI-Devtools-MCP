@@ -46,7 +46,7 @@ echo "4️⃣  Checking critical files..."
 CRITICAL_FILES=(
     "internal/queries/dispatcher_queries.go"
     "internal/capture/query_dispatcher.go"
-    "internal/capture/handlers.go"
+    "internal/capture/httpingest/handlers.go"
     "$CMD_DIR/tools_observe.go"
     "$CMD_DIR/tools_core.go"
 )
@@ -64,7 +64,7 @@ fi
 
 # 5. No stub implementations
 echo "5️⃣  Checking for stubs..."
-if grep -q 'queries.*\[\]interface{}{}' internal/capture/handlers.go 2>/dev/null; then
+if grep -q 'queries.*\[\]interface{}{}' internal/capture/httpingest/handlers.go 2>/dev/null; then
     echo "   ❌ STUB in handlers.go"
     ERRORS="$((ERRORS + 1))"
 elif ! grep -q 'GetCommandResult' "$CMD_DIR/tools_observe_analysis.go" 2>/dev/null; then

@@ -41,6 +41,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
@@ -437,7 +438,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.apiContractRuntime = apicontractruntime.NewRuntime()
 	var performanceEntries func() []performance.PerformanceSnapshot
 	var queryStore toolobserve.CommandStore
-	var inProgress func() []capture.SyncInProgress
+	var inProgress func() []syncruntime.SyncInProgress
 	var captureReader session.RuntimeCaptureReader
 	if handler.capture != nil {
 		performanceEntries = handler.capture.Performance().Samples

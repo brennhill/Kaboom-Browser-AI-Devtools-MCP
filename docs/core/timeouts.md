@@ -45,7 +45,7 @@ The bridge forwards JSON-RPC from stdin to the HTTP daemon. Each request gets a 
 | Default query timeout | 2s | `internal/queries/types.go` | Generic extension queries |
 | Async command timeout | 60s | `internal/queries/types.go` | Browser actions, execute_js, etc. |
 | Screenshot query timeout | 20s | `tools_observe_analysis.go` | Screenshot capture + upload round-trip |
-| Sync long-poll hold | 5s | `internal/capture/sync.go` | Server holds `/sync` response waiting for pending queries |
+| Sync long-poll hold | 5s | `internal/capture/syncruntime/handler.go` | Server holds `/sync` response waiting for pending queries |
 | Query result TTL | 60s | `internal/capture/queries.go` | Cleanup interval for uncollected query results |
 
 ## Extension Disconnect Detection (`internal/capture/`)

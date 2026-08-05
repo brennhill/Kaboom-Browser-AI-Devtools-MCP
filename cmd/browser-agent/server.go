@@ -38,6 +38,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
@@ -538,7 +539,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	mux.HandleFunc("/query-result", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleQueryResult)))
 	mux.HandleFunc("/enhanced-actions", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleEnhancedActions)))
 	mux.HandleFunc("/performance-snapshots", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandlePerformanceSnapshots)))
-	mux.HandleFunc("/sync", httpguard.CORS(httpguard.ExtensionOnly(capture.NewSyncHandler(captured).HandleSync)))
+	mux.HandleFunc("/sync", httpguard.CORS(httpguard.ExtensionOnly(newSyncHandler(captured).HandleSync)))
 	registerClientRegistryRoutes(mux, captured)
 	mux.HandleFunc("/recordings/save", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
 		screenrec.HandleSave(w, r, captured.Queries(), server.stateRecovery)
@@ -553,6 +554,17 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 
 func newRuntimeResetter(captured *capture.Capture) *resetter.Resetter {
 	return resetter.New(resetter.Dependencies{Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs()})
+}
+
+func newSyncHandler(captured *capture.Capture) *syncruntime.Handler {
+	return syncruntime.NewHandler(syncruntime.Dependencies{
+		Runtime:        captured.Extension(),
+		Queries:        captured.Queries(),
+		Lifecycle:      captured.Lifecycle(),
+		FeatureUsage:   captured.FeatureUsage(),
+		ExtensionLogs:  captured.ExtensionLogs(),
+		DiagnosticLogs: captured.DiagnosticLogs(),
+	})
 }
 
 func resolveClientRegistry(captured *capture.Capture, w http.ResponseWriter) (clientstore.Registry, bool) {

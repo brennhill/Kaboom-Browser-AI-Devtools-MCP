@@ -4,7 +4,7 @@
 // disconnect_detection_test.go — Tests for extension disconnect detection.
 // Covers: IsExtensionConnected, GetExtensionStatus, auto-expiry of pending
 // queries when extension disconnects, and pilot status enrichment.
-package capture
+package syncruntime
 
 import (
 	"bytes"
@@ -22,7 +22,7 @@ import (
 
 func TestIsExtensionConnected_FalseWhenNeverSynced(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	if c.Extension().IsExtensionConnected() {
@@ -32,10 +32,10 @@ func TestIsExtensionConnected_FalseWhenNeverSynced(t *testing.T) {
 
 func TestIsExtensionConnected_TrueAfterRecentSync(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(c.Extension(), func(state *runtimeState) {
 		state.lastSyncSeen = time.Now()
 		state.lastExtensionConnected = true
 	})
@@ -47,10 +47,10 @@ func TestIsExtensionConnected_TrueAfterRecentSync(t *testing.T) {
 
 func TestIsExtensionConnected_FalseAfterTimeout(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(c.Extension(), func(state *runtimeState) {
 		state.lastSyncSeen = time.Now().Add(-15 * time.Second)
 		state.lastExtensionConnected = true
 	})
@@ -62,11 +62,11 @@ func TestIsExtensionConnected_FalseAfterTimeout(t *testing.T) {
 
 func TestIsExtensionConnected_TrueAtBoundary(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	// Just under the threshold
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(c.Extension(), func(state *runtimeState) {
 		state.lastSyncSeen = time.Now().Add(-9 * time.Second)
 		state.lastExtensionConnected = true
 	})
@@ -82,11 +82,11 @@ func TestIsExtensionConnected_TrueAtBoundary(t *testing.T) {
 
 func TestGetExtensionStatus_ReturnsConnectionInfo(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	now := time.Now()
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(c.Extension(), func(state *runtimeState) {
 		state.lastSyncSeen = now
 		state.lastExtensionConnected = true
 		state.lastSyncClientID = "client-abc"
@@ -112,10 +112,10 @@ func TestGetExtensionStatus_ReturnsConnectionInfo(t *testing.T) {
 
 func TestGetExtensionStatus_DisconnectedWhenStale(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(c.Extension(), func(state *runtimeState) {
 		state.lastSyncSeen = time.Now().Add(-20 * time.Second)
 		state.lastExtensionConnected = true
 		state.lastSyncClientID = "client-old"
@@ -131,7 +131,7 @@ func TestGetExtensionStatus_DisconnectedWhenStale(t *testing.T) {
 
 func TestGetExtensionStatus_NeverConnected(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	status := c.Extension().GetExtensionStatus()
@@ -153,7 +153,7 @@ func TestGetExtensionStatus_NeverConnected(t *testing.T) {
 
 func TestHandleSync_UpdatesLastSyncSeen(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	// Before sync: not connected
@@ -168,7 +168,7 @@ func TestHandleSync_UpdatesLastSyncSeen(t *testing.T) {
 	httpReq.Header.Set("X-Kaboom-Client", "client-123")
 	w := httptest.NewRecorder()
 
-	NewSyncHandler(c).HandleSync(w, httpReq)
+	newTestHandler(c).HandleSync(w, httpReq)
 
 	// After sync: connected
 	if !c.Extension().IsExtensionConnected() {
@@ -188,11 +188,11 @@ func TestHandleSync_UpdatesLastSyncSeen(t *testing.T) {
 
 func TestGetPilotStatus_IncludesExtensionLastSeen(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	now := time.Now()
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(c.Extension(), func(state *runtimeState) {
 		state.pilotEnabled = true
 		state.lastPollAt = now
 		state.lastSyncSeen = now
@@ -217,7 +217,7 @@ func TestGetPilotStatus_IncludesExtensionLastSeen(t *testing.T) {
 
 func TestGetPilotStatus_EmptyLastSeenWhenNeverSynced(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	status, ok := c.Extension().GetPilotStatus().(map[string]any)
@@ -233,7 +233,7 @@ func TestGetPilotStatus_EmptyLastSeenWhenNeverSynced(t *testing.T) {
 
 func TestGetPilotStatus_DefaultsToAssumedEnabledUntilAuthoritative(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	status, ok := c.Extension().GetPilotStatus().(map[string]any)
@@ -254,7 +254,7 @@ func TestGetPilotStatus_DefaultsToAssumedEnabledUntilAuthoritative(t *testing.T)
 
 func TestGetPilotStatus_ExplicitDisableFromSyncIsAuthoritative(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	reqBody := `{
@@ -273,7 +273,7 @@ func TestGetPilotStatus_ExplicitDisableFromSyncIsAuthoritative(t *testing.T) {
 	}`
 	httpReq := httptest.NewRequest("POST", "/sync", bytes.NewBufferString(reqBody))
 	w := httptest.NewRecorder()
-	NewSyncHandler(c).HandleSync(w, httpReq)
+	newTestHandler(c).HandleSync(w, httpReq)
 
 	status, ok := c.Extension().GetPilotStatus().(map[string]any)
 	if !ok {
@@ -297,11 +297,11 @@ func TestGetPilotStatus_ExplicitDisableFromSyncIsAuthoritative(t *testing.T) {
 
 func TestGetPendingQueries_ExpiresOnDisconnect(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	// Simulate extension was connected, then disconnected
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(c.Extension(), func(state *runtimeState) {
 		state.lastSyncSeen = time.Now().Add(-15 * time.Second)
 		state.lastExtensionConnected = true
 	})
@@ -320,7 +320,7 @@ func TestGetPendingQueries_ExpiresOnDisconnect(t *testing.T) {
 	}
 
 	// Now call the disconnect-aware method
-	result := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
+	result := newTestHandler(c).GetPendingQueriesDisconnectAware()
 	if len(result) != 0 {
 		t.Fatalf("expected 0 queries after disconnect expiry, got %d", len(result))
 	}
@@ -340,11 +340,11 @@ func TestGetPendingQueries_ExpiresOnDisconnect(t *testing.T) {
 
 func TestGetPendingQueries_DoesNotExpireWhenConnected(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	// Simulate extension recently connected
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(c.Extension(), func(state *runtimeState) {
 		state.lastSyncSeen = time.Now()
 		state.lastExtensionConnected = true
 	})
@@ -357,7 +357,7 @@ func TestGetPendingQueries_DoesNotExpireWhenConnected(t *testing.T) {
 	}, 30*time.Second, "")
 
 	// Should return the query normally
-	result := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
+	result := newTestHandler(c).GetPendingQueriesDisconnectAware()
 	if len(result) != 1 {
 		t.Fatalf("expected 1 pending query when connected, got %d", len(result))
 	}
@@ -365,7 +365,7 @@ func TestGetPendingQueries_DoesNotExpireWhenConnected(t *testing.T) {
 
 func TestGetPendingQueries_DoesNotExpireWhenNeverSynced(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	// lastSyncSeen is zero (never synced) — don't expire, extension might
@@ -375,7 +375,7 @@ func TestGetPendingQueries_DoesNotExpireWhenNeverSynced(t *testing.T) {
 		Params: json.RawMessage(`{"selector":".test"}`),
 	}, 30*time.Second, "")
 
-	result := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
+	result := newTestHandler(c).GetPendingQueriesDisconnectAware()
 	if len(result) != 1 {
 		t.Fatalf("expected 1 pending query when never synced, got %d", len(result))
 	}
@@ -383,11 +383,11 @@ func TestGetPendingQueries_DoesNotExpireWhenNeverSynced(t *testing.T) {
 
 func TestHandleSync_ExpiresPendingOnDisconnect(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	defer c.Close()
 
 	// Simulate a past sync (extension was connected, now stale)
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(c.Extension(), func(state *runtimeState) {
 		state.lastSyncSeen = time.Now().Add(-15 * time.Second)
 		state.lastExtensionConnected = true
 		state.lastPollAt = time.Now().Add(-15 * time.Second)
@@ -413,7 +413,7 @@ func TestHandleSync_ExpiresPendingOnDisconnect(t *testing.T) {
 	httpReq := httptest.NewRequest("POST", "/sync", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
-	NewSyncHandler(c).HandleSync(w, httpReq)
+	newTestHandler(c).HandleSync(w, httpReq)
 
 	// After the sync, the pending queries should have been expired
 	// and the new sync should return no commands (they were expired before delivery)

@@ -219,7 +219,7 @@ func TestToolsInteractNavigate_AssumedEnabledWhenPilotStatusUncertain(t *testing
 	mcpHandler := NewToolHandler(server, cap)
 	h = mcpHandler.tools.Executor.(*ToolHandler)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
-	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
+	newSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().UpdateTrackedTab(42, "https://example.com", "")
 
 	resp := callInteractRaw(h, `{"what":"navigate","url":"https://example.com"}`)

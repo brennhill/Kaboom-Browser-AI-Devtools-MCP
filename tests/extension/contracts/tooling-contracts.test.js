@@ -252,7 +252,7 @@ describe('Tooling contracts', () => {
     const script = readFileSync('scripts/validate-architecture.sh', 'utf8')
     for (const currentOwner of [
       'internal/queries/dispatcher_results.go',
-      'internal/capture/sync.go',
+      'internal/capture/syncruntime/handler.go',
       'internal/toolobserve/dispatcher.go',
       'internal/toolinteract/interact_browser.go',
       'internal/bridge/bridge.go'

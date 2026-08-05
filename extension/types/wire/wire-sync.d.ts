@@ -1,5 +1,5 @@
 /**
- * @fileoverview Wire types for extension-daemon synchronization — matches internal/capture/wire_sync.go
+ * @fileoverview Wire types for extension-daemon synchronization — matches internal/capture/syncruntime/wire_sync.go
  *
  * Canonical TypeScript definitions for the complete /sync request and response graph.
  * Changes here MUST be mirrored in the Go counterpart. Run `make check-wire-drift`.

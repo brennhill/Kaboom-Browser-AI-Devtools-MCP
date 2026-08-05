@@ -1,7 +1,7 @@
 // sync_command_lifecycle_test.go — Tests sync polling and command-result lifecycle.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package syncruntime
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ import (
 
 func TestHandleSync_AdaptivePoll_FastWhenPendingCommands(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	// Create a pending query so there are commands waiting
 	cap.Queries().CreatePendingQuery(queries.PendingQuery{
@@ -46,7 +46,7 @@ func TestHandleSync_AdaptivePoll_FastWhenPendingCommands(t *testing.T) {
 
 func TestHandleSync_CommandsIncludeTabID(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:          "dom_action",
@@ -80,7 +80,7 @@ func TestHandleSync_CommandsIncludeTabID(t *testing.T) {
 
 func TestHandleSync_AdaptivePoll_SlowWhenNoCommands(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	// No pending queries — should get default 1000ms interval
 	req := SyncRequest{ExtSessionID: "test_session"}
@@ -102,7 +102,7 @@ func TestHandleSync_AdaptivePoll_SlowWhenNoCommands(t *testing.T) {
 
 func TestHandleSync_AdaptivePoll_RevertsAfterResultDelivered(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	// Create a pending query
 	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
@@ -137,7 +137,7 @@ func TestHandleSync_AdaptivePoll_RevertsAfterResultDelivered(t *testing.T) {
 
 func TestHandleSync_CommandResultPropagatesErrorStatus(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	corrID := "sync-corr-error-001"
 	cap.Queries().RegisterCommand(corrID, "q-sync-error-001", queries.AsyncCommandTimeout)
@@ -163,7 +163,7 @@ func TestHandleSync_CommandResultPropagatesErrorStatus(t *testing.T) {
 
 func TestHandleSync_CommandResultWithIDAndCorrelationPreservesErrorStatus(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	corrID := "sync-corr-with-id-error-001"
 	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
@@ -257,7 +257,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			cap := NewCapture()
+			cap := newTestState()
 
 			corrID := ""
 			if tc.hasCorrelation {
@@ -324,7 +324,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 
 func TestHandleSync_LastCommandAckPreventsRedelivery(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:   "dom",

@@ -4,7 +4,7 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -16,7 +16,7 @@ code_paths:
   - internal/queries/dispatcher_trace.go
   - internal/queries/types.go
   - internal/capture/capture.go
-  - internal/capture/sync.go
+  - internal/capture/syncruntime/handler.go
   - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/asyncresult/normalization.go
   - src/types/global.d.ts
@@ -43,7 +43,7 @@ test_paths:
   - internal/queries/expire_signal_test.go
   - cmd/browser-agent/tools_test_helpers_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
-  - internal/capture/extension_state_unit_test.go
+  - internal/capture/syncruntime/extension_state_unit_test.go
   - internal/capture/async_queue_integration_test.go
   - internal/capture/no_facade_test.go
   - internal/capture/sync_handler_owner_test.go

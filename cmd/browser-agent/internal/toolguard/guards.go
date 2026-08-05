@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -50,7 +51,7 @@ func (g *Guards) InjectCSPBlockedActions(resp mcp.JSONRPCResponse) mcp.JSONRPCRe
 	if !restricted {
 		return resp
 	}
-	actions, reason := capture.CSPBlockedActions(level)
+	actions, reason := syncruntime.CSPBlockedActions(level)
 	if actions == nil {
 		return resp
 	}

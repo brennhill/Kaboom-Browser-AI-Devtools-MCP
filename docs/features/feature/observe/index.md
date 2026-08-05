@@ -4,11 +4,11 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/capture/healthreader/reader.go
   - internal/queries/dispatcher_queries.go
-  - internal/capture/sync.go
+  - internal/capture/syncruntime/handler.go
   - internal/capture/telemetrystore/store.go
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/store.go

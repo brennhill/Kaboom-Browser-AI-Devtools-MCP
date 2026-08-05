@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
 
@@ -18,7 +17,7 @@ func seedSyncSettings(t *testing.T, env *configureTestEnv, settingsJSON string) 
 	reqBody := `{"ext_session_id":"tutorial-test","settings":` + settingsJSON + `}`
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(reqBody))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	capture.NewSyncHandler(env.capture).HandleSync(httptest.NewRecorder(), httpReq)
+	newSyncHandler(env.capture).HandleSync(httptest.NewRecorder(), httpReq)
 }
 
 func TestToolsConfigureTutorial_ResponseShape(t *testing.T) {

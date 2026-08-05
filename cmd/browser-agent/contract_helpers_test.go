@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -175,7 +174,7 @@ func (s *scenario) loadTrackingState(t *testing.T) {
 	}`)))
 	syncReq.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	capture.NewSyncHandler(s.capture).HandleSync(w, syncReq)
+	newSyncHandler(s.capture).HandleSync(w, syncReq)
 }
 
 // loadFullScenario loads all data types for comprehensive testing.

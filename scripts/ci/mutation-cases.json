@@ -54,7 +54,7 @@
     },
     {
       "id": "sync_detects_reconnect_after_disconnect",
-      "file": "internal/capture/sync.go",
+      "file": "internal/capture/syncruntime/handler.go",
       "package": "./internal/capture",
       "from": "state.isReconnect = state.wasDisconnected",
       "to": "state.isReconnect = false"

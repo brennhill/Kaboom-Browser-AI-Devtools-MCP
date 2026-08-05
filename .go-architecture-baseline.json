@@ -877,10 +877,6 @@
       "mutable_globals": 0,
       "exports": 5
     },
-    "internal/capture/extension_state.go": {
-      "mutable_globals": 0,
-      "exports": 40
-    },
     "internal/capture/featureusage/observer.go": {
       "mutable_globals": 0,
       "exports": 4
@@ -917,19 +913,23 @@
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/capture/sync.go": {
+    "internal/capture/syncruntime/handler.go": {
       "mutable_globals": 0,
-      "exports": 4
+      "exports": 5
+    },
+    "internal/capture/syncruntime/runtime.go": {
+      "mutable_globals": 0,
+      "exports": 40
+    },
+    "internal/capture/syncruntime/wire_sync.go": {
+      "mutable_globals": 0,
+      "exports": 7
     },
     "internal/capture/telemetrystore/store.go": {
       "mutable_globals": 0,
       "exports": 17
     },
     "internal/capture/waterfallstore/store.go": {
-      "mutable_globals": 0,
-      "exports": 7
-    },
-    "internal/capture/wire_sync.go": {
       "mutable_globals": 0,
       "exports": 7
     },

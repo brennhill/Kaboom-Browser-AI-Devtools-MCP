@@ -49,7 +49,7 @@ func simulateExtensionConnection(t *testing.T, env *interactHelpersTestEnv) {
 	t.Helper()
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	capture.NewSyncHandler(env.capture).HandleSync(httptest.NewRecorder(), httpReq)
+	newSyncHandler(env.capture).HandleSync(httptest.NewRecorder(), httpReq)
 }
 
 func respondToStateCapture(env *interactHelpersTestEnv, result map[string]any) <-chan error {

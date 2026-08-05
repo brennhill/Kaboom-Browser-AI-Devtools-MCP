@@ -144,7 +144,7 @@ functions are injected directly into tool handlers.
 | Add a new observe mode                  | `internal/tools/observe/` (handler), `internal/toolobserve/dispatcher.go` (register in its private mode map)                 |
 | Add a new analyze/generate/etc. action  | `internal/tools/<tool>/` (logic), `tools_<tool>.go` (register in dispatch map)                            |
 | Add an HTTP endpoint for the extension  | `internal/capture/` (handler), `server.go` (register in setupHTTPRoutes)                           |
-| Change sync protocol                    | `internal/capture/sync.go` (server), `src/background/sync/sync-client.ts` (extension)                         |
+| Change sync protocol                    | `internal/capture/syncruntime/handler.go` (server), `src/background/sync/sync-client.ts` (extension)                         |
 | Add a wire type                         | `internal/types/wire_*.go` (Go source of truth), run `make check-wire-drift`                              |
 | Add a feature dependency                | The owning `internal/<feature>/` package; inject a concrete owner or narrow function field at `tools_core.go` |
 | Add a CLI command                       | `cli_commands.go` (parser), `cli.go` (if new output format needed)                                        |

@@ -1,7 +1,7 @@
 // Purpose: Unit tests for capture pipeline extension state logic.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package syncruntime
 
 import (
 	"context"
@@ -13,13 +13,55 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
+func mutateExtensionStateForTest(runtime *Runtime, mutate func(*runtimeState)) {
+	runtime.mu.Lock()
+	defer runtime.mu.Unlock()
+	mutate(&runtime.state)
+}
+
+func extensionStateSnapshotForTest(runtime *Runtime) runtimeState {
+	runtime.mu.RLock()
+	defer runtime.mu.RUnlock()
+	return runtime.state
+}
+
+func applySettingsForTest(state *testState, settings SyncSettings) {
+	state.runtime.updateSyncConnectionState(SyncRequest{ExtSessionID: "capture-package-test", Settings: &settings}, "capture-package-test", time.Now())
+}
+
+func currentSettingsForTest(state *testState) SyncSettings {
+	extension := state.Extension()
+	tracking, tabID, tabURL := extension.GetTrackingStatus()
+	active, activeKnown := extension.IsTrackedTabActive()
+	var activeValue *bool
+	if activeKnown {
+		activeValue = &active
+	}
+	restricted, level := extension.GetCSPStatus()
+	return SyncSettings{PilotEnabled: extension.IsPilotEnabled(), TrackingEnabled: tracking, TrackedTabID: tabID,
+		TrackedTabURL: tabURL, TrackedTabTitle: extension.GetTrackedTabTitle(), TabStatus: extension.GetTabStatus(),
+		TrackedTabActive: activeValue, CspRestricted: restricted, CspLevel: level}
+}
+
+func connectForTest(state *testState) {
+	state.runtime.updateSyncConnectionState(SyncRequest{ExtSessionID: "capture-package-test"}, "capture-package-test", time.Now())
+}
+
+func setPilotForTest(state *testState, enabled bool) {
+	state.Extension().ApplyCachedPilot(enabled, time.Now())
+}
+
+func trackForTest(state *testState, tabID int, tabURL string) {
+	state.Extension().UpdateTrackedTab(tabID, tabURL, "")
+}
+
 // ============================================
 // WaitForExtensionConnected tests (issue #302)
 // ============================================
 
 func TestWaitForExtensionConnected_AlreadyConnected(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 
 	// Simulate extension already connected.
 	connectForTest(c)
@@ -31,7 +73,7 @@ func TestWaitForExtensionConnected_AlreadyConnected(t *testing.T) {
 
 func TestWaitForExtensionConnected_Timeout(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	// Extension never connects.
 
 	if c.Extension().WaitForExtensionConnected(context.Background(), 100*time.Millisecond) {
@@ -41,8 +83,8 @@ func TestWaitForExtensionConnected_Timeout(t *testing.T) {
 
 func TestMarkDisconnectedPreservesAuthoritativeSettings(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
-	c.extension.updateSyncConnectionState(SyncRequest{Settings: &SyncSettings{
+	c := newTestState()
+	c.runtime.updateSyncConnectionState(SyncRequest{Settings: &SyncSettings{
 		PilotEnabled:    true,
 		TrackingEnabled: true,
 		TrackedTabID:    42,
@@ -74,7 +116,7 @@ func TestMarkDisconnectedPreservesAuthoritativeSettings(t *testing.T) {
 func TestCaptureTestHelpersAndTTL(t *testing.T) {
 	t.Parallel()
 
-	c := NewCapture()
+	c := newTestState()
 
 	c.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.test/a", Status: 200},

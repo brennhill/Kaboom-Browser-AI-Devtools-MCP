@@ -109,11 +109,9 @@ func TestNewAddEnhancedActions_TestIDTagging(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	// Set active test IDs
-	c.extension.mu.Lock()
-	c.extension.state.activeTestIDs["test-alpha"] = true
-	c.extension.state.activeTestIDs["test-beta"] = true
-	c.extension.mu.Unlock()
+	// Set active test IDs through the canonical runtime boundary.
+	c.Extension().SetTestBoundaryStart("test-alpha")
+	c.Extension().SetTestBoundaryStart("test-beta")
 
 	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click"},

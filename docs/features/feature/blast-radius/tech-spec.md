@@ -166,7 +166,7 @@ Verify these files are compatible with your changes.
   internal/server/routes.go (already in session)
   cmd/browser-agent/main.go (not yet visited)
   internal/capture/httpingest/handlers.go (already in session)
-  internal/capture/sync.go (not yet visited)
+  internal/capture/syncruntime/handler.go (not yet visited)
   internal/capture/websocket.go (not yet visited)
   ...and 3 more
 Verify these files are compatible with your changes.

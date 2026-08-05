@@ -72,7 +72,7 @@ const WIRE_PAIRS = [
     types: [{ go: 'ExtensionLog', ts: 'ExtensionLog' }]
   },
   {
-    go: 'internal/capture/wire_sync.go',
+    go: 'internal/capture/syncruntime/wire_sync.go',
     ts: 'src/types/wire/wire-sync.ts',
     types: [
       { go: 'SyncRequest', ts: 'SyncRequest' },

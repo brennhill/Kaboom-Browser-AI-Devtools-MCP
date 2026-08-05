@@ -880,7 +880,7 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 - `internal/capture/queries.go`
 - `internal/capture/recording.go`
 - `internal/capture/settings.go`
-- `internal/capture/sync.go`
+- `internal/capture/syncruntime/handler.go`
 - `internal/capture/websocket.go`
 - `internal/capture/memory.go`
 - `internal/session/sessions.go`

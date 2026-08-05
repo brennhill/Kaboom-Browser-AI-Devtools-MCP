@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -228,7 +228,7 @@ func TestHandleSecurityMode(t *testing.T) {
 	})
 
 	t.Run("empty mode returns current", func(t *testing.T) {
-		d := &fakeConfigureDeps{hasCapture: true, securityMode: capture.SecurityModeNormal, productionParity: true}
+		d := &fakeConfigureDeps{hasCapture: true, securityMode: syncruntime.SecurityModeNormal, productionParity: true}
 		resp := HandleSecurityMode(d.deps(), newReq(), json.RawMessage(`{}`))
 		isErr, text := parseResp(t, resp)
 		if isErr {
@@ -246,7 +246,7 @@ func TestHandleSecurityMode(t *testing.T) {
 		if isErr {
 			t.Fatalf("unexpected error: %s", text)
 		}
-		if d.setSecurityCalledWith != capture.SecurityModeNormal {
+		if d.setSecurityCalledWith != syncruntime.SecurityModeNormal {
 			t.Errorf("SetSecurityMode called with %q, want normal", d.setSecurityCalledWith)
 		}
 	})
@@ -270,7 +270,7 @@ func TestHandleSecurityMode(t *testing.T) {
 		if isErr {
 			t.Fatalf("unexpected error: %s", text)
 		}
-		if d.setSecurityCalledWith != capture.SecurityModeInsecureProxy {
+		if d.setSecurityCalledWith != syncruntime.SecurityModeInsecureProxy {
 			t.Errorf("SetSecurityMode called with %q, want insecure_proxy", d.setSecurityCalledWith)
 		}
 		if len(d.setSecurityRewrites) == 0 {

@@ -3,7 +3,7 @@
 // Why: These live fields share one lock and are updated together by extension sync.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package syncruntime
 
 import (
 	"context"
@@ -26,8 +26,8 @@ const (
 	SecurityModeInsecureProxy = "insecure_proxy"
 )
 
-// ExtensionState tracks all extension-related state: connection, pilot, tracking, and test boundaries.
-// It is private storage protected by ExtensionRuntime.mu.
+// runtimeState tracks all extension-related state: connection, pilot, tracking, and test boundaries.
+// It is private storage protected by Runtime.mu.
 //
 // Invariants:
 // - trackingEnabled implies trackedTabID > 0 for authoritative single-tab mode.
@@ -37,7 +37,7 @@ const (
 // Failure semantics:
 //   - pilotStatusKnown=false intentionally defaults effective pilot access to enabled
 //     until an authoritative sync/settings signal arrives.
-type ExtensionState struct {
+type runtimeState struct {
 	// Connection tracking
 	lastPollAt             time.Time // When extension last polled. Health endpoint uses 3s/5s thresholds.
 	extSessionID           string    // Extension session ID (changes on reload/update).
@@ -83,17 +83,17 @@ type ExtensionState struct {
 	activeTestIDs map[string]bool // Active test boundary IDs. Used to tag events during ingestion.
 }
 
-// ExtensionRuntime owns live browser-extension state and its synchronization.
-type ExtensionRuntime struct {
+// Runtime owns live browser-extension state and its synchronization.
+type Runtime struct {
 	mu               sync.RWMutex
-	state            ExtensionState
+	state            runtimeState
 	connectionNotify chan struct{}
 }
 
-func newExtensionRuntime() *ExtensionRuntime {
-	return &ExtensionRuntime{
+func New() *Runtime {
+	return &Runtime{
 		connectionNotify: make(chan struct{}),
-		state: ExtensionState{
+		state: runtimeState{
 			activeTestIDs:          make(map[string]bool),
 			missingInProgressSince: make(map[string]time.Time),
 			pilotSource:            PilotSourceAssumedStartup,
@@ -112,7 +112,7 @@ type ExtensionSnapshot struct {
 	ActiveTestIDCount    int
 }
 
-func (r *ExtensionRuntime) Snapshot() ExtensionSnapshot {
+func (r *Runtime) Snapshot() ExtensionSnapshot {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return ExtensionSnapshot{
@@ -125,40 +125,40 @@ func (r *ExtensionRuntime) Snapshot() ExtensionSnapshot {
 	}
 }
 
-func (r *ExtensionRuntime) ClearTestBoundaries() {
+func (r *Runtime) ClearTestBoundaries() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.state.activeTestIDs = make(map[string]bool)
 }
 
-func (r *ExtensionRuntime) SetExtensionVersion(version string) {
+func (r *Runtime) SetExtensionVersion(version string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.state.extensionVersion = version
 }
 
 // SetServerVersion stores the daemon version used for extension compatibility checks.
-func (r *ExtensionRuntime) SetServerVersion(version string) {
+func (r *Runtime) SetServerVersion(version string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.state.serverVersion = version
 }
 
 // ServerVersion returns the daemon version used for sync responses.
-func (r *ExtensionRuntime) ServerVersion() string {
+func (r *Runtime) ServerVersion() string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.state.serverVersion
 }
 
-func (r *ExtensionRuntime) Disconnected() (neverSynced bool, disconnected bool) {
+func (r *Runtime) Disconnected() (neverSynced bool, disconnected bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	neverSynced = r.state.lastSyncSeen.IsZero()
 	return neverSynced, !neverSynced && !extensionStateConnected(r.state, time.Now())
 }
 
-func extensionStateConnected(state ExtensionState, now time.Time) bool {
+func extensionStateConnected(state runtimeState, now time.Time) bool {
 	return state.lastExtensionConnected &&
 		!state.lastSyncSeen.IsZero() &&
 		now.Sub(state.lastSyncSeen) < extensionDisconnectThreshold
@@ -176,7 +176,7 @@ type pilotStatusSnapshot struct {
 // elapses, or ctx is cancelled. Connection transitions close and rotate a
 // generation channel under the state lock, preventing missed wakeups.
 // A zero or negative timeout performs one state check without waiting.
-func (r *ExtensionRuntime) WaitForExtensionConnected(ctx context.Context, timeout time.Duration) bool {
+func (r *Runtime) WaitForExtensionConnected(ctx context.Context, timeout time.Duration) bool {
 	connected, notify := r.connectionReadinessSnapshot()
 	if connected {
 		return true
@@ -201,20 +201,20 @@ func (r *ExtensionRuntime) WaitForExtensionConnected(ctx context.Context, timeou
 	}
 }
 
-func (r *ExtensionRuntime) connectionReadinessSnapshot() (bool, <-chan struct{}) {
+func (r *Runtime) connectionReadinessSnapshot() (bool, <-chan struct{}) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return extensionStateConnected(r.state, time.Now()), r.connectionNotify
 }
 
-func (r *ExtensionRuntime) signalConnectionChangeLocked() {
+func (r *Runtime) signalConnectionChangeLocked() {
 	close(r.connectionNotify)
 	r.connectionNotify = make(chan struct{})
 }
 
 // IsExtensionConnected returns true if the extension has synced within the
 // disconnect threshold (10s). Returns false if never synced or stale.
-func (r *ExtensionRuntime) IsExtensionConnected() bool {
+func (r *Runtime) IsExtensionConnected() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return extensionStateConnected(r.state, time.Now())
@@ -222,7 +222,7 @@ func (r *ExtensionRuntime) IsExtensionConnected() bool {
 
 // MarkDisconnected records an authoritative transport loss while preserving
 // the last settings snapshot for diagnostics and reconnect recovery.
-func (r *ExtensionRuntime) MarkDisconnected() {
+func (r *Runtime) MarkDisconnected() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if !r.state.lastExtensionConnected {
@@ -237,7 +237,7 @@ func (r *ExtensionRuntime) MarkDisconnected() {
 //
 // Failure semantics:
 // - If extension has never synced, last_seen is empty and connected=false.
-func (r *ExtensionRuntime) GetExtensionStatus() map[string]any {
+func (r *Runtime) GetExtensionStatus() map[string]any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -259,7 +259,7 @@ func (r *ExtensionRuntime) GetExtensionStatus() map[string]any {
 // Returns the extension version, server version, and whether a mismatch exists.
 // A mismatch is detected only when the extension has reported a version (non-empty)
 // and the major.minor portions differ from the server version.
-func (r *ExtensionRuntime) VersionMismatch() (extensionVersion string, serverVersion string, hasMismatch bool) {
+func (r *Runtime) VersionMismatch() (extensionVersion string, serverVersion string, hasMismatch bool) {
 	r.mu.RLock()
 	extVer := r.state.extensionVersion
 	srvVer := r.state.serverVersion
@@ -278,7 +278,7 @@ func (r *ExtensionRuntime) VersionMismatch() (extensionVersion string, serverVer
 	return extVer, srvVer, extMajorMinor != srvMajorMinor
 }
 
-func (r *ExtensionRuntime) ExtensionVersion() string {
+func (r *Runtime) ExtensionVersion() string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.state.extensionVersion
@@ -306,7 +306,7 @@ func majorMinor(v string) string {
 }
 
 // IsPilotEnabled returns whether AI Web Pilot is currently enabled.
-func (r *ExtensionRuntime) IsPilotEnabled() bool {
+func (r *Runtime) IsPilotEnabled() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.state.pilotEnabled
@@ -314,7 +314,7 @@ func (r *ExtensionRuntime) IsPilotEnabled() bool {
 
 // IsPilotActionAllowed returns whether pilot-gated actions should be allowed.
 // Startup/reconnect uncertainty defaults to allowed until explicit disable arrives.
-func (r *ExtensionRuntime) IsPilotActionAllowed() bool {
+func (r *Runtime) IsPilotActionAllowed() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	snap := pilotStatusSnapshotFromExtensionState(r.state)
@@ -327,7 +327,7 @@ func (r *ExtensionRuntime) IsPilotActionAllowed() bool {
 //
 // Invariants:
 // - Returned in_progress slice is copied to prevent external mutation.
-func (r *ExtensionRuntime) GetPilotStatus() any {
+func (r *Runtime) GetPilotStatus() any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	snap := pilotStatusSnapshotFromExtensionState(r.state)
@@ -362,7 +362,7 @@ func (r *ExtensionRuntime) GetPilotStatus() any {
 //
 // Failure semantics:
 // - Returns empty slice when no heartbeat data is available.
-func (r *ExtensionRuntime) GetInProgressCommands() []SyncInProgress {
+func (r *Runtime) GetInProgressCommands() []SyncInProgress {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]SyncInProgress, len(r.state.inProgress))
@@ -374,7 +374,7 @@ func (r *ExtensionRuntime) GetInProgressCommands() []SyncInProgress {
 //
 // Failure semantics:
 // - Unknown/unset source fields fall back to conservative defaults.
-func pilotStatusSnapshotFromExtensionState(ext ExtensionState) pilotStatusSnapshot {
+func pilotStatusSnapshotFromExtensionState(ext runtimeState) pilotStatusSnapshot {
 	snap := pilotStatusSnapshot{
 		ConfiguredEnabled: ext.pilotEnabled,
 		Authoritative:     ext.pilotStatusKnown,
@@ -409,7 +409,7 @@ func pilotStatusSnapshotFromExtensionState(ext ExtensionState) pilotStatusSnapsh
 }
 
 // GetTrackingStatus returns the current tab tracking state.
-func (r *ExtensionRuntime) GetTrackingStatus() (enabled bool, tabID int, tabURL string) {
+func (r *Runtime) GetTrackingStatus() (enabled bool, tabID int, tabURL string) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.state.trackingEnabled, r.state.trackedTabID, r.state.trackedTabURL
@@ -421,7 +421,7 @@ func (r *ExtensionRuntime) GetTrackingStatus() (enabled bool, tabID int, tabURL 
 // Invariants:
 // - tabID must be > 0; zero/negative values are silently ignored.
 // - trackingEnabled is set to true when a valid tabID is provided.
-func (r *ExtensionRuntime) UpdateTrackedTab(tabID int, tabURL string, tabTitle string) {
+func (r *Runtime) UpdateTrackedTab(tabID int, tabURL string, tabTitle string) {
 	if tabID <= 0 {
 		return
 	}
@@ -435,14 +435,14 @@ func (r *ExtensionRuntime) UpdateTrackedTab(tabID int, tabURL string, tabTitle s
 }
 
 // GetTrackedTabTitle returns the tracked tab's title (may be stale).
-func (r *ExtensionRuntime) GetTrackedTabTitle() string {
+func (r *Runtime) GetTrackedTabTitle() string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.state.trackedTabTitle
 }
 
 // GetTabStatus returns the Chrome tab status ("loading", "complete", or empty if unknown).
-func (r *ExtensionRuntime) GetTabStatus() string {
+func (r *Runtime) GetTabStatus() string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.state.tabStatus
@@ -450,7 +450,7 @@ func (r *ExtensionRuntime) GetTabStatus() string {
 
 // IsTrackedTabActive returns whether the tracked tab is the foreground tab.
 // Returns (active, known). known=false means the extension has not reported this yet.
-func (r *ExtensionRuntime) IsTrackedTabActive() (bool, bool) {
+func (r *Runtime) IsTrackedTabActive() (bool, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if r.state.trackedTabActive == nil {
@@ -460,7 +460,7 @@ func (r *ExtensionRuntime) IsTrackedTabActive() (bool, bool) {
 }
 
 // GetCSPStatus returns the last reported CSP restriction level for the tracked page.
-func (r *ExtensionRuntime) GetCSPStatus() (restricted bool, level string) {
+func (r *Runtime) GetCSPStatus() (restricted bool, level string) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.state.cspRestricted, r.state.cspLevel
@@ -494,7 +494,7 @@ func CSPBlockedActions(level string) (actions []string, reason string) {
 // Invariants:
 // - Any non-insecure mode value normalizes to SecurityModeNormal.
 // - Rewrite slice is copied on write to avoid external aliasing.
-func (r *ExtensionRuntime) SetSecurityMode(mode string, rewrites []string) {
+func (r *Runtime) SetSecurityMode(mode string, rewrites []string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -513,7 +513,7 @@ func (r *ExtensionRuntime) SetSecurityMode(mode string, rewrites []string) {
 //
 // Invariants:
 // - Returned rewrite slice is copied and safe for caller mutation.
-func (r *ExtensionRuntime) GetSecurityMode() (mode string, productionParity bool, rewrites []string) {
+func (r *Runtime) GetSecurityMode() (mode string, productionParity bool, rewrites []string) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -527,7 +527,7 @@ func (r *ExtensionRuntime) GetSecurityMode() (mode string, productionParity bool
 }
 
 // GetActiveTestIDs returns the list of currently active test IDs.
-func (r *ExtensionRuntime) GetActiveTestIDs() []string {
+func (r *Runtime) GetActiveTestIDs() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	result := make([]string, 0, len(r.state.activeTestIDs))
@@ -541,7 +541,7 @@ func (r *ExtensionRuntime) GetActiveTestIDs() []string {
 //
 // Invariants:
 // - activeTestIDs behaves as a set (idempotent insert).
-func (r *ExtensionRuntime) SetTestBoundaryStart(id string) {
+func (r *Runtime) SetTestBoundaryStart(id string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.state.activeTestIDs[id] = true
@@ -551,13 +551,13 @@ func (r *ExtensionRuntime) SetTestBoundaryStart(id string) {
 //
 // Failure semantics:
 // - Deleting unknown IDs is a no-op.
-func (r *ExtensionRuntime) SetTestBoundaryEnd(id string) {
+func (r *Runtime) SetTestBoundaryEnd(id string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.state.activeTestIDs, id)
 }
 
-func (r *ExtensionRuntime) ApplyCachedPilot(enabled bool, updatedAt time.Time) {
+func (r *Runtime) ApplyCachedPilot(enabled bool, updatedAt time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.state.pilotEnabled = enabled

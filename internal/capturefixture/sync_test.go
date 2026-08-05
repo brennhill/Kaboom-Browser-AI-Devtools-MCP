@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 )
 
 func TestSyncAppliesAuthoritativeExtensionState(t *testing.T) {
@@ -12,7 +13,7 @@ func TestSyncAppliesAuthoritativeExtensionState(t *testing.T) {
 	state := capture.NewCapture()
 	active := true
 
-	Sync(state, capture.SyncSettings{
+	Sync(state, syncruntime.SyncSettings{
 		PilotEnabled:     true,
 		TrackingEnabled:  true,
 		TrackedTabID:     42,

@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
@@ -80,7 +80,7 @@ func (h *BrowserActions) resolveNavigateURL(rawURL string) (string, error) {
 	}
 
 	mode, _, _ := h.deps.Capture().Extension().GetSecurityMode()
-	if mode != capture.SecurityModeInsecureProxy {
+	if mode != syncruntime.SecurityModeInsecureProxy {
 		return "", fmt.Errorf("resolve insecure URL: requires security_mode=insecure_proxy. Set security mode before navigating")
 	}
 

@@ -1,7 +1,7 @@
 // Purpose: Tests for long-poll synchronization of captured data.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package syncruntime
 
 import (
 	"bytes"
@@ -14,11 +14,11 @@ import (
 )
 
 func TestHandleSync_LongPolling(t *testing.T) {
-	cap := NewCapture()
+	cap := newTestState()
 	t.Cleanup(cap.Close)
 	waiting := make(chan struct{})
 	releaseWait := make(chan struct{})
-	handler := NewSyncHandler(cap)
+	handler := newTestHandler(cap)
 	handler.waitForPendingQueries = func(time.Duration) {
 		close(waiting)
 		<-releaseWait
@@ -54,12 +54,12 @@ func TestHandleSync_LongPolling(t *testing.T) {
 }
 
 func TestHandleSync_TimeoutIfNoCommand(t *testing.T) {
-	cap := NewCapture()
+	cap := newTestState()
 	t.Cleanup(cap.Close)
 
 	timeout := syncLongPollTimeout()
 	var receivedTimeout time.Duration
-	handler := NewSyncHandler(cap)
+	handler := newTestHandler(cap)
 	handler.waitForPendingQueries = func(got time.Duration) { receivedTimeout = got }
 
 	reqBody, _ := json.Marshal(SyncRequest{ExtSessionID: "test"})

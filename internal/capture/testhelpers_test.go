@@ -5,17 +5,70 @@
 package capture
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	recordingmodel "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/server"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
+
+func newSyncHandlerForTest(capture *Capture) *syncruntime.Handler {
+	return syncruntime.NewHandler(syncruntime.Dependencies{
+		Runtime: capture.Extension(), Queries: capture.Queries(), Lifecycle: capture.Lifecycle(),
+		FeatureUsage: capture.FeatureUsage(), ExtensionLogs: capture.ExtensionLogs(), DiagnosticLogs: capture.DiagnosticLogs(),
+	})
+}
+
+func runSyncRequest(t *testing.T, capture *Capture, payload syncruntime.SyncRequest) *httptest.ResponseRecorder {
+	t.Helper()
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal sync request: %v", err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/sync", bytes.NewReader(body))
+	response := httptest.NewRecorder()
+	newSyncHandlerForTest(capture).HandleSync(response, request)
+	return response
+}
+
+func decodeSyncResponse(t *testing.T, response *httptest.ResponseRecorder) syncruntime.SyncResponse {
+	t.Helper()
+	var payload syncruntime.SyncResponse
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode sync response: %v", err)
+	}
+	return payload
+}
+
+func runQueryResultRequest(t *testing.T, capture *Capture, payload string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	httpIngestForTest(capture).HandleQueryResult(w, req)
+	return w
+}
+
+func assertCommandResult(t *testing.T, capture *Capture, corrID, wantStatus, wantError string) {
+	t.Helper()
+	command, found := capture.Queries().GetCommandResult(corrID)
+	if !found {
+		t.Fatal("expected command result")
+	}
+	if command.Status != wantStatus || command.Error != wantError {
+		t.Fatalf("command result = (%q, %q), want (%q, %q)", command.Status, command.Error, wantStatus, wantError)
+	}
+}
 
 const maxWSEvents = 500
 const wsBufferMemoryLimit = 4 * 1024 * 1024

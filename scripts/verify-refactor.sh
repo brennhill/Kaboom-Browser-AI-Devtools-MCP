@@ -146,7 +146,7 @@ echo "→ Checking critical architecture files exist..."
 CRITICAL_FILES=(
     "internal/queries/dispatcher_queries.go"
     "internal/capture/query_dispatcher.go"
-    "internal/capture/handlers.go"
+    "internal/capture/httpingest/handlers.go"
     "$CMD_DIR/tools_core.go"
     "$CMD_DIR/tools_interact.go"
     "$CMD_DIR/tools_observe.go"

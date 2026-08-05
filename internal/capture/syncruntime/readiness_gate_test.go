@@ -2,7 +2,7 @@
 // Why: Validates that commands hold for up to ColdStartTimeout instead of failing instantly.
 // Docs: docs/features/feature/cold-start-queuing/index.md
 
-package capture
+package syncruntime
 
 import (
 	"context"
@@ -24,7 +24,7 @@ func requireReadinessResult(t *testing.T, result <-chan bool, want bool) {
 
 func TestWaitForExtensionConnected_ConnectionTransitionClosesGeneration(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	t.Cleanup(c.Close)
 	connected, notify := c.Extension().connectionReadinessSnapshot()
 	if connected {
@@ -44,7 +44,7 @@ func TestWaitForExtensionConnected_ConnectionTransitionClosesGeneration(t *testi
 
 func TestWaitForExtensionConnected_NeverConnects(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	// Extension never connects — should timeout
 	t.Cleanup(c.Close)
 
@@ -57,7 +57,7 @@ func TestWaitForExtensionConnected_NeverConnects(t *testing.T) {
 
 func TestWaitForExtensionConnected_ConnectsPartway(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	t.Cleanup(c.Close)
 	result := make(chan bool, 1)
 	go func() { result <- c.Extension().WaitForExtensionConnected(context.Background(), 2*time.Second) }()
@@ -67,7 +67,7 @@ func TestWaitForExtensionConnected_ConnectsPartway(t *testing.T) {
 
 func TestWaitForExtensionConnected_ZeroTimeout(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	t.Cleanup(c.Close)
 
 	// Zero timeout should behave like a single check
@@ -79,7 +79,7 @@ func TestWaitForExtensionConnected_ZeroTimeout(t *testing.T) {
 
 func TestWaitForExtensionConnected_ZeroTimeout_AlreadyConnected(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	t.Cleanup(c.Close)
 	connectForTest(c)
 
@@ -92,7 +92,7 @@ func TestWaitForExtensionConnected_ZeroTimeout_AlreadyConnected(t *testing.T) {
 // P1-1: Verify context cancellation stops the wait and prevents goroutine leaks.
 func TestWaitForExtensionConnected_ContextCancelled(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	t.Cleanup(c.Close)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -106,7 +106,7 @@ func TestWaitForExtensionConnected_ContextCancelled(t *testing.T) {
 // P2-3: Connect-then-disconnect during wait returns after observing connection.
 func TestWaitForExtensionConnected_ConnectsThenDisconnects(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	t.Cleanup(c.Close)
 	result := make(chan bool, 1)
 	go func() { result <- c.Extension().WaitForExtensionConnected(context.Background(), 2*time.Second) }()
@@ -121,7 +121,7 @@ func TestWaitForExtensionConnected_ConnectsThenDisconnects(t *testing.T) {
 // P2-4: Negative timeout should behave same as zero (single check, no wait).
 func TestWaitForExtensionConnected_NegativeTimeout(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	t.Cleanup(c.Close)
 
 	// Not connected — negative timeout should return false instantly
@@ -134,7 +134,7 @@ func TestWaitForExtensionConnected_NegativeTimeout(t *testing.T) {
 
 func TestWaitForExtensionConnected_NegativeTimeout_AlreadyConnected(t *testing.T) {
 	t.Parallel()
-	c := NewCapture()
+	c := newTestState()
 	t.Cleanup(c.Close)
 	connectForTest(c)
 

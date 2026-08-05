@@ -19,6 +19,7 @@ import (
 
 	playbookresources "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks/resources"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -379,7 +380,7 @@ func (h *MCPHandler) maybeAddSecurityModeWarning(resp mcp.JSONRPCResponse) mcp.J
 		return resp
 	}
 	mode, productionParity, rewrites := captured.Extension().GetSecurityMode()
-	if mode == capture.SecurityModeNormal {
+	if mode == syncruntime.SecurityModeNormal {
 		return resp
 	}
 	resp = prependWarningToResponse(resp, "[ALTERED ENVIRONMENT] security_mode=insecure_proxy; production_parity=false. CSP headers are rewritten for debugging.\n\n")

@@ -705,9 +705,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 
 func mockConnectedTrackedTab(t *testing.T, cap *capture.Capture) {
 	t.Helper()
-	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
-	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
+	capturefixture.Connect(cap)
 	capturefixture.Track(cap, 42, "https://example.com")
 }
 

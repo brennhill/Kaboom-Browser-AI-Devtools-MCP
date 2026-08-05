@@ -10,19 +10,20 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 )
 
 // Sync applies an authoritative extension settings snapshot through /sync.
 // The canceled request context prevents the canonical handler from entering its
 // long-poll wait after it has applied and validated the snapshot.
-func Sync(state *capture.Capture, settings capture.SyncSettings) {
-	send(state, capture.SyncRequest{
+func Sync(state *capture.Capture, settings syncruntime.SyncSettings) {
+	send(state, syncruntime.SyncRequest{
 		ExtSessionID: "capture-fixture",
 		Settings:     &settings,
 	})
 }
 
-func send(state *capture.Capture, syncRequest capture.SyncRequest) {
+func send(state *capture.Capture, syncRequest syncruntime.SyncRequest) {
 	payload, err := json.Marshal(syncRequest)
 	if err != nil {
 		panic(err)
@@ -30,10 +31,21 @@ func send(state *capture.Capture, syncRequest capture.SyncRequest) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	request := httptest.NewRequest(http.MethodPost, "/sync", bytes.NewReader(payload)).WithContext(ctx)
-	capture.NewSyncHandler(state).HandleSync(httptest.NewRecorder(), request)
+	newSyncHandler(state).HandleSync(httptest.NewRecorder(), request)
 }
 
-func currentSettings(state *capture.Capture) capture.SyncSettings {
+func newSyncHandler(state *capture.Capture) *syncruntime.Handler {
+	return syncruntime.NewHandler(syncruntime.Dependencies{
+		Runtime:        state.Extension(),
+		Queries:        state.Queries(),
+		Lifecycle:      state.Lifecycle(),
+		FeatureUsage:   state.FeatureUsage(),
+		ExtensionLogs:  state.ExtensionLogs(),
+		DiagnosticLogs: state.DiagnosticLogs(),
+	})
+}
+
+func currentSettings(state *capture.Capture) syncruntime.SyncSettings {
 	extension := state.Extension()
 	tracking, tabID, tabURL := extension.GetTrackingStatus()
 	active, activeKnown := extension.IsTrackedTabActive()
@@ -42,7 +54,7 @@ func currentSettings(state *capture.Capture) capture.SyncSettings {
 		activeValue = &active
 	}
 	restricted, level := extension.GetCSPStatus()
-	return capture.SyncSettings{
+	return syncruntime.SyncSettings{
 		PilotEnabled:     extension.IsPilotEnabled(),
 		TrackingEnabled:  tracking,
 		TrackedTabID:     tabID,
@@ -57,7 +69,7 @@ func currentSettings(state *capture.Capture) capture.SyncSettings {
 
 // Connect records a heartbeat without changing the effective extension state.
 func Connect(state *capture.Capture) {
-	send(state, capture.SyncRequest{ExtSessionID: "capture-fixture"})
+	send(state, syncruntime.SyncRequest{ExtSessionID: "capture-fixture"})
 }
 
 // Disconnect records a transport loss without fabricating stale wall time.

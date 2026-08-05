@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -234,7 +234,7 @@ func TestResolveNavigateURL_InsecureRequiresMode(t *testing.T) {
 
 func TestResolveNavigateURL_InsecureProxyRewrite(t *testing.T) {
 	h, fs := newFakeBrowserActions(t)
-	fs.cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	fs.cap.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, nil)
 	got, err := h.resolveNavigateURL("kaboom-insecure://http://internal.host/path")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -246,7 +246,7 @@ func TestResolveNavigateURL_InsecureProxyRewrite(t *testing.T) {
 
 func TestResolveNavigateURL_InsecureEmptyTarget(t *testing.T) {
 	h, fs := newFakeBrowserActions(t)
-	fs.cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	fs.cap.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, nil)
 	if _, err := h.resolveNavigateURL("kaboom-insecure://"); err == nil {
 		t.Fatal("expected error for empty insecure target")
 	}
@@ -254,7 +254,7 @@ func TestResolveNavigateURL_InsecureEmptyTarget(t *testing.T) {
 
 func TestResolveNavigateURL_InsecureNonHTTPScheme(t *testing.T) {
 	h, fs := newFakeBrowserActions(t)
-	fs.cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	fs.cap.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, nil)
 	if _, err := h.resolveNavigateURL("kaboom-insecure://ftp://internal.host"); err == nil {
 		t.Fatal("expected error for non-http insecure target scheme")
 	}

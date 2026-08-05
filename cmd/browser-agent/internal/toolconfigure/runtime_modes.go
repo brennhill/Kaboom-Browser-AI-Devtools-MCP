@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -38,15 +38,15 @@ func HandleSecurityMode(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	}
 
 	switch mode {
-	case capture.SecurityModeNormal:
-		d.SetSecurityMode(capture.SecurityModeNormal, nil)
+	case syncruntime.SecurityModeNormal:
+		d.SetSecurityMode(syncruntime.SecurityModeNormal, nil)
 		return mcp.Succeed(req, "Security mode updated", map[string]any{
 			"status":                    "ok",
-			"security_mode":             capture.SecurityModeNormal,
+			"security_mode":             syncruntime.SecurityModeNormal,
 			"production_parity":         true,
 			"insecure_rewrites_applied": []string{},
 		})
-	case capture.SecurityModeInsecureProxy:
+	case syncruntime.SecurityModeInsecureProxy:
 		if !params.Confirm {
 			return mcp.Fail(req, mcp.ErrInvalidParam,
 				"security_mode=insecure_proxy requires explicit confirmation",
@@ -54,10 +54,10 @@ func HandleSecurityMode(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 				mcp.WithParam("confirm"))
 		}
 		rewrites := []string{"csp_headers"}
-		d.SetSecurityMode(capture.SecurityModeInsecureProxy, rewrites)
+		d.SetSecurityMode(syncruntime.SecurityModeInsecureProxy, rewrites)
 		return mcp.Succeed(req, "Security mode updated", map[string]any{
 			"status":                    "ok",
-			"security_mode":             capture.SecurityModeInsecureProxy,
+			"security_mode":             syncruntime.SecurityModeInsecureProxy,
 			"production_parity":         false,
 			"insecure_rewrites_applied": rewrites,
 			"warning":                   "Altered environment active. Findings are not production-parity evidence.",

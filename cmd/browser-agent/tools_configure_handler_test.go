@@ -34,7 +34,7 @@ func TestExecuteQAFixtureCommandHonorsConnectionCancellationAndQueuePressure(t *
 	connected := capture.NewCapture()
 	defer connected.Close()
 	syncRequest := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"fixture-test"}`))
-	capture.NewSyncHandler(connected).HandleSync(httptest.NewRecorder(), syncRequest)
+	newSyncHandler(connected).HandleSync(httptest.NewRecorder(), syncRequest)
 	for i := 0; i < queries.MaxPendingQueries; i++ {
 		if _, err := connected.Queries().CreatePendingQuery(queries.PendingQuery{Type: "occupied"}); err != nil {
 			t.Fatalf("fill command queue: %v", err)
@@ -49,7 +49,7 @@ func TestExecuteQAFixtureCommandReturnsExtensionResult(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()
 	syncRequest := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"fixture-test"}`))
-	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), syncRequest)
+	newSyncHandler(cap).HandleSync(httptest.NewRecorder(), syncRequest)
 
 	go func() {
 		cap.Queries().WaitForPendingQueries(time.Second)

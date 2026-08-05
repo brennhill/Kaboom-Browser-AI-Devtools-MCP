@@ -45,8 +45,8 @@ CRITICAL_FILES=(
     "internal/queries/dispatcher_results.go"
     "internal/queries/types.go"
     "internal/capture/capture.go"
-    "internal/capture/handlers.go"
-    "internal/capture/sync.go"
+    "internal/capture/httpingest/handlers.go"
+    "internal/capture/syncruntime/handler.go"
     "$CMD_DIR/tools_core.go"
     "$CMD_DIR/tools_interact_dispatch.go"
     "$CMD_DIR/internal/toolobserve/dispatcher.go"
@@ -76,14 +76,14 @@ done
 echo ""
 echo "3️⃣  Checking transport and MCP boundaries..."
 
-require_method "HandleSync" "internal/capture/sync.go"
+require_method "HandleSync" "internal/capture/syncruntime/handler.go"
 require_method "CommandResult" "$CMD_DIR/internal/toolobserve/dispatcher.go"
 require_method "pendingCommands" "$CMD_DIR/internal/toolobserve/dispatcher.go"
 require_method "FailedCommands" "$CMD_DIR/internal/toolobserve/dispatcher.go"
-require_method "HandleExecuteJSImpl" "$CMD_DIR/internal/toolinteract/interact_browser.go"
-require_method "HandleBrowserActionNavigateImpl" "$CMD_DIR/internal/toolinteract/interact_browser.go"
+require_method "handleExecuteJS" "$CMD_DIR/internal/toolinteract/interact_browser.go"
+require_method "handleNavigate" "$CMD_DIR/internal/toolinteract/interact_browser.go"
 
-if grep -q 'queries.*\\[\\]interface{}{}' internal/capture/handlers.go; then
+if grep -q 'queries.*\\[\\]interface{}{}' internal/capture/httpingest/handlers.go; then
     fail "STUB DETECTED: handlers.go returns an empty query array"
 else
     pass "capture handlers contain no empty query stub"

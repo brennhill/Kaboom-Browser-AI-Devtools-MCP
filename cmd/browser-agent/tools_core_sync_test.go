@@ -52,7 +52,7 @@ func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 	reqBody := `{"ext_session_id":"test"}`
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(reqBody))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
+	newSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Call with no explicit sync param (should default to true), then deliver
 	// completion without assuming which side wins the waiter-subscription race.
@@ -186,7 +186,7 @@ func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T)
 	// Seed a recent /sync so the first connectivity check passes.
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
+	newSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	waiting := make(chan struct{})
 	release := make(chan struct{})
 	handler.asyncCommands.Wait.Command = func(correlationID string, _ time.Duration) (*queries.CommandResult, bool) {

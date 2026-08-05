@@ -5,11 +5,13 @@ package capture
 import (
 	"reflect"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 )
 
 func TestSyncHandlerOwnsTransportWithoutCaptureFacade(t *testing.T) {
 	captureType := reflect.TypeOf((*Capture)(nil))
-	syncType := reflect.TypeOf((*SyncHandler)(nil))
+	syncType := reflect.TypeOf((*syncruntime.Handler)(nil))
 
 	for _, method := range []string{"HandleSync", "GetPendingQueriesDisconnectAware"} {
 		if _, exists := captureType.MethodByName(method); exists {

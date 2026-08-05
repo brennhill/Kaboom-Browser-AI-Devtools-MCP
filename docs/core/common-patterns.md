@@ -23,7 +23,7 @@ Use this as a hard checklist during design, coding, and review.
   - `src/background/exec/frame-targeting.ts`
 - Shared test helpers:
   - `internal/pagination/test_helpers_test.go`
-  - `internal/capture/sync_test_helpers_test.go`
+  - `internal/capture/syncruntime/sync_test_helpers_test.go`
 
 ## 1) Shared State Access
 

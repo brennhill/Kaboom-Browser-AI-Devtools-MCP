@@ -12,6 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
@@ -64,7 +65,7 @@ type Capture struct {
 	// Extension Runtime (Own Lock)
 	// ============================================
 
-	extension *ExtensionRuntime // Connection, pilot, tracking, CSP, and test boundaries. Independently synchronized.
+	extension *syncruntime.Runtime // Connection, pilot, tracking, CSP, and test boundaries. Independently synchronized.
 
 	// ============================================
 	// Diagnostic Logging (Own Lock)
@@ -104,7 +105,7 @@ func NewCapture() *Capture {
 	logRedactor := redaction.NewRedactionEngine("")
 	c := &Capture{
 		extensionLogs:    logstore.NewExtension(logRedactor.Redact),
-		extension:        newExtensionRuntime(),
+		extension:        syncruntime.New(),
 		perf:             perfstore.New(),
 		diagnosticLogs:   logstore.NewDiagnostic(logRedactor.Redact),
 		recordingManager: recording.NewRecordingManager(),
@@ -150,7 +151,7 @@ func (c *Capture) Clients() *clientstore.Owner {
 }
 
 // Extension returns the canonical independently synchronized extension runtime.
-func (c *Capture) Extension() *ExtensionRuntime {
+func (c *Capture) Extension() *syncruntime.Runtime {
 	return c.extension
 }
 

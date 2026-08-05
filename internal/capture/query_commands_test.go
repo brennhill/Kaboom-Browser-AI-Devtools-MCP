@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -79,7 +80,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_NeverSynced(t *testing.T) {
 
 	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
-	pending := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
+	pending := newSyncHandlerForTest(c).GetPendingQueriesDisconnectAware()
 	if len(pending) != 1 {
 		t.Fatalf("pending len = %d, want 1 (never synced = not disconnected)", len(pending))
 	}
@@ -91,14 +92,11 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_RecentSync(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
-		state.lastSyncSeen = time.Now()
-		state.lastExtensionConnected = true
-	})
+	runSyncRequest(t, c, syncruntime.SyncRequest{ExtSessionID: "recent-sync"})
 
 	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
-	pending := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
+	pending := newSyncHandlerForTest(c).GetPendingQueriesDisconnectAware()
 	if len(pending) != 1 {
 		t.Fatalf("pending len = %d, want 1 (recently synced)", len(pending))
 	}
@@ -110,10 +108,8 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_Disconnected(t *testing.T) 
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
-		state.lastSyncSeen = time.Now().Add(-20 * time.Second)
-		state.lastExtensionConnected = true
-	})
+	runSyncRequest(t, c, syncruntime.SyncRequest{ExtSessionID: "disconnect-sync"})
+	c.Extension().MarkDisconnected()
 
 	c.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:          "dom",
@@ -121,7 +117,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_Disconnected(t *testing.T) 
 		CorrelationID: "corr-disc",
 	})
 
-	pending := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
+	pending := newSyncHandlerForTest(c).GetPendingQueriesDisconnectAware()
 	if len(pending) != 0 {
 		t.Fatalf("pending len = %d, want 0 (disconnected)", len(pending))
 	}

@@ -13,7 +13,7 @@ Architecture-focused review of Kaboom control-plane reliability and failure mode
 - Strong bridge/daemon resilience patterns including respawn and compatibility checks (`cmd/browser-agent/bridge.go:127`, `cmd/browser-agent/bridge.go:220`, `cmd/browser-agent/bridge.go:477`).
 - Correct stdout serialization discipline for MCP responses (single write gate) (`cmd/browser-agent/internal/bridge/bridge_transport.go`).
 - Clear backpressure behavior in command queue (reject on saturation, no silent queue drops) (`internal/queries/dispatcher_queries.go:60`).
-- Command-loss reconciliation exists via in-progress heartbeat tracking (`internal/capture/sync.go:309`).
+- Command-loss reconciliation exists via in-progress heartbeat tracking (`internal/capture/syncruntime/handler.go:309`).
 - Contract-first wire typing with generation + drift checks (`Makefile:43`, `Makefile:243`, `internal/types/wire_network.go:1`, `src/types/wire/wire-network.ts:1`).
 - Localhost boundary hardening with Host + Origin checks (`cmd/browser-agent/server_middleware.go:107`).
 - High automated test density (substantial Go + extension test coverage footprint).
@@ -48,7 +48,7 @@ Architecture-focused review of Kaboom control-plane reliability and failure mode
 3. High — Ack semantics can acknowledge work before execution completion.
 - Extension sets `lastCommandAck` on receipt; server removes all pending up to that ID.
 - Crash/reload timing windows can convert accepted work into timeout/desync paths.
-- Evidence: `src/background/sync/sync-client.ts:348`, `src/background/sync/sync-client.ts:359`, `internal/queries/dispatcher_queries.go:211`, `internal/queries/dispatcher_queries.go:242`, `internal/capture/sync.go:369`.
+- Evidence: `src/background/sync/sync-client.ts:348`, `src/background/sync/sync-client.ts:359`, `internal/queries/dispatcher_queries.go:211`, `internal/queries/dispatcher_queries.go:242`, `internal/capture/syncruntime/handler.go:369`.
 
 4. Medium — Unknown command statuses normalize to `complete`.
 - This can mask protocol drift and create false-positive success states.

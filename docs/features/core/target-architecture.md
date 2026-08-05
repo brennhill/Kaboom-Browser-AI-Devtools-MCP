@@ -27,5 +27,5 @@ Implementation anchors:
 - Tool schemas: `internal/schema/schema.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
 - Query lifecycle: `internal/capture/queries.go`
-- Unified sync endpoint: `internal/capture/sync.go`
+- Unified sync endpoint: `internal/capture/syncruntime/handler.go`
 - Extension sync executor: `src/background/sync/sync-client.ts`, `src/background/pending-queries.ts`

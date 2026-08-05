@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/openapi.json
   - cmd/browser-agent/tools_configure.go
@@ -25,13 +25,13 @@ code_paths:
   - internal/capture/pressure/stats.go
   - internal/capture/ringstore/store.go
   - internal/capture/waterfallstore/store.go
-  - internal/capture/extension_state.go
+  - internal/capture/syncruntime/runtime.go
   - internal/capture/featureusage/observer.go
   - internal/capture/httpingest/handlers.go
   - internal/util/media.go
   - internal/queries/dispatcher_queries.go
-  - internal/capture/sync.go
-  - internal/capture/wire_sync.go
+  - internal/capture/syncruntime/handler.go
+  - internal/capture/syncruntime/wire_sync.go
   - internal/capturefixture/sync.go
   - internal/circuit/breaker.go
   - internal/debuglog/logger.go
@@ -107,25 +107,25 @@ test_paths:
   - cmd/browser-agent/tools_configure_network_recording_test.go
   - cmd/browser-agent/tools_configure_network_recording_handler_test.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
-  - internal/capture/sync_test.go
-  - internal/capture/sync_test_helpers_test.go
+  - internal/capture/syncruntime/sync_test.go
+  - internal/capture/syncruntime/sync_test_helpers_test.go
   - internal/capturefixture/sync_test.go
-  - internal/capture/sync_command_lifecycle_test.go
-  - internal/capture/readiness_gate_test.go
+  - internal/capture/syncruntime/sync_command_lifecycle_test.go
+  - internal/capture/syncruntime/readiness_gate_test.go
   - internal/capture/async_queue_integration_test.go
   - internal/capture/sync_waterfall_test.go
   - internal/capture/websocket_test.go
   - internal/capture/websocket_status_test.go
   - internal/capture/websocket_handlers_test.go
   - internal/capture/websocket-streaming_test.go
-  - internal/capture/sync_test_helpers_test.go
+  - internal/capture/syncruntime/sync_test_helpers_test.go
   - internal/capture/coverage_gaps_part2_test.go
   - internal/capture/api_contract_test.go
   - internal/capture/logstore/store_test.go
   - internal/capture/logstore/diagnostic_test.go
   - internal/capture/accessor_unit_test.go
   - internal/capture/featureusage/observer_test.go
-  - internal/capture/extension_state_test_helpers_test.go
+  - internal/capture/syncruntime/extension_state_unit_test.go
   - internal/capture/buffer_clear_test.go
   - internal/capture/capture_stress_test.go
   - internal/capture/capture_bench_test.go
@@ -363,7 +363,7 @@ diagnostic. Daemon handoffs also invalidate in-flight extension responses so an
 old server cannot dispatch work after the client changes endpoints.
 
 The complete `/sync` request/response graph now has one Go wire owner in
-`internal/capture/wire_sync.go`; extension diagnostic entries have their one
+`internal/capture/syncruntime/wire_sync.go`; extension diagnostic entries have their one
 nested owner in `internal/types/wire_log.go`. TypeScript contracts and
 the OpenAPI sync components are generated from those structs, and CI compares
 the generated OpenAPI client plus a shared bidirectional JSON fixture. The old
@@ -407,9 +407,9 @@ belong to `internal/capture/pressure`, so telemetry, performance, and health
 reporting share one neutral value contract without importing a broad capture
 implementation or preserving an obsolete compatibility surface.
 
-- `internal/capture/sync_test_helpers_test.go` centralizes `/sync` request marshaling, transport dispatch, and response decoding helpers.
-- `internal/capture/sync_test.go` reuses those helpers for request ingestion, heartbeats, and connection state.
-- `internal/capture/sync_command_lifecycle_test.go` owns adaptive polling and command-result lifecycle coverage.
+- `internal/capture/syncruntime/sync_test_helpers_test.go` centralizes `/sync` request marshaling, transport dispatch, and response decoding helpers.
+- `internal/capture/syncruntime/sync_test.go` reuses those helpers for request ingestion, heartbeats, and connection state.
+- `internal/capture/syncruntime/sync_command_lifecycle_test.go` owns adaptive polling and command-result lifecycle coverage.
 - `internal/capture/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
 - Additional capture contract tests (`coverage_gaps_part2_test`, `api_contract_test`) reuse shared helper assertions to keep endpoint/status checks consistent; canonical settings-path and recovery coverage lives with `settingscache`.
 - `src/background/sync/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.

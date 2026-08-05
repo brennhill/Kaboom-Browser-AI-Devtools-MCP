@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 )
 
 func TestHandleSync_IncludesSecurityModeOverridesWhenInsecureModeActive(t *testing.T) {
@@ -15,9 +17,9 @@ func TestHandleSync_IncludesSecurityModeOverridesWhenInsecureModeActive(t *testi
 	cap := NewCapture()
 	cap.Extension().SetSecurityMode("insecure_proxy", []string{"csp_headers"})
 
-	reqBody, err := json.Marshal(SyncRequest{
+	reqBody, err := json.Marshal(syncruntime.SyncRequest{
 		ExtSessionID: "ext-session-1",
-		Settings: &SyncSettings{
+		Settings: &syncruntime.SyncSettings{
 			PilotEnabled: true,
 		},
 	})
@@ -27,12 +29,12 @@ func TestHandleSync_IncludesSecurityModeOverridesWhenInsecureModeActive(t *testi
 
 	req := httptest.NewRequest("POST", "/sync", bytes.NewReader(reqBody))
 	w := httptest.NewRecorder()
-	NewSyncHandler(cap).HandleSync(w, req)
+	newSyncHandlerForTest(cap).HandleSync(w, req)
 	if w.Code != 200 {
 		t.Fatalf("HandleSync status = %d, want 200", w.Code)
 	}
 
-	var resp SyncResponse
+	var resp syncruntime.SyncResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
@@ -53,12 +55,12 @@ func TestHandleSync_DefaultSecurityModeOverridesEmpty(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/sync", bytes.NewReader([]byte(`{"ext_session_id":"ext-default"}`)))
 	w := httptest.NewRecorder()
-	NewSyncHandler(cap).HandleSync(w, req)
+	newSyncHandlerForTest(cap).HandleSync(w, req)
 	if w.Code != 200 {
 		t.Fatalf("HandleSync status = %d, want 200", w.Code)
 	}
 
-	var resp SyncResponse
+	var resp syncruntime.SyncResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
@@ -77,7 +79,7 @@ func FuzzSyncRequestCanonicalRoundTrip(f *testing.F) {
 		f.Add(seed)
 	}
 	f.Fuzz(func(t *testing.T, raw []byte) {
-		var request SyncRequest
+		var request syncruntime.SyncRequest
 		if json.Unmarshal(raw, &request) != nil {
 			return
 		}
@@ -85,7 +87,7 @@ func FuzzSyncRequestCanonicalRoundTrip(f *testing.F) {
 		if err != nil || !json.Valid(encoded) {
 			t.Fatalf("canonical sync request could not serialize: %v", err)
 		}
-		var roundTrip SyncRequest
+		var roundTrip syncruntime.SyncRequest
 		if err := json.Unmarshal(encoded, &roundTrip); err != nil {
 			t.Fatal(err)
 		}

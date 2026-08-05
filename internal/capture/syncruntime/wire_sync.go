@@ -1,6 +1,6 @@
 // wire_sync.go — Defines the canonical extension-daemon /sync wire contract.
 
-package capture
+package syncruntime
 
 import (
 	"encoding/json"

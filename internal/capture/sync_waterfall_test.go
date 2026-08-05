@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -31,7 +32,7 @@ func TestHandleSync_WaterfallQueryDelivery(t *testing.T) {
 	}
 
 	// Extension polls /sync and receives the command
-	req := SyncRequest{ExtSessionID: "test_session"}
+	req := syncruntime.SyncRequest{ExtSessionID: "test_session"}
 	w := runSyncRequest(t, cap, req)
 
 	if w.Code != http.StatusOK {
@@ -79,9 +80,9 @@ func TestHandleSync_WaterfallResultDelivery(t *testing.T) {
 	}
 	resultBytes, _ := json.Marshal(waterfallResult)
 
-	req := SyncRequest{
+	req := syncruntime.SyncRequest{
 		ExtSessionID: "test_session",
-		CommandResults: []SyncCommandResult{
+		CommandResults: []syncruntime.SyncCommandResult{
 			{
 				ID:     queryID,
 				Status: "complete",

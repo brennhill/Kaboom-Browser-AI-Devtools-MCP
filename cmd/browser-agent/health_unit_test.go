@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	capturelogstore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
@@ -211,7 +212,7 @@ func TestBuildPilotInfo_ExplicitDisableState(t *testing.T) {
 	if info.Enabled {
 		t.Fatalf("enabled = true, want false for explicit disable")
 	}
-	if info.Source != capture.PilotSourceSettingsCache {
+	if info.Source != syncruntime.PilotSourceSettingsCache {
 		t.Fatalf("source = %q, want settings_cache", info.Source)
 	}
 }

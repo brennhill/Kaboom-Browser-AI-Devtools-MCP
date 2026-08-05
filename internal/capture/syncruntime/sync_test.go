@@ -1,7 +1,7 @@
 // sync_test.go — Tests sync request ingestion and connection state.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package syncruntime
 
 import (
 	"encoding/json"
@@ -14,9 +14,31 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
+func TestExtractBrowserNameUsesPrivacySafeFamilies(t *testing.T) {
+	t.Parallel()
+	for userAgent, want := range map[string]string{
+		"Mozilla Chrome Brave": "brave", "Mozilla Chrome Edg/120": "edge",
+		"Mozilla Chrome/120": "chrome", "Mozilla Firefox/120": "firefox",
+		"Mozilla Safari/17": "safari", "custom client": "unknown",
+	} {
+		if got := extractBrowserName(userAgent); got != want {
+			t.Fatalf("extractBrowserName(%q) = %q, want %q", userAgent, got, want)
+		}
+	}
+}
+
+func TestMajorMinor(t *testing.T) {
+	t.Parallel()
+	for input, want := range map[string]string{"6.0.3": "6.0", "1.2.3": "1.2", "10.20.30": "10.20", "6.0": "6.0", "6": "", "": ""} {
+		if got := majorMinor(input); got != want {
+			t.Errorf("majorMinor(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
 func TestHandleSync_BasicRequest(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	// Create a sync request
 	req := SyncRequest{
@@ -61,7 +83,7 @@ func TestHandleSync_BasicRequest(t *testing.T) {
 
 func TestHandleSync_RejectsSupersededConnectionGeneration(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	first := runSyncRequest(t, cap, SyncRequest{
 		ExtSessionID: "session-old",
@@ -107,7 +129,7 @@ func TestHandleSync_RejectsSupersededConnectionGeneration(t *testing.T) {
 
 func TestHandleSync_RejectsStaleCommandResultWithoutCompletingCurrentWork(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	first := runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-old"})
 	firstGeneration := decodeSyncResponse(t, first).ConnectionGeneration
@@ -141,7 +163,7 @@ func TestHandleSync_RejectsStaleCommandResultWithoutCompletingCurrentWork(t *tes
 
 func TestHandleSync_RejectsStaleResultInsideCurrentHeartbeat(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	first := runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-old"})
 	firstGeneration := decodeSyncResponse(t, first).ConnectionGeneration
@@ -177,7 +199,7 @@ func TestHandleSync_RejectsStaleResultInsideCurrentHeartbeat(t *testing.T) {
 
 func TestHandleSync_MethodNotAllowed(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	// Try GET instead of POST
 	w := runSyncRawRequest(t, cap, "GET", nil)
@@ -189,7 +211,7 @@ func TestHandleSync_MethodNotAllowed(t *testing.T) {
 
 func TestHandleSync_InvalidJSON(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	// Send invalid JSON
 	w := runSyncRawRequest(t, cap, "POST", []byte("not json"))
@@ -201,7 +223,7 @@ func TestHandleSync_InvalidJSON(t *testing.T) {
 
 func TestHandleSync_WithExtensionLogs(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	// Create request with extension logs
 	req := SyncRequest{
@@ -234,7 +256,7 @@ func TestHandleSync_WithExtensionLogs(t *testing.T) {
 
 func TestHandleSync_WithExtensionLogs_RedactsSensitiveData(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	const (
 		bearer = "Bearer tokenValue1234567890abcdef"
@@ -281,7 +303,7 @@ func TestHandleSync_WithExtensionLogs_RedactsSensitiveData(t *testing.T) {
 
 func TestHandleSync_UpdatesLastPollAt(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	// Initially lastPollAt should be zero
 	initialPollAt := extensionStateSnapshotForTest(cap.Extension()).lastPollAt
@@ -307,7 +329,7 @@ func TestHandleSync_UpdatesLastPollAt(t *testing.T) {
 
 func TestHandleSync_StoresInProgressHeartbeat(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	progress := 42.5
 	req := SyncRequest{
@@ -353,7 +375,7 @@ func TestHandleSync_StoresInProgressHeartbeat(t *testing.T) {
 
 func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	corrID := "corr-missing-heartbeat"
 	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
@@ -392,7 +414,7 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 	}
 
 	// Move the deterministic reconciliation clock beyond the bounded grace.
-	mutateExtensionStateForTest(cap.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(cap.Extension(), func(state *runtimeState) {
 		state.missingInProgressSince[corrID] = time.Now().Add(-missingInProgressGrace)
 	})
 
@@ -420,7 +442,7 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 
 func TestHandleSync_ImmediateMissingHeartbeatsDoNotFailResultInFlight(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 
 	corrID := "corr-result-in-flight"
 	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
@@ -476,18 +498,18 @@ func TestHandleSync_ImmediateMissingHeartbeatsDoNotFailResultInFlight(t *testing
 
 func TestUpdateSyncConnectionState_NoReconnectForShortPollGap(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 	defer cap.Close()
 
 	now := time.Now()
-	mutateExtensionStateForTest(cap.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(cap.Extension(), func(state *runtimeState) {
 		state.lastPollAt = now.Add(-6 * time.Second)
 		state.lastSyncSeen = now.Add(-6 * time.Second)
 		state.lastExtensionConnected = true
 		state.lastExtensionConnected = true
 	})
 
-	state := cap.extension.updateSyncConnectionState(
+	state := cap.runtime.updateSyncConnectionState(
 		SyncRequest{ExtSessionID: "session-short-gap"},
 		"client-short-gap",
 		now,
@@ -503,18 +525,18 @@ func TestUpdateSyncConnectionState_NoReconnectForShortPollGap(t *testing.T) {
 
 func TestUpdateSyncConnectionState_ReconnectAfterDisconnectThreshold(t *testing.T) {
 	t.Parallel()
-	cap := NewCapture()
+	cap := newTestState()
 	defer cap.Close()
 
 	now := time.Now()
-	mutateExtensionStateForTest(cap.Extension(), func(state *ExtensionState) {
+	mutateExtensionStateForTest(cap.Extension(), func(state *runtimeState) {
 		state.lastPollAt = now.Add(-12 * time.Second)
 		state.lastSyncSeen = now.Add(-12 * time.Second)
 		state.lastExtensionConnected = true
 		state.lastExtensionConnected = true
 	})
 
-	state := cap.extension.updateSyncConnectionState(
+	state := cap.runtime.updateSyncConnectionState(
 		SyncRequest{ExtSessionID: "session-long-gap"},
 		"client-long-gap",
 		now,

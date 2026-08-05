@@ -38,7 +38,7 @@ const WIRE_PAIRS = [
   { go: 'internal/qafixture/wire_fixture.go', ts: 'src/types/wire/wire-qa-fixture.ts' },
   { go: 'internal/perftrace/wire_trace.go', ts: 'src/types/wire/wire-performance-trace.ts' },
   { go: 'internal/types/wire_log.go', ts: 'src/types/wire/wire-extension-log.ts', types: ['ExtensionLog'] },
-  { go: 'internal/capture/wire_sync.go', ts: 'src/types/wire/wire-sync.ts' }
+  { go: 'internal/capture/syncruntime/wire_sync.go', ts: 'src/types/wire/wire-sync.ts' }
 ]
 
 /**
@@ -435,7 +435,7 @@ function synchronizeSyncOpenAPI(checkOnly) {
   const sources = [
     { path: 'internal/types/wire_log.go', types: ['ExtensionLog'] },
     {
-      path: 'internal/capture/wire_sync.go',
+      path: 'internal/capture/syncruntime/wire_sync.go',
       types: [
         'SyncRequest',
         'SyncSettings',
