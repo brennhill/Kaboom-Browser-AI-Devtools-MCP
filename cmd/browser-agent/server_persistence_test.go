@@ -74,10 +74,11 @@ func TestServerPersistence_StaysAliveWithOpenStdin(t *testing.T) {
 	// INVARIANT: Server must stay alive for at least 10 seconds with open stdin
 	// Check health every second to catch early death
 	testDuration := 10 * time.Second
-	checkInterval := 1 * time.Second
 	startTime := time.Now()
-
-	for time.Since(startTime) < testDuration {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for check := 0; check < int(testDuration/time.Second); check++ {
+		<-ticker.C
 		// Verify server is still responding
 		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port))
 		if err != nil {
@@ -92,8 +93,6 @@ func TestServerPersistence_StaysAliveWithOpenStdin(t *testing.T) {
 			t.Fatalf("INVARIANT VIOLATION: Server returned %d after %v (must return 200)",
 				resp.StatusCode, elapsed)
 		}
-
-		time.Sleep(checkInterval)
 	}
 
 	t.Logf("✅ Server survived %v with open stdin (no data sent)", testDuration)
@@ -132,13 +131,12 @@ func TestServerPersistence_HealthResponseTime(t *testing.T) {
 	// Test health response time over 5 seconds
 	maxResponseTime := 100 * time.Millisecond
 	client := &http.Client{Timeout: maxResponseTime}
-	testDuration := 5 * time.Second
-	startTime := time.Now()
-
 	var slowestResponse time.Duration
-	var requestCount int
-
-	for time.Since(startTime) < testDuration {
+	const requestCount = 50
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for check := 0; check < requestCount; check++ {
+		<-ticker.C
 		reqStart := time.Now()
 		resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port))
 		responseTime := time.Since(reqStart)
@@ -151,9 +149,6 @@ func TestServerPersistence_HealthResponseTime(t *testing.T) {
 		if responseTime > slowestResponse {
 			slowestResponse = responseTime
 		}
-		requestCount++
-
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	t.Logf("✅ %d health checks completed, slowest: %v (limit: %v)", requestCount, slowestResponse, maxResponseTime)
@@ -197,8 +192,8 @@ func TestServerPersistence_SurvivesStdinClose(t *testing.T) {
 		t.Fatalf("Failed to close stdin: %v", err)
 	}
 
-	// Wait a moment, then verify server is still alive
-	time.Sleep(2 * time.Second)
+	// Verify persistence after an explicit two-second observation window.
+	<-time.After(2 * time.Second)
 
 	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port))
 	if err != nil {
@@ -254,10 +249,11 @@ func TestServerPersistence_PersistModeKeepsAlive(t *testing.T) {
 		t.Fatalf("Failed to close stdin: %v", err)
 	}
 
-	// Server should STAY alive for at least 3 seconds after stdin close
-	time.Sleep(1 * time.Second)
-
+	// Server should STAY alive for at least 3 seconds after stdin close.
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 	for i := 0; i < 3; i++ {
+		<-ticker.C
 		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port))
 		if err != nil {
 			t.Fatalf("INVARIANT VIOLATION: Server died after stdin close with persist=true: %v", err)
@@ -267,8 +263,6 @@ func TestServerPersistence_PersistModeKeepsAlive(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("Server returned %d after stdin close", resp.StatusCode)
 		}
-
-		time.Sleep(1 * time.Second)
 	}
 
 	t.Log("✅ Server stayed alive 3+ seconds after stdin close (persist=true)")
@@ -359,9 +353,11 @@ func TestServerPersistence_StdinNoDataExtendedPeriod(t *testing.T) {
 
 	t.Log("Starting 30-second persistence test...")
 
-	// Check every 5 seconds for 30 seconds
+	// Check every 5 seconds for 30 seconds.
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 	for i := 0; i < 6; i++ {
-		time.Sleep(5 * time.Second)
+		<-ticker.C
 
 		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port))
 		if err != nil {

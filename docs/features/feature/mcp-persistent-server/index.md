@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -84,6 +84,9 @@ test_paths:
   - tests/architecture/user-state-loaders.test.cjs
   - internal/statediag/collector_test.go
   - cmd/browser-agent/cli_modes_subprocess_test.go
+  - cmd/browser-agent/server_persistence_test.go
+  - cmd/browser-agent/server_reliability_test.go
+  - cmd/browser-agent/server_reliability_integration_test.go
   - cmd/browser-agent/main_connection_adapters_test.go
   - cmd/browser-agent/main_connection_recovery_primitives_test.go
   - cmd/browser-agent/connection_lifecycle_helpers_test.go
@@ -235,6 +238,12 @@ Subprocess-mode tests use the bridge readiness helper instead of a duplicate
 poll loop. Test-state cleanup retries yield only between failed filesystem
 operations, and suite-level daemon cleanup uses definitive termination rather
 than a fixed grace sleep.
+Release persistence and reliability suites express genuine observation windows
+with tickers or bounded timers and fixed check counts; scheduler sleeps no
+longer coordinate state. Upgrade coverage waits for the old child process to
+exit before binding its replacement. The permanently skipped goroutine-leak
+test was deleted because it measured the test process, not the daemon it claimed
+to validate.
 The execution modules, examples, and validation schemas used by that call path
 are constructed once in `internal/toolcatalog.Catalog`; the composition root
 does not maintain parallel lazy registries.

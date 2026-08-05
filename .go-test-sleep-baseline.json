@@ -1,9 +1,6 @@
 {
   "version": 1,
   "files": {
-    "cmd/browser-agent/server_persistence_test.go": 6,
-    "cmd/browser-agent/server_reliability_integration_test.go": 3,
-    "cmd/browser-agent/server_reliability_test.go": 3,
     "cmd/browser-agent/tools_interact_navigate_document_test.go": 1
   }
 }

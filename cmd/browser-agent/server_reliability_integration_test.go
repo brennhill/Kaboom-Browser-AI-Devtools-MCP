@@ -126,8 +126,6 @@ func TestReliability_MCPTraffic_RealisticSession(t *testing.T) {
 			t.Logf("  \u26a0 %s: error response: %v", step.name, errObj)
 		}
 
-		// Realistic delay between calls
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	t.Logf("\u2705 Realistic MCP session completed: %d/%d steps successful", successCount, len(sessionSteps))
@@ -187,7 +185,7 @@ func TestReliability_MCPTraffic_BurstPattern(t *testing.T) {
 		}
 
 		t.Logf("Burst %d complete, pausing 5s...", burst+1)
-		time.Sleep(5 * time.Second)
+		<-time.After(5 * time.Second)
 
 		// Verify server still healthy after pause
 		resp, err := client.Get(healthURL)
@@ -249,8 +247,15 @@ func TestReliability_Upgrade_OldServerKilled(t *testing.T) {
 		t.Logf("Warning: kill command failed: %v", err)
 	}
 
-	// Wait for old server to die
-	time.Sleep(500 * time.Millisecond)
+	oldExited := make(chan error, 1)
+	go func() { oldExited <- oldCmd.Wait() }()
+	select {
+	case <-oldExited:
+	case <-time.After(5 * time.Second):
+		_ = oldCmd.Process.Kill()
+		<-oldExited
+		t.Fatal("old server did not exit after termination signal")
+	}
 
 	// Start "new" server on same port
 	newCmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))

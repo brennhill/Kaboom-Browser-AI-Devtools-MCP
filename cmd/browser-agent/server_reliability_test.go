@@ -30,7 +30,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -184,7 +183,6 @@ func TestReliability_Stress_ExtendedOperation(t *testing.T) {
 
 	// Run for 2 minutes with periodic checks
 	testDuration := 2 * time.Minute
-	checkInterval := 5 * time.Second
 	startTime := time.Now()
 
 	client := &http.Client{Timeout: 5 * time.Second}
@@ -192,7 +190,10 @@ func TestReliability_Stress_ExtendedOperation(t *testing.T) {
 
 	t.Logf("Starting %v extended operation test...", testDuration)
 
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 	for time.Since(startTime) < testDuration {
+		<-ticker.C
 		checkCount++
 
 		// Health check
@@ -221,8 +222,6 @@ func TestReliability_Stress_ExtendedOperation(t *testing.T) {
 		if checkCount%12 == 0 { // Log every minute
 			t.Logf("  ✓ %v elapsed, %d checks passed", time.Since(startTime).Round(time.Second), checkCount)
 		}
-
-		time.Sleep(checkInterval)
 	}
 
 	t.Logf("✅ Server operated correctly for %v (%d checks, 100%% success)", testDuration, checkCount)
@@ -233,90 +232,6 @@ func TestReliability_Stress_ExtendedOperation(t *testing.T) {
 // ============================================================================
 
 // TestReliability_ResourceLeaks_Goroutines verifies no goroutine leaks under load.
-func TestReliability_ResourceLeaks_Goroutines(t *testing.T) {
-	// Skip: Flaky in parallel test runs due to port/timing issues.
-	// Works in isolation. TODO: Investigate root cause of flakiness.
-	t.Skip("Skipped: flaky in parallel test runs; works in isolation")
-	if testing.Short() {
-		t.Skip("skipping resource leak test in short mode")
-	}
-
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
-
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		t.Fatalf("Failed to create stdin pipe: %v", err)
-	}
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("Failed to start server: %v", err)
-	}
-	defer func() {
-		_ = stdin.Close()
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-	}()
-
-	// Send initialize request to trigger server spawn (MCP bridge mode waits for input)
-	initReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}` + "\n"
-	if _, err := stdin.Write([]byte(initReq)); err != nil {
-		t.Fatalf("Failed to send initialize request: %v", err)
-	}
-
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
-		t.Fatalf("Server failed to start")
-	}
-
-	// Get baseline goroutine count (in test process, not server)
-	// For server, we'll check it responds consistently
-	baselineGoroutines := runtime.NumGoroutine()
-
-	client := &http.Client{Timeout: 5 * time.Second}
-
-	// Make many requests that could leak resources
-	for round := 0; round < 5; round++ {
-		for i := 0; i < 100; i++ {
-			// Requests that allocate resources
-			mcpReq := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"observe","arguments":{"what":"network_waterfall","limit":100}}}`
-			resp, err := client.Post(
-				fmt.Sprintf("http://127.0.0.1:%d/mcp", port),
-				"application/json",
-				strings.NewReader(mcpReq),
-			)
-			if err != nil {
-				t.Fatalf("Request failed: %v", err)
-			}
-			io.Copy(io.Discard, resp.Body) // Drain body
-			resp.Body.Close()
-		}
-
-		// Let GC run
-		runtime.GC()
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	// Check goroutine count didn't explode (in test process)
-	finalGoroutines := runtime.NumGoroutine()
-	goroutineGrowth := finalGoroutines - baselineGoroutines
-
-	t.Logf("Goroutine check: baseline=%d, final=%d, growth=%d", baselineGoroutines, finalGoroutines, goroutineGrowth)
-
-	// Allow some growth for connection pooling, but not unbounded
-	if goroutineGrowth > 50 {
-		t.Errorf("Possible goroutine leak: grew by %d (baseline: %d, final: %d)", goroutineGrowth, baselineGoroutines, finalGoroutines)
-	}
-
-	// Verify server still responds (didn't OOM or deadlock)
-	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port))
-	if err != nil {
-		t.Fatalf("Server became unresponsive after load: %v", err)
-	}
-	resp.Body.Close()
-
-	t.Logf("✅ No significant goroutine leak detected (growth: %d)", goroutineGrowth)
-}
-
 // TestReliability_ResourceLeaks_ConnectionDrain verifies connections are properly
 // released even when clients disconnect abruptly.
 func TestReliability_ResourceLeaks_ConnectionDrain(t *testing.T) {
@@ -355,9 +270,6 @@ func TestReliability_ResourceLeaks_ConnectionDrain(t *testing.T) {
 		}
 		// Don't wait for response - simulate abrupt disconnect
 	}
-
-	// Wait for server to clean up
-	time.Sleep(1 * time.Second)
 
 	// Server should still be responsive
 	client := &http.Client{Timeout: 5 * time.Second}
