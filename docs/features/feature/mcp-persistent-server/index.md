@@ -99,6 +99,7 @@ test_paths:
   - cmd/browser-agent/internal/toolresp/toolresp_test.go
   - cmd/browser-agent/tools_errors_test.go
   - cmd/browser-agent/health_unit_test.go
+  - cmd/browser-agent/internal/health/health_test.go
   - cmd/browser-agent/handler_warning_test.go
   - cmd/browser-agent/internal/appruntime/runtime_test.go
   - cmd/browser-agent/command_execution_readiness_test.go
@@ -224,6 +225,8 @@ They close stdin and await the bridge's process-exit barrier, so transport
 purity is proven without wall-clock sleeps or forced termination. The focused
 smoke runner explicitly enables the integration build tag and therefore cannot
 silently report success after running zero transport tests.
+Health-metric uptime tests position the private start timestamp directly and
+assert the resulting duration; they do not wait for wall-clock time to pass.
 The execution modules, examples, and validation schemas used by that call path
 are constructed once in `internal/toolcatalog.Catalog`; the composition root
 does not maintain parallel lazy registries.

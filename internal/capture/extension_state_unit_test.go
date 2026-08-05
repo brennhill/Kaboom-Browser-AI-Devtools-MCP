@@ -29,22 +29,6 @@ func TestWaitForExtensionConnected_AlreadyConnected(t *testing.T) {
 	}
 }
 
-func TestWaitForExtensionConnected_ConnectsDuringWait(t *testing.T) {
-	t.Parallel()
-	c := NewCapture()
-
-	// Connect at 50ms — well before the first 200ms poll tick, giving a comfortable
-	// 150ms margin before the tick catches the connection.
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		connectForTest(c)
-	}()
-
-	if !c.Extension().WaitForExtensionConnected(context.Background(), time.Second) {
-		t.Fatal("WaitForExtensionConnected returned false; expected true after late connection")
-	}
-}
-
 func TestWaitForExtensionConnected_Timeout(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()

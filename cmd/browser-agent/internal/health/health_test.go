@@ -196,7 +196,7 @@ func TestMetrics_IncrementError(t *testing.T) {
 
 func TestMetrics_GetUptime(t *testing.T) {
 	m := NewMetrics()
-	time.Sleep(5 * time.Millisecond)
+	m.startTime = time.Now().Add(-5 * time.Millisecond)
 	uptime := m.GetUptime()
 	if uptime < 5*time.Millisecond {
 		t.Errorf("uptime too short: %v", uptime)

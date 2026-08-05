@@ -379,7 +379,8 @@ this one bounded delivery contract.
 - Extension readiness uses a lock-owned generation notification shared by sync
   connection and authoritative disconnect transitions. Waiters cannot miss a
   reconnect between checking state and blocking, and cancellation no longer
-  waits for a periodic polling tick.
+  waits for a periodic polling tick. Transition coverage lives in the canonical
+  readiness-gate suite; the older sleep-before-connect duplicate was deleted.
 - Query cleanup lifecycle coverage lives with the canonical QueryDispatcher;
   the former Capture-level goroutine-count and duplicate result-wait tests were
   deleted rather than preserved as a cross-owner test facade.
