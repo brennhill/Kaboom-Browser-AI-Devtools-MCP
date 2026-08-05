@@ -100,6 +100,13 @@ atomic file consolidation proceed without disguising genuine API or shared-
 state growth, turning instance ownership and minimal public interfaces into
 deterministic merge gates instead of review-only preferences.
 
+The folder boundary inventories every authored file under first-party source,
+test, package, script, site, specification, workflow, and documentation roots.
+Tests, fixtures, Markdown, shell scripts, schemas, and assets count toward the
+same ten-file ownership limit; only generated/build output and vendored code are
+explicitly exempt. Existing violations are recorded in a downward-only baseline,
+and CI independently regenerates that baseline to reject stale improvements.
+
 Prettier checks authored source and configuration while excluding the three
 minified action-family DOM primitives whose canonical representation is owned
 by `generate-dom-primitives.js`; generator drift checks validate those files

@@ -42,11 +42,32 @@ test('rejects production folders with more than ten source files', async () => {
   assert.match(result.stdout, /src: 11 files \(limit 10\)/)
 })
 
-test('does not count test suites or their fixture modules as production files', async () => {
+test('counts tests, fixtures, package code, scripts, docs, and site files as first-party architecture', async () => {
+  for (const [directory, extension] of [
+    ['tests/feature', '.test.js'],
+    ['tests/fixtures', '.json'],
+    ['npm/package/lib', '.cjs'],
+    ['scripts/release', '.sh'],
+    ['docs/core', '.md'],
+    ['gokaboom.dev/src', '.html']
+  ]) {
+    const root = await createRoot(
+      Array.from({ length: 11 }, (_, index) => `${directory}/responsibility-${index + 1}${extension}`)
+    )
+
+    const result = runGate(root)
+
+    assert.equal(result.status, 1, `${directory} was omitted:\n${result.stdout}${result.stderr}`)
+    assert.match(result.stdout, new RegExp(`${directory.replaceAll('/', '\\/')}: 11 files \\(limit 10\\)`))
+  }
+})
+
+test('explicitly exempts generated and vendored output', async () => {
   const root = await createRoot([
-    'src/production.js',
-    ...Array.from({ length: 11 }, (_, index) => `src/responsibility-${index + 1}-fixture.js`),
-    ...Array.from({ length: 11 }, (_, index) => `src/suite-${index + 1}.test.js`)
+    ...Array.from({ length: 11 }, (_, index) => `extension/background/generated-${index + 1}.js`),
+    ...Array.from({ length: 11 }, (_, index) => `src/generated/schema-${index + 1}.ts`),
+    ...Array.from({ length: 11 }, (_, index) => `vendor/package/file-${index + 1}.go`),
+    ...Array.from({ length: 11 }, (_, index) => `node_modules/package/file-${index + 1}.js`)
   ])
 
   const result = runGate(root)

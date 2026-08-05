@@ -72,8 +72,8 @@ jobs:
         with:
           node-version: "20"
 
-      # File length, folder budgets, and dormant Go/Node test detection share one
-      # canonical entrypoint so new structure gates cannot silently miss CI.
+      # File length, all first-party folder budgets, and dormant Go/Node test
+      # detection share one canonical entrypoint so structure cannot silently miss CI.
       - name: Run structure gates
         run: make check-structure
 

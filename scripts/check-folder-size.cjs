@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // check-folder-size.cjs — ratcheting gate on source files per folder.
 //
-// Target: no more than MAX_FILES source files in any one folder. Today ~20 folders
-// exceed that (cmd/browser-agent has ~195), so a hard limit would red-line CI until
+// Target: no more than MAX_FILES authored files in any first-party folder. Existing
+// violations are numerous, so a hard limit would red-line CI until
 // a repo-wide restructure lands. Instead this ratchets: each folder's CURRENT count
 // is frozen in a baseline, a folder may never grow past its baseline, and any folder
 // not in the baseline gets the real limit. Every PR can therefore only improve the
@@ -23,9 +23,25 @@ const REPO_ROOT = process.env.CHECK_FOLDER_SIZE_ROOT
   : path.resolve(__dirname, '..')
 const BASELINE_PATH = path.join(REPO_ROOT, '.folder-size-baseline.json')
 
-// Only hand-written source counts. Build output, generated code, vendored deps and
-// agent worktrees are not something a human organizes into modules.
-const SOURCE_EXT = new Set(['.go', '.ts', '.tsx', '.js', '.mjs', '.cjs'])
+// Every authored file in a first-party product/documentation root counts. A
+// module does not become easier to navigate because its eleventh owner is a
+// test, fixture, shell script, schema, stylesheet, or Markdown document.
+const FIRST_PARTY_ROOTS = [
+  '.github',
+  'claude_skill',
+  'cmd',
+  'docs',
+  'gokaboom.dev',
+  'internal',
+  'npm',
+  'packages',
+  'plugin',
+  'scripts',
+  'server',
+  'specs',
+  'src',
+  'tests'
+]
 const EXCLUDED_DIR = new Set([
   'node_modules',
   '.git',
@@ -35,46 +51,30 @@ const EXCLUDED_DIR = new Set([
   'vendor',
   'generated',
   'coverage',
-  '.beads',
-  'testdata'
+  '.beads'
 ])
-// Compiled/bundled output and third-party sites are not authored here.
-const EXCLUDED_PREFIX = ['extension/', 'npm/', 'gokaboom.dev/', 'scratchpad/']
 
-function isTestFile(name) {
-  return /(_test\.go|\.test\.(ts|js|cjs|mjs)|\.spec\.(ts|js)|-fixture\.(ts|js|cjs|mjs))$/.test(name)
-}
-
-/** Walk the repo and return {relDir: sourceFileCount}. */
+/** Walk first-party roots and return {relDir: authoredFileCount}. */
 function countByFolder() {
   const counts = {}
   const walk = (abs) => {
-    let entries
-    try {
-      entries = fs.readdirSync(abs, { withFileTypes: true })
-    } catch {
-      return // unreadable dir: not a policy violation, skip it
-    }
+    const entries = fs.readdirSync(abs, { withFileTypes: true })
     for (const entry of entries) {
       const full = path.join(abs, entry.name)
-      const rel = path.relative(REPO_ROOT, full)
       if (entry.isDirectory()) {
         if (EXCLUDED_DIR.has(entry.name) || entry.name.startsWith('.')) continue
-        if (EXCLUDED_PREFIX.some((p) => (rel + '/').startsWith(p))) continue
         walk(full)
         continue
       }
       if (!entry.isFile()) continue
-      if (!SOURCE_EXT.has(path.extname(entry.name))) continue
-      // Tests are excluded deliberately: a package with thorough tests would
-      // otherwise be penalized for it, which is the opposite of the intent.
-      if (isTestFile(entry.name)) continue
       const dir = path.relative(REPO_ROOT, abs) || '.'
-      if (EXCLUDED_PREFIX.some((p) => (dir + '/').startsWith(p))) continue
       counts[dir] = (counts[dir] || 0) + 1
     }
   }
-  walk(REPO_ROOT)
+  for (const root of FIRST_PARTY_ROOTS) {
+    const absolute = path.join(REPO_ROOT, root)
+    if (fs.existsSync(absolute)) walk(absolute)
+  }
   return counts
 }
 
