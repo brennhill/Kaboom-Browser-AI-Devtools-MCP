@@ -122,6 +122,7 @@ test_paths:
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go
   - cmd/browser-agent/tools_interact_rich_cmdresult_test.go
+  - cmd/browser-agent/tools_interact_rich_perfdiff_test.go
   - cmd/browser-agent/tools_interact_result_lifecycle_test.go
   - cmd/browser-agent/tools_interact_result_ambiguity_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
@@ -181,6 +182,9 @@ Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
 interact action. Tests acknowledge the action query exactly as the extension
 does, then await the screenshot query through the canonical pending-query
 notification barrier; no polling sleeps or undelivered-query shortcuts remain.
+Browser-action completion helpers use that same dispatcher notification rather
+than polling. Rich-result timing accepts zero at millisecond resolution and
+asserts only the public nonnegative timing contract.
 State snapshot handlers accept only the canonical `snapshot_name` parameter;
 the former generic `name` request alias has been removed.
 State dispatch and tests use the composed `stateInteractHandler` directly; the

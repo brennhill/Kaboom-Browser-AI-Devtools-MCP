@@ -270,19 +270,14 @@ func TestHandleBrowserActionCloseTab_WithTabID(t *testing.T) {
 // switch_tab — tracked tab retarget (#271)
 // ============================================
 
-// completePendingCommands polls for pending commands in the background and
-// completes them with the given result payload. Used by switch_tab tests
-// to simulate the extension completing the browser_action command.
-// Polls up to 100 iterations x 10ms sleep = 1s max wait before giving up.
+// completePendingCommands awaits the query dispatcher's enqueue notification,
+// then completes the browser_action command like the extension would.
 func completePendingCommands(env *interactTestEnv, result json.RawMessage, cmdErr string) {
-	for i := 0; i < 100; i++ { // 100 iterations * 10ms = 1s max polling window
-		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.Queries().GetPendingCommands()
-		for _, cmd := range pending {
-			if cmd != nil && cmd.CorrelationID != "" && cmd.Status == "pending" {
-				env.capture.Queries().ApplyCommandResult(cmd.CorrelationID, "complete", result, cmdErr)
-				return
-			}
+	env.capture.Queries().WaitForPendingQueries(time.Second)
+	for _, cmd := range env.capture.Queries().GetPendingCommands() {
+		if cmd != nil && cmd.CorrelationID != "" && cmd.Status == "pending" {
+			env.capture.Queries().ApplyCommandResult(cmd.CorrelationID, "complete", result, cmdErr)
+			return
 		}
 	}
 }

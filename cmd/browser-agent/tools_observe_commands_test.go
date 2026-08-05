@@ -51,9 +51,8 @@ func TestToolObserveFailedCommands_WithFailed(t *testing.T) {
 		CorrelationID: "test-fail-cmd",
 	}
 	env.capture.Queries().CreatePendingQueryWithTimeout(query, 1*time.Millisecond, "")
-	// Wait for expiry
-	time.Sleep(10 * time.Millisecond)
-	// Trigger cleanup by calling ExpireCommand
+	// Explicitly expire the command; this test owns failed-command projection,
+	// while deadline scheduling is covered by the query dispatcher.
 	env.capture.Queries().ExpireCommand("test-fail-cmd")
 
 	args := json.RawMessage(`{}`)

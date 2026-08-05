@@ -71,6 +71,7 @@ test_paths:
   - cmd/browser-agent/tools_observe_audit_test.go
   - cmd/browser-agent/tools_observe_screenshot_test.go
   - cmd/browser-agent/tools_observe_analysis_test.go
+  - cmd/browser-agent/tools_observe_commands_test.go
   - extension/background/commands/observe.fullpage.test.js
   - internal/a11ysummary/summary_test.go
   - internal/capture/websocket_test.go
@@ -145,6 +146,9 @@ On-demand waterfall capture distinguishes a confirmed empty page from inject
 bridge timeout, rejection, and dispatch failure. Failures remain structured
 through background dispatch and activate a redacted Doctor diagnostic; the next
 authenticated response resolves that incident even when it contains no entries.
+Failed-command projection tests transition commands explicitly; deadline
+scheduling remains owned by the query-dispatcher suite rather than a sleep in
+the observe adapter test.
 
 ## TL;DR
 - Status: shipped

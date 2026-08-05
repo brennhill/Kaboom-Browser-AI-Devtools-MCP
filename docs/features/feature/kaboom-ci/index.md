@@ -92,6 +92,9 @@ last_verified_date: 2026-08-03
   recovery, generation, queue, redaction, authentication, and reconnect mutant
   in an isolated worktree. It first proves every package baseline is green,
   requires a 100% kill score, and retains a machine-readable survivor report.
+- Async bridge contract tests deliver results immediately and prove the query
+  store is lossless regardless of whether delivery or waiter subscription wins;
+  they never use scheduler delay as a synchronization primitive.
 
 ## Specs
 

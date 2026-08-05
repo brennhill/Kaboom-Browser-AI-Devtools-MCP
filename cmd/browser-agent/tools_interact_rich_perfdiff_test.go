@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -244,8 +243,8 @@ func TestRichAction_CommandResultIncludesTimingMs(t *testing.T) {
 	}
 	corrID := resultData["correlation_id"].(string)
 
-	// Simulate extension completing the click after a small delay
-	time.Sleep(10 * time.Millisecond)
+	// Simulate extension completing the click. Timing may legitimately be zero
+	// at millisecond resolution; the contract is presence and non-negativity.
 	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"action":"click"}`), "")
 
 	// Observe command_result

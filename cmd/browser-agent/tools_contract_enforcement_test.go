@@ -411,10 +411,8 @@ func TestContractAsyncBridge_ConcurrentDelivery(t *testing.T) {
 		ch <- waitResult{data, err}
 	}()
 
-	// Give the goroutine time to start waiting
-	time.Sleep(50 * time.Millisecond)
-
-	// Deliver the result (simulates extension)
+	// Deliver immediately. WaitForResult must be lossless whether delivery wins
+	// the race or the waiter subscribes first.
 	s.capture.Queries().SetQueryResult(queryID, json.RawMessage(`{"value": 2}`))
 
 	// Wait for the goroutine to complete
