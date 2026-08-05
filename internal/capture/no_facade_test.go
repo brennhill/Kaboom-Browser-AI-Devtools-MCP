@@ -61,6 +61,8 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"type NetworkWaterfallStore struct",
 		"type TelemetryStore struct",
 		"func newTelemetryStore(",
+		"type HTTPHandlers struct",
+		"func NewHTTPHandlers(",
 		"func newNetworkWaterfallStore(",
 		"func (s *TelemetryStore) GetNetworkBodies(",
 		"func (s *TelemetryStore) GetNetworkTotalAdded(",

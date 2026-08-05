@@ -18,12 +18,17 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolcatalog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
+
+func captureHTTPForTest(captured *capture.Capture) *httpingest.Handlers {
+	return httpingest.New(httpingest.Dependencies{Telemetry: captured.Telemetry(), Queries: captured.Queries(), Recordings: captured.Recordings(), Performance: captured.Performance(), Circuit: captured.Circuit()})
+}
 
 func toolSchemasForTest() []mcp.MCPTool { return schema.AllTools() }
 

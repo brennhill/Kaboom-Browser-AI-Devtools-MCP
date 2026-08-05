@@ -883,7 +883,7 @@
     },
     "internal/capture/events.go": {
       "mutable_globals": 0,
-      "exports": 5
+      "exports": 3
     },
     "internal/capture/extension_state.go": {
       "mutable_globals": 0,
@@ -893,9 +893,9 @@
       "mutable_globals": 0,
       "exports": 4
     },
-    "internal/capture/handlers.go": {
+    "internal/capture/httpingest/handlers.go": {
       "mutable_globals": 0,
-      "exports": 9
+      "exports": 12
     },
     "internal/capture/logstore/store.go": {
       "mutable_globals": 0,

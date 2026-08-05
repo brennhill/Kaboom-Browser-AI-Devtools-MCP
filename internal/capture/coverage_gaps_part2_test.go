@@ -78,7 +78,7 @@ func TestHandleRecordingStorage_GET(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/recording-storage", nil)
-	NewHTTPHandlers(c).HandleRecordingStorage(rr, req)
+	httpIngestForTest(c).HandleRecordingStorage(rr, req)
 
 	// Should succeed (or return 500 if no recording directory configured — both are valid paths)
 	if rr.Code != http.StatusOK && rr.Code != http.StatusInternalServerError {
@@ -94,7 +94,7 @@ func TestHandleRecordingStorage_MethodNotAllowed(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/recording-storage", nil)
-	NewHTTPHandlers(c).HandleRecordingStorage(rr, req)
+	httpIngestForTest(c).HandleRecordingStorage(rr, req)
 
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
@@ -113,7 +113,7 @@ func TestHandleRecordingStorage_POST(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/recording-storage", nil)
-	NewHTTPHandlers(c).HandleRecordingStorage(rr, req)
+	httpIngestForTest(c).HandleRecordingStorage(rr, req)
 
 	// Should succeed (200) or fail if no recording directory (500)
 	if rr.Code != http.StatusOK && rr.Code != http.StatusInternalServerError {
@@ -133,7 +133,7 @@ func TestHandleRecordingStorage_DELETE_MissingID(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodDelete, "/recording-storage", nil)
-	NewHTTPHandlers(c).HandleRecordingStorage(rr, req)
+	httpIngestForTest(c).HandleRecordingStorage(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusBadRequest)
@@ -155,7 +155,7 @@ func TestHandleRecordingStorage_DELETE_NotFound(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodDelete, "/recording-storage?recording_id=nonexistent-id", nil)
-	NewHTTPHandlers(c).HandleRecordingStorage(rr, req)
+	httpIngestForTest(c).HandleRecordingStorage(rr, req)
 
 	// Should return 404 for non-existent recording
 	if rr.Code != http.StatusNotFound {
@@ -174,7 +174,7 @@ func TestHandleQueryResult_MethodNotAllowed(t *testing.T) {
 	defer c.Close()
 
 	rr := httptest.NewRecorder()
-	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodGet, "/query-result", nil))
+	httpIngestForTest(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodGet, "/query-result", nil))
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
 	}
@@ -187,7 +187,7 @@ func TestHandleQueryResult_InvalidJSON(t *testing.T) {
 	defer c.Close()
 
 	rr := httptest.NewRecorder()
-	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader("{bad")))
+	httpIngestForTest(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader("{bad")))
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
@@ -205,7 +205,7 @@ func TestHandleQueryResult_WithCorrelationID(t *testing.T) {
 
 	payload := `{"correlation_id":"` + corrID + `","status":"complete","result":{"value":2}}`
 	rr := httptest.NewRecorder()
-	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(payload)))
+	httpIngestForTest(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(payload)))
 	if rr.Code != http.StatusOK {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -226,7 +226,7 @@ func TestHandleQueryResult_WithQueryID(t *testing.T) {
 
 	payload := `{"id":"test-query-1","status":"complete","result":{"data":"hello"}}`
 	rr := httptest.NewRecorder()
-	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(payload)))
+	httpIngestForTest(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(payload)))
 	if rr.Code != http.StatusOK {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusOK)
 	}

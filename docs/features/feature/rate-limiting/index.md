@@ -4,14 +4,14 @@ feature_id: feature-rate-limiting
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/circuit/breaker.go
   - internal/lifecycle/observer.go
   - internal/capture/capture.go
-  - internal/capture/handlers.go
+  - internal/capture/httpingest/handlers.go
 test_paths:
-  - internal/capture/http_handlers_owner_test.go
+  - internal/capture/httpingest/handlers_test.go
   - internal/circuit/breaker_test.go
   - internal/lifecycle/observer_test.go
   - internal/capture/coverage_gaps_test.go
@@ -23,7 +23,7 @@ last_verified_date: 2026-03-05
 # Rate Limiting
 
 The extension-facing rate-limit HTTP boundary is owned directly by
-`capture.HTTPHandlers`; `Capture` has no forwarding handler methods.
+`httpingest.Handlers`; `Capture` has no forwarding handler methods.
 
 ## TL;DR
 

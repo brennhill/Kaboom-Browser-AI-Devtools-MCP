@@ -65,7 +65,7 @@ func runQueryResultRequest(t *testing.T, cap *Capture, payload string) *httptest
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(payload))
 	w := httptest.NewRecorder()
-	NewHTTPHandlers(cap).HandleQueryResult(w, req)
+	httpIngestForTest(cap).HandleQueryResult(w, req)
 	return w
 }
 

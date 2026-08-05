@@ -194,7 +194,7 @@ graph LR
 graph TB
     subgraph "Protected Files (Layer 1 + 3)"
         F1[internal/capture/queries.go<br/>303 lines - queue implementation]
-        F2[internal/capture/handlers.go<br/>HTTP polling endpoints]
+        F2[internal/capture/httpingest/handlers.go<br/>HTTP polling endpoints]
         F3[cmd/browser-agent/tools_core.go<br/>MCP tool handlers]
         F4[cmd/browser-agent/bridge.go<br/>MCP ↔ HTTP bridge]
         F5[internal/queries/types.go<br/>Type definitions]

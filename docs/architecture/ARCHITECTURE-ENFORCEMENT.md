@@ -50,7 +50,7 @@ On 2026-02-02, we deleted the async queue implementation during refactoring. Thi
 **File**: `.git/hooks/pre-commit`
 
 **What it checks**:
-- ✅ Critical files exist ([queries.go](internal/capture/queries.go), [handlers.go](internal/capture/handlers.go), [tools_core.go](cmd/browser-agent/tools_core.go))
+- ✅ Critical files exist ([queries.go](internal/capture/queries.go), [handlers.go](internal/capture/httpingest/handlers.go), [tools_core.go](cmd/browser-agent/tools_core.go))
 - ✅ Required methods exist (CreatePendingQuery, GetCommandResult, etc.)
 - ✅ No stub implementations
 
@@ -148,7 +148,7 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 
 1️⃣  Checking critical files...
    ✅ internal/capture/queries.go
-   ✅ internal/capture/handlers.go
+   ✅ internal/capture/httpingest/handlers.go
    ✅ cmd/browser-agent/tools_core.go
 
 2️⃣  Checking required methods in queries.go...

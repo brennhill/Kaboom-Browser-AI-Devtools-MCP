@@ -367,7 +367,7 @@ qd.queryCond.Broadcast()
 ### High Issues
 
 #### 4.1 HTTP Handlers Lack Detailed Error Logging ✅ FIXED
-**File:** [`internal/capture/handlers.go`](internal/capture/handlers.go:15-42)
+**File:** [`internal/capture/httpingest/handlers.go`](internal/capture/httpingest/handlers.go:15-42)
 **Severity:** High
 **Type:** Insufficient Error Reporting
 
@@ -876,7 +876,7 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 ### Go Backend
 - `cmd/browser-agent/main.go`
 - `internal/capture/types.go`
-- `internal/capture/handlers.go`
+- `internal/capture/httpingest/handlers.go`
 - `internal/capture/queries.go`
 - `internal/capture/recording.go`
 - `internal/capture/settings.go`

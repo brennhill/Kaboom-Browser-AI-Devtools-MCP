@@ -4,7 +4,7 @@ feature_id: feature-playback-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-05
 code_paths:
   - internal/recording/types.go
   - internal/recording/manager.go
@@ -21,7 +21,7 @@ code_paths:
   - internal/recording/logdiff/helpers.go
   - internal/recording/logdiff/report.go
   - internal/capture/capture.go
-  - internal/capture/handlers.go
+  - internal/capture/httpingest/handlers.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
@@ -30,9 +30,9 @@ code_paths:
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
 test_paths:
+  - internal/capture/httpingest/handlers_test.go
   - tests/architecture/user-state-loaders.test.cjs
   - internal/capture/testhelpers_test.go
-  - internal/capture/http_handlers_owner_test.go
   - internal/capture/recording_playback_integration_test.go
   - internal/capture/recording_logdiff_integration_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
@@ -115,7 +115,7 @@ last_verified_date: 2026-03-05
   against in-memory fakes.
 - Capture exposes the canonical manager through `Capture.Recordings()`; there
   is no recording/playback delegation surface on Capture.
-- Recording storage HTTP boundary: `internal/capture/handlers.go`
+- Recording storage HTTP boundary: `internal/capture/httpingest/handlers.go`
 - MCP owners: `cmd/browser-agent/tools_configure.go`, `cmd/browser-agent/internal/toolobserve/dispatcher.go`, and the composition root in `tools_core.go`
 - Recording and playback MCP behavior/state: `cmd/browser-agent/internal/toolrecording/`
 - Configure playback and log-diff actions route directly to the composed

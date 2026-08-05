@@ -115,14 +115,4 @@ func TestCaptureTestHelpersAndTTL(t *testing.T) {
 	if len(pending) != 2 || pending[len(pending)-1].Type != "accessibility" {
 		t.Fatalf("pending queries = %+v, want accessibility query last", pending)
 	}
-
-	if isExpiredByTTL(time.Now(), 0) {
-		t.Fatal("isExpiredByTTL should return false when ttl=0")
-	}
-	if !isExpiredByTTL(time.Now().Add(-2*time.Second), time.Second) {
-		t.Fatal("isExpiredByTTL should return true for expired entry")
-	}
-	if isExpiredByTTL(time.Now().Add(-200*time.Millisecond), time.Second) {
-		t.Fatal("isExpiredByTTL should return false for recent entry")
-	}
 }

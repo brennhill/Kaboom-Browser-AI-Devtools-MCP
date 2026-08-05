@@ -37,7 +37,7 @@ last_reviewed: 2026-02-16
 
 ---
 
-### internal/capture/handlers.go
+### internal/capture/httpingest/handlers.go
 **What it does:** HTTP endpoints for extension polling
 
 **Affects:**
@@ -213,7 +213,7 @@ last_reviewed: 2026-02-16
 ### Async Queue Pattern
 **Code:**
 - internal/capture/queries.go (303 lines)
-- internal/capture/handlers.go (polling endpoints)
+- internal/capture/httpingest/handlers.go (polling endpoints)
 - cmd/browser-agent/tools_core.go (MCP handlers)
 - internal/queries/types.go (type definitions)
 

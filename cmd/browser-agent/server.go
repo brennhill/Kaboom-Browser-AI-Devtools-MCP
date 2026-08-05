@@ -36,6 +36,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
@@ -525,7 +526,10 @@ func registerPerformanceTraceRoutes(mux *http.ServeMux) {
 }
 
 func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) {
-	captureHTTP := capture.NewHTTPHandlers(captured)
+	captureHTTP := httpingest.New(httpingest.Dependencies{
+		Telemetry: captured.Telemetry(), Queries: captured.Queries(), Recordings: captured.Recordings(),
+		Performance: captured.Performance(), Circuit: captured.Circuit(),
+	})
 	mux.HandleFunc("/websocket-events", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleWebSocketEvents)))
 	mux.HandleFunc("/websocket-status", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleWebSocketStatus)))
 	mux.HandleFunc("/network-bodies", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleNetworkBodies)))

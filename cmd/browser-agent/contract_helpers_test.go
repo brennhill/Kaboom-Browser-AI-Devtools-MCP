@@ -116,7 +116,7 @@ func (s *scenario) loadWebSocketData(t *testing.T) {
 	req := httptest.NewRequest("POST", "/websocket-events", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	capture.NewHTTPHandlers(s.capture).HandleWebSocketEvents(w, req)
+	captureHTTPForTest(s.capture).HandleWebSocketEvents(w, req)
 }
 
 // loadActionData populates capture with enhanced actions.
@@ -141,7 +141,7 @@ func (s *scenario) loadActionData(t *testing.T) {
 	req := httptest.NewRequest("POST", "/enhanced-actions", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	capture.NewHTTPHandlers(s.capture).HandleEnhancedActions(w, req)
+	captureHTTPForTest(s.capture).HandleEnhancedActions(w, req)
 }
 
 // loadExtensionLogs populates capture with extension debug logs.

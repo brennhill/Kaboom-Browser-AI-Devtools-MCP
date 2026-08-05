@@ -27,7 +27,7 @@ code_paths:
   - internal/capture/waterfallstore/store.go
   - internal/capture/extension_state.go
   - internal/capture/featureusage/observer.go
-  - internal/capture/handlers.go
+  - internal/capture/httpingest/handlers.go
   - internal/util/media.go
   - internal/queries/dispatcher_queries.go
   - internal/capture/sync.go
@@ -84,6 +84,7 @@ code_paths:
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
+  - internal/capture/httpingest/handlers_test.go
   - internal/capture/clientstore/owner_test.go
   - internal/capture/actionstore/store_test.go
   - internal/capture/wsconn/store_test.go
@@ -129,7 +130,6 @@ test_paths:
   - internal/capture/capture_bench_test.go
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
-  - internal/capture/http_handlers_owner_test.go
   - internal/capture/health_reader_owner_test.go
   - internal/capture/state_resetter_owner_test.go
   - internal/capture/sync_handler_owner_test.go
@@ -196,7 +196,7 @@ snapshotters through an explicit start barrier. Scheduler yields broaden the
 interleavings under the race detector without using elapsed time as a
 correctness signal.
 HTTP ingestion, query-result, recording-storage, performance, WebSocket, and
-circuit-health routes are owned by `capture.HTTPHandlers`. Server registration
+circuit-health routes are owned by `httpingest.Handlers`. Server registration
 and tests construct that owner directly; the corresponding `Capture.Handle*`
 methods were deleted rather than retained as forwarding facades. The sync
 transport is likewise owned by `capture.SyncHandler`, which composes extension

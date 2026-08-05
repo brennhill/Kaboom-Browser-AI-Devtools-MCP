@@ -586,7 +586,7 @@ If extension posts too many errors:
 ### Implementation Files
 
 **HTTP Handlers:**
-- `internal/capture/handlers.go` - All endpoint implementations
+- `internal/capture/httpingest/handlers.go` - All endpoint implementations
   - `/pending-queries` - PendingQueries()
   - `/dom-result` - DOMResult()
   - `/sync` - Sync()

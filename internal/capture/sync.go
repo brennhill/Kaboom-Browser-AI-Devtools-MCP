@@ -27,6 +27,8 @@ type SyncHandler struct {
 	waitForPendingQueries func(time.Duration)
 }
 
+const maxSyncPostBody = 5 << 20
+
 // NewSyncHandler binds extension sync transport to canonical capture owners.
 func NewSyncHandler(capture *Capture) *SyncHandler {
 	return &SyncHandler{
@@ -100,7 +102,7 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
+	r.Body = http.MaxBytesReader(w, r.Body, maxSyncPostBody)
 	var req SyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})

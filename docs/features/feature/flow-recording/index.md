@@ -4,7 +4,7 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -14,7 +14,7 @@ code_paths:
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
   - internal/capture/capture.go
-  - internal/capture/handlers.go
+  - internal/capture/httpingest/handlers.go
   - internal/recording/types.go
   - internal/recording/manager.go
   - internal/recording/actionlog/recorder.go
@@ -38,8 +38,8 @@ code_paths:
   - src/lib/storage/recovery.ts
   - src/lib/storage/validated.ts
 test_paths:
+  - internal/capture/httpingest/handlers_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
-  - internal/capture/http_handlers_owner_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
@@ -119,7 +119,7 @@ canonical owners directly; root one-line forwarding wrappers are prohibited.
   - `cmd/browser-agent/tools_core.go`
   - `cmd/browser-agent/internal/toolrecording/handler.go`
   - `cmd/browser-agent/internal/toolrecording/helpers.go`
-  - `internal/capture/handlers.go`
+  - `internal/capture/httpingest/handlers.go`
   - `src/background/recording/index.ts`
   - `src/background/recording/capture.ts`
   - `src/background/recording/listeners.ts`

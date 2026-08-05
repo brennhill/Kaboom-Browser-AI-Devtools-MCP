@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	recordingmodel "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/server"
@@ -40,6 +41,10 @@ func setupTestCapture(t *testing.T) *Capture {
 func replaceTelemetryForTest(capture *Capture, deps telemetrystore.Dependencies) {
 	deps.ActiveTestIDs = capture.extension.GetActiveTestIDs
 	capture.telemetry = telemetrystore.New(deps)
+}
+
+func httpIngestForTest(capture *Capture) *httpingest.Handlers {
+	return httpingest.New(httpingest.Dependencies{Telemetry: capture.Telemetry(), Queries: capture.Queries(), Recordings: capture.Recordings(), Performance: capture.Performance(), Circuit: capture.Circuit()})
 }
 
 func mustStartRecording(t *testing.T, capture *Capture, name, pageURL string, sensitive bool) string {

@@ -156,7 +156,7 @@ The hook checks if `new_string` contains any of these patterns. If not, the edit
 [Blast Radius] 3 files import this module:
   internal/server/routes.go (already in session)
   cmd/browser-agent/main.go (not yet visited)
-  internal/capture/handlers.go (not yet visited)
+  internal/capture/httpingest/handlers.go (not yet visited)
 Verify these files are compatible with your changes.
 ```
 
@@ -165,7 +165,7 @@ Verify these files are compatible with your changes.
 [Blast Radius] 8 files import this module:
   internal/server/routes.go (already in session)
   cmd/browser-agent/main.go (not yet visited)
-  internal/capture/handlers.go (already in session)
+  internal/capture/httpingest/handlers.go (already in session)
   internal/capture/sync.go (not yet visited)
   internal/capture/websocket.go (not yet visited)
   ...and 3 more

@@ -497,7 +497,7 @@ type BufferStats struct {
 - `internal/capture/network_bodies.go` - Body storage
 - `internal/capture/events.go` - Actions buffer
 - `internal/capture/extension_logs.go` - Logs buffer
-- `internal/capture/handlers.go` - /sync endpoint
+- `internal/capture/httpingest/handlers.go` - /sync endpoint
 - `internal/capture/memory.go` - Memory tracking
 - `internal/capture/ttl.go` - TTL eviction
 - `internal/capture/buffer_clear.go` - Cleanup logic
