@@ -13,7 +13,6 @@ code_paths:
   - cmd/browser-agent/server.go
   - internal/session/clientreg/registry.go
   - internal/session/clientreg/state.go
-  - internal/session/types.go
   - internal/session/snapshot-manager.go
   - internal/session/comparison.go
   - internal/session/snapdiff/types.go
@@ -33,7 +32,6 @@ test_paths:
   - internal/session/snapshot_manager_test.go
   - internal/session/sessions_test.go
   - internal/session/sessions_compare_regression_test.go
-  - internal/session/sessions_tool_handler_test.go
   - internal/session/tool_handler_test.go
   - internal/schema/configure/schema_test.go
   - internal/session/comparison_test.go
@@ -79,6 +77,9 @@ diff modules consume those types directly; they do not re-export package-local
 aliases. Snapshot manager, comparison, and diff tests exercise the same
 canonical contract. Network diffing likewise consumes URL-path normalization
 directly from `internal/util`, without routing through capture.
+The session package is bounded at ten files. `snapshot-manager.go` owns its
+aggregate state, reader boundary, validation constants, and CRUD helpers;
+runtime projection, comparison, and MCP dispatch retain distinct owners.
 Client-session registry wiring is owned by `Capture.Clients()`; runtime routes
 consume the installed registry directly without Capture set/get forwarding
 methods.

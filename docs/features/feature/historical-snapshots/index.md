@@ -4,11 +4,9 @@ feature_id: feature-historical-snapshots
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-05
 code_paths:
   - internal/types/snapshot.go
-  - internal/session/types.go
-  - internal/session/doc.go
   - internal/session/snapshot-manager.go
   - internal/session/runtime_reader.go
   - internal/session/comparison.go
@@ -17,11 +15,9 @@ code_paths:
   - internal/session/snapdiff/network.go
   - internal/session/snapdiff/performance.go
 test_paths:
-  - internal/session/runtime_reader_test.go
   - internal/session/snapshot_manager_test.go
   - internal/session/sessions_test.go
   - internal/session/sessions_compare_regression_test.go
-  - internal/session/sessions_tool_handler_test.go
   - internal/session/comparison_test.go
   - internal/session/snapdiff/errors_test.go
   - internal/session/snapdiff/network_test.go
@@ -55,8 +51,11 @@ last_verified_date: 2026-03-05
 
 - Snapshot contract types:
   - `internal/types/snapshot.go`
-  - `internal/session/types.go`
   - `internal/session/snapshot-manager.go`
+- `snapshot-manager.go` owns the bounded snapshot aggregate, its capture-reader
+  boundary, name invariants, list representation, and CRUD helpers. Handler and
+  comparison behavior remain separate, while duplicate handler and reader
+  test suites have been folded into their canonical owners.
 - Snapshot diff engine:
   - `internal/session/snapdiff/`
 - Tests:

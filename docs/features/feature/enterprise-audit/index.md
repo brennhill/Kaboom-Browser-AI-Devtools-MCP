@@ -26,7 +26,7 @@ test_paths:
   - internal/audit/audit_redaction_test.go
   - cmd/browser-agent/tools_configure_audit_test.go
   - cmd/browser-agent/tools_configure_wave_abc_tdd_test.go
-  - internal/session/runtime_reader_test.go
+  - internal/session/sessions_test.go
   - internal/analysis/thirdparty/audit_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

@@ -1,19 +1,45 @@
-// Purpose: Manages named snapshot CRUD: capture current state, list, delete, with capacity-based eviction.
+// Purpose: Owns named snapshot state, capture contracts, CRUD, and bounded eviction.
 // Docs: docs/features/feature/request-session-correlation/index.md
 
 // snapshot-manager.go — SessionManager struct and snapshot management.
 // NewSessionManager, Capture, captureCurrentState, List, Delete functions.
+// Package session manages named snapshots of browser state and diff_sessions.
 package session
 
 import (
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+const (
+	maxSnapshotNameLen    = 50
+	maxConsolePerSnapshot = 50
+	maxNetworkPerSnapshot = 100
+	reservedSnapshotName  = "current"
+)
+
+// CaptureStateReader supplies the live state needed to create a snapshot.
+type CaptureStateReader interface {
+	GetConsoleErrors() []types.SnapshotError
+	GetConsoleWarnings() []types.SnapshotError
+	GetNetworkRequests() []types.SnapshotNetworkRequest
+	GetWSConnections() []types.SnapshotWSConnection
+	GetPerformance() *performance.PerformanceSnapshot
+	GetCurrentPageURL() string
+}
+
+// SnapshotListEntry is the detached list representation of a snapshot.
+type SnapshotListEntry struct {
+	Name       string    `json:"name"`
+	CapturedAt time.Time `json:"captured_at"`
+	PageURL    string    `json:"page_url"`
+	ErrorCount int       `json:"error_count"`
+}
 
 // SessionManager manages named session snapshots.
 type SessionManager struct {
@@ -34,6 +60,32 @@ func NewSessionManager(maxSnapshots int, reader CaptureStateReader) *SessionMana
 		order:   make([]string, 0),
 		maxSize: maxSnapshots,
 		reader:  reader,
+	}
+}
+
+func (sm *SessionManager) validateName(name string) error {
+	if name == "" {
+		return fmt.Errorf("snapshot name cannot be empty")
+	}
+	if name == reservedSnapshotName {
+		return fmt.Errorf("snapshot name %q is reserved", reservedSnapshotName)
+	}
+	if len(name) > maxSnapshotNameLen {
+		return fmt.Errorf("snapshot name exceeds %d characters", maxSnapshotNameLen)
+	}
+	return nil
+}
+
+func (sm *SessionManager) removeFromOrder(name string) {
+	for i, existing := range sm.order {
+		if existing != name {
+			continue
+		}
+		order := make([]string, len(sm.order)-1)
+		copy(order, sm.order[:i])
+		copy(order[i:], sm.order[i+1:])
+		sm.order = order
+		return
 	}
 }
 
