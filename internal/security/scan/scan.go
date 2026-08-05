@@ -1,14 +1,63 @@
-// scan.go — Check dispatch, severity/URL filtering and summary construction.
-// Purpose: Orchestrates security checks by dispatching to credential, header, cookie, and transport scanners.
-// Why: Separates scan orchestration from individual check implementations.
+// scan.go — Security scan contracts, dispatch, filtering, and summaries.
+// Purpose: Owns the aggregate security scan lifecycle and public result model.
+// Why: Keeps orchestration and its state contract together without mutable registries.
+// Docs: docs/features/feature/security-hardening/index.md
+
+// Package scan audits captured network and console evidence for security risks.
 package scan
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"fmt"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+type Finding struct {
+	Check       string `json:"check"`
+	Severity    string `json:"severity"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Location    string `json:"location"`
+	Evidence    string `json:"evidence"`
+	Remediation string `json:"remediation"`
+}
+
+type Input struct {
+	NetworkBodies    []types.NetworkBody
+	WaterfallEntries []types.NetworkWaterfallEntry
+	ConsoleEntries   []types.LogEntry
+	PageURLs         []string
+	URLFilter        string
+	Checks           []string
+	SeverityMin      string
+}
+
+type Result struct {
+	Findings  []Finding `json:"findings"`
+	Summary   Summary   `json:"summary"`
+	ScannedAt time.Time `json:"scanned_at"`
+}
+
+type Summary struct {
+	TotalFindings int            `json:"total_findings"`
+	BySeverity    map[string]int `json:"by_severity"`
+	ByCheck       map[string]int `json:"by_check"`
+	URLsScanned   int            `json:"urls_scanned"`
+}
+
+type Scanner struct {
+	mu sync.RWMutex
+}
+
+func NewScanner() *Scanner { return &Scanner{} }
+
+func defaultSecurityChecks() []string {
+	return []string{"credentials", "pii", "headers", "cookies", "transport", "auth", "network"}
+}
 
 func (s *Scanner) runSecurityChecks(checkSet map[string]bool, bodies []types.NetworkBody, input Input) []Finding {
 	type checkEntry struct {
@@ -40,7 +89,7 @@ func (s *Scanner) Scan(input Input) Result {
 
 	checks := input.Checks
 	if len(checks) == 0 {
-		checks = defaultChecks
+		checks = defaultSecurityChecks()
 	}
 	checkSet := make(map[string]bool)
 	for _, c := range checks {
@@ -67,7 +116,9 @@ func (s *Scanner) HandleSecurityAudit(params json.RawMessage, bodies []types.Net
 		SeverityMin string   `json:"severity_min"`
 	}
 	if len(params) > 0 {
-		_ = json.Unmarshal(params, &toolParams)
+		if err := json.Unmarshal(params, &toolParams); err != nil {
+			return nil, fmt.Errorf("invalid security audit parameters: %w", err)
+		}
 	}
 
 	input := Input{

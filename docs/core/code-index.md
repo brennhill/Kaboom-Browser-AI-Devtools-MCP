@@ -285,7 +285,7 @@ Each internal package now has `doc.go` with comprehensive package overview:
 - `internal/analysis/thirdparty/audit.go` - Third-party origin auditing
 - `internal/capture/capture.go` - Real-time browser telemetry capture
 - `internal/pagination/doc.go` - Cursor-based pagination
-- `internal/security/scan/doc.go` - Aggregate security audit (credentials, PII, headers, cookies, transport)
+- `internal/security/scan/scan.go` - Aggregate security audit contracts and orchestration
 - `internal/security/csp/doc.go` - CSP generation from observed traffic
 - `internal/security/sri/doc.go` - Subresource Integrity hash generation
 - `internal/session/snapshot-manager.go` - Named browser-state snapshot ownership and bounded CRUD

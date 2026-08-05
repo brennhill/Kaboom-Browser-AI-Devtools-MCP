@@ -21,15 +21,10 @@ code_paths:
   - internal/security/policy/policy.go
   - internal/security/policy/mode.go
   - internal/security/policy/audit.go
-  - internal/security/scan/doc.go
   - internal/security/scan/scan.go
-  - internal/security/scan/types.go
   - internal/types/wire_log.go
-  - internal/security/scan/checks_cookies.go
-  - internal/security/scan/checks_headers.go
-  - internal/security/scan/checks_pii.go
-  - internal/security/scan/checks_transport_auth.go
-  - internal/security/scan/checks_network.go
+  - internal/security/scan/checks_policy.go
+  - internal/security/scan/credentials.go
   - internal/security/csp/types.go
   - internal/security/csp/store.go
   - internal/security/csp/generate.go
@@ -118,6 +113,13 @@ change together with runtime configuration policy.
 
 Security scan, diff, and SRI tests use `internal/types.NetworkBody` directly;
 the former test-only aliases have been removed.
+
+The aggregate scanner has three change-coupled production owners:
+`scan.go` owns contracts and orchestration, `checks_policy.go` owns browser
+transport/network/response policy, and `credentials.go` owns credential and
+PII detection plus redaction. Invalid handler JSON is rejected explicitly, the
+default check registry is constructed per scan, and a package regression test
+enforces the ten-file boundary.
 
 `internal/security` is a namespace of focused subpackages, not a package of its own.
 The dependency direction is one-way — `httpsec`, `netflag`, `policy` and `sri` import

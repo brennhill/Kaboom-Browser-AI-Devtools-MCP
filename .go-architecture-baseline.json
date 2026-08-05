@@ -1421,21 +1421,9 @@
       "mutable_globals": 1,
       "exports": 6
     },
-    "internal/security/scan/checks_headers.go": {
-      "mutable_globals": 1,
-      "exports": 0
-    },
-    "internal/security/scan/credentials_patterns.go": {
-      "mutable_globals": 1,
-      "exports": 0
-    },
     "internal/security/scan/scan.go": {
       "mutable_globals": 0,
-      "exports": 2
-    },
-    "internal/security/scan/types.go": {
-      "mutable_globals": 1,
-      "exports": 6
+      "exports": 8
     },
     "internal/security/sri/generate.go": {
       "mutable_globals": 0,

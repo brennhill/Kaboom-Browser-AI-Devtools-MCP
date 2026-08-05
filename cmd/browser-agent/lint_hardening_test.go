@@ -380,7 +380,7 @@ func TestPackagesDoNotReexportCanonicalLogEntry(t *testing.T) {
 		"internal/mcp/types.go",
 		"internal/server/main_handlers.go",
 		"internal/pagination/pagination_logs.go",
-		"internal/security/scan/types.go",
+		"internal/security/scan/scan.go",
 		"cmd/browser-agent/internal/logstore/store.go",
 	} {
 		path := filepath.Join(projectRoot(), relativePath)

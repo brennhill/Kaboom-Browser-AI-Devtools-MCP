@@ -27,7 +27,6 @@
     "internal/hook/eval/testdata/quality-gate": 13,
     "internal/pagination": 18,
     "internal/pty": 19,
-    "internal/security/scan": 17,
     "internal/tools/observe": 22,
     "scripts": 58,
     "scripts/smoke-tests": 35,

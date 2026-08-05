@@ -4,7 +4,7 @@ feature_id: feature-redaction-patterns
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/capture/extension_logs.go
   - internal/mcp/types.go
@@ -12,7 +12,6 @@ code_paths:
   - internal/redaction/redaction_engine.go
   - internal/redaction/redaction_map.go
   - internal/security/scan/credentials.go
-  - internal/security/scan/credentials_patterns.go
   - src/background/runtime-state/log-queue.ts
   - Makefile
 test_paths:
@@ -67,6 +66,11 @@ classification and recursive map traversal. Behavior/configuration,
 engine/edge/performance, structured-wire, property/fuzz, and race-build tests
 live with their corresponding concerns. The package contains exactly ten files
 and every file remains below 800 lines.
+
+Security-audit credential and PII patterns are separately owned together in
+`internal/security/scan/credentials.go`; they share the audit scanner's bounded
+input and evidence-redaction policy rather than the MCP response-redaction
+engine.
 
 Deterministic property suites exercise canonical MCP text and image blocks,
 nested metadata, errors, diagnostics, malformed envelopes, and extension runtime

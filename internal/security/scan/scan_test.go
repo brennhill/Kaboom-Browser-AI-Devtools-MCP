@@ -8,11 +8,38 @@ package scan
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestPackageFileBoundary(t *testing.T) {
+	t.Parallel()
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read scan package: %v", err)
+	}
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".go" {
+			count++
+		}
+	}
+	if count > 10 {
+		t.Fatalf("scan package has %d Go files; maximum is 10", count)
+	}
+}
+
+func TestHandleSecurityAuditRejectsInvalidJSON(t *testing.T) {
+	t.Parallel()
+	_, err := NewScanner().HandleSecurityAudit(json.RawMessage(`{"checks":`), nil, nil, nil, nil)
+	if err == nil {
+		t.Fatal("invalid audit parameters were accepted")
+	}
+}
 
 // Test fixtures: Stripe-like keys for security scanner tests.
 // Constructed via concatenation to avoid GitHub push protection flagging.
