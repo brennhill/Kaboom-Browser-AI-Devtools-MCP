@@ -30,7 +30,7 @@ func TestNetworkBody_BinaryFormatIntegration(t *testing.T) {
 	c.Telemetry().AddNetworkBodies(bodies)
 
 	// Retrieve and verify binary format was detected
-	result := c.Telemetry().GetNetworkBodies()
+	result := c.Telemetry().NetworkBodies().Snapshot().Bodies
 	if len(result) != 1 {
 		t.Fatalf("expected 1 body, got %d", len(result))
 	}
@@ -58,7 +58,7 @@ func TestNetworkBody_TextNoFormat(t *testing.T) {
 	c.Telemetry().AddNetworkBodies(bodies)
 
 	// Verify no binary format detected for text
-	result := c.Telemetry().GetNetworkBodies()
+	result := c.Telemetry().NetworkBodies().Snapshot().Bodies
 	if len(result) != 1 {
 		t.Fatalf("expected 1 body, got %d", len(result))
 	}

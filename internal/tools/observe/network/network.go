@@ -32,7 +32,7 @@ func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allBodies := deps.Capture.Telemetry().GetNetworkBodies()
+	allBodies := deps.Capture.Telemetry().NetworkBodies().Snapshot().Bodies
 	var bodyFilterErr error
 	filtered := buffers.ReverseFilterLimit(allBodies, func(b types.NetworkBody) bool {
 		if bodyFilterErr != nil {

@@ -22,7 +22,7 @@ func TestToolConfigureNetworkRecording_StartSuccess(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"start"}`)
-	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -49,7 +49,7 @@ func TestToolConfigureNetworkRecording_StartWithFilters(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"start","domain":"api.example.com","method":"POST"}`)
-	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -76,14 +76,14 @@ func TestToolConfigureNetworkRecording_StartAlreadyActive(t *testing.T) {
 	args := json.RawMessage(`{"operation":"start"}`)
 
 	// First start should succeed
-	resp1 := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+	resp1 := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, args)
 	result1 := parseToolResult(t, resp1)
 	if result1.IsError {
 		t.Fatalf("first start should succeed, got: %s", firstText(result1))
 	}
 
 	// Second start should fail
-	resp2 := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+	resp2 := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, args)
 	result2 := parseToolResult(t, resp2)
 	if !result2.IsError {
 		t.Fatal("second start should return isError:true")
@@ -103,7 +103,7 @@ func TestToolConfigureNetworkRecording_StopNotActive(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"stop"}`)
-	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -126,7 +126,7 @@ func TestToolConfigureNetworkRecording_StopSuccess(t *testing.T) {
 
 	// Start recording first
 	startArgs := json.RawMessage(`{"operation":"start"}`)
-	resp1 := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, startArgs)
+	resp1 := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, startArgs)
 	result1 := parseToolResult(t, resp1)
 	if result1.IsError {
 		t.Fatalf("start should succeed, got: %s", firstText(result1))
@@ -134,7 +134,7 @@ func TestToolConfigureNetworkRecording_StopSuccess(t *testing.T) {
 
 	// Stop recording
 	stopArgs := json.RawMessage(`{"operation":"stop"}`)
-	resp2 := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, stopArgs)
+	resp2 := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, stopArgs)
 	result2 := parseToolResult(t, resp2)
 	if result2.IsError {
 		t.Fatalf("stop should succeed, got: %s", firstText(result2))
@@ -160,7 +160,7 @@ func TestToolConfigureNetworkRecording_StatusInactive(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"status"}`)
-	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -188,7 +188,7 @@ func TestToolConfigureNetworkRecording_StatusActive(t *testing.T) {
 
 	// Start recording with filters
 	startArgs := json.RawMessage(`{"operation":"start","domain":"test.com","method":"GET"}`)
-	resp1 := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, startArgs)
+	resp1 := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, startArgs)
 	result1 := parseToolResult(t, resp1)
 	if result1.IsError {
 		t.Fatalf("start should succeed, got: %s", firstText(result1))
@@ -196,7 +196,7 @@ func TestToolConfigureNetworkRecording_StatusActive(t *testing.T) {
 
 	// Query status
 	statusArgs := json.RawMessage(`{"operation":"status"}`)
-	resp2 := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, statusArgs)
+	resp2 := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, statusArgs)
 	result2 := parseToolResult(t, resp2)
 	if result2.IsError {
 		t.Fatalf("status should succeed, got: %s", firstText(result2))
@@ -227,7 +227,7 @@ func TestToolConfigureNetworkRecording_UnknownOperation(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"restart"}`)
-	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -251,7 +251,7 @@ func TestToolConfigureNetworkRecording_InvalidJSON(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{bad json`)
-	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+	resp := netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {

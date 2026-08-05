@@ -19,7 +19,7 @@ func HandlePRSummary(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	completedCmds := cap.Queries().GetCompletedCommands()
 	failedCmds := cap.Queries().GetFailedCommands()
 	logs := cap.ExtensionLogs().Entries()
-	networkBodies := cap.Telemetry().GetNetworkBodies()
+	networkBodies := cap.Telemetry().NetworkBodies().Snapshot().Bodies
 	_, _, tabURL := cap.Extension().GetTrackingStatus()
 
 	// Count actions by type.

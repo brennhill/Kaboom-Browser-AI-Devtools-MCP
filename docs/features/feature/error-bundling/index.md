@@ -4,12 +4,13 @@ feature_id: feature-error-bundling
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-05
 code_paths:
   - src/lib/ai-context/ai-context-parsing.ts
   - src/lib/ai-context/ai-context-enrichment.ts
   - src/lib/page/exceptions.ts
   - src/inject/api.ts
+  - internal/capture/bodystore/store.go
 test_paths:
   - tests/extension/ai-context/ai-context-fixture.js
   - tests/extension/ai-context/ai-context-frameworks.test.js
@@ -18,6 +19,7 @@ test_paths:
   - tests/extension/ai-context/ai-context-parsing.test.js
   - tests/extension/ai-context/ai-context-enrichment.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
+  - internal/capture/bodystore/store_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

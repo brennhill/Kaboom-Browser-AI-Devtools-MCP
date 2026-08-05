@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/bodystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
@@ -25,13 +26,11 @@ import (
 
 const (
 	maxWSEvents        = 500
-	maxNetworkBodies   = 100
 	maxEnhancedActions = 1000
 
 	defaultWSLimit      = 50
 	defaultBodyLimit    = 20
 	wsBufferMemoryLimit = 4 * 1024 * 1024
-	nbBufferMemoryLimit = 8 * 1024 * 1024
 )
 
 // wsEventEntry bundles a types.WebSocketEvent with its ingestion timestamp.
@@ -40,16 +39,13 @@ type wsEventEntry struct {
 	AddedAt time.Time
 }
 
-// networkBodyEntry bundles a types.NetworkBody with its ingestion timestamp.
-type networkBodyEntry struct {
-	Body    types.NetworkBody
-	AddedAt time.Time
-}
-
 // NetworkWaterfall returns the independently synchronized waterfall owner.
 func (s *TelemetryStore) NetworkWaterfall() *waterfallstore.Store {
 	return s.networkWaterfall
 }
+
+// NetworkBodies returns the independently synchronized HTTP body owner.
+func (s *TelemetryStore) NetworkBodies() *bodystore.Store { return s.networkBodies }
 
 // enhancedActionEntry bundles an types.EnhancedAction with its ingestion timestamp.
 type enhancedActionEntry struct {
@@ -65,13 +61,6 @@ type BufferStore struct {
 	wsTotalAdded  int64
 	wsMemoryTotal int64
 	wsDropped     int64
-
-	// Network body buffer state.
-	networkBodies          ringstore.Store[networkBodyEntry]
-	networkTotalAdded      int64
-	networkErrorTotalAdded int64
-	networkBodyMemoryTotal int64
-	networkDropped         int64
 
 	// Enhanced action buffer state.
 	enhancedActions  ringstore.Store[enhancedActionEntry]
@@ -92,6 +81,7 @@ type TelemetryPressure struct {
 type TelemetryStore struct {
 	mu                 sync.RWMutex
 	buffers            BufferStore
+	networkBodies      *bodystore.Store
 	wsConnections      wsconn.Tracker
 	networkWaterfall   *waterfallstore.Store
 	extension          *ExtensionRuntime
@@ -103,6 +93,7 @@ type TelemetryStore struct {
 func newTelemetryStore(extension *ExtensionRuntime) *TelemetryStore {
 	return &TelemetryStore{
 		buffers:          newBufferStore(),
+		networkBodies:    bodystore.NewDefault(),
 		wsConnections:    wsconn.NewTracker(),
 		networkWaterfall: waterfallstore.NewDefault(),
 		extension:        extension,
@@ -120,20 +111,8 @@ func (s *TelemetryStore) SetNavigationCallback(callback func()) {
 func newBufferStore() BufferStore {
 	return BufferStore{
 		wsEvents:        ringstore.New[wsEventEntry](maxWSEvents),
-		networkBodies:   ringstore.New[networkBodyEntry](maxNetworkBodies),
 		enhancedActions: ringstore.New[enhancedActionEntry](maxEnhancedActions),
 	}
-}
-
-func (s *BufferStore) networkTimestamps() []time.Time {
-	if s.networkBodies.Len() == 0 {
-		return []time.Time{}
-	}
-	out := make([]time.Time, s.networkBodies.Len())
-	for i := range out {
-		out[i] = s.networkBodies.At(i).AddedAt
-	}
-	return out
 }
 
 func (s *BufferStore) webSocketTimestamps() []time.Time {
@@ -154,17 +133,6 @@ func (s *BufferStore) actionTimestamps() []time.Time {
 	out := make([]time.Time, s.enhancedActions.Len())
 	for i := range out {
 		out[i] = s.enhancedActions.At(i).AddedAt
-	}
-	return out
-}
-
-func (s *BufferStore) networkBodiesCopy() []types.NetworkBody {
-	if s.networkBodies.Len() == 0 {
-		return []types.NetworkBody{}
-	}
-	out := make([]types.NetworkBody, s.networkBodies.Len())
-	for i := range out {
-		out[i] = cloneNetworkBody(s.networkBodies.At(i).Body)
 	}
 	return out
 }
@@ -191,13 +159,6 @@ func (s *BufferStore) enhancedActionsCopy() []types.EnhancedAction {
 	return out
 }
 
-func (s *BufferStore) clearNetworkBuffers() {
-	s.networkBodies.Clear()
-	s.networkTotalAdded = 0
-	s.networkErrorTotalAdded = 0
-	s.networkBodyMemoryTotal = 0
-}
-
 func (s *BufferStore) clearWebSocketBuffers() {
 	s.wsEvents.Clear()
 	s.wsTotalAdded = 0
@@ -210,7 +171,6 @@ func (s *BufferStore) clearActionBuffers() {
 }
 
 func (s *BufferStore) clearAllEventBuffers() {
-	s.clearNetworkBuffers()
 	s.clearWebSocketBuffers()
 	s.clearActionBuffers()
 }
@@ -234,26 +194,6 @@ func (s *BufferStore) appendEnhancedActions(actions []types.EnhancedAction, now 
 	return hasNavigation
 }
 
-func (s *BufferStore) appendNetworkBodies(bodies []types.NetworkBody, now time.Time) {
-	s.networkTotalAdded += int64(len(bodies))
-	for i := range bodies {
-		if bodies[i].Status >= 400 {
-			s.networkErrorTotalAdded++
-		}
-		body := cloneNetworkBody(bodies[i])
-		evicted, overwritten := s.networkBodies.Push(networkBodyEntry{
-			Body:    body,
-			AddedAt: now,
-		})
-		if overwritten {
-			s.networkDropped++
-			s.networkBodyMemoryTotal -= nbEntryMemory(&evicted.Body)
-		}
-		s.networkBodyMemoryTotal += nbEntryMemory(&body)
-	}
-	s.evictNetworkForMemory()
-}
-
 func (s *BufferStore) appendWebSocketEvents(events []types.WebSocketEvent, now time.Time, onEvent func(types.WebSocketEvent)) {
 	s.wsTotalAdded += int64(len(events))
 	for i := range events {
@@ -274,22 +214,6 @@ func (s *BufferStore) appendWebSocketEvents(events []types.WebSocketEvent, now t
 	s.evictWebSocketForMemory()
 }
 
-func (s *BufferStore) evictNetworkForMemory() {
-	excess := s.networkBodyMemoryTotal - nbBufferMemoryLimit
-	if excess <= 0 {
-		return
-	}
-	drop := 0
-	for drop < s.networkBodies.Len() && excess > 0 {
-		entryMem := nbEntryMemory(&s.networkBodies.At(drop).Body)
-		excess -= entryMem
-		s.networkBodyMemoryTotal -= entryMem
-		drop++
-	}
-	s.networkBodies.DropOldest(drop)
-	s.networkDropped += int64(drop)
-}
-
 func (s *BufferStore) evictWebSocketForMemory() {
 	excess := s.wsMemoryTotal - wsBufferMemoryLimit
 	if excess <= 0 {
@@ -308,10 +232,11 @@ func (s *BufferStore) evictWebSocketForMemory() {
 
 // Pressure returns count, capacity, cumulative drops, and oldest age for each stream.
 func (s *TelemetryStore) Pressure() TelemetryPressure {
+	network := s.networkBodies.Stats().Pressure
 	s.mu.RLock()
 	now := time.Now()
 	pressure := TelemetryPressure{
-		Network:   pressureForRing(s.buffers.networkBodies, s.buffers.networkDropped, now, func(entry networkBodyEntry) time.Time { return entry.AddedAt }),
+		Network:   network,
 		WebSocket: pressureForRing(s.buffers.wsEvents, s.buffers.wsDropped, now, func(entry wsEventEntry) time.Time { return entry.AddedAt }),
 		Actions:   pressureForRing(s.buffers.enhancedActions, s.buffers.actionDropped, now, func(entry enhancedActionEntry) time.Time { return entry.AddedAt }),
 	}
@@ -332,24 +257,12 @@ func pressureForRing[T any](ring ringstore.Store[T], dropped int64, now time.Tim
 	return stats
 }
 
-func (s *BufferStore) networkTotal() int64 {
-	return s.networkTotalAdded
-}
-
-func (s *BufferStore) networkErrorTotal() int64 {
-	return s.networkErrorTotalAdded
-}
-
 func (s *BufferStore) webSocketTotal() int64 {
 	return s.wsTotalAdded
 }
 
 func (s *BufferStore) actionTotal() int64 {
 	return s.actionTotalAdded
-}
-
-func (s *BufferStore) networkCount() int {
-	return s.networkBodies.Len()
 }
 
 func (s *BufferStore) webSocketCount() int {
@@ -362,9 +275,8 @@ func (s *BufferStore) actionCount() int {
 
 const (
 	// Per-entry memory estimates
-	wsEventOverhead     = 200 // bytes overhead per WS event
-	networkBodyOverhead = 300 // bytes overhead per network body
-	actionMemoryFixed   = 500 // bytes per enhanced action (fixed estimate)
+	wsEventOverhead   = 200 // bytes overhead per WS event
+	actionMemoryFixed = 500 // bytes per enhanced action (fixed estimate)
 )
 
 // ============================================
@@ -374,11 +286,6 @@ const (
 // wsEventMemory returns the memory estimate for a single WS event.
 func wsEventMemory(e *types.WebSocketEvent) int64 {
 	return int64(len(e.Data)) + wsEventOverhead
-}
-
-// nbEntryMemory returns the memory estimate for a single network body entry.
-func nbEntryMemory(b *types.NetworkBody) int64 {
-	return int64(len(b.RequestBody)+len(b.ResponseBody)) + networkBodyOverhead
 }
 
 // ============================================
@@ -391,29 +298,17 @@ func (s *BufferStore) calcWSMemory() int64 {
 	return s.wsMemoryTotal
 }
 
-// calcNBMemory returns the running total of network bodies buffer memory (caller must hold lock).
-// O(1) — maintained incrementally by add/evict/clear operations.
-func (s *BufferStore) calcNBMemory() int64 {
-	return s.networkBodyMemoryTotal
-}
-
 // ClearNetworkBuffers resets network telemetry buffers and related counters.
 //
 // Invariants:
 // - network buffers and their monotonic counters are reset together under the telemetry lock.
 func (s *TelemetryStore) ClearNetworkBuffers() types.BufferClearCounts {
 	waterfallCount := s.networkWaterfall.Clear()
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+	bodyCount := s.networkBodies.Clear()
 	counts := types.BufferClearCounts{
 		NetworkWaterfall: waterfallCount,
-		NetworkBodies:    s.buffers.networkBodies.Len(),
+		NetworkBodies:    bodyCount,
 	}
-
-	// Clear network bodies buffer and reset memory tracking
-	s.buffers.clearNetworkBuffers()
-
 	return counts
 }
 
@@ -486,6 +381,7 @@ func (s *TelemetryStore) clearAll() {
 	s.buffers.clearAllEventBuffers()
 	s.wsConnections.Clear()
 	s.mu.Unlock()
+	s.networkBodies.Clear()
 	s.networkWaterfall.Clear()
 }
 
@@ -516,10 +412,7 @@ func (s *TelemetryStore) AddNetworkBodies(bodies []types.NetworkBody) {
 		prepared[i].TestIDs = append([]string(nil), activeTestIDs...)
 		detectAndSetBinaryFormat(&prepared[i])
 	}
-	now := time.Now()
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.buffers.appendNetworkBodies(prepared, now)
+	s.networkBodies.Add(prepared, time.Now())
 }
 
 func detectWSBinaryFormat(event *types.WebSocketEvent) {

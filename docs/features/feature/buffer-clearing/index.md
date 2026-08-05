@@ -4,13 +4,15 @@ feature_id: feature-buffer-clearing
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/clear.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
+  - internal/capture/bodystore/store.go
 test_paths:
   - internal/capture/state_resetter_owner_test.go
+  - internal/capture/bodystore/store_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_coverage_test.go
   - cmd/browser-agent/tools_configure_handler_test.go

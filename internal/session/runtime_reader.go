@@ -97,7 +97,7 @@ func (r *runtimeStateReader) GetNetworkRequests() []types.SnapshotNetworkRequest
 	if r.capture == nil {
 		return []types.SnapshotNetworkRequest{}
 	}
-	bodies := r.capture.Telemetry().GetNetworkBodies()
+	bodies := r.capture.Telemetry().NetworkBodies().Snapshot().Bodies
 	out := make([]types.SnapshotNetworkRequest, 0, len(bodies))
 	for _, body := range bodies {
 		out = append(out, types.SnapshotNetworkRequest{
@@ -176,7 +176,7 @@ func (r *runtimeStateReader) GetCurrentPageURL() string {
 	if snap := r.GetPerformance(); snap != nil && snap.URL != "" {
 		return snap.URL
 	}
-	bodies := r.capture.Telemetry().GetNetworkBodies()
+	bodies := r.capture.Telemetry().NetworkBodies().Snapshot().Bodies
 	if len(bodies) > 0 {
 		return bodies[len(bodies)-1].URL
 	}

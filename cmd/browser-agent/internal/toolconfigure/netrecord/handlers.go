@@ -8,17 +8,12 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/bodystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-// NetworkBodyProvider returns captured network bodies for recording stop.
-type NetworkBodyProvider interface {
-	GetNetworkBodies() []types.NetworkBody
-}
-
 // HandleNetworkRecording handles configure(what="network_recording").
-func HandleNetworkRecording(d NetworkBodyProvider, state *NetworkRecordingState, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func HandleNetworkRecording(bodies *bodystore.Store, state *NetworkRecordingState, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Operation string `json:"operation"`
 		Domain    string `json:"domain"`
@@ -59,7 +54,7 @@ func HandleNetworkRecording(d NetworkBodyProvider, state *NetworkRecordingState,
 		}
 
 		// Collect network bodies captured since start time.
-		recorded := CollectRecordedRequests(d.GetNetworkBodies(), snap)
+		recorded := CollectRecordedRequests(bodies.Snapshot().Bodies, snap)
 
 		duration := time.Since(snap.StartTime)
 		result := map[string]any{

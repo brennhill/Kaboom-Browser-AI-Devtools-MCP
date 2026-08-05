@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/bodystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-// fakeBodyProvider implements NetworkBodyProvider.
-type fakeBodyProvider struct {
-	networkBodies []types.NetworkBody
+func newBodyStore(bodies []types.NetworkBody) *bodystore.Store {
+	store := bodystore.New(100, 8*1024*1024)
+	store.Add(bodies, time.Now())
+	return store
 }
-
-func (f *fakeBodyProvider) GetNetworkBodies() []types.NetworkBody { return f.networkBodies }
 
 // parseResp decodes an MCP tool result into (isError, text).
 func parseResp(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
@@ -289,7 +289,7 @@ func TestCollectRecordedRequests(t *testing.T) {
 
 func TestHandleNetworkRecording(t *testing.T) {
 	t.Run("status when inactive", func(t *testing.T) {
-		d := &fakeBodyProvider{}
+		d := newBodyStore(nil)
 		state := &NetworkRecordingState{}
 		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"status"}`))
 		isErr, _ := parseResp(t, resp)
@@ -299,7 +299,7 @@ func TestHandleNetworkRecording(t *testing.T) {
 	})
 
 	t.Run("empty operation is status", func(t *testing.T) {
-		d := &fakeBodyProvider{}
+		d := newBodyStore(nil)
 		state := &NetworkRecordingState{}
 		resp := HandleNetworkRecording(d, state, newReq(), nil)
 		isErr, _ := parseResp(t, resp)
@@ -309,7 +309,7 @@ func TestHandleNetworkRecording(t *testing.T) {
 	})
 
 	t.Run("start then start again errors", func(t *testing.T) {
-		d := &fakeBodyProvider{}
+		d := newBodyStore(nil)
 		state := &NetworkRecordingState{}
 		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"start","domain":"example.com","method":"POST"}`))
 		if isErr, text := parseResp(t, resp); isErr {
@@ -328,9 +328,9 @@ func TestHandleNetworkRecording(t *testing.T) {
 
 	t.Run("stop when active returns recorded requests", func(t *testing.T) {
 		future := "2999-01-01T00:00:00Z"
-		d := &fakeBodyProvider{networkBodies: []types.NetworkBody{
+		d := newBodyStore([]types.NetworkBody{
 			{Timestamp: future, URL: "https://example.com/api", Method: "POST", Status: 200},
-		}}
+		})
 		state := &NetworkRecordingState{}
 		HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"start","domain":"example.com"}`))
 		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"stop"}`))
@@ -341,7 +341,7 @@ func TestHandleNetworkRecording(t *testing.T) {
 	})
 
 	t.Run("stop when inactive errors", func(t *testing.T) {
-		d := &fakeBodyProvider{}
+		d := newBodyStore(nil)
 		state := &NetworkRecordingState{}
 		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"stop"}`))
 		if isErr, _ := parseResp(t, resp); !isErr {
@@ -350,7 +350,7 @@ func TestHandleNetworkRecording(t *testing.T) {
 	})
 
 	t.Run("unknown operation errors", func(t *testing.T) {
-		d := &fakeBodyProvider{}
+		d := newBodyStore(nil)
 		state := &NetworkRecordingState{}
 		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"frobnicate"}`))
 		if isErr, _ := parseResp(t, resp); !isErr {
@@ -359,7 +359,7 @@ func TestHandleNetworkRecording(t *testing.T) {
 	})
 
 	t.Run("invalid JSON errors", func(t *testing.T) {
-		d := &fakeBodyProvider{}
+		d := newBodyStore(nil)
 		state := &NetworkRecordingState{}
 		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{not json`))
 		if isErr, _ := parseResp(t, resp); !isErr {

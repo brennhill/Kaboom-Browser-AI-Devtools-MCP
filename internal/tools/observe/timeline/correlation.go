@@ -74,7 +74,7 @@ func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessag
 	cap := deps.Capture
 	_, trackedTabID, _ = cap.Extension().GetTrackingStatus()
 
-	networkBodies := cap.Telemetry().GetNetworkBodies()
+	networkBodies := cap.Telemetry().NetworkBodies().Snapshot().Bodies
 	waterfallEntries := cap.Telemetry().NetworkWaterfall().Entries()
 	actions := cap.Telemetry().GetAllEnhancedActions()
 

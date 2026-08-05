@@ -387,7 +387,7 @@ func TestAPIContract_NetworkBodies_POSTThenRead(t *testing.T) {
 	}
 
 	// Read back via getter
-	bodies := c.Telemetry().GetNetworkBodies()
+	bodies := c.Telemetry().NetworkBodies().Snapshot().Bodies
 	if len(bodies) != 1 {
 		t.Errorf("Expected 1 body after POST, got %d", len(bodies))
 	}

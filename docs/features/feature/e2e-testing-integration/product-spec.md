@@ -234,7 +234,7 @@ This mode does NOT implement any CI runtime infrastructure (that is the Kaboom C
   - **`generate({what: "reproduction"})` (shipped)** -- Reuses `generateEnhancedPlaywrightScript()`, `generateFixtures()`, `getPlaywrightLocator()`, `replaceOrigin()`, `escapeJSString()` from `codegen.go` and `reproduction.go`.
   - **`generate({what: "test"})` (shipped)** -- Reuses `generateTestScript()` and `TestGenerationOptions` from `codegen.go` for action-to-test conversion.
   - **CI endpoints (shipped)** -- Reuses `SnapshotResponse`, `computeSnapshotStats()`, `filterLogsSince()` from `ci.go` for failure snapshot generation.
-  - **Network body capture (shipped)** -- Reads from the existing `networkBodies` ring buffer via `GetNetworkBodies()`.
+  - **Network body capture (shipped)** -- Reads detached evidence from the canonical bounded body store via `NetworkBodies().Snapshot().Bodies`.
   - **Redaction (shipped)** -- Applies existing header stripping and body redaction from `redaction.go`.
   - **Kaboom CI Infrastructure (proposed, v6)** -- The `test_harness` artifact references `@anthropic/kaboom-playwright` which is defined in the CI Infrastructure spec. The test harness is functional without it when `include_kaboom_fixture` is set to false.
 
@@ -266,7 +266,7 @@ The implementation should maximize reuse of existing functions:
 | `escapeJSString()` | `codegen.go` | String escaping in generated JavaScript |
 | `computeSnapshotStats()` | `ci.go` | Stats computation in `failure_snapshot` |
 | `filterLogsSince()` | `ci.go` | Timestamp filtering for `since` option |
-| `GetNetworkBodies()` | `capture` methods | Data source for `fixture_data` |
+| `NetworkBodies().Snapshot().Bodies` | `capture` methods | Data source for `fixture_data` |
 | `GetEnhancedActions()` | `capture` methods | Data source for `test_harness` |
 
 ### Estimated effort

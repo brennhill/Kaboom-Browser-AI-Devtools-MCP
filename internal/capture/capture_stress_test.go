@@ -136,7 +136,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 				for i := 0; i < readsPerReader; i++ {
 					// Read from all three buffers
 					_ = c.Telemetry().GetAllWebSocketEvents()
-					_ = c.Telemetry().GetNetworkBodies()
+					_ = c.Telemetry().NetworkBodies().Snapshot().Bodies
 					_ = c.Telemetry().GetAllEnhancedActions()
 
 					// Yield to allow writers to interleave
@@ -153,15 +153,16 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 
 		// Verify final state invariants
 		wsEvents := c.Telemetry().GetAllWebSocketEvents()
-		networkBodies := c.Telemetry().GetNetworkBodies()
+		networkBodies := c.Telemetry().NetworkBodies().Snapshot().Bodies
 		actions := c.Telemetry().GetAllEnhancedActions()
 
 		// Buffer capacity bounds must hold
 		if len(wsEvents) > maxWSEvents {
 			t.Errorf("WS events %d exceeds maxWSEvents %d", len(wsEvents), maxWSEvents)
 		}
-		if len(networkBodies) > maxNetworkBodies {
-			t.Errorf("Network bodies %d exceeds maxNetworkBodies %d", len(networkBodies), maxNetworkBodies)
+		networkCapacity := c.Telemetry().NetworkBodies().Stats().Pressure.Capacity
+		if len(networkBodies) > networkCapacity {
+			t.Errorf("Network bodies %d exceeds capacity %d", len(networkBodies), networkCapacity)
 		}
 		if len(actions) > maxEnhancedActions {
 			t.Errorf("Enhanced actions %d exceeds maxEnhancedActions %d", len(actions), maxEnhancedActions)
@@ -255,7 +256,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 					case 0:
 						_ = c.Telemetry().GetAllWebSocketEvents()
 					case 1:
-						_ = c.Telemetry().GetNetworkBodies()
+						_ = c.Telemetry().NetworkBodies().Snapshot().Bodies
 					case 2:
 						_ = c.Telemetry().GetAllEnhancedActions()
 					}
@@ -282,15 +283,16 @@ func TestStressCaptureWithClears(t *testing.T) {
 
 		// Verify buffers are in valid state after concurrent clears
 		wsEvents := c.Telemetry().GetAllWebSocketEvents()
-		networkBodies := c.Telemetry().GetNetworkBodies()
+		networkBodies := c.Telemetry().NetworkBodies().Snapshot().Bodies
 		actions := c.Telemetry().GetAllEnhancedActions()
 
 		// Capacity bounds must hold even with concurrent clears
 		if len(wsEvents) > maxWSEvents {
 			t.Errorf("WS events %d exceeds maxWSEvents %d after clears", len(wsEvents), maxWSEvents)
 		}
-		if len(networkBodies) > maxNetworkBodies {
-			t.Errorf("Network bodies %d exceeds maxNetworkBodies %d after clears", len(networkBodies), maxNetworkBodies)
+		networkCapacity := c.Telemetry().NetworkBodies().Stats().Pressure.Capacity
+		if len(networkBodies) > networkCapacity {
+			t.Errorf("Network bodies %d exceeds capacity %d after clears", len(networkBodies), networkCapacity)
 		}
 		if len(actions) > maxEnhancedActions {
 			t.Errorf("Actions %d exceeds maxEnhancedActions %d after clears", len(actions), maxEnhancedActions)

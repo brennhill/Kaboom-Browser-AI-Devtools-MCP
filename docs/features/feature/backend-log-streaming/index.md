@@ -13,6 +13,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/netrecord/state.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/filters.go
   - internal/capture/accessors.go
+  - internal/capture/bodystore/store.go
   - internal/capture/capture.go
   - internal/capture/clientstore/owner.go
   - internal/capture/settingscache/loader.go
@@ -81,6 +82,7 @@ code_paths:
   - src/lib/page/safe-global-patch.ts
 test_paths:
   - internal/capture/clientstore/owner_test.go
+  - internal/capture/bodystore/store_test.go
   - internal/capture/settingscache/loader_test.go
   - internal/capture/perfstore/store_test.go
   - internal/capture/ringstore/store_test.go
@@ -278,13 +280,15 @@ lock and counters; steady-state eviction therefore overwrites the oldest slot
 without allocating or copying the retained window. The former private ring
 implementation and root-level tests are deleted rather than retained as a
 parallel storage surface.
-Network bodies, WebSocket events and connection state, enhanced actions,
-navigation callbacks, and the waterfall owner now form one independently
-synchronized `TelemetryStore` returned by `Capture.Telemetry()`. Its consumers
-use that owner directly; the former Capture buffer fields, WebSocket tracker,
-navigation callback, five test helpers, and sixteen production forwarding
-methods are deleted. `Capture.ClearAll` remains only because it genuinely
-coordinates telemetry, extension boundaries, performance, and extension logs.
+Network bodies live in the independently synchronized `bodystore.Store`, which
+owns bounded retention, deep cloning, error and ingestion totals, timestamps,
+memory-pressure eviction, snapshots, and clearing. Consumers use
+`Capture.Telemetry().NetworkBodies()` directly; the three Telemetry forwarding
+methods and the former shared-buffer fields are deleted. WebSocket events and
+connection state, enhanced actions, navigation callbacks, and the focused body
+and waterfall owners compose `TelemetryStore`. `Capture.ClearAll` remains only
+because it genuinely coordinates telemetry, extension boundaries, performance,
+and extension logs.
 Configure network-recording dispatch calls `netrecord.HandleNetworkRecording`
 with the telemetry and recording-state owners directly; the root ToolHandler
 forwarding method is deleted.

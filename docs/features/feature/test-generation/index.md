@@ -16,6 +16,7 @@ code_paths:
   - cmd/browser-agent/internal/toolgenerate/artifacts_test_impl.go
   - internal/mcp/response.go
   - internal/testgen/generate.go
+  - internal/capture/bodystore/store.go
   - internal/types/wire_log.go
   - internal/testgen/helpers.go
   - internal/testgen/classify.go
@@ -38,6 +39,7 @@ test_paths:
   - cmd/browser-agent/internal/testgenhandler/classify_test.go
   - cmd/browser-agent/internal/testgenhandler/testhelpers_test.go
   - internal/testgen/generate_test.go
+  - internal/capture/bodystore/store_test.go
   - internal/testgen/helpers_test.go
   - internal/testgen/classify_test.go
   - internal/testgen/heal/heal_test.go

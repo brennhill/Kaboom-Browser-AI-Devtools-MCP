@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/bodystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/ringstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
@@ -108,10 +109,10 @@ func TestCoverageBoost_PublicMemoryAndBufferGetters(t *testing.T) {
 	if got := c.telemetry.buffers.calcWSMemory(); got <= 0 {
 		t.Fatalf("GetWebSocketBufferMemory() = %d, want > 0", got)
 	}
-	if got := c.telemetry.buffers.calcNBMemory(); got <= 0 {
+	if got := c.Telemetry().NetworkBodies().Stats().MemoryBytes; got <= 0 {
 		t.Fatalf("GetNetworkBodiesBufferMemory() = %d, want > 0", got)
 	}
-	if got := len(c.Telemetry().GetNetworkBodies()); got == 0 {
+	if got := len(c.Telemetry().NetworkBodies().Snapshot().Bodies); got == 0 {
 		t.Fatal("GetNetworkBodyCount() = 0, want > 0")
 	}
 }
@@ -155,10 +156,11 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 	c := newCoverageCapture(t)
 
 	now := time.Now()
+	c.Telemetry().NetworkBodies().Add([]types.NetworkBody{
+		{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"},
+		{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"},
+	}, now)
 	c.telemetry.mu.Lock()
-	c.telemetry.buffers.networkBodies = ringstore.New[networkBodyEntry](maxNetworkBodies)
-	c.telemetry.buffers.networkBodies.Push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now})
-	c.telemetry.buffers.networkBodies.Push(networkBodyEntry{Body: types.NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now})
 	c.extension.state.activeTestIDs["tid"] = true
 	c.telemetry.mu.Unlock()
 
@@ -168,27 +170,28 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 		RequestBody:  "ping",
 		ResponseBody: "pong",
 	}})
-	if got := len(c.Telemetry().GetNetworkBodies()); got != 3 {
+	if got := len(c.Telemetry().NetworkBodies().Snapshot().Bodies); got != 3 {
 		t.Fatalf("GetNetworkBodyCount() = %d, want 3 after add", got)
 	}
-	bodies := c.Telemetry().GetNetworkBodies()
+	bodies := c.Telemetry().NetworkBodies().Snapshot().Bodies
 	last := bodies[len(bodies)-1]
 	if len(last.TestIDs) == 0 || last.TestIDs[0] != "tid" {
 		t.Fatalf("last network body TestIDs = %+v, want [tid]", last.TestIDs)
 	}
 
 	c2 := newCoverageCapture(t)
-	huge := strings.Repeat("x", nbBufferMemoryLimit)
+	c2.telemetry.networkBodies = bodystore.New(100, 1)
+	huge := strings.Repeat("x", 2)
 	c2.Telemetry().AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
 		URL:          "https://example.test/huge",
 		RequestBody:  huge,
 		ResponseBody: huge,
 	}})
-	if got := len(c2.Telemetry().GetNetworkBodies()); got != 0 {
+	if got := len(c2.Telemetry().NetworkBodies().Snapshot().Bodies); got != 0 {
 		t.Fatalf("GetNetworkBodyCount() after memory eviction = %d, want 0", got)
 	}
-	if got := c2.telemetry.buffers.calcNBMemory(); got != 0 {
+	if got := c2.Telemetry().NetworkBodies().Stats().MemoryBytes; got != 0 {
 		t.Fatalf("GetNetworkBodiesBufferMemory() after eviction = %d, want 0", got)
 	}
 }

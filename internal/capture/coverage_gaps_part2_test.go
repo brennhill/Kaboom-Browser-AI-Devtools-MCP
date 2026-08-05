@@ -57,7 +57,7 @@ func TestGetNetworkBodies_EmptyReturnsEmptySlice(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	result := c.Telemetry().GetNetworkBodies()
+	result := c.Telemetry().NetworkBodies().Snapshot().Bodies
 	if result == nil {
 		t.Fatal("expected non-nil empty slice, got nil")
 	}

@@ -86,7 +86,7 @@ func TestCaptureTestHelpersAndTTL(t *testing.T) {
 	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", URL: "https://example.test", Timestamp: 123},
 	})
-	if got := c.Telemetry().GetNetworkTotalAdded(); got != 2 {
+	if got := c.Telemetry().NetworkBodies().Stats().TotalAdded; got != 2 {
 		t.Fatalf("GetNetworkTotalAdded() = %d, want 2", got)
 	}
 	if got := c.Telemetry().GetWebSocketTotalAdded(); got != 1 {

@@ -471,7 +471,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		Audit:   combinedaudit.Deps{Analyze: analyzeDeps, Observe: observeDeps},
 		Version: version, AnnotationStore: handler.annotationStore, Visual: visualAnalyzeDeps{h: handler},
 		ValidateAPI: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return handler.apiContractRuntime.Handle(req, args, handler.capture.Telemetry().GetNetworkBodies())
+			return handler.apiContractRuntime.Handle(req, args, handler.capture.Telemetry().NetworkBodies().Snapshot().Bodies)
 		},
 		PageSummary: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.pageActions.HandleContentExtraction(req, args, "page_summary", "page_summary")
@@ -638,7 +638,7 @@ func buildTestGenerationDeps(h *ToolHandler) testgenhandler.Deps {
 			if h.capture == nil {
 				return nil
 			}
-			return h.capture.Telemetry().GetNetworkBodies()
+			return h.capture.Telemetry().NetworkBodies().Snapshot().Bodies
 		},
 	}
 }
@@ -657,7 +657,7 @@ func buildAnalyzeDeps(h *ToolHandler) toolanalyze.Deps {
 			if h.capture == nil {
 				return nil
 			}
-			return h.capture.Telemetry().GetNetworkBodies()
+			return h.capture.Telemetry().NetworkBodies().Snapshot().Bodies
 		},
 		NetworkWaterfallEntries: func() []types.NetworkWaterfallEntry {
 			if h.capture == nil {

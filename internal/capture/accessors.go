@@ -12,18 +12,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-func cloneNetworkBody(body types.NetworkBody) types.NetworkBody {
-	if body.ResponseHeaders != nil {
-		headers := make(map[string]string, len(body.ResponseHeaders))
-		for key, value := range body.ResponseHeaders {
-			headers[key] = value
-		}
-		body.ResponseHeaders = headers
-	}
-	body.TestIDs = append([]string(nil), body.TestIDs...)
-	return body
-}
-
 func cloneWebSocketEvent(event types.WebSocketEvent) types.WebSocketEvent {
 	if event.Sampled != nil {
 		sampled := *event.Sampled
@@ -72,20 +60,6 @@ func cloneSelectorValue(value any) any {
 	}
 }
 
-// GetNetworkTotalAdded returns the monotonic total of network bodies ever added
-func (s *TelemetryStore) GetNetworkTotalAdded() int64 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.buffers.networkTotal()
-}
-
-// GetNetworkErrorTotalAdded returns the monotonic total of error network bodies ever added.
-func (s *TelemetryStore) GetNetworkErrorTotalAdded() int64 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.buffers.networkErrorTotal()
-}
-
 // GetWebSocketTotalAdded returns the monotonic total of WebSocket events ever added
 func (s *TelemetryStore) GetWebSocketTotalAdded() int64 {
 	s.mu.RLock()
@@ -122,17 +96,18 @@ type TelemetrySnapshot struct {
 // Failure semantics:
 // - Snapshot can be stale immediately after return; callers should treat it as diagnostic-only.
 func (s *TelemetryStore) GetSnapshot() TelemetrySnapshot {
+	network := s.networkBodies.Stats()
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	return TelemetrySnapshot{
-		NetworkTotalAdded:   s.buffers.networkTotal(),
+		NetworkTotalAdded:   network.TotalAdded,
 		WebSocketTotalAdded: s.buffers.webSocketTotal(),
 		ActionTotalAdded:    s.buffers.actionTotal(),
-		NetworkCount:        s.buffers.networkCount(),
+		NetworkCount:        network.Count,
 		WebSocketCount:      s.buffers.webSocketCount(),
 		ActionCount:         s.buffers.actionCount(),
-		NetworkCapacity:     s.buffers.networkBodies.Capacity(),
+		NetworkCapacity:     network.Pressure.Capacity,
 		WebSocketCapacity:   s.buffers.wsEvents.Capacity(),
 		ActionCapacity:      s.buffers.enhancedActions.Capacity(),
 		ConnectionCount:     s.wsConnections.Count(),
@@ -212,13 +187,6 @@ func (r *HealthReader) Snapshot() HealthSnapshot {
 		ActiveTestIDCount:     extensionSnap.ActiveTestIDCount,
 		QueryTimeout:          querySnap.QueryTimeout,
 	}
-}
-
-// GetNetworkBodies returns a copy of the network bodies slice (thread-safe)
-func (s *TelemetryStore) GetNetworkBodies() []types.NetworkBody {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.buffers.networkBodiesCopy()
 }
 
 // GetAllWebSocketEvents returns a copy of all WebSocket events slice (thread-safe)

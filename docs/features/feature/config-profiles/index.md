@@ -33,7 +33,6 @@ test_paths:
   - cmd/browser-agent/tools_configure_jitter_test.go
   - cmd/browser-agent/tools_configure_noise_test.go
   - cmd/browser-agent/noise_doctor_test.go
-  - cmd/browser-agent/tools_interface_check_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/tools_configure_session_test.go
   - internal/tools/configure/audit_test.go

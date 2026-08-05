@@ -4,9 +4,11 @@ feature_id: feature-e2e-testing-integration
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-05
 code_paths:
-test_paths: []
+  - internal/capture/bodystore/store.go
+test_paths:
+  - internal/capture/bodystore/store_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

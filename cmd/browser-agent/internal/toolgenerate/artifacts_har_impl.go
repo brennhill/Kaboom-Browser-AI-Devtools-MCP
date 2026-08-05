@@ -26,7 +26,7 @@ func HandleExportHAR(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	}
 
 	cap := d.Capture
-	bodies := cap.Telemetry().GetNetworkBodies()
+	bodies := cap.Telemetry().NetworkBodies().Snapshot().Bodies
 	waterfall := cap.Telemetry().NetworkWaterfall().Entries()
 	filter := types.NetworkBodyFilter{
 		URLFilter: params.URL,

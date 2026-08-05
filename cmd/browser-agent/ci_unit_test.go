@@ -174,8 +174,8 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	if srv.logs.EntryCount() != 0 {
 		t.Fatalf("server entry count = %d, want 0 after clear", srv.logs.EntryCount())
 	}
-	if len(cap.Telemetry().GetNetworkBodies()) != 0 {
-		t.Fatalf("network bodies len = %d, want 0 after clear", len(cap.Telemetry().GetNetworkBodies()))
+	if len(cap.Telemetry().NetworkBodies().Snapshot().Bodies) != 0 {
+		t.Fatalf("network bodies len = %d, want 0 after clear", len(cap.Telemetry().NetworkBodies().Snapshot().Bodies))
 	}
 
 	testBoundary := ciapi.TestBoundary(cap)

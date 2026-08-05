@@ -51,7 +51,7 @@ func BenchmarkAddNetworkBodies(b *testing.B) {
 		},
 	}
 
-	for i := 0; i < maxNetworkBodies; i++ {
+	for i := 0; i < cap.Telemetry().NetworkBodies().Stats().Pressure.Capacity; i++ {
 		cap.Telemetry().AddNetworkBodies(bodies)
 	}
 	b.ReportAllocs()

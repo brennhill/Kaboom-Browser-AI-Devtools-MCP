@@ -52,8 +52,8 @@ cmd/browser-agent/tools_core.go  # Add dispatch for new generate modes
 
 #### Integration Points:
 - `observe` - for error context
-- `capture.GetEnhancedActions()` - for user actions
-- `capture.GetNetworkBodies()` - for network context
+- `capture.Telemetry().GetAllEnhancedActions()` - for user actions
+- `capture.Telemetry().NetworkBodies().Snapshot().Bodies` - for network context
 
 ### Phase 3: test_heal Mode (Priority: HIGH)
 

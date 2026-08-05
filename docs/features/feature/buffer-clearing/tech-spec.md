@@ -79,26 +79,12 @@ func (c *BufferClearCounts) Total() int {
 #### Clear Methods
 
 ```go
-// ClearNetworkBuffers clears network_waterfall and network_bodies
-func (c *Capture) ClearNetworkBuffers() BufferClearCounts {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	counts := BufferClearCounts{
-		NetworkWaterfall: len(c.networkWaterfall),
-		NetworkBodies:    len(c.networkBodies),
+// ClearNetworkBuffers coordinates the two independent network owners.
+func (s *TelemetryStore) ClearNetworkBuffers() types.BufferClearCounts {
+	return types.BufferClearCounts{
+		NetworkWaterfall: s.NetworkWaterfall().Clear(),
+		NetworkBodies:    s.NetworkBodies().Clear(),
 	}
-
-	// Clear buffers
-	c.networkWaterfall = make([]NetworkWaterfallEntry, 0)
-	c.networkAddedAt = make([]time.Time, 0)
-	c.networkBodies = make([]NetworkBody, 0)
-
-	// Reset counters
-	c.networkTotalAdded = 0
-	c.nbMemoryTotal = 0
-
-	return counts
 }
 
 // ClearWebSocketBuffers clears websocket_events and websocket_status
@@ -276,7 +262,7 @@ func TestClearNetworkBuffers(t *testing.T) {
 	})
 
 	// Clear
-	counts := capture.ClearNetworkBuffers()
+	counts := capture.Telemetry().ClearNetworkBuffers()
 
 	// Verify counts
 	assert.Equal(t, 2, counts.NetworkWaterfall)
@@ -284,9 +270,9 @@ func TestClearNetworkBuffers(t *testing.T) {
 	assert.Equal(t, 3, counts.Total())
 
 	// Verify buffers empty
-	assert.Equal(t, 0, len(capture.networkWaterfall))
-	assert.Equal(t, 0, len(capture.networkBodies))
-	assert.Equal(t, int64(0), capture.networkTotalAdded)
+	assert.Empty(t, capture.Telemetry().NetworkWaterfall().Entries())
+	assert.Empty(t, capture.Telemetry().NetworkBodies().Snapshot().Bodies)
+	assert.Equal(t, int64(0), capture.Telemetry().NetworkBodies().Stats().TotalAdded)
 }
 
 func TestClearWebSocketBuffers(t *testing.T) {

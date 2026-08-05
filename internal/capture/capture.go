@@ -25,11 +25,10 @@ import (
 // Capture is a composition root. Each owner below synchronizes its own state;
 // Capture itself has no shared mutex or independently mutable state.
 //
-// Ring buffers (wsEvents, networkBodies, enhancedActions) use entry wrapper structs that
-// bundle each datum with its ingestion timestamp, eliminating parallel-array desync risk:
-// 1. Each entry carries its own AddedAt timestamp (wsEventEntry, networkBodyEntry, enhancedActionEntry)
-// 2. Monotonic counters that survive eviction (wsTotalAdded, networkTotalAdded, actionTotalAdded)
-// 3. Memory totals that estimate buffer overhead (wsMemoryTotal, networkBodyMemoryTotal)
+// Independently synchronized telemetry owners retain each datum with its
+// ingestion timestamp, eliminating parallel-array desynchronization. Their
+// snapshots expose monotonic totals, bounded-retention pressure, and memory
+// accounting without leaking mutable storage.
 //
 // Rate limiting uses a sliding 1-second window with circuit breaker (see internal/circuit):
 // windowEventCount resets per window. rateLimitStreak tracks consecutive seconds over threshold.

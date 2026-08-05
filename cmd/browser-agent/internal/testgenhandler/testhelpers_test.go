@@ -17,7 +17,9 @@ func (f *fakeDeps) handlerDeps() Deps {
 	return Deps{
 		LogEntries:      func() []types.LogEntry { return f.entries },
 		EnhancedActions: f.cap.Telemetry().GetAllEnhancedActions,
-		NetworkBodies:   f.cap.Telemetry().GetNetworkBodies,
+		NetworkBodies: func() []types.NetworkBody {
+			return f.cap.Telemetry().NetworkBodies().Snapshot().Bodies
+		},
 	}
 }
 

@@ -229,7 +229,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 		},
 		"security_mode": configureLocal(h.configureLocalDeps, toolconfigure.HandleSecurityMode),
 		"network_recording": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+			return netrecord.HandleNetworkRecording(h.capture.Telemetry().NetworkBodies(), h.networkRecording, req, args)
 		},
 		"action_jitter": configureLocal(h.configureLocalDeps, toolconfigure.HandleActionJitter),
 		"report_issue": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -513,7 +513,7 @@ func buildConfigureLocalDeps(h *ToolHandler) toolconfigure.Deps {
 			}
 			return entries
 		},
-		NetworkBodies:      func() []types.NetworkBody { return h.capture.Telemetry().GetNetworkBodies() },
+		NetworkBodies:      func() []types.NetworkBody { return h.capture.Telemetry().NetworkBodies().Snapshot().Bodies },
 		AllWebSocketEvents: func() []types.WebSocketEvent { return h.capture.Telemetry().GetAllWebSocketEvents() },
 		ToolsList:          schema.AllTools,
 		GetToolModuleExamples: func(toolName string) any {
