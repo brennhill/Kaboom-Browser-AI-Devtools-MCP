@@ -18,6 +18,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
 	ptyupload "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/upload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -108,7 +109,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 	// fd that will not close, a stranded stdin flush) to the structured log. The
 	// pty package has no logger of its own, so without this sink those failures are
 	// invisible in production (finding S8, rule 25).
-	pty.SetDiagnosticHook(func(event string, fields map[string]any) {
+	ptydiag.SetHook(func(event string, fields map[string]any) {
 		deps.logEvent(event, fields)
 	})
 

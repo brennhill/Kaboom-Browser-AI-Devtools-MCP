@@ -1137,6 +1137,10 @@
       "mutable_globals": 0,
       "exports": 6
     },
+    "internal/pty/diagnostics/diagnostics.go": {
+      "mutable_globals": 1,
+      "exports": 6
+    },
     "internal/pty/fanout/fanout.go": {
       "mutable_globals": 0,
       "exports": 10
@@ -1146,8 +1150,8 @@
       "exports": 18
     },
     "internal/pty/session.go": {
-      "mutable_globals": 6,
-      "exports": 31
+      "mutable_globals": 4,
+      "exports": 26
     },
     "internal/pty/session_unsupported.go": {
       "mutable_globals": 0,

@@ -47,6 +47,7 @@ code_paths:
   - internal/pty/manager.go
   - internal/pty/session.go
   - internal/pty/writebuf.go
+  - internal/pty/diagnostics/diagnostics.go
   - internal/pty/fanout/fanout.go
   - npm/kaboom-agentic-browser/lib/daemon/kill-daemon.js
   - scripts/tests/framework/framework.sh
@@ -92,6 +93,7 @@ test_paths:
   - internal/pty/manager_test.go
   - internal/pty/session_test.go
   - internal/pty/runtime_lifecycle_test.go
+  - internal/pty/diagnostics/diagnostics_test.go
   - internal/pty/fanout/fanout_test.go
   - internal/pty/upload/upload_test.go
   - cmd/browser-agent/internal/terminal/session_end_signal_test.go
@@ -148,6 +150,9 @@ last_verified_date: 2026-03-28
 - The current side panel rollout is terminal-only; xterm fills the available panel height
 - Terminal startup failure guidance now consistently points users at the Kaboom daemon command: `npx kaboom-agentic-browser`
 - Implicit terminal shells start in login mode so launchd-managed daemons load the user's profile and command `PATH`; explicitly requested commands retain their exact arguments.
+- PTY failure diagnostics are owned by a platform-neutral package. Manager and
+  write-buffer failures therefore compile and remain visible on every target;
+  Unix-only session code no longer owns the shared hook or event contract.
 - Terminal UAT preserves literal JSON booleans, including `false`, when validating a stopped session.
 - The terminal iframe accepts control messages only from its actual parent window; same-shaped messages from sibling or unrelated frames are ignored before target dispatch.
 - Start failures are never silently dropped: `startSession` classifies each failure (`unreachable` transport / `unavailable` reachable-500 / `sandbox`), and the side panel surfaces `unreachable`/`sandbox` even with no panel body mounted (via toast at daemon-down-at-open), while `unavailable` falls through to the recoverable no-session state. The daemon also logs state-mutating failures (`terminal_session_start_failed`, `terminal_session_stop_failed`) to `~/.kaboom/logs/kaboom.jsonl`.

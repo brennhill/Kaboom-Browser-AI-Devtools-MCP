@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+
+	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
 )
 
 // SessionKey identifies a session by repository path and agent type,
@@ -110,7 +112,7 @@ func (m *Manager) Start(cfg StartConfig) (*StartResult, error) {
 func closeSessions(sessions []*Session) {
 	for _, sess := range sessions {
 		if err := sess.Close(); err != nil {
-			diag(EventSessionCloseFailed, map[string]any{
+			ptydiag.Emit(ptydiag.EventSessionCloseFailed, map[string]any{
 				"session_id": sess.ID,
 				"error":      err.Error(),
 			})

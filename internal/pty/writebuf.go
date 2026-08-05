@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
+
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -179,7 +181,7 @@ func (wb *WriteBuffer) flushAll() {
 			// exited and they are undeliverable, but it can also be a transient
 			// write error, and either way the user's keystrokes just vanished. Log
 			// it (rule 25) rather than discarding the error.
-			diag(EventWriteBufferWriteFailed, map[string]any{
+			ptydiag.Emit(ptydiag.EventWriteBufferWriteFailed, map[string]any{
 				"session_id":    wb.sessionID,
 				"chunk_bytes":   len(chunk),
 				"pending_bytes": wb.Pending(),

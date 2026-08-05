@@ -17,6 +17,8 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
+
+	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
 )
 
 // maxScrollback is the maximum size of the terminal output scrollback buffer (256 KB).
@@ -341,7 +343,7 @@ func (s *Session) Close() error {
 			// Giving up here leaves a live process holding the slave PTY after the
 			// daemon believes the session is gone. Nothing else observes this, so
 			// it must not be silent (rule 25).
-			diag(EventSessionReapTimeout, map[string]any{
+			ptydiag.Emit(ptydiag.EventSessionReapTimeout, map[string]any{
 				"session_id": s.ID,
 				"pid":        s.Pid(),
 				"phase":      "close",
@@ -364,7 +366,7 @@ func (s *Session) signalChild(sig syscall.Signal) {
 	if err == nil || errors.Is(err, os.ErrProcessDone) {
 		return
 	}
-	diag(EventSessionSignalFailed, map[string]any{
+	ptydiag.Emit(ptydiag.EventSessionSignalFailed, map[string]any{
 		"session_id": s.ID,
 		"signal":     sig.String(),
 		"pid":        s.cmd.Process.Pid,
@@ -386,7 +388,7 @@ func (s *Session) Wait(timeout time.Duration) error {
 	case <-s.reaped:
 		return nil
 	case <-time.After(timeout):
-		diag(EventSessionReapTimeout, map[string]any{
+		ptydiag.Emit(ptydiag.EventSessionReapTimeout, map[string]any{
 			"session_id": s.ID,
 			"pid":        s.Pid(),
 			"phase":      "wait",
@@ -630,46 +632,4 @@ func (realClock) Now() time.Time { return time.Now() }
 
 func (realClock) AfterFunc(d time.Duration, f func()) stoppableTimer {
 	return time.AfterFunc(d, f)
-}
-
-// Diagnostic event names emitted by this package. Named constants so the daemon
-// log schema is greppable from one place.
-const (
-	// EventSessionSignalFailed: sending SIGTERM/SIGKILL to the child failed for a
-	// reason other than "already exited".
-	EventSessionSignalFailed = "pty_session_signal_failed"
-	// EventSessionReapTimeout: the child was not reaped within Close's bound even
-	// after SIGKILL — the process (and its PTY fd) outlives the daemon's teardown.
-	EventSessionReapTimeout = "pty_session_reap_timeout"
-	// EventSessionCloseFailed: Session.Close returned an error (PTY fd close).
-	EventSessionCloseFailed = "pty_session_close_failed"
-	// EventWriteBufferWriteFailed: a buffered chunk could not be written to the
-	// PTY; the bytes stay queued and are not retried until the next write.
-	EventWriteBufferWriteFailed = "pty_writebuffer_write_failed"
-)
-
-// diagMu guards diagFn: the setter (daemon wiring) and the readers (any session
-// teardown or drain goroutine) run concurrently.
-var (
-	diagMu sync.Mutex
-	diagFn func(event string, fields map[string]any)
-)
-
-// SetDiagnosticHook installs (or clears, with nil) the structured event sink for
-// PTY-internal failures. Called at daemon wiring; also used by tests.
-func SetDiagnosticHook(fn func(event string, fields map[string]any)) {
-	diagMu.Lock()
-	diagFn = fn
-	diagMu.Unlock()
-}
-
-// diag emits a structured event if a sink is installed. Nil-safe, and snapshots
-// the hook under the lock so a concurrent SetDiagnosticHook cannot race the call.
-func diag(event string, fields map[string]any) {
-	diagMu.Lock()
-	fn := diagFn
-	diagMu.Unlock()
-	if fn != nil {
-		fn(event, fields)
-	}
 }

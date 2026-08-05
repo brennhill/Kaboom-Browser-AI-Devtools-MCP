@@ -11,6 +11,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
 )
 
 // capturedEvent is one diagnostic emission.
@@ -26,12 +28,12 @@ func captureDiag(t *testing.T) func() []capturedEvent {
 	t.Helper()
 	var mu sync.Mutex
 	var events []capturedEvent
-	SetDiagnosticHook(func(name string, fields map[string]any) {
+	ptydiag.SetHook(func(name string, fields map[string]any) {
 		mu.Lock()
 		events = append(events, capturedEvent{name: name, fields: fields})
 		mu.Unlock()
 	})
-	t.Cleanup(func() { SetDiagnosticHook(nil) })
+	t.Cleanup(func() { ptydiag.SetHook(nil) })
 	return func() []capturedEvent {
 		mu.Lock()
 		defer mu.Unlock()
@@ -62,12 +64,12 @@ func TestSession_CloseLogsReapTimeout(t *testing.T) {
 	s := &Session{ID: "wedged", cmd: &exec.Cmd{}, done: make(chan struct{}), reaped: make(chan struct{})}
 	_ = s.Close()
 
-	ev, ok := findEvent(read(), EventSessionReapTimeout)
+	ev, ok := findEvent(read(), ptydiag.EventSessionReapTimeout)
 	if !ok {
-		t.Fatalf("Close on an unreapable child must emit %s, got %v", EventSessionReapTimeout, read())
+		t.Fatalf("Close on an unreapable child must emit %s, got %v", ptydiag.EventSessionReapTimeout, read())
 	}
 	if ev.fields["session_id"] != "wedged" {
-		t.Fatalf("%s must carry the session id, got %v", EventSessionReapTimeout, ev.fields)
+		t.Fatalf("%s must carry the session id, got %v", ptydiag.EventSessionReapTimeout, ev.fields)
 	}
 }
 
@@ -84,10 +86,10 @@ func TestSession_CloseDoesNotLogAlreadyExitedChild(t *testing.T) {
 	<-s.reaped // the child is gone and reaped before we close
 	_ = s.Close()
 
-	if ev, ok := findEvent(read(), EventSessionSignalFailed); ok {
+	if ev, ok := findEvent(read(), ptydiag.EventSessionSignalFailed); ok {
 		t.Fatalf("an already-exited child is expected, not a failure; got %s %v", ev.name, ev.fields)
 	}
-	if ev, ok := findEvent(read(), EventSessionReapTimeout); ok {
+	if ev, ok := findEvent(read(), ptydiag.EventSessionReapTimeout); ok {
 		t.Fatalf("a reaped child must not report a reap timeout; got %s %v", ev.name, ev.fields)
 	}
 }
@@ -114,7 +116,7 @@ func TestSession_WaitIsBounded(t *testing.T) {
 		t.Fatal("Session.Wait is unbounded — an unreapable child parks the relay's readLoop forever")
 	}
 
-	if _, ok := findEvent(read(), EventSessionReapTimeout); !ok {
+	if _, ok := findEvent(read(), ptydiag.EventSessionReapTimeout); !ok {
 		t.Fatalf("a give-up in Wait must be logged, got %v", read())
 	}
 }
@@ -131,7 +133,7 @@ func TestSession_WaitReturnsImmediatelyForReapedChild(t *testing.T) {
 	if err := s.Wait(time.Hour); err != nil {
 		t.Fatalf("Wait on a reaped child: %v", err)
 	}
-	if ev, ok := findEvent(read(), EventSessionReapTimeout); ok {
+	if ev, ok := findEvent(read(), ptydiag.EventSessionReapTimeout); ok {
 		t.Fatalf("a reaped child must not log a timeout, got %v", ev.fields)
 	}
 }
@@ -149,15 +151,15 @@ func TestManager_StopAllLogsCloseFailure(t *testing.T) {
 	started.Session.ptmx = closeErrorPTY{err: errors.New("close fixture failed")}
 	m.StopAll()
 
-	ev, ok := findEvent(read(), EventSessionCloseFailed)
+	ev, ok := findEvent(read(), ptydiag.EventSessionCloseFailed)
 	if !ok {
 		t.Fatalf("StopAll must not discard a Close error, got %v", read())
 	}
 	if ev.fields["session_id"] != "s1" {
-		t.Fatalf("%s must carry the session id, got %v", EventSessionCloseFailed, ev.fields)
+		t.Fatalf("%s must carry the session id, got %v", ptydiag.EventSessionCloseFailed, ev.fields)
 	}
 	if ev.fields["error"] == nil {
-		t.Fatalf("%s must carry the error, got %v", EventSessionCloseFailed, ev.fields)
+		t.Fatalf("%s must carry the error, got %v", ptydiag.EventSessionCloseFailed, ev.fields)
 	}
 }
 
@@ -173,7 +175,7 @@ func TestWriteBuffer_FlushFailureIsLogged(t *testing.T) {
 	}
 	_ = wb.Close() // Close's final flush runs synchronously, so the failure is observed here
 
-	ev, ok := findEvent(read(), EventWriteBufferWriteFailed)
+	ev, ok := findEvent(read(), ptydiag.EventWriteBufferWriteFailed)
 	if !ok {
 		t.Fatalf("a failed PTY flush must be logged, got %v", read())
 	}
