@@ -1,7 +1,9 @@
-// Purpose: Implements persistence manager lifecycle for storing and restoring AI session context.
+// Purpose: Defines session storage state and its public persistence contracts.
 // Why: Preserves investigative context across daemon restarts and multi-session workflows.
 // Docs: docs/features/feature/persistent-memory/index.md
 
+// Package persistence provides validated namespace/key storage, metadata
+// handling, and background dirty flushing for session state.
 package persistence
 
 import (

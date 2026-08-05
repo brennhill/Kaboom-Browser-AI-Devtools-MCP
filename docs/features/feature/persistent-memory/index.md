@@ -4,7 +4,7 @@ feature_id: feature-persistent-memory
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/server.go
   - cmd/browser-agent/tools_core.go
@@ -12,11 +12,8 @@ code_paths:
   - internal/persistence/persistence_context.go
   - internal/persistence/persistence_crud.go
   - internal/persistence/persistence_dirty.go
-  - internal/persistence/persistence_maintenance.go
-  - internal/persistence/persistence_stats.go
   - internal/persistence/persistence_store.go
   - internal/persistence/persistence_types.go
-  - internal/persistence/persistence_validation.go
   - internal/statefile/statefile.go
   - internal/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
@@ -82,6 +79,11 @@ last_verified_date: 2026-03-05
   touching real user state. Operational failures return stable value-free
   errors and activate Doctor incidents; expected optional-state absence is
   explicitly classified and resolves earlier incidents.
+- CRUD and path validation are one security boundary in
+  `persistence_crud.go`. Context loading, quota measurement, and statistics are
+  read-only filesystem projections owned by `persistence_context.go`. This
+  keeps the package at ten files while preserving separate dirty-flush,
+  request-dispatch, and store-lifecycle owners.
 - Each server resolves its session project root once, and tool handlers inherit
   that explicit root. Stateful test factories replace it with an isolated
   temporary project before handler construction, preventing parallel tests from

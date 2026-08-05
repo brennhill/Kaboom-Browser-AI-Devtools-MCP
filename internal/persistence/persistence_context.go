@@ -4,8 +4,10 @@ package persistence
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
@@ -106,4 +108,76 @@ func (s *SessionStore) LoadSessionContext() SessionContext {
 	ctx.Performance = s.loadJSONFileAs(filepath.Join(s.projectDir, "performance", "endpoints.json"), "performance_context_state")
 
 	return ctx
+}
+
+func (s *SessionStore) projectSize() (int64, error) {
+	var total int64
+	err := s.filesystem().Walk(s.projectDir, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			total += info.Size()
+		}
+		return nil
+	})
+	return total, err
+}
+
+func countNamespaceFiles(files sessionFilesystem, nsDir string) (count int, bytes int64, readErr error) {
+	entries, err := files.ReadDir(nsDir)
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return 0, 0, err
+		}
+		bytes += info.Size()
+		count++
+	}
+	return count, bytes, nil
+}
+
+func isSafeDirName(name string) bool {
+	return name != ".." && !filepath.IsAbs(name) && !strings.Contains(name, "..")
+}
+
+// Stats returns a complete filesystem-backed storage snapshot or a diagnosed error.
+func (s *SessionStore) Stats() (StoreStats, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	stats := StoreStats{Namespaces: make(map[string]int), SessionCount: s.meta.SessionCount}
+	entries, err := s.filesystem().ReadDir(s.projectDir)
+	if err != nil {
+		s.reportRecovery("session_store_stats_state", "Session storage statistics could not be read; no incomplete totals were returned.", "Check permissions for the project .kaboom directory, then retry.")
+		return stats, errors.New("session_state_stats_failed")
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			info, err := entry.Info()
+			if err != nil {
+				s.reportRecovery("session_store_stats_state", "Session storage statistics could not be read; no incomplete totals were returned.", "Check permissions for the project .kaboom directory, then retry.")
+				return StoreStats{Namespaces: make(map[string]int), SessionCount: s.meta.SessionCount}, errors.New("session_state_stats_failed")
+			}
+			stats.TotalBytes += info.Size()
+			continue
+		}
+		if !isSafeDirName(entry.Name()) {
+			continue
+		}
+		count, bytes, readErr := countNamespaceFiles(s.filesystem(), filepath.Join(s.projectDir, entry.Name()))
+		if readErr != nil {
+			s.reportRecovery("session_store_stats_state", "Session storage statistics could not be read; no incomplete totals were returned.", "Check permissions for the project .kaboom directory, then retry.")
+			return StoreStats{Namespaces: make(map[string]int), SessionCount: s.meta.SessionCount}, errors.New("session_state_stats_failed")
+		}
+		stats.TotalBytes += bytes
+		stats.Namespaces[entry.Name()] = count
+	}
+	statediag.Resolve(s.diagnostics, "session_store_stats_state")
+	return stats, nil
 }

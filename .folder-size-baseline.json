@@ -27,7 +27,6 @@
     "internal/hook": 18,
     "internal/hook/eval/testdata/quality-gate": 13,
     "internal/pagination": 18,
-    "internal/persistence": 14,
     "internal/pty": 19,
     "internal/queries": 14,
     "internal/security/scan": 17,

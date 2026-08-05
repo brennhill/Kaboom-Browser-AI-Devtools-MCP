@@ -6,10 +6,28 @@ package persistence
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
+
+func TestPackageFileBoundary(t *testing.T) {
+	t.Parallel()
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read persistence package: %v", err)
+	}
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".go" {
+			count++
+		}
+	}
+	if count > 10 {
+		t.Fatalf("persistence package has %d Go files; maximum is 10", count)
+	}
+}
 
 func newTestSessionStore(t *testing.T) *SessionStore {
 	t.Helper()
