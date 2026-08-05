@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/openapi.json
   - cmd/browser-agent/tools_configure.go
@@ -339,6 +339,9 @@ owners expose current size, capacity, cumulative drops, and oldest age so
 pressure and recovery are observable without competing with active commands.
 Extension telemetry batchers retain failed batches and schedule one
 lifecycle-cancellable half-open probe even when no new page event arrives.
+Circuit recovery tests inject one controlled clock and timer queue, then advance
+exactly one reset window before awaiting the active flush. A later retry window
+therefore cannot race success, reopen, or retained-buffer assertions.
 Each stream accounts exactly for received entries as delivered, retained, or
 dropped; capacity and requeue overflow emit redacted structured diagnostics and
 a correlated Doctor incident, which resolves after delivery recovers. The dead
@@ -365,6 +368,7 @@ this one bounded delivery contract.
 - `internal/capture/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
 - Additional capture contract tests (`settings_path_test`, `coverage_gaps_part2_test`, `api_contract_test`) now reuse shared helper assertions to keep endpoint/status checks consistent.
 - `src/background/sync/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.
+- `tests/extension/performance/rate-limit.test.js` deterministically covers autonomous half-open probe success, failure, buffer drain, and reopen transitions without wall-clock sleeps.
 - Correlation-view tests drive canonical command terminal transitions directly;
   deadline scheduling and cleanup signaling remain isolated in the query
   expiration suite, so lifecycle projection tests never poll wall-clock time.

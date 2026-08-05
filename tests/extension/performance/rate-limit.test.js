@@ -60,6 +60,32 @@ globalThis.fetch = mock.fn()
 import { createCircuitBreaker } from '../../../extension/background/sync/circuit-breaker.js'
 import { createBatcherWithCircuitBreaker, RATE_LIMIT_CONFIG } from '../../../extension/background/sync/batchers.js'
 
+function createControlledBatcherRuntime() {
+  let now = 0
+  let nextTimer = 1
+  const timers = new Map()
+
+  return {
+    runtime: {
+      now: () => now,
+      setTimeout: (callback, delay) => {
+        const id = nextTimer++
+        timers.set(id, { callback, due: now + delay })
+        return id
+      },
+      clearTimeout: (id) => timers.delete(id)
+    },
+    advanceBy(milliseconds) {
+      now += milliseconds
+      const due = [...timers.entries()].filter(([, timer]) => timer.due <= now)
+      for (const [id, timer] of due) {
+        timers.delete(id)
+        timer.callback()
+      }
+    }
+  }
+}
+
 describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
   beforeEach(() => {
     mock.reset()
@@ -91,28 +117,7 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
   })
 
   test('autonomously retries retained entries when an open circuit becomes probeable', async () => {
-    let now = 0
-    let nextTimer = 1
-    const timers = new Map()
-    const runtime = {
-      now: () => now,
-      setTimeout: (callback, delay) => {
-        const id = nextTimer++
-        timers.set(id, { callback, due: now + delay })
-        return id
-      },
-      clearTimeout: (id) => timers.delete(id)
-    }
-    const advance = async (milliseconds) => {
-      now += milliseconds
-      const due = [...timers.entries()].filter(([, timer]) => timer.due <= now)
-      for (const [id, timer] of due) {
-        timers.delete(id)
-        timer.callback()
-      }
-      await Promise.resolve()
-      await Promise.resolve()
-    }
+    const { runtime, advanceBy } = createControlledBatcherRuntime()
     let available = false
     const delivered = []
     const sendFn = mock.fn(async (entries) => {
@@ -133,9 +138,9 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
     assert.deepStrictEqual(batcher.getPending(), [{ id: 'retained' }])
 
     available = true
-    await advance(49)
+    advanceBy(49)
     assert.deepStrictEqual(delivered, [])
-    await advance(1)
+    advanceBy(1)
     await batcher.flush()
 
     assert.deepStrictEqual(delivered, [{ id: 'retained' }])
@@ -363,6 +368,7 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
 
   // Spec scenario 19: After 30 seconds -> single probe sent
   test('19: After resetTimeout, a single probe request is sent', async () => {
+    const { runtime, advanceBy } = createControlledBatcherRuntime()
     let shouldFail = true
     const sendFn = mock.fn(() => {
       if (shouldFail) return Promise.reject(new Error('Server error: 429'))
@@ -373,7 +379,8 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
       debounceMs: 1,
       maxBatchSize: 50,
       retryBudget: 1,
-      resetTimeout: 50 // Short timeout for testing
+      resetTimeout: 50,
+      runtime
     })
 
     // Open the circuit
@@ -386,13 +393,15 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
     // Recovery no longer needs another page event: the retained batch is the probe.
     shouldFail = false
     const callCountBefore = sendFn.mock.calls.length
-    await new Promise((r) => setTimeout(r, 150))
+    advanceBy(50)
+    await batcher.flush()
     assert.strictEqual(sendFn.mock.calls.length, callCountBefore + 1)
     assert.strictEqual(circuitBreaker.getState(), 'closed')
   })
 
   // Spec scenario 20: Probe succeeds -> circuit closes, buffer drains
   test('20: Probe succeeds closes circuit and drains buffer', async () => {
+    const { runtime, advanceBy } = createControlledBatcherRuntime()
     let shouldFail = true
     const sendFn = mock.fn(() => {
       if (shouldFail) return Promise.reject(new Error('Server error: 429'))
@@ -403,7 +412,8 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
       debounceMs: 1,
       maxBatchSize: 50,
       retryBudget: 1,
-      resetTimeout: 50
+      resetTimeout: 50,
+      runtime
     })
 
     // Open the circuit
@@ -415,7 +425,7 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
 
     // The scheduled half-open probe succeeds and drains without a new event.
     shouldFail = false
-    await new Promise((r) => setTimeout(r, 150))
+    advanceBy(50)
     await batcher.flush()
 
     assert.strictEqual(circuitBreaker.getState(), 'closed')
@@ -424,13 +434,15 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
 
   // Spec scenario 21: Probe fails -> circuit re-opens for another 30 seconds
   test('21: Probe fails re-opens circuit', async () => {
+    const { runtime, advanceBy } = createControlledBatcherRuntime()
     const sendFn = mock.fn(() => Promise.reject(new Error('Server error: 429')))
 
     const { batcher, circuitBreaker } = createBatcherWithCircuitBreaker(sendFn, {
       debounceMs: 1,
       maxBatchSize: 50,
       retryBudget: 1,
-      resetTimeout: 50
+      resetTimeout: 50,
+      runtime
     })
 
     // Open the circuit
@@ -442,7 +454,8 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
 
     // The autonomous half-open probe fails and immediately re-opens the circuit.
     const callsBeforeProbe = sendFn.mock.calls.length
-    await new Promise((r) => setTimeout(r, 150))
+    advanceBy(50)
+    await batcher.flush()
     assert.ok(sendFn.mock.calls.length > callsBeforeProbe)
     assert.strictEqual(circuitBreaker.getState(), 'open')
     assert.ok(batcher.getPending().length > 0)
