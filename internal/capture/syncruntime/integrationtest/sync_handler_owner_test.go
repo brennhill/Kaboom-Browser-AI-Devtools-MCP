@@ -1,8 +1,9 @@
 // sync_handler_owner_test.go — Structural ownership tests for extension sync transport.
 
-package capture
+package integrationtest
 
 import (
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"reflect"
 	"testing"
 

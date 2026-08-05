@@ -2,9 +2,10 @@
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 // enhanced_actions_test.go — Tests for enhanced action buffering, enrichment, and ring buffer eviction.
-package capture
+package pipelinetest
 
 import (
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"

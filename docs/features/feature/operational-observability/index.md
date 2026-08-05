@@ -4,7 +4,7 @@ feature_id: feature-operational-observability
 status: in_progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/capture/pressure/stats.go
   - internal/capture/perfstore/store.go
@@ -21,7 +21,7 @@ test_paths:
   - internal/capture/logstore/store_test.go
   - internal/capture/perfstore/store_test.go
   - internal/capture/settingscache/loader_test.go
-  - internal/capture/accessor_unit_test.go
+  - internal/capture/pipelinetest/accessor_unit_test.go
   - internal/incident/store_test.go
   - internal/incident/support_test.go
   - cmd/browser-agent/tools_configure_support_test.go

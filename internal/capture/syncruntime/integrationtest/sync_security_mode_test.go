@@ -1,11 +1,12 @@
 // Purpose: Tests for capture sync behavior in security mode.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package integrationtest
 
 import (
 	"bytes"
 	"encoding/json"
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"net/http/httptest"
 	"testing"
 

@@ -1,16 +1,15 @@
 // Purpose: Coverage-expansion tests for capture pipeline edge cases and branch paths.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package pipelinetest
 
 import (
 	"encoding/json"
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -32,29 +31,6 @@ func newCoverageCapture(t *testing.T) *Capture {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 	return c
-}
-
-func TestCoverageBoost_SetupHelpers(t *testing.T) {
-	c := setupTestCapture(t)
-	if c == nil {
-		t.Fatal("setupTestCapture returned nil")
-	}
-	c.Close()
-
-	srv, logFile := setupTestServer(t)
-	if srv == nil {
-		t.Fatal("setupTestServer returned nil server")
-	}
-	if logFile == "" {
-		t.Fatal("setupTestServer returned empty log file path")
-	}
-	if _, err := os.Stat(filepath.Dir(logFile)); err != nil {
-		t.Fatalf("setupTestServer log dir stat error = %v", err)
-	}
-
-	if got := setupToolHandler(t, srv, NewCapture()); got != nil {
-		t.Fatalf("setupToolHandler() = %v, want nil placeholder", got)
-	}
 }
 
 func TestCoverageBoost_RateLimitHealthHandler(t *testing.T) {
@@ -173,42 +149,38 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 		t.Fatalf("last network body TestIDs = %+v, want [tid]", last.TestIDs)
 	}
 
-	c2 := newCoverageCapture(t)
-	replaceTelemetryForTest(c2, telemetrystore.Dependencies{NetworkBodies: bodystore.New(100, 1)})
+	store := telemetrystore.New(telemetrystore.Dependencies{NetworkBodies: bodystore.New(100, 1)})
 	huge := strings.Repeat("x", 2)
-	c2.Telemetry().AddNetworkBodies([]types.NetworkBody{{
+	store.AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
 		URL:          "https://example.test/huge",
 		RequestBody:  huge,
 		ResponseBody: huge,
 	}})
-	if got := len(c2.Telemetry().NetworkBodies().Snapshot().Bodies); got != 0 {
+	if got := len(store.NetworkBodies().Snapshot().Bodies); got != 0 {
 		t.Fatalf("GetNetworkBodyCount() after memory eviction = %d, want 0", got)
 	}
-	if got := c2.Telemetry().NetworkBodies().Stats().MemoryBytes; got != 0 {
+	if got := store.NetworkBodies().Stats().MemoryBytes; got != 0 {
 		t.Fatalf("GetNetworkBodiesBufferMemory() after eviction = %d, want 0", got)
 	}
 }
 
 func TestCoverageBoost_NetworkWaterfallGetters(t *testing.T) {
-	c := newCoverageCapture(t)
-
-	empty := c.Telemetry().NetworkWaterfall().Entries()
+	store := telemetrystore.New(telemetrystore.Dependencies{Waterfall: waterfallstore.New(1)})
+	empty := store.NetworkWaterfall().Entries()
 	if len(empty) != 0 {
 		t.Fatalf("GetNetworkWaterfallEntries() initial len = %d, want 0", len(empty))
 	}
 
-	replaceTelemetryForTest(c, telemetrystore.Dependencies{Waterfall: waterfallstore.New(1)})
-
-	c.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
+	store.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
 		{Name: "https://one.example"},
 		{Name: "https://two.example"},
 	}, "https://page.example")
 
-	if got := len(c.Telemetry().NetworkWaterfall().Entries()); got != 1 {
+	if got := len(store.NetworkWaterfall().Entries()); got != 1 {
 		t.Fatalf("GetNetworkWaterfallCount() = %d, want 1", got)
 	}
-	entries := c.Telemetry().NetworkWaterfall().Entries()
+	entries := store.NetworkWaterfall().Entries()
 	if len(entries) != 1 {
 		t.Fatalf("GetNetworkWaterfallEntries() len = %d, want 1", len(entries))
 	}

@@ -1,7 +1,7 @@
 // Purpose: End-to-end tests that binary format detection runs on ingest for network bodies and WS messages.
 // Docs: docs/features/feature/binary-format-detection/index.md
 
-package capture_test
+package pipelinetest
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"

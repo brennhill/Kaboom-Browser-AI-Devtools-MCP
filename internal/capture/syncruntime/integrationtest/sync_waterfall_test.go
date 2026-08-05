@@ -1,10 +1,11 @@
 // sync_waterfall_test.go — Tests waterfall query and result delivery over sync.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package integrationtest
 
 import (
 	"encoding/json"
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"net/http"
 	"testing"
 

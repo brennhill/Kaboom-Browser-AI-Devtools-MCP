@@ -2,10 +2,11 @@
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 // capture_stress_test.go — Concurrent stress tests for capture system.
-package capture
+package pipelinetest
 
 import (
 	"fmt"
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"runtime"
 	"sync"
 	"testing"

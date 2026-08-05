@@ -1,10 +1,11 @@
 // sync_analytics_test.go — Tests for analytics fields in sync protocol:
 // features_used callback, install_id in response.
 
-package capture
+package integrationtest
 
 import (
 	"encoding/json"
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"net/http"
 	"sync"
 	"testing"

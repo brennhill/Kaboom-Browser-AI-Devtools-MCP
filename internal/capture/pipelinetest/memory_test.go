@@ -1,9 +1,10 @@
 // memory_test.go — Verifies WebSocket memory accounting and coordinated clearing.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package pipelinetest
 
 import (
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"testing"
 	"time"
 

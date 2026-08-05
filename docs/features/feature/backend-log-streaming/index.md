@@ -113,26 +113,26 @@ test_paths:
   - internal/capture/syncruntime/sync_command_lifecycle_test.go
   - internal/capture/syncruntime/readiness_gate_test.go
   - internal/capture/async_queue_integration_test.go
-  - internal/capture/sync_waterfall_test.go
+  - internal/capture/syncruntime/integrationtest/sync_waterfall_test.go
   - internal/capture/websockettest/websocket_test.go
   - internal/capture/websockettest/websocket_status_test.go
   - internal/capture/websockettest/websocket_handlers_test.go
   - internal/capture/websockettest/websocket-streaming_test.go
   - internal/capture/syncruntime/sync_test_helpers_test.go
   - internal/capture/coverage_gaps_part2_test.go
-  - internal/capture/api_contract_test.go
+  - internal/capture/pipelinetest/api_contract_test.go
   - internal/capture/logstore/store_test.go
   - internal/capture/logstore/diagnostic_test.go
-  - internal/capture/accessor_unit_test.go
+  - internal/capture/pipelinetest/accessor_unit_test.go
   - internal/capture/featureusage/observer_test.go
   - internal/capture/syncruntime/extension_state_unit_test.go
-  - internal/capture/buffer_clear_test.go
-  - internal/capture/capture_stress_test.go
-  - internal/capture/capture_bench_test.go
+  - internal/capture/pipelinetest/buffer_clear_test.go
+  - internal/capture/pipelinetest/capture_stress_test.go
+  - internal/capture/pipelinetest/capture_bench_test.go
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
   - internal/capture/healthreader/reader_test.go
-  - internal/capture/sync_handler_owner_test.go
+  - internal/capture/syncruntime/integrationtest/sync_handler_owner_test.go
   - internal/circuit/breaker_test.go
   - internal/debuglog/logger_test.go
   - internal/lifecycle/observer_test.go
@@ -410,7 +410,7 @@ implementation or preserving an obsolete compatibility surface.
 - `internal/capture/syncruntime/sync_test_helpers_test.go` centralizes `/sync` request marshaling, transport dispatch, and response decoding helpers.
 - `internal/capture/syncruntime/sync_test.go` reuses those helpers for request ingestion, heartbeats, and connection state.
 - `internal/capture/syncruntime/sync_command_lifecycle_test.go` owns adaptive polling and command-result lifecycle coverage.
-- `internal/capture/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
+- `internal/capture/syncruntime/integrationtest/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
 - Additional capture contract tests (`coverage_gaps_part2_test`, `api_contract_test`) reuse shared helper assertions to keep endpoint/status checks consistent; canonical settings-path and recovery coverage lives with `settingscache`.
 - `src/background/sync/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.
 - `tests/extension/performance/rate-limit.test.js` deterministically covers autonomous half-open probe success, failure, buffer drain, and reopen transitions without wall-clock sleeps.

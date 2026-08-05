@@ -1,7 +1,7 @@
 // Purpose: Tests for capture buffer clearing and reset behavior.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package pipelinetest
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"

@@ -1,9 +1,10 @@
 // Purpose: Benchmark capture pipeline throughput and latency.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package pipelinetest
 
 import (
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"testing"
 	"time"
 

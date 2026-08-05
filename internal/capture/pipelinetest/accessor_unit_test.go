@@ -1,10 +1,11 @@
 // Purpose: Unit tests for capture pipeline accessor logic.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package pipelinetest
 
 import (
 	"fmt"
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
@@ -119,14 +120,13 @@ func TestCaptureNestedSnapshotsDetachAtIngestAndRead(t *testing.T) {
 }
 
 func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
-	c := NewCapture()
 	now := time.Now().Add(-2 * time.Second)
-	replaceTelemetryForTest(c, telemetrystore.Dependencies{NetworkBodies: bodystore.New(100, 8*1024*1024), Actions: actionstore.New(1000), WebSockets: wsconn.NewStore(500, 4*1024*1024)})
-	c.Telemetry().NetworkBodies().Add(make([]types.NetworkBody, 103), now)
-	c.Telemetry().Actions().Add(make([]types.EnhancedAction, 1001), now)
-	c.Telemetry().WebSockets().Add(make([]types.WebSocketEvent, 502), now)
+	store := telemetrystore.New(telemetrystore.Dependencies{NetworkBodies: bodystore.New(100, 8*1024*1024), Actions: actionstore.New(1000), WebSockets: wsconn.NewStore(500, 4*1024*1024)})
+	store.NetworkBodies().Add(make([]types.NetworkBody, 103), now)
+	store.Actions().Add(make([]types.EnhancedAction, 1001), now)
+	store.WebSockets().Add(make([]types.WebSocketEvent, 502), now)
 
-	pressure := c.Telemetry().Pressure()
+	pressure := store.Pressure()
 	assertPressure := func(name string, got pressuremetrics.Stats, size int, dropped int64) {
 		t.Helper()
 		if got.Size != size || got.Capacity != size || got.Dropped != dropped || got.OldestAge < time.Second {
@@ -136,16 +136,16 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	assertPressure("network", pressure.Network, 100, 3)
 	assertPressure("websocket", pressure.WebSocket, 500, 2)
 	assertPressure("actions", pressure.Actions, 1000, 1)
-	replaceTelemetryForTest(c, telemetrystore.Dependencies{NetworkBodies: c.Telemetry().NetworkBodies(), Actions: c.Telemetry().Actions(), WebSockets: c.Telemetry().WebSockets(), Waterfall: waterfallstore.New(3)})
-	c.Telemetry().NetworkWaterfall().Add(make([]types.NetworkWaterfallEntry, 7), "https://example.test")
-	if got := c.Telemetry().Pressure().NetworkWaterfall; got.Size != 3 || got.Dropped != 4 {
+	store = telemetrystore.New(telemetrystore.Dependencies{NetworkBodies: store.NetworkBodies(), Actions: store.Actions(), WebSockets: store.WebSockets(), Waterfall: waterfallstore.New(3)})
+	store.NetworkWaterfall().Add(make([]types.NetworkWaterfallEntry, 7), "https://example.test")
+	if got := store.Pressure().NetworkWaterfall; got.Size != 3 || got.Dropped != 4 {
 		t.Fatalf("network waterfall pressure = %#v, want bounded with four drops", got)
 	}
 
-	c.Telemetry().ClearNetworkBuffers()
-	c.Telemetry().WebSockets().Clear()
-	c.Telemetry().Actions().Clear()
-	pressure = c.Telemetry().Pressure()
+	store.ClearNetworkBuffers()
+	store.WebSockets().Clear()
+	store.Actions().Clear()
+	pressure = store.Pressure()
 	if pressure.Network.Size != 0 || pressure.WebSocket.Size != 0 || pressure.Actions.Size != 0 {
 		t.Fatalf("pressure did not recover after clear: %#v", pressure)
 	}

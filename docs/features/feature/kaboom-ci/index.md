@@ -4,7 +4,7 @@ feature_id: feature-kaboom-ci
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - Makefile
   - .github/workflows/architecture-validation.yml
@@ -47,7 +47,7 @@ test_paths:
   - tests/cli/runtime/doctor.test.cjs
   - tests/cli/lifecycle/server-install-hardening.test.cjs
   - tests/site/gokaboom-domain-contract.test.js
-  - internal/capture/sync_security_mode_test.go
+  - internal/capture/syncruntime/integrationtest/sync_security_mode_test.go
   - internal/qafixture/fixture_test.go
   - internal/qafixture/registry_test.go
   - internal/redaction/redaction_fuzz_test.go

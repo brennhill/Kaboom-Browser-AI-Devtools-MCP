@@ -8,11 +8,12 @@
 // cannot communicate with the server and the product is broken.
 //
 // Modification of these tests requires principal review.
-package capture
+package pipelinetest
 
 import (
 	"bytes"
 	"encoding/json"
+	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"

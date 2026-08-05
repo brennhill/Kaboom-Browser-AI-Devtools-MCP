@@ -21,7 +21,6 @@
     "gokaboom.dev/src/content/docs/articles": 35,
     "gokaboom.dev/src/content/docs/blog": 23,
     "gokaboom.dev/src/content/docs/guides": 16,
-    "internal/capture": 23,
     "internal/hook/eval/testdata/quality-gate": 13,
     "scripts": 58,
     "scripts/smoke-tests": 35,
