@@ -29,6 +29,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -570,7 +571,7 @@ func buildIssueReportDeps(h *ToolHandler) issuereport.HandlerDeps {
 				report.Diagnostics.Server.ErrorRatePct = audit.ErrorRatePct
 			}
 			if h.capture != nil {
-				health := capture.NewHealthReader(h.capture).Snapshot()
+				health := healthreader.New(h.capture).Snapshot()
 				report.Diagnostics.Extension.Connected = health.ConnectionCount > 0
 				report.Diagnostics.Extension.Source = health.ExtSessionID
 				report.Diagnostics.Buffers.NetworkEntries = health.NetworkBodyCount

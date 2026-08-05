@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
@@ -93,7 +94,7 @@ func Status(options StatusOptions) http.HandlerFunc {
 		buffers := map[string]any{"console_entries": logEntries, "console_capacity": logCapacity}
 
 		if options.Capture != nil {
-			snap := capture.NewHealthReader(options.Capture).Snapshot()
+			snap := healthreader.New(options.Capture).Snapshot()
 
 			resp["extension_connected"] = options.Capture.Extension().IsExtensionConnected()
 			resp["pilot_enabled"] = snap.PilotEnabled

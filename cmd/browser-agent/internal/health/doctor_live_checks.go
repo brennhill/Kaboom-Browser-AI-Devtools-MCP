@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
@@ -96,7 +97,7 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 
 func runDoctorChecks(cap *capture.Capture, runtime doctorCommandRuntime) []DoctorCheck {
 	checks := make([]DoctorCheck, 0, 11)
-	snap := capture.NewHealthReader(cap).Snapshot()
+	snap := healthreader.New(cap).Snapshot()
 
 	// 1. Extension connectivity.
 	if cap.Extension().IsExtensionConnected() {

@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-05
 code_paths:
-  - internal/capture/accessors.go
+  - internal/capture/healthreader/reader.go
   - internal/queries/dispatcher_queries.go
   - internal/capture/sync.go
   - internal/capture/telemetrystore/store.go
@@ -59,7 +59,7 @@ test_paths:
   - internal/tools/observe/timeline/correlation_test.go
   - internal/tools/observe/logs/logs_edge_test.go
   - internal/tools/observe/idbquery/execute_test.go
-  - internal/capture/health_reader_owner_test.go
+  - internal/capture/healthreader/reader_test.go
   - tests/extension/dom/command-element-results.test.js
   - tests/extension/dom/page-query-targeting.test.js
   - cmd/browser-agent/lint_hardening_test.go
@@ -186,7 +186,7 @@ queue on a wall-clock interval.
 ## Canonical Note
 `observe` is the passive read surface for captured browser/server state. It is the canonical polling surface for async command completion via `what:"command_result"`.
 
-Cross-owner runtime health is read through `capture.HealthReader`; no aggregate
+Cross-owner runtime health is read through `healthreader.Reader`; no aggregate
 health facade remains on the `Capture` composition root.
 Element collection, visibility filtering, limits, and tab metadata use the
 shared command helpers also consumed by `interact-explore`; viewport screenshot

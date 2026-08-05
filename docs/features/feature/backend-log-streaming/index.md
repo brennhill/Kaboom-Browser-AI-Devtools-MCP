@@ -12,7 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/state.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/filters.go
-  - internal/capture/accessors.go
+  - internal/capture/healthreader/reader.go
   - internal/capture/actionstore/store.go
   - internal/capture/bodystore/store.go
   - internal/capture/capture.go
@@ -131,7 +131,7 @@ test_paths:
   - internal/capture/capture_bench_test.go
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
-  - internal/capture/health_reader_owner_test.go
+  - internal/capture/healthreader/reader_test.go
   - internal/capture/sync_handler_owner_test.go
   - internal/circuit/breaker_test.go
   - internal/debuglog/logger_test.go
@@ -244,7 +244,7 @@ for a bounded two-second result-delivery grace. A command still absent after
 that grace fails with `extension_lost_command`, preserving fast recovery from a
 genuinely lost extension worker without racing valid subtitle, highlight, or
 DOM-action results already being flushed.
-Aggregate health reads are owned by `capture.HealthReader`; it snapshots the
+Aggregate health reads are owned by `healthreader.Reader`; it snapshots the
 independently synchronized telemetry, query, extension, and circuit owners
 without a cross-owner method on `Capture`.
 Coordinated runtime clearing is owned by `resetter.Resetter`; it resets test

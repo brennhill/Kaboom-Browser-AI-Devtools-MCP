@@ -4,7 +4,7 @@ feature_id: feature-deployment-watchdog
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/binarywatch/watcher.go
   - cmd/browser-agent/config.go
@@ -17,7 +17,7 @@ code_paths:
   - cmd/browser-agent/internal/dashboard/diagnostics.html
   - src/generated/openapi-types.ts
 test_paths:
-  - internal/capture/health_reader_owner_test.go
+  - internal/capture/healthreader/reader_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/binarywatch/watcher_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go
@@ -54,7 +54,7 @@ last_verified_date: 2026-03-05
 JSON is served only by `GET /diagnostics`; the dashboard uses that canonical
 route, and generated TypeScript contracts come directly from
 `cmd/browser-agent/openapi.json`.
-Operational health handlers consume the canonical `capture.HealthReader`;
+Operational health handlers consume the canonical `healthreader.Reader`;
 `Capture` no longer exposes a health forwarding method.
 Binary-upgrade polling, baseline capture, cancellation, and grace-period waits
 have explicit private runtime signals in tests. Upgrade detection and watcher

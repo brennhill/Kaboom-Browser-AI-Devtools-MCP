@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
@@ -171,7 +172,7 @@ func BuildBuffersInfo(cap *capture.Capture, server ServerDeps) BuffersInfo {
 	var networkEntries, wsEntries, actionEntries int
 	var networkCapacity, wsCapacity, actionCapacity int
 	if cap != nil {
-		h := capture.NewHealthReader(cap).Snapshot()
+		h := healthreader.New(cap).Snapshot()
 		networkEntries = h.NetworkBodyCount
 		wsEntries = h.WebSocketCount
 		actionEntries = h.ActionCount
@@ -219,7 +220,7 @@ func getConsoleStats(server ServerDeps) (int, int, int64) {
 func BuildRateLimitInfo(cap *capture.Capture) RateLimitingInfo {
 	info := RateLimitingInfo{Threshold: circuit.RateLimitThreshold}
 	if cap != nil {
-		h := capture.NewHealthReader(cap).Snapshot()
+		h := healthreader.New(cap).Snapshot()
 		info.CurrentRate = h.WindowEventCount
 		info.CircuitOpen = h.CircuitOpen
 		info.CircuitReason = h.CircuitReason

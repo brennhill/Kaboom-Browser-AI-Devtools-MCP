@@ -94,7 +94,7 @@ test_paths:
   - cmd/browser-agent/server_core_unit_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go
   - cmd/browser-agent/server_telemetry_contract_test.go
-  - internal/capture/health_reader_owner_test.go
+  - internal/capture/healthreader/reader_test.go
   - cmd/browser-agent/internal/toolrouting/routing_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_handler_test.go

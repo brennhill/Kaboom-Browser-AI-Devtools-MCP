@@ -861,10 +861,6 @@
       "mutable_globals": 0,
       "exports": 2
     },
-    "internal/capture/accessors.go": {
-      "mutable_globals": 0,
-      "exports": 4
-    },
     "internal/capture/actionstore/store.go": {
       "mutable_globals": 0,
       "exports": 9
@@ -886,6 +882,10 @@
       "exports": 40
     },
     "internal/capture/featureusage/observer.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/capture/healthreader/reader.go": {
       "mutable_globals": 0,
       "exports": 4
     },

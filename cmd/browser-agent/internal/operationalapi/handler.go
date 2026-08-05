@@ -17,6 +17,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -237,7 +238,7 @@ func (h *Handler) ServeDiagnostics(w http.ResponseWriter, r *http.Request) {
 
 // appendCaptureDiagnostics adds capture-related diagnostic fields to response map.
 func appendCaptureDiagnostics(resp map[string]any, cap *capture.Capture) {
-	snap := capture.NewHealthReader(cap).Snapshot()
+	snap := healthreader.New(cap).Snapshot()
 	health := cap.Circuit().GetHealthStatus()
 
 	resp["buffers"] = map[string]any{
