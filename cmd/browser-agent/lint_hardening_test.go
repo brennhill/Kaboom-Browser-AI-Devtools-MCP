@@ -379,7 +379,7 @@ func TestPackagesDoNotReexportCanonicalLogEntry(t *testing.T) {
 	for _, relativePath := range []string{
 		"internal/mcp/types.go",
 		"internal/server/main_handlers.go",
-		"internal/pagination/pagination_logs.go",
+		"internal/pagination/entries.go",
 		"internal/security/scan/scan.go",
 		"cmd/browser-agent/internal/logstore/store.go",
 	} {

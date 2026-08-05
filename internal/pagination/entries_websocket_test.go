@@ -1,7 +1,6 @@
-// Purpose: Tests for WebSocket event pagination.
+// Purpose: Tests WebSocket pagination adapter behavior and serialization.
 // Docs: docs/features/feature/pagination/index.md
 
-// pagination_websocket_test.go — Unit tests for websocket event cursor-based pagination
 package pagination
 
 import (
@@ -274,5 +273,109 @@ func TestSerializeWebSocketEntryWithSequence(t *testing.T) {
 	// Verify tabId included
 	if result["tab_id"] != 123 {
 		t.Errorf("tab_id = %v, want 123", result["tab_id"])
+	}
+}
+
+func TestSerializeWebSocketEntryWithSequence_AllOptionalFields(t *testing.T) {
+	t.Parallel()
+	sampled := &types.SamplingInfo{Rate: "1/10", Logged: "5", Window: "60s"}
+	event := WebSocketEntryWithSequence{
+		Entry: types.WebSocketEvent{
+			Event:            "message",
+			ID:               "ws-42",
+			URL:              "wss://echo.example.com",
+			Type:             "binary",
+			Direction:        "outgoing",
+			Data:             `{"ping":true}`,
+			Size:             256,
+			CloseCode:        1000,
+			CloseReason:      "normal closure",
+			BinaryFormat:     "protobuf",
+			FormatConfidence: 0.95,
+			Sampled:          sampled,
+			TabID:            7,
+			Timestamp:        "2026-01-30T10:15:23Z",
+		},
+		Sequence:  100,
+		Timestamp: "2026-01-30T10:15:23Z",
+	}
+	result := SerializeWebSocketEntryWithSequence(event)
+
+	stringChecks := map[string]string{
+		"event":         "message",
+		"id":            "ws-42",
+		"url":           "wss://echo.example.com",
+		"type":          "binary",
+		"direction":     "outgoing",
+		"data":          `{"ping":true}`,
+		"reason":        "normal closure",
+		"binary_format": "protobuf",
+		"timestamp":     "2026-01-30T10:15:23Z",
+	}
+	for key, want := range stringChecks {
+		got, exists := result[key]
+		if !exists {
+			t.Errorf("missing key %q", key)
+			continue
+		}
+		if got != want {
+			t.Errorf("result[%q] = %v, want %v", key, got, want)
+		}
+	}
+
+	if result["sequence"] != int64(100) {
+		t.Errorf("sequence = %v, want 100", result["sequence"])
+	}
+	if result["size"] != 256 {
+		t.Errorf("size = %v, want 256", result["size"])
+	}
+	if result["code"] != 1000 {
+		t.Errorf("code = %v, want 1000", result["code"])
+	}
+	if result["format_confidence"] != 0.95 {
+		t.Errorf("format_confidence = %v, want 0.95", result["format_confidence"])
+	}
+	if result["tab_id"] != 7 {
+		t.Errorf("tab_id = %v, want 7", result["tab_id"])
+	}
+	gotSampled, ok := result["sampled"].(*types.SamplingInfo)
+	if !ok {
+		t.Fatalf("sampled is not *types.SamplingInfo, got %T", result["sampled"])
+	}
+	if gotSampled.Rate != "1/10" {
+		t.Errorf("sampled.Rate = %q, want %q", gotSampled.Rate, "1/10")
+	}
+}
+
+func TestSerializeWebSocketEntryWithSequence_NoOptionalFields(t *testing.T) {
+	t.Parallel()
+	event := WebSocketEntryWithSequence{
+		Entry: types.WebSocketEvent{
+			Event: "open",
+			ID:    "ws-1",
+		},
+		Sequence:  1,
+		Timestamp: "2026-01-30T10:15:23Z",
+	}
+	result := SerializeWebSocketEntryWithSequence(event)
+
+	// These keys should NOT be present when empty/zero
+	absent := []string{"type", "url", "direction", "data", "reason",
+		"binary_format", "size", "code", "format_confidence", "sampled", "tab_id"}
+	for _, key := range absent {
+		if _, exists := result[key]; exists {
+			t.Errorf("key %q should not be present when empty/zero, got %v", key, result[key])
+		}
+	}
+
+	// Required fields should always be present
+	if result["event"] != "open" {
+		t.Errorf("event = %v, want 'open'", result["event"])
+	}
+	if result["id"] != "ws-1" {
+		t.Errorf("id = %v, want 'ws-1'", result["id"])
+	}
+	if result["sequence"] != int64(1) {
+		t.Errorf("sequence = %v, want 1", result["sequence"])
 	}
 }

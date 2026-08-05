@@ -4,20 +4,19 @@ feature_id: feature-cursor-pagination
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-08-05
 code_paths:
-  - internal/pagination/cursor.go
   - internal/pagination/pagination.go
-  - internal/pagination/pagination_actions.go
-  - internal/pagination/pagination_websocket.go
-  - internal/pagination/test_helpers_test.go
+  - internal/pagination/entries.go
 test_paths:
   - internal/pagination/cursor_test.go
   - internal/pagination/pagination_test.go
-  - internal/pagination/pagination_actions_test.go
-  - internal/pagination/pagination_websocket_test.go
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+  - internal/pagination/entries_actions_test.go
+  - internal/pagination/entries_websocket_test.go
+  - internal/pagination/pagination_bench_test.go
+  - internal/pagination/test_helpers_test.go
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-05
 ---
 
 # Cursor Pagination
@@ -43,4 +42,9 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+`internal/pagination/pagination.go` is the single generic cursor engine. Domain
+adaptation is isolated in `internal/pagination/entries.go`, which consumes the
+canonical telemetry wire types without re-exporting them. Correctness,
+property, fuzz, performance, and adapter suites exercise the same public
+boundary, while a package regression test enforces the ten-file architecture
+limit.

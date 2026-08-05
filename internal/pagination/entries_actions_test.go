@@ -1,7 +1,6 @@
-// Purpose: Tests for action log pagination.
+// Purpose: Tests the change-coupled action, log, and WebSocket pagination adapters.
 // Docs: docs/features/feature/pagination/index.md
 
-// pagination_actions_test.go — Unit tests for action cursor-based pagination
 package pagination
 
 import (
@@ -374,3 +373,84 @@ func TestSerializeActionEntryWithSequence_NoTabID(t *testing.T) {
 		t.Errorf("tab_id should not be included when zero, got %v", result["tab_id"])
 	}
 }
+
+func TestSerializeActionEntryWithSequence_AllOptionalFields(t *testing.T) {
+	t.Parallel()
+	action := ActionEntryWithSequence{
+		Entry: types.EnhancedAction{
+			Type:          "click",
+			Timestamp:     1738238123456,
+			URL:           "https://example.com",
+			Selectors:     map[string]any{"css": "button"},
+			Value:         "submit",
+			InputType:     "button",
+			Key:           "Enter",
+			FromURL:       "https://example.com/page1",
+			ToURL:         "https://example.com/page2",
+			SelectedValue: "option1",
+			SelectedText:  "Option 1",
+			ScrollY:       500,
+			TabID:         42,
+		},
+		Sequence:  10,
+		Timestamp: "2026-01-30T10:15:23Z",
+	}
+	result := SerializeActionEntryWithSequence(action)
+
+	// Verify all fields
+	checks := map[string]any{
+		"type":           "click",
+		"timestamp":      "2026-01-30T10:15:23Z",
+		"sequence":       int64(10),
+		"url":            "https://example.com",
+		"value":          "submit",
+		"input_type":     "button",
+		"key":            "Enter",
+		"from_url":       "https://example.com/page1",
+		"to_url":         "https://example.com/page2",
+		"selected_value": "option1",
+		"selected_text":  "Option 1",
+		"scroll_y":       500,
+		"tab_id":         42,
+	}
+	for key, want := range checks {
+		got, exists := result[key]
+		if !exists {
+			t.Errorf("missing key %q in serialized action", key)
+			continue
+		}
+		if got != want {
+			t.Errorf("result[%q] = %v (%T), want %v (%T)", key, got, got, want, want)
+		}
+	}
+	// Verify selectors is a map
+	if _, ok := result["selectors"].(map[string]any); !ok {
+		t.Error("selectors should be a map[string]any")
+	}
+}
+
+func TestSerializeActionEntryWithSequence_NoOptionalFields(t *testing.T) {
+	t.Parallel()
+	action := ActionEntryWithSequence{
+		Entry: types.EnhancedAction{
+			Type:      "navigate",
+			Timestamp: 1738238123456,
+		},
+		Sequence:  1,
+		Timestamp: "2026-01-30T10:15:23Z",
+	}
+	result := SerializeActionEntryWithSequence(action)
+
+	// These keys should NOT be present when empty/zero
+	absent := []string{"url", "value", "input_type", "key", "from_url", "to_url",
+		"selected_value", "selected_text", "scroll_y", "tab_id", "selectors"}
+	for _, key := range absent {
+		if _, exists := result[key]; exists {
+			t.Errorf("key %q should not be present when empty/zero, got %v", key, result[key])
+		}
+	}
+}
+
+// ============================================
+// SerializeWebSocketEntryWithSequence — all optional fields
+// ============================================

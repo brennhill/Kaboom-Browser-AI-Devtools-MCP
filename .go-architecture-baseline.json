@@ -1089,25 +1089,13 @@
       "mutable_globals": 0,
       "exports": 6
     },
-    "internal/pagination/cursor.go": {
+    "internal/pagination/entries.go": {
       "mutable_globals": 0,
-      "exports": 7
+      "exports": 17
     },
     "internal/pagination/pagination.go": {
       "mutable_globals": 0,
-      "exports": 3
-    },
-    "internal/pagination/pagination_actions.go": {
-      "mutable_globals": 0,
-      "exports": 6
-    },
-    "internal/pagination/pagination_logs.go": {
-      "mutable_globals": 0,
-      "exports": 5
-    },
-    "internal/pagination/pagination_websocket.go": {
-      "mutable_globals": 0,
-      "exports": 6
+      "exports": 10
     },
     "internal/performance/diff.go": {
       "mutable_globals": 1,

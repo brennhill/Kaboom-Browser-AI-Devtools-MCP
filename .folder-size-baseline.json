@@ -25,7 +25,6 @@
     "internal/capture": 61,
     "internal/hook": 18,
     "internal/hook/eval/testdata/quality-gate": 13,
-    "internal/pagination": 18,
     "internal/pty": 19,
     "internal/tools/observe": 22,
     "scripts": 58,
