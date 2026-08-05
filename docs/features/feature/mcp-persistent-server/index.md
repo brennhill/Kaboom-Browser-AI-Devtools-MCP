@@ -231,6 +231,10 @@ Synchronous MCP completion tests establish connection first, then deliver the
 result without assuming whether completion or waiter subscription wins.
 QA fixture command tests await the canonical pending-query notification before
 returning the simulated extension result; they do not poll for enqueue.
+Subprocess-mode tests use the bridge readiness helper instead of a duplicate
+poll loop. Test-state cleanup retries yield only between failed filesystem
+operations, and suite-level daemon cleanup uses definitive termination rather
+than a fixed grace sleep.
 The execution modules, examples, and validation schemas used by that call path
 are constructed once in `internal/toolcatalog.Catalog`; the composition root
 does not maintain parallel lazy registries.

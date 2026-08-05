@@ -84,12 +84,8 @@ func TestCLIExplicitStateAndUploadConfiguration(t *testing.T) {
 				_ = cmd.Process.Kill()
 				_, _ = cmd.Process.Wait()
 			})
-			deadline := time.Now().Add(5 * time.Second)
-			for time.Now().Before(deadline) {
-				if bridgeRuntime().IsServerRunning(port) {
-					return
-				}
-				time.Sleep(25 * time.Millisecond)
+			if bridgeRuntime().WaitForServer(port, 5*time.Second) {
+				return
 			}
 			t.Fatalf("server did not start on port %d", port)
 		})

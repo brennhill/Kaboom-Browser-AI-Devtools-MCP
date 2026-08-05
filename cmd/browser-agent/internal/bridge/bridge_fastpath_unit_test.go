@@ -621,7 +621,11 @@ func TestBridgeServerHealthHelpers(t *testing.T) {
 	}
 	port := ln.Addr().(*net.TCPAddr).Port
 	srv := &http.Server{Handler: mux}
-	go func() { _ = srv.Serve(ln) }()
+	serveDone := make(chan struct{})
+	go func() {
+		defer close(serveDone)
+		_ = srv.Serve(ln)
+	}()
 	t.Cleanup(func() {
 		_ = srv.Close()
 	})
@@ -634,7 +638,7 @@ func TestBridgeServerHealthHelpers(t *testing.T) {
 	}
 
 	_ = srv.Close()
-	time.Sleep(50 * time.Millisecond)
+	<-serveDone
 	if testRunner.IsServerRunning(port) {
 		t.Fatalf("testRunner.IsServerRunning(%d) = true after shutdown, want false", port)
 	}

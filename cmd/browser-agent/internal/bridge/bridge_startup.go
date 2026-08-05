@@ -473,6 +473,6 @@ func (r *Runner) waitForPeerDaemonWithin(state *daemonState, port int, timeout t
 		if remaining < sleepFor {
 			sleepFor = remaining
 		}
-		time.Sleep(sleepFor)
+		r.sleep(sleepFor)
 	}
 }

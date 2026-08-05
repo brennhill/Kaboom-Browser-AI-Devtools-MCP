@@ -12,11 +12,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 
@@ -126,13 +126,11 @@ func getTestStateDir(t *testing.T) string {
 
 func removeTestStateDir(stateDir string) error {
 	var err error
-	backoff := 10 * time.Millisecond
 	for attempt := 0; attempt < 6; attempt++ {
 		if err = os.RemoveAll(stateDir); err == nil {
 			return nil
 		}
-		time.Sleep(backoff)
-		backoff *= 2
+		runtime.Gosched()
 	}
 	return err
 }

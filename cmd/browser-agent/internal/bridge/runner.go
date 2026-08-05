@@ -6,6 +6,7 @@ package bridge
 import (
 	"encoding/json"
 	"io"
+	"time"
 
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -56,9 +57,10 @@ type Runner struct {
 	transport Transport
 	protocol  Protocol
 	lifecycle Lifecycle
+	sleep     func(time.Duration)
 }
 
 // NewRunner constructs an independent bridge runtime.
 func NewRunner(identity Identity, transport Transport, protocol Protocol, lifecycle Lifecycle) *Runner {
-	return &Runner{identity: identity, transport: transport, protocol: protocol, lifecycle: lifecycle}
+	return &Runner{identity: identity, transport: transport, protocol: protocol, lifecycle: lifecycle, sleep: time.Sleep}
 }

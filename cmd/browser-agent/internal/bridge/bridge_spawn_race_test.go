@@ -118,29 +118,26 @@ func TestWaitForPeerDaemon_ServerAppearsOnFirstRetry(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 	_ = ln.Close()
 
-	// Launch server after 200ms.
-	go func() {
-		time.Sleep(200 * time.Millisecond)
-		startHealthServerOnPort(t, port, http.StatusOK, healthJSON(testRunner.identity.Version, "kaboom"))
-	}()
+	runner := *testRunner
+	started := false
+	runner.sleep = func(time.Duration) {
+		if !started {
+			started = true
+			startHealthServerOnPort(t, port, http.StatusOK, healthJSON(runner.identity.Version, "kaboom"))
+		}
+	}
 
-	state := &daemonState{runner: testRunner,
+	state := &daemonState{runner: &runner,
 		readyCh:  make(chan struct{}),
 		failedCh: make(chan struct{}),
 	}
-	start := time.Now()
-	got := testRunner.waitForPeerDaemon(state, port)
-	elapsed := time.Since(start)
+	got := runner.waitForPeerDaemon(state, port)
 
 	if !got {
 		t.Fatal("testRunner.waitForPeerDaemon() = false, want true when server appears during retry")
 	}
-	// Polling should wait long enough for the delayed server to come online.
-	if elapsed < 150*time.Millisecond {
-		t.Fatalf("elapsed = %v, want >= 150ms", elapsed)
-	}
-	if elapsed > daemonPeerWaitTimeout {
-		t.Fatalf("elapsed = %v, want <= %s", elapsed, daemonPeerWaitTimeout)
+	if !started {
+		t.Fatal("peer retry delay was not exercised")
 	}
 }
 

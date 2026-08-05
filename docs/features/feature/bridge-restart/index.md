@@ -4,7 +4,7 @@ feature_id: feature-bridge-restart
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/bridge/runner.go
   - cmd/browser-agent/internal/bridge/bridge.go
@@ -77,3 +77,7 @@ Bridge transport tests synchronize delayed response bodies with a header/body
 barrier, and startup-grace tests deliver readiness through the canonical signal
 channel. They verify cancellation ownership and readiness consumption without
 scheduler delays.
+The bridge runner owns its retry delay as a private runtime dependency.
+Peer-startup tests advance the first retry synchronously and start the fixture
+server at that transition; server-shutdown tests await `Serve` completion rather
+than sleeping before probing the closed listener.

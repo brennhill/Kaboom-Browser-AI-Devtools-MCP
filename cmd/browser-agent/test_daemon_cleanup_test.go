@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 )
@@ -40,7 +39,5 @@ func cleanupGoTestDaemons() {
 }
 
 func killPattern(pattern string) {
-	_ = exec.Command("pkill", "-TERM", "-f", pattern).Run()
-	time.Sleep(200 * time.Millisecond)
 	_ = exec.Command("pkill", "-KILL", "-f", pattern).Run()
 }
