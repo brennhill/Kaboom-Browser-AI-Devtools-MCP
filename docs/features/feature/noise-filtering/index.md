@@ -36,6 +36,8 @@ test_paths:
   - internal/noise/noise_edge_test.go
   - internal/noise/noise_persistence_test.go
   - internal/noise/noise_validation_test.go
+  - tests/architecture/user-state-loaders.test.cjs
+  - tests/architecture/user-state-loaders.json
   - scripts/tests/capture/cat-20-noise-persistence.sh
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -98,3 +100,6 @@ Persisted rule loading is fail-safe: malformed or unsupported saved data cannot
 block startup, built-in defaults remain active, and both the HTTP and MCP System
 Doctor surfaces report an actionable `noise_rule_state` warning. The diagnostic
 does not include raw persisted content.
+The architecture inventory names `noise_rules.go` as the canonical persisted
+state reader, so moving persistence ownership cannot silently disable fallback
+and Doctor enforcement.

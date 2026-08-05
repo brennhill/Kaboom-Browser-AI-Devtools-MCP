@@ -38,7 +38,7 @@
       "doctor": "stored_session_state"
     },
     {
-      "path": "internal/noise/noise_persistence.go",
+      "path": "internal/noise/noise_rules.go",
       "owner": "noise rules",
       "fallback": "activate default noise rules",
       "doctor": "noise_rules_state"
