@@ -19,10 +19,7 @@ code_paths:
   - internal/noise/noise.go
   - internal/noise/noise_builtin.go
   - internal/noise/noise_detect.go
-  - internal/noise/noise_filter.go
-  - internal/noise/noise_persistence.go
   - internal/noise/noise_rules.go
-  - internal/noise/noise_stats.go
   - internal/util/media.go
 test_paths:
   - cmd/browser-agent/noise_doctor_test.go
@@ -72,6 +69,12 @@ than the concrete session-store implementation. Canonical state-fault tests
 prove read, write, quota, corruption, partial-write, cancellation, sync-stage,
 and restart behavior; failures retain built-in or in-memory rules and create a
 redacted `noise_rule_state` Doctor incident.
+
+The package has two runtime ownership units: `noise.go` owns configuration and
+hot-path matching, while `noise_rules.go` owns the complete mutable rule
+lifecycle, including statistics and persistence. Keeping CRUD and its durable
+side effects together prevents partial rule migrations and bounds the package
+at ten files without compatibility wrappers.
 
 Automatic detection scheduling, navigation debouncing, first-connect lifecycle
 wiring, and telemetry adaptation are owned together by

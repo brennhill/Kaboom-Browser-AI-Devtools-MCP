@@ -26,7 +26,6 @@
     "internal/export": 17,
     "internal/hook": 18,
     "internal/hook/eval/testdata/quality-gate": 13,
-    "internal/noise": 14,
     "internal/pagination": 18,
     "internal/persistence": 14,
     "internal/pty": 19,

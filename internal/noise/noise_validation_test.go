@@ -6,12 +6,31 @@ package noise
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestPackageFileBoundary(t *testing.T) {
+	t.Parallel()
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read noise package: %v", err)
+	}
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".go" {
+			count++
+		}
+	}
+	if count > 10 {
+		t.Fatalf("noise package has %d Go files; maximum is 10", count)
+	}
+}
 
 // ============================================
 // Noise JSON serialization: snake_case fields

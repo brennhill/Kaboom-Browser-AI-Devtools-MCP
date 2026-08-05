@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -160,4 +161,93 @@ func (nc *NoiseConfig) recompile() {
 		compiled[i] = current
 	}
 	nc.compiled = compiled
+}
+
+// IsConsoleNoise reports whether a console entry matches a configured noise rule.
+func (nc *NoiseConfig) IsConsoleNoise(entry types.LogEntry) bool {
+	nc.mu.RLock()
+	defer nc.mu.RUnlock()
+
+	message, _ := entry["message"].(string)
+	source, _ := entry["source"].(string)
+	level, _ := entry["level"].(string)
+	for i := range nc.compiled {
+		compiled := &nc.compiled[i]
+		if compiled.rule.Category != "console" {
+			continue
+		}
+		if compiled.rule.MatchSpec.Level != "" && compiled.rule.MatchSpec.Level != level {
+			continue
+		}
+		if matchesConsoleRule(compiled, message, source) {
+			nc.recordMatch(compiled.rule.ID)
+			return true
+		}
+	}
+	nc.recordSignal()
+	return false
+}
+
+func matchesConsoleRule(compiled *compiledRule, message, source string) bool {
+	if compiled.messageRegex != nil && compiled.messageRegex.MatchString(message) {
+		return true
+	}
+	return compiled.sourceRegex != nil && compiled.sourceRegex.MatchString(source)
+}
+
+// IsNetworkNoise reports whether a network response matches a configured noise rule.
+// Authentication failures are always retained as signal.
+func (nc *NoiseConfig) IsNetworkNoise(body types.NetworkBody) bool {
+	if body.Status == 401 || body.Status == 403 {
+		return false
+	}
+	nc.mu.RLock()
+	defer nc.mu.RUnlock()
+	for i := range nc.compiled {
+		compiled := &nc.compiled[i]
+		if compiled.rule.Category != "network" || !matchesNetworkFilters(compiled, body) {
+			continue
+		}
+		if matchesNetworkRule(compiled, body.URL) {
+			nc.recordMatch(compiled.rule.ID)
+			return true
+		}
+	}
+	nc.recordSignal()
+	return false
+}
+
+func matchesNetworkFilters(compiled *compiledRule, body types.NetworkBody) bool {
+	if compiled.rule.MatchSpec.Method != "" && compiled.rule.MatchSpec.Method != body.Method {
+		return false
+	}
+	if compiled.rule.MatchSpec.StatusMin > 0 && body.Status < compiled.rule.MatchSpec.StatusMin {
+		return false
+	}
+	if compiled.rule.MatchSpec.StatusMax > 0 && body.Status > compiled.rule.MatchSpec.StatusMax {
+		return false
+	}
+	return true
+}
+
+func matchesNetworkRule(compiled *compiledRule, rawURL string) bool {
+	if compiled.urlRegex != nil {
+		return compiled.urlRegex.MatchString(rawURL)
+	}
+	return compiled.rule.MatchSpec.Method != "" || compiled.rule.MatchSpec.StatusMin > 0
+}
+
+// IsWebSocketNoise reports whether a WebSocket event matches a configured noise rule.
+func (nc *NoiseConfig) IsWebSocketNoise(event types.WebSocketEvent) bool {
+	nc.mu.RLock()
+	defer nc.mu.RUnlock()
+	for i := range nc.compiled {
+		compiled := &nc.compiled[i]
+		if compiled.rule.Category == "websocket" && compiled.urlRegex != nil && compiled.urlRegex.MatchString(event.URL) {
+			nc.recordMatch(compiled.rule.ID)
+			return true
+		}
+	}
+	nc.recordSignal()
+	return false
 }
