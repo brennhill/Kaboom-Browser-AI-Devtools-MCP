@@ -1,5 +1,5 @@
-// bridge_coverage_extra_test.go -- Additional unit tests raising coverage of telemetry,
-// push relay, startup-lock, fingerprint, and daemon status/respawn helpers.
+// bridge_coverage_extra_test.go -- Additional unit tests for telemetry,
+// startup-lock, and daemon status/respawn helpers.
 // These tests are deterministic: no sleeps on the critical path and no real daemon spawns.
 
 package bridge
@@ -9,17 +9,14 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -138,110 +135,6 @@ func TestRecordFastPathResourceRead_CountersAndLog(t *testing.T) {
 	success, failure = SnapshotFastPathResourceReadCounters()
 	if success != 0 || failure != 0 {
 		t.Fatalf("snapshot after reset = %d/%d, want 0/0", success, failure)
-	}
-}
-
-// --- Push relay ---
-
-func TestBuildPushNotification(t *testing.T) {
-	t.Parallel()
-
-	ev := push.PushEvent{Type: "screenshot", PageURL: "https://example.com/page"}
-	payload := BuildPushNotification(ev)
-	if payload == nil {
-		t.Fatal("BuildPushNotification returned nil")
-	}
-	var notif map[string]any
-	if err := json.Unmarshal(payload, &notif); err != nil {
-		t.Fatalf("unmarshal notification: %v", err)
-	}
-	if notif["method"] != "notifications/message" {
-		t.Fatalf("method = %v, want notifications/message", notif["method"])
-	}
-	params, _ := notif["params"].(map[string]any)
-	data, _ := params["data"].(map[string]any)
-	if data["type"] != "screenshot" {
-		t.Fatalf("data.type = %v, want screenshot", data["type"])
-	}
-	if data["page_url"] != "https://example.com/page" {
-		t.Fatalf("data.page_url = %v, want https://example.com/page", data["page_url"])
-	}
-}
-
-func TestRelayPendingPushEvents_RelaysEvents(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/push/drain" {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"events": []push.PushEvent{{ID: "1", Type: "chat", PageURL: "https://x.test", Message: "hi"}},
-			"count":  1,
-		})
-	}))
-	defer srv.Close()
-
-	client := &http.Client{}
-	output := captureBridgeIO(t, "", func() {
-		testRunner.relayPendingPushEvents(client, srv.URL)
-	})
-	if !strings.Contains(output, "sampling/createMessage") {
-		t.Fatalf("expected sampling/createMessage in relayed output, got: %q", output)
-	}
-}
-
-func TestRelayPendingPushEvents_NoOutputCases(t *testing.T) {
-	cases := []struct {
-		name    string
-		handler http.HandlerFunc
-	}{
-		{
-			name: "zero count",
-			handler: func(w http.ResponseWriter, _ *http.Request) {
-				_ = json.NewEncoder(w).Encode(map[string]any{"events": []push.PushEvent{}, "count": 0})
-			},
-		},
-		{
-			name: "non-200 status",
-			handler: func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusInternalServerError)
-			},
-		},
-		{
-			name: "invalid json",
-			handler: func(w http.ResponseWriter, _ *http.Request) {
-				_, _ = w.Write([]byte("{not-json"))
-			},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			srv := httptest.NewServer(tc.handler)
-			defer srv.Close()
-
-			client := &http.Client{}
-			output := captureBridgeIO(t, "", func() {
-				testRunner.relayPendingPushEvents(client, srv.URL)
-			})
-			if strings.TrimSpace(output) != "" {
-				t.Fatalf("expected no relayed output, got: %q", output)
-			}
-		})
-	}
-}
-
-func TestRelayPendingPushEvents_UnreachableEndpoint(t *testing.T) {
-	// Nothing listening on this port: client.Do returns an error, no output.
-	port := freeLocalPort(t)
-	endpoint := "http://127.0.0.1:" + strconv.Itoa(port)
-
-	client := &http.Client{Timeout: time.Second}
-	output := captureBridgeIO(t, "", func() {
-		testRunner.relayPendingPushEvents(client, endpoint)
-	})
-	if strings.TrimSpace(output) != "" {
-		t.Fatalf("expected no output for unreachable endpoint, got: %q", output)
 	}
 }
 

@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_transport.go
   - cmd/browser-agent/internal/bridge/fingerprint/fingerprint.go
+  - cmd/browser-agent/internal/bridge/pushrelay/relay.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_windows.go
@@ -32,6 +33,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_respawn_backoff_test.go
   - cmd/browser-agent/internal/bridge/fingerprint/fingerprint_test.go
+  - cmd/browser-agent/internal/bridge/pushrelay/relay_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix_test.go
 last_verified_version: 0.7.12

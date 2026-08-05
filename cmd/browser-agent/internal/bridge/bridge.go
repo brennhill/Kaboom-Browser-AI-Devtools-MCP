@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/pushrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/stdioisolate"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
@@ -109,7 +110,11 @@ func (r *Runner) StdioToHTTPFast(endpoint string, state *daemonState, port int) 
 
 	// Start push relay goroutine to poll daemon inbox and relay to Claude via stdio.
 	pushRelayDone := make(chan struct{})
-	r.startBridgePushRelay(client, endpoint, pushRelayDone)
+	pushrelay.New(client, endpoint, pushrelay.Deps{
+		Framing: r.protocol.GetFraming,
+		Write:   r.transport.Write,
+		Debugf:  r.transport.Debugf,
+	}).Start(pushRelayDone)
 
 	var wg sync.WaitGroup
 	responseSent := make(chan bool, 1)
