@@ -65,6 +65,9 @@ Command completion owns an injected wait operation. Lifecycle tests coordinate
 entry and release with channels, allowing disconnect races to be reproduced
 without sleeps while production remains wired to the query dispatcher's
 notification-based wait.
+Tool-level synchronous completion tests launch the waiter and deliver results
+through dispatcher state or the pending-query notification. They exercise both
+race orderings without delaying the completion goroutine.
 
 Command waiters subscribe to the current notification generation and then
 recheck lifecycle state before blocking. This prevents a completion or expiry

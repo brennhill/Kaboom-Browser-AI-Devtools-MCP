@@ -29,15 +29,13 @@ func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 	// Connect extension (fast path — no long-poll)
 	capturefixture.Connect(cap)
 
-	// Complete the command after 200ms
-	go func() {
-		time.Sleep(200 * time.Millisecond)
-		cap.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true,"data":"custom-timeout"}`), "")
-	}()
-
-	// Set timeout_ms to 2000ms (should be enough to catch the 200ms result)
+	response := make(chan mcp.JSONRPCResponse, 1)
 	start := time.Now()
-	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":2000}`), "Queued")
+	go func() {
+		response <- handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":2000}`), "Queued")
+	}()
+	cap.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true,"data":"custom-timeout"}`), "")
+	resp := <-response
 	elapsed := time.Since(start)
 
 	result := parseMCPResponseData(t, resp.Result)
@@ -150,22 +148,14 @@ func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 	// Connect extension (fast path — no long-poll)
 	capturefixture.Connect(cap)
 
-	// Complete the link_health command after a short delay
-	go func() {
-		time.Sleep(200 * time.Millisecond)
-		// Find the pending command and complete it
-		pending := cap.Queries().GetPendingCommands()
-		for _, cmd := range pending {
-			if cmd != nil && strings.HasPrefix(cmd.CorrelationID, "link_health_") {
-				cap.Queries().ApplyCommandResult(cmd.CorrelationID, "complete", json.RawMessage(`{"success":true,"healthy":5,"broken":0}`), "")
-				break
-			}
-		}
-	}()
+	completed := completePendingCommandByPrefix(cap, "link_health_", json.RawMessage(`{"success":true,"healthy":5,"broken":0}`))
 
 	// sync=true (default) should wait for the result
 	args := json.RawMessage(`{"what":"link_health","domain":"example.com"}`)
 	resp := handler.analyzeDispatcher.Handle(req, args)
+	if err := <-completed; err != "" {
+		t.Fatal(err)
+	}
 
 	result := parseMCPResponseData(t, resp.Result)
 	status, _ := result["status"].(string)
@@ -209,27 +199,35 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 	// Connect extension (fast path — no long-poll)
 	capturefixture.Connect(cap)
 
-	// Complete the command after 200ms
-	go func() {
-		time.Sleep(200 * time.Millisecond)
-		pending := cap.Queries().GetPendingCommands()
-		for _, cmd := range pending {
-			if cmd != nil && strings.HasPrefix(cmd.CorrelationID, "dom_") {
-				cap.Queries().ApplyCommandResult(cmd.CorrelationID, "complete", json.RawMessage(`{"success":true,"elements":[]}`), "")
-				break
-			}
-		}
-	}()
+	completed := completePendingCommandByPrefix(cap, "dom_", json.RawMessage(`{"success":true,"elements":[]}`))
 
 	// Set timeout_ms=1000 — should be enough to catch the 200ms result
 	args := json.RawMessage(`{"what":"dom","selector":"div","timeout_ms":1000}`)
 	resp := handler.analyzeDispatcher.Handle(req, args)
+	if err := <-completed; err != "" {
+		t.Fatal(err)
+	}
 
 	result := parseMCPResponseData(t, resp.Result)
 	status, _ := result["status"].(string)
 	if status == "queued" {
 		t.Error("With sync=true (default) and timeout_ms=1000, should not return queued")
 	}
+}
+
+func completePendingCommandByPrefix(cap *capture.Capture, prefix string, result json.RawMessage) <-chan string {
+	completed := make(chan string, 1)
+	go func() {
+		cap.Queries().WaitForPendingQueries(time.Second)
+		cmd := findPendingCommandByPrefix(cap, prefix)
+		if cmd == nil {
+			completed <- "pending command with prefix " + prefix + " was not enqueued"
+			return
+		}
+		cap.Queries().ApplyCommandResult(cmd.CorrelationID, "complete", result, "")
+		completed <- ""
+	}()
+	return completed
 }
 
 // findPendingCommandByPrefix finds a pending command's correlation ID by prefix

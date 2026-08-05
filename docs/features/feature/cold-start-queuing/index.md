@@ -37,3 +37,6 @@ Extension connection changes close and rotate a generation notification under
 the extension-state lock. Readiness waiters snapshot state and that channel
 atomically, then select on connection, cancellation, or one bounded timer; no
 poll interval or scheduler sleep participates in command readiness.
+Async timeout adapter tests likewise coordinate command enqueue and completion
+through the query dispatcher; elapsed wall time is reserved for the timeout
+contract itself, not used to schedule successful completion.

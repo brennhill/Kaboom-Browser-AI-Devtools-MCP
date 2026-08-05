@@ -177,7 +177,6 @@ func TestContractEnforcement_CommandResult_HasElapsedMs(t *testing.T) {
 		5*time.Second,
 		"",
 	)
-	time.Sleep(10 * time.Millisecond) // small delay to ensure non-zero elapsed
 	s.capture.Queries().SetQueryResult(queryID, json.RawMessage(`{"html":"<body/>"}`))
 
 	result, ok := s.callObserveWithArgs(t, `{"what":"command_result","correlation_id":"elapsed-test-123"}`)
@@ -189,8 +188,8 @@ func TestContractEnforcement_CommandResult_HasElapsedMs(t *testing.T) {
 	if _, exists := data["elapsed_ms"]; !exists {
 		t.Error("command_result response missing 'elapsed_ms' field")
 	}
-	if elapsed, ok := data["elapsed_ms"].(float64); ok && elapsed <= 0 {
-		t.Errorf("elapsed_ms should be > 0, got %v", elapsed)
+	if elapsed, ok := data["elapsed_ms"].(float64); ok && elapsed < 0 {
+		t.Errorf("elapsed_ms should be non-negative, got %v", elapsed)
 	}
 }
 

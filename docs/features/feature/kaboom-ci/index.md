@@ -95,6 +95,8 @@ last_verified_date: 2026-08-03
 - Async bridge contract tests deliver results immediately and prove the query
   store is lossless regardless of whether delivery or waiter subscription wins;
   they never use scheduler delay as a synchronization primitive.
+- Command-result elapsed time is a nonnegative millisecond-resolution value;
+  contract tests no longer sleep merely to force it above zero.
 
 ## Specs
 
