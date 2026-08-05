@@ -100,7 +100,7 @@ Alerts are capped at 10 pending entries. Beyond that, the oldest are dropped (th
 
 ### Pending Alert
 
-Stored in the server's `PerformanceStore`:
+Stored in the server's focused performance-retention owner:
 - Alert ID (monotonic counter)
 - URL path that regressed
 - Detection timestamp

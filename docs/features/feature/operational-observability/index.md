@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-08-05
 code_paths:
   - internal/capture/pressure/stats.go
+  - internal/capture/perfstore/store.go
   - internal/incident/registry.go
   - internal/incident/store.go
   - internal/incident/projections.go
@@ -17,6 +18,7 @@ code_paths:
   - internal/schema/configure/properties_core.go
 test_paths:
   - internal/capture/logstore/store_test.go
+  - internal/capture/perfstore/store_test.go
   - internal/capture/accessor_unit_test.go
   - internal/incident/store_test.go
   - internal/incident/support_test.go
@@ -72,6 +74,8 @@ Disposable capture owners report resource pressure through the neutral
 performance samples, and health projections therefore expose consistent size,
 capacity, cumulative-drop, and oldest-entry evidence without importing one
 another or duplicating operational types.
+Performance pressure is derived from the store's injected clock, so capacity,
+drop, and age transitions are verified without wall-clock sleeps.
 
 The allowed graph is explicit: incidents may resolve directly from `detected`
 to `recovered` or `exhausted`; only retryable incidents may enter `retrying`.

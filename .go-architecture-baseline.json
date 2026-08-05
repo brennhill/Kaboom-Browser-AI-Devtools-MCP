@@ -863,11 +863,11 @@
     },
     "internal/capture/accessors.go": {
       "mutable_globals": 0,
-      "exports": 22
+      "exports": 13
     },
     "internal/capture/capture.go": {
       "mutable_globals": 0,
-      "exports": 13
+      "exports": 14
     },
     "internal/capture/events.go": {
       "mutable_globals": 0,
@@ -891,7 +891,11 @@
     },
     "internal/capture/model.go": {
       "mutable_globals": 0,
-      "exports": 14
+      "exports": 13
+    },
+    "internal/capture/perfstore/store.go": {
+      "mutable_globals": 0,
+      "exports": 11
     },
     "internal/capture/pressure/stats.go": {
       "mutable_globals": 0,

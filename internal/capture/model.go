@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
 
 const (
@@ -47,33 +46,6 @@ type SecurityFlag struct {
 	Resource  string    `json:"resource"`
 	PageURL   string    `json:"page_url"`
 	Timestamp time.Time `json:"timestamp"`
-}
-
-type PerformanceStore struct {
-	mu              sync.RWMutex
-	snapshots       map[string]performance.PerformanceSnapshot
-	snapshotOrder   []string
-	samples         []performance.PerformanceSnapshot
-	sampleAdded     []time.Time
-	beforeSnapshots map[string]performance.PerformanceSnapshot
-	snapshotAdded   map[string]time.Time
-	beforeOrder     []string
-	beforeAdded     map[string]time.Time
-	snapshotDropped int64
-	sampleDropped   int64
-	beforeDropped   int64
-}
-
-func newPerformanceStore() *PerformanceStore {
-	return &PerformanceStore{
-		snapshots:       make(map[string]performance.PerformanceSnapshot),
-		snapshotOrder:   make([]string, 0),
-		samples:         make([]performance.PerformanceSnapshot, 0),
-		sampleAdded:     make([]time.Time, 0),
-		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
-		snapshotAdded:   make(map[string]time.Time),
-		beforeAdded:     make(map[string]time.Time),
-	}
 }
 
 type ClientRegistry interface {

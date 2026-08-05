@@ -10,6 +10,7 @@ package capture
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -77,7 +78,7 @@ type Capture struct {
 	// Composed Sub-Structures
 	// ============================================
 
-	perf *PerformanceStore // Performance snapshots and action correlations. Own lock and retention.
+	perf *perfstore.Store // Performance snapshots and action correlations. Own lock and retention.
 
 	// ============================================
 	// Multi-Client Support
@@ -103,7 +104,7 @@ func NewCapture() *Capture {
 	c := &Capture{
 		extensionLogs:    logstore.NewExtension(logRedactor.Redact),
 		extension:        newExtensionRuntime(),
-		perf:             newPerformanceStore(),
+		perf:             perfstore.New(),
 		diagnosticLogs:   logstore.NewDiagnostic(logRedactor.Redact),
 		recordingManager: recording.NewRecordingManager(),
 		lifecycle:        lifecycle.NewObserver(),
@@ -156,6 +157,9 @@ func (c *Capture) Extension() *ExtensionRuntime {
 func (c *Capture) Telemetry() *TelemetryStore {
 	return c.telemetry
 }
+
+// Performance returns the canonical independently synchronized performance owner.
+func (c *Capture) Performance() *perfstore.Store { return c.perf }
 
 // ExtensionLogs returns the independently synchronized extension-log owner.
 func (c *Capture) ExtensionLogs() *logstore.Extension { return c.extensionLogs }

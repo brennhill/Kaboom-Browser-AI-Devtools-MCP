@@ -17,6 +17,7 @@ code_paths:
   - internal/capture/model.go
   - internal/capture/events.go
   - internal/capture/logstore/store.go
+  - internal/capture/perfstore/store.go
   - internal/capture/pressure/stats.go
   - internal/capture/extension_state.go
   - internal/capture/featureusage/observer.go
@@ -76,6 +77,7 @@ code_paths:
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
+  - internal/capture/perfstore/store_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/contracts/no-dynamic-import-background.test.js
@@ -278,7 +280,7 @@ Configure network-recording dispatch calls `netrecord.HandleNetworkRecording`
 with the telemetry and recording-state owners directly; the root ToolHandler
 forwarding method is deleted.
 Performance snapshots and pre-action correlation snapshots now share an
-independently synchronized `PerformanceStore`. Callers use
+independently synchronized `perfstore.Store`. Callers use
 `Capture.Performance()` for add/list/URL lookup and consume-on-read correlation;
 the five former capture-level forwarding methods have been removed.
 Rate limiting and circuit health use the canonical breaker returned by

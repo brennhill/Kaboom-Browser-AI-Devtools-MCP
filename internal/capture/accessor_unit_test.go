@@ -185,8 +185,8 @@ func TestCapturePerformanceSnapshotAccessors(t *testing.T) {
 		t.Fatal("missing snapshot lookup should return ok=false")
 	}
 	pressure := c.Performance().Pressure()
-	if pressure.Snapshots.Size != maxPerformanceSnapshots || pressure.Snapshots.Dropped != 5 {
-		t.Fatalf("performance snapshot pressure = %#v, want size=%d dropped=5", pressure.Snapshots, maxPerformanceSnapshots)
+	if pressure.Snapshots.Size != pressure.Snapshots.Capacity || pressure.Snapshots.Capacity != 100 || pressure.Snapshots.Dropped != 5 {
+		t.Fatalf("performance snapshot pressure = %#v, want size/capacity=100 dropped=5", pressure.Snapshots)
 	}
 }
 
@@ -207,14 +207,8 @@ func TestCaptureBeforeSnapshotStoreAndConsume(t *testing.T) {
 		c.Performance().StoreBefore(fmt.Sprintf("corr-%d", i), performance.PerformanceSnapshot{URL: fmt.Sprintf("u-%d", i)})
 	}
 
-	c.perf.mu.RLock()
-	beforeCount := len(c.perf.beforeSnapshots)
-	c.perf.mu.RUnlock()
-	if beforeCount > 50 {
-		t.Fatalf("beforeSnapshots size = %d, want <= 50", beforeCount)
-	}
-	if got := c.Performance().Pressure().BeforeSnapshots; got.Size != maxBeforeSnapshots || got.Dropped != 10 {
-		t.Fatalf("before snapshot pressure = %#v, want size=%d dropped=10", got, maxBeforeSnapshots)
+	if got := c.Performance().Pressure().BeforeSnapshots; got.Size != got.Capacity || got.Capacity != 50 || got.Dropped != 10 {
+		t.Fatalf("before snapshot pressure = %#v, want size/capacity=50 dropped=10", got)
 	}
 }
 

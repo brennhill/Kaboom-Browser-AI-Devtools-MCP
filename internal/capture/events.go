@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -567,7 +568,7 @@ func (s *TelemetryStore) ClearActionBuffer() types.BufferClearCounts {
 type StateResetter struct {
 	extension     *ExtensionRuntime
 	telemetry     *TelemetryStore
-	performance   *PerformanceStore
+	performance   *perfstore.Store
 	extensionLogs *logstore.Extension
 }
 
@@ -586,7 +587,7 @@ func NewStateResetter(capture *Capture) *StateResetter {
 func (r *StateResetter) ClearAll() int {
 	r.extension.ClearTestBoundaries()
 	r.telemetry.clearAll()
-	r.performance.clear()
+	r.performance.Clear()
 	return r.extensionLogs.Clear()
 }
 

@@ -6,8 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-05
 code_paths:
-  - internal/capture/model.go
-  - internal/capture/accessors.go
+  - internal/capture/perfstore/store.go
   - internal/capture/capture.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/server.go
@@ -26,7 +25,7 @@ code_paths:
   - internal/util/media.go
 test_paths:
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
-  - internal/capture/performance_store_test.go
+  - internal/capture/perfstore/store_test.go
   - cmd/browser-agent/server_routes_clients_test.go
   - internal/session/clientreg/clientreg_test.go
   - internal/session/snapshot_manager_test.go
@@ -90,6 +89,9 @@ workers through a barrier rather than delaying between operations.
 The runtime retains a bounded chronological history independently from its
 latest-by-URL index. Named snapshots retain up to 20 recent performance
 samples for the same page, and Doctor exposes sample pressure and drops.
+The capture composition root installs the focused performance store directly.
+That owner retains bounded pre-action baselines by correlation ID and consumes
+them on read, preventing stale baselines from being reused across actions.
 Comparisons report Core Web Vitals, transfer and execution cost, duplicate
 requests, critical-path changes, median/p75 distributions, sample sufficiency,
 and optional absolute regression-budget verdicts.
