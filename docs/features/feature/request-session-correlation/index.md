@@ -4,7 +4,7 @@ feature_id: feature-request-session-correlation
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/capture/model.go
   - internal/capture/accessors.go
@@ -22,6 +22,7 @@ code_paths:
   - internal/performance/types.go
   - internal/session/runtime_reader.go
   - internal/session/tool-handler.go
+  - internal/schema/configure/properties_runtime.go
   - internal/types/snapshot.go
   - internal/util/media.go
 test_paths:
@@ -34,6 +35,7 @@ test_paths:
   - internal/session/sessions_compare_regression_test.go
   - internal/session/sessions_tool_handler_test.go
   - internal/session/tool_handler_test.go
+  - internal/schema/configure/schema_test.go
   - internal/session/comparison_test.go
   - internal/session/snapdiff/errors_test.go
   - internal/session/snapdiff/network_test.go
@@ -90,3 +92,7 @@ samples for the same page, and Doctor exposes sample pressure and drops.
 Comparisons report Core Web Vitals, transfer and execution cost, duplicate
 requests, critical-path changes, median/p75 distributions, sample sufficiency,
 and optional absolute regression-budget verdicts.
+Performance-budget names come from one sorted canonical metric registry. The
+configure schema constrains object property names to that registry, runtime
+validation rejects unknown names precisely, and parity tests prove every
+documented metric is accepted by both boundaries.

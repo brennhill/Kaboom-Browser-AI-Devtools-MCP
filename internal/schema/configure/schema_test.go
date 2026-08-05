@@ -1,7 +1,12 @@
 // schema_test.go — Invariants for the configure tool schema and its property groups.
 package configure
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+)
 
 // TestToolSchema_RequiresWhat verifies canonical routing while retaining action
 // only as a mode-specific sub-action field.
@@ -53,6 +58,22 @@ func TestToolSchemaExposesAtomicQAFixtureApplyContract(t *testing.T) {
 	fixture := props["fixture"].(map[string]any)
 	if fixture["additionalProperties"] != false {
 		t.Fatal("fixture schema must reject unknown fields")
+	}
+}
+
+func TestPerformanceBudgetSchemaMatchesRuntimeMetrics(t *testing.T) {
+	t.Parallel()
+
+	properties := ToolSchema().InputSchema["properties"].(map[string]any)
+	budgets := properties["performance_budgets"].(map[string]any)
+	propertyNames := budgets["propertyNames"].(map[string]any)
+	got := propertyNames["enum"].([]string)
+	want := performance.BudgetMetricNames()
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("performance budget schema metrics = %v, runtime accepts %v", got, want)
+	}
+	if budgets["additionalProperties"] == true {
+		t.Fatal("performance budget schema must constrain property names")
 	}
 }
 

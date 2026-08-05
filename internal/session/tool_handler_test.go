@@ -8,9 +8,11 @@ package session
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -237,6 +239,29 @@ func TestSessionHandleToolRejectsUnknownPerformanceBudget(t *testing.T) {
 	_, err := sm.HandleTool(json.RawMessage(`{"action":"compare","compare_a":"a","compare_b":"b","performance_budgets":{"largest_paint_typo":10}}`))
 	if err == nil || !strings.Contains(err.Error(), "largest_paint_typo") {
 		t.Fatalf("unknown budget error = %v", err)
+	}
+}
+
+func TestSessionHandleToolAcceptsEveryCanonicalPerformanceBudget(t *testing.T) {
+	t.Parallel()
+
+	for _, metric := range performance.BudgetMetricNames() {
+		metric := metric
+		t.Run(metric, func(t *testing.T) {
+			t.Parallel()
+			sm := NewSessionManager(10, &mockCaptureState{})
+			params := fmt.Sprintf(
+				`{"action":"compare","compare_a":"missing-a","compare_b":"missing-b","performance_budgets":{%q:1}}`,
+				metric,
+			)
+			_, err := sm.HandleTool(json.RawMessage(params))
+			if err == nil {
+				t.Fatal("missing snapshots must still fail")
+			}
+			if strings.Contains(err.Error(), "unknown performance budget") {
+				t.Fatalf("canonical metric %q rejected: %v", metric, err)
+			}
+		})
 	}
 }
 
