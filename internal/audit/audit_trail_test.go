@@ -4,9 +4,32 @@
 package audit
 
 import (
+	"os"
 	"sync"
 	"testing"
 )
+
+func TestAuditPackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("audit package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
+
+func TestAuditPackageHasNoTypeAliasFacade(t *testing.T) {
+	if _, err := os.Stat("type_aliases.go"); !os.IsNotExist(err) {
+		t.Fatalf("type_aliases.go compatibility facade must not exist (stat error: %v)", err)
+	}
+}
 
 // ============================================
 // Test: Recording a tool call creates an entry

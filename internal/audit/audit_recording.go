@@ -2,7 +2,23 @@
 // Why: Separates construction and entry recording from query and redaction concerns.
 package audit
 
-import "time"
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"time"
+)
+
+func generateAuditID() string {
+	bytes := make([]byte, 8)
+	_, _ = rand.Read(bytes) // #nosec G104 -- best-effort uniqueness for a non-security audit ID
+	return hex.EncodeToString(bytes)
+}
+
+func generateAuditSessionID() string {
+	bytes := make([]byte, 16)
+	_, _ = rand.Read(bytes) // #nosec G104 -- best-effort uniqueness for a non-security session ID
+	return hex.EncodeToString(bytes)
+}
 
 // NewAuditTrail creates a new audit trail with the given configuration.
 // Zero-value AuditConfig fields are replaced with sensible defaults.
