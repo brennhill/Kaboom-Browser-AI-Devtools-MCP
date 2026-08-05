@@ -1,7 +1,8 @@
-// Purpose: Implements ring buffer storage primitives and cursor-safe access patterns.
-// Why: Prevents unbounded memory growth while preserving recent evidence for debugging.
+// Purpose: Implements fixed-capacity ring buffer storage and cursor-safe access.
+// Why: Prevents unbounded memory growth while preserving recent evidence for concurrent readers.
 // Docs: docs/features/feature/ring-buffer/index.md
 
+// Package buffers provides generic fixed-capacity circular buffers and filtering.
 package buffers
 
 import (

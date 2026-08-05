@@ -4,7 +4,7 @@ feature_id: feature-ring-buffer
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/buffers/ring_buffer.go
   - internal/buffers/ring_buffer_filter.go
@@ -13,7 +13,6 @@ test_paths:
   - internal/buffers/ring_buffer_test.go
   - internal/buffers/ring_buffer_stress_test.go
   - internal/buffers/ring_buffer_property_test.go
-  - internal/buffers/ring_buffer_resolve_test.go
   - internal/buffers/ring_buffer_slo_test.go
   - internal/buffers/filter_test.go
 last_verified_version: 0.7.12
@@ -51,3 +50,7 @@ last_verified_date: 2026-03-05
 - Concurrency and stress tests release readers, writers, and clearers from a
   shared start barrier. Race coverage therefore exercises the same operation
   set without depending on scheduler delays.
+- The package is intentionally bounded to ten Go files. Cursor-resolution
+  cases live with core buffer behavior, while benchmarks live with the SLO
+  tests they measure; historical migration smoke tests are not retained as a
+  parallel behavioral suite.

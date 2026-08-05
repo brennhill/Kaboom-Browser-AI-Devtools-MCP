@@ -4,10 +4,31 @@
 package buffers
 
 import (
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 )
+
+func TestPackageFileBoundary(t *testing.T) {
+	t.Parallel()
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read buffers package: %v", err)
+	}
+
+	fileCount := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".go" {
+			fileCount++
+		}
+	}
+	if fileCount > 10 {
+		t.Fatalf("buffers package has %d Go files; maximum is 10", fileCount)
+	}
+}
 
 // ============================================
 // Basic Write/Read
@@ -564,5 +585,38 @@ func TestRingBuffer_MultipleWraparounds(t *testing.T) {
 
 	if rb.GetCurrentPosition() != 15 {
 		t.Errorf("Expected position 15, got %d", rb.GetCurrentPosition())
+	}
+}
+
+func TestResolveStartPosition(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		capacity      int
+		entries       []int
+		position      int64
+		wantStart     int64
+		wantAvailable int64
+	}{
+		{name: "empty buffer", capacity: 10},
+		{name: "cursor at zero", capacity: 10, entries: []int{1, 2, 3}, wantAvailable: 3},
+		{name: "cursor in middle", capacity: 10, entries: []int{1, 2, 3, 4, 5}, position: 2, wantStart: 2, wantAvailable: 3},
+		{name: "cursor at end", capacity: 10, entries: []int{1, 2, 3}, position: 3, wantStart: 3},
+		{name: "evicted cursor", capacity: 3, entries: []int{1, 2, 3, 4, 5}, wantStart: 2, wantAvailable: 3},
+		{name: "oldest cursor", capacity: 3, entries: []int{1, 2, 3, 4, 5}, position: 2, wantStart: 2, wantAvailable: 3},
+		{name: "wrapped middle", capacity: 3, entries: []int{1, 2, 3, 4, 5}, position: 3, wantStart: 3, wantAvailable: 2},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			rb := NewRingBuffer[int](test.capacity)
+			rb.Write(test.entries)
+			start, available := rb.resolveStartPosition(test.position)
+			if start != test.wantStart || available != test.wantAvailable {
+				t.Fatalf("resolveStartPosition(%d) = (%d, %d), want (%d, %d)", test.position, start, available, test.wantStart, test.wantAvailable)
+			}
+		})
 	}
 }
