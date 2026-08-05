@@ -27,7 +27,7 @@ func TestHandleBrowserActionNavigate_InsecureSchemeRequiresSecurityMode(t *testi
 		t.Fatalf("error should mention security_mode enablement, got: %s", text)
 	}
 
-	if pq := env.capture.Queries().GetLastPendingQuery(); pq != nil {
+	if pq := lastPendingQuerySnapshot(env.capture.Queries()); pq != nil {
 		t.Fatalf("no pending query should be queued on validation failure, got type=%s", pq.Type)
 	}
 }
@@ -51,7 +51,7 @@ func TestHandleBrowserActionNavigate_RewritesKaboomInsecureURL(t *testing.T) {
 		t.Fatalf("navigate should succeed with insecure mode enabled, got: %s", firstText(result))
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("navigate should create pending query")
 	}
@@ -93,7 +93,7 @@ func TestHandleBrowserActionNewTab_RewritesKaboomInsecureURL(t *testing.T) {
 		t.Fatalf("new_tab should succeed with insecure mode enabled, got: %s", firstText(result))
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("new_tab should create pending query")
 	}

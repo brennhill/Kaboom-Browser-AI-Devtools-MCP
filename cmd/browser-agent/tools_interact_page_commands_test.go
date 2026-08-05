@@ -80,7 +80,7 @@ func TestToolsInteractHighlight_Success(t *testing.T) {
 	}
 
 	// Verify pending query created
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("highlight should create a pending query")
 	}

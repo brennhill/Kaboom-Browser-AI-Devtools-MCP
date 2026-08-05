@@ -587,3 +587,59 @@ func TestNewQueryDispatcher_ExpireAllPendingQueries(t *testing.T) {
 		t.Error("corr-exp-2 missing from failed commands")
 	}
 }
+
+func TestSetQueryResultDetachesCallerPayload(t *testing.T) {
+	t.Parallel()
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+	id, err := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := json.RawMessage(`{"stable":true}`)
+	qd.SetQueryResult(id, payload)
+	payload[2] = 'X'
+	got, found := qd.TakeQueryResult(id)
+	if !found || string(got) != `{"stable":true}` {
+		t.Fatalf("stored result = %s, found=%v; want detached original payload", got, found)
+	}
+}
+
+func TestPendingQuerySnapshotsDetachPayload(t *testing.T) {
+	t.Parallel()
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+	params := json.RawMessage(`{"selector":"main"}`)
+	if _, err := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: params}); err != nil {
+		t.Fatal(err)
+	}
+	params[2] = 'X'
+	first := qd.GetPendingQueries()
+	if len(first) != 1 || string(first[0].Params) != `{"selector":"main"}` {
+		t.Fatalf("first snapshot = %+v, want detached original params", first)
+	}
+	first[0].Params[2] = 'Y'
+	second := qd.GetPendingQueries()
+	if len(second) != 1 || string(second[0].Params) != `{"selector":"main"}` {
+		t.Fatalf("second snapshot = %+v, want dispatcher state unchanged", second)
+	}
+}
+
+func TestCommandResultSnapshotsDetachPayload(t *testing.T) {
+	t.Parallel()
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+	qd.RegisterCommand("corr-detached", "query-detached", time.Minute)
+	payload := json.RawMessage(`{"stable":true}`)
+	qd.ApplyCommandResult("corr-detached", "complete", payload, "")
+	payload[2] = 'X'
+	first, found := qd.GetCommandResult("corr-detached")
+	if !found || string(first.Result) != `{"stable":true}` {
+		t.Fatalf("stored command result = %+v, found=%v; want detached original", first, found)
+	}
+	first.Result[2] = 'Y'
+	second, found := qd.GetCommandResult("corr-detached")
+	if !found || string(second.Result) != `{"stable":true}` {
+		t.Fatalf("second command result = %+v, found=%v; want unchanged", second, found)
+	}
+}

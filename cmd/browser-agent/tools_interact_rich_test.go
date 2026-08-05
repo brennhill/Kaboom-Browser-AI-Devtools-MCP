@@ -37,7 +37,7 @@ func TestRichAction_AnalyzeInPendingQueryParams(t *testing.T) {
 	}
 
 	// Extract the queued pending query and verify analyze is in params
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}
@@ -69,7 +69,7 @@ func TestRichAction_AnalyzeFalseNotForwarded(t *testing.T) {
 			result.Content[0].Text)
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}
@@ -98,7 +98,7 @@ func TestRichAction_AnalyzeOmittedByDefault(t *testing.T) {
 			result.Content[0].Text)
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}
@@ -142,7 +142,7 @@ func TestRichAction_FrameSelectorInPendingQueryParams(t *testing.T) {
 		t.Fatalf("click with frame selector should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}
@@ -169,7 +169,7 @@ func TestRichAction_FrameIndexInPendingQueryParams(t *testing.T) {
 		t.Fatalf("click with frame index should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}

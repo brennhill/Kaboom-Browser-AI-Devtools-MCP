@@ -33,7 +33,7 @@ func TestToolsAnalyzePageStructure_DispatchesQuery(t *testing.T) {
 		t.Errorf("correlation_id should start with 'page_structure_', got: %s", corr)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -152,7 +152,7 @@ func TestToolsAnalyzePageStructure_TabIDPassthrough(t *testing.T) {
 		t.Fatalf("page_structure with tab_id should succeed, got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}

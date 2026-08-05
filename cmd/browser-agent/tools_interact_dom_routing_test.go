@@ -137,7 +137,7 @@ func TestToolsInteractDOMPrimitives_SuccessWithPilot(t *testing.T) {
 				t.Errorf("correlation_id should start with 'dom_', got: %s", corr)
 			}
 
-			pq := cap.Queries().GetLastPendingQuery()
+			pq := lastPendingQuerySnapshot(cap.Queries())
 			if pq == nil {
 				t.Fatalf("expected pending query for %s", tc.action)
 			}
@@ -161,7 +161,7 @@ func TestToolsInteractDOMPrimitive_ScopeRectQueues(t *testing.T) {
 		t.Fatalf("click with scope_rect should queue, got error: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query for click")
 	}
@@ -200,7 +200,7 @@ func TestToolsInteractDOMPrimitive_NearParamsConvertToScopeRect(t *testing.T) {
 		t.Fatalf("list_interactive with near params should queue, got error: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query for list_interactive")
 	}
@@ -241,7 +241,7 @@ func TestToolsInteractDOMPrimitive_NearParamsDoNotOverrideScopeRect(t *testing.T
 		t.Fatalf("unexpected error: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query")
 	}

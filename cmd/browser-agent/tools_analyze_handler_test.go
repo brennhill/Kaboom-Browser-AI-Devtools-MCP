@@ -189,7 +189,7 @@ func TestToolsAnalyzeDOM_NoSelector_FullDOMDump(t *testing.T) {
 	}
 
 	// Verify the pending query uses "*" as default selector
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -241,7 +241,7 @@ func TestToolsAnalyzeDOM_FrameSelectorForwardedInPendingQuery(t *testing.T) {
 		t.Fatalf("dom with frame selector should succeed, got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -266,7 +266,7 @@ func TestToolsAnalyzeDOM_FrameIndexForwardedInPendingQuery(t *testing.T) {
 		t.Fatalf("dom with frame index should succeed, got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -507,7 +507,7 @@ func TestSmoke_AnalyzeDOM_SelectorParam_ForwardedInPendingQuery(t *testing.T) {
 		t.Errorf("status = %v, want 'queued'", data["status"])
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -536,7 +536,7 @@ func TestSmoke_AnalyzeDOM_DefaultSelector_IsStar(t *testing.T) {
 		t.Fatalf("dom without selector should succeed, got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}

@@ -26,6 +26,14 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
 
+func lastPendingQuerySnapshot(dispatcher *queries.QueryDispatcher) *queries.PendingQueryResponse {
+	pending := dispatcher.GetPendingQueries()
+	if len(pending) == 0 {
+		return nil
+	}
+	return &pending[len(pending)-1]
+}
+
 func TestLoadAndFilterRecordingsReportsMalformedMetadata(t *testing.T) {
 	t.Parallel()
 
@@ -638,7 +646,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatalf("screen_recording_start path = %q, want .webm suffix", startData["path"])
 	}
 
-	lastQuery := env.capture.Queries().GetLastPendingQuery()
+	lastQuery := lastPendingQuerySnapshot(env.capture.Queries())
 	if lastQuery == nil {
 		t.Fatal("expected pending query for screen_recording_start")
 	}
@@ -679,7 +687,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatalf("screen_recording_stop recording_state = %v, want %q", stopData["recording_state"], recordingStateStopping)
 	}
 
-	stopQuery := env.capture.Queries().GetLastPendingQuery()
+	stopQuery := lastPendingQuerySnapshot(env.capture.Queries())
 	if stopQuery == nil {
 		t.Fatal("expected pending query for screen_recording_stop")
 	}

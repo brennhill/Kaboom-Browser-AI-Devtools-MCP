@@ -28,7 +28,7 @@ func TestToolsAnalyzeFormState_DispatchesQuery(t *testing.T) {
 		t.Errorf("correlation_id should start with 'form_state_', got: %s", corr)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -56,7 +56,7 @@ func TestToolsAnalyzeDataTable_DispatchesQuery(t *testing.T) {
 		t.Errorf("correlation_id should start with 'data_table_', got: %s", corr)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}

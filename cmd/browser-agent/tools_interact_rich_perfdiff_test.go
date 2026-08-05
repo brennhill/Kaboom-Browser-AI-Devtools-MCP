@@ -413,7 +413,7 @@ func TestRichAction_CompactClickMissingDomSummary_WhenExtensionHangs(t *testing.
 		t.Fatal("click should succeed with pilot enabled")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	// BUG SCENARIO: Extension never responds because withMutationTracking

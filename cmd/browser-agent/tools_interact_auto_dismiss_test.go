@@ -36,7 +36,7 @@ func TestInteract_AutoDismissOverlays_DispatchesPendingQuery(t *testing.T) {
 		t.Fatalf("auto_dismiss_overlays should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("auto_dismiss_overlays should create a pending query")
 	}
@@ -181,7 +181,7 @@ func TestInteract_WaitForStable_DispatchesPendingQuery(t *testing.T) {
 		t.Fatalf("wait_for_stable should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("wait_for_stable should create a pending query")
 	}
@@ -212,7 +212,7 @@ func TestInteract_WaitForStable_DefaultTimeout(t *testing.T) {
 		t.Fatalf("wait_for_stable should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("wait_for_stable should create a pending query")
 	}
@@ -254,7 +254,7 @@ func TestInteract_WaitForStable_CustomParams(t *testing.T) {
 		t.Fatalf("wait_for_stable should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("wait_for_stable should create a pending query")
 	}

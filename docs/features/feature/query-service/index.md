@@ -41,9 +41,10 @@ test_paths:
   - internal/queries/commands_test.go
   - internal/queries/command_trace_test.go
   - internal/queries/expire_signal_test.go
-  - internal/queries/result_ownership_test.go
+  - cmd/browser-agent/tools_test_helpers_test.go
+  - cmd/browser-agent/internal/screenrec/screenrec_test.go
+  - internal/capture/extension_state_unit_test.go
   - internal/capture/async_queue_integration_test.go
-  - internal/queries/no_facade_test.go
   - internal/capture/no_facade_test.go
   - internal/capture/sync_handler_owner_test.go
   - internal/capture/query_commands_test.go
@@ -140,6 +141,10 @@ accepted unresolved command to make room for disposable history.
   pending-query facade have been deleted; disconnect-aware queue reconciliation
   is owned by `capture.SyncHandler` because it composes extension liveness with
   query expiry. `Capture` retains no sync forwarding methods.
+- Test callers also consume `GetPendingQueries` directly. The former exported
+  `GetLastPendingQuery` test accessor was a production compatibility surface;
+  every caller now derives the latest detached snapshot in test code, and the
+  query architecture gate prevents that facade from returning.
 - `internal/asynccommand.Handler` owns queue admission, accessibility queries,
   connectivity-aware waiting, terminal response enrichment, and outcome
   recording as one lifecycle. Callers receive its functions explicitly; the
@@ -147,4 +152,4 @@ accepted unresolved command to make room for disposable history.
   interfaces.
 - Tests:
   - `internal/mcp/response_test.go`
-  - `internal/queries/no_facade_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.
+  - `internal/queries/dispatcher_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.

@@ -25,7 +25,7 @@ func TestCommandResult_AmbiguousTarget_CandidatesPromotedToTopLevel(t *testing.T
 		t.Fatal("click should queue successfully")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	// Simulate extension returning ambiguous_target with candidates
@@ -87,7 +87,7 @@ func TestCommandResult_AmbiguousTarget_SuggestedElementID(t *testing.T) {
 		t.Fatal("click should queue successfully")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	// First candidate is NOT visible, second is visible — suggested should be second
@@ -136,7 +136,7 @@ func TestCommandResult_AmbiguousTarget_RetryGuidanceMentionsCandidates(t *testin
 		t.Fatal("click should queue successfully")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	ambiguousResult := `{
@@ -187,7 +187,7 @@ func TestCommandResult_AmbiguousTarget_NoCandidates_NoSuggestedElementID(t *test
 		t.Fatal("click should queue successfully")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	// ambiguous_target with no candidates array (edge case)

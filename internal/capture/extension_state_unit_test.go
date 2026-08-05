@@ -106,14 +106,14 @@ func TestCaptureTestHelpersAndTTL(t *testing.T) {
 		t.Fatalf("tracking state = (%v,%d,%q), want (true,77,https://tracked.test)", enabled, tabID, tabURL)
 	}
 
-	if q := c.Queries().GetLastPendingQuery(); q != nil {
-		t.Fatalf("GetLastPendingQuery() = %+v, want nil before adding pending query", q)
+	if pending := c.Queries().GetPendingQueries(); len(pending) != 0 {
+		t.Fatalf("GetPendingQueries() = %+v, want none before adding pending query", pending)
 	}
 	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "query_dom", Params: []byte(`{"selector":".x"}`)})
 	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "accessibility", Params: []byte(`{"scope":"page"}`)})
-	last := c.Queries().GetLastPendingQuery()
-	if last == nil || last.Type != "accessibility" {
-		t.Fatalf("last pending query = %+v, want accessibility query", last)
+	pending := c.Queries().GetPendingQueries()
+	if len(pending) != 2 || pending[len(pending)-1].Type != "accessibility" {
+		t.Fatalf("pending queries = %+v, want accessibility query last", pending)
 	}
 
 	if isExpiredByTTL(time.Now(), 0) {

@@ -116,7 +116,7 @@ func TestToolsInteractHardwareClick_Success(t *testing.T) {
 		t.Errorf("correlation_id should start with 'cdp_click_', got: %s", corr)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("hardware_click should create a pending query")
 	}
@@ -146,7 +146,7 @@ func TestToolsInteractClick_CDPEscalationWithXY(t *testing.T) {
 		t.Fatalf("click with x/y should succeed (CDP escalation), got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("click with x/y should create a pending query")
 	}
@@ -172,7 +172,7 @@ func TestToolsInteractClick_NoCDPEscalationWithoutXY(t *testing.T) {
 		t.Fatalf("click without x/y should succeed (DOM path), got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("click without x/y should create a pending query")
 	}

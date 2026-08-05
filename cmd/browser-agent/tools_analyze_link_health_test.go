@@ -215,7 +215,7 @@ func TestAnalyzeLinkHealth_DomainParamForwarded(t *testing.T) {
 		t.Fatalf("link_health with domain should not error: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("link_health should create a pending query")
 	}

@@ -1257,10 +1257,6 @@
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/queries/testing_helpers.go": {
-      "mutable_globals": 0,
-      "exports": 1
-    },
     "internal/queries/types.go": {
       "mutable_globals": 0,
       "exports": 7

@@ -1,6 +1,7 @@
-// Purpose: Declares PendingQuery, QueryResult, and response types used across the query dispatch system.
+// Purpose: Declares the query dispatch package and its transport/lifecycle contracts.
 // Docs: docs/features/feature/query-service/index.md
 
+// Package queries owns extension-bound request queues and command results.
 package queries
 
 import (

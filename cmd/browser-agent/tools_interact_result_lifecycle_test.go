@@ -263,7 +263,7 @@ func TestSubtitle_CorrelationID_MatchesPendingQuery(t *testing.T) {
 	}
 
 	// The PendingQuery IS created with a correlationID
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("No pending query created for subtitle")
 	}

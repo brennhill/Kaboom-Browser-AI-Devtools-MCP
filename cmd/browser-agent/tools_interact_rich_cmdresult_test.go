@@ -28,7 +28,7 @@ func TestCommandResult_ExpiredSetsIsError(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	// Simulate expiry — extension never responded
@@ -67,7 +67,7 @@ func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	// Simulate extension completing with an error
@@ -105,7 +105,7 @@ func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	// Extension reported failure inside the result payload without setting command error.
@@ -142,7 +142,7 @@ func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
 		t.Fatal("execute_js should queue successfully")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":false,"error":"csp_blocked_all_worlds","message":"Page CSP blocks dynamic script execution"}`), "")
@@ -180,7 +180,7 @@ func TestCommandResult_ErrorStatusCSPFailureIncludesRetryHint(t *testing.T) {
 		t.Fatal("navigate should queue successfully")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 	env.capture.Queries().ApplyCommandResult(corrID, "error", json.RawMessage(`{"success":false,"error":"csp_blocked_page","message":"This page blocks extension script execution.","csp_blocked":true,"failure_cause":"csp"}`), "csp_blocked_page")
 
@@ -269,7 +269,7 @@ func TestCommandResult_InteractFailureCodesIncludeRecoveryRetryGuidance(t *testi
 				t.Fatal("click should queue successfully")
 			}
 
-			pq := env.capture.Queries().GetLastPendingQuery()
+			pq := lastPendingQuerySnapshot(env.capture.Queries())
 			corrID := pq.CorrelationID
 			env.capture.Queries().ApplyCommandResult(corrID, "error", json.RawMessage(tc.resultJSON), tc.errorCode)
 
@@ -313,7 +313,7 @@ func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 
 	// Simulate successful completion
@@ -475,7 +475,7 @@ func TestCommandResult_ExpiredIncludesDiagnosticHint(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	corrID := pq.CorrelationID
 	env.capture.Queries().ExpireCommand(corrID)
 

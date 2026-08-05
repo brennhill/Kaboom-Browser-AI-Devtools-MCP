@@ -105,7 +105,7 @@ func TestToolsInteractListInteractive_ResponseFields(t *testing.T) {
 		t.Errorf("correlation_id should start with 'dom_list_', got: %s", corr)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query for list_interactive")
 	}
@@ -141,7 +141,7 @@ func TestToolsInteractGetText_StructuredPassthrough(t *testing.T) {
 		t.Errorf("correlation_id should start with 'dom_get_text_', got: %s", corr)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query for get_text")
 	}

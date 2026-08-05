@@ -58,7 +58,7 @@ func TestGetReadable_QueryType_IsGetReadable(t *testing.T) {
 		t.Fatalf("get_readable should not error, got: %s", firstText(result))
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_readable should create a pending query")
 	}
@@ -77,7 +77,7 @@ func TestGetReadable_NoScriptInParams(t *testing.T) {
 
 	env.callInteract(t, `{"what":"get_readable"}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_readable should create a pending query")
 	}
@@ -101,7 +101,7 @@ func TestGetReadable_ForwardsTabID(t *testing.T) {
 
 	env.callInteract(t, `{"what":"get_readable","tab_id":99}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_readable should create a pending query")
 	}
@@ -120,7 +120,7 @@ func TestGetReadable_DefaultTimeout(t *testing.T) {
 
 	env.callInteract(t, `{"what":"get_readable"}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_readable should create a pending query")
 	}
@@ -148,7 +148,7 @@ func TestGetReadable_CustomTimeout(t *testing.T) {
 
 	env.callInteract(t, `{"what":"get_readable","timeout_ms":5000}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_readable should create a pending query")
 	}
@@ -180,7 +180,7 @@ func TestPageSummary_QueryType_IsPageSummary(t *testing.T) {
 		t.Fatalf("page_summary should not error, got: %s", firstText(result))
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("page_summary should create a pending query")
 	}
@@ -199,7 +199,7 @@ func TestPageSummary_NoScriptInParams(t *testing.T) {
 
 	callAnalyzeRaw(env.handler, `{"what":"page_summary"}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("page_summary should create a pending query")
 	}
@@ -223,7 +223,7 @@ func TestPageSummary_ForwardsTabID(t *testing.T) {
 
 	callAnalyzeRaw(env.handler, `{"what":"page_summary","tab_id":77}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("page_summary should create a pending query")
 	}
@@ -242,7 +242,7 @@ func TestPageSummary_DefaultTimeout(t *testing.T) {
 
 	callAnalyzeRaw(env.handler, `{"what":"page_summary"}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("page_summary should create a pending query")
 	}
@@ -270,7 +270,7 @@ func TestPageSummary_CustomTimeout(t *testing.T) {
 
 	callAnalyzeRaw(env.handler, `{"what":"page_summary","timeout_ms":5000}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("page_summary should create a pending query")
 	}
@@ -304,7 +304,7 @@ func TestGetMarkdown_QueryType_IsGetMarkdown(t *testing.T) {
 		t.Fatalf("get_markdown should not error, got: %s", firstText(result))
 	}
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_markdown should create a pending query")
 	}
@@ -323,7 +323,7 @@ func TestGetMarkdown_NoScriptInParams(t *testing.T) {
 
 	env.callInteract(t, `{"what":"get_markdown"}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_markdown should create a pending query")
 	}
@@ -347,7 +347,7 @@ func TestGetMarkdown_ForwardsTabID(t *testing.T) {
 
 	env.callInteract(t, `{"what":"get_markdown","tab_id":88}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_markdown should create a pending query")
 	}
@@ -366,7 +366,7 @@ func TestGetMarkdown_DefaultTimeout(t *testing.T) {
 
 	env.callInteract(t, `{"what":"get_markdown"}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_markdown should create a pending query")
 	}
@@ -394,7 +394,7 @@ func TestGetMarkdown_CustomTimeout(t *testing.T) {
 
 	env.callInteract(t, `{"what":"get_markdown","timeout_ms":7000}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_markdown should create a pending query")
 	}
@@ -422,7 +422,7 @@ func TestContentExtraction_TimeoutClamp(t *testing.T) {
 
 	env.callInteract(t, `{"what":"get_readable","timeout_ms":60000}`)
 
-	pq := env.capture.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(env.capture.Queries())
 	if pq == nil {
 		t.Fatal("get_readable should create a pending query")
 	}

@@ -43,7 +43,7 @@ func TestInteract_ExplorePage_DispatchesPendingQuery(t *testing.T) {
 		t.Errorf("correlation_id should start with 'explore_page_', got: %s", corr)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -69,7 +69,7 @@ func TestInteract_ExplorePage_NoURL_UsesCurrentTab(t *testing.T) {
 		t.Fatalf("explore_page without URL should succeed, got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -96,7 +96,7 @@ func TestInteract_ExplorePage_WithURL_IncludesNavigate(t *testing.T) {
 		t.Fatalf("explore_page with URL should succeed, got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -126,7 +126,7 @@ func TestInteract_ExplorePage_ForwardsParams(t *testing.T) {
 		t.Fatalf("explore_page with params should succeed, got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}
@@ -433,7 +433,7 @@ func TestInteract_ExplorePage_TabIDForwarded(t *testing.T) {
 		t.Fatalf("explore_page with tab_id should succeed, got: %s", result.Content[0].Text)
 	}
 
-	pq := cap.Queries().GetLastPendingQuery()
+	pq := lastPendingQuerySnapshot(cap.Queries())
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}

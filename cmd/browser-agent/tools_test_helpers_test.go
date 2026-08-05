@@ -20,11 +20,20 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 func toolSchemasForTest() []mcp.MCPTool { return schema.AllTools() }
+
+func lastPendingQuerySnapshot(dispatcher *queries.QueryDispatcher) *queries.PendingQueryResponse {
+	pending := dispatcher.GetPendingQueries()
+	if len(pending) == 0 {
+		return nil
+	}
+	return &pending[len(pending)-1]
+}
 
 // ============================================
 // Factory + Test Environment
