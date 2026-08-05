@@ -1,6 +1,7 @@
-// toolconfigure_test.go — Unit tests for the toolconfigure sub-package exported API.
+// contract_test.go — Unit tests for saved-sequence contract invariants.
+// Docs: docs/features/feature/batch-sequences/index.md
 
-package toolconfigure
+package sequencehandler
 
 import (
 	"testing"
@@ -36,35 +37,5 @@ func TestSequenceConstants(t *testing.T) {
 	}
 	if DefaultStepTimeout != 10000 {
 		t.Errorf("DefaultStepTimeout: want 10000, got %d", DefaultStepTimeout)
-	}
-}
-
-// ---------------------------------------------------------------------------
-// NormalizeTelemetryMode
-// ---------------------------------------------------------------------------
-
-func TestNormalizeTelemetryMode(t *testing.T) {
-	tests := []struct {
-		input  string
-		want   string
-		wantOK bool
-	}{
-		{"off", "off", true},
-		{"auto", "auto", true},
-		{"full", "full", true},
-		{"invalid", "", false},
-		{"", "", false},
-		{"  off  ", "  off  ", true}, // validates after trim, returns original
-	}
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got, ok := NormalizeTelemetryMode(tt.input)
-			if ok != tt.wantOK {
-				t.Errorf("ok: want %v, got %v", tt.wantOK, ok)
-			}
-			if got != tt.want {
-				t.Errorf("mode: want %q, got %q", tt.want, got)
-			}
-		})
 	}
 }

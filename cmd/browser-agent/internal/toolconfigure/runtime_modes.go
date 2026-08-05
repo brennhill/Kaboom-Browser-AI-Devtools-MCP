@@ -1,5 +1,5 @@
-// security_mode.go — Handles configure(what="security_mode") for toggling security modes.
-// Why: Isolates security mode mutation from the configure router.
+// runtime_modes.go — Configures runtime telemetry, security, and action-jitter modes.
+// Why: These lightweight handlers own process-local runtime behavior toggles.
 
 package toolconfigure
 
@@ -68,4 +68,64 @@ func HandleSecurityMode(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 			"Use mode: normal or insecure_proxy",
 			mcp.WithParam("mode"))
 	}
+}
+
+// HandleTelemetry handles configure(what="telemetry").
+func HandleTelemetry(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params struct {
+		TelemetryMode string `json:"telemetry_mode"`
+	}
+	mcp.LenientUnmarshal(args, &params)
+
+	if params.TelemetryMode == "" {
+		return mcp.Succeed(req, "Telemetry mode", map[string]any{
+			"status": "ok", "telemetry_mode": d.GetTelemetryMode(),
+		})
+	}
+
+	mode, ok := NormalizeTelemetryMode(params.TelemetryMode)
+	if !ok {
+		return mcp.Fail(req, mcp.ErrInvalidParam,
+			"Invalid telemetry_mode: "+params.TelemetryMode,
+			"Use telemetry_mode: off, auto, or full",
+			mcp.WithParam("telemetry_mode"))
+	}
+
+	d.SetTelemetryMode(mode)
+	return mcp.Succeed(req, "Telemetry mode updated", map[string]any{
+		"status": "ok", "telemetry_mode": mode,
+	})
+}
+
+// NormalizeTelemetryMode validates and normalizes a telemetry mode string.
+func NormalizeTelemetryMode(input string) (string, bool) {
+	switch strings.TrimSpace(input) {
+	case "off", "auto", "full":
+		return input, true
+	default:
+		return "", false
+	}
+}
+
+// HandleActionJitter handles configure(what="action_jitter").
+func HandleActionJitter(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params struct {
+		ActionJitterMs *int `json:"action_jitter_ms"`
+	}
+	mcp.LenientUnmarshal(args, &params)
+
+	if params.ActionJitterMs != nil {
+		value := *params.ActionJitterMs
+		if value < 0 {
+			value = 0
+		}
+		if value > 5000 {
+			value = 5000
+		}
+		d.InteractActionSetJitter(value)
+	}
+
+	return mcp.Succeed(req, "Action jitter configured", map[string]any{
+		"action_jitter_ms": d.InteractActionGetJitter(),
+	})
 }

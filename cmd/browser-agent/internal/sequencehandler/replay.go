@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
@@ -70,7 +69,7 @@ func (h *Handler) Replay(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 	})
 }
 
-func buildPlan(req mcp.JSONRPCRequest, sequence *toolconfigure.Sequence, params replayParams) (replayPlan, *mcp.JSONRPCResponse) {
+func buildPlan(req mcp.JSONRPCRequest, sequence *Sequence, params replayParams) (replayPlan, *mcp.JSONRPCResponse) {
 	if params.OverrideSteps != nil && len(params.OverrideSteps) != sequence.StepCount {
 		resp := mcp.Fail(req, mcp.ErrInvalidParam,
 			fmt.Sprintf("override_steps length (%d) does not match sequence step count (%d)", len(params.OverrideSteps), sequence.StepCount),
@@ -92,7 +91,7 @@ func buildPlan(req mcp.JSONRPCRequest, sequence *toolconfigure.Sequence, params 
 	return replayPlan{continueOnError: continueOnError, stepTimeout: time.Duration(timeout) * time.Millisecond, maxSteps: maxSteps}, nil
 }
 
-func (h *Handler) executeSteps(req mcp.JSONRPCRequest, sequence *toolconfigure.Sequence, params replayParams, plan replayPlan) ([]replay.StepResult, replayMetrics) {
+func (h *Handler) executeSteps(req mcp.JSONRPCRequest, sequence *Sequence, params replayParams, plan replayPlan) ([]replay.StepResult, replayMetrics) {
 	results := make([]replay.StepResult, 0, plan.maxSteps)
 	var metrics replayMetrics
 	for index := 0; index < plan.maxSteps; index++ {

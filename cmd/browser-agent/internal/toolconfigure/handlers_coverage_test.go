@@ -14,6 +14,32 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
+func TestNormalizeTelemetryMode(t *testing.T) {
+	tests := []struct {
+		input  string
+		want   string
+		wantOK bool
+	}{
+		{"off", "off", true},
+		{"auto", "auto", true},
+		{"full", "full", true},
+		{"invalid", "", false},
+		{"", "", false},
+		{"  off  ", "  off  ", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, ok := NormalizeTelemetryMode(tt.input)
+			if ok != tt.wantOK {
+				t.Errorf("ok: want %v, got %v", tt.wantOK, ok)
+			}
+			if got != tt.want {
+				t.Errorf("mode: want %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Test fakes
 // ---------------------------------------------------------------------------

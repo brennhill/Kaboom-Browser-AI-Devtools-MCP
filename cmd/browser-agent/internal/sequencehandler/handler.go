@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -54,17 +53,17 @@ func (h *Handler) Save(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 	if resp, stop := toolresp.RequireString(req, params.Name, "name", "Add the 'name' parameter"); stop {
 		return resp
 	}
-	if len(params.Name) > toolconfigure.MaxSequenceNameLen {
-		return mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Name exceeds maximum length of %d characters", toolconfigure.MaxSequenceNameLen), "Use a shorter name", mcp.WithParam("name"))
+	if len(params.Name) > MaxSequenceNameLen {
+		return mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Name exceeds maximum length of %d characters", MaxSequenceNameLen), "Use a shorter name", mcp.WithParam("name"))
 	}
-	if !toolconfigure.SequenceNamePattern.MatchString(params.Name) {
+	if !SequenceNamePattern.MatchString(params.Name) {
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Name must match ^[a-zA-Z0-9_-]+$", "Use only alphanumeric characters, hyphens, and underscores", mcp.WithParam("name"))
 	}
 	if len(params.Steps) == 0 {
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Steps must be a non-empty array", "Add at least one step", mcp.WithParam("steps"))
 	}
-	if len(params.Steps) > toolconfigure.MaxSequenceSteps {
-		return mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Steps exceeds maximum of %d", toolconfigure.MaxSequenceSteps), "Split into smaller sequences", mcp.WithParam("steps"))
+	if len(params.Steps) > MaxSequenceSteps {
+		return mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Steps exceeds maximum of %d", MaxSequenceSteps), "Split into smaller sequences", mcp.WithParam("steps"))
 	}
 	for i, step := range params.Steps {
 		var action struct {
@@ -78,7 +77,7 @@ func (h *Handler) Save(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 	if resp, stop := h.requireStore(req); stop {
 		return resp
 	}
-	sequence := toolconfigure.Sequence{
+	sequence := Sequence{
 		Name: params.Name, Description: params.Description, Tags: params.Tags,
 		SavedAt: time.Now().UTC().Format(time.RFC3339), StepCount: len(params.Steps), Steps: params.Steps,
 	}
@@ -86,7 +85,7 @@ func (h *Handler) Save(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to serialize sequence: "+err.Error(), "Check step format")
 	}
-	if err := h.deps.Store.Save(toolconfigure.SequenceNamespace, params.Name, data); err != nil {
+	if err := h.deps.Store.Save(SequenceNamespace, params.Name, data); err != nil {
 		h.reportRecovery("A saved sequence could not be written; the previous on-disk value, if any, remains active.")
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Failed to save sequence", "Check disk space and System Doctor")
 	}
@@ -123,16 +122,16 @@ func (h *Handler) List(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 	if resp, stop := h.requireStore(req); stop {
 		return resp
 	}
-	keys, err := h.deps.Store.List(toolconfigure.SequenceNamespace)
+	keys, err := h.deps.Store.List(SequenceNamespace)
 	if err != nil {
 		h.reportRecovery("Saved sequences could not be listed; an empty list is shown as a safe fallback.")
 		return mcp.Succeed(req, "Sequences", map[string]any{"status": "ok", "sequences": []any{}, "count": 0})
 	}
-	summaries := make([]toolconfigure.SequenceSummary, 0, len(keys))
+	summaries := make([]SequenceSummary, 0, len(keys))
 	hadRecovery := false
 	for _, key := range keys {
-		data, loadErr := h.deps.Store.Load(toolconfigure.SequenceNamespace, key)
-		var sequence toolconfigure.Sequence
+		data, loadErr := h.deps.Store.Load(SequenceNamespace, key)
+		var sequence Sequence
 		if loadErr != nil {
 			hadRecovery = true
 			h.reportRecovery("Saved sequence '" + key + "' could not be read; it was omitted.")
@@ -146,7 +145,7 @@ func (h *Handler) List(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPC
 		if !hasAllTags(sequence.Tags, params.Tags) {
 			continue
 		}
-		summaries = append(summaries, toolconfigure.SequenceSummary{
+		summaries = append(summaries, SequenceSummary{
 			Name: sequence.Name, Description: sequence.Description, Tags: sequence.Tags,
 			SavedAt: sequence.SavedAt, StepCount: sequence.StepCount,
 		})
@@ -168,13 +167,13 @@ func (h *Handler) Delete(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 	if resp, stop := h.requireStore(req); stop {
 		return resp
 	}
-	if _, err := h.deps.Store.Load(toolconfigure.SequenceNamespace, params.Name); err != nil {
+	if _, err := h.deps.Store.Load(SequenceNamespace, params.Name); err != nil {
 		if !errors.Is(err, statediag.ErrAbsent) {
 			h.reportRecovery("A saved sequence could not be read before deletion; no deletion was attempted.")
 		}
 		return mcp.Fail(req, mcp.ErrNoData, "Sequence not found: "+params.Name, "Use list_sequences to see available sequences")
 	}
-	if err := h.deps.Store.Delete(toolconfigure.SequenceNamespace, params.Name); err != nil {
+	if err := h.deps.Store.Delete(SequenceNamespace, params.Name); err != nil {
 		h.reportRecovery("A saved sequence could not be deleted; its on-disk value remains active.")
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Failed to delete sequence", "Check System Doctor and try again")
 	}
@@ -188,11 +187,11 @@ func (h *Handler) requireStore(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, boo
 	return mcp.Fail(req, mcp.ErrNotInitialized, "Session store not initialized", "Internal error — do not retry"), true
 }
 
-func (h *Handler) load(req mcp.JSONRPCRequest, name string) (*toolconfigure.Sequence, *mcp.JSONRPCResponse) {
+func (h *Handler) load(req mcp.JSONRPCRequest, name string) (*Sequence, *mcp.JSONRPCResponse) {
 	if resp, stop := h.requireStore(req); stop {
 		return nil, &resp
 	}
-	data, err := h.deps.Store.Load(toolconfigure.SequenceNamespace, name)
+	data, err := h.deps.Store.Load(SequenceNamespace, name)
 	if err != nil {
 		if !errors.Is(err, statediag.ErrAbsent) {
 			h.reportRecovery("A saved sequence could not be read; it was not loaded.")
@@ -200,7 +199,7 @@ func (h *Handler) load(req mcp.JSONRPCRequest, name string) (*toolconfigure.Sequ
 		resp := mcp.Fail(req, mcp.ErrNoData, "Sequence not found: "+name, "Use list_sequences to see available sequences")
 		return nil, &resp
 	}
-	var sequence toolconfigure.Sequence
+	var sequence Sequence
 	if err := json.Unmarshal(data, &sequence); err != nil {
 		h.reportRecovery("A saved sequence was malformed and could not be loaded.")
 		resp := mcp.Fail(req, mcp.ErrInvalidJSON, "Corrupted sequence data", "Delete and re-save the sequence")

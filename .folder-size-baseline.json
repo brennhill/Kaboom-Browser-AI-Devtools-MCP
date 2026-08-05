@@ -6,7 +6,6 @@
     "cmd/browser-agent/internal/bridge": 26,
     "cmd/browser-agent/internal/playbooks": 14,
     "cmd/browser-agent/internal/terminal": 33,
-    "cmd/browser-agent/internal/toolconfigure": 13,
     "cmd/browser-agent/internal/toolinteract": 20,
     "docs": 56,
     "docs/adrs": 70,

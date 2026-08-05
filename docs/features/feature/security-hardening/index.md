@@ -10,7 +10,7 @@ code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_security_impl.go
-  - cmd/browser-agent/internal/toolconfigure/security_mode.go
+  - cmd/browser-agent/internal/toolconfigure/runtime_modes.go
   - internal/mcp/response.go
   - internal/security/diff/types.go
   - internal/security/diff/compare.go
@@ -98,6 +98,9 @@ Security policy configuration likewise resolves only through the canonical
 state path and does not fall back to historical config directories.
 Analyze-time security handlers and their summary projections share one
 change-coupled owner, and the package enforces its ten-file boundary in tests.
+Process-local security, telemetry, and action-jitter configuration handlers
+share `runtime_modes.go`; these toggles use the same dependency bundle and
+change together with runtime configuration policy.
 
 ## Specs
 

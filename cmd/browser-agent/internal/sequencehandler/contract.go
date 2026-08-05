@@ -1,6 +1,7 @@
-// Purpose: Shared sequence constants and data types for configure sequence tooling.
+// contract.go — Canonical saved-sequence constants and wire models.
+// Docs: docs/features/feature/batch-sequences/index.md
 
-package toolconfigure
+package sequencehandler
 
 import (
 	"encoding/json"
@@ -9,8 +10,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 )
 
-// NOTE: MaxSequenceSteps and DefaultStepTimeout are duplicated in toolinteract/interact_batch.go
-// as unexported constants. Keep both in sync.
 const (
 	SequenceNamespace  = "sequences"
 	MaxSequenceSteps   = replay.MaxSteps
@@ -38,6 +37,3 @@ type SequenceSummary struct {
 	SavedAt     string   `json:"saved_at"`
 	StepCount   int      `json:"step_count"`
 }
-
-// Note: replayMu lives in the main package and is passed via Deps.ReplayMu.
-// This prevents concurrent sequence replays and batch executions.
