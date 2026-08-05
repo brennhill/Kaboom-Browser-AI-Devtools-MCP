@@ -31,6 +31,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
@@ -90,7 +91,7 @@ type Server struct {
 	// Terminal PTY session manager
 	ptyManager  *pty.Manager
 	ptyRelays   *terminal.Map
-	intentStore *terminal.IntentStore
+	intentStore *terminalintent.Store
 
 	// Terminal server port (0 = terminal server not running)
 	terminalPort int
@@ -208,7 +209,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		pushInbox:          push.NewPushInbox(50),
 		ptyManager:         pty.NewManager(),
 		tokenTracker:       tracking.NewTokenTracker(),
-		intentStore:        terminal.NewIntentStore(),
+		intentStore:        terminalintent.NewStore(),
 		stateRecovery:      stateRecovery,
 		incidents:          incident.NewStore(100, telemetry.QueueReliability),
 	}

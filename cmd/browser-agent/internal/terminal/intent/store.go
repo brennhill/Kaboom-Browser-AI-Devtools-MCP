@@ -2,7 +2,7 @@
 // Why: Bridges the UI trigger to the AI session — the intent persists until the AI picks it up.
 // Docs: docs/features/feature/auto-fix/index.md
 
-package terminal
+package intent
 
 import (
 	"crypto/rand"
@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	IntentTTL      = 5 * time.Minute
-	IntentMaxCount = 3
-	// IntentMaxNudges is the number of tool responses to nudge before giving up and discarding.
-	IntentMaxNudges    = 3
-	IntentActionQAScan = "qa_scan"
+	TTL      = 5 * time.Minute
+	MaxCount = 3
+	// MaxNudges is the number of tool responses to nudge before giving up and discarding.
+	MaxNudges    = 3
+	ActionQAScan = "qa_scan"
 )
 
 // Intent represents a user-initiated action request.
@@ -29,26 +29,26 @@ type Intent struct {
 	NudgeCount    int    `json:"-"`
 }
 
-// IntentStore is a thread-safe in-memory store for user intents.
-type IntentStore struct {
+// Store is a thread-safe in-memory store for user intents.
+type Store struct {
 	mu    sync.Mutex
 	items []Intent
 	count atomic.Int32 // Fast-path: skip lock when empty
 }
 
-// NewIntentStore creates a new intent store.
-func NewIntentStore() *IntentStore {
-	return &IntentStore{}
+// NewStore creates a new intent store.
+func NewStore() *Store {
+	return &Store{}
 }
 
 // Add creates a new intent and returns its correlation ID.
-func (s *IntentStore) Add(pageURL, action string) string {
+func (s *Store) Add(pageURL, action string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.cleanExpiredLocked()
 
-	for len(s.items) >= IntentMaxCount {
+	for len(s.items) >= MaxCount {
 		s.items = s.items[1:]
 	}
 
@@ -64,7 +64,7 @@ func (s *IntentStore) Add(pageURL, action string) string {
 }
 
 // Consume removes and returns the intent with the given correlation ID.
-func (s *IntentStore) Consume(correlationID string) *Intent {
+func (s *Store) Consume(correlationID string) *Intent {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -81,7 +81,7 @@ func (s *IntentStore) Consume(correlationID string) *Intent {
 }
 
 // Pending returns all non-expired intents without consuming them.
-func (s *IntentStore) Pending() []Intent {
+func (s *Store) Pending() []Intent {
 	if s.count.Load() == 0 {
 		return []Intent{}
 	}
@@ -95,9 +95,9 @@ func (s *IntentStore) Pending() []Intent {
 }
 
 // NudgeAndClean increments the nudge count on all pending intents and removes
-// any that have exceeded IntentMaxNudges. Returns true if there are still
+// any that have exceeded MaxNudges. Returns true if there are still
 // pending intents that should be surfaced to the AI.
-func (s *IntentStore) NudgeAndClean() bool {
+func (s *Store) NudgeAndClean() bool {
 	if s.count.Load() == 0 {
 		return false
 	}
@@ -109,7 +109,7 @@ func (s *IntentStore) NudgeAndClean() bool {
 	n := 0
 	for i := range s.items {
 		s.items[i].NudgeCount++
-		if s.items[i].NudgeCount <= IntentMaxNudges {
+		if s.items[i].NudgeCount <= MaxNudges {
 			s.items[n] = s.items[i]
 			n++
 		}
@@ -120,7 +120,7 @@ func (s *IntentStore) NudgeAndClean() bool {
 }
 
 // ConsumeAll removes and returns all non-expired intents.
-func (s *IntentStore) ConsumeAll() []Intent {
+func (s *Store) ConsumeAll() []Intent {
 	if s.count.Load() == 0 {
 		return nil
 	}
@@ -134,9 +134,9 @@ func (s *IntentStore) ConsumeAll() []Intent {
 	return out
 }
 
-func (s *IntentStore) cleanExpiredLocked() {
+func (s *Store) cleanExpiredLocked() {
 	now := time.Now().Unix()
-	cutoff := now - int64(IntentTTL.Seconds())
+	cutoff := now - int64(TTL.Seconds())
 	n := 0
 	for _, it := range s.items {
 		if it.CreatedAt >= cutoff {
@@ -148,8 +148,8 @@ func (s *IntentStore) cleanExpiredLocked() {
 	s.syncCountLocked()
 }
 
-func (s *IntentStore) syncCountLocked() {
-	// #nosec G115 -- Add caps this slice at IntentMaxCount (3).
+func (s *Store) syncCountLocked() {
+	// #nosec G115 -- Add caps this slice at MaxCount (3).
 	s.count.Store(int32(len(s.items)))
 }
 

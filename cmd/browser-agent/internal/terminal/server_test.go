@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
@@ -22,7 +23,7 @@ func TestSetupMux_WiresTerminalAndIntentRoutes(t *testing.T) {
 	defer mgr.StopAll()
 	store := capture.NewCapture()
 
-	mux, relays := SetupMux(deps, &fakeServerDeps{}, &fakeIntentDeps{store: NewIntentStore(), relays: &fakeRelayMap{}}, mgr, store)
+	mux, relays := SetupMux(deps, &fakeServerDeps{}, &fakeIntentDeps{store: terminalintent.NewStore(), relays: &fakeRelayMap{}}, mgr, store)
 	if mux == nil || relays == nil {
 		t.Fatal("SetupMux returned nil mux or relays")
 	}

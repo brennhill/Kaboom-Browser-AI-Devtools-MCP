@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -35,7 +35,7 @@ func TestMaybeAddPendingIntents_UsesAuditWorkflowCopy(t *testing.T) {
 	}
 	t.Cleanup(func() { server.Close() })
 
-	server.intentStore.Add("https://tracked.example/", terminal.IntentActionQAScan)
+	server.intentStore.Add("https://tracked.example/", terminalintent.ActionQAScan)
 
 	handler := NewMCPHandler(server, "test-version")
 	resp := handler.maybeAddPendingIntents(makeTextResultResponse(t, "base response"))

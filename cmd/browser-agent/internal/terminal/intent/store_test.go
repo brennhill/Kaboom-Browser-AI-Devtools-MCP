@@ -1,7 +1,7 @@
 // intent_store_test.go -- Tests for intent store: TTL, capacity, consume, dedup.
 // Docs: docs/features/feature/auto-fix/index.md
 
-package terminal
+package intent
 
 import (
 	"strings"
@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-func TestIntentStore_AddAndPending(t *testing.T) {
+func TestStore_AddAndPending(t *testing.T) {
 	t.Parallel()
-	s := NewIntentStore()
+	s := NewStore()
 
 	id := s.Add("http://localhost:3000", "qa_scan")
 	if !strings.HasPrefix(id, "intent_") {
@@ -30,9 +30,9 @@ func TestIntentStore_AddAndPending(t *testing.T) {
 	}
 }
 
-func TestIntentStore_ConsumeRemoves(t *testing.T) {
+func TestStore_ConsumeRemoves(t *testing.T) {
 	t.Parallel()
-	s := NewIntentStore()
+	s := NewStore()
 
 	id := s.Add("http://localhost:3000", "qa_scan")
 	it := s.Consume(id)
@@ -54,9 +54,9 @@ func TestIntentStore_ConsumeRemoves(t *testing.T) {
 	}
 }
 
-func TestIntentStore_ConsumeAll(t *testing.T) {
+func TestStore_ConsumeAll(t *testing.T) {
 	t.Parallel()
-	s := NewIntentStore()
+	s := NewStore()
 
 	s.Add("http://localhost:3000/a", "qa_scan")
 	s.Add("http://localhost:3000/b", "qa_scan")
@@ -70,9 +70,9 @@ func TestIntentStore_ConsumeAll(t *testing.T) {
 	}
 }
 
-func TestIntentStore_MaxCapacity(t *testing.T) {
+func TestStore_MaxCapacity(t *testing.T) {
 	t.Parallel()
-	s := NewIntentStore()
+	s := NewStore()
 
 	s.Add("http://a", "qa_scan")
 	s.Add("http://b", "qa_scan")
@@ -80,8 +80,8 @@ func TestIntentStore_MaxCapacity(t *testing.T) {
 	id4 := s.Add("http://d", "qa_scan")
 
 	pending := s.Pending()
-	if len(pending) != IntentMaxCount {
-		t.Fatalf("expected %d, got %d", IntentMaxCount, len(pending))
+	if len(pending) != MaxCount {
+		t.Fatalf("expected %d, got %d", MaxCount, len(pending))
 	}
 
 	// Oldest (http://a) should have been evicted; newest (http://d) should be present
@@ -101,9 +101,9 @@ func TestIntentStore_MaxCapacity(t *testing.T) {
 	}
 }
 
-func TestIntentStore_TTLExpiry(t *testing.T) {
+func TestStore_TTLExpiry(t *testing.T) {
 	t.Parallel()
-	s := NewIntentStore()
+	s := NewStore()
 
 	// Manually insert an expired intent
 	s.mu.Lock()
@@ -127,18 +127,18 @@ func TestIntentStore_TTLExpiry(t *testing.T) {
 	}
 }
 
-func TestIntentStore_ConsumeNonExistent(t *testing.T) {
+func TestStore_ConsumeNonExistent(t *testing.T) {
 	t.Parallel()
-	s := NewIntentStore()
+	s := NewStore()
 
 	if s.Consume("nonexistent") != nil {
 		t.Error("should return nil for nonexistent ID")
 	}
 }
 
-func TestIntentStore_EmptyPending(t *testing.T) {
+func TestStore_EmptyPending(t *testing.T) {
 	t.Parallel()
-	s := NewIntentStore()
+	s := NewStore()
 
 	pending := s.Pending()
 	if pending == nil {
@@ -149,13 +149,13 @@ func TestIntentStore_EmptyPending(t *testing.T) {
 	}
 }
 
-func TestIntentStore_NudgeAndClean(t *testing.T) {
+func TestStore_NudgeAndClean(t *testing.T) {
 	t.Parallel()
-	s := NewIntentStore()
-	s.Add("http://localhost:3000", IntentActionQAScan)
+	s := NewStore()
+	s.Add("http://localhost:3000", ActionQAScan)
 
 	// First nudge — should return true (intent still active)
-	for i := 0; i < IntentMaxNudges; i++ {
+	for i := 0; i < MaxNudges; i++ {
 		if !s.NudgeAndClean() {
 			t.Fatalf("nudge %d should return true", i+1)
 		}
@@ -170,9 +170,9 @@ func TestIntentStore_NudgeAndClean(t *testing.T) {
 	}
 }
 
-func TestIntentStore_NudgeAndClean_EmptyFastPath(t *testing.T) {
+func TestStore_NudgeAndClean_EmptyFastPath(t *testing.T) {
 	t.Parallel()
-	s := NewIntentStore()
+	s := NewStore()
 
 	// Should return false immediately without acquiring lock
 	if s.NudgeAndClean() {

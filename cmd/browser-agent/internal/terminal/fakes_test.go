@@ -5,6 +5,8 @@
 
 package terminal
 
+import terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
+
 // fakeServerDeps is an in-memory ServerDeps for testing active-codebase logic.
 type fakeServerDeps struct {
 	codebase string
@@ -33,11 +35,11 @@ func (f *fakeRelayMap) CloseAll() { f.closedAll = true }
 // exercise the "not initialized" error branches.
 type fakeIntentDeps struct {
 	relays RelayMap
-	store  *IntentStore
+	store  *terminalintent.Store
 }
 
-func (f *fakeIntentDeps) GetPtyRelays() RelayMap       { return f.relays }
-func (f *fakeIntentDeps) GetIntentStore() *IntentStore { return f.store }
+func (f *fakeIntentDeps) GetPtyRelays() RelayMap                { return f.relays }
+func (f *fakeIntentDeps) GetIntentStore() *terminalintent.Store { return f.store }
 
 // fakeClientRegistry implements clientstore.Registry for AutoDetectCWD tests.
 // listResult is returned verbatim from List(); its concrete type selects which

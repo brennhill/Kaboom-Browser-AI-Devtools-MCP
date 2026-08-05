@@ -7,6 +7,8 @@ import (
 	"bufio"
 	"io"
 	"net/http"
+
+	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 )
 
 // ServerDeps provides the subset of Server behavior needed by terminal handlers.
@@ -19,7 +21,7 @@ type ServerDeps interface {
 // from the main Server. Used by intent handlers.
 type IntentDeps interface {
 	GetPtyRelays() RelayMap
-	GetIntentStore() *IntentStore
+	GetIntentStore() *terminalintent.Store
 }
 
 // RelayMap is the interface for terminal relay map operations used by intent handlers.

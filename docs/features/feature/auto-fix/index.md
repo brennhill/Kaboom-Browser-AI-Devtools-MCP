@@ -4,7 +4,7 @@ feature_id: feature-auto-fix
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -12,7 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/handler.go
-  - cmd/browser-agent/internal/terminal/intent_store.go
+  - cmd/browser-agent/internal/terminal/intent/store.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
   - internal/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
@@ -31,7 +31,7 @@ test_paths:
   - cmd/browser-agent/handler_tools_call_postprocess_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
-  - cmd/browser-agent/internal/terminal/intent_store_test.go
+  - cmd/browser-agent/internal/terminal/intent/store_test.go
   - tests/extension/reliability/request-audit.test.js
   - tests/extension/content/message-handlers.test.js
   - tests/extension/contracts/background-boundaries.test.js

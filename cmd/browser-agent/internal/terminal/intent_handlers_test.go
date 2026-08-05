@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 )
 
 // A valid-JSON body larger than MaxPostBody must be bounded by MaxBytesReader and
@@ -39,7 +41,7 @@ func TestHandleIntentCreate_CapsBodySize(t *testing.T) {
 	t.Parallel()
 	deps := testDeps()
 	deps.MaxPostBody = 1024
-	store := NewIntentStore()
+	store := terminalintent.NewStore()
 
 	big := strings.Repeat("A", 8192)
 	body := fmt.Sprintf(`{"page_url":%q,"action":"qa_scan"}`, big)
@@ -157,7 +159,7 @@ func TestHandleTerminalInject_BadBody(t *testing.T) {
 
 func TestHandleIntentCreate_Success(t *testing.T) {
 	t.Parallel()
-	store := NewIntentStore()
+	store := terminalintent.NewStore()
 	deps := testDeps()
 	intentDeps := &fakeIntentDeps{store: store}
 
@@ -186,7 +188,7 @@ func TestHandleIntentCreate_Success(t *testing.T) {
 
 func TestHandleIntentCreate_DefaultsAction(t *testing.T) {
 	t.Parallel()
-	store := NewIntentStore()
+	store := terminalintent.NewStore()
 	deps := testDeps()
 
 	body, _ := json.Marshal(map[string]string{"page_url": "http://localhost:3000"})
@@ -198,8 +200,8 @@ func TestHandleIntentCreate_DefaultsAction(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 	pending := store.Pending()
-	if len(pending) != 1 || pending[0].Action != IntentActionQAScan {
-		t.Fatalf("expected default action %q, got %+v", IntentActionQAScan, pending)
+	if len(pending) != 1 || pending[0].Action != terminalintent.ActionQAScan {
+		t.Fatalf("expected default action %q, got %+v", terminalintent.ActionQAScan, pending)
 	}
 }
 
@@ -221,14 +223,14 @@ func TestHandleIntentCreate_MethodAndBadJSON(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/intent", nil)
 	rec := httptest.NewRecorder()
-	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: NewIntentStore()})
+	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: terminalintent.NewStore()})
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected 405, got %d", rec.Code)
 	}
 
 	req = httptest.NewRequest("POST", "/intent", strings.NewReader("{bad"))
 	rec = httptest.NewRecorder()
-	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: NewIntentStore()})
+	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: terminalintent.NewStore()})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rec.Code)
 	}
@@ -237,7 +239,7 @@ func TestHandleIntentCreate_MethodAndBadJSON(t *testing.T) {
 func TestRegisterIntentRoutes_Dispatch(t *testing.T) {
 	t.Parallel()
 	deps := testDeps()
-	store := NewIntentStore()
+	store := terminalintent.NewStore()
 	intentDeps := &fakeIntentDeps{relays: &fakeRelayMap{writeOK: true}, store: store}
 
 	mux := http.NewServeMux()

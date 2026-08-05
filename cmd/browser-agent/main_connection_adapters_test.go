@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 )
 
@@ -39,7 +40,7 @@ func TestSessionClientRegistryAdapterDelegates(t *testing.T) {
 }
 
 func TestServerIntentDepsExposeOwnedState(t *testing.T) {
-	server := &Server{intentStore: terminal.NewIntentStore()}
+	server := &Server{intentStore: terminalintent.NewStore()}
 	deps := &serverIntentDeps{server: server}
 	if deps.GetPtyRelays() != nil || deps.GetIntentStore() != server.intentStore {
 		t.Fatal("empty server intent dependencies mismatch")

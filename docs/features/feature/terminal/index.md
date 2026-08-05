@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -23,6 +23,7 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - cmd/browser-agent/internal/nativeinstall/installer.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
+  - cmd/browser-agent/internal/terminal/intent/store.go
   - cmd/browser-agent/internal/terminal/static.go
   - cmd/browser-agent/internal/terminal/terminal_assets/terminal.html
   - extension/sidepanel.html
@@ -105,6 +106,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/relay_close_test.go
   - cmd/browser-agent/internal/terminal/relay_init_test.go
   - cmd/browser-agent/internal/terminal/intent_handlers_test.go
+  - cmd/browser-agent/internal/terminal/intent/store_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
   - cmd/browser-agent/internal/nativeinstall/connect_refused_test.go
   - tests/extension/terminal-reconnect/terminal-html-reconnect.test.js

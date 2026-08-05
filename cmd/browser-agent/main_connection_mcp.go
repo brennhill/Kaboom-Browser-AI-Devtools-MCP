@@ -24,6 +24,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -60,7 +61,7 @@ func (deps *serverIntentDeps) GetPtyRelays() terminal.RelayMap {
 	return deps.server.ptyRelays
 }
 
-func (deps *serverIntentDeps) GetIntentStore() *terminal.IntentStore {
+func (deps *serverIntentDeps) GetIntentStore() *terminalintent.Store {
 	return deps.server.intentStore
 }
 

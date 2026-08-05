@@ -7,6 +7,8 @@ package terminal
 import (
 	"encoding/json"
 	"net/http"
+
+	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 )
 
 // IntentRequest is the JSON body for intent creation.
@@ -85,7 +87,7 @@ func HandleIntentCreate(w http.ResponseWriter, r *http.Request, deps Deps, inten
 		return
 	}
 	if req.Action == "" {
-		req.Action = IntentActionQAScan
+		req.Action = terminalintent.ActionQAScan
 	}
 
 	store := intentDeps.GetIntentStore()
