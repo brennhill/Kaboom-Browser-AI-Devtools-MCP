@@ -1,7 +1,7 @@
 // export_sarif_file_test.go — Tests SARIF file paths and filesystem safety.
 // Docs: docs/features/feature/sarif-export/index.md
 
-package export
+package sarif
 
 import (
 	"encoding/json"
@@ -246,7 +246,7 @@ func TestSaveSARIFToFile_UnwritableDir(t *testing.T) {
 	log := &SARIFLog{
 		Schema:  "https://example.com/schema",
 		Version: "2.1.0",
-		Runs:    []SARIFRun{},
+		Runs:    []sarifRun{},
 	}
 
 	// Create a temp dir, then create a subdir that's not writable
@@ -346,7 +346,7 @@ func TestSaveSARIFToFile_SymlinkResolution(t *testing.T) {
 
 	// The resolved path is under the OS temp dir, so the write should succeed.
 	// This validates that the resolution + allowed-dir check work together.
-	log := &SARIFLog{Version: "2.1.0", Schema: "test", Runs: []SARIFRun{}}
+	log := &SARIFLog{Version: "2.1.0", Schema: "test", Runs: []sarifRun{}}
 	err := saveSARIFToFile(log, filePath)
 	if err != nil {
 		t.Fatalf("saveSARIFToFile through symlink under temp should succeed: %v", err)
@@ -362,7 +362,7 @@ func TestSaveSARIFToFile_SymlinkResolution(t *testing.T) {
 func TestSaveSARIFToFile_OutsideAllowedDirs(t *testing.T) {
 	t.Parallel()
 	// Test that paths outside both cwd and temp dir are rejected.
-	log := &SARIFLog{Version: "2.1.0", Schema: "test", Runs: []SARIFRun{}}
+	log := &SARIFLog{Version: "2.1.0", Schema: "test", Runs: []sarifRun{}}
 	err := saveSARIFToFile(log, "/nonexistent/path/evil.sarif")
 	if err == nil {
 		t.Error("Expected error for path outside allowed directories")

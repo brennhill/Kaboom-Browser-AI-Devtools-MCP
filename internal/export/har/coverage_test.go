@@ -1,15 +1,14 @@
-// Purpose: Coverage-expansion tests for HAR/SARIF export edge cases and branch paths.
+// Purpose: Coverage-expansion tests for HAR export edge cases and branch paths.
 // Docs: docs/features/feature/har-export/index.md
 
 // export_coverage_test.go — Targeted coverage tests for uncovered export paths.
 // Covers: ExportHARMergedToFile, httpStatusText branches, computeWaterfallTimings edge cases,
-// matchesWaterfallFilter, matchesHARFilter, and SARIF path validation.
-package export
+// matchesWaterfallFilter and matchesHARFilter.
+package har
 
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -358,6 +357,7 @@ func TestExportHARMergedToFile_EmptyData(t *testing.T) {
 		t.Errorf("entries_count = %d, want 0", result.EntriesCount)
 	}
 }
+
 // ============================================
 // isPathSafe — Additional branches
 // ============================================
@@ -370,90 +370,6 @@ func TestIsPathSafe_PrivateTmpPrefix(t *testing.T) {
 	}
 }
 
-// ============================================
-// SARIF: isPathUnderResolvedDir — EvalSymlinks error
-// ============================================
-
-func TestIsPathUnderResolvedDir_NonexistentDir(t *testing.T) {
-	t.Parallel()
-
-	// Pass a non-existent directory — EvalSymlinks should fail
-	result := isPathUnderResolvedDir("/tmp/some/file.sarif", "/nonexistent/dir/that/does/not/exist")
-	if result {
-		t.Error("expected false for non-existent directory")
-	}
-}
-
-// ============================================
-// SARIF: validateSARIFSavePath — Additional paths
-// ============================================
-
-func TestValidateSARIFSavePath_TempDirPath(t *testing.T) {
-	t.Parallel()
-
-	tmpDir := os.TempDir()
-	resolvedTmp, err := filepath.EvalSymlinks(tmpDir)
-	if err != nil {
-		t.Skipf("cannot resolve temp dir: %v", err)
-	}
-
-	testPath := filepath.Join(resolvedTmp, "kaboom-test", "output.sarif")
-	err = validateSARIFSavePath(testPath, testPath)
-	if err != nil {
-		t.Errorf("validateSARIFSavePath under temp dir should succeed, got: %v", err)
-	}
-}
-
-// ============================================
-// SARIF: ensureRule with no WCAG tags
-// ============================================
-
-func TestEnsureRule_NoWCAGTags(t *testing.T) {
-	t.Parallel()
-
-	run := &SARIFRun{
-		Tool: SARIFTool{
-			Driver: SARIFDriver{Rules: []SARIFRule{}},
-		},
-		Results: []SARIFResult{},
-	}
-	indices := make(map[string]int)
-
-	// Violation with no WCAG tags
-	v := axeViolation{
-		ID:          "test-rule",
-		Description: "Test description",
-		Help:        "Test help",
-		Tags:        []string{"cat.aria", "TTv5"},
-	}
-
-	idx := ensureRule(run, indices, v)
-	if idx != 0 {
-		t.Errorf("expected index 0, got %d", idx)
-	}
-
-	rule := run.Tool.Driver.Rules[0]
-	if rule.Properties != nil {
-		t.Error("expected nil Properties when no WCAG tags")
-	}
-}
-
-// ============================================
-// SARIF: nodeToResult with empty target
-// ============================================
-
-func TestNodeToResult_EmptyTarget(t *testing.T) {
-	t.Parallel()
-
-	v := axeViolation{ID: "test", Help: "Help text"}
-	node := axeNode{HTML: "<div></div>", Target: []string{}}
-
-	result := nodeToResult(v, node, 0, "error")
-	if result.Locations[0].PhysicalLocation.ArtifactLocation.URI != "" {
-		t.Errorf("expected empty URI for empty target, got %q",
-			result.Locations[0].PhysicalLocation.ArtifactLocation.URI)
-	}
-}
 // ============================================
 // HARExportResult JSON field names (snake_case)
 // ============================================

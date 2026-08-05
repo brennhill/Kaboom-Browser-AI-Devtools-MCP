@@ -1,6 +1,6 @@
 // Purpose: Provides URL query parsing, header formatting, and file-save helpers for HAR export.
 // Why: Separates utility functions from HAR conversion and filter logic.
-package export
+package har
 
 import (
 	"fmt"
@@ -11,19 +11,19 @@ import (
 )
 
 // parseQueryString extracts query parameters from a URL as name/value pairs.
-func parseQueryString(rawURL string) []HARNameValue {
+func parseQueryString(rawURL string) []harNameValue {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
-		return make([]HARNameValue, 0)
+		return make([]harNameValue, 0)
 	}
 	params := parsed.Query()
 	if len(params) == 0 {
-		return make([]HARNameValue, 0)
+		return make([]harNameValue, 0)
 	}
-	result := make([]HARNameValue, 0, len(params))
+	result := make([]harNameValue, 0, len(params))
 	for name, values := range params {
 		for _, val := range values {
-			result = append(result, HARNameValue{Name: name, Value: val})
+			result = append(result, harNameValue{Name: name, Value: val})
 		}
 	}
 	return result

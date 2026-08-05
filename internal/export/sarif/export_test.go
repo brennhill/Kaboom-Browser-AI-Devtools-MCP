@@ -1,7 +1,7 @@
 // export_sarif_test.go — Tests accessibility-result conversion into SARIF.
 // Docs: docs/features/feature/sarif-export/index.md
 
-package export
+package sarif
 
 import (
 	"encoding/json"
@@ -374,13 +374,13 @@ func TestEnsureRule_DedupPath(t *testing.T) {
 
 func TestEnsureRule_Deduplication(t *testing.T) {
 	t.Parallel()
-	run := &SARIFRun{
-		Tool: SARIFTool{
-			Driver: SARIFDriver{
-				Rules: []SARIFRule{},
+	run := &sarifRun{
+		Tool: sarifTool{
+			Driver: sarifDriver{
+				Rules: []sarifRule{},
 			},
 		},
-		Results: []SARIFResult{},
+		Results: []sarifResult{},
 	}
 	indices := make(map[string]int)
 

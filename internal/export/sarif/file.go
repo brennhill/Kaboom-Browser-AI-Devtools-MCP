@@ -1,6 +1,6 @@
 // Purpose: Resolves output paths and writes SARIF JSON files to disk with symlink-safe resolution.
 // Why: Isolates file I/O and path validation from SARIF data conversion.
-package export
+package sarif
 
 import (
 	"encoding/json"

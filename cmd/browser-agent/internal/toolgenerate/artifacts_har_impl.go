@@ -6,10 +6,10 @@ package toolgenerate
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export/har"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // HandleExportHAR generates a HAR export from captured network data.
@@ -38,14 +38,14 @@ func HandleExportHAR(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	ver := d.Version
 
 	if params.SaveTo != "" {
-		result, err := export.ExportHARMergedToFile(bodies, waterfall, filter, ver, params.SaveTo)
+		result, err := har.ExportHARMergedToFile(bodies, waterfall, filter, ver, params.SaveTo)
 		if err != nil {
 			return mcp.Fail(req, mcp.ErrExportFailed, "HAR file export failed: "+err.Error(), "Check the save_to path and try again")
 		}
 		return mcp.Succeed(req, fmt.Sprintf("HAR exported to %s (%d entries)", result.SavedTo, result.EntriesCount), result)
 	}
 
-	harLog := export.ExportHARMerged(bodies, waterfall, filter, ver)
+	harLog := har.ExportHARMerged(bodies, waterfall, filter, ver)
 	summary := fmt.Sprintf("HAR export (%d entries)", len(harLog.Log.Entries))
 	return mcp.Succeed(req, summary, harLog)
 }

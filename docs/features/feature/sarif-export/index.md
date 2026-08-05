@@ -4,21 +4,24 @@ feature_id: feature-sarif-export
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go
   - internal/mcp/response.go
-  - internal/export/export_sarif.go
-  - internal/export/export_sarif_file.go
+  - internal/export/sarif/export.go
+  - internal/export/sarif/conversion.go
+  - internal/export/sarif/file.go
+  - internal/export/sarif/types.go
 test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
   - cmd/browser-agent/tools_generate_audit_test.go
-  - internal/export/export_sarif_test.go
-  - internal/export/export_sarif_document_test.go
-  - internal/export/export_sarif_file_test.go
-  - internal/export/export_sarif_unit_test.go
+  - internal/export/sarif/export_test.go
+  - internal/export/sarif/document_test.go
+  - internal/export/sarif/file_test.go
+  - internal/export/sarif/unit_test.go
+  - internal/export/sarif/coverage_test.go
   - cmd/browser-agent/lint_hardening_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -51,4 +54,7 @@ last_verified_date: 2026-03-05
 - Composition: `cmd/browser-agent/internal/toolgenerate/deps.go` explicitly
   supplies connectivity and accessibility operations; no catch-all host is retained.
 - Generate handler: `cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go`
-- Export implementation and tests: `internal/export/`
+- Export implementation and tests: `internal/export/sarif/`
+- SARIF owns its schema, conversion, safe file output, and golden evidence as a
+  ten-file package. The generate handler supplies the Kaboom version explicitly;
+  report generation no longer depends on mutable linker-injected package state.

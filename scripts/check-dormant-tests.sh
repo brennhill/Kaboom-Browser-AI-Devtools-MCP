@@ -13,7 +13,7 @@
 #   internal/redaction/redaction_test.go       823 lines  "raceEnabled needs to be
 #                                                          exported or defined here" (it was defined
 #                                                          in the same package)
-#   internal/export/export_sarif_test.go       977 lines  "requires MCP handler types
+#   internal/export/sarif/export_test.go       977 lines  "requires MCP handler types
 #                                                          that aren't exported" (referenced none)
 #
 # That is ~3,400 lines and several hundred assertions that CI never ran, in code

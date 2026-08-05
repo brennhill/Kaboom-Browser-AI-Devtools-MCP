@@ -1,7 +1,7 @@
 // Purpose: Unit tests for HAR/SARIF export export sarif logic.
 // Docs: docs/features/feature/har-export/index.md
 
-package export
+package sarif
 
 import (
 	"encoding/json"
@@ -149,7 +149,7 @@ func TestSaveSARIFToFile_PathGuardsAndWrite(t *testing.T) {
 	log := &SARIFLog{
 		Schema:  sarifSchemaURL,
 		Version: sarifSpecVersion,
-		Runs:    []SARIFRun{},
+		Runs:    []sarifRun{},
 	}
 
 	// Allowed: under current working directory

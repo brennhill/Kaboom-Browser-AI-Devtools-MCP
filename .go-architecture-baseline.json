@@ -941,17 +941,17 @@
       "mutable_globals": 2,
       "exports": 5
     },
-    "internal/export/export_har.go": {
+    "internal/export/har/export.go": {
       "mutable_globals": 0,
-      "exports": 13
+      "exports": 4
     },
-    "internal/export/export_sarif.go": {
+    "internal/export/sarif/export.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/export/export_sarif_types.go": {
-      "mutable_globals": 1,
-      "exports": 14
+    "internal/export/sarif/types.go": {
+      "mutable_globals": 0,
+      "exports": 2
     },
     "internal/flakerepro/runner.go": {
       "mutable_globals": 0,

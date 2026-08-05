@@ -13,7 +13,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export/har"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -57,7 +57,7 @@ func TestToolExportHAR_ReturnsHARJSON(t *testing.T) {
 	if lines := strings.SplitN(text, "\n", 2); len(lines) == 2 {
 		jsonPart = lines[1]
 	}
-	var harLog export.HARLog
+	var harLog har.HARLog
 	if err := json.Unmarshal([]byte(jsonPart), &harLog); err != nil {
 		t.Fatalf("response text is not valid HAR JSON: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestToolExportHAR_SaveToFile(t *testing.T) {
 	if lines := strings.SplitN(text, "\n", 2); len(lines) == 2 {
 		jsonPart = lines[1]
 	}
-	var summary export.HARExportResult
+	var summary har.HARExportResult
 	if err := json.Unmarshal([]byte(jsonPart), &summary); err != nil {
 		t.Fatalf("response text is not valid summary JSON: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestToolExportHAR_Filters(t *testing.T) {
 	if lines := strings.SplitN(text, "\n", 2); len(lines) == 2 {
 		jsonPart = lines[1]
 	}
-	var harLog export.HARLog
+	var harLog har.HARLog
 	if err := json.Unmarshal([]byte(jsonPart), &harLog); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestToolExportHAR_EmptyCapture(t *testing.T) {
 	if lines := strings.SplitN(text, "\n", 2); len(lines) == 2 {
 		jsonPart = lines[1]
 	}
-	var harLog export.HARLog
+	var harLog har.HARLog
 	if err := json.Unmarshal([]byte(jsonPart), &harLog); err != nil {
 		t.Fatalf("Expected valid HAR JSON, got parse error: %v", err)
 	}

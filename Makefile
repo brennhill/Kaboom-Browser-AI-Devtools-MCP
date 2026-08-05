@@ -6,7 +6,7 @@ VERSION = $(shell cat VERSION)
 BINARY_NAME := kaboom-agentic-browser
 HOOKS_BINARY_NAME := kaboom-hooks
 BUILD_DIR := dist
-LDFLAGS := -s -w -X main.version=$(VERSION) -X github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export.version=$(VERSION) -X github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry.Version=$(VERSION)
+LDFLAGS := -s -w -X main.version=$(VERSION) -X github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry.Version=$(VERSION)
 HOOKS_LDFLAGS := -s -w -X main.version=$(VERSION)
 CMD_PKG ?= ./cmd/browser-agent
 CMD_DIR ?= $(patsubst ./%,%,$(CMD_PKG))

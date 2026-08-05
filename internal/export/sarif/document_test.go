@@ -1,7 +1,7 @@
 // export_sarif_document_test.go — Tests SARIF document assembly and rule reuse.
 // Docs: docs/features/feature/sarif-export/index.md
 
-package export
+package sarif
 
 import (
 	"encoding/json"
@@ -41,6 +41,17 @@ func TestExportSARIF_EmptyViolations(t *testing.T) {
 	}
 	if !json.Valid(data) {
 		t.Error("Expected valid JSON output")
+	}
+}
+
+func TestExportSARIFUsesExplicitToolVersion(t *testing.T) {
+	t.Parallel()
+	log, err := ExportSARIF(json.RawMessage(`{"violations":[]}`), SARIFExportOptions{Version: "0.9.0-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := log.Runs[0].Tool.Driver.Version; got != "0.9.0-test" {
+		t.Fatalf("tool version = %q, want explicit version", got)
 	}
 }
 
@@ -118,8 +129,8 @@ func TestExportSARIF_Schema(t *testing.T) {
 	if log.Runs[0].Tool.Driver.Name != "Kaboom Agentic Browser" {
 		t.Errorf("Expected tool name 'Kaboom Agentic Browser', got %q", log.Runs[0].Tool.Driver.Name)
 	}
-	if log.Runs[0].Tool.Driver.Version != version {
-		t.Errorf("Expected tool version %q, got %q", version, log.Runs[0].Tool.Driver.Version)
+	if log.Runs[0].Tool.Driver.Version != defaultToolVersion {
+		t.Errorf("Expected tool version %q, got %q", defaultToolVersion, log.Runs[0].Tool.Driver.Version)
 	}
 	if log.Runs[0].Tool.Driver.InformationURI != "https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP" {
 		t.Errorf("Unexpected informationUri: %q", log.Runs[0].Tool.Driver.InformationURI)

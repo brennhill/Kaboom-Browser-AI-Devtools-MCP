@@ -1,11 +1,11 @@
 // Purpose: Converts axe-core violations and passes into SARIF 2.1.0 result entries.
 // Why: Separates violation-to-result conversion from SARIF file I/O and type definitions.
-package export
+package sarif
 
 import "strings"
 
 // convertViolationsToResults converts axe violations to SARIF results.
-func convertViolationsToResults(run *SARIFRun, ruleIndices map[string]int, violations []axeViolation) {
+func convertViolationsToResults(run *sarifRun, ruleIndices map[string]int, violations []axeViolation) {
 	for i := range violations {
 		v := violations[i]
 		ruleIdx := ensureRule(run, ruleIndices, v)
@@ -16,7 +16,7 @@ func convertViolationsToResults(run *SARIFRun, ruleIndices map[string]int, viola
 }
 
 // convertPassesToResults converts axe passes to SARIF results with "none" level.
-func convertPassesToResults(run *SARIFRun, ruleIndices map[string]int, passes []axeViolation) {
+func convertPassesToResults(run *sarifRun, ruleIndices map[string]int, passes []axeViolation) {
 	for i := range passes {
 		p := passes[i]
 		ruleIdx := ensureRule(run, ruleIndices, p)
@@ -27,21 +27,21 @@ func convertPassesToResults(run *SARIFRun, ruleIndices map[string]int, passes []
 }
 
 // ensureRule adds a rule to the driver rules if not already present, returns the index.
-func ensureRule(run *SARIFRun, indices map[string]int, v axeViolation) int {
+func ensureRule(run *sarifRun, indices map[string]int, v axeViolation) int {
 	if idx, exists := indices[v.ID]; exists {
 		return idx
 	}
 
-	rule := SARIFRule{
+	rule := sarifRule{
 		ID:               v.ID,
-		ShortDescription: SARIFMessage{Text: v.Description},
-		FullDescription:  SARIFMessage{Text: v.Help},
+		ShortDescription: sarifMessage{Text: v.Description},
+		FullDescription:  sarifMessage{Text: v.Help},
 		HelpURI:          v.HelpURL,
 	}
 
 	wcagTags := extractWCAGTags(v.Tags)
 	if len(wcagTags) > 0 {
-		rule.Properties = &SARIFRuleProperties{Tags: wcagTags}
+		rule.Properties = &sarifRuleProperties{Tags: wcagTags}
 	}
 
 	idx := len(run.Tool.Driver.Rules)
@@ -51,24 +51,24 @@ func ensureRule(run *SARIFRun, indices map[string]int, v axeViolation) int {
 }
 
 // nodeToResult converts a single axe node to a SARIF result.
-func nodeToResult(v axeViolation, node axeNode, ruleIndex int, level string) SARIFResult {
+func nodeToResult(v axeViolation, node axeNode, ruleIndex int, level string) sarifResult {
 	selector := ""
 	if len(node.Target) > 0 {
 		selector = node.Target[0]
 	}
 
-	return SARIFResult{
+	return sarifResult{
 		RuleID:    v.ID,
 		RuleIndex: ruleIndex,
 		Level:     level,
-		Message:   SARIFMessage{Text: v.Help},
-		Locations: []SARIFLocation{{
-			PhysicalLocation: SARIFPhysicalLocation{
-				ArtifactLocation: SARIFArtifactLocation{
+		Message:   sarifMessage{Text: v.Help},
+		Locations: []sarifLocation{{
+			PhysicalLocation: sarifPhysicalLocation{
+				ArtifactLocation: sarifArtifactLocation{
 					URI: selector,
 				},
-				Region: SARIFRegion{
-					Snippet: SARIFSnippet{Text: node.HTML},
+				Region: sarifRegion{
+					Snippet: sarifSnippet{Text: node.HTML},
 				},
 			},
 		}},

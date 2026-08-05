@@ -17,7 +17,8 @@
 // - export_sarif_types.go: SARIF and axe-core data models and constants
 // - export_sarif_convert.go: rule/result conversion helpers
 // - export_sarif_file.go: path validation and file persistence
-package export
+// Package sarif converts accessibility findings into SARIF 2.1.0 reports.
+package sarif
 
 import (
 	"encoding/json"
@@ -32,19 +33,23 @@ func ExportSARIF(a11yResultJSON json.RawMessage, opts SARIFExportOptions) (*SARI
 		return nil, fmt.Errorf("failed to parse a11y result: %w", err)
 	}
 
+	toolVersion := opts.Version
+	if toolVersion == "" {
+		toolVersion = defaultToolVersion
+	}
 	log := &SARIFLog{
 		Schema:  sarifSchemaURL,
 		Version: sarifSpecVersion,
-		Runs: []SARIFRun{{
-			Tool: SARIFTool{
-				Driver: SARIFDriver{
+		Runs: []sarifRun{{
+			Tool: sarifTool{
+				Driver: sarifDriver{
 					Name:           "Kaboom Agentic Browser",
-					Version:        version,
+					Version:        toolVersion,
 					InformationURI: "https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP",
-					Rules:          []SARIFRule{},
+					Rules:          []sarifRule{},
 				},
 			},
-			Results: []SARIFResult{},
+			Results: []sarifResult{},
 		}},
 	}
 

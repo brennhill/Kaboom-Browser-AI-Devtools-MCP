@@ -8,7 +8,8 @@
 //
 // JSON CONVENTION: All fields MUST use snake_case. See .claude/refs/api-naming-standards.md
 // SPEC:HAR — HAR 1.2 fields use camelCase per http://www.softwareishard.com/blog/har-12-spec/
-package export
+// Package har serializes captured browser network data as HTTP Archive files.
+package har
 
 import (
 	"encoding/json"
@@ -24,79 +25,79 @@ import (
 
 // HARLog is the top-level HAR structure.
 type HARLog struct {
-	Log HARLogInner `json:"log"` // SPEC:HAR
+	Log harLogInner `json:"log"` // SPEC:HAR
 }
 
-// HARLogInner contains the HAR version, creator, and entries.
-type HARLogInner struct {
+// harLogInner contains the HAR version, creator, and entries.
+type harLogInner struct {
 	Version string     `json:"version"` // SPEC:HAR
-	Creator HARCreator `json:"creator"` // SPEC:HAR
-	Entries []HAREntry `json:"entries"` // SPEC:HAR
+	Creator harCreator `json:"creator"` // SPEC:HAR
+	Entries []harEntry `json:"entries"` // SPEC:HAR
 }
 
-// HARCreator identifies the tool that generated the HAR.
-type HARCreator struct {
+// harCreator identifies the tool that generated the HAR.
+type harCreator struct {
 	Name    string `json:"name"`    // SPEC:HAR
 	Version string `json:"version"` // SPEC:HAR
 }
 
-// HAREntry represents a single HTTP request/response pair.
-type HAREntry struct {
+// harEntry represents a single HTTP request/response pair.
+type harEntry struct {
 	StartedDateTime string      `json:"startedDateTime"`   // SPEC:HAR
 	Time            int         `json:"time"`              // SPEC:HAR — total elapsed time in ms
-	Request         HARRequest  `json:"request"`           // SPEC:HAR
-	Response        HARResponse `json:"response"`          // SPEC:HAR
-	Timings         HARTimings  `json:"timings"`           // SPEC:HAR
+	Request         harRequest  `json:"request"`           // SPEC:HAR
+	Response        harResponse `json:"response"`          // SPEC:HAR
+	Timings         harTimings  `json:"timings"`           // SPEC:HAR
 	Comment         string      `json:"comment,omitempty"` // SPEC:HAR
 }
 
-// HARRequest represents an HTTP request.
-type HARRequest struct {
+// harRequest represents an HTTP request.
+type harRequest struct {
 	Method      string         `json:"method"`             // SPEC:HAR
 	URL         string         `json:"url"`                // SPEC:HAR
 	HTTPVersion string         `json:"httpVersion"`        // SPEC:HAR
-	Headers     []HARNameValue `json:"headers"`            // SPEC:HAR
-	QueryString []HARNameValue `json:"queryString"`        // SPEC:HAR
-	PostData    *HARPostData   `json:"postData,omitempty"` // SPEC:HAR
+	Headers     []harNameValue `json:"headers"`            // SPEC:HAR
+	QueryString []harNameValue `json:"queryString"`        // SPEC:HAR
+	PostData    *harPostData   `json:"postData,omitempty"` // SPEC:HAR
 	HeadersSize int            `json:"headersSize"`        // SPEC:HAR
 	BodySize    int            `json:"bodySize"`           // SPEC:HAR
 	Comment     string         `json:"comment,omitempty"`  // SPEC:HAR
 }
 
-// HARResponse represents an HTTP response.
-type HARResponse struct {
+// harResponse represents an HTTP response.
+type harResponse struct {
 	Status      int            `json:"status"`            // SPEC:HAR
 	StatusText  string         `json:"statusText"`        // SPEC:HAR
 	HTTPVersion string         `json:"httpVersion"`       // SPEC:HAR
-	Headers     []HARNameValue `json:"headers"`           // SPEC:HAR
-	Content     HARContent     `json:"content"`           // SPEC:HAR
+	Headers     []harNameValue `json:"headers"`           // SPEC:HAR
+	Content     harContent     `json:"content"`           // SPEC:HAR
 	HeadersSize int            `json:"headersSize"`       // SPEC:HAR
 	BodySize    int            `json:"bodySize"`          // SPEC:HAR
 	Comment     string         `json:"comment,omitempty"` // SPEC:HAR
 }
 
-// HARContent represents response body content.
-type HARContent struct {
+// harContent represents response body content.
+type harContent struct {
 	Size     int    `json:"size"`           // SPEC:HAR
 	MimeType string `json:"mimeType"`       // SPEC:HAR
 	Text     string `json:"text,omitempty"` // SPEC:HAR
 }
 
-// HARTimings contains timing breakdown for the request.
-type HARTimings struct {
+// harTimings contains timing breakdown for the request.
+type harTimings struct {
 	Send    int `json:"send"`    // SPEC:HAR
 	Wait    int `json:"wait"`    // SPEC:HAR
 	Receive int `json:"receive"` // SPEC:HAR
 }
 
-// HARNameValue is a generic name/value pair for headers, query params, etc.
-type HARNameValue struct {
+// harNameValue is a generic name/value pair for headers, query params, etc.
+type harNameValue struct {
 	Name  string `json:"name"`  // SPEC:HAR
 	Value string `json:"value"` // SPEC:HAR
 }
 
-// HARPostData represents request body data.
-type HARPostData struct {
+// harPostData represents request body data.
+type harPostData struct {
 	MimeType string `json:"mimeType"` // SPEC:HAR
 	Text     string `json:"text"`     // SPEC:HAR
 }
@@ -113,8 +114,8 @@ type HARExportResult struct {
 // timings. Waterfall-only entries become lightweight HAR entries with timing and size but no body.
 func ExportHARMerged(bodies []types.NetworkBody, waterfall []types.NetworkWaterfallEntry, filter types.NetworkBodyFilter, creatorVersion string) HARLog {
 	// Build map of entries keyed by URL from bodies.
-	entryMap := make(map[string]*HAREntry, len(bodies))
-	var entries []HAREntry
+	entryMap := make(map[string]*harEntry, len(bodies))
+	var entries []harEntry
 
 	for _, body := range bodies {
 		if !matchesHARFilter(body, filter) {
@@ -145,7 +146,7 @@ func ExportHARMerged(bodies []types.NetworkBody, waterfall []types.NetworkWaterf
 	})
 
 	if entries == nil {
-		entries = make([]HAREntry, 0)
+		entries = make([]harEntry, 0)
 	}
 
 	return buildHARLog(entries, creatorVersion)
@@ -157,11 +158,11 @@ func ExportHARMergedToFile(bodies []types.NetworkBody, waterfall []types.Network
 	return writeHARToFile(harLog, path)
 }
 
-func buildHARLog(entries []HAREntry, creatorVersion string) HARLog {
+func buildHARLog(entries []harEntry, creatorVersion string) HARLog {
 	return HARLog{
-		Log: HARLogInner{
+		Log: harLogInner{
 			Version: "1.2",
-			Creator: HARCreator{Name: "Kaboom Agentic Browser", Version: creatorVersion},
+			Creator: harCreator{Name: "Kaboom Agentic Browser", Version: creatorVersion},
 			Entries: entries,
 		},
 	}

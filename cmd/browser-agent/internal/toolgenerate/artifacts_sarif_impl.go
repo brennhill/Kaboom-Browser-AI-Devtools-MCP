@@ -6,7 +6,7 @@ package toolgenerate
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export/sarif"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -40,10 +40,11 @@ func HandleExportSARIF(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	}
 
 	// Convert to SARIF.
-	sarifLog, err := export.ExportSARIF(a11yResult, export.SARIFExportOptions{
+	sarifLog, err := sarif.ExportSARIF(a11yResult, sarif.SARIFExportOptions{
 		Scope:         arguments.Scope,
 		IncludePasses: arguments.IncludePasses,
 		SaveTo:        arguments.SaveTo,
+		Version:       d.Version,
 	})
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrNoData, "SARIF export failed: "+err.Error(), "Check a11y audit results and try again.")
