@@ -5,7 +5,7 @@
 // so the daemon, which already runs shells in these directories, lists them.
 // Docs: docs/features/feature/terminal/index.md
 
-package terminal
+package directorybrowser
 
 import (
 	"net/http"
@@ -69,15 +69,15 @@ func parentOf(dir string) string {
 // Directories only: a file cannot be a working directory, so offering one would
 // only produce a spawn failure later. Dot-directories are hidden — they clutter
 // the list and are almost never a project root.
-func HandleTerminalDirs(w http.ResponseWriter, r *http.Request, deps Deps) {
+func Handle(w http.ResponseWriter, r *http.Request, respond func(http.ResponseWriter, int, any)) {
 	if r.Method != "GET" {
-		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
+		respond(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
 	}
 
 	dir, ok := resolveDirRequest(r.URL.Query().Get("path"))
 	if !ok {
-		deps.JSONResponse(w, http.StatusBadRequest, map[string]string{
+		respond(w, http.StatusBadRequest, map[string]string{
 			"error":   "invalid_path",
 			"message": "path must be absolute or start with ~",
 		})
@@ -89,14 +89,14 @@ func HandleTerminalDirs(w http.ResponseWriter, r *http.Request, deps Deps) {
 	info, err := os.Stat(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			deps.JSONResponse(w, http.StatusNotFound, map[string]string{"error": "not_found", "path": dir})
+			respond(w, http.StatusNotFound, map[string]string{"error": "not_found", "path": dir})
 			return
 		}
-		deps.JSONResponse(w, http.StatusForbidden, map[string]string{"error": "stat_failed", "path": dir})
+		respond(w, http.StatusForbidden, map[string]string{"error": "stat_failed", "path": dir})
 		return
 	}
 	if !info.IsDir() {
-		deps.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "not_a_directory", "path": dir})
+		respond(w, http.StatusBadRequest, map[string]string{"error": "not_a_directory", "path": dir})
 		return
 	}
 
@@ -104,7 +104,7 @@ func HandleTerminalDirs(w http.ResponseWriter, r *http.Request, deps Deps) {
 	if err != nil {
 		// Unreadable is a normal outcome (permissions), not a server fault — the
 		// picker shows the path with no children rather than an error page.
-		deps.JSONResponse(w, http.StatusForbidden, map[string]string{"error": "read_failed", "path": dir})
+		respond(w, http.StatusForbidden, map[string]string{"error": "read_failed", "path": dir})
 		return
 	}
 
@@ -123,7 +123,7 @@ func HandleTerminalDirs(w http.ResponseWriter, r *http.Request, deps Deps) {
 		truncated = true
 	}
 
-	deps.JSONResponse(w, http.StatusOK, DirListing{
+	respond(w, http.StatusOK, DirListing{
 		Path:      dir,
 		Parent:    parentOf(dir),
 		Entries:   entries,

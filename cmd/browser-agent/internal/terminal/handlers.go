@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/directorybrowser"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
@@ -162,7 +163,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 	// Directory listing for the side panel's root-folder picker. The browser
 	// cannot resolve an absolute path on its own, so the daemon does it.
 	mux.HandleFunc("/terminal/dirs", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		HandleTerminalDirs(w, r, deps)
+		directorybrowser.Handle(w, r, deps.JSONResponse)
 	}))
 
 	// Image upload for terminal sessions.

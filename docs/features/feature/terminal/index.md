@@ -16,7 +16,6 @@ code_paths:
   - cmd/browser-agent/internal/terminal/handlers.go
   - cmd/browser-agent/internal/terminal/spawn_retry.go
   - cmd/browser-agent/internal/terminal/relay.go
-  - cmd/browser-agent/internal/terminal/dirs.go
   - cmd/browser-agent/internal/terminal/server.go
   - cmd/browser-agent/internal/terminal/supervisor/supervisor.go
   - cmd/browser-agent/main_connection_mcp.go
@@ -24,6 +23,7 @@ code_paths:
   - cmd/browser-agent/internal/nativeinstall/installer.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
   - cmd/browser-agent/internal/terminal/intent/store.go
+  - cmd/browser-agent/internal/terminal/directorybrowser/browser.go
   - cmd/browser-agent/internal/terminal/static.go
   - cmd/browser-agent/internal/terminal/terminal_assets/terminal.html
   - extension/sidepanel.html
@@ -64,7 +64,6 @@ test_paths:
   - tests/extension/terminal-session/terminal-start-pending.test.js
   - tests/extension/branding/brand-metadata.test.js
   - tests/extension/terminal-session/terminal-write-guard.test.js
-  - cmd/browser-agent/internal/terminal/dirs_test.go
   - cmd/browser-agent/internal/terminal/handlers_test.go
   - cmd/browser-agent/internal/terminal/handlers_extra_test.go
   - cmd/browser-agent/internal/terminal/ws_panic_test.go
@@ -107,6 +106,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/relay_init_test.go
   - cmd/browser-agent/internal/terminal/intent_handlers_test.go
   - cmd/browser-agent/internal/terminal/intent/store_test.go
+  - cmd/browser-agent/internal/terminal/directorybrowser/browser_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
   - cmd/browser-agent/internal/nativeinstall/connect_refused_test.go
   - tests/extension/terminal-reconnect/terminal-html-reconnect.test.js

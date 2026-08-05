@@ -1,5 +1,5 @@
 // dirs_test.go — Directory browsing for the terminal root-folder picker.
-package terminal
+package directorybrowser
 
 import (
 	"encoding/json"
@@ -11,22 +11,17 @@ import (
 	"testing"
 )
 
-func dirsTestDeps() Deps {
-	return Deps{
-		JSONResponse: func(w http.ResponseWriter, status int, data any) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(status)
-			_ = json.NewEncoder(w).Encode(data)
-		},
-		Stderrf: func(string, ...any) {},
-	}
+func respondJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(data)
 }
 
 func listDirs(t *testing.T, query string) (int, DirListing) {
 	t.Helper()
 	req := httptest.NewRequest("GET", "/terminal/dirs"+query, nil)
 	rec := httptest.NewRecorder()
-	HandleTerminalDirs(rec, req, dirsTestDeps())
+	Handle(rec, req, respondJSON)
 
 	var listing DirListing
 	if err := json.Unmarshal(rec.Body.Bytes(), &listing); err != nil {
@@ -231,7 +226,7 @@ func TestDirs_RejectsNonGET(t *testing.T) {
 	req := httptest.NewRequest("POST", "/terminal/dirs", nil)
 	rec := httptest.NewRecorder()
 
-	HandleTerminalDirs(rec, req, dirsTestDeps())
+	Handle(rec, req, respondJSON)
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want 405", rec.Code)
