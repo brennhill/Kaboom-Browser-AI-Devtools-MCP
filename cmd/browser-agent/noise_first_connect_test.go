@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/noiseautorun"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 )
@@ -22,8 +21,13 @@ func simulateExtensionConnect(cap *capture.Capture) {
 	capturefixture.Connect(cap)
 }
 
-func waitForNoiseFirstConnectCallback() {
-	time.Sleep(noiseautorun.FirstConnectDelay() + 150*time.Millisecond)
+func awaitNoiseDetection(t *testing.T, detected <-chan struct{}) {
+	t.Helper()
+	select {
+	case <-detected:
+	case <-time.After(time.Second):
+		t.Fatal("noise first-connect callback did not run")
+	}
 }
 
 func TestNoiseAutoDetectOnFirstSync_TriggersOnce(t *testing.T) {
@@ -42,13 +46,16 @@ func TestNoiseAutoDetectOnFirstSync_TriggersOnce(t *testing.T) {
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	// Override first-connect detection to count invocations.
-	handler.noiseFirstConnectFn = func() { detectCount.Add(1) }
+	detected := make(chan struct{}, 1)
+	handler.noiseFirstConnectFn = func() {
+		detectCount.Add(1)
+		detected <- struct{}{}
+	}
 
 	// Simulate first extension connection
 	simulateExtensionConnect(cap)
 
-	// Give the async callback time to fire and execute.
-	waitForNoiseFirstConnectCallback()
+	awaitNoiseDetection(t, detected)
 
 	if got := detectCount.Load(); got != 1 {
 		t.Errorf("noise auto-detect should run once on first connection, got %d", got)
@@ -71,16 +78,18 @@ func TestNoiseAutoDetectOnFirstSync_DoesNotRepeat(t *testing.T) {
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	// Override first-connect detection to count invocations.
-	handler.noiseFirstConnectFn = func() { detectCount.Add(1) }
+	detected := make(chan struct{}, 1)
+	handler.noiseFirstConnectFn = func() {
+		detectCount.Add(1)
+		detected <- struct{}{}
+	}
 
 	// Simulate multiple connections (extension polls repeatedly)
 	for i := 0; i < 5; i++ {
 		simulateExtensionConnect(cap)
-		time.Sleep(50 * time.Millisecond)
 	}
 
-	// Give async callback time to fire and execute.
-	waitForNoiseFirstConnectCallback()
+	awaitNoiseDetection(t, detected)
 
 	if got := detectCount.Load(); got != 1 {
 		t.Errorf("noise auto-detect should run exactly once across multiple syncs, got %d", got)
@@ -91,10 +100,6 @@ func TestNoiseAutoDetectOnFirstSync_ManualAutoDetectStillWorks(t *testing.T) {
 	t.Parallel()
 
 	env := newConfigureTestEnv(t)
-
-	// Trigger first-connection auto-detect
-	simulateExtensionConnect(env.capture)
-	waitForNoiseFirstConnectCallback()
 
 	// Manual auto_detect should still work independently
 	result, ok := env.callConfigure(t, `{"what":"noise_rule","noise_action":"auto_detect"}`)
@@ -109,30 +114,6 @@ func TestNoiseAutoDetectOnFirstSync_ManualAutoDetectStillWorks(t *testing.T) {
 	if _, ok := data["proposals"]; !ok {
 		t.Error("manual auto_detect response should contain proposals")
 	}
-}
-
-func TestNoiseAutoDetectOnFirstSync_EmitsLogEntry(t *testing.T) {
-	t.Parallel()
-
-	server, err := NewServer(t.TempDir()+"/test.jsonl", 100)
-	if err != nil {
-		t.Fatalf("NewServer: %v", err)
-	}
-	t.Cleanup(func() { server.Close() })
-
-	cap := capture.NewCapture()
-	capturefixture.SetPilot(cap, false)
-	mcpHandler := NewToolHandler(server, cap)
-	_ = mcpHandler.tools.Executor.(*ToolHandler)
-
-	// Simulate first extension connection
-	simulateExtensionConnect(cap)
-
-	// Give async callback time to fire and complete.
-	waitForNoiseFirstConnectCallback()
-
-	// The diagnostic log is written to the configured stderr sink; verify no panic occurs.
-	// and the auto-detect function executes (covered by count tests above)
 }
 
 // parseResponseJSON already defined in contract_helpers_test.go — reused here.

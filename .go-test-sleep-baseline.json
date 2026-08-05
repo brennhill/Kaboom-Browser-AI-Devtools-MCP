@@ -1,7 +1,6 @@
 {
   "version": 1,
   "files": {
-    "cmd/browser-agent/noise_first_connect_test.go": 2,
     "cmd/browser-agent/server_persistence_test.go": 6,
     "cmd/browser-agent/server_reliability_integration_test.go": 3,
     "cmd/browser-agent/server_reliability_test.go": 3,

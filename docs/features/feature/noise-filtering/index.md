@@ -4,7 +4,7 @@ feature_id: feature-noise-filtering
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/toolconfigure/noise_actions.go
@@ -84,6 +84,9 @@ Tests drive callbacks and first-connect timers explicitly, while production uses
 panic-safe goroutines and timers. A detector panic clears pending state through
 a deferred lifecycle transition, so future navigation detection cannot remain
 permanently wedged.
+Composition coverage awaits the first-connect callback itself and emits repeated
+connection events without spacing them on the wall clock. The former no-assertion
+"emits log" test was deleted rather than retained as dormant coverage.
 Configure noise handlers receive their owner callbacks through the explicit
 configure dependency value; no noise-specific ToolHandler adapter surface
 remains.
