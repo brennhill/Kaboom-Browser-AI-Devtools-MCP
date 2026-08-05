@@ -9,6 +9,26 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
+func TestDirectiveForResourceType_UnknownType(t *testing.T) {
+	t.Parallel()
+	if got := directiveForResourceType("unknown"); got != "default-src" {
+		t.Errorf("directiveForResourceType(unknown) = %q, want default-src", got)
+	}
+}
+
+func TestDirectiveForResourceType_KnownTypes(t *testing.T) {
+	t.Parallel()
+	cases := map[string]string{
+		"script": "script-src", "style": "style-src", "font": "font-src",
+		"img": "img-src", "connect": "connect-src",
+	}
+	for resourceType, want := range cases {
+		if got := directiveForResourceType(resourceType); got != want {
+			t.Errorf("directiveForResourceType(%q) = %q, want %q", resourceType, got, want)
+		}
+	}
+}
+
 func TestCSPRecordOriginFromBody(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()

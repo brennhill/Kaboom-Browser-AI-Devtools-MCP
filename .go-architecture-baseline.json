@@ -1401,10 +1401,6 @@
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/security/csp/audit.go": {
-      "mutable_globals": 0,
-      "exports": 1
-    },
     "internal/security/csp/generate.go": {
       "mutable_globals": 0,
       "exports": 1
@@ -1423,7 +1419,7 @@
     },
     "internal/security/csp/types.go": {
       "mutable_globals": 1,
-      "exports": 7
+      "exports": 8
     },
     "internal/security/diff/compare.go": {
       "mutable_globals": 0,

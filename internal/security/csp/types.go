@@ -1,6 +1,12 @@
 // types.go — Origin entry, generator state, params and response models.
 // Purpose: Defines types for CSP origin entries, responses, and the CSP generator state.
 // Why: Centralizes CSP type definitions so store, generate, and tooling modules share one schema.
+// Docs: docs/features/feature/security-hardening/index.md
+
+// Package csp accumulates observed resource origins and turns them into a
+// Content-Security-Policy grounded in runtime traffic. The package owns its
+// core models, bounded store, generation pipeline, directive helpers, and
+// MCP-facing session overrides as one cohesive security feature.
 package csp
 
 import (
@@ -20,6 +26,15 @@ type OriginEntry struct {
 	Count        int             `json:"observation_count"`
 	FirstSeen    time.Time       `json:"first_seen"`
 	LastSeen     time.Time       `json:"last_seen"`
+}
+
+// Audit reports which whitelist overrides shaped a generated policy and where
+// they came from, so a reviewer can distinguish session-only overrides from
+// persistent configuration.
+type Audit struct {
+	SessionOverrides    []string `json:"session_overrides,omitempty"`
+	PersistentWhitelist []string `json:"persistent_whitelist,omitempty"`
+	OverrideSource      string   `json:"override_source,omitempty"`
 }
 
 // Generator maintains the origin accumulator and generates CSP policies.

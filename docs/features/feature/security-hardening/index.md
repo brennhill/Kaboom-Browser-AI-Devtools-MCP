@@ -30,13 +30,11 @@ code_paths:
   - internal/security/scan/checks_pii.go
   - internal/security/scan/checks_transport_auth.go
   - internal/security/scan/checks_network.go
-  - internal/security/csp/doc.go
   - internal/security/csp/types.go
   - internal/security/csp/store.go
   - internal/security/csp/generate.go
   - internal/security/csp/helpers.go
   - internal/security/csp/tooling.go
-  - internal/security/csp/audit.go
   - internal/security/sri/doc.go
   - internal/security/sri/types.go
   - internal/security/sri/generate.go
@@ -70,7 +68,6 @@ test_paths:
   - internal/security/csp/csp_tooling_test.go
   - internal/security/csp/csp_helpers_test.go
   - internal/security/csp/boundary_test.go
-  - internal/security/csp/coverage_test.go
   - internal/security/sri/sri_test.go
   - internal/security/sri/helpers_test.go
   - internal/security/netflag/netflag_test.go
@@ -146,6 +143,10 @@ imports `httpsec`.
 - `internal/security/csp/csp_tooling_test.go` — CSP tool parameter handling and dispatch.
 - `internal/security/csp/csp_helpers_test.go` — resource classification and URL extraction.
 - `internal/security/csp/boundary_test.go` — session-only whitelist overrides are applied, warned about, audited, and never persisted.
+- CSP package documentation and its response audit contract live with the
+  canonical models in `types.go`. Store eviction/page-listing branches live
+  with store tests, while directive mapping branches live with helper tests;
+  an executable package boundary keeps the owner at ten files.
 - `internal/security/diff/diff_test.go` — snapshot lifecycle and retention with shared setup helpers.
 - Security-diff retention owns a private clock boundary. Snapshot timestamps,
   ages, TTL checks, and current comparisons share that source; tests advance a

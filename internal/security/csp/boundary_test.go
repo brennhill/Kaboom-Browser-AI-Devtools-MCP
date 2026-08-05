@@ -5,11 +5,28 @@
 package csp
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/policy"
 )
+
+func TestCSPPackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("CSP package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
 
 // ============================================
 // Security Boundary: LLM Trust Model Tests

@@ -35,7 +35,6 @@
     "internal/persistence": 14,
     "internal/pty": 19,
     "internal/queries": 14,
-    "internal/security/csp": 13,
     "internal/security/scan": 17,
     "internal/session": 16,
     "internal/tools/observe": 22,

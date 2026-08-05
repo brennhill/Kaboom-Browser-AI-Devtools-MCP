@@ -4,9 +4,50 @@
 package csp
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestGenerator_EvictOldestOrigin(t *testing.T) {
+	t.Parallel()
+	g := NewGenerator()
+
+	for i := 0; i < 10002; i++ {
+		origin := "https://evict-origin-" + strings.Repeat("x", 5) + "-" + padInt(i)
+		g.RecordOrigin(origin, "script", "https://evict-page.example.com")
+	}
+
+	g.mu.RLock()
+	count := len(g.origins)
+	g.mu.RUnlock()
+	if count > 10001 {
+		t.Errorf("origin count = %d, should be capped after eviction", count)
+	}
+}
+
+func padInt(n int) string {
+	s := ""
+	for n > 0 {
+		s = string(rune('0'+n%10)) + s
+		n /= 10
+	}
+	if s == "" {
+		return "0"
+	}
+	return s
+}
+
+func TestGenerator_GetPages(t *testing.T) {
+	t.Parallel()
+	g := NewGenerator()
+	g.RecordOrigin("https://cdn.example.com", "script", "https://page1.example.com")
+	g.RecordOrigin("https://cdn.example.com", "style", "https://page2.example.com")
+
+	if pages := g.GetPages(); len(pages) != 2 {
+		t.Errorf("GetPages() len = %d, want 2", len(pages))
+	}
+}
 
 func TestCSPOriginAccumulatorPersistsAfterBufferWrap(t *testing.T) {
 	t.Parallel()
