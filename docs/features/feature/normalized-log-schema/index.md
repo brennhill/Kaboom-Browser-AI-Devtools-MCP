@@ -7,10 +7,12 @@ owners: []
 last_reviewed: 2026-08-05
 code_paths:
   - internal/types/wire_log.go
-  - internal/capture/extension_logs.go
+  - internal/capture/logstore/store.go
+  - internal/capture/pressure/stats.go
   - src/types/wire/wire-extension-log.ts
 test_paths:
-  - internal/capture/extension_log_store_test.go
+  - internal/capture/logstore/store_test.go
+  - internal/capture/logstore/diagnostic_test.go
   - internal/capture/sync_test_helpers_test.go
   - scripts/contracts/sync-wire-generated.test.cjs
 last_verified_version: 0.9.0
@@ -44,3 +46,7 @@ Extension diagnostic entries have one Go wire owner. The generated TypeScript
 shape is embedded in the canonical `/sync` graph, while the capture store owns
 normalization, redaction, and retention after ingestion. A shared JSON fixture
 must round-trip through Go and match the generated extension feature contract.
+
+The normalized log store is a direct package boundary rather than a root
+compatibility facade. Its bounded retention reports the shared resource
+pressure contract, including capacity, cumulative drops, and oldest-entry age.

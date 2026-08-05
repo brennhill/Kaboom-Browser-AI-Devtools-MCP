@@ -1,26 +1,28 @@
-// Purpose: Tests for capture HTTP debug logging with redaction.
+// diagnostic_test.go — Tests daemon HTTP diagnostic redaction.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package capture
+package logstore
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestLogHTTPDebugEntry_RedactsSensitiveFields(t *testing.T) {
 	t.Parallel()
 
-	c := NewCapture()
+	store := NewDiagnostic(redaction.NewRedactionEngine("").Redact)
 
 	const (
 		bearer = "Bearer tokenValue1234567890abcdef"
 		ghPAT  = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef123456"
 	)
 
-	c.DiagnosticLogs().AddHTTP(types.HTTPDebugEntry{
+	store.AddHTTP(types.HTTPDebugEntry{
 		Timestamp: time.Now(),
 		Endpoint:  "/mcp",
 		Method:    "POST",
@@ -34,7 +36,7 @@ func TestLogHTTPDebugEntry_RedactsSensitiveFields(t *testing.T) {
 		DurationMs:   10,
 	})
 
-	entries := c.DiagnosticLogs().HTTPEntries()
+	entries := store.HTTPEntries()
 	var found *types.HTTPDebugEntry
 	for i := range entries {
 		if entries[i].Method == "POST" && entries[i].Endpoint == "/mcp" {

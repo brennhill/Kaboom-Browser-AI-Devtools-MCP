@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 )
 
@@ -81,7 +82,7 @@ func BuildResourcePressure(cap *capture.Capture, alerts *alertbuf.AlertBuffer) m
 	result := make(map[string]ResourcePressure)
 	if cap != nil {
 		telemetry := cap.Telemetry().Pressure()
-		for name, pressure := range map[string]capture.PressureStats{
+		for name, pressure := range map[string]pressure.Stats{
 			"network": telemetry.Network, "network_waterfall": telemetry.NetworkWaterfall,
 			"websocket": telemetry.WebSocket, "actions": telemetry.Actions,
 			"extension_diagnostics": cap.ExtensionLogs().Pressure(),
@@ -93,7 +94,7 @@ func BuildResourcePressure(cap *capture.Capture, alerts *alertbuf.AlertBuffer) m
 		result["pending_commands"] = ResourcePressure{Entries: queries.PendingQueryCount,
 			Capacity: queries.PendingCapacity, OldestAgeMs: queries.OldestPendingAge.Milliseconds(), ActiveEntries: queries.PendingQueryCount}
 		performance := cap.Performance().Pressure()
-		for name, pressure := range map[string]capture.PressureStats{
+		for name, pressure := range map[string]pressure.Stats{
 			"performance_snapshots": performance.Snapshots, "performance_samples": performance.Samples,
 			"performance_baselines": performance.BeforeSnapshots,
 		} {

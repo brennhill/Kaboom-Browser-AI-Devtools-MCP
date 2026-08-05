@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -134,7 +136,7 @@ func (s *NetworkWaterfallStore) addAt(entries []types.NetworkWaterfallEntry, pag
 }
 
 // Pressure returns bounded waterfall retention metrics.
-func (s *NetworkWaterfallStore) Pressure() PressureStats {
+func (s *NetworkWaterfallStore) Pressure() pressure.Stats {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return pressureForRing(s.entries, s.dropped, time.Now(), func(entry types.NetworkWaterfallEntry) time.Time { return entry.Timestamp })
@@ -188,10 +190,10 @@ type BufferStore struct {
 
 // TelemetryPressure is the bounded retention state for disposable browser telemetry.
 type TelemetryPressure struct {
-	Network          PressureStats `json:"network"`
-	NetworkWaterfall PressureStats `json:"network_waterfall"`
-	WebSocket        PressureStats `json:"websocket"`
-	Actions          PressureStats `json:"actions"`
+	Network          pressure.Stats `json:"network"`
+	NetworkWaterfall pressure.Stats `json:"network_waterfall"`
+	WebSocket        pressure.Stats `json:"websocket"`
+	Actions          pressure.Stats `json:"actions"`
 }
 
 // TelemetryStore owns event buffers, WebSocket connection state, navigation
@@ -427,8 +429,8 @@ func (s *TelemetryStore) Pressure() TelemetryPressure {
 	return pressure
 }
 
-func pressureForRing[T any](ring boundedRing[T], dropped int64, now time.Time, addedAt func(T) time.Time) PressureStats {
-	stats := PressureStats{Size: ring.len(), Capacity: ring.capacity(), Dropped: dropped}
+func pressureForRing[T any](ring boundedRing[T], dropped int64, now time.Time, addedAt func(T) time.Time) pressure.Stats {
+	stats := pressure.Stats{Size: ring.len(), Capacity: ring.capacity(), Dropped: dropped}
 	if ring.len() == 0 {
 		return stats
 	}
@@ -566,7 +568,7 @@ type StateResetter struct {
 	extension     *ExtensionRuntime
 	telemetry     *TelemetryStore
 	performance   *PerformanceStore
-	extensionLogs *ExtensionLogStore
+	extensionLogs *logstore.Extension
 }
 
 // NewStateResetter binds reset behavior to the canonical state owners.

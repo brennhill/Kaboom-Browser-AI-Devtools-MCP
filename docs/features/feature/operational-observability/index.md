@@ -4,8 +4,9 @@ feature_id: feature-operational-observability
 status: in_progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
+  - internal/capture/pressure/stats.go
   - internal/incident/registry.go
   - internal/incident/store.go
   - internal/incident/projections.go
@@ -15,6 +16,8 @@ code_paths:
   - cmd/browser-agent/tools_configure_support.go
   - internal/schema/configure/properties_core.go
 test_paths:
+  - internal/capture/logstore/store_test.go
+  - internal/capture/accessor_unit_test.go
   - internal/incident/store_test.go
   - internal/incident/support_test.go
   - cmd/browser-agent/tools_configure_support_test.go
@@ -63,6 +66,12 @@ Recovery follows an idempotent, generation-aware state machine. Stale
 transitions cannot alter current health. Incident storage and history are
 bounded, use single-pass eviction, and expose dropped-entry counts rather than
 silently losing pressure signals.
+
+Disposable capture owners report resource pressure through the neutral
+`internal/capture/pressure` value contract. Extension logs, browser telemetry,
+performance samples, and health projections therefore expose consistent size,
+capacity, cumulative-drop, and oldest-entry evidence without importing one
+another or duplicating operational types.
 
 The allowed graph is explicit: incidents may resolve directly from `detected`
 to `recovered` or `exhausted`; only retryable incidents may enter `retrying`.

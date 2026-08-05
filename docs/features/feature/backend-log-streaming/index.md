@@ -16,7 +16,8 @@ code_paths:
   - internal/capture/capture.go
   - internal/capture/model.go
   - internal/capture/events.go
-  - internal/capture/extension_logs.go
+  - internal/capture/logstore/store.go
+  - internal/capture/pressure/stats.go
   - internal/capture/extension_state.go
   - internal/capture/featureusage/observer.go
   - internal/capture/handlers.go
@@ -102,7 +103,8 @@ test_paths:
   - internal/capture/settings_path_test.go
   - internal/capture/coverage_gaps_part2_test.go
   - internal/capture/api_contract_test.go
-  - internal/capture/extension_log_store_test.go
+  - internal/capture/logstore/store_test.go
+  - internal/capture/logstore/diagnostic_test.go
   - internal/capture/accessor_unit_test.go
   - internal/capture/featureusage/observer_test.go
   - internal/capture/client_registry_owner_test.go
@@ -360,6 +362,14 @@ this one bounded delivery contract.
 - FEATURE_BACKEND_LOG_STREAMING_003
 
 ## Code and Tests
+
+Extension and daemon diagnostic logs now belong to the focused
+`internal/capture/logstore` package. It owns redaction, bounded retention,
+detached reads, and drop-pressure reporting; the root `Capture` type only
+composes and exposes that canonical owner. Generic bounded-resource metrics
+belong to `internal/capture/pressure`, so telemetry, performance, and health
+reporting share one neutral value contract without importing a broad capture
+implementation or preserving an obsolete compatibility surface.
 
 - `internal/capture/sync_test_helpers_test.go` centralizes `/sync` request marshaling, transport dispatch, and response decoding helpers.
 - `internal/capture/sync_test.go` reuses those helpers for request ingestion, heartbeats, and connection state.

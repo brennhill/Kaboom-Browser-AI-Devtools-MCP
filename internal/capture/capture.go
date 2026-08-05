@@ -9,6 +9,7 @@ package capture
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -43,7 +44,7 @@ type Capture struct {
 	// Timings and Performance Data
 	// ============================================
 
-	extensionLogs *ExtensionLogStore // Bounded extension logs. Own lock, redaction, and retention.
+	extensionLogs *logstore.Extension // Bounded extension logs. Own lock, redaction, and retention.
 
 	// ============================================
 	// Query Dispatch (Own Locks)
@@ -67,7 +68,7 @@ type Capture struct {
 	// Diagnostic Logging (Own Lock)
 	// ============================================
 
-	diagnosticLogs *DiagnosticLogStore // Redacted polling + HTTP diagnostics. Independently synchronized.
+	diagnosticLogs *logstore.Diagnostic // Redacted polling + HTTP diagnostics. Independently synchronized.
 
 	// recording.Recording Management — delegates to recording.RecordingManager sub-struct (aliased from internal/recording).
 	recordingManager *recording.RecordingManager // recording.Recording lifecycle, playback, and log-diff. Has own sync.Mutex.
@@ -100,10 +101,10 @@ type Capture struct {
 func NewCapture() *Capture {
 	logRedactor := redaction.NewRedactionEngine("")
 	c := &Capture{
-		extensionLogs:    newExtensionLogStore(logRedactor.Redact),
+		extensionLogs:    logstore.NewExtension(logRedactor.Redact),
 		extension:        newExtensionRuntime(),
 		perf:             newPerformanceStore(),
-		diagnosticLogs:   newDiagnosticLogStore(logRedactor.Redact),
+		diagnosticLogs:   logstore.NewDiagnostic(logRedactor.Redact),
 		recordingManager: recording.NewRecordingManager(),
 		lifecycle:        lifecycle.NewObserver(),
 		featureUsage:     featureusage.New(),
@@ -155,6 +156,12 @@ func (c *Capture) Extension() *ExtensionRuntime {
 func (c *Capture) Telemetry() *TelemetryStore {
 	return c.telemetry
 }
+
+// ExtensionLogs returns the independently synchronized extension-log owner.
+func (c *Capture) ExtensionLogs() *logstore.Extension { return c.extensionLogs }
+
+// DiagnosticLogs returns the canonical redacted diagnostic-log owner.
+func (c *Capture) DiagnosticLogs() *logstore.Diagnostic { return c.diagnosticLogs }
 
 // Close shuts down capture-owned background goroutines.
 //

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	pressuremetrics "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
 
@@ -130,7 +131,7 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	c.telemetry.mu.Unlock()
 
 	pressure := c.Telemetry().Pressure()
-	assertPressure := func(name string, got PressureStats, size int, dropped int64) {
+	assertPressure := func(name string, got pressuremetrics.Stats, size int, dropped int64) {
 		t.Helper()
 		if got.Size != size || got.Capacity != size || got.Dropped != dropped || got.OldestAge < time.Second {
 			t.Fatalf("%s pressure = %#v, want size/capacity=%d dropped=%d and positive age", name, got, size, dropped)

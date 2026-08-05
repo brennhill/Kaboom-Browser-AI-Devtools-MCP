@@ -867,15 +867,11 @@
     },
     "internal/capture/capture.go": {
       "mutable_globals": 0,
-      "exports": 11
+      "exports": 13
     },
     "internal/capture/events.go": {
       "mutable_globals": 0,
       "exports": 24
-    },
-    "internal/capture/extension_logs.go": {
-      "mutable_globals": 0,
-      "exports": 11
     },
     "internal/capture/extension_state.go": {
       "mutable_globals": 0,
@@ -889,9 +885,17 @@
       "mutable_globals": 0,
       "exports": 9
     },
+    "internal/capture/logstore/store.go": {
+      "mutable_globals": 0,
+      "exports": 13
+    },
     "internal/capture/model.go": {
       "mutable_globals": 0,
-      "exports": 16
+      "exports": 14
+    },
+    "internal/capture/pressure/stats.go": {
+      "mutable_globals": 0,
+      "exports": 1
     },
     "internal/capture/sync.go": {
       "mutable_globals": 0,

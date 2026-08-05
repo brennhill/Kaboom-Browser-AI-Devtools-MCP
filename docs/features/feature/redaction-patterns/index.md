@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-05
 code_paths:
-  - internal/capture/extension_logs.go
+  - internal/capture/logstore/store.go
   - internal/mcp/types.go
   - internal/redaction/redaction.go
   - internal/redaction/redaction_engine.go
@@ -15,7 +15,8 @@ code_paths:
   - src/background/runtime-state/log-queue.ts
   - Makefile
 test_paths:
-  - internal/capture/http_debug_redaction_test.go
+  - internal/capture/logstore/diagnostic_test.go
+  - internal/capture/logstore/store_test.go
   - internal/redaction/redaction_test.go
   - internal/redaction/redaction_engine_test.go
   - internal/redaction/redaction_fuzz_test.go
@@ -71,6 +72,11 @@ Security-audit credential and PII patterns are separately owned together in
 `internal/security/scan/credentials.go`; they share the audit scanner's bounded
 input and evidence-redaction policy rather than the MCP response-redaction
 engine.
+
+Capture diagnostics apply the canonical redaction engine at the focused
+`internal/capture/logstore` ingestion boundary. The owner recursively redacts
+structured extension data and daemon HTTP fields before retention, returns
+detached snapshots, and exposes no legacy root-package store aliases.
 
 Deterministic property suites exercise canonical MCP text and image blocks,
 nested metadata, errors, diagnostics, malformed envelopes, and extension runtime

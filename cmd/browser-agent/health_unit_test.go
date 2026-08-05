@@ -14,6 +14,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	capturelogstore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
@@ -149,7 +150,7 @@ func TestHealthResponseExposesMachineReadableResourcePressure(t *testing.T) {
 	hm := health.NewMetrics()
 	cap := capture.NewCapture()
 	cap.Telemetry().AddNetworkBodies(make([]types.NetworkBody, capture.MaxNetworkBodies+2))
-	cap.ExtensionLogs().Add(make([]types.ExtensionLog, capture.MaxExtensionLogs+1))
+	cap.ExtensionLogs().Add(make([]types.ExtensionLog, capturelogstore.ExtensionCapacity+1))
 	alerts := alertbuf.NewAlertBuffer()
 	for i := 0; i < alertbuf.AlertBufferCap+3; i++ {
 		alerts.AddAlert(types.Alert{Title: fmt.Sprintf("alert-%d", i)})

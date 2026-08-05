@@ -434,7 +434,7 @@ func (h *SyncHandler) updateSyncLogs(req SyncRequest, now time.Time, pilotEnable
 		PilotEnabled: &pilotEnabled,
 		QueryCount:   queryCount,
 	})
-	h.capture.extensionLogs.addAt(req.ExtensionLogs, now)
+	h.capture.extensionLogs.AddAt(req.ExtensionLogs, now)
 	if req.ExtensionVersion != "" {
 		h.capture.extension.SetExtensionVersion(req.ExtensionVersion)
 	}

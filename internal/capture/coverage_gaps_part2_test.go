@@ -8,7 +8,6 @@ package capture
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,65 +16,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
-
-// ============================================
-// AddExtensionLogs — zero timestamp + eviction
-// ============================================
-
-func TestAddExtensionLogs_ZeroTimestamp(t *testing.T) {
-	t.Parallel()
-
-	c := NewCapture()
-	defer c.Close()
-
-	logs := []types.ExtensionLog{
-		{Message: "test1", Source: "background", Category: "debug"},
-	}
-	c.ExtensionLogs().Add(logs)
-
-	result := c.ExtensionLogs().Entries()
-	if len(result) != 1 {
-		t.Fatalf("len = %d, want 1", len(result))
-	}
-	if result[0].Timestamp.IsZero() {
-		t.Error("expected zero timestamp to be filled by AddExtensionLogs")
-	}
-	if result[0].Message != "test1" {
-		t.Errorf("Message = %q, want test1", result[0].Message)
-	}
-}
-
-func TestAddExtensionLogs_Eviction(t *testing.T) {
-	t.Parallel()
-
-	c := NewCapture()
-	defer c.Close()
-
-	evictionThreshold := MaxExtensionLogs + MaxExtensionLogs/2
-
-	// Fill beyond eviction threshold (750) to trigger compaction.
-	// After compaction, the buffer is trimmed to MaxExtensionLogs (500),
-	// then remaining batch items are appended, so final count is
-	// between MaxExtensionLogs and evictionThreshold.
-	batch := make([]types.ExtensionLog, evictionThreshold+10)
-	for i := range batch {
-		batch[i] = types.ExtensionLog{
-			Message:   "log entry",
-			Source:    "background",
-			Category:  "debug",
-			Timestamp: time.Now(),
-		}
-	}
-	c.ExtensionLogs().Add(batch)
-
-	result := c.ExtensionLogs().Entries()
-	if len(result) > evictionThreshold {
-		t.Errorf("len = %d, should be at most evictionThreshold=%d", len(result), evictionThreshold)
-	}
-	if len(result) < MaxExtensionLogs {
-		t.Errorf("len = %d, should be at least MaxExtensionLogs=%d", len(result), MaxExtensionLogs)
-	}
-}
 
 // ============================================
 // GetAllWebSocketEvents / GetAllEnhancedActions — empty branches

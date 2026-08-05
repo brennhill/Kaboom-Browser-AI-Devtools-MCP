@@ -7,6 +7,7 @@ package capture
 import (
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -280,9 +281,9 @@ const (
 
 // PerformancePressure describes retained page snapshots and active pre-action baselines.
 type PerformancePressure struct {
-	Snapshots       PressureStats `json:"snapshots"`
-	Samples         PressureStats `json:"samples"`
-	BeforeSnapshots PressureStats `json:"before_snapshots"`
+	Snapshots       pressure.Stats `json:"snapshots"`
+	Samples         pressure.Stats `json:"samples"`
+	BeforeSnapshots pressure.Stats `json:"before_snapshots"`
 }
 
 // Pressure returns bounded performance-retention metrics.
@@ -297,16 +298,16 @@ func (s *PerformanceStore) Pressure() PerformancePressure {
 	}
 }
 
-func pressureForSamples(added []time.Time, dropped int64, capacity int, now time.Time) PressureStats {
-	stats := PressureStats{Size: len(added), Capacity: capacity, Dropped: dropped}
+func pressureForSamples(added []time.Time, dropped int64, capacity int, now time.Time) pressure.Stats {
+	stats := pressure.Stats{Size: len(added), Capacity: capacity, Dropped: dropped}
 	if len(added) > 0 {
 		stats.OldestAge = now.Sub(added[0])
 	}
 	return stats
 }
 
-func pressureForKeys(order []string, added map[string]time.Time, dropped int64, capacity int, now time.Time) PressureStats {
-	stats := PressureStats{Size: len(order), Capacity: capacity, Dropped: dropped}
+func pressureForKeys(order []string, added map[string]time.Time, dropped int64, capacity int, now time.Time) pressure.Stats {
+	stats := pressure.Stats{Size: len(order), Capacity: capacity, Dropped: dropped}
 	if len(order) > 0 {
 		stats.OldestAge = now.Sub(added[order[0]])
 	}
