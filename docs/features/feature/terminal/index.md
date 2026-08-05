@@ -14,7 +14,7 @@ code_paths:
   - cmd/browser-agent/internal/terminal/ws.go
   - src/lib/brand.ts
   - cmd/browser-agent/internal/terminal/handlers.go
-  - cmd/browser-agent/internal/terminal/spawn_retry.go
+  - cmd/browser-agent/internal/terminal/spawnpolicy/retry.go
   - cmd/browser-agent/internal/terminal/relay.go
   - cmd/browser-agent/internal/terminal/server.go
   - cmd/browser-agent/internal/terminal/supervisor/supervisor.go
@@ -58,7 +58,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/relay_rebind_test.go
   - cmd/browser-agent/internal/terminal/relay_test.go
   - cmd/browser-agent/internal/terminal/fakes_test.go
-  - cmd/browser-agent/internal/terminal/spawn_retry_test.go
+  - cmd/browser-agent/internal/terminal/spawnpolicy/retry_test.go
   - cmd/browser-agent/internal/terminal/sandbox_error_test.go
   - cmd/browser-agent/internal/terminal/handlers_start_decisions_test.go
   - tests/extension/terminal-session/terminal-start-pending.test.js

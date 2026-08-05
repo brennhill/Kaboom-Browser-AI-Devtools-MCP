@@ -13,10 +13,10 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/directorybrowser"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/spawnpolicy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
@@ -216,7 +216,7 @@ func classifyStartError(err error, sessionID, token string) (int, map[string]any
 	// fork/exec EPERM: the OS refused to spawn a child. A restricted sandbox profile
 	// is the usual cause, but it is an INFERENCE — sandboxPayload states it as such
 	// and always carries the underlying error in `detail` (see IsSandboxError).
-	if IsSandboxError(err) {
+	if spawnpolicy.IsSandboxError(err) {
 		return http.StatusServiceUnavailable, sandboxPayload(err)
 	}
 	if errors.Is(err, pty.ErrSessionExists) {
@@ -294,7 +294,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	// end. Only that one typed error is retried; everything else fails immediately.
 	// The sleep hook doubles as the retry log — otherwise a recovered spawn would
 	// leave no trace and this whole path would be invisible in production.
-	result, err := startWithEPERMRetry(
+	result, err := spawnpolicy.StartWithEPERMRetry(
 		func() (*pty.StartResult, error) { return mgr.Start(startCfg) },
 		func(d time.Duration) {
 			deps.logEvent("terminal_spawn_eperm_retry", map[string]any{
@@ -458,26 +458,6 @@ func HandleTerminalStop(w http.ResponseWriter, r *http.Request, deps Deps, mgr *
 	relays.Remove(req.ID)
 
 	deps.JSONResponse(w, http.StatusOK, map[string]string{"status": "stopped"})
-}
-
-// IsSandboxError reports whether err is a fork/exec EPERM — the signature of a
-// daemon running under a restricted sandbox profile that cannot spawn children.
-//
-// The scope is deliberately narrow. Every syscall in the PTY spawn path can
-// return EPERM (open /dev/ptmx, TIOCPTYGRANT, TIOCPTYUNLK, opening the slave,
-// TIOCSWINSZ), so the old bare "not permitted" substring match attributed all of
-// them to sandboxing and discarded the real error. A transient PTY failure was
-// then reported as "restart your daemon", which fixes nothing and hides the
-// actual cause. Match the one shape that genuinely means "cannot fork".
-func IsSandboxError(err error) bool {
-	if err == nil {
-		return false
-	}
-	var pathErr *fs.PathError
-	if !errors.As(err, &pathErr) || pathErr.Op != "fork/exec" {
-		return false
-	}
-	return errors.Is(pathErr.Err, syscall.EPERM)
 }
 
 // sandboxPayload builds the 503 body for a fork/exec EPERM. The diagnosis is an

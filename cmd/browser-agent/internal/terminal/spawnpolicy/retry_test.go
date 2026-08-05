@@ -8,10 +8,12 @@
 // blamed the wrong thing. A genuinely sandboxed daemon still fails every attempt and
 // still gets the honest 503, just a few hundred milliseconds later.
 
-package terminal
+package spawnpolicy
 
 import (
 	"errors"
+	"fmt"
+	"io/fs"
 	"syscall"
 	"testing"
 	"time"
@@ -19,12 +21,16 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
+func forkExecErr(errno syscall.Errno) error {
+	return fmt.Errorf("start /bin/zsh: %w", &fs.PathError{Op: "fork/exec", Path: "/bin/zsh", Err: errno})
+}
+
 func TestStartWithEPERMRetry_RetriesTransientEPERMThenSucceeds(t *testing.T) {
 	t.Parallel()
 
 	calls := 0
 	var slept []time.Duration
-	res, err := startWithEPERMRetry(func() (*pty.StartResult, error) {
+	res, err := StartWithEPERMRetry(func() (*pty.StartResult, error) {
 		calls++
 		if calls < 3 {
 			return nil, forkExecErr(syscall.EPERM)
@@ -53,8 +59,8 @@ func TestStartWithEPERMRetry_RetriesTransientEPERMThenSucceeds(t *testing.T) {
 	for _, d := range slept {
 		total += d
 	}
-	if total > epermRetryMaxTotalDelay {
-		t.Errorf("total retry delay %v exceeds the %v budget for a synchronous handler", total, epermRetryMaxTotalDelay)
+	if total > MaxTotalDelay {
+		t.Errorf("total retry delay %v exceeds the %v budget for a synchronous handler", total, MaxTotalDelay)
 	}
 }
 
@@ -63,13 +69,13 @@ func TestStartWithEPERMRetry_GivesUpAfterBudgetAndReturnsRealError(t *testing.T)
 
 	calls := 0
 	sentinel := forkExecErr(syscall.EPERM)
-	_, err := startWithEPERMRetry(func() (*pty.StartResult, error) {
+	_, err := StartWithEPERMRetry(func() (*pty.StartResult, error) {
 		calls++
 		return nil, sentinel
 	}, func(time.Duration) {})
 
-	if calls != epermSpawnAttempts {
-		t.Fatalf("want exactly %d attempts, got %d", epermSpawnAttempts, calls)
+	if calls != MaxAttempts {
+		t.Fatalf("want exactly %d attempts, got %d", MaxAttempts, calls)
 	}
 	// A genuinely sandboxed daemon must still get the honest error — retrying must
 	// never convert a real failure into a different or swallowed one.
@@ -99,7 +105,7 @@ func TestStartWithEPERMRetry_DoesNotRetryOtherErrors(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			calls := 0
 			slept := 0
-			_, err := startWithEPERMRetry(func() (*pty.StartResult, error) {
+			_, err := StartWithEPERMRetry(func() (*pty.StartResult, error) {
 				calls++
 				return nil, want
 			}, func(time.Duration) { slept++ })
@@ -121,7 +127,7 @@ func TestStartWithEPERMRetry_SucceedsFirstTryWithoutSleeping(t *testing.T) {
 	t.Parallel()
 
 	calls, slept := 0, 0
-	_, err := startWithEPERMRetry(func() (*pty.StartResult, error) {
+	_, err := StartWithEPERMRetry(func() (*pty.StartResult, error) {
 		calls++
 		return &pty.StartResult{SessionID: "ok"}, nil
 	}, func(time.Duration) { slept++ })

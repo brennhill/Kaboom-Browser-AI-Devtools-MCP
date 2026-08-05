@@ -1,6 +1,6 @@
 // sandbox_error_test.go -- Tests that sandbox attribution is narrow and never swallows the real error.
 //
-// Regression: IsSandboxError used to substring-match "not permitted" anywhere in
+// Regression: spawnpolicy.IsSandboxError used to substring-match "not permitted" anywhere in
 // the error and then replace it with a confident "the daemon was started by an
 // MCP client" story plus a restart instruction. Every syscall in the PTY spawn
 // path can return EPERM (open /dev/ptmx, TIOCPTYGRANT, TIOCPTYUNLK, opening the
@@ -16,6 +16,8 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/spawnpolicy"
 )
 
 // forkExecErr builds the error shape os/exec produces when the child fails to
@@ -29,7 +31,7 @@ func forkExecErr(errno syscall.Errno) error {
 }
 
 func TestIsSandboxErrorMatchesForkExecEPERM(t *testing.T) {
-	if !IsSandboxError(forkExecErr(syscall.EPERM)) {
+	if !spawnpolicy.IsSandboxError(forkExecErr(syscall.EPERM)) {
 		t.Fatal("fork/exec EPERM is the sandbox signature and must be detected")
 	}
 }
@@ -45,7 +47,7 @@ func TestIsSandboxErrorIgnoresNonForkExecEPERM(t *testing.T) {
 	}
 	for name, err := range cases {
 		t.Run(name, func(t *testing.T) {
-			if IsSandboxError(err) {
+			if spawnpolicy.IsSandboxError(err) {
 				t.Fatalf("%v must not be attributed to the sandbox", err)
 			}
 		})
@@ -64,7 +66,7 @@ func TestIsSandboxErrorIgnoresUnrelatedFailures(t *testing.T) {
 	}
 	for name, err := range cases {
 		t.Run(name, func(t *testing.T) {
-			if IsSandboxError(err) {
+			if spawnpolicy.IsSandboxError(err) {
 				t.Fatalf("%v must not be attributed to the sandbox", err)
 			}
 		})
