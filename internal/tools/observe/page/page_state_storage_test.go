@@ -1,5 +1,5 @@
 // storage_test.go — Tests for storage filtering and summarization.
-package observe
+package page
 
 import (
 	"encoding/json"

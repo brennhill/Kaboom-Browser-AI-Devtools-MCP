@@ -1,9 +1,13 @@
 // Purpose: Tests for the console-stream observe modes' summary builders and text truncation.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package logs
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
+)
 
 func TestBuildErrorsSummary_CountsBySource(t *testing.T) {
 	t.Parallel()
@@ -12,7 +16,7 @@ func TestBuildErrorsSummary_CountsBySource(t *testing.T) {
 		{"message": "err2", "source": "console", "timestamp": "2024-01-01T00:00:01Z"},
 		{"message": "err3", "source": "network", "timestamp": "2024-01-01T00:00:02Z"},
 	}
-	meta := ResponseMetadata{RetrievedAt: "2024-01-01T00:00:03Z", DataAge: "1.0s"}
+	meta := core.ResponseMetadata{RetrievedAt: "2024-01-01T00:00:03Z", DataAge: "1.0s"}
 	result := buildErrorsSummary(errors, 0, meta)
 
 	total, _ := result["total"].(int)
@@ -43,7 +47,7 @@ func TestBuildErrorsSummary_TopMessages(t *testing.T) {
 	}
 	errors = append(errors, map[string]any{"message": "rare error", "source": "js"})
 
-	result := buildErrorsSummary(errors, 0, ResponseMetadata{})
+	result := buildErrorsSummary(errors, 0, core.ResponseMetadata{})
 	topMessages, ok := result["top_messages"].([]map[string]any)
 	if !ok {
 		t.Fatal("top_messages not a []map[string]any")
@@ -66,7 +70,7 @@ func TestBuildErrorsSummary_TopMessages(t *testing.T) {
 
 func TestBuildErrorsSummary_Empty(t *testing.T) {
 	t.Parallel()
-	result := buildErrorsSummary(nil, 0, ResponseMetadata{})
+	result := buildErrorsSummary(nil, 0, core.ResponseMetadata{})
 	total, _ := result["total"].(int)
 	if total != 0 {
 		t.Errorf("total = %d, want 0", total)

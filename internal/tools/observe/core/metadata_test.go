@@ -1,7 +1,9 @@
 // metadata_test.go — Tests for observe response metadata including data_age_ms.
-package observe
+package core
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -9,6 +11,23 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination"
 )
+
+func TestCorePackageFileBoundary(t *testing.T) {
+	t.Parallel()
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read observe package: %v", err)
+	}
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".go" {
+			count++
+		}
+	}
+	if count > 10 {
+		t.Fatalf("observe core package has %d Go files; maximum is 10", count)
+	}
+}
 
 func TestBuildResponseMetadata_DataAgeMs_FreshData(t *testing.T) {
 	t.Parallel()

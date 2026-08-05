@@ -38,4 +38,4 @@ Four of the exported handlers back analyze tool modes rather than observe modes 
 RunA11yAudit, CheckPerformance, AnalyzeErrors and AnalyzeHistory — because they
 read the same buffers. cmd/browser-agent registers them under analyze.
 */
-package observe
+package core

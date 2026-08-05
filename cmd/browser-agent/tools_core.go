@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
 	"os"
 	"strings"
 	"sync"
@@ -56,7 +57,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
-	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
+	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
@@ -496,22 +497,22 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		IsExtensionConnected: func() bool { return handler.capture.Extension().IsExtensionConnected() },
 		Commands:             queryStore, InProgress: inProgress,
 		AnnotationStore: handler.annotationStore,
-		Annotations: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		Annotations: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.annotationAnalysis.GetAnnotations(req, args)
 		},
-		AnnotationDetail: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		AnnotationDetail: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.annotationAnalysis.GetAnnotationDetail(req, args)
 		},
-		Recordings: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		Recordings: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.Recordings(req, args)
 		},
-		RecordingActions: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		RecordingActions: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.RecordingActions(req, args)
 		},
-		PlaybackResults: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		PlaybackResults: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.PlaybackResults(req, args)
 		},
-		LogDiffReport: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		LogDiffReport: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.LogDiffReport(req, args)
 		},
 		FormatCommand: handler.asyncCommands.FormatCommandResult, InjectSummary: handler.summaryPrefs.Inject,
@@ -596,7 +597,7 @@ func buildMCPToolBackend(handler *ToolHandler) ToolBackend {
 }
 
 func (d visualAnalyzeDeps) CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	return observe.GetScreenshot(buildObserveReadDeps(d.h), req, json.RawMessage(`{}`))
+	return observepage.GetScreenshot(buildObserveReadDeps(d.h), req, json.RawMessage(`{}`))
 }
 
 func (d visualAnalyzeDeps) GetTrackingStatus() (bool, int, string) {
@@ -701,8 +702,8 @@ func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
 	}
 }
 
-func buildObserveReadDeps(h *ToolHandler) observe.Deps {
-	return observe.Deps{
+func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
+	return observecore.Deps{
 		Capture: h.capture,
 		LogEntries: func() ([]types.LogEntry, []time.Time) {
 			return h.server.logs.EntriesWithAddedAt()
@@ -750,10 +751,10 @@ func initializeInteractActionOwners(h *ToolHandler) {
 			}
 		},
 		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observe.GetScreenshot(buildObserveReadDeps(h), req, args)
+			return observepage.GetScreenshot(buildObserveReadDeps(h), req, args)
 		},
 		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observe.GetPageInfo(buildObserveReadDeps(h), req, args)
+			return observepage.GetPageInfo(buildObserveReadDeps(h), req, args)
 		},
 	})
 	h.browserActions = toolinteract.NewBrowserActions(h.interactRuntime, h.pageActions, toolinteract.BrowserDeps{

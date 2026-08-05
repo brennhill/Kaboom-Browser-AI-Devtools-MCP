@@ -3,10 +3,11 @@
 // and they share the enhanced-action buffer and the tracking status.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package session
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
@@ -20,7 +21,7 @@ import (
 
 // GetEnhancedActions returns captured user actions (clicks, inputs, navigations).
 // Supports optional "type" filter to return only actions of a specific type.
-func GetEnhancedActions(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetEnhancedActions(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit   int    `json:"limit"`
 		LastN   int    `json:"last_n"`
@@ -29,14 +30,14 @@ func GetEnhancedActions(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 		Summary bool   `json:"summary"`
 	}
 	mcp.LenientUnmarshal(args, &params)
-	params.Limit = clampLimit(params.Limit, 100)
+	params.Limit = core.ClampLimit(params.Limit, 100)
 
 	allActions := deps.Capture.Telemetry().GetAllEnhancedActions()
 	filtered := buffers.ReverseFilterLimit(allActions, func(a types.EnhancedAction) bool {
 		if params.Type != "" && a.Type != params.Type {
 			return false
 		}
-		if params.URL != "" && !ContainsIgnoreCase(a.URL, params.URL) {
+		if params.URL != "" && !core.ContainsIgnoreCase(a.URL, params.URL) {
 			return false
 		}
 		return true
@@ -51,7 +52,7 @@ func GetEnhancedActions(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 		newestTS = time.UnixMilli(allActions[len(allActions)-1].Timestamp)
 	}
 
-	responseMeta := BuildResponseMetadata(deps.Capture, newestTS)
+	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
 	if params.Summary {
 		return mcp.Succeed(req, "Enhanced actions", buildActionsSummary(filtered, responseMeta))
 	}
@@ -69,7 +70,7 @@ func GetEnhancedActions(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 
 // GetTransients returns captured transient UI elements (toasts, alerts, snackbars).
 // Filters enhanced actions for type == "transient" with optional classification and URL filters.
-func GetTransients(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetTransients(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit          int    `json:"limit"`
 		URL            string `json:"url"`
@@ -90,14 +91,14 @@ func GetTransients(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 
 	// Lower default than other handlers (50 vs 100): transients are less frequent than logs/actions.
 	// MVP: duration_ms is always 0 — removal tracking is not yet implemented.
-	params.Limit = clampLimit(params.Limit, 50)
+	params.Limit = core.ClampLimit(params.Limit, 50)
 
 	allActions := deps.Capture.Telemetry().GetAllEnhancedActions()
 	filtered := buffers.ReverseFilterLimit(allActions, func(a types.EnhancedAction) bool {
 		if a.Type != "transient" {
 			return false
 		}
-		if params.URL != "" && !ContainsIgnoreCase(a.URL, params.URL) {
+		if params.URL != "" && !core.ContainsIgnoreCase(a.URL, params.URL) {
 			return false
 		}
 		if params.Classification != "" && a.Classification != params.Classification {
@@ -111,7 +112,7 @@ func GetTransients(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 		newestTS = time.UnixMilli(filtered[0].Timestamp)
 	}
 
-	responseMeta := BuildResponseMetadata(deps.Capture, newestTS)
+	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
 	if params.Summary {
 		summaryResp := buildTransientsSummary(filtered, responseMeta)
 		if paramHint != "" {
@@ -135,7 +136,7 @@ func GetTransients(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 }
 
 // buildTransientsSummary returns {total, by_classification, metadata}.
-func buildTransientsSummary(actions []types.EnhancedAction, meta ResponseMetadata) map[string]any {
+func buildTransientsSummary(actions []types.EnhancedAction, meta core.ResponseMetadata) map[string]any {
 	byClassification := make(map[string]int)
 	for _, a := range actions {
 		cls := a.Classification
@@ -153,16 +154,16 @@ func buildTransientsSummary(actions []types.EnhancedAction, meta ResponseMetadat
 }
 
 // ObservePilot returns the current pilot/extension connection status.
-func ObservePilot(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func ObservePilot(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	status := deps.Capture.Extension().GetPilotStatus()
 	if statusMap, ok := status.(map[string]any); ok {
-		statusMap["metadata"] = BuildResponseMetadata(deps.Capture, time.Now())
+		statusMap["metadata"] = core.BuildResponseMetadata(deps.Capture, time.Now())
 	}
 	return mcp.Succeed(req, "Pilot status", status)
 }
 
 // CheckPerformance returns performance snapshots from the capture buffer.
-func CheckPerformance(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func CheckPerformance(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TraceSource string `json:"trace_source"`
 	}
@@ -190,7 +191,7 @@ type historyEntry struct {
 }
 
 // AnalyzeHistory extracts navigation history from captured user actions.
-func AnalyzeHistory(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func AnalyzeHistory(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit   int  `json:"limit"`
 		Summary bool `json:"summary"`
@@ -199,9 +200,9 @@ func AnalyzeHistory(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 
 	actions := deps.Capture.Telemetry().GetAllEnhancedActions()
 	entries := buildHistoryEntries(actions)
-	entries = limitHistoryEntries(entries, clampLimit(params.Limit, 0))
+	entries = limitHistoryEntries(entries, core.ClampLimit(params.Limit, 0))
 
-	responseMeta := BuildResponseMetadata(deps.Capture, time.Now())
+	responseMeta := core.BuildResponseMetadata(deps.Capture, time.Now())
 	if params.Summary {
 		return mcp.Succeed(req, "History", buildHistorySummary(entries, responseMeta))
 	}
@@ -238,12 +239,12 @@ func limitHistoryEntries(entries []historyEntry, limit int) []historyEntry {
 	return entries[len(entries)-limit:]
 }
 
-func GetWebVitals(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func GetWebVitals(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	snapshots := deps.Capture.Performance().Entries()
 	vitals := buildVitalsMap(snapshots)
 	return mcp.Succeed(req, "Web vitals", map[string]any{
 		"metrics":  vitals,
-		"metadata": BuildResponseMetadata(deps.Capture, time.Now()),
+		"metadata": core.BuildResponseMetadata(deps.Capture, time.Now()),
 	})
 }
 
@@ -276,7 +277,7 @@ func buildVitalsMap(snapshots []performance.PerformanceSnapshot) map[string]any 
 
 // GetTabs returns information about tracked browser tabs.
 
-func GetTabs(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func GetTabs(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	cap := deps.Capture
 	enabled, tabID, tabURL := cap.Extension().GetTrackingStatus()
 
@@ -293,11 +294,11 @@ func GetTabs(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCRe
 	return mcp.Succeed(req, "Tabs", map[string]any{
 		"tabs":            tabs,
 		"tracking_active": enabled,
-		"metadata":        BuildResponseMetadata(cap, time.Now()),
+		"metadata":        core.BuildResponseMetadata(cap, time.Now()),
 	})
 }
 
-func buildActionsSummary(actions []types.EnhancedAction, meta ResponseMetadata) map[string]any {
+func buildActionsSummary(actions []types.EnhancedAction, meta core.ResponseMetadata) map[string]any {
 	byType := make(map[string]int)
 	var firstTS, lastTS int64
 	hasTS := false
@@ -329,7 +330,7 @@ func buildActionsSummary(actions []types.EnhancedAction, meta ResponseMetadata) 
 
 // buildHistorySummary returns {total, by_type, unique_urls, metadata}.
 
-func buildHistorySummary(entries []historyEntry, meta ResponseMetadata) map[string]any {
+func buildHistorySummary(entries []historyEntry, meta core.ResponseMetadata) map[string]any {
 	byType := make(map[string]int)
 	urls := make(map[string]bool)
 

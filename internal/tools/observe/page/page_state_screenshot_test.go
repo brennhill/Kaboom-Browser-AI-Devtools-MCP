@@ -1,5 +1,5 @@
 // analysis_save_test.go — Tests for saveScreenshotToPath.
-package observe
+package page
 
 import (
 	"encoding/base64"

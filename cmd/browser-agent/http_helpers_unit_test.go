@@ -11,7 +11,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
+	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 )
 
 func TestAuthMiddleware(t *testing.T) {
@@ -87,8 +87,8 @@ func TestHandleOpenAPIAndLogLevelRank(t *testing.T) {
 		"other": -1,
 	}
 	for level, want := range cases {
-		if got := observe.LogLevelRank(level); got != want {
-			t.Fatalf("observe.LogLevelRank(%q) = %d, want %d", level, got, want)
+		if got := observecore.LogLevelRank(level); got != want {
+			t.Fatalf("observecore.LogLevelRank(%q) = %d, want %d", level, got, want)
 		}
 	}
 }

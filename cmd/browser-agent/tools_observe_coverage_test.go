@@ -6,13 +6,15 @@ package main
 
 import (
 	"encoding/json"
+	observelogs "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/logs"
+	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
+	observesession "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
 // ============================================
@@ -98,7 +100,7 @@ func TestToolAnalyzeErrors_NoErrors(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.AnalyzeErrors(buildObserveReadDeps(env.handler), req, nil)
+	resp := observelogs.AnalyzeErrors(buildObserveReadDeps(env.handler), req, nil)
 
 	result := parseToolResult(t, resp)
 	data := parseResponseJSON(t, result)
@@ -130,7 +132,7 @@ func TestToolAnalyzeErrors_WithClusters(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.AnalyzeErrors(buildObserveReadDeps(env.handler), req, nil)
+	resp := observelogs.AnalyzeErrors(buildObserveReadDeps(env.handler), req, nil)
 
 	result := parseToolResult(t, resp)
 	data := parseResponseJSON(t, result)
@@ -160,7 +162,7 @@ func TestToolAnalyzeHistory_Empty(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"history"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.AnalyzeHistory(buildObserveReadDeps(env.handler), req, args)
+	resp := observesession.AnalyzeHistory(buildObserveReadDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	data := parseResponseJSON(t, result)
@@ -182,7 +184,7 @@ func TestToolAnalyzeHistory_WithNavigations(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"history"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.AnalyzeHistory(buildObserveReadDeps(env.handler), req, args)
+	resp := observesession.AnalyzeHistory(buildObserveReadDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	data := parseResponseJSON(t, result)
@@ -202,7 +204,7 @@ func TestToolGetScreenshot_TrackingDisabled(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"screenshot"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
+	resp := observepage.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -224,7 +226,7 @@ func TestToolRunA11yAudit_TrackingDisabled(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"accessibility"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.RunA11yAudit(buildObserveReadDeps(env.handler), req, args)
+	resp := observepage.RunA11yAudit(buildObserveReadDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {

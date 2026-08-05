@@ -1,10 +1,12 @@
 // Purpose: Tests for the session-activity observe modes (actions, history) and their summaries.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package session
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
 	"strings"
 	"testing"
 	"time"
@@ -22,8 +24,8 @@ func TestCheckPerformanceIncludesCriticalPathAndTraceState(t *testing.T) {
 	captured.Performance().Add([]performance.PerformanceSnapshot{{
 		URL: "/app", Timing: performance.PerformanceTiming{TimeToFirstByte: 75},
 	}})
-	response := decodePageStateToolResult(t, CheckPerformance(
-		Deps{Capture: captured},
+	response := testsupport.DecodeToolResult(t, CheckPerformance(
+		core.Deps{Capture: captured},
 		mcp.JSONRPCRequest{ID: json.RawMessage(`1`)},
 		json.RawMessage(`{}`),
 	))
@@ -116,7 +118,7 @@ func TestBuildActionsSummary_ByType(t *testing.T) {
 		{Type: "type", Timestamp: now + 2000},
 		{Type: "navigate", Timestamp: now + 3000},
 	}
-	result := buildActionsSummary(actions, ResponseMetadata{})
+	result := buildActionsSummary(actions, core.ResponseMetadata{})
 
 	total, _ := result["total"].(int)
 	if total != 4 {
@@ -143,7 +145,7 @@ func TestBuildActionsSummary_TimeRange(t *testing.T) {
 		{Type: "click", Timestamp: t1},
 		{Type: "click", Timestamp: t2},
 	}
-	result := buildActionsSummary(actions, ResponseMetadata{})
+	result := buildActionsSummary(actions, core.ResponseMetadata{})
 
 	timeRange, ok := result["time_range"].(map[string]string)
 	if !ok {
@@ -161,7 +163,7 @@ func TestBuildActionsSummary_EpochTimestamp(t *testing.T) {
 		{Type: "click", Timestamp: 0},
 		{Type: "click", Timestamp: 1000},
 	}
-	result := buildActionsSummary(actions, ResponseMetadata{})
+	result := buildActionsSummary(actions, core.ResponseMetadata{})
 	if _, ok := result["time_range"]; !ok {
 		t.Error("expected time_range even with epoch timestamp 0")
 	}
@@ -174,7 +176,7 @@ func TestBuildHistorySummary_Counts(t *testing.T) {
 		{Timestamp: "2024-01-01T10:01:00Z", ToURL: "http://b.com", Type: "navigate"},
 		{Timestamp: "2024-01-01T10:02:00Z", ToURL: "http://b.com/page", Type: "page_visit"},
 	}
-	result := buildHistorySummary(entries, ResponseMetadata{RetrievedAt: "2024-01-01T10:03:00Z"})
+	result := buildHistorySummary(entries, core.ResponseMetadata{RetrievedAt: "2024-01-01T10:03:00Z"})
 
 	total, _ := result["total"].(int)
 	if total != 3 {
@@ -201,7 +203,7 @@ func TestBuildHistorySummary_Counts(t *testing.T) {
 
 func TestBuildHistorySummary_Empty(t *testing.T) {
 	t.Parallel()
-	result := buildHistorySummary(nil, ResponseMetadata{})
+	result := buildHistorySummary(nil, core.ResponseMetadata{})
 	total, _ := result["total"].(int)
 	if total != 0 {
 		t.Errorf("total = %d, want 0", total)

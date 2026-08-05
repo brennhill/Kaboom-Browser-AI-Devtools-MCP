@@ -1,9 +1,10 @@
 // Purpose: Tests for the cross-stream observe modes (error bundles, timeline) and their summaries.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package timeline
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"testing"
 	"time"
 
@@ -77,7 +78,7 @@ func TestBuildErrorBundlesSummary_Counts(t *testing.T) {
 		{"error": map[string]any{"message": "err2"}},
 		{"error": map[string]any{"message": "err1"}},
 	}
-	meta := ResponseMetadata{RetrievedAt: "2024-01-01T00:00:00Z"}
+	meta := core.ResponseMetadata{RetrievedAt: "2024-01-01T00:00:00Z"}
 	result := buildErrorBundlesSummary(bundles, time.Now(), meta)
 
 	total, _ := result["total_bundles"].(int)

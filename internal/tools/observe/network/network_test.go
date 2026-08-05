@@ -1,10 +1,12 @@
 // Purpose: Tests for the network-stream observe modes and their summary builders.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package network
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -22,17 +24,17 @@ func TestNetworkBodyHandlerFiltersTransformsAndExplainsEmptyResults(t *testing.T
 		{URL: "https://example.test/api/users", Method: "GET", Status: 200, Timestamp: time.Now().Format(time.RFC3339), ResponseBody: `{"data":{"id":7}}`},
 		{URL: "https://example.test/api/admin", Method: "POST", Status: 503, Timestamp: time.Now().Format(time.RFC3339), ResponseBody: `{"error":"down"}`},
 	})
-	deps := pageStateDeps(cap)
+	deps := testsupport.Deps(cap)
 	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 7}
-	response := decodePageStateToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"url":"users","method":"get","status_min":200,"status_max":299,"body_path":"data.id"}`)))
+	response := testsupport.DecodeToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"url":"users","method":"get","status_min":200,"status_max":299,"body_path":"data.id"}`)))
 	if response.IsError || !strings.Contains(response.Content[0].Text, `"response_body":"7"`) {
 		t.Fatalf("filtered network bodies = %+v", response)
 	}
-	response = decodePageStateToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"url":"missing","summary":true}`)))
+	response = testsupport.DecodeToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"url":"missing","summary":true}`)))
 	if response.IsError || !strings.Contains(response.Content[0].Text, "hint") {
 		t.Fatalf("empty body summary = %+v", response)
 	}
-	response = decodePageStateToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"body_path":"data["}`)))
+	response = testsupport.DecodeToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"body_path":"data["}`)))
 	if !response.IsError {
 		t.Fatalf("malformed body filter = %+v", response)
 	}
@@ -65,12 +67,12 @@ func TestWebSocketHandlerFiltersAndSummarizesTraffic(t *testing.T) {
 		{ID: "two", URL: "wss://other.test/socket", Direction: "outgoing", Event: "message", Timestamp: time.Now().Format(time.RFC3339)},
 	})
 	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 8}
-	deps := pageStateDeps(cap)
-	result := decodePageStateToolResult(t, GetWSEvents(deps, req, json.RawMessage(`{"url":"example","connection_id":"one","direction":"incoming"}`)))
+	deps := testsupport.Deps(cap)
+	result := testsupport.DecodeToolResult(t, GetWSEvents(deps, req, json.RawMessage(`{"url":"example","connection_id":"one","direction":"incoming"}`)))
 	if result.IsError || !strings.Contains(result.Content[0].Text, `"count":1`) {
 		t.Fatalf("filtered websocket events = %+v", result)
 	}
-	result = decodePageStateToolResult(t, GetWSEvents(deps, req, json.RawMessage(`{"url":"missing","direction":"sideways","summary":true}`)))
+	result = testsupport.DecodeToolResult(t, GetWSEvents(deps, req, json.RawMessage(`{"url":"missing","direction":"sideways","summary":true}`)))
 	if result.IsError || !strings.Contains(result.Content[0].Text, "param_hint") || !strings.Contains(result.Content[0].Text, "hint") {
 		t.Fatalf("websocket summary = %+v", result)
 	}
@@ -90,23 +92,23 @@ func TestWaterfallAndWebSocketStatusHandlersExposeOperationalShapes(t *testing.T
 		{ID: "closed", URL: "wss://other.test/socket", Event: "close", Timestamp: time.Now().Format(time.RFC3339)},
 	})
 	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 9}
-	deps := pageStateDeps(cap)
+	deps := testsupport.Deps(cap)
 	for _, args := range []json.RawMessage{json.RawMessage(`{"url":"example"}`), json.RawMessage(`{"url":"example","summary":true}`)} {
-		result := decodePageStateToolResult(t, GetNetworkWaterfall(deps, req, args))
+		result := testsupport.DecodeToolResult(t, GetNetworkWaterfall(deps, req, args))
 		if result.IsError || !strings.Contains(result.Content[0].Text, `"count":1`) {
 			t.Fatalf("waterfall result = %+v", result)
 		}
 	}
-	if result := decodePageStateToolResult(t, GetWSStatus(deps, req, json.RawMessage(`not-json`))); !result.IsError {
+	if result := testsupport.DecodeToolResult(t, GetWSStatus(deps, req, json.RawMessage(`not-json`))); !result.IsError {
 		t.Fatal("websocket status accepted invalid JSON")
 	}
-	result := decodePageStateToolResult(t, GetWSStatus(deps, req, json.RawMessage(`{"summary":true}`)))
+	result := testsupport.DecodeToolResult(t, GetWSStatus(deps, req, json.RawMessage(`{"summary":true}`)))
 	if result.IsError || !strings.Contains(result.Content[0].Text, "active_connection_ids") || !strings.Contains(result.Content[0].Text, "closed_connection_ids") {
 		t.Fatalf("websocket status summary = %+v", result)
 	}
 	empty := capture.NewCapture()
 	t.Cleanup(empty.Close)
-	result = decodePageStateToolResult(t, GetWSStatus(pageStateDeps(empty), req, nil))
+	result = testsupport.DecodeToolResult(t, GetWSStatus(testsupport.Deps(empty), req, nil))
 	if result.IsError || !strings.Contains(result.Content[0].Text, "hint") {
 		t.Fatalf("empty websocket status = %+v", result)
 	}
@@ -119,7 +121,7 @@ func TestRefreshWaterfallFreshnessUsesInjectedClock(t *testing.T) {
 	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{URL: "https://example.test/app.js"}}, "https://example.test")
 	addedAt := cap.Telemetry().NetworkWaterfall().Entries()[0].Timestamp
 
-	deps := pageStateDeps(cap)
+	deps := testsupport.Deps(cap)
 	deps.Now = func() time.Time { return addedAt.Add(time.Second) }
 	deps.WaterfallRefreshTimeout = time.Nanosecond
 	_ = GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 10}, nil)
@@ -261,7 +263,7 @@ func TestBuildNetworkBodiesSummary_StatusGrouping(t *testing.T) {
 		{URL: "http://a.com/api3", Method: "POST", Status: 404},
 		{URL: "http://a.com/api4", Method: "GET", Status: 500},
 	}
-	result := buildNetworkBodiesSummary(bodies, ResponseMetadata{})
+	result := buildNetworkBodiesSummary(bodies, core.ResponseMetadata{})
 
 	byStatus, ok := result["by_status_group"].(map[string]int)
 	if !ok {
@@ -285,7 +287,7 @@ func TestBuildNetworkBodiesSummary_RecentURLs(t *testing.T) {
 		{URL: longURL, Method: "GET", Status: 200},
 		{URL: "http://short.com", Method: "GET", Status: 200},
 	}
-	result := buildNetworkBodiesSummary(bodies, ResponseMetadata{})
+	result := buildNetworkBodiesSummary(bodies, core.ResponseMetadata{})
 
 	recentURLs, ok := result["recent_urls"].([]string)
 	if !ok {
@@ -307,7 +309,7 @@ func TestBuildWSEventsSummary_ByDirection(t *testing.T) {
 		{Direction: "incoming", ID: "conn1", Event: "message"},
 		{Direction: "outgoing", ID: "conn1", Event: "message"},
 	}
-	result := buildWSEventsSummary(events, ResponseMetadata{})
+	result := buildWSEventsSummary(events, core.ResponseMetadata{})
 
 	byDir, ok := result["by_direction"].(map[string]int)
 	if !ok {
@@ -328,7 +330,7 @@ func TestBuildWSEventsSummary_UniqueConnections(t *testing.T) {
 		{Direction: "incoming", ID: "conn2", Event: "message"},
 		{Direction: "incoming", ID: "conn1", Event: "message"},
 	}
-	result := buildWSEventsSummary(events, ResponseMetadata{})
+	result := buildWSEventsSummary(events, core.ResponseMetadata{})
 
 	connCount, _ := result["connection_count"].(int)
 	if connCount != 2 {

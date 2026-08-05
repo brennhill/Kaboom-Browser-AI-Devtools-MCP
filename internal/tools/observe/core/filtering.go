@@ -1,7 +1,7 @@
 // Purpose: Filters and sorts log entries by level, source, URL, and time range for observe responses.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package core
 
 import (
 	"encoding/json"

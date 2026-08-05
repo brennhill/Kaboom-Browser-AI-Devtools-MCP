@@ -3,12 +3,13 @@
 // like right now, so they share the tracking gate and the "no tab is being tracked" error path.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package page
 
 import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"os"
 	"path/filepath"
 	"sort"
@@ -23,7 +24,7 @@ import (
 )
 
 // GetPageInfo returns information about the currently tracked page.
-func GetPageInfo(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func GetPageInfo(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	cap := deps.Capture
 	enabled, tabID, trackedURL := cap.Extension().GetTrackingStatus()
 	trackedTitle := cap.Extension().GetTrackedTabTitle()
@@ -63,7 +64,7 @@ func GetPageInfo(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONR
 		"csp_level":               cspLevel,
 		"tab_status":              tabStatus,
 		"page_ready_for_commands": pageReady,
-		"metadata":                BuildResponseMetadata(cap, time.Now()),
+		"metadata":                core.BuildResponseMetadata(cap, time.Now()),
 	}
 	if tabID > 0 {
 		result["tab_id"] = tabID
@@ -95,7 +96,7 @@ func resolvePageURL(cap *capture.Capture, trackedURL string) string {
 	return ""
 }
 
-func resolvePageTitle(deps Deps, trackedTitle string) string {
+func resolvePageTitle(deps core.Deps, trackedTitle string) string {
 	if trackedTitle != "" {
 		return trackedTitle
 	}
@@ -212,7 +213,7 @@ func filterCookies(cookies []any, name string) []any {
 }
 
 // GetStorage returns localStorage, sessionStorage, and cookies from the tracked tab.
-func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetStorage(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	params := parseStorageParams(args)
 	cap := deps.Capture
 	enabled, _, _ := cap.Extension().GetTrackingStatus()
@@ -267,7 +268,7 @@ func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 
 	response := map[string]any{
 		"url":      stateResult["url"],
-		"metadata": BuildResponseMetadata(cap, time.Now()),
+		"metadata": core.BuildResponseMetadata(cap, time.Now()),
 	}
 
 	includeLocal := params.StorageType == "" || params.StorageType == "local"
@@ -325,7 +326,7 @@ func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 }
 
 // GetIndexedDB returns rows from one IndexedDB object store.
-func GetIndexedDB(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetIndexedDB(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Database string `json:"database"`
 		Store    string `json:"store"`
@@ -349,7 +350,7 @@ func GetIndexedDB(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 			mcp.WithParam("store"),
 		)
 	}
-	params.Limit = clampLimit(params.Limit, 100)
+	params.Limit = core.ClampLimit(params.Limit, 100)
 
 	cap := deps.Capture
 	enabled, _, _ := cap.Extension().GetTrackingStatus()
@@ -384,7 +385,7 @@ func GetIndexedDB(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 		"entries":  entries,
 		"count":    count,
 		"limit":    params.Limit,
-		"metadata": BuildResponseMetadata(cap, time.Now()),
+		"metadata": core.BuildResponseMetadata(cap, time.Now()),
 	}
 	if v, ok := storeData["object_stores"]; ok {
 		response["object_stores"] = v
@@ -411,7 +412,7 @@ func toInt(v any) (int, bool) {
 }
 
 // GetScreenshot captures a screenshot of the current page via the extension.
-func GetScreenshot(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetScreenshot(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	cap := deps.Capture
 	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
@@ -591,7 +592,7 @@ func saveScreenshotToPath(saveTo string, dataURL string) error {
 }
 
 // RunA11yAudit executes an accessibility audit via the extension.
-func RunA11yAudit(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func RunA11yAudit(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Selector     string   `json:"selector"`
 		Scope        string   `json:"scope"`

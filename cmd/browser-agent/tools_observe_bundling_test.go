@@ -11,6 +11,7 @@ package main
 
 import (
 	"encoding/json"
+	observetimeline "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/timeline"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
 // ============================================
@@ -55,7 +55,7 @@ func (e *bundleTestEnv) callErrorBundles(t *testing.T, args string) (mcp.MCPTool
 	t.Helper()
 	rawArgs := json.RawMessage(args)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.GetErrorBundles(buildObserveReadDeps(e.handler), req, rawArgs)
+	resp := observetimeline.GetErrorBundles(buildObserveReadDeps(e.handler), req, rawArgs)
 	if resp.Result == nil {
 		return mcp.MCPToolResult{}, false
 	}

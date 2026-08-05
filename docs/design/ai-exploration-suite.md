@@ -617,7 +617,7 @@ Since it runs in parallel, wall-clock impact is **0-200ms** (only matters if it 
 
 #### 9.2.2 Batch with Per-Step Screenshots
 
-The batch handler (`cmd/browser-agent/tools_interact_batch.go`) executes steps sequentially through `h.toolInteract(req, replayStepArgs)` (line 88). If a step includes `include_screenshot=true`, the `toolInteract` dispatcher (line 205 of `tools_interact.go`) calls `appendScreenshotToResponse`, which calls `observe.GetScreenshot` with a 20-second timeout (`internal/tools/observe/page_state.go`, lines 348-360). Each screenshot involves:
+The batch handler (`cmd/browser-agent/tools_interact_batch.go`) executes steps sequentially through `h.toolInteract(req, replayStepArgs)` (line 88). If a step includes `include_screenshot=true`, the `toolInteract` dispatcher (line 205 of `tools_interact.go`) calls `appendScreenshotToResponse`, which calls the page observation owner with a 20-second timeout (`internal/tools/observe/page/page_state.go`). Each screenshot involves:
 
 1. `CreatePendingQueryWithTimeout` (screenshot query)
 2. `WaitForResult` up to 20s
@@ -798,7 +798,7 @@ Adding `explore_page` to `interactActions` (`internal/schema/interact/tool.go`, 
 
 #### 9.6.4 observe(what="screenshot") Is Unchanged
 
-The UX review (Section 8.2, Finding 5) discusses making `include_screenshot` default to `true` for `explore_page` "via the param instead of hardcoding." If this change were implemented by altering the default in `GetScreenshot` (`internal/tools/observe/page_state.go`), it could affect `observe({what: "screenshot"})` callers. However, the proposed implementation only changes the `explore_page` handler, not `GetScreenshot`. **No breaking change.**
+The UX review (Section 8.2, Finding 5) discusses making `include_screenshot` default to `true` for `explore_page` "via the param instead of hardcoding." If this change were implemented by altering the default in `GetScreenshot` (`internal/tools/observe/page/page_state.go`), it could affect `observe({what: "screenshot"})` callers. However, the proposed implementation only changes the `explore_page` handler, not `GetScreenshot`. **No breaking change.**
 
 #### 9.6.5 The `action` Alias Is Preserved
 

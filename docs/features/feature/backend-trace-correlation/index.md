@@ -4,10 +4,10 @@ feature_id: feature-backend-trace-correlation
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - internal/performance/tracecorr/correlate.go
-  - internal/tools/observe/session.go
+  - internal/tools/observe/session/session.go
   - src/lib/net/network.ts
   - cmd/browser-agent/internal/cli/parser/observe_analyze.go
 test_paths:

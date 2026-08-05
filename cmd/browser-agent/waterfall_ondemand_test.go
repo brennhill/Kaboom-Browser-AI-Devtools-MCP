@@ -11,6 +11,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	observenetwork "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/network"
 	"sync"
 	"testing"
 	"time"
@@ -18,7 +19,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -70,7 +70,7 @@ func TestWaterfallOnDemand_FreshDataNoQuery(t *testing.T) {
 	pendingBefore := len(cap.Queries().GetPendingQueries())
 
 	// Call observe network_waterfall - should return cached data without querying
-	resp := observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observenetwork.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	// Verify no new query was created (data was fresh)
 	pendingAfter := len(cap.Queries().GetPendingQueries())
@@ -132,7 +132,7 @@ func TestWaterfallOnDemand_StaleDataCreatesQuery(t *testing.T) {
 	})
 
 	// Call observe network_waterfall - should create query and wait
-	resp := observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observenetwork.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 	if err := <-responded; err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestWaterfallOnDemand_EmptyBufferCreatesQuery(t *testing.T) {
 	})
 
 	// Call observe network_waterfall
-	_ = observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	_ = observenetwork.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 	if err := <-responded; err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func TestWaterfallOnDemand_TimeoutHandling(t *testing.T) {
 
 	// Don't respond to the query - let it timeout
 	start := time.Now()
-	resp := observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observenetwork.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 	elapsed := time.Since(start)
 
 	// Should complete within reasonable time (not hang forever)
@@ -256,7 +256,7 @@ func TestWaterfallOnDemand_ConcurrentRequests(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			resp := observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+			resp := observenetwork.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 			var result map[string]any
 			if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -347,7 +347,7 @@ func TestWaterfallStalenessThreshold(t *testing.T) {
 
 	// Immediately query - should NOT create new query (data is fresh)
 	pendingBefore := len(cap.Queries().GetPendingQueries())
-	_ = observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	_ = observenetwork.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 	pendingAfter := len(cap.Queries().GetPendingQueries())
 
 	if pendingAfter > pendingBefore {
@@ -357,7 +357,7 @@ func TestWaterfallStalenessThreshold(t *testing.T) {
 	// At exactly one second the entry is stale and must trigger a refresh.
 	deps.Now = func() time.Time { return addedAt.Add(time.Second) }
 	responded := respondToNextWaterfallQuery(cap, map[string]any{"entries": []any{}, "page_url": "https://example.com"})
-	_ = observe.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	_ = observenetwork.GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 	if err := <-responded; err != nil {
 		t.Fatal(err)
 	}

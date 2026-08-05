@@ -4,13 +4,13 @@ feature_id: feature-web-vitals
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - src/lib/analysis/perf-snapshot.ts
   - src/lib/analysis/vitals-attribution.ts
   - internal/performance/wire_performance.go
   - internal/performance/types.go
-  - internal/tools/observe/session.go
+  - internal/tools/observe/session/session.go
 test_paths:
   - tests/extension/performance/web-vitals.test.js
   - internal/performance/wire_performance_test.go

@@ -275,7 +275,7 @@ last_verified_date: 2026-03-05
 - `compression_ratio` near 1 when all entries are identical
 - `time_range.start` is earliest entry, `time_range.end` is latest entry
 
-**Test File:** `internal/tools/observe/summarized_logs_test.go`
+**Test File:** `internal/tools/observe/logs/summarized_logs_test.go`
 
 ### Integration Tests
 
@@ -325,7 +325,7 @@ last_verified_date: 2026-03-05
 
 | Test Type | File | Status | Notes |
 |-----------|------|--------|-------|
-| Unit | `internal/tools/observe/summarized_logs_test.go` | Pending | Awaiting implementation |
+| Unit | `internal/tools/observe/logs/summarized_logs_test.go` | Pending | Awaiting implementation |
 | Integration | `cmd/browser-agent/tools_observe_summarized_test.go` | Pending | Awaiting implementation |
 | UAT | `scripts/test-all-tools-comprehensive.sh` | Pending | Addition to existing script |
 | Manual | N/A | Pending | Awaiting implementation |

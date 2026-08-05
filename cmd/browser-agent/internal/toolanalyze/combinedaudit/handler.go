@@ -6,16 +6,18 @@ package combinedaudit
 
 import (
 	"encoding/json"
+	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
+	observesession "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/session"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
+	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 )
 
 type Deps struct {
 	Analyze toolanalyze.Deps
-	Observe observe.Deps
+	Observe observecore.Deps
 }
 
 // auditCategory defines a category for the combined audit.
@@ -29,10 +31,10 @@ type auditCategory struct {
 func defaultAuditCategories() []auditCategory {
 	return []auditCategory{
 		{Name: "performance", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observe.CheckPerformance(d.Observe, req, args)
+			return observesession.CheckPerformance(d.Observe, req, args)
 		}, Weight: 1.0},
 		{Name: "accessibility", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observe.RunA11yAudit(d.Observe, req, args)
+			return observepage.RunA11yAudit(d.Observe, req, args)
 		}, Weight: 1.0},
 		{Name: "security", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return toolanalyze.HandleSecurityAudit(d.Analyze, req, args)

@@ -188,7 +188,7 @@ func TestObserveDispatcherDoesNotRequireHostInterfaces(t *testing.T) {
 	for relativePath, forbidden := range map[string]string{
 		"cmd/browser-agent/internal/toolobserve/deps.go":       "type Deps interface {",
 		"cmd/browser-agent/internal/toolobserve/dispatcher.go": "type Host interface {",
-		"internal/tools/observe/deps.go":                       "type Deps interface {",
+		"internal/tools/observe/core/deps.go":                  "type Deps interface {",
 	} {
 		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
 		if err != nil {

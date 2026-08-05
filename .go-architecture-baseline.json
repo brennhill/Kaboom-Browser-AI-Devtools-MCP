@@ -1657,21 +1657,21 @@
       "mutable_globals": 0,
       "exports": 9
     },
-    "internal/tools/observe/correlation.go": {
+    "internal/tools/observe/core/deps.go": {
       "mutable_globals": 0,
-      "exports": 2
-    },
-    "internal/tools/observe/deps.go": {
-      "mutable_globals": 0,
-      "exports": 2
+      "exports": 4
     },
     "internal/tools/observe/errorcluster/cluster.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/tools/observe/filtering.go": {
+    "internal/tools/observe/core/filtering.go": {
       "mutable_globals": 0,
       "exports": 3
+    },
+    "internal/tools/observe/core/metadata.go": {
+      "mutable_globals": 0,
+      "exports": 4
     },
     "internal/tools/observe/hints/hints.go": {
       "mutable_globals": 0,
@@ -1681,29 +1681,33 @@
       "mutable_globals": 0,
       "exports": 2
     },
-    "internal/tools/observe/logs.go": {
+    "internal/tools/observe/logs/logs.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "internal/tools/observe/metadata.go": {
+    "internal/tools/observe/logs/summarized_logs.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/tools/observe/network/network.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "internal/tools/observe/network.go": {
-      "mutable_globals": 0,
-      "exports": 4
-    },
-    "internal/tools/observe/page_state.go": {
+    "internal/tools/observe/page/page_state.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "internal/tools/observe/session.go": {
+    "internal/tools/observe/session/session.go": {
       "mutable_globals": 0,
       "exports": 7
     },
-    "internal/tools/observe/summarized_logs.go": {
+    "internal/tools/observe/testsupport/helpers.go": {
       "mutable_globals": 0,
       "exports": 3
+    },
+    "internal/tools/observe/timeline/correlation.go": {
+      "mutable_globals": 0,
+      "exports": 2
     },
     "internal/tracking/stats_endpoint.go": {
       "mutable_globals": 0,

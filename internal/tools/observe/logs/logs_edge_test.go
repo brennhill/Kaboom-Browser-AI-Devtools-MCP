@@ -1,10 +1,12 @@
 // logs_edge_test.go — Tests log normalization and extension filtering edge contracts.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package logs
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
 	"testing"
 	"time"
 
@@ -30,10 +32,10 @@ func TestNormalizeBrowserLogEntryPreservesLifecycleContext(t *testing.T) {
 	if !ok || data["custom"] != "value" {
 		t.Fatalf("extras = %#v", got["data"])
 	}
-	if ts := logEntryTimestamp(map[string]any{"ts": "first", "timestamp": "second"}); ts != "first" {
+	if ts := core.LogEntryTimestamp(map[string]any{"ts": "first", "timestamp": "second"}); ts != "first" {
 		t.Fatalf("timestamp precedence = %q", ts)
 	}
-	if ts := logEntryTimestamp(map[string]any{}); ts != "" {
+	if ts := core.LogEntryTimestamp(map[string]any{}); ts != "" {
 		t.Fatalf("empty timestamp = %q", ts)
 	}
 }
@@ -68,7 +70,7 @@ func TestGetBrowserLogsAppliesCurrentPageFiltersAndIncludesExtensionLogs(t *test
 		{"type": "lifecycle", "event": "startup", "timestamp": "2026-07-29T09:00:00Z"},
 		{"level": "error", "source": "console", "url": "https://app.example.test/page", "tabId": float64(7), "message": "noise"},
 	}
-	deps := Deps{
+	deps := core.Deps{
 		Capture:       cap,
 		LogEntries:    func() ([]types.LogEntry, []time.Time) { return entries, nil },
 		LogTotalAdded: func() int64 { return int64(len(entries)) },
@@ -84,7 +86,7 @@ func TestGetBrowserLogsAppliesCurrentPageFiltersAndIncludesExtensionLogs(t *test
 		"include_extension_logs":true,
 		"extension_limit":1
 	}`))
-	data := extractMCPJSON(t, resp)
+	data := testsupport.ExtractMCPJSON(t, resp)
 	if data["count"] != float64(1) {
 		t.Fatalf("count = %v, want 1; response=%#v", data["count"], data)
 	}
@@ -109,7 +111,7 @@ func TestGetBrowserLogsSummarizesInternalEntriesAndReportsInvalidParameters(t *t
 		{"type": "lifecycle", "event": "startup", "timestamp": "2026-07-29T09:00:00Z"},
 		{"level": "warn", "source": "console", "message": "warning", "ts": "2026-07-29T10:00:00Z"},
 	}
-	deps := Deps{
+	deps := core.Deps{
 		Capture:        cap,
 		LogEntries:     func() ([]types.LogEntry, []time.Time) { return entries, nil },
 		LogTotalAdded:  func() int64 { return int64(len(entries)) },
@@ -123,7 +125,7 @@ func TestGetBrowserLogsSummarizesInternalEntriesAndReportsInvalidParameters(t *t
 		"include_internal":true,
 		"summary":true
 	}`))
-	data := extractMCPJSON(t, resp)
+	data := testsupport.ExtractMCPJSON(t, resp)
 	if data["total"] != float64(2) {
 		t.Fatalf("total = %v, want 2; response=%#v", data["total"], data)
 	}
@@ -138,7 +140,7 @@ func TestGetBrowserLogsSummarizesInternalEntriesAndReportsInvalidParameters(t *t
 
 func TestGetBrowserLogsRejectsMalformedCursor(t *testing.T) {
 	t.Parallel()
-	deps := (&mockTransientDeps{cap: capture.NewCapture()}).deps()
+	deps := testsupport.Deps(capture.NewCapture())
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`3`)}
 
 	resp := GetBrowserLogs(deps, req, json.RawMessage(`{"after_cursor":"not-a-cursor"}`))
@@ -161,7 +163,7 @@ func TestGetBrowserErrorsScopesTrackedPageAndSummarizesNoise(t *testing.T) {
 		{"level": "error", "source": "console", "url": "https://other.example.test", "tabId": float64(8), "message": "wrong tab"},
 		{"level": "warn", "source": "console", "url": "https://app.example.test/page", "tabId": float64(7), "message": "not an error"},
 	}
-	deps := Deps{
+	deps := core.Deps{
 		Capture:    cap,
 		LogEntries: func() ([]types.LogEntry, []time.Time) { return entries, nil },
 		IsConsoleNoise: func(entry types.LogEntry) bool {
@@ -171,7 +173,7 @@ func TestGetBrowserErrorsScopesTrackedPageAndSummarizesNoise(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`4`)}
 
 	resp := GetBrowserErrors(deps, req, json.RawMessage(`{"scope":"invalid","summary":true}`))
-	data := extractMCPJSON(t, resp)
+	data := testsupport.ExtractMCPJSON(t, resp)
 	if data["total"] != float64(1) || data["noise_suppressed"] != float64(1) {
 		t.Fatalf("summary = %#v", data)
 	}

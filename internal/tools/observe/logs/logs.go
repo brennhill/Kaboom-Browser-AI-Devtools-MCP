@@ -4,10 +4,11 @@
 // and that caller is in this file.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package logs
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sort"
 	"time"
@@ -21,7 +22,7 @@ import (
 )
 
 // GetBrowserErrors returns error-level log entries from the capture buffer.
-func GetBrowserErrors(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetBrowserErrors(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit   int    `json:"limit"`
 		URL     string `json:"url"`
@@ -29,7 +30,7 @@ func GetBrowserErrors(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		Summary bool   `json:"summary"`
 	}
 	mcp.LenientUnmarshal(args, &params)
-	params.Limit = clampLimit(params.Limit, 100)
+	params.Limit = core.ClampLimit(params.Limit, 100)
 	if params.Scope == "" {
 		params.Scope = "current_page"
 	}
@@ -63,7 +64,7 @@ func GetBrowserErrors(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		}
 		if params.URL != "" {
 			entryURL, _ := entry["url"].(string)
-			if !ContainsIgnoreCase(entryURL, params.URL) {
+			if !core.ContainsIgnoreCase(entryURL, params.URL) {
 				return false
 			}
 		}
@@ -91,7 +92,7 @@ func GetBrowserErrors(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		}
 	}
 
-	responseMeta := BuildResponseMetadata(deps.Capture, newestTS)
+	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
 	responseMeta.NoiseSuppressed = noiseSuppressed
 
 	if params.Summary {
@@ -119,7 +120,7 @@ func GetBrowserErrors(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 
 // GetBrowserLogs returns console log entries with cursor-based pagination.
 // #lizard forgives
-func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetBrowserLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit             int    `json:"limit"`
 		MinLevel          string `json:"min_level"`
@@ -138,7 +139,7 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	mcp.LenientUnmarshal(args, &params)
 
 	var paramHint string
-	if params.MinLevel != "" && LogLevelRank(params.MinLevel) < 0 {
+	if params.MinLevel != "" && core.LogLevelRank(params.MinLevel) < 0 {
 		paramHint = "Unknown min_level " + params.MinLevel + " ignored (using default=all). Valid values: debug, log, info, warn, error."
 		params.MinLevel = ""
 	}
@@ -157,7 +158,7 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	}
 
 	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
-	params.Limit = clampLimit(params.Limit, 100)
+	params.Limit = core.ClampLimit(params.Limit, 100)
 
 	// Default URL filter to the tracked page URL so logs are scoped to
 	// the current page, not stale entries from previous navigations.
@@ -196,7 +197,7 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		if level == "" && isInternalLogType(entryType) {
 			level = "info"
 		}
-		if params.MinLevel != "" && LogLevelRank(level) < LogLevelRank(params.MinLevel) {
+		if params.MinLevel != "" && core.LogLevelRank(level) < core.LogLevelRank(params.MinLevel) {
 			continue
 		}
 
@@ -209,7 +210,7 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 
 		if params.URL != "" {
 			entryURL, _ := e.Entry["url"].(string)
-			if !ContainsIgnoreCase(entryURL, params.URL) {
+			if !core.ContainsIgnoreCase(entryURL, params.URL) {
 				continue
 			}
 		}
@@ -236,13 +237,13 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	var newestTS time.Time
 	if len(paginated) > 0 {
 		last := paginated[len(paginated)-1]
-		if ts := logEntryTimestamp(last.Entry); ts != "" {
+		if ts := core.LogEntryTimestamp(last.Entry); ts != "" {
 			newestTS = util.ParseTimestamp(ts)
 		}
 	}
 
 	isFirstPage := params.AfterCursor == "" && params.BeforeCursor == "" && params.SinceCursor == ""
-	meta := BuildPaginatedMetadataWithSummary(deps.Capture, newestTS, pMeta, isFirstPage, func() map[string]any {
+	meta := core.BuildPaginatedMetadataWithSummary(deps.Capture, newestTS, pMeta, isFirstPage, func() map[string]any {
 		return quickLogsSummary(logs)
 	})
 	meta["scope"] = params.Scope
@@ -275,7 +276,7 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		if limit <= 0 {
 			limit = params.Limit
 		}
-		limit = clampLimit(limit, 100)
+		limit = core.ClampLimit(limit, 100)
 		extLogs := buildExtensionLogEntries(deps.Capture.ExtensionLogs().Entries(), limit, "", params.MinLevel)
 		response["extension_logs"] = extLogs
 		response["extension_logs_count"] = len(extLogs)
@@ -286,16 +287,6 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 
 func isInternalLogType(entryType string) bool {
 	return entryType == "lifecycle" || entryType == "tracking" || entryType == "extension"
-}
-
-func logEntryTimestamp(entry map[string]any) string {
-	if ts, ok := entry["ts"].(string); ok && ts != "" {
-		return ts
-	}
-	if ts, ok := entry["timestamp"].(string); ok && ts != "" {
-		return ts
-	}
-	return ""
 }
 
 func normalizeBrowserLogEntry(entry map[string]any) map[string]any {
@@ -324,7 +315,7 @@ func normalizeBrowserLogEntry(entry map[string]any) map[string]any {
 		"url":       entry["url"],
 		"line":      entry["line"],
 		"column":    entry["column"],
-		"timestamp": logEntryTimestamp(entry),
+		"timestamp": core.LogEntryTimestamp(entry),
 		"tab_id":    entry["tabId"],
 	}
 
@@ -362,7 +353,7 @@ func buildExtensionLogEntries(allLogs []types.ExtensionLog, limit int, level str
 		if level != "" && entry.Level != level {
 			return false
 		}
-		if minLevel != "" && LogLevelRank(entry.Level) < LogLevelRank(minLevel) {
+		if minLevel != "" && core.LogLevelRank(entry.Level) < core.LogLevelRank(minLevel) {
 			return false
 		}
 		return true
@@ -383,13 +374,13 @@ func buildExtensionLogEntries(allLogs []types.ExtensionLog, limit int, level str
 }
 
 // GetExtensionLogs returns internal extension debug logs.
-func GetExtensionLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetExtensionLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit int    `json:"limit"`
 		Level string `json:"level"`
 	}
 	mcp.LenientUnmarshal(args, &params)
-	params.Limit = clampLimit(params.Limit, 100)
+	params.Limit = core.ClampLimit(params.Limit, 100)
 
 	allLogs := deps.Capture.ExtensionLogs().Entries()
 	logs := buildExtensionLogEntries(allLogs, params.Limit, params.Level, "")
@@ -402,24 +393,24 @@ func GetExtensionLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	return mcp.Succeed(req, "Extension logs", map[string]any{
 		"logs":     logs,
 		"count":    len(logs),
-		"metadata": BuildResponseMetadata(deps.Capture, newestTS),
+		"metadata": core.BuildResponseMetadata(deps.Capture, newestTS),
 	})
 }
 
 // AnalyzeErrors clusters error entries by normalized message for pattern detection.
-func AnalyzeErrors(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func AnalyzeErrors(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	entries, _ := deps.LogEntries()
 	result := errorcluster.Analyze(entries)
 
 	return mcp.Succeed(req, "Error clusters", map[string]any{
 		"clusters":    result,
 		"total_count": len(result),
-		"metadata":    BuildResponseMetadata(deps.Capture, time.Now()),
+		"metadata":    core.BuildResponseMetadata(deps.Capture, time.Now()),
 	})
 }
 
 // buildErrorsSummary returns {total, by_source, top_messages, metadata}.
-func buildErrorsSummary(errors []map[string]any, noiseSuppressed int, meta ResponseMetadata) map[string]any {
+func buildErrorsSummary(errors []map[string]any, noiseSuppressed int, meta core.ResponseMetadata) map[string]any {
 	bySource := make(map[string]int)
 	msgCounts := make(map[string]int)
 

@@ -3,7 +3,7 @@
 // sits with it because every mode that accepts a limit runs it through clampLimit before touching a buffer.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package core
 
 import (
 	"encoding/json"
@@ -32,7 +32,7 @@ type Deps struct {
 const MaxObserveLimit = 1000
 
 // clampLimit applies default and max bounds to a limit parameter.
-func clampLimit(limit, defaultVal int) int {
+func ClampLimit(limit, defaultVal int) int {
 	if limit <= 0 {
 		return defaultVal
 	}
@@ -40,4 +40,15 @@ func clampLimit(limit, defaultVal int) int {
 		return MaxObserveLimit
 	}
 	return limit
+}
+
+// LogEntryTimestamp returns the canonical timestamp from browser and internal log shapes.
+func LogEntryTimestamp(entry map[string]any) string {
+	if timestamp, ok := entry["ts"].(string); ok && timestamp != "" {
+		return timestamp
+	}
+	if timestamp, ok := entry["timestamp"].(string); ok && timestamp != "" {
+		return timestamp
+	}
+	return ""
 }

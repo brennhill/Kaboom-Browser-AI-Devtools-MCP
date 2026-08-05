@@ -23,16 +23,16 @@ code_paths:
   - internal/mcp/response.go
   - cmd/browser-agent/internal/asynccommand/handler.go
   - internal/a11ysummary/summary.go
-  - internal/tools/observe/deps.go
-  - internal/tools/observe/filtering.go
-  - internal/tools/observe/metadata.go
-  - internal/tools/observe/logs.go
-  - internal/tools/observe/summarized_logs.go
+  - internal/tools/observe/core/deps.go
+  - internal/tools/observe/core/filtering.go
+  - internal/tools/observe/core/metadata.go
+  - internal/tools/observe/logs/logs.go
+  - internal/tools/observe/logs/summarized_logs.go
   - internal/types/wire_log.go
-  - internal/tools/observe/network.go
-  - internal/tools/observe/session.go
-  - internal/tools/observe/correlation.go
-  - internal/tools/observe/page_state.go
+  - internal/tools/observe/network/network.go
+  - internal/tools/observe/session/session.go
+  - internal/tools/observe/timeline/correlation.go
+  - internal/tools/observe/page/page_state.go
   - cmd/browser-agent/internal/mcphttp/handler.go
   - internal/tools/observe/hints/hints.go
   - internal/tools/observe/idbquery/execute.go
@@ -55,8 +55,8 @@ code_paths:
   - src/lib/net/websocket-tracking.ts
 test_paths:
   - cmd/browser-agent/waterfall_ondemand_test.go
-  - internal/tools/observe/correlation_test.go
-  - internal/tools/observe/logs_edge_test.go
+  - internal/tools/observe/timeline/correlation_test.go
+  - internal/tools/observe/logs/logs_edge_test.go
   - internal/tools/observe/idbquery/execute_test.go
   - internal/capture/health_reader_owner_test.go
   - tests/extension/dom/command-element-results.test.js
@@ -78,18 +78,19 @@ test_paths:
   - internal/capture/websocket_test.go
   - internal/capture/websocket_status_test.go
   - internal/capture/websocket_handlers_test.go
-  - internal/tools/observe/logs_test.go
-  - internal/tools/observe/metadata_test.go
-  - internal/tools/observe/network_test.go
-  - internal/tools/observe/session_test.go
-  - internal/tools/observe/session_transients_test.go
-  - internal/tools/observe/correlation_test.go
-  - internal/tools/observe/summarized_logs_test.go
-  - internal/tools/observe/validation_test.go
-  - internal/tools/observe/page_state_test.go
+  - internal/tools/observe/logs/logs_test.go
+  - internal/tools/observe/core/metadata_test.go
+  - internal/tools/observe/network/network_test.go
+  - internal/tools/observe/session/session_test.go
+  - internal/tools/observe/session/session_transients_test.go
+  - internal/tools/observe/timeline/correlation_test.go
+  - internal/tools/observe/logs/summarized_logs_test.go
+  - internal/tools/observe/contracts/validation_test.go
+  - internal/tools/observe/testsupport/helpers.go
+  - internal/tools/observe/page/page_state_test.go
   - cmd/browser-agent/internal/mcphttp/handler_test.go
-  - internal/tools/observe/page_state_storage_test.go
-  - internal/tools/observe/page_state_screenshot_test.go
+  - internal/tools/observe/page/page_state_storage_test.go
+  - internal/tools/observe/page/page_state_screenshot_test.go
 
   - internal/tools/observe/hints/hints_test.go
   - tests/extension/injection/inject-console-network-exceptions.test.js
@@ -117,6 +118,14 @@ last_verified_date: 2026-03-05
 ---
 
 # Observe
+
+The Go implementation is partitioned by change-coupled observation family.
+`core` owns the minimal dependency, metadata, and filtering contracts shared by
+those families; `logs`, `network`, `page`, `session`, and `timeline` own their
+respective handlers. Callers import those owners directly. The former root
+package has been removed rather than retained as a compatibility facade, and
+cross-family integration is verified by the `contracts` suite. Shared fixture
+construction lives in `testsupport` and is imported only by tests.
 
 The background service-worker entrypoint owns startup only. Telemetry tests and
 runtime code import caches, batching, transport, and log processing directly

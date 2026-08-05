@@ -1,7 +1,7 @@
 // Purpose: Tests for enum param validation in observe handlers.
 // Why: Ensures invalid min_level, direction, classification, scope values return defaults with param_hint instead of errors.
 
-package observe
+package contracts
 
 import (
 	"encoding/json"
@@ -10,10 +10,16 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/logs"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/network"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/session"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/timeline"
 )
 
-func newValidationDeps() Deps {
-	return (&mockTransientDeps{cap: capture.NewCapture()}).deps()
+func newValidationDeps() core.Deps {
+	return testsupport.Deps(capture.NewCapture())
 }
 
 // extractJSON strips any text prefix before the first '{' or '['.
@@ -58,7 +64,7 @@ func TestGetBrowserLogs_InvalidMinLevel_ReturnsDefaultWithHint(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"min_level":"critical"}`)
 
-	resp := GetBrowserLogs(deps, req, args)
+	resp := logs.GetBrowserLogs(deps, req, args)
 	hint := parseParamHint(t, resp)
 
 	if hint == "" {
@@ -79,7 +85,7 @@ func TestGetBrowserLogs_ValidMinLevels_NoHint(t *testing.T) {
 
 	for _, level := range []string{"debug", "log", "info", "warn", "error", ""} {
 		args, _ := json.Marshal(map[string]any{"min_level": level})
-		resp := GetBrowserLogs(deps, req, args)
+		resp := logs.GetBrowserLogs(deps, req, args)
 		hint := parseParamHint(t, resp)
 		if hint != "" {
 			t.Errorf("min_level=%q should not produce param_hint, got: %s", level, hint)
@@ -97,7 +103,7 @@ func TestGetWSEvents_InvalidDirection_ReturnsDefaultWithHint(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"direction":"both"}`)
 
-	resp := GetWSEvents(deps, req, args)
+	resp := network.GetWSEvents(deps, req, args)
 	hint := parseParamHint(t, resp)
 
 	if hint == "" {
@@ -118,7 +124,7 @@ func TestGetWSEvents_ValidDirections_NoHint(t *testing.T) {
 
 	for _, dir := range []string{"incoming", "outgoing", ""} {
 		args, _ := json.Marshal(map[string]any{"direction": dir})
-		resp := GetWSEvents(deps, req, args)
+		resp := network.GetWSEvents(deps, req, args)
 		hint := parseParamHint(t, resp)
 		if hint != "" {
 			t.Errorf("direction=%q should not produce param_hint, got: %s", dir, hint)
@@ -136,7 +142,7 @@ func TestGetTransients_InvalidClassification_ReturnsDefaultWithHint(t *testing.T
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"classification":"popup"}`)
 
-	resp := GetTransients(deps, req, args)
+	resp := session.GetTransients(deps, req, args)
 	hint := parseParamHint(t, resp)
 
 	if hint == "" {
@@ -157,7 +163,7 @@ func TestGetTransients_ValidClassifications_NoHint(t *testing.T) {
 
 	for _, cls := range []string{"alert", "toast", "snackbar", "notification", "tooltip", "banner", "flash", ""} {
 		args, _ := json.Marshal(map[string]any{"classification": cls})
-		resp := GetTransients(deps, req, args)
+		resp := session.GetTransients(deps, req, args)
 		hint := parseParamHint(t, resp)
 		if hint != "" {
 			t.Errorf("classification=%q should not produce param_hint, got: %s", cls, hint)
@@ -175,7 +181,7 @@ func TestGetErrorBundles_InvalidScope_ReturnsDefaultWithHint(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"scope":"bogus"}`)
 
-	resp := GetErrorBundles(deps, req, args)
+	resp := timeline.GetErrorBundles(deps, req, args)
 	hint := parseParamHint(t, resp)
 
 	if hint == "" {
@@ -193,7 +199,7 @@ func TestGetErrorBundles_ValidScopes_NoHint(t *testing.T) {
 
 	for _, scope := range []string{"current_page", "all", ""} {
 		args, _ := json.Marshal(map[string]any{"scope": scope})
-		resp := GetErrorBundles(deps, req, args)
+		resp := timeline.GetErrorBundles(deps, req, args)
 		hint := parseParamHint(t, resp)
 		if hint != "" {
 			t.Errorf("scope=%q should not produce param_hint, got: %s", scope, hint)

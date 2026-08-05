@@ -2,10 +2,11 @@
 // Docs: docs/features/feature/observe/index.md
 
 // summarized_logs_test.go — Tests for log aggregation fingerprinting and grouping.
-package observe
+package logs
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +29,7 @@ func TestGetSummarizedLogsFiltersAndBuildsWireResponse(t *testing.T) {
 		{"level": "error", "message": "Request 1001 failed", "source": "console", "tabId": float64(7), "url": "https://app.example.test/a", "ts": "2026-01-01T00:00:03Z"},
 		{"level": "error", "message": "Request 1002 failed", "source": "console", "tabId": float64(7), "url": "https://app.example.test/b", "ts": "2026-01-01T00:00:04Z"},
 	}
-	deps := Deps{
+	deps := core.Deps{
 		Capture: cap,
 		LogEntries: func() ([]types.LogEntry, []time.Time) {
 			return entries, nil
@@ -74,7 +75,7 @@ func TestGetSummarizedLogsRejectsUnknownScope(t *testing.T) {
 	cap := capture.NewCapture()
 	t.Cleanup(cap.Close)
 	resp := GetSummarizedLogs(
-		Deps{Capture: cap},
+		core.Deps{Capture: cap},
 		mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`8`)},
 		json.RawMessage(`{"scope":"workspace"}`),
 	)

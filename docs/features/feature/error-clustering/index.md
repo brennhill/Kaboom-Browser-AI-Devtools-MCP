@@ -8,7 +8,7 @@ last_reviewed: 2026-08-05
 code_paths:
   - internal/tools/observe/errorcluster/cluster.go
   - internal/tools/observe/errorcluster/normalize.go
-  - internal/tools/observe/logs.go
+  - internal/tools/observe/logs/logs.go
   - internal/types/wire_log.go
   - internal/schema/analyze.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
@@ -103,7 +103,7 @@ statement of intent — **edit the reference first**, then make the scanner matc
 | --- | --- |
 | `internal/tools/observe/errorcluster/cluster.go` | Grouping rules and deterministic response ordering |
 | `internal/tools/observe/errorcluster/normalize.go` | Message fingerprint normalizer (byte scanner) |
-| `internal/tools/observe/logs.go` | `AnalyzeErrors` entry point |
+| `internal/tools/observe/logs/logs.go` | `AnalyzeErrors` entry point |
 | `internal/schema/analyze.go` | Advertises `error_clusters` in the tool schema |
 | `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go` | Routes `error_clusters` to `AnalyzeErrors` |
 | `internal/tools/observe/errorcluster/cluster_test.go` | Grouping, ordering, determinism |

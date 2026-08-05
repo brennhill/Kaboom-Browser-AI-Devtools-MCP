@@ -1,11 +1,12 @@
 // Purpose: Tests for the live-page observe modes (accessibility audit, screenshot data URLs).
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package page
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,6 +18,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -31,13 +33,6 @@ func completeNextPageStateQuery(t *testing.T, cap *capture.Capture, result json.
 	cap.Queries().SetQueryResultWithClient(pending[0].ID, result, "")
 }
 
-func pageStateDeps(cap *capture.Capture) Deps {
-	return Deps{
-		Capture:              cap,
-		DiagnosticHintString: func() string { return "doctor hint" },
-	}
-}
-
 func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
 
@@ -46,8 +41,8 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 		defer cap.Close()
 		capturefixture.Track(cap, 1, "https://example.test")
 		go completeNextPageStateQuery(t, cap, json.RawMessage(`{"error":"storage denied"}`))
-		resp := GetStorage(pageStateDeps(cap), req, json.RawMessage(`{}`))
-		if result := decodePageStateToolResult(t, resp); !result.IsError || !strings.Contains(result.Content[0].Text, "storage denied") {
+		resp := GetStorage(testsupport.Deps(cap), req, json.RawMessage(`{}`))
+		if result := testsupport.DecodeToolResult(t, resp); !result.IsError || !strings.Contains(result.Content[0].Text, "storage denied") {
 			t.Fatalf("extension failure response = %+v", result)
 		}
 	})
@@ -57,8 +52,8 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 		defer cap.Close()
 		capturefixture.Track(cap, 1, "https://example.test")
 		go completeNextPageStateQuery(t, cap, json.RawMessage(`not-json`))
-		resp := GetStorage(pageStateDeps(cap), req, json.RawMessage(`{}`))
-		if result := decodePageStateToolResult(t, resp); !result.IsError || !strings.Contains(result.Content[0].Text, "invalid_json") {
+		resp := GetStorage(testsupport.Deps(cap), req, json.RawMessage(`{}`))
+		if result := testsupport.DecodeToolResult(t, resp); !result.IsError || !strings.Contains(result.Content[0].Text, "invalid_json") {
 			t.Fatalf("invalid-result response = %+v", result)
 		}
 	})
@@ -72,8 +67,8 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 				t.Fatalf("fill queue: %v", err)
 			}
 		}
-		resp := GetStorage(pageStateDeps(cap), req, json.RawMessage(`{}`))
-		if result := decodePageStateToolResult(t, resp); !result.IsError || !strings.Contains(result.Content[0].Text, "queue_full") {
+		resp := GetStorage(testsupport.Deps(cap), req, json.RawMessage(`{}`))
+		if result := testsupport.DecodeToolResult(t, resp); !result.IsError || !strings.Contains(result.Content[0].Text, "queue_full") {
 			t.Fatalf("queue-full response = %+v", result)
 		}
 	})
@@ -91,8 +86,8 @@ func TestGetStorageFiltersSuccessfulCapture(t *testing.T) {
 	}`)
 	go completeNextPageStateQuery(t, cap, result)
 	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 2}
-	resp := GetStorage(pageStateDeps(cap), req, json.RawMessage(`{"storage_type":"local","key":"theme","summary":true}`))
-	toolResult := decodePageStateToolResult(t, resp)
+	resp := GetStorage(testsupport.Deps(cap), req, json.RawMessage(`{"storage_type":"local","key":"theme","summary":true}`))
+	toolResult := testsupport.DecodeToolResult(t, resp)
 	if toolResult.IsError {
 		t.Fatalf("storage capture failed: %s", toolResult.Content[0].Text)
 	}
@@ -111,8 +106,8 @@ func TestGetStorageReturnsAllRawStorageFamilies(t *testing.T) {
 		"sessionStorage":{"draft":"saved"},
 		"cookies":[{"name":"session","value":"abc"}]
 	}`))
-	resp := GetStorage(pageStateDeps(cap), mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 3}, json.RawMessage(`{}`))
-	result := decodePageStateToolResult(t, resp)
+	resp := GetStorage(testsupport.Deps(cap), mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 3}, json.RawMessage(`{}`))
+	result := testsupport.DecodeToolResult(t, resp)
 	if result.IsError || !strings.Contains(result.Content[0].Text, "local_storage") ||
 		!strings.Contains(result.Content[0].Text, "session_storage") || !strings.Contains(result.Content[0].Text, "cookies") {
 		t.Fatalf("raw storage response = %+v", result)
@@ -135,14 +130,14 @@ func TestJSONPathFilteringCoversValidAndRejectedShapes(t *testing.T) {
 	t.Parallel()
 	body := types.NetworkBody{ResponseBody: `{"data":{"items":[{"id":7}],"spaced key":"ok"}}`}
 	for _, path := range []string{"$.data.items[0].id", `$["data"]["spaced key"]`, "$"} {
-		filtered, include, err := ApplyNetworkBodyFilter(body, path)
+		filtered, include, err := core.ApplyNetworkBodyFilter(body, path)
 		if err != nil || !include || filtered.ResponseBody == "" {
-			t.Fatalf("ApplyNetworkBodyFilter(%q) = %#v, %t, %v", path, filtered, include, err)
+			t.Fatalf("core.ApplyNetworkBodyFilter(%q) = %#v, %t, %v", path, filtered, include, err)
 		}
 	}
 	for _, path := range []string{" ", "data.", "data[", "data[]", `data[""]`, "data[abc]", "data[-1]", "data..id"} {
-		if _, _, err := ApplyNetworkBodyFilter(body, path); err == nil {
-			t.Fatalf("ApplyNetworkBodyFilter(%q) accepted malformed path", path)
+		if _, _, err := core.ApplyNetworkBodyFilter(body, path); err == nil {
+			t.Fatalf("core.ApplyNetworkBodyFilter(%q) accepted malformed path", path)
 		}
 	}
 	for _, testCase := range []struct {
@@ -155,8 +150,8 @@ func TestJSONPathFilteringCoversValidAndRejectedShapes(t *testing.T) {
 		{body: body, path: "data.items[9]"},
 		{body: body, path: "data.items.id"},
 	} {
-		if _, include, err := ApplyNetworkBodyFilter(testCase.body, testCase.path); err != nil || include {
-			t.Fatalf("ApplyNetworkBodyFilter(%q) = include %t, err %v", testCase.path, include, err)
+		if _, include, err := core.ApplyNetworkBodyFilter(testCase.body, testCase.path); err != nil || include {
+			t.Fatalf("core.ApplyNetworkBodyFilter(%q) = include %t, err %v", testCase.path, include, err)
 		}
 	}
 }
@@ -169,7 +164,7 @@ func TestGetScreenshotValidatesAndPersistsSuccessfulCapture(t *testing.T) {
 		defer cap.Close()
 		capturefixture.Track(cap, 1, "https://example.test")
 		for _, args := range []json.RawMessage{json.RawMessage(`{"format":"gif"}`), json.RawMessage(`{"quality":101}`)} {
-			if result := decodePageStateToolResult(t, GetScreenshot(pageStateDeps(cap), req, args)); !result.IsError {
+			if result := testsupport.DecodeToolResult(t, GetScreenshot(testsupport.Deps(cap), req, args)); !result.IsError {
 				t.Fatalf("GetScreenshot(%s) accepted invalid options", args)
 			}
 		}
@@ -185,7 +180,7 @@ func TestGetScreenshotValidatesAndPersistsSuccessfulCapture(t *testing.T) {
 			"format": "png", "quality": 90, "full_page": true,
 			"selector": "main", "wait_for_stable": true, "save_to": path,
 		})
-		result := decodePageStateToolResult(t, GetScreenshot(pageStateDeps(cap), req, args))
+		result := testsupport.DecodeToolResult(t, GetScreenshot(testsupport.Deps(cap), req, args))
 		if result.IsError {
 			t.Fatalf("GetScreenshot() = %+v", result)
 		}
@@ -204,16 +199,16 @@ func TestGetIndexedDBValidatesTrackingAndReturnsRows(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()
 	for _, args := range []json.RawMessage{json.RawMessage(`{}`), json.RawMessage(`{"database":"app"}`)} {
-		if result := decodePageStateToolResult(t, GetIndexedDB(pageStateDeps(cap), req, args)); !result.IsError {
+		if result := testsupport.DecodeToolResult(t, GetIndexedDB(testsupport.Deps(cap), req, args)); !result.IsError {
 			t.Fatalf("GetIndexedDB(%s) accepted missing parameters", args)
 		}
 	}
-	if result := decodePageStateToolResult(t, GetIndexedDB(pageStateDeps(cap), req, json.RawMessage(`{"database":"app","store":"users"}`))); !result.IsError {
+	if result := testsupport.DecodeToolResult(t, GetIndexedDB(testsupport.Deps(cap), req, json.RawMessage(`{"database":"app","store":"users"}`))); !result.IsError {
 		t.Fatal("GetIndexedDB accepted an untracked tab")
 	}
 	capturefixture.Track(cap, 1, "https://example.test")
 	go completeNextPageStateQuery(t, cap, json.RawMessage(`{"success":true,"result":{"entries":[{"id":1}],"count":9,"object_stores":["users"]}}`))
-	result := decodePageStateToolResult(t, GetIndexedDB(pageStateDeps(cap), req, json.RawMessage(`{"database":"app","store":"users","limit":3}`)))
+	result := testsupport.DecodeToolResult(t, GetIndexedDB(testsupport.Deps(cap), req, json.RawMessage(`{"database":"app","store":"users","limit":3}`)))
 	if result.IsError || !strings.Contains(result.Content[0].Text, `"count":9`) || !strings.Contains(result.Content[0].Text, "object_stores") {
 		t.Fatalf("GetIndexedDB result = %+v", result)
 	}
@@ -230,7 +225,7 @@ func TestGetScreenshotReportsExtensionAndPersistenceErrors(t *testing.T) {
 			defer cap.Close()
 			capturefixture.Track(cap, 1, "https://example.test")
 			go completeNextPageStateQuery(t, cap, payload)
-			if result := decodePageStateToolResult(t, GetScreenshot(pageStateDeps(cap), req, json.RawMessage(`{}`))); !result.IsError {
+			if result := testsupport.DecodeToolResult(t, GetScreenshot(testsupport.Deps(cap), req, json.RawMessage(`{}`))); !result.IsError {
 				t.Fatalf("GetScreenshot accepted %s", name)
 			}
 		})
@@ -239,19 +234,10 @@ func TestGetScreenshotReportsExtensionAndPersistenceErrors(t *testing.T) {
 	defer cap.Close()
 	capturefixture.Track(cap, 1, "https://example.test")
 	go completeNextPageStateQuery(t, cap, json.RawMessage(`{"data_url":"data:image/png;base64,aGVsbG8="}`))
-	result := decodePageStateToolResult(t, GetScreenshot(pageStateDeps(cap), req, json.RawMessage(`{"save_to":"bad.txt"}`)))
+	result := testsupport.DecodeToolResult(t, GetScreenshot(testsupport.Deps(cap), req, json.RawMessage(`{"save_to":"bad.txt"}`)))
 	if result.IsError || !strings.Contains(result.Content[0].Text, "save_to_error") {
 		t.Fatalf("save failure response = %+v", result)
 	}
-}
-
-func decodePageStateToolResult(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {
-	t.Helper()
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil {
-		t.Fatalf("decode tool result: %v", err)
-	}
-	return result
 }
 
 func TestPageStateUsesCanonicalMCPResponses(t *testing.T) {
@@ -275,7 +261,7 @@ func TestPageStateUsesCanonicalMCPResponses(t *testing.T) {
 }
 
 // ============================================
-// Mock Deps for RunA11yAudit tests
+// Mock core.Deps for RunA11yAudit tests
 // ============================================
 
 type mockA11yDeps struct {
@@ -285,8 +271,8 @@ type mockA11yDeps struct {
 	diagnosticStr string
 }
 
-func (m *mockA11yDeps) deps() Deps {
-	return Deps{
+func (m *mockA11yDeps) deps() core.Deps {
+	return core.Deps{
 		Capture:              m.cap,
 		LogEntries:           func() ([]types.LogEntry, []time.Time) { return nil, nil },
 		LogTotalAdded:        func() int64 { return 0 },

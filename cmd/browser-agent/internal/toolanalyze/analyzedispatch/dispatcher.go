@@ -5,6 +5,9 @@ package analyzedispatch
 
 import (
 	"encoding/json"
+	observelogs "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/logs"
+	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
+	observesession "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/session"
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
@@ -17,7 +20,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
+	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -26,7 +29,7 @@ type ModeHandler func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
 type Config struct {
 	Analyze          toolanalyze.Deps
 	Inspect          inspect.Deps
-	Observe          observe.Deps
+	Observe          observecore.Deps
 	Audit            combinedaudit.Deps
 	Version          string
 	AnnotationStore  *annotation.Store
@@ -49,9 +52,9 @@ func NewDispatcher(config Config) *Dispatcher {
 		"dom": wrapInspect(config.Inspect, inspect.HandleDOM), "api_validation": func(_ struct{}, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return d.ValidateAPI(req, args)
 		},
-		"page_summary": mode(config.PageSummary), "performance": wrapObserve(config.Observe, observe.CheckPerformance),
-		"accessibility": wrapObserve(config.Observe, observe.RunA11yAudit), "error_clusters": wrapObserve(config.Observe, observe.AnalyzeErrors),
-		"navigation_patterns": wrapObserve(config.Observe, observe.AnalyzeHistory),
+		"page_summary": mode(config.PageSummary), "performance": wrapObserve(config.Observe, observesession.CheckPerformance),
+		"accessibility": wrapObserve(config.Observe, observepage.RunA11yAudit), "error_clusters": wrapObserve(config.Observe, observelogs.AnalyzeErrors),
+		"navigation_patterns": wrapObserve(config.Observe, observesession.AnalyzeHistory),
 		"security_audit":      wrapLocal(config.Analyze, toolanalyze.HandleSecurityAudit),
 		"third_party_audit":   wrapLocal(config.Analyze, toolanalyze.HandleThirdPartyAudit),
 		"link_health":         wrapLocal(config.Analyze, toolanalyze.HandleLinkHealth),
@@ -132,7 +135,7 @@ func wrapInspect(deps inspect.Deps, fn func(inspect.Deps, mcp.JSONRPCRequest, js
 	}
 }
 
-func wrapObserve(deps observe.Deps, fn func(observe.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[struct{}] {
+func wrapObserve(deps observecore.Deps, fn func(observecore.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[struct{}] {
 	return func(_ struct{}, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(deps, req, args)
 	}

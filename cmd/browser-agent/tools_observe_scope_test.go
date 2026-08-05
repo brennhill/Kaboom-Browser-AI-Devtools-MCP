@@ -6,11 +6,11 @@ package main
 
 import (
 	"encoding/json"
+	observelogs "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/logs"
 	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
 func TestGetBrowserErrors_InvalidScope(t *testing.T) {
@@ -18,7 +18,7 @@ func TestGetBrowserErrors_InvalidScope(t *testing.T) {
 	h := newTestToolHandler()
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{"scope": "bogus"})
-	resp := observe.GetBrowserErrors(buildObserveReadDeps(h), req, args)
+	resp := observelogs.GetBrowserErrors(buildObserveReadDeps(h), req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -39,7 +39,7 @@ func TestGetBrowserErrors_ValidScopes(t *testing.T) {
 
 	for _, scope := range []string{"current_page", "all", ""} {
 		args, _ := json.Marshal(map[string]any{"scope": scope})
-		resp := observe.GetBrowserErrors(buildObserveReadDeps(h), req, args)
+		resp := observelogs.GetBrowserErrors(buildObserveReadDeps(h), req, args)
 		var result mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err != nil {
 			t.Fatalf("scope=%q unmarshal: %v", scope, err)
@@ -55,7 +55,7 @@ func TestGetBrowserLogs_InvalidScope(t *testing.T) {
 	h := newTestToolHandler()
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{"scope": "invalid"})
-	resp := observe.GetBrowserLogs(buildObserveReadDeps(h), req, args)
+	resp := observelogs.GetBrowserLogs(buildObserveReadDeps(h), req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -76,7 +76,7 @@ func TestGetBrowserLogs_ValidScopes(t *testing.T) {
 
 	for _, scope := range []string{"current_page", "all", ""} {
 		args, _ := json.Marshal(map[string]any{"scope": scope})
-		resp := observe.GetBrowserLogs(buildObserveReadDeps(h), req, args)
+		resp := observelogs.GetBrowserLogs(buildObserveReadDeps(h), req, args)
 		var result mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err != nil {
 			t.Fatalf("scope=%q unmarshal: %v", scope, err)
@@ -93,7 +93,7 @@ func TestGetBrowserErrors_ScopeInResponse(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
 	args, _ := json.Marshal(map[string]any{"scope": "all"})
-	resp := observe.GetBrowserErrors(buildObserveReadDeps(h), req, args)
+	resp := observelogs.GetBrowserErrors(buildObserveReadDeps(h), req, args)
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal: %v", err)

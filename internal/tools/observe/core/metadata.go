@@ -3,7 +3,7 @@
 // paginated-with-summary spellings of that step belong together.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package core
 
 import (
 	"fmt"

@@ -10,6 +10,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	observenetwork "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/network"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -59,7 +59,7 @@ func TestGetNetworkBodies_EmptyWithWaterfallData_ReturnsHint(t *testing.T) {
 	// Do NOT add any network bodies — simulates issue #278
 
 	// Call observe network_bodies
-	resp := observe.GetNetworkBodies(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observenetwork.GetNetworkBodies(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -98,7 +98,7 @@ func TestGetNetworkBodies_EmptyNoWaterfall_ReturnsHint(t *testing.T) {
 
 	// No waterfall entries, no bodies — fresh session
 
-	resp := observe.GetNetworkBodies(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observenetwork.GetNetworkBodies(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -138,7 +138,7 @@ func TestGetNetworkBodies_NonEmpty_NoHint(t *testing.T) {
 		},
 	})
 
-	resp := observe.GetNetworkBodies(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observenetwork.GetNetworkBodies(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -173,7 +173,7 @@ func TestGetNetworkBodies_EmptyWithURLFilter_HintMentionsFilter(t *testing.T) {
 	})
 
 	// Filter for a URL that doesn't match
-	resp := observe.GetNetworkBodies(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"url":"github.com"}`))
+	resp := observenetwork.GetNetworkBodies(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"url":"github.com"}`))
 
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -209,7 +209,7 @@ func TestGetWSEvents_Empty_ReturnsHint(t *testing.T) {
 
 	// No WebSocket events
 
-	resp := observe.GetWSEvents(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observenetwork.GetWSEvents(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -249,7 +249,7 @@ func TestGetWSEvents_NonEmpty_NoHint(t *testing.T) {
 		},
 	})
 
-	resp := observe.GetWSEvents(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observenetwork.GetWSEvents(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -273,7 +273,7 @@ func TestGetWSStatus_Empty_ReturnsHint(t *testing.T) {
 
 	// No WebSocket connections
 
-	resp := observe.GetWSStatus(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observenetwork.GetWSStatus(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -341,7 +341,7 @@ func TestGetWSStatus_SummaryMode_ReturnsCompactShape(t *testing.T) {
 		t.Fatalf("expected websocket-events ingest 200, got %d", rec.Code)
 	}
 
-	resp := observe.GetWSStatus(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"summary":true}`))
+	resp := observenetwork.GetWSStatus(buildObserveReadDeps(env.handler), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"summary":true}`))
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
 

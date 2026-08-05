@@ -3,10 +3,11 @@
 // they were split across four files even though every symbol in three of them served only this handler.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package logs
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"math"
 	"regexp"
 	"sort"
@@ -19,7 +20,7 @@ import (
 )
 
 // GetSummarizedLogs handles observe(what="summarized_logs").
-func GetSummarizedLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetSummarizedLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	params := parseSummarizedLogsParams(args)
 	if params.Scope != "current_page" && params.Scope != "all" {
 		return mcp.JSONRPCResponse{
@@ -52,7 +53,7 @@ func GetSummarizedLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) 
 
 	timeStart, timeEnd := summarizedLogsTimeRange(views)
 	summary := summarizedLogsSummary(views, groups, anomalies, noiseSuppressed, timeStart, timeEnd)
-	responseMeta := BuildResponseMetadata(deps.Capture, time.Time{})
+	responseMeta := core.BuildResponseMetadata(deps.Capture, time.Time{})
 
 	return mcp.Succeed(req, "Summarized logs", map[string]any{
 		"groups":    cleanSummarizedLogGroups(groups),
@@ -78,14 +79,14 @@ func parseSummarizedLogsParams(args json.RawMessage) summarizedLogsParams {
 	if params.Scope == "" {
 		params.Scope = "current_page"
 	}
-	params.Limit = clampLimit(params.Limit, 100)
+	params.Limit = core.ClampLimit(params.Limit, 100)
 	if params.MinGroupSize <= 0 {
 		params.MinGroupSize = 2
 	}
 	return params
 }
 
-func filterSummarizedLogViews(rawEntries []types.LogEntry, deps Deps, params summarizedLogsParams, trackedTabID int) ([]logEntryView, int) {
+func filterSummarizedLogViews(rawEntries []types.LogEntry, deps core.Deps, params summarizedLogsParams, trackedTabID int) ([]logEntryView, int) {
 	noiseSuppressed := 0
 	views := make([]logEntryView, 0, min(params.Limit, len(rawEntries)))
 	count := 0
@@ -111,7 +112,7 @@ func filterSummarizedLogViews(rawEntries []types.LogEntry, deps Deps, params sum
 		if params.Level != "" && level != params.Level {
 			continue
 		}
-		if params.MinLevel != "" && LogLevelRank(level) < LogLevelRank(params.MinLevel) {
+		if params.MinLevel != "" && core.LogLevelRank(level) < core.LogLevelRank(params.MinLevel) {
 			continue
 		}
 		if params.Source != "" {
@@ -122,7 +123,7 @@ func filterSummarizedLogViews(rawEntries []types.LogEntry, deps Deps, params sum
 		}
 		if params.URL != "" {
 			entryURL, _ := entry["url"].(string)
-			if !ContainsIgnoreCase(entryURL, params.URL) {
+			if !core.ContainsIgnoreCase(entryURL, params.URL) {
 				continue
 			}
 		}
@@ -423,8 +424,8 @@ func groupLogs(entries []logEntryView, minGroupSize int) ([]LogGroup, []LogAnoma
 
 	// Sort anomalies by severity desc, then timestamp desc
 	sort.Slice(anomalies, func(i, j int) bool {
-		ri := LogLevelRank(anomalies[i].Level)
-		rj := LogLevelRank(anomalies[j].Level)
+		ri := core.LogLevelRank(anomalies[i].Level)
+		rj := core.LogLevelRank(anomalies[j].Level)
 		if ri != rj {
 			return ri > rj
 		}

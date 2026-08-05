@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
 // TestGetScreenshot_InlineImageInResponse verifies that a successful screenshot
@@ -41,7 +41,7 @@ func TestGetScreenshot_InlineImageInResponse(t *testing.T) {
 	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
-		resp = observe.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
+		resp = observepage.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
 		close(done)
 	}()
 
@@ -128,7 +128,7 @@ func TestGetScreenshot_InlineImage_PNGFormat(t *testing.T) {
 	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
-		resp = observe.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
+		resp = observepage.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
 		close(done)
 	}()
 
@@ -183,7 +183,7 @@ func TestGetScreenshot_NoDataURL_StillReturnsTextResult(t *testing.T) {
 	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
-		resp = observe.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
+		resp = observepage.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
 		close(done)
 	}()
 
@@ -234,7 +234,7 @@ func TestGetScreenshot_SaveTo_WritesFileAndReturnsPath(t *testing.T) {
 	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
-		resp = observe.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
+		resp = observepage.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
 		close(done)
 	}()
 
@@ -297,7 +297,7 @@ func TestGetScreenshot_SaveTo_InvalidExtensionReturnsSaveError(t *testing.T) {
 	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
-		resp = observe.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
+		resp = observepage.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
 		close(done)
 	}()
 

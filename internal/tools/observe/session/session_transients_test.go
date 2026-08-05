@@ -1,32 +1,15 @@
-// handlers_transients_test.go — Tests for GetTransients and GetEnhancedActions type filter.
-package observe
+// session_transients_test.go — Tests transient and enhanced-action observation filters.
+package session
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
-
-// mockTransientDeps owns mutable test state used to compose observation reads.
-type mockTransientDeps struct {
-	cap *capture.Capture
-}
-
-func (m *mockTransientDeps) deps() Deps {
-	return Deps{
-		Capture:              m.cap,
-		LogEntries:           func() ([]types.LogEntry, []time.Time) { return nil, nil },
-		LogTotalAdded:        func() int64 { return 0 },
-		IsConsoleNoise:       func(types.LogEntry) bool { return false },
-		ExecuteA11yQuery:     func(string, []string, any, bool) (json.RawMessage, error) { return nil, nil },
-		DiagnosticHintString: func() string { return "" },
-	}
-}
 
 func seedTransientActions(c *capture.Capture) {
 	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
@@ -38,39 +21,14 @@ func seedTransientActions(c *capture.Capture) {
 	})
 }
 
-// extractMCPJSON parses the MCP tool result text which is "summary\n{json}" format.
-func extractMCPJSON(t *testing.T, resp mcp.JSONRPCResponse) map[string]any {
-	t.Helper()
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil {
-		t.Fatalf("Unmarshal result: %v", err)
-	}
-	if len(result.Content) == 0 {
-		t.Fatal("No content blocks in response")
-	}
-	text := result.Content[0].Text
-	// Split on first newline — summary is before, JSON is after
-	idx := strings.Index(text, "\n")
-	if idx < 0 {
-		t.Fatalf("No newline in response text: %s", text)
-	}
-	jsonText := text[idx+1:]
-	var data map[string]any
-	if err := json.Unmarshal([]byte(jsonText), &data); err != nil {
-		t.Fatalf("Unmarshal JSON from text: %v\nText: %s", err, jsonText)
-	}
-	return data
-}
-
 func TestGetTransients_FiltersTransientType(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
 	seedTransientActions(c)
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	resp := GetTransients(deps.deps(), req, json.RawMessage(`{}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetTransients(testsupport.Deps(c), req, json.RawMessage(`{}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	count, _ := data["count"].(float64)
 	if int(count) != 3 {
@@ -82,11 +40,10 @@ func TestGetTransients_FiltersByClassification(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
 	seedTransientActions(c)
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	resp := GetTransients(deps.deps(), req, json.RawMessage(`{"classification":"toast"}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetTransients(testsupport.Deps(c), req, json.RawMessage(`{"classification":"toast"}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	count, _ := data["count"].(float64)
 	if int(count) != 1 {
@@ -98,11 +55,10 @@ func TestGetTransients_FiltersByURL(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
 	seedTransientActions(c)
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	resp := GetTransients(deps.deps(), req, json.RawMessage(`{"url":"other.com"}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetTransients(testsupport.Deps(c), req, json.RawMessage(`{"url":"other.com"}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	count, _ := data["count"].(float64)
 	if int(count) != 1 {
@@ -113,11 +69,10 @@ func TestGetTransients_FiltersByURL(t *testing.T) {
 func TestGetTransients_EmptyBuffer(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	resp := GetTransients(deps.deps(), req, json.RawMessage(`{}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetTransients(testsupport.Deps(c), req, json.RawMessage(`{}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	count, _ := data["count"].(float64)
 	if int(count) != 0 {
@@ -129,11 +84,10 @@ func TestGetTransients_Limit(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
 	seedTransientActions(c)
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	resp := GetTransients(deps.deps(), req, json.RawMessage(`{"limit":2}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetTransients(testsupport.Deps(c), req, json.RawMessage(`{"limit":2}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	count, _ := data["count"].(float64)
 	if int(count) != 2 {
@@ -145,11 +99,10 @@ func TestGetTransients_SummaryMode(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
 	seedTransientActions(c)
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	resp := GetTransients(deps.deps(), req, json.RawMessage(`{"summary":true}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetTransients(testsupport.Deps(c), req, json.RawMessage(`{"summary":true}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	total, _ := data["total"].(float64)
 	if int(total) != 3 {
@@ -170,12 +123,11 @@ func TestGetTransients_CombinedClassificationAndURL(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
 	seedTransientActions(c)
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
 	// Only snackbar on other.com should match
-	resp := GetTransients(deps.deps(), req, json.RawMessage(`{"classification":"snackbar","url":"other.com"}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetTransients(testsupport.Deps(c), req, json.RawMessage(`{"classification":"snackbar","url":"other.com"}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	count, _ := data["count"].(float64)
 	if int(count) != 1 {
@@ -187,12 +139,11 @@ func TestGetTransients_CombinedFilterNoMatch(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
 	seedTransientActions(c)
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
 	// toast is only on example.com, not other.com
-	resp := GetTransients(deps.deps(), req, json.RawMessage(`{"classification":"toast","url":"other.com"}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetTransients(testsupport.Deps(c), req, json.RawMessage(`{"classification":"toast","url":"other.com"}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	count, _ := data["count"].(float64)
 	if int(count) != 0 {
@@ -204,11 +155,10 @@ func TestGetEnhancedActions_TypeFilter(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
 	seedTransientActions(c)
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	resp := GetEnhancedActions(deps.deps(), req, json.RawMessage(`{"type":"click"}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetEnhancedActions(testsupport.Deps(c), req, json.RawMessage(`{"type":"click"}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	count, _ := data["count"].(float64)
 	if int(count) != 1 {
@@ -220,11 +170,10 @@ func TestGetEnhancedActions_TypeFilterTransient(t *testing.T) {
 	t.Parallel()
 	c := capture.NewCapture()
 	seedTransientActions(c)
-	deps := &mockTransientDeps{cap: c}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	resp := GetEnhancedActions(deps.deps(), req, json.RawMessage(`{"type":"transient"}`))
-	data := extractMCPJSON(t, resp)
+	resp := GetEnhancedActions(testsupport.Deps(c), req, json.RawMessage(`{"type":"transient"}`))
+	data := testsupport.ExtractMCPJSON(t, resp)
 
 	count, _ := data["count"].(float64)
 	if int(count) != 3 {

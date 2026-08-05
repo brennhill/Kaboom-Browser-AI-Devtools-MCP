@@ -3,10 +3,11 @@
 // together, so they share the tab filters and timestamp parsing that single-stream modes do not need.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+package timeline
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sort"
 	"time"
@@ -33,7 +34,7 @@ type bundleContext struct {
 }
 
 // GetErrorBundles assembles pre-joined debugging context around each recent error.
-func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit         int    `json:"limit"`
 		WindowSeconds int    `json:"window_seconds"`
@@ -101,7 +102,7 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	}
 
 	if params.Summary {
-		summaryResp := buildErrorBundlesSummary(bundles, newestEntry, BuildResponseMetadata(cap, newestEntry))
+		summaryResp := buildErrorBundlesSummary(bundles, newestEntry, core.BuildResponseMetadata(cap, newestEntry))
 		if paramHint != "" {
 			summaryResp["param_hint"] = paramHint
 		}
@@ -111,7 +112,7 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	response := map[string]any{
 		"bundles":  bundles,
 		"count":    len(bundles),
-		"metadata": BuildResponseMetadata(cap, newestEntry),
+		"metadata": core.BuildResponseMetadata(cap, newestEntry),
 	}
 	if paramHint != "" {
 		response["param_hint"] = paramHint
@@ -123,7 +124,7 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 }
 
 // collectErrorsAndLogs extracts errors and logs from the log buffer snapshot.
-func collectErrorsAndLogs(deps Deps, limit int, urlFilter, scope string, trackedTabID int) ([]timedEntry, []timedEntry) {
+func collectErrorsAndLogs(deps core.Deps, limit int, urlFilter, scope string, trackedTabID int) ([]timedEntry, []timedEntry) {
 	entries, _ := deps.LogEntries()
 
 	var errors, logs []timedEntry
@@ -147,7 +148,7 @@ func collectErrorsAndLogs(deps Deps, limit int, urlFilter, scope string, tracked
 		if level == "error" {
 			if urlFilter != "" {
 				entryURL, _ := entry["url"].(string)
-				if !ContainsIgnoreCase(entryURL, urlFilter) {
+				if !core.ContainsIgnoreCase(entryURL, urlFilter) {
 					continue
 				}
 			}
@@ -286,7 +287,7 @@ func filterWaterfallByTab(entries []types.NetworkWaterfallEntry, tabID int, cap 
 	}
 	filtered := make([]types.NetworkWaterfallEntry, 0, len(entries))
 	for _, w := range entries {
-		if w.PageURL != "" && !ContainsIgnoreCase(w.PageURL, trackedURL) {
+		if w.PageURL != "" && !core.ContainsIgnoreCase(w.PageURL, trackedURL) {
 			continue
 		}
 		filtered = append(filtered, w)
@@ -340,7 +341,7 @@ func parseTimelineIncludes(include []string) timelineIncludes {
 }
 
 // GetSessionTimeline returns a merged, time-sorted timeline of all captured events.
-func GetSessionTimeline(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func GetSessionTimeline(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit   int      `json:"limit"`
 		Include []string `json:"include"`
@@ -350,8 +351,8 @@ func GetSessionTimeline(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 	if params.Limit <= 0 {
 		params.Limit = 50
 	}
-	if params.Limit > MaxObserveLimit {
-		params.Limit = MaxObserveLimit
+	if params.Limit > core.MaxObserveLimit {
+		params.Limit = core.MaxObserveLimit
 	}
 
 	inc := parseTimelineIncludes(params.Include)
@@ -363,7 +364,7 @@ func GetSessionTimeline(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 
 	if params.Summary {
 		summary := buildTimelineSummary(entries)
-		summary["metadata"] = BuildResponseMetadata(deps.Capture, time.Now())
+		summary["metadata"] = core.BuildResponseMetadata(deps.Capture, time.Now())
 		return mcp.Succeed(req, "Timeline", summary)
 	}
 
@@ -374,7 +375,7 @@ func GetSessionTimeline(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 	response := map[string]any{
 		"entries":  entries,
 		"count":    len(entries),
-		"metadata": BuildResponseMetadata(deps.Capture, time.Now()),
+		"metadata": core.BuildResponseMetadata(deps.Capture, time.Now()),
 	}
 	if len(entries) == 0 {
 		response["hint"] = hints.Timeline()
@@ -382,7 +383,7 @@ func GetSessionTimeline(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 	return mcp.Succeed(req, "Timeline", response)
 }
 
-func collectTimelineEntries(deps Deps, inc timelineIncludes) []timelineEntry {
+func collectTimelineEntries(deps core.Deps, inc timelineIncludes) []timelineEntry {
 	cap := deps.Capture
 	entries := make([]timelineEntry, 0)
 	if inc.actions {
@@ -418,7 +419,7 @@ func collectTimelineActions(cap *capture.Capture) []timelineEntry {
 	return entries
 }
 
-func collectTimelineErrors(deps Deps) []timelineEntry {
+func collectTimelineErrors(deps core.Deps) []timelineEntry {
 	logEntries, _ := deps.LogEntries()
 	entries := make([]timelineEntry, 0)
 	for _, entry := range logEntries {
@@ -426,7 +427,7 @@ func collectTimelineErrors(deps Deps) []timelineEntry {
 		if level != "error" {
 			continue
 		}
-		ts := logEntryTimestamp(entry)
+		ts := core.LogEntryTimestamp(entry)
 		msg, _ := entry["message"].(string)
 		if len(msg) > 80 {
 			msg = msg[:80] + "..."
@@ -497,7 +498,7 @@ func buildTimelineSummary(entries []timelineEntry) map[string]any {
 }
 
 // buildErrorBundlesSummary returns {total_bundles, unique_error_messages, newest_entry, metadata}.
-func buildErrorBundlesSummary(bundles []map[string]any, newestEntry time.Time, meta ResponseMetadata) map[string]any {
+func buildErrorBundlesSummary(bundles []map[string]any, newestEntry time.Time, meta core.ResponseMetadata) map[string]any {
 	seen := make(map[string]bool)
 	messages := make([]string, 0)
 

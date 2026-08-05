@@ -6,6 +6,11 @@ package toolobserve
 import (
 	"encoding/json"
 	"fmt"
+	observelogs "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/logs"
+	observenetwork "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/network"
+	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
+	observesession "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/session"
+	observetimeline "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/timeline"
 	"strings"
 	"time"
 
@@ -18,7 +23,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
-	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
+	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -34,18 +39,18 @@ type CommandStore interface {
 }
 
 type Config struct {
-	Observe              observe.Deps
+	Observe              observecore.Deps
 	Local                Deps
 	IsExtensionConnected func() bool
 	Commands             CommandStore
 	InProgress           func() []capture.SyncInProgress
 	AnnotationStore      *annotation.Store
-	Annotations          toolrouting.Handler[observe.Deps]
-	AnnotationDetail     toolrouting.Handler[observe.Deps]
-	Recordings           toolrouting.Handler[observe.Deps]
-	RecordingActions     toolrouting.Handler[observe.Deps]
-	PlaybackResults      toolrouting.Handler[observe.Deps]
-	LogDiffReport        toolrouting.Handler[observe.Deps]
+	Annotations          toolrouting.Handler[observecore.Deps]
+	AnnotationDetail     toolrouting.Handler[observecore.Deps]
+	Recordings           toolrouting.Handler[observecore.Deps]
+	RecordingActions     toolrouting.Handler[observecore.Deps]
+	PlaybackResults      toolrouting.Handler[observecore.Deps]
+	LogDiffReport        toolrouting.Handler[observecore.Deps]
 	FormatCommand        func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse
 	InjectSummary        func(json.RawMessage) json.RawMessage
 	DrainAlerts          func() []types.Alert
@@ -54,48 +59,48 @@ type Config struct {
 }
 
 type Dispatcher struct {
-	observe  observe.Deps
+	observe  observecore.Deps
 	commands CommandStore
 	config   Config
-	registry toolrouting.Registry[observe.Deps]
+	registry toolrouting.Registry[observecore.Deps]
 }
 
 func NewDispatcher(config Config) *Dispatcher {
 	d := &Dispatcher{observe: config.Observe, commands: config.Commands, config: config}
-	handlers := map[string]toolrouting.Handler[observe.Deps]{
-		"errors": wrap(observe.GetBrowserErrors), "logs": wrap(observe.GetBrowserLogs),
-		"extension_logs": wrap(observe.GetExtensionLogs), "network_waterfall": wrap(observe.GetNetworkWaterfall),
-		"network_bodies": wrap(observe.GetNetworkBodies), "websocket_events": wrap(observe.GetWSEvents),
-		"websocket_status": wrap(observe.GetWSStatus), "actions": wrap(observe.GetEnhancedActions),
-		"vitals": wrap(observe.GetWebVitals), "page": wrap(observe.GetPageInfo), "tabs": wrap(observe.GetTabs),
-		"history": wrap(observe.AnalyzeHistory), "pilot": wrap(observe.ObservePilot),
-		"timeline": wrap(observe.GetSessionTimeline), "error_bundles": wrap(observe.GetErrorBundles),
-		"screenshot": wrap(observe.GetScreenshot), "storage": wrap(observe.GetStorage),
-		"indexeddb": wrap(observe.GetIndexedDB), "summarized_logs": wrap(observe.GetSummarizedLogs),
-		"transients":  wrap(observe.GetTransients),
+	handlers := map[string]toolrouting.Handler[observecore.Deps]{
+		"errors": wrap(observelogs.GetBrowserErrors), "logs": wrap(observelogs.GetBrowserLogs),
+		"extension_logs": wrap(observelogs.GetExtensionLogs), "network_waterfall": wrap(observenetwork.GetNetworkWaterfall),
+		"network_bodies": wrap(observenetwork.GetNetworkBodies), "websocket_events": wrap(observenetwork.GetWSEvents),
+		"websocket_status": wrap(observenetwork.GetWSStatus), "actions": wrap(observesession.GetEnhancedActions),
+		"vitals": wrap(observesession.GetWebVitals), "page": wrap(observepage.GetPageInfo), "tabs": wrap(observesession.GetTabs),
+		"history": wrap(observesession.AnalyzeHistory), "pilot": wrap(observesession.ObservePilot),
+		"timeline": wrap(observetimeline.GetSessionTimeline), "error_bundles": wrap(observetimeline.GetErrorBundles),
+		"screenshot": wrap(observepage.GetScreenshot), "storage": wrap(observepage.GetStorage),
+		"indexeddb": wrap(observepage.GetIndexedDB), "summarized_logs": wrap(observelogs.GetSummarizedLogs),
+		"transients":  wrap(observesession.GetTransients),
 		"annotations": config.Annotations, "annotation_detail": config.AnnotationDetail,
 		"draw_history": d.drawHistory, "draw_session": d.drawSession,
 		"page_inventory": local(config.Local, HandlePageInventory), "inbox": local(config.Local, HandleInbox), "site_menus": local(config.Local, HandleSiteMenus),
-		"command_result": func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		"command_result": func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return d.CommandResult(req, args)
 		},
 		"pending_commands": d.pendingCommands,
-		"failed_commands": func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		"failed_commands": func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return d.FailedCommands(req, args)
 		},
 		"saved_videos": d.savedVideos,
 		"recordings":   config.Recordings, "recording_actions": config.RecordingActions,
 		"playback_results": config.PlaybackResults, "log_diff_report": config.LogDiffReport,
 	}
-	d.registry = toolrouting.Registry[observe.Deps]{
+	d.registry = toolrouting.Registry[observecore.Deps]{
 		Handlers: handlers,
 		Resolution: toolrouting.Resolution{
 			ToolName: "observe", ValidModes: strings.Join(util.SortedMapKeys(handlers), ", "),
 		},
-		PreDispatch: func(_ observe.Deps, _ mcp.JSONRPCRequest, args json.RawMessage, _ string) (json.RawMessage, *mcp.JSONRPCResponse) {
+		PreDispatch: func(_ observecore.Deps, _ mcp.JSONRPCRequest, args json.RawMessage, _ string) (json.RawMessage, *mcp.JSONRPCResponse) {
 			return config.InjectSummary(args), nil
 		},
-		PostDispatch: func(_ observe.Deps, _ mcp.JSONRPCRequest, resp mcp.JSONRPCResponse, what string) mcp.JSONRPCResponse {
+		PostDispatch: func(_ observecore.Deps, _ mcp.JSONRPCRequest, resp mcp.JSONRPCResponse, what string) mcp.JSONRPCResponse {
 			if !config.IsExtensionConnected() && !ServerSideObserveModes[what] {
 				resp = PrependDisconnectWarning(resp)
 			}
@@ -108,14 +113,14 @@ func NewDispatcher(config Config) *Dispatcher {
 	return d
 }
 
-func wrap(fn func(observe.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[observe.Deps] {
-	return func(h observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func wrap(fn func(observecore.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[observecore.Deps] {
+	return func(h observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
 
-func local(deps Deps, fn func(Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[observe.Deps] {
-	return func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func local(deps Deps, fn func(Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[observecore.Deps] {
+	return func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(deps, req, args)
 	}
 }
@@ -126,12 +131,12 @@ func (d *Dispatcher) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 
 func (d *Dispatcher) ValidModes() []string { return util.SortedMapKeys(d.registry.Handlers) }
 
-func (d *Dispatcher) drawHistory(_ observe.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) drawHistory(_ observecore.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	dir, err := mediaapi.ScreenshotsDir()
 	return annotation.ListDrawHistory(req, dir, err)
 }
 
-func (d *Dispatcher) drawSession(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) drawSession(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	dir, err := mediaapi.ScreenshotsDir()
 	return annotation.LoadDrawSession(d.config.AnnotationStore, req, args, dir, err)
 }
@@ -169,7 +174,7 @@ func (d *Dispatcher) CommandResult(req mcp.JSONRPCRequest, args json.RawMessage)
 	return d.config.FormatCommand(req, *command, params.CorrelationID)
 }
 
-func (d *Dispatcher) pendingCommands(_ observe.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) pendingCommands(_ observecore.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	if d.commands == nil {
 		data := map[string]any{"pending": []*queries.CommandResult{}, "completed": []*queries.CommandResult{}, "failed": []*queries.CommandResult{}, "extension_in_progress": []capture.SyncInProgress{}, "extension_in_progress_count": 0}
 		return mcp.Succeed(req, "Pending: 0, Completed: 0, Failed: 0, Extension in-progress: 0", data)
@@ -196,6 +201,6 @@ func (d *Dispatcher) FailedCommands(req mcp.JSONRPCRequest, _ json.RawMessage) m
 	return mcp.Succeed(req, fmt.Sprintf("Found %d failed/expired commands", len(failed)), data)
 }
 
-func (d *Dispatcher) savedVideos(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) savedVideos(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return screenrec.HandleObserveSavedVideos(req, args, d.config.StateDiagnostics)
 }
