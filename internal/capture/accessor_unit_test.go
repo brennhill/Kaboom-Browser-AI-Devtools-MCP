@@ -10,6 +10,7 @@ import (
 	"time"
 
 	pressuremetrics "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
 
@@ -140,8 +141,9 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	assertPressure("network", pressure.Network, maxNetworkBodies, 3)
 	assertPressure("websocket", pressure.WebSocket, maxWSEvents, 2)
 	assertPressure("actions", pressure.Actions, maxEnhancedActions, 1)
-	c.Telemetry().NetworkWaterfall().addAt(make([]types.NetworkWaterfallEntry, defaultNetworkWaterfallCapacity+4), "https://example.test", now)
-	if got := c.Telemetry().Pressure().NetworkWaterfall; got.Size != defaultNetworkWaterfallCapacity || got.Dropped != 4 {
+	c.telemetry.networkWaterfall = waterfallstore.New(3)
+	c.Telemetry().NetworkWaterfall().Add(make([]types.NetworkWaterfallEntry, 7), "https://example.test")
+	if got := c.Telemetry().Pressure().NetworkWaterfall; got.Size != 3 || got.Dropped != 4 {
 		t.Fatalf("network waterfall pressure = %#v, want bounded with four drops", got)
 	}
 

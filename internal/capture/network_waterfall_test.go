@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
 )
 
 // ============================================
@@ -159,7 +161,7 @@ func TestNetworkWaterfall_RingBufferEviction(t *testing.T) {
 	capture := NewCapture()
 
 	// Override capacity to test eviction behavior
-	capture.telemetry.networkWaterfall = newNetworkWaterfallStore(10)
+	capture.telemetry.networkWaterfall = waterfallstore.New(10)
 
 	// Add 12 entries which should trigger eviction since we set max to 10
 	for i := 0; i < 12; i++ {
@@ -240,7 +242,7 @@ func TestNetworkWaterfall_FeedsCSPGenerator(t *testing.T) {
 func TestNetworkWaterfall_DefaultCapacity(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()
-	if capture.telemetry.networkWaterfall.capacity == 0 {
+	if capture.Telemetry().NetworkWaterfall().Pressure().Capacity == 0 {
 		t.Errorf("Expected networkWaterfall buffer to be initialized")
 	}
 }
@@ -248,7 +250,7 @@ func TestNetworkWaterfall_DefaultCapacity(t *testing.T) {
 func TestNetworkWaterfall_CustomCapacity(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()
-	capacity := capture.telemetry.networkWaterfall.capacity
+	capacity := capture.Telemetry().NetworkWaterfall().Pressure().Capacity
 
 	if capacity == 0 {
 		t.Errorf("Expected non-zero capacity")

@@ -17,6 +17,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/ringstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -27,11 +28,10 @@ const (
 	maxNetworkBodies   = 100
 	maxEnhancedActions = 1000
 
-	defaultNetworkWaterfallCapacity = 1000
-	defaultWSLimit                  = 50
-	defaultBodyLimit                = 20
-	wsBufferMemoryLimit             = 4 * 1024 * 1024
-	nbBufferMemoryLimit             = 8 * 1024 * 1024
+	defaultWSLimit      = 50
+	defaultBodyLimit    = 20
+	wsBufferMemoryLimit = 4 * 1024 * 1024
+	nbBufferMemoryLimit = 8 * 1024 * 1024
 )
 
 // wsEventEntry bundles a types.WebSocketEvent with its ingestion timestamp.
@@ -46,68 +46,9 @@ type networkBodyEntry struct {
 	AddedAt time.Time
 }
 
-// NetworkWaterfallStore owns bounded browser resource timings and synchronization.
-type NetworkWaterfallStore struct {
-	mu       sync.RWMutex
-	entries  ringstore.Store[types.NetworkWaterfallEntry]
-	capacity int
-	dropped  int64
-}
-
-func newNetworkWaterfallStore(capacity int) *NetworkWaterfallStore {
-	return &NetworkWaterfallStore{
-		entries:  ringstore.New[types.NetworkWaterfallEntry](capacity),
-		capacity: capacity,
-	}
-}
-
 // NetworkWaterfall returns the independently synchronized waterfall owner.
-func (s *TelemetryStore) NetworkWaterfall() *NetworkWaterfallStore {
+func (s *TelemetryStore) NetworkWaterfall() *waterfallstore.Store {
 	return s.networkWaterfall
-}
-
-// Add tags and appends resource timings at server receive time.
-func (s *NetworkWaterfallStore) Add(entries []types.NetworkWaterfallEntry, pageURL string) {
-	s.addAt(entries, pageURL, time.Now())
-}
-
-func (s *NetworkWaterfallStore) addAt(entries []types.NetworkWaterfallEntry, pageURL string, now time.Time) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for i := range entries {
-		entries[i].PageURL = pageURL
-		entries[i].Timestamp = now
-		_, overwritten := s.entries.Push(entries[i])
-		if overwritten {
-			s.dropped++
-		}
-	}
-}
-
-// Pressure returns bounded waterfall retention metrics.
-func (s *NetworkWaterfallStore) Pressure() pressure.Stats {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return pressureForRing(s.entries, s.dropped, time.Now(), func(entry types.NetworkWaterfallEntry) time.Time { return entry.Timestamp })
-}
-
-// Entries returns a detached snapshot of resource timings.
-func (s *NetworkWaterfallStore) Entries() []types.NetworkWaterfallEntry {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.entries.Snapshot()
-}
-
-// Clear removes all resource timings and returns the removed count.
-func (s *NetworkWaterfallStore) Clear() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	count := s.entries.Len()
-	s.entries.Clear()
-	return count
 }
 
 // enhancedActionEntry bundles an types.EnhancedAction with its ingestion timestamp.
@@ -152,7 +93,7 @@ type TelemetryStore struct {
 	mu                 sync.RWMutex
 	buffers            BufferStore
 	wsConnections      wsconn.Tracker
-	networkWaterfall   *NetworkWaterfallStore
+	networkWaterfall   *waterfallstore.Store
 	extension          *ExtensionRuntime
 	navigationCallback func()
 	dispatchCallback   func(func())
@@ -163,7 +104,7 @@ func newTelemetryStore(extension *ExtensionRuntime) *TelemetryStore {
 	return &TelemetryStore{
 		buffers:          newBufferStore(),
 		wsConnections:    wsconn.NewTracker(),
-		networkWaterfall: newNetworkWaterfallStore(defaultNetworkWaterfallCapacity),
+		networkWaterfall: waterfallstore.NewDefault(),
 		extension:        extension,
 		dispatchCallback: util.SafeGo,
 	}

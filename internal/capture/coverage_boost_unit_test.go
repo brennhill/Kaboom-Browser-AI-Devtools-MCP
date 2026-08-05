@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/ringstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
@@ -200,7 +201,7 @@ func TestCoverageBoost_NetworkWaterfallGetters(t *testing.T) {
 		t.Fatalf("GetNetworkWaterfallEntries() initial len = %d, want 0", len(empty))
 	}
 
-	c.telemetry.networkWaterfall = newNetworkWaterfallStore(1)
+	c.telemetry.networkWaterfall = waterfallstore.New(1)
 
 	c.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
 		{Name: "https://one.example"},

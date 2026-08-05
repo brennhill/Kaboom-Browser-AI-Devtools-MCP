@@ -58,6 +58,8 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"ExtensionReadinessTimeout =",
 		"type boundedRing[",
 		"func newBoundedRing[",
+		"type NetworkWaterfallStore struct",
+		"func newNetworkWaterfallStore(",
 		"getSettingsPath(",
 		"readSettingsData(",
 		"QueryDispatcher =",

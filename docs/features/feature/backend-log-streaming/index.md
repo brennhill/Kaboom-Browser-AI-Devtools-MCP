@@ -21,6 +21,7 @@ code_paths:
   - internal/capture/perfstore/store.go
   - internal/capture/pressure/stats.go
   - internal/capture/ringstore/store.go
+  - internal/capture/waterfallstore/store.go
   - internal/capture/extension_state.go
   - internal/capture/featureusage/observer.go
   - internal/capture/handlers.go
@@ -83,6 +84,7 @@ test_paths:
   - internal/capture/settingscache/loader_test.go
   - internal/capture/perfstore/store_test.go
   - internal/capture/ringstore/store_test.go
+  - internal/capture/waterfallstore/store_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/contracts/no-dynamic-import-background.test.js
@@ -263,11 +265,12 @@ Daemon polling and HTTP diagnostics likewise use the canonical
 `DiagnosticLogStore` returned by `Capture.DiagnosticLogs()`. It owns HTTP-field
 redaction and the bounded debug logger; the four Capture-level forwarding and
 redaction methods are deleted.
-Browser resource timings likewise live in an independently synchronized
-`NetworkWaterfallStore`, which owns page/timestamp tagging, capacity eviction,
+Browser resource timings likewise live in the independently synchronized
+`waterfallstore.Store`, which owns page/timestamp tagging, capacity eviction,
 snapshots, and clearing. All ingestion and analysis callers use
 `Capture.Telemetry().NetworkWaterfall()`; the former capture-level access,
-add/get facades, and raw waterfall buffer are deleted.
+add/get facades, raw waterfall buffer, embedded implementation, and root store
+tests are deleted.
 Waterfall timings, WebSocket events, network bodies, and enhanced actions use
 the canonical `ringstore.Store` fixed-capacity FIFO. The store owns circular
 retention and slot release while each feature owner retains its surrounding

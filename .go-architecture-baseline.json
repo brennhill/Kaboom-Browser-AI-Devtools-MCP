@@ -909,6 +909,10 @@
       "mutable_globals": 0,
       "exports": 1
     },
+    "internal/capture/waterfallstore/store.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
     "internal/capture/sync.go": {
       "mutable_globals": 0,
       "exports": 4
