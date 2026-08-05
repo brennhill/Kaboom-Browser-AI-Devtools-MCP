@@ -32,7 +32,6 @@ code_paths:
   - internal/mcp/response.go
   - internal/annotation/store.go
   - internal/annotation/store_results.go
-  - internal/annotation/store_wait.go
   - internal/tools/analyze/args_parse.go
   - internal/tools/analyze/computed_styles.go
   - internal/tools/analyze/forms.go
@@ -75,7 +74,7 @@ test_paths:
   - internal/verification/contract_test.go
   - internal/verification/evidence_test.go
   - internal/verification/store_test.go
-  - internal/annotation/draw_sessions_handler_test.go
+  - internal/annotation/store_lifecycle_test.go
   - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/tools_analyze_structured_extraction_test.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go

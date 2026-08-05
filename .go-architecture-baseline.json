@@ -799,11 +799,7 @@
     },
     "internal/annotation/store.go": {
       "mutable_globals": 0,
-      "exports": 13
-    },
-    "internal/annotation/store_clear.go": {
-      "mutable_globals": 0,
-      "exports": 2
+      "exports": 16
     },
     "internal/annotation/store_details.go": {
       "mutable_globals": 0,
@@ -820,10 +816,6 @@
     "internal/annotation/store_sessions.go": {
       "mutable_globals": 0,
       "exports": 6
-    },
-    "internal/annotation/store_wait.go": {
-      "mutable_globals": 0,
-      "exports": 1
     },
     "internal/audit/audit_query.go": {
       "mutable_globals": 0,

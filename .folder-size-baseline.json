@@ -21,7 +21,6 @@
     "gokaboom.dev/src/content/docs/articles": 35,
     "gokaboom.dev/src/content/docs/blog": 23,
     "gokaboom.dev/src/content/docs/guides": 16,
-    "internal/annotation": 18,
     "internal/capture": 61,
     "internal/hook": 18,
     "internal/hook/eval/testdata/quality-gate": 13,

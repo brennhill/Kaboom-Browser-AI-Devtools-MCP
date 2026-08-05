@@ -65,5 +65,5 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/internal/asynccommand/handler.go`
 - `internal/annotation/store.go`
 - `internal/annotation/store_results.go`
-- `internal/annotation/store_wait.go`
+- `internal/annotation/store.go`
 - `internal/schema/analyze.go`

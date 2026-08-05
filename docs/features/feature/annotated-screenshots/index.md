@@ -4,7 +4,7 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - src/content/draw-mode/lifecycle-overlay.js
   - src/content/draw-mode/input-rendering.js
@@ -15,11 +15,9 @@ code_paths:
   - scripts/build/generate-draw-mode.js
   - extension/content/draw-mode.js
   - internal/annotation/store.go
-  - internal/annotation/store_cleanup.go
   - internal/annotation/store_details.go
   - internal/annotation/store_named.go
   - internal/annotation/store_sessions.go
-  - internal/annotation/store_wait.go
   - internal/annotation/store_results.go
   - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
@@ -49,10 +47,8 @@ test_paths:
   - tests/extension/draw-mode/draw-mode.test.js
   - internal/annotation/store_test.go
   - internal/annotation/named_test.go
-  - internal/annotation/store_named_sessions_test.go
   - internal/annotation/store_lifecycle_test.go
   - internal/annotation/store_maintenance_test.go
-  - internal/annotation/draw_sessions_handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/internal/mediaapi/annotation_store_test.go
   - cmd/browser-agent/internal/mediaapi/draw_mode_http_test.go
@@ -65,8 +61,8 @@ test_paths:
   - tests/extension/contracts/entry-point-parity.test.js
   - scripts/smoke-tests/31-annotation-parity.sh
   - scripts/smoke-tests/annotation-parity-benchmark.sh
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+last_verified_version: 0.9.0
+last_verified_date: 2026-08-05
 ---
 
 # Annotated Screenshots
@@ -108,16 +104,24 @@ last_verified_date: 2026-03-05
   preserving rate limiting for uncorrelated browser uploads.
 
 ### Go (store + handler)
-- `internal/annotation/store.go` — `Detail` struct with ParentContext, Siblings, CSSFramework fields; session TTL = 2 hours
+- `internal/annotation/store.go` — canonical store state, lifecycle, cleanup,
+  reset, and wait coordination; `Detail` includes ParentContext, Siblings, and
+  CSSFramework fields; session TTL = 2 hours.
 - Store time ownership is injected through its private clock boundary. Production
   uses the wall clock, while package tests advance a controlled clock for TTL,
   draw-generation, and eviction behavior without sleeps or timing races.
-- `internal/annotation/store_clear.go` — `ClearAll()` resets anonymous sessions, named sessions, details, and waiters (used by `configure(what:"clear", buffer:"all")` to prevent stale replay)
+- `Store.ClearAll()` resets anonymous sessions, named sessions, details, and
+  waiters (used by `configure(what:"clear", buffer:"all")` to prevent stale
+  replay).
 - `internal/annotation/draw_sessions_handler.go` — persisted draw history, traversal-safe loading, and annotation-store hydration
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` — detail response enrichment, error correlation, LLM hints, and cross-project scope safety metadata (`projects`, `scope_ambiguous`, `scope_warning`, `filter_applied`)
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` — annotation retrieval, error correlation, and detail response shaping
 - `internal/annotation/store_results.go` owns the canonical filtered named-session
   page projection shared by async completion and analysis enrichment.
+- The package is exactly ten files, every file is below 800 lines, and
+  `TestPackageFileBoundary` prevents either boundary from regressing. Tests are
+  grouped by store behavior, maintenance, lifecycle/persistence, and result
+  projection—the same families that change together.
 - `cmd/browser-agent/internal/toolgenerate/annotations/visual.go` — resilient visual test generation via locator fallback candidates (`css`, `testid`, `role`, `label`, `placeholder`, `text`)
 - `cmd/browser-agent/internal/toolgenerate/annotations/handlers.go` — the three MCP entry points (`visual_test`, `annotation_report`, `annotation_issues`) and session resolution
 - Annotation artifact handlers accept the canonical `*annotation.Store`
@@ -135,7 +139,7 @@ last_verified_date: 2026-03-05
 - Annotation store tests synchronize waiters through store notifications and use
   the controlled clock for timestamp ordering and expiration; no test relies on
   `time.Sleep` for correctness.
-- `internal/annotation/draw_sessions_handler_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
+- `internal/annotation/store_lifecycle_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
 - `cmd/browser-agent/tools_analyze_annotations_test.go` — enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, hints tests
 - `internal/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
 - `cmd/browser-agent/tools_generate_annotations_test.go` — resilient locator fallback generation tests

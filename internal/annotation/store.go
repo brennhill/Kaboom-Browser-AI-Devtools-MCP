@@ -1,7 +1,8 @@
-// Purpose: Defines annotation store core types/state and constructor lifecycle.
-// Why: Keeps shared data model and initialization logic centralized for split store modules.
+// Purpose: Defines annotation store state, lifecycle, cleanup, reset, and wait coordination.
+// Why: Keeps the shared in-memory owner and its bounded lifecycle behavior atomic.
 // Docs: docs/features/feature/annotated-screenshots/index.md
 
+// Package annotation stores draw-mode sessions and their detailed DOM/style context.
 package annotation
 
 import (
@@ -167,4 +168,138 @@ func (s *Store) RegisterWaiter(correlationID string, sessionName string, urlFilt
 		AnnotSessionName: sessionName,
 		URLFilter:        urlFilter,
 	})
+}
+
+// cleanupLoop periodically removes expired sessions and detail entries.
+func (s *Store) cleanupLoop() {
+	ticker := time.NewTicker(2 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.done:
+			return
+		case <-ticker.C:
+			s.evictExpiredEntries()
+		}
+	}
+}
+
+// evictExpiredEntries removes all expired details, sessions, and named sessions.
+func (s *Store) evictExpiredEntries() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := s.now()
+	for id, entry := range s.details {
+		if now.After(entry.ExpiresAt) {
+			delete(s.details, id)
+		}
+	}
+	for tabID, entry := range s.sessions {
+		if now.After(entry.ExpiresAt) {
+			delete(s.sessions, tabID)
+		}
+	}
+	for name, entry := range s.named {
+		if now.After(entry.ExpiresAt) {
+			delete(s.named, name)
+		}
+	}
+}
+
+// ClearCounts reports how many annotation-store entries were removed by ClearAll.
+type ClearCounts struct {
+	Sessions      int
+	Details       int
+	NamedSessions int
+	Waiters       int
+}
+
+// ClearAll removes all anonymous sessions, named sessions, detail entries, and waiters.
+// It also resets draw-start time so future waits evaluate against fresh state.
+func (s *Store) ClearAll() ClearCounts {
+	type clearPlan struct {
+		counts ClearCounts
+		ch     chan struct{}
+	}
+	plan := func() clearPlan {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
+		counts := ClearCounts{
+			Sessions:      len(s.sessions),
+			Details:       len(s.details),
+			NamedSessions: len(s.named),
+			Waiters:       len(s.waiters),
+		}
+
+		s.sessions = make(map[int]*sessionEntry)
+		s.details = make(map[string]*detailEntry)
+		s.named = make(map[string]*namedSessionEntry)
+		s.waiters = nil
+		s.lastDrawStartedAt = 0
+
+		ch := s.sessionNotify
+		s.sessionNotify = make(chan struct{})
+
+		return clearPlan{counts: counts, ch: ch}
+	}()
+
+	close(plan.ch)
+	return plan.counts
+}
+
+// TakeWaiter removes and returns a pending async annotation waiter by correlation_id.
+// Returns (sessionName, urlFilter, true) when found, or ("", "", false) when missing.
+func (s *Store) TakeWaiter(correlationID string) (string, string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, w := range s.waiters {
+		if w.CorrelationID != correlationID {
+			continue
+		}
+		s.waiters = append(s.waiters[:i], s.waiters[i+1:]...)
+		return w.AnnotSessionName, w.URLFilter, true
+	}
+	return "", "", false
+}
+
+// waitForCondition blocks until checker returns non-nil, timeout, or store close.
+// Returns (result, timedOut). result is nil if timed out or store closed.
+func (s *Store) waitForCondition(timeout time.Duration, checker func() any) (any, bool) {
+	if result := checker(); result != nil {
+		return result, false
+	}
+
+	deadline := time.Now().Add(timeout)
+	for {
+		s.mu.RLock()
+		ch := s.sessionNotify
+		s.mu.RUnlock()
+
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			if result := checker(); result != nil {
+				return result, false
+			}
+			return nil, true
+		}
+
+		timer := time.NewTimer(remaining)
+		select {
+		case <-ch:
+			timer.Stop()
+			if result := checker(); result != nil {
+				return result, false
+			}
+			continue
+		case <-timer.C:
+			if result := checker(); result != nil {
+				return result, false
+			}
+			return nil, true
+		case <-s.done:
+			timer.Stop()
+			return nil, false
+		}
+	}
 }
