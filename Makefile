@@ -42,6 +42,12 @@ GO_TEST_STATE_DIR ?= /tmp/kaboom-state-test
 GO_TEST_TOOLCHAIN ?= auto
 GO_TEST_CACHE_DIR ?= /tmp/go-build-cache
 SUPPORTED_GO_TOOLCHAIN := go$(shell awk '/^go / {print $$2}' go.mod)
+GO_TOOL_BIN := $(shell go env GOBIN)
+ifeq ($(strip $(GO_TOOL_BIN)),)
+GO_TOOL_BIN := $(shell go env GOPATH)/bin
+endif
+GOSEC_BIN := $(GO_TOOL_BIN)/gosec
+GOVULNCHECK_BIN := $(GO_TOOL_BIN)/govulncheck
 
 uat:
 	./scripts/test-all-tools-comprehensive.sh --suite all
@@ -471,10 +477,10 @@ install-security-tools:
 
 security-check:
 	@echo "Running security checks..."
-	@command -v gosec >/dev/null 2>&1 || { echo "gosec $(GOSEC_VERSION) is required. Run: make install-security-tools"; exit 1; }
-	@command -v govulncheck >/dev/null 2>&1 || { echo "govulncheck $(GOVULNCHECK_VERSION) is required. Run: make install-security-tools"; exit 1; }
-	gosec -quiet -exclude=G104,G114,G204,G301,G304,G306 -severity=high ./cmd/browser-agent/... ./internal/...
-	GOTOOLCHAIN=$(SUPPORTED_GO_TOOLCHAIN) govulncheck ./cmd/browser-agent/... ./internal/...
+	@test -x "$(GOSEC_BIN)" || { echo "gosec $(GOSEC_VERSION) is required at $(GOSEC_BIN). Run: make install-security-tools"; exit 1; }
+	@test -x "$(GOVULNCHECK_BIN)" || { echo "govulncheck $(GOVULNCHECK_VERSION) is required at $(GOVULNCHECK_BIN). Run: make install-security-tools"; exit 1; }
+	"$(GOSEC_BIN)" -quiet -exclude=G104,G114,G204,G301,G304,G306 -severity=high ./cmd/browser-agent/... ./internal/...
+	GOTOOLCHAIN=$(SUPPORTED_GO_TOOLCHAIN) "$(GOVULNCHECK_BIN)" ./cmd/browser-agent/... ./internal/...
 	node --test scripts/security/check-npm-audit.test.mjs
 	node scripts/security/check-npm-audit.mjs
 	npx eslint extension/ tests/extension/

@@ -13,8 +13,9 @@ test('local, hook, docs, and CI consume one pinned Go security-tool owner', () =
 
   const installer = read('scripts/security/install-go-tools.sh')
   assert.match(installer, /source "\$SCRIPT_DIR\/go-tool-versions\.env"/)
-  assert.match(installer, /gosec@\$GOSEC_VERSION/)
-  assert.match(installer, /govulncheck@\$GOVULNCHECK_VERSION/)
+  assert.match(installer, /GO_TOOL_BIN=.*go env GOPATH/)
+  assert.match(installer, /GOBIN="\$GO_TOOL_BIN" go install "github\.com\/securego\/gosec\/v2\/cmd\/gosec@\$GOSEC_VERSION"/)
+  assert.match(installer, /GOBIN="\$GO_TOOL_BIN" go install "golang\.org\/x\/vuln\/cmd\/govulncheck@\$GOVULNCHECK_VERSION"/)
 
   const workflow = read('.github/workflows/ci.yml')
   assert.match(workflow, /scripts\/security\/install-go-tools\.sh/)
@@ -24,6 +25,11 @@ test('local, hook, docs, and CI consume one pinned Go security-tool owner', () =
   const makefile = read('Makefile')
   assert.match(makefile, /include scripts\/security\/go-tool-versions\.env/)
   assert.match(makefile, /^install-security-tools:/m)
+  assert.match(makefile, /GOSEC_BIN := \$\(GO_TOOL_BIN\)\/gosec/)
+  assert.match(makefile, /GOVULNCHECK_BIN := \$\(GO_TOOL_BIN\)\/govulncheck/)
+  assert.match(makefile, /"\$\(GOSEC_BIN\)" -quiet/)
+  assert.match(makefile, /"\$\(GOVULNCHECK_BIN\)" \.\/cmd\/browser-agent\/\.\.\. \.\/internal\/\.\.\./)
+  assert.doesNotMatch(makefile, /command -v (?:gosec|govulncheck)/)
   assert.doesNotMatch(makefile, /gosec@latest/)
 
   const docs = read('docs/DEVELOPMENT.md')

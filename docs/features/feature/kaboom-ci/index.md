@@ -55,7 +55,7 @@ test_paths:
   - internal/statediag/collector_test.go
   - scripts/ci/run-targeted-mutations.test.mjs
 last_verified_version: 0.9.0
-last_verified_date: 2026-08-03
+last_verified_date: 2026-08-05
 ---
 
 # Kaboom Ci
@@ -87,7 +87,9 @@ last_verified_date: 2026-08-03
 - Go scanner versions have one shell/Make-compatible source of truth. Local
   bootstrap, pre-commit guidance, development docs, and hosted CI consume the
   same installer; a contract test rejects direct workflow installs, `latest`,
-  and silent pre-commit security skips.
+  and silent pre-commit security skips. The installer and gate resolve Go's
+  canonical binary directory explicitly, so security checks do not depend on a
+  developer shell having `GOPATH/bin` on `PATH`.
 - The current build dependency graph has no audit exceptions. Patched direct
   tooling and narrowly pinned transitive overrides keep the complete npm audit
   clean; the empty policy remains checked in so future exceptions cannot appear
@@ -122,7 +124,9 @@ last_verified_date: 2026-08-03
 ## Code and Tests
 
 - `tests/extension/contracts/tooling-contracts.test.js` prevents hosted CI,
-  `ci-go`, the 89% threshold, and retained coverage artifacts from drifting.
+  `ci-go`, the 89% threshold, retained coverage artifacts, and the canonical
+  pinned security-tool installer from drifting. Direct workflow scanner
+  installs are rejected so there is no second version source.
 - `scripts/ci/run-fuzz-campaigns.sh` is the sole owner of both deterministic
   seed replay and nightly mutation target selection; `make fuzz-smoke` and
   `make fuzz-nightly` are the canonical local and hosted entrypoints.

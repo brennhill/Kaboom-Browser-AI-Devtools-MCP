@@ -125,12 +125,17 @@ describe('Tooling contracts', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
     const makefile = readFileSync('Makefile', 'utf8')
 
-    assert.match(workflow, /go install golang\.org\/x\/vuln\/cmd\/govulncheck@v[\d.]+/)
+    assert.match(workflow, /scripts\/security\/install-go-tools\.sh/)
+    assert.doesNotMatch(
+      workflow,
+      /go install .*\/(?:gosec|govulncheck)@/,
+      'hosted CI must consume the canonical pinned installer instead of duplicating scanner versions'
+    )
     assert.match(workflow, /name: Canonical security gate[\s\S]*run: make security-check/)
-    assert.match(makefile, /gosec[^\n]*\.\/cmd\/browser-agent\/\.\.\. \.\/internal\/\.\.\./)
+    assert.match(makefile, /"\$\(GOSEC_BIN\)"[^\n]*\.\/cmd\/browser-agent\/\.\.\. \.\/internal\/\.\.\./)
     assert.match(
       makefile,
-      /GOTOOLCHAIN=\$\(SUPPORTED_GO_TOOLCHAIN\) govulncheck \.\/cmd\/browser-agent\/\.\.\. \.\/internal\/\.\.\./
+      /GOTOOLCHAIN=\$\(SUPPORTED_GO_TOOLCHAIN\) "\$\(GOVULNCHECK_BIN\)" \.\/cmd\/browser-agent\/\.\.\. \.\/internal\/\.\.\./
     )
     assert.match(makefile, /node scripts\/security\/check-npm-audit\.mjs/)
   })
