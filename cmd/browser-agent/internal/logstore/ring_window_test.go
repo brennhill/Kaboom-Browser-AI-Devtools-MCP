@@ -4,11 +4,46 @@
 package logstore
 
 import (
+	"os"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestLogStorePackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("logstore package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
+
+// BenchmarkEntryWindowHTTPIngestBudget isolates the mutation performed for
+// each validated HTTP log entry. It should remain comfortably below the
+// repository's 0.5ms HTTP processing budget without steady-state allocations.
+func BenchmarkEntryWindowHTTPIngestBudget(b *testing.B) {
+	window := newEntryWindow(10_000)
+	now := time.Unix(10, 0)
+	entry := types.LogEntry{"level": "info", "message": "bounded ingest"}
+	for range window.entries {
+		window.append(entry, now)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		window.append(entry, now)
+	}
+}
 
 func TestEntryWindowSteadyStateAppendReusesStorage(t *testing.T) {
 	window := newEntryWindow(3)

@@ -4,7 +4,7 @@ feature_id: feature-backend-log-ingestion
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/logstore/async.go
   - cmd/browser-agent/internal/logstore/store.go
@@ -12,7 +12,6 @@ test_paths:
   - cmd/browser-agent/internal/logstore/async_test.go
   - cmd/browser-agent/internal/logstore/store_test.go
   - cmd/browser-agent/internal/logstore/ring_window_test.go
-  - cmd/browser-agent/internal/logstore/ring_window_bench_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -54,3 +53,7 @@ Persistence tests use graceful shutdown as the canonical completion barrier.
 Because the store owns one FIFO writer, a returned shutdown proves every
 accepted batch—including rotation followed by a new-file append—has completed;
 tests never infer persistence from an elapsed delay.
+The ring-window regression and its HTTP hot-path benchmark share
+`ring_window_test.go`, because they evolve with the same bounded-storage
+primitive. The package boundary test keeps the complete log-store owner set at
+ten files.
