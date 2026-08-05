@@ -22,7 +22,7 @@ func TestRecorderRecordsCanonicalAIAction(t *testing.T) {
 
 	recorder.Record("navigate", "https://example.com", map[string]any{"tab_id": 4})
 
-	actions := store.Telemetry().GetAllEnhancedActions()
+	actions := store.Telemetry().Actions().Snapshot().Actions
 	if len(actions) != 1 {
 		t.Fatalf("actions = %d, want 1", len(actions))
 	}
@@ -42,7 +42,7 @@ func TestRecorderNormalizesEnhancedActionOwnership(t *testing.T) {
 		Type: "click", Source: "browser", Timestamp: 99, Value: "kept",
 	})
 
-	got := store.Telemetry().GetAllEnhancedActions()[0]
+	got := store.Telemetry().Actions().Snapshot().Actions[0]
 	if got.Source != "ai" || got.Timestamp != 1234 || got.Value != "kept" {
 		t.Fatalf("unexpected enhanced action: %#v", got)
 	}
@@ -53,7 +53,7 @@ func TestRecorderMapsDOMPrimitiveForReproduction(t *testing.T) {
 
 	recorder.RecordDOMPrimitive("type", "#email", "person@example.com", "")
 
-	got := store.Telemetry().GetAllEnhancedActions()[0]
+	got := store.Telemetry().Actions().Snapshot().Actions[0]
 	if got.Type != "input" || got.Value != "person@example.com" || got.Source != "ai" {
 		t.Fatalf("unexpected DOM action: %#v", got)
 	}
@@ -67,7 +67,7 @@ func TestRecorderPreservesUnknownDOMPrimitive(t *testing.T) {
 
 	recorder.RecordDOMPrimitive("custom", "#target", "", "")
 
-	got := store.Telemetry().GetAllEnhancedActions()[0]
+	got := store.Telemetry().Actions().Snapshot().Actions[0]
 	if got.Type != "dom_custom" || got.Selectors["selector"] != "#target" {
 		t.Fatalf("unexpected fallback action: %#v", got)
 	}

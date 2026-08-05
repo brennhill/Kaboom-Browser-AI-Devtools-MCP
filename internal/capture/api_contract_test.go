@@ -336,7 +336,7 @@ func TestAPIContract_EnhancedActions_POSTThenRead(t *testing.T) {
 	}
 
 	// Read back via getter
-	actions := c.Telemetry().GetAllEnhancedActions()
+	actions := c.Telemetry().Actions().Snapshot().Actions
 	if len(actions) != 2 {
 		t.Errorf("Expected 2 actions after POST, got %d", len(actions))
 	}

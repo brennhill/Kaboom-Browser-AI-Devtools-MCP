@@ -34,7 +34,7 @@ sequenceDiagram
     Note over Capture: Ring buffer, 1000 max<br/>Multi-strategy selectors per action
 
     Generate->>Script: toolGetReproductionScript(args)
-    Script->>Capture: GetAllEnhancedActions()
+    Script->>Capture: Telemetry().Actions().Snapshot().Actions
     Capture-->>Script: []EnhancedAction
 
     alt output_format = "kaboom"
@@ -114,7 +114,7 @@ type ReproductionMeta struct {
 
 ##### Flow:
 1. Parse `ReproductionParams` from args
-2. Call `h.capture.GetAllEnhancedActions()`
+2. Read `h.capture.Telemetry().Actions().Snapshot().Actions`
 3. If no actions → return structured error `no_actions_captured`
 4. Apply `last_n` filter (slice from end)
 5. Dispatch to `generateKaboomScript()` or `generateReproPlaywrightScript()`
@@ -211,7 +211,7 @@ func generateReproPlaywrightScript(actions []capture.EnhancedAction, opts Reprod
 
 ### E1: No Actions Captured
 
-**Trigger:** `GetAllEnhancedActions()` returns empty slice.
+**Trigger:** `Actions().Snapshot().Actions` returns an empty slice.
 **Resolution:** Return structured error `no_actions_captured` with hint: "Interact with the page first, then retry."
 
 ### E2: All Selectors Missing

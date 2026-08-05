@@ -15,7 +15,7 @@ import (
 // HandlePRSummary generates a PR markdown summary from captured session data.
 func HandlePRSummary(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	cap := d.Capture
-	actions := cap.Telemetry().GetAllEnhancedActions()
+	actions := cap.Telemetry().Actions().Snapshot().Actions
 	completedCmds := cap.Queries().GetCompletedCommands()
 	failedCmds := cap.Queries().GetFailedCommands()
 	logs := cap.ExtensionLogs().Entries()

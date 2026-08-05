@@ -125,7 +125,7 @@ func TestNavigationCallback_FiredOutsideLock(t *testing.T) {
 	called := false
 	c.Telemetry().SetNavigationCallback(func() {
 		// This would deadlock if callback ran while the telemetry owner held its lock.
-		count := len(c.Telemetry().GetAllEnhancedActions())
+		count := len(c.Telemetry().Actions().Snapshot().Actions)
 		if count == 0 {
 			t.Error("expected actions to be stored before callback fires")
 		}

@@ -632,7 +632,7 @@ func buildTestGenerationDeps(h *ToolHandler) testgenhandler.Deps {
 			if h.capture == nil {
 				return nil
 			}
-			return h.capture.Telemetry().GetAllEnhancedActions()
+			return h.capture.Telemetry().Actions().Snapshot().Actions
 		},
 		NetworkBodies: func() []types.NetworkBody {
 			if h.capture == nil {

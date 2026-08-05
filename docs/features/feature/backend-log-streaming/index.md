@@ -13,6 +13,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/netrecord/state.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/filters.go
   - internal/capture/accessors.go
+  - internal/capture/actionstore/store.go
   - internal/capture/bodystore/store.go
   - internal/capture/capture.go
   - internal/capture/clientstore/owner.go
@@ -82,6 +83,7 @@ code_paths:
   - src/lib/page/safe-global-patch.ts
 test_paths:
   - internal/capture/clientstore/owner_test.go
+  - internal/capture/actionstore/store_test.go
   - internal/capture/bodystore/store_test.go
   - internal/capture/settingscache/loader_test.go
   - internal/capture/perfstore/store_test.go
@@ -280,6 +282,11 @@ lock and counters; steady-state eviction therefore overwrites the oldest slot
 without allocating or copying the retained window. The former private ring
 implementation and root-level tests are deleted rather than retained as a
 parallel storage surface.
+Enhanced actions live in the independently synchronized `actionstore.Store`,
+which owns navigation signaling, deep selector cloning, bounded retention,
+timestamps, allocation-free statistics, detached evidence, pressure, and
+clearing. Consumers use `Capture.Telemetry().Actions()` directly; the two
+Telemetry forwarding methods and shared buffer fields are deleted.
 Network bodies live in the independently synchronized `bodystore.Store`, which
 owns bounded retention, deep cloning, error and ingestion totals, timestamps,
 memory-pressure eviction, snapshots, and clearing. Consumers use

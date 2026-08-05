@@ -68,7 +68,7 @@ func Snapshot(logs Logs, captured Capture) http.HandlerFunc {
 			Logs:            entries,
 			WebSocket:       wsEvents,
 			NetworkBodies:   networkBodies,
-			EnhancedActions: captured.Telemetry().GetAllEnhancedActions(),
+			EnhancedActions: captured.Telemetry().Actions().Snapshot().Actions,
 			Stats:           ComputeSnapshotStats(entries, wsEvents, networkBodies),
 		})
 	}

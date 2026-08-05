@@ -92,7 +92,7 @@ func TestCaptureTestHelpersAndTTL(t *testing.T) {
 	if got := c.Telemetry().GetWebSocketTotalAdded(); got != 1 {
 		t.Fatalf("GetWebSocketTotalAdded() = %d, want 1", got)
 	}
-	if got := c.Telemetry().GetActionTotalAdded(); got != 1 {
+	if got := c.Telemetry().Actions().Stats().TotalAdded; got != 1 {
 		t.Fatalf("GetActionTotalAdded() = %d, want 1", got)
 	}
 

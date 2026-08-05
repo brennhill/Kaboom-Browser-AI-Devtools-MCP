@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/actionstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/bodystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
@@ -25,9 +26,7 @@ import (
 )
 
 const (
-	maxWSEvents        = 500
-	maxEnhancedActions = 1000
-
+	maxWSEvents         = 500
 	defaultWSLimit      = 50
 	defaultBodyLimit    = 20
 	wsBufferMemoryLimit = 4 * 1024 * 1024
@@ -47,13 +46,10 @@ func (s *TelemetryStore) NetworkWaterfall() *waterfallstore.Store {
 // NetworkBodies returns the independently synchronized HTTP body owner.
 func (s *TelemetryStore) NetworkBodies() *bodystore.Store { return s.networkBodies }
 
-// enhancedActionEntry bundles an types.EnhancedAction with its ingestion timestamp.
-type enhancedActionEntry struct {
-	Action  types.EnhancedAction
-	AddedAt time.Time
-}
+// Actions returns the independently synchronized enhanced-action owner.
+func (s *TelemetryStore) Actions() *actionstore.Store { return s.actions }
 
-// BufferStore holds the in-memory rings used for event/body/action capture.
+// BufferStore holds the WebSocket event ring and its change-coupled counters.
 // Its owning TelemetryStore supplies synchronization.
 type BufferStore struct {
 	// WebSocket event buffer state.
@@ -61,11 +57,6 @@ type BufferStore struct {
 	wsTotalAdded  int64
 	wsMemoryTotal int64
 	wsDropped     int64
-
-	// Enhanced action buffer state.
-	enhancedActions  ringstore.Store[enhancedActionEntry]
-	actionTotalAdded int64
-	actionDropped    int64
 }
 
 // TelemetryPressure is the bounded retention state for disposable browser telemetry.
@@ -81,6 +72,7 @@ type TelemetryPressure struct {
 type TelemetryStore struct {
 	mu                 sync.RWMutex
 	buffers            BufferStore
+	actions            *actionstore.Store
 	networkBodies      *bodystore.Store
 	wsConnections      wsconn.Tracker
 	networkWaterfall   *waterfallstore.Store
@@ -93,6 +85,7 @@ type TelemetryStore struct {
 func newTelemetryStore(extension *ExtensionRuntime) *TelemetryStore {
 	return &TelemetryStore{
 		buffers:          newBufferStore(),
+		actions:          actionstore.NewDefault(),
 		networkBodies:    bodystore.NewDefault(),
 		wsConnections:    wsconn.NewTracker(),
 		networkWaterfall: waterfallstore.NewDefault(),
@@ -110,8 +103,7 @@ func (s *TelemetryStore) SetNavigationCallback(callback func()) {
 
 func newBufferStore() BufferStore {
 	return BufferStore{
-		wsEvents:        ringstore.New[wsEventEntry](maxWSEvents),
-		enhancedActions: ringstore.New[enhancedActionEntry](maxEnhancedActions),
+		wsEvents: ringstore.New[wsEventEntry](maxWSEvents),
 	}
 }
 
@@ -122,17 +114,6 @@ func (s *BufferStore) webSocketTimestamps() []time.Time {
 	out := make([]time.Time, s.wsEvents.Len())
 	for i := range out {
 		out[i] = s.wsEvents.At(i).AddedAt
-	}
-	return out
-}
-
-func (s *BufferStore) actionTimestamps() []time.Time {
-	if s.enhancedActions.Len() == 0 {
-		return []time.Time{}
-	}
-	out := make([]time.Time, s.enhancedActions.Len())
-	for i := range out {
-		out[i] = s.enhancedActions.At(i).AddedAt
 	}
 	return out
 }
@@ -148,50 +129,14 @@ func (s *BufferStore) webSocketEventsCopy() []types.WebSocketEvent {
 	return out
 }
 
-func (s *BufferStore) enhancedActionsCopy() []types.EnhancedAction {
-	if s.enhancedActions.Len() == 0 {
-		return []types.EnhancedAction{}
-	}
-	out := make([]types.EnhancedAction, s.enhancedActions.Len())
-	for i := range out {
-		out[i] = cloneEnhancedAction(s.enhancedActions.At(i).Action)
-	}
-	return out
-}
-
 func (s *BufferStore) clearWebSocketBuffers() {
 	s.wsEvents.Clear()
 	s.wsTotalAdded = 0
 	s.wsMemoryTotal = 0
 }
 
-func (s *BufferStore) clearActionBuffers() {
-	s.enhancedActions.Clear()
-	s.actionTotalAdded = 0
-}
-
 func (s *BufferStore) clearAllEventBuffers() {
 	s.clearWebSocketBuffers()
-	s.clearActionBuffers()
-}
-
-func (s *BufferStore) appendEnhancedActions(actions []types.EnhancedAction, now time.Time) bool {
-	s.actionTotalAdded += int64(len(actions))
-	hasNavigation := false
-	for i := range actions {
-		action := cloneEnhancedAction(actions[i])
-		_, overwritten := s.enhancedActions.Push(enhancedActionEntry{
-			Action:  action,
-			AddedAt: now,
-		})
-		if overwritten {
-			s.actionDropped++
-		}
-		if actions[i].Type == "navigation" {
-			hasNavigation = true
-		}
-	}
-	return hasNavigation
 }
 
 func (s *BufferStore) appendWebSocketEvents(events []types.WebSocketEvent, now time.Time, onEvent func(types.WebSocketEvent)) {
@@ -233,12 +178,13 @@ func (s *BufferStore) evictWebSocketForMemory() {
 // Pressure returns count, capacity, cumulative drops, and oldest age for each stream.
 func (s *TelemetryStore) Pressure() TelemetryPressure {
 	network := s.networkBodies.Stats().Pressure
+	actions := s.actions.Stats().Pressure
 	s.mu.RLock()
 	now := time.Now()
 	pressure := TelemetryPressure{
 		Network:   network,
 		WebSocket: pressureForRing(s.buffers.wsEvents, s.buffers.wsDropped, now, func(entry wsEventEntry) time.Time { return entry.AddedAt }),
-		Actions:   pressureForRing(s.buffers.enhancedActions, s.buffers.actionDropped, now, func(entry enhancedActionEntry) time.Time { return entry.AddedAt }),
+		Actions:   actions,
 	}
 	s.mu.RUnlock()
 	pressure.NetworkWaterfall = s.networkWaterfall.Pressure()
@@ -261,22 +207,13 @@ func (s *BufferStore) webSocketTotal() int64 {
 	return s.wsTotalAdded
 }
 
-func (s *BufferStore) actionTotal() int64 {
-	return s.actionTotalAdded
-}
-
 func (s *BufferStore) webSocketCount() int {
 	return s.wsEvents.Len()
 }
 
-func (s *BufferStore) actionCount() int {
-	return s.enhancedActions.Len()
-}
-
 const (
 	// Per-entry memory estimates
-	wsEventOverhead   = 200 // bytes overhead per WS event
-	actionMemoryFixed = 500 // bytes per enhanced action (fixed estimate)
+	wsEventOverhead = 200 // bytes overhead per WS event
 )
 
 // ============================================
@@ -334,21 +271,6 @@ func (s *TelemetryStore) ClearWebSocketBuffers() types.BufferClearCounts {
 	return counts
 }
 
-// ClearActionBuffer resets action telemetry ring and counters.
-func (s *TelemetryStore) ClearActionBuffer() types.BufferClearCounts {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	counts := types.BufferClearCounts{
-		Actions: s.buffers.enhancedActions.Len(),
-	}
-
-	// Clear actions buffer
-	s.buffers.clearActionBuffers()
-
-	return counts
-}
-
 // StateResetter owns the coordinated reset of capture runtime stores.
 type StateResetter struct {
 	extension     *ExtensionRuntime
@@ -382,6 +304,7 @@ func (s *TelemetryStore) clearAll() {
 	s.wsConnections.Clear()
 	s.mu.Unlock()
 	s.networkBodies.Clear()
+	s.actions.Clear()
 	s.networkWaterfall.Clear()
 }
 
@@ -526,19 +449,17 @@ func (s *TelemetryStore) AddEnhancedActions(actions []types.EnhancedAction) {
 	activeTestIDs := s.extension.GetActiveTestIDs()
 	prepared := make([]types.EnhancedAction, len(actions))
 	copy(prepared, actions)
-	navigationCallback := func() func() {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		for i := range prepared {
-			prepared[i].TestIDs = append([]string(nil), activeTestIDs...)
-		}
-		if s.buffers.appendEnhancedActions(prepared, time.Now()) {
-			return s.navigationCallback
-		}
-		return nil
-	}()
+	for i := range prepared {
+		prepared[i].TestIDs = append([]string(nil), activeTestIDs...)
+	}
+	if !s.actions.Add(prepared, time.Now()) {
+		return
+	}
+	s.mu.RLock()
+	navigationCallback := s.navigationCallback
+	dispatch := s.dispatchCallback
+	s.mu.RUnlock()
 	if navigationCallback != nil {
-		s.dispatchCallback(navigationCallback)
+		dispatch(navigationCallback)
 	}
 }

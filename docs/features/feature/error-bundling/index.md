@@ -11,6 +11,7 @@ code_paths:
   - src/lib/page/exceptions.ts
   - src/inject/api.ts
   - internal/capture/bodystore/store.go
+  - internal/capture/actionstore/store.go
 test_paths:
   - tests/extension/ai-context/ai-context-fixture.js
   - tests/extension/ai-context/ai-context-frameworks.test.js
@@ -20,6 +21,7 @@ test_paths:
   - tests/extension/ai-context/ai-context-enrichment.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
   - internal/capture/bodystore/store_test.go
+  - internal/capture/actionstore/store_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

@@ -217,7 +217,7 @@ configure({what: "clear", buffer: "network"})
 
 - Add `ClearNetworkBuffers()` method to Capture
 - Add `ClearWebSocketBuffers()` method to Capture
-- Add `ClearActionBuffer()` method to Capture
+- Clear enhanced actions through the canonical `Telemetry().Actions()` owner
 - Update MCP tool description
 
 ### Not Required
@@ -265,7 +265,7 @@ func TestClearAllBuffers(t *testing.T) {
 	// Verify all buffers are empty
 	assert.Equal(t, 0, len(capture.networkWaterfall))
 	assert.Equal(t, 0, len(capture.wsEvents))
-	assert.Equal(t, 0, len(capture.enhancedActions))
+	assert.Equal(t, 0, capture.Telemetry().Actions().Stats().Count)
 	// ...
 }
 ```

@@ -1,3 +1,4 @@
+// testhelpers_test.go — Provides focused test-generation handler dependencies.
 package testgenhandler
 
 import (
@@ -15,8 +16,10 @@ type fakeDeps struct {
 
 func (f *fakeDeps) handlerDeps() Deps {
 	return Deps{
-		LogEntries:      func() []types.LogEntry { return f.entries },
-		EnhancedActions: f.cap.Telemetry().GetAllEnhancedActions,
+		LogEntries: func() []types.LogEntry { return f.entries },
+		EnhancedActions: func() []types.EnhancedAction {
+			return f.cap.Telemetry().Actions().Snapshot().Actions
+		},
 		NetworkBodies: func() []types.NetworkBody {
 			return f.cap.Telemetry().NetworkBodies().Snapshot().Bodies
 		},

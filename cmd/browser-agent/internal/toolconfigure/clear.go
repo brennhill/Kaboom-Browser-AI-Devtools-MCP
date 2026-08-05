@@ -64,8 +64,7 @@ func clearBuffer(targets ClearTargets, buffer string) (any, bool) {
 		counts := targets.Capture.Telemetry().ClearWebSocketBuffers()
 		return map[string]int{"events": counts.WebSocketEvents, "connections": counts.WebSocketStatus}, true
 	case "actions":
-		counts := targets.Capture.Telemetry().ClearActionBuffer()
-		return map[string]int{"actions": counts.Actions}, true
+		return map[string]int{"actions": targets.Capture.Telemetry().Actions().Clear()}, true
 	case "logs":
 		return map[string]int{"logs": targets.ClearLogs()}, true
 	case "inbox":

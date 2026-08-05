@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/bodystore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/ringstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
@@ -120,20 +119,18 @@ func TestCoverageBoost_PublicMemoryAndBufferGetters(t *testing.T) {
 func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 	c := newCoverageCapture(t)
 
-	c.telemetry.mu.Lock()
 	now := time.Now()
-	c.telemetry.buffers.enhancedActions = ringstore.New[enhancedActionEntry](maxEnhancedActions)
-	c.telemetry.buffers.enhancedActions.Push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
-	c.telemetry.buffers.enhancedActions.Push(enhancedActionEntry{Action: types.EnhancedAction{Type: "click"}, AddedAt: now})
+	c.Telemetry().Actions().Add([]types.EnhancedAction{{Type: "click"}, {Type: "click"}}, now)
+	c.telemetry.mu.Lock()
 	c.extension.state.activeTestIDs["test-1"] = true
 	c.telemetry.mu.Unlock()
 
 	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "type", Value: "hello"}})
-	if got := len(c.Telemetry().GetAllEnhancedActions()); got != 3 {
+	if got := len(c.Telemetry().Actions().Snapshot().Actions); got != 3 {
 		t.Fatalf("GetEnhancedActionCount() = %d, want 3 after add", got)
 	}
 
-	actions := c.Telemetry().GetAllEnhancedActions()
+	actions := c.Telemetry().Actions().Snapshot().Actions
 	if len(actions) == 0 {
 		t.Fatal("GetAllEnhancedActions() returned empty actions")
 	}
@@ -142,13 +139,13 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 		t.Fatalf("last action TestIDs = %+v, want [test-1]", last.TestIDs)
 	}
 
-	many := make([]types.EnhancedAction, maxEnhancedActions+5)
+	many := make([]types.EnhancedAction, actionCapacity(c)+5)
 	for i := range many {
 		many[i] = types.EnhancedAction{Type: "click"}
 	}
 	c.Telemetry().AddEnhancedActions(many)
-	if got := len(c.Telemetry().GetAllEnhancedActions()); got != maxEnhancedActions {
-		t.Fatalf("GetEnhancedActionCount() after rotation = %d, want %d", got, maxEnhancedActions)
+	if got := len(c.Telemetry().Actions().Snapshot().Actions); got != actionCapacity(c) {
+		t.Fatalf("GetEnhancedActionCount() after rotation = %d, want %d", got, actionCapacity(c))
 	}
 }
 

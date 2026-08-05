@@ -9,6 +9,7 @@ code_paths:
   - internal/pagination/pagination.go
   - internal/pagination/entries.go
   - internal/types/wire_log.go
+  - internal/capture/actionstore/store.go
   - Makefile
 test_paths:
   - internal/pagination/pagination_test.go
@@ -17,6 +18,7 @@ test_paths:
   - internal/pagination/entries_websocket_test.go
   - internal/pagination/pagination_bench_test.go
   - internal/pagination/test_helpers_test.go
+  - internal/capture/actionstore/store_test.go
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
 ---
@@ -56,6 +58,9 @@ last_verified_date: 2026-08-04
 - Action and WebSocket pagination tests consume `internal/types.EnhancedAction`
   and `internal/types.WebSocketEvent` directly; pagination does not re-export
   canonical entry contracts.
+- Action pagination receives one coherent action snapshot and monotonic total
+  from `capture.Telemetry().Actions()` so evidence and sequence metadata cannot
+  be read through separate compatibility surfaces.
 - Cursor construction uses direct integer formatting rather than general
   formatting, keeping the hot path below its 500 ns budget. Wall-clock cursor
   SLOs run through `make test-performance` with package and test parallelism

@@ -523,7 +523,7 @@
     },
     "cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go": {
       "mutable_globals": 0,
-      "exports": 2
+      "exports": 1
     },
     "cmd/browser-agent/internal/toolconfigure/netrecord/state.go": {
       "mutable_globals": 0,
@@ -863,7 +863,11 @@
     },
     "internal/capture/accessors.go": {
       "mutable_globals": 0,
-      "exports": 13
+      "exports": 8
+    },
+    "internal/capture/actionstore/store.go": {
+      "mutable_globals": 0,
+      "exports": 9
     },
     "internal/capture/bodystore/store.go": {
       "mutable_globals": 0,
@@ -879,7 +883,7 @@
     },
     "internal/capture/events.go": {
       "mutable_globals": 0,
-      "exports": 24
+      "exports": 20
     },
     "internal/capture/extension_state.go": {
       "mutable_globals": 0,
@@ -913,13 +917,13 @@
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/capture/waterfallstore/store.go": {
-      "mutable_globals": 0,
-      "exports": 7
-    },
     "internal/capture/sync.go": {
       "mutable_globals": 0,
       "exports": 4
+    },
+    "internal/capture/waterfallstore/store.go": {
+      "mutable_globals": 0,
+      "exports": 7
     },
     "internal/capture/wire_sync.go": {
       "mutable_globals": 0,
@@ -1689,10 +1693,6 @@
       "mutable_globals": 0,
       "exports": 4
     },
-    "internal/tools/observe/errorcluster/cluster.go": {
-      "mutable_globals": 0,
-      "exports": 1
-    },
     "internal/tools/observe/core/filtering.go": {
       "mutable_globals": 0,
       "exports": 3
@@ -1700,6 +1700,10 @@
     "internal/tools/observe/core/metadata.go": {
       "mutable_globals": 0,
       "exports": 4
+    },
+    "internal/tools/observe/errorcluster/cluster.go": {
+      "mutable_globals": 0,
+      "exports": 1
     },
     "internal/tools/observe/hints/hints.go": {
       "mutable_globals": 0,

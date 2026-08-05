@@ -362,7 +362,7 @@ observe({what: "logs", after_cursor: 500, limit: 100})
 - ✅ Efficient (no re-indexing)
 
 #### Implementation:
-- Use existing monotonic counters: `logTotalAdded`, `wsTotalAdded`, `actionTotalAdded`
+- Use canonical monotonic counters, including `Telemetry().Actions().Stats().TotalAdded`
 - Add `cursor` and `after_cursor` parameters
 - Keep offset/limit for backward compatibility (static data like network_waterfall)
 

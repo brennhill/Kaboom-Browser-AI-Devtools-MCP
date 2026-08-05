@@ -100,8 +100,8 @@ func TestClearWebSocketBuffers(t *testing.T) {
 	capture.telemetry.mu.RUnlock()
 }
 
-// TestClearActionBuffer verifies clearing enhancedActions buffer.
-func TestClearActionBuffer(t *testing.T) {
+// TestActionStoreClear verifies clearing the canonical enhanced-action owner.
+func TestActionStoreClear(t *testing.T) {
 	t.Parallel()
 	capture := setupTestCapture(t)
 
@@ -112,19 +112,17 @@ func TestClearActionBuffer(t *testing.T) {
 	})
 
 	// Clear
-	counts := capture.Telemetry().ClearActionBuffer()
+	cleared := capture.Telemetry().Actions().Clear()
 
 	// Verify counts
-	if counts.Actions != 2 {
-		t.Errorf("Expected Actions count = 2, got %d", counts.Actions)
+	if cleared != 2 {
+		t.Errorf("Expected cleared count = 2, got %d", cleared)
 	}
 
 	// Verify buffer empty
-	capture.telemetry.mu.RLock()
-	if capture.telemetry.buffers.enhancedActions.Len() != 0 {
-		t.Errorf("Expected enhancedActions to be empty, got %d entries", capture.telemetry.buffers.enhancedActions.Len())
+	if count := capture.Telemetry().Actions().Stats().Count; count != 0 {
+		t.Errorf("Expected enhancedActions to be empty, got %d entries", count)
 	}
-	capture.telemetry.mu.RUnlock()
 }
 
 // TestClearAllCapture verifies clearing all capture buffers at once.
@@ -159,7 +157,7 @@ func TestClearAllCapture(t *testing.T) {
 	if capture.telemetry.buffers.wsEvents.Len() != 0 {
 		t.Error("Expected wsEvents to be empty")
 	}
-	if capture.telemetry.buffers.enhancedActions.Len() != 0 {
+	if capture.Telemetry().Actions().Stats().Count != 0 {
 		t.Error("Expected enhancedActions to be empty")
 	}
 	if logs := capture.ExtensionLogs().Entries(); len(logs) != 0 {

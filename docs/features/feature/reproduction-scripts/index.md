@@ -4,7 +4,7 @@ feature_id: feature-reproduction-scripts
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
@@ -14,6 +14,7 @@ code_paths:
   - internal/reproduction/reproduction_selectors.go
   - internal/reproduction/reproduction_utils.go
   - src/lib/page/reproduction.ts
+  - internal/capture/actionstore/store.go
 test_paths:
   - cmd/browser-agent/reproduction_test.go
   - internal/reproduction/reproduction_test.go
@@ -22,6 +23,7 @@ test_paths:
   - tests/extension/reproduction/reproduction-script-fixture.js
   - tests/extension/reproduction/reproduction-script-generation.test.js
   - tests/extension/reproduction/reproduction-script.test.js
+  - internal/capture/actionstore/store_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -54,3 +56,5 @@ last_verified_date: 2026-03-05
   composition rather than a ToolHandler-satisfied host interface.
 - Page-side reproduction capture: `src/lib/page/reproduction.ts`
 - Go behavior coverage: `cmd/browser-agent/reproduction_test.go`
+- Reproduction evidence reads a detached snapshot from the canonical enhanced-
+  action store; the capture root does not provide an action forwarding API.

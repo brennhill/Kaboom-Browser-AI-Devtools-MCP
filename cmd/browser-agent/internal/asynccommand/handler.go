@@ -72,7 +72,7 @@ func (h *Handler) AttachTransientElements(responseData map[string]any, since tim
 	if h == nil || responseData == nil {
 		return
 	}
-	asyncresult.AttachTransientElements(responseData, h.deps.Capture.Telemetry().GetAllEnhancedActions(), since)
+	asyncresult.AttachTransientElements(responseData, h.deps.Capture.Telemetry().Actions().Snapshot().Actions, since)
 }
 
 func (h *Handler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {

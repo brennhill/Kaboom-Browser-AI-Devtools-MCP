@@ -21,57 +21,11 @@ func cloneWebSocketEvent(event types.WebSocketEvent) types.WebSocketEvent {
 	return event
 }
 
-func cloneEnhancedAction(action types.EnhancedAction) types.EnhancedAction {
-	if action.Selectors != nil {
-		selectors := make(map[string]any, len(action.Selectors))
-		for key, value := range action.Selectors {
-			selectors[key] = cloneSelectorValue(value)
-		}
-		action.Selectors = selectors
-	}
-	action.TestIDs = append([]string(nil), action.TestIDs...)
-	return action
-}
-
-func cloneSelectorValue(value any) any {
-	switch typed := value.(type) {
-	case map[string]any:
-		clone := make(map[string]any, len(typed))
-		for key, child := range typed {
-			clone[key] = cloneSelectorValue(child)
-		}
-		return clone
-	case []any:
-		clone := make([]any, len(typed))
-		for index, child := range typed {
-			clone[index] = cloneSelectorValue(child)
-		}
-		return clone
-	case map[string]string:
-		clone := make(map[string]string, len(typed))
-		for key, child := range typed {
-			clone[key] = child
-		}
-		return clone
-	case []string:
-		return append([]string(nil), typed...)
-	default:
-		return value
-	}
-}
-
 // GetWebSocketTotalAdded returns the monotonic total of WebSocket events ever added
 func (s *TelemetryStore) GetWebSocketTotalAdded() int64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.buffers.webSocketTotal()
-}
-
-// GetActionTotalAdded returns the monotonic total of actions ever added
-func (s *TelemetryStore) GetActionTotalAdded() int64 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.buffers.actionTotal()
 }
 
 // TelemetrySnapshot is an immutable point-in-time view of event-store counters.
@@ -97,19 +51,20 @@ type TelemetrySnapshot struct {
 // - Snapshot can be stale immediately after return; callers should treat it as diagnostic-only.
 func (s *TelemetryStore) GetSnapshot() TelemetrySnapshot {
 	network := s.networkBodies.Stats()
+	actions := s.actions.Stats()
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	return TelemetrySnapshot{
 		NetworkTotalAdded:   network.TotalAdded,
 		WebSocketTotalAdded: s.buffers.webSocketTotal(),
-		ActionTotalAdded:    s.buffers.actionTotal(),
+		ActionTotalAdded:    actions.TotalAdded,
 		NetworkCount:        network.Count,
 		WebSocketCount:      s.buffers.webSocketCount(),
-		ActionCount:         s.buffers.actionCount(),
+		ActionCount:         actions.Count,
 		NetworkCapacity:     network.Pressure.Capacity,
 		WebSocketCapacity:   s.buffers.wsEvents.Capacity(),
-		ActionCapacity:      s.buffers.enhancedActions.Capacity(),
+		ActionCapacity:      actions.Capacity,
 		ConnectionCount:     s.wsConnections.Count(),
 	}
 }
@@ -194,11 +149,4 @@ func (s *TelemetryStore) GetAllWebSocketEvents() []types.WebSocketEvent {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.buffers.webSocketEventsCopy()
-}
-
-// GetAllEnhancedActions returns a copy of all enhanced actions slice (thread-safe)
-func (s *TelemetryStore) GetAllEnhancedActions() []types.EnhancedAction {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.buffers.enhancedActionsCopy()
 }

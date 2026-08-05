@@ -137,7 +137,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 					// Read from all three buffers
 					_ = c.Telemetry().GetAllWebSocketEvents()
 					_ = c.Telemetry().NetworkBodies().Snapshot().Bodies
-					_ = c.Telemetry().GetAllEnhancedActions()
+					_ = c.Telemetry().Actions().Snapshot().Actions
 
 					// Yield to allow writers to interleave
 					if i%5 == 0 {
@@ -154,7 +154,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 		// Verify final state invariants
 		wsEvents := c.Telemetry().GetAllWebSocketEvents()
 		networkBodies := c.Telemetry().NetworkBodies().Snapshot().Bodies
-		actions := c.Telemetry().GetAllEnhancedActions()
+		actions := c.Telemetry().Actions().Snapshot().Actions
 
 		// Buffer capacity bounds must hold
 		if len(wsEvents) > maxWSEvents {
@@ -164,8 +164,9 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 		if len(networkBodies) > networkCapacity {
 			t.Errorf("Network bodies %d exceeds capacity %d", len(networkBodies), networkCapacity)
 		}
-		if len(actions) > maxEnhancedActions {
-			t.Errorf("Enhanced actions %d exceeds maxEnhancedActions %d", len(actions), maxEnhancedActions)
+		actionCapacity := c.Telemetry().Actions().Stats().Capacity
+		if len(actions) > actionCapacity {
+			t.Errorf("Enhanced actions %d exceeds capacity %d", len(actions), actionCapacity)
 		}
 
 		// With no clears, buffers must not be empty (we wrote plenty of data)
@@ -258,7 +259,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 					case 1:
 						_ = c.Telemetry().NetworkBodies().Snapshot().Bodies
 					case 2:
-						_ = c.Telemetry().GetAllEnhancedActions()
+						_ = c.Telemetry().Actions().Snapshot().Actions
 					}
 					runtime.Gosched()
 				}
@@ -284,7 +285,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 		// Verify buffers are in valid state after concurrent clears
 		wsEvents := c.Telemetry().GetAllWebSocketEvents()
 		networkBodies := c.Telemetry().NetworkBodies().Snapshot().Bodies
-		actions := c.Telemetry().GetAllEnhancedActions()
+		actions := c.Telemetry().Actions().Snapshot().Actions
 
 		// Capacity bounds must hold even with concurrent clears
 		if len(wsEvents) > maxWSEvents {
@@ -294,8 +295,9 @@ func TestStressCaptureWithClears(t *testing.T) {
 		if len(networkBodies) > networkCapacity {
 			t.Errorf("Network bodies %d exceeds capacity %d after clears", len(networkBodies), networkCapacity)
 		}
-		if len(actions) > maxEnhancedActions {
-			t.Errorf("Actions %d exceeds maxEnhancedActions %d after clears", len(actions), maxEnhancedActions)
+		actionCapacity := c.Telemetry().Actions().Stats().Capacity
+		if len(actions) > actionCapacity {
+			t.Errorf("Actions %d exceeds capacity %d after clears", len(actions), actionCapacity)
 		}
 
 		// Snapshot must be consistent with buffer contents

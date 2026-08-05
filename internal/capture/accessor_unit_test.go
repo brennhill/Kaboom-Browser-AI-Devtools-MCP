@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/actionstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/bodystore"
 	pressuremetrics "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/waterfallstore"
@@ -22,7 +23,7 @@ func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
 
 	if len(c.Telemetry().NetworkBodies().Snapshot().Timestamps) != 0 ||
 		len(c.telemetry.buffers.webSocketTimestamps()) != 0 ||
-		len(c.telemetry.buffers.actionTimestamps()) != 0 {
+		len(c.Telemetry().Actions().Snapshot().Timestamps) != 0 {
 		t.Fatal("new capture should return empty timestamp slices")
 	}
 
@@ -60,9 +61,9 @@ func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
 		t.Fatal("GetAllWebSocketEvents should return a copied slice")
 	}
 
-	actions := c.Telemetry().GetAllEnhancedActions()
+	actions := c.Telemetry().Actions().Snapshot().Actions
 	actions[0].Type = "mutated"
-	if fresh := c.Telemetry().GetAllEnhancedActions()[0].Type; fresh == "mutated" {
+	if fresh := c.Telemetry().Actions().Snapshot().Actions[0].Type; fresh == "mutated" {
 		t.Fatal("GetAllEnhancedActions should return a copied slice")
 	}
 
@@ -98,7 +99,7 @@ func TestCaptureNestedSnapshotsDetachAtIngestAndRead(t *testing.T) {
 
 	storedBodies := c.Telemetry().NetworkBodies().Snapshot().Bodies
 	storedEvents := c.Telemetry().GetAllWebSocketEvents()
-	storedActions := c.Telemetry().GetAllEnhancedActions()
+	storedActions := c.Telemetry().Actions().Snapshot().Actions
 	if storedBodies[0].ResponseHeaders["x-test"] != "original" || storedBodies[0].TestIDs[0] != "test-original" {
 		t.Fatalf("network body retained caller-owned nested state: %+v", storedBodies[0])
 	}
@@ -118,7 +119,7 @@ func TestCaptureNestedSnapshotsDetachAtIngestAndRead(t *testing.T) {
 	if c.Telemetry().GetAllWebSocketEvents()[0].Sampled.Rate != "1:1" {
 		t.Fatal("WebSocket snapshot aliases retained sampling metadata")
 	}
-	if c.Telemetry().GetAllEnhancedActions()[0].Selectors["css"] != "#original" {
+	if c.Telemetry().Actions().Snapshot().Actions[0].Selectors["css"] != "#original" {
 		t.Fatal("enhanced action snapshot aliases retained selectors")
 	}
 }
@@ -128,9 +129,10 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	now := time.Now().Add(-2 * time.Second)
 	c.telemetry.networkBodies = bodystore.New(100, 8*1024*1024)
 	c.telemetry.networkBodies.Add(make([]types.NetworkBody, 103), now)
+	c.telemetry.actions = actionstore.New(1000)
+	c.telemetry.actions.Add(make([]types.EnhancedAction, 1001), now)
 	c.telemetry.mu.Lock()
 	c.telemetry.buffers.appendWebSocketEvents(make([]types.WebSocketEvent, maxWSEvents+2), now, nil)
-	c.telemetry.buffers.appendEnhancedActions(make([]types.EnhancedAction, maxEnhancedActions+1), now)
 	c.telemetry.mu.Unlock()
 
 	pressure := c.Telemetry().Pressure()
@@ -142,7 +144,7 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	}
 	assertPressure("network", pressure.Network, 100, 3)
 	assertPressure("websocket", pressure.WebSocket, maxWSEvents, 2)
-	assertPressure("actions", pressure.Actions, maxEnhancedActions, 1)
+	assertPressure("actions", pressure.Actions, 1000, 1)
 	c.telemetry.networkWaterfall = waterfallstore.New(3)
 	c.Telemetry().NetworkWaterfall().Add(make([]types.NetworkWaterfallEntry, 7), "https://example.test")
 	if got := c.Telemetry().Pressure().NetworkWaterfall; got.Size != 3 || got.Dropped != 4 {
@@ -151,7 +153,7 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 
 	c.Telemetry().ClearNetworkBuffers()
 	c.Telemetry().ClearWebSocketBuffers()
-	c.Telemetry().ClearActionBuffer()
+	c.Telemetry().Actions().Clear()
 	pressure = c.Telemetry().Pressure()
 	if pressure.Network.Size != 0 || pressure.WebSocket.Size != 0 || pressure.Actions.Size != 0 {
 		t.Fatalf("pressure did not recover after clear: %#v", pressure)
@@ -236,7 +238,7 @@ func TestCaptureSnapshotTimestampsAreCopied(t *testing.T) {
 
 	netTS := c.Telemetry().NetworkBodies().Snapshot().Timestamps
 	wsTS := c.telemetry.buffers.webSocketTimestamps()
-	actTS := c.telemetry.buffers.actionTimestamps()
+	actTS := c.Telemetry().Actions().Snapshot().Timestamps
 	if len(netTS) != 1 || len(wsTS) != 1 || len(actTS) != 1 {
 		t.Fatalf("timestamp lengths = %d/%d/%d, want 1/1/1", len(netTS), len(wsTS), len(actTS))
 	}
@@ -247,7 +249,7 @@ func TestCaptureSnapshotTimestampsAreCopied(t *testing.T) {
 	actTS[0] = time.Time{}
 	if c.Telemetry().NetworkBodies().Snapshot().Timestamps[0].IsZero() ||
 		c.telemetry.buffers.webSocketTimestamps()[0].IsZero() ||
-		c.telemetry.buffers.actionTimestamps()[0].IsZero() {
+		c.Telemetry().Actions().Snapshot().Timestamps[0].IsZero() {
 		t.Fatal("timestamp accessors should return copies")
 	}
 }

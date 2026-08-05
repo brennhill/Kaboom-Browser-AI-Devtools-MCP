@@ -136,7 +136,7 @@ sequenceDiagram
    a. **Acquire Server.mu.RLock** — scan `entries` for non-error logs in window `[T - window, T]`
    b. **Release Server.mu.RLock**
    c. **Get network bodies** via `capture.Telemetry().NetworkBodies().Snapshot().Bodies` — filter by timestamp in window
-   d. **Get actions** via `capture.Telemetry().GetAllEnhancedActions()` — filter by timestamp in window
+   d. **Get actions** via `capture.Telemetry().Actions().Snapshot().Actions` — filter by timestamp in window
 4. Assemble bundle per error, return array
 
 **Why release and re-acquire locks?** To avoid holding two locks simultaneously (Server.mu + Capture.mu) which risks deadlock. The data could change between lock acquisitions, but for observational debugging context, slight inconsistency is acceptable.

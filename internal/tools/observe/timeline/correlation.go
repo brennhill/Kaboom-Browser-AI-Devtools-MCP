@@ -76,7 +76,7 @@ func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessag
 
 	networkBodies := cap.Telemetry().NetworkBodies().Snapshot().Bodies
 	waterfallEntries := cap.Telemetry().NetworkWaterfall().Entries()
-	actions := cap.Telemetry().GetAllEnhancedActions()
+	actions := cap.Telemetry().Actions().Snapshot().Actions
 
 	// Apply scope filtering to context buffers so bundles only include
 	// network/action entries from the tracked tab, not global state.
@@ -402,7 +402,7 @@ func collectTimelineEntries(deps core.Deps, inc timelineIncludes) []timelineEntr
 }
 
 func collectTimelineActions(cap *capture.Capture) []timelineEntry {
-	actions := cap.Telemetry().GetAllEnhancedActions()
+	actions := cap.Telemetry().Actions().Snapshot().Actions
 	entries := make([]timelineEntry, 0, len(actions))
 	for _, a := range actions {
 		ts := time.UnixMilli(a.Timestamp).Format(time.RFC3339Nano)

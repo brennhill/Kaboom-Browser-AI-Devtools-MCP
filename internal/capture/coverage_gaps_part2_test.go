@@ -42,7 +42,7 @@ func TestGetAllEnhancedActions_EmptyReturnsEmptySlice(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	result := c.Telemetry().GetAllEnhancedActions()
+	result := c.Telemetry().Actions().Snapshot().Actions
 	if result == nil {
 		t.Fatal("expected non-nil empty slice, got nil")
 	}
