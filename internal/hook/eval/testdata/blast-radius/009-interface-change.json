@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol.go",
+      "file_path": "internal/hook/hook_policy.go",
       "new_string": "type HookResult interface {\n\tFormatContext() string\n\tValidate() error\n}"
     }
   },

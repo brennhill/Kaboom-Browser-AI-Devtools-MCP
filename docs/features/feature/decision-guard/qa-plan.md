@@ -86,7 +86,7 @@ tags: [testing, qa, hooks]
 
 ### 4.1 Unit Tests
 
-Source under test: `internal/hook/decision_guard.go`. Tests live in `internal/hook/decision_guard_test.go`.
+Source under test: `internal/hook/hook_policy.go`. Tests live in `internal/hook/hook_policy_test.go`.
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|

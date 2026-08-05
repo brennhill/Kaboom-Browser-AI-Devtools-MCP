@@ -10,7 +10,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol.go",
+      "file_path": "internal/hook/hook_policy.go",
       "new_string": "func WriteOutput(w io.Writer, context string) error {\n\treturn nil\n}"
     }
   },

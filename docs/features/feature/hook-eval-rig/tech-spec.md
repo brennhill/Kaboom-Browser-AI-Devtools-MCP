@@ -205,10 +205,10 @@ scripts/eval/scenarios/kaboom-refactor-handler.jsonl
 Each line is a tool use event. The rig replays them in order, running all hooks after each step:
 
 ```jsonl
-{"tool_name":"Read","tool_input":{"file_path":"internal/hook/quality_gate.go"}}
-{"tool_name":"Read","tool_input":{"file_path":"internal/hook/protocol.go"}}
-{"tool_name":"Edit","tool_input":{"file_path":"internal/hook/quality_gate.go","new_string":"func RunQualityGate(input Input) *QualityGateResult {"}}
-{"tool_name":"Read","tool_input":{"file_path":"internal/hook/quality_gate.go"}}
+{"tool_name":"Read","tool_input":{"file_path":"internal/hook/hook_policy.go"}}
+{"tool_name":"Read","tool_input":{"file_path":"internal/hook/hook_policy.go"}}
+{"tool_name":"Edit","tool_input":{"file_path":"internal/hook/hook_policy.go","new_string":"func RunQualityGate(input Input) *QualityGateResult {"}}
+{"tool_name":"Read","tool_input":{"file_path":"internal/hook/hook_policy.go"}}
 {"tool_name":"Bash","tool_input":{"command":"go test ./internal/hook/..."},"tool_response":{"stdout":"ok  \tinternal/hook\t0.5s\n"}}
 ```
 

@@ -4,7 +4,7 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": { "file_path": "internal/hook/protocol.go", "new_string": "EXPIRED_DECISION_SENTINEL_VALUE" }
+    "tool_input": { "file_path": "internal/hook/hook_policy.go", "new_string": "EXPIRED_DECISION_SENTINEL_VALUE" }
   },
   "expect": {
     "has_output": false,

@@ -5,13 +5,13 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol.go",
+      "file_path": "internal/hook/hook_policy.go",
       "new_string": "func WriteOutput(w io.Writer, context string) error {\n\treturn nil\n}"
     }
   },
   "expect": {
     "has_output": true,
-    "contains": ["internal/hook/protocol.go", "Not yet reviewed"],
+    "contains": ["internal/hook/hook_policy.go", "Not yet reviewed"],
     "max_latency_ms": 5000
   }
 }

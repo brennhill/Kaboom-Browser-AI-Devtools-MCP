@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/quality_gate_test.go",
+      "file_path": "internal/hook/hook_policy_test.go",
       "new_string": "func TestValidateA(t *testing.T) { check(\"a\") }\nfunc TestValidateB(t *testing.T) { check(\"b\") }\nfunc TestValidateC(t *testing.T) { check(\"c\") }"
     }
   },

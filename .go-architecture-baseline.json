@@ -957,37 +957,21 @@
       "mutable_globals": 1,
       "exports": 3
     },
-    "internal/hook/convention_detect.go": {
-      "mutable_globals": 2,
-      "exports": 4
-    },
-    "internal/hook/convention_discover.go": {
-      "mutable_globals": 3,
-      "exports": 3
-    },
-    "internal/hook/decision_guard.go": {
-      "mutable_globals": 0,
-      "exports": 4
+    "internal/hook/conventions.go": {
+      "mutable_globals": 5,
+      "exports": 7
     },
     "internal/hook/eval/eval.go": {
       "mutable_globals": 1,
       "exports": 10
     },
-    "internal/hook/protocol.go": {
+    "internal/hook/hook_policy.go": {
       "mutable_globals": 0,
-      "exports": 12
+      "exports": 24
     },
-    "internal/hook/quality_gate.go": {
+    "internal/hook/session.go": {
       "mutable_globals": 0,
-      "exports": 8
-    },
-    "internal/hook/session_store.go": {
-      "mutable_globals": 0,
-      "exports": 11
-    },
-    "internal/hook/session_track.go": {
-      "mutable_globals": 0,
-      "exports": 3
+      "exports": 14
     },
     "internal/identity/mcp.go": {
       "mutable_globals": 0,

@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol_test.go",
+      "file_path": "internal/hook/hook_policy_test.go",
       "new_string": "func TestDebug(t *testing.T) {\n\tfmt.Println(\"debug output\")\n}"
     }
   },

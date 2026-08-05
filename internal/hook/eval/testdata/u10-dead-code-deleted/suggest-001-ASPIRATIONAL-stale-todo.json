@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol.go",
+      "file_path": "internal/hook/hook_policy.go",
       "new_string": "// TODO(2025-01-15): refactor this to use the new API\nfunc legacyProcess() {}"
     }
   },

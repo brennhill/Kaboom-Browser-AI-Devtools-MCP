@@ -3,17 +3,15 @@ doc_type: tech-spec
 feature_id: feature-session-tracking
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-05
 links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/session_track.go
-  - internal/hook/session_store.go
+  - internal/hook/session.go
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/session_track_test.go
-  - internal/hook/session_store_test.go
+  - internal/hook/session_test.go
   - cmd/hooks/main_test.go
 ---
 
@@ -21,18 +19,18 @@ test_paths:
 
 ## TL;DR
 
-- Design: Append-only JSONL session log in `~/.kaboom/sessions/<session-id>/`, read by all hooks via shared `session_store.go` package
+- Design: Append-only JSONL session log in `~/.kaboom/sessions/<session-id>/`, read by all hooks through the canonical `session.go` owner
 - Key constraints: < 20ms per invocation, no locks (append-only), concurrent-safe
 - Rollout risk: Low — purely additive, no changes to existing hooks
 
 ## Requirement Mapping
 
-- SESSION_TRACK_001 -> `internal/hook/session_track.go:RecordToolUse()` — appends JSONL entry
-- SESSION_TRACK_002 -> `internal/hook/session_track.go:CheckRedundantRead()` — scans log for prior reads
-- SESSION_TRACK_003 -> `internal/hook/session_track.go:SessionSummary()` — counts reads/edits/commands
-- SESSION_TRACK_004 -> `internal/hook/session_store.go:SessionID()` — derives `(ppid, cwd)` hash
+- SESSION_TRACK_001 -> `internal/hook/session.go:runSessionTrack()` and `AppendTouch()` — append the classified JSONL entry
+- SESSION_TRACK_002 -> `internal/hook/session.go:checkRedundantRead()` — scans log for prior reads
+- SESSION_TRACK_003 -> `internal/hook/session.go:SessionSummary()` — counts reads/edits/commands
+- SESSION_TRACK_004 -> `internal/hook/session.go:SessionID()` — derives `(ppid, cwd)` hash
 - SESSION_TRACK_005 -> all functions return `("", nil)` on I/O errors
-- SESSION_TRACK_006 -> benchmarked in `session_track_test.go`
+- SESSION_TRACK_006 -> benchmarked and regression-tested in `session_test.go`
 
 ## Session Store (shared by all hooks)
 
@@ -96,7 +94,7 @@ kaboom-hooks session-track:
 
 ## Cross-Hook API
 
-Other hooks import `internal/hook/session_store.go`:
+Other hooks import `internal/hook/session.go`:
 
 ```go
 // ReadTouches returns all session entries, newest first.

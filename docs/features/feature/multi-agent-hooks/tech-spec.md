@@ -3,17 +3,17 @@ doc_type: tech-spec
 feature_id: feature-multi-agent-hooks
 status: proposed
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-08-05
 links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/protocol.go
+  - internal/hook/hook_policy.go
   - cmd/hooks/main.go
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
   - cmd/browser-agent/tools_configure.go
 test_paths:
-  - internal/hook/protocol_test.go
+  - internal/hook/hook_policy_test.go
   - cmd/hooks/main_test.go
   - cmd/browser-agent/tools_configure_quality_gates_test.go
 ---
@@ -23,15 +23,15 @@ test_paths:
 ## TL;DR
 
 - Design: Auto-detect agent via env vars, adapt output JSON format in `WriteOutput()`
-- Key constraints: ~20 lines of code change in protocol.go, zero impact on hook logic
+- Key constraints: one protocol boundary in `hook_policy.go`, zero impact on hook command logic
 - Rollout risk: Very low — additive change, existing Claude Code output is the default
 
 ## Requirement Mapping
 
-- MULTI_AGENT_001 -> `internal/hook/protocol.go:DetectAgent()`
-- MULTI_AGENT_002 -> `internal/hook/protocol.go:WriteOutput()` switch on agent
+- MULTI_AGENT_001 -> `internal/hook/hook_policy.go:DetectAgent()`
+- MULTI_AGENT_002 -> `internal/hook/hook_policy.go:WriteOutput()` switch on agent
 - MULTI_AGENT_003 -> No change needed — input format is already compatible
-- MULTI_AGENT_004 -> `internal/hook/session_store.go:SessionID()` checks env vars first
+- MULTI_AGENT_004 -> `internal/hook/session.go:SessionID()` checks env vars first
 - MULTI_AGENT_005 -> `cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go` writes the managed hook configuration
 - MULTI_AGENT_006 -> Future work, tracked separately
 - MULTI_AGENT_007 -> No change needed — already one binary

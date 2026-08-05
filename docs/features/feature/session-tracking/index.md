@@ -4,16 +4,12 @@ feature_id: feature-session-tracking
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-05
 code_paths:
-  - internal/hook/session_track.go
-  - internal/hook/session_store.go
-  - internal/hook/session_track.go
+  - internal/hook/session.go
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/session_track_test.go
-  - internal/hook/session_store_test.go
-  - internal/hook/session_track_test.go
+  - internal/hook/session_test.go
   - internal/hook/eval/testdata/session-track/
   - cmd/hooks/main_test.go
 ---
@@ -45,6 +41,9 @@ by file sync and checked close. Deterministic write, sync, quota, partial-write,
 cancellation, restart, read, and corruption failures collapse to stable
 value-free codes. A failed preflight or append is returned as valid hook-protocol
 context and is never described as recorded; corrupt history is never extended.
+Persistence and tracking decisions now live in one change-coupled `session.go`
+owner, with their durability, recovery, and classification tests together in
+`session_test.go`.
 
 ## Install
 

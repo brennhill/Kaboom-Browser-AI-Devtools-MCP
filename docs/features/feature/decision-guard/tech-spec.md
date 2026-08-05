@@ -3,15 +3,15 @@ doc_type: tech-spec
 feature_id: feature-decision-guard
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-05
 links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/decision_guard.go
+  - internal/hook/hook_policy.go
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/decision_guard_test.go
+  - internal/hook/hook_policy_test.go
   - cmd/hooks/main_test.go
 ---
 
@@ -25,9 +25,9 @@ test_paths:
 
 ## Requirement Mapping
 
-- DECISION_001 -> `internal/hook/decision_guard.go:Decision` struct + `LoadDecisions()`
-- DECISION_002 -> `internal/hook/decision_guard.go:MatchDecisions()` — pattern + scope matching
-- DECISION_003 -> `internal/hook/decision_guard.go:FormatDecisions()` — output formatting
+- DECISION_001 -> `internal/hook/hook_policy.go:Decision` struct + `LoadDecisions()`
+- DECISION_002 -> `internal/hook/hook_policy.go:MatchDecisions()` — pattern + scope matching
+- DECISION_003 -> `internal/hook/hook_policy.go:FormatDecisions()` — output formatting
 - DECISION_004 -> `cmd/hooks/main.go:runLockDecision()` — CLI subcommand
 - DECISION_005 -> no special code needed — file is plain JSON
 - DECISION_006 -> `MatchDecisions()` skips expired decisions

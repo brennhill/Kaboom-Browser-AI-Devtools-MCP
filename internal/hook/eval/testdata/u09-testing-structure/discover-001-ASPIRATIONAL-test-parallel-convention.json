@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/quality_gate_test.go",
+      "file_path": "internal/hook/hook_policy_test.go",
       "new_string": "func TestNew(t *testing.T) {\n\t// no t.Parallel()\n\tresult := RunQualityGate(input)\n\tif result == nil { t.Fatal(\"nil\") }\n}"
     }
   },

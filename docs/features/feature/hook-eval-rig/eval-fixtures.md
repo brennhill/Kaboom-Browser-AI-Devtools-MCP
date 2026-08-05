@@ -9,7 +9,7 @@
 
 ## Quality Gate (6/13)
 
-Source: `internal/hook/quality_gate.go` (195 LOC), `internal/hook/convention_detect.go` (251 LOC)
+Source: `internal/hook/hook_policy.go` (195 LOC), `internal/hook/conventions.go` (251 LOC)
 
 The quality gate fires on every Edit/Write. It finds `.kaboom.json` in the parent chain, loads the project's code standards, checks file size, and detects convention drift.
 
@@ -17,7 +17,7 @@ The quality gate fires on every Edit/Write. It finds `.kaboom.json` in the paren
 
 **001 — Standards injection** `quality-gate/001-standards-injection.json`
 
-Edits `internal/hook/protocol.go`. The hook finds `.kaboom.json` at the repo root, reads `kaboom-code-standards.md`, and injects the first 150 lines into the agent's context. Expects `PROJECT CODE STANDARDS` and `Max 800 lines`. This is the core loop: every edit, the agent sees the project's rules.
+Edits `internal/hook/hook_policy.go`. The hook finds `.kaboom.json` at the repo root, reads `kaboom-code-standards.md`, and injects the first 150 lines into the agent's context. Expects `PROJECT CODE STANDARDS` and `Max 800 lines`. This is the core loop: every edit, the agent sees the project's rules.
 
 **002 — File size warning** `quality-gate/002-file-size-warning.json`
 
@@ -125,7 +125,7 @@ Go test with `TestHandler/nil_body` failing inside parent `TestHandler`. Expects
 
 ## Session Track (5/9)
 
-Source: `internal/hook/session_track.go` (130 LOC), `internal/hook/session_store.go` (278 LOC)
+Source: `internal/hook/session.go` (130 LOC), `internal/hook/session.go` (278 LOC)
 
 Records every tool use in an append-only JSONL session log. Detects redundant reads and injects session summaries on edits.
 
@@ -159,7 +159,7 @@ Session has `Bash: cat /p/handlers.go`. Then a Read of that same file. Expects t
 
 **007 — `grep` as read** `session-track/007-grep-as-read.json`
 
-Same idea: session has `Bash: grep -n 'WriteOutput' /project/internal/hook/protocol.go`. Then a Read of that file. **Why it fails:** Same root cause — Bash commands aren't parsed for file references.
+Same idea: session has `Bash: grep -n 'WriteOutput' /project/internal/hook/hook_policy.go`. Then a Read of that file. **Why it fails:** Same root cause — Bash commands aren't parsed for file references.
 
 **008 — Edit without tests** `session-track/008-edit-without-tests-warning.json`
 
@@ -193,7 +193,7 @@ Read tool on `protocol.go`. `isEditTool("Read")` returns false. No blast radius 
 
 **004 — File path in output** `blast-radius/004-output-contains-filepath.json`
 
-Same edit as 001 but specifically checks that `internal/hook/protocol.go` (the relative path) appears in the output, and that importers are listed under `Not yet reviewed`. Tests the formatting, not just existence of output.
+Same edit as 001 but specifically checks that `internal/hook/hook_policy.go` (the relative path) appears in the output, and that importers are listed under `Not yet reviewed`. Tests the formatting, not just existence of output.
 
 ### Failing
 
@@ -221,7 +221,7 @@ Edits to add a method to an interface. Expects warning about implementors. **Why
 
 ## Decision Guard (7/10)
 
-Source: `internal/hook/decision_guard.go` (156 LOC)
+Source: `internal/hook/hook_policy.go` (156 LOC)
 
 Checks edited code against locked architectural decisions in `.kaboom/decisions.json`. Supports literal patterns, regex, and expiry dates.
 

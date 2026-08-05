@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol.go",
+      "file_path": "internal/hook/hook_policy.go",
       "new_string": "func getLimit(cfg map[string]int) int {\n\tv, ok := cfg[\"limit\"]\n\tif !ok {\n\t\treturn 100\n\t}\n\treturn v\n}"
     }
   },

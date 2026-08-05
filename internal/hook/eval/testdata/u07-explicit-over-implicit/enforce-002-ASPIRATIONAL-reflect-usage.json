@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol.go",
+      "file_path": "internal/hook/hook_policy.go",
       "new_string": "import \"reflect\"\n\nfunc setField(obj interface{}, name string, value interface{}) {\n\treflect.ValueOf(obj).Elem().FieldByName(name).Set(reflect.ValueOf(value))\n}"
     }
   },

@@ -4,12 +4,12 @@ feature_id: feature-decision-guard
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-05
 code_paths:
-  - internal/hook/decision_guard.go
+  - internal/hook/hook_policy.go
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/decision_guard_test.go
+  - internal/hook/hook_policy_test.go
   - internal/hook/eval/testdata/decision-guard/
   - cmd/hooks/main_test.go
 ---

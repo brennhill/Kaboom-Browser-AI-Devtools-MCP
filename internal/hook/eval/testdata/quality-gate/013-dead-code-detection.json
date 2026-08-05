@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol.go",
+      "file_path": "internal/hook/hook_policy.go",
       "new_string": "func NewHandler() {\n\t// oldImpl := buildOldHandler()\n\t// result := oldImpl.Process()\n\t// return result\n\tnewImpl := buildNewHandler()\n\treturn newImpl.Process()\n}"
     }
   },

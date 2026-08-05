@@ -22,7 +22,6 @@
     "gokaboom.dev/src/content/docs/blog": 23,
     "gokaboom.dev/src/content/docs/guides": 16,
     "internal/capture": 61,
-    "internal/hook": 18,
     "internal/hook/eval/testdata/quality-gate": 13,
     "internal/pty": 19,
     "internal/tools/observe": 22,

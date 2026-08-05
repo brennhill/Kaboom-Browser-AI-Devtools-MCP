@@ -4,15 +4,13 @@ feature_id: feature-convention-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-05
 code_paths:
-  - internal/hook/convention_discover.go
-  - internal/hook/convention_detect.go
-  - internal/hook/quality_gate.go
+  - internal/hook/conventions.go
+  - internal/hook/hook_policy.go
 test_paths:
-  - internal/hook/convention_discover_test.go
-  - internal/hook/convention_detect_test.go
-  - internal/hook/quality_gate_test.go
+  - internal/hook/conventions_test.go
+  - internal/hook/hook_policy_test.go
   - internal/hook/eval/testdata/quality-gate/
 ---
 
@@ -36,7 +34,8 @@ Three plugin tiers: universal (10 principles, always active, free), language bas
 
 ## Current State (Phase 1)
 
-- Call-site discovery engine built (`convention_discover.go`)
+- Call-site discovery engine and edited-file detection share the canonical
+  `conventions.go` owner.
 - Convention summary injected on every Edit/Write
 - Discovered probes integrated into existing convention detection
 - 5-minute cache per project root + language

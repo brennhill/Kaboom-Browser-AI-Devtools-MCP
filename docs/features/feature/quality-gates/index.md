@@ -13,10 +13,9 @@ code_paths:
   - internal/tools/configure/capabilities/modespecs_configure.go
   - internal/schema/configure/properties_core.go
   - internal/schema/configure/properties_runtime.go
-  - internal/hook/protocol.go
+  - internal/hook/hook_policy.go
   - internal/hook/compress_output.go
-  - internal/hook/quality_gate.go
-  - internal/hook/convention_detect.go
+  - internal/hook/conventions.go
   - internal/tracking/token_tracker.go
   - internal/tracking/stats_endpoint.go
   - cmd/hooks/main.go
@@ -38,10 +37,9 @@ test_paths:
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go
   - cmd/browser-agent/tools_configure_quality_gates_test.go
   - cmd/hooks/main_test.go
-  - internal/hook/protocol_test.go
+  - internal/hook/hook_policy_test.go
   - internal/hook/compress_output_test.go
-  - internal/hook/quality_gate_test.go
-  - internal/hook/convention_detect_test.go
+  - internal/hook/conventions_test.go
   - internal/tracking/token_tracker_test.go
   - internal/tracking/stats_endpoint_test.go
   - scripts/check-file-length.test.mjs
@@ -61,6 +59,12 @@ last_verified_date: 2026-03-28
 ---
 
 # Quality Gates
+
+The hook package is organized into five paired change families: hook request
+policy, convention discovery/detection, session persistence/tracking, blast
+radius, and output compression. Its package-level regression test enforces ten
+files, and every owner remains below 800 lines; no compatibility filenames or
+forwarding surfaces remain after the atomic migration.
 
 | Field         | Value                                   |
 |---------------|-----------------------------------------|

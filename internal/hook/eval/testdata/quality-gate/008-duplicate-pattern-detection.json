@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/session_store.go",
+      "file_path": "internal/hook/session.go",
       "new_string": "data, err := os.ReadFile(path)\nif err != nil {\n\treturn nil, err\n}"
     }
   },

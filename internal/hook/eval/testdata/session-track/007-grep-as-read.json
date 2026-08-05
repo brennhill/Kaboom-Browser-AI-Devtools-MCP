@@ -8,13 +8,13 @@
         "tool": "Bash",
         "file": "",
         "action": "bash",
-        "summary": "grep -n 'WriteOutput' /project/internal/hook/protocol.go"
+        "summary": "grep -n 'WriteOutput' /project/internal/hook/hook_policy.go"
       }
     ]
   },
   "input": {
     "tool_name": "Read",
-    "tool_input": { "file_path": "/project/internal/hook/protocol.go" }
+    "tool_input": { "file_path": "/project/internal/hook/hook_policy.go" }
   },
   "expect": {
     "has_output": true,

@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol.go",
+      "file_path": "internal/hook/hook_policy.go",
       "new_string": "func getConfig(settings map[string]string) string {\n\treturn settings[\"max_retries\"]\n}"
     }
   },

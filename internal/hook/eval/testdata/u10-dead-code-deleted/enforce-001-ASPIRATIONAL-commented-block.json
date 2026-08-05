@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/hook/protocol.go",
+      "file_path": "internal/hook/hook_policy.go",
       "new_string": "// func oldHandler(w http.ResponseWriter, r *http.Request) {\n//\tw.WriteHeader(200)\n//\tw.Write([]byte(\"ok\"))\n//\tlog.Printf(\"handled\")\n// }"
     }
   },

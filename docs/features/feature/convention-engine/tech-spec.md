@@ -3,18 +3,16 @@ doc_type: tech-spec
 feature_id: feature-convention-engine
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-05
 links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/convention_discover.go
-  - internal/hook/convention_detect.go
-  - internal/hook/quality_gate.go
+  - internal/hook/conventions.go
+  - internal/hook/hook_policy.go
 test_paths:
-  - internal/hook/convention_discover_test.go
-  - internal/hook/convention_detect_test.go
-  - internal/hook/quality_gate_test.go
+  - internal/hook/conventions_test.go
+  - internal/hook/hook_policy_test.go
   - internal/hook/eval/testdata/quality-gate/
   - internal/hook/eval/testdata/u01-errors-not-ignored/
 ---

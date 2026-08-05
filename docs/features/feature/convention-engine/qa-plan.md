@@ -84,7 +84,7 @@ tags: [testing, qa, hooks, conventions]
 
 ### 4.1 Unit Tests
 
-Source under test: `internal/hook/convention_discover.go`, `internal/hook/convention_detect.go`. Tests: `convention_discover_test.go`, `convention_detect_test.go`.
+Source under test: `internal/hook/conventions.go`, `internal/hook/conventions.go`. Tests: `convention_discover_test.go`, `convention_detect_test.go`.
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|

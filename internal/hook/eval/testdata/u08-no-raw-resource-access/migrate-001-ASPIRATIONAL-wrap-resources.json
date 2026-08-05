@@ -4,7 +4,7 @@
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": { "file_path": "internal/hook/protocol.go", "new_string": "data, err := os.ReadFile(path)" }
+    "tool_input": { "file_path": "internal/hook/hook_policy.go", "new_string": "data, err := os.ReadFile(path)" }
   },
   "expect": {
     "has_output": true,
