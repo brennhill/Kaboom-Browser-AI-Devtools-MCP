@@ -42,7 +42,7 @@ func TestBridgeRunnerIsPerRuntime(t *testing.T) {
 	first.SetBridgeRunner(fakeBridge{id: "first"})
 	second.SetBridgeRunner(fakeBridge{id: "second"})
 
-	if first.BridgeRunner().LaunchFingerprint()["id"] == second.BridgeRunner().LaunchFingerprint()["id"] {
+	if first.BridgeRunner() == second.BridgeRunner() {
 		t.Fatal("bridge runner leaked between application runtimes")
 	}
 }
@@ -56,5 +56,4 @@ type fakeBridge struct{ id string }
 func (f fakeBridge) IsServerRunning(int) bool              { return false }
 func (f fakeBridge) WaitForServer(int, time.Duration) bool { return false }
 func (f fakeBridge) EnsureIOIsolation(string) error        { return nil }
-func (f fakeBridge) LaunchFingerprint() map[string]any     { return map[string]any{"id": f.id} }
 func (f fakeBridge) RunMode(int, string, int)              {}

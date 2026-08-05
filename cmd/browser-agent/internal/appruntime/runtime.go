@@ -22,7 +22,6 @@ type BridgeRunner interface {
 	IsServerRunning(port int) bool
 	WaitForServer(port int, timeout time.Duration) bool
 	EnsureIOIsolation(logFileHint string) error
-	LaunchFingerprint() map[string]any
 	RunMode(port int, logFile string, maxEntries int)
 }
 

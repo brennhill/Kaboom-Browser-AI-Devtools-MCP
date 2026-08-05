@@ -405,31 +405,6 @@ func TestBridgeStartupLockRelease_NonOwnerKeepsFile(t *testing.T) {
 	(&bridgeStartupLock{}).release()
 }
 
-// --- Fingerprint error paths ---
-
-func TestReadGoBuildID_Errors(t *testing.T) {
-	t.Parallel()
-
-	if _, err := readGoBuildID(filepath.Join(t.TempDir(), "does-not-exist")); err == nil {
-		t.Fatal("expected error for missing file")
-	}
-
-	noBuildID := filepath.Join(t.TempDir(), "no-build-id")
-	if err := os.WriteFile(noBuildID, []byte("plain content without build id"), 0o600); err != nil {
-		t.Fatalf("WriteFile error = %v", err)
-	}
-	if _, err := readGoBuildID(noBuildID); err == nil {
-		t.Fatal("expected error when go build id is absent")
-	}
-}
-
-func TestFileSHA256_FileNotFound(t *testing.T) {
-	t.Parallel()
-	if _, err := fileSHA256(filepath.Join(t.TempDir(), "missing")); err == nil {
-		t.Fatal("expected error for missing file")
-	}
-}
-
 // --- daemonStartupSuggestion ---
 
 func TestDaemonStartupSuggestion(t *testing.T) {

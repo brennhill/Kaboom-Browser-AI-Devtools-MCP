@@ -4,14 +4,14 @@ feature_id: feature-bridge-restart
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/bridge/runner.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_transport.go
-  - cmd/browser-agent/internal/bridge/bridge_fingerprint.go
+  - cmd/browser-agent/internal/bridge/fingerprint/fingerprint.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_windows.go
@@ -31,7 +31,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_respawn_backoff_test.go
-  - cmd/browser-agent/internal/bridge/bridge_fingerprint_test.go
+  - cmd/browser-agent/internal/bridge/fingerprint/fingerprint_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix_test.go
 last_verified_version: 0.7.12
@@ -63,15 +63,16 @@ last_verified_date: 2026-03-05
 
 | File | Purpose |
 |------|---------|
-| `cmd/browser-agent/bridge.go` | Startup-aware forwarding for `tools/call` during daemon warm-up |
-| `cmd/browser-agent/bridge_startup_orchestration.go` | Startup coordinator: leader election, follower wait, stale-lock takeover |
-| `cmd/browser-agent/bridge_startup_lock.go` | Lock-file startup leadership (`bridge-startup-<port>.lock.json`) |
-| `cmd/browser-agent/bridge_startup_state.go` | Daemon readiness/failed signaling, bounded respawn peer-wait, and stale-wait leadership reclaim |
+| `cmd/browser-agent/internal/bridge/bridge.go` | Startup-aware forwarding for `tools/call` during daemon warm-up |
+| `cmd/browser-agent/internal/bridge/bridge_startup.go` | Startup coordinator, leadership, follower wait, and stale-lock takeover |
+| `cmd/browser-agent/internal/bridge/bridge_startup_state.go` | Daemon readiness/failed signaling, bounded respawn peer-wait, and stale-wait leadership reclaim |
+| `cmd/browser-agent/internal/bridge/fingerprint/fingerprint.go` | Immutable executable identity used by launch diagnostics |
 | `cmd/browser-agent/tools_configure.go` | `handleConfigureRestart()` daemon-side handler |
 | `internal/schema/configure/tool.go` | Schema: `restart` in configure action enum + oneOf |
-| `cmd/browser-agent/bridge_test.go` | Unit tests for `extractToolAction()` |
-| `cmd/browser-agent/bridge_startup_contention_test.go` | Multi-client startup convergence integration test |
-| `cmd/browser-agent/bridge_fastpath_unit_test.go` | Fast-path + startup fallback regression tests (no indefinite wait on startup state drift) |
+| `cmd/browser-agent/internal/bridge/bridge_unit_test.go` | Unit tests for bridge request routing |
+| `cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go` | Multi-client startup convergence integration test |
+| `cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go` | Fast-path + startup fallback regression tests (no indefinite wait on startup state drift) |
+| `cmd/browser-agent/internal/bridge/fingerprint/fingerprint_test.go` | Binary identity and diagnostic error-path tests |
 
 Bridge transport tests synchronize delayed response bodies with a header/body
 barrier, and startup-grace tests deliver readiness through the canonical signal

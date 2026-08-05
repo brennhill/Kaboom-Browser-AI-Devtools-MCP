@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fingerprint"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/connectmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
@@ -361,7 +362,7 @@ func dispatchMode(server *Server, config *serverConfig) {
 			bridge.SendStartupError("Bridge stdio isolation failed: " + err.Error())
 			os.Exit(1)
 		}
-		server.logLifecycle("bridge_mode_start", config.port, server.runtime.BridgeRunner().LaunchFingerprint())
+		server.logLifecycle("bridge_mode_start", config.port, fingerprint.Capture(version, os.Executable))
 		if config.bridgeMode {
 			diag.Println("[Kaboom] Starting in bridge mode (stdio -> HTTP)")
 		} else if isTTY && mcpConfigPath != "" {
