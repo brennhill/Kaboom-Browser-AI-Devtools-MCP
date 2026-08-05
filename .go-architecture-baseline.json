@@ -1079,23 +1079,15 @@
     },
     "internal/noise/noise.go": {
       "mutable_globals": 0,
-      "exports": 9
+      "exports": 12
     },
     "internal/noise/noise_detect.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/noise/noise_filter.go": {
-      "mutable_globals": 0,
-      "exports": 3
-    },
     "internal/noise/noise_rules.go": {
       "mutable_globals": 0,
-      "exports": 5
-    },
-    "internal/noise/noise_stats.go": {
-      "mutable_globals": 0,
-      "exports": 1
+      "exports": 6
     },
     "internal/pagination/cursor.go": {
       "mutable_globals": 0,
