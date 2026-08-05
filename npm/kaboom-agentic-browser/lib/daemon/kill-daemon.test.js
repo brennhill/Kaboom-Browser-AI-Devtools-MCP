@@ -269,9 +269,9 @@ test('cleanup attempts to terminate pids discovered from pid files', () => {
 });
 
 test('npm lifecycle hooks invoke daemon cleanup script', () => {
-  const pkgPath = path.join(__dirname, '..', 'package.json');
+  const pkgPath = path.join(__dirname, '..', '..', 'package.json');
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 
-  assert.equal(pkg?.scripts?.preinstall, 'node lib/kill-daemon.js');
-  assert.equal(pkg?.scripts?.preuninstall, 'node lib/kill-daemon.js');
+  assert.equal(pkg?.scripts?.preinstall, 'node lib/daemon/kill-daemon.js');
+  assert.equal(pkg?.scripts?.preuninstall, 'node lib/daemon/kill-daemon.js');
 });

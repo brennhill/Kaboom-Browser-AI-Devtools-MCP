@@ -538,7 +538,7 @@ async function main() {
     info('stage 2: npm cleanup kills old daemon + pid file')
     daemon = startDaemon(oldBinary, port, envWithShims)
     await expectDaemonIdentity(port, supportedPreviousVersion)
-    run('node', ['npm/kaboom-agentic-browser/lib/kill-daemon.js'], { env: envWithShims })
+    run('node', ['npm/kaboom-agentic-browser/lib/daemon/kill-daemon.js'], { env: envWithShims })
     await waitForChildExit(daemon, 12000)
     if (fs.existsSync(pidFile)) {
       fail(`npm cleanup did not remove pid file ${pidFile}`)

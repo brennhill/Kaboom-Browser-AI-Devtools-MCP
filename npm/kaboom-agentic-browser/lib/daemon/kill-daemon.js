@@ -127,7 +127,7 @@ function resolveVersion(health) {
 
 function readSelfVersion() {
   try {
-    return String(require('../package.json').version || '').trim();
+    return String(require('../../package.json').version || '').trim();
   } catch (_) {
     return '';
   }

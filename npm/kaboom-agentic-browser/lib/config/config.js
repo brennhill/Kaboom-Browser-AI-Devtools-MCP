@@ -31,7 +31,7 @@ function resolveManagedBinaryPath(deps = {}) {
   const platformName = deps.platform || process.platform;
   const archName = deps.arch || process.arch;
   const existsFn = deps.existsFn || fs.existsSync;
-  const packageRoot = deps.packageRoot || path.resolve(__dirname, '..');
+  const packageRoot = deps.packageRoot || path.resolve(__dirname, '..', '..');
 
   const envOverride = env.KABOOM_BINARY_PATH;
   if (envOverride && existsFn(envOverride)) {

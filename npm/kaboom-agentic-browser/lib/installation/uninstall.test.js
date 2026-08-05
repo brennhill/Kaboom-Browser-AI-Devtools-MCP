@@ -10,8 +10,8 @@ const fs = require('node:fs');
 const { uninstallFromClient, executeUninstall } = require('./uninstall');
 
 test('npm wrapper no longer exposes gasoline launcher aliases', () => {
-  const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-  const hooksLauncher = fs.readFileSync(path.join(__dirname, '..', 'bin', 'kaboom-hooks'), 'utf8');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+  const hooksLauncher = fs.readFileSync(path.join(__dirname, '..', '..', 'bin', 'kaboom-hooks'), 'utf8');
 
   assert.equal(packageJson.bin['gasoline-agentic-browser'], undefined);
   assert.equal(packageJson.bin['gasoline-hooks'], undefined);

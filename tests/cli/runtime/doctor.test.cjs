@@ -1,5 +1,5 @@
 /**
- * Unit tests for lib/doctor.js
+ * Unit tests for lib/daemon/doctor.js
  * Tests diagnostic functions: testBinary, runDiagnostics
  */
 
@@ -8,8 +8,8 @@ const assert = require('node:assert')
 const fs = require('fs')
 const path = require('path')
 const os = require('os')
-const doctor = require('../../../npm/kaboom-agentic-browser/lib/doctor')
-const config = require('../../../npm/kaboom-agentic-browser/lib/config')
+const doctor = require('../../../npm/kaboom-agentic-browser/lib/daemon/doctor')
+const config = require('../../../npm/kaboom-agentic-browser/lib/config/config')
 
 // runDiagnostics is async and now performs a live /health probe. Stub it to an
 // unreachable daemon so these config-focused tests stay hermetic and fast

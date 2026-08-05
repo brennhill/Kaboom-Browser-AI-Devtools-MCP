@@ -10,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
-const { isEnvFlagSet } = require('./config');
+const { isEnvFlagSet } = require('../config/config');
 
 // The folder the curl|sh / PowerShell installers stage the extension into.
 const STAGED_DIR_NAME = 'KaboomAgenticDevtoolExtension';
@@ -45,7 +45,7 @@ function resolveExtensionDir(env = process.env, homeDir = os.homedir()) {
     return { dir: override, exists: isExtensionDir(override), source: 'env' };
   }
 
-  const bundled = path.join(__dirname, '..', 'extension');
+  const bundled = path.join(__dirname, '..', '..', 'extension');
   const staged = path.join(homeDir, STAGED_DIR_NAME);
   for (const candidate of [{ dir: bundled, source: 'bundled' }, { dir: staged, source: 'staged' }]) {
     if (isExtensionDir(candidate.dir)) {

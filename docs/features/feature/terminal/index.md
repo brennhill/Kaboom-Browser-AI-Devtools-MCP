@@ -50,7 +50,7 @@ code_paths:
   - internal/pty/writebuf.go
   - internal/pty/fanout.go
   - internal/pty/diag.go
-  - npm/kaboom-agentic-browser/lib/kill-daemon.js
+  - npm/kaboom-agentic-browser/lib/daemon/kill-daemon.js
   - scripts/tests/framework/framework.sh
   - scripts/tests/workflows/cat-28-terminal.sh
 test_paths:
@@ -115,7 +115,7 @@ test_paths:
   - tests/extension/terminal-reconnect/terminal-reconnect-budget-contract.test.js
   - tests/extension/terminal-reconnect/terminal-port-discovery.test.js
   - tests/extension/terminal-reconnect/terminal-iframe-message-contract.test.js
-  - npm/kaboom-agentic-browser/lib/kill-daemon.test.js
+  - npm/kaboom-agentic-browser/lib/daemon/kill-daemon.test.js
   - tests/cli/contracts/uat-harness-regressions.test.cjs
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28

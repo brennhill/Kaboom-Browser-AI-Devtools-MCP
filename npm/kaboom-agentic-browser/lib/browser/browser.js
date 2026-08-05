@@ -11,8 +11,8 @@ const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn, execFileSync } = require('node:child_process');
-const { autoOpenDisabled } = require('./extension');
-const { commandExistsOnPath } = require('./config');
+const { autoOpenDisabled } = require('../installation/extension');
+const { commandExistsOnPath } = require('../config/config');
 
 // Ordered by preference. `scheme` is the browser-internal URL scheme for its
 // extensions page. darwinApp is the .app bundle name; linuxBins are PATH names;

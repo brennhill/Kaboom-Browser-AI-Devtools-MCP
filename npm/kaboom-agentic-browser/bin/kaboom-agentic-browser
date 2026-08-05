@@ -2,7 +2,7 @@
 
 // bin/kaboom-agentic-browser — Cross-platform launcher for the Kaboom Agentic Browser server.
 // MCP mode (default): finds the Go binary and spawns it.
-// CLI commands (--install, --config, etc.): delegates to lib/cli.js.
+// CLI commands (--install, --config, etc.): delegates to lib/cli/cli.js.
 
 const { execFileSync } = require('child_process')
 const path = require('path')
@@ -101,8 +101,8 @@ const args = process.argv.slice(2)
 
 // CLI commands → delegate to Node.js
 if (isCliCommand(args)) {
-  require(path.join(LIB_DIR, 'cli.js'))
-  // cli.js handles process.argv directly
+  require(path.join(LIB_DIR, 'cli', 'cli.js'))
+  // cli/cli.js handles process.argv directly
 } else {
   // MCP server mode — find and exec the Go binary
   const binary = findBinary(info)

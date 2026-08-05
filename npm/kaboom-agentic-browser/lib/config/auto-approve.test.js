@@ -21,8 +21,8 @@ const {
   removeClaudeSettingsAllow,
 } = require('./auto-approve');
 const { getClientById } = require('./config');
-const { installToClient } = require('./install');
-const { uninstallFromClient } = require('./uninstall');
+const { installToClient } = require('../installation/install');
+const { uninstallFromClient } = require('../installation/uninstall');
 
 const SERVER = 'kaboom-browser-devtools';
 

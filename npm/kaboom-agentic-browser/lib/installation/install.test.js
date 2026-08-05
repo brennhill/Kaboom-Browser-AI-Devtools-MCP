@@ -16,7 +16,7 @@ const {
 const { installBundledSkills } = require('./skills');
 
 test('npm wrapper metadata uses kaboom package and launcher names', () => {
-  const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
   assert.equal(packageJson.name, 'kaboom-agentic-browser');
   assert.equal(packageJson.bin['kaboom-agentic-browser'], 'bin/kaboom-agentic-browser');
   assert.equal(packageJson.bin['kaboom-hooks'], 'bin/kaboom-hooks');
@@ -26,9 +26,9 @@ test('npm wrapper metadata uses kaboom package and launcher names', () => {
 });
 
 test('npm wrapper readme and launcher copy use kaboom branding', () => {
-  const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
-  const launcher = fs.readFileSync(path.join(__dirname, '..', 'bin', 'kaboom-agentic-browser'), 'utf8');
-  const cli = fs.readFileSync(path.join(__dirname, 'cli.js'), 'utf8');
+  const readme = fs.readFileSync(path.join(__dirname, '..', '..', 'README.md'), 'utf8');
+  const launcher = fs.readFileSync(path.join(__dirname, '..', '..', 'bin', 'kaboom-agentic-browser'), 'utf8');
+  const cli = fs.readFileSync(path.join(__dirname, '..', 'cli', 'cli.js'), 'utf8');
 
   assert.match(readme, /^# kaboom-agentic-browser$/m);
   assert.match(launcher, /Kaboom Agentic Browser server/);

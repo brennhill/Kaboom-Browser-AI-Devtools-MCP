@@ -29,7 +29,7 @@ test('npm package has no QA skill redirect', () => {
 })
 
 test('npm config exports only canonical client APIs', () => {
-  const source = readFileSync('npm/kaboom-agentic-browser/lib/config.js', 'utf8')
+  const source = readFileSync('npm/kaboom-agentic-browser/lib/config/config.js', 'utf8')
   assert.doesNotMatch(source, /function getConfigCandidates\(/)
   assert.doesNotMatch(source, /function getToolNameFromPath\(/)
 })

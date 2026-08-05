@@ -37,8 +37,14 @@ test('kaboom npm wrapper metadata points at the final repo slug', () => {
 })
 
 test('npm skill installer targets only canonical kaboom-managed output', () => {
-  const skillsSource = fs.readFileSync(path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/lib/skills.js'), 'utf8')
-  const postinstallSource = fs.readFileSync(path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/lib/postinstall-skills.js'), 'utf8')
+  const skillsSource = fs.readFileSync(
+    path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/lib/installation/skills.js'),
+    'utf8'
+  )
+  const postinstallSource = fs.readFileSync(
+    path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/lib/installation/postinstall-skills.js'),
+    'utf8'
+  )
 
   assert.match(skillsSource, /kaboom-managed-skill/)
   assert.doesNotMatch(skillsSource, /\b(?:gasoline|strum|legacy)\b/i)

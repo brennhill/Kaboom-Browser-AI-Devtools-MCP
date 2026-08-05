@@ -5,16 +5,16 @@
 // Invoked by the shell wrapper when --install, --config, --doctor, etc. are passed.
 
 const os = require('os');
-const config = require('./config');
+const config = require('../config/config');
 const output = require('./output');
-const install = require('./install');
-const extension = require('./extension');
-const browser = require('./browser');
-const health = require('./health');
-const daemon = require('./daemon');
-const skills = require('./skills');
-const doctor = require('./doctor');
-const uninstall = require('./uninstall');
+const install = require('../installation/install');
+const extension = require('../installation/extension');
+const browser = require('../browser/browser');
+const health = require('../daemon/health');
+const daemon = require('../daemon/daemon');
+const skills = require('../installation/skills');
+const doctor = require('../daemon/doctor');
+const uninstall = require('../installation/uninstall');
 
 // How long the post-install / --connect loop waits for the extension to appear.
 const CONNECT_WAIT_MS = 30000;
@@ -429,7 +429,7 @@ async function main() {
 
   // Version (print and exit)
   if (args.includes('--version') || args.includes('-v')) {
-    const pkg = require('../package.json');
+    const pkg = require('../../package.json');
     console.log(`kaboom-agentic-browser v${pkg.version}`);
     process.exit(0);
   }

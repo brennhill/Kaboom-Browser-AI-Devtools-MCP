@@ -9,7 +9,7 @@ const { execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const os = require('os')
-const doctor = require('../../../npm/kaboom-agentic-browser/lib/doctor')
+const doctor = require('../../../npm/kaboom-agentic-browser/lib/daemon/doctor')
 
 // --doctor now exits non-zero on a HARD failure — a missing/broken platform
 // binary — and 0 when tooling is healthy (a not-running daemon / not-connected
@@ -122,7 +122,7 @@ test('kaboom-agentic-browser --doctor exit code reflects the binary check (hard 
 
 test('kaboom-agentic-browser --install --dry-run previews without writing', () => {
   // Get initial state
-  const config = require('../../../npm/kaboom-agentic-browser/lib/config')
+  const config = require('../../../npm/kaboom-agentic-browser/lib/config/config')
   const candidates = config.CLIENT_DEFINITIONS
     .filter((def) => def.type === 'file' && def.format !== 'toml')
     .map((def) => config.getClientConfigPath(def))

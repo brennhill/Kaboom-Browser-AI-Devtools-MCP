@@ -13,7 +13,7 @@
 'use strict';
 
 const http = require('node:http');
-const { isEnvFlagSet } = require('./config');
+const { isEnvFlagSet } = require('../config/config');
 
 const DEFAULT_PORT = 7890;
 // One /health read should be quick on localhost; cap it so a hung socket can

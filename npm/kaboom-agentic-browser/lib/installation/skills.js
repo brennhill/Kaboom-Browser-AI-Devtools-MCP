@@ -14,7 +14,7 @@ const os = require('os');
 const path = require('path');
 
 const MANAGED_MARKER = '<!-- kaboom-managed-skill';
-const BUNDLED_SKILLS_DIR = path.join(__dirname, '..', 'skills');
+const BUNDLED_SKILLS_DIR = path.join(__dirname, '..', '..', 'skills');
 const DEFAULT_AGENTS = ['claude', 'codex', 'gemini'];
 
 function parseBoolEnv(name) {

@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-05
 code_paths:
   - internal/configdiscovery/mcp.go
   - cmd/browser-agent/main.go
@@ -34,11 +34,11 @@ code_paths:
   - scripts/release/install-upgrade-regression.mjs
   - cmd/browser-agent/internal/nativeinstall/installer.go
   - cmd/browser-agent/internal/nativeinstall/codex.go
-  - npm/kaboom-agentic-browser/lib/extension.js
-  - npm/kaboom-agentic-browser/lib/browser.js
-  - npm/kaboom-agentic-browser/lib/health.js
-  - npm/kaboom-agentic-browser/lib/daemon.js
-  - npm/kaboom-agentic-browser/lib/output.js
+  - npm/kaboom-agentic-browser/lib/installation/extension.js
+  - npm/kaboom-agentic-browser/lib/browser/browser.js
+  - npm/kaboom-agentic-browser/lib/daemon/health.js
+  - npm/kaboom-agentic-browser/lib/daemon/daemon.js
+  - npm/kaboom-agentic-browser/lib/cli/output.js
   - scripts/install.sh
   - scripts/install.ps1
   - scripts/install-bundled-skills.sh
@@ -48,16 +48,16 @@ code_paths:
   - scripts/uninstall.ps1
   - server/scripts/install.js
   - npm/kaboom-agentic-browser/bin/kaboom-agentic-browser
-  - npm/kaboom-agentic-browser/lib/config.js
-  - npm/kaboom-agentic-browser/lib/doctor.js
-  - npm/kaboom-agentic-browser/lib/install.js
-  - npm/kaboom-agentic-browser/lib/kill-daemon.js
-  - npm/kaboom-agentic-browser/lib/skills.js
-  - npm/kaboom-agentic-browser/lib/uninstall.js
-  - npm/kaboom-agentic-browser/lib/cli.js
-  - npm/kaboom-agentic-browser/lib/output.js
-  - npm/kaboom-agentic-browser/lib/auto-approve.js
-  - npm/kaboom-agentic-browser/lib/codex-config.js
+  - npm/kaboom-agentic-browser/lib/config/config.js
+  - npm/kaboom-agentic-browser/lib/daemon/doctor.js
+  - npm/kaboom-agentic-browser/lib/installation/install.js
+  - npm/kaboom-agentic-browser/lib/daemon/kill-daemon.js
+  - npm/kaboom-agentic-browser/lib/installation/skills.js
+  - npm/kaboom-agentic-browser/lib/installation/uninstall.js
+  - npm/kaboom-agentic-browser/lib/cli/cli.js
+  - npm/kaboom-agentic-browser/lib/config/auto-approve.js
+  - npm/kaboom-agentic-browser/lib/config/codex-config.js
+  - npm/kaboom-agentic-browser/lib/contracts/validate-versions.js
   - docs/mcp-install-guide.md
 test_paths:
   - cmd/browser-agent/internal/cli/cli_commands_test.go
@@ -82,20 +82,20 @@ test_paths:
   - cmd/browser-agent/internal/nativeinstall/config_test.go
   - cmd/browser-agent/internal/nativeinstall/open_test.go
   - cmd/browser-agent/internal/nativeinstall/connect_test.go
-  - npm/kaboom-agentic-browser/lib/config.test.js
-  - npm/kaboom-agentic-browser/lib/auto-approve.test.js
-  - npm/kaboom-agentic-browser/lib/codex-config.test.js
-  - npm/kaboom-agentic-browser/lib/output.test.js
-  - npm/kaboom-agentic-browser/lib/extension.test.js
-  - npm/kaboom-agentic-browser/lib/browser.test.js
-  - npm/kaboom-agentic-browser/lib/health.test.js
-  - npm/kaboom-agentic-browser/lib/daemon.test.js
-  - npm/kaboom-agentic-browser/lib/doctor.test.js
-  - npm/kaboom-agentic-browser/lib/install.test.js
-  - npm/kaboom-agentic-browser/lib/uninstall.test.js
-  - npm/kaboom-agentic-browser/lib/kill-daemon.test.js
-  - npm/kaboom-agentic-browser/lib/skills.test.js
-  - npm/kaboom-agentic-browser/lib/no-compatibility.test.js
+  - npm/kaboom-agentic-browser/lib/config/config.test.js
+  - npm/kaboom-agentic-browser/lib/config/auto-approve.test.js
+  - npm/kaboom-agentic-browser/lib/config/codex-config.test.js
+  - npm/kaboom-agentic-browser/lib/cli/output.test.js
+  - npm/kaboom-agentic-browser/lib/installation/extension.test.js
+  - npm/kaboom-agentic-browser/lib/browser/browser.test.js
+  - npm/kaboom-agentic-browser/lib/daemon/health.test.js
+  - npm/kaboom-agentic-browser/lib/daemon/daemon.test.js
+  - npm/kaboom-agentic-browser/lib/daemon/doctor.test.js
+  - npm/kaboom-agentic-browser/lib/installation/install.test.js
+  - npm/kaboom-agentic-browser/lib/installation/uninstall.test.js
+  - npm/kaboom-agentic-browser/lib/daemon/kill-daemon.test.js
+  - npm/kaboom-agentic-browser/lib/installation/skills.test.js
+  - npm/kaboom-agentic-browser/lib/contracts/no-compatibility.test.js
   - tests/packaging/kaboom-packaging-branding.test.js
   - tests/extension/release/install-script-extension-source.test.js
   - server/scripts/install.test.js
@@ -169,6 +169,12 @@ OpenAPI contract.
   uninstalls only canonical Kaboom identities and state paths. It does not
   retain migration branches for historical server names, skill markers,
   process names, config keys, config paths, or PID files.
+- The npm launcher library is divided by change ownership: `config/` owns
+  client configuration and approval, `installation/` owns install/uninstall
+  and bundled skills, `daemon/` owns health and process lifecycle, `browser/`
+  owns browser discovery, `cli/` owns orchestration and presentation, and
+  `contracts/` owns package invariants. Every owner contains at most ten files;
+  callers use these canonical modules directly with no root-level facades.
 - Skill-install and doctor output report only fields produced by the canonical
   installers; obsolete legacy-removal counters and warning renderers are gone.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.

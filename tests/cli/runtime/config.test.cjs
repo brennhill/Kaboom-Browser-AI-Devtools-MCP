@@ -1,5 +1,5 @@
 /**
- * Unit tests for lib/config.js
+ * Unit tests for lib/config/config.js
  * Tests config file utilities: read, write, validate, merge, parse
  */
 
@@ -8,12 +8,12 @@ const assert = require('node:assert')
 const fs = require('fs')
 const path = require('path')
 const os = require('os')
-const config = require('../../../npm/kaboom-agentic-browser/lib/config')
+const config = require('../../../npm/kaboom-agentic-browser/lib/config/config')
 const {
   InvalidJSONError,
   FileSizeError,
   ConfigValidationError: _ConfigValidationError
-} = require('../../../npm/kaboom-agentic-browser/lib/errors')
+} = require('../../../npm/kaboom-agentic-browser/lib/config/errors')
 
 const testDir = path.join(os.tmpdir(), 'kaboom-cli-test')
 

@@ -8,7 +8,7 @@
 'use strict';
 
 const { spawn } = require('node:child_process');
-const { resolveManagedBinaryPath, isEnvFlagSet } = require('./config');
+const { resolveManagedBinaryPath, isEnvFlagSet } = require('../config/config');
 const { fetchHealth, DEFAULT_PORT } = require('./health');
 
 /** The daemon flags — must match the Go installer's startDaemonSilently. */

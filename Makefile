@@ -226,7 +226,7 @@ validate-semver:
 
 # Validate optionalDependencies match package version
 validate-deps-versions:
-	@node npm/kaboom-agentic-browser/lib/validate-versions.js
+	@node npm/kaboom-agentic-browser/lib/contracts/validate-versions.js
 
 build: $(PLATFORMS)
 

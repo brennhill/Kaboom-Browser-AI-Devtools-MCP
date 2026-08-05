@@ -16,9 +16,9 @@ const {
   getDetectedClients,
   readConfigFile,
   writeConfigFile,
-} = require('./config');
-const autoApprove = require('./auto-approve');
-const codexConfig = require('./codex-config');
+} = require('../config/config');
+const autoApprove = require('../config/auto-approve');
+const codexConfig = require('../config/codex-config');
 const { cleanupInstalledSkills } = require('./skills');
 
 /**

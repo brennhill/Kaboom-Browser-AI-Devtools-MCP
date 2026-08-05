@@ -45,7 +45,7 @@ EXT_DIR="${KABOOM_EXTENSION_DIR:-$HOME/KaboomAgenticDevtoolExtension}"
 
 SERVER_NAMES="kaboom-browser-devtools"
 
-# Managed skill files start with one of these markers (see lib/skills.js).
+# Managed skill files start with one of these markers (see lib/installation/skills.js).
 SKILL_MARKER_RE='<!-- kaboom-managed-skill'
 
 RED='\033[0;31m'

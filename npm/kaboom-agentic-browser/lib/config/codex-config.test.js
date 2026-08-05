@@ -12,9 +12,9 @@ const fs = require('node:fs');
 
 const codex = require('./codex-config');
 const { getClientById } = require('./config');
-const { installToClient } = require('./install');
-const { uninstallFromClient } = require('./uninstall');
-const { runDiagnostics } = require('./doctor');
+const { installToClient } = require('../installation/install');
+const { uninstallFromClient } = require('../installation/uninstall');
+const { runDiagnostics } = require('../daemon/doctor');
 
 const SERVER = 'kaboom-browser-devtools';
 

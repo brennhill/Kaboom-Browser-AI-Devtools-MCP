@@ -30,7 +30,7 @@ $APPDATA_DIR = if ($env:APPDATA) { $env:APPDATA } else { Join-Path $HOME "AppDat
 
 $SERVER_NAMES = @('kaboom-browser-devtools')
 
-# Managed skill files start with one of these markers (see lib/skills.js).
+# Managed skill files start with one of these markers (see lib/installation/skills.js).
 $SKILL_MARKER = 'kaboom-managed-skill'
 
 Write-Host ""

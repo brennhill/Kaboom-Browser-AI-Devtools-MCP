@@ -1,11 +1,11 @@
 /**
- * Unit tests for lib/output.js
+ * Unit tests for lib/cli/output.js
  * Tests output formatters: success, error, warning, info, install/doctor/uninstall result formatters
  */
 
 const test = require('node:test')
 const assert = require('node:assert')
-const output = require('../../../npm/kaboom-agentic-browser/lib/output')
+const output = require('../../../npm/kaboom-agentic-browser/lib/cli/output')
 
 test('output.success returns formatted success message', () => {
   const result = output.success('Kaboom installed')

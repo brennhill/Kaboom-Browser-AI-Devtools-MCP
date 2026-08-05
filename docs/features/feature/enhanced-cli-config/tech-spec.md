@@ -40,8 +40,8 @@ Python CLI entry point. Current structure:
 ### Bundled Skill Installation Paths
 
 - **npm**:
-  - `npm/kaboom-agentic-browser/lib/postinstall-skills.js` installs bundled skills on package install.
-  - `npm/kaboom-agentic-browser/lib/cli.js` invokes `installBundledSkills()` during `--install`.
+  - `npm/kaboom-agentic-browser/lib/installation/postinstall-skills.js` installs bundled skills on package install.
+  - `npm/kaboom-agentic-browser/lib/cli/cli.js` invokes `installBundledSkills()` during `--install`.
 - **PyPI**:
   - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py` invokes `install_bundled_skills()` during `--install`.
   - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/skills.py` implements managed write/update/legacy cleanup behavior.
@@ -54,7 +54,7 @@ Python CLI entry point. Current structure:
 ### NPM (Node.js)
 - **Language**: JavaScript (Node.js stdlib)
 - **Location**: `npm/kaboom-agentic-browser/bin/kaboom-agentic-browser`
-- **Modules**: `lib/config.js`, `lib/doctor.js`, `lib/install.js`, `lib/uninstall.js`, `lib/output.js`, `lib/errors.js`
+- **Modules**: `lib/config/config.js`, `lib/daemon/doctor.js`, `lib/installation/install.js`, `lib/installation/uninstall.js`, `lib/cli/output.js`, `lib/config/errors.js`
 - **File I/O**: `fs` module
 - **JSON**: Built-in `JSON.parse()` and `JSON.stringify()`
 

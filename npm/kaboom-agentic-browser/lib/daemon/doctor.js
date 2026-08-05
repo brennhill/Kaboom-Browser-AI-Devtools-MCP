@@ -17,8 +17,8 @@ const {
   isClientInstalled,
   commandExistsOnPath,
   readConfigFile,
-} = require('./config');
-const codexConfig = require('./codex-config');
+} = require('../config/config');
+const codexConfig = require('../config/codex-config');
 const { fetchHealth, DEFAULT_PORT } = require('./health');
 
 // Node floor: the launcher and lib/*.js rely on modern Node built-ins
@@ -89,12 +89,13 @@ function testBinary() {
     const homeDir = os.homedir();
 
     // Check several locations
+    const packageRoot = path.resolve(__dirname, '..', '..');
     const candidates = [
       path.join(homeDir, '.npm', '_npx', pkg, 'bin', binaryName),
       path.join(homeDir, 'node_modules', pkg, 'bin', binaryName),
-      path.join(__dirname, '..', 'node_modules', pkg, 'bin', binaryName),
-      path.join(__dirname, '..', '..', pkg, 'bin', binaryName),
-      path.join(__dirname, '..', '..', '..', pkg, 'bin', binaryName),
+      path.join(packageRoot, 'node_modules', pkg, 'bin', binaryName),
+      path.join(packageRoot, '..', pkg, 'bin', binaryName),
+      path.join(packageRoot, '..', '..', pkg, 'bin', binaryName),
     ];
 
     let binaryPath = null;

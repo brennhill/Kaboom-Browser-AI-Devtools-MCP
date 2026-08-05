@@ -18,7 +18,7 @@ test('npm publish script targets kaboom package names', () => {
 })
 
 test('npm wrapper CLI exposes kaboom update command', () => {
-  const cliSource = fs.readFileSync(path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/lib/cli.js'), 'utf8')
+  const cliSource = fs.readFileSync(path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/lib/cli/cli.js'), 'utf8')
 
   assert.match(cliSource, /--update/)
   assert.match(cliSource, /kaboom-agentic-browser --update/)

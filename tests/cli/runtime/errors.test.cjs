@@ -1,5 +1,5 @@
 /**
- * Unit tests for lib/errors.js
+ * Unit tests for lib/config/errors.js
  * Tests custom error classes and their formatting
  */
 
@@ -14,7 +14,7 @@ const {
   EnvWithoutInstallError,
   ConfigValidationError,
   FileSizeError
-} = require('../../../npm/kaboom-agentic-browser/lib/errors')
+} = require('../../../npm/kaboom-agentic-browser/lib/config/errors')
 
 test('KaboomError is base class for all errors', () => {
   const err = new KaboomError('Test message', 'Test recovery')
