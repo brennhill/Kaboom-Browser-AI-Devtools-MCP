@@ -1,7 +1,7 @@
-// playbooks_resolver_test.go -- Tests for URI resolution, capability normalization,
+// resolver_test.go -- Tests for URI resolution, capability normalization,
 // playbook-key resolution, and strict rejection of noncanonical names. Pure logic; no I/O.
 
-package playbooks
+package resources
 
 import "testing"
 
@@ -78,11 +78,11 @@ func TestResolveResourceContent(t *testing.T) {
 		{"capabilities", "kaboom://capabilities", "kaboom://capabilities", true, CapabilityIndex},
 		{"guide", "kaboom://guide", "kaboom://guide", true, GuideContent},
 		{"quickstart", "kaboom://quickstart", "kaboom://quickstart", true, QuickstartContent},
-		{"playbook bare capability", "kaboom://playbook/performance", "kaboom://playbook/performance/quick", true, Playbooks["performance/quick"]},
-		{"playbook explicit level", "kaboom://playbook/security/full", "kaboom://playbook/security/full", true, Playbooks["security/full"]},
+		{"playbook bare capability", "kaboom://playbook/performance", "kaboom://playbook/performance/quick", true, playbooks()["performance/quick"]},
+		{"playbook explicit level", "kaboom://playbook/security/full", "kaboom://playbook/security/full", true, playbooks()["security/full"]},
 		{"playbook alias rejected", "kaboom://playbook/interact", "", false, ""},
 		{"playbook unknown", "kaboom://playbook/banana", "", false, ""},
-		{"demo valid", "kaboom://demo/ws", "kaboom://demo/ws", true, DemoScripts["ws"]},
+		{"demo valid", "kaboom://demo/ws", "kaboom://demo/ws", true, demoScripts()["ws"]},
 		{"demo unknown", "kaboom://demo/nope", "", false, ""},
 		{"unknown scheme", "kaboom://mystery", "", false, ""},
 		{"empty", "", "", false, ""},
@@ -107,6 +107,22 @@ func TestResolveResourceContent(t *testing.T) {
 				t.Fatalf("ResolveResourceContent(%q) returned content on failure: %q", tc.uri, content)
 			}
 		})
+	}
+}
+
+func TestResourceLookupsCannotMutateLaterResponses(t *testing.T) {
+	firstPlaybooks := playbooks()
+	firstPlaybooks["performance/quick"] = "poisoned"
+	firstDemos := demoScripts()
+	firstDemos["ws"] = "poisoned"
+
+	_, playbook, ok := ResolveResourceContent("kaboom://playbook/performance/quick")
+	if !ok || playbook == "poisoned" {
+		t.Fatalf("playbook lookup retained caller mutation: ok=%v content=%q", ok, playbook)
+	}
+	_, demo, ok := ResolveResourceContent("kaboom://demo/ws")
+	if !ok || demo == "poisoned" {
+		t.Fatalf("demo lookup retained caller mutation: ok=%v content=%q", ok, demo)
 	}
 }
 

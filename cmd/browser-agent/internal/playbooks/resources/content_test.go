@@ -1,6 +1,6 @@
-// playbooks_content_test.go — Tests for playbook content serving and validation.
+// content_test.go — Tests for playbook content serving and validation.
 
-package playbooks
+package resources
 
 import (
 	"strings"

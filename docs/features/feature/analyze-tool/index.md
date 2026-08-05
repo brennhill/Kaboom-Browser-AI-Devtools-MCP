@@ -8,7 +8,7 @@ last_reviewed: 2026-08-05
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
-  - cmd/browser-agent/internal/playbooks/playbooks_guides.go
+  - cmd/browser-agent/internal/playbooks/resources/guides.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
   - internal/analysis/apicontract/runtime/handler.go

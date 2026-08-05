@@ -1,6 +1,6 @@
-// resource_catalog.go — Declares the MCP resource catalog and URI templates served by playbooks.
+// catalog.go — Declares the MCP resource catalog and URI templates.
 
-package playbooks
+package resources
 
 import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 

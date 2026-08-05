@@ -1,10 +1,10 @@
-// playbooks_guides.go — Stores long-form guide/quickstart markdown resources for MCP resource reads.
+// guides.go — Stores long-form guide/quickstart markdown resources for MCP resource reads.
 // Why: Keeps documentation payloads separate from playbook catalogs and resolver logic.
 
-package playbooks
+package resources
 
 // GuideContent is the full usage guide resource.
-var GuideContent = `# Kaboom MCP Tools
+const GuideContent = `# Kaboom MCP Tools
 
 Agentic Browser Devtools - rapid e2e web development. 5 tools for real-time browser telemetry.
 
@@ -105,7 +105,7 @@ Use restart_on_eviction=true if a cursor expires.
 `
 
 // QuickstartContent is the short quickstart resource.
-var QuickstartContent = `# Kaboom MCP Quickstart
+const QuickstartContent = `# Kaboom MCP Quickstart
 
 ## 1. Health Check
 {"tool":"configure","arguments":{"what":"health"}}

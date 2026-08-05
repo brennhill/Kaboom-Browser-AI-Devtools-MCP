@@ -12,7 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/exitdiag"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
+	playbookresources "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks/resources"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
@@ -70,8 +70,8 @@ func buildBridgeRunner(exitDiagnostics *exitdiag.Recorder) *bridge.Runner {
 				}
 			},
 			ExtractCapabilities: pushapi.ExtractClientCapabilities, NegotiateVersion: mcp.NegotiateProtocolVersion,
-			Resources: playbooks.Resources, ResourceTemplates: playbooks.ResourceTemplates,
-			ResolveResource: playbooks.ResolveResourceContent,
+			Resources: playbookresources.Resources, ResourceTemplates: playbookresources.ResourceTemplates,
+			ResolveResource: playbookresources.ResolveResourceContent,
 		},
 		bridge.Lifecycle{
 			ProcessArgv0: daemonProcessArgv0, StopServerForUpgrade: stopServerForUpgrade,

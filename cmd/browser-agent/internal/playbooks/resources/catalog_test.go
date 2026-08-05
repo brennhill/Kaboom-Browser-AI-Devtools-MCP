@@ -1,8 +1,27 @@
-// resource_catalog_test.go — Verifies the MCP resource discovery catalog and templates.
+// catalog_test.go — Verifies the MCP resource discovery catalog and package boundary.
 
-package playbooks
+package resources
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
+
+func TestResourcesPackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("playbook resources package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
 
 func TestResourcesMatchResolvableCanonicalContent(t *testing.T) {
 	resources := Resources()

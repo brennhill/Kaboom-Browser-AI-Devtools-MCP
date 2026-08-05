@@ -265,41 +265,21 @@
       "mutable_globals": 1,
       "exports": 5
     },
-    "cmd/browser-agent/internal/playbooks/playbooks.go": {
-      "mutable_globals": 2,
+    "cmd/browser-agent/internal/playbooks/resources/catalog.go": {
+      "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/playbooks/playbooks_accessibility.go": {
-      "mutable_globals": 1,
-      "exports": 0
+    "cmd/browser-agent/internal/playbooks/resources/guides.go": {
+      "mutable_globals": 0,
+      "exports": 2
     },
-    "cmd/browser-agent/internal/playbooks/playbooks_automation.go": {
-      "mutable_globals": 1,
-      "exports": 0
-    },
-    "cmd/browser-agent/internal/playbooks/playbooks_demos.go": {
-      "mutable_globals": 1,
+    "cmd/browser-agent/internal/playbooks/resources/index.go": {
+      "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/playbooks/playbooks_guides.go": {
-      "mutable_globals": 2,
-      "exports": 2
-    },
-    "cmd/browser-agent/internal/playbooks/playbooks_performance.go": {
-      "mutable_globals": 1,
-      "exports": 0
-    },
-    "cmd/browser-agent/internal/playbooks/playbooks_resolver.go": {
+    "cmd/browser-agent/internal/playbooks/resources/resolver.go": {
       "mutable_globals": 0,
       "exports": 3
-    },
-    "cmd/browser-agent/internal/playbooks/playbooks_security.go": {
-      "mutable_globals": 1,
-      "exports": 0
-    },
-    "cmd/browser-agent/internal/playbooks/resource_catalog.go": {
-      "mutable_globals": 0,
-      "exports": 2
     },
     "cmd/browser-agent/internal/procctl/argv0.go": {
       "mutable_globals": 0,

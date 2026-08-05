@@ -1,10 +1,11 @@
-// playbooks_automation.go — Automation playbook content.
+// automation.go — Automation playbook content.
 // Why: Keeps capability-specific playbooks modular and easier to update.
 
-package playbooks
+package resources
 
-var playbookSetAutomation = map[string]string{
-	"automation/quick": `# Playbook: Browser Automation (Quick)
+func playbookSetAutomation() map[string]string {
+	return map[string]string{
+		"automation/quick": `# Playbook: Browser Automation (Quick)
 
 Use when you need to interact with any web page: navigate, fill forms, click buttons, post content, or complete multi-step workflows.
 
@@ -29,7 +30,7 @@ Use when you need to interact with any web page: navigate, fill forms, click but
 - Use interact(what:"list_interactive") to discover clickable elements on the page.
 - For rich text editors, type will handle content insertion automatically.
 `,
-	"automation/full": `# Playbook: Browser Automation (Full)
+		"automation/full": `# Playbook: Browser Automation (Full)
 
 Use for complex multi-step browser workflows: form filling, multi-page navigation, content posting, or any task requiring sequential browser interactions.
 
@@ -82,4 +83,5 @@ Use for complex multi-step browser workflows: form filling, multi-page navigatio
 - interact navigate and refresh auto-include performance metrics
 - For file uploads use interact(what:"upload")
 `,
+	}
 }

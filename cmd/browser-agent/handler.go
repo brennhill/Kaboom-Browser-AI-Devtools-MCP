@@ -17,7 +17,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
+	playbookresources "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks/resources"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
@@ -208,7 +208,7 @@ func (h *MCPHandler) handleInitialize(request mcp.JSONRPCRequest) mcp.JSONRPCRes
 }
 
 func (h *MCPHandler) handleResourcesList(request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	resultJSON, _ := json.Marshal(mcp.MCPResourcesListResult{Resources: playbooks.Resources()})
+	resultJSON, _ := json.Marshal(mcp.MCPResourcesListResult{Resources: playbookresources.Resources()})
 	return toolresp.SucceedRaw(request, resultJSON)
 }
 
@@ -223,7 +223,7 @@ func (h *MCPHandler) handleResourcesRead(request mcp.JSONRPCRequest) mcp.JSONRPC
 			Error:   &mcp.JSONRPCError{Code: -32602, Message: "Invalid params: " + err.Error()},
 		}
 	}
-	canonicalURI, text, ok := playbooks.ResolveResourceContent(params.URI)
+	canonicalURI, text, ok := playbookresources.ResolveResourceContent(params.URI)
 	if !ok {
 		return mcp.JSONRPCResponse{
 			JSONRPC: mcp.JSONRPCVersion,
@@ -240,7 +240,7 @@ func (h *MCPHandler) handleResourcesRead(request mcp.JSONRPCRequest) mcp.JSONRPC
 
 func (h *MCPHandler) handleResourcesTemplatesList(request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	resultJSON, _ := json.Marshal(mcp.MCPResourceTemplatesListResult{
-		ResourceTemplates: playbooks.ResourceTemplates(),
+		ResourceTemplates: playbookresources.ResourceTemplates(),
 	})
 	return toolresp.SucceedRaw(request, resultJSON)
 }

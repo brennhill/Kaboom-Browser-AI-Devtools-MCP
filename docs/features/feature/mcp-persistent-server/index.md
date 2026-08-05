@@ -30,8 +30,9 @@ code_paths:
   - internal/incident/projections.go
   - cmd/browser-agent/internal/health/response_builders.go
   - cmd/browser-agent/internal/health/response_types.go
-  - cmd/browser-agent/internal/playbooks/resource_catalog.go
-  - cmd/browser-agent/internal/playbooks/playbooks_resolver.go
+  - cmd/browser-agent/internal/playbooks/resources/catalog.go
+  - cmd/browser-agent/internal/playbooks/resources/resolver.go
+  - cmd/browser-agent/internal/playbooks/resources/audits.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_transport.go
@@ -116,8 +117,9 @@ test_paths:
   - cmd/browser-agent/main_connection_pid_contract_test.go
   - internal/diag/output_test.go
   - internal/diag/debug_file_test.go
-  - cmd/browser-agent/internal/playbooks/resource_catalog_test.go
-  - cmd/browser-agent/internal/playbooks/playbooks_resolver_test.go
+  - cmd/browser-agent/internal/playbooks/resources/catalog_test.go
+  - cmd/browser-agent/internal/playbooks/resources/resolver_test.go
+  - cmd/browser-agent/internal/playbooks/resources/content_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/stdio_silence_test.go
   - scripts/smoke-mcp-transport.sh
@@ -179,6 +181,14 @@ last_verified_date: 2026-03-29
 ---
 
 # MCP Persistent Server
+
+MCP documentation resources are owned by the canonical
+`internal/playbooks/resources` package: catalog, URI resolution, guides,
+demos, automation, and audit playbooks evolve together without depending on
+interact-failure recovery. Accessibility, performance, and security share one
+audit-content owner, while the parent `playbooks` package contains only the
+structured interact recovery contract. Both packages enforce the ten-file
+boundary directly and callers import the resource owner without a facade.
 
 Each server owns an application runtime for its start epoch, release checker,
 binary-upgrade provider, exit diagnostics, bridge runner, and update-warning cooldown. These collaborators are

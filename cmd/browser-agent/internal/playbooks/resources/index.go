@@ -1,10 +1,10 @@
-// playbooks.go — Embeds the capability index, usage guide, quickstart, and on-demand playbook content served as MCP resources.
+// index.go — Embeds the token-efficient capability index served as an MCP resource.
 // Why: Provides token-efficient documentation that MCP clients can read without external network access.
 
-package playbooks
+package resources
 
 // CapabilityIndex is the token-efficient capability discovery resource.
-var CapabilityIndex = `# Kaboom Capability Index (Token-Efficient)
+const CapabilityIndex = `# Kaboom Capability Index (Token-Efficient)
 
 Use this index for discovery. Load detailed guidance only when task intent matches.
 
@@ -47,13 +47,14 @@ When unsure which params a mode accepts, use per-mode filtering:
 - Add future playbooks under kaboom://playbook/{capability}/{quick|full}.
 `
 
-// Playbooks maps "{capability}/{level}" keys to markdown playbook content.
-var Playbooks = mergePlaybookSets(
-	playbookSetPerformance,
-	playbookSetAccessibility,
-	playbookSetSecurity,
-	playbookSetAutomation,
-)
+func playbooks() map[string]string {
+	return mergePlaybookSets(
+		playbookSetPerformance(),
+		playbookSetAccessibility(),
+		playbookSetSecurity(),
+		playbookSetAutomation(),
+	)
+}
 
 func mergePlaybookSets(sets ...map[string]string) map[string]string {
 	merged := make(map[string]string)

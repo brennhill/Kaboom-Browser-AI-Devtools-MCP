@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-08-03
 code_paths:
   - cmd/browser-agent/internal/cli/parser/generate_configure.go
-  - cmd/browser-agent/internal/playbooks/playbooks_guides.go
+  - cmd/browser-agent/internal/playbooks/resources/guides.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup.go
   - cmd/browser-agent/internal/health/doctor_live_checks.go

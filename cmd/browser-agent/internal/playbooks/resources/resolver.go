@@ -1,7 +1,7 @@
-// playbooks_resolver.go — Resolves playbook/demo resource URIs to canonical URIs and markdown content.
+// resolver.go — Resolves playbook/demo resource URIs to canonical URIs and markdown content.
 // Why: Isolates strict URI parsing from large static documentation payloads.
 
-package playbooks
+package resources
 
 import "strings"
 
@@ -58,14 +58,14 @@ func ResolveResourceContent(uri string) (string, string, bool) {
 		return uri, QuickstartContent, true
 	case strings.HasPrefix(uri, "kaboom://playbook/"):
 		key := ResolvePlaybookKey(strings.TrimPrefix(uri, "kaboom://playbook/"))
-		text, ok := Playbooks[key]
+		text, ok := playbooks()[key]
 		if !ok {
 			return "", "", false
 		}
 		return "kaboom://playbook/" + key, text, true
 	case strings.HasPrefix(uri, "kaboom://demo/"):
 		name := strings.TrimPrefix(uri, "kaboom://demo/")
-		text, ok := DemoScripts[name]
+		text, ok := demoScripts()[name]
 		if !ok {
 			return "", "", false
 		}

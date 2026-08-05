@@ -1,11 +1,11 @@
-// playbooks_demos.go — Stores lightweight demo scripts exposed via kaboom://demo/* resources.
+// demos.go — Stores lightweight demo scripts exposed via kaboom://demo/* resources.
 // Why: Keeps demo payloads modular and separate from primary capability playbooks.
 
-package playbooks
+package resources
 
-// DemoScripts maps demo names to markdown demo script content.
-var DemoScripts = map[string]string{
-	"ws": `# Demo: WebSocket Debugging
+func demoScripts() map[string]string {
+	return map[string]string{
+		"ws": `# Demo: WebSocket Debugging
 
 Goal: show mismatched message format and where to fix it.
 
@@ -18,7 +18,7 @@ Expected:
 - Connection OK, but message schema warnings
 - Identify client-side parsing path for fix
 `,
-	"annotations": `# Demo: Usability Annotations
+		"annotations": `# Demo: Usability Annotations
 
 Goal: highlight a layout issue and collect feedback.
 
@@ -30,7 +30,7 @@ Steps:
 Expected:
 - Annotation list with coordinates and notes
 `,
-	"recording": `# Demo: Flow Recording
+		"recording": `# Demo: Flow Recording
 
 Goal: show record → action → stop workflow.
 
@@ -42,7 +42,7 @@ Steps:
 Expected:
 - Saved recording ID and playback instructions
 `,
-	"dependencies": `# Demo: Dependency Vetting
+		"dependencies": `# Demo: Dependency Vetting
 
 Goal: identify unexpected third-party origins.
 
@@ -53,4 +53,5 @@ Steps:
 Expected:
 - Highlight unexpected origins for review
 `,
+	}
 }

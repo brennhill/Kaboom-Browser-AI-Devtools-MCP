@@ -3,7 +3,26 @@
 
 package playbooks
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
+
+func TestInteractPlaybooksPackageRespectsTenFileBoundary(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files++
+		}
+	}
+	if files > 10 {
+		t.Fatalf("interact playbooks package has %d files; want at most 10 change-coupled owners", files)
+	}
+}
 
 func TestNormalizeInteractFailureCode(t *testing.T) {
 	t.Parallel()
