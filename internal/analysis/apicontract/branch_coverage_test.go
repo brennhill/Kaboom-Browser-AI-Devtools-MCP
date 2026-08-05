@@ -5,7 +5,6 @@ package apicontract
 
 import (
 	"testing"
-	"time"
 )
 
 func TestCompareShapesReportsTopLevelTypeChanges(t *testing.T) {
@@ -117,7 +116,6 @@ func TestRecordObservation(t *testing.T) {
 		tracker := &EndpointTracker{}
 		v.recordObservation(tracker, 200)
 		first := tracker.FirstCalled
-		time.Sleep(time.Millisecond)
 		v.recordObservation(tracker, 201)
 		if !tracker.FirstCalled.Equal(first) {
 			t.Error("FirstCalled should not change after first call")

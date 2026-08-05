@@ -28,8 +28,6 @@
     "cmd/browser-agent/tools_interact_rich_perfdiff_test.go": 1,
     "cmd/browser-agent/tools_observe_commands_test.go": 1,
     "cmd/browser-agent/tools_observe_indexeddb_test.go": 2,
-    "internal/analysis/apicontract/branch_coverage_test.go": 1,
-    "internal/analysis/apicontract/contract_report_test.go": 1,
     "internal/capture/extension_state_unit_test.go": 1
   }
 }

@@ -212,9 +212,9 @@ func TestAPIContractValidator_FirstCalledTracking(t *testing.T) {
 	if tracker.FirstCalled.Before(before) || tracker.FirstCalled.After(after) {
 		t.Error("FirstCalled not in expected range")
 	}
+	firstCalled := tracker.FirstCalled
 
 	// Second call should NOT update FirstCalled
-	time.Sleep(time.Millisecond)
 	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/2",
@@ -224,7 +224,7 @@ func TestAPIContractValidator_FirstCalledTracking(t *testing.T) {
 	})
 
 	tracker = v.GetTrackers()["GET /api/users/{id}"]
-	if tracker.FirstCalled.After(after) {
+	if !tracker.FirstCalled.Equal(firstCalled) {
 		t.Error("FirstCalled should not be updated on subsequent calls")
 	}
 }

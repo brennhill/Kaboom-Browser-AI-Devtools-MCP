@@ -4,7 +4,7 @@ feature_id: feature-api-schema
 status: superseded
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-04
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/capabilities.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
@@ -95,6 +95,9 @@ API contract tests construct canonical `internal/types.NetworkBody` values
 directly; no test-local type alias masks the wire-contract owner.
 API contract violations expose one discriminator, `violation_type`; the former
 duplicate `type` response field is not emitted.
+First-observation retention tests compare the exact captured timestamp across
+subsequent observations; they do not sleep merely to make wall-clock values
+different.
 
 Observed-traffic API schema inference (`observe {what: "api"}`):
 
