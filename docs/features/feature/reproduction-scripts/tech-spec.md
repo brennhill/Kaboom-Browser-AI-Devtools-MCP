@@ -280,7 +280,7 @@ func selectorRole(selectors map[string]any) (role, name string) {
 | File | Change | LOC |
 |------|--------|-----|
 | `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Generate adapter and reproduction formatting | <800 |
-| `cmd/browser-agent/reproduction_test.go` | **NEW** — Tests | ~300 |
+| `internal/tools/interact/reproduction_test.go` | **NEW** — Tests | ~300 |
 | `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Update `toolGetReproductionScript()` to delegate to reproduction.go | ~5 |
 
 **Total new code:** ~555 LOC

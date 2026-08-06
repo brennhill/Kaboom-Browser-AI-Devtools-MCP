@@ -16,7 +16,7 @@ code_paths:
   - src/lib/page/reproduction.ts
   - internal/capture/actionstore/store.go
 test_paths:
-  - cmd/browser-agent/reproduction_test.go
+  - internal/tools/interact/reproduction_test.go
   - internal/reproduction/reproduction_test.go
   - internal/reproduction/golden_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
@@ -55,6 +55,6 @@ last_verified_date: 2026-03-05
 - The dispatcher receives the canonical capture owner through explicit generate
   composition rather than a ToolHandler-satisfied host interface.
 - Page-side reproduction capture: `src/lib/page/reproduction.ts`
-- Go behavior coverage: `cmd/browser-agent/reproduction_test.go`
+- Go behavior coverage: `internal/tools/interact/reproduction_test.go`
 - Reproduction evidence reads a detached snapshot from the canonical enhanced-
   action store; the capture root does not provide an action forwarding API.

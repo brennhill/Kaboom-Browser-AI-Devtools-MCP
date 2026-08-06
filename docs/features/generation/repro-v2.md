@@ -87,7 +87,7 @@ Update `generate` tool schema:
 
 ## Tests
 
-**File:** `cmd/browser-agent/reproduction_test.go`
+**File:** `internal/tools/interact/reproduction_test.go`
 
 1. Screenshot insertion at correct points
 2. Fixture file generation from network data
@@ -111,4 +111,4 @@ go test -v ./cmd/browser-agent/ -run Reproduction
 |------|--------|
 | `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Screenshot, fixture, assertion generation |
 | `cmd/browser-agent/tools_core.go` | Update generate tool schema |
-| `cmd/browser-agent/reproduction_test.go` | Test new options |
+| `internal/tools/interact/reproduction_test.go` | Test new options |
