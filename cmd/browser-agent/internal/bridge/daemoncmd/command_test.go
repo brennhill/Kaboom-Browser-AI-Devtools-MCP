@@ -5,7 +5,9 @@ package daemoncmd
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -38,5 +40,15 @@ func TestBuildDetachesStreamsAndIncludesRuntimeOptions(t *testing.T) {
 		if !slices.Contains(cmd.Args, want) {
 			t.Fatalf("args %q missing %q", cmd.Args, want)
 		}
+	}
+}
+
+func TestBuildRetainsDetachedProcessBoundary(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("command.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(source), "util.SetDetachedProcess(cmd)") {
+		t.Fatal("Build must detach the persistent daemon process")
 	}
 }

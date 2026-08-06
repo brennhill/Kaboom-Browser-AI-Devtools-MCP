@@ -147,7 +147,6 @@ test_paths:
   - cmd/browser-agent/mcp_protocol_test.go
   - cmd/browser-agent/mcp_initialize_test.go
   - cmd/browser-agent/internal/mcpprotocol/responses_test.go
-  - cmd/browser-agent/mcp_transport_handler_test.go
   - cmd/browser-agent/internal/bridge/bridge_unit_test.go
   - cmd/browser-agent/tools_registry_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go
@@ -213,6 +212,9 @@ The adjacent `internal/mcprouter` owner validates JSON-RPC envelopes, handles
 notification semantics, routes protocol and static methods, and clamps dynamic
 results. Its configuration exposes only immutable protocol data and one
 tool-call callback, keeping transport routing independent of application state.
+HTTP notification/framing assertions live with `internal/mcphttp`, while bridge
+stdout-forwarding contracts live with the bridge transport they protect; no
+mixed root transport test duplicates these owners.
 
 MCP documentation resources are owned by the canonical
 `internal/playbooks/resources` package: catalog, URI resolution, guides,

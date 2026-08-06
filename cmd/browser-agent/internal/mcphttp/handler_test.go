@@ -113,3 +113,38 @@ func TestServeHTTPReplacesInvalidRawResultWithProtocolError(t *testing.T) {
 		t.Fatalf("response id = %#v, want 7", response.ID)
 	}
 }
+
+func TestServeHTTPNotificationAndResponseFraming(t *testing.T) {
+	t.Parallel()
+	handler := New(Config{
+		Version:     "test",
+		MaxBodySize: 4096,
+		HandleRequest: func(request mcp.JSONRPCRequest) *mcp.JSONRPCResponse {
+			if !request.HasID() {
+				return nil
+			}
+			response := mcp.JSONRPCResponse{JSONRPC: "2.0", ID: request.ID, Result: json.RawMessage(`{}`)}
+			return &response
+		},
+	})
+
+	notification := httptest.NewRecorder()
+	handler.ServeHTTP(notification, httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+	)))
+	if notification.Code != http.StatusNoContent || notification.Body.Len() != 0 {
+		t.Fatalf("notification status/body = %d/%q", notification.Code, notification.Body.String())
+	}
+
+	request := httptest.NewRecorder()
+	handler.ServeHTTP(request, httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(
+		`{"jsonrpc":"2.0","id":1,"method":"ping"}`,
+	)))
+	body := request.Body.Bytes()
+	if request.Code != http.StatusOK || len(body) == 0 || body[len(body)-1] != '\n' {
+		t.Fatalf("request status/body = %d/%q", request.Code, body)
+	}
+	if len(body) > 1 && body[len(body)-2] == '\n' {
+		t.Fatalf("response has double newline: %q", body)
+	}
+}
