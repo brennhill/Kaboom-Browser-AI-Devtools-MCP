@@ -3,7 +3,7 @@
 // keepalive, upstream reader) must tear down only that connection, log a
 // structured event, and keep the PTY session + process alive.
 
-package terminal
+package wstransport
 
 import (
 	"bufio"
@@ -79,12 +79,12 @@ func panicOnBinaryWriteFrame(w *bufio.ReadWriter, opcode byte, payload []byte) e
 	return testWSWriteFrame(w, opcode, payload)
 }
 
-// TestHandleTerminalWS_DownstreamPanicDoesNotCrashDaemon drives a real WS
+// TestHandle_DownstreamPanicDoesNotCrashDaemon drives a real WS
 // connection whose downstream writes panic once PTY output arrives. Before the
 // fix this panicked in an unrecovered goroutine and crashed the whole test
 // binary (the daemon). After the fix: the connection tears down, the PTY
 // session survives for reconnect, and a structured panic event is logged.
-func TestHandleTerminalWS_DownstreamPanicDoesNotCrashDaemon(t *testing.T) {
+func TestHandle_DownstreamPanicDoesNotCrashDaemon(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 
@@ -105,7 +105,7 @@ func TestHandleTerminalWS_DownstreamPanicDoesNotCrashDaemon(t *testing.T) {
 
 	relays := sessionrelay.NewMap()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		HandleTerminalWS(w, r, deps, mgr, relays)
+		Handle(w, r, deps, mgr, relays)
 	}))
 	t.Cleanup(srv.Close)
 	addr := strings.TrimPrefix(srv.URL, "http://")

@@ -4,7 +4,7 @@
 // full-fanout refusal as `exited` makes the client set processExited=true and stop
 // reconnecting on a perfectly healthy shell (finding A).
 
-package terminal
+package wstransport
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
-func TestHandleTerminalWS_FanoutFullDoesNotReportExited(t *testing.T) {
+func TestHandle_FanoutFullDoesNotReportExited(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 

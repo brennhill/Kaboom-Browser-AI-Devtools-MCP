@@ -19,6 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/directorybrowser"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/spawnpolicy"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/wstransport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
@@ -53,23 +54,6 @@ func resolveTerminalCommand(cmd string, args []string) (string, []string) {
 	}
 	return defaultShell(), []string{"-l"}
 }
-
-// PingInterval is how often the server sends WebSocket ping frames.
-// Browser WebSocket API auto-replies with pong — no client code needed.
-const PingInterval = 30 * time.Second
-
-// PongTimeout is the max time allowed without receiving any frame (data or pong).
-// If exceeded, the connection is considered dead and closed. The PTY session survives
-// so the browser can reconnect with scrollback replay.
-const PongTimeout = 60 * time.Second
-
-// WSWriteTimeout bounds a single WebSocket frame write. A browser that stops
-// reading (backgrounded-tab TCP zero-window, laptop sleep, or a hostile client
-// that stalls) would otherwise block the downstream pump — and, via the shared
-// write mutex, the ping keepalive — until PongTimeout. On a write timeout the
-// connection is torn down. Refreshed per frame, so a slow-but-progressing
-// connection is never cut.
-const WSWriteTimeout = 10 * time.Second
 
 // IdleTimeout is the duration of silence after PTY output before
 // the idle callback fires. Used to detect when an agent is waiting for input.
@@ -116,7 +100,11 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 
 	// WebSocket upgrade for PTY I/O.
 	mux.HandleFunc("/terminal/ws", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		HandleTerminalWS(w, r, deps, mgr, relays)
+		wstransport.Handle(w, r, wstransport.Deps{
+			JSONResponse: deps.JSONResponse,
+			Stderrf:      deps.Stderrf, LogEvent: deps.LogEvent,
+			WSReadFrame: deps.WSReadFrame, WSWriteFrame: deps.WSWriteFrame, WSAcceptKey: deps.WSAcceptKey,
+		}, mgr, relays)
 	}))
 
 	// Session lifecycle.

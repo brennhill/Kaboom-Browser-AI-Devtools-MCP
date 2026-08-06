@@ -1,8 +1,8 @@
 // ws_integration_test.go -- End-to-end tests for the terminal WebSocket relay.
-// Drives HandleTerminalWS + wsLoop over a real loopback connection against a
+// Drives Handle + wsLoop over a real loopback connection against a
 // deterministic `cat` PTY session, reusing the package's WS codec helpers.
 
-package terminal
+package wstransport
 
 import (
 	"bufio"
@@ -71,13 +71,13 @@ func newWSTestServer(t *testing.T, mgr *pty.Manager, relays *sessionrelay.Map) *
 	t.Helper()
 	deps := testDeps()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		HandleTerminalWS(w, r, deps, mgr, relays)
+		Handle(w, r, deps, mgr, relays)
 	}))
 	t.Cleanup(srv.Close)
 	return srv
 }
 
-func TestHandleTerminalWS_EchoControlAndClose(t *testing.T) {
+func TestHandle_EchoControlAndClose(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 
@@ -149,7 +149,7 @@ func TestHandleTerminalWS_EchoControlAndClose(t *testing.T) {
 	}
 }
 
-func TestHandleTerminalWS_SessionExitNotifies(t *testing.T) {
+func TestHandle_SessionExitNotifies(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 
@@ -197,7 +197,7 @@ func TestHandleTerminalWS_SessionExitNotifies(t *testing.T) {
 	}
 }
 
-func TestHandleTerminalWS_HijackUnsupported(t *testing.T) {
+func TestHandle_HijackUnsupported(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 
@@ -213,7 +213,7 @@ func TestHandleTerminalWS_HijackUnsupported(t *testing.T) {
 	req.Header.Set("Upgrade", "websocket")
 	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
 	rec := httptest.NewRecorder()
-	HandleTerminalWS(rec, req, deps, mgr, relays)
+	Handle(rec, req, deps, mgr, relays)
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500 when hijacking unsupported, got %d", rec.Code)

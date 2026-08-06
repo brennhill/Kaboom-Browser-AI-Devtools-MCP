@@ -51,31 +51,6 @@ func TestResolveStartDir(t *testing.T) {
 	}
 }
 
-// A keystroke frame that the write buffer refuses is user input that vanished. The
-// WS loop used to discard the error entirely, and the buffer reported "full" for
-// both causes anyway — so the log could not say whether the shell had exited or was
-// merely wedged (finding S9).
-func TestWriteDropReason(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		err  error
-		want string
-	}{
-		"closed buffer means the session ended": {pty.ErrWriteBufferClosed, "session_ended"},
-		"full buffer means backpressure":        {pty.ErrWriteBufferFull, "backpressure"},
-		"wrapped errors still classify":         {fmt.Errorf("ws upstream: %w", pty.ErrWriteBufferClosed), "session_ended"},
-		"anything else is an opaque failure":    {errors.New("boom"), "write_error"},
-	}
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			if got := writeDropReason(tc.err); got != tc.want {
-				t.Errorf("writeDropReason(%v) = %q, want %q", tc.err, got, tc.want)
-			}
-		})
-	}
-}
-
 func TestClassifyStartError(t *testing.T) {
 	t.Parallel()
 

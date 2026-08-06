@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/wstransport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
@@ -245,7 +246,7 @@ func TestHandleControlMessage_NoSessionAccessPaths(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Must not panic with nil session on these early-return paths.
-			HandleControlMessage([]byte(tc.payload), nil)
+			wstransport.HandleControlMessage([]byte(tc.payload), nil)
 		})
 	}
 }
@@ -264,7 +265,7 @@ func TestHandleControlMessage_ResizeAppliesToSession(t *testing.T) {
 		t.Fatalf("get: %v", err)
 	}
 	// Valid resize path: exercises Resize + ForceRedraw. Should not error/panic.
-	HandleControlMessage([]byte(`{"type":"resize","cols":120,"rows":40}`), sess)
+	wstransport.HandleControlMessage([]byte(`{"type":"resize","cols":120,"rows":40}`), sess)
 }
 
 func TestRegisterRoutes_DispatchesWithoutSpawning(t *testing.T) {

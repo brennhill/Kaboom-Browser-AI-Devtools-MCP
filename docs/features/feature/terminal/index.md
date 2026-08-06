@@ -11,7 +11,7 @@ code_paths:
   - src/content/ui/panel/host-tab.ts
   - src/content/ui/panel/shell.ts
   - src/content/ui/panel/status-indicators.ts
-  - cmd/browser-agent/internal/terminal/ws.go
+  - cmd/browser-agent/internal/terminal/wstransport/ws.go
   - src/lib/brand.ts
   - cmd/browser-agent/internal/terminal/handlers.go
   - cmd/browser-agent/internal/terminal/spawnpolicy/retry.go
@@ -67,7 +67,7 @@ test_paths:
   - tests/extension/terminal-session/terminal-write-guard.test.js
   - cmd/browser-agent/internal/terminal/handlers_test.go
   - cmd/browser-agent/internal/terminal/handlers_extra_test.go
-  - cmd/browser-agent/internal/terminal/ws_panic_test.go
+  - cmd/browser-agent/internal/terminal/wstransport/ws_panic_test.go
   - cmd/browser-agent/internal/terminal/supervisor/supervisor_test.go
   - tests/extension/terminal-sidepanel/sidepanel-terminal-fixture.js
   - tests/extension/terminal-sidepanel/sidepanel-terminal-io.test.js
@@ -97,10 +97,12 @@ test_paths:
   - internal/pty/diagnostics/diagnostics_test.go
   - internal/pty/fanout/fanout_test.go
   - internal/pty/upload/upload_test.go
-  - cmd/browser-agent/internal/terminal/session_end_signal_test.go
-  - cmd/browser-agent/internal/terminal/frame_writer_deadline_test.go
-  - cmd/browser-agent/internal/terminal/handlers_fanout_test.go
-  - cmd/browser-agent/internal/terminal/handlers_replay_deadline_test.go
+  - cmd/browser-agent/internal/terminal/wstransport/session_end_signal_test.go
+  - cmd/browser-agent/internal/terminal/wstransport/frame_writer_deadline_test.go
+  - cmd/browser-agent/internal/terminal/wstransport/handlers_fanout_test.go
+  - cmd/browser-agent/internal/terminal/wstransport/handlers_replay_deadline_test.go
+  - cmd/browser-agent/internal/terminal/wstransport/ws_integration_test.go
+  - cmd/browser-agent/internal/terminal/wstransport/test_support_test.go
   - cmd/browser-agent/internal/terminal/sessionrelay/relay_boundary_test.go
   - cmd/browser-agent/internal/terminal/sessionrelay/relay_replace_test.go
   - cmd/browser-agent/internal/terminal/sessionrelay/relay_close_test.go

@@ -4,7 +4,7 @@
 // closed the subscriber channel and were reported to the browser as `exited`,
 // so a merely-slow terminal (big build, backgrounded tab) was declared dead.
 
-package terminal
+package wstransport
 
 import (
 	"net/http"
@@ -61,7 +61,7 @@ func TestRelay_EndedDistinguishesSessionEndFromDrop(t *testing.T) {
 
 // End-to-end: stopping a connected session sends the browser an `exited` frame
 // (the downstream `!ok`+Ended branch), so the terminal correctly reports death.
-func TestHandleTerminalWS_SessionEndSendsExited(t *testing.T) {
+func TestHandle_SessionEndSendsExited(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 
@@ -73,7 +73,7 @@ func TestHandleTerminalWS_SessionEndSendsExited(t *testing.T) {
 	deps := testDeps()
 	relays := sessionrelay.NewMap()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		HandleTerminalWS(w, r, deps, mgr, relays)
+		Handle(w, r, deps, mgr, relays)
 	}))
 	t.Cleanup(srv.Close)
 	addr := strings.TrimPrefix(srv.URL, "http://")

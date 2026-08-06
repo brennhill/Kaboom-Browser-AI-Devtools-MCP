@@ -5,13 +5,14 @@
 // files within the 800-line limit.
 // Docs: docs/features/feature/terminal/index.md
 
-package terminal
+package wstransport
 
 import (
 	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"runtime/debug"
@@ -25,9 +26,34 @@ import (
 	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
 )
 
+const (
+	// PingInterval is how often the server probes an idle connection.
+	PingInterval = 30 * time.Second
+	// PongTimeout bounds time without any incoming frame.
+	PongTimeout = 60 * time.Second
+	// WriteTimeout bounds a single WebSocket frame write.
+	WriteTimeout = 10 * time.Second
+)
+
+// Deps are the explicit HTTP, codec, and diagnostic collaborators for transport.
+type Deps struct {
+	JSONResponse func(http.ResponseWriter, int, any)
+	Stderrf      func(string, ...any)
+	LogEvent     func(string, map[string]any)
+	WSReadFrame  func(io.Reader) (bool, byte, []byte, error)
+	WSWriteFrame func(*bufio.ReadWriter, byte, []byte) error
+	WSAcceptKey  func(string) string
+}
+
+func (d Deps) logEvent(event string, fields map[string]any) {
+	if d.LogEvent != nil {
+		d.LogEvent(event, fields)
+	}
+}
+
 // HandleTerminalWS upgrades a GET /terminal/ws request to a WebSocket connection
 // that relays raw PTY I/O to/from the browser's xterm.js terminal emulator.
-func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *sessionrelay.Map) {
+func Handle(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *sessionrelay.Map) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		deps.JSONResponse(w, http.StatusUnauthorized, map[string]string{"error": "missing token"})
@@ -362,7 +388,7 @@ func NewFrameWriter(conn writeDeadliner, rw *bufio.ReadWriter, deps Deps) func(o
 			// Refresh the deadline per frame: a slow-but-progressing connection
 			// keeps getting a fresh window; only a truly stalled write errors,
 			// and the caller tears the connection down on that error.
-			_ = conn.SetWriteDeadline(time.Now().Add(WSWriteTimeout))
+			_ = conn.SetWriteDeadline(time.Now().Add(WriteTimeout))
 		}
 		return deps.WSWriteFrame(rw, opcode, payload)
 	}

@@ -5,7 +5,7 @@
 // would otherwise block conn.Write forever — one leaked goroutine + fd per connect,
 // uncapped, until fd exhaustion kills the daemon (finding B).
 
-package terminal
+package wstransport
 
 import (
 	"bufio"
@@ -63,7 +63,7 @@ func (c *recordConn) writeDeadlineCount() int {
 	return c.deadlines
 }
 
-// hijackRecorder is a ResponseWriter+Hijacker that hands HandleTerminalWS the
+// hijackRecorder is a ResponseWriter+Hijacker that hands Handle the
 // recordConn so we can observe the replay path's write deadlines.
 type hijackRecorder struct {
 	header http.Header
@@ -78,7 +78,7 @@ func (h *hijackRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return h.conn, h.rw, nil
 }
 
-func TestHandleTerminalWS_ReplayWritesAreDeadlineBound(t *testing.T) {
+func TestHandle_ReplayWritesAreDeadlineBound(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 
@@ -106,7 +106,7 @@ func TestHandleTerminalWS_ReplayWritesAreDeadlineBound(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		HandleTerminalWS(hrec, req, testDeps(), mgr, relays)
+		Handle(hrec, req, testDeps(), mgr, relays)
 	}()
 
 	// The replay (scrollback chunk + replay_end) runs before wsLoop. On the fixed

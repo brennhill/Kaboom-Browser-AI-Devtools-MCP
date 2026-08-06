@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/wstransport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
@@ -30,6 +31,14 @@ func testDeps() Deps {
 		WSReadFrame:    testWSReadFrame,
 		WSWriteFrame:   testWSWriteFrame,
 		WSAcceptKey:    testWSAcceptKey,
+	}
+}
+
+func wsTestDeps() wstransport.Deps {
+	deps := testDeps()
+	return wstransport.Deps{
+		JSONResponse: deps.JSONResponse, Stderrf: deps.Stderrf, LogEvent: deps.LogEvent,
+		WSReadFrame: deps.WSReadFrame, WSWriteFrame: deps.WSWriteFrame, WSAcceptKey: deps.WSAcceptKey,
 	}
 }
 
@@ -117,8 +126,7 @@ func TestNewFrameWriter_SerializesConcurrentWrites(t *testing.T) {
 
 	var wire bytes.Buffer
 	rw := bufio.NewReadWriter(bufio.NewReader(&wire), bufio.NewWriter(&wire))
-	deps := testDeps()
-	writeFrame := NewFrameWriter(nil, rw, deps)
+	writeFrame := wstransport.NewFrameWriter(nil, rw, wsTestDeps())
 
 	var wg sync.WaitGroup
 	for i := 0; i < frameCount; i++ {
@@ -510,12 +518,11 @@ func TestHandleTerminalValidate_StaleToken(t *testing.T) {
 
 func TestHandleTerminalWS_MissingToken(t *testing.T) {
 	mgr := pty.NewManager()
-	deps := testDeps()
 
 	req := httptest.NewRequest("GET", "/terminal/ws", nil)
 	rec := httptest.NewRecorder()
 	relays := sessionrelay.NewMap()
-	HandleTerminalWS(rec, req, deps, mgr, relays)
+	wstransport.Handle(rec, req, wsTestDeps(), mgr, relays)
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", rec.Code)
@@ -524,12 +531,11 @@ func TestHandleTerminalWS_MissingToken(t *testing.T) {
 
 func TestHandleTerminalWS_InvalidToken(t *testing.T) {
 	mgr := pty.NewManager()
-	deps := testDeps()
 
 	req := httptest.NewRequest("GET", "/terminal/ws?token=bogus", nil)
 	rec := httptest.NewRecorder()
 	relays := sessionrelay.NewMap()
-	HandleTerminalWS(rec, req, deps, mgr, relays)
+	wstransport.Handle(rec, req, wsTestDeps(), mgr, relays)
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", rec.Code)
@@ -539,7 +545,6 @@ func TestHandleTerminalWS_InvalidToken(t *testing.T) {
 func TestHandleTerminalWS_NoUpgradeHeader(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
-	deps := testDeps()
 
 	// Start a session to get a valid token.
 	result, err := mgr.Start(pty.StartConfig{
@@ -553,7 +558,7 @@ func TestHandleTerminalWS_NoUpgradeHeader(t *testing.T) {
 	req := httptest.NewRequest("GET", "/terminal/ws?token="+result.Token, nil)
 	rec := httptest.NewRecorder()
 	relays := sessionrelay.NewMap()
-	HandleTerminalWS(rec, req, deps, mgr, relays)
+	wstransport.Handle(rec, req, wsTestDeps(), mgr, relays)
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rec.Code)
