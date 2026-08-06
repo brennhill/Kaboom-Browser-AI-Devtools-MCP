@@ -159,7 +159,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/daemoncmd/command_test.go
   - cmd/browser-agent/internal/bridge/contracts/source_contract_test.go
   - cmd/browser-agent/internal/bridge/healthprobe/probe_test.go
-  - cmd/browser-agent/internal/bridge/runner_isolation_test.go
+  - cmd/browser-agent/internal/bridge/bridge_test_support_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go

@@ -6,7 +6,6 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - cmd/browser-agent/internal/bridge/runner.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
@@ -25,15 +24,13 @@ code_paths:
   - internal/schema/configure/tool.go
 test_paths:
   - cmd/browser-agent/internal/bridge/bridge_unit_test.go
-  - cmd/browser-agent/internal/bridge/runner_isolation_test.go
+  - cmd/browser-agent/internal/bridge/bridge_test_support_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/bridge_test.go
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
-  - cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go
-  - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
+  - cmd/browser-agent/internal/bridge/bridge_startup_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
-  - cmd/browser-agent/internal/bridge/bridge_respawn_backoff_test.go
   - cmd/browser-agent/internal/bridge/processsignal/resume_test.go
   - cmd/browser-agent/internal/bridge/fingerprint/fingerprint_test.go
   - cmd/browser-agent/internal/bridge/pushrelay/relay_test.go
@@ -76,7 +73,7 @@ last_verified_date: 2026-03-05
 | `cmd/browser-agent/tools_configure.go` | `handleConfigureRestart()` daemon-side handler |
 | `internal/schema/configure/tool.go` | Schema: `restart` in configure action enum + oneOf |
 | `cmd/browser-agent/internal/bridge/bridge_unit_test.go` | Unit tests for bridge request routing |
-| `cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go` | Multi-client startup convergence integration test |
+| `cmd/browser-agent/internal/bridge/bridge_startup_test.go` | Startup, respawn, and multi-client convergence tests |
 | `cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go` | Fast-path + startup fallback regression tests (no indefinite wait on startup state drift) |
 | `cmd/browser-agent/internal/bridge/fingerprint/fingerprint_test.go` | Binary identity and diagnostic error-path tests |
 

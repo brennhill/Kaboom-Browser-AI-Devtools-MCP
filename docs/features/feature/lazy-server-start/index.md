@@ -6,7 +6,6 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - cmd/browser-agent/internal/bridge/runner.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
   - cmd/browser-agent/internal/bridge/healthprobe/probe.go
@@ -24,12 +23,10 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/bridge/fastpathtelemetry/telemetry_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/bridge/runner_isolation_test.go
-  - cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go
+  - cmd/browser-agent/internal/bridge/bridge_test_support_test.go
   - cmd/browser-agent/internal/bridge/bridge_startup_test.go
   - cmd/browser-agent/internal/bridge/startuplock/lock_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
-  - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
   - cmd/browser-agent/internal/bridge/healthprobe/probe_test.go
   - cmd/browser-agent/internal/bridge/daemoncmd/command_test.go
   - cmd/browser-agent/internal/launchmode/launch_mode_test.go

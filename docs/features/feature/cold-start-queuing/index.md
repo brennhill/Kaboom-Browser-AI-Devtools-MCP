@@ -12,7 +12,7 @@ code_paths:
   - internal/capture/syncruntime/runtime.go
 test_paths:
   - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
+  - cmd/browser-agent/internal/bridge/bridge_startup_test.go
   - internal/capture/syncruntime/readiness_gate_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
   - cmd/browser-agent/tools_async_timeout_test.go
