@@ -11,7 +11,7 @@ last_reviewed: 2026-08-04
 - `internal/incident/store_test.go` and `support_test.go` cover lifecycle, capacity, generation rejection, projections, preview invalidation, redaction, and file permissions.
 - `internal/statediag/collector_test.go` covers bounded redacted state diagnostics.
 - `internal/telemetry/contract_compliance_test.go` and `beacon_test.go` cover the privacy allowlist, delivery outcomes, deduplication, queue pressure, panic recovery, and shutdown.
-- `cmd/browser-agent/tools_configure_support_test.go` covers the public support workflow.
+- `cmd/browser-agent/internal/doctorsupport/handler_test.go` covers the public support workflow.
 - Packaged recovery checks live in `tests/cli/contracts/packaged-recovery-uat.test.cjs` and `scripts/tests/release/cat-34-packaged-corruption-recovery.sh`.
 
 ## Required Scenarios

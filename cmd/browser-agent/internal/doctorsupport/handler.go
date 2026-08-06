@@ -1,5 +1,7 @@
-// tools_configure_support.go — Explicit preview-confirm export for privacy-bounded Doctor bundles.
-package main
+// handler.go — Builds and explicitly exports privacy-bounded Doctor support bundles.
+// Docs: docs/features/feature/operational-observability/index.md
+
+package doctorsupport
 
 import (
 	"crypto/subtle"
@@ -7,23 +9,21 @@ import (
 	"errors"
 	"log/slog"
 	"os"
-	"runtime"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
 
-type doctorSupportArgs struct {
+type arguments struct {
 	Action            string `json:"doctor_action"`
 	ConfirmationToken string `json:"confirmation_token"`
 	OutputPath        string `json:"output_path"`
 }
 
-var writeDoctorSupportBundle = func(path string, data []byte) error { return statefile.Write(path, data, 0o600) }
-
-func handleDoctorSupportAction(req mcp.JSONRPCRequest, args json.RawMessage, views []incident.DoctorView) (mcp.JSONRPCResponse, bool) {
-	var input doctorSupportArgs
+// Handle processes Doctor bundle actions and reports whether the request was one of them.
+func Handle(req mcp.JSONRPCRequest, args json.RawMessage, views []incident.DoctorView, version, platform string, write func(string, []byte) error) (mcp.JSONRPCResponse, bool) {
+	var input arguments
 	if err := json.Unmarshal(args, &input); err != nil {
 		slog.Warn("invalid Doctor support arguments", "component", "doctor_support_bundle", "stage", "decode")
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid Doctor support arguments", "Pass a valid configure argument object"), true
@@ -35,7 +35,7 @@ func handleDoctorSupportAction(req mcp.JSONRPCRequest, args json.RawMessage, vie
 	if input.Action != "preview_support_bundle" && input.Action != "export_support_bundle" {
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Unsupported doctor_action", "Use preview_support_bundle or export_support_bundle"), true
 	}
-	bundle := incident.BuildSupportBundle(version, runtime.GOOS+"-"+runtime.GOARCH, views)
+	bundle := incident.BuildSupportBundle(version, platform, views)
 	artifact, err := incident.SupportBundleBytes(bundle)
 	if err != nil {
 		slog.Error("Doctor support bundle encoding failed", "component", "doctor_support_bundle", "stage", "encode")
@@ -54,7 +54,10 @@ func handleDoctorSupportAction(req mcp.JSONRPCRequest, args json.RawMessage, vie
 		// EXPECTED_ABSENCE: A missing or stale approval token is an expected validation rejection and does not represent a runtime incident.
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Support bundle confirmation does not match the current preview", "Preview again, then pass its confirmation_token and an explicit output_path"), true
 	}
-	if err := writeDoctorSupportBundle(input.OutputPath, artifact); err != nil {
+	if write == nil {
+		write = func(path string, data []byte) error { return statefile.Write(path, data, 0o600) }
+	}
+	if err := write(input.OutputPath, artifact); err != nil {
 		slog.Error("Doctor support bundle export failed", "component", "doctor_support_bundle", "stage", string(statefile.FailureStage(err)))
 		if errors.Is(err, os.ErrPermission) {
 			return mcp.Fail(req, mcp.ErrInternal, "Support bundle export failed", "Choose a writable local output_path"), true

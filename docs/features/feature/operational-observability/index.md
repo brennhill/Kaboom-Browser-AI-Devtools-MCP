@@ -15,7 +15,7 @@ code_paths:
   - internal/incident/support.go
   - internal/statediag/collector.go
   - internal/telemetry/beacon.go
-  - cmd/browser-agent/tools_configure_support.go
+  - cmd/browser-agent/internal/doctorsupport/handler.go
   - internal/schema/configure/properties_core.go
 test_paths:
   - internal/capture/logstore/store_test.go
@@ -24,7 +24,7 @@ test_paths:
   - internal/capture/pipelinetest/accessor_unit_test.go
   - internal/incident/store_test.go
   - internal/incident/support_test.go
-  - cmd/browser-agent/tools_configure_support_test.go
+  - cmd/browser-agent/internal/doctorsupport/handler_test.go
   - internal/statediag/collector_test.go
   - internal/telemetry/contract_compliance_test.go
   - internal/telemetry/beacon_test.go

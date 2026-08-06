@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/doctorsupport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
@@ -150,7 +151,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 				incidentViews = h.server.incidents.DoctorSnapshot()
 				checks = append(checks, incidentDoctorChecks(h.server.incidents)...)
 			}
-			if response, handled := handleDoctorSupportAction(req, args, incidentViews); handled {
+			if response, handled := doctorsupport.Handle(req, args, incidentViews, version, runtime.GOOS+"-"+runtime.GOARCH, nil); handled {
 				return response
 			}
 			return handleConfigureDoctor(

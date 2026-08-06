@@ -173,6 +173,10 @@
       "mutable_globals": 5,
       "exports": 9
     },
+    "cmd/browser-agent/internal/doctorsupport/handler.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/exitdiag/recorder.go": {
       "mutable_globals": 0,
       "exports": 5

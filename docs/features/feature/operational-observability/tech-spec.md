@@ -11,7 +11,7 @@ last_reviewed: 2026-08-04
 - `internal/incident` owns incident definitions, lifecycle transitions, bounded storage, Doctor projections, fingerprints, and support artifacts.
 - `internal/statediag` collects redacted state-loader diagnostics.
 - `internal/telemetry` owns the allowlisted external projection and bounded asynchronous delivery.
-- `cmd/browser-agent/tools_configure_support.go` exposes support preview/export through `configure`.
+- `cmd/browser-agent/internal/doctorsupport/handler.go` exposes support preview/export through `configure`.
 - `internal/schema/configure/properties_core.go` defines the public tool schema.
 
 ## Invariants
