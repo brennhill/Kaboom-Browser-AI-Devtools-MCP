@@ -69,7 +69,7 @@ func (deps *serverIntentDeps) GetIntentStore() *terminalintent.Store {
 func setupTerminalMux(server *Server, manager *pty.Manager, store *capture.Capture) (*http.ServeMux, *sessionrelay.Map) {
 	deps := terminalDeps()
 	deps.LogEvent = func(event string, fields map[string]any) { server.logLifecycle(event, 0, fields) }
-	return terminal.SetupMux(deps, server, &serverIntentDeps{server: server}, manager, store)
+	return terminal.SetupMux(deps, server.activeCodebase, &serverIntentDeps{server: server}, manager, store)
 }
 
 func startTerminalServer(port int, mux *http.ServeMux) (*http.Server, <-chan struct{}, error) {
@@ -77,7 +77,7 @@ func startTerminalServer(port int, mux *http.ServeMux) (*http.Server, <-chan str
 }
 
 func handleActiveCodebase(w http.ResponseWriter, r *http.Request, server *Server) {
-	terminal.HandleActiveCodebase(w, r, terminalDeps(), server)
+	terminal.HandleActiveCodebase(w, r, terminalDeps(), server.activeCodebase)
 }
 
 // runMCPMode runs the server in MCP mode:

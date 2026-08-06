@@ -35,6 +35,7 @@ import (
 	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/activecodebase"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
@@ -100,10 +101,7 @@ type Server struct {
 	// nil if the terminal server never bound (Windows, or bind failure).
 	terminalSupervisor *terminalsupervisor.Supervisor
 
-	// Active codebase path — set via MCP configure(what='store', key='active_codebase')
-	// or via the extension options page. Used as default CWD for terminal sessions.
-	activeCodebaseMu sync.RWMutex
-	activeCodebase   string
+	activeCodebase *activecodebase.Store
 
 	// Token savings tracker for output compression hooks.
 	tokenTracker  *tracking.TokenTracker
@@ -199,6 +197,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		sessionProjectPath: sessionProjectPath,
 		warningSeen:        make(map[string]struct{}),
 		annotationStore:    annotation.NewStore(10 * time.Minute),
+		activeCodebase:     activecodebase.New(),
 		pushInbox:          push.NewPushInbox(50),
 		ptyManager:         pty.NewManager(),
 		tokenTracker:       tracking.NewTokenTracker(),
@@ -308,20 +307,6 @@ func (s *Server) closeAnnotationStore() {
 	if store != nil {
 		store.Close()
 	}
-}
-
-// GetActiveCodebase returns the active codebase path (thread-safe).
-func (s *Server) GetActiveCodebase() string {
-	s.activeCodebaseMu.RLock()
-	defer s.activeCodebaseMu.RUnlock()
-	return s.activeCodebase
-}
-
-// SetActiveCodebase updates the active codebase path (thread-safe).
-func (s *Server) SetActiveCodebase(path string) {
-	s.activeCodebaseMu.Lock()
-	defer s.activeCodebaseMu.Unlock()
-	s.activeCodebase = path
 }
 
 // Close gracefully shuts down the server, draining the async log writer.

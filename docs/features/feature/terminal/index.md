@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - internal/activecodebase/store.go
   - cmd/browser-agent/internal/terminal/status/status.go
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -56,6 +57,7 @@ code_paths:
   - scripts/tests/framework/framework.sh
   - scripts/tests/workflows/cat-28-terminal.sh
 test_paths:
+  - internal/activecodebase/store_test.go
   - cmd/browser-agent/internal/terminal/status/status_test.go
   - tests/extension/terminal-reconnect/terminal-html-liveness.test.js
   - cmd/browser-agent/internal/terminal/sessionrelay/relay_rebind_test.go
@@ -367,7 +369,7 @@ If the client calls `POST /terminal/start` with an ID that already exists:
 
 When starting a session, the working directory is resolved in this order:
 1. `dir` from the request body (explicit)
-2. `active_codebase` set via MCP/extension (`server.GetActiveCodebase()`)
+2. `active_codebase` set via MCP/extension (`activecodebase.Store`)
 3. Auto-detected from the first registered MCP client's CWD
 4. Falls back to the daemon's working directory
 

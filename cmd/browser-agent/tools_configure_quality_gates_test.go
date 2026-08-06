@@ -15,7 +15,7 @@ func TestSetupQualityGates_CreatesConfigAndStandards(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	resp := callConfigureRaw(h, `{"what":"setup_quality_gates"}`)
 	result := parseToolResult(t, resp)
@@ -73,7 +73,7 @@ func TestSetupQualityGates_DoesNotOverwriteExistingConfig(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	// Pre-create .kaboom.json with custom content.
 	existing := `{"code_standards":"my-custom-rules.md","file_size_limit":500}`
@@ -104,7 +104,7 @@ func TestSetupQualityGates_DoesNotOverwriteExistingStandards(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	// Pre-create standards file.
 	existing := "# My Custom Standards\n\nDo not overwrite me."
@@ -130,7 +130,7 @@ func TestSetupQualityGates_CustomTargetDir(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	subdir := filepath.Join(dir, "subproject")
 	if err := os.MkdirAll(subdir, 0755); err != nil {
@@ -154,7 +154,7 @@ func TestSetupQualityGates_RejectsTargetDirOutsideProject(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	outsideDir := t.TempDir() // Different temp dir — outside project.
 
@@ -190,7 +190,7 @@ func TestSetupQualityGates_CustomStandardsPathInExistingConfig(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	// Pre-create config pointing to custom standards file.
 	config := `{"code_standards":"docs/my-patterns.md"}`
@@ -215,7 +215,7 @@ func TestSetupQualityGates_SnakeCaseResponse(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	resp := callConfigureRaw(h, `{"what":"setup_quality_gates"}`)
 	result := parseToolResult(t, resp)
@@ -232,7 +232,7 @@ func TestSetupQualityGates_ResponseContainsSuggestions(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	resp := callConfigureRaw(h, `{"what":"setup_quality_gates"}`)
 	result := parseToolResult(t, resp)
@@ -252,7 +252,7 @@ func TestSetupQualityGates_ResponseContainsDefaults(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	resp := callConfigureRaw(h, `{"what":"setup_quality_gates"}`)
 	result := parseToolResult(t, resp)
@@ -278,7 +278,7 @@ func TestSetupQualityGates_InstallsHooks(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	resp := callConfigureRaw(h, `{"what":"setup_quality_gates"}`)
 	result := parseToolResult(t, resp)
@@ -335,7 +335,7 @@ func TestSetupQualityGates_DoesNotDuplicateHooks(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	// Run setup twice.
 	callConfigureRaw(h, `{"what":"setup_quality_gates"}`)
@@ -368,7 +368,7 @@ func TestSetupQualityGates_MergesWithExistingSettings(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	dir := t.TempDir()
-	server.SetActiveCodebase(dir)
+	server.activeCodebase.SetActiveCodebase(dir)
 
 	// Pre-create .claude/settings.json with existing settings.
 	settingsDir := filepath.Join(dir, ".claude")

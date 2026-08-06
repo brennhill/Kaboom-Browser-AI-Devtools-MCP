@@ -425,13 +425,13 @@
       "mutable_globals": 1,
       "exports": 24
     },
-    "cmd/browser-agent/internal/terminal/status/status.go": {
-      "mutable_globals": 0,
-      "exports": 7
-    },
     "cmd/browser-agent/internal/terminal/spawnpolicy/retry.go": {
       "mutable_globals": 0,
       "exports": 4
+    },
+    "cmd/browser-agent/internal/terminal/status/status.go": {
+      "mutable_globals": 0,
+      "exports": 7
     },
     "cmd/browser-agent/internal/terminal/supervisor/supervisor.go": {
       "mutable_globals": 0,
@@ -775,15 +775,11 @@
     },
     "cmd/browser-agent/server.go": {
       "mutable_globals": 1,
-      "exports": 7
+      "exports": 5
     },
     "cmd/browser-agent/tools_configure.go": {
       "mutable_globals": 1,
       "exports": 2
-    },
-    "cmd/browser-agent/tools_configure_support.go": {
-      "mutable_globals": 1,
-      "exports": 0
     },
     "cmd/browser-agent/tools_core.go": {
       "mutable_globals": 0,
@@ -800,6 +796,10 @@
     "internal/a11ysummary/summary.go": {
       "mutable_globals": 0,
       "exports": 3
+    },
+    "internal/activecodebase/store.go": {
+      "mutable_globals": 0,
+      "exports": 4
     },
     "internal/analysis/apicontract/contract.go": {
       "mutable_globals": 0,

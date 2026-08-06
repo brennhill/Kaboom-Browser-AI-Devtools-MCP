@@ -238,7 +238,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return issuereport.Handle(h.issueReportDeps, req, args)
 		},
 		"setup_quality_gates": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return qualitygates.Handle(h.server, req, args)
+			return qualitygates.Handle(h.server.activeCodebase, req, args)
 		},
 		"qa_fixture": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			if fixtureErr != nil {

@@ -557,7 +557,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 			return sessionStoreGuard(handler.sessionStoreImpl, req)
 		},
 		InvalidateSummary: handler.summaryPrefs.Invalidate,
-		SetActiveCodebase: handler.MCPHandler.server.SetActiveCodebase,
+		SetActiveCodebase: handler.MCPHandler.server.activeCodebase.SetActiveCodebase,
 	},
 		handler.sessionStoreImpl,
 		handler.sessionManager,

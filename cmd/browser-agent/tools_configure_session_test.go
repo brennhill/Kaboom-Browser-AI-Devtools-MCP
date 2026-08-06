@@ -46,7 +46,7 @@ func TestToolLoadSessionContext_NilStore(t *testing.T) {
 			return sessionStoreGuard(env.handler.sessionStoreImpl, req)
 		},
 		InvalidateSummary: env.handler.summaryPrefs.Invalidate,
-		SetActiveCodebase: env.server.SetActiveCodebase,
+		SetActiveCodebase: env.server.activeCodebase.SetActiveCodebase,
 	}, nil, env.handler.sessionManager)
 
 	args := json.RawMessage(`{"what":"load"}`)
