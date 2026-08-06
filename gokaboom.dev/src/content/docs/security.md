@@ -203,7 +203,7 @@ shasum -a 256 bin/kaboom-*
 
 ## Data Flow Diagram
 
-![Localhost-Only Security Boundary](../../assets/diagrams/security-localhost-boundary.svg)
+![Localhost-Only Security Boundary](../../assets/diagrams/security/security-localhost-boundary.svg)
 
 ## Enterprise Deployment
 

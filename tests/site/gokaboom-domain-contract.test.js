@@ -340,7 +340,7 @@ describe('gokaboom domain contracts', () => {
       'gokaboom.dev/public/images/landing/overlay-tool-palette-snapshot.svg',
       'gokaboom.dev/public/images/landing/hover-widget-snapshot.svg',
       'gokaboom.dev/src/assets/diagrams/architecture-main.svg',
-      'gokaboom.dev/src/assets/diagrams/seo-content-plan-funnel.svg',
+      'gokaboom.dev/src/assets/diagrams/marketing/seo-content-plan-funnel.svg',
       'gokaboom.dev/src/assets/diagrams/kaboom-live-spec-architecture.svg',
       'gokaboom.dev/src/assets/diagrams/kaboom-trace-spec-architecture.svg',
       'gokaboom.dev/src/assets/diagrams/kaboom-replay-spec-architecture.svg',

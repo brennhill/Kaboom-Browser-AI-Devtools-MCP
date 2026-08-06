@@ -16,6 +16,8 @@ code_paths:
   - gokaboom.dev/src/content.config.ts
   - gokaboom.dev/public/images/integrations
   - gokaboom.dev/public/images/landing
+  - gokaboom.dev/src/assets/diagrams/marketing/
+  - gokaboom.dev/src/assets/diagrams/security/
   - gokaboom.dev/public/images/solutions-seo-signal.svg
   - gokaboom.dev/src/content/docs/articles
   - gokaboom.dev/src/content/docs/blog
