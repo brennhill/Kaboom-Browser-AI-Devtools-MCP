@@ -4,6 +4,8 @@ import { execSync } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { collectChangedFiles } from './changed-doc-files.mjs';
+
 const DOCS_PREFIX = 'gokaboom.dev/src/content/docs/';
 const DOC_EXT_RE = /\.(md|mdx)$/;
 const VERSION_SURFACES = [
@@ -63,25 +65,6 @@ const VERSION_SURFACES = [
   }
 ];
 
-function splitEnvFileList(value) {
-  return value
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function runGitDiff(range) {
-  const output = execSync(`git diff --name-only --diff-filter=ACMR ${range}`, {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-  });
-
-  return output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
 function isShallowRepository() {
   try {
     const result = execSync('git rev-parse --is-shallow-repository', {
@@ -123,79 +106,17 @@ function ensureSufficientDepth() {
 
 function getChangedFiles() {
   if (process.env.CONTENT_CONTRACT_FILES) {
-    return splitEnvFileList(process.env.CONTENT_CONTRACT_FILES);
+    return collectChangedFiles({
+      envFilesKey: 'CONTENT_CONTRACT_FILES',
+      envRangeKey: 'CONTENT_CONTRACT_RANGE',
+    });
   }
-
   ensureSufficientDepth();
-
-  const changed = new Set();
-  const ranges = [];
-
-  if (process.env.CONTENT_CONTRACT_RANGE) {
-    ranges.push(process.env.CONTENT_CONTRACT_RANGE);
-  }
-
-  if (process.env.GITHUB_BASE_REF) {
-    ranges.push(`origin/${process.env.GITHUB_BASE_REF}...HEAD`);
-  }
-
-  ranges.push('HEAD~1..HEAD');
-
-  let anyRangeSucceeded = false;
-
-  for (const range of ranges) {
-    try {
-      const files = runGitDiff(range);
-      for (const file of files) {
-        changed.add(file);
-      }
-      anyRangeSucceeded = true;
-    } catch {
-      // Try next range.
-    }
-  }
-
-  if (!anyRangeSucceeded && ranges.length > 0) {
-    throw new Error(
-      'Content contract: all git diff ranges failed. ' +
-      'This may indicate a shallow clone without sufficient history. ' +
-      'Set CONTENT_CONTRACT_FILES or use fetch-depth: 0 in CI.'
-    );
-  }
-
-  try {
-    const workingTree = execSync('git diff --name-only --diff-filter=ACMR', {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    for (const file of workingTree) {
-      changed.add(file);
-    }
-  } catch {
-    // Ignore and return gathered set.
-  }
-
-  try {
-    const untracked = execSync('git ls-files --others --exclude-standard', {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    for (const file of untracked) {
-      changed.add(file);
-    }
-  } catch {
-    // Ignore and return gathered set.
-  }
-
-  return Array.from(changed);
+  return collectChangedFiles({
+    envFilesKey: 'CONTENT_CONTRACT_FILES',
+    envRangeKey: 'CONTENT_CONTRACT_RANGE',
+    requireRange: true,
+  });
 }
 
 function requireFrontmatterBlock(content) {

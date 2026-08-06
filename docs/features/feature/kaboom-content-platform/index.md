@@ -59,6 +59,7 @@ code_paths:
   - scripts/docs/site/check-site-content-ids.mjs
   - scripts/docs/site/check-gokaboom-content-contract.mjs
   - scripts/docs/site/check-content-style-contract.mjs
+  - scripts/docs/site/changed-doc-files.mjs
   - scripts/docs/site/check-downloads-page-contract.mjs
   - scripts/docs/site/check-landing-layout-contract.mjs
   - scripts/docs/reference/generate-reference-executable-examples.mjs
@@ -67,6 +68,7 @@ code_paths:
   - scripts/docs/site/run-vale-on-changed.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs
   - tests/site/gokaboom-domain-contract.test.js
+  - tests/site/changed-doc-files.test.js
   - scripts/docs/features/check-feature-bundles.js
   - .github/workflows/ci.yml
 test_paths:
@@ -75,6 +77,7 @@ test_paths:
   - scripts/docs/features/check-feature-bundles.js
   - scripts/docs/site/check-gokaboom-content-contract.mjs
   - scripts/docs/site/check-content-style-contract.mjs
+  - scripts/docs/site/changed-doc-files.mjs
   - scripts/docs/site/check-downloads-page-contract.mjs
   - scripts/docs/site/check-landing-layout-contract.mjs
   - scripts/docs/reference/generate-reference-executable-examples.mjs
@@ -82,6 +85,7 @@ test_paths:
   - scripts/docs/features/sync-verification-metadata.mjs
   - scripts/docs/site/run-vale-on-changed.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs
+  - tests/site/changed-doc-files.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

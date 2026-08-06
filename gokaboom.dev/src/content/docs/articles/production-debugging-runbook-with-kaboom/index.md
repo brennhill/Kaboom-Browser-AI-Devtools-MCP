@@ -76,4 +76,4 @@ configure({what: "save_sequence", name: "incident-triage-core", steps: [/* triag
 
 ## You’re Building Operational Confidence
 
-A runbook is one of the highest-leverage team tools. *KaBOOM Agentic Devtools** helps you make it concrete, repeatable, and easier to improve after every incident.
+A runbook is one of the most effective team tools. **KaBOOM Agentic Devtools** helps you make it concrete, repeatable, and easier to improve after every incident.

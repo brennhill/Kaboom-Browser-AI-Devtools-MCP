@@ -71,4 +71,4 @@ generate({what: "csp", mode: "strict", exclude_origins: ["https://optional-widge
 
 ## You’re Doing Real Defensive Engineering
 
-A good CSP is one of the highest-leverage web security controls. **KaBOOM Agentic Devtools** helps you build it with confidence from real data.
+A good CSP is one of the most effective web security controls. **KaBOOM Agentic Devtools** helps you build it with confidence from real data.

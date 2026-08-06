@@ -372,16 +372,16 @@ describe('gokaboom domain contracts', () => {
   test('articles batch 13 uses KaBOOM naming in the first content cluster', () => {
     const files = [
       'gokaboom.dev/src/content/docs/articles.mdx',
-      'gokaboom.dev/src/content/docs/articles/identify-render-blocking-assets-and-slow-routes.md',
-      'gokaboom.dev/src/content/docs/articles/local-first-demo-recording-for-product-teams.md',
-      'gokaboom.dev/src/content/docs/articles/production-debugging-runbook-with-kaboom.md',
-      'gokaboom.dev/src/content/docs/articles/use-mcp-for-browser-aware-debugging.md',
-      'gokaboom.dev/src/content/docs/articles/debug-websocket-real-time-apps.md',
-      'gokaboom.dev/src/content/docs/articles/reproduce-works-locally-fails-in-ci-browser-bugs.md',
-      'gokaboom.dev/src/content/docs/articles/build-reusable-qa-macros-with-batch-sequences.md',
-      'gokaboom.dev/src/content/docs/articles/compare-error-states-across-releases.md',
-      'gokaboom.dev/src/content/docs/articles/prevent-credential-and-pii-leaks-during-debugging.md',
-      'gokaboom.dev/src/content/docs/articles/security-audit-for-browser-workflows.md'
+      'gokaboom.dev/src/content/docs/articles/identify-render-blocking-assets-and-slow-routes/index.md',
+      'gokaboom.dev/src/content/docs/articles/local-first-demo-recording-for-product-teams/index.md',
+      'gokaboom.dev/src/content/docs/articles/production-debugging-runbook-with-kaboom/index.md',
+      'gokaboom.dev/src/content/docs/articles/use-mcp-for-browser-aware-debugging/index.md',
+      'gokaboom.dev/src/content/docs/articles/debug-websocket-real-time-apps/index.md',
+      'gokaboom.dev/src/content/docs/articles/reproduce-works-locally-fails-in-ci-browser-bugs/index.md',
+      'gokaboom.dev/src/content/docs/articles/build-reusable-qa-macros-with-batch-sequences/index.md',
+      'gokaboom.dev/src/content/docs/articles/compare-error-states-across-releases/index.md',
+      'gokaboom.dev/src/content/docs/articles/prevent-credential-and-pii-leaks-during-debugging/index.md',
+      'gokaboom.dev/src/content/docs/articles/security-audit-for-browser-workflows/index.md'
     ]
 
     for (const file of files) {
@@ -396,14 +396,14 @@ describe('gokaboom domain contracts', () => {
 
   test('articles batch 14 uses KaBOOM naming and Kaboom install commands in setup guides', () => {
     const files = [
-      'gokaboom.dev/src/content/docs/articles/how-to-install-kaboom-in-5-minutes.md',
-      'gokaboom.dev/src/content/docs/articles/how-to-connect-kaboom-to-claude-code.md',
-      'gokaboom.dev/src/content/docs/articles/how-to-connect-kaboom-to-cursor.md',
-      'gokaboom.dev/src/content/docs/articles/how-to-connect-kaboom-to-windsurf.md',
-      'gokaboom.dev/src/content/docs/articles/cursor-kaboom-interactive-web-development.md',
-      'gokaboom.dev/src/content/docs/articles/claude-code-kaboom-fast-bug-triage-setup.md',
-      'gokaboom.dev/src/content/docs/articles/how-to-use-kaboom-if-you-are-not-a-developer.md',
-      'gokaboom.dev/src/content/docs/articles/how-to-record-your-first-product-demo-with-kaboom.md'
+      'gokaboom.dev/src/content/docs/articles/how-to-install-kaboom-in-5-minutes/index.md',
+      'gokaboom.dev/src/content/docs/articles/how-to-connect-kaboom-to-claude-code/index.md',
+      'gokaboom.dev/src/content/docs/articles/how-to-connect-kaboom-to-cursor/index.md',
+      'gokaboom.dev/src/content/docs/articles/how-to-connect-kaboom-to-windsurf/index.md',
+      'gokaboom.dev/src/content/docs/articles/cursor-kaboom-interactive-web-development/index.md',
+      'gokaboom.dev/src/content/docs/articles/claude-code-kaboom-fast-bug-triage-setup/index.md',
+      'gokaboom.dev/src/content/docs/articles/how-to-use-kaboom-if-you-are-not-a-developer/index.md',
+      'gokaboom.dev/src/content/docs/articles/how-to-record-your-first-product-demo-with-kaboom/index.md'
     ]
 
     for (const file of files) {
@@ -418,14 +418,14 @@ describe('gokaboom domain contracts', () => {
 
   test('articles batch 15 uses KaBOOM naming in the workflow guide cluster', () => {
     const files = [
-      'gokaboom.dev/src/content/docs/articles/annotation-driven-ux-reviews-for-engineering-teams.md',
-      'gokaboom.dev/src/content/docs/articles/api-validation-for-frontend-teams.md',
-      'gokaboom.dev/src/content/docs/articles/catch-third-party-script-regressions-fast.md',
-      'gokaboom.dev/src/content/docs/articles/core-web-vitals-regression-triage.md',
-      'gokaboom.dev/src/content/docs/articles/debug-broken-forms-labels-aria-validation.md',
-      'gokaboom.dev/src/content/docs/articles/detect-api-contract-drift-before-production.md',
-      'gokaboom.dev/src/content/docs/articles/fix-login-redirect-loops-and-session-bugs.md',
-      'gokaboom.dev/src/content/docs/articles/generate-csp-policy-from-real-traffic.md'
+      'gokaboom.dev/src/content/docs/articles/annotation-driven-ux-reviews-for-engineering-teams/index.md',
+      'gokaboom.dev/src/content/docs/articles/api-validation-for-frontend-teams/index.md',
+      'gokaboom.dev/src/content/docs/articles/catch-third-party-script-regressions-fast/index.md',
+      'gokaboom.dev/src/content/docs/articles/core-web-vitals-regression-triage/index.md',
+      'gokaboom.dev/src/content/docs/articles/debug-broken-forms-labels-aria-validation/index.md',
+      'gokaboom.dev/src/content/docs/articles/detect-api-contract-drift-before-production/index.md',
+      'gokaboom.dev/src/content/docs/articles/fix-login-redirect-loops-and-session-bugs/index.md',
+      'gokaboom.dev/src/content/docs/articles/generate-csp-policy-from-real-traffic/index.md'
     ]
 
     for (const file of files) {
@@ -440,14 +440,14 @@ describe('gokaboom domain contracts', () => {
 
   test('articles batch 16 uses KaBOOM naming in the remaining article cluster', () => {
     const files = [
-      'gokaboom.dev/src/content/docs/articles/generate-playwright-tests-from-real-user-sessions.md',
-      'gokaboom.dev/src/content/docs/articles/how-to-capture-console-logs-and-network-without-devtools.md',
-      'gokaboom.dev/src/content/docs/articles/how-to-run-your-first-browser-debug-session.md',
-      'gokaboom.dev/src/content/docs/articles/how-to-share-reproducible-bug-evidence-with-your-team.md',
-      'gokaboom.dev/src/content/docs/articles/how-to-use-annotations-to-explain-ui-bugs-clearly.md',
-      'gokaboom.dev/src/content/docs/articles/mcp-tools-vs-traditional-test-runners.md',
-      'gokaboom.dev/src/content/docs/articles/run-accessibility-audits-in-ci-and-export-sarif.md',
-      'gokaboom.dev/src/content/docs/articles/visual-regression-testing-with-annotation-sessions.md'
+      'gokaboom.dev/src/content/docs/articles/generate-playwright-tests-from-real-user-sessions/index.md',
+      'gokaboom.dev/src/content/docs/articles/how-to-capture-console-logs-and-network-without-devtools/index.md',
+      'gokaboom.dev/src/content/docs/articles/how-to-run-your-first-browser-debug-session/index.md',
+      'gokaboom.dev/src/content/docs/articles/how-to-share-reproducible-bug-evidence-with-your-team/index.md',
+      'gokaboom.dev/src/content/docs/articles/how-to-use-annotations-to-explain-ui-bugs-clearly/index.md',
+      'gokaboom.dev/src/content/docs/articles/mcp-tools-vs-traditional-test-runners/index.md',
+      'gokaboom.dev/src/content/docs/articles/run-accessibility-audits-in-ci-and-export-sarif/index.md',
+      'gokaboom.dev/src/content/docs/articles/visual-regression-testing-with-annotation-sessions/index.md'
     ]
 
     for (const file of files) {
