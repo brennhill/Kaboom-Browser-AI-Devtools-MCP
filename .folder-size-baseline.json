@@ -3,8 +3,7 @@
   "max_files": 10,
   "folders": {
     "cmd/browser-agent": 196,
-    "cmd/browser-agent/internal/bridge": 26,
-    "cmd/browser-agent/internal/terminal": 33,
+    "cmd/browser-agent/internal/bridge": 20,
     "cmd/browser-agent/internal/toolinteract": 20,
     "docs": 56,
     "docs/adrs": 70,

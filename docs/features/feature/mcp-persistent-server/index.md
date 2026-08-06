@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -155,8 +155,7 @@ test_paths:
 
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
-  - cmd/browser-agent/internal/bridge/bridge_detach_contract_test.go
-  - cmd/browser-agent/internal/bridge/bridge_context_contract_test.go
+  - cmd/browser-agent/internal/bridge/contracts/source_contract_test.go
   - cmd/browser-agent/internal/bridge/health_metadata_test.go
   - cmd/browser-agent/internal/bridge/runner_isolation_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix_test.go
