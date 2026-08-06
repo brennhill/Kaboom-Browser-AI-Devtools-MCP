@@ -15,21 +15,21 @@ This folder contains the architecture contract used to make safe edits.
 
 ## Start Here (Safe Edits)
 
-1. [SAFE_EDIT_CHECKLIST.md](SAFE_EDIT_CHECKLIST.md)
-2. [EDIT_REQUEST_TEMPLATE.md](EDIT_REQUEST_TEMPLATE.md)
+1. [SAFE_EDIT_CHECKLIST.md](../boundaries/SAFE_EDIT_CHECKLIST.md)
+2. [EDIT_REQUEST_TEMPLATE.md](../workflows/EDIT_REQUEST_TEMPLATE.md)
 3. [system-overview.md](system-overview.md)
-4. [module-map.md](module-map.md)
-5. [invariants.md](invariants.md)
-6. [interfaces.md](interfaces.md)
-7. [PR Template](../../.github/pull_request_template.md)
+4. [module-map.md](../boundaries/module-map.md)
+5. [invariants.md](../boundaries/invariants.md)
+6. [interfaces.md](../boundaries/interfaces.md)
+7. [PR Template](../../../.github/pull_request_template.md)
 
 ## Canonical Technical References
 
-- [Server Architecture](../core/server-architecture.md)
-- [Extension Architecture](../core/extension-architecture.md)
-- [Extension Message Protocol](../core/extension-message-protocol.md)
-- [MCP Command Option Matrix](../core/mcp-command-option-matrix.md)
-- [Code Index](../core/code-index.md)
+- [Server Architecture](../../core/server-architecture.md)
+- [Extension Architecture](../../core/extension-architecture.md)
+- [Extension Message Protocol](../../core/extension-message-protocol.md)
+- [MCP Command Option Matrix](../../core/mcp-command-option-matrix.md)
+- [Code Index](../../core/code-index.md)
 - ADRs in this folder (`ADR-00x-*`)
 
 ## Comments in Code Files

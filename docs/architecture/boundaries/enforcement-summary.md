@@ -94,13 +94,13 @@ We've built **defense-in-depth** protection for the async queue-and-poll archite
 ### 5. Documentation (Context & Guidance) 📚
 
 **Files Created**:
-- [ADR-002-async-queue-immutability.md](docs/architecture/ADR-002-async-queue-immutability.md)
+- [ADR-002-async-queue-immutability.md](docs/architecture/decisions/ADR-002-async-queue-immutability.md)
   - WHY architecture is immutable
   - Incident report
   - 5-layer defense rationale
   - Bypass procedure
 
-- [ARCHITECTURE-ENFORCEMENT.md](docs/architecture/ARCHITECTURE-ENFORCEMENT.md)
+- [ARCHITECTURE-ENFORCEMENT.md](docs/architecture/boundaries/ARCHITECTURE-ENFORCEMENT.md)
   - Complete guide to all layers
   - How to run each check
   - FAQ and troubleshooting
@@ -348,8 +348,8 @@ git checkout <commit-hash> -- internal/capture/
 - `.github/workflows/architecture-validation.yml` (80 lines)
 
 **Documentation**:
-- `docs/architecture/ADR-002-async-queue-immutability.md` (450 lines)
-- `docs/architecture/ARCHITECTURE-ENFORCEMENT.md` (650 lines)
+- `docs/architecture/decisions/ADR-002-async-queue-immutability.md` (450 lines)
+- `docs/architecture/boundaries/ARCHITECTURE-ENFORCEMENT.md` (650 lines)
 - `docs/async-queue-correlation-tracking.md` (420 lines)
 
 **Agent Configs**:

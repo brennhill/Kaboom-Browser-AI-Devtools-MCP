@@ -136,7 +136,7 @@ fi
 echo ""
 echo "6️⃣  Checking architecture documentation..."
 require_file "docs/core/async-tool-pattern.md"
-require_file "docs/architecture/ADR-002-async-queue-immutability.md"
+require_file "docs/architecture/decisions/ADR-002-async-queue-immutability.md"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

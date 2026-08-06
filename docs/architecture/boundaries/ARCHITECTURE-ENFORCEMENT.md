@@ -67,7 +67,7 @@ On 2026-02-02, we deleted the async queue implementation during refactoring. Thi
    This file implements the async queue-and-poll pattern.
    Without it, ALL interact() commands will timeout.
 
-   See docs/architecture/ADR-002-async-queue-immutability.md
+   See docs/architecture/decisions/ADR-002-async-queue-immutability.md
 ```
 
 **Install**:
@@ -193,8 +193,8 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 ### Layer 5: Documentation 📚
 
 **Files**:
-- [ADR-002-async-queue-immutability.md](ADR-002-async-queue-immutability.md) - WHY immutable
-- [async-queue-correlation-tracking.md](docs/async-queue-correlation-tracking.md) - Implementation
+- [ADR-002-async-queue-immutability.md](../decisions/ADR-002-async-queue-immutability.md) - WHY immutable
+- [async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md) - Implementation
 - Inline comments in critical files
 
 **What it provides**:
@@ -207,7 +207,7 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 
 **Read before modifying**:
 ```bash
-cat docs/architecture/ADR-002-async-queue-immutability.md
+cat docs/architecture/decisions/ADR-002-async-queue-immutability.md
 ```
 
 ---
@@ -385,7 +385,7 @@ Since implementing enforcement (2026-02-02):
 - "How do I modify async queue architecture?"
 
 **Issues?**
-- Check [ADR-002](ADR-002-async-queue-immutability.md)
+- Check [ADR-002](../decisions/ADR-002-async-queue-immutability.md)
 - Run `./scripts/validate-architecture.sh`
 - Check GitHub Actions logs
 
@@ -398,9 +398,9 @@ Since implementing enforcement (2026-02-02):
 
 ## Related Documents
 
-- [ADR-001: Async Queue Pattern](ADR-001-async-queue-pattern.md) - Original design
-- [ADR-002: Async Queue Immutability](ADR-002-async-queue-immutability.md) - This enforcement
-- [async-queue-correlation-tracking.md](docs/async-queue-correlation-tracking.md) - Implementation
+- [ADR-001: Async Queue Pattern](../decisions/ADR-001-async-queue-pattern.md) - Original design
+- [ADR-002: Async Queue Immutability](../decisions/ADR-002-async-queue-immutability.md) - This enforcement
+- [async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md) - Implementation
 - [async_queue_integration_test.go](internal/capture/async_queue_integration_test.go) - Tests
 
 ---

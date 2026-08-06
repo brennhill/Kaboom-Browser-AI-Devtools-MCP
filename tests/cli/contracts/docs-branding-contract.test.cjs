@@ -7,12 +7,12 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..')
 // Flow maps were relocated out of the retired docs/architecture/flow-maps/ dir into
 // docs/architecture/ (the flow-map system was retired; see the Docs Cross-Reference
 // Contract in CLAUDE.md/AGENTS.md). These paths track that move.
-const NEW_FLOW_MAP = 'docs/architecture/gokaboom-content-publishing-and-agent-markdown.md'
+const NEW_FLOW_MAP = 'docs/architecture/platform/gokaboom-content-publishing-and-agent-markdown.md'
 const OLD_FLOW_MAP = 'docs/architecture/cookwithgasoline-content-publishing-and-agent-markdown.md'
 const DOCS_TO_SCAN = [
   NEW_FLOW_MAP,
-  'docs/architecture/terminal-side-panel-host.md',
-  'docs/architecture/tracked-tab-hover-quick-actions.md',
+  'docs/architecture/runtime/terminal-side-panel-host.md',
+  'docs/architecture/runtime/tracked-tab-hover-quick-actions.md',
   'docs/features/feature/terminal/index.md',
   'docs/features/feature/terminal/product-spec.md',
   'docs/features/feature/terminal/tech-spec.md',
@@ -42,7 +42,7 @@ test('kaboom docs flow maps point at gokaboom and kaboom naming', () => {
   const terminalIndex = read('docs/features/feature/terminal/index.md')
   assert.match(terminalIndex, /Kaboom work context/)
 
-  const hoverFlowMap = read('docs/architecture/tracked-tab-hover-quick-actions.md')
+  const hoverFlowMap = read('docs/architecture/runtime/tracked-tab-hover-quick-actions.md')
   assert.match(hoverFlowMap, /Kaboom terminal side panel/)
   assert.match(hoverFlowMap, /Hide Kaboom Devtool/)
 })

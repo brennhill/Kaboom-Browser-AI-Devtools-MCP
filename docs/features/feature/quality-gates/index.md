@@ -6,6 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - docs/architecture/boundaries/
+  - docs/architecture/decisions/
+  - docs/architecture/platform/
+  - docs/architecture/runtime/
+  - docs/architecture/workflows/
   - docs/features/capture/
   - docs/features/generation/
   - docs/features/pilot/

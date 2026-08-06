@@ -71,6 +71,6 @@ The panel may add additive interfaces (for example watch-mode configuration), bu
 
 ## References
 
-- Feature spec: [In-Browser Agent Panel Product Spec](../features/feature/in-browser-agent-panel/product-spec.md)
-- Technical design: [In-Browser Agent Panel Tech Spec](../features/feature/in-browser-agent-panel/tech-spec.md)
+- Feature spec: [In-Browser Agent Panel Product Spec](../../features/feature/in-browser-agent-panel/product-spec.md)
+- Technical design: [In-Browser Agent Panel Tech Spec](../../features/feature/in-browser-agent-panel/tech-spec.md)
 - Related architecture policy: [ADR-002 Async Queue Immutability](ADR-002-async-queue-immutability.md)

@@ -80,7 +80,7 @@ If ANY component is deleted, the test **fails to compile or run**.
 ### Layer 4: Documentation (Human Context)
 
 - [ADR-002](ADR-002-async-queue-immutability.md) - This document (WHY it's immutable)
-- [async-queue-correlation-tracking.md](docs/async-queue-correlation-tracking.md) - Implementation details
+- [async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md) - Implementation details
 - Inline comments in critical files referencing ADR-002
 
 **Strength**: Provides context for future developers
@@ -93,7 +93,7 @@ Define required interfaces that force implementation:
 ```go
 // AsyncQueue defines the IMMUTABLE async queue contract.
 // DO NOT modify this interface without ADR approval.
-// See: docs/architecture/ADR-002-async-queue-immutability.md
+// See: docs/architecture/decisions/ADR-002-async-queue-immutability.md
 type AsyncQueue interface {
     CreatePendingQueryWithTimeout(query PendingQuery, timeout time.Duration, clientID string) string
     GetPendingQueries() []PendingQueryResponse
@@ -121,7 +121,7 @@ If `Capture` doesn't implement `AsyncQueue`, compilation fails.
 ✅ **Clear error messages** - Each layer provides actionable guidance:
 ```
 ❌ COMMIT BLOCKED: Critical file 'internal/capture/queries.go' is missing!
-   See docs/architecture/ADR-002-async-queue-immutability.md
+   See docs/architecture/decisions/ADR-002-async-queue-immutability.md
    Or ask: 'How do I restore the async queue implementation?'
 ```
 
@@ -174,7 +174,7 @@ To modify the async queue architecture:
 - [x] Integration test created (`async_queue_integration_test.go`)
 - [x] Architecture validation script (`scripts/validate-architecture.sh`)
 - [x] ADR-002 written (this document)
-- [x] Documentation updated ([async-queue-correlation-tracking.md](docs/async-queue-correlation-tracking.md))
+- [x] Documentation updated ([async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md))
 - [ ] CI workflow added (`.github/workflows/architecture-validation.yml`) - TODO
 - [ ] Interface-based enforcement added (future enhancement)
 - [ ] Team training on bypass procedure
@@ -231,7 +231,7 @@ To modify the async queue architecture:
 ## References
 
 - Incident Report: Phase 4b async queue deletion (2026-02-02)
-- [async-queue-correlation-tracking.md](docs/async-queue-correlation-tracking.md)
+- [async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md)
 - [async_queue_integration_test.go](internal/capture/async_queue_integration_test.go)
 - [validate-architecture.sh](scripts/validate-architecture.sh)
 
@@ -248,9 +248,9 @@ To modify the async queue architecture:
 
 For visual understanding of the architecture:
 
-- 📊 [Async Queue-and-Poll Flow Diagram](diagrams/async-queue-flow.md) - See the full end-to-end flow
-- 🎯 [Correlation ID Lifecycle](diagrams/correlation-id-lifecycle.md) - Understand command tracking
-- 🛡️ [5-Layer Protection Diagram](diagrams/quality/5-layer-protection.md) - Visualize defense-in-depth
-- 🏗️ [System Architecture](diagrams/system-architecture.md) - See how all pieces fit together
+- 📊 [Async Queue-and-Poll Flow Diagram](../diagrams/async-queue-flow.md) - See the full end-to-end flow
+- 🎯 [Correlation ID Lifecycle](../diagrams/correlation-id-lifecycle.md) - Understand command tracking
+- 🛡️ [5-Layer Protection Diagram](../diagrams/quality/5-layer-protection.md) - Visualize defense-in-depth
+- 🏗️ [System Architecture](../diagrams/system-architecture.md) - See how all pieces fit together
 
 All diagrams use Mermaid and render automatically on GitHub.

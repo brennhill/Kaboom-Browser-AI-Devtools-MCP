@@ -18,7 +18,7 @@ Copy/paste and fill this when asking for edits.
 
 ## Hard Constraints
 
-Use [invariants.md](invariants.md) and [interfaces.md](interfaces.md) as hard constraints.
+Use [invariants.md](../boundaries/invariants.md) and [interfaces.md](../boundaries/interfaces.md) as hard constraints.
 
 ## Scope
 

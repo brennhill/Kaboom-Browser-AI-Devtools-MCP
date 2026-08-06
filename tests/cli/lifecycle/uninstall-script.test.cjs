@@ -1,7 +1,7 @@
 /**
  * @fileoverview Contract + behavioral tests for scripts/uninstall.sh and scripts/uninstall.ps1.
  * The uninstaller must reverse every artifact created by scripts/install.sh and
- * `kaboom-agentic-browser --install` (see docs/architecture/uninstall-and-cleanup.md).
+ * `kaboom-agentic-browser --install` (see docs/architecture/runtime/uninstall-and-cleanup.md).
  */
 
 const test = require('node:test')

@@ -7,7 +7,6 @@
     "cmd/browser-agent/internal/toolinteract": 20,
     "docs": 56,
     "docs/adrs": 70,
-    "docs/architecture": 23,
     "docs/core": 40,
     "scripts": 58,
     "scripts/smoke-tests": 35

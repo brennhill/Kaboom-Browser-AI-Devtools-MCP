@@ -56,4 +56,4 @@ mock a different world). Two real bugs lived exactly here. Track a tab first.
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - Feature Index: [index.md](./index.md)
 - Canonical Flow Maps:
-  - [terminal-side-panel-host.md](../../../architecture/terminal-side-panel-host.md)
+  - [terminal-side-panel-host.md](../../../architecture/runtime/terminal-side-panel-host.md)

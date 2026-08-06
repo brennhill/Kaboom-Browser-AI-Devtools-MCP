@@ -23,7 +23,7 @@ Use this checklist when requesting or implementing changes.
 
 ## 2) Canonical Docs Reviewed (required)
 
-- [ ] [system-overview.md](system-overview.md)
+- [ ] [system-overview.md](../platform/system-overview.md)
 - [ ] [module-map.md](module-map.md)
 - [ ] [invariants.md](invariants.md)
 - [ ] [interfaces.md](interfaces.md)
