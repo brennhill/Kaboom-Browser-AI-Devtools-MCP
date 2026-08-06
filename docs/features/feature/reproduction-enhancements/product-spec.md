@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Reproduction Enhan
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Reproduction Enhancements Review](reproduction-enhancements-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

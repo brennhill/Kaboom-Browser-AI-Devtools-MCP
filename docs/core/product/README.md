@@ -19,10 +19,10 @@ The [`in-progress/`](in-progress/) folder holds work-in-progress specs, tracking
 
 ## API Specifications
 
-- [async-command-api.yaml](async-command-api.yaml) - OpenAPI 3.0 spec for async command execution between MCP server and browser extension (v6.0.0)
+- [async-command-api.yaml](../protocol/async-command-api.yaml) - OpenAPI 3.0 spec for async command execution between MCP server and browser extension (v6.0.0)
 
 ## Engineering Working Rules
 
-- [common-patterns.md](common-patterns.md) - Required implementation/review patterns for shared state, multi-entry-point flows, runtime message contracts, duplication checks, and e2e data passing.
+- [common-patterns.md](../reliability/common-patterns.md) - Required implementation/review patterns for shared state, multi-entry-point flows, runtime message contracts, duplication checks, and e2e data passing.
 
 For feature-specific documentation, see `/docs/features/feature/`.

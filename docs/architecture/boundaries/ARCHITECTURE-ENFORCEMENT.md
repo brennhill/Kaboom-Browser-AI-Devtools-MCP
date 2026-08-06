@@ -194,7 +194,7 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 
 **Files**:
 - [ADR-002-async-queue-immutability.md](../decisions/ADR-002-async-queue-immutability.md) - WHY immutable
-- [async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md) - Implementation
+- [async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md) - Implementation
 - Inline comments in critical files
 
 **What it provides**:
@@ -400,7 +400,7 @@ Since implementing enforcement (2026-02-02):
 
 - [ADR-001: Async Queue Pattern](../decisions/ADR-001-async-queue-pattern.md) - Original design
 - [ADR-002: Async Queue Immutability](../decisions/ADR-002-async-queue-immutability.md) - This enforcement
-- [async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md) - Implementation
+- [async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md) - Implementation
 - [async_queue_integration_test.go](internal/capture/async_queue_integration_test.go) - Tests
 
 ---

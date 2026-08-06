@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 # QA Plan: Cursor-Based Pagination
 
 **Status:** COMPLETED (shipped in v5.3)
-**Canonical Test Reference:** `docs/core/uat-v5.3-checklist.md`
+**Canonical Test Reference:** `docs/core/quality/uat-v5.3-checklist.md`
 **Last Verified:** 2026-01-30
 
 ---
@@ -128,5 +128,5 @@ For v6.0+ features that depend on pagination:
 
 - **tech-spec.md** — Complete technical specification
 - **product-spec.md** — Feature requirements
-- **../../../core/uat-v5.3-checklist.md** — Full UAT scenarios
-- **../../../core/known-issues.md** — Current blockers
+- **../../../core/quality/uat-v5.3-checklist.md** — Full UAT scenarios
+- **../../../core/quality/known-issues.md** — Current blockers

@@ -3,7 +3,7 @@ status: shipped
 scope: feature/app-telemetry
 ai-priority: medium
 tags: [telemetry, privacy, reliability]
-relates-to: [index.md, tech-spec.md, qa-plan.md, ../../../core/app-metrics.md]
+relates-to: [index.md, tech-spec.md, qa-plan.md, ../../../core/quality/app-metrics.md]
 last-verified: 2026-08-04
 doc_type: product-spec
 feature_id: feature-app-telemetry
@@ -19,7 +19,7 @@ last_verified_date: 2026-08-04
 App telemetry gives the Kaboom maintainers anonymous product-usage and
 reliability signals without collecting browser content or making telemetry a
 dependency of any user operation. The canonical event and field definitions
-are in the [app telemetry contract](../../../core/app-metrics.md).
+are in the [app telemetry contract](../../../core/quality/app-metrics.md).
 
 ## User and Product Outcomes
 
@@ -74,7 +74,7 @@ outbound transmission in this feature.
 ## Acceptance Criteria
 
 - The event envelopes and payloads conform to
-  [`docs/core/app-metrics.md`](../../../core/app-metrics.md).
+  [`docs/core/quality/app-metrics.md`](../../../core/quality/app-metrics.md).
 - Opt-out causes no HTTP request.
 - Network failure and concurrency saturation remain best-effort and nonblocking.
 - Install/session state and aggregate counters remain race-safe.

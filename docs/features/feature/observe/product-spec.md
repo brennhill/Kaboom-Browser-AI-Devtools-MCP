@@ -38,5 +38,5 @@ Provide read-only access to captured runtime state, logs, network artifacts, act
 - No execution of new page commands outside screenshot capture path.
 
 ## Related
-- Core contract: `docs/core/product-spec.md`
-- Command matrix: `docs/core/mcp-command-option-matrix.md`
+- Core contract: `docs/core/product/product-spec.md`
+- Command matrix: `docs/core/protocol/mcp-command-option-matrix.md`

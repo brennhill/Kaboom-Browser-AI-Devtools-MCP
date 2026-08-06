@@ -13,12 +13,12 @@ last-verified: 2026-02-17
 - Project rules and commands: `../claude.md`
 - Architecture reference: `../.claude/refs/architecture.md`
 - Feature index: `features/feature-index.md`
-- Core product spec (TARGET): `core/product-spec.md`
-- Core tech spec (TARGET): `core/tech-spec.md`
-- Core QA spec (TARGET): `core/qa-spec.md`
-- Command/option matrix: `core/mcp-command-option-matrix.md`
-- Release process: `core/release.md`
-- Known issues: `core/known-issues.md`
+- Core product spec (TARGET): `core/product/product-spec.md`
+- Core tech spec (TARGET): `core/product/tech-spec.md`
+- Core QA spec (TARGET): `core/quality/qa-spec.md`
+- Command/option matrix: `core/protocol/mcp-command-option-matrix.md`
+- Release process: `core/product/release.md`
+- Known issues: `core/quality/known-issues.md`
 
 ## Structure
 - `docs/core/`: canonical cross-feature product/tech/qa and release docs

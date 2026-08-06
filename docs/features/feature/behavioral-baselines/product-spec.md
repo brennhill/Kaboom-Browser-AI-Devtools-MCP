@@ -16,4 +16,4 @@ User-facing requirements, rationale, and deprecations for the Behavioral Baselin
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Behavioral Baselines Review](../../../specs/reviews/runtime-data/behavioral-baselines-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

@@ -4,7 +4,7 @@ feature_id: feature-security-hardening
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/security.go
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go

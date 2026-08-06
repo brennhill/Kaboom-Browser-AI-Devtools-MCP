@@ -345,6 +345,6 @@ sequenceDiagram
 - [Async Queue-and-Poll Flow](async-queue-flow.md) - Queue state machine
 
 ### Documentation
-- [MCP Correctness](../../core/mcp-correctness.md) - Protocol compliance
-- [Extension Message Protocol](../../core/extension-message-protocol.md) - Message types
-- [Error Recovery](../../core/error-recovery.md) - Error handling strategy
+- [MCP Correctness](../../core/protocol/mcp-correctness.md) - Protocol compliance
+- [Extension Message Protocol](../../core/protocol/extension-message-protocol.md) - Message types
+- [Error Recovery](../../core/reliability/error-recovery.md) - Error handling strategy

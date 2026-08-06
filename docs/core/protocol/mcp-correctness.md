@@ -9,7 +9,7 @@ last-verified: 2026-02-11
 
 # MCP Correctness
 
-**See Also:** [.claude/refs/architecture.md](../../.claude/refs/architecture.md) (canonical system design)
+**See Also:** [.claude/refs/architecture.md](../../../.claude/refs/architecture.md) (canonical system design)
 
 Kaboom MCP implements [Model Context Protocol](https://modelcontextprotocol.io/specification/2025-11-25) JSON-RPC semantics with a stdio client boundary and a local HTTP bridge.
 

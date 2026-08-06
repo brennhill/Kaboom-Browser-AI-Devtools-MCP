@@ -136,7 +136,7 @@ If you already have a conventions doc:
 
 ```json
 {
-  "code_standards": "docs/core/common-patterns.md"
+  "code_standards": "docs/core/reliability/common-patterns.md"
 }
 ```
 

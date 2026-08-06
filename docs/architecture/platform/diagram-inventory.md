@@ -55,7 +55,7 @@ last_verified_date: 2026-03-05
 
 | Missing Diagram | Should Show | Located In | Why Critical |
 |-----------------|------------|-----------|--------------|
-| **Extension Message Protocol** | Message routing flow, message types | docs/core/extension-message-protocol.md | Core docs exist but NO visual diagram |
+| **Extension Message Protocol** | Message routing flow, message types | docs/core/protocol/extension-message-protocol.md | Core docs exist but NO visual diagram |
 | **Capture Data Pipeline** | WS → Network → Actions → Logs | internal/capture/ | How telemetry flows from tab to server |
 | **Query Dispatcher** | Query routing logic | internal/queries/dispatcher_queries.go | How commands route to extension |
 | **Buffer Architecture** | Ring buffer, TTL, eviction | internal/buffers/, internal/capture/ | Memory management strategy |

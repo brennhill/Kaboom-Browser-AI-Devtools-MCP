@@ -28,7 +28,7 @@ last_verified_date: 2026-03-05
 
 - Status: proposed
 - Tool: interact, analyze
-- Mode/Action: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
+- Mode/Action: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
 - Location: `docs/features/draw-mode`
 
 ## Specs

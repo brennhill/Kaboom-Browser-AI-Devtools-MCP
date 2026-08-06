@@ -46,5 +46,5 @@ test('canonical contract names exactly match the structured-event allowlist', as
   const match = content.match(
     /case "tool_call", "first_tool_call", "session_start", "session_end", "usage_summary", "app_error":/
   )
-  assert.ok(match, 'structured telemetry allowlist drifted from docs/core/app-metrics.md')
+  assert.ok(match, 'structured telemetry allowlist drifted from docs/core/quality/app-metrics.md')
 })

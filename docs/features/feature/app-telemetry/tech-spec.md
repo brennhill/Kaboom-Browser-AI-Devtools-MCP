@@ -3,7 +3,7 @@ status: shipped
 scope: feature/app-telemetry
 ai-priority: medium
 tags: [telemetry, architecture, privacy]
-relates-to: [index.md, product-spec.md, qa-plan.md, ../../../core/app-metrics.md]
+relates-to: [index.md, product-spec.md, qa-plan.md, ../../../core/quality/app-metrics.md]
 last-verified: 2026-08-04
 doc_type: tech-spec
 feature_id: feature-app-telemetry
@@ -113,7 +113,7 @@ the loop.
 ## Contracts
 
 The authoritative wire contract is
-[`docs/core/app-metrics.md`](../../../core/app-metrics.md). Changes to event
+[`docs/core/quality/app-metrics.md`](../../../core/quality/app-metrics.md). Changes to event
 names, envelope fields, outcome values, session reasons, or summary shapes must
 update that contract and the contract-compliance tests in the same change.
 

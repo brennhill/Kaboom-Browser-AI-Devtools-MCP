@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Compressed Diffs f
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Compressed Diffs Review](compressed-diffs-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

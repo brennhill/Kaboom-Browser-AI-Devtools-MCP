@@ -4,7 +4,7 @@ feature_id: feature-api-key-auth
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/httpguard/apikey.go
   - cmd/browser-agent/internal/httpguard/middleware.go

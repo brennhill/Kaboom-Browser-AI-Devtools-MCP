@@ -152,7 +152,7 @@ Last benchmarked: 2026-02-09 on darwin/arm64
 
 ## Known Issues
 
-See [docs/core/known-issues.md](docs/core/known-issues.md) for current known issues.
+See [docs/core/quality/known-issues.md](docs/core/quality/known-issues.md) for current known issues.
 
 ## Development
 
@@ -162,7 +162,7 @@ node --test tests/extension/*.test.js  # Extension tests
 make dev                               # Build for current platform
 ```
 
-**[Release process & quality gates →](docs/core/release.md)** · **[Changelog →](CHANGELOG.md)**
+**[Release process & quality gates →](docs/core/product/release.md)** · **[Changelog →](CHANGELOG.md)**
 
 ## License
 

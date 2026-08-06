@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the AI Capture Control
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [AI Capture Control Review](ai-capture-control-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Rate Limiting feat
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Rate Limiting Review](rate-limiting-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

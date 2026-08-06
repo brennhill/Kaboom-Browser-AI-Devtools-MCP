@@ -118,7 +118,7 @@ When buffer is full, oldest entries are evicted. Cursors for evicted entries bec
 
 All pagination scenarios are covered in:
 - **Core test:** `cmd/browser-agent/composite_tools_test.go`
-- **UAT scenarios:** `docs/core/uat-v5.3-checklist.md`
+- **UAT scenarios:** `docs/core/quality/uat-v5.3-checklist.md`
 
 Tested:
 - ✓ Basic pagination with after_cursor
@@ -134,7 +134,7 @@ Tested:
 
 - **product-spec.md** — Feature requirements
 - **feature-proposal.md** — Original proposal
-- **../../../core/uat-v5.3-checklist.md** — Comprehensive UAT tests
+- **../../../core/quality/uat-v5.3-checklist.md** — Comprehensive UAT tests
 - **ADR-cursor-pagination.md** — Architecture decision record
 
 ---

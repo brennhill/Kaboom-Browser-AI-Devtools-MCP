@@ -140,7 +140,7 @@ Once Phase 1 implementation begins:
 - **product-spec.md** — Feature requirements
 - **tech-spec.md** — Technical implementation
 - **feature-tracking.md** — Phase breakdown
-- **../../../core/uat-v5.3-checklist.md** — UAT patterns for reference
+- **../../../core/quality/uat-v5.3-checklist.md** — UAT patterns for reference
 
 ---
 

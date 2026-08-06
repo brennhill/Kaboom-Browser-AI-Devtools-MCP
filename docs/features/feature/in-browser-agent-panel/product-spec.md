@@ -20,7 +20,7 @@ User-facing requirements and boundaries for turning Kaboom into an in-browser ag
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Runtime Spec (Go Orchestrator)](runtime-spec-go-orchestrator.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)
 
 ## Problem
 

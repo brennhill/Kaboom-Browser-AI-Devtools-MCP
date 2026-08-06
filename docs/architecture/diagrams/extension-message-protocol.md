@@ -615,6 +615,6 @@ If extension posts too many errors:
 - [Data Capture Pipeline](data-capture-pipeline.md) - Telemetry flow
 
 ### Documentation
-- [Extension Message Protocol](../../core/extension-message-protocol.md) - Core docs
-- [Error Recovery](../../core/error-recovery.md) - Error handling
-- [Circuit Breaker Pattern](../../core/zombie-prevention.md) - Resilience
+- [Extension Message Protocol](../../core/protocol/extension-message-protocol.md) - Core docs
+- [Error Recovery](../../core/reliability/error-recovery.md) - Error handling
+- [Circuit Breaker Pattern](../../core/reliability/zombie-prevention.md) - Resilience

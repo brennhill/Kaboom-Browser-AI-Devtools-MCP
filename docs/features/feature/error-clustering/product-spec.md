@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Error Clustering f
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Error Clustering Review](error-clustering-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

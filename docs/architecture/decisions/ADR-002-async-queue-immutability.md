@@ -80,7 +80,7 @@ If ANY component is deleted, the test **fails to compile or run**.
 ### Layer 4: Documentation (Human Context)
 
 - [ADR-002](ADR-002-async-queue-immutability.md) - This document (WHY it's immutable)
-- [async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md) - Implementation details
+- [async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md) - Implementation details
 - Inline comments in critical files referencing ADR-002
 
 **Strength**: Provides context for future developers
@@ -174,7 +174,7 @@ To modify the async queue architecture:
 - [x] Integration test created (`async_queue_integration_test.go`)
 - [x] Architecture validation script (`scripts/validate-architecture.sh`)
 - [x] ADR-002 written (this document)
-- [x] Documentation updated ([async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md))
+- [x] Documentation updated ([async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md))
 - [ ] CI workflow added (`.github/workflows/architecture-validation.yml`) - TODO
 - [ ] Interface-based enforcement added (future enhancement)
 - [ ] Team training on bypass procedure
@@ -231,7 +231,7 @@ To modify the async queue architecture:
 ## References
 
 - Incident Report: Phase 4b async queue deletion (2026-02-02)
-- [async-queue-correlation-tracking.md](../../core/async-queue-correlation-tracking.md)
+- [async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md)
 - [async_queue_integration_test.go](internal/capture/async_queue_integration_test.go)
 - [validate-architecture.sh](scripts/validate-architecture.sh)
 

@@ -14,4 +14,4 @@ last_reviewed: 2026-02-16
 **See also:**
 - [Product Spec](product-spec.md)
 - [Tech Spec](tech-spec.md)
-- [Core ADRs](../../../core/adrs.md)
+- [Core ADRs](../../../core/product/adrs.md)

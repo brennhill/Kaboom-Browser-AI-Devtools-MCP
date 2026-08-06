@@ -179,8 +179,8 @@ func TestTimestampNormalization(t *testing.T) {
 
 ## Related Documents
 
-- [Cursor Pagination Proposal](../features/feature/cursor-pagination/feature-proposal.md) - Uses composite `"timestamp:sequence"` cursors
-- [Pagination Product Spec](../features/feature/pagination/product-spec.md) - Offset-based pagination (v5.3)
+- [Cursor Pagination Proposal](../../features/feature/cursor-pagination/feature-proposal.md) - Uses composite `"timestamp:sequence"` cursors
+- [Pagination Product Spec](../../features/feature/pagination/product-spec.md) - Offset-based pagination (v5.3)
 - [v6.0 Roadmap](../roadmap.md) - Future filtering and time-range queries
 
 ---

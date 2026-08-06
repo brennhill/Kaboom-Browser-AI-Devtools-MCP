@@ -509,6 +509,6 @@ type BufferStats struct {
 - [Query System](query-system.md) - Query routing
 
 ### Documentation
-- [Timestamp Standard](../../core/timestamp-standard.md) - Time format
-- [CSP Execution Strategies](../../core/csp-execution-strategies.md) - Observer limitations
-- [Error Recovery](../../core/error-recovery.md) - Error handling
+- [Timestamp Standard](../../core/protocol/timestamp-standard.md) - Time format
+- [CSP Execution Strategies](../../core/reliability/csp-execution-strategies.md) - Observer limitations
+- [Error Recovery](../../core/reliability/error-recovery.md) - Error handling

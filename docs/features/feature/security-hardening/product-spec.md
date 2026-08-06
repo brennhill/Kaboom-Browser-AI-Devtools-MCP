@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Security Hardening
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Security Hardening Review](security-hardening-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

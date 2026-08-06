@@ -185,7 +185,7 @@ if *daemonMode {
 
 ### Runtime State Files
 
-Persistent server runtime files are stored in Kaboom's runtime state directory, not home-root files. See [`docs/core/runtime-state-directory.md`](../../core/runtime-state-directory.md) for defaults, overrides, and full layout.
+Persistent server runtime files are stored in Kaboom's runtime state directory, not home-root files. See [`docs/core/reliability/runtime-state-directory.md`](../../core/reliability/runtime-state-directory.md) for defaults, overrides, and full layout.
 
 ### Server Startup
 

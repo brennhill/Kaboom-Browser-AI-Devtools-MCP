@@ -148,7 +148,7 @@ timestamp := entry.Timestamp.Format(time.RFC3339)
 timestamp := entry.Timestamp
 ```
 
-**Documented standard:** See [docs/core/timestamp-standard.md](../../../core/timestamp-standard.md)
+**Documented standard:** See [docs/core/protocol/timestamp-standard.md](../../../core/protocol/timestamp-standard.md)
 
 ### Concurrency Model (Extended Read Lock)
 

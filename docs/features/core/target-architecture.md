@@ -4,7 +4,7 @@ status: active
 scope: features/core/target-architecture
 ai-priority: high
 tags: [core, architecture, target, canonical]
-relates-to: [../../core/product-spec.md, ../../core/tech-spec.md, ../../core/qa-spec.md]
+relates-to: [../../core/product/product-spec.md, ../../core/product/tech-spec.md, ../../core/quality/qa-spec.md]
 last-verified: 2026-03-05
 canonical: true
 last_reviewed: 2026-07-05
@@ -17,10 +17,10 @@ last_verified_date: 2026-03-05
 This page is the architecture pointer for target behavior docs.
 
 Canonical documents:
-- Product contract: `docs/core/product-spec.md`
-- Technical architecture and flows: `docs/core/tech-spec.md`
-- QA contract and release gates: `docs/core/qa-spec.md`
-- Command/option traceability: `docs/core/mcp-command-option-matrix.md`
+- Product contract: `docs/core/product/product-spec.md`
+- Technical architecture and flows: `docs/core/product/tech-spec.md`
+- QA contract and release gates: `docs/core/quality/qa-spec.md`
+- Command/option traceability: `docs/core/protocol/mcp-command-option-matrix.md`
 
 Implementation anchors:
 - MCP handler: `cmd/browser-agent/handler.go`

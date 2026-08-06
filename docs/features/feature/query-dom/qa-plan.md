@@ -3,7 +3,7 @@ status: shipped
 scope: feature/query-dom/qa
 ai-priority: high
 tags: [testing, qa, dom]
-relates-to: [product-spec.md, tech-spec.md, ../../core/mcp-command-option-matrix.md]
+relates-to: [product-spec.md, tech-spec.md, ../../core/protocol/mcp-command-option-matrix.md]
 last-verified: 2026-03-05
 doc_type: qa-plan
 feature_id: feature-query-dom

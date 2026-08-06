@@ -14,9 +14,9 @@
 // If any MCP tool fails to return a valid response, it MUST be:
 // - Removed from tools_schema.go (don't expose unimplemented commands)
 // - Marked as TODO in the codebase
-// - Tracked in docs/core/known-issues.md
+// - Tracked in docs/core/quality/known-issues.md
 //
-// See: docs/core/release.md#gate-8-mcp-command-completeness-mandatory
+// See: docs/core/product/release.md#gate-8-mcp-command-completeness-mandatory
 //
 // Run: go test ./cmd/browser-agent -run "TestIntegration" -v
 package main
@@ -283,7 +283,7 @@ func TestIntegration_AllMCPToolsReturnValidResponses(t *testing.T) {
 		t.Logf("\nAction Required:")
 		t.Logf("  1. Remove unimplemented tools from cmd/browser-agent/tools_schema.go")
 		t.Logf("  2. Add TODO comments in the code")
-		t.Logf("  3. Track in docs/core/known-issues.md")
+		t.Logf("  3. Track in docs/core/quality/known-issues.md")
 	}
 }
 

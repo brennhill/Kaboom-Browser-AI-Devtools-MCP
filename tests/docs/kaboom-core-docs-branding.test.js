@@ -16,10 +16,10 @@ function read(relativePath) {
 describe('kaboom core docs branding', () => {
   test('core architecture and UAT docs use Kaboom naming', () => {
     const files = [
-      'docs/core/mcp-correctness.md',
-      'docs/core/server-architecture.md',
-      'docs/core/version-checking.md',
-      'docs/core/comprehensive-uat-plan.md'
+      'docs/core/protocol/mcp-correctness.md',
+      'docs/core/architecture/server-architecture.md',
+      'docs/core/product/version-checking.md',
+      'docs/core/quality/comprehensive-uat-plan.md'
     ]
 
     for (const file of files) {

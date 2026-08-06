@@ -173,8 +173,8 @@ last_verified_date: 2026-04-13
 ## TL;DR
 
 - Status: proposed
-- Tool: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical tool enums.
-- Mode/Action: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
+- Tool: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical tool enums.
+- Mode/Action: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
 - Location: `docs/features/feature/backend-log-streaming`
 
 Capture dependencies use the canonical `capture.Capture` container type.

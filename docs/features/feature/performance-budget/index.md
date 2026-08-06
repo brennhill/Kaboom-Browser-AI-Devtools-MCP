@@ -4,7 +4,7 @@ feature_id: feature-performance-budget
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-06
 code_paths:
   - internal/performance/types.go
   - internal/performance/diff.go

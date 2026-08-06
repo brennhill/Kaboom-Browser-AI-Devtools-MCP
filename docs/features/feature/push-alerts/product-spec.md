@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Push Alerts featur
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Push Alerts Review](push-alerts-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

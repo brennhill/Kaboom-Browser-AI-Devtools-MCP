@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Web Vitals feature
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Web Vitals Review](../../../specs/reviews/runtime-data/web-vitals-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

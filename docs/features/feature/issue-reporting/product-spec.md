@@ -57,4 +57,4 @@ Enable LLMs and users to file sanitized bug reports to GitHub Issues directly fr
 
 ## Related
 
-- Command matrix: `docs/core/mcp-command-option-matrix.md`
+- Command matrix: `docs/core/protocol/mcp-command-option-matrix.md`

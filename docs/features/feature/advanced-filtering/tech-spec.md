@@ -98,7 +98,7 @@ To complete this technical specification, address:
 - **feature-proposal.md** — Full feature proposal and rationale
 - **qa-plan.md** — Test scenarios (placeholder)
 - **ADR-advanced-filtering.md** — Architecture decision record (if exists)
-- **../../../core/known-issues.md** — Related issues or blockers
+- **../../../core/quality/known-issues.md** — Related issues or blockers
 
 ---
 

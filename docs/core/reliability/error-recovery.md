@@ -403,7 +403,7 @@ grep "duration_ms" -o | sort -n | tail -10
 
 ## Related Documents
 
-- [Connection State Machine](../../.claude/refs/architecture.md#connection-state-machine)
-- [Async Command Architecture](../../.claude/refs/async-command-architecture.md)
-- [MCP Persistent Server](../features/mcp-persistent-server/architecture.md)
-- [Troubleshooting Guide](../troubleshooting.md)
+- [Connection State Machine](../../../.claude/refs/architecture.md#connection-state-machine)
+- [Async Command Architecture](../../../.claude/refs/async-command-architecture.md)
+- [MCP Persistent Server](../../features/mcp-persistent-server/architecture.md)
+- [Troubleshooting Guide](../../troubleshooting.md)

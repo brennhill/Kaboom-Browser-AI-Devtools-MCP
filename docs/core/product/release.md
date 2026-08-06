@@ -3,7 +3,7 @@ status: active
 scope: process/release
 ai-priority: high
 tags: [release, process, quality-gates, deployment]
-relates-to: [known-issues.md, docs/core/uat-v5.3-checklist.md]
+relates-to: [known-issues.md, docs/core/quality/uat-v5.3-checklist.md]
 last-verified: 2026-07-24
 canonical: true
 ---
@@ -137,7 +137,7 @@ implemented.
 
 1. Remove it from the MCP tool definitions (do not expose it to clients)
 2. Add a TODO in the code marking it for future implementation
-3. Track in `docs/core/known-issues.md` under "Planned Features"
+3. Track in `docs/core/quality/known-issues.md` under "Planned Features"
 
 ### Gate 8: Architecture Invariant Tests (MANDATORY)
 

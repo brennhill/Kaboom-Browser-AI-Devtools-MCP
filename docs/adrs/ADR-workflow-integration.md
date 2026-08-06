@@ -7,4 +7,4 @@ last_reviewed: 2026-02-16
 # ADRs: Workflow Integration
 
 - [Workflow Integration Review](workflow-integration-review.md)
-- [Core ADRs](../../../core/adrs.md)
+- [Core ADRs](../../../core/product/adrs.md)

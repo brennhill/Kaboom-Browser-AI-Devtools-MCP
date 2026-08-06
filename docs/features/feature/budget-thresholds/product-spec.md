@@ -16,4 +16,4 @@ User-facing requirements, rationale, and deprecations for the Budget Thresholds 
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Budget Thresholds Review](budget-thresholds-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

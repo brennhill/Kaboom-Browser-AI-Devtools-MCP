@@ -12,7 +12,7 @@
  * launcher never counted annotations (F7).
  *
  * If this fails: route the entry point through the shared helper named in the
- * assertion instead of re-implementing it. See docs/core/bug-class-audit.md.
+ * assertion instead of re-implementing it. See docs/core/reliability/bug-class-audit.md.
  */
 
 import { describe, test } from 'node:test'

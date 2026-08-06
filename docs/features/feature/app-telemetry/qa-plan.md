@@ -3,7 +3,7 @@ status: shipped
 scope: feature/app-telemetry
 ai-priority: medium
 tags: [telemetry, testing, privacy]
-relates-to: [index.md, product-spec.md, tech-spec.md, ../../../core/app-metrics.md]
+relates-to: [index.md, product-spec.md, tech-spec.md, ../../../core/quality/app-metrics.md]
 last-verified: 2026-08-04
 doc_type: qa-plan
 feature_id: feature-app-telemetry

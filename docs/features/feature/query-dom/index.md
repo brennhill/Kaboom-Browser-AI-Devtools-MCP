@@ -4,7 +4,7 @@ feature_id: feature-query-dom
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/inspect/dom.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go

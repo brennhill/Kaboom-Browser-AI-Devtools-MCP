@@ -88,8 +88,8 @@ verified in this package.
 ## TL;DR
 
 - Status: proposed
-- Tool: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical tool enums.
-- Mode/Action: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
+- Tool: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical tool enums.
+- Mode/Action: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
 - Location: `docs/features/feature/query-service`
 
 ## Specs

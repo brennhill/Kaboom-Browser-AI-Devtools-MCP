@@ -16,4 +16,4 @@ User-facing requirements, rationale, and deprecations for the Agentic CI/CD feat
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Agentic E2E Repair Review](../../../specs/reviews/agent-workflows/agentic-e2e-repair-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

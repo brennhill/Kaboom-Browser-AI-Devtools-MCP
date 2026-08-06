@@ -25,7 +25,7 @@ describe('kaboom mcp docs branding', () => {
       'docs/mcp-integration/cursor.md',
       'docs/mcp-integration/windsurf.md',
       'docs/mcp-integration/zed.md',
-      'docs/core/mcp-client-configs.md'
+      'docs/core/protocol/mcp-client-configs.md'
     ]
 
     for (const file of files) {

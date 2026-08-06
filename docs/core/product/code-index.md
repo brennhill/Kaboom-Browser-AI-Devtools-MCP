@@ -23,10 +23,10 @@ last_reviewed: 2026-02-16
 
 **Affects:**
 - 🔥 **CRITICAL:** All `interact()` commands (execute_js, navigate, etc.)
-- Feature: [Async Queue Pattern](architecture/ADR-001-async-queue-pattern.md)
-- Feature: [Correlation ID Tracking](async-queue-correlation-tracking.md)
-- Protection: [5-Layer Enforcement](architecture/ARCHITECTURE-ENFORCEMENT.md)
-- Diagram: [Async Queue Flow](architecture/diagrams/async-queue-flow.md)
+- Feature: [Async Queue Pattern](../architecture/ADR-001-async-queue-pattern.md)
+- Feature: [Correlation ID Tracking](../protocol/async-queue-correlation-tracking.md)
+- Protection: [5-Layer Enforcement](../architecture/ARCHITECTURE-ENFORCEMENT.md)
+- Diagram: [Async Queue Flow](../architecture/diagrams/async-queue-flow.md)
 
 **Tests:**
 - internal/capture/async_queue_integration_test.go
@@ -73,7 +73,7 @@ last_reviewed: 2026-02-16
 - Async command queuing
 
 **Docs:**
-- [MCP Integration](../mcp-integration/index.md)
+- [MCP Integration](../../mcp-integration/index.md)
 - [Interact Tool](../features/feature/interact-explore/)
 - [Observe Tool](../features/feature/observe/)
 
@@ -109,7 +109,7 @@ last_reviewed: 2026-02-16
 - Error propagation to AI
 - JSON-RPC protocol handling
 
-**Diagram:** [System Architecture - Bridge Process](architecture/diagrams/system-architecture.md)
+**Diagram:** [System Architecture - Bridge Process](../architecture/diagrams/system-architecture.md)
 
 ---
 

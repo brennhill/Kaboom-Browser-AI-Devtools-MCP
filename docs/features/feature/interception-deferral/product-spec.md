@@ -16,4 +16,4 @@ User-facing requirements, rationale, and deprecations for the Interception Defer
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Interception Deferral Review](interception-deferral-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

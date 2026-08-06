@@ -245,6 +245,6 @@ AI Agent
 - [Extension Message Protocol](extension-message-protocol.md) - All message types
 
 ### Documentation
-- [MCP Correctness](../../core/mcp-correctness.md)
-- [Extension Message Protocol](../../core/extension-message-protocol.md)
-- [Error Recovery](../../core/error-recovery.md)
+- [MCP Correctness](../../core/protocol/mcp-correctness.md)
+- [Extension Message Protocol](../../core/protocol/extension-message-protocol.md)
+- [Error Recovery](../../core/reliability/error-recovery.md)

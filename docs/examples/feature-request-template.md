@@ -73,7 +73,7 @@ Gate 5: Implementation with TDD
 **Context:**
 - Review existing MCP tools in cmd/browser-agent/tools_observe.go for patterns
 - Check docs/features/feature-navigation.md for similar features
-- Follow MCP protocol correctness rules from docs/core/mcp-correctness.md
+- Follow MCP protocol correctness rules from docs/core/protocol/mcp-correctness.md
 
 **Quality Gates (Mandatory):**
 Before implementation, confirm:

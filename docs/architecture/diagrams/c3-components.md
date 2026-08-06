@@ -422,6 +422,6 @@ AI calls configure({what: 'store', data: {...}})
 - [Query System](query-system.md) - Query routing details
 
 ### Documentation
-- [Codebase Index](../../core/code-index.md)
-- [Feature Strategy](../../core/feature-to-strategy.md)
-- [MCP Correctness](../../core/mcp-correctness.md)
+- [Codebase Index](../../core/product/code-index.md)
+- [Feature Strategy](../../core/product/feature-to-strategy.md)
+- [MCP Correctness](../../core/protocol/mcp-correctness.md)

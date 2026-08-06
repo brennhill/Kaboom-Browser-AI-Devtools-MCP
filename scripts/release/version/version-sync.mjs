@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // version-sync.mjs — Atomically synchronize canonical release-version targets.
-// Docs: docs/core/release.md
+// Docs: docs/core/product/release.md
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 

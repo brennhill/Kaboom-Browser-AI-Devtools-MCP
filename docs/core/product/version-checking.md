@@ -484,5 +484,5 @@ resetVersionCheck();
 ## See Also
 
 - [RELEASE.md](./release.md) - Version history and upgrade notes
-- [README.md](../../README.md) - Installation and setup
+- [README.md](../../../README.md) - Installation and setup
 - [docs/plugin-server-communications.md](./plugin-server-communications.md) - Full protocol spec

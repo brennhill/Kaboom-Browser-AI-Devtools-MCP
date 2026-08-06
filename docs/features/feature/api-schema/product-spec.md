@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the API Schema feature
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [API Schema Review](api-schema-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

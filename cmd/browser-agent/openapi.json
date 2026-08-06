@@ -335,7 +335,7 @@
         "description": "HTTP bridge for the MCP protocol. Accepts JSON-RPC 2.0 requests and routes them to the same tool handlers used by the stdio MCP transport. Supports methods: observe, generate, configure, interact, and analyze. This endpoint enables non-stdio MCP clients (dashboards, web UIs, REST wrappers) to call MCP tools over HTTP.",
         "operationId": "postMcp",
         "x-docs": {
-          "core": "docs/core/async-tool-pattern.md"
+          "core": "docs/core/protocol/async-tool-pattern.md"
         },
         "requestBody": {
           "required": true,
@@ -1060,7 +1060,7 @@
           }
         ],
         "x-docs": {
-          "core": "docs/core/async-command-api.yaml"
+          "core": "docs/core/protocol/async-command-api.yaml"
         },
         "requestBody": {
           "required": true,
@@ -3211,7 +3211,7 @@
         "type": "object",
         "description": "A command queued for execution by the Chrome extension. Created by MCP tool handlers and delivered to the extension via the /sync endpoint. The extension executes the command and returns results via /query-result or the sync response's command_results field.",
         "x-docs": {
-          "core": "docs/core/async-command-api.yaml"
+          "core": "docs/core/protocol/async-command-api.yaml"
         },
         "properties": {
           "id": {
@@ -3278,7 +3278,7 @@
         "type": "object",
         "description": "Result of an async command submitted by the extension via POST /query-result. Contains either a successful result or an error. The id field matches the original PendingQuery, and correlation_id links back to the MCP tool invocation.",
         "x-docs": {
-          "core": "docs/core/async-command-api.yaml"
+          "core": "docs/core/protocol/async-command-api.yaml"
         },
         "properties": {
           "id": {
@@ -3650,7 +3650,7 @@
         "type": "object",
         "description": "Result of an async command returned by the extension via the /sync endpoint's command_results field. Structurally identical to AsyncCommandResult but delivered inline with the sync payload instead of via POST /query-result.",
         "x-docs": {
-          "core": "docs/core/async-command-api.yaml"
+          "core": "docs/core/protocol/async-command-api.yaml"
         },
         "properties": {
           "id": {

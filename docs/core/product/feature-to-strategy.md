@@ -242,10 +242,10 @@ last_reviewed: 2026-02-16
 
 **For product design:**
 - [docs/features/](../features/) - Feature specifications
-- [docs/roadmap-detailed.md](../roadmap-detailed.md) - Planned features
+- [docs/roadmap-detailed.md](../../roadmap-detailed.md) - Planned features
 
 **For implementation:**
-- [docs/core/code-index.md](code-index.md) - Code → feature map
+- [docs/core/product/code-index.md](code-index.md) - Code → feature map
 - [docs/architecture/diagrams/](../architecture/diagrams/) - Architecture diagrams
 
 **For decision-making:**

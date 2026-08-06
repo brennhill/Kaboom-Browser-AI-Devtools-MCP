@@ -135,7 +135,7 @@ fi
 
 echo ""
 echo "6️⃣  Checking architecture documentation..."
-require_file "docs/core/async-tool-pattern.md"
+require_file "docs/core/protocol/async-tool-pattern.md"
 require_file "docs/architecture/decisions/ADR-002-async-queue-immutability.md"
 
 echo ""
@@ -151,5 +151,5 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "The canonical async queue-and-poll architecture is broken."
 echo "DO NOT merge this change."
-echo "See: docs/core/async-tool-pattern.md"
+echo "See: docs/core/protocol/async-tool-pattern.md"
 exit 1

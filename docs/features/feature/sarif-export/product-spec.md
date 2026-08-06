@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Sarif Export featu
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Sarif Export Review](sarif-export-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

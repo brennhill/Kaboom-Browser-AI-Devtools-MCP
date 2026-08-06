@@ -4,7 +4,7 @@ feature_id: feature-noise-filtering
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/toolconfigure/noise_actions.go

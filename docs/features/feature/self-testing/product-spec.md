@@ -16,4 +16,4 @@ User-facing requirements, rationale, and deprecations for the Self Testing featu
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Self Testing Review](self-testing-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

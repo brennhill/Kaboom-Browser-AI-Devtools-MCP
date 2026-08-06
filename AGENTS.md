@@ -107,7 +107,7 @@ satisfied. (Flow maps are no longer required — do not create or update them.)
 21. User-facing recording labels/toasts/badge text must come from shared helpers to keep wording and truncation consistent across entry points.
 22. Duplicate code checks are required for refactors touching `src/background` or `src/popup` (`npx jscpd src/background src/popup --min-lines 8 --min-tokens 60`), and each non-trivial clone must be either extracted or documented as intentional.
 23. Behavior-replacing refactors must update or delete obsolete tests in the same change (for example, replacing watermark behavior with badge behavior).
-24. See `docs/core/common-patterns.md` for the canonical patterns and review checklist.
+24. See `docs/core/reliability/common-patterns.md` for the canonical patterns and review checklist.
 25. **Fail loud on state-mutating paths.** No operation that changes state may fail silently. `catch {}` is banned (ESLint `no-empty` with `allowEmptyCatch: false`) — every catch either handles the error or documents why swallowing is safe. A genuine failure must not be masked as a recoverable/expected state; distinguish expected conflicts from actual failures and surface the latter.
 26. **Compatibility facades are prohibited.** Migrations are atomic: move every caller to the canonical API and delete the obsolete aliases, wrappers, shims, tests, and documentation in the same change. If the migration cannot be completed end-to-end, do not begin it. Never preserve an old internal surface merely to reduce migration effort.
 27. **Never silently discard failures.** Every unexpected catch/rejection must emit a redacted structured log or Doctor diagnostic. If an expected absence or cancellation intentionally produces no log, the catch must contain an adjacent `EXPECTED_ABSENCE:` comment explaining why the condition is normal and why logging it would be misleading.
@@ -120,7 +120,7 @@ satisfied. (Flow maps are no longer required — do not create or update them.)
 | Test plans            | `docs/features/<name>/{name}-test-plan.md`       |
 | Test plan template    | `docs/features/_template/template-test-plan.md`  |
 | Architecture          | `.claude/refs/architecture.md`                   |
-| Known issues          | `docs/core/known-issues.md`                      |
+| Known issues          | `docs/core/quality/known-issues.md`                      |
 | All features          | `docs/features/feature-navigation.md`            |
 
 

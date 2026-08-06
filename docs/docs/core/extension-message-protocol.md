@@ -6,4 +6,4 @@ last_reviewed: 2026-02-16
 
 # Legacy Route Alias
 
-Canonical: [../../core/extension-message-protocol.md](../../core/extension-message-protocol.md)
+Canonical: [../../core/protocol/extension-message-protocol.md](../../core/protocol/extension-message-protocol.md)

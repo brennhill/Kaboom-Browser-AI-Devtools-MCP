@@ -4,7 +4,7 @@ feature_id: feature-error-clustering
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/tools/observe/errorcluster/cluster.go
   - internal/tools/observe/errorcluster/normalize.go

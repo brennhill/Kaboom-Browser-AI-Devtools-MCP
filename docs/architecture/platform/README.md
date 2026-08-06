@@ -25,11 +25,11 @@ This folder contains the architecture contract used to make safe edits.
 
 ## Canonical Technical References
 
-- [Server Architecture](../../core/server-architecture.md)
-- [Extension Architecture](../../core/extension-architecture.md)
-- [Extension Message Protocol](../../core/extension-message-protocol.md)
-- [MCP Command Option Matrix](../../core/mcp-command-option-matrix.md)
-- [Code Index](../../core/code-index.md)
+- [Server Architecture](../../core/architecture/server-architecture.md)
+- [Extension Architecture](../../core/architecture/extension-architecture.md)
+- [Extension Message Protocol](../../core/protocol/extension-message-protocol.md)
+- [MCP Command Option Matrix](../../core/protocol/mcp-command-option-matrix.md)
+- [Code Index](../../core/product/code-index.md)
 - ADRs in this folder (`ADR-00x-*`)
 
 ## Comments in Code Files

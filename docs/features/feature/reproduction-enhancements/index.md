@@ -4,7 +4,7 @@ feature_id: feature-reproduction-enhancements
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-06
 code_paths:
 test_paths: []
 last_verified_version: 0.7.12

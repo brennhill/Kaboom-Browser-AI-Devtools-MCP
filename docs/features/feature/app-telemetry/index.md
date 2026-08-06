@@ -4,7 +4,7 @@ feature_id: feature-app-telemetry
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-06
 code_paths:
   - internal/telemetry/beacon.go
   - internal/telemetry/install_id.go
@@ -39,7 +39,7 @@ last_verified_date: 2026-08-04
 
 Kaboom emits privacy-bounded product telemetry using the canonical event,
 identity, opt-out, and aggregation contract in
-[`docs/core/app-metrics.md`](../../../core/app-metrics.md).
+[`docs/core/quality/app-metrics.md`](../../../core/quality/app-metrics.md).
 
 The event suite owns individual beacon envelopes and payloads. The session
 identity module owns activity boundaries, shutdown, timeout, and opt-out
@@ -111,4 +111,4 @@ delivery.
 - [Product specification](product-spec.md)
 - [Technical specification](tech-spec.md)
 - [QA plan](qa-plan.md)
-- [Canonical telemetry contract](../../../core/app-metrics.md)
+- [Canonical telemetry contract](../../../core/quality/app-metrics.md)

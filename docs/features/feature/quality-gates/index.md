@@ -6,6 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - docs/core/architecture/
+  - docs/core/product/
+  - docs/core/protocol/
+  - docs/core/quality/
+  - docs/core/reliability/
   - docs/architecture/boundaries/
   - docs/architecture/decisions/
   - docs/architecture/platform/

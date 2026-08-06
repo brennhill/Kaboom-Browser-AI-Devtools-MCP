@@ -4,7 +4,7 @@ feature_id: feature-scaffold-wizard
 status: spec
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-06
 ---
 
 # Scaffold Wizard
@@ -1580,7 +1580,7 @@ Content-Type: application/json
 
 The canonical contract lives in:
 
-- [docs/core/app-metrics.md](/Users/brenn/dev/gasoline/docs/core/app-metrics.md)
+- [docs/core/quality/app-metrics.md](/Users/brenn/dev/gasoline/docs/core/quality/app-metrics.md)
 
 The metrics service flattens these events into Cloudflare Analytics Engine rows for dashboard queries.
 

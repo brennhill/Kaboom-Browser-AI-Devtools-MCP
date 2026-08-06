@@ -11,7 +11,7 @@
  *
  * If this fails: don't swallow into a benign return. Either handle the error,
  * rethrow, or distinguish "expected/absent" from "actually failed" and surface
- * the latter (see docs/core/bug-class-audit.md).
+ * the latter (see docs/core/reliability/bug-class-audit.md).
  */
 
 import { describe, test } from 'node:test'

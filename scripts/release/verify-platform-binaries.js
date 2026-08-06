@@ -7,7 +7,7 @@
 // How: for a platform package dir, every bin/* path in package.json "files" MUST exist,
 //      be a regular file, and exceed a sane minimum size (Go binaries are multi-MB).
 // Used by: each platform package's prepublishOnly hook, `make npm-binaries`, and publish.yml.
-// Docs: docs/core/known-issues.md (empty-binary-package incident).
+// Docs: docs/core/quality/known-issues.md (empty-binary-package incident).
 
 import fs from 'node:fs'
 import path from 'node:path'

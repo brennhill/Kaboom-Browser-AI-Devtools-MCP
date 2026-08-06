@@ -762,8 +762,8 @@ execute_js({ script: "window.userEmail", world: "auto", force_debugger: true })
 ## Related Documents
 
 - [Error Recovery Strategy](./error-recovery.md) - Handles CSP errors in retry logic
-- [Async Command Architecture](../../.claude/refs/async-command-architecture.md)
-- [Extension Architecture](../../.claude/refs/extension-architecture.md) - World parameter details
+- [Async Command Architecture](../../../.claude/refs/async-command-architecture.md)
+- [Extension Architecture](../../../.claude/refs/extension-architecture.md) - World parameter details
 - [MDN: Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP)
 - [Google: Trusted Types](https://web.dev/trusted-types/)
 

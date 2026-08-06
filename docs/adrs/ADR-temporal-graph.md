@@ -7,4 +7,4 @@ last_reviewed: 2026-02-16
 # ADRs: Temporal Graph
 
 - [Temporal Graph Review](../../../specs/temporal-graph-review.md)
-- [Core ADRs](../../../core/adrs.md)
+- [Core ADRs](../../../core/product/adrs.md)

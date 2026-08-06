@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Enterprise Audit f
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Enterprise Audit Review](enterprise-audit-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

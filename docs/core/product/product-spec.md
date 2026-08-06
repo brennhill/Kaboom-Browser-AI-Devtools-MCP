@@ -67,4 +67,4 @@ Define the user-visible, canonical behavior of the Kaboom MCP surface. This spec
 ## Canonical References
 - Schema: `internal/schema/schema.go`
 - Dispatcher: `cmd/browser-agent/tools_core.go`
-- Command/mode matrix: `docs/core/mcp-command-option-matrix.md`
+- Command/mode matrix: `docs/core/protocol/mcp-command-option-matrix.md`

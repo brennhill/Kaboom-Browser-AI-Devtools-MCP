@@ -1,6 +1,6 @@
 // tools_interact_command_builder.go — Fluent builder for interact command dispatch.
 // Why: Eliminates the repeated correlate→arm→guard→enqueue→wait boilerplate across 30+ interact handlers.
-// Docs: docs/core/common-patterns.md
+// Docs: docs/core/reliability/common-patterns.md
 
 package toolinteract
 

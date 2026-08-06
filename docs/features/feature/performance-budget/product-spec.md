@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Performance Budget
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Performance Budget Review](performance-budget-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

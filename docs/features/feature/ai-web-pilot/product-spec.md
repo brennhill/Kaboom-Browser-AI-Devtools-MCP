@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the AI Web Pilot featu
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [AI Web Pilot Review](../../../specs/reviews/agent-workflows/ai-web-pilot-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

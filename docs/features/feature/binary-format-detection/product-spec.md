@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Binary Format Dete
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Binary Format Detection Review](binary-format-detection-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

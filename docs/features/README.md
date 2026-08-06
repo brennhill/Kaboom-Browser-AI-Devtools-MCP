@@ -14,11 +14,11 @@ last_verified_date: 2026-03-05
 ## Start Here
 - Feature index: `feature-index.md`
 - Core TARGET specs:
-- `../core/product-spec.md`
-- `../core/tech-spec.md`
-- `../core/qa-spec.md`
+- `../core/product/product-spec.md`
+- `../core/product/tech-spec.md`
+- `../core/quality/qa-spec.md`
 - Command/option traceability:
-- `../core/mcp-command-option-matrix.md`
+- `../core/protocol/mcp-command-option-matrix.md`
 
 ## Feature Folder Contract
 Each feature under `docs/features/feature/<feature-name>/` should keep:
@@ -38,6 +38,6 @@ Each feature under `docs/features/feature/<feature-name>/` should keep:
 
 ## Update Rule
 When schema/handler behavior changes:
-1. Update `docs/core/mcp-command-option-matrix.md`.
+1. Update `docs/core/protocol/mcp-command-option-matrix.md`.
 2. Update affected feature `product-spec.md`, `tech-spec.md`, `qa-plan.md`.
 3. Refresh `last-verified` in touched docs.

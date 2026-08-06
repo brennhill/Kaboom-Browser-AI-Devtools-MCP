@@ -8,4 +8,4 @@ last_reviewed: 2026-02-16
 
 This file exists to preserve legacy internal documentation links.
 
-- Canonical docs entrypoint: [README.md](README.md)
+- Canonical docs entrypoint: [README.md](../product/README.md)

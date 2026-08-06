@@ -28,4 +28,4 @@ Describes the user-facing requirements, rationale, and deprecations for the Nois
 ## See also:
 - [Noise Filtering Tech Spec](tech-spec.md)
 - [Noise Filtering ADRs](ADRS.md)
-- [Core Product Spec](../../../core/product-spec.md)
+- [Core Product Spec](../../../core/product/product-spec.md)

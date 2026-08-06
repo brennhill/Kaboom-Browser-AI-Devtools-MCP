@@ -19,7 +19,7 @@ last_verified_date: 2026-03-05
 
 - Status: proposed
 - Tool: generate
-- Mode/Action: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
+- Mode/Action: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
 - This document is a generated placeholder and should be completed.
 
 ## Linked Specs

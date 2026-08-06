@@ -4,7 +4,7 @@ feature_id: feature-reproduction-scripts
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
@@ -34,7 +34,7 @@ last_verified_date: 2026-03-05
 
 - Status: proposed
 - Tool: generate
-- Mode/Action: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
+- Mode/Action: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
 - Location: `docs/features/feature/reproduction-scripts`
 
 ## Specs

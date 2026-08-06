@@ -109,7 +109,7 @@ class DocumentLinter:
                 )
                 candidates.append(docs_root_target / "index.md")
 
-                # Collapse historically over-prefixed relatives like ../../../core/adrs.md.
+                # Collapse historically over-prefixed relatives like ../../../core/product/adrs.md.
                 collapsed = file_part
                 while collapsed.startswith("../"):
                     collapsed = collapsed[3:]

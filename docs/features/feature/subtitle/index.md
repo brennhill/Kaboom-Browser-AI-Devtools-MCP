@@ -4,7 +4,7 @@ feature_id: feature-subtitle
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-06
 code_paths:
 test_paths: []
 last_verified_version: 0.7.12
@@ -16,8 +16,8 @@ last_verified_date: 2026-03-05
 ## TL;DR
 
 - Status: proposed
-- Tool: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical tool enums.
-- Mode/Action: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
+- Tool: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical tool enums.
+- Mode/Action: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
 - Location: `docs/features/feature/subtitle`
 
 ## Specs

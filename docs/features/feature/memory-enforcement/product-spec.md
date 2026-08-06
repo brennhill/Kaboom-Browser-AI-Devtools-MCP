@@ -17,4 +17,4 @@ User-facing requirements, rationale, and deprecations for the Memory Enforcement
 
 - See also: [Tech Spec](tech-spec.md)
 - See also: [Memory Enforcement Review](memory-enforcement-review.md)
-- See also: [Core Product Spec](../../../core/product-spec.md)
+- See also: [Core Product Spec](../../../core/product/product-spec.md)

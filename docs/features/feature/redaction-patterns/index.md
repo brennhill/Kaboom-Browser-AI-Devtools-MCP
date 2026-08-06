@@ -4,7 +4,7 @@ feature_id: feature-redaction-patterns
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/capture/logstore/store.go
   - internal/mcp/types.go

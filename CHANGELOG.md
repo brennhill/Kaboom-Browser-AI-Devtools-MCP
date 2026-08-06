@@ -64,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Complete filename standardization** — All 335 documentation files standardized to `lowercase-with-hyphens` format (product-spec.md, tech-spec.md, qa-plan.md across all 71 features)
 - **Documentation automation scripts** — Feature navigation generator (`generate-feature-navigation.py`) and lint checker (`lint-documentation.py`) with link verification and frontmatter validation
 - **Mandatory documentation workflow** — `documentation-maintenance.md` with quality gates, commit checklists, and enforcement rules
-- **Comprehensive documentation guides** — `docs/features/README.md` (LLM-optimized feature guide), `docs/cross-reference.md` (dependency mapping), `docs/core/codebase-canon-v5.3.md` (baseline reference)
+- **Comprehensive documentation guides** — `docs/features/README.md` (LLM-optimized feature guide), `docs/cross-reference.md` (dependency mapping), `docs/core/architecture/codebase-canon-v5.3.md` (baseline reference)
 - **YAML frontmatter metadata** — All feature docs include status, scope, ai-priority, tags, relates-to, and last-verified fields for AI discoverability
 - **On-demand context loading strategy** — `context-on-demand.md` with task-based documentation loading to minimize startup overhead
 - **Optimized startup context** — Reduced initial documentation load to ~5K tokens
