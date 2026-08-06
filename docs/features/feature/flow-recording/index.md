@@ -44,7 +44,7 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
-  - cmd/browser-agent/recording_playback_result_test.go
+  - cmd/browser-agent/internal/toolrecording/playback_result_test.go
   - internal/capture/recordingtest/recording_manager_test.go
   - internal/capture/recordingtest/recording_store_integration_test.go
   - internal/capture/recordingtest/recording_logdiff_integration_test.go
@@ -133,7 +133,7 @@ canonical owners directly; root one-line forwarding wrappers are prohibited.
 - Core tests:
   - `cmd/browser-agent/internal/toolrecording/handler_test.go`
   - `cmd/browser-agent/internal/toolrecording/toolrecording_test.go`
-  - `cmd/browser-agent/recording_playback_result_test.go`
+  - `cmd/browser-agent/internal/toolrecording/playback_result_test.go`
   - `internal/capture/recordingtest/recording_manager_test.go`
   - `tests/extension/recording-lifecycle/recording.test.js`
   - `tests/extension/recording-ui/recording-listeners-target-tab.test.js`

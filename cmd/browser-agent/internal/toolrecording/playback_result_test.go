@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/playback-engine/index.md
 
 // recording_playback_result_test.go — Tests for canonical playback result formatting.
-package main
+package toolrecording_test
 
 import (
 	"encoding/json"
@@ -18,6 +18,15 @@ import (
 // ============================================
 // BuildPlaybackResult
 // ============================================
+
+func extractJSONFromText(text string) string {
+	for index, character := range text {
+		if character == '{' || character == '[' {
+			return text[index:]
+		}
+	}
+	return text
+}
 
 func TestBuildPlaybackResult_AllActionsSucceeded(t *testing.T) {
 	t.Parallel()

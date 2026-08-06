@@ -39,7 +39,7 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
-  - cmd/browser-agent/recording_playback_result_test.go
+  - cmd/browser-agent/internal/toolrecording/playback_result_test.go
   - internal/recording/manager_test.go
   - internal/statediag/collector_test.go
   - internal/recording/types_test.go
