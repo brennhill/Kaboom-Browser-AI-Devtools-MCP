@@ -7,6 +7,13 @@ owners:
   - Brenn
 last_reviewed: 2026-08-06
 code_paths:
+  - docs/assets/images/brand/
+  - docs/assets/images/campaigns/
+  - docs/assets/images/character/
+  - docs/assets/images/error-states/
+  - docs/assets/images/investigation/
+  - docs/assets/images/product/
+  - docs/assets/images/safety/
   - docs/assets/images/chrome_store/branding/
   - docs/assets/images/chrome_store/listing/
   - package.json

@@ -4,7 +4,7 @@ description: "Configure Kaboom as an MCP server for OpenAI Codex. Give Codex acc
 keywords: "OpenAI Codex MCP server, Codex browser errors, Codex debugging, Codex MCP integration"
 permalink: /mcp-integration/codex/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "Fuel OpenAI Codex with live browser data."
 toc: true

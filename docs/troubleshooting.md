@@ -4,7 +4,7 @@ description: "Fix common Kaboom issues: extension not connecting, logs not appea
 keywords: "kaboom troubleshooting, extension not connecting, MCP not working, kaboom debug mode, port conflict fix"
 permalink: /troubleshooting/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "Flame out? Get it burning again."
 toc: true

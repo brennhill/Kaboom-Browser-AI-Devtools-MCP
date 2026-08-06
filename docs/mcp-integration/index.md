@@ -4,7 +4,7 @@ description: "Connect Kaboom to any MCP-compatible coding agent. Configuration g
 keywords: "MCP server configuration, Model Context Protocol, autonomous coding agent, agentic debugging, browser debugging MCP"
 permalink: /mcp-integration/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "One config. Your AI tool fires up Kaboom automatically."
 toc: true

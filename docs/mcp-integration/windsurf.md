@@ -4,7 +4,7 @@ description: "Configure Kaboom as an MCP server for Windsurf (Codeium). Give Win
 keywords: "Windsurf MCP server, Windsurf browser debugging, Codeium MCP, Windsurf AI browser logs"
 permalink: /mcp-integration/windsurf/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "Fuel Windsurf's AI with live browser data."
 toc: true

@@ -174,7 +174,7 @@ Artwork, logos, and the Sparky mascot are **Copyright (c) Brenn Hill** and are n
 
 <div align="center">
 
-<img src="docs/assets/images/sparky-wave.png" alt="Sparky the Salamander" width="120" />
+<img src="docs/assets/images/character/sparky-wave.png" alt="Sparky the Salamander" width="120" />
 
 **[gokaboom.dev](https://gokaboom.dev)**
 

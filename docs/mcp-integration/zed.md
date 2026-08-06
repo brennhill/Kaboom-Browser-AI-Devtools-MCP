@@ -4,7 +4,7 @@ description: "Configure Kaboom as a context server for Zed editor. Give Zed's AI
 keywords: "Zed MCP server, Zed context server, Zed browser debugging, Zed AI browser logs"
 permalink: /mcp-integration/zed/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "Fuel Zed's AI with live browser data."
 toc: true

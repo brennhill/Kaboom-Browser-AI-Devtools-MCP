@@ -12,7 +12,7 @@ plugins:
 # SEO
 twitter:
   username: brennhill
-logo: /assets/images/logo.png
+logo: /assets/images/brand/logo.png
 
 # Author
 author:

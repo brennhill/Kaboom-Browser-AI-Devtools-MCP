@@ -14,13 +14,13 @@ last_reviewed: 2026-03-06
     <p><em style="color: #fb923c;">Pouring fuel on the AI development fire</em></p>
     <p><a href="/getting-started/" class="btn">Get Started</a></p>
   </div>
-  <img src="/assets/images/sparky-working-laptop-web.webp" alt="Sparky coding" class="hero-sparky">
+  <img src="/assets/images/product/sparky-working-laptop-web.webp" alt="Sparky coding" class="hero-sparky">
 </div>
 
 ## Now You're Cooking
 
 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
-  <img src="/assets/images/sparky-wave-web.webp" alt="Sparky waving" style="width: clamp(40px, 10vw, 80px); height: auto; border-radius: 6px;">
+  <img src="/assets/images/character/sparky-wave-web.webp" alt="Sparky waving" style="width: clamp(40px, 10vw, 80px); height: auto; border-radius: 6px;">
   <span style="font-size: 1.1em; color: #fb923c;">Welcome! Sparky is here to help you fire up your AI-powered browser debugging.</span>
 </div>
 
@@ -102,7 +102,7 @@ Fewer tokens = more room for your codebase, faster responses, lower cost.
 ## Enterprise Ready — Zero Data Leakage
 
 <div class="section-with-sparky">
-<img src="/assets/images/sparky-shield-web.webp" alt="Sparky with shield" class="section-sparky">
+<img src="/assets/images/safety/sparky-shield-web.webp" alt="Sparky with shield" class="section-sparky">
 <div>
 
 **No browser data is ever shared with any AI provider.** Kaboom runs entirely on your machine:
@@ -174,7 +174,7 @@ Not tied to Anthropic. Not tied to Cursor. Not tied to anyone. If your agent spe
 ---
 
 <div class="cta-footer">
-  <img src="/assets/images/sparky-firefighter-happy-web.webp" alt="Sparky ready to help" class="cta-sparky">
+  <img src="/assets/images/safety/sparky-firefighter-happy-web.webp" alt="Sparky ready to help" class="cta-sparky">
   <div>
     <h3>Ready to Fire It Up?</h3>
     <p><a href="/getting-started/" class="btn">Get Started</a></p>

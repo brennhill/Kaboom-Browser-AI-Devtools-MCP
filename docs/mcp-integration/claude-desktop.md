@@ -4,7 +4,7 @@ description: "Configure Kaboom as an MCP server for Claude Desktop. Give Claude 
 keywords: "Claude Desktop MCP server, Claude Desktop browser errors, Claude Desktop MCP config, Claude Desktop debugging"
 permalink: /mcp-integration/claude-desktop/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "Fuel Claude Desktop with live browser data."
 toc: true

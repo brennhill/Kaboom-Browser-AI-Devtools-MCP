@@ -4,7 +4,7 @@ description: "Kaboom keeps captured browser data local and sends only anonymous 
 keywords: "local browser debugging, privacy first developer tools, anonymous usage telemetry, localhost debugging tool, secure browser debugging"
 permalink: /privacy/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "Your browser data stays local. Anonymous product usage helps improve Kaboom."
 toc: true

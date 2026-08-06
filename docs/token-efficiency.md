@@ -9,7 +9,7 @@ status: reference
 last_reviewed: 2026-03-06
 ---
 
-<img src="/assets/images/sparky-wave-web.webp" alt="Sparky" style="float: right; width: 100px; margin: 0 0 1rem 1.5rem; border-radius: 6px;">
+<img src="/assets/images/character/sparky-wave-web.webp" alt="Sparky" style="float: right; width: 100px; margin: 0 0 1rem 1.5rem; border-radius: 6px;">
 
 Every token your MCP tools consume is a token your AI agent can't use for reasoning, code generation, or understanding your codebase. Most developers don't think about this — but when an MCP server eats 30,000+ tokens just to register its tools, you've lost a meaningful chunk of your context window before anything happens.
 

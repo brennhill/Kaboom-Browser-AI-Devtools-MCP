@@ -4,7 +4,7 @@ description: "Install and configure Kaboom in under 2 minutes. Start streaming b
 keywords: "install kaboom, kaboom agentic browser setup, browser extension install, MCP server setup"
 permalink: /getting-started/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "One command. Two minutes. Your AI sees your browser."
 toc: true

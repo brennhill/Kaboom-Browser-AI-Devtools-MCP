@@ -4,7 +4,7 @@ description: "Configure Kaboom as an MCP server for Claude Code. Give Claude rea
 keywords: "Claude Code MCP server, Claude Code browser errors, Claude Code debugging, Claude Code browser extension"
 permalink: /mcp-integration/claude-code/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "Fuel Claude Code with live browser data."
 toc: true

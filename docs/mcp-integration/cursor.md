@@ -4,7 +4,7 @@ description: "Configure Kaboom as an MCP server for Cursor IDE. Give Cursor's AI
 keywords: "Cursor MCP server, Cursor browser debugging, Cursor AI browser logs, Cursor MCP extension"
 permalink: /mcp-integration/cursor/
 header:
-  overlay_image: /assets/images/hero-banner.png
+  overlay_image: /assets/images/brand/hero-banner.png
   overlay_filter: 0.85
   excerpt: "Fuel Cursor's AI with live browser data."
 toc: true
