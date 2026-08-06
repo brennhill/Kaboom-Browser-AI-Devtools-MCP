@@ -19,7 +19,7 @@ test_paths:
   - tests/extension/misc/integration.test.cjs
   - cmd/browser-agent/internal/ciapi/snapshot_test.go
   - cmd/browser-agent/internal/ciapi/compute_test.go
-  - cmd/browser-agent/ci_unit_test.go
+  - cmd/browser-agent/internal/ciapi/handlers_integration_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -59,7 +59,7 @@ last_verified_date: 2026-03-05
 - Characterization and route tests:
   `cmd/browser-agent/internal/ciapi/snapshot_test.go`,
   `cmd/browser-agent/internal/ciapi/compute_test.go`,
-  `cmd/browser-agent/ci_unit_test.go`
+  `cmd/browser-agent/internal/ciapi/handlers_integration_test.go`
 - JavaScript CI rebuilds TypeScript and fails on content drift; checkout
   modification times are never treated as build evidence. Sharded failures are
   attributed only to the process that exited nonzero.

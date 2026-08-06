@@ -1,12 +1,11 @@
 // Purpose: Unit tests for browser-agent ci logic.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package ciapi_test
 
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -14,28 +13,36 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-func newTestServerForHandlers(t *testing.T) *Server {
+func newTestLogs(t *testing.T) *logstore.Store {
 	t.Helper()
-	logPath := filepath.Join(t.TempDir(), "logs.jsonl")
-	s, err := NewServer(logPath, 1000)
-	if err != nil {
-		t.Fatalf("NewServer() error = %v", err)
-	}
+	logs := logstore.New(logstore.Config{LogFile: filepath.Join(t.TempDir(), "logs.jsonl"), MaxEntries: 1000})
 	t.Cleanup(func() {
-		s.logs.Shutdown(2 * time.Second)
+		logs.Shutdown(2 * time.Second)
 	})
-	return s
+	return logs
+}
+
+func newTestResetter(captured *capture.Capture) *resetter.Resetter {
+	return resetter.New(resetter.Dependencies{
+		Extension:     captured.Extension(),
+		Telemetry:     captured.Telemetry(),
+		Performance:   captured.Performance(),
+		ExtensionLogs: captured.ExtensionLogs(),
+	})
 }
 
 func TestHandleSnapshot_MethodAndSinceValidation(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServerForHandlers(t)
+	logs := newTestLogs(t)
 	cap := capture.NewCapture()
-	handler := ciapi.Snapshot(srv.logs, cap)
+	handler := ciapi.Snapshot(logs, cap)
 
 	notGetReq := httptest.NewRequest(http.MethodPost, "/snapshot", nil)
 	notGetRR := httptest.NewRecorder()
@@ -55,10 +62,10 @@ func TestHandleSnapshot_MethodAndSinceValidation(t *testing.T) {
 func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServerForHandlers(t)
+	logs := newTestLogs(t)
 	cap := capture.NewCapture()
 
-	srv.logs.AddEntries([]types.LogEntry{
+	logs.AddEntries([]types.LogEntry{
 		{"level": "error", "message": "boom", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 		{"level": "warn", "message": "warn", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 		{"level": "info", "message": "info", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
@@ -77,7 +84,7 @@ func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 	})
 	cap.Extension().SetTestBoundaryStart("test-123")
 
-	handler := ciapi.Snapshot(srv.logs, cap)
+	handler := ciapi.Snapshot(logs, cap)
 	req := httptest.NewRequest(http.MethodGet, "/snapshot", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -116,14 +123,14 @@ func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 func TestHandleSnapshot_SinceFilter(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServerForHandlers(t)
+	logs := newTestLogs(t)
 	cap := capture.NewCapture()
-	handler := ciapi.Snapshot(srv.logs, cap)
+	handler := ciapi.Snapshot(logs, cap)
 
 	oldTS := time.Now().UTC().Add(-10 * time.Second)
 	cutoff := time.Now().UTC().Add(-5 * time.Second)
 	newTS := time.Now().UTC().Add(-1 * time.Second)
-	srv.logs.AddEntries([]types.LogEntry{
+	logs.AddEntries([]types.LogEntry{
 		{"level": "error", "message": "old", "ts": oldTS.Format(time.RFC3339Nano)},
 		{"level": "error", "message": "new", "ts": newTS.Format(time.RFC3339Nano)},
 	})
@@ -150,13 +157,13 @@ func TestHandleSnapshot_SinceFilter(t *testing.T) {
 func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServerForHandlers(t)
+	logs := newTestLogs(t)
 	cap := capture.NewCapture()
 
-	srv.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "x"}})
+	logs.AddEntries([]types.LogEntry{{"level": "error", "message": "x"}})
 	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test", Status: 200}})
 
-	clearHandler := ciapi.Clear(srv.logs, newRuntimeResetter(cap))
+	clearHandler := ciapi.Clear(logs, newTestResetter(cap))
 
 	getReq := httptest.NewRequest(http.MethodGet, "/clear", nil)
 	getRR := httptest.NewRecorder()
@@ -171,8 +178,8 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	if postRR.Code != http.StatusOK {
 		t.Fatalf("POST /clear status = %d, want %d", postRR.Code, http.StatusOK)
 	}
-	if srv.logs.EntryCount() != 0 {
-		t.Fatalf("server entry count = %d, want 0 after clear", srv.logs.EntryCount())
+	if logs.EntryCount() != 0 {
+		t.Fatalf("server entry count = %d, want 0 after clear", logs.EntryCount())
 	}
 	if len(cap.Telemetry().NetworkBodies().Snapshot().Bodies) != 0 {
 		t.Fatalf("network bodies len = %d, want 0 after clear", len(cap.Telemetry().NetworkBodies().Snapshot().Bodies))
