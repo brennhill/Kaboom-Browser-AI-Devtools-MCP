@@ -20,6 +20,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonrecovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/dashboard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
@@ -112,7 +113,7 @@ type Server struct {
 	pushDrainToken   string
 	uploadAutomation bool
 	uploadSecurity   *uploadsec.Security
-	daemonHost       daemonHost
+	daemonRecovery   *daemonrecovery.Reclaimer
 }
 
 func (s *Server) applyRuntimeConfig(config *serverConfig) {
@@ -162,7 +163,6 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 
 	s := &Server{
 		runtime:            appruntime.New(version),
-		daemonHost:         newDaemonHost(),
 		listenPort:         listenport.New(),
 		sessionProjectPath: sessionProjectPath,
 		warnings:           warningqueue.New(),
@@ -184,6 +184,10 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		TelemetryMode: telemetryModeAuto,
 		AddWarning:    s.warnings.Add,
 		Stderrf:       diag.Printf,
+	})
+	s.daemonRecovery = daemonrecovery.New(daemonrecovery.Config{
+		Version: version, Recovery: s.stateRecovery, Incidents: s.incidents,
+		LogLifecycle: s.logLifecycle, Diagnosticf: diag.Printf,
 	})
 
 	// Initialize push router with capability sync callback

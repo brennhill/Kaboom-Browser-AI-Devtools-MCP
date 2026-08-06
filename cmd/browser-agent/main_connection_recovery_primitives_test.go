@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -14,20 +13,6 @@ import (
 	"syscall"
 	"testing"
 )
-
-func TestIdentifyPortHolderFiltersInvalidAndSelfOwners(t *testing.T) {
-	host := newDaemonHost()
-	host.processCommand = func(pid int) string { return "foreign-server --pid " + fmt.Sprint(pid) }
-	host.findProcessOnPort = func(int) ([]int, error) { return []int{-1, os.Getpid(), 4242}, nil }
-	pid, command := identifyPortHolder(host, 7890)
-	if pid != 4242 || !strings.Contains(command, "4242") {
-		t.Fatalf("identified holder = %d %q", pid, command)
-	}
-	host.findProcessOnPort = func(int) ([]int, error) { return nil, errors.New("lookup failed") }
-	if pid, command := identifyPortHolder(host, 7890); pid != 0 || command != "" {
-		t.Fatalf("failed lookup holder = %d %q", pid, command)
-	}
-}
 
 func TestHTTPServerStartupReportsBindFailureAndServesUntilShutdown(t *testing.T) {
 	server := newTestServerForHandlers(t)

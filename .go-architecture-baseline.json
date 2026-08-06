@@ -167,7 +167,11 @@
     },
     "cmd/browser-agent/internal/daemonrecovery/primitives.go": {
       "mutable_globals": 0,
-      "exports": 5
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/daemonrecovery/reclaimer.go": {
+      "mutable_globals": 0,
+      "exports": 7
     },
     "cmd/browser-agent/internal/dashboard/handler.go": {
       "mutable_globals": 5,
@@ -772,10 +776,6 @@
     "cmd/browser-agent/main_connection_mcp.go": {
       "mutable_globals": 0,
       "exports": 2
-    },
-    "cmd/browser-agent/main_connection_recovery.go": {
-      "mutable_globals": 0,
-      "exports": 1
     },
     "cmd/browser-agent/server.go": {
       "mutable_globals": 1,

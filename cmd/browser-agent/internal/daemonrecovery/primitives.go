@@ -26,27 +26,27 @@ const (
 
 // StopServerForUpgrade applies bounded graceful and forced shutdown escalation.
 func StopServerForUpgrade(port int) bool {
-	_ = TryShutdownViaHTTP(port)
-	if WaitForPortRelease(port, fastPortWait) {
+	_ = tryShutdownViaHTTP(port)
+	if waitForPortRelease(port, fastPortWait) {
 		procctl.RemovePIDFile(port)
 		return true
 	}
 
 	pid := procctl.ReadPIDFile(port)
 	if pid > 0 && pid != os.Getpid() {
-		TerminatePIDQuiet(pid, false)
+		terminatePIDQuiet(pid, false)
 	}
 
 	pids, err := procctl.FindProcessOnPort(port)
 	if err == nil {
 		for _, candidate := range pids {
 			if candidate != os.Getpid() {
-				TerminatePIDQuiet(candidate, false)
+				terminatePIDQuiet(candidate, false)
 			}
 		}
 	}
 
-	if WaitForPortRelease(port, slowPortWait) {
+	if waitForPortRelease(port, slowPortWait) {
 		procctl.RemovePIDFile(port)
 		return true
 	}
@@ -55,20 +55,19 @@ func StopServerForUpgrade(port int) bool {
 	if err == nil {
 		for _, candidate := range pids {
 			if candidate != os.Getpid() {
-				TerminatePIDQuiet(candidate, true)
+				terminatePIDQuiet(candidate, true)
 			}
 		}
 	}
 
-	released := WaitForPortRelease(port, slowPortWait)
+	released := waitForPortRelease(port, slowPortWait)
 	if released {
 		procctl.RemovePIDFile(port)
 	}
 	return released
 }
 
-// TryShutdownViaHTTP requests a graceful shutdown from a loopback daemon.
-func TryShutdownViaHTTP(port int) bool {
+func tryShutdownViaHTTP(port int) bool {
 	shutdownURL := fmt.Sprintf("http://127.0.0.1:%d/shutdown", port)
 	client := &http.Client{Timeout: shutdownHTTPTimeout}
 	req, err := http.NewRequest(http.MethodPost, shutdownURL, nil)
@@ -83,8 +82,7 @@ func TryShutdownViaHTTP(port int) bool {
 	return resp.StatusCode == http.StatusOK
 }
 
-// WaitForPortRelease polls until the loopback daemon port is no longer accepting connections.
-func WaitForPortRelease(port int, timeout time.Duration) bool {
+func waitForPortRelease(port int, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		if !corebridge.IsServerRunning(port) {
@@ -95,8 +93,7 @@ func WaitForPortRelease(port int, timeout time.Duration) bool {
 	return !corebridge.IsServerRunning(port)
 }
 
-// TerminatePIDQuiet requests termination and escalates after a bounded grace period.
-func TerminatePIDQuiet(pid int, force bool) {
+func terminatePIDQuiet(pid int, force bool) {
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		return
@@ -113,8 +110,7 @@ func TerminatePIDQuiet(pid int, force bool) {
 	}
 }
 
-// FetchDaemonHealth reduces a health response to the takeover policy contract.
-func FetchDaemonHealth(ctx context.Context, port int, timeout time.Duration) (reachable bool, version string, refused bool) {
+func fetchDaemonHealth(ctx context.Context, port int, timeout time.Duration) (reachable bool, version string, refused bool) {
 	health := nativeinstall.FetchHealth(ctx, port, timeout)
 	return health.Reachable, health.Version, health.Refused
 }

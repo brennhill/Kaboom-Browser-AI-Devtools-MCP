@@ -1,5 +1,5 @@
 // Purpose: Tests for daemon lifecycle policy and shutdown, exercised through the
-// REAL main-side wiring (daemonlifeDeps) so the seams this package hands to
+// REAL main-side wiring (Reclaimer.LifecycleDeps) so the seams this package hands to
 // daemonlife — pid files, port probes, the Server logger — stay connected.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
@@ -135,24 +135,12 @@ func TestEnforceDaemonStartupPolicy_DefaultTakeover(t *testing.T) {
 		t.Fatalf("NewServer() error = %v", err)
 	}
 
-	oldIsAlive := server.daemonHost.isProcessAlive
-	oldIsServerRunning := server.daemonHost.isServerRunning
-	oldTryShutdown := server.daemonHost.tryShutdown
-	oldWaitRelease := server.daemonHost.waitForPortRelease
-	oldTerminate := server.daemonHost.terminatePID
-	defer func() {
-		server.daemonHost.isProcessAlive = oldIsAlive
-		server.daemonHost.isServerRunning = oldIsServerRunning
-		server.daemonHost.tryShutdown = oldTryShutdown
-		server.daemonHost.waitForPortRelease = oldWaitRelease
-		server.daemonHost.terminatePID = oldTerminate
-	}()
-
-	server.daemonHost.isProcessAlive = func(pid int) bool { return pid == existingPID }
-	server.daemonHost.isServerRunning = func(port int) bool { return port == existingPort }
-	server.daemonHost.tryShutdown = func(port int) bool { return port == existingPort }
+	deps := server.daemonRecovery.LifecycleDeps()
+	deps.IsProcessAlive = func(pid int) bool { return pid == existingPID }
+	deps.IsServerRunning = func(port int) bool { return port == existingPort }
+	deps.TryShutdown = func(port int) bool { return port == existingPort }
 	waitCalls := 0
-	server.daemonHost.waitForPortRelease = func(port int, _ time.Duration) bool {
+	deps.WaitForPortRelease = func(port int, _ time.Duration) bool {
 		if port != existingPort {
 			return false
 		}
@@ -160,11 +148,11 @@ func TestEnforceDaemonStartupPolicy_DefaultTakeover(t *testing.T) {
 		return waitCalls >= 2
 	}
 	terminatedPIDs := make([]int, 0, 2)
-	server.daemonHost.terminatePID = func(pid int, _ bool) {
+	deps.TerminatePID = func(pid int, _ bool) {
 		terminatedPIDs = append(terminatedPIDs, pid)
 	}
 
-	if err := daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), requestedPort, daemonlife.LaunchOptions{}); err != nil {
+	if err := daemonlife.EnforceStartupPolicy(deps, requestedPort, daemonlife.LaunchOptions{}); err != nil {
 		t.Fatalf("daemonlife.EnforceStartupPolicy() error = %v", err)
 	}
 
@@ -233,20 +221,13 @@ func TestEnforceDaemonStartupPolicy_SafetyGuardRejectsPIDMismatch(t *testing.T) 
 	}
 	defer server.logs.Shutdown(2 * time.Second)
 
-	oldIsAlive := server.daemonHost.isProcessAlive
-	oldIsServerRunning := server.daemonHost.isServerRunning
-	oldTerminate := server.daemonHost.terminatePID
-	defer func() {
-		server.daemonHost.isProcessAlive = oldIsAlive
-		server.daemonHost.isServerRunning = oldIsServerRunning
-		server.daemonHost.terminatePID = oldTerminate
-	}()
-	server.daemonHost.isProcessAlive = func(pid int) bool { return pid == existingPID }
-	server.daemonHost.isServerRunning = func(port int) bool { return port == existingPort }
+	deps := server.daemonRecovery.LifecycleDeps()
+	deps.IsProcessAlive = func(pid int) bool { return pid == existingPID }
+	deps.IsServerRunning = func(port int) bool { return port == existingPort }
 	terminated := false
-	server.daemonHost.terminatePID = func(_ int, _ bool) { terminated = true }
+	deps.TerminatePID = func(_ int, _ bool) { terminated = true }
 
-	err = daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), 7901, daemonlife.LaunchOptions{})
+	err = daemonlife.EnforceStartupPolicy(deps, 7901, daemonlife.LaunchOptions{})
 	if err == nil {
 		t.Fatal("daemonlife.EnforceStartupPolicy() error = nil, want ownership mismatch error")
 	}
@@ -276,24 +257,17 @@ func TestEnforceDaemonStartupPolicy_ParallelRequiresIsolatedStateDir(t *testing.
 	}
 	defer server.logs.Shutdown(2 * time.Second)
 
-	oldIsAlive := server.daemonHost.isProcessAlive
-	oldTerminate := server.daemonHost.terminatePID
-	oldTryShutdown := server.daemonHost.tryShutdown
-	defer func() {
-		server.daemonHost.isProcessAlive = oldIsAlive
-		server.daemonHost.terminatePID = oldTerminate
-		server.daemonHost.tryShutdown = oldTryShutdown
-	}()
-	server.daemonHost.isProcessAlive = func(pid int) bool { return pid == 30303 }
+	deps := server.daemonRecovery.LifecycleDeps()
+	deps.IsProcessAlive = func(pid int) bool { return pid == 30303 }
 	terminated := false
 	shutdownCalled := false
-	server.daemonHost.terminatePID = func(_ int, _ bool) { terminated = true }
-	server.daemonHost.tryShutdown = func(_ int) bool {
+	deps.TerminatePID = func(_ int, _ bool) { terminated = true }
+	deps.TryShutdown = func(_ int) bool {
 		shutdownCalled = true
 		return false
 	}
 
-	err = daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), 7921, daemonlife.LaunchOptions{Parallel: true})
+	err = daemonlife.EnforceStartupPolicy(deps, 7921, daemonlife.LaunchOptions{Parallel: true})
 	if err == nil {
 		t.Fatal("daemonlife.EnforceStartupPolicy() error = nil, want isolated state-dir error")
 	}
@@ -328,20 +302,13 @@ func TestEnforceDaemonStartupPolicy_ReclaimsStaleLockOnPIDMismatchWhenPortIdle(t
 		t.Fatalf("NewServer() error = %v", err)
 	}
 
-	oldIsAlive := server.daemonHost.isProcessAlive
-	oldIsServerRunning := server.daemonHost.isServerRunning
-	oldTerminate := server.daemonHost.terminatePID
-	defer func() {
-		server.daemonHost.isProcessAlive = oldIsAlive
-		server.daemonHost.isServerRunning = oldIsServerRunning
-		server.daemonHost.terminatePID = oldTerminate
-	}()
-	server.daemonHost.isProcessAlive = func(pid int) bool { return pid == existingPID }
-	server.daemonHost.isServerRunning = func(port int) bool { return false }
+	deps := server.daemonRecovery.LifecycleDeps()
+	deps.IsProcessAlive = func(pid int) bool { return pid == existingPID }
+	deps.IsServerRunning = func(port int) bool { return false }
 	terminated := false
-	server.daemonHost.terminatePID = func(_ int, _ bool) { terminated = true }
+	deps.TerminatePID = func(_ int, _ bool) { terminated = true }
 
-	if err := daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), 7931, daemonlife.LaunchOptions{}); err != nil {
+	if err := daemonlife.EnforceStartupPolicy(deps, 7931, daemonlife.LaunchOptions{}); err != nil {
 		t.Fatalf("daemonlife.EnforceStartupPolicy() error = %v, want stale lock reclaimed", err)
 	}
 	if terminated {

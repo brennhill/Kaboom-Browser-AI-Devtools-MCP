@@ -124,7 +124,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		}
 	}
 
-	if err := daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), port, opts); err != nil {
+	if err := daemonlife.EnforceStartupPolicy(server.daemonRecovery.LifecycleDeps(), port, opts); err != nil {
 		if errors.Is(err, daemonlife.ErrDeferToHealthyDaemon) {
 			// A healthy, compatible daemon already owns this port. Exit cleanly
 			// (exit 0) and let it keep serving — do NOT start a rival server or
@@ -144,7 +144,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		// not clear it. Reclaim it (find + log + kill) so we stay single-instance,
 		// then re-check; only abort if it is still stuck.
 		server.logLifecycle("port_reclaim_attempt", port, map[string]any{"purpose": "main", "reason": err.Error()})
-		reclaimPort(server, port, "main")
+		server.daemonRecovery.ReclaimPort(port, "main")
 		if err := preflightPortCheck(server, port); err != nil {
 			return err
 		}
@@ -159,7 +159,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	// so a pathological loop degrades gracefully instead of hammering launchd (which
 	// would throttle/disable the LaunchAgent and take the terminal server on port+1
 	// dark too). Never refuses to start; an upgrade/epoch takeover resets the counter.
-	daemonlife.ApplyStartupRestartThrottle(daemonlifeDeps(server), port)
+	daemonlife.ApplyStartupRestartThrottle(server.daemonRecovery.LifecycleDeps(), port)
 
 	srv, httpDone, err := startHTTPServer(server, port, apiKey, mux)
 	if err != nil {
@@ -178,7 +178,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		// makes 7891 "connection refused" for the extension (can't type / Start
 		// fails). Reclaim it and retry once so the terminal server reliably binds.
 		server.logLifecycle("terminal_server_bind_retry", termPort, map[string]any{"error": termErr.Error()})
-		if reclaimPort(server, termPort, "terminal") {
+		if server.daemonRecovery.ReclaimPort(termPort, "terminal") {
 			termSrv, termDone, termErr = startTerminalServer(termPort, termMux)
 		}
 	}
@@ -188,7 +188,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		// lines below go to /dev/null for a bridge-spawned daemon (spawned with
 		// Stdout/Stderr = nil so it cannot die of SIGPIPE), making the health payload
 		// the only place a user or agent can learn what happened.
-		blockingPID, blockingCmd := identifyPortHolder(server.daemonHost, termPort)
+		blockingPID, blockingCmd := server.daemonRecovery.IdentifyPortHolder(termPort)
 		server.terminalStatus.SetUnavailable(termPort, termErr.Error(), blockingPID, blockingCmd)
 
 		diag.Printf("[Kaboom] WARNING: terminal server failed to start on port %d: %v\n", termPort, termErr)
@@ -211,7 +211,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		// down the main daemon; never restarts during graceful shutdown.
 		sup := terminalsupervisor.New(terminalsupervisor.Dependencies{
 			Start:   startTerminalServer,
-			Reclaim: func(port int) { reclaimPort(server, port, "terminal") },
+			Reclaim: func(port int) { server.daemonRecovery.ReclaimPort(port, "terminal") },
 			SetPort: server.terminalStatus.SetPort,
 			Log:     func(event string, fields map[string]any) { server.logLifecycle(event, termPort, fields) },
 			Warn:    diag.Printf,
@@ -348,7 +348,7 @@ func preflightPortCheck(server *Server, port int) error {
 	testAddr := fmt.Sprintf("127.0.0.1:%d", port)
 	testLn, err := net.Listen("tcp", testAddr)
 	if err != nil {
-		blockingPID, blockingCmd := identifyPortHolder(server.daemonHost, port)
+		blockingPID, blockingCmd := server.daemonRecovery.IdentifyPortHolder(port)
 		server.logLifecycle("port_conflict_detected", port, map[string]any{
 			"error":          err.Error(),
 			"blocked_by_pid": blockingPID,
@@ -440,7 +440,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 		"uptime_seconds":  time.Since(server.runtime.StartedAt()).Seconds(),
 	})
 	if shutdownSource != "http_listener_died" {
-		daemonlife.ClearRestartHistoryOnCleanShutdown(daemonlifeDeps(server), port)
+		daemonlife.ClearRestartHistoryOnCleanShutdown(server.daemonRecovery.LifecycleDeps(), port)
 	}
 	if diagPath := server.runtime.ExitDiagnostics().Append("daemon_shutdown", map[string]any{
 		"port":            port,

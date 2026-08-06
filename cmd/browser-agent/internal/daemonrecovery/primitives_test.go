@@ -3,8 +3,13 @@
 package daemonrecovery
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -33,12 +38,12 @@ func TestTryShutdownViaHTTPReportsAcceptedAndRejectedResponses(t *testing.T) {
 			defer server.Close()
 
 			port := listener.Addr().(*net.TCPAddr).Port
-			if got := TryShutdownViaHTTP(port); got != test.want {
-				t.Fatalf("TryShutdownViaHTTP() = %v, want %v", got, test.want)
+			if got := tryShutdownViaHTTP(port); got != test.want {
+				t.Fatalf("tryShutdownViaHTTP() = %v, want %v", got, test.want)
 			}
 		})
 	}
-	if TryShutdownViaHTTP(freePort(t)) {
+	if tryShutdownViaHTTP(freePort(t)) {
 		t.Fatal("shutdown succeeded without a server")
 	}
 }
@@ -54,15 +59,58 @@ func TestWaitForPortReleaseObservesOccupiedAndClosedPorts(t *testing.T) {
 	})}
 	go func() { _ = server.Serve(listener) }()
 
-	if WaitForPortRelease(port, 60*time.Millisecond) {
+	if waitForPortRelease(port, 60*time.Millisecond) {
 		t.Fatal("occupied port reported released")
 	}
 	if err := server.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if !WaitForPortRelease(port, time.Second) {
+	if !waitForPortRelease(port, time.Second) {
 		t.Fatal("closed port remained occupied")
 	}
+}
+
+func TestFetchDaemonHealthClassifiesReachableRefusedAndCancelled(t *testing.T) {
+	t.Run("reachable", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(w).Encode(map[string]string{"version": "1.2.3"})
+		}))
+		defer server.Close()
+		port := portFromURL(t, server.URL)
+		reachable, version, refused := fetchDaemonHealth(context.Background(), port, time.Second)
+		if !reachable || version != "1.2.3" || refused {
+			t.Fatalf("reachable=%v version=%q refused=%v", reachable, version, refused)
+		}
+	})
+
+	t.Run("refused", func(t *testing.T) {
+		port := freePort(t)
+		reachable, _, refused := fetchDaemonHealth(context.Background(), port, time.Second)
+		if reachable || !refused {
+			t.Fatalf("reachable=%v refused=%v", reachable, refused)
+		}
+	})
+
+	t.Run("cancelled", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		if reachable, _, _ := fetchDaemonHealth(ctx, 7890, time.Second); reachable {
+			t.Fatal("cancelled probe reported reachable")
+		}
+	})
+}
+
+func portFromURL(t *testing.T, rawURL string) int {
+	t.Helper()
+	index := strings.LastIndexByte(rawURL, ':')
+	if index < 0 {
+		t.Fatalf("URL has no port: %q", rawURL)
+	}
+	var port int
+	if _, err := fmt.Sscanf(rawURL[index+1:], "%d", &port); err != nil {
+		t.Fatalf("parse port: %v", err)
+	}
+	return port
 }
 
 func TestStopServerForUpgradeAcceptsAlreadyFreePort(t *testing.T) {

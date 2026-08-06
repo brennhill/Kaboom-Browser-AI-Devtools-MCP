@@ -54,13 +54,12 @@ code_paths:
   - internal/statediag/collector.go
   - internal/statefault/fault.go
   - internal/statefile/statefile.go
-  - cmd/browser-agent/main_connection_recovery.go
+  - cmd/browser-agent/internal/daemonrecovery/reclaimer.go
   - cmd/browser-agent/internal/procctl/stop.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/internal/procctl/pidfile.go
   - cmd/browser-agent/internal/procctl/port.go
   - cmd/browser-agent/internal/procctl/argv0.go
-  - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/internal/operationalapi/handler.go
   - cmd/browser-agent/internal/dashboard/handler.go
   - cmd/browser-agent/internal/dashboard/dashboard.html
@@ -88,6 +87,7 @@ code_paths:
   - internal/util/proc_windows.go
 test_paths:
   - cmd/browser-agent/internal/daemonrecovery/primitives_test.go
+  - cmd/browser-agent/internal/daemonrecovery/reclaimer_test.go
   - internal/listenport/store_test.go
   - internal/warningqueue/queue_test.go
   - cmd/browser-agent/internal/httpapi/openapi_test.go
@@ -145,8 +145,6 @@ test_paths:
   - cmd/browser-agent/tools_registry_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go
   - cmd/browser-agent/internal/terminal/status/status_test.go
-  - cmd/browser-agent/reclaim_port_identity_test.go
-  - cmd/browser-agent/reclaim_port_test.go
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
   - cmd/browser-agent/start_timeout_norace_test.go
