@@ -5,7 +5,7 @@
 // session, which GetOrCreate then returns unchanged. ReplaceRelay overwrites under
 // one lock so the fresh binding always wins (finding H).
 
-package terminal
+package sessionrelay
 
 import (
 	"sync"

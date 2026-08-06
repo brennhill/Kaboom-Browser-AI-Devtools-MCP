@@ -15,7 +15,7 @@
 // the handler must not have to compute `Replaced` correctly for the relay map to
 // stay consistent with the session manager.
 
-package terminal
+package sessionrelay
 
 import (
 	"testing"

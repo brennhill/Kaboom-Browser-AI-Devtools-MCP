@@ -1,7 +1,7 @@
 // relay.go -- Per-session relay: fan-out PTY output, buffer writes, prompt detection.
 // Why: Supports multiple WebSocket viewers per session and non-blocking input.
 
-package terminal
+package sessionrelay
 
 import (
 	"fmt"
@@ -13,6 +13,19 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+)
+
+const (
+	// BufferSize bounds each PTY read and WebSocket replay chunk.
+	BufferSize = 4096
+	// InitTimeout bounds prompt detection before the initialization command is sent.
+	InitTimeout = 2 * time.Second
+	// PromptChars identify common interactive shell prompts.
+	PromptChars = "$#>%"
+	// ReapTimeout bounds child-process exit-code collection.
+	ReapTimeout = 2 * time.Second
+	// CloseTimeout bounds relay teardown during stop and daemon shutdown.
+	CloseTimeout = 5 * time.Second
 )
 
 // Relay manages per-session fan-out, buffered writes, and a PTY reader loop.
@@ -77,7 +90,7 @@ func (r *Relay) readLoop() {
 	}()
 	defer r.fanout.Close()
 	defer r.writeBuf.Close()
-	buf := make([]byte, ReadBufSize)
+	buf := make([]byte, BufferSize)
 	for {
 		n, err := r.sess.Read(buf)
 		if n > 0 {
@@ -161,7 +174,7 @@ func (r *Relay) Close() {
 
 	select {
 	case <-r.done:
-	case <-time.After(RelayCloseTimeout):
+	case <-time.After(CloseTimeout):
 		// readLoop is wedged (an unreapable child, or a write buffer whose drain is
 		// stuck). Do not block the caller — shutdown and /terminal/stop must still
 		// make progress; the session-layer diagnostics record the underlying stall.

@@ -67,7 +67,7 @@ Class 3 `HandleTerminalStart` 409, Class 5 sidepanel port teardown. New instance
 
 | ID | Sev | Class | Where | Issue | Status |
 |----|-----|-------|-------|-------|--------|
-| F1 | HIGH | 3+5 | `internal/terminal/relay.go` `WriteToFirst` | Discarded `writeBuf.Write` error → reports success on a dead shell; in-page **Audit prompt silently lost**. | **Fixed** (propagate the write error). Follow-up: prune dead relays from the `Map` on `readLoop` exit. |
+| F1 | HIGH | 3+5 | `internal/terminal/sessionrelay/relay.go` `WriteToFirst` | Discarded `writeBuf.Write` error → reports success on a dead shell; in-page **Audit prompt silently lost**. | **Fixed** (propagate the write error). Follow-up: prune dead relays from the `Map` on `readLoop` exit. |
 | F2 | MED | 4 | `background/context-menus.ts` vs `popup/tabs/tab-tracking-api.ts` | Context-menu "Control Tab" skipped the cloaked/internal-page guard (**privacy leak**, rule 7), content-script inject, and stop-recording-on-release. | **Fixed** — shared `src/lib/tabs/tab-tracking-core.ts` `trackTab`/`untrackTab`; both entry points route through it. Tests: `tab-tracking-core`, `entry-point-parity`. |
 | F3 | MED | 3 | `src/lib/storage-utils.ts` `writeStorage` | Never checked `chrome.runtime.lastError` → reported success on a failed/over-quota write. | **Fixed** — write/remove/setAccessLevel reject on `lastError`; 19 fire-and-forget callers moved to a logged `persist()` helper. Tests: `storage-utils` (fail-loud writes). |
 | F4 | MED | 1 | `src/sidepanel.ts` (exit/close/minimize) | Three close paths re-listed the same teardown; drift could leak `resetWriteGuardState`. | **Fixed** — one `closePanelWithIntent(intent)`; the teardown invariant lives in it. Tests: `sidepanel-terminal` (disconnect/close/minimize). |

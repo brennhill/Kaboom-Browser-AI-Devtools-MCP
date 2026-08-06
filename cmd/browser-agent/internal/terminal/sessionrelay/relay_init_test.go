@@ -4,7 +4,7 @@
 // channel, and the first init's deferred Unsubscribe("init-cmd") then closes the
 // SECOND's channel, making it bail early without writing its init command (I).
 
-package terminal
+package sessionrelay
 
 import (
 	"testing"

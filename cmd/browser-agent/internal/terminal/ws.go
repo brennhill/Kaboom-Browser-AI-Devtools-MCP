@@ -19,13 +19,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
 )
 
 // HandleTerminalWS upgrades a GET /terminal/ws request to a WebSocket connection
 // that relays raw PTY I/O to/from the browser's xterm.js terminal emulator.
-func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *Map) {
+func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *sessionrelay.Map) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		deps.JSONResponse(w, http.StatusUnauthorized, map[string]string{"error": "missing token"})
@@ -91,19 +92,19 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 	// AND broadcast (duplicate) or neither (lost) at the reconnect boundary — the
 	// readLoop appends under scrollMu then broadcasts under the fanout mutex, two
 	// separate locks this snapshot+subscribe would otherwise straddle (finding C).
-	subID := NextWSSubID()
+	subID := sessionrelay.NextWSSubID()
 	history, sub, subErr := relay.SubscribeWithHistory(subID)
 
 	// Replay scrollback so the reconnecting (or first-connecting) terminal sees prior output.
 	if len(history) > 0 {
-		for off := 0; off < len(history); off += ReadBufSize {
-			end := off + ReadBufSize
+		for off := 0; off < len(history); off += sessionrelay.BufferSize {
+			end := off + sessionrelay.BufferSize
 			if end > len(history) {
 				end = len(history)
 			}
 			if err := writeFrame(0x2, history[off:end]); err != nil {
 				if subErr == nil {
-					relay.fanout.Unsubscribe(subID)
+					relay.Fanout().Unsubscribe(subID)
 				}
 				_ = conn.Close()
 				return
@@ -113,7 +114,7 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 	replayEnd, _ := json.Marshal(map[string]string{"type": "replay_end"})
 	if err := writeFrame(0x1, replayEnd); err != nil {
 		if subErr == nil {
-			relay.fanout.Unsubscribe(subID)
+			relay.Fanout().Unsubscribe(subID)
 		}
 		_ = conn.Close()
 		return
@@ -128,7 +129,7 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 	// dead (finding A).
 	if subErr != nil {
 		if errors.Is(subErr, ptyfanout.ErrFanoutClosed) {
-			exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
+			exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.ExitCode()})
 			_ = writeFrame(0x1, exitMsg)
 		}
 		_ = writeFrame(0x8, nil)
@@ -138,7 +139,7 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 
 	deps.logEvent("terminal_ws_connect", map[string]any{"session_id": sess.ID, "sub_id": subID})
 	wsLoop(conn, bufrw, deps, sess, relay, sub, writeFrame)
-	relay.fanout.Unsubscribe(subID)
+	relay.Fanout().Unsubscribe(subID)
 	deps.logEvent("terminal_ws_disconnect", map[string]any{"session_id": sess.ID, "sub_id": subID})
 }
 
@@ -158,7 +159,7 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 // pre-loop replay writes and wsLoop's downstream/ping/control writes all serialize
 // on ONE mutex (a second NewFrameWriter would double-serialize on a different
 // mutex and defeat the shared-writer invariant).
-func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, relay *Relay, sub <-chan []byte, writeFrame func(opcode byte, payload []byte) error) {
+func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, relay *sessionrelay.Relay, sub <-chan []byte, writeFrame func(opcode byte, payload []byte) error) {
 	// Coordinated shutdown: connDone signals all goroutines to exit,
 	// closeConn ensures conn.Close() is called exactly once.
 	connDone := make(chan struct{})
@@ -183,7 +184,7 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 					if relay.Ended() {
 						// Session genuinely ended — send exit notification so the
 						// browser can display the message and stop reconnecting.
-						exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
+						exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.ExitCode()})
 						_ = writeFrame(0x1, exitMsg)
 					} else {
 						// This subscriber was dropped for being slow (fanout
@@ -277,7 +278,7 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 				_ = writeFrame(0xA, payload)
 			case 0xA: // Pong — no-op, deadline already refreshed above
 			case 0x2: // Binary — raw keystrokes -> PTY stdin via write buffer
-				if _, werr := relay.writeBuf.Write(payload); werr != nil {
+				if _, werr := relay.WriteBuf().Write(payload); werr != nil {
 					// The keystrokes did NOT reach the shell. Dropping them silently
 					// is exactly the "typed input vanished" report we cannot diagnose
 					// afterwards (rule 25), and the two causes need different

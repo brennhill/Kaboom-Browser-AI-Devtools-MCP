@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
@@ -91,7 +92,7 @@ func TestHandleTerminalWS_ReplayWritesAreDeadlineBound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	relays.GetOrCreate("b", sess, "") // start the relay readLoop so scrollback fills
 	waitForTrue(t, func() bool { return strings.Contains(string(sess.Scrollback()), "PRELOAD") }, 3*time.Second)
 

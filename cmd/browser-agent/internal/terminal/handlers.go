@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/directorybrowser"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/spawnpolicy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
@@ -69,39 +70,14 @@ const PongTimeout = 60 * time.Second
 // connection is never cut.
 const WSWriteTimeout = 10 * time.Second
 
-// ReadBufSize is the buffer size for PTY reads relayed to the browser.
-const ReadBufSize = 4096
-
-// InitTimeout is the max time to wait for a shell prompt before
-// writing init_command. Replaces the old hardcoded 500ms sleep with an
-// adaptive readiness check that looks for prompt characters.
-const InitTimeout = 2 * time.Second
-
-// PromptChars contains characters that indicate a shell prompt is ready.
-const PromptChars = "$#>%"
-
 // IdleTimeout is the duration of silence after PTY output before
 // the idle callback fires. Used to detect when an agent is waiting for input.
 const IdleTimeout = 30 * time.Second
 
-// ReapTimeout bounds how long the relay's readLoop waits for the child's exit
-// code before tearing the fanout down anyway. The PTY read has already failed by
-// then, so the child is normally gone and this returns instantly; the bound only
-// matters for a child that cannot be reaped, which must not hold every WebSocket
-// pump hostage. Matches Session.Close's own reap bound.
-const ReapTimeout = 2 * time.Second
-
-// RelayCloseTimeout bounds how long Relay.Close waits for readLoop to finish its
-// teardown. Worst case that teardown is ReapTimeout (waiting for the child's exit
-// code) plus the write buffer's own close bound, so this sits above their sum;
-// past it the caller gives up rather than letting one wedged session stall
-// /terminal/stop or daemon shutdown.
-const RelayCloseTimeout = 5 * time.Second
-
 // RegisterRoutes adds terminal-related routes to the mux.
 // NOT MCP — These are daemon-served endpoints for the in-browser terminal.
-func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Capture) *Map {
-	relays := NewMap()
+func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Capture) *sessionrelay.Map {
+	relays := sessionrelay.NewMap()
 
 	// Route a stuck-writer write-buffer close timeout (a drain goroutine + fd leak
 	// that cannot be safely interrupted) to the structured log, so the leak is
@@ -236,7 +212,7 @@ func classifyStartError(err error, sessionID, token string) (int, map[string]any
 	}
 }
 
-func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Capture, relays *Map) {
+func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Capture, relays *sessionrelay.Map) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
@@ -313,7 +289,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		// dereferenced the result, so a /terminal/stop landing between Start and Get
 		// nil-panicked this handler (finding S4).
 		sess := result.Session
-		var relay *Relay
+		var relay *sessionrelay.Relay
 		if result.Replaced {
 			// The manager evicted a dead session with this ID and spawned a fresh
 			// one. Atomically drop the stale relay (closed fanout, bound to the dead
@@ -345,7 +321,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 			// Panic-recovered one-shot init (bounded by InitTimeout): a panic here
 			// must never crash the daemon.
 			r, cmd := relay, req.InitCommand
-			util.SafeGo(func() { WaitForPromptViaRelay(r, cmd) })
+			util.SafeGo(func() { sessionrelay.WaitForPromptViaRelay(r, cmd) })
 		}
 	}
 	if err != nil {
@@ -426,7 +402,7 @@ func AutoDetectCWD(cap *capture.Capture) string {
 }
 
 // HandleTerminalStop destroys a terminal session.
-func HandleTerminalStop(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *Map) {
+func HandleTerminalStop(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *sessionrelay.Map) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
@@ -477,7 +453,7 @@ func sandboxPayload(err error) map[string]any {
 }
 
 // HandleTerminalConfig returns terminal session details including alt-screen state and subscriber counts.
-func HandleTerminalConfig(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *Map) {
+func HandleTerminalConfig(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *sessionrelay.Map) {
 	switch r.Method {
 	case "GET":
 		ids := mgr.List()
@@ -494,7 +470,7 @@ func HandleTerminalConfig(w http.ResponseWriter, r *http.Request, deps Deps, mgr
 				"alt_screen": sess.AltScreenActive(),
 			}
 			if relay := relays.Get(id); relay != nil {
-				info["subscribers"] = relay.fanout.Count()
+				info["subscribers"] = relay.Fanout().Count()
 			}
 			sessions = append(sessions, info)
 		}
@@ -530,7 +506,7 @@ func HandleTerminalValidate(w http.ResponseWriter, r *http.Request, deps Deps, m
 // HandleTerminalUpload handles image uploads for terminal sessions.
 // POST /terminal/upload?session_id=xxx&filename=screenshot.png
 // Content-Type must be an image type. Body is raw image data.
-func HandleTerminalUpload(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *Map) {
+func HandleTerminalUpload(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *sessionrelay.Map) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
@@ -554,7 +530,7 @@ func HandleTerminalUpload(w http.ResponseWriter, r *http.Request, deps Deps, mgr
 	relay := relays.Get(sessionID)
 	workspaceDir := ""
 	if relay != nil {
-		workspaceDir = relay.workspaceDir
+		workspaceDir = relay.WorkspaceDir()
 	}
 	if workspaceDir == "" {
 		deps.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "no workspace directory for session"})

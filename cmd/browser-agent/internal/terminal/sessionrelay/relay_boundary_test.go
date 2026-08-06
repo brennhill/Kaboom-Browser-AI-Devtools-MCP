@@ -11,7 +11,7 @@
 // is lost (channel starts past the boundary) or duplicated (channel repeats it), so
 // some subscribe fails. (finding C)
 
-package terminal
+package sessionrelay
 
 import (
 	"encoding/binary"

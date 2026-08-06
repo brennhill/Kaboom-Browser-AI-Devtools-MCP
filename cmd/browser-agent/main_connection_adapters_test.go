@@ -6,8 +6,8 @@ package main
 import (
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 )
 
@@ -45,7 +45,7 @@ func TestServerIntentDepsExposeOwnedState(t *testing.T) {
 	if deps.GetPtyRelays() != nil || deps.GetIntentStore() != server.intentStore {
 		t.Fatal("empty server intent dependencies mismatch")
 	}
-	server.ptyRelays = terminal.NewMap()
+	server.ptyRelays = sessionrelay.NewMap()
 	if deps.GetPtyRelays() == nil {
 		t.Fatal("relay map was not exposed")
 	}

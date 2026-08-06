@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
@@ -102,7 +103,7 @@ func TestHandleTerminalWS_DownstreamPanicDoesNotCrashDaemon(t *testing.T) {
 		}
 	}
 
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		HandleTerminalWS(w, r, deps, mgr, relays)
 	}))

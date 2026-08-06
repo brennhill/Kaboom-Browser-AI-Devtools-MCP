@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
@@ -48,7 +49,7 @@ func TestHandleTerminalStart_LogsFailure(t *testing.T) {
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, NewMap())
+	HandleTerminalStart(rec, req, deps, nil, mgr, nil, sessionrelay.NewMap())
 
 	if rec.Code < 400 {
 		t.Fatalf("expected a failure status, got %d", rec.Code)
@@ -74,7 +75,7 @@ func TestHandleTerminalStart_SuccessDoesNotLogFailure(t *testing.T) {
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, NewMap())
+	HandleTerminalStart(rec, req, deps, nil, mgr, nil, sessionrelay.NewMap())
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -92,7 +93,7 @@ func TestHandleTerminalStart_SelfHealsDeadSession(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 	deps, get := depsWithLogCapture()
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 
 	start := func(cmd string, args []string) *httptest.ResponseRecorder {
 		body, _ := json.Marshal(map[string]any{"cmd": cmd, "args": args})
@@ -155,7 +156,7 @@ func TestHandleTerminalStop_LogsFailure(t *testing.T) {
 	req := httptest.NewRequest("POST", "/terminal/stop", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	HandleTerminalStop(rec, req, deps, mgr, NewMap())
+	HandleTerminalStop(rec, req, deps, mgr, sessionrelay.NewMap())
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 for unknown session, got %d", rec.Code)

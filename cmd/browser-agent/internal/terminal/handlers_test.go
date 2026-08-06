@@ -16,6 +16,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
@@ -199,7 +200,7 @@ func TestHandleTerminalStart_CreatesSession(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	HandleTerminalStart(rec, req, deps, nil, mgr, nil, relays)
 
 	if rec.Code != http.StatusOK {
@@ -231,7 +232,7 @@ func TestHandleTerminalStart_DuplicateReturnsConflict(t *testing.T) {
 		"args": []string{"-c", "exec cat"},
 	})
 
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 
 	// First start.
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
@@ -267,7 +268,7 @@ func TestHandleTerminalStart_BadDirSurfacesDistinctError(t *testing.T) {
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, NewMap())
+	HandleTerminalStart(rec, req, deps, nil, mgr, nil, sessionrelay.NewMap())
 
 	if rec.Code == http.StatusConflict {
 		t.Fatalf("bad cwd must NOT return 409 (silent reconnect); body: %s", rec.Body.String())
@@ -295,7 +296,7 @@ func TestHandleTerminalStart_DefaultsToShell(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	HandleTerminalStart(rec, req, deps, nil, mgr, nil, relays)
 
 	if rec.Code != http.StatusOK {
@@ -313,7 +314,7 @@ func TestHandleTerminalStop_DestroysSession(t *testing.T) {
 		"cmd":  "/bin/sh",
 		"args": []string{"-c", "exec cat"},
 	})
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(startBody))
 	rec := httptest.NewRecorder()
 	HandleTerminalStart(rec, req, deps, nil, mgr, nil, relays)
@@ -341,7 +342,7 @@ func TestHandleTerminalStop_NotFound(t *testing.T) {
 	body, _ := json.Marshal(map[string]any{"id": "nonexistent"})
 	req := httptest.NewRequest("POST", "/terminal/stop", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	HandleTerminalStop(rec, req, deps, mgr, relays)
 
 	if rec.Code != http.StatusNotFound {
@@ -366,7 +367,7 @@ func TestHandleTerminalConfig_ListsSessions(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/terminal/config", nil)
 	rec := httptest.NewRecorder()
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	HandleTerminalConfig(rec, req, deps, mgr, relays)
 
 	if rec.Code != http.StatusOK {
@@ -513,7 +514,7 @@ func TestHandleTerminalWS_MissingToken(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/terminal/ws", nil)
 	rec := httptest.NewRecorder()
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	HandleTerminalWS(rec, req, deps, mgr, relays)
 
 	if rec.Code != http.StatusUnauthorized {
@@ -527,7 +528,7 @@ func TestHandleTerminalWS_InvalidToken(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/terminal/ws?token=bogus", nil)
 	rec := httptest.NewRecorder()
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	HandleTerminalWS(rec, req, deps, mgr, relays)
 
 	if rec.Code != http.StatusUnauthorized {
@@ -551,7 +552,7 @@ func TestHandleTerminalWS_NoUpgradeHeader(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/terminal/ws?token="+result.Token, nil)
 	rec := httptest.NewRecorder()
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	HandleTerminalWS(rec, req, deps, mgr, relays)
 
 	if rec.Code != http.StatusBadRequest {
@@ -574,7 +575,7 @@ func TestHandleTerminalUpload_Success(t *testing.T) {
 	}
 
 	sess, _ := mgr.Get("upload-test")
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	relays.GetOrCreate("upload-test", sess, t.TempDir())
 
 	imgData := bytes.Repeat([]byte{0xFF, 0xD8, 0xFF}, 10)
@@ -611,7 +612,7 @@ func TestHandleTerminalUpload_InvalidContentType(t *testing.T) {
 	}
 
 	sess, _ := mgr.Get("upload-bad")
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	relays.GetOrCreate("upload-bad", sess, t.TempDir())
 
 	req := httptest.NewRequest("POST", "/terminal/upload?session_id=upload-bad&filename=test.txt", bytes.NewReader([]byte("not an image")))
@@ -626,7 +627,7 @@ func TestHandleTerminalUpload_InvalidContentType(t *testing.T) {
 
 func TestHandleTerminalUpload_SessionNotFound(t *testing.T) {
 	mgr := pty.NewManager()
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	deps := testDeps()
 
 	req := httptest.NewRequest("POST", "/terminal/upload?session_id=nonexistent", bytes.NewReader([]byte("data")))

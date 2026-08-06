@@ -25,6 +25,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -65,7 +66,7 @@ func (deps *serverIntentDeps) GetIntentStore() *terminalintent.Store {
 	return deps.server.intentStore
 }
 
-func setupTerminalMux(server *Server, manager *pty.Manager, store *capture.Capture) (*http.ServeMux, *terminal.Map) {
+func setupTerminalMux(server *Server, manager *pty.Manager, store *capture.Capture) (*http.ServeMux, *sessionrelay.Map) {
 	deps := terminalDeps()
 	deps.LogEvent = func(event string, fields map[string]any) { server.logLifecycle(event, 0, fields) }
 	return terminal.SetupMux(deps, server, &serverIntentDeps{server: server}, manager, store)

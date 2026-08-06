@@ -1,7 +1,7 @@
 // relay_test.go -- Tests for the per-session relay map, relay accessors,
 // subscriber-ID generation, and prompt-wait injection.
 
-package terminal
+package sessionrelay
 
 import (
 	"runtime"

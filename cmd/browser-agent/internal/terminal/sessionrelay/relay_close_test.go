@@ -4,7 +4,7 @@
 // whose session ended on its own was never removed from the Map — so every
 // stopped/dead terminal leaked a goroutine, a PTY fd and a map entry.
 
-package terminal
+package sessionrelay
 
 import (
 	"errors"

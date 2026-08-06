@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
@@ -66,7 +67,7 @@ func readFrame(t *testing.T, conn net.Conn, rw *bufio.ReadWriter) (byte, []byte)
 	return opcode, payload
 }
 
-func newWSTestServer(t *testing.T, mgr *pty.Manager, relays *Map) *httptest.Server {
+func newWSTestServer(t *testing.T, mgr *pty.Manager, relays *sessionrelay.Map) *httptest.Server {
 	t.Helper()
 	deps := testDeps()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +85,7 @@ func TestHandleTerminalWS_EchoControlAndClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	srv := newWSTestServer(t, mgr, relays)
 	addr := strings.TrimPrefix(srv.URL, "http://")
 
@@ -156,7 +157,7 @@ func TestHandleTerminalWS_SessionExitNotifies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	srv := newWSTestServer(t, mgr, relays)
 	addr := strings.TrimPrefix(srv.URL, "http://")
 
@@ -205,7 +206,7 @@ func TestHandleTerminalWS_HijackUnsupported(t *testing.T) {
 		t.Fatalf("start: %v", err)
 	}
 	deps := testDeps()
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 
 	// httptest.ResponseRecorder does not implement http.Hijacker.
 	req := httptest.NewRequest("GET", "/terminal/ws?token="+res.Token, nil)

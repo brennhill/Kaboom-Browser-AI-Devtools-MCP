@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
@@ -28,7 +29,7 @@ func TestRelay_EndedDistinguishesSessionEndFromDrop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("spawn: %v", err)
 	}
-	relay := NewRelay(sess, "")
+	relay := sessionrelay.NewRelay(sess, "")
 
 	if relay.Ended() {
 		t.Fatal("Ended() must be false while the session is alive")
@@ -52,7 +53,7 @@ func TestRelay_EndedDistinguishesSessionEndFromDrop(t *testing.T) {
 
 	// A genuine session end must mark it ended.
 	_ = sess.Close()
-	<-relay.done
+	waitForTrue(t, relay.Ended, 2*time.Second)
 	if !relay.Ended() {
 		t.Fatal("relay completion must retain the genuine session-end state")
 	}
@@ -70,7 +71,7 @@ func TestHandleTerminalWS_SessionEndSendsExited(t *testing.T) {
 	}
 
 	deps := testDeps()
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		HandleTerminalWS(w, r, deps, mgr, relays)
 	}))

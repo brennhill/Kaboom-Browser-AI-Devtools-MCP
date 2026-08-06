@@ -15,7 +15,7 @@ code_paths:
   - src/lib/brand.ts
   - cmd/browser-agent/internal/terminal/handlers.go
   - cmd/browser-agent/internal/terminal/spawnpolicy/retry.go
-  - cmd/browser-agent/internal/terminal/relay.go
+  - cmd/browser-agent/internal/terminal/sessionrelay/relay.go
   - cmd/browser-agent/internal/terminal/server.go
   - cmd/browser-agent/internal/terminal/supervisor/supervisor.go
   - cmd/browser-agent/main_connection_mcp.go
@@ -55,8 +55,8 @@ code_paths:
   - scripts/tests/workflows/cat-28-terminal.sh
 test_paths:
   - tests/extension/terminal-reconnect/terminal-html-liveness.test.js
-  - cmd/browser-agent/internal/terminal/relay_rebind_test.go
-  - cmd/browser-agent/internal/terminal/relay_test.go
+  - cmd/browser-agent/internal/terminal/sessionrelay/relay_rebind_test.go
+  - cmd/browser-agent/internal/terminal/sessionrelay/relay_test.go
   - cmd/browser-agent/internal/terminal/fakes_test.go
   - cmd/browser-agent/internal/terminal/spawnpolicy/retry_test.go
   - cmd/browser-agent/internal/terminal/sandbox_error_test.go
@@ -100,10 +100,10 @@ test_paths:
   - cmd/browser-agent/internal/terminal/frame_writer_deadline_test.go
   - cmd/browser-agent/internal/terminal/handlers_fanout_test.go
   - cmd/browser-agent/internal/terminal/handlers_replay_deadline_test.go
-  - cmd/browser-agent/internal/terminal/relay_boundary_test.go
-  - cmd/browser-agent/internal/terminal/relay_replace_test.go
-  - cmd/browser-agent/internal/terminal/relay_close_test.go
-  - cmd/browser-agent/internal/terminal/relay_init_test.go
+  - cmd/browser-agent/internal/terminal/sessionrelay/relay_boundary_test.go
+  - cmd/browser-agent/internal/terminal/sessionrelay/relay_replace_test.go
+  - cmd/browser-agent/internal/terminal/sessionrelay/relay_close_test.go
+  - cmd/browser-agent/internal/terminal/sessionrelay/relay_init_test.go
   - cmd/browser-agent/internal/terminal/intent_handlers_test.go
   - cmd/browser-agent/internal/terminal/intent/store_test.go
   - cmd/browser-agent/internal/terminal/directorybrowser/browser_test.go

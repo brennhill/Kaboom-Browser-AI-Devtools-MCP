@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
@@ -28,7 +29,7 @@ func TestHandleTerminalWS_FanoutFullDoesNotReportExited(t *testing.T) {
 		t.Fatalf("get: %v", err)
 	}
 
-	relays := NewMap()
+	relays := sessionrelay.NewMap()
 	// Pre-create the relay and fill its fanout to the subscriber cap, so the
 	// handler's own Subscribe returns ErrFanoutFull (a live-shell refusal), not
 	// ErrFanoutClosed (a dead shell). cat with no input produces no output, so the

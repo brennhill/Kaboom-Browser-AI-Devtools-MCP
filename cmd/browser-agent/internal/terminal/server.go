@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -23,7 +24,7 @@ const PortOffset = 1
 // SetupMux creates a new ServeMux with only terminal routes.
 // No AuthMiddleware — terminal uses its own session token validation.
 // Returns the mux and the relay map for use in shutdown.
-func SetupMux(deps Deps, server ServerDeps, intentDeps IntentDeps, mgr *pty.Manager, cap *capture.Capture) (*http.ServeMux, *Map) {
+func SetupMux(deps Deps, server ServerDeps, intentDeps IntentDeps, mgr *pty.Manager, cap *capture.Capture) (*http.ServeMux, *sessionrelay.Map) {
 	mux := http.NewServeMux()
 	relays := RegisterRoutes(mux, deps, server, mgr, cap)
 	RegisterIntentRoutes(mux, deps, intentDeps)
