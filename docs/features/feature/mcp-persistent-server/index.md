@@ -78,6 +78,7 @@ code_paths:
   - cmd/browser-agent/internal/httpapi/response.go
   - cmd/browser-agent/internal/mcphttp/handler.go
   - cmd/browser-agent/internal/mcptelemetry/owner.go
+  - cmd/browser-agent/internal/mcpresponse/owner.go
   - cmd/browser-agent/internal/connectmode/runner.go
   - cmd/browser-agent/internal/versioncheck/checker.go
   - internal/diag/output.go
@@ -119,7 +120,7 @@ test_paths:
   - cmd/browser-agent/tools_errors_test.go
   - cmd/browser-agent/health_unit_test.go
   - cmd/browser-agent/internal/health/health_test.go
-  - cmd/browser-agent/handler_warning_test.go
+  - cmd/browser-agent/internal/mcpresponse/owner_test.go
   - cmd/browser-agent/internal/appruntime/runtime_test.go
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/handler_unit_test.go

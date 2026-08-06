@@ -4,7 +4,7 @@ feature_id: feature-auto-fix
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/handler.go
+  - cmd/browser-agent/internal/mcpresponse/owner.go
   - cmd/browser-agent/internal/terminal/intent/store.go
   - cmd/browser-agent/internal/terminal/intent/handlers.go
   - internal/schema/analyze.go
@@ -28,7 +29,7 @@ code_paths:
 test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
-  - cmd/browser-agent/handler_tools_call_postprocess_test.go
+  - cmd/browser-agent/internal/mcpresponse/owner_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/internal/terminal/intent/store_test.go

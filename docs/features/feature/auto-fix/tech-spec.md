@@ -3,7 +3,7 @@ doc_type: tech-spec
 feature_id: feature-auto-fix
 status: proposed
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-08-07
 links:
   index: ./index.md
   product: ./product-spec.md
@@ -11,7 +11,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/handler_tools_call_postprocess.go
+  - cmd/browser-agent/internal/mcpresponse/owner.go
   - cmd/browser-agent/internal/terminal/intent_store.go
   - cmd/browser-agent/internal/terminal/intent/handlers.go
   - src/lib/tabs/request-audit.ts
@@ -19,7 +19,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
-  - cmd/browser-agent/handler_tools_call_postprocess_test.go
+  - cmd/browser-agent/internal/mcpresponse/owner_test.go
   - tests/extension/reliability/request-audit.test.js
   - tests/extension/content/message-handlers.test.js
 ---
@@ -80,7 +80,7 @@ In `src/lib/tabs/request-audit.ts`. Both the popup `Audit` button and the on-pag
 
 ### Fallback and nudge — daemon intent store
 
-The terminal server injects the prompt into the active PTY when possible. When PTY injection is unavailable, it persists a `qa_scan` intent (`cmd/browser-agent/internal/terminal/intent_store.go`, `intent_handlers.go`). On the next MCP tool response, `handler_tools_call_postprocess.go` prepends an `ACTION REQUIRED` warning pointing the operator at `/kaboom/audit` (or `/audit`).
+The terminal server injects the prompt into the active PTY when possible. When PTY injection is unavailable, it persists a `qa_scan` intent through the canonical terminal intent owner. On the next MCP tool response, `internal/mcpresponse.Owner` prepends an `ACTION REQUIRED` warning pointing the operator at `/kaboom/audit` (or `/audit`).
 
 ## Data Flow
 
@@ -93,7 +93,7 @@ User clicks Audit (popup or hover)
   -> terminal server:
        primary  : inject prompt into active PTY
        fallback : store qa_scan intent in the daemon
-  -> next MCP tool response: handler_tools_call_postprocess prepends ACTION REQUIRED -> /kaboom/audit
+  -> next MCP tool response: mcpresponse.Owner prepends ACTION REQUIRED -> /kaboom/audit
   -> agent runs /kaboom/audit (or audit skill):
        health check
        analyze(what="page_issues", summary=true)  -> baseline evidence

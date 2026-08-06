@@ -5,12 +5,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"sort"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpresponse"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
@@ -19,7 +16,6 @@ import (
 
 	playbookresources "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks/resources"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -66,6 +62,7 @@ type MCPHandler struct {
 	runtime *appruntime.Runtime
 
 	passiveTelemetry *mcptelemetry.Owner
+	responsePolicy   *mcpresponse.Owner
 }
 
 // ToolExecutor is the sole behavior required from the five-tool backend.
@@ -106,9 +103,18 @@ func NewMCPHandler(server *Server, version string) *MCPHandler {
 		telemetryConfig.ErrorTotal = server.logs.ErrorTotalAdded
 		telemetryConfig.Mode = server.logs.TelemetryMode
 	}
+	responseConfig := mcpresponse.Config{Runtime: runtime}
+	if server != nil {
+		responseConfig.AddWarning = server.warnings.Add
+		responseConfig.DrainWarnings = server.warnings.Drain
+		responseConfig.PendingAudit = func() bool {
+			return server.intentStore != nil && server.intentStore.NudgeAndClean()
+		}
+	}
 	return &MCPHandler{
 		server: server, version: version, runtime: runtime,
 		passiveTelemetry: mcptelemetry.New(telemetryConfig),
+		responsePolicy:   mcpresponse.New(responseConfig),
 	}
 }
 
@@ -119,6 +125,7 @@ func NewMCPHandler(server *Server, version string) *MCPHandler {
 func (h *MCPHandler) SetToolBackend(backend ToolBackend) {
 	h.tools = backend
 	h.passiveTelemetry.SetCapture(backend.Capture)
+	h.responsePolicy.SetCapture(backend.Capture)
 }
 
 // GetUsageTracker returns the configured usage tracker.
@@ -273,7 +280,7 @@ func (h *MCPHandler) handleToolsCall(req mcp.JSONRPCRequest) mcp.JSONRPCResponse
 			Error: &mcp.JSONRPCError{Code: -32601, Message: "Unknown tool: " + params.Name},
 		}
 	}
-	h.warnUnknownToolArguments(params.Name, params.Arguments)
+	h.responsePolicy.WarnUnknownArguments(params.Name, params.Arguments, h.tools.Schemas)
 	if err := h.checkToolRateLimit(); err != nil {
 		telemetry.AppError(incident.CodeToolRateLimited)
 		return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Error: err}
@@ -299,157 +306,11 @@ func (h *MCPHandler) checkToolRateLimit() *mcp.JSONRPCError {
 	return nil
 }
 
-func (h *MCPHandler) warnUnknownToolArguments(toolName string, args json.RawMessage) {
-	if h.server == nil || h.tools.Executor == nil || len(args) == 0 {
-		return
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(args, &raw); err != nil || len(raw) == 0 {
-		return
-	}
-	allowed := h.allowedToolArgumentKeys(toolName)
-	if len(allowed) == 0 {
-		return
-	}
-	unknown := make([]string, 0)
-	for key := range raw {
-		if _, ok := allowed[key]; !ok {
-			unknown = append(unknown, key)
-		}
-	}
-	sort.Strings(unknown)
-	for _, key := range unknown {
-		h.server.warnings.Add(fmt.Sprintf("unknown parameter '%s' for tool '%s' (ignored)", key, toolName))
-	}
-}
-
-func (h *MCPHandler) allowedToolArgumentKeys(toolName string) map[string]struct{} {
-	for _, tool := range h.tools.Schemas {
-		if tool.Name != toolName {
-			continue
-		}
-		keys := make(map[string]struct{})
-		properties, ok := tool.InputSchema["properties"].(map[string]any)
-		if !ok {
-			return keys
-		}
-		for key := range properties {
-			keys[key] = struct{}{}
-		}
-		return keys
-	}
-	return nil
-}
-
 func (h *MCPHandler) applyToolResponsePostProcessing(resp mcp.JSONRPCResponse, clientID, toolName string, arguments json.RawMessage) mcp.JSONRPCResponse {
 	redactor := h.tools.Redactor
 	if redactor != nil && resp.Result != nil {
 		resp.Result = redactor.RedactJSON(resp.Result)
 	}
-	if h.server != nil {
-		resp = mcp.AppendWarningsToResponse(resp, h.server.warnings.Drain())
-	}
-	resp = h.maybeAddSecurityModeWarning(resp)
-	resp = h.maybeAddVersionWarning(resp)
-	resp = h.maybeAddUpdateAvailableWarning(resp)
-	resp = h.maybeAddUpgradeWarning(resp)
-	resp = h.maybeAddPendingIntents(resp)
+	resp = h.responsePolicy.Augment(resp, h.tools.Executor != nil)
 	return h.passiveTelemetry.Augment(resp, clientID, toolName, arguments)
-}
-
-func (h *MCPHandler) maybeAddPendingIntents(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	if h.server == nil || h.server.intentStore == nil || resp.Result == nil {
-		return resp
-	}
-	if !h.server.intentStore.NudgeAndClean() {
-		return resp
-	}
-	return prependWarningToResponse(resp, "ACTION REQUIRED: The user clicked 'Audit' in the browser. "+
-		"Run the Kaboom audit workflow (/kaboom/audit or /audit fallback) "+
-		"for a full six-lane report.\n\n")
-}
-
-func prependWarningToResponse(resp mcp.JSONRPCResponse, warning string) mcp.JSONRPCResponse {
-	return mcp.PrependWarningToResponse(resp, warning)
-}
-
-func (h *MCPHandler) maybeAddSecurityModeWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	if h.tools.Executor == nil || resp.Result == nil {
-		return resp
-	}
-	captured := h.tools.Capture
-	if captured == nil {
-		return resp
-	}
-	mode, productionParity, rewrites := captured.Extension().GetSecurityMode()
-	if mode == syncruntime.SecurityModeNormal {
-		return resp
-	}
-	resp = prependWarningToResponse(resp, "[ALTERED ENVIRONMENT] security_mode=insecure_proxy; production_parity=false. CSP headers are rewritten for debugging.\n\n")
-	return mcp.MutateToolResult(resp, func(result *mcp.MCPToolResult) {
-		if result.Metadata == nil {
-			result.Metadata = make(map[string]any)
-		}
-		result.Metadata["security_mode"] = mode
-		result.Metadata["production_parity"] = productionParity
-		result.Metadata["insecure_rewrites_applied"] = rewrites
-	})
-}
-
-func (h *MCPHandler) maybeAddVersionWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	if h.tools.Executor == nil || resp.Result == nil {
-		return resp
-	}
-	captured := h.tools.Capture
-	if captured == nil {
-		return resp
-	}
-	extensionVersion, serverVersion, mismatch := captured.Extension().VersionMismatch()
-	if !mismatch {
-		return resp
-	}
-	warning := fmt.Sprintf(
-		"WARNING: Version mismatch detected — server v%s, extension v%s. Update your extension to avoid issues.\n\n",
-		serverVersion, extensionVersion,
-	)
-	return prependWarningToResponse(resp, warning)
-}
-
-func (h *MCPHandler) maybeAddUpdateAvailableWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	if resp.Result == nil {
-		return resp
-	}
-	if h.runtime.Upgrade() != nil {
-		if pending, _, _ := h.runtime.Upgrade().UpgradeInfo(); pending {
-			return resp
-		}
-	}
-	availableVersion := h.runtime.ReleaseChecker().Available()
-	if availableVersion == "" || !daemonlife.IsNewerVersion(availableVersion, h.runtime.Version()) {
-		return resp
-	}
-	if !h.runtime.ClaimUpdateWarning(time.Now(), 24*time.Hour) {
-		return resp
-	}
-	warning := fmt.Sprintf(
-		"UPDATE AVAILABLE: Kaboom v%s is available (current: v%s). Run: npm install -g kaboom-agentic-browser@latest\n\n",
-		availableVersion, h.runtime.Version(),
-	)
-	return prependWarningToResponse(resp, warning)
-}
-
-func (h *MCPHandler) maybeAddUpgradeWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	if h.runtime.Upgrade() == nil || resp.Result == nil {
-		return resp
-	}
-	pending, newVersion, detectedAt := h.runtime.Upgrade().UpgradeInfo()
-	if !pending {
-		return resp
-	}
-	elapsed := time.Since(detectedAt).Truncate(time.Second)
-	warning := fmt.Sprintf(
-		"NOTICE: Kaboom v%s detected on disk (current: v%s, detected %s ago). Auto-restart imminent. Your next tool call will use the new version.\n\n",
-		newVersion, h.runtime.Version(), elapsed,
-	)
-	return prependWarningToResponse(resp, warning)
 }

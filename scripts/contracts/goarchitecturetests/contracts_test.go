@@ -326,6 +326,26 @@ func TestPassiveTelemetryDoesNotReturnToRootHandler(t *testing.T) {
 	}
 }
 
+func TestResponsePolicyDoesNotReturnToRootHandler(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read root MCP handler: %v", err)
+	}
+	for _, forbidden := range []string{
+		"func (h *MCPHandler) warnUnknownToolArguments(",
+		"func (h *MCPHandler) maybeAddPendingIntents(",
+		"func (h *MCPHandler) maybeAddSecurityModeWarning(",
+		"func (h *MCPHandler) maybeAddVersionWarning(",
+		"func (h *MCPHandler) maybeAddUpdateAvailableWarning(",
+		"func (h *MCPHandler) maybeAddUpgradeWarning(",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("root MCP handler retains response-policy surface %q", forbidden)
+		}
+	}
+}
+
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
 	if err != nil {
