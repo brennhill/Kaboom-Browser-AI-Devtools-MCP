@@ -28,6 +28,8 @@ import (
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpprotocol"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -302,7 +304,7 @@ func TestToolHandler_ToolsList_NoStdout(t *testing.T) {
 	handler := createTestToolHandler(t)
 
 	output := captureStdout(t, func() {
-		_ = handler.handleToolsList(mcp.JSONRPCRequest{})
+		_ = mcpprotocol.ToolsList(mcp.JSONRPCRequest{}, handler.tools.Schemas)
 	})
 
 	if output != "" {

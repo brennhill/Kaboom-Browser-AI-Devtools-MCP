@@ -273,6 +273,10 @@
       "mutable_globals": 0,
       "exports": 4
     },
+    "cmd/browser-agent/internal/mcpprotocol/responses.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
     "cmd/browser-agent/internal/mcpresponse/owner.go": {
       "mutable_globals": 0,
       "exports": 6

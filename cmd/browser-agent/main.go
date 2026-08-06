@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonrecovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/exitdiag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpprotocol"
 	playbookresources "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks/resources"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
@@ -58,7 +59,7 @@ func init() {
 func buildBridgeRunner(exitDiagnostics *exitdiag.Recorder) *bridge.Runner {
 	debugLogger := diag.NewDebugFileFromEnv()
 	return bridge.NewRunner(
-		bridge.Identity{Version: version, ServerName: identity.MCPServerName, ServerInstructions: serverInstructions},
+		bridge.Identity{Version: version, ServerName: identity.MCPServerName, ServerInstructions: mcpprotocol.Instructions},
 		bridge.Transport{
 			MaxBodySize: maxPostBodySize, Stderrf: diag.Printf, Debugf: debugLogger.Printf,
 			Write: bridge.WriteMCPPayload, Sync: bridge.SyncStdoutBestEffort, SetStderr: diag.SetSink,

@@ -77,6 +77,7 @@ code_paths:
   - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/internal/httpapi/response.go
   - cmd/browser-agent/internal/mcphttp/handler.go
+  - cmd/browser-agent/internal/mcpprotocol/responses.go
   - cmd/browser-agent/internal/mcptelemetry/owner.go
   - cmd/browser-agent/internal/mcpresponse/owner.go
   - cmd/browser-agent/internal/connectmode/runner.go
@@ -143,6 +144,7 @@ test_paths:
   - scripts/uat/protocol/smoke-mcp-transport.sh
   - cmd/browser-agent/mcp_protocol_test.go
   - cmd/browser-agent/mcp_initialize_test.go
+  - cmd/browser-agent/internal/mcpprotocol/responses_test.go
   - cmd/browser-agent/mcp_transport_handler_test.go
   - cmd/browser-agent/internal/bridge/bridge_unit_test.go
   - cmd/browser-agent/tools_registry_test.go
@@ -321,6 +323,12 @@ does not maintain parallel lazy registries.
 > sources during composition and delegates augmentation directly; cursor
 > synchronization, mode parsing, delta calculation, and expiry no longer live
 > in the root handler or expose mutable test seams.
+
+> **2026-08-07:** Stateless MCP initialization, tool catalog, bundled-resource,
+> and resource-template responses now live in `internal/mcpprotocol`. The same
+> canonical instructions feed initialize responses and bridge identity, and
+> response encoding failures return a redacted JSON-RPC internal error instead
+> of being silently discarded.
 
 > **2026-07-27:** Removed the unreachable `main_connection_diag.go`
 > connection-probing path and its dedicated tests. No production caller invoked

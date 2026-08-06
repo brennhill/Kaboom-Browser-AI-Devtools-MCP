@@ -346,6 +346,26 @@ func TestResponsePolicyDoesNotReturnToRootHandler(t *testing.T) {
 	}
 }
 
+func TestStatelessProtocolResponsesDoNotReturnToRootHandler(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read root MCP handler: %v", err)
+	}
+	for _, forbidden := range []string{
+		"const serverInstructions =",
+		"func (h *MCPHandler) handleInitialize(",
+		"func (h *MCPHandler) handleResourcesList(",
+		"func (h *MCPHandler) handleResourcesRead(",
+		"func (h *MCPHandler) handleResourcesTemplatesList(",
+		"func (h *MCPHandler) handleToolsList(",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("root MCP handler retains stateless protocol surface %q", forbidden)
+		}
+	}
+}
+
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
 	if err != nil {

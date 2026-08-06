@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpprotocol"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -29,7 +30,7 @@ func TestServerInstructionsRequireKaboomForBrowserWork(t *testing.T) {
 		"user explicitly requests",
 		"capability gap",
 	} {
-		if !strings.Contains(serverInstructions, required) {
+		if !strings.Contains(mcpprotocol.Instructions, required) {
 			t.Errorf("server instructions missing %q", required)
 		}
 	}
