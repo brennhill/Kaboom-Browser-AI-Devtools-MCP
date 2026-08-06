@@ -22,6 +22,9 @@ code_paths:
   - gokaboom.dev/src/content/docs/articles
   - gokaboom.dev/src/content/docs/blog
   - gokaboom.dev/src/content/docs/downloads.md
+  - gokaboom.dev/src/content/docs/privacy/
+  - gokaboom.dev/src/content/docs/security/
+  - gokaboom.dev/src/content/docs/troubleshooting/
   - gokaboom.dev/src/content/docs/guides/start-here-by-role.md
   - gokaboom.dev/src/content/docs/guides/tracks
   - gokaboom.dev/src/content/docs/guides/visual-evidence-standards.md

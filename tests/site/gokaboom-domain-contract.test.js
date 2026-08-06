@@ -118,9 +118,9 @@ describe('gokaboom domain contracts', () => {
   test('site docs batch 3 removes legacy brand copy', () => {
     const files = [
       'gokaboom.dev/src/content/docs/features.md',
-      'gokaboom.dev/src/content/docs/privacy.md',
-      'gokaboom.dev/src/content/docs/security.md',
-      'gokaboom.dev/src/content/docs/troubleshooting.md'
+      'gokaboom.dev/src/content/docs/privacy/index.md',
+      'gokaboom.dev/src/content/docs/security/index.md',
+      'gokaboom.dev/src/content/docs/troubleshooting/index.md'
     ]
 
     for (const file of files) {
