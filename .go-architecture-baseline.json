@@ -65,6 +65,10 @@
       "mutable_globals": 2,
       "exports": 6
     },
+    "cmd/browser-agent/internal/bridge/daemoncmd/command.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/bridge/fastpathtelemetry/telemetry.go": {
       "mutable_globals": 5,
       "exports": 8

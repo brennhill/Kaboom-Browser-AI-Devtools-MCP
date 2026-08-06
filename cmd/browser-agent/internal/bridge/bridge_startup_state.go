@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/daemoncmd"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -95,7 +96,7 @@ func (s *daemonState) reserveRespawnSlot(now time.Time) bool {
 
 // performDaemonRespawn is the default (real) spawn implementation behind respawnSpawnFn.
 func performDaemonRespawn(s *daemonState) bool {
-	cmd, err := s.buildDaemonCmd()
+	cmd, err := daemoncmd.Build(s.port, s.logFile, s.maxEntries, s.runner.lifecycle.ProcessArgv0)
 	if err != nil {
 		s.markFailed(err.Error())
 		return false
@@ -295,7 +296,7 @@ func (s *daemonState) respawnIfNeeded() bool {
 func spawnDaemonAsync(state *daemonState) {
 	// Spawn daemon in background (don't block on it)
 	util.SafeGo(func() {
-		cmd, err := state.buildDaemonCmd()
+		cmd, err := daemoncmd.Build(state.port, state.logFile, state.maxEntries, state.runner.lifecycle.ProcessArgv0)
 		if err != nil {
 			telemetry.AppError(incident.CodeBridgeSpawnBuildError)
 			state.markFailed(err.Error())

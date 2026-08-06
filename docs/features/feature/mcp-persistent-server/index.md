@@ -36,6 +36,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/healthprobe/probe.go
+  - cmd/browser-agent/internal/bridge/daemoncmd/command.go
   - cmd/browser-agent/internal/bridge/bridge_transport.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
@@ -155,7 +156,7 @@ test_paths:
   - cmd/browser-agent/internal/exitdiag/recorder_test.go
 
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
-  - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
+  - cmd/browser-agent/internal/bridge/daemoncmd/command_test.go
   - cmd/browser-agent/internal/bridge/contracts/source_contract_test.go
   - cmd/browser-agent/internal/bridge/healthprobe/probe_test.go
   - cmd/browser-agent/internal/bridge/runner_isolation_test.go

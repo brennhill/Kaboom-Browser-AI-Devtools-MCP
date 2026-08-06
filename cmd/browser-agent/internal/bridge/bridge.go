@@ -17,7 +17,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"sync"
 	"time"
 
@@ -28,7 +27,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
-	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -52,42 +50,6 @@ func (r *Runner) EnsureIOIsolation(logFileHint string) error {
 // toolCallTimeout delegates to internal/bridge for per-request timeout logic.
 func toolCallTimeout(req mcp.JSONRPCRequest) time.Duration {
 	return internbridge.ToolCallTimeout(req.Method, req.Params)
-}
-
-// buildDaemonCmd resolves the current executable and builds an exec.Cmd for the
-// daemon process with the appropriate flags and detached-process settings.
-func (s *daemonState) buildDaemonCmd() (*exec.Cmd, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		return nil, fmt.Errorf("find executable: %w. Verify kaboom is installed correctly", err)
-	}
-
-	args := []string{"--daemon", "--port", fmt.Sprintf("%d", s.port)}
-	if stateDir := os.Getenv(statecfg.StateDirEnv); stateDir != "" {
-		args = append(args, "--state-dir", stateDir)
-	}
-	if s.logFile != "" {
-		args = append(args, "--log-file", s.logFile)
-	}
-	if s.maxEntries > 0 {
-		args = append(args, "--max-entries", fmt.Sprintf("%d", s.maxEntries))
-	}
-	cmd := exec.Command(exe, args...) // #nosec G702 -- exe is our own binary path from os.Executable with fixed flags // nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command, go_subproc_rule-subproc -- bridge spawns own daemon
-	cmd.Args[0] = s.runner.lifecycle.ProcessArgv0(exe)
-	// Detach the daemon's standard streams. nil => os/exec connects the fd to
-	// os.DevNull (/dev/null). We must NOT use io.Discard here: os/exec routes any
-	// non-*os.File writer through an OS pipe whose read-end lives in THIS bridge
-	// process. Setsid detaches the daemon's session/process group but NOT the
-	// inherited pipe fds. When the bridge exits on stdin_eof, those pipe read-ends
-	// close, and the daemon's next stderr write dies with SIGPIPE on fd 2 (Go
-	// terminates on a broken pipe to fd 1/2). /dev/null never breaks, so the
-	// spawned daemon stays persistent across the bridge's exit. This mirrors the
-	// installer's startDaemonSilently (internal/nativeinstall/installer.go), which already uses nil.
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	cmd.Stdin = nil
-	util.SetDetachedProcess(cmd)
-	return cmd, nil
 }
 
 // isConnectionError delegates to internal/bridge for connection error detection.
