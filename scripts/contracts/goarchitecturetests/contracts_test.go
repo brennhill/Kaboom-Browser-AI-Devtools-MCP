@@ -1,10 +1,10 @@
 // Purpose: Tests for lint-hardening rules and static checks.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-// lint_hardening_test.go — Go test wrapper for custom lint rules.
+// contracts_test.go — Go architecture contracts enforced through static analysis.
 // Runs scripts/quality/verification/lint-hardening.sh as a Go test so violations are caught
 // by `go test` (including `go test -short`). Fast: only grep-based scans.
-package main
+package goarchitecturetests
 
 import (
 	"go/ast"
@@ -17,11 +17,20 @@ import (
 	"testing"
 )
 
-// projectRoot returns the repository root by navigating from this source file.
+// projectRoot returns the repository root containing go.mod.
 func projectRoot() string {
-	_, thisFile, _, _ := runtime.Caller(0)
-	// thisFile = .../cmd/browser-agent/lint_hardening_test.go
-	return filepath.Join(filepath.Dir(thisFile), "..", "..")
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return ""
+	}
+	for dir := filepath.Dir(thisFile); ; dir = filepath.Dir(dir) {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		if filepath.Dir(dir) == dir {
+			return ""
+		}
+	}
 }
 
 func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {

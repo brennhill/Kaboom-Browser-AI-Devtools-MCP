@@ -31,7 +31,7 @@ code_paths:
   - internal/schema/generate.go
 test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/tools_generate_handler_test.go
   - cmd/browser-agent/tools_generate_validation_test.go
   - cmd/browser-agent/tools_generate_warning_filter_test.go

@@ -72,7 +72,7 @@ test_paths:
   - internal/security/netflag/detectors_unit_test.go
   - internal/security/httpsec/url_test.go
   - internal/security/httpsec/cookie_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

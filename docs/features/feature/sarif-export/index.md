@@ -22,7 +22,7 @@ test_paths:
   - internal/export/sarif/file_test.go
   - internal/export/sarif/unit_test.go
   - internal/export/sarif/coverage_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

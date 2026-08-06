@@ -57,7 +57,7 @@ test_paths:
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_generate_annotations_test.go
   - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/contracts/entry-point-parity.test.js
   - scripts/smoke-tests/media/31-annotation-parity.sh
   - scripts/smoke-tests/media/annotation-parity-benchmark.sh

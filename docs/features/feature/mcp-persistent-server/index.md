@@ -146,7 +146,7 @@ test_paths:
   - cmd/browser-agent/internal/versioncheck/checker_test.go
   - scripts/quality/contracts/check-bridge-stdout-invariant.sh
   - cmd/browser-agent/handler_consistency_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/tools_core_sync_test.go
   - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/internal/dashboard/branding_test.go

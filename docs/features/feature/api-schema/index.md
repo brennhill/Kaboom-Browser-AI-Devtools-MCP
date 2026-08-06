@@ -39,7 +39,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/tools_configure_capabilities_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - internal/analysis/apicontract/runtime/handler_test.go

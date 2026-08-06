@@ -19,7 +19,7 @@ test_paths:
   - cmd/browser-agent/tools_generate_har_test.go
   - internal/export/har/export_test.go
   - internal/export/har/coverage_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

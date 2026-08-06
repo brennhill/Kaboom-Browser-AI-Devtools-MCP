@@ -36,7 +36,7 @@ test_paths:
   - internal/capture/recordingtest/recording_playback_integration_test.go
   - internal/capture/recordingtest/recording_logdiff_integration_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/recording_playback_result_test.go

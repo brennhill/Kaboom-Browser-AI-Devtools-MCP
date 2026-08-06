@@ -17,7 +17,7 @@ code_paths:
   - internal/issuereport/submit.go
 test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/tools_configure_report_issue_test.go
   - internal/issuereport/handler_test.go
   - internal/issuereport/templates_test.go

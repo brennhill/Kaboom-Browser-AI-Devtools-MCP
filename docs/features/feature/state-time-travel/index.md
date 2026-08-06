@@ -4,7 +4,7 @@ feature_id: feature-state-time-travel
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-30
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/tools_core.go
@@ -16,7 +16,7 @@ code_paths:
   - src/inject/settings.ts
   - src/inject/state.ts
 test_paths:
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - internal/recording/actionlog/recorder_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
@@ -86,7 +86,7 @@ last_verified_date: 2026-03-05
 - Canonical public action schemas:
   - `internal/schema/interact/actions.go`
 - Tests:
-  - `cmd/browser-agent/lint_hardening_test.go`
+  - `scripts/contracts/goarchitecturetests/contracts_test.go`
   - `cmd/browser-agent/internal/toolinteract/interactstate/state_test.go`
   - `cmd/browser-agent/tools_interact_gate_test.go`
   - `cmd/browser-agent/tools_interact_helpers_test.go`

@@ -88,7 +88,7 @@ test_paths:
   - tests/extension/misc/upload-handler.test.js
   - tests/extension/dom/command-element-results.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - internal/recording/actionlog/recorder_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/internal/toolinteract/interact_dom_test.go

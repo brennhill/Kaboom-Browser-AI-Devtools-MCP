@@ -4,7 +4,7 @@ feature_id: feature-best-practices-audit
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -12,7 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/audit_scoring.go
 test_paths:
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
   - cmd/browser-agent/tools_analyze_audit_test.go
   - cmd/browser-agent/internal/toolanalyze/toolanalyze_test.go

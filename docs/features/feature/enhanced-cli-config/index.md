@@ -69,7 +69,7 @@ test_paths:
   - cmd/browser-agent/internal/cli/cli_test.go
   - cmd/browser-agent/internal/nativeinstall/installer_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/main_flags_test.go
   - cmd/browser-agent/main_io_unit_test.go
   - cmd/browser-agent/tools_schema_parity_test.go

@@ -4,7 +4,7 @@ feature_id: browser-push
 status: implementation
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-06
 code_paths:
   - internal/push/
   - cmd/browser-agent/internal/pushapi/runtime.go
@@ -27,7 +27,7 @@ test_paths:
   - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/branding/push-handler-branding.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

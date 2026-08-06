@@ -24,7 +24,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/tools_configure_noise_test.go
   - cmd/browser-agent/internal/noiseautorun/autorun_test.go

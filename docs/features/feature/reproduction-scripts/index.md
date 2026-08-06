@@ -19,7 +19,7 @@ test_paths:
   - cmd/browser-agent/reproduction_test.go
   - internal/reproduction/reproduction_test.go
   - internal/reproduction/golden_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/reproduction/reproduction-script-fixture.js
   - tests/extension/reproduction/reproduction-script-generation.test.js
   - tests/extension/reproduction/reproduction-script.test.js

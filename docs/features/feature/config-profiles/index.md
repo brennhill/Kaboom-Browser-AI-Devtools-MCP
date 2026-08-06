@@ -4,7 +4,7 @@ feature_id: feature-config-profiles
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
@@ -24,7 +24,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - internal/statediag/collector_test.go
   - cmd/browser-agent/tools_configure_handler_test.go

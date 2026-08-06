@@ -26,7 +26,7 @@ code_paths:
   - src/background/message-routing/utility-handler.ts
   - src/types/runtime-messages.ts
 test_paths:
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - cmd/browser-agent/handler_tools_call_postprocess_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go

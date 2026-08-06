@@ -41,7 +41,7 @@ test_paths:
   - internal/capture/httpingest/handlers_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/lint_hardening_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/recording_playback_result_test.go
