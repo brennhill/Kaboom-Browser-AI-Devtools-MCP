@@ -237,9 +237,9 @@ func TestActionRecordingDoesNotReturnToToolHandler(t *testing.T) {
 
 func TestNavigateEnrichmentBelongsToInteractOwner(t *testing.T) {
 	checks := map[string]string{
-		"cmd/browser-agent/tools_interact_dispatch.go":              "func (h *ToolHandler) enrichNavigateResponse(",
-		"cmd/browser-agent/internal/toolinteract/action_owners.go":  "EnrichNavigateResponse func(",
-		"cmd/browser-agent/internal/toolinteract/fake_deps_test.go": "EnrichNavigateResponse:",
+		"cmd/browser-agent/tools_interact_dispatch.go":                   "func (h *ToolHandler) enrichNavigateResponse(",
+		"cmd/browser-agent/internal/toolinteract/action_owners.go":       "EnrichNavigateResponse func(",
+		"cmd/browser-agent/internal/toolinteract/action_runtime_test.go": "EnrichNavigateResponse:",
 	}
 	for relativePath, forbidden := range checks {
 		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
@@ -358,7 +358,7 @@ func TestInteractTestsDoNotMirrorRootAccessor(t *testing.T) {
 		"browser-agent",
 		"internal",
 		"toolinteract",
-		"test_helpers_test.go",
+		"interact_dom_test.go",
 	)
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
@@ -402,7 +402,7 @@ func TestEvidenceCaptureHasNoCompatibilityShim(t *testing.T) {
 		t.Fatalf("evidence compatibility shim still exists: %s", shimPath)
 	}
 
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolinteract", "interact_evidence.go")
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolinteract", "action_owners.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatalf("read evidence implementation: %v", err)

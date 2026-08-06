@@ -21,6 +21,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/nativeinstall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/runtimeconfig"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
@@ -132,10 +133,18 @@ func parseAndValidateFlags() *serverConfig {
 	validatePort(*f.port)
 	normalizeStateDir(f.stateDir)
 	var warnings []string
-	if err := applyParallelModeStateDir(*f.parallelMode, f.stateDir, &warnings); err != nil {
+	resolvedStateDir, parallelWarnings, err := runtimeconfig.ApplyParallelStateDir(
+		*f.parallelMode,
+		*f.stateDir,
+		time.Now(),
+		os.Getpid(),
+	)
+	if err != nil {
 		diag.Printf("[Kaboom] Invalid --parallel setup: %v\n", err)
 		os.Exit(1)
 	}
+	*f.stateDir = resolvedStateDir
+	warnings = append(warnings, parallelWarnings...)
 	handleEarlyExitModes(f)
 	resolveDefaultLogFile(f.logFile, &warnings)
 
@@ -203,26 +212,6 @@ func normalizeStateDir(stateDir *string) {
 		diag.Printf("[Kaboom] Failed to set %s: %v\n", state.StateDirEnv, err)
 		os.Exit(1)
 	}
-}
-
-func applyParallelModeStateDir(parallel bool, stateDir *string, warnings *[]string) error {
-	if !parallel || strings.TrimSpace(*stateDir) != "" {
-		return nil
-	}
-	root, err := state.RootDir()
-	if err != nil {
-		return fmt.Errorf("cannot resolve runtime state root: %w", err)
-	}
-	generated := filepath.Join(root, "parallel", fmt.Sprintf("run-%d-%d", time.Now().UnixNano(), os.Getpid()))
-	if err := os.MkdirAll(generated, 0o750); err != nil {
-		return fmt.Errorf("cannot create parallel state dir %q: %w", generated, err)
-	}
-	*stateDir = filepath.Clean(generated)
-	if err := os.Setenv(state.StateDirEnv, *stateDir); err != nil {
-		return fmt.Errorf("failed to set %s: %w", state.StateDirEnv, err)
-	}
-	*warnings = append(*warnings, fmt.Sprintf("parallel_mode_state_dir_auto: %s", *stateDir))
-	return nil
 }
 
 func resolveDefaultLogFile(logFile *string, warnings *[]string) {

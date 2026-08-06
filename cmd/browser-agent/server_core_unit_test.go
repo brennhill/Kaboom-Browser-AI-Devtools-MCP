@@ -30,11 +30,7 @@ func TestConfigPathsInitializeLocalStateAndUploadBoundary(t *testing.T) {
 		t.Fatalf("normalized state directory = %q env=%q", relative, os.Getenv(state.StateDirEnv))
 	}
 
-	explicit := filepath.Join(t.TempDir(), "explicit")
 	var warnings []string
-	if err := applyParallelModeStateDir(true, &explicit, &warnings); err != nil || explicit == "" {
-		t.Fatalf("explicit parallel state directory = %q, err=%v", explicit, err)
-	}
 	logFile := ""
 	resolveDefaultLogFile(&logFile, &warnings)
 	if logFile == "" || !strings.HasSuffix(logFile, "kaboom.jsonl") {

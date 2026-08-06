@@ -22,6 +22,7 @@ code_paths:
   - cmd/browser-agent/internal/appruntime/runtime.go
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
+  - cmd/browser-agent/internal/runtimeconfig/parallel.go
   - cmd/browser-agent/tools_core.go
   - internal/session/snapshot-manager.go
   - cmd/browser-agent/internal/toolmodule/registry.go
@@ -80,6 +81,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/internal/runtimeconfig/parallel_test.go
   - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs

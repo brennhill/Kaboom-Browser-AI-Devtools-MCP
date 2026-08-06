@@ -19,8 +19,8 @@ import (
 func TestSmokeUploadScripts_Stage4PathsAligned(t *testing.T) {
 	repoRoot := repoRootFromTestFile(t)
 
-	bootstrapPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "01-bootstrap.sh")
-	uploadPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "15-file-upload.sh")
+	bootstrapPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "core", "01-bootstrap.sh")
+	uploadPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "upload", "15-file-upload.sh")
 
 	bootstrapRaw, err := os.ReadFile(bootstrapPath)
 	if err != nil {
@@ -98,7 +98,7 @@ func TestOSAutomation_RejectsSmokeTmpPathOutsideDefaultUploadDir(t *testing.T) {
 
 func TestSmokeUploadScript_Stage4PollTreatsCompleteWithErrorAsFailed(t *testing.T) {
 	repoRoot := repoRootFromTestFile(t)
-	uploadPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "15-file-upload.sh")
+	uploadPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "upload", "15-file-upload.sh")
 
 	raw, err := os.ReadFile(uploadPath)
 	if err != nil {
@@ -121,7 +121,7 @@ func TestSmokeUploadScript_Stage4PollTreatsCompleteWithErrorAsFailed(t *testing.
 
 func TestSmokeUploadScript_15_17HandlesAccessibilityAsSkip(t *testing.T) {
 	repoRoot := repoRootFromTestFile(t)
-	uploadPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "15-file-upload.sh")
+	uploadPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "upload", "15-file-upload.sh")
 
 	raw, err := os.ReadFile(uploadPath)
 	if err != nil {
@@ -146,7 +146,7 @@ func TestSmokeUploadScript_15_17HandlesAccessibilityAsSkip(t *testing.T) {
 
 func TestSmokeUploadScript_15_15HasFallbackWhenExecuteJSReturnsNoResult(t *testing.T) {
 	repoRoot := repoRootFromTestFile(t)
-	uploadPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "15-file-upload.sh")
+	uploadPath := filepath.Join(repoRoot, "scripts", "smoke-tests", "upload", "15-file-upload.sh")
 
 	raw, err := os.ReadFile(uploadPath)
 	if err != nil {
