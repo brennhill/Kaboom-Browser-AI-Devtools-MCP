@@ -3,7 +3,7 @@
 
 // injection_resistance_test.go — Tests for injection resistance in OS automation sanitizers.
 
-package main
+package injectiontests
 
 import (
 	"strings"
