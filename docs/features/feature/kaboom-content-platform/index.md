@@ -5,8 +5,10 @@ status: in_progress
 feature_type: feature
 owners:
   - Brenn
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-06
 code_paths:
+  - docs/assets/images/chrome_store/branding/
+  - docs/assets/images/chrome_store/listing/
   - package.json
   - .vale.ini
   - .vale/styles/Gasoline

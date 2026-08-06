@@ -109,23 +109,23 @@ English (United States)
 **Required: 1-5 screenshots**
 
 **Screenshot 1:** Extension popup showing tracking controls
-- File: `docs/assets/images/chrome_store/screenshot-1-popup.png` (TODO: Create)
+- File: `docs/assets/images/chrome_store/listing/screenshot-1-popup.png` (TODO: Create)
 - Caption: "Track a tab and enable AI Web Pilot for autonomous debugging"
 
 **Screenshot 2:** Flickering flame favicon
-- File: `docs/assets/images/chrome_store/screenshot-2-flame.png` (TODO: Create)
+- File: `docs/assets/images/chrome_store/listing/screenshot-2-flame.png` (TODO: Create)
 - Caption: "Visual indicator shows when AI is actively controlling your browser"
 
 **Screenshot 3:** AI debugging in action
-- File: `docs/assets/images/chrome_store/screenshot-3-ai-debug.png` (TODO: Create)
+- File: `docs/assets/images/chrome_store/listing/screenshot-3-ai-debug.png` (TODO: Create)
 - Caption: "AI assistant sees console errors and network failures in real-time"
 
 **Screenshot 4:** Privacy controls
-- File: `docs/assets/images/chrome_store/screenshot-4-privacy.png` (TODO: Create)
+- File: `docs/assets/images/chrome_store/listing/screenshot-4-privacy.png` (TODO: Create)
 - Caption: "100% localhost-only - no data sent to external servers"
 
 **Screenshot 5:** MCP integration
-- File: `docs/assets/images/chrome_store/screenshot-5-mcp.png` (TODO: Create)
+- File: `docs/assets/images/chrome_store/listing/screenshot-5-mcp.png` (TODO: Create)
 - Caption: "Works with Claude Code, Cursor, Copilot, Windsurf, and any MCP-compatible assistant"
 
 ---
@@ -136,7 +136,7 @@ English (United States)
 ---
 
 ## Promotional Tile (440x280) - Optional
-**File:** `docs/assets/images/chrome_store/promo-tile-440x280.png` (TODO: Create if submitting)
+**File:** `docs/assets/images/chrome_store/listing/promo-tile-440x280.png` (TODO: Create if submitting)
 
 **Suggested design:**
 - Kaboom flame logo
@@ -146,7 +146,7 @@ English (United States)
 ---
 
 ## Small Promotional Tile (220x140) - Optional
-**File:** `docs/assets/images/chrome_store/promo-tile-small-220x140.png` (TODO: Create if submitting)
+**File:** `docs/assets/images/chrome_store/listing/promo-tile-small-220x140.png` (TODO: Create if submitting)
 
 ---
 
