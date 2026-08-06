@@ -265,9 +265,9 @@ describe('gokaboom domain contracts', () => {
 
   test('blog batch 10 uses KaBOOM naming and Kaboom repo links', () => {
     const files = [
-      'gokaboom.dev/src/content/docs/blog/v5-7-5-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-8-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v6-0-0-beta-release.md'
+      'gokaboom.dev/src/content/docs/blog/v5-7-5-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-8-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v6-0-0-beta-release/index.md'
     ]
 
     for (const file of files) {
@@ -282,25 +282,25 @@ describe('gokaboom domain contracts', () => {
 
   test('remaining release posts use KaBOOM naming and Kaboom repo links', () => {
     const files = [
-      'gokaboom.dev/src/content/docs/blog/v0-7-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v0-8-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v1-0-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v2-0-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v3-0-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v4-0-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-0-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-1-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-2-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-2-1-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-2-5-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-3-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-4-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-4-1-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-4-3-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-5-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-6-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-7-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-7-4-release.md'
+      'gokaboom.dev/src/content/docs/blog/v0-7-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v0-8-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v1-0-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v2-0-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v3-0-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v4-0-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-0-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-1-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-2-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-2-1-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-2-5-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-3-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-4-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-4-1-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-4-3-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-5-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-6-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-7-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-7-4-release/index.md'
     ]
 
     for (const file of files) {
@@ -462,8 +462,8 @@ describe('gokaboom domain contracts', () => {
 
   test('blog batch 17 removes final gasoline identifiers from release snippets', () => {
     const files = [
-      'gokaboom.dev/src/content/docs/blog/v1-0-0-release.md',
-      'gokaboom.dev/src/content/docs/blog/v5-5-0-release.md'
+      'gokaboom.dev/src/content/docs/blog/v1-0-0-release/index.md',
+      'gokaboom.dev/src/content/docs/blog/v5-5-0-release/index.md'
     ]
 
     for (const file of files) {
