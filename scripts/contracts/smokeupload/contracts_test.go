@@ -1,7 +1,7 @@
 // Purpose: Contract tests for upload endpoint behavior.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package smokeupload
 
 import (
 	"os"
@@ -173,6 +173,12 @@ func repoRootFromTestFile(t *testing.T) string {
 	if !ok {
 		t.Fatal("runtime.Caller failed")
 	}
-	// cmd/browser-agent/<this_file>.go -> repo root is ../..
-	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", ".."))
+	for dir := filepath.Dir(thisFile); ; dir = filepath.Dir(dir) {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		if filepath.Dir(dir) == dir {
+			t.Fatal("find repository root containing go.mod")
+		}
+	}
 }
