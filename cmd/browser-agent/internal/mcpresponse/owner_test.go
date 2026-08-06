@@ -12,6 +12,8 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/versioncheck"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -79,6 +81,32 @@ func TestOwnerWarnsUnknownArgumentsInStableOrder(t *testing.T) {
 	owner.WarnUnknownArguments("observe", json.RawMessage(`{"z":1,"what":"logs","a":2}`), schemas)
 	if len(warnings) != 2 || !strings.Contains(warnings[0], "'a'") || !strings.Contains(warnings[1], "'z'") {
 		t.Fatalf("warnings = %#v", warnings)
+	}
+}
+
+func TestOwnerAddsAlteredEnvironmentWarningAndMetadata(t *testing.T) {
+	captured := capture.NewCapture()
+	captured.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, []string{"csp_headers"})
+	owner := New(Config{})
+	owner.SetCapture(captured)
+
+	response := owner.Augment(textResponse(), true)
+	if text := responseText(t, response); !strings.Contains(text, "[ALTERED ENVIRONMENT]") {
+		t.Fatalf("security warning missing: %s", text)
+	}
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Metadata["security_mode"] != syncruntime.SecurityModeInsecureProxy {
+		t.Fatalf("security_mode = %#v", result.Metadata["security_mode"])
+	}
+	if productionParity, ok := result.Metadata["production_parity"].(bool); !ok || productionParity {
+		t.Fatalf("production_parity = %#v", result.Metadata["production_parity"])
+	}
+	rewrites, ok := result.Metadata["insecure_rewrites_applied"].([]any)
+	if !ok || len(rewrites) != 1 || rewrites[0] != "csp_headers" {
+		t.Fatalf("insecure_rewrites_applied = %#v", result.Metadata["insecure_rewrites_applied"])
 	}
 }
 

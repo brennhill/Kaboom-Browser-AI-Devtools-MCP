@@ -215,6 +215,8 @@ tool-call callback, keeping transport routing independent of application state.
 HTTP notification/framing assertions live with `internal/mcphttp`, while bridge
 stdout-forwarding contracts live with the bridge transport they protect; no
 mixed root transport test duplicates these owners.
+Security-mode response warning and metadata coverage likewise lives directly
+with `internal/mcpresponse`, independent of full tool-handler composition.
 
 MCP documentation resources are owned by the canonical
 `internal/playbooks/resources` package: catalog, URI resolution, guides,
