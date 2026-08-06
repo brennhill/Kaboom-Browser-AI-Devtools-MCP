@@ -4,13 +4,15 @@ package clientstore
 import (
 	"sync"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 )
 
 func TestOwnerAllowsConcurrentReplacementAndRead(t *testing.T) {
 	t.Parallel()
 
 	owner := New()
-	registry := registryStub{}
+	registry := clientreg.NewClientRegistry()
 	start := make(chan struct{})
 	var workers sync.WaitGroup
 	for range 50 {
@@ -33,11 +35,3 @@ func TestOwnerAllowsConcurrentReplacementAndRead(t *testing.T) {
 		t.Fatalf("Registry() = %#v, want installed registry", got)
 	}
 }
-
-type registryStub struct{}
-
-func (registryStub) Count() int             { return 0 }
-func (registryStub) List() any              { return nil }
-func (registryStub) Register(string) any    { return nil }
-func (registryStub) Get(string) any         { return nil }
-func (registryStub) Unregister(string) bool { return false }

@@ -17,6 +17,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/wstransport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 )
 
 func TestHandleActiveCodebase_Get(t *testing.T) {
@@ -96,64 +97,32 @@ func TestAutoDetectCWD_NilRegistry(t *testing.T) {
 	}
 }
 
-func TestAutoDetectCWD_NilClientList(t *testing.T) {
+func TestAutoDetectCWD_EmptyClientList(t *testing.T) {
 	t.Parallel()
 	store := capture.NewCapture()
-	store.Clients().Set(&fakeClientRegistry{listResult: nil})
+	store.Clients().Set(clientreg.NewClientRegistry())
 	if got := AutoDetectCWD(store); got != "" {
-		t.Fatalf("expected empty CWD when List() is nil, got %q", got)
+		t.Fatalf("expected empty CWD when no clients are registered, got %q", got)
 	}
 }
 
-func TestAutoDetectCWD_AnySliceBranch(t *testing.T) {
+func TestAutoDetectCWD_ReturnsRegisteredClientCWD(t *testing.T) {
 	t.Parallel()
 	store := capture.NewCapture()
-	store.Clients().Set(&fakeClientRegistry{listResult: []any{
-		map[string]any{"cwd": ""},                // skipped: empty
-		"not-a-map",                              // skipped: wrong type
-		map[string]any{"other": "x"},             // skipped: no cwd
-		map[string]any{"cwd": "/first/real/cwd"}, // taken
-	}})
-	if got := AutoDetectCWD(store); got != "/first/real/cwd" {
-		t.Fatalf("got %q, want /first/real/cwd", got)
+	registry := clientreg.NewClientRegistry()
+	registry.Register("/registered/cwd")
+	store.Clients().Set(registry)
+	if got := AutoDetectCWD(store); got != "/registered/cwd" {
+		t.Fatalf("got %q, want /registered/cwd", got)
 	}
 }
 
-func TestAutoDetectCWD_AnySliceNoCWD(t *testing.T) {
+func TestAutoDetectCWD_SkipsEmptyCWD(t *testing.T) {
 	t.Parallel()
 	store := capture.NewCapture()
-	store.Clients().Set(&fakeClientRegistry{listResult: []any{
-		map[string]any{"cwd": ""},
-		map[string]any{"other": "y"},
-	}})
-	if got := AutoDetectCWD(store); got != "" {
-		t.Fatalf("expected empty when no client has cwd, got %q", got)
-	}
-}
-
-func TestAutoDetectCWD_JSONRoundtripBranch(t *testing.T) {
-	t.Parallel()
-	// A typed slice (not []any) forces the default JSON-roundtrip branch.
-	type clientInfo struct {
-		CWD string `json:"cwd"`
-	}
-	store := capture.NewCapture()
-	store.Clients().Set(&fakeClientRegistry{listResult: []clientInfo{
-		{CWD: ""},
-		{CWD: "/roundtrip/cwd"},
-	}})
-	if got := AutoDetectCWD(store); got != "/roundtrip/cwd" {
-		t.Fatalf("got %q, want /roundtrip/cwd", got)
-	}
-}
-
-func TestAutoDetectCWD_JSONRoundtripEmpty(t *testing.T) {
-	t.Parallel()
-	type clientInfo struct {
-		CWD string `json:"cwd"`
-	}
-	store := capture.NewCapture()
-	store.Clients().Set(&fakeClientRegistry{listResult: []clientInfo{{CWD: ""}}})
+	registry := clientreg.NewClientRegistry()
+	registry.Register("")
+	store.Clients().Set(registry)
 	if got := AutoDetectCWD(store); got != "" {
 		t.Fatalf("expected empty, got %q", got)
 	}

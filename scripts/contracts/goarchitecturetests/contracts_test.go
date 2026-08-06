@@ -261,6 +261,35 @@ func TestNavigateEnrichmentBelongsToInteractOwner(t *testing.T) {
 	}
 }
 
+func TestClientRegistryUsesCanonicalConcreteOwner(t *testing.T) {
+	checks := map[string][]string{
+		"internal/capture/clientstore/owner.go": {
+			"type Registry interface",
+			"registry Registry",
+			"Registry() Registry",
+		},
+		"cmd/browser-agent/main_connection_mcp.go": {
+			"sessionClientRegistryAdapter",
+			"newSessionClientRegistryAdapter",
+		},
+		"cmd/browser-agent/internal/terminal/handlers.go": {
+			"clients.(type)",
+			"json.Marshal(v)",
+		},
+	}
+	for relativePath, forbiddenValues := range checks {
+		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
+		if err != nil {
+			t.Fatalf("read %s: %v", relativePath, err)
+		}
+		for _, forbidden := range forbiddenValues {
+			if strings.Contains(string(source), forbidden) {
+				t.Errorf("%s retains client-registry compatibility surface %q", relativePath, forbidden)
+			}
+		}
+	}
+}
+
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
 	if err != nil {

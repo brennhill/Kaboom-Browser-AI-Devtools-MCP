@@ -29,7 +29,6 @@ import (
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/settingscache"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
@@ -239,29 +238,10 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	return nil
 }
 
-type sessionClientRegistryAdapter struct {
-	reg *clientreg.ClientRegistry
-}
-
-func newSessionClientRegistryAdapter(reg *clientreg.ClientRegistry) clientstore.Registry {
-	if reg == nil {
-		return nil
-	}
-	return &sessionClientRegistryAdapter{reg: reg}
-}
-
-func (a *sessionClientRegistryAdapter) Count() int              { return a.reg.Count() }
-func (a *sessionClientRegistryAdapter) List() any               { return a.reg.List() }
-func (a *sessionClientRegistryAdapter) Register(cwd string) any { return a.reg.Register(cwd) }
-func (a *sessionClientRegistryAdapter) Get(id string) any       { return a.reg.Get(id) }
-func (a *sessionClientRegistryAdapter) Unregister(id string) bool {
-	return a.reg.Unregister(id)
-}
-
 // initCapture creates and configures the capture buffers with lifecycle logging.
 func initCapture(server *Server, port int) *capture.Capture {
 	cap := capture.NewCapture()
-	cap.Clients().Set(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
+	cap.Clients().Set(clientreg.NewClientRegistry())
 	cap.Extension().SetServerVersion(version)
 	cap.Lifecycle().Subscribe(func(event lifecycle.Event, data map[string]any) {
 		entry := types.LogEntry{

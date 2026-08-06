@@ -349,35 +349,9 @@ func AutoDetectCWD(cap *capture.Capture) string {
 	if reg == nil {
 		return ""
 	}
-	clients := reg.List()
-	if clients == nil {
-		return ""
-	}
-
-	// List() returns any — extract CWD from the first client.
-	switch v := clients.(type) {
-	case []any:
-		for _, c := range v {
-			if m, ok := c.(map[string]any); ok {
-				if cwd, ok := m["cwd"].(string); ok && cwd != "" {
-					return cwd
-				}
-			}
-		}
-	default:
-		// Try JSON roundtrip as fallback.
-		data, err := json.Marshal(v)
-		if err != nil {
-			return ""
-		}
-		var entries []map[string]any
-		if err := json.Unmarshal(data, &entries); err != nil {
-			return ""
-		}
-		for _, e := range entries {
-			if cwd, ok := e["cwd"].(string); ok && cwd != "" {
-				return cwd
-			}
+	for _, client := range reg.List() {
+		if client.CWD != "" {
+			return client.CWD
 		}
 	}
 	return ""

@@ -83,8 +83,10 @@ aggregate state, reader boundary, validation constants, and CRUD helpers;
 runtime projection, comparison, and MCP dispatch retain distinct owners.
 Client-session registry installation is owned by the focused
 `internal/capture/clientstore` package. `Capture.Clients()` exposes that
-canonical owner directly; runtime routes consume the installed registry without
-Capture set/get forwarding methods or root-package contract aliases.
+canonical owner directly and stores the concrete `clientreg.ClientRegistry`.
+Runtime routes and terminal CWD detection consume that registry without
+interfaces returning `any`, adapters, JSON round trips, Capture forwarding
+methods, or root-package contract aliases.
 Each client state owns a private activity clock used by `Touch`; tests advance
 that source explicitly. Concurrent register/unregister coverage starts all
 workers through a barrier rather than delaying between operations.

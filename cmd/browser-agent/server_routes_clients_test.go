@@ -6,93 +6,20 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 )
 
-// mockClientRegistry implements clientstore.Registry for testing.
-type mockClientRegistry struct {
-	mu      sync.RWMutex
-	clients map[string]map[string]any
-	order   []string
-	nextID  int
-}
-
-func newMockClientRegistry() *mockClientRegistry {
-	return &mockClientRegistry{
-		clients: make(map[string]map[string]any),
-	}
-}
-
-func (m *mockClientRegistry) Count() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return len(m.clients)
-}
-
-func (m *mockClientRegistry) List() any {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	result := make([]map[string]any, 0, len(m.clients))
-	for _, id := range m.order {
-		if c, ok := m.clients[id]; ok {
-			result = append(result, c)
-		}
-	}
-	return result
-}
-
-func (m *mockClientRegistry) Register(cwd string) any {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.nextID++
-	id := fmt.Sprintf("client-%d", m.nextID)
-	cs := map[string]any{
-		"id":  id,
-		"cwd": cwd,
-	}
-	m.clients[id] = cs
-	m.order = append(m.order, id)
-	return cs
-}
-
-func (m *mockClientRegistry) Get(id string) any {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	if c, ok := m.clients[id]; ok {
-		return c
-	}
-	return nil
-}
-
-func (m *mockClientRegistry) Unregister(id string) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.clients[id]; !ok {
-		return false
-	}
-	delete(m.clients, id)
-	nextOrder := make([]string, 0, len(m.order))
-	for _, existingID := range m.order {
-		if existingID != id {
-			nextOrder = append(nextOrder, existingID)
-		}
-	}
-	m.order = nextOrder
-	return true
-}
-
-// newCaptureWithRegistry creates a capture instance with a mock client registry.
+// newCaptureWithRegistry creates a capture instance with the canonical registry.
 func newCaptureWithRegistry(t *testing.T) *capture.Capture {
 	t.Helper()
 	cap := capture.NewCapture()
-	cap.Clients().Set(newMockClientRegistry())
+	cap.Clients().Set(clientreg.NewClientRegistry())
 	return cap
 }
 
@@ -284,13 +211,7 @@ func TestHandleClientByID_GET_ExistingClient(t *testing.T) {
 	cap := newCaptureWithRegistry(t)
 
 	// Register a client and get its ID
-	csAny := cap.Clients().Registry().Register("/tmp/project")
-	csJSON, _ := json.Marshal(csAny)
-	var cs map[string]any
-	if err := json.Unmarshal(csJSON, &cs); err != nil {
-		t.Fatalf("json.Unmarshal error: %v", err)
-	}
-	clientID, _ := cs["id"].(string)
+	clientID := cap.Clients().Registry().Register("/tmp/project").ID
 
 	if clientID == "" {
 		t.Fatal("failed to get client ID from registration")
@@ -365,13 +286,9 @@ func TestHandleClientByID_DELETE_ReturnsUnregistered(t *testing.T) {
 	t.Parallel()
 	cap := newCaptureWithRegistry(t)
 	registered := cap.Clients().Registry().Register("/tmp/project")
-	registeredMap, ok := registered.(map[string]any)
-	if !ok {
-		t.Fatalf("expected mock registry to return map, got %T", registered)
-	}
-	clientID, ok := registeredMap["id"].(string)
-	if !ok || clientID == "" {
-		t.Fatalf("expected registered client id, got %#v", registeredMap["id"])
+	clientID := registered.ID
+	if clientID == "" {
+		t.Fatal("expected registered client id")
 	}
 
 	req := httptest.NewRequest("DELETE", "/clients/"+clientID, nil)

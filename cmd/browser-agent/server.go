@@ -39,7 +39,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/activecodebase"
 	annotationruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation/runtime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
@@ -50,6 +49,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/perftrace"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -391,7 +391,7 @@ func newSyncHandler(captured *capture.Capture) *syncruntime.Handler {
 	})
 }
 
-func resolveClientRegistry(captured *capture.Capture, w http.ResponseWriter) (clientstore.Registry, bool) {
+func resolveClientRegistry(captured *capture.Capture, w http.ResponseWriter) (*clientreg.ClientRegistry, bool) {
 	registry := captured.Clients().Registry()
 	if registry == nil {
 		httpapi.JSON(w, http.StatusServiceUnavailable, map[string]string{"error": "client_registry_unavailable"})
