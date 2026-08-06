@@ -32,7 +32,7 @@ test('local, hook, docs, and CI consume one pinned Go security-tool owner', () =
   assert.doesNotMatch(makefile, /command -v (?:gosec|govulncheck)/)
   assert.doesNotMatch(makefile, /gosec@latest/)
 
-  const docs = read('docs/DEVELOPMENT.md')
+  const docs = read('docs/setup/DEVELOPMENT.md')
   const hook = read('scripts/hooks/pre-commit')
   assert.match(docs, /make install-security-tools/)
   assert.match(hook, /make install-security-tools/)

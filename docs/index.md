@@ -4,7 +4,7 @@ description: "Autonomously debug and fix issues in real time. Streams console lo
 layout: home
 permalink: /
 status: reference
-last_reviewed: 2026-03-06
+last_reviewed: 2026-08-06
 ---
 
 <div class="hero">
@@ -12,7 +12,7 @@ last_reviewed: 2026-03-06
     <h1>Browser Observability for AI Coding Agents</h1>
     <p>Streams console logs, network errors, and exceptions to Claude Code, Copilot, Cursor, or any MCP-compatible assistant. Enterprise ready.</p>
     <p><em style="color: #fb923c;">Pouring fuel on the AI development fire</em></p>
-    <p><a href="/getting-started/" class="btn">Get Started</a></p>
+    <p><a href="/setup/getting-started/" class="btn">Get Started</a></p>
   </div>
   <img src="/assets/images/product/sparky-working-laptop-web.webp" alt="Sparky coding" class="hero-sparky">
 </div>
@@ -60,26 +60,26 @@ Kaboom is a **browser extension + local MCP server** that streams real-time brow
 | **DOM queries** | ✅ | ✅ | ✅ | ✅ |
 | **Screenshots** | ✅ | ✅ | ✅ | ✅ |
 | | | | | |
-| **[Web Vitals](/web-vitals/)** | ✅ LCP, CLS, INP, FCP | ❌ | ❌ | ❌ |
-| **[Regression detection](/regression-detection/)** | ✅ Automatic | ❌ | ❌ | ❌ |
-| **[API schema inference](/api-schema/)** | ✅ OpenAPI from traffic | ❌ | ❌ | ❌ |
-| **[Accessibility audits](/accessibility-audit/)** | ✅ WCAG + SARIF | ❌ | ❌ | ❌ |
-| **[Session checkpoints](/session-checkpoints/)** | ✅ Named + auto | ❌ | ❌ | ❌ |
-| **[Noise filtering](/noise-filtering/)** | ✅ Auto-detect | ❌ | ❌ | ❌ |
+| **[Web Vitals](features/feature/web-vitals/)** | ✅ LCP, CLS, INP, FCP | ❌ | ❌ | ❌ |
+| **[Regression detection](features/feature/push-regression/)** | ✅ Automatic | ❌ | ❌ | ❌ |
+| **[API schema inference](features/feature/api-schema/)** | ✅ OpenAPI from traffic | ❌ | ❌ | ❌ |
+| **[Accessibility audits](features/feature/sarif-export/)** | ✅ WCAG + SARIF | ❌ | ❌ | ❌ |
+| **[Session checkpoints](features/feature/persistent-memory/)** | ✅ Named + auto | ❌ | ❌ | ❌ |
+| **[Noise filtering](features/feature/noise-filtering/)** | ✅ Auto-detect | ❌ | ❌ | ❌ |
 | | | | | |
-| **[Test generation](/generate-test/)** | ✅ Playwright | ❌ | ❌ | ❌ |
-| **[Reproduction scripts](/reproduction-scripts/)** | ✅ From actions | ❌ | ❌ | ❌ |
-| **[PR summaries](/pr-summaries/)** | ✅ Perf impact | ❌ | ❌ | ❌ |
-| **[HAR export](/har-export/)** | ✅ | ❌ | ❌ | ❌ |
+| **[Test generation](features/feature/test-generation/)** | ✅ Playwright | ❌ | ❌ | ❌ |
+| **[Reproduction scripts](features/feature/reproduction-scripts/)** | ✅ From actions | ❌ | ❌ | ❌ |
+| **[PR summaries](features/feature/pr-preview-exploration/)** | ✅ Perf impact | ❌ | ❌ | ❌ |
+| **[HAR export](features/feature/har-export/)** | ✅ | ❌ | ❌ | ❌ |
 | | | | | |
 | **Zero dependencies** | ✅ Single Go binary | ❌ Node.js + Chrome flags | ❌ Node.js + Puppeteer | ❌ Electron |
 | **Vendor neutral** | ✅ Any MCP tool | ⚠️ Any MCP tool | ⚠️ Any MCP tool | ❌ Cursor only |
 | **No debug port** | ✅ | ❌ `--remote-debugging-port` | ❌ `--remote-debugging-port` | N/A |
 | **Privacy** | ✅ Localhost only | ✅ Local | ⚠️ Optional cloud | ❌ Cursor servers |
 | **Performance overhead** | < 0.1ms | ~5ms | ~5ms | Unknown |
-| **[Token efficiency](/token-efficiency/)** | ~9,750 (5 tools) | ~30,000+ (20+ tools) | ~25,000+ (15+ tools) | Unknown |
+| **[Token efficiency](setup/token-efficiency.md)** | ~9,750 (5 tools) | ~30,000+ (20+ tools) | ~25,000+ (15+ tools) | Unknown |
 
-[Full comparison →](/alternatives/)
+[Project overview →](README.md)
 
 ## Absurdly Token Efficient
 
@@ -97,7 +97,7 @@ A complete debug-and-fix cycle — error triage, DOM inspection, code fix, reloa
 
 Fewer tokens = more room for your codebase, faster responses, lower cost.
 
-[Token efficiency deep dive →](/token-efficiency/)
+[Token efficiency deep dive →](setup/token-efficiency.md)
 
 ## Enterprise Ready — Zero Data Leakage
 
@@ -151,17 +151,17 @@ Not tied to Anthropic. Not tied to Cursor. Not tied to anyone. If your agent spe
 - **Console Logs** — `console.log()`, `.warn()`, `.error()` with full arguments
 - **Network Errors** — Failed API calls (4xx/5xx) with response bodies
 - **Exceptions** — Uncaught errors with full stack traces
-- **[WebSocket Events](/websocket-monitoring/)** — Connection lifecycle and message payloads
-- **[Network Bodies](/network-bodies/)** — Request/response payloads for API debugging
+- **[WebSocket Events](features/capture/network-capture.md)** — Connection lifecycle and message payloads
+- **[Network Bodies](features/capture/network-capture.md)** — Request/response payloads for API debugging
 - **User Actions** — Click, type, navigate, scroll recording with smart selectors
 - **Web Vitals** — LCP, CLS, INP, FCP with automatic regression detection
-- **[Live DOM](/dom-queries/)** — Query the page with CSS selectors via MCP
-- **[Accessibility](/accessibility-audit/)** — WCAG audits with SARIF export
+- **[Live DOM](features/feature/query-dom/)** — Query the page with CSS selectors via MCP
+- **[Accessibility](features/feature/sarif-export/)** — WCAG audits with SARIF export
 - **API Schema Inference** — Auto-discover OpenAPI from captured traffic
 - **Session Checkpoints** — Save state, diff changes, detect regressions over time
-- **[Test Generation](/generate-test/)** — Playwright tests and reproduction scripts from actions
+- **[Test Generation](features/feature/test-generation/)** — Playwright tests and reproduction scripts from actions
 - **Noise Filtering** — Auto-detect and dismiss irrelevant errors
-- **[Context API](/developer-api/)** — Annotate errors with `window.__kaboom`
+- **[Context API](features/feature/custom-event-api/)** — Annotate errors with `window.__kaboom`
 
 ## Zero Bloat, Zero Risk
 
@@ -177,6 +177,6 @@ Not tied to Anthropic. Not tied to Cursor. Not tied to anyone. If your agent spe
   <img src="/assets/images/safety/sparky-firefighter-happy-web.webp" alt="Sparky ready to help" class="cta-sparky">
   <div>
     <h3>Ready to Fire It Up?</h3>
-    <p><a href="/getting-started/" class="btn">Get Started</a></p>
+    <p><a href="/setup/getting-started/" class="btn">Get Started</a></p>
   </div>
 </div>

@@ -802,7 +802,7 @@ test('handles 401 response gracefully', async () => {
 | `extension/background.js` | Include API key in requests |
 | `extension/options.html` | Add API key input field |
 | `extension/options.js` | Handle API key storage |
-| `docs/configuration.md` | Document API key configuration |
+| `docs/setup/getting-started.md` | Document API key configuration |
 
 ---
 

@@ -485,4 +485,4 @@ resetVersionCheck();
 
 - [RELEASE.md](./release.md) - Version history and upgrade notes
 - [README.md](../../../README.md) - Installation and setup
-- [docs/plugin-server-communications.md](./plugin-server-communications.md) - Full protocol spec
+- [Plugin-server communications](../protocol/plugin-server-communications.md) - Full protocol spec

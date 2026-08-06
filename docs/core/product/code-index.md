@@ -10,8 +10,8 @@ last_reviewed: 2026-02-16
 
 ## See Also
 
-- [codebase-canon-v5.3.md](codebase-canon-v5.3.md) - v5.3 baseline (now superseded by v5.4)
-- [known-issues.md](known-issues.md) - Current blockers and workarounds
+- [codebase-canon-v5.3.md](../architecture/codebase-canon-v5.3.md) - v5.3 baseline (now superseded by v5.4)
+- [known-issues.md](../quality/known-issues.md) - Current blockers and workarounds
 - [feature-to-strategy.md](feature-to-strategy.md) - Feature → product strategy alignment
 
 ---
@@ -25,7 +25,7 @@ last_reviewed: 2026-02-16
 - 🔥 **CRITICAL:** All `interact()` commands (execute_js, navigate, etc.)
 - Feature: [Async Queue Pattern](../architecture/ADR-001-async-queue-pattern.md)
 - Feature: [Correlation ID Tracking](../protocol/async-queue-correlation-tracking.md)
-- Protection: [5-Layer Enforcement](../architecture/ARCHITECTURE-ENFORCEMENT.md)
+- Protection: [5-Layer Enforcement](../../architecture/boundaries/ARCHITECTURE-ENFORCEMENT.md)
 - Diagram: [Async Queue Flow](../architecture/diagrams/async-queue-flow.md)
 
 **Tests:**

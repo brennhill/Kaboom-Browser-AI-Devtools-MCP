@@ -6,4 +6,4 @@ last_reviewed: 2026-02-16
 
 # Legacy Route Alias
 
-Canonical: [../getting-started.md](../getting-started.md)
+Canonical: [../setup/getting-started.md](../setup/getting-started.md)

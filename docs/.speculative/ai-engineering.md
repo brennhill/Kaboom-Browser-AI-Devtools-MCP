@@ -231,7 +231,7 @@ The 5 MCP tools become:
 ## Related Documents
 
 - [roadmap.md](../roadmap.md) — Current roadmap and thesis
-- [ROADMAP-STRATEGY-ANALYSIS.md](../ROADMAP-STRATEGY-ANALYSIS.md) — Strategic analysis
+- [Roadmap](../roadmap.md) — Current strategy and priorities
 - [feature-to-strategy.md](feature-to-strategy.md) — Feature-to-strategy mapping
 - [architecture.md](../../.claude/refs/architecture.md) — System architecture
 

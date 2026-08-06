@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Purpose: Automate check-wire-drift.js workflow behavior for repository tooling.
 // Why: Keeps repetitive maintenance and verification steps deterministic.
-// Docs: docs/DEVELOPMENT.md
+// Docs: docs/setup/DEVELOPMENT.md
 
 // check-wire-drift.js — Validates Go and TypeScript wire types stay in sync.
 // Compares json tags in wire_*.go files against interface fields in wire-*.ts files.

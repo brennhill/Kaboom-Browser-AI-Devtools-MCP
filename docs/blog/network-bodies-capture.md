@@ -6,4 +6,4 @@ last_reviewed: 2026-02-16
 
 # Legacy Route Alias
 
-Canonical: [../features/network-capture.md](../features/network-capture.md)
+Canonical: [../features/capture/network-capture.md](../features/capture/network-capture.md)

@@ -179,7 +179,7 @@ Forces structured approach, not ad-hoc coding.
 
 ### 2. **Quality Standards Upfront**
 ```
-"Maintain all quality standards (docs/quality-standards.md)"
+"Maintain all quality standards (kaboom-code-standards.md)"
 "Run `make quality-gate` before every commit"
 ```
 Sets bar high from the start.
@@ -448,7 +448,7 @@ Start with product-spec.md. Ask questions if unclear.
 Add [FEATURE].
 
 **Workflow:** Strict 5-gate process with principal review
-**Quality:** Top 1% standards (docs/quality-standards.md)
+**Quality:** Follow `kaboom-code-standards.md`
 **Architecture:** May require new packages or file splits
 **Performance:** Define targets in tech-spec
 **Testing:** Unit + integration tests, 90%+ coverage

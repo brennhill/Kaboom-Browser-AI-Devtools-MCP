@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/configdiscovery/mcp.go
   - cmd/browser-agent/main.go
@@ -60,7 +60,7 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/config/auto-approve.js
   - npm/kaboom-agentic-browser/lib/config/codex-config.js
   - npm/kaboom-agentic-browser/lib/contracts/validate-versions.js
-  - docs/mcp-install-guide.md
+  - docs/setup/mcp-install-guide.md
 test_paths:
   - cmd/browser-agent/internal/cli/parser/commands_test.go
   - cmd/browser-agent/internal/cli/parser/flags_test.go

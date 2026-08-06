@@ -1,7 +1,7 @@
 ---
 doc_type: legacy_doc
 status: reference
-last_reviewed: 2026-02-16
+last_reviewed: 2026-08-06
 ---
 
 # Kaboom MCP Roadmap
@@ -19,5 +19,5 @@ This document outlines the planned features and architectural improvements for K
 - **Advanced Telemetry**: Immediate feedback loops for background errors.
 
 ## Agent Feedback
-- [Gemini Agent Feedback & Suggestions](./gemini-feedback.md) (2026-02-16)
-- [Codex Agent Feedback RFC & Issue Checklist](./codex-feedback-rfc.md) (2026-02-16)
+- [Gemini Agent Feedback & Suggestions](./audits/historical/gemini-feedback.md) (2026-02-16)
+- [Codex Agent Feedback RFC & Issue Checklist](./planning/product/codex-feedback-rfc.md) (2026-02-16)

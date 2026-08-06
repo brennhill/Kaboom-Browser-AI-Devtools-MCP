@@ -22,7 +22,7 @@ last_reviewed: 2026-02-16
 ## 🎯 Remaining Today
 
 ### 1. Post to Reddit (30 minutes)
-**File:** [`docs/marketing/reddit-posts/01-intro-kaboom-mcp.md`](docs/marketing/reddit-posts/01-intro-kaboom-mcp.md:1)
+**File:** [Reddit introduction](reddit-posts/01-intro-kaboom-agentic-browser.md)
 
 **Subreddits to target:**
 - r/LocalLLaMA - Primary target (AI/LLM audience)

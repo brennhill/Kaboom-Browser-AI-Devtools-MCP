@@ -17,7 +17,7 @@ decisions belong in the owning feature's `tech-spec.md`.
 
 ## In-Progress
 
-The [`in-progress/`](in-progress/) folder holds work-in-progress specs, tracking documents, and issue trackers that are actively being developed. Once finalized, items are moved to their permanent location in `docs/features/` or `docs/core/`, or archived under `docs/archive/`.
+The [`in-progress/`](../in-progress/) folder holds work-in-progress specs, tracking documents, and issue trackers that are actively being developed. Once finalized, items are moved to their permanent location in `docs/features/` or `docs/core/`, or archived under `docs/archive/`.
 
 ## API Specifications
 

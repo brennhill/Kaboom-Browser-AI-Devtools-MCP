@@ -31,7 +31,7 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/uninstall.js
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/install.py
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py
-  - docs/mcp-install-guide.md
+  - docs/setup/mcp-install-guide.md
 test_paths:
   - cmd/browser-agent/native_install_test.go
   - cmd/browser-agent/native_install_connect_test.go
@@ -135,7 +135,7 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 - `npm/kaboom-agentic-browser/lib/uninstall.js`
 - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/install.py`
 - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py`
-- `docs/mcp-install-guide.md`
+- `docs/setup/mcp-install-guide.md`
 
 ## Test Paths
 

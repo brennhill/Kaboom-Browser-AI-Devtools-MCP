@@ -21,7 +21,7 @@ code_paths:
   - scripts/security/go-tool-versions.env
   - scripts/security/install-go-tools.sh
   - scripts/hooks/pre-commit
-  - docs/DEVELOPMENT.md
+  - docs/setup/DEVELOPMENT.md
   - scripts/docs/features/check-feature-bundles.js
   - scripts/docs/site/check-gokaboom-content-contract.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs

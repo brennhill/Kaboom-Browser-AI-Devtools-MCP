@@ -20,10 +20,10 @@ describe('kaboom root docs branding', () => {
   test('root install and troubleshooting docs use Kaboom naming', () => {
     const files = [
       'docs/README.md',
-      'docs/getting-started.md',
-      'docs/mcp-install-guide.md',
-      'docs/agent-install-guide.md',
-      'docs/troubleshooting.md'
+      'docs/setup/getting-started.md',
+      'docs/setup/mcp-install-guide.md',
+      'docs/setup/agent-install-guide.md',
+      'docs/setup/troubleshooting.md'
     ]
 
     for (const file of files) {

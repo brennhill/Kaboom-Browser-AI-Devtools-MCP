@@ -83,7 +83,7 @@ This script automatically:
 
 Restart Claude Code, Cursor, Windsurf, or Zed. The Kaboom server will now start automatically when needed.
 
-**[Full setup guide →](https://gokaboom.dev/getting-started/)** | **[Per-tool install guide →](docs/mcp-install-guide.md)**
+**[Full setup guide →](https://gokaboom.dev/getting-started/)** | **[Per-tool install guide →](docs/setup/mcp-install-guide.md)**
 
 ### Uninstall
 

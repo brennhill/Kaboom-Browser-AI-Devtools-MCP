@@ -6,6 +6,10 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - docs/audits/historical/
+  - docs/planning/product/
+  - docs/planning/release/
+  - docs/setup/
   - docs/core/architecture/
   - docs/core/product/
   - docs/core/protocol/
@@ -56,6 +60,7 @@ code_paths:
   - package.json
   - .github/workflows/ci.yml
 test_paths:
+  - tests/docs/documentation-link-parser.test.js
   - scripts/lint-documentation.py
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go

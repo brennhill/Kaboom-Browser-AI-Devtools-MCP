@@ -76,8 +76,8 @@ Refactor [FILE/COMPONENT].
 - [.claude/docs/testing.md](../../.claude/docs/testing.md) - TDD workflow
 
 **Quality Standards:**
-- [../quality-standards.md](../quality-standards.md) - Complete quality guide (20 sections)
-- [../quality-quick-reference.md](../quality-quick-reference.md) - Quick checklist (1 page)
+- [../../kaboom-code-standards.md](../../kaboom-code-standards.md) - Project quality standards
+- [../core/reliability/common-patterns.md](../core/reliability/common-patterns.md) - Canonical implementation patterns
 - [../standards/README.md](../standards/README.md) - Comprehensive implementation standards (data models, functions, APIs, error handling, security, concurrency, testing, performance)
 
 ---
@@ -88,7 +88,7 @@ Refactor [FILE/COMPONENT].
 
 1. Read [feature-request-template.md](feature-request-template.md) (15 min)
 2. Read [.claude/docs/feature-workflow.md](../../.claude/docs/feature-workflow.md) (10 min)
-3. Review [docs/quality-quick-reference.md](../quality-quick-reference.md) (5 min)
+3. Review [the canonical implementation patterns](../core/reliability/common-patterns.md) (5 min)
 4. Practice: Request a small feature using the template
 
 **Result:** You'll know how to request features that maintain quality!

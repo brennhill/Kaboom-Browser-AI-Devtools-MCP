@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Purpose: Automate generate-dom-primitives.js workflow behavior for repository tooling.
 // Why: Keeps repetitive maintenance and verification steps deterministic.
-// Docs: docs/DEVELOPMENT.md
+// Docs: docs/setup/DEVELOPMENT.md
 
 /**
  * generate-dom-primitives.js

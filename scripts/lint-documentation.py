@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Purpose: Automate lint-documentation.py workflow behavior for repository tooling.
 # Why: Keeps repetitive maintenance and verification steps deterministic.
-# Docs: docs/DEVELOPMENT.md
+# Docs: docs/setup/DEVELOPMENT.md
 
 # pylint: disable=invalid-name
 """
@@ -58,9 +58,11 @@ class DocumentLinter:
 
     def check_markdown_links(self, file_path, content):
         """Check all markdown links in a file"""
+        link_content = re.sub(r'(```|~~~)[\s\S]*?\1', '', content)
+        link_content = re.sub(r'`[^`\n]*`', '', link_content)
         # Pattern: [text](path) or [text](path#anchor)
         pattern = r'\[([^\]]+)\]\(([^)]+)\)'
-        matches = re.findall(pattern, content)
+        matches = re.findall(pattern, link_content)
         code_exts = (".go", ".ts", ".tsx", ".js", ".jsx", ".py", ".sh", ".yaml", ".yml", ".json")
 
         for _text, link in matches:

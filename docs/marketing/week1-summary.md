@@ -14,7 +14,7 @@ last_reviewed: 2026-02-16
 ## What We've Accomplished
 
 ### ✅ 1. Marketing Plan Created
-**File:** [`docs/marketing-plan.md`](docs/marketing-plan.md:1)
+**File:** [Marketing plan](../planning/product/marketing-plan.md)
 
 A comprehensive 12-month marketing strategy including:
 - Target audience analysis
