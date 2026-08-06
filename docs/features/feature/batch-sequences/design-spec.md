@@ -17,7 +17,7 @@ last_verified_date: 2026-03-05
 
 ## 1. Current State
 
-The `interact(what="batch")` handler (`cmd/browser-agent/internal/toolinteract/interact_batch.go`) accepts an array of steps
+The `interact(what="batch")` handler (`cmd/browser-agent/internal/toolinteract/action_owners.go`) accepts an array of steps
 and executes them sequentially. It shares execution machinery with `replay_sequence`.
 
 ### What exists today

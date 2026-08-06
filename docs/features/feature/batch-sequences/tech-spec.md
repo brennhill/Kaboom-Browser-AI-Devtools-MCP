@@ -10,7 +10,7 @@ last_verified_date: 2026-03-05
 # Batch Sequences Tech Spec
 
 ## Architecture
-- Core batch executor: `cmd/browser-agent/internal/toolinteract/interact_batch.go`
+- Core batch executor: `cmd/browser-agent/internal/toolinteract/action_owners.go`
 - Sequence configure boundary: `cmd/browser-agent/tools_configure.go`
 - Sequence persistence handlers: `cmd/browser-agent/internal/sequencehandler/handler.go`
 - Replay orchestration: `cmd/browser-agent/internal/sequencehandler/replay.go`

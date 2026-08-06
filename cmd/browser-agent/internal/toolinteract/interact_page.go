@@ -1,25 +1,19 @@
-// interact_page.go — Interact actions that read from or overlay the page as a whole
-// rather than targeting one element: get_readable/get_markdown, explore_page,
-// clipboard read/write, draw mode, and the composable pre/post-steps
-// (wait_for_stable, auto_dismiss_overlays, action diff, subtitle).
-// Why one file: five small files that shared nothing but a filename prefix each;
-// what they actually share is the shape — one newCommand(...) dispatch per action
-// with no state of their own.
+// interact_page.go — Page-level and browser-state action execution.
 // Docs: docs/features/feature/interact-explore/index.md
 
 package toolinteract
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"net/url"
-	"strings"
-	"time"
-
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/menus"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
+	"net/url"
+	"strings"
+	"time"
 )
 
 const (
@@ -478,4 +472,200 @@ func (h *PageActions) QueueComposableSubtitle(req mcp.JSONRPCRequest, text strin
 	if _, blocked := h.deps.EnqueuePendingQuery(req, subtitleQuery, queries.AsyncCommandTimeout); blocked {
 		return
 	}
+}
+
+var validStorageTypes = map[string]string{
+	"localStorage":   "localStorage",
+	"sessionStorage": "sessionStorage",
+}
+
+type scriptExecutionTarget struct {
+	TabID     int    `json:"tab_id,omitempty"`
+	TimeoutMs int    `json:"timeout_ms,omitempty"`
+	World     string `json:"world,omitempty"`
+}
+
+type storageCommandParams struct {
+	scriptExecutionTarget
+	StorageType string `json:"storage_type"`
+}
+
+type keyedStorageCommandParams struct {
+	storageCommandParams
+	Key string `json:"key"`
+}
+
+type setStorageParams struct {
+	keyedStorageCommandParams
+	Value *string `json:"value"`
+}
+
+type cookieCommandParams struct {
+	scriptExecutionTarget
+	Name   string `json:"name"`
+	Domain string `json:"domain,omitempty"`
+	Path   string `json:"path,omitempty"`
+}
+
+type setCookieParams struct {
+	cookieCommandParams
+	Value *string `json:"value"`
+}
+
+// validateStorageType checks that storage_type is one of the valid storage types.
+// Returns the JS expression (e.g. "localStorage") and true on success, or an error response and false on failure.
+func validateStorageType(req mcp.JSONRPCRequest, storageType string) (string, mcp.JSONRPCResponse, bool) {
+	storageExpr, ok := validStorageTypes[storageType]
+	if !ok {
+		return "", mcp.Fail(req, mcp.ErrInvalidParam, "Invalid 'storage_type' value: "+storageType, "Use 'localStorage' or 'sessionStorage'", mcp.WithParam("storage_type")), false
+	}
+	return storageExpr, mcp.JSONRPCResponse{}, true
+}
+
+func validateKeyedStorageParams(req mcp.JSONRPCRequest, params keyedStorageCommandParams) (string, mcp.JSONRPCResponse, bool) {
+	storageExpr, resp, ok := validateStorageType(req, params.StorageType)
+	if !ok {
+		return "", resp, false
+	}
+	if resp, blocked := toolresp.RequireString(req, params.Key, "key", "Add the 'key' parameter and call again"); blocked {
+		return "", resp, false
+	}
+	return storageExpr, mcp.JSONRPCResponse{}, true
+}
+
+func (h *StorageActions) HandleSetStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params setStorageParams
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+		return resp
+	}
+
+	storageExpr, errResp, ok := validateKeyedStorageParams(req, params.keyedStorageCommandParams)
+	if !ok {
+		return errResp
+	}
+	if params.Value == nil {
+		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'value' is missing for set_storage action", "Add the 'value' parameter and call again", mcp.WithParam("value"))
+	}
+
+	script := fmt.Sprintf(`(() => { try { %s.setItem(%s, %s); return { ok: true, action: "set_storage", storage_type: %s, key: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
+		storageExpr, jsQuote(params.Key), jsQuote(*params.Value), jsQuote(params.StorageType), jsQuote(params.Key))
+	return h.queueExecuteScript(req, args, "storage_set", params.TabID, params.TimeoutMs, params.World, script, "set_storage", "set_storage queued")
+}
+
+func (h *StorageActions) HandleDeleteStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params keyedStorageCommandParams
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+		return resp
+	}
+
+	storageExpr, errResp, ok := validateKeyedStorageParams(req, params)
+	if !ok {
+		return errResp
+	}
+
+	script := fmt.Sprintf(`(() => { try { %s.removeItem(%s); return { ok: true, action: "delete_storage", storage_type: %s, key: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
+		storageExpr, jsQuote(params.Key), jsQuote(params.StorageType), jsQuote(params.Key))
+	return h.queueExecuteScript(req, args, "storage_del", params.TabID, params.TimeoutMs, params.World, script, "delete_storage", "delete_storage queued")
+}
+
+func (h *StorageActions) HandleClearStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params storageCommandParams
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+		return resp
+	}
+
+	storageExpr, errResp, ok := validateStorageType(req, params.StorageType)
+	if !ok {
+		return errResp
+	}
+
+	script := fmt.Sprintf(`(() => { try { %s.clear(); return { ok: true, action: "clear_storage", storage_type: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
+		storageExpr, jsQuote(params.StorageType))
+	return h.queueExecuteScript(req, args, "storage_clear", params.TabID, params.TimeoutMs, params.World, script, "clear_storage", "clear_storage queued")
+}
+
+func (h *StorageActions) HandleSetCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params setCookieParams
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+		return resp
+	}
+	if resp, blocked := toolresp.RequireString(req, params.Name, "name", "Add the 'name' parameter and call again"); blocked {
+		return resp
+	}
+	if params.Value == nil {
+		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'value' is missing for set_cookie action", "Add the 'value' parameter and call again", mcp.WithParam("value"))
+	}
+
+	cookie := buildCookie(params.Name+"="+*params.Value, params.Path, params.Domain)
+
+	script := fmt.Sprintf(`(() => { try { document.cookie = %s; return { ok: true, action: "set_cookie", name: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
+		jsQuote(cookie), jsQuote(params.Name))
+	return h.queueExecuteScript(req, args, "cookie_set", params.TabID, params.TimeoutMs, params.World, script, "set_cookie", "set_cookie queued")
+}
+
+func (h *StorageActions) HandleDeleteCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params cookieCommandParams
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+		return resp
+	}
+	if resp, blocked := toolresp.RequireString(req, params.Name, "name", "Add the 'name' parameter and call again"); blocked {
+		return resp
+	}
+
+	cookie := buildCookie(params.Name+"=; expires=Thu, 01 Jan 1970 00:00:00 GMT", params.Path, params.Domain)
+
+	script := fmt.Sprintf(`(() => { try { document.cookie = %s; return { ok: true, action: "delete_cookie", name: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
+		jsQuote(cookie), jsQuote(params.Name))
+	return h.queueExecuteScript(req, args, "cookie_del", params.TabID, params.TimeoutMs, params.World, script, "delete_cookie", "delete_cookie queued")
+}
+
+func buildCookie(nameValue, path, domain string) string {
+	cookie := nameValue
+	if path == "" {
+		path = "/"
+	}
+	cookie += "; path=" + path
+	if domain != "" {
+		cookie += "; domain=" + domain
+	}
+	return cookie
+}
+
+func (h *StorageActions) queueExecuteScript(
+	req mcp.JSONRPCRequest,
+	waitArgs json.RawMessage,
+	correlationPrefix string,
+	tabID, timeoutMs int,
+	world, script, reason, queuedMsg string,
+) mcp.JSONRPCResponse {
+	if world == "" {
+		world = "auto"
+	}
+	if !act.ValidWorldValues[world] {
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid 'world' value: "+world, "Use 'auto' (default), 'main', or 'isolated'", mcp.WithParam("world"))
+	}
+	if timeoutMs <= 0 {
+		timeoutMs = 5000
+	}
+
+	return h.runtime.newCommand(reason).
+		correlationPrefix(correlationPrefix).
+		reason(reason).
+		queryType("execute").
+		buildParams(map[string]any{
+			"script":     script,
+			"timeout_ms": timeoutMs,
+			"world":      world,
+			"reason":     reason,
+		}).
+		tabID(tabID).
+		guards(h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking).
+		cspGuard(world).
+		queuedMessage(queuedMsg).
+		execute(req, waitArgs)
+}
+
+func jsQuote(v string) string {
+	b, _ := json.Marshal(v)
+	return string(b)
 }

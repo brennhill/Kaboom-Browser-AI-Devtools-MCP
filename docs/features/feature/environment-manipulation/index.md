@@ -12,7 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup.go
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
-  - cmd/browser-agent/internal/toolinteract/interact_storage.go
+  - cmd/browser-agent/internal/toolinteract/interact_page.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_core.go
   - internal/qafixture/wire_fixture.go
@@ -43,7 +43,7 @@ test_paths:
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
   - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/noise_doctor_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_storage_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup_test.go
   - internal/qafixture/fixture_test.go

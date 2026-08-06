@@ -4,13 +4,13 @@ feature_id: feature-memory-snapshot
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/commands/analyze.ts
-  - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
+  - cmd/browser-agent/internal/toolinteract/interact_dom.go
 test_paths: []
 last_verified_version: 0.8.6
 last_verified_date: 2026-06-29
@@ -55,7 +55,7 @@ the megabytes of raw heap data that would otherwise consume the agent's context 
 - Analyze dispatch registry: `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
 - Mode hints and parameter specs: `internal/tools/configure/capabilities/modespecs_analyze.go`
 - CDP attach/detach lifecycle: `src/background/dom/cdp/cdp-dispatch.ts`
-- Asynchronous command builder: `cmd/browser-agent/internal/toolinteract/interact_command_builder.go`
+- Asynchronous command builder: `cmd/browser-agent/internal/toolinteract/interact_dom.go`
 
 ## Code and Tests
 

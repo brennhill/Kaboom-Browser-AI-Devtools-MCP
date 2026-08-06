@@ -4,21 +4,17 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/action_runtime.go
-  - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
-  - cmd/browser-agent/internal/toolinteract/interact_browser.go
   - cmd/browser-agent/internal/toolinteract/interact_dom.go
-  - cmd/browser-agent/internal/toolinteract/interact_storage.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser.go
   - cmd/browser-agent/internal/toolinteract/interact_page.go
   - cmd/browser-agent/internal/toolinteract/interact_workflow.go
-  - cmd/browser-agent/internal/toolinteract/interact_evidence.go
-  - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
@@ -88,19 +84,14 @@ test_paths:
   - tests/extension/content/content-ui.test.js
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - cmd/browser-agent/internal/toolinteract/action_runtime_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_page_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser_test.go
   - tests/extension/misc/upload-handler.test.js
   - tests/extension/dom/command-element-results.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - internal/recording/actionlog/recorder_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
-  - cmd/browser-agent/internal/toolinteract/test_helpers_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_browser_actions_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_dom_primitive_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_elements_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_page_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_storage_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_handler_test.go

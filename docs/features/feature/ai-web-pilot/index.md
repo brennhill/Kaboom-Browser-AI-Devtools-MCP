@@ -9,7 +9,6 @@ code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
-  - cmd/browser-agent/internal/toolinteract/interact_evidence.go
   - src/popup.ts
   - src/popup/ai-web-pilot.ts
   - scripts/templates/partials/_dom-selectors.tpl

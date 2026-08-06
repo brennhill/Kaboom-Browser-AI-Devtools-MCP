@@ -59,7 +59,7 @@ over the cached graph:
   Identifier (URI).
 
 **Asynchronous command plumbing**: Capture is long-running, so it follows the asynchronous
-command pattern (`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`) with a
+command pattern (`cmd/browser-agent/internal/toolinteract/interact_dom.go`) with a
 sixty-second timeout and result polling through `observe({what: "command_result"})`. Analysis
 queries against an already-cached snapshot are synchronous.
 
@@ -173,7 +173,7 @@ Comparison: analyze({..., detail: "leak_suspects", compare_to: <other snapshot_i
 - The analyze dispatch registry (`cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`).
 - The CDP attach/detach lifecycle and `HeapProfiler` domain (`src/background/dom/cdp/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
-  (`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`,
+  (`cmd/browser-agent/internal/toolinteract/interact_dom.go`,
   `observe({what: "command_result"})`).
 - WebSocket chunked transfer for large payloads.
 
