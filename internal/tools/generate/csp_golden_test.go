@@ -2,17 +2,16 @@
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
 // csp_golden_test.go — Golden file validation for CSP directive generation.
-package main
+package generate
 
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"sort"
 	"testing"
 
-	gen "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestGoldenCSPModerate(t *testing.T) {
@@ -27,7 +26,7 @@ func TestGoldenCSPModerate(t *testing.T) {
 		{URL: "https://api.example.com/users", ContentType: "application/json"},
 	}
 
-	directives := gen.BuildCSPDirectives(networkBodies)
+	directives := BuildCSPDirectives(networkBodies)
 
 	// Sort directive values for deterministic output
 	sortedDirectives := make(map[string][]string)
@@ -46,7 +45,7 @@ func TestGoldenCSPModerate(t *testing.T) {
 
 	goldenPath := "testdata/csp-moderate.golden.json"
 
-	if updateGolden {
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
 		err = os.WriteFile(goldenPath, data, 0644)
 		if err != nil {
 			t.Fatalf("WriteFile failed: %v", err)

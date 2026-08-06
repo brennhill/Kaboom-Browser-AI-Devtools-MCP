@@ -30,6 +30,8 @@ code_paths:
   - internal/testgen/heal/types.go
   - internal/schema/generate.go
 test_paths:
+  - internal/tools/generate/csp_golden_test.go
+  - internal/tools/generate/testdata/csp-moderate.golden.json
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/tools_generate_handler_test.go
