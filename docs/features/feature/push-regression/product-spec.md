@@ -16,5 +16,5 @@ last_verified_date: 2026-03-05
 User-facing requirements, rationale, and deprecations for the Push Regression feature.
 
 - See also: [Tech Spec](tech-spec.md)
-- See also: [Push Regression Review](../../../specs/push-regression-review.md)
+- See also: [Push Regression Review](../../../specs/reviews/runtime-data/push-regression-review.md)
 - See also: [Core Product Spec](../../../core/product-spec.md)

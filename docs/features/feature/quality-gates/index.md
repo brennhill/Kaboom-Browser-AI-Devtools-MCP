@@ -6,6 +6,10 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - docs/specs/contracts/
+  - docs/specs/reviews/agent-workflows/
+  - docs/specs/reviews/runtime-data/
+  - docs/specs/versioning/
   - docs/architecture/diagrams/quality/5-layer-protection.md
   - kaboom-code-standards.md
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
@@ -34,6 +38,7 @@ code_paths:
   - package.json
   - .github/workflows/ci.yml
 test_paths:
+  - scripts/lint-documentation.py
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go
   - cmd/browser-agent/tools_configure_quality_gates_test.go

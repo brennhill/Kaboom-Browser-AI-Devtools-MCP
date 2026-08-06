@@ -4,7 +4,7 @@ feature_id: feature-web-vitals
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - src/lib/analysis/perf-snapshot.ts
   - src/lib/analysis/vitals-attribution.ts

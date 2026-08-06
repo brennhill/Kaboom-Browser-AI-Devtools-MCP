@@ -4,7 +4,7 @@ feature_id: feature-ai-web-pilot
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-02
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/tools_core.go
