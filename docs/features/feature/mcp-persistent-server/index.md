@@ -77,6 +77,7 @@ code_paths:
   - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/internal/httpapi/response.go
   - cmd/browser-agent/internal/mcphttp/handler.go
+  - cmd/browser-agent/internal/mcptelemetry/owner.go
   - cmd/browser-agent/internal/connectmode/runner.go
   - cmd/browser-agent/internal/versioncheck/checker.go
   - internal/diag/output.go
@@ -123,6 +124,7 @@ test_paths:
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/handler_unit_test.go
   - cmd/browser-agent/handler_unit_telemetry_test.go
+  - cmd/browser-agent/internal/mcptelemetry/owner_test.go
   - cmd/browser-agent/handler_tools_call_usage_test.go
   - cmd/browser-agent/internal/procctl/stop_parse_test.go
   - cmd/browser-agent/internal/procctl/stop_test.go
@@ -312,6 +314,12 @@ does not maintain parallel lazy registries.
 > history cleanup, so a failed removal cannot masquerade as a crash. Packaged
 > lifecycle UAT kills the daemon, restarts it,
 > and requires the correlated terminal Doctor incident before passing.
+
+> **2026-08-07:** Passive MCP telemetry metadata now has one bounded,
+> per-client owner in `internal/mcptelemetry`. The handler supplies aggregate
+> sources during composition and delegates augmentation directly; cursor
+> synchronization, mode parsing, delta calculation, and expiry no longer live
+> in the root handler or expose mutable test seams.
 
 > **2026-07-27:** Removed the unreachable `main_connection_diag.go`
 > connection-probing path and its dedicated tests. No production caller invoked

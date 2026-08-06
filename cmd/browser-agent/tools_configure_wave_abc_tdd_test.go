@@ -219,7 +219,7 @@ func TestWaveC_RedactionEngineIsWiredAndApplied(t *testing.T) {
 		ID:      1,
 		Result:  json.RawMessage(`{"content":[{"type":"text","text":"Authorization: Bearer ghp_1234567890abcdef"}],"isError":false}`),
 	}
-	output := h.applyToolResponsePostProcessing(input, "wave-c-test", "configure", "")
+	output := h.applyToolResponsePostProcessing(input, "wave-c-test", "configure", nil)
 	result := parseToolResult(t, output)
 	if len(result.Content) == 0 {
 		t.Fatal("expected content in redacted response")

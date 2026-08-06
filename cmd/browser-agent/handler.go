@@ -7,11 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
@@ -54,7 +54,7 @@ Key patterns:
 //
 // Invariants:
 // - tools is configured once during bootstrap before serving requests.
-// - telemetryCursors is guarded by telemetryMu.
+// - passive telemetry cursor synchronization is owned by mcptelemetry.Owner.
 //
 // Failure semantics:
 // - Unknown methods/tools return JSON-RPC method-not-found errors.
@@ -65,8 +65,7 @@ type MCPHandler struct {
 	version string
 	runtime *appruntime.Runtime
 
-	telemetryMu      sync.Mutex
-	telemetryCursors map[string]passiveTelemetryCursor
+	passiveTelemetry *mcptelemetry.Owner
 }
 
 // ToolExecutor is the sole behavior required from the five-tool backend.
@@ -99,14 +98,17 @@ type RedactionEngine interface {
 // NewMCPHandler creates a new MCP handler.
 func NewMCPHandler(server *Server, version string) *MCPHandler {
 	runtime := appruntime.New(version)
+	telemetryConfig := mcptelemetry.Config{}
 	if server != nil && server.runtime != nil {
 		runtime = server.runtime
 	}
+	if server != nil && server.logs != nil {
+		telemetryConfig.ErrorTotal = server.logs.ErrorTotalAdded
+		telemetryConfig.Mode = server.logs.TelemetryMode
+	}
 	return &MCPHandler{
-		server:           server,
-		version:          version,
-		runtime:          runtime,
-		telemetryCursors: make(map[string]passiveTelemetryCursor),
+		server: server, version: version, runtime: runtime,
+		passiveTelemetry: mcptelemetry.New(telemetryConfig),
 	}
 }
 
@@ -116,6 +118,7 @@ func NewMCPHandler(server *Server, version string) *MCPHandler {
 // - Intended for one-time startup wiring; runtime swapping is unsupported.
 func (h *MCPHandler) SetToolBackend(backend ToolBackend) {
 	h.tools = backend
+	h.passiveTelemetry.SetCapture(backend.Capture)
 }
 
 // GetUsageTracker returns the configured usage tracker.
@@ -282,8 +285,7 @@ func (h *MCPHandler) handleToolsCall(req mcp.JSONRPCRequest) mcp.JSONRPCResponse
 			Error: &mcp.JSONRPCError{Code: -32601, Message: "Unknown tool: " + params.Name},
 		}
 	}
-	telemetryModeOverride := parseTelemetryModeOverride(params.Arguments)
-	return h.applyToolResponsePostProcessing(resp, req.ClientID, params.Name, telemetryModeOverride)
+	return h.applyToolResponsePostProcessing(resp, req.ClientID, params.Name, params.Arguments)
 }
 
 func (h *MCPHandler) checkToolRateLimit() *mcp.JSONRPCError {
@@ -339,7 +341,7 @@ func (h *MCPHandler) allowedToolArgumentKeys(toolName string) map[string]struct{
 	return nil
 }
 
-func (h *MCPHandler) applyToolResponsePostProcessing(resp mcp.JSONRPCResponse, clientID, toolName, telemetryModeOverride string) mcp.JSONRPCResponse {
+func (h *MCPHandler) applyToolResponsePostProcessing(resp mcp.JSONRPCResponse, clientID, toolName string, arguments json.RawMessage) mcp.JSONRPCResponse {
 	redactor := h.tools.Redactor
 	if redactor != nil && resp.Result != nil {
 		resp.Result = redactor.RedactJSON(resp.Result)
@@ -352,7 +354,7 @@ func (h *MCPHandler) applyToolResponsePostProcessing(resp mcp.JSONRPCResponse, c
 	resp = h.maybeAddUpdateAvailableWarning(resp)
 	resp = h.maybeAddUpgradeWarning(resp)
 	resp = h.maybeAddPendingIntents(resp)
-	return h.maybeAddTelemetrySummary(resp, clientID, toolName, telemetryModeOverride)
+	return h.passiveTelemetry.Augment(resp, clientID, toolName, arguments)
 }
 
 func (h *MCPHandler) maybeAddPendingIntents(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
@@ -450,187 +452,4 @@ func (h *MCPHandler) maybeAddUpgradeWarning(resp mcp.JSONRPCResponse) mcp.JSONRP
 		newVersion, h.runtime.Version(), elapsed,
 	)
 	return prependWarningToResponse(resp, warning)
-}
-
-const defaultTelemetryClientKey = "_default"
-
-const (
-	telemetryModeOff  = "off"
-	telemetryModeAuto = "auto"
-	telemetryModeFull = "full"
-)
-
-const telemetryCursorTTL = 30 * time.Minute
-const telemetryCursorMaxEntries = 200
-
-type passiveTelemetryCursor struct {
-	errorTotal        int64
-	networkTotal      int64
-	networkErrorTotal int64
-	wsTotal           int64
-	actionTotal       int64
-	lastSeen          time.Time
-}
-
-func (h *MCPHandler) maybeAddTelemetrySummary(resp mcp.JSONRPCResponse, clientID, toolName, modeOverride string) mcp.JSONRPCResponse {
-	if h.tools.Executor == nil || resp.Result == nil {
-		return resp
-	}
-	summary, changed := h.buildTelemetrySummary(clientID, toolName)
-	mode := h.resolveTelemetryMode(modeOverride)
-	if mode == telemetryModeOff {
-		return resp
-	}
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil || len(result.Content) == 0 {
-		return resp
-	}
-	if result.Metadata == nil {
-		result.Metadata = make(map[string]any)
-	}
-	result.Metadata["telemetry_changed"] = changed
-	if mode == telemetryModeFull || (mode == telemetryModeAuto && changed) {
-		result.Metadata["telemetry_summary"] = summary
-	}
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return resp
-	}
-	resp.Result = json.RawMessage(resultJSON)
-	return resp
-}
-
-func (h *MCPHandler) buildTelemetrySummary(clientID, toolName string) (map[string]any, bool) {
-	current := h.currentTelemetryCursor()
-	deltas := h.telemetryDeltasForClient(clientID, current)
-	changed := deltas.errorTotal > 0 ||
-		deltas.networkTotal > 0 ||
-		deltas.networkErrorTotal > 0 ||
-		deltas.wsTotal > 0 ||
-		deltas.actionTotal > 0
-	summary := map[string]any{
-		"new_errors_since_last_call":           deltas.errorTotal,
-		"new_network_requests_since_last_call": deltas.networkTotal,
-		"new_network_errors_since_last_call":   deltas.networkErrorTotal,
-		"new_websocket_events_since_last_call": deltas.wsTotal,
-		"new_actions_since_last_call":          deltas.actionTotal,
-		"trigger_tool":                         toolName,
-		"retrieved_at":                         time.Now().UTC().Format(time.RFC3339),
-	}
-	captured := h.tools.Capture
-	if captured != nil {
-		summary["extension_connected"] = captured.Extension().IsExtensionConnected()
-		enabled, tabID, tabURL := captured.Extension().GetTrackingStatus()
-		summary["tracking_enabled"] = enabled
-		if tabID > 0 {
-			summary["tracked_tab_id"] = tabID
-		}
-		if tabURL != "" {
-			summary["tracked_tab_url"] = tabURL
-		}
-	}
-	if clientID != "" {
-		summary["client_id"] = clientID
-	}
-	return summary, changed
-}
-
-func (h *MCPHandler) currentTelemetryCursor() passiveTelemetryCursor {
-	current := passiveTelemetryCursor{}
-	if h.server != nil {
-		current.errorTotal = h.server.logs.ErrorTotalAdded()
-	}
-	captured := h.tools.Capture
-	if captured == nil {
-		return current
-	}
-	current.networkTotal = captured.Telemetry().NetworkBodies().Stats().TotalAdded
-	current.networkErrorTotal = captured.Telemetry().NetworkBodies().Stats().ErrorTotalAdded
-	current.wsTotal = captured.Telemetry().WebSockets().Stats().TotalAdded
-	current.actionTotal = captured.Telemetry().Actions().Stats().TotalAdded
-	return current
-}
-
-func (h *MCPHandler) telemetryDeltasForClient(clientID string, current passiveTelemetryCursor) passiveTelemetryCursor {
-	key := clientID
-	if key == "" {
-		key = defaultTelemetryClientKey
-	}
-	h.telemetryMu.Lock()
-	defer h.telemetryMu.Unlock()
-	if h.telemetryCursors == nil {
-		h.telemetryCursors = make(map[string]passiveTelemetryCursor)
-	}
-	previous, ok := h.telemetryCursors[key]
-	current.lastSeen = time.Now()
-	h.telemetryCursors[key] = current
-	if len(h.telemetryCursors) > telemetryCursorMaxEntries {
-		h.evictStaleCursorsLocked()
-	}
-	if !ok {
-		return passiveTelemetryCursor{}
-	}
-	return passiveTelemetryCursor{
-		errorTotal:        clampDelta(current.errorTotal, previous.errorTotal),
-		networkTotal:      clampDelta(current.networkTotal, previous.networkTotal),
-		networkErrorTotal: clampDelta(current.networkErrorTotal, previous.networkErrorTotal),
-		wsTotal:           clampDelta(current.wsTotal, previous.wsTotal),
-		actionTotal:       clampDelta(current.actionTotal, previous.actionTotal),
-	}
-}
-
-func clampDelta(current, previous int64) int64 {
-	if current <= previous {
-		return 0
-	}
-	return current - previous
-}
-
-func parseTelemetryModeOverride(args json.RawMessage) string {
-	if len(args) == 0 {
-		return ""
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(args, &payload); err != nil {
-		return ""
-	}
-	raw, ok := payload["telemetry_mode"].(string)
-	if !ok {
-		return ""
-	}
-	mode, ok := normalizeTelemetryMode(raw)
-	if !ok {
-		return ""
-	}
-	return mode
-}
-
-func normalizeTelemetryMode(mode string) (string, bool) {
-	switch mode {
-	case telemetryModeOff, telemetryModeAuto, telemetryModeFull:
-		return mode, true
-	default:
-		return "", false
-	}
-}
-
-func (h *MCPHandler) evictStaleCursorsLocked() {
-	cutoff := time.Now().Add(-telemetryCursorTTL)
-	for key, cursor := range h.telemetryCursors {
-		if cursor.lastSeen.Before(cutoff) {
-			delete(h.telemetryCursors, key)
-		}
-	}
-}
-
-func (h *MCPHandler) resolveTelemetryMode(modeOverride string) string {
-	if mode, ok := normalizeTelemetryMode(modeOverride); ok {
-		return mode
-	}
-	if h.server != nil {
-		if mode, ok := normalizeTelemetryMode(h.server.logs.TelemetryMode()); ok {
-			return mode
-		}
-	}
-	return telemetryModeAuto
 }

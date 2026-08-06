@@ -46,7 +46,7 @@ func TestToolResponsePostProcessing_AddsSecurityModeMetadataAndWarning(t *testin
 		t.Fatal("expected configure tool call to be handled")
 	}
 
-	post := handler.applyToolResponsePostProcessing(resp, "test-client", "configure", "")
+	post := handler.applyToolResponsePostProcessing(resp, "test-client", "configure", nil)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(post.Result, &result); err != nil {

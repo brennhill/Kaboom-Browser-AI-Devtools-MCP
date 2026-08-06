@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
@@ -224,7 +225,7 @@ func TestMCPHandler_PassiveTelemetryModeFullIncludesSummaryWithoutChanges(t *tes
 		t.Fatalf("NewServer() error = %v", err)
 	}
 	t.Cleanup(srv.Close)
-	srv.logs.SetTelemetryMode(telemetryModeFull)
+	srv.logs.SetTelemetryMode(mcptelemetry.ModeFull)
 
 	h := NewMCPHandler(srv, "v-test")
 	setFakeToolBackend(h, &fakeToolHandlerForMCP{
@@ -265,7 +266,7 @@ func TestMCPHandler_PassiveTelemetryModeOffSuppressesTelemetryMetadata(t *testin
 		t.Fatalf("NewServer() error = %v", err)
 	}
 	t.Cleanup(srv.Close)
-	srv.logs.SetTelemetryMode(telemetryModeOff)
+	srv.logs.SetTelemetryMode(mcptelemetry.ModeOff)
 
 	h := NewMCPHandler(srv, "v-test")
 	setFakeToolBackend(h, &fakeToolHandlerForMCP{
@@ -312,7 +313,7 @@ func TestMCPHandler_PassiveTelemetryModePerCallOverride(t *testing.T) {
 		t.Fatalf("NewServer() error = %v", err)
 	}
 	t.Cleanup(srv.Close)
-	srv.logs.SetTelemetryMode(telemetryModeFull)
+	srv.logs.SetTelemetryMode(mcptelemetry.ModeFull)
 
 	h := NewMCPHandler(srv, "v-test")
 	setFakeToolBackend(h, &fakeToolHandlerForMCP{
@@ -622,25 +623,5 @@ func TestMCPHandlerHandleHTTP_IDNullIsInvalidRequest(t *testing.T) {
 	}
 	if nullIDResp.ID != nil {
 		t.Fatalf("id:null response id = %v, want null", nullIDResp.ID)
-	}
-}
-
-func TestMCPHandlerEvictsOnlyStaleTelemetryCursors(t *testing.T) {
-	t.Parallel()
-
-	now := time.Now()
-	handler := NewMCPHandler(nil, "v-test")
-	handler.telemetryCursors = map[string]passiveTelemetryCursor{
-		"fresh": {lastSeen: now},
-		"stale": {lastSeen: now.Add(-telemetryCursorTTL - time.Second)},
-	}
-
-	handler.evictStaleCursorsLocked()
-
-	if _, ok := handler.telemetryCursors["stale"]; ok {
-		t.Fatal("stale telemetry cursor was not evicted")
-	}
-	if _, ok := handler.telemetryCursors["fresh"]; !ok {
-		t.Fatal("fresh telemetry cursor was evicted")
 	}
 }

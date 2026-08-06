@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
@@ -55,8 +56,8 @@ func TestToolsConfigureTelemetry_DefaultStatus(t *testing.T) {
 	if data["status"] != "ok" {
 		t.Errorf("status = %v, want 'ok'", data["status"])
 	}
-	if mode, _ := data["telemetry_mode"].(string); mode != telemetryModeAuto {
-		t.Errorf("telemetry_mode = %q, want %q", mode, telemetryModeAuto)
+	if mode, _ := data["telemetry_mode"].(string); mode != mcptelemetry.ModeAuto {
+		t.Errorf("telemetry_mode = %q, want %q", mode, mcptelemetry.ModeAuto)
 	}
 
 	assertSnakeCaseFields(t, string(resp.Result))
@@ -72,8 +73,8 @@ func TestToolsConfigureTelemetry_SetMode(t *testing.T) {
 		t.Fatalf("telemetry set mode should succeed, got: %s", result.Content[0].Text)
 	}
 	data := extractResultJSON(t, result)
-	if mode, _ := data["telemetry_mode"].(string); mode != telemetryModeFull {
-		t.Errorf("telemetry_mode = %q, want %q", mode, telemetryModeFull)
+	if mode, _ := data["telemetry_mode"].(string); mode != mcptelemetry.ModeFull {
+		t.Errorf("telemetry_mode = %q, want %q", mode, mcptelemetry.ModeFull)
 	}
 }
 

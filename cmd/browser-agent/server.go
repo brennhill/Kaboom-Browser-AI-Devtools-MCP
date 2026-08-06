@@ -28,6 +28,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/insecureproxy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcphttp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/operationalapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
@@ -181,7 +182,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	s.logs = logstore.New(logstore.Config{
 		LogFile:       logFile,
 		MaxEntries:    maxEntries,
-		TelemetryMode: telemetryModeAuto,
+		TelemetryMode: mcptelemetry.ModeAuto,
 		AddWarning:    s.warnings.Add,
 		Stderrf:       diag.Printf,
 	})

@@ -307,6 +307,25 @@ func TestDaemonRecoveryPrimitivesDoNotReturnToMain(t *testing.T) {
 	}
 }
 
+func TestPassiveTelemetryDoesNotReturnToRootHandler(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read root MCP handler: %v", err)
+	}
+	for _, forbidden := range []string{
+		"type passiveTelemetryCursor struct",
+		"telemetryCursors map[",
+		"func (h *MCPHandler) telemetryDeltasForClient(",
+		"func (h *MCPHandler) evictStaleCursorsLocked(",
+		"func parseTelemetryModeOverride(",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("root MCP handler retains passive telemetry owner surface %q", forbidden)
+		}
+	}
+}
+
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
 	if err != nil {
