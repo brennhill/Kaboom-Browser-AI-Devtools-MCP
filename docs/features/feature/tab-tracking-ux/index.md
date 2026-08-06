@@ -4,8 +4,9 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-06
 code_paths:
+  - docs/architecture/diagrams/ui/flame-flicker-visual.md
   - src/lib/brand.ts
   - src/lib/constants.ts
   - src/lib/tabs/request-audit.ts

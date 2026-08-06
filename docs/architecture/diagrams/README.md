@@ -71,14 +71,14 @@ Visual guides to understanding Kaboom's core architecture.
 
 ### 🛡️ Infrastructure & Quality
 
-**[5-Layer Architectural Protection](5-layer-protection.md)**
+**[5-Layer Architectural Protection](quality/5-layer-protection.md)**
 - Defense-in-depth system preventing architecture deletion
 - All 5 enforcement layers (pre-commit hook, tests, validation, CI)
 - Protection matrix showing what each layer checks
 - Bypass requirements and justification
 - Historical context and lessons learned
 
-**[Flame Flicker Visual Indicator](flame-flicker-visual.md)**
+**[Flame Flicker Visual Indicator](ui/flame-flicker-visual.md)**
 - Browser tab favicon animation showing AI Pilot active state
 - Visual state machine (NotTracking → TrackingOnly → AIPilotActive)
 - 8-frame animation sequence and SVG structure

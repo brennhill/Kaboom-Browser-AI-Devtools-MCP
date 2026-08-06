@@ -4,8 +4,9 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
+  - docs/architecture/diagrams/quality/5-layer-protection.md
   - kaboom-code-standards.md
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
   - cmd/browser-agent/tools_configure.go

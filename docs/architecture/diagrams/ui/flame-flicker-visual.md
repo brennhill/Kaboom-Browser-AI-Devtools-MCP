@@ -297,4 +297,4 @@ journey
 - [Implementation: favicon-replacer.ts](../../src/content/favicon-replacer.ts)
 - [Icon frames: extension/icons/](../../extension/icons/)
 - [Tests: favicon-replacer.test.js](../../tests/extension/branding/favicon-replacer.test.js)
-- [Product Spec: Tab Tracking UX](../../docs/features/feature/tab-tracking-ux/product-spec.md)
+- [Product Spec: Tab Tracking UX](../../../features/feature/tab-tracking-ux/product-spec.md)

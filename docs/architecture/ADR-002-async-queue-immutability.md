@@ -250,7 +250,7 @@ For visual understanding of the architecture:
 
 - 📊 [Async Queue-and-Poll Flow Diagram](diagrams/async-queue-flow.md) - See the full end-to-end flow
 - 🎯 [Correlation ID Lifecycle](diagrams/correlation-id-lifecycle.md) - Understand command tracking
-- 🛡️ [5-Layer Protection Diagram](diagrams/5-layer-protection.md) - Visualize defense-in-depth
+- 🛡️ [5-Layer Protection Diagram](diagrams/quality/5-layer-protection.md) - Visualize defense-in-depth
 - 🏗️ [System Architecture](diagrams/system-architecture.md) - See how all pieces fit together
 
 All diagrams use Mermaid and render automatically on GitHub.

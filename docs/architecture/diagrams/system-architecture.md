@@ -376,6 +376,6 @@ graph TB
 
 - [Async Queue Flow](async-queue-flow.md)
 - [Correlation ID Lifecycle](correlation-id-lifecycle.md)
-- [5-Layer Protection](5-layer-protection.md)
-- [Flame Flicker Visual](flame-flicker-visual.md)
+- [5-Layer Protection](quality/5-layer-protection.md)
+- [Flame Flicker Visual](ui/flame-flicker-visual.md)
 - [ADR-001: Async Queue Pattern](../ADR-001-async-queue-pattern.md)

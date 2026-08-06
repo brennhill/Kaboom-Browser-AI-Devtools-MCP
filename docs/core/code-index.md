@@ -90,7 +90,7 @@ last_reviewed: 2026-02-16
 **Affects:**
 - Feature: [Tab Tracking UX](features/feature/tab-tracking-ux/product-spec.md)
 - Feature: [AI Web Pilot Visual](features/feature/ai-web-pilot/)
-- Visual: [Flame Flicker Diagram](architecture/diagrams/flame-flicker-visual.md)
+- Visual: [Flame Flicker Diagram](../architecture/diagrams/ui/flame-flicker-visual.md)
 
 **Assets:**
 - extension/icons/icon-flicker-*.svg (8 frames)
@@ -251,7 +251,7 @@ last_reviewed: 2026-02-16
 
 **Docs:**
 - features/feature/tab-tracking-ux/product-spec.md
-- architecture/diagrams/flame-flicker-visual.md
+- architecture/diagrams/ui/flame-flicker-visual.md
 
 **Tests:**
 - tests/extension/branding/favicon-replacer.test.js
@@ -268,7 +268,7 @@ last_reviewed: 2026-02-16
 **Docs:**
 - architecture/ADR-002-async-queue-immutability.md
 - architecture/ARCHITECTURE-ENFORCEMENT.md
-- architecture/diagrams/5-layer-protection.md
+- architecture/diagrams/quality/5-layer-protection.md
 
 **Tests:**
 - internal/capture/async_queue_integration_test.go (exercises full flow)
