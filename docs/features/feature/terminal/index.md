@@ -24,6 +24,7 @@ code_paths:
   - cmd/browser-agent/internal/terminal/intent_handlers.go
   - cmd/browser-agent/internal/terminal/intent/store.go
   - cmd/browser-agent/internal/terminal/directorybrowser/browser.go
+  - cmd/browser-agent/internal/terminal/dimensions/dimensions.go
   - cmd/browser-agent/internal/terminal/static.go
   - cmd/browser-agent/internal/terminal/terminal_assets/terminal.html
   - extension/sidepanel.html
@@ -107,6 +108,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/intent_handlers_test.go
   - cmd/browser-agent/internal/terminal/intent/store_test.go
   - cmd/browser-agent/internal/terminal/directorybrowser/browser_test.go
+  - cmd/browser-agent/internal/terminal/dimensions/dimensions_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
   - cmd/browser-agent/internal/nativeinstall/connect_refused_test.go
   - tests/extension/terminal-reconnect/terminal-html-reconnect.test.js

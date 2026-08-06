@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/dimensions"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
@@ -383,7 +384,7 @@ func HandleControlMessage(payload []byte, sess *pty.Session) {
 	switch msg.Type {
 	case "resize":
 		if msg.Cols > 0 && msg.Rows > 0 {
-			cols, rows, ok := terminalDimensions(msg.Cols, msg.Rows)
+			cols, rows, ok := dimensions.Resolve(msg.Cols, msg.Rows)
 			if !ok {
 				return
 			}
