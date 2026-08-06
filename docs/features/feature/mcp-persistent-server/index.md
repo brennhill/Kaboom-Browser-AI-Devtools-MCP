@@ -50,6 +50,7 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/install_epoch.go
   - cmd/browser-agent/internal/daemonlife/startup_throttle.go
   - cmd/browser-agent/internal/daemonlife/deps.go
+  - cmd/browser-agent/internal/daemonrecovery/primitives.go
   - internal/statediag/collector.go
   - internal/statefault/fault.go
   - internal/statefile/statefile.go
@@ -86,6 +87,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/internal/daemonrecovery/primitives_test.go
   - internal/listenport/store_test.go
   - internal/warningqueue/queue_test.go
   - cmd/browser-agent/internal/httpapi/openapi_test.go

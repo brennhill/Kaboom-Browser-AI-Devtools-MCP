@@ -14,6 +14,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonrecovery"
 )
 
 // TestDaemonlifeDeps_AllSeamsWired is the regression guard for the one failure mode
@@ -79,7 +81,7 @@ func TestFetchDaemonHealth(t *testing.T) {
 		defer srv.Close()
 		port := portFromTestServerURL(t, srv.URL)
 
-		reachable, ver, refused := fetchDaemonHealth(context.Background(), port, time.Second)
+		reachable, ver, refused := daemonrecovery.FetchDaemonHealth(context.Background(), port, time.Second)
 		if !reachable || ver != "1.2.3" || refused {
 			t.Fatalf("got reachable=%v version=%q refused=%v, want true/1.2.3/false", reachable, ver, refused)
 		}
@@ -91,7 +93,7 @@ func TestFetchDaemonHealth(t *testing.T) {
 		port := portFromTestServerURL(t, srv.URL)
 		srv.Close()
 
-		reachable, _, refused := fetchDaemonHealth(context.Background(), port, time.Second)
+		reachable, _, refused := daemonrecovery.FetchDaemonHealth(context.Background(), port, time.Second)
 		if reachable {
 			t.Fatal("a closed port must not report reachable")
 		}
@@ -103,7 +105,7 @@ func TestFetchDaemonHealth(t *testing.T) {
 	t.Run("a cancelled context is unreachable, never a hang", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		if reachable, _, _ := fetchDaemonHealth(ctx, 7890, time.Second); reachable {
+		if reachable, _, _ := daemonrecovery.FetchDaemonHealth(ctx, 7890, time.Second); reachable {
 			t.Fatal("a cancelled probe must not report reachable")
 		}
 	})

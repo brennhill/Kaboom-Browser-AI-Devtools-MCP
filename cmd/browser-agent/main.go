@@ -11,6 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonrecovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/exitdiag"
 	playbookresources "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks/resources"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
@@ -75,7 +76,7 @@ func buildBridgeRunner(exitDiagnostics *exitdiag.Recorder) *bridge.Runner {
 			ResolveResource: playbookresources.ResolveResourceContent,
 		},
 		bridge.Lifecycle{
-			ProcessArgv0: daemonProcessArgv0, StopServerForUpgrade: stopServerForUpgrade,
+			ProcessArgv0: daemonProcessArgv0, StopServerForUpgrade: daemonrecovery.StopServerForUpgrade,
 			FindProcessOnPort: procctl.FindProcessOnPort, IsProcessAlive: procctl.IsProcessAlive,
 			AppendExitDiagnostic: exitDiagnostics.Append,
 		},

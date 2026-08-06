@@ -290,6 +290,25 @@ func TestClientRegistryUsesCanonicalConcreteOwner(t *testing.T) {
 	}
 }
 
+func TestDaemonRecoveryPrimitivesDoNotReturnToMain(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "main_connection_recovery.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read main recovery composition: %v", err)
+	}
+	for _, forbidden := range []string{
+		"func stopServerForUpgrade(",
+		"func tryShutdownViaHTTP(",
+		"func waitForPortRelease(",
+		"func terminatePIDQuiet(",
+		"func fetchDaemonHealth(",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("main recovery retains daemon I/O primitive %q", forbidden)
+		}
+	}
+}
+
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
 	if err != nil {

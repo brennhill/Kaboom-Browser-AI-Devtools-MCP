@@ -165,6 +165,10 @@
       "mutable_globals": 1,
       "exports": 2
     },
+    "cmd/browser-agent/internal/daemonrecovery/primitives.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
     "cmd/browser-agent/internal/dashboard/handler.go": {
       "mutable_globals": 5,
       "exports": 9
