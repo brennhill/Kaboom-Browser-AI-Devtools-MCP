@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpcall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpprotocol"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -42,22 +43,22 @@ type testRedactor struct {
 	replacement json.RawMessage
 }
 
-func (r testRedactor) Redact(input string) string {
-	return input // no-op for existing tests
-}
-
 func (r testRedactor) RedactJSON(_ json.RawMessage) json.RawMessage {
 	return r.replacement
 }
 
-func (r testRedactor) RedactMapValues(data map[string]any) map[string]any {
-	return data // no-op for existing tests
+type testLimiterContract interface {
+	Allow() bool
+}
+
+type testRedactorContract interface {
+	RedactJSON(json.RawMessage) json.RawMessage
 }
 
 type fakeToolHandlerForMCP struct {
 	cap      *capture.Capture
-	limiter  RateLimiter
-	redactor RedactionEngine
+	limiter  testLimiterContract
+	redactor testRedactorContract
 	tools    []mcp.MCPTool
 	handleFn func(req mcp.JSONRPCRequest, name string, arguments json.RawMessage) (mcp.JSONRPCResponse, bool)
 }
@@ -69,8 +70,8 @@ func (f *fakeToolHandlerForMCP) HandleToolCall(req mcp.JSONRPCRequest, name stri
 	return f.handleFn(req, name, arguments)
 }
 
-func (f *fakeToolHandlerForMCP) backend() ToolBackend {
-	return ToolBackend{
+func (f *fakeToolHandlerForMCP) backend() mcpcall.Backend {
+	return mcpcall.Backend{
 		Executor: f, Capture: f.cap, Limiter: f.limiter,
 		Redactor: f.redactor, Schemas: f.tools,
 	}

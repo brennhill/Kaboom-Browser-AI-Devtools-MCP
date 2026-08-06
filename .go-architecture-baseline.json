@@ -3,7 +3,7 @@
   "files": {
     "cmd/browser-agent/handler.go": {
       "mutable_globals": 2,
-      "exports": 9
+      "exports": 5
     },
     "cmd/browser-agent/internal/appruntime/runtime.go": {
       "mutable_globals": 0,
@@ -268,6 +268,10 @@
     "cmd/browser-agent/internal/logstore/validate.go": {
       "mutable_globals": 1,
       "exports": 3
+    },
+    "cmd/browser-agent/internal/mcpcall/handler.go": {
+      "mutable_globals": 0,
+      "exports": 2
     },
     "cmd/browser-agent/internal/mcphttp/handler.go": {
       "mutable_globals": 0,

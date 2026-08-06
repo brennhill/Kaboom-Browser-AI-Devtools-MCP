@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - internal/listenport/store.go
   - cmd/browser-agent/internal/runtimeflags/flags.go
@@ -77,6 +77,7 @@ code_paths:
   - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/internal/httpapi/response.go
   - cmd/browser-agent/internal/mcphttp/handler.go
+  - cmd/browser-agent/internal/mcpcall/handler.go
   - cmd/browser-agent/internal/mcpprotocol/responses.go
   - cmd/browser-agent/internal/mcptelemetry/owner.go
   - cmd/browser-agent/internal/mcpresponse/owner.go
@@ -155,6 +156,7 @@ test_paths:
   - cmd/browser-agent/start_timeout_norace_test.go
   - cmd/browser-agent/start_timeout_race_test.go
   - cmd/browser-agent/internal/mcphttp/handler_test.go
+  - cmd/browser-agent/internal/mcpcall/handler_test.go
   - cmd/browser-agent/internal/httpguard/middleware_test.go
   - cmd/browser-agent/internal/connectmode/runner_test.go
   - cmd/browser-agent/internal/versioncheck/checker_test.go
@@ -198,6 +200,12 @@ last_verified_date: 2026-03-29
 ---
 
 # MCP Persistent Server
+
+The canonical `internal/mcpcall` owner contains the complete `tools/call`
+pipeline: parameter validation, unknown-argument diagnostics, rate limiting,
+five-tool execution, response redaction, response policy, and passive usage
+telemetry. The root MCP handler only routes requests and composes this owner;
+it defines no duplicate backend contracts or post-processing facade.
 
 MCP documentation resources are owned by the canonical
 `internal/playbooks/resources` package: catalog, URI resolution, guides,

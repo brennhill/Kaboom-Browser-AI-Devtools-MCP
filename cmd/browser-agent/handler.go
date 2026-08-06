@@ -7,14 +7,13 @@ import (
 	"encoding/json"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpcall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpprotocol"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpresponse"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -29,39 +28,12 @@ import (
 // - Notification requests (no id) intentionally produce no response.
 type MCPHandler struct {
 	server  *Server
-	tools   ToolBackend
+	tools   mcpcall.Backend
 	version string
 	runtime *appruntime.Runtime
 
 	passiveTelemetry *mcptelemetry.Owner
 	responsePolicy   *mcpresponse.Owner
-}
-
-// ToolExecutor is the sole behavior required from the five-tool backend.
-type ToolExecutor interface {
-	HandleToolCall(req mcp.JSONRPCRequest, name string, arguments json.RawMessage) (mcp.JSONRPCResponse, bool)
-}
-
-// ToolBackend composes execution with MCP transport policy and telemetry owners.
-type ToolBackend struct {
-	Executor     ToolExecutor
-	Capture      *capture.Capture
-	Limiter      RateLimiter
-	Redactor     RedactionEngine
-	Schemas      []mcp.MCPTool
-	UsageTracker *telemetry.UsageTracker
-}
-
-// RateLimiter interface for tool call rate limiting.
-type RateLimiter interface {
-	Allow() bool
-}
-
-// RedactionEngine interface for response redaction.
-type RedactionEngine interface {
-	Redact(input string) string
-	RedactJSON(data json.RawMessage) json.RawMessage
-	RedactMapValues(data map[string]any) map[string]any
 }
 
 // NewMCPHandler creates a new MCP handler.
@@ -94,7 +66,7 @@ func NewMCPHandler(server *Server, version string) *MCPHandler {
 //
 // Invariants:
 // - Intended for one-time startup wiring; runtime swapping is unsupported.
-func (h *MCPHandler) SetToolBackend(backend ToolBackend) {
+func (h *MCPHandler) SetToolBackend(backend mcpcall.Backend) {
 	h.tools = backend
 	h.passiveTelemetry.SetCapture(backend.Capture)
 	h.responsePolicy.SetCapture(backend.Capture)
@@ -115,7 +87,7 @@ var mcpMethodHandlers = map[string]mcpMethodHandler{
 		return mcpprotocol.ToolsList(request, handler.tools.Schemas)
 	},
 	"tools/call": func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-		return handler.handleToolsCall(request)
+		return mcpcall.Handle(request, handler.tools, handler.responsePolicy, handler.passiveTelemetry)
 	},
 	"resources/list": func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 		return mcpprotocol.ResourcesList(request)
@@ -171,58 +143,4 @@ func (h *MCPHandler) HandleRequest(request mcp.JSONRPCRequest) *mcp.JSONRPCRespo
 		Error:   &mcp.JSONRPCError{Code: -32601, Message: "Method not found: " + request.Method},
 	}
 	return &response
-}
-
-// handleToolsCall validates tool call payload, executes the tool, and applies
-// response guards and diagnostics owned by the MCP request lifecycle.
-func (h *MCPHandler) handleToolsCall(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	var params struct {
-		Name      string          `json:"name"`
-		Arguments json.RawMessage `json:"arguments"`
-	}
-	if err := json.Unmarshal(req.Params, &params); err != nil {
-		return mcp.JSONRPCResponse{
-			JSONRPC: mcp.JSONRPCVersion, ID: req.ID,
-			Error: &mcp.JSONRPCError{Code: -32602, Message: "Invalid params: " + err.Error()},
-		}
-	}
-	if h.tools.Executor == nil {
-		return mcp.JSONRPCResponse{
-			JSONRPC: mcp.JSONRPCVersion, ID: req.ID,
-			Error: &mcp.JSONRPCError{Code: -32601, Message: "Unknown tool: " + params.Name},
-		}
-	}
-	h.responsePolicy.WarnUnknownArguments(params.Name, params.Arguments, h.tools.Schemas)
-	if err := h.checkToolRateLimit(); err != nil {
-		telemetry.AppError(incident.CodeToolRateLimited)
-		return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Error: err}
-	}
-	resp, handled := h.tools.Executor.HandleToolCall(req, params.Name, params.Arguments)
-	if !handled {
-		return mcp.JSONRPCResponse{
-			JSONRPC: mcp.JSONRPCVersion, ID: req.ID,
-			Error: &mcp.JSONRPCError{Code: -32601, Message: "Unknown tool: " + params.Name},
-		}
-	}
-	return h.applyToolResponsePostProcessing(resp, req.ClientID, params.Name, params.Arguments)
-}
-
-func (h *MCPHandler) checkToolRateLimit() *mcp.JSONRPCError {
-	limiter := h.tools.Limiter
-	if limiter != nil && !limiter.Allow() {
-		return &mcp.JSONRPCError{
-			Code:    -32603,
-			Message: "Tool call rate limit exceeded (500 calls/minute). Please wait before retrying.",
-		}
-	}
-	return nil
-}
-
-func (h *MCPHandler) applyToolResponsePostProcessing(resp mcp.JSONRPCResponse, clientID, toolName string, arguments json.RawMessage) mcp.JSONRPCResponse {
-	redactor := h.tools.Redactor
-	if redactor != nil && resp.Result != nil {
-		resp.Result = redactor.RedactJSON(resp.Result)
-	}
-	resp = h.responsePolicy.Augment(resp, h.tools.Executor != nil)
-	return h.passiveTelemetry.Augment(resp, clientID, toolName, arguments)
 }

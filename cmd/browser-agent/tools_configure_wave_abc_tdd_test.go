@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpcall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -219,7 +220,17 @@ func TestWaveC_RedactionEngineIsWiredAndApplied(t *testing.T) {
 		ID:      1,
 		Result:  json.RawMessage(`{"content":[{"type":"text","text":"Authorization: Bearer ghp_1234567890abcdef"}],"isError":false}`),
 	}
-	output := h.applyToolResponsePostProcessing(input, "wave-c-test", "configure", nil)
+	backend := h.tools
+	backend.Executor = &fakeToolHandlerForMCP{handleFn: func(request mcp.JSONRPCRequest, _ string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
+		input.ID = request.ID
+		return input, true
+	}}
+	output := mcpcall.Handle(mcp.JSONRPCRequest{
+		JSONRPC:  "2.0",
+		ID:       1,
+		ClientID: "wave-c-test",
+		Params:   json.RawMessage(`{"name":"configure","arguments":{}}`),
+	}, backend, h.responsePolicy, h.passiveTelemetry)
 	result := parseToolResult(t, output)
 	if len(result.Content) == 0 {
 		t.Fatal("expected content in redacted response")

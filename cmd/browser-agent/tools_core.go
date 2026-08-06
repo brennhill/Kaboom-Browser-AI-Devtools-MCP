@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpcall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/noiseautorun"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
@@ -84,7 +85,7 @@ type ToolHandler struct {
 	healthMetrics *health.Metrics
 
 	// Redaction engine for scrubbing sensitive data from tool responses
-	redactionEngine RedactionEngine
+	redactionEngine *redaction.RedactionEngine
 
 	// Rate limiter for MCP tool calls (sliding window)
 	toolCallLimiter *toolresp.ToolCallLimiter
@@ -583,8 +584,8 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 
 type visualAnalyzeDeps struct{ h *ToolHandler }
 
-func buildMCPToolBackend(handler *ToolHandler) ToolBackend {
-	return ToolBackend{
+func buildMCPToolBackend(handler *ToolHandler) mcpcall.Backend {
+	return mcpcall.Backend{
 		Executor: handler, Capture: handler.capture,
 		Limiter: handler.toolCallLimiter, Redactor: handler.redactionEngine,
 		Schemas: schema.AllTools(), UsageTracker: handler.usageTracker,

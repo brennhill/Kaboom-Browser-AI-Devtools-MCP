@@ -366,6 +366,27 @@ func TestStatelessProtocolResponsesDoNotReturnToRootHandler(t *testing.T) {
 	}
 }
 
+func TestToolCallPipelineDoesNotReturnToRootHandler(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read root MCP handler: %v", err)
+	}
+	for _, forbidden := range []string{
+		"type ToolExecutor interface",
+		"type ToolBackend struct",
+		"type RateLimiter interface",
+		"type RedactionEngine interface",
+		"func (h *MCPHandler) handleToolsCall(",
+		"func (h *MCPHandler) checkToolRateLimit(",
+		"func (h *MCPHandler) applyToolResponsePostProcessing(",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("root MCP handler retains tool-call pipeline surface %q", forbidden)
+		}
+	}
+}
+
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
 	if err != nil {

@@ -13,7 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func TestToolResponsePostProcessing_AddsSecurityModeMetadataAndWarning(t *testing.T) {
+func TestResponsePolicyAddsSecurityModeMetadataAndWarning(t *testing.T) {
 	t.Parallel()
 
 	server, err := NewServer(t.TempDir()+"/security-mode-handler.jsonl", 100)
@@ -46,7 +46,7 @@ func TestToolResponsePostProcessing_AddsSecurityModeMetadataAndWarning(t *testin
 		t.Fatal("expected configure tool call to be handled")
 	}
 
-	post := handler.applyToolResponsePostProcessing(resp, "test-client", "configure", nil)
+	post := handler.responsePolicy.Augment(resp, true)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(post.Result, &result); err != nil {
