@@ -11,10 +11,10 @@ import { fileURLToPath } from 'node:url'
 const execFileAsync = promisify(execFile)
 const thisFile = fileURLToPath(import.meta.url)
 const smokeDir = path.dirname(thisFile)
-const projectRoot = path.resolve(smokeDir, '..', '..')
+const projectRoot = path.resolve(smokeDir, '..', '..', '..')
 const sourceDir = path.join(smokeDir, 'framework-fixtures')
-const harnessRootDir = path.join(projectRoot, 'cmd', 'browser-agent', 'testpages')
-const outputDir = path.join(projectRoot, 'cmd', 'browser-agent', 'testpages', 'frameworks')
+const harnessRootDir = path.join(projectRoot, 'cmd', 'browser-agent', 'internal', 'testpages', 'pages')
+const outputDir = path.join(harnessRootDir, 'frameworks')
 const tempDir = path.join(projectRoot, '.tmp-framework-fixtures')
 const nextFixtureAppDir = path.join(sourceDir, 'next-app')
 

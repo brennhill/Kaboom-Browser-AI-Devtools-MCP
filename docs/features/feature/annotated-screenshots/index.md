@@ -4,7 +4,7 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - src/content/draw-mode/lifecycle-overlay.js
   - src/content/draw-mode/input-rendering.js
@@ -33,8 +33,8 @@ code_paths:
   - cmd/browser-agent/internal/toolgenerate/annotations/builder.go
   - internal/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
-  - scripts/smoke-tests/31-annotation-parity.sh
-  - scripts/smoke-tests/annotation-parity-benchmark.sh
+  - scripts/smoke-tests/media/31-annotation-parity.sh
+  - scripts/smoke-tests/media/annotation-parity-benchmark.sh
   - scripts/uat/runners/smoke-test.sh
   - package.json
 test_paths:
@@ -59,8 +59,8 @@ test_paths:
   - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - tests/extension/contracts/entry-point-parity.test.js
-  - scripts/smoke-tests/31-annotation-parity.sh
-  - scripts/smoke-tests/annotation-parity-benchmark.sh
+  - scripts/smoke-tests/media/31-annotation-parity.sh
+  - scripts/smoke-tests/media/annotation-parity-benchmark.sh
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-05
 ---
@@ -144,6 +144,6 @@ last_verified_date: 2026-08-05
 - `internal/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
 - `cmd/browser-agent/tools_generate_annotations_test.go` — resilient locator fallback generation tests
 - `cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go` — generator unit tests (JS escaping, locator candidates, Markdown report, issue list, Playwright script) and handler no-data/named-session paths
-- `scripts/smoke-tests/31-annotation-parity.sh` — deterministic end-to-end ingest/retrieval/generation gate with bounded retries for transient startup/no_data windows
-- `scripts/smoke-tests/annotation-parity-benchmark.sh` — repeated pass-rate benchmark with threshold enforcement
+- `scripts/smoke-tests/media/31-annotation-parity.sh` — deterministic end-to-end ingest/retrieval/generation gate with bounded retries for transient startup/no_data windows
+- `scripts/smoke-tests/media/annotation-parity-benchmark.sh` — repeated pass-rate benchmark with threshold enforcement
 - `scripts/uat/runners/smoke-test.sh` — resume-mode daemon version parity guard prevents stale-daemon false negatives in `--only/--start-from` runs

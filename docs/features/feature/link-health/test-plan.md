@@ -202,7 +202,7 @@ last_verified_date: 2026-03-05
 
 #### Smoke Tests:
 
-**File:** `/Users/brenn/dev/kaboom/scripts/smoke-tests/link-health-smoke.sh`
+**File:** `/Users/brenn/dev/kaboom/scripts/smoke-tests/links/link-health-smoke.sh`
 
 (Status: Exists with additional quick-check scenarios)
 
@@ -280,7 +280,7 @@ The cat-19 tests focus on **API contract & MCP protocol validation**. They don't
 
 ```bash
 # Quick sanity checks
-./scripts/smoke-tests/link-health-smoke.sh
+./scripts/smoke-tests/links/link-health-smoke.sh
 ```
 
 ### Full Test Suite

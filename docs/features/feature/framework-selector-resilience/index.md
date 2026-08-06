@@ -4,20 +4,20 @@ feature_id: feature-framework-selector-resilience
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-08-06
 code_paths:
-  - scripts/smoke-tests/29-framework-selector-resilience.sh
-  - scripts/smoke-tests/build-framework-fixtures.mjs
+  - scripts/smoke-tests/framework/29-framework-selector-resilience.sh
+  - scripts/smoke-tests/framework/build-framework-fixtures.mjs
   - scripts/uat/runners/smoke-test.sh
   - package.json
-  - scripts/smoke-tests/framework-fixtures/react-entry.jsx
-  - scripts/smoke-tests/framework-fixtures/vue-entry.js
-  - scripts/smoke-tests/framework-fixtures/SmokeSvelteApp.svelte
-  - scripts/smoke-tests/framework-fixtures/next-app/pages/index.jsx
-  - scripts/smoke-tests/framework-fixtures/README.md
+  - scripts/smoke-tests/framework/framework-fixtures/react-entry.jsx
+  - scripts/smoke-tests/framework/framework-fixtures/vue-entry.js
+  - scripts/smoke-tests/framework/framework-fixtures/SmokeSvelteApp.svelte
+  - scripts/smoke-tests/framework/framework-fixtures/next-app/pages/index.jsx
+  - scripts/smoke-tests/framework/framework-fixtures/README.md
 test_paths:
-  - scripts/smoke-tests/29-framework-selector-resilience.sh
-  - scripts/smoke-tests/29-framework-selector-resilience.sh
+  - scripts/smoke-tests/framework/29-framework-selector-resilience.sh
+  - tests/cli/contracts/smoke-layout-contract.test.cjs
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

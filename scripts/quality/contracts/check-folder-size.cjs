@@ -53,6 +53,11 @@ const EXCLUDED_DIR = new Set([
   'coverage',
   '.beads'
 ])
+const GENERATED_OUTPUT_ROOTS = new Set([
+  'cmd/browser-agent/internal/testpages/pages/frameworks',
+  'cmd/browser-agent/internal/testpages/pages/_next',
+  'scripts/smoke-tests/framework/framework-fixtures/next-app/out'
+])
 
 /** Walk first-party roots and return {relDir: authoredFileCount}. */
 function countByFolder() {
@@ -62,7 +67,8 @@ function countByFolder() {
     for (const entry of entries) {
       const full = path.join(abs, entry.name)
       if (entry.isDirectory()) {
-        if (EXCLUDED_DIR.has(entry.name) || entry.name.startsWith('.')) continue
+        const relative = path.relative(REPO_ROOT, full)
+        if (EXCLUDED_DIR.has(entry.name) || entry.name.startsWith('.') || GENERATED_OUTPUT_ROOTS.has(relative)) continue
         walk(full)
         continue
       }

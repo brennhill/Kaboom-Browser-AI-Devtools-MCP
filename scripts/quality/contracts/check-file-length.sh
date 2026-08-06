@@ -44,6 +44,8 @@ done < <(
         -not -path "*/dist/*" \
         -not -path "*/build/*" \
         -not -path "*/coverage/*" \
+        -not -path "*/scripts/smoke-tests/framework/framework-fixtures/next-app/.next/*" \
+        -not -path "*/scripts/smoke-tests/framework/framework-fixtures/next-app/out/*" \
         -not -path "*/extension/*" \
         -not -path "*/gokaboom.dev/*" \
         -not -path "*/scratchpad/*" \

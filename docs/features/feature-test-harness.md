@@ -74,7 +74,7 @@ We will use a lightweight local server to host the `tests/pages/` directory duri
 * **Lifecycle:** Spun up at the start of `smoke-test.sh` and torn down automatically via `trap`.
 
 Implemented as:
-* `scripts/smoke-tests/harness-server.py` (ThreadingHTTPServer)
+* `scripts/smoke-tests/harness/harness-server.py` (ThreadingHTTPServer)
 * Root: `tests/pages/`
 * Deterministic API endpoints:
   * `/healthz`
@@ -88,7 +88,7 @@ The existing smoke tests will be updated to point to `http://localhost:8080/inte
 The test validations will be tightened. Instead of checking if `example.com` loaded, we will assert that Kaboom specifically caught the 800ms long task on `performance.html` or successfully navigated the React event trap on `interact.html`.
 
 Implemented migration strategy:
-* `scripts/smoke-tests/framework-smoke.sh` now starts the local harness automatically.
+* `scripts/smoke-tests/harness/framework-smoke.sh` now starts the local harness automatically.
 * Smoke requests are URL-rewritten at the framework layer so legacy `https://example.com` navigations are routed to local deterministic pages under `tests/pages/example.com/`.
 
 ### The "Real World" Exceptions
@@ -109,7 +109,7 @@ Current phase status:
    * Setup the local web server in the Makefile/test scripts.
    * Build the 4 core HTML/JS pages outlined above.
 2. **Phase 2: Migrate Smoke Tests**
-   * Rewrite `scripts/smoke-tests/*.sh` to target the local pages.
+   * Rewrite the owner-grouped modules under `scripts/smoke-tests/` to target the local pages.
    * Enhance assertions to look for the specific, deterministic failures we programmed into the pages.
 3. **Phase 3: CI Integration**
    * Ensure GitHub Actions spins up the test server before running the end-to-end tests.

@@ -459,7 +459,7 @@ All test-plans follow the standard template in `/docs/features/_template/templat
 
 | Feature | Product Spec | Tech Spec | Test Plan | UAT Tests | Smoke Tests |
 |---------|--------------|-----------|-----------|-----------|------------|
-| **link-health** | ❌ None | ✅ [tech-spec.md](../feature/link-health/tech-spec.md) | ✅ [test-plan.md](../feature/link-health/test-plan.md) | ✅ [cat-19-link-health.sh](../../../scripts/tests/browser/cat-19-link-health.sh) | ✅ [link-health-smoke.sh](../../../scripts/smoke-tests/link-health-smoke.sh) |
+| **link-health** | ❌ None | ✅ [tech-spec.md](../feature/link-health/tech-spec.md) | ✅ [test-plan.md](../feature/link-health/test-plan.md) | ✅ [cat-19-link-health.sh](../../../scripts/tests/browser/cat-19-link-health.sh) | ✅ [link-health-smoke.sh](../../../scripts/smoke-tests/links/link-health-smoke.sh) |
 | **noise-filtering** | ✅ [product-spec.md](../feature/noise-filtering/product-spec.md) | ✅ [tech-spec.md](../feature/noise-filtering/tech-spec.md) | ✅ [test-plan.md](../feature/noise-filtering/test-plan.md) | ✅ [cat-20-noise-persistence.sh](../../../scripts/tests/capture/cat-20-noise-persistence.sh) | ❌ None |
 | **ai-web-pilot** | ✅ [product-spec.md](../feature/ai-web-pilot/product-spec.md) | ✅ [tech-spec.md](../feature/ai-web-pilot/tech-spec.md) | ✅ [test-plan.md](../feature/ai-web-pilot/test-plan.md) | ✅ cat-13/14/15 (12 tests) | ❌ None |
 | **flow-recording** | ✅ [product-spec.md](../feature/flow-recording/product-spec.md) | ✅ [tech-spec.md](../feature/flow-recording/tech-spec.md) | ✅ [test-plan.md](../feature/flow-recording/test-plan.md) | ✅ [cat-18-recording.sh](../../../scripts/tests/capture/cat-18-recording.sh) | ❌ None |

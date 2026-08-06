@@ -120,7 +120,7 @@ _smoke_check_deps
 # ── Source framework (initializes globals) ────────────────
 # shellcheck source=/dev/null
 export SMOKE_KEEP_DAEMON_ON_EXIT="${SMOKE_KEEP_DAEMON_ON_EXIT:-1}"
-source "$SMOKE_DIR/framework-smoke.sh"
+source "$SMOKE_DIR/harness/framework-smoke.sh"
 init_smoke "$PORT"
 # Note: init_smoke sets the EXIT trap (_smoke_master_cleanup).
 # Do NOT set another EXIT trap here — use register_cleanup instead.
@@ -130,34 +130,34 @@ EXPECTED_VERSION_NORM="$(normalize_semver "$EXPECTED_VERSION")"
 
 # ── Module list ──────────────────────────────────────────
 MODULES=(
-    "01-bootstrap.sh"
-    "02-core-telemetry.sh"
-    "03-observe-modes.sh"
-    "04-network-websocket.sh"
-    "05-interact-dom.sh"
-    "06-interact-state.sh"
-    "07-generate-formats.sh"
-    "08-configure-features.sh"
-    "09-perf-analysis.sh"
-    "10-recording.sh"
-    "11-subtitle-screenshot.sh"
-    "12-cross-cutting.sh"
-    "13-draw-mode.sh"
-    "14-browser-push.sh"
-    "15-file-upload.sh"       # upload requires a live daemon before shutdown/stability modules
-    "20-inspect-visual.sh"
-    "21-macro-recording.sh"
-    "22-log-aggregation.sh"
-    "23-doctor-preflight.sh"
-    "24-retryable-errors.sh"
-    "25-action-enrichment.sh"
-    "26-default-upload-dir.sh"
-    "27-extension-refactor.sh"
-    "28-proof-first.sh"
-    "29-framework-selector-resilience.sh"
-    "31-annotation-parity.sh"
-    "32-metrics-collection.sh"
-    "30-stability-shutdown.sh" # 30 must be last: it kills the daemon
+    "core/01-bootstrap.sh"
+    "core/02-core-telemetry.sh"
+    "observe/03-observe-modes.sh"
+    "observe/04-network-websocket.sh"
+    "interact/05-interact-dom.sh"
+    "interact/06-interact-state.sh"
+    "generate/07-generate-formats.sh"
+    "interact/08-configure-features.sh"
+    "observe/09-perf-analysis.sh"
+    "media/10-recording.sh"
+    "media/11-subtitle-screenshot.sh"
+    "core/12-cross-cutting.sh"
+    "media/13-draw-mode.sh"
+    "interact/14-browser-push.sh"
+    "upload/15-file-upload.sh"       # upload requires a live daemon before shutdown/stability modules
+    "observe/20-inspect-visual.sh"
+    "media/21-macro-recording.sh"
+    "observe/22-log-aggregation.sh"
+    "core/23-doctor-preflight.sh"
+    "core/24-retryable-errors.sh"
+    "observe/25-action-enrichment.sh"
+    "upload/26-default-upload-dir.sh"
+    "interact/27-extension-refactor.sh"
+    "core/28-proof-first.sh"
+    "framework/29-framework-selector-resilience.sh"
+    "media/31-annotation-parity.sh"
+    "core/32-metrics-collection.sh"
+    "core/30-stability-shutdown.sh" # 30 must be last: it kills the daemon
 )
 
 # ── Port conflict check ───────────────────────────────────

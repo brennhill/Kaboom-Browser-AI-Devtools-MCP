@@ -9,7 +9,7 @@ set -eo pipefail
 
 # ── Source base framework ─────────────────────────────────
 SMOKE_FRAMEWORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SMOKE_FRAMEWORK_DIR/../tests/framework.sh"
+source "$SMOKE_FRAMEWORK_DIR/../../tests/framework/framework.sh"
 
 # ── Shared mutable state (set by modules, read by later modules) ──
 EXTENSION_CONNECTED=false
@@ -54,8 +54,8 @@ _smoke_master_cleanup() {
     # Set SMOKE_KEEP_DAEMON_ON_EXIT=0 for strict cleanup mode in automation.
     if [ "${SMOKE_KEEP_DAEMON_ON_EXIT:-1}" != "1" ]; then
         kill_server 2>/dev/null || true
-        if [ -f "$SMOKE_FRAMEWORK_DIR/../cleanup-test-daemons.sh" ]; then
-            bash "$SMOKE_FRAMEWORK_DIR/../cleanup-test-daemons.sh" --quiet >/dev/null 2>&1 || true
+        if [ -f "$SMOKE_FRAMEWORK_DIR/../../maintenance/cleanup-test-daemons.sh" ]; then
+            bash "$SMOKE_FRAMEWORK_DIR/../../maintenance/cleanup-test-daemons.sh" --quiet >/dev/null 2>&1 || true
         fi
     fi
     pkill -f "upload-server.py" 2>/dev/null || true
@@ -85,28 +85,13 @@ _resolve_harness_root() {
         return 1
     fi
 
-    # The harness pages moved under internal/testpages/pages when the fixture
-    # server was extracted into its own package — go:embed requires the assets
-    # to live inside the package directory. The pre-move path is kept so this
-    # script still works when checked out against an older tree.
-    local candidates=(
-        "$SMOKE_FRAMEWORK_DIR/../../tests/pages"
-        "$SMOKE_FRAMEWORK_DIR/../../cmd/browser-agent/internal/testpages/pages"
-        "$SMOKE_FRAMEWORK_DIR/../../cmd/browser-agent/testpages"
-    )
-    local candidate
-    for candidate in "${candidates[@]}"; do
-        if [ -d "$candidate" ]; then
-            _smoke_abs_dir "$candidate"
-            return 0
-        fi
-    done
+    local candidate="$SMOKE_FRAMEWORK_DIR/../../../cmd/browser-agent/internal/testpages/pages"
+    if [ -d "$candidate" ]; then
+        _smoke_abs_dir "$candidate"
+        return 0
+    fi
 
-    echo "FATAL: unable to resolve harness root directory." >&2
-    echo "  Tried:" >&2
-    for candidate in "${candidates[@]}"; do
-        echo "    - $candidate" >&2
-    done
+    echo "FATAL: unable to resolve canonical harness root: $candidate" >&2
     echo "  Override with: SMOKE_HARNESS_ROOT=/absolute/path/to/testpages" >&2
     return 1
 }

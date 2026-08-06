@@ -25,10 +25,10 @@ export default [
       'pypi/**/dist/',
       'pypi/**/*.egg-info/',
       // Generated framework smoke artifacts
-      'cmd/browser-agent/testpages/frameworks/**',
-      'cmd/browser-agent/testpages/_next/**',
-      'scripts/smoke-tests/framework-fixtures/next-app/.next/**',
-      'scripts/smoke-tests/framework-fixtures/next-app/out/**',
+      'cmd/browser-agent/internal/testpages/pages/frameworks/**',
+      'cmd/browser-agent/internal/testpages/pages/_next/**',
+      'scripts/smoke-tests/framework/framework-fixtures/next-app/.next/**',
+      'scripts/smoke-tests/framework/framework-fixtures/next-app/out/**',
       // Compiled TypeScript output (linted at the .ts source level)
       'extension/background/',
       'extension/content/',
@@ -48,7 +48,7 @@ export default [
       'cmd/browser-agent/terminal_assets/**',
       'cmd/browser-agent/internal/terminal/assets/terminal_assets/**',
       // Generated smoke fixture bundles
-      'cmd/browser-agent/testpages/frameworks/*.bundle.js'
+      'cmd/browser-agent/internal/testpages/pages/frameworks/*.bundle.js'
     ]
   },
 

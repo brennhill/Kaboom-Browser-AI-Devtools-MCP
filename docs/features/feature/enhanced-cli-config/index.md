@@ -75,7 +75,7 @@ test_paths:
   - cmd/browser-agent/main_helpers_more_test.go
   - cmd/browser-agent/internal/health/health_coverage_test.go
   - cmd/browser-agent/server_reliability_integration_test.go
-  - scripts/smoke-tests/23-doctor-preflight.sh
+  - scripts/smoke-tests/core/23-doctor-preflight.sh
   - cmd/browser-agent/config_parallel_test.go
   - internal/configdiscovery/mcp_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go

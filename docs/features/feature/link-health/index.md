@@ -4,7 +4,7 @@ feature_id: feature-link-health
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - src/lib/analysis/link-health.ts
@@ -13,6 +13,7 @@ code_paths:
   - src/inject/message-handlers.ts
 test_paths:
   - cmd/browser-agent/tools_analyze_validation_test.go
+  - scripts/smoke-tests/links/link-health-smoke.sh
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

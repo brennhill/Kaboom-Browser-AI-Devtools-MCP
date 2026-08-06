@@ -466,7 +466,7 @@ if (params.summary_script) {
 
 ### 8.3 Smoke Test
 
-**New file: `scripts/smoke-tests/11-auto-summary.sh`**
+**New file: `scripts/smoke-tests/media/11-auto-summary.sh`**
 
 1. Navigate to a known URL → verify response contains `summary` with expected fields
 2. Navigate with `summary: false` → verify no `summary` in response

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 RUNS="${ANNOTATION_PARITY_BENCH_RUNS:-3}"
 PASS_RATE_THRESHOLD="${ANNOTATION_PARITY_PASS_RATE_THRESHOLD:-99}"

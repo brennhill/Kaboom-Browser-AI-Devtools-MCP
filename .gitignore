@@ -92,10 +92,10 @@ gokaboom.dev/dist/
 gokaboom.dev/.astro/
 
 # Generated framework smoke fixtures
-cmd/browser-agent/testpages/frameworks/
-cmd/browser-agent/testpages/_next/
-scripts/smoke-tests/framework-fixtures/next-app/.next/
-scripts/smoke-tests/framework-fixtures/next-app/out/
+cmd/browser-agent/internal/testpages/pages/frameworks/
+cmd/browser-agent/internal/testpages/pages/_next/
+scripts/smoke-tests/framework/framework-fixtures/next-app/.next/
+scripts/smoke-tests/framework/framework-fixtures/next-app/out/
 
 # Beads / Dolt files (added by bd init)
 .dolt/

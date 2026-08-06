@@ -4,7 +4,7 @@ feature_id: feature-file-upload
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
@@ -22,7 +22,7 @@ code_paths:
   - internal/upload/uploadsec/input.go
   - internal/upload/osauto/inject.go
   - internal/upload/osauto/pid.go
-  - scripts/smoke-tests/upload-server.py
+  - scripts/smoke-tests/upload/upload-server.py
 test_paths:
   - internal/upload/osauto/pid_test.go
   - cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go
@@ -36,8 +36,8 @@ test_paths:
   - internal/upload/uploadsec/path_test.go
   - internal/upload/uploadsec/ssrf_test.go
   - internal/upload/osauto/osauto_test.go
-  - scripts/smoke-tests/test-upload-server.py
-  - scripts/smoke-tests/15-file-upload.sh
+  - scripts/smoke-tests/upload/test-upload-server.py
+  - scripts/smoke-tests/upload/15-file-upload.sh
   - scripts/tests/browser/cat-24-upload.sh
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

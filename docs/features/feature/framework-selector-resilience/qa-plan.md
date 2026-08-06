@@ -12,7 +12,7 @@ last_verified_date: 2026-03-05
 ## Automated Coverage
 
 1. `scripts/uat/runners/smoke-test.sh --only 29`
-2. `scripts/smoke-tests/29-framework-selector-resilience.sh`
+2. `scripts/smoke-tests/framework/29-framework-selector-resilience.sh`
 
 ## Required Scenarios
 

@@ -8,11 +8,11 @@ last_reviewed: 2026-08-06
 code_paths:
   - .github/workflows/ci.yml
   - scripts/uat/runners/smoke-test.sh
-  - scripts/smoke-tests/framework-smoke.sh
-  - scripts/smoke-tests/14-browser-push.sh
-  - scripts/smoke-tests/15-file-upload.sh
-  - scripts/smoke-tests/29-framework-selector-resilience.sh
-  - scripts/smoke-tests/30-stability-shutdown.sh
+  - scripts/smoke-tests/harness/framework-smoke.sh
+  - scripts/smoke-tests/interact/14-browser-push.sh
+  - scripts/smoke-tests/upload/15-file-upload.sh
+  - scripts/smoke-tests/framework/29-framework-selector-resilience.sh
+  - scripts/smoke-tests/core/30-stability-shutdown.sh
   - scripts/uat/runners/test-all-split.sh
   - scripts/uat/runners/test-original-uat.sh
   - scripts/uat/runners/test-new-uat.sh
@@ -39,6 +39,7 @@ code_paths:
   - internal/statefault/store.go
   - internal/capturefixture/sync.go
 test_paths:
+  - tests/cli/contracts/smoke-layout-contract.test.cjs
   - tests/extension/contracts/tooling-contracts.test.js
   - cmd/browser-agent/bridge_faststart_extended_test.go
   - cmd/browser-agent/server_persistence_test.go
@@ -48,10 +49,10 @@ test_paths:
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/cli/contracts/test-layout-contract.test.cjs
-  - scripts/smoke-tests/14-browser-push.sh
-  - scripts/smoke-tests/15-file-upload.sh
-  - scripts/smoke-tests/29-framework-selector-resilience.sh
-  - scripts/smoke-tests/30-stability-shutdown.sh
+  - scripts/smoke-tests/interact/14-browser-push.sh
+  - scripts/smoke-tests/upload/15-file-upload.sh
+  - scripts/smoke-tests/framework/29-framework-selector-resilience.sh
+  - scripts/smoke-tests/core/30-stability-shutdown.sh
   - scripts/tests/contracts/cat-01-protocol.sh
   - scripts/tests/tools/cat-02-observe.sh
   - scripts/tests/tools/cat-03-generate.sh
@@ -129,8 +130,8 @@ cached Pilot state, tracked-tab updates, and explicit disconnect lifecycle.
 The package is not imported by release binaries and replaces a larger set of
 unsafe mutation methods that previously compiled into `internal/capture`.
 
-- Smoke runner lifecycle and post-run daemon availability: `scripts/uat/runners/smoke-test.sh`, `scripts/smoke-tests/framework-smoke.sh`
-- Smoke module contracts for push/upload/framework resilience/stability: `scripts/smoke-tests/14-browser-push.sh`, `scripts/smoke-tests/15-file-upload.sh`, `scripts/smoke-tests/29-framework-selector-resilience.sh`, `scripts/smoke-tests/30-stability-shutdown.sh`
+- Smoke runner lifecycle and post-run daemon availability: `scripts/uat/runners/smoke-test.sh`, `scripts/smoke-tests/harness/framework-smoke.sh`
+- Smoke module contracts for push/upload/framework resilience/stability: `scripts/smoke-tests/interact/14-browser-push.sh`, `scripts/smoke-tests/upload/15-file-upload.sh`, `scripts/smoke-tests/framework/29-framework-selector-resilience.sh`, `scripts/smoke-tests/core/30-stability-shutdown.sh`
 - Split UAT orchestration + integrity checks: `scripts/uat/runners/test-all-split.sh`, `scripts/uat/runners/test-original-uat.sh`, `scripts/uat/runners/test-new-uat.sh`
 - Shared UAT result parsing: `scripts/uat/orchestration/uat-result-lib.sh`
 - Connected action coverage classifies every live five-tool action and supports

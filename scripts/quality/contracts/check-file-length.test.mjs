@@ -56,6 +56,8 @@ test('ignores generated, compiled, bundled, vendored, and dependency output', as
     'dist/output.js': 801,
     'vendor/library.go': 801,
     'node_modules/library/index.js': 801,
+    'scripts/smoke-tests/framework/framework-fixtures/next-app/.next/server/runtime.js': 801,
+    'scripts/smoke-tests/framework/framework-fixtures/next-app/out/static.js': 801,
     'src/small.js': 12
   })
 

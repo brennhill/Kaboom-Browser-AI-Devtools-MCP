@@ -67,7 +67,19 @@ test('explicitly exempts generated and vendored output', async () => {
     ...Array.from({ length: 11 }, (_, index) => `extension/background/generated-${index + 1}.js`),
     ...Array.from({ length: 11 }, (_, index) => `src/generated/schema-${index + 1}.ts`),
     ...Array.from({ length: 11 }, (_, index) => `vendor/package/file-${index + 1}.go`),
-    ...Array.from({ length: 11 }, (_, index) => `node_modules/package/file-${index + 1}.js`)
+    ...Array.from({ length: 11 }, (_, index) => `node_modules/package/file-${index + 1}.js`),
+    ...Array.from(
+      { length: 11 },
+      (_, index) => `cmd/browser-agent/internal/testpages/pages/frameworks/chunks/generated-${index + 1}.js`
+    ),
+    ...Array.from(
+      { length: 11 },
+      (_, index) => `cmd/browser-agent/internal/testpages/pages/_next/chunks/generated-${index + 1}.js`
+    ),
+    ...Array.from(
+      { length: 11 },
+      (_, index) => `scripts/smoke-tests/framework/framework-fixtures/next-app/out/chunks/generated-${index + 1}.js`
+    )
   ])
 
   const result = runGate(root)

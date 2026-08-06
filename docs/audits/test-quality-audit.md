@@ -24,8 +24,8 @@ last_reviewed: 2026-02-16
 | **Total** | **57** |
 
 **Test Suites Audited:**
-- 15 smoke test files (`scripts/smoke-tests/01-*.sh` through `15-*.sh`)
-- 2 test framework files (`scripts/tests/framework/framework.sh`, `scripts/smoke-tests/framework-smoke.sh`)
+- 15 smoke test files across the change-coupled owner folders under `scripts/smoke-tests/`
+- 2 test framework files (`scripts/tests/framework/framework.sh`, `scripts/smoke-tests/harness/framework-smoke.sh`)
 - ~100 Go unit test files across `cmd/browser-agent/` and `internal/`
 - 13 regression test files (`tests/regression/`)
 - 29 UAT category test files (`scripts/tests/cat-*.sh`)
@@ -35,7 +35,7 @@ last_reviewed: 2026-02-16
 
 ## Part 1: Smoke Tests (`scripts/smoke-tests/`)
 
-### File: `scripts/smoke-tests/01-bootstrap.sh`
+### File: `scripts/smoke-tests/core/01-bootstrap.sh`
 
 **[MEDIUM] Test 1.1 -- Fixed sleep instead of polling for port release**
 Line 15: `sleep 0.5` after `kill_server` before checking port availability. On slow machines or under load, 0.5s may not be enough for the OS to release the port. This creates a flaky test that can false-fail on busy CI machines.
@@ -48,7 +48,7 @@ Line 145: `grep -qi "example.com"` would match any URL containing "example.com" 
 
 ---
 
-### File: `scripts/smoke-tests/02-core-telemetry.sh`
+### File: `scripts/smoke-tests/core/02-core-telemetry.sh`
 
 **[HIGH] Test 2.2 -- Fallback pass that weakens the assertion**
 Lines 79-80: If the injected button's ID is not found in the response, the test falls back to a generic `grep -qi "click"` and passes. The word "click" could appear anywhere in the response text (e.g., in a description, timestamp format, or unrelated log). This fallback means the test can pass even if the button click was never captured -- it only proves the daemon returned _something_ containing "click."
@@ -64,7 +64,7 @@ Lines 376-377: Uses `grep -ci "input\|change\|focus"` to count matches case-inse
 
 ---
 
-### File: `scripts/smoke-tests/03-observe-modes.sh`
+### File: `scripts/smoke-tests/observe/03-observe-modes.sh`
 
 **[LOW] Test 3.1 -- Fixed 3-second sleep for Web Vitals**
 Uses `sleep 3` waiting for vitals to be collected. On slow connections or complex pages, vitals may take longer. On fast machines, this wastes time. Should poll with backoff.
@@ -74,7 +74,7 @@ Verifies `error_bundles` returned a count > 0 but never verifies the bundle cont
 
 ---
 
-### File: `scripts/smoke-tests/04-network-websocket.sh`
+### File: `scripts/smoke-tests/observe/04-network-websocket.sh`
 
 **[CRITICAL] Test 4.1 -- Depends on external service (binance.com)**
 The WebSocket capture test navigates to `binance.com` and waits for WebSocket messages. This test is fundamentally fragile:
@@ -90,7 +90,7 @@ Uses regex grep on the response text instead of proper JSON parsing via `jq` to 
 
 ---
 
-### File: `scripts/smoke-tests/05-interact-dom.sh`
+### File: `scripts/smoke-tests/interact/05-interact-dom.sh`
 
 **[HIGH] Tests 5.x -- Error detection via grep on response text**
 Multiple tests check for errors using `grep -qi "error\|failed"`. This pattern false-positives on legitimate content containing these words (e.g., "No errors found", "0 failed assertions", or an element with id="error-container").
@@ -100,7 +100,7 @@ Tests use `sleep 0.3` to `sleep 3` between DOM operations. These are timing-depe
 
 ---
 
-### File: `scripts/smoke-tests/06-interact-state.sh`
+### File: `scripts/smoke-tests/interact/06-interact-state.sh`
 
 **[HIGH] Test 6.1 -- Fallback pass without verification**
 When the save_state response does not contain the snapshot name, the test falls back to passing if the response is not an error. This means the test passes even if the state was not actually saved -- it only proves the daemon did not crash.
@@ -110,7 +110,7 @@ When load_state does not return a clear success indicator, the test passes with 
 
 ---
 
-### File: `scripts/smoke-tests/07-generate-formats.sh`
+### File: `scripts/smoke-tests/generate/07-generate-formats.sh`
 
 **[MEDIUM] Test 7.1 -- Loose Playwright pattern matching**
 Line checks for `page.|await.*goto|.click(` using regex. These patterns would match any JavaScript code, not specifically Playwright-formatted reproduction steps. For example, a response saying "No page data available" would match `page.`.
@@ -123,7 +123,7 @@ Only checks for CSP directive keywords (`default-src|script-src|style-src`). Doe
 
 ---
 
-### File: `scripts/smoke-tests/09-perf-analysis.sh`
+### File: `scripts/smoke-tests/observe/09-perf-analysis.sh`
 
 **[MEDIUM] Test 9.1 -- 3-second sleep between navigations**
 Uses `sleep 3` between page navigations for performance comparison. This is both wasteful and insufficient depending on page load speed.
@@ -133,7 +133,7 @@ Uses `grep -qE '"verdict":\s*"(improved|regressed|mixed|unchanged)"'` for JSON p
 
 ---
 
-### File: `scripts/smoke-tests/10-recording.sh`
+### File: `scripts/smoke-tests/media/10-recording.sh`
 
 **[CRITICAL] Tests 10.x -- Depend on external service (YouTube)**
 Recording tests navigate to YouTube. Same external dependency issues as test 4.1 -- YouTube may change, be blocked, or be down.
@@ -143,7 +143,7 @@ Only checks recording name appears in `saved_videos`. Does not verify the video 
 
 ---
 
-### File: `scripts/smoke-tests/12-cross-cutting.sh`
+### File: `scripts/smoke-tests/core/12-cross-cutting.sh`
 
 **[HIGH] Test 12.1 -- Pagination overlap check is insufficient**
 Verifies consecutive pages have "different text" but does not check for duplicate entries across pages, which is the primary risk in cursor-based pagination. Two pages could contain different subsets of the same data with overlapping entries.
@@ -153,14 +153,14 @@ Error recovery test has a fallback that passes when "some responses not structur
 
 ---
 
-### File: `scripts/smoke-tests/13-draw-mode.sh`
+### File: `scripts/smoke-tests/media/13-draw-mode.sh`
 
 **[HIGH] Tests 13.5, 13.7-13.9 -- Require manual interaction**
 These tests use `read -r` to wait for human input, making them impossible to run in CI. They are permanently stuck as manual tests without any automation path documented.
 
 ---
 
-### File: `scripts/smoke-tests/14-stability-shutdown.sh`
+### File: `scripts/smoke-tests/core/30-stability-shutdown.sh`
 
 **[LOW] Test 14.1 -- Only checks URL presence**
 Post-barrage stability check only verifies `observe(page)` returns a URL. Does not check for data corruption, memory growth, or buffer integrity after the full test barrage.
@@ -170,7 +170,7 @@ Does not inspect memory usage, goroutine count, or connection count metrics that
 
 ---
 
-### File: `scripts/smoke-tests/15-file-upload.sh`
+### File: `scripts/smoke-tests/upload/15-file-upload.sh`
 
 **[MEDIUM] Tests 15.x -- Heavy reliance on Python test server**
 The upload test suite spawns a Python HTTP server for file upload testing. If Python is not available or the server fails to start, all 18 tests are skipped rather than failing. This means upload testing silently disappears from the suite.
@@ -192,7 +192,7 @@ Lines 151-155: The retry logic on "starting up" is useful for cold starts but co
 
 ---
 
-### File: `scripts/smoke-tests/framework-smoke.sh`
+### File: `scripts/smoke-tests/harness/framework-smoke.sh`
 
 **[MEDIUM] `interact_and_wait` -- Fixed 0.5s polling interval**
 The polling helper uses a fixed 0.5-second sleep between polls. On fast operations, this wastes time. On slow operations, 15 polls x 0.5s = 7.5s max wait may be insufficient. Should use exponential backoff.

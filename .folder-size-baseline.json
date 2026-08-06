@@ -4,7 +4,6 @@
   "folders": {
     "cmd/browser-agent": 196,
     "cmd/browser-agent/internal/bridge": 20,
-    "cmd/browser-agent/internal/toolinteract": 20,
-    "scripts/smoke-tests": 35
+    "cmd/browser-agent/internal/toolinteract": 20
   }
 }

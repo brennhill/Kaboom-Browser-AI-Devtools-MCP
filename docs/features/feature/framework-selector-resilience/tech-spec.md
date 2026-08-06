@@ -11,7 +11,7 @@ last_verified_date: 2026-03-05
 
 ## Architecture
 
-1. Source fixtures live in `scripts/smoke-tests/framework-fixtures/`.
+1. Source fixtures live in `scripts/smoke-tests/framework/framework-fixtures/`.
 2. Build pipeline in `build-framework-fixtures.mjs` compiles/exports fixtures into harness-served output:
    - React bundle (`esbuild`)
    - Vue bundle (`esbuild`)

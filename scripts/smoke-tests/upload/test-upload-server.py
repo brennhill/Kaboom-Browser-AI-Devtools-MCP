@@ -8,7 +8,7 @@
 Tests that GET /upload/hardened returns a form with isTrusted validation.
 
 Usage:
-  python3 scripts/smoke-tests/test-upload-server.py
+  python3 scripts/smoke-tests/upload/test-upload-server.py
 """
 import http.client
 import json
