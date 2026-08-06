@@ -5,6 +5,8 @@ package mcphttp
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -146,5 +148,71 @@ func TestServeHTTPNotificationAndResponseFraming(t *testing.T) {
 	}
 	if len(body) > 1 && body[len(body)-2] == '\n' {
 		t.Fatalf("response has double newline: %q", body)
+	}
+}
+
+type failingReader struct{}
+
+func (failingReader) Read([]byte) (int, error) { return 0, errors.New("read failed") }
+
+func TestServeHTTPRejectsInvalidTransportInputs(t *testing.T) {
+	t.Parallel()
+	handler := New(Config{
+		Version:     "test",
+		MaxBodySize: 4096,
+		HandleRequest: func(request mcp.JSONRPCRequest) *mcp.JSONRPCResponse {
+			response := mcp.JSONRPCResponse{JSONRPC: "2.0", ID: request.ID, Result: json.RawMessage(`{}`)}
+			return &response
+		},
+	})
+	assertProtocolError := func(recorder *httptest.ResponseRecorder, code int) {
+		t.Helper()
+		var response mcp.JSONRPCResponse
+		if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+			t.Fatal(err)
+		}
+		if response.Error == nil || response.Error.Code != code {
+			t.Fatalf("response = %#v, want protocol error %d", response, code)
+		}
+	}
+
+	method := httptest.NewRecorder()
+	handler.ServeHTTP(method, httptest.NewRequest(http.MethodGet, "/mcp", nil))
+	if method.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("GET status = %d", method.Code)
+	}
+
+	malformed := httptest.NewRecorder()
+	handler.ServeHTTP(malformed, httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0",`)))
+	assertProtocolError(malformed, -32700)
+
+	nonJSON := httptest.NewRecorder()
+	nonJSONRequest := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	nonJSONRequest.Header.Set("Content-Type", "text/plain")
+	handler.ServeHTTP(nonJSON, nonJSONRequest)
+	assertProtocolError(nonJSON, -32700)
+
+	readFailure := httptest.NewRecorder()
+	readFailureRequest := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	readFailureRequest.Body = io.NopCloser(failingReader{})
+	handler.ServeHTTP(readFailure, readFailureRequest)
+	var readResponse mcp.JSONRPCResponse
+	if err := json.Unmarshal(readFailure.Body.Bytes(), &readResponse); err != nil {
+		t.Fatal(err)
+	}
+	if readResponse.Error == nil || readResponse.Error.Code != -32700 || readResponse.ID != nil {
+		t.Fatalf("read failure response = %#v", readResponse)
+	}
+
+	for _, contentType := range []string{"", "application/json", "application/json; charset=utf-8"} {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"ping"}`))
+		if contentType != "" {
+			request.Header.Set("Content-Type", contentType)
+		}
+		handler.ServeHTTP(recorder, request)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("content type %q status = %d", contentType, recorder.Code)
+		}
 	}
 }

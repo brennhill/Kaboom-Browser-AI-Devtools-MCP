@@ -35,13 +35,20 @@ func TestOwnerTracksDeltasPerClientAndHonorsModes(t *testing.T) {
 
 	errorTotal++
 	captured.Telemetry().AddNetworkBodies([]types.NetworkBody{{Method: "GET", URL: "https://example.test", Status: 500}})
+	captured.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", ID: "ws-1"}})
+	captured.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: now.UnixMilli()}})
 	second := owner.Augment(successResponse(t), "client-a", "observe", nil)
 	metadata = responseMetadata(t, second)
 	if metadata["telemetry_changed"] != true {
 		t.Fatalf("second telemetry_changed = %#v", metadata["telemetry_changed"])
 	}
 	summary := metadata["telemetry_summary"].(map[string]any)
-	if summary["new_errors_since_last_call"] != float64(1) || summary["new_network_requests_since_last_call"] != float64(1) {
+	if summary["new_errors_since_last_call"] != float64(1) ||
+		summary["new_network_requests_since_last_call"] != float64(1) ||
+		summary["new_network_errors_since_last_call"] != float64(1) ||
+		summary["new_websocket_events_since_last_call"] != float64(1) ||
+		summary["new_actions_since_last_call"] != float64(1) ||
+		summary["trigger_tool"] != "observe" {
 		t.Fatalf("summary = %#v", summary)
 	}
 
@@ -59,6 +66,12 @@ func TestOwnerTracksDeltasPerClientAndHonorsModes(t *testing.T) {
 	off := owner.Augment(successResponse(t), "client-b", "observe", json.RawMessage(`{"telemetry_mode":"off"}`))
 	if _, exists := responseMetadata(t, off)["telemetry_changed"]; exists {
 		t.Fatal("per-call off mode retained telemetry metadata")
+	}
+
+	mode = ModeOff
+	configuredOff := owner.Augment(successResponse(t), "client-b", "observe", nil)
+	if _, exists := responseMetadata(t, configuredOff)["telemetry_changed"]; exists {
+		t.Fatal("configured off mode retained telemetry metadata")
 	}
 }
 

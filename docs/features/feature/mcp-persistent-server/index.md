@@ -127,7 +127,6 @@ test_paths:
   - cmd/browser-agent/internal/appruntime/runtime_test.go
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/handler_unit_test.go
-  - cmd/browser-agent/handler_unit_telemetry_test.go
   - cmd/browser-agent/internal/mcptelemetry/owner_test.go
   - cmd/browser-agent/handler_tools_call_usage_test.go
   - cmd/browser-agent/internal/procctl/stop_parse_test.go
@@ -217,6 +216,9 @@ stdout-forwarding contracts live with the bridge transport they protect; no
 mixed root transport test duplicates these owners.
 Security-mode response warning and metadata coverage likewise lives directly
 with `internal/mcpresponse`, independent of full tool-handler composition.
+Passive delta/mode coverage lives with `internal/mcptelemetry`; envelope and
+negotiation coverage lives with `internal/mcprouter`; malformed input,
+content-type, read-failure, and framing coverage lives with `internal/mcphttp`.
 
 MCP documentation resources are owned by the canonical
 `internal/playbooks/resources` package: catalog, URI resolution, guides,

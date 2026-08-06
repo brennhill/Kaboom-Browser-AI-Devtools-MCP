@@ -90,65 +90,6 @@ func mustDecodeJSON[T any](t *testing.T, raw json.RawMessage) T {
 	return out
 }
 
-func mustTelemetryMetadata(t *testing.T, raw json.RawMessage) map[string]any {
-	t.Helper()
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(raw, &result); err != nil {
-		t.Fatalf("json.Unmarshal(MCPToolResult) error = %v", err)
-	}
-	if result.Metadata == nil {
-		t.Fatal("result metadata missing")
-	}
-	return result.Metadata
-}
-
-func mustTelemetrySummary(t *testing.T, raw json.RawMessage) map[string]any {
-	t.Helper()
-	metadata := mustTelemetryMetadata(t, raw)
-	summary, ok := metadata["telemetry_summary"].(map[string]any)
-	if !ok {
-		t.Fatalf("telemetry_summary missing or wrong type: %#v", metadata["telemetry_summary"])
-	}
-	return summary
-}
-
-func telemetrySummaryIfPresent(t *testing.T, raw json.RawMessage) (map[string]any, bool) {
-	t.Helper()
-	metadata := mustTelemetryMetadata(t, raw)
-	summary, ok := metadata["telemetry_summary"].(map[string]any)
-	if !ok {
-		return nil, false
-	}
-	return summary, true
-}
-
-func mustTelemetryInt(t *testing.T, summary map[string]any, key string) int64 {
-	t.Helper()
-	v, ok := summary[key]
-	if !ok {
-		t.Fatalf("telemetry_summary[%q] missing", key)
-	}
-	f, ok := v.(float64)
-	if !ok {
-		t.Fatalf("telemetry_summary[%q] type = %T, want number", key, v)
-	}
-	return int64(f)
-}
-
-func mustTelemetryChanged(t *testing.T, raw json.RawMessage) bool {
-	t.Helper()
-	metadata := mustTelemetryMetadata(t, raw)
-	v, ok := metadata["telemetry_changed"]
-	if !ok {
-		t.Fatal("telemetry_changed missing")
-	}
-	changed, ok := v.(bool)
-	if !ok {
-		t.Fatalf("telemetry_changed type = %T, want bool", v)
-	}
-	return changed
-}
-
 func TestMCPHandlerHandleRequestCorePaths(t *testing.T) {
 	t.Parallel()
 

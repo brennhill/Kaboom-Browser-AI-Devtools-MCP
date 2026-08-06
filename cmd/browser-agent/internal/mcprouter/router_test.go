@@ -66,3 +66,42 @@ func TestHandleClampsDynamicResults(t *testing.T) {
 		t.Fatalf("clamped result size = %d, original = %d", len(response.Result), len(raw))
 	}
 }
+
+func TestHandleNegotiatesVersionsAndRejectsInvalidVersionOrNullID(t *testing.T) {
+	for clientVersion, expected := range map[string]string{
+		"2024-11-05": "2024-11-05",
+		"2025-06-18": "2025-06-18",
+		"2099-01-01": "2025-06-18",
+		"":           "2025-06-18",
+	} {
+		params := json.RawMessage(`{}`)
+		if clientVersion != "" {
+			params = json.RawMessage(`{"protocolVersion":"` + clientVersion + `"}`)
+		}
+		response := Handle(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "initialize", Params: params}, Config{Version: "v-test"})
+		var result mcp.MCPInitializeResult
+		if response == nil || response.Error != nil {
+			t.Fatalf("initialize %q response = %#v", clientVersion, response)
+		}
+		if err := json.Unmarshal(response.Result, &result); err != nil {
+			t.Fatal(err)
+		}
+		if result.ProtocolVersion != expected {
+			t.Fatalf("initialize %q negotiated %q, want %q", clientVersion, result.ProtocolVersion, expected)
+		}
+	}
+	for _, version := range []string{"", "1.0"} {
+		response := Handle(mcp.JSONRPCRequest{JSONRPC: version, ID: 1, Method: "ping"}, Config{})
+		if response == nil || response.Error == nil || response.Error.Code != -32600 {
+			t.Fatalf("JSON-RPC version %q response = %#v", version, response)
+		}
+	}
+	var nullID mcp.JSONRPCRequest
+	if err := json.Unmarshal([]byte(`{"jsonrpc":"2.0","id":null,"method":"ping"}`), &nullID); err != nil {
+		t.Fatal(err)
+	}
+	response := Handle(nullID, Config{})
+	if response == nil || response.Error == nil || response.Error.Code != -32600 || response.ID != nil {
+		t.Fatalf("null ID response = %#v", response)
+	}
+}
