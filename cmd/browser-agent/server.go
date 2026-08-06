@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -77,9 +78,7 @@ type Server struct {
 	logs *logstore.Store
 
 	// One-shot warnings surfaced via MCP tool responses.
-	warningsMu  sync.Mutex
-	warnings    []string
-	warningSeen map[string]struct{}
+	warnings *warningqueue.Queue
 
 	// Annotation store is server-scoped to avoid cross-session contamination.
 	annotationStore *annotation.Store
@@ -119,35 +118,6 @@ type Server struct {
 func (s *Server) applyRuntimeConfig(config *serverConfig) {
 	s.uploadAutomation = config.uploadAutomation
 	s.uploadSecurity = config.uploadSecurity
-}
-
-// AddWarning stores a unique one-shot warning for the next tool response.
-func (s *Server) AddWarning(message string) {
-	if message == "" {
-		return
-	}
-	s.warningsMu.Lock()
-	defer s.warningsMu.Unlock()
-	if s.warningSeen == nil {
-		s.warningSeen = make(map[string]struct{})
-	}
-	if _, exists := s.warningSeen[message]; exists {
-		return
-	}
-	s.warningSeen[message] = struct{}{}
-	s.warnings = append(s.warnings, message)
-}
-
-// TakeWarnings drains pending warnings.
-func (s *Server) TakeWarnings() []string {
-	s.warningsMu.Lock()
-	defer s.warningsMu.Unlock()
-	if len(s.warnings) == 0 {
-		return nil
-	}
-	warnings := append([]string(nil), s.warnings...)
-	s.warnings = nil
-	return warnings
 }
 
 func (s *Server) logLifecycle(event string, port int, fields map[string]any) {
@@ -195,7 +165,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		daemonHost:         newDaemonHost(),
 		listenPort:         defaultPort,
 		sessionProjectPath: sessionProjectPath,
-		warningSeen:        make(map[string]struct{}),
+		warnings:           warningqueue.New(),
 		annotationStore:    annotation.NewStore(10 * time.Minute),
 		activeCodebase:     activecodebase.New(),
 		pushInbox:          push.NewPushInbox(50),
@@ -212,7 +182,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		LogFile:       logFile,
 		MaxEntries:    maxEntries,
 		TelemetryMode: telemetryModeAuto,
-		AddWarning:    s.AddWarning,
+		AddWarning:    s.warnings.Add,
 		Stderrf:       diag.Printf,
 	})
 
@@ -234,19 +204,19 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		// #nosec G301 -- log directory: owner rwx, group rx for diagnostics
 		if err := os.MkdirAll(dir, 0o750); err != nil {
 			fallback := logstore.FallbackFilePath()
-			s.AddWarning(fmt.Sprintf("state_dir_not_writable: %v; falling back to %s", err, fallback))
+			s.warnings.Add(fmt.Sprintf("state_dir_not_writable: %v; falling back to %s", err, fallback))
 			s.logs.SetLogFile(fallback)
 			_ = os.MkdirAll(filepath.Dir(s.logs.LogFile()), 0o750)
 		}
 		if err := logstore.EnsureFileWritable(s.logs.LogFile()); err != nil {
 			fallback := logstore.FallbackFilePath()
-			s.AddWarning(fmt.Sprintf("state_dir_not_writable: %v; falling back to %s", err, fallback))
+			s.warnings.Add(fmt.Sprintf("state_dir_not_writable: %v; falling back to %s", err, fallback))
 			s.logs.SetLogFile(fallback)
 			if err := os.MkdirAll(filepath.Dir(s.logs.LogFile()), 0o750); err != nil {
-				s.AddWarning(fmt.Sprintf("log_persistence_disabled: %v", err))
+				s.warnings.Add(fmt.Sprintf("log_persistence_disabled: %v", err))
 				s.logs.SetLogFile("")
 			} else if err := logstore.EnsureFileWritable(s.logs.LogFile()); err != nil {
-				s.AddWarning(fmt.Sprintf("log_persistence_disabled: %v", err))
+				s.warnings.Add(fmt.Sprintf("log_persistence_disabled: %v", err))
 				s.logs.SetLogFile("")
 			}
 		}
@@ -257,7 +227,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		if err := s.logs.LoadEntries(); err != nil {
 			// File might not exist yet, that's OK
 			if !os.IsNotExist(err) {
-				s.AddWarning(fmt.Sprintf("log_load_failed: %v", err))
+				s.warnings.Add(fmt.Sprintf("log_load_failed: %v", err))
 			}
 		}
 	}

@@ -459,7 +459,7 @@ func TestMCPHandler_AppendsServerWarningsToToolResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
 	}
-	srv.AddWarning("state_dir_not_writable: test warning")
+	srv.warnings.Add("state_dir_not_writable: test warning")
 
 	h := NewMCPHandler(srv, "v-test")
 	setFakeToolBackend(h, &fakeToolHandlerForMCP{

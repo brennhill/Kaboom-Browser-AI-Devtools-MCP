@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - internal/warningqueue/queue.go
   - cmd/browser-agent/internal/httpapi/openapi.go
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -82,6 +83,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - internal/warningqueue/queue_test.go
   - cmd/browser-agent/internal/httpapi/openapi_test.go
   - cmd/browser-agent/internal/runtimeconfig/parallel_test.go
   - cmd/browser-agent/noise_doctor_test.go

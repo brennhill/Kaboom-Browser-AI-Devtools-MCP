@@ -27,6 +27,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
 )
 
 func newTestServerForHandlers(t *testing.T) *Server {
@@ -432,6 +433,7 @@ func newTestToolHandler() *ToolHandler {
 	srv := &Server{
 		logs:           logstore.New(logstore.Config{AddWarning: func(string) {}}),
 		terminalStatus: terminalstatus.New(),
+		warnings:       warningqueue.New(),
 	}
 	h := &ToolHandler{
 		MCPHandler: &MCPHandler{server: srv},

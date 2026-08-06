@@ -117,7 +117,7 @@ func main() {
 	server.runtime = runtime
 	server.applyRuntimeConfig(cfg)
 	for _, warning := range cfg.startupWarnings {
-		server.AddWarning(warning)
+		server.warnings.Add(warning)
 	}
 
 	dispatchMode(server, cfg)

@@ -305,7 +305,7 @@ func dispatchMode(server *Server, config *serverConfig) {
 	})
 
 	if warning := launchmode.Warning(launchInfo, config.port); warning != "" {
-		server.AddWarning(warning)
+		server.warnings.Add(warning)
 		diag.Printf("[Kaboom] Kaboom appears to be running in non-persistent mode (%s).\n", launchInfo.Reason)
 		diag.Println("[Kaboom] This will disconnect the extension when the process exits.")
 		diag.Printf("[Kaboom] Start persistently: kaboom-agentic-browser --daemon --port %d\n", config.port)

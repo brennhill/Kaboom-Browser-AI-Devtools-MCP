@@ -101,7 +101,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 			server.logLifecycle("binary_upgrade_detected", port, map[string]any{
 				"current_version": version, "new_version": newVersion,
 			})
-			server.AddWarning("UPGRADE DETECTED: v" + newVersion + " installed. Auto-restart in ~5s.")
+			server.warnings.Add("UPGRADE DETECTED: v" + newVersion + " installed. Auto-restart in ~5s.")
 		},
 		func() {
 			if server.runtime.Upgrade() != nil {
@@ -118,7 +118,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	))
 	if markerPath, err := state.UpgradeMarkerFile(); err == nil {
 		if marker, markerErr := binarywatch.ReadAndClearMarker(markerPath); markerErr == nil && marker != nil {
-			server.AddWarning(fmt.Sprintf("Upgraded from v%s to v%s", marker.FromVersion, marker.ToVersion))
+			server.warnings.Add(fmt.Sprintf("Upgraded from v%s to v%s", marker.FromVersion, marker.ToVersion))
 			server.logLifecycle("binary_upgrade_complete", port, map[string]any{
 				"from_version": marker.FromVersion, "to_version": marker.ToVersion,
 			})

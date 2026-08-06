@@ -317,7 +317,7 @@ func (h *MCPHandler) warnUnknownToolArguments(toolName string, args json.RawMess
 	}
 	sort.Strings(unknown)
 	for _, key := range unknown {
-		h.server.AddWarning(fmt.Sprintf("unknown parameter '%s' for tool '%s' (ignored)", key, toolName))
+		h.server.warnings.Add(fmt.Sprintf("unknown parameter '%s' for tool '%s' (ignored)", key, toolName))
 	}
 }
 
@@ -345,7 +345,7 @@ func (h *MCPHandler) applyToolResponsePostProcessing(resp mcp.JSONRPCResponse, c
 		resp.Result = redactor.RedactJSON(resp.Result)
 	}
 	if h.server != nil {
-		resp = mcp.AppendWarningsToResponse(resp, h.server.TakeWarnings())
+		resp = mcp.AppendWarningsToResponse(resp, h.server.warnings.Drain())
 	}
 	resp = h.maybeAddSecurityModeWarning(resp)
 	resp = h.maybeAddVersionWarning(resp)
