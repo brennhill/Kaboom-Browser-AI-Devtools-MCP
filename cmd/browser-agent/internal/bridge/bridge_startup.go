@@ -1,13 +1,7 @@
-// bridge_startup.go -- Decides who brings the daemon up and when it counts as up:
-// the tuning knobs, the cross-process startup lock that elects one leader, the
-// health/version probes that answer "is something already listening", and the
-// RunMode orchestration that ties them together.
-// Why: these were four files, but the lock, the probes and the knobs have no
-// meaning apart from the coordination policy that reads them — every knob is
-// read by two of the four, so the split forced the policy to be understood
-// across file boundaries. The daemon state machine itself (respawn throttling,
-// ready/failed signalling) stays separate in bridge_startup_state.go, because
-// that one IS independently testable.
+// bridge_startup.go — Coordinates daemon discovery, startup, and readiness.
+// Why: health/version probes and startup policy change together. Cross-process
+// lock persistence is owned separately by startuplock; the respawn state machine
+// remains in bridge_startup_state.go.
 // Docs: docs/features/feature/lazy-server-start/index.md
 
 package bridge
@@ -17,15 +11,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/startuplock"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -76,128 +68,6 @@ var daemonPeerFallbackWaitTimeout = 250 * time.Millisecond
 // daemonStartupLockStaleAfter defines when a startup lock is considered stale
 // and can be reclaimed by another bridge.
 var daemonStartupLockStaleAfter = 2 * time.Second
-
-type bridgeStartupLockRecord struct {
-	PID       int    `json:"pid"`
-	Port      int    `json:"port"`
-	Version   string `json:"version,omitempty"`
-	CreatedAt string `json:"created_at"`
-}
-
-type bridgeStartupLock struct {
-	path string
-	pid  int
-}
-
-func bridgeStartupLockPath(port int) (string, error) {
-	return statecfg.InRoot("run", fmt.Sprintf("bridge-startup-%d.lock.json", port))
-}
-
-func (r *Runner) tryAcquireBridgeStartupLock(port int) (*bridgeStartupLock, bool, error) {
-	path, err := bridgeStartupLockPath(port)
-	if err != nil {
-		return nil, false, err
-	}
-	// #nosec G301 -- runtime state directory for bridge coordination.
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return nil, false, err
-	}
-
-	record := bridgeStartupLockRecord{
-		PID:       os.Getpid(),
-		Port:      port,
-		Version:   r.identity.Version,
-		CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
-	}
-	payload, err := json.Marshal(record)
-	if err != nil {
-		return nil, false, err
-	}
-
-	// #nosec G304 -- deterministic lock file path rooted in runtime state dir.
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		if os.IsExist(err) {
-			return nil, false, nil
-		}
-		return nil, false, err
-	}
-	if _, err := f.Write(payload); err != nil {
-		_ = f.Close()       //nolint:errcheck // best-effort cleanup on write failure
-		_ = os.Remove(path) //nolint:errcheck // best-effort cleanup on write failure
-		return nil, false, err
-	}
-	if err := f.Close(); err != nil {
-		_ = os.Remove(path) //nolint:errcheck // best-effort cleanup on close failure
-		return nil, false, err
-	}
-	return &bridgeStartupLock{path: path, pid: os.Getpid()}, true, nil
-}
-
-func (l *bridgeStartupLock) release() {
-	if l == nil || l.path == "" {
-		return
-	}
-	rec, err := readBridgeStartupLockRecord(l.path)
-	if err == nil && rec != nil && rec.PID != l.pid {
-		return
-	}
-	_ = os.Remove(l.path) //nolint:errcheck // best-effort ownership release
-}
-
-func readBridgeStartupLockRecord(path string) (*bridgeStartupLockRecord, error) {
-	// #nosec G304 -- deterministic lock file path rooted in runtime state dir.
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	var rec bridgeStartupLockRecord
-	if err := json.Unmarshal(data, &rec); err != nil {
-		return nil, err
-	}
-	return &rec, nil
-}
-
-func (r *Runner) clearStaleBridgeStartupLock(port int, staleAfter time.Duration) bool {
-	path, err := bridgeStartupLockPath(port)
-	if err != nil {
-		return false
-	}
-	rec, err := readBridgeStartupLockRecord(path)
-	if err != nil {
-		_ = os.Remove(path) //nolint:errcheck // best-effort stale lock cleanup
-		return true
-	}
-	if rec == nil {
-		return false
-	}
-
-	if rec.PID <= 0 || !r.lifecycle.IsProcessAlive(rec.PID) {
-		_ = os.Remove(path) //nolint:errcheck // best-effort stale lock cleanup
-		return true
-	}
-
-	createdAt, err := parseBridgeStartupLockTime(rec.CreatedAt)
-	if err != nil {
-		_ = os.Remove(path) //nolint:errcheck // best-effort stale lock cleanup
-		return true
-	}
-	if staleAfter > 0 && time.Since(createdAt) > staleAfter {
-		_ = os.Remove(path) //nolint:errcheck // best-effort stale lock cleanup
-		return true
-	}
-	return false
-}
-
-func parseBridgeStartupLockTime(raw string) (time.Time, error) {
-	if ts, err := time.Parse(time.RFC3339Nano, raw); err == nil {
-		return ts, nil
-	}
-	return time.Parse(time.RFC3339, raw)
-}
 
 // IsServerRunning checks the daemon health endpoint.
 func (r *Runner) IsServerRunning(port int) bool {
@@ -374,7 +244,8 @@ func (r *Runner) startDaemonSpawnCoordinator(state *daemonState, port int) {
 }
 
 func (r *Runner) coordinateDaemonStartup(state *daemonState, port int) bool {
-	lock, acquired, err := r.tryAcquireBridgeStartupLock(port)
+	locks := startuplock.NewManager(r.identity.Version, r.lifecycle.IsProcessAlive)
+	lock, acquired, err := locks.Acquire(port)
 	if err != nil {
 		// Coordination failed (state dir/lock issue). Fall back to local spawn.
 		return false
@@ -390,8 +261,8 @@ func (r *Runner) coordinateDaemonStartup(state *daemonState, port int) bool {
 	}
 
 	// Leader appears stalled. Reclaim stale/dead lock and try to take over.
-	_ = r.clearStaleBridgeStartupLock(port, daemonStartupLockStaleAfter)
-	lock, acquired, err = r.tryAcquireBridgeStartupLock(port)
+	_ = locks.ClearStale(port, daemonStartupLockStaleAfter)
+	lock, acquired, err = locks.Acquire(port)
 	if err != nil {
 		return false
 	}
@@ -404,9 +275,9 @@ func (r *Runner) coordinateDaemonStartup(state *daemonState, port int) bool {
 	return r.waitForPeerDaemonWithin(state, port, daemonPeerFallbackWaitTimeout)
 }
 
-func (r *Runner) startAsStartupLeader(state *daemonState, port int, lock *bridgeStartupLock) {
+func (r *Runner) startAsStartupLeader(state *daemonState, port int, lock *startuplock.Lock) {
 	if lock != nil {
-		defer lock.release()
+		defer lock.Release()
 	}
 	if r.tryConnectToExisting(state, port) {
 		return

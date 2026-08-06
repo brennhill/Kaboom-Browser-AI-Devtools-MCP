@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/startuplock"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -21,6 +22,10 @@ func initTestDeps(t *testing.T) {
 	testRunner.protocol.Resources = func() []mcp.MCPResource { return nil }
 	testRunner.protocol.ResourceTemplates = func() []any { return nil }
 	testRunner.protocol.ResolveResource = func(string) (string, string, bool) { return "", "", false }
+}
+
+func testStartupLockManager() startuplock.Manager {
+	return startuplock.NewManager(testRunner.identity.Version, testRunner.lifecycle.IsProcessAlive)
 }
 
 // Note: captureBridgeIO and parseJSONLines are defined in the tests that own them.

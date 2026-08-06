@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/startuplock"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -21,7 +22,8 @@ func TestBridgeStartupLock_SingleLeaderElection(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	port := 7890
 
-	lockA, acquired, err := testRunner.tryAcquireBridgeStartupLock(port)
+	locks := testStartupLockManager()
+	lockA, acquired, err := locks.Acquire(port)
 	if err != nil {
 		t.Fatalf("testRunner.tryAcquireBridgeStartupLock() error = %v", err)
 	}
@@ -29,7 +31,7 @@ func TestBridgeStartupLock_SingleLeaderElection(t *testing.T) {
 		t.Fatal("first lock acquisition should succeed")
 	}
 
-	lockB, acquired, err := testRunner.tryAcquireBridgeStartupLock(port)
+	lockB, acquired, err := locks.Acquire(port)
 	if err != nil {
 		t.Fatalf("second testRunner.tryAcquireBridgeStartupLock() error = %v", err)
 	}
@@ -37,28 +39,28 @@ func TestBridgeStartupLock_SingleLeaderElection(t *testing.T) {
 		t.Fatal("second lock acquisition should not succeed while first leader holds lock")
 	}
 
-	lockA.release()
+	lockA.Release()
 
-	lockC, acquired, err := testRunner.tryAcquireBridgeStartupLock(port)
+	lockC, acquired, err := locks.Acquire(port)
 	if err != nil {
 		t.Fatalf("third testRunner.tryAcquireBridgeStartupLock() error = %v", err)
 	}
 	if !acquired || lockC == nil {
 		t.Fatal("third lock acquisition should succeed after release")
 	}
-	lockC.release()
+	lockC.Release()
 }
 
 func TestClearStaleBridgeStartupLock_RemovesDeadOwner(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	port := 7891
-	path := writeBridgeStartupLockForTest(t, port, bridgeStartupLockRecord{
+	path := writeBridgeStartupLockForTest(t, port, startuplock.Record{
 		PID:       -1,
 		Port:      port,
 		CreatedAt: time.Now().Add(-time.Minute).UTC().Format(time.RFC3339Nano),
 	})
 
-	if removed := testRunner.clearStaleBridgeStartupLock(port, daemonStartupLockStaleAfter); !removed {
+	if removed := testStartupLockManager().ClearStale(port, daemonStartupLockStaleAfter); !removed {
 		t.Fatal("testRunner.clearStaleBridgeStartupLock() = false, want true for dead owner")
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -69,13 +71,13 @@ func TestClearStaleBridgeStartupLock_RemovesDeadOwner(t *testing.T) {
 func TestClearStaleBridgeStartupLock_PreservesRecentLiveOwner(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	port := 7892
-	path := writeBridgeStartupLockForTest(t, port, bridgeStartupLockRecord{
+	path := writeBridgeStartupLockForTest(t, port, startuplock.Record{
 		PID:       os.Getpid(),
 		Port:      port,
 		CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
 	})
 
-	if removed := testRunner.clearStaleBridgeStartupLock(port, time.Minute); removed {
+	if removed := testStartupLockManager().ClearStale(port, time.Minute); removed {
 		t.Fatal("testRunner.clearStaleBridgeStartupLock() = true, want false for recent live owner")
 	}
 	if _, err := os.Stat(path); err != nil {
@@ -83,9 +85,9 @@ func TestClearStaleBridgeStartupLock_PreservesRecentLiveOwner(t *testing.T) {
 	}
 }
 
-func writeBridgeStartupLockForTest(t *testing.T, port int, record bridgeStartupLockRecord) string {
+func writeBridgeStartupLockForTest(t *testing.T, port int, record startuplock.Record) string {
 	t.Helper()
-	path, err := bridgeStartupLockPath(port)
+	path, err := startuplock.Path(port)
 	if err != nil {
 		t.Fatalf("bridgeStartupLockPath() error = %v", err)
 	}

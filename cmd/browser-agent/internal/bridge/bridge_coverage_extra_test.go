@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fastpathtelemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/startuplock"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -176,11 +177,11 @@ func TestBridgeRequestIDString_AdditionalCases(t *testing.T) {
 
 func TestReadBridgeStartupLockRecord_NonExistent(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	path, err := bridgeStartupLockPath(7901)
+	path, err := startuplock.Path(7901)
 	if err != nil {
 		t.Fatalf("bridgeStartupLockPath() error = %v", err)
 	}
-	rec, err := readBridgeStartupLockRecord(path)
+	rec, err := startuplock.Read(path)
 	if err != nil {
 		t.Fatalf("readBridgeStartupLockRecord() error = %v, want nil", err)
 	}
@@ -191,7 +192,7 @@ func TestReadBridgeStartupLockRecord_NonExistent(t *testing.T) {
 
 func TestReadBridgeStartupLockRecord_Malformed(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	path, err := bridgeStartupLockPath(7902)
+	path, err := startuplock.Path(7902)
 	if err != nil {
 		t.Fatalf("bridgeStartupLockPath() error = %v", err)
 	}
@@ -201,7 +202,7 @@ func TestReadBridgeStartupLockRecord_Malformed(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{not valid json"), 0o600); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	if _, err := readBridgeStartupLockRecord(path); err == nil {
+	if _, err := startuplock.Read(path); err == nil {
 		t.Fatal("expected error for malformed lock record")
 	}
 }
@@ -209,13 +210,13 @@ func TestReadBridgeStartupLockRecord_Malformed(t *testing.T) {
 func TestParseBridgeStartupLockTime(t *testing.T) {
 	t.Parallel()
 
-	if _, err := parseBridgeStartupLockTime(time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+	if _, err := startuplock.ParseTime(time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatalf("RFC3339Nano parse error = %v", err)
 	}
-	if _, err := parseBridgeStartupLockTime(time.Now().UTC().Format(time.RFC3339)); err != nil {
+	if _, err := startuplock.ParseTime(time.Now().UTC().Format(time.RFC3339)); err != nil {
 		t.Fatalf("RFC3339 parse error = %v", err)
 	}
-	if _, err := parseBridgeStartupLockTime("not-a-timestamp"); err == nil {
+	if _, err := startuplock.ParseTime("not-a-timestamp"); err == nil {
 		t.Fatal("expected error for invalid timestamp")
 	}
 }
@@ -224,7 +225,7 @@ func TestParseBridgeStartupLockTime(t *testing.T) {
 
 func TestClearStaleBridgeStartupLock_NoRecord(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	if removed := testRunner.clearStaleBridgeStartupLock(7903, time.Minute); removed {
+	if removed := testStartupLockManager().ClearStale(7903, time.Minute); removed {
 		t.Fatal("testRunner.clearStaleBridgeStartupLock() = true, want false when no lock exists")
 	}
 }
@@ -232,12 +233,12 @@ func TestClearStaleBridgeStartupLock_NoRecord(t *testing.T) {
 func TestClearStaleBridgeStartupLock_RemovesExpiredLiveOwner(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	port := 7904
-	writeBridgeStartupLockForTest(t, port, bridgeStartupLockRecord{
+	writeBridgeStartupLockForTest(t, port, startuplock.Record{
 		PID:       os.Getpid(), // alive
 		Port:      port,
 		CreatedAt: time.Now().Add(-time.Hour).UTC().Format(time.RFC3339Nano),
 	})
-	if removed := testRunner.clearStaleBridgeStartupLock(port, time.Second); !removed {
+	if removed := testStartupLockManager().ClearStale(port, time.Second); !removed {
 		t.Fatal("testRunner.clearStaleBridgeStartupLock() = false, want true for expired lock")
 	}
 }
@@ -245,7 +246,7 @@ func TestClearStaleBridgeStartupLock_RemovesExpiredLiveOwner(t *testing.T) {
 func TestClearStaleBridgeStartupLock_RemovesMalformedRecord(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	port := 7905
-	path, err := bridgeStartupLockPath(port)
+	path, err := startuplock.Path(port)
 	if err != nil {
 		t.Fatalf("bridgeStartupLockPath() error = %v", err)
 	}
@@ -255,7 +256,7 @@ func TestClearStaleBridgeStartupLock_RemovesMalformedRecord(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{corrupt"), 0o600); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	if removed := testRunner.clearStaleBridgeStartupLock(port, time.Minute); !removed {
+	if removed := testStartupLockManager().ClearStale(port, time.Minute); !removed {
 		t.Fatal("testRunner.clearStaleBridgeStartupLock() = false, want true for malformed record")
 	}
 	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
@@ -266,37 +267,14 @@ func TestClearStaleBridgeStartupLock_RemovesMalformedRecord(t *testing.T) {
 func TestClearStaleBridgeStartupLock_RemovesInvalidCreatedAt(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 	port := 7906
-	writeBridgeStartupLockForTest(t, port, bridgeStartupLockRecord{
+	writeBridgeStartupLockForTest(t, port, startuplock.Record{
 		PID:       os.Getpid(), // alive
 		Port:      port,
 		CreatedAt: "not-a-real-time",
 	})
-	if removed := testRunner.clearStaleBridgeStartupLock(port, time.Minute); !removed {
+	if removed := testStartupLockManager().ClearStale(port, time.Minute); !removed {
 		t.Fatal("testRunner.clearStaleBridgeStartupLock() = false, want true for invalid created_at")
 	}
-}
-
-// --- Lock release ownership ---
-
-func TestBridgeStartupLockRelease_NonOwnerKeepsFile(t *testing.T) {
-	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	port := 7907
-	path := writeBridgeStartupLockForTest(t, port, bridgeStartupLockRecord{
-		PID:       999999, // different owner
-		Port:      port,
-		CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
-	})
-
-	lock := &bridgeStartupLock{path: path, pid: 12345}
-	lock.release()
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("lock file should remain when releaser is not owner, stat err = %v", err)
-	}
-
-	// nil and empty-path releases must be no-ops (no panic).
-	var nilLock *bridgeStartupLock
-	nilLock.release()
-	(&bridgeStartupLock{}).release()
 }
 
 // --- daemonStartupSuggestion ---
