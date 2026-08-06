@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - internal/telemetry/usagecallback/callback.go
   - internal/telemetry/beacon.go
   - internal/telemetry/install_id.go
   - internal/telemetry/usage_counter.go
@@ -17,6 +18,7 @@ code_paths:
   - internal/incident/store.go
   - internal/incident/projections.go
 test_paths:
+  - internal/telemetry/usagecallback/callback_test.go
   - tests/architecture/user-state-loaders.test.cjs
   - internal/telemetry/beacon_test.go
   - internal/telemetry/contract_compliance_test.go

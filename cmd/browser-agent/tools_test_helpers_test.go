@@ -8,9 +8,11 @@ package main
 import (
 	"encoding/json"
 	"net/http/httptest"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 
@@ -25,6 +27,16 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
+
+func newTestServerForHandlers(t *testing.T) *Server {
+	t.Helper()
+	server, err := NewServer(filepath.Join(t.TempDir(), "logs.jsonl"), 1000)
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	t.Cleanup(func() { server.logs.Shutdown(2 * time.Second) })
+	return server
+}
 
 func captureHTTPForTest(captured *capture.Capture) *httpingest.Handlers {
 	return httpingest.New(httpingest.Dependencies{Telemetry: captured.Telemetry(), Queries: captured.Queries(), Recordings: captured.Recordings(), Performance: captured.Performance(), Circuit: captured.Circuit()})

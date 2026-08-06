@@ -56,6 +56,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry/usagecallback"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -354,14 +355,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	})
 	handler.usageTracker = telemetry.NewUsageTracker()
 	if captureStore != nil {
-		tracker := handler.usageTracker
-		captureStore.FeatureUsage().SetCallback(func(features map[string]bool) {
-			for key, used := range features {
-				if used {
-					tracker.RecordToolCall("ext:"+key, 0, false)
-				}
-			}
-		})
+		captureStore.FeatureUsage().SetCallback(usagecallback.New(handler.usageTracker))
 	}
 
 	handler.healthMetrics = health.NewMetrics()

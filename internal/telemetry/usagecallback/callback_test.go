@@ -1,7 +1,7 @@
 // features_callback_test.go — Tests for extension UI feature usage flowing
 // through the features callback into the usage counter with ext: prefix.
 
-package main
+package usagecallback
 
 import (
 	"testing"
@@ -9,22 +9,11 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
-// makeFeaturesCallback reproduces the wiring from tools_core_constructor.go.
-func makeFeaturesCallback(counter *telemetry.UsageTracker) func(map[string]bool) {
-	return func(features map[string]bool) {
-		for key, used := range features {
-			if used {
-				counter.RecordToolCall("ext:"+key, 0, false)
-			}
-		}
-	}
-}
-
 func TestFeaturesCallbackWiresIntoUsageTracker(t *testing.T) {
 	t.Parallel()
 
 	counter := telemetry.NewUsageTracker()
-	cb := makeFeaturesCallback(counter)
+	cb := New(counter)
 
 	cb(map[string]bool{
 		"screenshot":  true,
@@ -53,7 +42,7 @@ func TestFeaturesCallback_OnlyTrueValuesIncrement(t *testing.T) {
 	t.Parallel()
 
 	counter := telemetry.NewUsageTracker()
-	cb := makeFeaturesCallback(counter)
+	cb := New(counter)
 
 	cb(map[string]bool{
 		"screenshot":  false,
@@ -70,7 +59,7 @@ func TestFeaturesCallback_MultipleInvocations_Accumulate(t *testing.T) {
 	t.Parallel()
 
 	counter := telemetry.NewUsageTracker()
-	cb := makeFeaturesCallback(counter)
+	cb := New(counter)
 
 	cb(map[string]bool{"screenshot": true})
 	cb(map[string]bool{"screenshot": true, "video": true})
