@@ -1,7 +1,7 @@
 // tools_async_formatting_test.go — Tests for the response envelope built around
 // the async result pipeline (trace summary slimming).
 
-package main
+package asynccommand_test
 
 import (
 	"testing"

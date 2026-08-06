@@ -1,5 +1,5 @@
 // tools_async_transient_test.go — Tests for attachTransientElements.
-package main
+package asynccommand_test
 
 import (
 	"testing"

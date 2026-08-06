@@ -10,7 +10,7 @@ code_paths:
   - cmd/browser-agent/internal/asyncresult/transients.go
   - src/lib/page/transient-capture.ts
 test_paths:
-  - cmd/browser-agent/tools_async_transient_test.go
+  - cmd/browser-agent/internal/asynccommand/transient_test.go
   - internal/tools/observe/session/session_transients_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

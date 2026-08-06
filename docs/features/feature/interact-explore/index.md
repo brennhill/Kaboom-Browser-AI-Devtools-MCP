@@ -132,7 +132,7 @@ test_paths:
   - internal/tools/configure/capabilities/modespecs_test.go
   - tests/extension/ui-controls/toggle-overlay.test.js
   - cmd/browser-agent/internal/asyncresult/asyncresult_test.go
-  - cmd/browser-agent/tools_async_formatting_test.go
+  - cmd/browser-agent/internal/asynccommand/formatting_test.go
   - tests/extension/pilot/interact-content-fallback.test.js
   - tests/extension/pilot/async-timeout.test.js
   - tests/extension/sync/pending-query-targeting.test.js
