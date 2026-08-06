@@ -150,7 +150,7 @@ test_paths:
   - cmd/browser-agent/tools_core_sync_test.go
   - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/internal/dashboard/branding_test.go
-  - cmd/browser-agent/openapi_branding_test.go
+  - scripts/contracts/openapibranding/branding_test.go
   - cmd/browser-agent/internal/operationalapi/debug_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go
   - cmd/browser-agent/internal/operationalapi/coverage_contract_test.go
