@@ -73,6 +73,14 @@
       "mutable_globals": 0,
       "exports": 1
     },
+    "cmd/browser-agent/internal/bridge/processsignal/resume_unix.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/bridge/processsignal/resume_windows.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/bridge/pushrelay/relay.go": {
       "mutable_globals": 0,
       "exports": 5

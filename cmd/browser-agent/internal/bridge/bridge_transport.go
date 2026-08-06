@@ -22,6 +22,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/processsignal"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
@@ -339,7 +340,7 @@ func (r *Runner) forceKillOnPort(port int) {
 			continue
 		}
 		// On Unix this sends SIGCONT; on Windows this is a no-op.
-		signalResumeProcess(p)
+		processsignal.Resume(p)
 	}
 }
 

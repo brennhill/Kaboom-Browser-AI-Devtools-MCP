@@ -11,6 +11,8 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_transport.go
+  - cmd/browser-agent/internal/bridge/processsignal/resume_unix.go
+  - cmd/browser-agent/internal/bridge/processsignal/resume_windows.go
   - cmd/browser-agent/internal/bridge/fingerprint/fingerprint.go
   - cmd/browser-agent/internal/bridge/pushrelay/relay.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
@@ -32,6 +34,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_respawn_backoff_test.go
+  - cmd/browser-agent/internal/bridge/processsignal/resume_test.go
   - cmd/browser-agent/internal/bridge/fingerprint/fingerprint_test.go
   - cmd/browser-agent/internal/bridge/pushrelay/relay_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_test.go
@@ -68,6 +71,7 @@ last_verified_date: 2026-03-05
 | `cmd/browser-agent/internal/bridge/bridge.go` | Startup-aware forwarding for `tools/call` during daemon warm-up |
 | `cmd/browser-agent/internal/bridge/bridge_startup.go` | Startup coordinator, leadership, follower wait, and stale-lock takeover |
 | `cmd/browser-agent/internal/bridge/bridge_startup_state.go` | Daemon readiness/failed signaling, bounded respawn peer-wait, and stale-wait leadership reclaim |
+| `cmd/browser-agent/internal/bridge/processsignal/` | Platform-specific suspended-daemon resume signaling |
 | `cmd/browser-agent/internal/bridge/fingerprint/fingerprint.go` | Immutable executable identity used by launch diagnostics |
 | `cmd/browser-agent/tools_configure.go` | `handleConfigureRestart()` daemon-side handler |
 | `internal/schema/configure/tool.go` | Schema: `restart` in configure action enum + oneOf |
