@@ -4,7 +4,7 @@ feature_id: feature-ci-infrastructure
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - .github/workflows/ci.yml
   - scripts/uat/runners/test-js-sharded.sh
@@ -18,7 +18,7 @@ test_paths:
   - tests/extension/contracts/tooling-contracts.test.js
   - tests/extension/misc/integration.test.cjs
   - cmd/browser-agent/internal/ciapi/snapshot_test.go
-  - cmd/browser-agent/ci_test.go
+  - cmd/browser-agent/internal/ciapi/compute_test.go
   - cmd/browser-agent/ci_unit_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -58,7 +58,8 @@ last_verified_date: 2026-03-05
   `cmd/browser-agent/internal/ciapi/types.go`
 - Characterization and route tests:
   `cmd/browser-agent/internal/ciapi/snapshot_test.go`,
-  `cmd/browser-agent/ci_test.go`, `cmd/browser-agent/ci_unit_test.go`
+  `cmd/browser-agent/internal/ciapi/compute_test.go`,
+  `cmd/browser-agent/ci_unit_test.go`
 - JavaScript CI rebuilds TypeScript and fails on content drift; checkout
   modification times are never treated as build evidence. Sharded failures are
   attributed only to the process that exited nonzero.
