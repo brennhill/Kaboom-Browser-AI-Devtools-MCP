@@ -314,7 +314,7 @@ sequenceDiagram
 
 **Query Queue:**
 - `internal/capture/capture.go:Capture.queries`
-- `internal/capture/queries.go` - Queue management
+- `internal/queries/dispatcher_queries.go` - Queue management
 - `internal/queries/dispatcher_queries.go` - Routing logic
 
 **Result Storage:**
@@ -340,7 +340,7 @@ sequenceDiagram
 ### Related Diagrams
 - [C2: Containers](c2-containers.md) - Component boundaries
 - [C3: Components](c3-components.md) - Go packages
-- [Query System](query-system.md) - Async queue details
+- [Query System](./README.md) - Async queue details
 - [Correlation ID Lifecycle](correlation-id-lifecycle.md) - Command tracking
 - [Async Queue-and-Poll Flow](async-queue-flow.md) - Queue state machine
 

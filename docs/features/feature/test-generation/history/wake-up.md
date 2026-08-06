@@ -266,7 +266,7 @@ That's enough to claim victory on this feature.
 - "What if validation fails?" → Document limitations, ship anyway
 - "How long to wire up missing pieces?" → 2-4 hours (DOM queries, error IDs)
 - "Should I validate first or wire up first?" → Validate first (faster, proves value)
-- "What's next after this feature?" → See [TestSprite competitive analysis](../../../docs/competitors.md) for remaining gaps
+- "What's next after this feature?" → See the [documentation index](../../../../README.md) for current product guidance
 
 ---
 

@@ -205,7 +205,7 @@ last_verified_date: 2026-03-05
 
 ## Key Implementation Files
 
-- `cmd/browser-agent/codegen.go` — Existing Playwright generation to extend
+- `cmd/browser-agent/testgen.go` — Existing Playwright generation to extend
 - `cmd/browser-agent/tools_core.go` — Tool dispatch and response helpers
 - `cmd/browser-agent/queries.go` — Pending query infrastructure
 - `extension/lib/analysis/dom-queries.js` — DOM query execution

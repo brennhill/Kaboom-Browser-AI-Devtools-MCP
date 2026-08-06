@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-rate-limiting.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [Rate Limiting Review](rate-limiting-review.md).
+> See also: [Product Spec](product-spec.md) and [Rate Limiting Review](./index.md).
 
 # Technical Spec: Rate Limiting & Circuit Breaker
 

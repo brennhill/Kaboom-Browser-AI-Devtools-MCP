@@ -33,8 +33,8 @@ Screenshot archival and queryable design system compliance tool that allows LLMs
 
 | Document | Link | Purpose |
 |----------|------|---------|
-| **Design Spec** | [screenshot-archival-and-query.md](/docs/screenshot-archival-and-query.md) | Feature specification, API design, data model, configuration |
-| **Spec Review** | [screenshot-archival-and-query-review.md](/docs/screenshot-archival-and-query-review.md) | Principal engineer review, critical issues, implementation guidance |
+| **Design Spec** | [screenshot-archival-and-query.md](./index.md) | Feature specification, API design, data model, configuration |
+| **Spec Review** | [screenshot-archival-and-query-review.md](./index.md) | Principal engineer review, critical issues, implementation guidance |
 
 ---
 

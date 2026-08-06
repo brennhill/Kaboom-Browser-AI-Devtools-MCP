@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-push-regression.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [Push Regression Review](push-regression-review.md).
+> See also: [Product Spec](product-spec.md) and [Push Regression Review](./index.md).
 
 # Technical Spec: Push Notification on Regression
 

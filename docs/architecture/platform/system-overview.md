@@ -39,5 +39,5 @@ Kaboom MCP is a local-first system that allows AI clients to inspect and automat
 
 - [Server Architecture](../../core/architecture/server-architecture.md)
 - [Extension Architecture](../../core/architecture/extension-architecture.md)
-- [Async Queue ADR](../decisions/ADR-001-async-queue-pattern.md)
+- [Async Queue ADR](./README.md)
 - [Async Queue Immutability ADR](../decisions/ADR-002-async-queue-immutability.md)

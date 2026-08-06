@@ -659,8 +659,8 @@ if event.TraceID == "" {
 
 - **Browser Enhancement:** [browser-extension-enhancement/TECH_SPEC.md](../browser-extension-enhancement/TECH_SPEC.md)
 - **Ring Buffer:** [ring-buffer/TECH_SPEC.md](../ring-buffer/TECH_SPEC.md)
-- **Query Service:** [query-service/TECH_SPEC.md](../query-service/TECH_SPEC.md) (Sprint 2)
-- **Architecture:** [360-observability-architecture.md](../../../core/architecture/360-observability-architecture.md#normalized-event-schema)
+- **Query Service:** [query-service/TECH_SPEC.md](../query-service/index.md) (Sprint 2)
+- **Architecture:** [360-observability-architecture.md](../../../core/product/README.md#normalized-event-schema)
 
 ---
 

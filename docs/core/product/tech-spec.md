@@ -25,7 +25,7 @@ Primary components:
 - Transport + MCP routing: `cmd/browser-agent/handler.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
 - Tool schemas: `internal/schema/schema.go`
-- Queue/command lifecycle: `internal/capture/queries.go`
+- Queue/command lifecycle: `internal/capture/query_dispatcher.go`
 - Unified extension sync channel: `internal/capture/syncruntime/handler.go`
 - Extension sync client: `src/background/sync/sync-client.ts`
 - Extension command executor: `src/background/pending-queries.ts`
@@ -83,6 +83,6 @@ Primary components:
 - Configure dispatch map: `cmd/browser-agent/tools_configure.go`
 - Interact dispatch map: `cmd/browser-agent/tools_interact.go`
 - Generate dispatch map: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
-- Query dispatcher and command tracker: `internal/capture/queries.go`
+- Query dispatcher and command tracker: `internal/capture/query_dispatcher.go`
 - Extension sync endpoint: `internal/capture/syncruntime/handler.go`
 - Extension command execution: `src/background/pending-queries.ts`

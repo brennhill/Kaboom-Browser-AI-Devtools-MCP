@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-push-alerts.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [Push Alerts Review](push-alerts-review.md).
+> See also: [Product Spec](product-spec.md) and [Push Alerts Review](./index.md).
 
 # Tech Spec: Context Streaming / Push-Based Alerts (Phase 3)
 

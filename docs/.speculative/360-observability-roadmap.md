@@ -30,7 +30,7 @@ The remaining 20% is better context, not more data sources.
 
 One call replaces 3-4 separate observe() calls. Go-side only, no extension changes.
 
-**Tech spec:** [docs/features/feature/error-bundling/tech-spec.md](../feature/error-bundling/tech-spec.md)
+**Tech spec:** [docs/features/feature/error-bundling/tech-spec.md](../features/feature/error-bundling/tech-spec.md)
 **Implementation:** `cmd/browser-agent/tools_observe_bundling.go` (~130 lines)
 **Tests:** 11 behavioral tests in `tools_observe_bundling_test.go`
 
@@ -80,7 +80,7 @@ interact({ what: "click", selector: "text=Load More", analyze: true })
 
 **The optimization loop:** edit → `interact(refresh)` → read perf_diff → repeat. One call per iteration.
 
-**Tech spec:** [docs/features/feature/perf-experimentation/tech-spec.md](../feature/perf-experimentation/tech-spec.md)
+**Tech spec:** [docs/features/feature/perf-experimentation/tech-spec.md](../features/feature/perf-experimentation/tech-spec.md)
 **Effort:** ~1.5 weeks. Extension-side: perf tracking, MutationObserver in domPrimitive, User Timing capture. Go-side: pass through `analyze` flag, surface user timing.
 
 ---

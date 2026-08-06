@@ -21,7 +21,7 @@ last-verified: 2026-02-08
 |-------|-------------|-------------|--------|
 | `src/background/pending-queries.ts` | 952 | < 500 | ❌ Exceeds |
 | `internal/capture/types.go` | 653 | < 500 | ❌ Exceeds |
-| `internal/session/sessions.go` | 694 | < 500 | ❌ Exceeds |
+| `internal/session/types.go` | 694 | < 500 | ❌ Exceeds |
 | `src/background/message-handlers.ts` | 552 | < 500 | ❌ Exceeds |
 | `src/lib/net/websocket.ts` | 776 | < 500 | ⚠️ Near limit |
 
@@ -92,7 +92,7 @@ last-verified: 2026-02-08
 - Migration checklist
 - Estimated effort (6.8 hours)
 
-## 3. `internal/session/sessions.go` (694 LOC → ~400 LOC)
+## 3. `internal/session/types.go` (694 LOC → ~400 LOC)
 
 **Refactoring Plan:** See [`sessions-go-refactor-plan.md`](sessions-go-refactor-plan.md) for detailed split strategy including:
 - 11 new files organized by domain/concern
@@ -151,7 +151,7 @@ last-verified: 2026-02-08
 
 ---
 
-## 3. `internal/session/sessions.go` (694 LOC → ~400 LOC)
+## 3. `internal/session/types.go` (694 LOC → ~400 LOC)
 
 **Current concerns:**
 - Session comparison logic
@@ -190,7 +190,7 @@ last-verified: 2026-02-08
    - Playback session management
    - Execution tracking
 
-8. `internal/session/sessions.go` (~200 LOC)
+8. `internal/session/types.go` (~200 LOC)
    - SessionManager struct
    - Snapshot capture logic
    - Main exports

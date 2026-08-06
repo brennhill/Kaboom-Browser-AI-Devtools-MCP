@@ -50,7 +50,7 @@ On 2026-02-02, we deleted the async queue implementation during refactoring. Thi
 **File**: `.git/hooks/pre-commit`
 
 **What it checks**:
-- ✅ Critical files exist ([queries.go](internal/capture/queries.go), [handlers.go](internal/capture/httpingest/handlers.go), [tools_core.go](cmd/browser-agent/tools_core.go))
+- ✅ Critical files exist ([queries.go](internal/queries/dispatcher_queries.go), [handlers.go](internal/capture/httpingest/handlers.go), [tools_core.go](cmd/browser-agent/tools_core.go))
 - ✅ Required methods exist (CreatePendingQuery, GetCommandResult, etc.)
 - ✅ No stub implementations
 
@@ -62,7 +62,7 @@ On 2026-02-02, we deleted the async queue implementation during refactoring. Thi
 
 **Example output**:
 ```bash
-❌ COMMIT BLOCKED: Critical file 'internal/capture/queries.go' is missing!
+❌ COMMIT BLOCKED: Critical file 'internal/queries/dispatcher_queries.go' is missing!
 
    This file implements the async queue-and-poll pattern.
    Without it, ALL interact() commands will timeout.
@@ -147,7 +147,7 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 🏗️  Validating Kaboom architecture...
 
 1️⃣  Checking critical files...
-   ✅ internal/capture/queries.go
+   ✅ internal/queries/dispatcher_queries.go
    ✅ internal/capture/httpingest/handlers.go
    ✅ cmd/browser-agent/tools_core.go
 
@@ -194,7 +194,7 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 
 **Files**:
 - [ADR-002-async-queue-immutability.md](../decisions/ADR-002-async-queue-immutability.md) - WHY immutable
-- [async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md) - Implementation
+- [async-queue-correlation-tracking.md](../../core/product/README.md) - Implementation
 - Inline comments in critical files
 
 **What it provides**:
@@ -236,8 +236,8 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 ### 🚨 I accidentally broke the architecture
 
 1. **Don't panic** - We have backups
-2. **Check git history** - `git log --oneline -- internal/capture/queries.go`
-3. **Restore from commit** - `git checkout <commit> -- internal/capture/queries.go`
+2. **Check git history** - `git log --oneline -- internal/queries/dispatcher_queries.go`
+3. **Restore from commit** - `git checkout <commit> -- internal/queries/dispatcher_queries.go`
 4. **Run validation** - `./scripts/quality/verification/validate-architecture.sh`
 5. **Run tests** - `go test ./internal/capture`
 
@@ -314,10 +314,10 @@ Update enforcement layers when:
 
 ```bash
 # Test pre-commit hook
-rm internal/capture/queries.go  # Delete critical file
+rm internal/queries/dispatcher_queries.go  # Delete critical file
 git add -A
 git commit -m "test"  # Should block
-git checkout internal/capture/queries.go  # Restore
+git checkout internal/queries/dispatcher_queries.go  # Restore
 
 # Test validation script
 ./scripts/quality/verification/validate-architecture.sh  # Should pass
@@ -398,9 +398,9 @@ Since implementing enforcement (2026-02-02):
 
 ## Related Documents
 
-- [ADR-001: Async Queue Pattern](../decisions/ADR-001-async-queue-pattern.md) - Original design
+- [ADR-001: Async Queue Pattern](../platform/README.md) - Original design
 - [ADR-002: Async Queue Immutability](../decisions/ADR-002-async-queue-immutability.md) - This enforcement
-- [async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md) - Implementation
+- [async-queue-correlation-tracking.md](../../core/product/README.md) - Implementation
 - [async_queue_integration_test.go](internal/capture/async_queue_integration_test.go) - Tests
 
 ---

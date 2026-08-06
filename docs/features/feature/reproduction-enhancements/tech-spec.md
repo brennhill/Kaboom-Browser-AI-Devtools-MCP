@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-reproduction-enhancements.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [Reproduction Enhancements Review](reproduction-enhancements-review.md).
+> See also: [Product Spec](product-spec.md) and [Reproduction Enhancements Review](./index.md).
 
 # Technical Spec: Reproduction Script Enhancements
 
@@ -291,7 +291,7 @@ By default, only `on_error` is true (screenshots on errors are the highest-value
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/codegen.go` (enhanced script generation, fixture derivation, bug report).
+Server implementation: `cmd/browser-agent/testgen.go` (enhanced script generation, fixture derivation, bug report).
 
 Extension implementation: `extension/background.js` (screenshot capture, auto-capture configuration).
 

@@ -638,7 +638,7 @@ kill $TUNNEL_PID
 - **Product Spec:** [PRODUCT_SPEC.md](PRODUCT_SPEC.md)
 - **kaboom-run:** [TECH_SPEC_KABOOM_RUN.md](TECH_SPEC_KABOOM_RUN.md)
 - **Local Tailer:** [TECH_SPEC_LOCAL_TAILER.md](TECH_SPEC_LOCAL_TAILER.md)
-- **Architecture:** [layer1-be-observability.md](../../core/layer1-be-observability.md)
+- **Architecture:** [layer1-be-observability.md](../../core/target-architecture.md)
 
 ---
 

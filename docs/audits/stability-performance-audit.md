@@ -155,7 +155,7 @@ Use lazy initialization with `sync.Once` -- only create the store when first acc
 
 ### FINDING 2.2 -- WaitForResultWithClient spawns a 10ms ticker goroutine per blocking call
 
-- **Location:** `internal/capture/queries.go:311-322`
+- **Location:** `internal/capture/query_dispatcher.go:311-322`
 - **Category:** Resource Leak
 - **Severity:** LOW
 
@@ -455,7 +455,7 @@ No action needed.
 
 ### FINDING 5.3 -- completedResults map cleaned every 30 seconds with 60s TTL
 
-- **Location:** `internal/capture/queries.go:374-415`
+- **Location:** `internal/capture/query_dispatcher.go:374-415`
 - **Category:** Memory
 - **Severity:** LOW
 

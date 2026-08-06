@@ -236,12 +236,12 @@ Update enforcement when:
 
 ```bash
 # Simulate deletion
-rm internal/capture/queries.go
+rm internal/queries/dispatcher_queries.go
 git add -A
 git commit -m "test"  # Should BLOCK
 
 # Restore
-git checkout internal/capture/queries.go
+git checkout internal/queries/dispatcher_queries.go
 
 # Verify
 ./scripts/quality/verification/validate-architecture.sh  # Should PASS
@@ -327,7 +327,7 @@ Ask:
 
 ```bash
 # Find last good commit
-git log --oneline -- internal/capture/queries.go
+git log --oneline -- internal/queries/dispatcher_queries.go
 
 # Restore from commit
 git checkout <commit-hash> -- internal/capture/

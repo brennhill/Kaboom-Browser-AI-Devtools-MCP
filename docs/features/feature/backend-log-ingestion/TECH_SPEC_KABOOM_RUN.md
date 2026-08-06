@@ -801,7 +801,7 @@ kaboom-run npm run dev | tee output.log
 - **Product Spec:** [PRODUCT_SPEC.md](PRODUCT_SPEC.md)
 - **Local Tailer:** [TECH_SPEC_LOCAL_TAILER.md](TECH_SPEC_LOCAL_TAILER.md)
 - **SSH Tailer:** [TECH_SPEC_SSH_TAILER.md](TECH_SPEC_SSH_TAILER.md)
-- **Architecture:** [layer1-be-observability.md](../../core/layer1-be-observability.md)
+- **Architecture:** [layer1-be-observability.md](../../core/target-architecture.md)
 
 ---
 

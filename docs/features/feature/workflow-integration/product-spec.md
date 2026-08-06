@@ -15,5 +15,5 @@ last_verified_date: 2026-03-05
 User-facing requirements, rationale, and deprecations for the Workflow Integration feature.
 
 - See also: [Tech Spec](tech-spec.md)
-- See also: [Workflow Integration Review](workflow-integration-review.md)
+- See also: [Workflow Integration Review](./index.md)
 - See also: [Core Product Spec](../../../core/product/product-spec.md)

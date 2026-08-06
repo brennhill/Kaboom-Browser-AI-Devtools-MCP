@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-agentic-cicd.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [Agentic Cicd Review](agentic-cicd-review.md).
+> See also: [Product Spec](product-spec.md) and [Agentic Cicd Review](./index.md).
 
 # Tech Spec: Agentic CI/CD Loop
 

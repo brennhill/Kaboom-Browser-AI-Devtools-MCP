@@ -15,5 +15,5 @@ last_verified_date: 2026-03-05
 User-facing requirements, rationale, and deprecations for the Behavioral Baselines feature.
 
 - See also: [Tech Spec](tech-spec.md)
-- See also: [Behavioral Baselines Review](../../../specs/reviews/runtime-data/behavioral-baselines-review.md)
+- See also: [Behavioral Baselines Review](../../feature-index.md)
 - See also: [Core Product Spec](../../../core/product/product-spec.md)

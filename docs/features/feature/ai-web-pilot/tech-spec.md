@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-ai-web-pilot.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [Ai Web Pilot Review](ai-web-pilot-review.md).
+> See also: [Product Spec](product-spec.md) and [Ai Web Pilot Review](./index.md).
 
 # Technical Spec: AI Web Pilot
 

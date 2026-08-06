@@ -680,9 +680,9 @@ diff = Compare(baseline, current)
 
 ## Related Documents
 
-- **Architecture:** [360-observability-architecture.md](../../../core/architecture/360-observability-architecture.md#storage-ring-buffers)
+- **Architecture:** [360-observability-architecture.md](../../../core/product/README.md#storage-ring-buffers)
 - **Schema:** [normalized-event-schema/TECH_SPEC.md](../normalized-event-schema/TECH_SPEC.md)
-- **Sequencing:** [implementation-sequencing.md](../../../core/architecture/implementation-sequencing.md#sprint-a1-browser-extension--buffer-layer-week-1)
+- **Sequencing:** [implementation-sequencing.md](../../../core/product/README.md#sprint-a1-browser-extension--buffer-layer-week-1)
 
 ---
 

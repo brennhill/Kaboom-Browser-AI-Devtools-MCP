@@ -10,7 +10,7 @@ last_reviewed: 2026-02-16
 
 This example demonstrates how to request a feature that maintains top 1% code quality by following the mandatory 5-gate workflow.
 
-**See also:** [docs/standards/README.md](../standards/README.md) for comprehensive implementation standards covering data models, functions, APIs, error handling, security, concurrency, testing, performance, and more.
+**See also:** [docs/standards/README.md](../standards/docs-system.md) for comprehensive implementation standards covering data models, functions, APIs, error handling, security, concurrency, testing, performance, and more.
 
 ---
 

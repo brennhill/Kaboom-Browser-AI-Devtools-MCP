@@ -419,7 +419,7 @@ AI calls configure({what: 'store', data: {...}})
 - [C2: Containers](c2-containers.md) - Container boundaries
 - [Request-Response Cycle](request-response-cycle.md) - MCP command flow
 - [Data Capture Pipeline](data-capture-pipeline.md) - Telemetry flow
-- [Query System](query-system.md) - Query routing details
+- [Query System](./README.md) - Query routing details
 
 ### Documentation
 - [Codebase Index](../../core/product/code-index.md)

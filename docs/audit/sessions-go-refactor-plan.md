@@ -9,7 +9,7 @@ last-verified: 2026-02-08
 
 # sessions.go Refactoring Plan (694 LOC → ~400 LOC)
 
-**File:** [`internal/session/sessions.go`](internal/session/sessions.go) (694 lines)
+**File:** [`internal/session/types.go`](internal/session/types.go) (694 lines)
 
 **Goal:** Split into focused files by domain/concern.
 
@@ -186,7 +186,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 11. `internal/session/sessions.go` (~200 LOC)
+### 11. `internal/session/types.go` (~200 LOC)
 **Purpose:** SessionManager struct and main exports
 
 **Contents:**
@@ -244,7 +244,7 @@ last-verified: 2026-02-08
 
 ## Import Structure After Refactoring
 
-### In `internal/session/sessions.go`:
+### In `internal/session/types.go`:
 ```go
 import (
 	"encoding/json"

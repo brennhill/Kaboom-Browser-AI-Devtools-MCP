@@ -938,7 +938,7 @@ User session timeout after 30 minutes
 - **Product Spec:** [PRODUCT_SPEC.md](PRODUCT_SPEC.md)
 - **kaboom-run:** [TECH_SPEC_KABOOM_RUN.md](TECH_SPEC_KABOOM_RUN.md)
 - **SSH Tailer:** [TECH_SPEC_SSH_TAILER.md](TECH_SPEC_SSH_TAILER.md)
-- **Architecture:** [layer1-be-observability.md](../../core/layer1-be-observability.md)
+- **Architecture:** [layer1-be-observability.md](../../core/target-architecture.md)
 
 ---
 

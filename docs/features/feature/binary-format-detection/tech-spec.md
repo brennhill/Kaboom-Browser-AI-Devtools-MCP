@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-binary-format-detection.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [Binary Format Detection Review](binary-format-detection-review.md).
+> See also: [Product Spec](product-spec.md) and [Binary Format Detection Review](./index.md).
 
 # Technical Spec: Binary Format Detection
 

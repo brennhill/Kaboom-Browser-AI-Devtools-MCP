@@ -10,7 +10,7 @@ last_reviewed: 2026-02-16
 
 ## See Also
 
-- [codebase-canon-v5.3.md](../architecture/codebase-canon-v5.3.md) - v5.3 baseline (now superseded by v5.4)
+- [codebase-canon-v5.3.md](./README.md) - v5.3 baseline (now superseded by v5.4)
 - [known-issues.md](../quality/known-issues.md) - Current blockers and workarounds
 - [feature-to-strategy.md](feature-to-strategy.md) - Feature → product strategy alignment
 
@@ -18,13 +18,13 @@ last_reviewed: 2026-02-16
 
 ## Critical Core Files
 
-### internal/capture/queries.go
+### internal/capture/query_dispatcher.go
 **What it does:** Async queue-and-poll implementation
 
 **Affects:**
 - 🔥 **CRITICAL:** All `interact()` commands (execute_js, navigate, etc.)
-- Feature: [Async Queue Pattern](../architecture/ADR-001-async-queue-pattern.md)
-- Feature: [Correlation ID Tracking](../protocol/async-queue-correlation-tracking.md)
+- Feature: [Async Queue Pattern](./README.md)
+- Feature: [Correlation ID Tracking](./README.md)
 - Protection: [5-Layer Enforcement](../../architecture/boundaries/ARCHITECTURE-ENFORCEMENT.md)
 - Diagram: [Async Queue Flow](../architecture/diagrams/async-queue-flow.md)
 
@@ -212,7 +212,7 @@ last_reviewed: 2026-02-16
 
 ### Async Queue Pattern
 **Code:**
-- internal/capture/queries.go (303 lines)
+- internal/capture/query_dispatcher.go (303 lines)
 - internal/capture/httpingest/handlers.go (polling endpoints)
 - cmd/browser-agent/tools_core.go (MCP handlers)
 - internal/queries/types.go (type definitions)

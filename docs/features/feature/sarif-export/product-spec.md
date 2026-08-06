@@ -16,5 +16,5 @@ last_verified_date: 2026-03-05
 User-facing requirements, rationale, and deprecations for the Sarif Export feature.
 
 - See also: [Tech Spec](tech-spec.md)
-- See also: [Sarif Export Review](sarif-export-review.md)
+- See also: [Sarif Export Review](./index.md)
 - See also: [Core Product Spec](../../../core/product/product-spec.md)

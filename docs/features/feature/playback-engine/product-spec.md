@@ -483,7 +483,7 @@ These are deliberate scope boundaries, not bugs. Each is documented so the LLM c
 ## Dependencies
 
 ### Internal
-- **PendingQuery system** (`internal/capture/queries.go`) — dispatches commands to extension
+- **PendingQuery system** (`internal/capture/query_dispatcher.go`) — dispatches commands to extension
 - **interact tool** (`cmd/browser-agent/tools_interact.go`) — existing action primitives
 - **configure tool** (`cmd/browser-agent/tools_configure.go`) — playback start entry point
 - **observe tool** (`cmd/browser-agent/tools_observe.go`) — playback results query

@@ -246,7 +246,7 @@ grep AsyncCommandTimeout internal/queries/types.go
 
 ## References
 
-- [Implementation: queries.go](../../internal/capture/queries.go)
+- [Implementation: dispatcher_queries.go](../../../internal/queries/dispatcher_queries.go)
 - [Type Definition: CommandResult](../../internal/queries/types.go)
 - [Async Queue Flow Diagram](async-queue-flow.md)
 - [Architecture Enforcement](../boundaries/ARCHITECTURE-ENFORCEMENT.md)

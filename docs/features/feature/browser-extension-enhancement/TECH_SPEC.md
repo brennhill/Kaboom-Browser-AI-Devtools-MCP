@@ -739,7 +739,7 @@ interface NormalizedBrowserEvent {
 
 - **Product Spec:** [PRODUCT_SPEC.md](PRODUCT_SPEC.md)
 - **QA Plan:** [QA_PLAN.md](QA_PLAN.md)
-- **Architecture:** [360-observability-architecture.md](../../../core/architecture/360-observability-architecture.md#ingestion-layer)
+- **Architecture:** [360-observability-architecture.md](../../../core/product/README.md#ingestion-layer)
 
 ---
 

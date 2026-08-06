@@ -611,7 +611,7 @@ If extension posts too many errors:
 ### Related Diagrams
 - [C2: Containers](c2-containers.md) - Component overview
 - [Request-Response Cycle](request-response-cycle.md) - MCP flow
-- [Query System](query-system.md) - Async queue details
+- [Query System](./README.md) - Async queue details
 - [Data Capture Pipeline](data-capture-pipeline.md) - Telemetry flow
 
 ### Documentation

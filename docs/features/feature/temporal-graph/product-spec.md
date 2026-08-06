@@ -16,5 +16,5 @@ last_verified_date: 2026-03-05
 User-facing requirements, rationale, and deprecations for the Temporal Graph feature.
 
 - See also: [Tech Spec](tech-spec.md)
-- See also: [Temporal Graph Review](../../../specs/reviews/runtime-data/temporal-graph-review.md)
+- See also: [Temporal Graph Review](../../feature-index.md)
 - See also: [Core Product Spec](../../../core/product/product-spec.md)

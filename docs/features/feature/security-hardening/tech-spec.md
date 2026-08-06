@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-security-hardening.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [Security Hardening Review](security-hardening-review.md).
+> See also: [Product Spec](product-spec.md) and [Security Hardening Review](./index.md).
 
 # Technical Spec: Security Hardening Tools
 

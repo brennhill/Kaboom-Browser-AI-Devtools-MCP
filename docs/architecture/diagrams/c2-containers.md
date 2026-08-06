@@ -241,7 +241,7 @@ AI Agent
 ### Related Diagrams
 - [C3: Components](c3-components.md) - Go package structure
 - [Request-Response Cycle](request-response-cycle.md) - Complete MCP command flow
-- [Query System](query-system.md) - Async queue-and-poll details
+- [Query System](./README.md) - Async queue-and-poll details
 - [Extension Message Protocol](extension-message-protocol.md) - All message types
 
 ### Documentation

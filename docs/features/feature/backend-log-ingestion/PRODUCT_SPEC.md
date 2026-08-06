@@ -616,7 +616,7 @@ MCP Server (stdio)
 
 ## Related Documents
 
-- **Architecture:** [layer1-be-observability.md](../../core/layer1-be-observability.md)
+- **Architecture:** [layer1-be-observability.md](../../core/target-architecture.md)
 - **Target Architecture:** [target-architecture.md](../../core/target-architecture.md)
 
 ---

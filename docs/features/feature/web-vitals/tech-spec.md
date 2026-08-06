@@ -14,7 +14,7 @@ last_verified_date: 2026-08-04
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-web-vitals.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [Web Vitals Review](web-vitals-review.md).
+> See also: [Product Spec](product-spec.md) and [Web Vitals Review](./index.md).
 
 # Technical Spec: Web Vitals Capture
 

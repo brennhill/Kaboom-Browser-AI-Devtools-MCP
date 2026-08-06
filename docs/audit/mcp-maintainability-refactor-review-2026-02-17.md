@@ -101,7 +101,7 @@ Evidence:
 
 - Extension sends statuses (`complete|error|timeout`), but many failures are encoded as `complete` with `error` payload.
 - Server-side processing of command results largely keys off correlation/result presence, not strict status semantics.
-- Relevant files: `src/background/pending-queries.ts`, `src/background/sync/sync-client.ts`, `internal/capture/syncruntime/handler.go`, `internal/capture/queries.go`.
+- Relevant files: `src/background/pending-queries.ts`, `src/background/sync/sync-client.ts`, `internal/capture/syncruntime/handler.go`, `internal/capture/query_dispatcher.go`.
 
 Impact:
 
@@ -131,7 +131,7 @@ Impact:
 5. Extension `SyncClient` receives commands: `src/background/sync/sync-client.ts`.
 6. Extension executes in `handlePendingQuery`: `src/background/pending-queries.ts`.
 7. Command results are sent back via `/sync` `command_results`.
-8. Server correlates via query ID/correlation ID: `internal/capture/syncruntime/handler.go`, `internal/capture/queries.go`.
+8. Server correlates via query ID/correlation ID: `internal/capture/syncruntime/handler.go`, `internal/capture/query_dispatcher.go`.
 9. Tool response is post-processed (redaction/warnings/telemetry): `cmd/browser-agent/handler.go`, `cmd/browser-agent/telemetry_passive.go`.
 
 ## Current accuracy posture

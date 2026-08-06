@@ -3,7 +3,7 @@ status: proposed
 scope: core/vision
 ai-priority: high
 tags: [vision, ai-first, strategy, thesis, product-strategy]
-relates-to: [roadmap.md, ROADMAP-STRATEGY-ANALYSIS.md, feature-to-strategy.md, semantic-graph.md]
+relates-to: [roadmap.md, ROADMAP-STRATEGY-ANALYSIS.md, semantic-graph.md]
 last-verified: 2026-02-02
 ---
 
@@ -232,7 +232,6 @@ The 5 MCP tools become:
 
 - [roadmap.md](../roadmap.md) — Current roadmap and thesis
 - [Roadmap](../roadmap.md) — Current strategy and priorities
-- [feature-to-strategy.md](feature-to-strategy.md) — Feature-to-strategy mapping
 - [architecture.md](../../.claude/refs/architecture.md) — System architecture
 
 ---

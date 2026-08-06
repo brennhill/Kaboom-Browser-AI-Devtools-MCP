@@ -506,7 +506,7 @@ type BufferStats struct {
 - [Extension Message Protocol](extension-message-protocol.md) - HTTP messages
 - [Request-Response Cycle](request-response-cycle.md) - MCP flow
 - [C2: Containers](c2-containers.md) - Component overview
-- [Query System](query-system.md) - Query routing
+- [Query System](./README.md) - Query routing
 
 ### Documentation
 - [Timestamp Standard](../../core/protocol/timestamp-standard.md) - Time format

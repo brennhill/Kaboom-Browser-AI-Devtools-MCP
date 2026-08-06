@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 > **[MIGRATION NOTICE]**
 > Canonical location for this tech spec. Migrated from `/docs/ai-first/tech-spec-ttl-retention.md` on 2026-01-26.
-> See also: [Product Spec](product-spec.md) and [TTL Retention Review](ttl-retention-review.md).
+> See also: [Product Spec](product-spec.md) and [TTL Retention Review](./index.md).
 
 # Technical Spec: TTL-Based Retention (Feature 16)
 

@@ -22,20 +22,6 @@ import sys
 CODE_DIR = Path.cwd()
 DOCS_DIR = CODE_DIR / "docs"
 
-# Historic code/doc path aliases after refactors.
-LEGACY_CODE_PATH_MAP = {
-    "cmd/browser-agent/tools.go": "cmd/browser-agent/tools_schema.go",
-    "cmd/browser-agent/codegen.go": "cmd/browser-agent/testgen.go",
-    "internal/session/sessions.go": "internal/session/types.go",
-    "internal/capture/queries.go": "internal/capture/query_dispatcher.go",
-    "internal/capture/recording.go": "internal/capture/recording_manager.go",
-    "internal/security/security_config.go": "internal/security/policy/mode.go",
-    "internal/security/security_config_mode.go": "internal/security/policy/mode.go",
-    "internal/security/security_config_policy.go": "internal/security/policy/policy.go",
-    "internal/security/security_config_audit.go": "internal/security/policy/audit.go",
-    "internal/security/security_diff.go": "internal/security/diff/types.go",
-}
-
 class DocumentLinter:
     """Lint markdown documentation files for common issues."""
 
@@ -144,14 +130,6 @@ class DocumentLinter:
                         else collapsed_repo_target
                     )
                     candidates.append(collapsed_repo_target / "index.md")
-                else:
-                    collapsed_repo = file_part
-
-                # Refactor aliases for moved code files.
-                alias = LEGACY_CODE_PATH_MAP.get(collapsed_repo)
-                if alias:
-                    alias_target = (CODE_DIR / alias).resolve()
-                    candidates.append(alias_target)
 
             if not any(candidate.exists() for candidate in candidates):
                 rel = file_path.relative_to(DOCS_DIR)
@@ -185,6 +163,23 @@ class DocumentLinter:
                             )
                 except (OSError, UnicodeDecodeError):
                     pass
+
+    def check_compatibility_facade(self, file_path, content):
+        """Reject documentation that only forwards readers to a canonical owner."""
+        legacy_frontmatter = re.search(
+            r'^doc_type:\s*legacy_alias\s*$', content, re.MULTILINE
+        )
+        forwarding_only = re.search(
+            r'\bthis file exists only to (?:preserve|redirect|forward)\b',
+            content,
+            re.IGNORECASE,
+        )
+        if legacy_frontmatter or forwarding_only:
+            kind = "legacy_alias" if legacy_frontmatter else "forwarding-only prose"
+            self.error(
+                f"{file_path.relative_to(DOCS_DIR)}: documentation compatibility facade "
+                f"uses {kind}"
+            )
 
     def check_frontmatter(self, file_path, content):
         """Check YAML frontmatter quality"""
@@ -232,6 +227,7 @@ class DocumentLinter:
                 content = f.read()
 
             self.check_frontmatter(file_path, content)
+            self.check_compatibility_facade(file_path, content)
             self.check_markdown_links(file_path, content)
             self.check_code_references(file_path, content)
 

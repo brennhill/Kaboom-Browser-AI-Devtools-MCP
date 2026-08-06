@@ -11,7 +11,7 @@ last_verified_date: 2026-03-05
 **Status**: ACCEPTED (2026-02-02)
 **Deciders**: Engineering Team
 **Supersedes**: None
-**Related**: [ADR-001: Async Queue Pattern](ADR-001-async-queue-pattern.md)
+**Related**: [ADR-001: Async Queue Pattern](../platform/README.md)
 
 ---
 
@@ -80,7 +80,7 @@ If ANY component is deleted, the test **fails to compile or run**.
 ### Layer 4: Documentation (Human Context)
 
 - [ADR-002](ADR-002-async-queue-immutability.md) - This document (WHY it's immutable)
-- [async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md) - Implementation details
+- [async-queue-correlation-tracking.md](../../core/product/README.md) - Implementation details
 - Inline comments in critical files referencing ADR-002
 
 **Strength**: Provides context for future developers
@@ -120,7 +120,7 @@ If `Capture` doesn't implement `AsyncQueue`, compilation fails.
 
 ✅ **Clear error messages** - Each layer provides actionable guidance:
 ```
-❌ COMMIT BLOCKED: Critical file 'internal/capture/queries.go' is missing!
+❌ COMMIT BLOCKED: Critical file 'internal/queries/dispatcher_queries.go' is missing!
    See docs/architecture/decisions/ADR-002-async-queue-immutability.md
    Or ask: 'How do I restore the async queue implementation?'
 ```
@@ -174,7 +174,7 @@ To modify the async queue architecture:
 - [x] Integration test created (`async_queue_integration_test.go`)
 - [x] Architecture validation script (`scripts/quality/verification/validate-architecture.sh`)
 - [x] ADR-002 written (this document)
-- [x] Documentation updated ([async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md))
+- [x] Documentation updated ([async-queue-correlation-tracking.md](../../core/product/README.md))
 - [ ] CI workflow added (`.github/workflows/architecture-validation.yml`) - TODO
 - [ ] Interface-based enforcement added (future enhancement)
 - [ ] Team training on bypass procedure
@@ -225,13 +225,13 @@ To modify the async queue architecture:
 
 ## Related Decisions
 
-- [ADR-001: Async Queue Pattern](ADR-001-async-queue-pattern.md) - Original design decision
-- [ADR-003: Correlation ID Tracking](ADR-003-correlation-id-tracking.md) - Status visibility (future)
+- [ADR-001: Async Queue Pattern](../platform/README.md) - Original design decision
+- [ADR-003: Correlation ID Tracking](../platform/README.md) - Status visibility (future)
 
 ## References
 
 - Incident Report: Phase 4b async queue deletion (2026-02-02)
-- [async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md)
+- [async-queue-correlation-tracking.md](../../core/product/README.md)
 - [async_queue_integration_test.go](internal/capture/async_queue_integration_test.go)
 - [validate-architecture.sh](scripts/quality/verification/validate-architecture.sh)
 

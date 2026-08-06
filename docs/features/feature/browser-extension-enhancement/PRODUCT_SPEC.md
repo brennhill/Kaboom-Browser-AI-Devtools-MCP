@@ -313,8 +313,8 @@ interface SmartSelector {
 
 - **Tech Spec:** [browser-extension-enhancement/TECH_SPEC.md](TECH_SPEC.md)
 - **QA Plan:** [browser-extension-enhancement/QA_PLAN.md](QA_PLAN.md)
-- **Architecture:** [360-observability-architecture.md](../../../core/architecture/360-observability-architecture.md#ingestion-layer)
-- **Sequencing:** [implementation-sequencing.md](../../../core/architecture/implementation-sequencing.md#sprint-a1-browser-extension--buffer-layer-week-1)
+- **Architecture:** [360-observability-architecture.md](../../../core/product/README.md#ingestion-layer)
+- **Sequencing:** [implementation-sequencing.md](../../../core/product/README.md#sprint-a1-browser-extension--buffer-layer-week-1)
 
 ---
 

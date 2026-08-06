@@ -147,5 +147,5 @@ Standard Kaboom colors used in diagrams:
 ## References
 
 - [ADR Index](../README.md)
-- [Codebase Canon](../../core/architecture/codebase-canon-v5.3.md)
+- [Codebase Canon](../../core/product/README.md)
 - [Feature Documentation](../../features/README.md)

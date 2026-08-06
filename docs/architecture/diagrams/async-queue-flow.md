@@ -220,8 +220,8 @@ Extension polls every **1 second** in ideal conditions.
 
 ## References
 
-- [queries.go](../../internal/capture/queries.go) - Queue implementation
+- [dispatcher_queries.go](../../../internal/queries/dispatcher_queries.go) - Queue implementation
 - [handlers.go](../../internal/capture/httpingest/handlers.go) - HTTP endpoints
 - [tools_core.go](../../cmd/browser-agent/tools_core.go) - MCP tool handlers
-- [ADR-001: Async Queue Pattern](../decisions/ADR-001-async-queue-pattern.md)
+- [ADR-001: Async Queue Pattern](../platform/README.md)
 - [ADR-002: Async Queue Immutability](../decisions/ADR-002-async-queue-immutability.md)

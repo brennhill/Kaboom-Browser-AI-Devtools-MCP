@@ -103,7 +103,7 @@ Files with too many lines of code (limit: 600 lines)
 **internal/buffers/ring_buffer.go** (1 issues)
 - Line 272: Method  has a cyclomatic complexity of 11 (limit is 8)
 
-**internal/capture/recording.go** (1 issues)
+**internal/capture/recording_manager.go** (1 issues)
 - Line 224: Method ListRecordings has a cyclomatic complexity of 9 (limit is 8)
 
 **internal/capture/websockettest/websocket-streaming_test.go** (1 issues)
@@ -118,7 +118,7 @@ Files with too many lines of code (limit: 600 lines)
 **internal/security/security.go** (1 issues)
 - Line 88: Method Scan has a cyclomatic complexity of 11 (limit is 8)
 
-**internal/security/security_diff.go** (4 issues)
+**internal/security/diff/types.go** (4 issues)
 - Line 638: Method buildEphemeralSnapshot has a cyclomatic complexity of 13 (limit is 8)
 - Line 550: Method compareTransport has a cyclomatic complexity of 14 (limit is 8)
 - Line 389: Method compareCookies has a cyclomatic complexity of 20 (limit is 8)

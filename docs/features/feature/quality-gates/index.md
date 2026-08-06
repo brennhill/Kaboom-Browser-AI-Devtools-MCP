@@ -35,7 +35,6 @@ code_paths:
   - docs/features/protocol/
   - docs/features/testing/
   - docs/specs/contracts/
-  - docs/specs/reviews/agent-workflows/
   - docs/specs/reviews/runtime-data/
   - docs/specs/versioning/
   - docs/architecture/diagrams/quality/5-layer-protection.md

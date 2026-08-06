@@ -118,7 +118,7 @@ export function cleanupRequestTracking(): void {
 ---
 
 #### 1.3 Goroutine Leak in Query Cleanup
-**File:** [`internal/capture/queries.go`](internal/capture/queries.go:79-90)
+**File:** [`internal/capture/query_dispatcher.go`](internal/capture/query_dispatcher.go:79-90)
 **Severity:** High
 **Type:** Resource Leak
 
@@ -146,7 +146,7 @@ go func() {
 ### Medium Issues
 
 #### 1.4 Recording Storage No Cleanup ✅ FIXED
-**File:** [`internal/capture/recording.go`](internal/capture/recording.go:21-25)
+**File:** [`internal/capture/recording_manager.go`](internal/capture/recording_manager.go:21-25)
 **Severity:** Medium
 **Type:** Disk Space Leak
 
@@ -347,7 +347,7 @@ flush(): void {
 ### Medium Issues
 
 #### 3.3 Query Dispatcher Broadcast Without Context
-**File:** [`internal/capture/queries.go`](internal/capture/queries.go:196)  
+**File:** [`internal/capture/query_dispatcher.go`](internal/capture/query_dispatcher.go:196)
 **Severity:** Medium  
 **Type:** Concurrency Issue
 
@@ -482,7 +482,7 @@ if (!response.ok) {
 |-------|--------|--------|
 | `src/background/pending-queries.ts` | 952 | ❌ Exceeds |
 | `internal/capture/types.go` | 653 | ❌ Exceeds |
-| `internal/session/sessions.go` | 694 | ❌ Exceeds |
+| `internal/session/types.go` | 694 | ❌ Exceeds |
 | `src/background/message-handlers.ts` | 552 | ❌ Exceeds |
 | `src/lib/net/websocket.ts` | 776 | ⚠️ Near limit |
 
@@ -772,7 +772,7 @@ if (domLike.nodeType) {
 ### Low Issues
 
 #### 9.1 TODO Comments Without Issues
-**File:** [`internal/security/security_config.go`](internal/security/security_config.go:44,129,145,161,181)  
+**File:** [`internal/security/policy/mode.go`](internal/security/policy/mode.go:44,129,145,161,181)
 **Severity:** Low  
 **Type:** Documentation Debt
 
@@ -877,15 +877,15 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 - `cmd/browser-agent/main.go`
 - `internal/capture/types.go`
 - `internal/capture/httpingest/handlers.go`
-- `internal/capture/queries.go`
-- `internal/capture/recording.go`
+- `internal/capture/query_dispatcher.go`
+- `internal/capture/recording_manager.go`
 - `internal/capture/settings.go`
 - `internal/capture/syncruntime/handler.go`
 - `internal/capture/websocket.go`
 - `internal/capture/memory.go`
-- `internal/session/sessions.go`
+- `internal/session/types.go`
 - `internal/session/client_registry.go`
-- `internal/security/security_config.go`
+- `internal/security/policy/mode.go`
 - `internal/buffers/ring_buffer.go`
 
 ### TypeScript/JavaScript Frontend

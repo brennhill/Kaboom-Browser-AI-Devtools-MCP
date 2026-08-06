@@ -52,7 +52,6 @@ last_verified_date: 2026-03-05
 | HAR Export | deprecated | — | — | 5.0.0 | [feature/har-export](feature/har-export/) |
 | In-Browser Agent Panel | proposed | observe, analyze, interact, configure | agent_panel, agent_watch (proposed) | — | [feature/in-browser-agent-panel](feature/in-browser-agent-panel/) |
 | Interception Deferral | in-progress | observe, configure | (network buffering) | — | [feature/interception-deferral](feature/interception-deferral/) |
-| MCP Tool Descriptions | shipped | — | (tool schema) | 5.0.0 | [feature/mcp-tool-descriptions](feature/mcp-tool-descriptions/) |
 | Memory Enforcement | shipped | configure | health | 5.0.0 | [feature/memory-enforcement](feature/memory-enforcement/) |
 | Noise Filtering | shipped | configure | noise_rule | 5.0.0 | [feature/noise-filtering](feature/noise-filtering/) |
 | Performance Budget | shipped | configure, analyze | health, performance | 5.0.0 | [feature/performance-budget](feature/performance-budget/) |

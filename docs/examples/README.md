@@ -78,7 +78,7 @@ Refactor [FILE/COMPONENT].
 **Quality Standards:**
 - [../../kaboom-code-standards.md](../../kaboom-code-standards.md) - Project quality standards
 - [../core/reliability/common-patterns.md](../core/reliability/common-patterns.md) - Canonical implementation patterns
-- [../standards/README.md](../standards/README.md) - Comprehensive implementation standards (data models, functions, APIs, error handling, security, concurrency, testing, performance)
+- [../standards/README.md](../standards/docs-system.md) - Comprehensive implementation standards (data models, functions, APIs, error handling, security, concurrency, testing, performance)
 
 ---
 
