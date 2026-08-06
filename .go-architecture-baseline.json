@@ -213,6 +213,10 @@
       "mutable_globals": 0,
       "exports": 12
     },
+    "cmd/browser-agent/internal/httpapi/openapi.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/httpapi/response.go": {
       "mutable_globals": 0,
       "exports": 1

@@ -55,6 +55,7 @@ code_paths:
   - src/lib/net/websocket.ts
   - src/lib/net/websocket-tracking.ts
 test_paths:
+  - internal/tools/observe/core/filtering_test.go
   - cmd/browser-agent/waterfall_ondemand_test.go
   - internal/tools/observe/timeline/correlation_test.go
   - internal/tools/observe/logs/logs_edge_test.go

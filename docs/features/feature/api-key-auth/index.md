@@ -11,7 +11,6 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/httpguard/apikey_test.go
   - cmd/browser-agent/internal/httpguard/middleware_test.go
-  - cmd/browser-agent/http_helpers_unit_test.go
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-29
 ---
@@ -41,4 +40,4 @@ last_verified_date: 2026-03-29
 
 - Auth middleware: `cmd/browser-agent/internal/httpguard/apikey.go`
 - CORS allowlist for auth header: `cmd/browser-agent/internal/httpguard/middleware.go`
-- Tests: `cmd/browser-agent/internal/httpguard/apikey_test.go`, `cmd/browser-agent/http_helpers_unit_test.go`
+- Tests: `cmd/browser-agent/internal/httpguard/apikey_test.go`

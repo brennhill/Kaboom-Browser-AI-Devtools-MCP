@@ -409,18 +409,6 @@ func (s *Server) Close() {
 //go:embed openapi.json
 var openapiJSON []byte
 
-func handleOpenAPI(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(openapiJSON); err != nil {
-		diag.Printf("[kaboom] failed to write /openapi.json response: %v\n", err)
-	}
-}
-
 func handleTelemetry(server *Server, captured *capture.Capture) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -648,7 +636,7 @@ func registerUploadRoutes(mux *http.ServeMux, server *Server) {
 }
 
 func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) *MCPHandler {
-	mux.HandleFunc("/openapi.json", httpguard.CORS(handleOpenAPI))
+	mux.HandleFunc("/openapi.json", httpguard.CORS(httpapi.OpenAPI(openapiJSON)))
 
 	mcpHandler := NewToolHandler(server, captured)
 	mux.HandleFunc("/mcp", httpguard.CORS(newMCPHTTPHandler(mcpHandler).ServeHTTP))
