@@ -99,10 +99,10 @@ npm run demo
 
 ## Key Files
 
-- **[wake-up.md](wake-up.md)** — Start here
+- **[wake-up.md](../history/wake-up.md)** — Start here
 - **[validation-guide.md](validation-guide.md)** — Hands-on validation
-- **[STATUS.md](STATUS.md)** — Detailed status
-- **[competitive-advantage.md](competitive-advantage.md)** — Why WebSocket matters
+- **[STATUS.md](../history/STATUS.md)** — Detailed status
+- **[competitive-advantage.md](../history/competitive-advantage.md)** — Why WebSocket matters
 
 ---
 

@@ -11,8 +11,8 @@ const requiredFiles = ['index.md', 'product-spec.md', 'tech-spec.md', 'qa-plan.m
 const requiredFrontmatterKeys = ['doc_type', 'feature_id', 'last_reviewed']
 
 const featureDirPredicates = [
-  (rel) => rel.startsWith('feature/'),
-  (rel) => rel.startsWith('bug/'),
+  (rel) => /^feature\/[^/]+$/.test(rel),
+  (rel) => /^bug\/[^/]+$/.test(rel),
   (rel) =>
     [
       'draw-mode',
@@ -80,7 +80,7 @@ export function discoverFeatureDirs(featuresRoot) {
       const full = path.join(current, entry)
       if (!isDir(full)) continue
       stack.push(full)
-      const rel = path.relative(featuresRoot, full)
+      const rel = path.relative(featuresRoot, full).split(path.sep).join('/')
       if (featureDirPredicates.some((fn) => fn(rel))) {
         dirs.push(full)
       }

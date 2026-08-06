@@ -61,3 +61,21 @@ test('strict feature freshness gate rejects invalid calendar dates', () => {
 
   assert.ok(result.issues.some((issue) => issue.includes("invalid last_reviewed value '2026-02-31'")))
 })
+
+test('nested feature document owners are not misclassified as feature bundles', () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'feature-bundle-check-'))
+  writeFeatureBundle(repoRoot, 'feature/sample-feature', '2026-03-01')
+  const guidesDir = path.join(repoRoot, 'docs', 'features', 'feature', 'sample-feature', 'guides')
+  fs.mkdirSync(guidesDir, { recursive: true })
+  fs.writeFileSync(path.join(guidesDir, 'quick-start.md'), '# Quick start\n', 'utf8')
+
+  const result = checkFeatureBundles({
+    repoRoot,
+    strictFrontmatter: true,
+    enforceFeatureFreshness: true,
+    freshnessWindowDays: 30,
+    now: new Date('2026-03-03T00:00:00Z')
+  })
+
+  assert.deepEqual(result.issues, [])
+})

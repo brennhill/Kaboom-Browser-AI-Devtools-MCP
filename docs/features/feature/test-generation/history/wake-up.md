@@ -74,7 +74,7 @@ last_verified_date: 2026-03-05
 
 ### Validation Guide
 
-**Location:** [validation-guide.md](validation-guide.md)
+**Location:** [validation-guide.md](../guides/validation-guide.md)
 
 **Time required:** ~2 hours total
 
@@ -144,7 +144,7 @@ make dev
 
 Read these in order:
 1. [STATUS.md](STATUS.md) — Detailed status report
-2. [validation-guide.md](validation-guide.md) — Step-by-step validation
+2. [validation-guide.md](../guides/validation-guide.md) — Step-by-step validation
 3. [competitive-advantage.md](competitive-advantage.md) — Why WebSocket matters
 
 ### Option 3: Ask Questions

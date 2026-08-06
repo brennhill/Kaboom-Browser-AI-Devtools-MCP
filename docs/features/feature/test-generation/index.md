@@ -4,7 +4,7 @@ feature_id: feature-test-generation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - cmd/browser-agent/internal/testgenhandler/handler.go
   - cmd/browser-agent/internal/testgenhandler/provider_adapter.go
@@ -64,6 +64,8 @@ last_verified_date: 2026-03-05
 - Product Spec: [product-spec.md](./product-spec.md)
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
+- Operator guides: [quick start](./guides/quick-start.md), [UAT](./guides/uat-guide.md), and [validation](./guides/validation-guide.md)
+- Historical planning and reviews: [status](./history/STATUS.md) and [review](./history/REVIEW.md)
 
 ## Requirement IDs
 

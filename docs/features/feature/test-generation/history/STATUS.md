@@ -133,7 +133,7 @@ These features are implemented but not connected:
 
 ### Validation Plan
 
-**[validation-guide.md](validation-guide.md)** provides step-by-step validation:
+**[validation-guide.md](../guides/validation-guide.md)** provides step-by-step validation:
 
 1. **Phase 1:** Generate test from WebSocket error (30 min)
    - **Unique to Kaboom:** WebSocket frame monitoring
@@ -269,11 +269,11 @@ Kaboom can generate tests that verify WebSocket behavior automatically — no ma
 4. `docs/features/feature/test-generation/tech-spec.md`
 5. `docs/features/feature/test-generation/review.md`
 6. `docs/features/feature/test-generation/qa-plan.md`
-7. `docs/features/feature/test-generation/uat-guide.md`
+7. `docs/features/feature/test-generation/guides/uat-guide.md`
 8. `docs/features/feature/test-generation/migration.md`
 9. `docs/features/feature/test-generation/questions.md`
-10. `docs/features/feature/test-generation/validation-plan.md`
-11. `docs/features/feature/test-generation/validation-guide.md`
+10. `docs/features/feature/test-generation/history/validation-plan.md`
+11. `docs/features/feature/test-generation/guides/validation-guide.md`
 12. `docs/features/feature/test-generation/status.md` (this file)
 
 ### Modified Files
