@@ -11,7 +11,9 @@ This folder contains all cross-product and foundational documentation for Kaboom
 - Technical specifications that apply to the entire system
 - API specifications (OpenAPI/Swagger)
 
-For Architecture Decision Records, see [`/docs/adrs/`](../adrs/).
+For cross-cutting Architecture Decision Records, see
+[`/docs/architecture/decisions/`](../../architecture/decisions/). Feature-specific
+decisions belong in the owning feature's `tech-spec.md`.
 
 ## In-Progress
 

@@ -186,7 +186,7 @@ cat >> "$TEMP_FILE" << 'EOF'
 → Read TECH_SPEC.md and look for "**Code References**" section or `filename:line_number` format
 
 ### I need to understand design decisions
-→ Read the feature-review.md or check `docs/adrs/ADR-<feature-name>.md`
+→ Read the owning feature's TECH_SPEC.md and optional feature-review.md
 
 ---
 
@@ -201,7 +201,6 @@ feature/<feature-name>/
 ├── QA_PLAN.md              # Test scenarios & acceptance criteria
 ├── <feature>-review.md     # Optional: Principal engineer review
 └── [Optional files]
-    ├── ADR-<feature>.md    # Links here (actually in /docs/adrs/)
     ├── IMPLEMENTATION_PLAN.md
     ├── MIGRATION.md
     └── [Other docs]
@@ -215,7 +214,7 @@ feature/<feature-name>/
 2. Add PRODUCT_SPEC.md (copy template from `docs/templates/FEATURE-TEMPLATE.md`)
 3. Add TECH_SPEC.md
 4. Add QA_PLAN.md
-5. Create ADR at `docs/adrs/ADR-<feature-name>.md`
+5. Record feature decisions in TECH_SPEC.md
 6. Update **FEATURE-INDEX.md** with new entry
 7. Verify YAML frontmatter on all files
 8. Get spec review before implementation

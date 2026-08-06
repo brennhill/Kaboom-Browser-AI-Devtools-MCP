@@ -1,12 +1,12 @@
 ---
-doc_type: legacy_doc
-status: reference
-last_reviewed: 2026-02-16
+doc_type: architecture_decision
+status: active
+last_reviewed: 2026-08-06
 ---
 
 # ADR-005: Auto-Summarizing Navigation
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-02-16
 - **Related Issues**: #63, #65
 
@@ -55,4 +55,4 @@ Bundle a **compact page summary** into navigate/refresh/back/forward responses b
 
 ## Implementation Spec
 
-See [Tech Spec: Auto-Summarizing Navigation](../specs/auto-summary-navigation-spec.md) for detailed design, API contracts, error handling, and testing strategy.
+See [Tech Spec: Auto-Summarizing Navigation](../../specs/contracts/auto-summary-navigation-spec.md) for detailed design, API contracts, error handling, and testing strategy.

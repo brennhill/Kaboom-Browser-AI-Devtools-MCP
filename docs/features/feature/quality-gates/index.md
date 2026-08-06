@@ -16,6 +16,7 @@ code_paths:
   - docs/architecture/platform/
   - docs/architecture/runtime/
   - docs/architecture/workflows/
+  - docs/features/feature-navigation.md
   - docs/features/capture/
   - docs/features/generation/
   - docs/features/pilot/
@@ -41,6 +42,8 @@ code_paths:
   - cmd/hooks/main.go
   - scripts/check-file-length.sh
   - scripts/check-folder-size.cjs
+  - scripts/generate-feature-navigation.py
+  - scripts/generate-feature-navigation.sh
   - scripts/check-dormant-tests.sh
   - scripts/contracts/check_go_test_determinism.go
   - scripts/contracts/goarchitecture/main.go

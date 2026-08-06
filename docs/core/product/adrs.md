@@ -1,9 +1,11 @@
 ---
-doc_type: legacy_alias
-status: archived
-last_reviewed: 2026-02-16
+doc_type: architecture_index
+status: active
+last_reviewed: 2026-08-06
 ---
 
-# Legacy ADR Index Alias
+# Architecture Decision Records
 
-Use [docs/adrs/ADRs.md](../adrs/ADRs.md).
+Cross-cutting decisions live in [`docs/architecture/decisions/`](../../architecture/decisions/).
+Feature-specific decisions live with the code and tests they govern in each
+feature's `tech-spec.md`; no alias ADRs are maintained.

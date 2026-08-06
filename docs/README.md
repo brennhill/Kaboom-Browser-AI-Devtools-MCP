@@ -4,7 +4,7 @@ status: active
 scope: documentation/navigation
 ai-priority: high
 tags: [docs, index, canonical]
-last-verified: 2026-02-17
+last-verified: 2026-08-06
 ---
 
 # Kaboom Docs Index
@@ -23,7 +23,8 @@ last-verified: 2026-02-17
 ## Structure
 - `docs/core/`: canonical cross-feature product/tech/qa and release docs
 - `docs/features/`: feature-level product/tech/qa docs
-- `docs/adrs/`: architecture decision records
+- `docs/architecture/decisions/`: cross-cutting architecture decisions
+- `docs/features/feature/*/tech-spec.md`: feature-specific decisions
 - `docs/templates/`: spec templates
 
 ## Canonical Code Anchors

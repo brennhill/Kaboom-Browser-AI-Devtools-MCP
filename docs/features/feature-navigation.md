@@ -5,8 +5,8 @@ ai-priority: high
 tags: [features, navigation, index, lookup]
 relates-to: [FEATURE-INDEX.md, README.md]
 canonical: true
-last-verified: 2026-03-05
-last_reviewed: 2026-08-04
+last-verified: 2026-08-06
+last_reviewed: 2026-08-06
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-03
 ---
@@ -15,7 +15,7 @@ last_verified_date: 2026-04-03
 
 **For LLM Agents:** Quick lookup to find feature documentation folders and their key files.
 
-**Last updated:** 2026-08-04
+**Last updated:** 2026-08-06
 
 ---
 
@@ -194,7 +194,7 @@ Features that are documented but not yet implemented in code.
 > Read tech-spec.md and look for "**Code References**" section or `filename:line_number` format
 
 ### I need to understand design decisions
-> Read the feature review file or check `docs/adrs/ADR-<feature-name>.md`
+> Read the owning feature's tech-spec.md and optional review file
 
 ---
 
@@ -209,7 +209,6 @@ feature/<feature-name>/
 ├── qa-plan.md              # Test scenarios & acceptance criteria
 ├── <feature>-review.md     # Optional: Principal engineer review
 └── [Optional files]
-    ├── ADR-<feature>.md    # Links here (actually in /docs/adrs/)
     ├── implementation-plan.md
     ├── MIGRATION.md
     └── [Other docs]
@@ -223,7 +222,7 @@ feature/<feature-name>/
 2. Add product-spec.md (copy template from `docs/templates/FEATURE-TEMPLATE.md`)
 3. Add tech-spec.md
 4. Add qa-plan.md
-5. Create ADR at `docs/adrs/ADR-<feature-name>.md`
+5. Record feature decisions in tech-spec.md
 6. Update **FEATURE-INDEX.md** with new entry
 7. Verify YAML frontmatter on all files
 8. Get spec review before implementation

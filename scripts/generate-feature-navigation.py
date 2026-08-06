@@ -158,7 +158,7 @@ NAVIGATION_FOOTER = """
 \u2192 Read TECH_SPEC.md and look for "**Code References**" section or `filename:line_number` format
 
 ### I need to understand design decisions
-\u2192 Read the feature-review.md or check `docs/adrs/ADR-<feature-name>.md`
+\u2192 Read the owning feature's TECH_SPEC.md and optional feature-review.md
 
 ---
 
@@ -173,7 +173,6 @@ feature/<feature-name>/
 \u251c\u2500\u2500 QA_PLAN.md              # Test scenarios & acceptance criteria
 \u251c\u2500\u2500 <feature>-review.md     # Optional: Principal engineer review
 \u2514\u2500\u2500 [Optional files]
-    \u251c\u2500\u2500 ADR-<feature>.md    # Links here (actually in /docs/adrs/)
     \u251c\u2500\u2500 IMPLEMENTATION_PLAN.md
     \u251c\u2500\u2500 MIGRATION.md
     \u2514\u2500\u2500 [Other docs]
@@ -187,7 +186,7 @@ feature/<feature-name>/
 2. Add PRODUCT_SPEC.md (copy template from `docs/templates/FEATURE-TEMPLATE.md`)
 3. Add TECH_SPEC.md
 4. Add QA_PLAN.md
-5. Create ADR at `docs/adrs/ADR-<feature-name>.md`
+5. Record feature decisions in TECH_SPEC.md
 6. Update **FEATURE-INDEX.md** with new entry
 7. Verify YAML frontmatter on all files
 8. Get spec review before implementation

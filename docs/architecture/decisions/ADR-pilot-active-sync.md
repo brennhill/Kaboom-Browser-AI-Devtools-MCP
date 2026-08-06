@@ -1,7 +1,7 @@
 ---
-doc_type: legacy_doc
-status: reference
-last_reviewed: 2026-02-16
+doc_type: architecture_decision
+status: active
+last_reviewed: 2026-08-06
 ---
 
 # ADR: AI Pilot Feature Active Sync Architecture
@@ -318,6 +318,5 @@ If issues arise post-deployment:
 
 ## References
 
-- Implementation: [Plan](../../.claude/plans/buzzing-honking-cookie.md)
-- Architecture: [.claude/docs/architecture.md](../../.claude/docs/architecture.md)
-- Specification: [spec-review.md](./.claude/docs/spec-review.md)
+- [AI Web Pilot technical specification](../../features/feature/ai-web-pilot/tech-spec.md)
+- [System overview](../platform/system-overview.md)
