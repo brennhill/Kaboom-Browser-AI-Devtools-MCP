@@ -15,6 +15,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge_fastpath.go
   - cmd/browser-agent/internal/bridge/fastpathtelemetry/telemetry.go
   - cmd/browser-agent/internal/launchmode/launch_mode.go
+  - cmd/browser-agent/internal/launchmode/runtime_mode.go
   - cmd/browser-agent/internal/toolguard/guards.go
   - internal/identity/mcp.go
   - src/popup/tabs/tab-tracking.ts
@@ -30,6 +31,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/healthprobe/probe_test.go
   - cmd/browser-agent/internal/bridge/daemoncmd/command_test.go
   - cmd/browser-agent/internal/launchmode/launch_mode_test.go
+  - cmd/browser-agent/internal/launchmode/runtime_mode_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
   - internal/identity/mcp_test.go
 ---

@@ -233,6 +233,10 @@
       "mutable_globals": 3,
       "exports": 9
     },
+    "cmd/browser-agent/internal/launchmode/runtime_mode.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
     "cmd/browser-agent/internal/logstore/accessors.go": {
       "mutable_globals": 0,
       "exports": 14

@@ -68,13 +68,6 @@ type serverConfig struct {
 	startupWarnings  []string
 }
 
-type runtimeMode string
-
-const (
-	modeBridge runtimeMode = "bridge"
-	modeDaemon runtimeMode = "daemon"
-)
-
 // parsedFlags holds the raw parsed flag values before validation.
 type parsedFlags struct {
 	port, maxEntries                                         *int
@@ -285,23 +278,13 @@ func detectStdinMode() (isTTY bool, stdinMode os.FileMode) {
 	return isTTY, stdinMode
 }
 
-func selectRuntimeMode(config *serverConfig, _ bool) runtimeMode {
-	if config.bridgeMode {
-		return modeBridge
-	}
-	if config.daemonMode {
-		return modeDaemon
-	}
-	return modeBridge
-}
-
 func dispatchMode(server *Server, config *serverConfig) {
 	isTTY, stdinMode := detectStdinMode()
 	mcpConfigPath := configdiscovery.Find()
-	mode := selectRuntimeMode(config, isTTY)
+	mode := launchmode.SelectRuntimeMode(config.bridgeMode, config.daemonMode)
 	launchInfo := launchmode.Classify(config.daemonMode, isTTY, launchmode.DetectParentProcessName())
 	launchmode.SetCurrent(launchInfo)
-	if mode == modeDaemon {
+	if mode == launchmode.RuntimeDaemon {
 		diag.SetSink(os.Stderr)
 	}
 
@@ -333,7 +316,7 @@ func dispatchMode(server *Server, config *serverConfig) {
 	}
 
 	switch mode {
-	case modeDaemon:
+	case launchmode.RuntimeDaemon:
 		server.logLifecycle("daemon_mode_start", config.port, nil)
 		if err := runMCPMode(server, config.port, config.apiKey, daemonlife.LaunchOptions{Parallel: config.parallelMode}); err != nil {
 			telemetry.AppError(incident.CodeDaemonStartFailed)
@@ -347,7 +330,7 @@ func dispatchMode(server *Server, config *serverConfig) {
 			diag.Printf("[Kaboom] Daemon error: %v\n", err)
 			os.Exit(1)
 		}
-	case modeBridge:
+	case launchmode.RuntimeBridge:
 		if err := server.runtime.BridgeRunner().EnsureIOIsolation(config.logFile); err != nil {
 			bridge.SendStartupError("Bridge stdio isolation failed: " + err.Error())
 			os.Exit(1)
