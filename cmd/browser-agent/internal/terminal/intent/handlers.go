@@ -2,14 +2,31 @@
 // Why: Bridges the extension's "Find Problems" button to the AI via PTY or intent fallback.
 // Docs: docs/features/feature/auto-fix/index.md
 
-package terminal
+package intent
 
 import (
 	"encoding/json"
 	"net/http"
-
-	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 )
+
+// RelayMap is the injection capability consumed by intent routes.
+type RelayMap interface {
+	WriteToFirst([]byte) bool
+	CloseAll()
+}
+
+// RuntimeDeps provides the live terminal relay and intent store.
+type RuntimeDeps interface {
+	GetPtyRelays() RelayMap
+	GetIntentStore() *Store
+}
+
+// HTTPDeps owns the HTTP response and request-boundary collaborators.
+type HTTPDeps struct {
+	JSONResponse   func(http.ResponseWriter, int, any)
+	CORSMiddleware func(http.HandlerFunc) http.HandlerFunc
+	MaxPostBody    int64
+}
 
 // IntentRequest is the JSON body for intent creation.
 type IntentRequest struct {
@@ -18,20 +35,20 @@ type IntentRequest struct {
 }
 
 // RegisterIntentRoutes adds intent-related routes to the terminal mux.
-func RegisterIntentRoutes(mux *http.ServeMux, deps Deps, intentDeps IntentDeps) {
+func RegisterRoutes(mux *http.ServeMux, deps HTTPDeps, runtime RuntimeDeps) {
 	// Inject text directly into the active PTY session.
 	mux.HandleFunc("/terminal/inject", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		HandleTerminalInject(w, r, deps, intentDeps)
+		handleTerminalInject(w, r, deps, runtime)
 	}))
 
 	// Store an intent for the AI to pick up via MCP tool responses.
 	mux.HandleFunc("/intent", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		HandleIntentCreate(w, r, deps, intentDeps)
+		handleCreate(w, r, deps, runtime)
 	}))
 }
 
 // HandleTerminalInject writes text into the first active PTY session.
-func HandleTerminalInject(w http.ResponseWriter, r *http.Request, deps Deps, intentDeps IntentDeps) {
+func handleTerminalInject(w http.ResponseWriter, r *http.Request, deps HTTPDeps, runtime RuntimeDeps) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
@@ -49,7 +66,7 @@ func HandleTerminalInject(w http.ResponseWriter, r *http.Request, deps Deps, int
 		return
 	}
 
-	relays := intentDeps.GetPtyRelays()
+	relays := runtime.GetPtyRelays()
 	if relays == nil {
 		deps.JSONResponse(w, http.StatusServiceUnavailable, map[string]any{
 			"injected": false,
@@ -71,7 +88,7 @@ func HandleTerminalInject(w http.ResponseWriter, r *http.Request, deps Deps, int
 }
 
 // HandleIntentCreate creates an intent for the AI to pick up.
-func HandleIntentCreate(w http.ResponseWriter, r *http.Request, deps Deps, intentDeps IntentDeps) {
+func handleCreate(w http.ResponseWriter, r *http.Request, deps HTTPDeps, runtime RuntimeDeps) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
@@ -87,10 +104,10 @@ func HandleIntentCreate(w http.ResponseWriter, r *http.Request, deps Deps, inten
 		return
 	}
 	if req.Action == "" {
-		req.Action = terminalintent.ActionQAScan
+		req.Action = ActionQAScan
 	}
 
-	store := intentDeps.GetIntentStore()
+	store := runtime.GetIntentStore()
 	if store == nil {
 		deps.JSONResponse(w, http.StatusServiceUnavailable, map[string]string{"error": "intent store not initialized"})
 		return

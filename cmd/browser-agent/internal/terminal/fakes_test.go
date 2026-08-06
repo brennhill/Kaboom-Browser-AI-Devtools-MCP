@@ -1,11 +1,7 @@
 // fakes_test.go -- Shared test doubles for terminal handler tests.
-// Provides in-memory fakes for ServerDeps, IntentDeps, RelayMap, and the
-// capture ClientRegistry so handler logic can be exercised without real
-// servers, PTYs, or MCP clients.
+// Provides in-memory fakes for ServerDeps and the capture ClientRegistry.
 
 package terminal
-
-import terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 
 // fakeServerDeps is an in-memory ServerDeps for testing active-codebase logic.
 type fakeServerDeps struct {
@@ -14,32 +10,6 @@ type fakeServerDeps struct {
 
 func (f *fakeServerDeps) GetActiveCodebase() string  { return f.codebase }
 func (f *fakeServerDeps) SetActiveCodebase(p string) { f.codebase = p }
-
-// fakeRelayMap is an in-memory RelayMap capturing injected writes.
-type fakeRelayMap struct {
-	writeOK   bool
-	written   [][]byte
-	closedAll bool
-}
-
-func (f *fakeRelayMap) WriteToFirst(data []byte) bool {
-	cp := make([]byte, len(data))
-	copy(cp, data)
-	f.written = append(f.written, cp)
-	return f.writeOK
-}
-
-func (f *fakeRelayMap) CloseAll() { f.closedAll = true }
-
-// fakeIntentDeps is an in-memory IntentDeps. Either dependency may be nil to
-// exercise the "not initialized" error branches.
-type fakeIntentDeps struct {
-	relays RelayMap
-	store  *terminalintent.Store
-}
-
-func (f *fakeIntentDeps) GetPtyRelays() RelayMap                { return f.relays }
-func (f *fakeIntentDeps) GetIntentStore() *terminalintent.Store { return f.store }
 
 // fakeClientRegistry implements clientstore.Registry for AutoDetectCWD tests.
 // listResult is returned verbatim from List(); its concrete type selects which

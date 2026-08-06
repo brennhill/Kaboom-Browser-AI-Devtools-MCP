@@ -55,7 +55,7 @@ func terminalDeps() terminal.Deps {
 
 type serverIntentDeps struct{ server *Server }
 
-func (deps *serverIntentDeps) GetPtyRelays() terminal.RelayMap {
+func (deps *serverIntentDeps) GetPtyRelays() terminalintent.RelayMap {
 	if deps.server.ptyRelays == nil {
 		return nil
 	}

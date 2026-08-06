@@ -21,12 +21,12 @@ code_paths:
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - cmd/browser-agent/internal/nativeinstall/installer.go
-  - cmd/browser-agent/internal/terminal/intent_handlers.go
+  - cmd/browser-agent/internal/terminal/intent/handlers.go
   - cmd/browser-agent/internal/terminal/intent/store.go
   - cmd/browser-agent/internal/terminal/directorybrowser/browser.go
   - cmd/browser-agent/internal/terminal/dimensions/dimensions.go
-  - cmd/browser-agent/internal/terminal/static.go
-  - cmd/browser-agent/internal/terminal/terminal_assets/terminal.html
+  - cmd/browser-agent/internal/terminal/assets/assets.go
+  - cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html
   - extension/sidepanel.html
   - extension/sidepanel.js
   - src/content/ui/terminal-panel-bridge.ts
@@ -107,7 +107,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/sessionrelay/relay_replace_test.go
   - cmd/browser-agent/internal/terminal/sessionrelay/relay_close_test.go
   - cmd/browser-agent/internal/terminal/sessionrelay/relay_init_test.go
-  - cmd/browser-agent/internal/terminal/intent_handlers_test.go
+  - cmd/browser-agent/internal/terminal/intent/handlers_test.go
   - cmd/browser-agent/internal/terminal/intent/store_test.go
   - cmd/browser-agent/internal/terminal/directorybrowser/browser_test.go
   - cmd/browser-agent/internal/terminal/dimensions/dimensions_test.go
@@ -534,7 +534,7 @@ Note: `/config/active-codebase` is on the **main** daemon server (not terminal s
 | `cmd/browser-agent/internal/terminal/supervisor/supervisor.go` | Restart/backoff supervision and graceful shutdown behind explicit host callbacks |
 | `cmd/browser-agent/main_connection_mcp.go` | Terminal server startup, supervision, root adapters, and graceful shutdown |
 | `cmd/browser-agent/terminal_handlers.go` | All HTTP handlers: page, WS, start, stop, validate, config |
-| `cmd/browser-agent/terminal_assets/terminal.html` | xterm.js terminal page with WS reconnect and postMessage bridge |
+| `cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html` | xterm.js terminal page with WS reconnect and postMessage bridge |
 | `extension/sidepanel.html` | Side panel shell that loads the terminal host |
 | `src/sidepanel.ts` | Side panel UI: terminal shell, terminal iframe, write guard, session restore |
 | `src/content/ui/terminal-panel-bridge.ts` | Content-script bridge for opening the panel and forwarding writes |

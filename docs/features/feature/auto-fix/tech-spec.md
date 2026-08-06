@@ -13,7 +13,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/handler_tools_call_postprocess.go
   - cmd/browser-agent/internal/terminal/intent_store.go
-  - cmd/browser-agent/internal/terminal/intent_handlers.go
+  - cmd/browser-agent/internal/terminal/intent/handlers.go
   - src/lib/tabs/request-audit.ts
   - src/background/message-handlers.ts
 test_paths:

@@ -28,7 +28,7 @@ import {
   terminalReconnectExhaustionMs
 } from '../../../extension/content/ui/terminal-widget-types.js'
 
-const TERMINAL_HTML = 'cmd/browser-agent/internal/terminal/terminal_assets/terminal.html'
+const TERMINAL_HTML = 'cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html'
 const html = readFileSync(TERMINAL_HTML, 'utf8')
 
 /** Pull an integer out of terminal.html, failing loudly if the shape changed. */

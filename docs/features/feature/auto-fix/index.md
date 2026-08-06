@@ -13,7 +13,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/handler.go
   - cmd/browser-agent/internal/terminal/intent/store.go
-  - cmd/browser-agent/internal/terminal/intent_handlers.go
+  - cmd/browser-agent/internal/terminal/intent/handlers.go
   - internal/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - plugin/kaboom-workflows/commands/audit.md
@@ -32,6 +32,7 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/internal/terminal/intent/store_test.go
+  - cmd/browser-agent/internal/terminal/intent/handlers_test.go
   - tests/extension/reliability/request-audit.test.js
   - tests/extension/content/message-handlers.test.js
   - tests/extension/contracts/background-boundaries.test.js

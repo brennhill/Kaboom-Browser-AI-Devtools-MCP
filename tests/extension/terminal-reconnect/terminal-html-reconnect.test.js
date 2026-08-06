@@ -16,7 +16,7 @@ import vm from 'node:vm'
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-const html = readFileSync(new URL('../../../cmd/browser-agent/internal/terminal/terminal_assets/terminal.html', import.meta.url), 'utf8')
+const html = readFileSync(new URL('../../../cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html', import.meta.url), 'utf8')
 // The only inline <script> (the xterm one has a src attribute) is the IIFE.
 const iife = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((s) => s.includes('term.onData'))
 assert.ok(iife && iife.includes('replay_end'), 'could not extract terminal.html reconnect IIFE')

@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	terminalassets "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/assets"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/dimensions"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/directorybrowser"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
@@ -88,7 +89,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 	}))
 
 	// Serve xterm.js and other static assets.
-	staticFS, err := fs.Sub(AssetsFS, "terminal_assets")
+	staticFS, err := fs.Sub(terminalassets.FS, "terminal_assets")
 	if err != nil {
 		deps.Stderrf("[Kaboom] failed to create terminal static FS: %v\n", err)
 		return relays
@@ -146,7 +147,7 @@ func HandleTerminalPage(w http.ResponseWriter, r *http.Request, deps Deps) {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
 	}
-	data, err := AssetsFS.ReadFile("terminal_assets/terminal.html")
+	data, err := terminalassets.FS.ReadFile("terminal_assets/terminal.html")
 	if err != nil {
 		deps.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "failed to read terminal page"})
 		return

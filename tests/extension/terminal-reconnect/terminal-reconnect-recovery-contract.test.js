@@ -1,6 +1,6 @@
 /**
  * Contract for daemon-restart recovery in the terminal iframe host
- * (cmd/browser-agent/internal/terminal/terminal_assets/terminal.html) and its
+ * (cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html) and its
  * parent (src/sidepanel.ts).
  *
  * Why this exists: a full daemon restart drops every session/token, so the
@@ -15,7 +15,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
 
-const TERMINAL_HTML = 'cmd/browser-agent/internal/terminal/terminal_assets/terminal.html'
+const TERMINAL_HTML = 'cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html'
 const SIDEPANEL = 'src/sidepanel.ts'
 
 describe('terminal reconnect-recovery contract', () => {

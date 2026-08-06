@@ -2,9 +2,9 @@
 // Why: Bundles xterm.js and the terminal HTML page into the Go binary via go:embed,
 // keeping the extension zero-dep while providing a full terminal emulator.
 
-package terminal
+package assets
 
 import "embed"
 
 //go:embed terminal_assets
-var AssetsFS embed.FS
+var FS embed.FS

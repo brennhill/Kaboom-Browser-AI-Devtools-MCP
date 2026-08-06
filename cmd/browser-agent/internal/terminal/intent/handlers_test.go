@@ -1,7 +1,7 @@
 // intent_handlers_test.go -- Tests for intent creation and terminal injection
 // handlers using in-memory fakes (no PTY, no real server).
 
-package terminal
+package intent
 
 import (
 	"bytes"
@@ -11,9 +11,38 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 )
+
+type fakeRelayMap struct {
+	writeOK bool
+	written [][]byte
+}
+
+func (f *fakeRelayMap) WriteToFirst(data []byte) bool {
+	f.written = append(f.written, append([]byte(nil), data...))
+	return f.writeOK
+}
+func (f *fakeRelayMap) CloseAll() {}
+
+type fakeIntentDeps struct {
+	relays RelayMap
+	store  *Store
+}
+
+func (f *fakeIntentDeps) GetPtyRelays() RelayMap { return f.relays }
+func (f *fakeIntentDeps) GetIntentStore() *Store { return f.store }
+
+func testDeps() HTTPDeps {
+	return HTTPDeps{
+		JSONResponse: func(w http.ResponseWriter, status int, data any) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			_ = json.NewEncoder(w).Encode(data)
+		},
+		CORSMiddleware: func(next http.HandlerFunc) http.HandlerFunc { return next },
+		MaxPostBody:    10 * 1024 * 1024,
+	}
+}
 
 // A valid-JSON body larger than MaxPostBody must be bounded by MaxBytesReader and
 // rejected, not fully buffered — same cap every other terminal handler applies (G).
@@ -27,7 +56,7 @@ func TestHandleTerminalInject_CapsBodySize(t *testing.T) {
 	body := fmt.Sprintf(`{"text":%q}`, big)
 	req := httptest.NewRequest("POST", "/terminal/inject", strings.NewReader(body))
 	rec := httptest.NewRecorder()
-	HandleTerminalInject(rec, req, deps, &fakeIntentDeps{relays: relays})
+	handleTerminalInject(rec, req, deps, &fakeIntentDeps{relays: relays})
 
 	if rec.Code == http.StatusOK {
 		t.Fatalf("oversized inject body must be bounded/rejected, got 200")
@@ -37,17 +66,17 @@ func TestHandleTerminalInject_CapsBodySize(t *testing.T) {
 	}
 }
 
-func TestHandleIntentCreate_CapsBodySize(t *testing.T) {
+func TestHandleCreate_CapsBodySize(t *testing.T) {
 	t.Parallel()
 	deps := testDeps()
 	deps.MaxPostBody = 1024
-	store := terminalintent.NewStore()
+	store := NewStore()
 
 	big := strings.Repeat("A", 8192)
 	body := fmt.Sprintf(`{"page_url":%q,"action":"qa_scan"}`, big)
 	req := httptest.NewRequest("POST", "/intent", strings.NewReader(body))
 	rec := httptest.NewRecorder()
-	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: store})
+	handleCreate(rec, req, deps, &fakeIntentDeps{store: store})
 
 	if rec.Code == http.StatusOK {
 		t.Fatalf("oversized intent body must be bounded/rejected, got 200")
@@ -66,7 +95,7 @@ func TestHandleTerminalInject_Success(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{"text": "run tests"})
 	req := httptest.NewRequest("POST", "/terminal/inject", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	HandleTerminalInject(rec, req, deps, intentDeps)
+	handleTerminalInject(rec, req, deps, intentDeps)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -90,7 +119,7 @@ func TestHandleTerminalInject_NoActiveSession(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{"text": "hi"})
 	req := httptest.NewRequest("POST", "/terminal/inject", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	HandleTerminalInject(rec, req, deps, intentDeps)
+	handleTerminalInject(rec, req, deps, intentDeps)
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", rec.Code)
@@ -111,7 +140,7 @@ func TestHandleTerminalInject_NoTerminalServer(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{"text": "hi"})
 	req := httptest.NewRequest("POST", "/terminal/inject", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	HandleTerminalInject(rec, req, deps, intentDeps)
+	handleTerminalInject(rec, req, deps, intentDeps)
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", rec.Code)
@@ -128,7 +157,7 @@ func TestHandleTerminalInject_MethodNotAllowed(t *testing.T) {
 	deps := testDeps()
 	req := httptest.NewRequest("GET", "/terminal/inject", nil)
 	rec := httptest.NewRecorder()
-	HandleTerminalInject(rec, req, deps, &fakeIntentDeps{})
+	handleTerminalInject(rec, req, deps, &fakeIntentDeps{})
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected 405, got %d", rec.Code)
 	}
@@ -149,7 +178,7 @@ func TestHandleTerminalInject_BadBody(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest("POST", "/terminal/inject", strings.NewReader(tc.body))
 			rec := httptest.NewRecorder()
-			HandleTerminalInject(rec, req, deps, &fakeIntentDeps{relays: &fakeRelayMap{writeOK: true}})
+			handleTerminalInject(rec, req, deps, &fakeIntentDeps{relays: &fakeRelayMap{writeOK: true}})
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("expected 400 for %s, got %d", tc.name, rec.Code)
 			}
@@ -157,16 +186,16 @@ func TestHandleTerminalInject_BadBody(t *testing.T) {
 	}
 }
 
-func TestHandleIntentCreate_Success(t *testing.T) {
+func TestHandleCreate_Success(t *testing.T) {
 	t.Parallel()
-	store := terminalintent.NewStore()
+	store := NewStore()
 	deps := testDeps()
 	intentDeps := &fakeIntentDeps{store: store}
 
 	body, _ := json.Marshal(map[string]string{"page_url": "http://localhost:3000", "action": "custom_scan"})
 	req := httptest.NewRequest("POST", "/intent", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	HandleIntentCreate(rec, req, deps, intentDeps)
+	handleCreate(rec, req, deps, intentDeps)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -186,64 +215,64 @@ func TestHandleIntentCreate_Success(t *testing.T) {
 	}
 }
 
-func TestHandleIntentCreate_DefaultsAction(t *testing.T) {
+func TestHandleCreate_DefaultsAction(t *testing.T) {
 	t.Parallel()
-	store := terminalintent.NewStore()
+	store := NewStore()
 	deps := testDeps()
 
 	body, _ := json.Marshal(map[string]string{"page_url": "http://localhost:3000"})
 	req := httptest.NewRequest("POST", "/intent", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: store})
+	handleCreate(rec, req, deps, &fakeIntentDeps{store: store})
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 	pending := store.Pending()
-	if len(pending) != 1 || pending[0].Action != terminalintent.ActionQAScan {
-		t.Fatalf("expected default action %q, got %+v", terminalintent.ActionQAScan, pending)
+	if len(pending) != 1 || pending[0].Action != ActionQAScan {
+		t.Fatalf("expected default action %q, got %+v", ActionQAScan, pending)
 	}
 }
 
-func TestHandleIntentCreate_StoreNotInitialized(t *testing.T) {
+func TestHandleCreate_StoreNotInitialized(t *testing.T) {
 	t.Parallel()
 	deps := testDeps()
 	body, _ := json.Marshal(map[string]string{"page_url": "http://x"})
 	req := httptest.NewRequest("POST", "/intent", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: nil})
+	handleCreate(rec, req, deps, &fakeIntentDeps{store: nil})
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", rec.Code)
 	}
 }
 
-func TestHandleIntentCreate_MethodAndBadJSON(t *testing.T) {
+func TestHandleCreate_MethodAndBadJSON(t *testing.T) {
 	t.Parallel()
 	deps := testDeps()
 
 	req := httptest.NewRequest("GET", "/intent", nil)
 	rec := httptest.NewRecorder()
-	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: terminalintent.NewStore()})
+	handleCreate(rec, req, deps, &fakeIntentDeps{store: NewStore()})
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected 405, got %d", rec.Code)
 	}
 
 	req = httptest.NewRequest("POST", "/intent", strings.NewReader("{bad"))
 	rec = httptest.NewRecorder()
-	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: terminalintent.NewStore()})
+	handleCreate(rec, req, deps, &fakeIntentDeps{store: NewStore()})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rec.Code)
 	}
 }
 
-func TestRegisterIntentRoutes_Dispatch(t *testing.T) {
+func TestRegisterRoutes_Dispatch(t *testing.T) {
 	t.Parallel()
 	deps := testDeps()
-	store := terminalintent.NewStore()
+	store := NewStore()
 	intentDeps := &fakeIntentDeps{relays: &fakeRelayMap{writeOK: true}, store: store}
 
 	mux := http.NewServeMux()
-	RegisterIntentRoutes(mux, deps, intentDeps)
+	RegisterRoutes(mux, deps, intentDeps)
 
 	// /intent route wired.
 	body, _ := json.Marshal(map[string]string{"page_url": "http://localhost", "action": "qa_scan"})

@@ -1,6 +1,6 @@
 /**
  * Cross-context message-envelope contract between the terminal iframe
- * (cmd/browser-agent/internal/terminal/terminal_assets/terminal.html) and the
+ * (cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html) and the
  * extension side that hosts it (src/content/ui/terminal-write-guard.ts +
  * src/sidepanel.ts).
  *
@@ -16,7 +16,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
 
-const TERMINAL_HTML = 'cmd/browser-agent/internal/terminal/terminal_assets/terminal.html'
+const TERMINAL_HTML = 'cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html'
 const WRITE_GUARD = 'src/content/ui/terminal-write-guard.ts'
 const SIDEPANEL = 'src/sidepanel.ts'
 
