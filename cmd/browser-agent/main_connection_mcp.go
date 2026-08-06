@@ -482,7 +482,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	}
 
 	server.logs.Shutdown(asyncLoggerDrainTimeout)
-	server.closeAnnotationStore()
+	server.annotationRuntime.Close()
 	closeCaptureStore(mcpHandler)
 	closeTerminalResources(server)
 	persistTokenSavings(server)

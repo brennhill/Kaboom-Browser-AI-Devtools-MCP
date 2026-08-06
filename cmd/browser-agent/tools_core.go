@@ -401,7 +401,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		RecordAsyncOutcome: handler.usageTracker.RecordAsyncOutcome,
 	})
 
-	handler.annotationStore = server.getAnnotationStore()
+	handler.annotationStore = server.annotationRuntime.Store()
 	handler.annotationAnalysis = annotationanalysis.New(
 		handler.annotationStore,
 		handler.capture,

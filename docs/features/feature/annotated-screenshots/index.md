@@ -15,6 +15,7 @@ code_paths:
   - scripts/build/generate-draw-mode.js
   - extension/content/draw-mode.js
   - internal/annotation/store.go
+  - internal/annotation/runtime/owner.go
   - internal/annotation/store_details.go
   - internal/annotation/store_named.go
   - internal/annotation/store_sessions.go
@@ -38,6 +39,7 @@ code_paths:
   - scripts/uat/runners/smoke-test.sh
   - package.json
 test_paths:
+  - internal/annotation/runtime/owner_test.go
   - tests/extension/draw-mode/draw-mode-generation.test.js
   - tests/extension/draw-mode/draw-mode-drawing.test.js
   - tests/extension/draw-mode/draw-mode-enrichment.test.js

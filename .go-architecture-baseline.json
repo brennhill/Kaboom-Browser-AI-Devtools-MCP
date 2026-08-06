@@ -833,6 +833,10 @@
       "mutable_globals": 0,
       "exports": 2
     },
+    "internal/annotation/runtime/owner.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
     "internal/annotation/store.go": {
       "mutable_globals": 0,
       "exports": 16

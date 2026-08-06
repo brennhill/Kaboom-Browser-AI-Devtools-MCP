@@ -37,7 +37,7 @@ import (
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/activecodebase"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	annotationruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation/runtime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
@@ -81,8 +81,7 @@ type Server struct {
 	// One-shot warnings surfaced via MCP tool responses.
 	warnings *warningqueue.Queue
 
-	// Annotation store is server-scoped to avoid cross-session contamination.
-	annotationStore *annotation.Store
+	annotationRuntime *annotationruntime.Owner
 
 	// Push delivery pipeline
 	pushInbox  *push.PushInbox
@@ -167,7 +166,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		listenPort:         listenport.New(),
 		sessionProjectPath: sessionProjectPath,
 		warnings:           warningqueue.New(),
-		annotationStore:    annotation.NewStore(10 * time.Minute),
+		annotationRuntime:  annotationruntime.New(10 * time.Minute),
 		activeCodebase:     activecodebase.New(),
 		pushInbox:          push.NewPushInbox(50),
 		ptyManager:         pty.NewManager(),
@@ -236,35 +235,10 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	return s, nil
 }
 
-func (s *Server) getAnnotationStore() *annotation.Store {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.annotationStore == nil {
-		s.annotationStore = annotation.NewStore(10 * time.Minute)
-	}
-	return s.annotationStore
-}
-
-func (s *Server) closeAnnotationStore() {
-	if s == nil {
-		return
-	}
-	store := func() *annotation.Store {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		store := s.annotationStore
-		s.annotationStore = nil
-		return store
-	}()
-	if store != nil {
-		store.Close()
-	}
-}
-
 // Close gracefully shuts down the server, draining the async log writer.
 func (s *Server) Close() {
 	s.logs.Shutdown(asyncLoggerDrainTimeout)
-	s.closeAnnotationStore()
+	s.annotationRuntime.Close()
 }
 
 //go:embed openapi.json
@@ -354,7 +328,7 @@ func handleTelemetry(server *Server, captured *capture.Capture) http.HandlerFunc
 }
 
 func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *MCPHandler) {
-	server.mediaHTTP = mediaapi.New(captured, server.annotationStore, server.pushRouter)
+	server.mediaHTTP = mediaapi.New(captured, server.annotationRuntime.Store(), server.pushRouter)
 	mux := http.NewServeMux()
 	if captured != nil {
 		registerCaptureRoutes(mux, server, captured)
