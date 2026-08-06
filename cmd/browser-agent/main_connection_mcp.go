@@ -87,7 +87,7 @@ func handleActiveCodebase(w http.ResponseWriter, r *http.Request, server *Server
 // Returns error if port binding fails (race condition with another client).
 // Never returns on success (blocks forever serving MCP protocol).
 func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchOptions) error {
-	server.setListenPort(port)
+	server.listenPort.Set(port)
 	cap := initCapture(server, port)
 	mux, mcpHandler := setupHTTPRoutes(server, cap)
 

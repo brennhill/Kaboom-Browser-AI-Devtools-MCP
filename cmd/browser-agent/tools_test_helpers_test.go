@@ -23,6 +23,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/listenport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
@@ -432,6 +433,7 @@ func newTestToolHandler() *ToolHandler {
 	cap := capture.NewCapture()
 	srv := &Server{
 		logs:           logstore.New(logstore.Config{AddWarning: func(string) {}}),
+		listenPort:     listenport.New(),
 		terminalStatus: terminalstatus.New(),
 		warnings:       warningqueue.New(),
 	}

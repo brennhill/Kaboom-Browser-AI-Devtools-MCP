@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - internal/listenport/store.go
   - cmd/browser-agent/internal/runtimeflags/flags.go
   - internal/serverdefaults/defaults.go
   - internal/warningqueue/queue.go
@@ -85,6 +86,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - internal/listenport/store_test.go
   - internal/warningqueue/queue_test.go
   - cmd/browser-agent/internal/httpapi/openapi_test.go
   - cmd/browser-agent/internal/runtimeconfig/parallel_test.go

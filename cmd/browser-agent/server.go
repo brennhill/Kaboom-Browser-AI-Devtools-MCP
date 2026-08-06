@@ -46,10 +46,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/listenport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/perftrace"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -69,7 +69,7 @@ type stateRecoveryDiagnostics interface {
 // Server holds the server state.
 type Server struct {
 	runtime    *appruntime.Runtime
-	listenPort int
+	listenPort *listenport.Store
 	mu         sync.RWMutex
 	// sessionProjectPath is resolved once at server construction so handlers do
 	// not independently bind persistence to a changing process working directory.
@@ -164,7 +164,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	s := &Server{
 		runtime:            appruntime.New(version),
 		daemonHost:         newDaemonHost(),
-		listenPort:         serverdefaults.Port,
+		listenPort:         listenport.New(),
 		sessionProjectPath: sessionProjectPath,
 		warnings:           warningqueue.New(),
 		annotationStore:    annotation.NewStore(10 * time.Minute),
@@ -234,25 +234,6 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	}
 
 	return s, nil
-}
-
-// setListenPort stores the active HTTP listener port for URL rewriting helpers.
-func (s *Server) setListenPort(port int) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if port > 0 {
-		s.listenPort = port
-	}
-}
-
-// getListenPort returns the active HTTP listener port.
-func (s *Server) getListenPort() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.listenPort <= 0 {
-		return serverdefaults.Port
-	}
-	return s.listenPort
 }
 
 func (s *Server) getAnnotationStore() *annotation.Store {
@@ -558,7 +539,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 			}
 			return port, server.ptyManager.Count(), server.ptyManager.List()
 		},
-		ListenPort: server.getListenPort,
+		ListenPort: server.listenPort.Get,
 		Audit: func() any {
 			if mcpHandler.tools.Executor == nil {
 				return nil

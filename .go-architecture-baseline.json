@@ -1089,6 +1089,10 @@
       "mutable_globals": 1,
       "exports": 18
     },
+    "internal/listenport/store.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
     "internal/mcp/errors.go": {
       "mutable_globals": 0,
       "exports": 27

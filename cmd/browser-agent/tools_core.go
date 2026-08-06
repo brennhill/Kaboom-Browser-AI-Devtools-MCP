@@ -758,7 +758,7 @@ func initializeInteractActionOwners(h *ToolHandler) {
 		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
 		GetListenPort: func() int {
 			if h.server != nil {
-				return h.server.getListenPort()
+				return h.server.listenPort.Get()
 			}
 			return serverdefaults.Port
 		},
