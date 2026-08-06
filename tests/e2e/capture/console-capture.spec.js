@@ -5,13 +5,13 @@
  *   Page console.error → inject.js captures → content.js bridges →
  *   background.js batches → POST /logs → GET /logs reads
  */
-import { test, expect } from './helpers/extension.js'
-import { entryContains } from './helpers/mcp.js'
+import { test, expect } from '../helpers/extension.js'
+import { entryContains } from '../helpers/mcp.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 test.describe('Console Error Capture', () => {
   test('should capture console.error and deliver to server', async ({ page, serverUrl }) => {

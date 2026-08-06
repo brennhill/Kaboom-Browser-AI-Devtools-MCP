@@ -7,13 +7,13 @@
  * Covers: tools/list, observe (errors, logs, network_bodies, websocket_events,
  *         websocket_status, performance), configure (clear)
  */
-import { test, expect } from './helpers/extension.js'
-import { mcpCall, mcpToolText } from './helpers/mcp.js'
+import { test, expect } from '../helpers/extension.js'
+import { mcpCall, mcpToolText } from '../helpers/mcp.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 test.describe('MCP HTTP Endpoint', () => {
   test('should respond to tools/list with all available tools', async ({ page, serverUrl }) => {

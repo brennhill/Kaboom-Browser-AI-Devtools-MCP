@@ -7,13 +7,13 @@
  *
  * Note: These tests require a WebSocket echo server spawned per suite.
  */
-import { test, expect } from './helpers/extension.js'
-import { createWsEchoServer, enableWebSocketCapture } from './helpers/ws-server.js'
+import { test, expect } from '../helpers/extension.js'
+import { createWsEchoServer, enableWebSocketCapture } from '../helpers/ws-server.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 test.describe('WebSocket Capture', () => {
   let wsServer

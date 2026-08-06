@@ -7,12 +7,12 @@
  *   - Enhanced action recording
  *   - Playwright script generation
  */
-import { test, expect } from './helpers/extension.js'
+import { test, expect } from '../helpers/extension.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 test.describe('v5: Multi-Strategy Selectors', () => {
   test('should compute testId selector from data-testid', async ({ page }) => {

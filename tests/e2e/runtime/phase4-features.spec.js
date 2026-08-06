@@ -6,13 +6,13 @@
  *   2. Error Clustering — observe(what: "error_clusters")
  *   3. Navigation History — observe(what: "history")
  */
-import { test, expect } from './helpers/extension.js'
-import { mcpCall, mcpToolText } from './helpers/mcp.js'
+import { test, expect } from '../helpers/extension.js'
+import { mcpCall, mcpToolText } from '../helpers/mcp.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 // ===================================================
 // Capture Control

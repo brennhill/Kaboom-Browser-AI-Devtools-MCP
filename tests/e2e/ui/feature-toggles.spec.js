@@ -4,13 +4,13 @@
  * Proves that each popup toggle actually enables/disables its feature.
  * Tests the full pipeline: popup → background → content → inject → server
  */
-import { test, expect } from './helpers/extension.js'
-import { entryContains } from './helpers/mcp.js'
+import { test, expect } from '../helpers/extension.js'
+import { entryContains } from '../helpers/mcp.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 /**
  * Helper: Set log level via background message

@@ -5,12 +5,12 @@
  *   Page load → inject.js captures performance data → content.js bridges →
  *   background.js POSTs → /performance-snapshot stores → GET reads
  */
-import { test, expect } from './helpers/extension.js'
+import { test, expect } from '../helpers/extension.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 test.describe('Performance Budget Monitor', () => {
   test('should capture performance snapshot after page load', async ({ page, serverUrl }) => {

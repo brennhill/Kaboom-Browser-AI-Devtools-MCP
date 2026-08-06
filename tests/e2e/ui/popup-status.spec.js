@@ -4,7 +4,7 @@
  * Tests the popup UI reflects the actual server connection state:
  *   background.js polls /health → updates status → popup reads status
  */
-import { test, expect } from './helpers/extension.js'
+import { test, expect } from '../helpers/extension.js'
 
 test.describe('Popup Connection Status', () => {
   test('should show connected status when server is running', async ({ context, extensionId, serverUrl }) => {

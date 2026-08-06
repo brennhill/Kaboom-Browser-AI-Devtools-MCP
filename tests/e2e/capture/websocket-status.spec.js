@@ -6,13 +6,13 @@
  *   - Message rate (perSecond calculated from rolling window)
  *   - Last message age (formatted relative time)
  */
-import { test, expect } from './helpers/extension.js'
-import { createWsEchoServer, enableWebSocketCapture } from './helpers/ws-server.js'
+import { test, expect } from '../helpers/extension.js'
+import { createWsEchoServer, enableWebSocketCapture } from '../helpers/ws-server.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 test.describe('WebSocket Status', () => {
   let wsServer

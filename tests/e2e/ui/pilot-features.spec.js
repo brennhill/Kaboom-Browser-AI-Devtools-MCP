@@ -8,13 +8,13 @@
  *
  * These features require the AI Web Pilot toggle to be enabled.
  */
-import { test, expect } from './helpers/extension.js'
-import { mcpCall } from './helpers/mcp.js'
+import { test, expect } from '../helpers/extension.js'
+import { mcpCall } from '../helpers/mcp.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 /**
  * Call an MCP tool and return the parsed result

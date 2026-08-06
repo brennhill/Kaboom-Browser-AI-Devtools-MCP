@@ -4,12 +4,12 @@
  * Tests circuit breaker (extension resilience when server is down)
  * and memory enforcement (server evicts data under pressure).
  */
-import { test, expect } from './helpers/extension.js'
+import { test, expect } from '../helpers/extension.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const fixturesDir = path.join(__dirname, 'fixtures')
+const fixturesDir = path.join(__dirname, '..', 'fixtures')
 
 test.describe('Circuit Breaker', () => {
   test('extension should survive server being killed and recover when restarted', async ({
