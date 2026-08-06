@@ -16,7 +16,7 @@ func TestConfigPathsInitializeLocalStateAndUploadBoundary(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv(state.StateDirEnv, "")
-	security := initUploadSecurity(false, "", multiFlag{"private-*"})
+	security := initUploadSecurity(false, "", []string{"private-*"})
 	if security == nil {
 		t.Fatal("default upload security was not initialized")
 	}

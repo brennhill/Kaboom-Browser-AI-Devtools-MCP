@@ -14,11 +14,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
-)
-
-const (
-	defaultMaxEntries = 1000
 )
 
 // GetHealth computes and returns the current health metrics.
@@ -211,7 +208,7 @@ func BuildBuffersInfo(cap *capture.Capture, server ServerDeps) BuffersInfo {
 // getConsoleStats returns console buffer entries, capacity, and drop count from the server.
 func getConsoleStats(server ServerDeps) (int, int, int64) {
 	if server == nil {
-		return 0, defaultMaxEntries, 0
+		return 0, serverdefaults.MaxLogEntries, 0
 	}
 	return server.GetConsoleStats()
 }

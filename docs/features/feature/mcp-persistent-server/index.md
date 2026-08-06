@@ -6,6 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - cmd/browser-agent/internal/runtimeflags/flags.go
+  - internal/serverdefaults/defaults.go
   - internal/warningqueue/queue.go
   - cmd/browser-agent/internal/httpapi/openapi.go
   - internal/mcp/response.go
@@ -120,7 +122,8 @@ test_paths:
   - cmd/browser-agent/handler_tools_call_usage_test.go
   - cmd/browser-agent/internal/procctl/stop_parse_test.go
   - cmd/browser-agent/internal/procctl/stop_test.go
-  - cmd/browser-agent/main_flags_test.go
+  - cmd/browser-agent/internal/runtimeflags/parsing_test.go
+  - cmd/browser-agent/internal/runtimeflags/repeatable_test.go
   - cmd/browser-agent/test_daemon_cleanup_test.go
   - cmd/browser-agent/main_connection_pid_contract_test.go
   - internal/diag/output_test.go

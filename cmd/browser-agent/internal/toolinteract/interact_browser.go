@@ -20,10 +20,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
-
-const defaultPort = 7890
 
 // Handle is the sole cross-package browser-action boundary. Action-family
 // implementations remain private so callers cannot couple to orchestration details.
@@ -99,7 +98,7 @@ func (h *BrowserActions) resolveNavigateURL(rawURL string) (string, error) {
 		return "", fmt.Errorf("kaboom-insecure target URL must include host")
 	}
 
-	port := defaultPort
+	port := serverdefaults.Port
 	if h.deps.GetListenPort != nil {
 		port = h.deps.GetListenPort()
 	}

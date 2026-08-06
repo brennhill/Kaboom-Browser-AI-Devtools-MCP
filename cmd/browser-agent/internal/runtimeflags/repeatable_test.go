@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
 // main_unit_test.go — Unit tests for pure functions in main.go.
-package main
+package runtimeflags
 
 import (
 	"testing"

@@ -53,6 +53,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -759,7 +760,7 @@ func initializeInteractActionOwners(h *ToolHandler) {
 			if h.server != nil {
 				return h.server.getListenPort()
 			}
-			return defaultPort
+			return serverdefaults.Port
 		},
 	})
 	h.workflowActions = toolinteract.NewWorkflowActions(

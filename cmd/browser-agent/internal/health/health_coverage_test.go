@@ -19,6 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 )
 
 // ---------------------------------------------------------------------------
@@ -730,15 +731,15 @@ func TestGetHealth_NilServerAndUpgrade(t *testing.T) {
 		t.Error("nil upgrade provider should yield nil Upgrade")
 	}
 	// Console falls back to defaults when server is nil.
-	if resp.Buffers.Console.Capacity != defaultMaxEntries {
-		t.Errorf("Console.Capacity: want %d, got %d", defaultMaxEntries, resp.Buffers.Console.Capacity)
+	if resp.Buffers.Console.Capacity != serverdefaults.MaxLogEntries {
+		t.Errorf("Console.Capacity: want %d, got %d", serverdefaults.MaxLogEntries, resp.Buffers.Console.Capacity)
 	}
 }
 
 func TestBuildBuffersInfo_NilCaptureAndServer(t *testing.T) {
 	info := BuildBuffersInfo(nil, nil)
-	if info.Console.Capacity != defaultMaxEntries {
-		t.Errorf("Console.Capacity: want %d, got %d", defaultMaxEntries, info.Console.Capacity)
+	if info.Console.Capacity != serverdefaults.MaxLogEntries {
+		t.Errorf("Console.Capacity: want %d, got %d", serverdefaults.MaxLogEntries, info.Console.Capacity)
 	}
 	if info.Network.Entries != 0 {
 		t.Errorf("Network.Entries: want 0, got %d", info.Network.Entries)

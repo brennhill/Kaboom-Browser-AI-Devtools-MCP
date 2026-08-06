@@ -4,12 +4,10 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
@@ -22,17 +20,16 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/nativeinstall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/runtimeconfig"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/runtimeflags"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
-
-// multiFlag implements flag.Value for repeatable string flags (e.g., --upload-deny-pattern).
-type multiFlag []string
 
 func runSetupCheckWithOptions(port int, options setupCheckOptions) bool {
 	// Doctor must inspect a stable snapshot. Fast-path writes are intentionally
@@ -44,12 +41,6 @@ func runSetupCheckWithOptions(port int, options setupCheckOptions) bool {
 		Version: version, PortKillHint: procctl.PortKillHint,
 		FastPathTelemetryLogPath: fastpathtelemetry.MethodLogPath,
 	})
-}
-
-func (f *multiFlag) String() string { return strings.Join(*f, ", ") }
-func (f *multiFlag) Set(value string) error {
-	*f = append(*f, value)
-	return nil
 }
 
 // serverConfig holds the parsed command-line flags for the server.
@@ -68,50 +59,6 @@ type serverConfig struct {
 	startupWarnings  []string
 }
 
-// parsedFlags holds the raw parsed flag values before validation.
-type parsedFlags struct {
-	port, maxEntries                                         *int
-	fastPathMinSamples                                       *int
-	logFile, apiKey, clientID, stateDir, uploadDir           *string
-	fastPathMaxFailureRatio                                  *float64
-	showVersion, showHelp, doctorMode, stopMode, connectMode *bool
-	bridgeMode, daemonMode, enableOsUploadAutomation         *bool
-	parallelMode                                             *bool
-	forceCleanup                                             *bool
-	installMode                                              *bool
-	uploadDenyPatterns                                       multiFlag
-	ssrfAllowedHosts                                         multiFlag
-}
-
-// registerFlags defines all CLI flags and returns the parsed values.
-func registerFlags() *parsedFlags {
-	f := &parsedFlags{}
-	f.port = flag.Int("port", defaultPort, "Port to listen on")
-	f.logFile = flag.String("log-file", "", "Path to log file (default: in runtime state dir)")
-	f.maxEntries = flag.Int("max-entries", defaultMaxEntries, "Max log entries before rotation")
-	f.fastPathMinSamples = flag.Int("fastpath-min-samples", 50, "Minimum fast-path telemetry samples required when threshold check is enabled")
-	f.fastPathMaxFailureRatio = flag.Float64("fastpath-max-failure-ratio", -1, "Maximum allowed fast-path failure ratio in --doctor (set >=0 to enforce)")
-	f.showVersion = flag.Bool("version", false, "Show version")
-	f.showHelp = flag.Bool("help", false, "Show help")
-	f.apiKey = flag.String("api-key", os.Getenv("KABOOM_API_KEY"), "API key for HTTP authentication (optional, or KABOOM_API_KEY env)")
-	f.doctorMode = flag.Bool("doctor", false, "Run setup diagnostics")
-	f.stopMode = flag.Bool("stop", false, "Stop the running server on the specified port")
-	f.connectMode = flag.Bool("connect", false, "Connect to existing server (multi-client mode)")
-	f.clientID = flag.String("client-id", "", "Override client ID (default: derived from CWD)")
-	f.bridgeMode = flag.Bool("bridge", false, "Run as stdio-to-HTTP bridge (spawns daemon if needed)")
-	f.daemonMode = flag.Bool("daemon", false, "Run as background server daemon (internal use)")
-	f.parallelMode = flag.Bool("parallel", false, "Enable isolated parallel daemon mode (skip takeover; requires unique port/state-dir)")
-	f.stateDir = flag.String("state-dir", "", "Directory for runtime state (default: OS app state directory)")
-	f.enableOsUploadAutomation = flag.Bool("enable-os-upload-automation", false, "Enable OS-level file upload automation (Stage 4: AppleScript/xdotool)")
-	f.uploadDir = flag.String("upload-dir", "", "Directory from which file uploads are allowed (required for Stages 2-4)")
-	f.forceCleanup = flag.Bool("force", false, "Force kill all running kaboom daemons (used during install to ensure clean upgrade)")
-	f.installMode = flag.Bool("install", false, "Auto-install Kaboom to all detected MCP clients")
-	flag.Var(&f.uploadDenyPatterns, "upload-deny-pattern", "Additional sensitive path patterns to block (repeatable)")
-	flag.Var(&f.ssrfAllowedHosts, "ssrf-allow-host", "Host:port to allow for form submit SSRF (repeatable, test use)")
-	flag.Parse()
-	return f
-}
-
 type setupCheckOptions struct {
 	minSamples      int
 	maxFailureRatio float64
@@ -119,16 +66,20 @@ type setupCheckOptions struct {
 
 // parseAndValidateFlags parses CLI flags, validates them, and handles early-exit modes.
 func parseAndValidateFlags() *serverConfig {
-	f := registerFlags()
+	f, err := runtimeflags.Parse(os.Args[1:], os.Getenv("KABOOM_API_KEY"))
+	if err != nil {
+		diag.Printf("[Kaboom] Invalid command-line options: %v\n", err)
+		os.Exit(2)
+	}
 
-	uploadsec.SetSSRFAllowedHosts(f.ssrfAllowedHosts)
-	uploadSecurity := initUploadSecurity(*f.enableOsUploadAutomation, *f.uploadDir, f.uploadDenyPatterns)
-	validatePort(*f.port)
-	normalizeStateDir(f.stateDir)
+	uploadsec.SetSSRFAllowedHosts(f.SSRFAllowedHosts)
+	uploadSecurity := initUploadSecurity(f.EnableOSUpload, f.UploadDir, f.UploadDenyPatterns)
+	validatePort(f.Port)
+	normalizeStateDir(&f.StateDir)
 	var warnings []string
 	resolvedStateDir, parallelWarnings, err := runtimeconfig.ApplyParallelStateDir(
-		*f.parallelMode,
-		*f.stateDir,
+		f.ParallelMode,
+		f.StateDir,
 		time.Now(),
 		os.Getpid(),
 	)
@@ -136,28 +87,28 @@ func parseAndValidateFlags() *serverConfig {
 		diag.Printf("[Kaboom] Invalid --parallel setup: %v\n", err)
 		os.Exit(1)
 	}
-	*f.stateDir = resolvedStateDir
+	f.StateDir = resolvedStateDir
 	warnings = append(warnings, parallelWarnings...)
-	handleEarlyExitModes(f)
-	resolveDefaultLogFile(f.logFile, &warnings)
+	handleEarlyExitModes(&f)
+	resolveDefaultLogFile(&f.LogFile, &warnings)
 
 	return &serverConfig{
-		port:             *f.port,
-		logFile:          *f.logFile,
-		maxEntries:       *f.maxEntries,
-		apiKey:           *f.apiKey,
-		stateDir:         *f.stateDir,
-		clientID:         *f.clientID,
-		bridgeMode:       *f.bridgeMode,
-		daemonMode:       *f.daemonMode,
-		parallelMode:     *f.parallelMode,
-		uploadAutomation: *f.enableOsUploadAutomation,
+		port:             f.Port,
+		logFile:          f.LogFile,
+		maxEntries:       f.MaxEntries,
+		apiKey:           f.APIKey,
+		stateDir:         f.StateDir,
+		clientID:         f.ClientID,
+		bridgeMode:       f.BridgeMode,
+		daemonMode:       f.DaemonMode,
+		parallelMode:     f.ParallelMode,
+		uploadAutomation: f.EnableOSUpload,
 		uploadSecurity:   uploadSecurity,
 		startupWarnings:  warnings,
 	}
 }
 
-func initUploadSecurity(enabled bool, dir string, denyPatterns multiFlag) *uploadsec.Security {
+func initUploadSecurity(enabled bool, dir string, denyPatterns []string) *uploadsec.Security {
 	if dir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -221,50 +172,50 @@ func resolveDefaultLogFile(logFile *string, warnings *[]string) {
 	*logFile = defaultLogFile
 }
 
-func handleEarlyExitModes(flags *parsedFlags) {
-	if *flags.showVersion {
+func handleEarlyExitModes(flags *runtimeflags.Values) {
+	if flags.ShowVersion {
 		diag.Printf("kaboom v%s\n", version)
 		os.Exit(0)
 	}
-	if *flags.showHelp {
+	if flags.ShowHelp {
 		printHelp()
 		os.Exit(0)
 	}
-	if *flags.forceCleanup {
+	if flags.ForceCleanup {
 		procctl.ForceCleanup()
 		os.Exit(0)
 	}
-	if *flags.doctorMode {
-		ok := runSetupCheckWithOptions(*flags.port, setupCheckOptions{
-			minSamples:      *flags.fastPathMinSamples,
-			maxFailureRatio: *flags.fastPathMaxFailureRatio,
+	if flags.DoctorMode {
+		ok := runSetupCheckWithOptions(flags.Port, setupCheckOptions{
+			minSamples:      flags.FastPathMinSamples,
+			maxFailureRatio: flags.FastPathMaxFailureRatio,
 		})
 		if !ok {
 			os.Exit(1)
 		}
 		os.Exit(0)
 	}
-	if *flags.stopMode {
-		procctl.Stop(*flags.port, bridgeRuntime().IsServerRunning)
+	if flags.StopMode {
+		procctl.Stop(flags.Port, bridgeRuntime().IsServerRunning)
 		os.Exit(0)
 	}
-	if *flags.installMode {
-		if err := nativeinstall.Run(procctl.ForceCleanupQuietly, flag.Args()...); err != nil {
+	if flags.InstallMode {
+		if err := nativeinstall.Run(procctl.ForceCleanupQuietly, flags.Arguments...); err != nil {
 			fmt.Fprintf(os.Stderr, "install_failed: %v\n", err)
 			os.Exit(2)
 		}
 		os.Exit(0)
 	}
-	if *flags.connectMode {
+	if flags.ConnectMode {
 		cwd, _ := os.Getwd()
-		id := *flags.clientID
+		id := flags.ClientID
 		if id == "" {
 			id = clientreg.DeriveClientID(cwd)
 		}
 		connectmode.New(connectmode.Deps{
 			Input: os.Stdin, HTTPClient: http.DefaultClient,
 			Diagnosticf: diag.Printf, WriteMCP: bridge.WriteMCPPayload, Exit: os.Exit,
-		}).Run(*flags.port, id, cwd)
+		}).Run(flags.Port, id, cwd)
 		os.Exit(0)
 	}
 }
@@ -310,7 +261,7 @@ func dispatchMode(server *Server, config *serverConfig) {
 		diag.Println("[Kaboom] This will disconnect the extension when the process exits.")
 		diag.Printf("[Kaboom] Start persistently: kaboom-agentic-browser --daemon --port %d\n", config.port)
 	}
-	if err := launchmode.EnforcePersistent(launchInfo, defaultPort); err != nil {
+	if err := launchmode.EnforcePersistent(launchInfo, serverdefaults.Port); err != nil {
 		diag.Printf("[Kaboom] %v\n", err)
 		os.Exit(1)
 	}

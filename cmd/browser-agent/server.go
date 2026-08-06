@@ -49,6 +49,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/perftrace"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -163,7 +164,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	s := &Server{
 		runtime:            appruntime.New(version),
 		daemonHost:         newDaemonHost(),
-		listenPort:         defaultPort,
+		listenPort:         serverdefaults.Port,
 		sessionProjectPath: sessionProjectPath,
 		warnings:           warningqueue.New(),
 		annotationStore:    annotation.NewStore(10 * time.Minute),
@@ -249,7 +250,7 @@ func (s *Server) getListenPort() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if s.listenPort <= 0 {
-		return defaultPort
+		return serverdefaults.Port
 	}
 	return s.listenPort
 }

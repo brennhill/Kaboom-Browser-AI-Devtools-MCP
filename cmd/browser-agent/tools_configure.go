@@ -38,6 +38,7 @@ import (
 	fixturecontract "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/qafixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
@@ -463,12 +464,10 @@ func (a *serverDepsAdapter) GetTerminalPort() int {
 
 func (a *serverDepsAdapter) GetConsoleStats() (int, int, int64) {
 	if a.s == nil || a.s.logs == nil {
-		return 0, defaultMaxEntries, 0
+		return 0, serverdefaults.MaxLogEntries, 0
 	}
 	return a.s.logs.EntryCount(), a.s.logs.MaxEntries(), a.s.logs.DropCount()
 }
-
-const defaultMaxEntries = 1000
 
 func getHealthResponse(hm *health.Metrics, cap *capture.Capture, server *Server, alerts *alertbuf.AlertBuffer, recovery recoveryDiagnostics, ver string) health.MCPHealthResponse {
 	var serverDeps health.ServerDeps

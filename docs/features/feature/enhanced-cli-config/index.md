@@ -6,6 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - cmd/browser-agent/internal/runtimeflags/flags.go
+  - internal/serverdefaults/defaults.go
   - internal/configdiscovery/mcp.go
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
@@ -70,7 +72,8 @@ test_paths:
   - cmd/browser-agent/internal/nativeinstall/installer_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/main_flags_test.go
+  - cmd/browser-agent/internal/runtimeflags/parsing_test.go
+  - cmd/browser-agent/internal/runtimeflags/repeatable_test.go
   - cmd/browser-agent/main_io_unit_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
   - cmd/browser-agent/main_helpers_more_test.go

@@ -19,6 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -36,7 +37,7 @@ func daemonProcessArgv0(exePath string) string {
 
 func cliRuntimeConfig(runtime *appruntime.Runtime) cli.RuntimeConfig {
 	return cli.RuntimeConfig{
-		DefaultPort: defaultPort, MaxPostBodySize: maxPostBodySize,
+		DefaultPort: serverdefaults.Port, MaxPostBodySize: maxPostBodySize,
 		DiagnosticOutput: diag.Sink(),
 		IsServerRunning:  runtime.BridgeRunner().IsServerRunning,
 		WaitForServer: func(port int, timeout time.Duration) bool {
@@ -86,7 +87,6 @@ func bridgeRuntime() *bridge.Runner {
 }
 
 const (
-	defaultPort     = 7890
 	maxPostBodySize = 10 * 1024 * 1024 // 10 MB
 
 	// Server health check parameters
