@@ -65,6 +65,26 @@ func TestEval_AllFixtures(t *testing.T) {
 	}
 }
 
+func TestLoadFixturesDiscoversChangeCoupledSubdirectories(t *testing.T) {
+	root := t.TempDir()
+	nested := filepath.Join(root, "quality-gate", "structure")
+	if err := os.MkdirAll(nested, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	payload := `{"description":"nested","hook":"quality-gate","project_root":".","input":{"tool_name":"Read","tool_input":{}},"expect":{"has_output":false}}`
+	path := filepath.Join(nested, "nested.json")
+	if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fixtures, err := LoadFixtures(root)
+	if err != nil {
+		t.Fatalf("LoadFixtures() error = %v", err)
+	}
+	if len(fixtures) != 1 || fixtures[0].FixturePath != path {
+		t.Fatalf("fixtures = %#v, want nested fixture %q", fixtures, path)
+	}
+}
+
 func TestEval_Report(t *testing.T) {
 	testdataDir := filepath.Join("testdata")
 

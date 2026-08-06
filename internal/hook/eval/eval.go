@@ -112,28 +112,37 @@ func LoadFixtures(dir string) ([]*Fixture, error) {
 
 	for _, hookDir := range fixtureDirs {
 		hookPath := filepath.Join(dir, hookDir)
-		entries, err := os.ReadDir(hookPath)
+		info, err := os.Stat(hookPath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
 			}
-			return nil, fmt.Errorf("read dir %s: %w", hookPath, err)
+			return nil, fmt.Errorf("stat dir %s: %w", hookPath, err)
 		}
-		for _, e := range entries {
-			if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
-				continue
+		if !info.IsDir() {
+			return nil, fmt.Errorf("read dir %s: not a directory", hookPath)
+		}
+		err = filepath.WalkDir(hookPath, func(path string, entry os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
 			}
-			path := filepath.Join(hookPath, e.Name())
+			if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+				return nil
+			}
 			data, err := os.ReadFile(path)
 			if err != nil {
-				return nil, fmt.Errorf("read fixture %s: %w", path, err)
+				return fmt.Errorf("read fixture %s: %w", path, err)
 			}
 			var fix Fixture
 			if err := json.Unmarshal(data, &fix); err != nil {
-				return nil, fmt.Errorf("parse fixture %s: %w", path, err)
+				return fmt.Errorf("parse fixture %s: %w", path, err)
 			}
 			fix.FixturePath = path
 			fixtures = append(fixtures, &fix)
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("walk fixtures %s: %w", hookPath, err)
 		}
 	}
 	return fixtures, nil

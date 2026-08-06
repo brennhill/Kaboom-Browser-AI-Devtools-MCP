@@ -4,7 +4,7 @@ feature_id: feature-multi-agent-hooks
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-06
 code_paths:
   - internal/hook/hook_policy.go
   - internal/hook/session.go
@@ -18,7 +18,7 @@ test_paths:
   - internal/hook/hook_policy_test.go
   - internal/hook/session_test.go
   - internal/hook/eval/eval_test.go
-  - internal/hook/eval/testdata/quality-gate/002-file-size-warning.json
+  - internal/hook/eval/testdata/quality-gate/standards/002-file-size-warning.json
   - internal/hook/eval/testdata/u02-single-responsibility/enforce-001-file-over-limit.json
   - cmd/hooks/main_test.go
   - cmd/browser-agent/tools_configure_quality_gates_test.go
