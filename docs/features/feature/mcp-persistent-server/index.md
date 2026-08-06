@@ -135,7 +135,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_unit_test.go
   - cmd/browser-agent/tools_registry_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go
-  - cmd/browser-agent/terminal_availability_test.go
+  - cmd/browser-agent/internal/terminal/status/status_test.go
   - cmd/browser-agent/reclaim_port_identity_test.go
   - cmd/browser-agent/reclaim_port_test.go
   - cmd/browser-agent/bridge_startup_contention_test.go

@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - cmd/browser-agent/internal/terminal/status/status.go
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
   - src/content/ui/panel/host-tab.ts
@@ -55,6 +56,7 @@ code_paths:
   - scripts/tests/framework/framework.sh
   - scripts/tests/workflows/cat-28-terminal.sh
 test_paths:
+  - cmd/browser-agent/internal/terminal/status/status_test.go
   - tests/extension/terminal-reconnect/terminal-html-liveness.test.js
   - cmd/browser-agent/internal/terminal/sessionrelay/relay_rebind_test.go
   - cmd/browser-agent/internal/terminal/sessionrelay/relay_test.go

@@ -8,30 +8,18 @@
 // daemon (it is spawned with Stdout/Stderr = nil so it cannot die of SIGPIPE), so
 // the ONE place a user or agent can learn what happened is this payload.
 
-package main
+package status
 
 import (
-	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/operationalapi"
 )
 
-func newAvailabilityServer(t *testing.T) *Server {
-	t.Helper()
-	server, err := NewServer(filepath.Join(t.TempDir(), "avail.log"), 100)
-	if err != nil {
-		t.Fatalf("NewServer() error = %v", err)
-	}
-	t.Cleanup(func() { server.logs.Shutdown(2 * time.Second) })
-	return server
-}
-
-func terminalHealthPayload(server *Server) map[string]any {
+func terminalHealthPayload(store *Store) map[string]any {
 	handler := operationalapi.New(operationalapi.Options{
 		TerminalStatus: func() operationalapi.TerminalStatus {
-			status := server.getTerminalStatus()
+			status := store.Snapshot()
 			return operationalapi.TerminalStatus{
 				Available:      status.Available,
 				Port:           status.Port,
@@ -45,12 +33,12 @@ func terminalHealthPayload(server *Server) map[string]any {
 }
 
 func TestTerminalStatus_ReportsBlockingProcess(t *testing.T) {
-	server := newAvailabilityServer(t)
+	store := New()
 
-	server.setTerminalUnavailable(7891, "listen tcp 127.0.0.1:7891: bind: address already in use",
+	store.SetUnavailable(7891, "listen tcp 127.0.0.1:7891: bind: address already in use",
 		4242, "/opt/homebrew/opt/postgresql@16/bin/postgres -D /var/pg")
 
-	st := server.getTerminalStatus()
+	st := store.Snapshot()
 	if st.Available {
 		t.Fatal("a failed bind must not report the terminal as available")
 	}
@@ -71,14 +59,14 @@ func TestTerminalStatus_ReportsBlockingProcess(t *testing.T) {
 }
 
 func TestTerminalStatus_AvailableAfterSuccessfulBind(t *testing.T) {
-	server := newAvailabilityServer(t)
+	store := New()
 
 	// A failure followed by a successful (re)bind must fully clear the diagnosis —
 	// a stale "blocked by postgres" would be worse than saying nothing.
-	server.setTerminalUnavailable(7891, "bind: address already in use", 4242, "postgres")
-	server.setTerminalPort(7891)
+	store.SetUnavailable(7891, "bind: address already in use", 4242, "postgres")
+	store.SetPort(7891)
 
-	st := server.getTerminalStatus()
+	st := store.Snapshot()
 	if !st.Available {
 		t.Fatal("a successful bind must report the terminal as available")
 	}
@@ -91,23 +79,23 @@ func TestTerminalStatus_AvailableAfterSuccessfulBind(t *testing.T) {
 }
 
 func TestTerminalStatus_SupervisorDeathMarksUnavailable(t *testing.T) {
-	server := newAvailabilityServer(t)
-	server.setTerminalPort(7891)
+	store := New()
+	store.SetPort(7891)
 
 	// The supervisor reports death by setting the port to 0. That must flip
 	// availability too, or /health would keep claiming a terminal that is gone.
-	server.setTerminalPort(0)
+	store.SetPort(0)
 
-	if server.getTerminalStatus().Available {
+	if store.Snapshot().Available {
 		t.Fatal("setTerminalPort(0) means the terminal server is gone; availability must follow")
 	}
 }
 
 func TestHealthPayload_ExplainsAnUnavailableTerminal(t *testing.T) {
-	server := newAvailabilityServer(t)
-	server.setTerminalUnavailable(7891, "bind: address already in use", 4242, "postgres -D /var/pg")
+	store := New()
+	store.SetUnavailable(7891, "bind: address already in use", 4242, "postgres -D /var/pg")
 
-	payload := terminalHealthPayload(server)
+	payload := terminalHealthPayload(store)
 
 	avail, ok := payload["terminal_available"].(bool)
 	if !ok {
@@ -132,10 +120,10 @@ func TestHealthPayload_ExplainsAnUnavailableTerminal(t *testing.T) {
 }
 
 func TestHealthPayload_HealthyTerminalCarriesNoDiagnosis(t *testing.T) {
-	server := newAvailabilityServer(t)
-	server.setTerminalPort(7891)
+	store := New()
+	store.SetPort(7891)
 
-	payload := terminalHealthPayload(server)
+	payload := terminalHealthPayload(store)
 	if avail, _ := payload["terminal_available"].(bool); !avail {
 		t.Fatal("terminal_available must be true after a successful bind")
 	}

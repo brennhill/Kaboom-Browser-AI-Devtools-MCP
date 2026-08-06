@@ -32,6 +32,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
+	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
@@ -93,15 +94,7 @@ type Server struct {
 	ptyRelays   *sessionrelay.Map
 	intentStore *terminalintent.Store
 
-	// Terminal server port (0 = terminal server not running)
-	terminalPort int
-	// Terminal diagnosability: a bind failure is non-fatal, so /health is the only
-	// place the reason can surface (daemon stderr goes to /dev/null when spawned).
-	terminalAvailable        bool
-	terminalWantedPort       int
-	terminalError            string
-	terminalBlockedByPID     int
-	terminalBlockedByCommand string
+	terminalStatus *terminalstatus.Store
 
 	// terminalSupervisor watches and auto-restarts the terminal HTTP server.
 	// nil if the terminal server never bound (Windows, or bind failure).
@@ -210,6 +203,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		ptyManager:         pty.NewManager(),
 		tokenTracker:       tracking.NewTokenTracker(),
 		intentStore:        terminalintent.NewStore(),
+		terminalStatus:     terminalstatus.New(),
 		stateRecovery:      stateRecovery,
 		incidents:          incident.NewStore(100, telemetry.QueueReliability),
 	}
@@ -314,76 +308,6 @@ func (s *Server) closeAnnotationStore() {
 	if store != nil {
 		store.Close()
 	}
-}
-
-// terminalStatus is the diagnosable state of the terminal server.
-//
-// A terminal-port bind failure is non-fatal — the daemon serves MCP normally and
-// the terminal is simply absent — so the ONLY way a user or agent learns what
-// happened is this status. The daemon's stderr explanation cannot serve that role:
-// a bridge-spawned daemon is started with Stdout/Stderr = nil (so it cannot die of
-// SIGPIPE), which sends every stderr diagnostic to /dev/null.
-type terminalStatus struct {
-	Available        bool   `json:"available"`
-	Port             int    `json:"port"`
-	Error            string `json:"error,omitempty"`
-	BlockedByPID     int    `json:"blocked_by_pid,omitempty"`
-	BlockedByCommand string `json:"blocked_by_command,omitempty"`
-}
-
-// setTerminalPort stores the port the terminal server is listening on. A non-zero
-// port means a successful bind, which clears any previous failure diagnosis — a
-// stale "blocked by postgres" would be worse than reporting nothing. Port 0 is how
-// the supervisor reports the server died, so availability follows it down.
-func (s *Server) setTerminalPort(port int) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.terminalPort = port
-	s.terminalAvailable = port > 0
-	if port > 0 {
-		s.terminalError = ""
-		s.terminalBlockedByPID = 0
-		s.terminalBlockedByCommand = ""
-	}
-}
-
-// setTerminalUnavailable records WHY the terminal server is not running, including
-// the process holding the port when we can identify it. "Port busy" is not
-// actionable; "postgres (pid 4242) is on 7891" is.
-func (s *Server) setTerminalUnavailable(port int, reason string, blockingPID int, blockingCommand string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.terminalPort = 0 // nothing is listening for us
-	s.terminalAvailable = false
-	s.terminalError = reason
-	s.terminalBlockedByPID = blockingPID
-	s.terminalBlockedByCommand = blockingCommand
-	s.terminalWantedPort = port
-}
-
-// getTerminalStatus returns the terminal server's diagnosable state.
-func (s *Server) getTerminalStatus() terminalStatus {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	port := s.terminalPort
-	if !s.terminalAvailable && s.terminalWantedPort > 0 {
-		// Report the port we could not get, so the message names something concrete.
-		port = s.terminalWantedPort
-	}
-	return terminalStatus{
-		Available:        s.terminalAvailable,
-		Port:             port,
-		Error:            s.terminalError,
-		BlockedByPID:     s.terminalBlockedByPID,
-		BlockedByCommand: s.terminalBlockedByCommand,
-	}
-}
-
-// getTerminalPort returns the terminal server port (0 if not running).
-func (s *Server) getTerminalPort() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.terminalPort
 }
 
 // GetActiveCodebase returns the active codebase path (thread-safe).
@@ -646,7 +570,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 		Version:   version,
 		StartedAt: server.runtime.StartedAt(),
 		TerminalStatus: func() operationalapi.TerminalStatus {
-			status := server.getTerminalStatus()
+			status := server.terminalStatus.Snapshot()
 			return operationalapi.TerminalStatus{
 				Available:      status.Available,
 				Port:           status.Port,
@@ -672,7 +596,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 			return server.logs.EntryCount(), server.logs.MaxEntries()
 		},
 		Terminal: func() (int, int, []string) {
-			port := server.getTerminalPort()
+			port := server.terminalStatus.Port()
 			if server.ptyManager == nil {
 				return port, 0, nil
 			}

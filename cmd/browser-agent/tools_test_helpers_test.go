@@ -16,6 +16,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 
+	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolcatalog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
@@ -429,7 +430,8 @@ func assertIsError(t *testing.T, resp mcp.JSONRPCResponse, contains string) {
 func newTestToolHandler() *ToolHandler {
 	cap := capture.NewCapture()
 	srv := &Server{
-		logs: logstore.New(logstore.Config{AddWarning: func(string) {}}),
+		logs:           logstore.New(logstore.Config{AddWarning: func(string) {}}),
+		terminalStatus: terminalstatus.New(),
 	}
 	h := &ToolHandler{
 		MCPHandler: &MCPHandler{server: srv},

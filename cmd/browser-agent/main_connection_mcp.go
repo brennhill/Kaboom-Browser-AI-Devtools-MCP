@@ -190,7 +190,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		// Stdout/Stderr = nil so it cannot die of SIGPIPE), making the health payload
 		// the only place a user or agent can learn what happened.
 		blockingPID, blockingCmd := identifyPortHolder(server.daemonHost, termPort)
-		server.setTerminalUnavailable(termPort, termErr.Error(), blockingPID, blockingCmd)
+		server.terminalStatus.SetUnavailable(termPort, termErr.Error(), blockingPID, blockingCmd)
 
 		diag.Printf("[Kaboom] WARNING: terminal server failed to start on port %d: %v\n", termPort, termErr)
 		if blockingPID > 0 {
@@ -204,7 +204,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 			"blocked_by_cmd": blockingCmd,
 		})
 	} else {
-		server.setTerminalPort(termPort)
+		server.terminalStatus.SetPort(termPort)
 		server.logLifecycle("terminal_server_started", termPort, nil)
 		// Supervise the terminal server — restart it with backoff if it dies
 		// unexpectedly, so a transient terminal-server death does not leave the
@@ -213,7 +213,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		sup := terminalsupervisor.New(terminalsupervisor.Dependencies{
 			Start:   startTerminalServer,
 			Reclaim: func(port int) { reclaimPort(server, port, "terminal") },
-			SetPort: server.setTerminalPort,
+			SetPort: server.terminalStatus.SetPort,
 			Log:     func(event string, fields map[string]any) { server.logLifecycle(event, termPort, fields) },
 			Warn:    diag.Printf,
 		}, termPort, termMux, termSrv, termDone)

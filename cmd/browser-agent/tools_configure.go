@@ -458,7 +458,7 @@ func (a *serverDepsAdapter) GetTerminalPort() int {
 	if a.s == nil {
 		return 0
 	}
-	return a.s.getTerminalPort()
+	return a.s.terminalStatus.Port()
 }
 
 func (a *serverDepsAdapter) GetConsoleStats() (int, int, int64) {

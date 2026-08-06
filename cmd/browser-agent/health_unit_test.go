@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
+	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	capturelogstore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
@@ -100,6 +101,7 @@ func TestHealthResponseIncludesDroppedCount(t *testing.T) {
 	// Create a server with a channel of size 1 and NO async worker,
 	// so the channel stays full when we manually fill it.
 	srv := &Server{
+		terminalStatus: terminalstatus.New(),
 		logs: logstore.New(logstore.Config{
 			MaxEntries: 100,
 			ChanSize:   1,
