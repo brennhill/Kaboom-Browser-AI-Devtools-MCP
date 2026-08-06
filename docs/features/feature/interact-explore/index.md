@@ -87,8 +87,7 @@ test_paths:
   - tests/extension/content/content.test.js
   - tests/extension/content/content-ui.test.js
   - scripts/contracts/check-architecture-boundaries.test.cjs
-  - cmd/browser-agent/internal/toolinteract/action_runtime_edge_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_evidence_test.go
+  - cmd/browser-agent/internal/toolinteract/action_runtime_test.go
   - cmd/browser-agent/internal/toolinteract/interact_page_test.go
   - tests/extension/misc/upload-handler.test.js
   - tests/extension/dom/command-element-results.test.js
@@ -96,7 +95,6 @@ test_paths:
   - cmd/browser-agent/lint_hardening_test.go
   - internal/recording/actionlog/recorder_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
-  - cmd/browser-agent/internal/toolinteract/fake_deps_test.go
   - cmd/browser-agent/internal/toolinteract/test_helpers_test.go
   - cmd/browser-agent/internal/toolinteract/interact_browser_actions_test.go
   - cmd/browser-agent/internal/toolinteract/interact_dom_primitive_test.go

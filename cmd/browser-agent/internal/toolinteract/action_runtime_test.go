@@ -1,10 +1,16 @@
-// fake_deps_test.go — Shared fully-populated fake Deps harness for toolinteract tests.
-// Purpose: Provide a deterministic, dependency-injected Deps so handlers can be exercised
-// end-to-end without real chrome/network/IO. Reuses the real capture.Capture (no external I/O).
+// action_runtime_test.go — Shared action runtime, evidence, and constructed dependency tests.
+// Docs: docs/features/feature/interact-explore/index.md
+
 package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,15 +18,126 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
+
+func TestSecureJitterStaysWithinRequestedRange(t *testing.T) {
+	t.Parallel()
+	for i := 0; i < 100; i++ {
+		got := secureJitter(7)
+		if got < 0 || got >= 7 {
+			t.Fatalf("secureJitter(7) = %d", got)
+		}
+	}
+	if got := secureJitter(0); got != 0 {
+		t.Fatalf("secureJitter(0) = %d", got)
+	}
+}
+
+func TestRetryContractStopsUnchangedSecondAttempt(t *testing.T) {
+	runtime := NewActionRuntime(RuntimeDeps{})
+	firstArgs := json.RawMessage(`{"what":"click","selector":"#save"}`)
+	runtime.armRetryContract("first", "", firstArgs)
+	runtime.armRetryContract("second", "click", json.RawMessage(`{"selector":"#save","correlation_id":"first"}`))
+
+	data := map[string]any{"error_code": "element_not_found", "effective_url": "https://example.test"}
+	decision := runtime.AttachRetryContext("second", data, "error", "")
+	if !decision.Terminal || decision.Cause != "strategy_not_changed" {
+		t.Fatalf("decision = %+v", decision)
+	}
+	if data["terminal"] != true || data["retryable"] != false || data["evidence_summary"] == nil {
+		t.Fatalf("terminal response = %#v", data)
+	}
+	context, ok := data["retry_context"].(map[string]any)
+	if !ok || context["attempt"] != 2 || context["policy_violation"] != "strategy_unchanged" {
+		t.Fatalf("retry context = %#v", data["retry_context"])
+	}
+}
+
+func TestRetryContractMissingParentAndAttemptLimit(t *testing.T) {
+	runtime := NewActionRuntime(RuntimeDeps{})
+	runtime.armRetryContract("orphan", "click", json.RawMessage(`{"element_id":"x","correlation_id":"missing"}`))
+	orphan, _ := runtime.getRetryState("orphan")
+	if orphan.Attempt != 2 || orphan.PolicyViolation != "parent_context_missing" {
+		t.Fatalf("orphan = %+v", orphan)
+	}
+
+	runtime.armRetryContract("third", "click", json.RawMessage(`{"scope_selector":"main","correlation_id":"orphan"}`))
+	third, _ := runtime.getRetryState("third")
+	if third.Attempt != maxRetryAttemptsPerStep || third.PolicyViolation != "attempt_limit_exceeded" {
+		t.Fatalf("third = %+v", third)
+	}
+	data := map[string]any{"error": " timeout "}
+	decision := runtime.AttachRetryContext("third", data, "timeout", "")
+	if !decision.Terminal || decision.Cause != "max_attempts_reached" {
+		t.Fatalf("decision = %+v", decision)
+	}
+}
+
+func TestRetryHelpersCoverStrategiesAndPruning(t *testing.T) {
+	for _, tc := range []struct {
+		args string
+		want string
+	}{
+		{args: `{}`, want: "default"},
+		{args: `{"element_id":"e"}`, want: "element_handle"},
+		{args: `{"scope_rect":{"x":1}}`, want: "scoped_selector"},
+		{args: `{"frame":"main"}`, want: "frame_targeted"},
+		{args: `{"selector":"button"}`, want: "selector"},
+		{args: `{"index":1}`, want: "indexed"},
+		{args: `{"world":"isolated"}`, want: "world_switch"},
+	} {
+		strategy, fingerprint := deriveRetryStrategy("click", json.RawMessage(tc.args))
+		if strategy != tc.want || !strings.Contains(fingerprint, `"action":"click"`) {
+			t.Fatalf("%s => %q %q", tc.args, strategy, fingerprint)
+		}
+	}
+	if stableMarshalForRetry(nil) != "" {
+		t.Fatal("nil retry map was marshaled")
+	}
+
+	runtime := NewActionRuntime(RuntimeDeps{})
+	runtime.retryByCommand = map[string]*commandRetryState{
+		"old": {CreatedAt: time.Unix(1, 0)},
+		"new": {CreatedAt: time.Unix(2, 0)},
+	}
+	runtime.pruneRetryStatesLocked(1)
+	if _, exists := runtime.retryByCommand["old"]; exists {
+		t.Fatal("old retry state was not pruned")
+	}
+	if decision := runtime.AttachRetryContext("missing", map[string]any{}, "error", "fallback"); decision.Terminal {
+		t.Fatal("missing retry state became terminal")
+	}
+	if decision := (*ActionRuntime)(nil).AttachRetryContext("x", map[string]any{}, "error", "fallback"); decision.Terminal {
+		t.Fatal("nil runtime became terminal")
+	}
+}
+
+func TestQueuedResponseRecognitionEdgeCases(t *testing.T) {
+	queued := mcp.Succeed(testReq(), "queued", map[string]any{"status": "queued"})
+	if !isResponseQueued(queued) {
+		t.Fatal("queued response not recognized")
+	}
+	for _, response := range []mcp.JSONRPCResponse{
+		{},
+		{Result: json.RawMessage(`bad`)},
+		{Result: mustRuntimeJSON(t, mcp.MCPToolResult{})},
+		mcp.SucceedText(testReq(), "not json"),
+		mcp.Succeed(testReq(), "complete", map[string]any{"status": "complete"}),
+	} {
+		if isResponseQueued(response) {
+			t.Fatalf("false queued response: %s", response.Result)
+		}
+	}
+}
+
+func mustRuntimeJSON(t *testing.T, value any) json.RawMessage {
+	t.Helper()
+	data, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
 
 func TestActionOwnersDoNotReexportMCPProtocolSurface(t *testing.T) {
 	_, testFile, _, ok := runtime.Caller(0)
@@ -397,4 +514,101 @@ func indexOf(s, sub string) int {
 		}
 	}
 	return -1
+}
+
+func TestEvidenceArgumentAndEnvironmentParsing(t *testing.T) {
+	for _, tc := range []struct {
+		args string
+		want evidenceMode
+		ok   bool
+	}{
+		{args: `{}`, want: evidenceModeOff, ok: true},
+		{args: `{"evidence":" ALWAYS "}`, want: evidenceModeAlways, ok: true},
+		{args: `{"evidence":"on_mutation"}`, want: evidenceModeOnMutation, ok: true},
+		{args: `{"evidence":"sometimes"}`, want: evidenceModeOff, ok: false},
+	} {
+		got, err := ParseEvidenceMode(json.RawMessage(tc.args))
+		if (err == nil) != tc.ok || got != tc.want {
+			t.Fatalf("ParseEvidenceMode(%s) = %q, %v", tc.args, got, err)
+		}
+	}
+	t.Setenv(evidenceRetryEnv, "bad")
+	if got := evidenceRetryCount(); got != 1 {
+		t.Fatalf("bad retry = %d", got)
+	}
+	t.Setenv(evidenceRetryEnv, "-3")
+	if got := evidenceRetryCount(); got != 0 {
+		t.Fatalf("low retry = %d", got)
+	}
+	t.Setenv(evidenceRetryEnv, "99")
+	if got := evidenceRetryCount(); got != 3 {
+		t.Fatalf("high retry = %d", got)
+	}
+	t.Setenv(evidenceMaxCapturesEnv, "1")
+	if got := evidenceMaxCapturesPerCommand(); got != 1 {
+		t.Fatalf("capture max = %d", got)
+	}
+	if got := canonicalActionFromInteractArgs(json.RawMessage(`{"action":" CLICK "}`)); got != "click" {
+		t.Fatalf("canonical action = %q", got)
+	}
+	if !isMutationAction(" Navigate ") || isMutationAction("get_text") {
+		t.Fatal("mutation classification mismatch")
+	}
+}
+
+func TestCaptureEvidencePreconditions(t *testing.T) {
+	if got := CaptureEvidence(nil, "client"); got.Error != "capture_not_initialized" {
+		t.Fatalf("nil capture = %+v", got)
+	}
+	store := capture.NewCapture()
+	if got := CaptureEvidence(store, "client"); got.Error != "no_tracked_tab" {
+		t.Fatalf("untracked capture = %+v", got)
+	}
+}
+
+func TestCaptureEvidenceResultContracts(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+		want    EvidenceShot
+	}{
+		{name: "success", payload: `{"path":"/tmp/shot.png","filename":"shot.png"}`, want: EvidenceShot{Path: "/tmp/shot.png", Filename: "shot.png"}},
+		{name: "extension error", payload: `{"error":"capture denied"}`, want: EvidenceShot{Error: "capture denied"}},
+		{name: "missing path", payload: `{"filename":"shot.png"}`, want: EvidenceShot{Filename: "shot.png", Error: "screenshot_missing_path"}},
+		{name: "invalid JSON", payload: `{bad`, want: EvidenceShot{Error: "screenshot_parse_error:"}},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			store := capture.NewCapture()
+			t.Cleanup(store.Close)
+			store.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
+			done := make(chan EvidenceShot, 1)
+			go func() { done <- CaptureEvidence(store, "client") }()
+			store.Queries().WaitForPendingQueries(time.Second)
+			queryID := ""
+			for _, query := range store.Queries().GetPendingQueries() {
+				if query.Type == "screenshot" {
+					queryID = query.ID
+					break
+				}
+			}
+			if queryID == "" {
+				t.Fatal("screenshot query was not queued")
+			}
+			store.Queries().SetQueryResult(queryID, json.RawMessage(tc.payload))
+			select {
+			case got := <-done:
+				if tc.name == "invalid JSON" {
+					if len(got.Error) < len(tc.want.Error) || got.Error[:len(tc.want.Error)] != tc.want.Error {
+						t.Fatalf("shot = %+v", got)
+					}
+				} else if got != tc.want {
+					t.Fatalf("shot = %+v, want %+v", got, tc.want)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("CaptureEvidence did not return")
+			}
+		})
+	}
 }
