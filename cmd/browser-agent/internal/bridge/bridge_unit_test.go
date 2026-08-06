@@ -6,12 +6,14 @@ package bridge
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -543,5 +545,28 @@ func TestCheckDaemonStatus_StartupGraceTimeoutReturnsStarting(t *testing.T) {
 	}
 	if elapsed < 40*time.Millisecond {
 		t.Fatalf("startup grace wait too short: %v, want >= 40ms", elapsed)
+	}
+}
+
+func TestIsIgnorableStdoutSyncError(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "nil", err: nil, want: false},
+		{name: "einval", err: syscall.EINVAL, want: true},
+		{name: "ebadf", err: syscall.EBADF, want: true},
+		{name: "pathErrorEbadf", err: &os.PathError{Op: "sync", Path: "/dev/stdout", Err: syscall.EBADF}, want: true},
+		{name: "other", err: fmt.Errorf("boom"), want: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := IsIgnorableStdoutSyncError(tc.err); got != tc.want {
+				t.Fatalf("IsIgnorableStdoutSyncError(%v) = %v, want %v", tc.err, got, tc.want)
+			}
+		})
 	}
 }
