@@ -34,11 +34,11 @@ code_paths:
   - gokaboom.dev/src/content/docs/articles/*.md
   - gokaboom.dev/src/content/docs/blog/*.md
   - gokaboom.dev/src/content/docs/downloads.md
-  - gokaboom.dev/src/content/docs/guides/start-here-by-role.md
+  - gokaboom.dev/src/content/docs/guides/start-here-by-role/index.md
   - gokaboom.dev/src/content/docs/guides/tracks/*.md
-  - gokaboom.dev/src/content/docs/guides/visual-evidence-standards.md
-  - gokaboom.dev/src/content/docs/guides/seo-analysis.md
-  - gokaboom.dev/src/content/docs/guides/annotation-skill-terminal-workflow.md
+  - gokaboom.dev/src/content/docs/guides/visual-evidence-standards/index.md
+  - gokaboom.dev/src/content/docs/guides/seo-analysis/index.md
+  - gokaboom.dev/src/content/docs/guides/annotation-skill-terminal-workflow/index.md
   - gokaboom.dev/src/content/docs/index.mdx
   - gokaboom.dev/src/content/docs/reference/index.md
   - gokaboom.dev/src/content/docs/reference/examples/*.md
@@ -176,8 +176,8 @@ Covers complete homepage theme/layout replacement and messaging updates (includi
 - `gokaboom.dev/src/styles/custom.css`
 - `gokaboom.dev/src/content/docs/index.mdx`
 - `gokaboom.dev/src/content/docs/downloads.md`
-- `gokaboom.dev/src/content/docs/guides/seo-analysis.md`
-- `gokaboom.dev/src/content/docs/guides/annotation-skill-terminal-workflow.md`
+- `gokaboom.dev/src/content/docs/guides/seo-analysis/index.md`
+- `gokaboom.dev/src/content/docs/guides/annotation-skill-terminal-workflow/index.md`
 - `gokaboom.dev/src/data/workflows.ts`
 - `gokaboom.dev/src/pages/[...slug].md.ts`
 - `gokaboom.dev/src/pages/index.md.ts`

@@ -25,11 +25,11 @@ code_paths:
   - gokaboom.dev/src/content/docs/privacy/
   - gokaboom.dev/src/content/docs/security/
   - gokaboom.dev/src/content/docs/troubleshooting/
-  - gokaboom.dev/src/content/docs/guides/start-here-by-role.md
+  - gokaboom.dev/src/content/docs/guides/start-here-by-role/index.md
   - gokaboom.dev/src/content/docs/guides/tracks
-  - gokaboom.dev/src/content/docs/guides/visual-evidence-standards.md
-  - gokaboom.dev/src/content/docs/guides/seo-analysis.md
-  - gokaboom.dev/src/content/docs/guides/annotation-skill-terminal-workflow.md
+  - gokaboom.dev/src/content/docs/guides/visual-evidence-standards/index.md
+  - gokaboom.dev/src/content/docs/guides/seo-analysis/index.md
+  - gokaboom.dev/src/content/docs/guides/annotation-skill-terminal-workflow/index.md
   - gokaboom.dev/src/content/docs/index.mdx
   - gokaboom.dev/src/content/docs/reference/index.md
   - gokaboom.dev/src/content/docs/reference/examples

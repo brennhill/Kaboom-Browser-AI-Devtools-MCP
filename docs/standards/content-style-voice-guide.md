@@ -19,7 +19,7 @@ Write tutorials and articles that are:
 
 This guide is the default writing standard for **KaBOOM Agentic Devtools** content.
 
-Visual standards companion: [gokaboom.dev visual evidence guide](../../gokaboom.dev/src/content/docs/guides/visual-evidence-standards.md)
+Visual standards companion: [gokaboom.dev visual evidence guide](../../gokaboom.dev/src/content/docs/guides/visual-evidence-standards/index.md)
 CI gates companion: [docs quality CI gates](./docs-quality-ci-gates.md)
 
 ## Audience and Reading Assumptions

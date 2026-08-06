@@ -158,11 +158,11 @@ describe('gokaboom domain contracts', () => {
 
   test('guides batch 4 uses KaBOOM branding', () => {
     const files = [
-      'gokaboom.dev/src/content/docs/guides/accessibility.md',
-      'gokaboom.dev/src/content/docs/guides/noise-filtering.md',
-      'gokaboom.dev/src/content/docs/guides/security-auditing.md',
-      'gokaboom.dev/src/content/docs/guides/websocket-debugging.md',
-      'gokaboom.dev/src/content/docs/guides/seo-analysis.md'
+      'gokaboom.dev/src/content/docs/guides/accessibility/index.md',
+      'gokaboom.dev/src/content/docs/guides/noise-filtering/index.md',
+      'gokaboom.dev/src/content/docs/guides/security-auditing/index.md',
+      'gokaboom.dev/src/content/docs/guides/websocket-debugging/index.md',
+      'gokaboom.dev/src/content/docs/guides/seo-analysis/index.md'
     ]
 
     for (const file of files) {
@@ -178,8 +178,8 @@ describe('gokaboom domain contracts', () => {
   test('reference and guide batch 5 use KaBOOM branding', () => {
     const files = [
       'gokaboom.dev/src/content/docs/reference/index.md',
-      'gokaboom.dev/src/content/docs/guides/debug-webapps.md',
-      'gokaboom.dev/src/content/docs/guides/product-demos.md'
+      'gokaboom.dev/src/content/docs/guides/debug-webapps/index.md',
+      'gokaboom.dev/src/content/docs/guides/product-demos/index.md'
     ]
 
     for (const file of files) {
@@ -194,10 +194,10 @@ describe('gokaboom domain contracts', () => {
 
   test('guide batch 6 uses KaBOOM branding', () => {
     const files = [
-      'gokaboom.dev/src/content/docs/guides/demo-scripts.md',
-      'gokaboom.dev/src/content/docs/guides/performance.md',
-      'gokaboom.dev/src/content/docs/guides/replace-selenium.md',
-      'gokaboom.dev/src/content/docs/guides/api-validation.md'
+      'gokaboom.dev/src/content/docs/guides/demo-scripts/index.md',
+      'gokaboom.dev/src/content/docs/guides/performance/index.md',
+      'gokaboom.dev/src/content/docs/guides/replace-selenium/index.md',
+      'gokaboom.dev/src/content/docs/guides/api-validation/index.md'
     ]
 
     for (const file of files) {
@@ -212,9 +212,9 @@ describe('gokaboom domain contracts', () => {
 
   test('guide batch 7 uses KaBOOM branding', () => {
     const files = [
-      'gokaboom.dev/src/content/docs/guides/automate-and-notify.md',
-      'gokaboom.dev/src/content/docs/guides/resilient-uat.md',
-      'gokaboom.dev/src/content/docs/guides/visual-evidence-standards.md',
+      'gokaboom.dev/src/content/docs/guides/automate-and-notify/index.md',
+      'gokaboom.dev/src/content/docs/guides/resilient-uat/index.md',
+      'gokaboom.dev/src/content/docs/guides/visual-evidence-standards/index.md',
       'gokaboom.dev/src/content/docs/guides/tracks/engineering.md'
     ]
 
@@ -234,7 +234,7 @@ describe('gokaboom domain contracts', () => {
       'gokaboom.dev/src/content/docs/reference/generate.md',
       'gokaboom.dev/src/content/docs/reference/interact.md',
       'gokaboom.dev/src/content/docs/reference/observe.md',
-      'gokaboom.dev/src/content/docs/guides/annotation-skill-terminal-workflow.md'
+      'gokaboom.dev/src/content/docs/guides/annotation-skill-terminal-workflow/index.md'
     ]
 
     for (const file of files) {
