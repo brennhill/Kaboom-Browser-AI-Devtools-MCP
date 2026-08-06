@@ -9,6 +9,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/runner.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
+  - cmd/browser-agent/internal/bridge/healthprobe/probe.go
   - cmd/browser-agent/internal/bridge/startuplock/lock.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath.go
@@ -28,7 +29,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/startuplock/lock_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
-  - cmd/browser-agent/internal/bridge/health_metadata_test.go
+  - cmd/browser-agent/internal/bridge/healthprobe/probe_test.go
   - cmd/browser-agent/internal/launchmode/launch_mode_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
   - internal/identity/mcp_test.go

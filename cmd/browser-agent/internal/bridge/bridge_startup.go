@@ -7,13 +7,13 @@
 package bridge
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/healthprobe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/startuplock"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
@@ -25,30 +25,6 @@ import (
 // daemonStartupGracePeriod is a short wait window for first tool calls so
 // clients don't fail on daemon boot races.
 var daemonStartupGracePeriod = 2 * time.Second
-
-type healthMetadata struct {
-	Version string `json:"version"`
-	Name    string `json:"name"`
-}
-
-func decodeHealthMetadata(body []byte) (healthMetadata, bool) {
-	var metadata healthMetadata
-	if json.Unmarshal(body, &metadata) != nil {
-		return healthMetadata{}, false
-	}
-	return metadata, true
-}
-
-func (m healthMetadata) serviceName() string {
-	return strings.TrimSpace(m.Name)
-}
-
-func versionsMatch(left, right string) bool {
-	normalize := func(version string) string {
-		return strings.TrimPrefix(strings.TrimSpace(version), "v")
-	}
-	return normalize(left) == normalize(right)
-}
 
 // daemonStartupReadyTimeout bounds how long a bridge waits for a spawned daemon
 // to report healthy before treating the attempt as failed.
@@ -90,21 +66,23 @@ func (r *Runner) runningServerVersionCompatible(port int) (bool, string, string)
 		return false, "", ""
 	}
 
-	meta, ok := decodeHealthMetadata(body)
+	compatible, runningVersion, serviceName, ok := healthprobe.Evaluate(
+		body,
+		r.identity.ServerName,
+		r.identity.Version,
+	)
 	if !ok {
 		return false, "", ""
 	}
 
-	serviceName := meta.serviceName()
 	if serviceName != r.identity.ServerName {
-		return false, strings.TrimSpace(meta.Version), serviceName
+		return false, runningVersion, serviceName
 	}
 
-	runningVersion := strings.TrimSpace(meta.Version)
 	if runningVersion == "" {
 		return false, "<missing>", serviceName
 	}
-	return versionsMatch(runningVersion, r.identity.Version), runningVersion, serviceName
+	return compatible, runningVersion, serviceName
 }
 
 // WaitForServer waits until the daemon health endpoint responds.

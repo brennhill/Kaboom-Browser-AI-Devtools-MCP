@@ -1,10 +1,10 @@
-// health_metadata_test.go — Verifies daemon health identity and version compatibility parsing.
+// probe_test.go — Verifies canonical daemon health identity and version matching.
 
-package bridge
+package healthprobe
 
 import "testing"
 
-func TestDecodeHealthMetadataUsesCanonicalNameOnly(t *testing.T) {
+func TestDecodeUsesCanonicalNameOnly(t *testing.T) {
 	tests := []struct {
 		name string
 		body string
@@ -16,11 +16,11 @@ func TestDecodeHealthMetadataUsesCanonicalNameOnly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, ok := decodeHealthMetadata([]byte(tt.body))
+			_, _, service, ok := Evaluate([]byte(tt.body), tt.want, "0.8.8")
 			if !ok {
 				t.Fatal("expected valid health metadata")
 			}
-			if got := meta.serviceName(); got != tt.want {
+			if got := service; got != tt.want {
 				t.Fatalf("resolved service = %q, want %q", got, tt.want)
 			}
 		})
@@ -28,10 +28,12 @@ func TestDecodeHealthMetadataUsesCanonicalNameOnly(t *testing.T) {
 }
 
 func TestVersionsMatchNormalizesWhitespaceAndVPrefix(t *testing.T) {
-	if !versionsMatch(" v0.8.8 ", "0.8.8") {
+	compatible, _, _, ok := Evaluate([]byte(`{"version":" v0.8.8 ","name":"kaboom"}`), "kaboom", "0.8.8")
+	if !ok || !compatible {
 		t.Fatal("expected normalized versions to match")
 	}
-	if versionsMatch("0.8.8", "0.8.9") {
+	compatible, _, _, ok = Evaluate([]byte(`{"version":"0.8.8","name":"kaboom"}`), "kaboom", "0.8.9")
+	if !ok || compatible {
 		t.Fatal("different versions must not match")
 	}
 }
