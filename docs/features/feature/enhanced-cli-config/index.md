@@ -79,7 +79,7 @@ test_paths:
   - scripts/smoke-tests/core/23-doctor-preflight.sh
   - cmd/browser-agent/internal/runtimeconfig/parallel_test.go
   - internal/configdiscovery/mcp_test.go
-  - cmd/browser-agent/stdout_protocol_boundary_test.go
+  - scripts/contracts/stdout_protocol_test.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/tutorial_test.go
   - cmd/browser-agent/internal/nativeinstall/installer_test.go
   - cmd/browser-agent/internal/nativeinstall/codex_test.go

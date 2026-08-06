@@ -124,7 +124,7 @@ test_paths:
   - cmd/browser-agent/internal/playbooks/resources/catalog_test.go
   - cmd/browser-agent/internal/playbooks/resources/resolver_test.go
   - cmd/browser-agent/internal/playbooks/resources/content_test.go
-  - cmd/browser-agent/stdout_protocol_boundary_test.go
+  - scripts/contracts/stdout_protocol_test.go
   - cmd/browser-agent/stdio_silence_test.go
   - scripts/uat/protocol/smoke-mcp-transport.sh
   - cmd/browser-agent/mcp_protocol_test.go
