@@ -12,17 +12,16 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fastpathtelemetry"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 func TestHandleHealthIncludesBridgeFastPathCounters(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	bridge.ResetFastPathResourceReadCounters()
-	runner := bridge.NewRunner(bridge.Identity{Version: "test"}, bridge.Transport{}, bridge.Protocol{}, bridge.Lifecycle{})
-	runner.RecordFastPathResourceRead("kaboom://capabilities", true, 0)
-	runner.RecordFastPathResourceRead("kaboom://playbook/nonexistent/quick", false, -32002)
-	bridge.FlushFastPathTelemetry()
+	fastpathtelemetry.ResetResourceReadCounters()
+	fastpathtelemetry.RecordResourceRead("test", "kaboom://capabilities", true, 0)
+	fastpathtelemetry.RecordResourceRead("test", "kaboom://playbook/nonexistent/quick", false, -32002)
+	fastpathtelemetry.Flush()
 
 	handler := New(Options{
 		Logs: logstore.New(logstore.Config{

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fastpathtelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -98,9 +98,9 @@ func TestEvaluateFastPathFailureThreshold(t *testing.T) {
 func TestRunSetupCheckIncludesFastPathTelemetrySummary(t *testing.T) {
 	// Do not run in parallel; test redirects diagnostics and uses Setenv.
 	t.Setenv(state.StateDirEnv, t.TempDir())
-	bridge.ResetFastPathCounters()
-	bridgeRuntime().RecordFastPathEvent("resources/read", true, 0)
-	bridgeRuntime().RecordFastPathEvent("resources/read", false, -32002)
+	fastpathtelemetry.ResetMethodCounters()
+	fastpathtelemetry.RecordMethod(version, "resources/read", true, 0)
+	fastpathtelemetry.RecordMethod(version, "resources/read", false, -32002)
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

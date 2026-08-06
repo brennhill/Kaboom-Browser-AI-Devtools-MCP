@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fastpathtelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/pushrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/stdioisolate"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
@@ -103,7 +104,7 @@ func FlushStdout() {
 // immediately while daemon starts in background. Only blocks on tools/call.
 // #lizard forgives
 func (r *Runner) StdioToHTTPFast(endpoint string, state *daemonState, port int) {
-	defer FlushFastPathTelemetry()
+	defer fastpathtelemetry.Flush()
 	reader := bufio.NewReaderSize(os.Stdin, 64*1024)
 
 	client := &http.Client{} // per-request timeouts via context

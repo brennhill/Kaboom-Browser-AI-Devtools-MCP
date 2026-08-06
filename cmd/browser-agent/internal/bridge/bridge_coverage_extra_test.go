@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fastpathtelemetry"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -50,13 +51,13 @@ func TestNormalizeMCPPayloadRejectsProtocolNoise(t *testing.T) {
 
 func TestRecordFastPathEvent_WritesTelemetryLog(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	resetFastPathCounters()
+	fastpathtelemetry.ResetMethodCounters()
 
-	testRunner.RecordFastPathEvent("tools/call", true, 0)
-	testRunner.RecordFastPathEvent("tools/call", false, -32000)
-	FlushFastPathTelemetry()
+	fastpathtelemetry.RecordMethod(testRunner.identity.Version, "tools/call", true, 0)
+	fastpathtelemetry.RecordMethod(testRunner.identity.Version, "tools/call", false, -32000)
+	fastpathtelemetry.Flush()
 
-	path, err := FastPathTelemetryLogPath()
+	path, err := fastpathtelemetry.MethodLogPath()
 	if err != nil {
 		t.Fatalf("FastPathTelemetryLogPath() error = %v", err)
 	}
@@ -74,15 +75,15 @@ func TestRecordFastPathEvent_WritesTelemetryLog(t *testing.T) {
 
 func TestResetFastPathCounters_ResetsSuccessCount(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	resetFastPathCounters()
+	fastpathtelemetry.ResetMethodCounters()
 
-	testRunner.RecordFastPathEvent("tools/call", true, 0)
-	testRunner.RecordFastPathEvent("tools/call", true, 0)
-	ResetFastPathCounters()
-	testRunner.RecordFastPathEvent("tools/call", true, 0)
-	FlushFastPathTelemetry()
+	fastpathtelemetry.RecordMethod(testRunner.identity.Version, "tools/call", true, 0)
+	fastpathtelemetry.RecordMethod(testRunner.identity.Version, "tools/call", true, 0)
+	fastpathtelemetry.ResetMethodCounters()
+	fastpathtelemetry.RecordMethod(testRunner.identity.Version, "tools/call", true, 0)
+	fastpathtelemetry.Flush()
 
-	path, err := FastPathTelemetryLogPath()
+	path, err := fastpathtelemetry.MethodLogPath()
 	if err != nil {
 		t.Fatalf("FastPathTelemetryLogPath() error = %v", err)
 	}
@@ -107,18 +108,18 @@ func TestResetFastPathCounters_ResetsSuccessCount(t *testing.T) {
 
 func TestRecordFastPathResourceRead_CountersAndLog(t *testing.T) {
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	resetFastPathResourceReadCounters()
+	fastpathtelemetry.ResetResourceReadCounters()
 
-	testRunner.RecordFastPathResourceRead("kaboom://capabilities", true, 0)
-	testRunner.RecordFastPathResourceRead("kaboom://capabilities", false, 404)
-	FlushFastPathTelemetry()
+	fastpathtelemetry.RecordResourceRead(testRunner.identity.Version, "kaboom://capabilities", true, 0)
+	fastpathtelemetry.RecordResourceRead(testRunner.identity.Version, "kaboom://capabilities", false, 404)
+	fastpathtelemetry.Flush()
 
-	success, failure := SnapshotFastPathResourceReadCounters()
+	success, failure := fastpathtelemetry.SnapshotResourceReadCounters()
 	if success != 1 || failure != 1 {
 		t.Fatalf("snapshot success/failure = %d/%d, want 1/1", success, failure)
 	}
 
-	path, err := FastPathResourceReadLogPath()
+	path, err := fastpathtelemetry.ResourceReadLogPath()
 	if err != nil {
 		t.Fatalf("FastPathResourceReadLogPath() error = %v", err)
 	}
@@ -131,8 +132,8 @@ func TestRecordFastPathResourceRead_CountersAndLog(t *testing.T) {
 		t.Fatalf("resource-read log lines = %d, want 2", len(lines))
 	}
 
-	ResetFastPathResourceReadCounters()
-	success, failure = SnapshotFastPathResourceReadCounters()
+	fastpathtelemetry.ResetResourceReadCounters()
+	success, failure = fastpathtelemetry.SnapshotResourceReadCounters()
 	if success != 0 || failure != 0 {
 		t.Fatalf("snapshot after reset = %d/%d, want 0/0", success, failure)
 	}

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fastpathtelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fingerprint"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/connectmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
@@ -35,12 +36,12 @@ type multiFlag []string
 func runSetupCheckWithOptions(port int, options setupCheckOptions) bool {
 	// Doctor must inspect a stable snapshot. Fast-path writes are intentionally
 	// asynchronous, so drain accepted records before reading their log.
-	bridge.FlushFastPathTelemetry()
+	fastpathtelemetry.Flush()
 	return health.RunSetupCheckWithOptions(port, health.SetupCheckOptions{
 		MinSamples: options.minSamples, MaxFailureRatio: options.maxFailureRatio,
 	}, health.SetupDeps{
 		Version: version, PortKillHint: procctl.PortKillHint,
-		FastPathTelemetryLogPath: bridge.FastPathTelemetryLogPath,
+		FastPathTelemetryLogPath: fastpathtelemetry.MethodLogPath,
 	})
 }
 

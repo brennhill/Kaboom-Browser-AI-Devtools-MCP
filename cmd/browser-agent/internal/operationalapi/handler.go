@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fastpathtelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
@@ -74,7 +74,7 @@ func (h *Handler) ServeHealth(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	h.addTerminalHealth(response)
-	successReads, failedReads := bridge.SnapshotFastPathResourceReadCounters()
+	successReads, failedReads := fastpathtelemetry.SnapshotResourceReadCounters()
 	response["bridge_fastpath"] = map[string]any{"resources_read_success": successReads, "resources_read_failure": failedReads}
 	if availableVersion := h.availableVersion(); availableVersion != "" {
 		response["available_version"] = availableVersion

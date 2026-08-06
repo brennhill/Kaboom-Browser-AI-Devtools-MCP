@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fastpathtelemetry"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -209,7 +210,7 @@ func parseFramedJSONResponse(t *testing.T, output string) mcp.JSONRPCResponse {
 
 func TestBridgeFastPathCoreMethods(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
-	resetFastPathResourceReadCounters()
+	fastpathtelemetry.ResetResourceReadCounters()
 	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,`,
@@ -283,7 +284,7 @@ func TestBridgeFastPathCoreMethods(t *testing.T) {
 		t.Fatalf("startup result isError = %v, want true", startupResult["isError"])
 	}
 
-	success, failure := SnapshotFastPathResourceReadCounters()
+	success, failure := fastpathtelemetry.SnapshotResourceReadCounters()
 	if success != 1 || failure != 0 {
 		t.Fatalf("fast-path resources/read counters = (%d,%d), want (1,0)", success, failure)
 	}
@@ -313,7 +314,7 @@ func TestBridgeFastPath_ContentLengthInputProducesContentLengthOutput(t *testing
 
 func TestBridgeFastPathResourcesReadCanonicalizesPlaybookAliases(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
-	resetFastPathResourceReadCounters()
+	fastpathtelemetry.ResetResourceReadCounters()
 	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"kaboom://playbook/security"}}`,
@@ -346,7 +347,7 @@ func TestBridgeFastPathResourcesReadCanonicalizesPlaybookAliases(t *testing.T) {
 		}
 	}
 
-	success, failure := SnapshotFastPathResourceReadCounters()
+	success, failure := fastpathtelemetry.SnapshotResourceReadCounters()
 	if success != 2 || failure != 0 {
 		t.Fatalf("fast-path resources/read counters = (%d,%d), want (2,0)", success, failure)
 	}
@@ -354,7 +355,7 @@ func TestBridgeFastPathResourcesReadCanonicalizesPlaybookAliases(t *testing.T) {
 
 func TestBridgeFastPathResourcesReadFailureTelemetry(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio.
-	resetFastPathResourceReadCounters()
+	fastpathtelemetry.ResetResourceReadCounters()
 	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"kaboom://playbook/nonexistent/quick"}}`,
@@ -375,7 +376,7 @@ func TestBridgeFastPathResourcesReadFailureTelemetry(t *testing.T) {
 		t.Fatalf("response[1] error = %+v, want -32602", responses[1].Error)
 	}
 
-	success, failure := SnapshotFastPathResourceReadCounters()
+	success, failure := fastpathtelemetry.SnapshotResourceReadCounters()
 	if success != 0 || failure != 2 {
 		t.Fatalf("fast-path resources/read counters = (%d,%d), want (0,2)", success, failure)
 	}
@@ -383,7 +384,7 @@ func TestBridgeFastPathResourcesReadFailureTelemetry(t *testing.T) {
 
 func TestBridgeFastPathResourcesReadTelemetryPersistsToStateLogs(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio and env.
-	resetFastPathResourceReadCounters()
+	fastpathtelemetry.ResetResourceReadCounters()
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
 
 	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
@@ -396,7 +397,7 @@ func TestBridgeFastPathResourcesReadTelemetryPersistsToStateLogs(t *testing.T) {
 		testRunner.StdioToHTTPFast("http://127.0.0.1:1/mcp", state, 7890)
 	})
 
-	path, err := FastPathResourceReadLogPath()
+	path, err := fastpathtelemetry.ResourceReadLogPath()
 	if err != nil {
 		t.Fatalf("FastPathResourceReadLogPath() error = %v", err)
 	}
@@ -435,7 +436,7 @@ func TestBridgeFastPathResourcesReadTelemetryPersistsToStateLogs(t *testing.T) {
 func TestBridgeFastPathResourcesReadTelemetry(t *testing.T) {
 	// Do not run in parallel; test redirects process stdio and uses Setenv.
 	t.Setenv(statecfg.StateDirEnv, t.TempDir())
-	resetFastPathCounters()
+	fastpathtelemetry.ResetMethodCounters()
 
 	state := &daemonState{runner: testRunner, readyCh: make(chan struct{}), failedCh: make(chan struct{})}
 	input := strings.Join([]string{
@@ -459,7 +460,7 @@ func TestBridgeFastPathResourcesReadTelemetry(t *testing.T) {
 		t.Fatalf("resources/read miss response = %+v, want -32002", responses[2])
 	}
 
-	path, err := FastPathTelemetryLogPath()
+	path, err := fastpathtelemetry.MethodLogPath()
 	if err != nil {
 		t.Fatalf("FastPathTelemetryLogPath error = %v", err)
 	}

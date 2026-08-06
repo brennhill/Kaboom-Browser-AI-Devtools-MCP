@@ -23,8 +23,7 @@ func initTestDeps(t *testing.T) {
 	testRunner.protocol.ResolveResource = func(string) (string, string, bool) { return "", "", false }
 }
 
-// Note: resetFastPathResourceReadCounters, resetFastPathCounters,
-// captureBridgeIO, and parseJSONLines are defined in the test files that were moved from main.
+// Note: captureBridgeIO and parseJSONLines are defined in the tests that own them.
 
 // fastPathTelemetrySummary is a test-local summary type for telemetry log parsing.
 type fastPathTelemetrySummary struct {
