@@ -387,6 +387,26 @@ func TestToolCallPipelineDoesNotReturnToRootHandler(t *testing.T) {
 	}
 }
 
+func TestJSONRPCRouterDoesNotReturnToRootHandler(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read root MCP handler: %v", err)
+	}
+	for _, forbidden := range []string{
+		"type mcpMethodHandler ",
+		"var mcpMethodHandlers =",
+		"var mcpStaticResponses =",
+		"request.HasInvalidID()",
+		"request.JSONRPC != mcp.JSONRPCVersion",
+		"Method not found: ",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("root MCP handler retains JSON-RPC routing surface %q", forbidden)
+		}
+	}
+}
+
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
 	if err != nil {

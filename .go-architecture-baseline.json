@@ -2,7 +2,7 @@
   "version": 1,
   "files": {
     "cmd/browser-agent/handler.go": {
-      "mutable_globals": 2,
+      "mutable_globals": 0,
       "exports": 5
     },
     "cmd/browser-agent/internal/appruntime/runtime.go": {
@@ -284,6 +284,10 @@
     "cmd/browser-agent/internal/mcpresponse/owner.go": {
       "mutable_globals": 0,
       "exports": 6
+    },
+    "cmd/browser-agent/internal/mcprouter/router.go": {
+      "mutable_globals": 0,
+      "exports": 2
     },
     "cmd/browser-agent/internal/mcptelemetry/owner.go": {
       "mutable_globals": 0,

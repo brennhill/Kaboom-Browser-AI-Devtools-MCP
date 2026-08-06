@@ -4,14 +4,11 @@
 package main
 
 import (
-	"encoding/json"
-
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpcall"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpprotocol"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpresponse"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcprouter"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -77,70 +74,13 @@ func (h *MCPHandler) GetUsageTracker() *telemetry.UsageTracker {
 	return h.tools.UsageTracker
 }
 
-type mcpMethodHandler func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse
-
-var mcpMethodHandlers = map[string]mcpMethodHandler{
-	"initialize": func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-		return mcpprotocol.Initialize(request, handler.version)
-	},
-	"tools/list": func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-		return mcpprotocol.ToolsList(request, handler.tools.Schemas)
-	},
-	"tools/call": func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-		return mcpcall.Handle(request, handler.tools, handler.responsePolicy, handler.passiveTelemetry)
-	},
-	"resources/list": func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-		return mcpprotocol.ResourcesList(request)
-	},
-	"resources/read": func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-		return mcpprotocol.ResourcesRead(request)
-	},
-	"resources/templates/list": func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-		return mcpprotocol.ResourceTemplatesList(request)
-	},
-}
-
-var mcpStaticResponses = map[string]string{
-	"initialized":  `{}`,
-	"ping":         `{}`,
-	"prompts/list": `{"prompts":[]}`,
-}
-
 // HandleRequest validates and routes one JSON-RPC request.
 func (h *MCPHandler) HandleRequest(request mcp.JSONRPCRequest) *mcp.JSONRPCResponse {
-	if request.HasInvalidID() {
-		response := mcp.JSONRPCResponse{
-			JSONRPC: mcp.JSONRPCVersion,
-			ID:      nil,
-			Error:   &mcp.JSONRPCError{Code: -32600, Message: "Invalid Request: id must be string or number when present"},
-		}
-		return &response
-	}
-	if !request.HasID() {
-		return nil
-	}
-	if request.JSONRPC != mcp.JSONRPCVersion {
-		return &mcp.JSONRPCResponse{
-			JSONRPC: mcp.JSONRPCVersion,
-			ID:      request.ID,
-			Error:   &mcp.JSONRPCError{Code: -32600, Message: `Invalid Request: jsonrpc must be "2.0"`},
-		}
-	}
-	if methodHandler, ok := mcpMethodHandlers[request.Method]; ok {
-		response := methodHandler(h, request)
-		if response.Result != nil {
-			response.Result = mcp.ClampResponseSize(response.Result)
-		}
-		return &response
-	}
-	if staticResult, ok := mcpStaticResponses[request.Method]; ok {
-		response := toolresp.SucceedRaw(request, json.RawMessage(staticResult))
-		return &response
-	}
-	response := mcp.JSONRPCResponse{
-		JSONRPC: mcp.JSONRPCVersion,
-		ID:      request.ID,
-		Error:   &mcp.JSONRPCError{Code: -32601, Message: "Method not found: " + request.Method},
-	}
-	return &response
+	return mcprouter.Handle(request, mcprouter.Config{
+		Version: h.version,
+		Schemas: h.tools.Schemas,
+		ToolCall: func(request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+			return mcpcall.Handle(request, h.tools, h.responsePolicy, h.passiveTelemetry)
+		},
+	})
 }

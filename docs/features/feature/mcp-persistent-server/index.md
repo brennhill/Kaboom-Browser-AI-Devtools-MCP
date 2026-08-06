@@ -78,6 +78,7 @@ code_paths:
   - cmd/browser-agent/internal/httpapi/response.go
   - cmd/browser-agent/internal/mcphttp/handler.go
   - cmd/browser-agent/internal/mcpcall/handler.go
+  - cmd/browser-agent/internal/mcprouter/router.go
   - cmd/browser-agent/internal/mcpprotocol/responses.go
   - cmd/browser-agent/internal/mcptelemetry/owner.go
   - cmd/browser-agent/internal/mcpresponse/owner.go
@@ -157,6 +158,7 @@ test_paths:
   - cmd/browser-agent/start_timeout_race_test.go
   - cmd/browser-agent/internal/mcphttp/handler_test.go
   - cmd/browser-agent/internal/mcpcall/handler_test.go
+  - cmd/browser-agent/internal/mcprouter/router_test.go
   - cmd/browser-agent/internal/httpguard/middleware_test.go
   - cmd/browser-agent/internal/connectmode/runner_test.go
   - cmd/browser-agent/internal/versioncheck/checker_test.go
@@ -206,6 +208,11 @@ pipeline: parameter validation, unknown-argument diagnostics, rate limiting,
 five-tool execution, response redaction, response policy, and passive usage
 telemetry. The root MCP handler only routes requests and composes this owner;
 it defines no duplicate backend contracts or post-processing facade.
+
+The adjacent `internal/mcprouter` owner validates JSON-RPC envelopes, handles
+notification semantics, routes protocol and static methods, and clamps dynamic
+results. Its configuration exposes only immutable protocol data and one
+tool-call callback, keeping transport routing independent of application state.
 
 MCP documentation resources are owned by the canonical
 `internal/playbooks/resources` package: catalog, URI resolution, guides,
