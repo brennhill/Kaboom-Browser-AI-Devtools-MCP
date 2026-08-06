@@ -63,7 +63,7 @@ If ANY component is deleted, the test **fails to compile or run**.
 
 ### Layer 3: Architecture Validation Script (CI Enforcement)
 
-`scripts/validate-architecture.sh` checks:
+`scripts/quality/verification/validate-architecture.sh` checks:
 - Canonical post-refactor owner existence across `internal/queries`,
   `internal/capture`, `internal/toolobserve`, `internal/toolinteract`, and
   `internal/bridge`
@@ -172,7 +172,7 @@ To modify the async queue architecture:
 
 - [x] Pre-commit hook created (`.git/hooks/pre-commit`)
 - [x] Integration test created (`async_queue_integration_test.go`)
-- [x] Architecture validation script (`scripts/validate-architecture.sh`)
+- [x] Architecture validation script (`scripts/quality/verification/validate-architecture.sh`)
 - [x] ADR-002 written (this document)
 - [x] Documentation updated ([async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md))
 - [ ] CI workflow added (`.github/workflows/architecture-validation.yml`) - TODO
@@ -233,7 +233,7 @@ To modify the async queue architecture:
 - Incident Report: Phase 4b async queue deletion (2026-02-02)
 - [async-queue-correlation-tracking.md](../../core/protocol/async-queue-correlation-tracking.md)
 - [async_queue_integration_test.go](internal/capture/async_queue_integration_test.go)
-- [validate-architecture.sh](scripts/validate-architecture.sh)
+- [validate-architecture.sh](scripts/quality/verification/validate-architecture.sh)
 
 ---
 

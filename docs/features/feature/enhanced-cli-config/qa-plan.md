@@ -118,7 +118,7 @@ last_verified_date: 2026-03-28
 
 #### Manual/Local Build Verification
 
-- [ ] `./scripts/install-bundled-skills.sh` installs managed skills from source tree
+- [ ] `./scripts/setup/install-bundled-skills.sh` installs managed skills from source tree
 - [ ] Script respects `KABOOM_SKILL_SCOPE` (`global`, `project`, `all`)
 - [ ] Script respects target overrides (`KABOOM_SKILL_TARGETS`, `KABOOM_CODEX_SKILLS_DIR`, etc.)
 

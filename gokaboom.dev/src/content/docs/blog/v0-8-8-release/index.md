@@ -57,7 +57,7 @@ Both passed for the `v0.8.8` release cut.
 ### Upgrade
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/setup/install.sh | bash
 ```
 
 The installer defers to a healthy same-version daemon and cleanly takes over an older

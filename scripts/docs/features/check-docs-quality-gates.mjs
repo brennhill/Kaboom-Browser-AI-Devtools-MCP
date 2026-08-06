@@ -11,7 +11,7 @@ if (!Number.isInteger(phase) || phase < 1 || phase > 3) {
 }
 
 function runLintIntegrity() {
-  const proc = spawnSync('python3', ['scripts/lint-documentation.py', 'docs/features', 'docs/architecture'], {
+  const proc = spawnSync('python3', ['scripts/docs/lint-documentation.py', 'docs/features', 'docs/architecture'], {
     cwd: process.cwd(),
     encoding: 'utf8'
   })

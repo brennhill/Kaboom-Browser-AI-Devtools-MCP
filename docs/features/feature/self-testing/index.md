@@ -7,19 +7,19 @@ owners: []
 last_reviewed: 2026-08-06
 code_paths:
   - .github/workflows/ci.yml
-  - scripts/smoke-test.sh
+  - scripts/uat/runners/smoke-test.sh
   - scripts/smoke-tests/framework-smoke.sh
   - scripts/smoke-tests/14-browser-push.sh
   - scripts/smoke-tests/15-file-upload.sh
   - scripts/smoke-tests/29-framework-selector-resilience.sh
   - scripts/smoke-tests/30-stability-shutdown.sh
-  - scripts/test-all-split.sh
-  - scripts/test-original-uat.sh
-  - scripts/test-new-uat.sh
-  - scripts/test-js-sharded.sh
+  - scripts/uat/runners/test-all-split.sh
+  - scripts/uat/runners/test-original-uat.sh
+  - scripts/uat/runners/test-new-uat.sh
+  - scripts/uat/runners/test-js-sharded.sh
   - scripts/build/run-go-integration.sh
   - scripts/build/run-go-coverage.sh
-  - scripts/uat-result-lib.sh
+  - scripts/uat/orchestration/uat-result-lib.sh
   - scripts/tests/framework/framework.sh
   - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
@@ -27,10 +27,10 @@ code_paths:
   - scripts/tests/browser/cat-35-qa-fixtures.sh
   - scripts/tests/release/cat-34-packaged-corruption-recovery.sh
   - scripts/contracts/check-architecture-boundaries.cjs
-  - scripts/check-dormant-tests.sh
+  - scripts/quality/contracts/check-dormant-tests.sh
   - .architecture-boundaries.json
-  - scripts/test-all-tools-comprehensive.sh
-  - scripts/cleanup-test-daemons.sh
+  - scripts/uat/runners/test-all-tools-comprehensive.sh
+  - scripts/maintenance/cleanup-test-daemons.sh
   - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/testpages/http.go
   - cmd/browser-agent/internal/testpages/websocket.go
@@ -129,10 +129,10 @@ cached Pilot state, tracked-tab updates, and explicit disconnect lifecycle.
 The package is not imported by release binaries and replaces a larger set of
 unsafe mutation methods that previously compiled into `internal/capture`.
 
-- Smoke runner lifecycle and post-run daemon availability: `scripts/smoke-test.sh`, `scripts/smoke-tests/framework-smoke.sh`
+- Smoke runner lifecycle and post-run daemon availability: `scripts/uat/runners/smoke-test.sh`, `scripts/smoke-tests/framework-smoke.sh`
 - Smoke module contracts for push/upload/framework resilience/stability: `scripts/smoke-tests/14-browser-push.sh`, `scripts/smoke-tests/15-file-upload.sh`, `scripts/smoke-tests/29-framework-selector-resilience.sh`, `scripts/smoke-tests/30-stability-shutdown.sh`
-- Split UAT orchestration + integrity checks: `scripts/test-all-split.sh`, `scripts/test-original-uat.sh`, `scripts/test-new-uat.sh`
-- Shared UAT result parsing: `scripts/uat-result-lib.sh`
+- Split UAT orchestration + integrity checks: `scripts/uat/runners/test-all-split.sh`, `scripts/uat/runners/test-original-uat.sh`, `scripts/uat/runners/test-new-uat.sh`
+- Shared UAT result parsing: `scripts/uat/orchestration/uat-result-lib.sh`
 - Connected action coverage classifies every live five-tool action and supports
   `KABOOM_UAT_ACTION=tool/mode` for isolated reproduction without inheriting
   state from unrelated actions.

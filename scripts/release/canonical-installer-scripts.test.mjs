@@ -9,13 +9,13 @@ import { fileURLToPath } from 'node:url'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const scripts = [
-  'scripts/clean-old-daemons.sh',
-  'scripts/install-bundled-skills.sh',
-  'scripts/install.ps1',
-  'scripts/install.sh',
-  'scripts/rebuild.sh',
-  'scripts/uninstall.ps1',
-  'scripts/uninstall.sh'
+  'scripts/maintenance/clean-old-daemons.sh',
+  'scripts/setup/install-bundled-skills.sh',
+  'scripts/setup/install.ps1',
+  'scripts/setup/install.sh',
+  'scripts/maintenance/rebuild.sh',
+  'scripts/setup/uninstall.ps1',
+  'scripts/setup/uninstall.sh'
 ]
 
 test('platform scripts use only canonical Kaboom identities', () => {

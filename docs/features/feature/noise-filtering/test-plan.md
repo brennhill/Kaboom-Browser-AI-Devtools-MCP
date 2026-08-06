@@ -315,7 +315,7 @@ Per QA Plan section DL-1 through DL-3 (marked CRITICAL):
 
 ```bash
 # Run comprehensive suite (all categories)
-./scripts/test-all-tools-comprehensive.sh
+./scripts/uat/runners/test-all-tools-comprehensive.sh
 ```
 
 ---

@@ -150,4 +150,4 @@ Each hook is a short-lived process that does one thing and exits. The design fav
 
 ## Validation
 
-`cmd/hooks/main_test.go`, `internal/hook/hook_policy_test.go`, `internal/hook/conventions_test.go`, and `internal/hook/compress_output_test.go` cover the hooks. `cmd/browser-agent/tools_configure_quality_gates_test.go` covers setup. `internal/tracking/token_tracker_test.go` covers stats. The hook eval rig exercises the quality-gate and compress-output fixtures against the Kaboom codebase. Install behavior is covered by `scripts/release/install-upgrade-regression.contract.test.mjs` and `scripts/test-install-hooks-only.sh`.
+`cmd/hooks/main_test.go`, `internal/hook/hook_policy_test.go`, `internal/hook/conventions_test.go`, and `internal/hook/compress_output_test.go` cover the hooks. `cmd/browser-agent/tools_configure_quality_gates_test.go` covers setup. `internal/tracking/token_tracker_test.go` covers stats. The hook eval rig exercises the quality-gate and compress-output fixtures against the Kaboom codebase. Install behavior is covered by `scripts/release/install-upgrade-regression.contract.test.mjs` and `scripts/setup/test-install-hooks-only.sh`.

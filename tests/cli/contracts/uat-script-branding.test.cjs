@@ -10,11 +10,11 @@ function read(relativePath) {
 }
 
 test('UAT entry scripts use Kaboom-facing copy and binary names', () => {
-  const comprehensive = read('scripts/test-all-tools-comprehensive.sh')
-  const stdioValidation = read('scripts/validate-test-generation-stdio.sh')
-  const multiTier = read('scripts/test-multi-tier.sh')
-  const newUat = read('scripts/test-new-uat.sh')
-  const newUatConservative = read('scripts/test-new-uat-conservative.sh')
+  const comprehensive = read('scripts/uat/runners/test-all-tools-comprehensive.sh')
+  const stdioValidation = read('scripts/quality/verification/validate-test-generation-stdio.sh')
+  const multiTier = read('scripts/uat/runners/test-multi-tier.sh')
+  const newUat = read('scripts/uat/runners/test-new-uat.sh')
+  const newUatConservative = read('scripts/uat/runners/test-new-uat-conservative.sh')
 
   assert.match(comprehensive, /Kaboom MCP — COMPREHENSIVE UAT/)
   assert.match(comprehensive, /kaboom-agentic-browser/)

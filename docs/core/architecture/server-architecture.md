@@ -166,7 +166,7 @@ go test ./internal/...          # Internal package tests only
 **UAT script** validates the npm-installed binary end-to-end:
 
 ```bash
-./scripts/test-all-tools-comprehensive.sh
+./scripts/uat/runners/test-all-tools-comprehensive.sh
 ```
 
 Tests cold start, all 5 tool calls, concurrent clients, stdout purity, persistence, and graceful shutdown. Never modify UAT tests during a UAT run.

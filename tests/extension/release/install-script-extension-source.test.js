@@ -12,8 +12,8 @@ import { fileURLToPath } from 'node:url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const REPO_ROOT = path.resolve(__dirname, '../../..')
-const INSTALL_SH = path.join(REPO_ROOT, 'scripts', 'install.sh')
-const INSTALL_PS1 = path.join(REPO_ROOT, 'scripts', 'install.ps1')
+const INSTALL_SH = path.join(REPO_ROOT, 'scripts', 'setup', 'install.sh')
+const INSTALL_PS1 = path.join(REPO_ROOT, 'scripts', 'setup', 'install.ps1')
 const SERVER_INSTALL_JS = path.join(REPO_ROOT, 'server', 'scripts', 'install.js')
 
 test('bash installer validates the canonical bundled layout and falls back to STABLE source zip', () => {

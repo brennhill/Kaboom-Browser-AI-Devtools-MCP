@@ -112,7 +112,7 @@ run_test_1_3() {
         echo "  >>> 1. Open Chrome with the Kaboom extension installed" | tee -a "$OUTPUT_FILE"
         echo "  >>> 2. Click the Kaboom icon > 'Track This Tab' on any page" | tee -a "$OUTPUT_FILE"
         echo "  >>> 3. Enable 'AI Web Pilot' toggle in the extension popup" | tee -a "$OUTPUT_FILE"
-        echo "  >>> 4. Re-run: bash scripts/smoke-test.sh" | tee -a "$OUTPUT_FILE"
+        echo "  >>> 4. Re-run: bash scripts/uat/runners/smoke-test.sh" | tee -a "$OUTPUT_FILE"
         echo "" | tee -a "$OUTPUT_FILE"
     fi
 }

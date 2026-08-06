@@ -51,9 +51,9 @@ test('npm skill installer targets only canonical kaboom-managed output', () => {
   assert.match(postinstallSource, /\[kaboom-mcp\]/)
 })
 
-// --- scripts/install-bundled-skills.sh parity with the npm installer ---
+// --- scripts/setup/install-bundled-skills.sh parity with the npm installer ---
 
-const SKILLS_SH = path.join(REPO_ROOT, 'scripts', 'install-bundled-skills.sh')
+const SKILLS_SH = path.join(REPO_ROOT, 'scripts', 'setup', 'install-bundled-skills.sh')
 
 function runSkillsScript(env) {
   return spawnSync('bash', [SKILLS_SH], {
@@ -163,7 +163,7 @@ test('install-bundled-skills.sh keeps Codex YAML frontmatter first', () => {
 })
 
 test('installer stamps the install epoch next to the binary (latest-install-wins tiebreaker)', () => {
-  const installSh = fs.readFileSync(path.join(REPO_ROOT, 'scripts/install.sh'), 'utf8')
+  const installSh = fs.readFileSync(path.join(REPO_ROOT, 'scripts/setup/install.sh'), 'utf8')
   // A per-install epoch stamp gives the daemon's single-instance takeover a
   // deterministic tiebreaker at equal versions (see install_epoch.go): the latest
   // install wins, so two same-version installs can't thrash into a takeover war.

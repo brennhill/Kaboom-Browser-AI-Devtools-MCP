@@ -81,7 +81,8 @@ describe('recording listeners popup target selection', () => {
       getTabId: () => 0,
       setInactive: () => {},
       clearRecordingState: async () => {},
-      getServerUrl: () => 'http://localhost:7890'
+      getServerUrl: () => 'http://localhost:7890',
+      schedule: mock.fn((callback) => callback())
     }
 
     installRecordingListeners(deps)
@@ -108,13 +109,15 @@ describe('recording listeners popup target selection', () => {
       getTabId: () => 0,
       setInactive: () => {},
       clearRecordingState: async () => {},
-      getServerUrl: () => 'http://localhost:7890'
+      getServerUrl: () => 'http://localhost:7890',
+      schedule: mock.fn((callback) => callback())
     }
 
     installRecordingListeners(deps)
-    await dispatchPopupMessage({ type: 'mic_granted_close_tab' }, { tab: { id: 501 } })
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    const response = await dispatchPopupMessage({ type: 'mic_granted_close_tab' }, { tab: { id: 501 } })
 
+    assert.deepStrictEqual(response, { status: 'ok' })
+    assert.strictEqual(deps.schedule.mock.calls.length, 1)
     assert.deepStrictEqual(globalThis.chrome.tabs.remove.mock.calls[0].arguments, [501])
     assert.deepStrictEqual(globalThis.chrome.tabs.update.mock.calls[0].arguments, [88, { active: true }])
     assert.match(globalThis.chrome.tabs.sendMessage.mock.calls[0].arguments[1].detail, /Open KaBOOM! and click Record/)

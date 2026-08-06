@@ -50,7 +50,7 @@ GOSEC_BIN := $(GO_TOOL_BIN)/gosec
 GOVULNCHECK_BIN := $(GO_TOOL_BIN)/govulncheck
 
 uat:
-	./scripts/test-all-tools-comprehensive.sh --suite all
+	./scripts/uat/runners/test-all-tools-comprehensive.sh --suite all
 
 all: validate-semver clean build
 
@@ -101,29 +101,29 @@ test-long:
 	$(MAKE) test-go-long
 
 test-js: compile-ts
-	./scripts/test-js-sharded.sh
+	./scripts/uat/runners/test-js-sharded.sh
 
 test-fast:
 	go vet $(CMD_PKG)/
 	$(MAKE) test-go-quick
-	./scripts/test-js-sharded.sh
+	./scripts/uat/runners/test-js-sharded.sh
 
 # `test` now includes the JS suite; keep test-all as a stable alias.
 test-all: test
 
 test-go-quick:
-	@set -e; trap 'bash ./scripts/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
+	@set -e; trap 'bash ./scripts/maintenance/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
 	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) go test -short -count=$(GO_TEST_COUNT) -p $(GO_TEST_P) -parallel $(GO_TEST_PARALLEL) ./internal/...; \
-	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) GO_TEST_SHARDS=$(GO_TEST_SHARDS) GO_TEST_COUNT=$(GO_TEST_COUNT) KABOOM_CMD_PKG=$(CMD_PKG) ./scripts/test-go-sharded.sh --package $(CMD_PKG) --short -- -parallel $(GO_TEST_PARALLEL)
+	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) GO_TEST_SHARDS=$(GO_TEST_SHARDS) GO_TEST_COUNT=$(GO_TEST_COUNT) KABOOM_CMD_PKG=$(CMD_PKG) ./scripts/uat/runners/test-go-sharded.sh --package $(CMD_PKG) --short -- -parallel $(GO_TEST_PARALLEL)
 
 test-go-long:
-	@set -e; trap 'bash ./scripts/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
+	@set -e; trap 'bash ./scripts/maintenance/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
 	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) go test -count=$(GO_TEST_COUNT) -p $(GO_TEST_P) -parallel $(GO_TEST_PARALLEL) ./internal/...; \
-	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) GO_TEST_SHARDS=$(GO_TEST_SHARDS) GO_TEST_COUNT=$(GO_TEST_COUNT) KABOOM_CMD_PKG=$(CMD_PKG) ./scripts/test-go-sharded.sh --package $(CMD_PKG) -- -parallel $(GO_TEST_PARALLEL)
+	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) GO_TEST_SHARDS=$(GO_TEST_SHARDS) GO_TEST_COUNT=$(GO_TEST_COUNT) KABOOM_CMD_PKG=$(CMD_PKG) ./scripts/uat/runners/test-go-sharded.sh --package $(CMD_PKG) -- -parallel $(GO_TEST_PARALLEL)
 
 test-go-sharded:
-	@set -e; trap 'bash ./scripts/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
-	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) GO_TEST_SHARDS=$(GO_TEST_SHARDS) GO_TEST_COUNT=$(GO_TEST_COUNT) KABOOM_CMD_PKG=$(CMD_PKG) ./scripts/test-go-sharded.sh --package $(CMD_PKG) -- -parallel $(GO_TEST_PARALLEL)
+	@set -e; trap 'bash ./scripts/maintenance/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
+	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) GO_TEST_SHARDS=$(GO_TEST_SHARDS) GO_TEST_COUNT=$(GO_TEST_COUNT) KABOOM_CMD_PKG=$(CMD_PKG) ./scripts/uat/runners/test-go-sharded.sh --package $(CMD_PKG) -- -parallel $(GO_TEST_PARALLEL)
 
 # Wall-clock SLOs must run without cross-package or intra-package contention.
 # Unit lanes retain deterministic correctness/race coverage under -short.
@@ -137,7 +137,7 @@ test-cover:
 	./scripts/build/run-go-coverage.sh
 
 test-integration:
-	@set -e; trap 'bash ./scripts/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
+	@set -e; trap 'bash ./scripts/maintenance/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
 	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) KABOOM_STATE_DIR=$(GO_TEST_STATE_DIR) go test -tags=integration -count=1 -timeout=300s ./internal/... $(CMD_PKG)/...
 
 test-cover-integration:
@@ -167,7 +167,7 @@ mutation-test:
 	@node scripts/ci/run-targeted-mutations.mjs
 
 clean-test-daemons:
-	bash ./scripts/cleanup-test-daemons.sh
+	bash ./scripts/maintenance/cleanup-test-daemons.sh
 
 verify-zero-deps:
 	@if grep -q '^require' go.mod; then echo "FAIL: go.mod contains external dependencies"; exit 1; fi
@@ -188,20 +188,20 @@ verify-size:
 
 # Check file line limits (800 lines, hand-written source only)
 check-file-length:
-	@bash scripts/check-file-length.sh
+	@bash scripts/quality/contracts/check-file-length.sh
 
 # Ratcheting per-folder source-file limit (10 files; existing folders frozen at
 # their current count and may only shrink).
 check-folder-size:
-	@node scripts/check-folder-size.cjs
+	@node scripts/quality/contracts/check-folder-size.cjs
 
 # Re-freeze the folder baseline after reducing a folder's file count.
 folder-baseline-update:
-	@node scripts/check-folder-size.cjs --update
+	@node scripts/quality/contracts/check-folder-size.cjs --update
 
 # Go tests excluded from the default suite (stale build tags, *_test.go.* files).
 check-dormant-tests:
-	@bash scripts/check-dormant-tests.sh
+	@bash scripts/quality/contracts/check-dormant-tests.sh
 
 # Go tests must synchronize on observable events or controlled clocks, never wall time.
 check-test-determinism:
@@ -222,14 +222,14 @@ go-architecture-baseline-update:
 check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture lint-boundaries lint-silent-catches lint-circular check-duplicates
 
 validate-architecture:
-	@bash scripts/validate-architecture.sh
+	@bash scripts/quality/verification/validate-architecture.sh
 
 check-duplicates:
 	@npx jscpd src/background src/popup --min-lines 8 --min-tokens 60 --threshold 0
 
 # Validate strict semver (X.Y.Z format, no pre-release)
 validate-semver:
-	@bash scripts/validate-semver.sh
+	@bash scripts/quality/verification/validate-semver.sh
 
 # Validate optionalDependencies match package version
 validate-deps-versions:
@@ -351,7 +351,7 @@ lint-dead-ts:
 lint-dead: lint-dead-go lint-dead-ts
 
 lint-circular:
-	@bash scripts/check-circular-deps.sh
+	@bash scripts/quality/contracts/check-circular-deps.sh
 
 lint-boundaries:
 	@node scripts/contracts/check-architecture-boundaries.cjs
@@ -361,10 +361,10 @@ lint-silent-catches:
 	@node scripts/contracts/check-silent-catches.cjs
 
 lint-json-casing:
-	@bash scripts/check-json-casing.sh
+	@bash scripts/quality/contracts/check-json-casing.sh
 
 lint-hardening:
-	@./scripts/lint-hardening.sh
+	@./scripts/quality/verification/lint-hardening.sh
 
 lint-js:
 	npx eslint extension/ tests/extension/
@@ -402,13 +402,13 @@ check-invariants: check-wire-drift check-ts-json-casing check-openapi-types
 check-schema:
 	@npm run docs:lint:reference-schema-sync
 	@go test ./cmd/browser-agent -run 'TestSchemaParity_' -count=1
-	@./scripts/check-esm-extensions.sh
-	@./scripts/check-sync-invariants.sh
-	@./scripts/check-bridge-stdout-invariant.sh
-	@./scripts/validate-codex-skills.sh
+	@./scripts/quality/contracts/check-esm-extensions.sh
+	@./scripts/quality/contracts/check-sync-invariants.sh
+	@./scripts/quality/contracts/check-bridge-stdout-invariant.sh
+	@./scripts/quality/verification/validate-codex-skills.sh
 
 smoke-mcp-transport:
-	@./scripts/smoke-mcp-transport.sh
+	@./scripts/uat/protocol/smoke-mcp-transport.sh
 
 # `test` already includes the JS suite (test-js).
 ci: check test validate-deps-versions
@@ -447,7 +447,7 @@ ci-js:
 	npm ci
 	npx eslint extension/ tests/extension/
 	npx tsc --noEmit
-	JS_TEST_TIMEOUT=20000 ./scripts/test-js-sharded.sh
+	JS_TEST_TIMEOUT=20000 ./scripts/uat/runners/test-js-sharded.sh
 
 ci-security: security-check
 

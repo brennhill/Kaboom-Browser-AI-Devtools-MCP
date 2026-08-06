@@ -73,7 +73,7 @@ If you want to ensure daemons are cleaned up before installing:
 kaboom --force
 
 # Or using the shell script
-./scripts/clean-old-daemons.sh
+./scripts/maintenance/clean-old-daemons.sh
 ```
 
 ### Option 3: Stop Specific Server
@@ -157,7 +157,7 @@ The `--force` flag invokes `procctl.ForceCleanup()` which:
 
 ### Shell Script: `clean-old-daemons.sh`
 
-**File:** `scripts/clean-old-daemons.sh`
+**File:** `scripts/maintenance/clean-old-daemons.sh`
 
 User-accessible cleanup script for manual daemon cleanup.
 
@@ -290,5 +290,5 @@ The sync-version Makefile target will automatically update:
 - `npm/kaboom-mcp/lib/validate-versions.js` - Version validation script
 - `cmd/browser-agent/config.go` - `--force` flag definition and dispatch
 - `cmd/browser-agent/internal/procctl/stop.go` - daemon stop and forced cleanup implementation
-- `scripts/clean-old-daemons.sh` - User-friendly cleanup script
+- `scripts/maintenance/clean-old-daemons.sh` - User-friendly cleanup script
 - `Makefile` - sync-version and validate-deps-versions targets

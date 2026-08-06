@@ -35,7 +35,7 @@ Use this checklist when requesting or implementing changes.
 - [ ] `go test ./internal/...`
 - [ ] `make test`
 - [ ] `make check-wire-drift`
-- [ ] `./scripts/validate-architecture.sh`
+- [ ] `./scripts/quality/verification/validate-architecture.sh`
 - [ ] Feature-specific command(s): `...`
 
 ## 4) Stop-and-Ask Triggers

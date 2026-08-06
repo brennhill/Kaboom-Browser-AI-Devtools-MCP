@@ -47,7 +47,7 @@ Python CLI entry point. Current structure:
   - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/skills.py` implements managed write/update/legacy cleanup behavior.
   - `pypi/kaboom-agentic-browser/pyproject.toml` includes bundled skill files as package data.
 - **Manual/local source build**:
-  - `scripts/install-bundled-skills.sh` installs bundled skills from `npm/kaboom-agentic-browser/skills` into target agent directories.
+  - `scripts/setup/install-bundled-skills.sh` installs bundled skills from `npm/kaboom-agentic-browser/skills` into target agent directories.
 
 ## Implementation: NPM vs. Python
 

@@ -96,7 +96,7 @@ skills.json entry:
 **Estimated size:** ~120 LOC markdown
 
 **Automated verification:**
-- [ ] `./scripts/install-bundled-skills.sh` completes without errors
+- [ ] `./scripts/setup/install-bundled-skills.sh` completes without errors
 - [ ] `ls ~/.claude/skills/qa.md` exists with managed marker
 - [ ] `ls ~/.codex/skills/qa/SKILL.md` exists with managed marker
 - [ ] Every tool call in the skill references a real mode — grep each `analyze(what:`, `observe(what:`, `interact(what:` against `tools_analyze_dispatch.go`, `tools_observe_registry.go`, and interact registry to confirm no hallucinated modes

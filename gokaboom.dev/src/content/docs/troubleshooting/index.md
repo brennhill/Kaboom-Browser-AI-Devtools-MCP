@@ -126,7 +126,7 @@ This verifies port availability, binary version, client configuration, and print
 **To fix**:
 1. Update: re-run the installer to get the latest version of both:
    ```bash
-   curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/install.sh | bash
+   curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/setup/install.sh | bash
    ```
 2. Reload the extension: go to `chrome://extensions`, remove the old version, click **Load unpacked**, select `~/KaboomAgenticDevtoolExtension`
 3. Both should show the same major version

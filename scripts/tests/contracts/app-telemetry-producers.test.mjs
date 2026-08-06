@@ -15,8 +15,8 @@ test('extension and shell lifecycle code cannot post product telemetry', async (
   const paths = [
     'src/background/init.ts',
     'src/background/sync/sync-client.ts',
-    'scripts/install.sh',
-    'scripts/uninstall.sh'
+    'scripts/setup/install.sh',
+    'scripts/setup/uninstall.sh'
   ]
   for (const path of paths) {
     const content = await source(path)

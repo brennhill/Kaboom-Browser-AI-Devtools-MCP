@@ -35,7 +35,7 @@ describe('kaboom bundled skill branding', () => {
       'npm/kaboom-agentic-browser/skills/test-coverage/SKILL.md',
       'npm/kaboom-agentic-browser/skills/ux-audit/SKILL.md',
       'npm/kaboom-agentic-browser/skills/skills.json',
-      'scripts/smoke-test.sh'
+      'scripts/uat/runners/smoke-test.sh'
     ]
 
     for (const file of files) {

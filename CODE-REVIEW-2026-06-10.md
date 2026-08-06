@@ -2,7 +2,7 @@
 
 Four parallel review passes: Go server (`cmd/`, `internal/`), extension TypeScript (`src/`),
 installers/packaging, and CI/test/docs infrastructure. Findings verified against the tree where
-noted. Companion change shipped with this review: `scripts/uninstall.sh` + `scripts/uninstall.ps1`
+noted. Companion change shipped with this review: `scripts/setup/uninstall.sh` + `scripts/setup/uninstall.ps1`
 (+ tests + docs) — see `docs/architecture/flow-maps/uninstall-and-cleanup.md`.
 
 ---
@@ -22,7 +22,7 @@ no JS tests, no docs gates. Combined with CR1, code can reach npm having never p
 **Fix:** gate `build-and-release` on a test job (`make ci` or `workflow_call` to CI).
 
 ### CR3. The default branch currently fails its own gates (proof CR1 matters)
-- `scripts/validate-architecture.sh:20-30` requires `cmd/browser-agent/bridge.go` and
+- `scripts/quality/verification/validate-architecture.sh:20-30` requires `cmd/browser-agent/bridge.go` and
   `tools_interact.go` as "critical files" — neither exists (refactored). Script exits 1 today.
 - `pypi/` does not exist, but `ci.yml:96-99`, `Makefile:434-498`, and
   `scripts/release/install-upgrade-regression.mjs:312` reference it; `docs/features/feature/enhanced-cli-config/index.md`
@@ -31,14 +31,14 @@ no JS tests, no docs gates. Combined with CR1, code can reach npm having never p
   `scripts/docs/features/check-feature-bundles.js:96-140` — `npm run docs:check:strict` fails wholesale.
 
 ### CR4. `install.sh` deletes the live binaries before downloading; `--hooks-only` destroys a full install
-`scripts/install.sh:271-287, 423` — `purge_legacy_install_artifacts` includes the **canonical**
+`scripts/setup/install.sh:271-287, 423` — `purge_legacy_install_artifacts` includes the **canonical**
 `kaboom-agentic-browser` and `kaboom-hooks` names and runs before any download. If download/checksum/
 smoke-test then fails, the user's working install is gone (configs/LaunchAgent point at nothing).
 Worse: in `--hooks-only` mode the main binary is purged (line 423 is outside the guard) and never
 reinstalled. **Fix:** purge only genuinely legacy names, and only after `download_and_verify` succeeds.
 
 ### CR5. Windows install is broken: validator requires a file that no longer exists
-`scripts/install.ps1:167-185` (`Test-ExtensionStage`) hard-requires `theme-bootstrap.js`; verified
+`scripts/setup/install.ps1:167-185` (`Test-ExtensionStage`) hard-requires `theme-bootstrap.js`; verified
 absent from `extension/` (bundled layout uses `early-patch.bundled.js`). `install.sh:195-198` accepts
 either layout; the PS1 was never updated. Release-zip staging and the source-zip fallback both fail →
 script dies after binary replacement, before `--install`. **Fix:** port the dual-layout check to PS1.
@@ -97,7 +97,7 @@ dev server on those 22 ports dies. `server/scripts/install.js:94-107` does the s
 - **I-H1. npm `--uninstall` deletes entire shared settings files.**
   `npm/kaboom-agentic-browser/lib/uninstall.js:160-165`: when the config key empties, it
   `unlinkSync`s the file — for Zed `settings.json`, Gemini `settings.json`, OpenCode
-  `opencode.json` that destroys all user settings. (The new `scripts/uninstall.sh` deliberately
+  `opencode.json` that destroys all user settings. (The new `scripts/setup/uninstall.sh` deliberately
   edits-in-place and never unlinks; port that behavior here.)
 - **I-H2. Substring process-kill patterns match unrelated processes.** `install.sh:300-305`
   (`strum` matches "in**strum**ent"; bare `gasoline`), `kill-daemon.js:70` (`pgrep -af "kaboom"`

@@ -80,7 +80,7 @@ Unit tests in `dom-primitives-richtext.test.js` covering:
 ### Regression Testing
 
 - Run existing `dom-primitives-richtext.test.js` tests — all must pass
-- Run full UAT script `scripts/test-all-tools-comprehensive.sh`
+- Run full UAT script `scripts/uat/runners/test-all-tools-comprehensive.sh`
 - Verify `fill_form` action still works for standard forms
 - Verify single-line `type` into standard inputs is unaffected
 

@@ -26,12 +26,12 @@ code_paths:
   - scripts/docs/site/check-gokaboom-content-contract.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs
   - gokaboom.dev/src/content/docs/reference/configure.md
-  - scripts/lint-documentation.py
-  - scripts/check-dormant-tests.sh
+  - scripts/docs/lint-documentation.py
+  - scripts/quality/contracts/check-dormant-tests.sh
   - scripts/ci/run-fuzz-campaigns.sh
   - scripts/ci/mutation-cases.json
   - scripts/ci/run-targeted-mutations.mjs
-  - scripts/test-js-sharded.sh
+  - scripts/uat/runners/test-js-sharded.sh
   - package.json
   - package-lock.json
 test_paths:

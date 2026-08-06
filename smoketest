@@ -1,2 +1,2 @@
 #!/bin/bash
-exec "$(dirname "$0")/scripts/smoke-test.sh" "$@"
+exec "$(dirname "$0")/scripts/uat/runners/smoke-test.sh" "$@"

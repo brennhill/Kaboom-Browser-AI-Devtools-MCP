@@ -117,14 +117,14 @@ Both safe runners use `source` to load these variables for reliable result aggre
 ### For Quick Feedback (1-2 min)
 ```bash
 # Run original 54 proven tests only
-bash scripts/test-original-uat-safe.sh
+bash scripts/uat/runners/test-original-uat-safe.sh
 ```
 
 ### For Comprehensive Validation (5-6 min)
 ```bash
 # Run original + new tests
-bash scripts/test-original-uat-safe.sh && \
-bash scripts/test-new-uat-conservative.sh
+bash scripts/uat/runners/test-original-uat-safe.sh && \
+bash scripts/uat/runners/test-new-uat-conservative.sh
 ```
 
 ### For Development/Debugging
@@ -156,4 +156,4 @@ The tiered approach (`test-tiered-parallel.sh`, `test-multi-tier.sh`) should not
 
 - QA Analysis: Analysis of parallel test failures, root causes, and recommendations
 - Framework: `scripts/tests/framework/framework.sh` — daemon lifecycle, health polling
-- Test Runners: `scripts/test-original-uat-safe.sh`, `scripts/test-new-uat-conservative.sh`
+- Test Runners: `scripts/uat/runners/test-original-uat-safe.sh`, `scripts/uat/runners/test-new-uat-conservative.sh`

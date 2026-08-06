@@ -6,8 +6,8 @@ last_reviewed: 2026-07-27
 owners:
   - Brenn
 entrypoints:
-  - scripts/install.sh
-  - scripts/install.ps1
+  - scripts/setup/install.sh
+  - scripts/setup/install.ps1
   - scripts/release/build-crx.js
   - cmd/browser-agent/native_install.go:runNativeInstall
   - cmd/browser-agent/native_install.go:runExtensionConnectWait
@@ -17,8 +17,8 @@ entrypoints:
 code_paths:
   - Makefile
   - scripts/release/build-crx.js
-  - scripts/install.sh
-  - scripts/install.ps1
+  - scripts/setup/install.sh
+  - scripts/setup/install.ps1
   - server/scripts/install.js
   - cmd/browser-agent/native_install.go
   - npm/kaboom-agentic-browser/lib/config.js
@@ -64,7 +64,7 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 
 ## Entrypoints
 
-1. One-liner installers: `scripts/install.sh` and `scripts/install.ps1`.
+1. One-liner installers: `scripts/setup/install.sh` and `scripts/setup/install.ps1`.
 2. Native CLI install flow: `runNativeInstall`.
 3. Wrapper install commands: npm `executeInstall` and PyPI `run_install`.
 
@@ -120,8 +120,8 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 
 - `Makefile`
 - `scripts/release/build-crx.js`
-- `scripts/install.sh`
-- `scripts/install.ps1`
+- `scripts/setup/install.sh`
+- `scripts/setup/install.ps1`
 - `server/scripts/install.js`
 - `cmd/browser-agent/native_install.go`
 - `cmd/browser-agent/native_install.go` (`runExtensionConnectWait`)

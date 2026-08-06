@@ -154,7 +154,7 @@ These tests BLOCK feature deployment if they fail.
 
 ### All Tests
 ```bash
-./scripts/test-all-tools-comprehensive.sh
+./scripts/uat/runners/test-all-tools-comprehensive.sh
 ```
 
 ### Specific Category
@@ -211,7 +211,7 @@ docs/features/feature/noise-filtering/test-plan.md (updated)
 ### Immediate (Critical Path)
 1. ✅ Tests built and ready to execute
 2. Run critical security tests: `bash scripts/tests/cat-20-security.sh`
-3. Run full test suite: `./scripts/test-all-tools-comprehensive.sh`
+3. Run full test suite: `./scripts/uat/runners/test-all-tools-comprehensive.sh`
 4. Fix any failures
 
 ### Follow-Up Actions

@@ -373,7 +373,7 @@ rm -rf "$TMPDIR" "$PROJECT_ROOT/.kaboom"
 
 2. **Run All Tests:**
    ```bash
-   ./scripts/test-all-tools-comprehensive.sh
+   ./scripts/uat/runners/test-all-tools-comprehensive.sh
    ```
 
 3. **Run Persistence Tests Only:**

@@ -47,6 +47,7 @@ export interface RecordingListenerDeps extends Omit<ScreenRecordingHandlers, 'is
   setInactive: () => void
   clearRecordingState: () => Promise<void>
   getServerUrl: () => string
+  schedule: (callback: () => void, delayMs: number) => void
 }
 
 /**
@@ -143,7 +144,11 @@ export function installRecordingListeners(deps: RecordingListenerDeps): void {
    * Closes the permission tab, activates the original tab, and shows a guidance toast.
    */
   // #lizard forgives
-  chrome.runtime.onMessage.addListener((message: { type?: string }, sender: chrome.runtime.MessageSender) => {
+  chrome.runtime.onMessage.addListener((
+    message: { type?: string },
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+  ) => {
     // Only accept messages from the extension itself
     if (sender.id !== chrome.runtime.id) return false
     if (message.type !== 'mic_granted_close_tab') return false
@@ -181,37 +186,39 @@ export function installRecordingListeners(deps: RecordingListenerDeps): void {
       // Activate the original tab and show guidance toast
       if (returnTabId) {
         console.log(LOG, 'Activating return tab', returnTabId)
-        chrome.tabs
-          .update(returnTabId, { active: true })
-          .then(() => {
-            console.log(LOG, 'Return tab activated, sending toast in 300ms')
-            // Short delay to let the tab activation settle before sending message
-            setTimeout(() => {
-              console.log(LOG, 'Sending guidance toast to tab', returnTabId)
-              chrome.tabs
-                .sendMessage(returnTabId, {
-                  type: 'kaboom_action_toast',
-                  text: 'Mic permission granted',
-                  detail: 'Open KaBOOM! and click Record',
-                  state: 'success' as const,
-                  duration_ms: scaleTimeout(8000)
-                })
-                .catch((err) => {
-                  // No content script on the tab → benign, not an error worth logging.
-                  if (isNoReceiverError(err)) return
-                  console.error(LOG, 'Toast send FAILED to tab', returnTabId, ':', errorMessage(err))
-                })
-            }, scaleTimeout(300))
-          })
-          .catch((err) => {
-            console.error(LOG, 'Tab activation FAILED for tab', returnTabId, ':', errorMessage(err))
-          })
+        try {
+          await chrome.tabs.update(returnTabId, { active: true })
+          console.log(LOG, 'Return tab activated, sending toast in 300ms')
+          // Short delay to let the tab activation settle before sending message.
+          deps.schedule(() => {
+            console.log(LOG, 'Sending guidance toast to tab', returnTabId)
+            chrome.tabs
+              .sendMessage(returnTabId, {
+                type: 'kaboom_action_toast',
+                text: 'Mic permission granted',
+                detail: 'Open KaBOOM! and click Record',
+                state: 'success' as const,
+                duration_ms: scaleTimeout(8000)
+              })
+              .catch((err) => {
+                // No content script on the tab → benign, not an error worth logging.
+                if (isNoReceiverError(err)) return
+                console.error(LOG, 'Toast send FAILED to tab', returnTabId, ':', errorMessage(err))
+              })
+          }, scaleTimeout(300))
+        } catch (err) {
+          console.error(LOG, 'Tab activation FAILED for tab', returnTabId, ':', errorMessage(err))
+        }
       } else {
         console.warn(LOG, 'No returnTabId found — cannot activate tab or show toast')
       }
-    })()
+      sendResponse({ status: 'ok' })
+    })().catch((err) => {
+      console.error(LOG, 'Microphone permission completion FAILED:', errorMessage(err))
+      sendResponse({ status: 'error' })
+    })
 
-    return false
+    return true
   })
 
   /**

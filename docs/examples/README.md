@@ -64,7 +64,7 @@ Refactor [FILE/COMPONENT].
 **Process:** Document → Plan → Tag → Split incrementally → Verify
 **Safety:** Test after each change, preserve history
 **Quality:** Files under 800 lines, no test failures
-**Verification:** Run `bash scripts/verify-refactor.sh`
+**Verification:** Run `bash scripts/quality/verification/verify-refactor.sh`
 ```
 
 ---

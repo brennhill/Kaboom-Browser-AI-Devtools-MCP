@@ -11,8 +11,8 @@ SUBPROCESS_PROFILE="$COVERAGE_ROOT/subprocess.out"
 MERGED_PROFILE="$PROJECT_ROOT/coverage.out"
 MINIMUM="${GO_COVERAGE_MINIMUM:-89}"
 
+rm -rf "$SUBPROCESS_DIR"
 mkdir -p "$SUBPROCESS_DIR"
-find "$SUBPROCESS_DIR" -mindepth 1 -maxdepth 1 -type f -delete
 
 cd "$PROJECT_ROOT"
 KABOOM_GO_COVERDIR="$SUBPROCESS_DIR" \

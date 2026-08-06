@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
 // lint_hardening_test.go — Go test wrapper for custom lint rules.
-// Runs scripts/lint-hardening.sh as a Go test so violations are caught
+// Runs scripts/quality/verification/lint-hardening.sh as a Go test so violations are caught
 // by `go test` (including `go test -short`). Fast: only grep-based scans.
 package main
 

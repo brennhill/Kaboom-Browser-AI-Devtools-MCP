@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-const linter = path.resolve('scripts/lint-documentation.py');
+const linter = path.resolve('scripts/docs/lint-documentation.py');
 
 function runLint(markdown) {
   const root = mkdtempSync(path.join(tmpdir(), 'kaboom-doc-lint-'));

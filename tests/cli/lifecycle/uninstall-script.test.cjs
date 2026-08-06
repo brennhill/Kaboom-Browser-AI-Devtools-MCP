@@ -1,6 +1,6 @@
 /**
- * @fileoverview Contract + behavioral tests for scripts/uninstall.sh and scripts/uninstall.ps1.
- * The uninstaller must reverse every artifact created by scripts/install.sh and
+ * @fileoverview Contract + behavioral tests for scripts/setup/uninstall.sh and scripts/setup/uninstall.ps1.
+ * The uninstaller must reverse every artifact created by scripts/setup/install.sh and
  * `kaboom-agentic-browser --install` (see docs/architecture/runtime/uninstall-and-cleanup.md).
  */
 
@@ -12,8 +12,8 @@ const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..')
-const UNINSTALL_SH = path.join(REPO_ROOT, 'scripts', 'uninstall.sh')
-const UNINSTALL_PS1 = path.join(REPO_ROOT, 'scripts', 'uninstall.ps1')
+const UNINSTALL_SH = path.join(REPO_ROOT, 'scripts', 'setup', 'uninstall.sh')
+const UNINSTALL_PS1 = path.join(REPO_ROOT, 'scripts', 'setup', 'uninstall.ps1')
 
 const KNOWN_SERVER_NAMES = [
   'kaboom-browser-devtools',
@@ -24,9 +24,9 @@ const KNOWN_SERVER_NAMES = [
 // ─────────────────────────────────────────────────────────────
 
 test('uninstall.sh exists and is executable', () => {
-  assert.ok(fs.existsSync(UNINSTALL_SH), 'scripts/uninstall.sh must exist')
+  assert.ok(fs.existsSync(UNINSTALL_SH), 'scripts/setup/uninstall.sh must exist')
   const mode = fs.statSync(UNINSTALL_SH).mode
-  assert.ok(mode & 0o111, 'scripts/uninstall.sh must be executable')
+  assert.ok(mode & 0o111, 'scripts/setup/uninstall.sh must be executable')
 })
 
 test('uninstall.sh uses strict shell mode and safe removal guards', () => {
@@ -281,7 +281,7 @@ test('uninstall.sh --keep-data preserves state data but removes binaries', () =>
 // ─────────────────────────────────────────────────────────────
 
 test('uninstall.ps1 exists and mirrors the artifact coverage of install.ps1', () => {
-  assert.ok(fs.existsSync(UNINSTALL_PS1), 'scripts/uninstall.ps1 must exist')
+  assert.ok(fs.existsSync(UNINSTALL_PS1), 'scripts/setup/uninstall.ps1 must exist')
   const script = fs.readFileSync(UNINSTALL_PS1, 'utf8')
 
   assert.match(script, /\.kaboom/)

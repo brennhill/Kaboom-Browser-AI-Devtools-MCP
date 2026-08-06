@@ -243,7 +243,7 @@ The cat-18 tests focus on **API contract (start/stop/list)**. They don't test th
 
 ```bash
 # Run comprehensive suite (all categories)
-./scripts/test-all-tools-comprehensive.sh
+./scripts/uat/runners/test-all-tools-comprehensive.sh
 ```
 
 ---

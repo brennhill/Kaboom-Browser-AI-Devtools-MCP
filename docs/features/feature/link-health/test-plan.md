@@ -287,7 +287,7 @@ The cat-19 tests focus on **API contract & MCP protocol validation**. They don't
 
 ```bash
 # Run comprehensive suite (all categories)
-./scripts/test-all-tools-comprehensive.sh
+./scripts/uat/runners/test-all-tools-comprehensive.sh
 ```
 
 ---

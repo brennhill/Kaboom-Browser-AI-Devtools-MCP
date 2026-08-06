@@ -35,7 +35,7 @@ code_paths:
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - scripts/smoke-tests/31-annotation-parity.sh
   - scripts/smoke-tests/annotation-parity-benchmark.sh
-  - scripts/smoke-test.sh
+  - scripts/uat/runners/smoke-test.sh
   - package.json
 test_paths:
   - tests/extension/draw-mode/draw-mode-generation.test.js
@@ -146,4 +146,4 @@ last_verified_date: 2026-08-05
 - `cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go` — generator unit tests (JS escaping, locator candidates, Markdown report, issue list, Playwright script) and handler no-data/named-session paths
 - `scripts/smoke-tests/31-annotation-parity.sh` — deterministic end-to-end ingest/retrieval/generation gate with bounded retries for transient startup/no_data windows
 - `scripts/smoke-tests/annotation-parity-benchmark.sh` — repeated pass-rate benchmark with threshold enforcement
-- `scripts/smoke-test.sh` — resume-mode daemon version parity guard prevents stale-daemon false negatives in `--only/--start-from` runs
+- `scripts/uat/runners/smoke-test.sh` — resume-mode daemon version parity guard prevents stale-daemon false negatives in `--only/--start-from` runs

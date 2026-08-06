@@ -6,8 +6,8 @@ const path = require('node:path')
 const REPO_ROOT = path.resolve(__dirname, '../../..')
 
 const FILES = [
-  'scripts/test-all-split.sh',
-  'scripts/test-install-hooks-only.sh',
+  'scripts/uat/runners/test-all-split.sh',
+  'scripts/setup/test-install-hooks-only.sh',
   'tests/regression/run-all.sh',
   'tests/regression/lib/common.sh',
   'tests/e2e/helpers/extension.js',
@@ -29,8 +29,8 @@ test('build and test harness entry points use Kaboom naming', () => {
 
 test('core harness files point at Kaboom binary names', () => {
   const makefile = fs.readFileSync(path.join(REPO_ROOT, 'Makefile'), 'utf8')
-  const splitScript = fs.readFileSync(path.join(REPO_ROOT, 'scripts/test-all-split.sh'), 'utf8')
-  const hooksInstallScript = fs.readFileSync(path.join(REPO_ROOT, 'scripts/test-install-hooks-only.sh'), 'utf8')
+  const splitScript = fs.readFileSync(path.join(REPO_ROOT, 'scripts/uat/runners/test-all-split.sh'), 'utf8')
+  const hooksInstallScript = fs.readFileSync(path.join(REPO_ROOT, 'scripts/setup/test-install-hooks-only.sh'), 'utf8')
   const regressionRunner = fs.readFileSync(path.join(REPO_ROOT, 'tests/regression/run-all.sh'), 'utf8')
   const regressionCommon = fs.readFileSync(path.join(REPO_ROOT, 'tests/regression/lib/common.sh'), 'utf8')
   const e2eExtension = fs.readFileSync(path.join(REPO_ROOT, 'tests/e2e/helpers/extension.js'), 'utf8')

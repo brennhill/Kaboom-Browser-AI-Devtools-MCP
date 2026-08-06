@@ -381,7 +381,7 @@ This document summarizes the comprehensive test plans created for 5 major Kaboom
    - Check tech tests (unit/integration design)
 
 2. **Verify implementation:**
-   - Run UAT tests: `./scripts/test-all-tools-comprehensive.sh`
+   - Run UAT tests: `./scripts/uat/runners/test-all-tools-comprehensive.sh`
    - Review failures against test-plan gaps
    - Implement missing logic if tests fail
 

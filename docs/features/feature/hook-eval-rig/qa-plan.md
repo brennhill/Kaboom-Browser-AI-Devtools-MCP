@@ -25,7 +25,7 @@ tags: [testing, qa, hooks, eval]
 
 | # | Data Leak Risk | What to Check | Severity |
 |---|---------------|---------------|----------|
-| DL-1 | Eval code linked into shipped binaries | A lint invariant (check 16 in `scripts/lint-hardening.sh`) forbids `internal/hook/eval` from being imported by production binaries. Verify the invariant exists and fails the build if violated. | critical |
+| DL-1 | Eval code linked into shipped binaries | A lint invariant (check 16 in `scripts/quality/verification/lint-hardening.sh`) forbids `internal/hook/eval` from being imported by production binaries. Verify the invariant exists and fails the build if violated. | critical |
 | DL-2 | Network access during eval | Tier 1 unit evals run fully offline against fixtures and the local repo. Verify no fixture triggers a network call. | high |
 | DL-3 | Temp session dirs leaking | `RunFixture` creates `os.MkdirTemp` session dirs and defers `os.RemoveAll`. Verify no temp dir is left behind after a run. | medium |
 | DL-4 | Fixture content exposing secrets | Fixtures contain synthetic code snippets. Verify none embed real credentials or private paths. | medium |

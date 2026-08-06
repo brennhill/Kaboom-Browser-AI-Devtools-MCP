@@ -10,6 +10,7 @@ export interface RecordingListenerDeps extends Omit<ScreenRecordingHandlers, 'is
     setInactive: () => void;
     clearRecordingState: () => Promise<void>;
     getServerUrl: () => string;
+    schedule: (callback: () => void, delayMs: number) => void;
 }
 /**
  * Install all chrome.runtime.onMessage listeners for recording.

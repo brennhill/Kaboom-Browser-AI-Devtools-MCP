@@ -6,12 +6,12 @@ last_reviewed: 2026-06-10
 owners:
   - Brenn
 entrypoints:
-  - scripts/uninstall.sh
-  - scripts/uninstall.ps1
+  - scripts/setup/uninstall.sh
+  - scripts/setup/uninstall.ps1
   - npm/kaboom-agentic-browser/lib/uninstall.js:executeUninstall
 code_paths:
-  - scripts/uninstall.sh
-  - scripts/uninstall.ps1
+  - scripts/setup/uninstall.sh
+  - scripts/setup/uninstall.ps1
   - npm/kaboom-agentic-browser/lib/uninstall.js
   - npm/kaboom-agentic-browser/lib/skills.js
   - cmd/browser-agent/native_install.go
@@ -32,8 +32,8 @@ channels, reversing every artifact the install flow creates (see
 [Installer Binary Path and Manual Extension Handoff](./installer-binary-path-and-manual-extension-handoff.md)
 for the install-side flow):
 
-1. One-liner uninstall: `scripts/uninstall.sh` (macOS/Linux) and
-   `scripts/uninstall.ps1` (Windows) — counterparts to `install.sh`/`install.ps1`.
+1. One-liner uninstall: `scripts/setup/uninstall.sh` (macOS/Linux) and
+   `scripts/setup/uninstall.ps1` (Windows) — counterparts to `install.sh`/`install.ps1`.
 2. npm wrapper uninstall: `kaboom-agentic-browser --uninstall`
    (`lib/uninstall.js`) — removes MCP client config entries and managed
    skills only; it does not remove curl-installed binaries or autostart

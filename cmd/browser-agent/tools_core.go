@@ -1,5 +1,4 @@
-// Purpose: Defines the ToolHandler struct, shared state (capture, AI client, sequence store), and tool dispatch infrastructure.
-// Why: All five MCP tools share a common handler that owns capture state, extension connectivity, and session context.
+// tools_core.go — Defines shared five-tool dispatch state and runtime composition.
 package main
 
 import (

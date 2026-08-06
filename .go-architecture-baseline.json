@@ -50,16 +50,8 @@
       "exports": 5
     },
     "cmd/browser-agent/internal/bridge/bridge_fastpath.go": {
-      "mutable_globals": 6,
-      "exports": 8
-    },
-    "cmd/browser-agent/internal/bridge/bridge_fingerprint.go": {
       "mutable_globals": 1,
-      "exports": 1
-    },
-    "cmd/browser-agent/internal/bridge/bridge_push_relay.go": {
-      "mutable_globals": 0,
-      "exports": 1
+      "exports": 0
     },
     "cmd/browser-agent/internal/bridge/bridge_startup.go": {
       "mutable_globals": 6,
@@ -73,9 +65,25 @@
       "mutable_globals": 2,
       "exports": 6
     },
+    "cmd/browser-agent/internal/bridge/fastpathtelemetry/telemetry.go": {
+      "mutable_globals": 5,
+      "exports": 8
+    },
+    "cmd/browser-agent/internal/bridge/fingerprint/fingerprint.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/bridge/pushrelay/relay.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
     "cmd/browser-agent/internal/bridge/runner.go": {
       "mutable_globals": 0,
       "exports": 6
+    },
+    "cmd/browser-agent/internal/bridge/startuplock/lock.go": {
+      "mutable_globals": 0,
+      "exports": 10
     },
     "cmd/browser-agent/internal/bridge/stdioisolate/isolation.go": {
       "mutable_globals": 4,
@@ -353,45 +361,53 @@
       "mutable_globals": 0,
       "exports": 6
     },
+    "cmd/browser-agent/internal/terminal/assets/assets.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/terminal/deps.go": {
       "mutable_globals": 0,
-      "exports": 4
+      "exports": 2
     },
-    "cmd/browser-agent/internal/terminal/dirs.go": {
+    "cmd/browser-agent/internal/terminal/dimensions/dimensions.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/terminal/directorybrowser/browser.go": {
       "mutable_globals": 0,
       "exports": 4
     },
     "cmd/browser-agent/internal/terminal/handlers.go": {
       "mutable_globals": 0,
-      "exports": 19
+      "exports": 10
     },
-    "cmd/browser-agent/internal/terminal/intent_handlers.go": {
+    "cmd/browser-agent/internal/terminal/intent/handlers.go": {
       "mutable_globals": 0,
-      "exports": 4
+      "exports": 5
     },
-    "cmd/browser-agent/internal/terminal/intent_store.go": {
+    "cmd/browser-agent/internal/terminal/intent/store.go": {
       "mutable_globals": 0,
       "exports": 13
-    },
-    "cmd/browser-agent/internal/terminal/relay.go": {
-      "mutable_globals": 1,
-      "exports": 19
     },
     "cmd/browser-agent/internal/terminal/server.go": {
       "mutable_globals": 0,
       "exports": 3
     },
-    "cmd/browser-agent/internal/terminal/static.go": {
+    "cmd/browser-agent/internal/terminal/sessionrelay/relay.go": {
       "mutable_globals": 1,
-      "exports": 1
+      "exports": 24
+    },
+    "cmd/browser-agent/internal/terminal/spawnpolicy/retry.go": {
+      "mutable_globals": 0,
+      "exports": 4
     },
     "cmd/browser-agent/internal/terminal/supervisor/supervisor.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "cmd/browser-agent/internal/terminal/ws.go": {
+    "cmd/browser-agent/internal/terminal/wstransport/ws.go": {
       "mutable_globals": 0,
-      "exports": 4
+      "exports": 8
     },
     "cmd/browser-agent/internal/testgenhandler/classify.go": {
       "mutable_globals": 1,

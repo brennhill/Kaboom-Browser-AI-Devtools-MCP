@@ -10,12 +10,12 @@ function read(relativePath) {
 }
 
 test('operator scripts use only canonical Kaboom binary names', () => {
-  const stdioSilence = read('scripts/test-stdio-silence.sh')
-  const mcpComprehensive = read('scripts/test-mcp-comprehensive.sh')
-  const cursorSimulation = read('scripts/test-cursor-simulation.sh')
-  const rebuild = read('scripts/rebuild.sh')
+  const stdioSilence = read('scripts/uat/protocol/test-stdio-silence.sh')
+  const mcpComprehensive = read('scripts/uat/protocol/test-mcp-comprehensive.sh')
+  const cursorSimulation = read('scripts/uat/protocol/test-cursor-simulation.sh')
+  const rebuild = read('scripts/maintenance/rebuild.sh')
   const buildCrx = read('scripts/release/build-crx.js')
-  const killTestServers = read('scripts/kill-test-servers.sh')
+  const killTestServers = read('scripts/maintenance/kill-test-servers.sh')
 
   assert.match(stdioSilence, /WRAPPER="kaboom-agentic-browser"/)
   assert.doesNotMatch(stdioSilence, /gasoline-mcp|npm\/gasoline-mcp/)

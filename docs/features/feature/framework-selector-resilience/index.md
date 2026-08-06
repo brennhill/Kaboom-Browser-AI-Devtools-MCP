@@ -8,7 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - scripts/smoke-tests/29-framework-selector-resilience.sh
   - scripts/smoke-tests/build-framework-fixtures.mjs
-  - scripts/smoke-test.sh
+  - scripts/uat/runners/smoke-test.sh
   - package.json
   - scripts/smoke-tests/framework-fixtures/react-entry.jsx
   - scripts/smoke-tests/framework-fixtures/vue-entry.js

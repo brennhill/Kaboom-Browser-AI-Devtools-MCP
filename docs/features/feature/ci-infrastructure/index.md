@@ -7,8 +7,8 @@ owners: []
 last_reviewed: 2026-08-05
 code_paths:
   - .github/workflows/ci.yml
-  - scripts/test-js-sharded.sh
-  - scripts/validate-architecture.sh
+  - scripts/uat/runners/test-js-sharded.sh
+  - scripts/quality/verification/validate-architecture.sh
   - cmd/browser-agent/internal/ciapi/handlers.go
   - cmd/browser-agent/internal/ciapi/snapshot.go
   - cmd/browser-agent/internal/ciapi/types.go

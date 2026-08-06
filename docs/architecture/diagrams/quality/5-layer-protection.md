@@ -255,6 +255,6 @@ timeline
 
 - [ADR-002: Async Queue Immutability](../../decisions/ADR-002-async-queue-immutability.md)
 - [ARCHITECTURE-ENFORCEMENT.md](../../boundaries/ARCHITECTURE-ENFORCEMENT.md)
-- [validate-architecture.sh](../../scripts/validate-architecture.sh)
+- [validate-architecture.sh](../../scripts/quality/verification/validate-architecture.sh)
 - [architecture-validation.yml](../../.github/workflows/architecture-validation.yml)
 - [Pre-commit hook](../../scripts/hooks/pre-commit)

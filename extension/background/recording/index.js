@@ -573,7 +573,10 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
             recordingState.active = false;
         },
         clearRecordingState,
-        getServerUrl: () => getServerUrl()
+        getServerUrl: () => getServerUrl(),
+        schedule: (callback, delayMs) => {
+            setTimeout(callback, delayMs);
+        }
     });
 }
 //# sourceMappingURL=index.js.map

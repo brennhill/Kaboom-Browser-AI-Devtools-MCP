@@ -11,7 +11,7 @@ last_verified_date: 2026-03-05
 
 ## Automated Coverage
 
-1. `scripts/smoke-test.sh --only 29`
+1. `scripts/uat/runners/smoke-test.sh --only 29`
 2. `scripts/smoke-tests/29-framework-selector-resilience.sh`
 
 ## Required Scenarios
@@ -31,4 +31,4 @@ last_verified_date: 2026-03-05
 2. Check diagnostics for first failing framework and step.
 3. Confirm framework detection payload from `analyze(page_structure)`.
 4. Validate that fixture semantic contract IDs/text still exist.
-5. Re-run single module with `CI=1 bash scripts/smoke-test.sh 7890 --only 29`.
+5. Re-run single module with `CI=1 bash scripts/uat/runners/smoke-test.sh 7890 --only 29`.

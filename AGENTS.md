@@ -37,12 +37,12 @@ npm run lint       # ESLint
 
 ## Testing
 
-**Primary UAT Script:** [`scripts/test-all-tools-comprehensive.sh`](scripts/test-all-tools-comprehensive.sh)
+**Primary UAT Script:** [`scripts/uat/runners/test-all-tools-comprehensive.sh`](scripts/uat/runners/test-all-tools-comprehensive.sh)
 
 Tests: cold start, tool calls, concurrent clients, stdout purity, persistence, graceful shutdown.
 
 ```bash
-./scripts/test-all-tools-comprehensive.sh  # Run full UAT
+./scripts/uat/runners/test-all-tools-comprehensive.sh  # Run full UAT
 ```
 
 **UAT Rules:**

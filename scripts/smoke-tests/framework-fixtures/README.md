@@ -41,7 +41,7 @@ npm run smoke:annotation-parity-benchmark
 Optional repeat controls:
 
 ```bash
-FRAMEWORK_RESILIENCE_FULL_REPEATS=3 FRAMEWORK_SELECTOR_REFRESH_CYCLES=3 bash scripts/smoke-test.sh --only 29
+FRAMEWORK_RESILIENCE_FULL_REPEATS=3 FRAMEWORK_SELECTOR_REFRESH_CYCLES=3 bash scripts/uat/runners/smoke-test.sh --only 29
 ```
 
 Generated output is written to:

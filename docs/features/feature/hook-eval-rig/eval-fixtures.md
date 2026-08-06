@@ -316,4 +316,4 @@ Each fixture is a JSON file in `internal/hook/eval/testdata/<hook-name>/`:
 go test ./internal/hook/eval/ -v -run TestEval_Report -count=1
 ```
 
-The eval is test-only code. A lint invariant (check 16 in `scripts/lint-hardening.sh`) prevents `hook/eval` from being imported by production binaries.
+The eval is test-only code. A lint invariant (check 16 in `scripts/quality/verification/lint-hardening.sh`) prevents `hook/eval` from being imported by production binaries.

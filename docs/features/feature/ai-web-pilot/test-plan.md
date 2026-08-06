@@ -344,7 +344,7 @@ Safety:
 
 ```bash
 # Run comprehensive suite (all categories)
-./scripts/test-all-tools-comprehensive.sh
+./scripts/uat/runners/test-all-tools-comprehensive.sh
 ```
 
 ---

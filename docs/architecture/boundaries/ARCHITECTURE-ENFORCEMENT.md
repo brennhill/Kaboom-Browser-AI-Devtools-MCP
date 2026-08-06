@@ -117,7 +117,7 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 
 ### Layer 3: Architecture Validation Script 🤖
 
-**File**: `scripts/validate-architecture.sh`
+**File**: `scripts/quality/verification/validate-architecture.sh`
 
 **What it checks**:
 1. 📁 **Critical files** - 6 files must exist
@@ -130,7 +130,7 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 8. 📚 **Documentation** - ADRs and guides exist
 
 **When it runs**:
-- Manually: `./scripts/validate-architecture.sh`
+- Manually: `./scripts/quality/verification/validate-architecture.sh`
 - CI: Every PR/push
 
 **Can be bypassed**: No (runs in CI)
@@ -139,7 +139,7 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 
 **Run locally**:
 ```bash
-./scripts/validate-architecture.sh
+./scripts/quality/verification/validate-architecture.sh
 ```
 
 **Example output**:
@@ -218,7 +218,7 @@ cat docs/architecture/decisions/ADR-002-async-queue-immutability.md
 
 ```bash
 # Run all checks
-./scripts/validate-architecture.sh
+./scripts/quality/verification/validate-architecture.sh
 
 # Run integration tests
 go test -v ./internal/capture -run TestAsyncQueueIntegration
@@ -238,7 +238,7 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 1. **Don't panic** - We have backups
 2. **Check git history** - `git log --oneline -- internal/capture/queries.go`
 3. **Restore from commit** - `git checkout <commit> -- internal/capture/queries.go`
-4. **Run validation** - `./scripts/validate-architecture.sh`
+4. **Run validation** - `./scripts/quality/verification/validate-architecture.sh`
 5. **Run tests** - `go test ./internal/capture`
 
 ### 🔓 I need to bypass pre-commit hook
@@ -302,7 +302,7 @@ Update enforcement layers when:
    - Add test case for new behavior
    - Update `TestAsyncQueueArchitectureInvariants`
 
-3. **Validation script**: Edit `scripts/validate-architecture.sh`
+3. **Validation script**: Edit `scripts/quality/verification/validate-architecture.sh`
    - Update `CRITICAL_FILES` array
    - Update `REQUIRED_METHODS` array
 
@@ -320,7 +320,7 @@ git commit -m "test"  # Should block
 git checkout internal/capture/queries.go  # Restore
 
 # Test validation script
-./scripts/validate-architecture.sh  # Should pass
+./scripts/quality/verification/validate-architecture.sh  # Should pass
 
 # Test integration tests
 go test ./internal/capture -run TestAsyncQueueIntegration  # Should pass
@@ -386,7 +386,7 @@ Since implementing enforcement (2026-02-02):
 
 **Issues?**
 - Check [ADR-002](../decisions/ADR-002-async-queue-immutability.md)
-- Run `./scripts/validate-architecture.sh`
+- Run `./scripts/quality/verification/validate-architecture.sh`
 - Check GitHub Actions logs
 
 **Emergencies?**

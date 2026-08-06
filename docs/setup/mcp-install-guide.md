@@ -7,7 +7,7 @@ Kaboom Agentic Browser supports 9 AI coding tools. Use the one-liner installer o
 The quickest way to install Kaboom and configure all your AI tools is via the one-liner script:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/setup/install.sh | bash
 ```
 
 This script:

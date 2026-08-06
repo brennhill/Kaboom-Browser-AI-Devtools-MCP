@@ -302,7 +302,7 @@ last_verified_date: 2026-03-05
 - Call with `min_level=error` and verify only errors are aggregated
 - Call with `limit=5` and verify `summary.total_entries` <= 5
 
-**Test File:** Addition to `scripts/test-all-tools-comprehensive.sh`
+**Test File:** Addition to `scripts/uat/runners/test-all-tools-comprehensive.sh`
 
 ### Manual Testing
 
@@ -327,7 +327,7 @@ last_verified_date: 2026-03-05
 |-----------|------|--------|-------|
 | Unit | `internal/tools/observe/logs/summarized_logs_test.go` | Pending | Awaiting implementation |
 | Integration | `cmd/browser-agent/tools_observe_summarized_test.go` | Pending | Awaiting implementation |
-| UAT | `scripts/test-all-tools-comprehensive.sh` | Pending | Addition to existing script |
+| UAT | `scripts/uat/runners/test-all-tools-comprehensive.sh` | Pending | Addition to existing script |
 | Manual | N/A | Pending | Awaiting implementation |
 
 **Overall:** All product test scenarios must pass before feature is considered complete.

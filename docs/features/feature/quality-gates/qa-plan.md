@@ -132,7 +132,7 @@ Source: `cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go`. Test
 | IT-1 | End-to-end quality-gate | `kaboom-hooks quality-gate` via stdin | Valid envelope on a real edit | must |
 | IT-2 | End-to-end compression | `kaboom-hooks compress-output` via stdin | Compressed envelope + best-effort stats post | must |
 | IT-3 | Token tracking | `internal/tracking/` | Savings aggregated per session; lifetime persisted | should |
-| IT-4 | Install contract | `scripts/release/install-upgrade-regression.contract.test.mjs`, `scripts/test-install-hooks-only.sh` | Install/upgrade preserves user settings and updates managed entries | must |
+| IT-4 | Install contract | `scripts/release/install-upgrade-regression.contract.test.mjs`, `scripts/setup/test-install-hooks-only.sh` | Install/upgrade preserves user settings and updates managed entries | must |
 | IT-5 | Eval fixtures | `internal/hook/eval/testdata/quality-gate/`, `compress-output/` | Regression fixtures pass | must |
 
 ### 4.4 Edge Case Tests

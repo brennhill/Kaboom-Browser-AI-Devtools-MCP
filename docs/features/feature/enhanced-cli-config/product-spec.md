@@ -72,7 +72,7 @@ Remove Kaboom from AI assistant configs:
 Ensure bundled managed skills are installed consistently across all distribution channels:
 - npm install: postinstall installs bundled skills
 - `kaboom-agentic-browser --install` (npm + PyPI): installs MCP config and bundled skills
-- manual/local source builds: supported via `scripts/install-bundled-skills.sh`
+- manual/local source builds: supported via `scripts/setup/install-bundled-skills.sh`
 
 ## Requirements
 

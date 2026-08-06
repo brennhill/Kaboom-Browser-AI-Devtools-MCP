@@ -1,5 +1,5 @@
 /**
- * @fileoverview Safety-contract tests for scripts/install.sh (and docs install
+ * @fileoverview Safety-contract tests for scripts/setup/install.sh (and docs install
  * one-liners). Static regression guards for the 2026-06-10 code-review fixes:
  * anchored process-kill patterns, backup-preserving cleanup,
  * bash-only invocation strings, fish rc-dir creation, exact checksum matching,
@@ -13,8 +13,8 @@ const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..')
-const INSTALL_SH = path.join(REPO_ROOT, 'scripts', 'install.sh')
-const UNINSTALL_SH = path.join(REPO_ROOT, 'scripts', 'uninstall.sh')
+const INSTALL_SH = path.join(REPO_ROOT, 'scripts', 'setup', 'install.sh')
+const UNINSTALL_SH = path.join(REPO_ROOT, 'scripts', 'setup', 'uninstall.sh')
 
 const script = fs.readFileSync(INSTALL_SH, 'utf8')
 const lines = script.split('\n')
@@ -37,7 +37,7 @@ test('install.sh parses cleanly under bash -n', () => {
 
 // ─────────────────────────────────────────────────────────────
 // Finding 3 — process-kill patterns must be anchored full names,
-// consistent with scripts/uninstall.sh.
+// consistent with scripts/setup/uninstall.sh.
 // ─────────────────────────────────────────────────────────────
 
 test('process kill patterns are anchored and match uninstall.sh', () => {
@@ -171,7 +171,7 @@ test('post-install health check requires kaboom identity', () => {
 
 // ─────────────────────────────────────────────────────────────
 // Finding 9 — destructive rm/mv of EXT_DIR must be guarded
-// (mirrors safe_rm_rf in scripts/uninstall.sh).
+// (mirrors safe_rm_rf in scripts/setup/uninstall.sh).
 // ─────────────────────────────────────────────────────────────
 
 test('EXT_DIR destructive operations are guarded against unsafe paths', () => {

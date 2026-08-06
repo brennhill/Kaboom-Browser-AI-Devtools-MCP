@@ -49,7 +49,7 @@ Every feature spec file must include at least:
 3. Regenerate feature/traceability indexes:
    - `node scripts/docs/features/normalize-docs.js`
 4. Verify docs links and metadata:
-   - `python3 scripts/lint-documentation.py`
+   - `python3 scripts/docs/lint-documentation.py`
 5. Enforce feature bundle contract:
    - `node scripts/docs/features/check-feature-bundles.js`
 6. Enforce content writing/voice contract:

@@ -261,7 +261,7 @@ last_reviewed: 2026-02-16
 ### 5-Layer Protection
 **Code:**
 - .git/hooks/pre-commit (119 lines)
-- scripts/validate-architecture.sh (225 lines)
+- scripts/quality/verification/validate-architecture.sh (225 lines)
 - .github/workflows/architecture-validation.yml (103 lines)
 - internal/capture/async_queue_integration_test.go
 
@@ -371,8 +371,8 @@ grep -r "correlation" docs/architecture/
 | I'm changing... | Check these docs... | Run these tests... |
 |-----------------|---------------------|--------------------|
 | queries.go | ADR-001, ADR-002, async-queue-flow.md | TestAsyncQueue*, validate-architecture.sh |
-| handlers.go | async-queue-flow.md | ./scripts/validate-architecture.sh |
-| tools_core.go | MCP integration docs, feature specs | ./scripts/validate-architecture.sh |
+| handlers.go | async-queue-flow.md | ./scripts/quality/verification/validate-architecture.sh |
+| tools_core.go | MCP integration docs, feature specs | ./scripts/quality/verification/validate-architecture.sh |
 | favicon-replacer.ts | flame-flicker-visual.md, tab-tracking-ux | npm run test:ext |
 | manifest.json | Extension build docs | make compile-ts |
 | Any internal/capture/* | Architecture diagrams | go test ./internal/capture |

@@ -74,7 +74,7 @@ describe('Tooling contracts', () => {
   test('subprocess lifecycle tests run in the explicit Go integration job', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
     const coverageRunner = readFileSync('scripts/build/run-go-coverage.sh', 'utf8')
-    const transportSmoke = readFileSync('scripts/smoke-mcp-transport.sh', 'utf8')
+    const transportSmoke = readFileSync('scripts/uat/protocol/smoke-mcp-transport.sh', 'utf8')
     assert.match(workflow, /name: Go Integration Checks/)
     assert.match(workflow, /run-go-integration\.sh -race -count=1/)
     assert.match(
@@ -118,6 +118,11 @@ describe('Tooling contracts', () => {
     assert.match(workflow, /name: Retain aggregate Go coverage[\s\S]*path:[\s\S]*coverage\.out/)
     assert.match(makefile, /^ci-go:[\s\S]*\n\t\$\(MAKE\) test-cover/m)
     assert.match(coverageRunner, /MINIMUM="\$\{GO_COVERAGE_MINIMUM:-89\}"/)
+    assert.match(
+      coverageRunner,
+      /rm -rf "\$SUBPROCESS_DIR"[\s\S]*mkdir -p "\$SUBPROCESS_DIR"/,
+      'coverage must discard nested subprocess profiles before each run instead of accumulating gigabytes'
+    )
     assert.doesNotMatch(workflow, /70% minimum|COVERAGE < 70|coverprofile=coverage\.out/)
   })
 
@@ -229,7 +234,7 @@ describe('Tooling contracts', () => {
   })
 
   test('JavaScript shard reporting identifies only the shards that failed', () => {
-    const runner = readFileSync('scripts/test-js-sharded.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-js-sharded.sh', 'utf8')
     assert.match(runner, /SHARD_FAILED/)
     assert.doesNotMatch(
       runner,
@@ -239,7 +244,7 @@ describe('Tooling contracts', () => {
   })
 
   test('validate-architecture should enforce /sync handler instead of removed legacy handlers', () => {
-    const script = readFileSync('scripts/validate-architecture.sh', 'utf8')
+    const script = readFileSync('scripts/quality/verification/validate-architecture.sh', 'utf8')
     assert.match(script, /HandleSync/, 'validate-architecture should require HandleSync')
     assert.doesNotMatch(
       script,
@@ -249,7 +254,7 @@ describe('Tooling contracts', () => {
   })
 
   test('validate-architecture follows canonical post-refactor owners', () => {
-    const script = readFileSync('scripts/validate-architecture.sh', 'utf8')
+    const script = readFileSync('scripts/quality/verification/validate-architecture.sh', 'utf8')
     for (const currentOwner of [
       'internal/queries/dispatcher_results.go',
       'internal/capture/syncruntime/handler.go',
@@ -271,7 +276,7 @@ describe('Tooling contracts', () => {
   })
 
   test('validate-architecture stub check should not depend on fixed grep context windows', () => {
-    const script = readFileSync('scripts/validate-architecture.sh', 'utf8')
+    const script = readFileSync('scripts/quality/verification/validate-architecture.sh', 'utf8')
     assert.doesNotMatch(
       script,
       /grep\s+-r?A\s+20/,
@@ -280,7 +285,7 @@ describe('Tooling contracts', () => {
   })
 
   test('validate-architecture should not hardcode AsyncCommandTimeout to 30s', () => {
-    const script = readFileSync('scripts/validate-architecture.sh', 'utf8')
+    const script = readFileSync('scripts/quality/verification/validate-architecture.sh', 'utf8')
     assert.doesNotMatch(
       script,
       /AsyncCommandTimeout\.\*30\.\*time\.Second/,

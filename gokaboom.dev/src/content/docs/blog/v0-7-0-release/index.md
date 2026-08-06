@@ -39,7 +39,7 @@ v0.7.0 is a ground-up rewrite delivering a complete browser observability platfo
 ### Install
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/setup/install.sh | bash
 ```
 
 ### Full Changelog

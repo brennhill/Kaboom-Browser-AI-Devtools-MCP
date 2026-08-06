@@ -41,13 +41,13 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/daemon/health.js
   - npm/kaboom-agentic-browser/lib/daemon/daemon.js
   - npm/kaboom-agentic-browser/lib/cli/output.js
-  - scripts/install.sh
-  - scripts/install.ps1
-  - scripts/install-bundled-skills.sh
-  - scripts/clean-old-daemons.sh
-  - scripts/rebuild.sh
-  - scripts/uninstall.sh
-  - scripts/uninstall.ps1
+  - scripts/setup/install.sh
+  - scripts/setup/install.ps1
+  - scripts/setup/install-bundled-skills.sh
+  - scripts/maintenance/clean-old-daemons.sh
+  - scripts/maintenance/rebuild.sh
+  - scripts/setup/uninstall.sh
+  - scripts/setup/uninstall.ps1
   - server/scripts/install.js
   - npm/kaboom-agentic-browser/bin/kaboom-agentic-browser
   - npm/kaboom-agentic-browser/lib/config/config.js

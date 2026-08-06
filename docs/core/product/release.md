@@ -47,7 +47,7 @@ feature/c ───────────────●
 | Channel | What ships | How |
 | --- | --- | --- |
 | **npm** | `kaboom-agentic-browser` aggregate package + 5 `@brennhill/kaboom-agentic-browser-<platform>` binary packages | `release.yml` on tag push |
-| **`curl \| sh`** | `scripts/install.sh` served live from `STABLE`; downloads the platform binary + extension from the GitHub Release | GitHub Release assets from `release.yml` |
+| **`curl \| sh`** | `scripts/setup/install.sh` served live from `STABLE`; downloads the platform binary + extension from the GitHub Release | GitHub Release assets from `release.yml` |
 | **GitHub Release** | 5 platform binaries, 5 `kaboom-hooks` binaries, extension zip, `checksums.txt` | `release.yml` on tag push |
 | **Chrome Web Store** | `extension/` directory | Manual upload (see below) |
 

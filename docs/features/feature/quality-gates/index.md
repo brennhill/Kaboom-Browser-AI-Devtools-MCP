@@ -6,6 +6,14 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - scripts/docs/
+  - scripts/maintenance/
+  - scripts/quality/contracts/
+  - scripts/quality/verification/
+  - scripts/setup/
+  - scripts/uat/orchestration/
+  - scripts/uat/protocol/
+  - scripts/uat/runners/
   - docs/audits/historical/
   - docs/planning/product/
   - docs/planning/release/
@@ -44,15 +52,15 @@ code_paths:
   - internal/tracking/token_tracker.go
   - internal/tracking/stats_endpoint.go
   - cmd/hooks/main.go
-  - scripts/check-file-length.sh
-  - scripts/check-folder-size.cjs
-  - scripts/generate-feature-navigation.py
-  - scripts/generate-feature-navigation.sh
-  - scripts/check-dormant-tests.sh
+  - scripts/quality/contracts/check-file-length.sh
+  - scripts/quality/contracts/check-folder-size.cjs
+  - scripts/docs/generate-feature-navigation.py
+  - scripts/docs/generate-feature-navigation.sh
+  - scripts/quality/contracts/check-dormant-tests.sh
   - scripts/contracts/check_go_test_determinism.go
   - scripts/contracts/goarchitecture/main.go
   - .go-architecture-baseline.json
-  - scripts/test-js-sharded.sh
+  - scripts/uat/runners/test-js-sharded.sh
   - scripts/build/run-go-coverage.sh
   - scripts/build/merge-go-coverage.mjs
   - .prettierignore
@@ -61,7 +69,7 @@ code_paths:
   - .github/workflows/ci.yml
 test_paths:
   - tests/docs/documentation-link-parser.test.js
-  - scripts/lint-documentation.py
+  - scripts/docs/lint-documentation.py
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go
   - cmd/browser-agent/tools_configure_quality_gates_test.go
@@ -71,14 +79,14 @@ test_paths:
   - internal/hook/conventions_test.go
   - internal/tracking/token_tracker_test.go
   - internal/tracking/stats_endpoint_test.go
-  - scripts/check-file-length.test.mjs
-  - scripts/check-folder-size.test.mjs
+  - scripts/quality/contracts/check-file-length.test.mjs
+  - scripts/quality/contracts/check-folder-size.test.mjs
   - scripts/contracts/check_go_test_determinism_test.go
   - scripts/contracts/goarchitecture/main_test.go
   - scripts/tests/contracts/go-coverage-profile.test.mjs
   - internal/testsync/testsync_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
-  - scripts/test-install-hooks-only.sh
+  - scripts/setup/test-install-hooks-only.sh
   - scripts/docs/features/check-feature-paths.test.mjs
   - tests/cli/contracts/root-metadata-branding.test.cjs
   - tests/site/gokaboom-domain-contract.test.js

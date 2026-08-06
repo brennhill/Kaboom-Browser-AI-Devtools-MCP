@@ -233,7 +233,7 @@ The cat-17 tests focus on **action export and format validation**. They don't te
 
 ```bash
 # Run comprehensive suite (all categories)
-./scripts/test-all-tools-comprehensive.sh
+./scripts/uat/runners/test-all-tools-comprehensive.sh
 ```
 
 ---

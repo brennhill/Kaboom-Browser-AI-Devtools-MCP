@@ -122,7 +122,7 @@ test_paths:
   - cmd/browser-agent/internal/playbooks/resources/content_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/stdio_silence_test.go
-  - scripts/smoke-mcp-transport.sh
+  - scripts/uat/protocol/smoke-mcp-transport.sh
   - cmd/browser-agent/mcp_protocol_test.go
   - cmd/browser-agent/mcp_initialize_test.go
   - cmd/browser-agent/mcp_transport_handler_test.go
@@ -140,7 +140,7 @@ test_paths:
   - cmd/browser-agent/internal/httpguard/middleware_test.go
   - cmd/browser-agent/internal/connectmode/runner_test.go
   - cmd/browser-agent/internal/versioncheck/checker_test.go
-  - scripts/check-bridge-stdout-invariant.sh
+  - scripts/quality/contracts/check-bridge-stdout-invariant.sh
   - cmd/browser-agent/handler_consistency_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_core_sync_test.go

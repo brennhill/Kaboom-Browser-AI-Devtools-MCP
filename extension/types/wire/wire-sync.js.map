@@ -1,1 +1,1 @@
-{"version":3,"file":"wire-sync.js","sourceRoot":"","sources":["../../../src/types/wire/wire-sync.ts"],"names":[],"mappings":"AAAA,gDAAgD;AAChD,wCAAwC;AACxC,kDAAkD;AAkFlD,MAAM,CAAC,MAAM,gBAAgB,GAAG,CAAC,YAAY,EAAE,aAAa,EAAE,OAAO,EAAE,YAAY,EAAE,kBAAkB,CAAU,CAAA"}
+{"version":3,"file":"wire-sync.js","sourceRoot":"","sources":["../../../src/types/wire/wire-sync.ts"],"names":[],"mappings":"AAAA,gDAAgD;AAChD,oDAAoD;AACpD,kDAAkD;AAkFlD,MAAM,CAAC,MAAM,gBAAgB,GAAG,CAAC,YAAY,EAAE,aAAa,EAAE,OAAO,EAAE,YAAY,EAAE,kBAAkB,CAAU,CAAA"}

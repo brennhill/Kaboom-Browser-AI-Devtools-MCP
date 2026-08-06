@@ -32,7 +32,7 @@ run_smoke_module() {
     NO_COLOR=1 \
       FRAMEWORK_RESILIENCE_FULL_REPEATS="$FRAMEWORK_REPEATS" \
       FRAMEWORK_SELECTOR_REFRESH_CYCLES="$FRAMEWORK_CYCLES" \
-      bash scripts/smoke-test.sh --only "$module"
+      bash scripts/uat/runners/smoke-test.sh --only "$module"
   ) >"$outfile" 2>&1 || status=$?
 
   local passed failed skipped

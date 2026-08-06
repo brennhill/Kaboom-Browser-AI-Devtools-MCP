@@ -34,7 +34,7 @@ code_paths:
   - src/background/orchestration/connection-monitor.ts
   - src/background/orchestration/stream-runtime.ts
   - scripts/contracts/check-architecture-boundaries.cjs
-  - scripts/validate-architecture.sh
+  - scripts/quality/verification/validate-architecture.sh
 test_paths:
   - internal/mcp/response_test.go
   - internal/queries/dispatcher_test.go

@@ -14,7 +14,7 @@ entrypoints:
   - src/background/sync/server.ts
   - src/background/index.ts
   - src/popup/shell/status-display.ts
-  - scripts/test-all-tools-comprehensive.sh
+  - scripts/uat/runners/test-all-tools-comprehensive.sh
 code_paths:
   - src/background/sync/server.ts
   - src/background/index.ts
@@ -23,7 +23,7 @@ code_paths:
   - src/background/state.ts
   - src/popup.ts
   - src/popup/shell/status-display.ts
-  - scripts/test-all-tools-comprehensive.sh
+  - scripts/uat/runners/test-all-tools-comprehensive.sh
 test_paths:
   - tests/extension/server.test.js
   - tests/extension/background-batching.test.js
@@ -41,7 +41,7 @@ Define one meaning for extension "Connected": the daemon has observed a live ext
 - `src/background/sync/server.ts` parses daemon `/health` responses into extension connection state.
 - `src/background/index.ts` stores the parsed connection state and fans it out to popup/badge consumers.
 - `src/popup/shell/status-display.ts` renders the user-visible `Connected` or `Offline` status.
-- `scripts/test-all-tools-comprehensive.sh` blocks UAT unless daemon-side `capture.extension_connected` is true.
+- `scripts/uat/runners/test-all-tools-comprehensive.sh` blocks UAT unless daemon-side `capture.extension_connected` is true.
 
 ## Primary Flow
 
@@ -82,7 +82,7 @@ Define one meaning for extension "Connected": the daemon has observed a live ext
 - `src/background/state.ts`
 - `src/popup.ts`
 - `src/popup/shell/status-display.ts`
-- `scripts/test-all-tools-comprehensive.sh`
+- `scripts/uat/runners/test-all-tools-comprehensive.sh`
 
 ## Test Paths
 

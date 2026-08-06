@@ -30,7 +30,7 @@ describe('packaged corruption recovery release UAT', () => {
 
   test('is a blocking release CI check and comprehensive offline category', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
 
     assert.match(workflow, /Packaged corruption and recovery UAT/)
     assert.match(workflow, /cat-34-packaged-corruption-recovery\.sh/)

@@ -305,7 +305,7 @@ Split internal/security/security.go (1054 lines) into smaller focused files.
    - Commit frequently
 
 5. Verify nothing broke:
-   - `bash scripts/verify-refactor.sh`
+   - `bash scripts/quality/verification/verify-refactor.sh`
    - `go test ./internal/security/...`
    - Compare benchmarks
 
@@ -473,7 +473,7 @@ Refactor [FILE/COMPONENT].
 2. Create refactoring plan with safety measures
 3. Tag baseline: `git tag before-refactor-$(date +%Y%m%d)`
 4. Split incrementally, test after each change
-5. Run `bash scripts/verify-refactor.sh`
+5. Run `bash scripts/quality/verification/verify-refactor.sh`
 6. Run `make quality-gate`
 
 **Safety:**

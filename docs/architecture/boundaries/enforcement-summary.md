@@ -57,7 +57,7 @@ We've built **defense-in-depth** protection for the async queue-and-poll archite
 
 ### 3. Validation Script (Automated Checks) 🤖
 
-**File**: `scripts/validate-architecture.sh`
+**File**: `scripts/quality/verification/validate-architecture.sh`
 **Runtime**: ~3 seconds
 
 **Checks 9 categories**:
@@ -71,7 +71,7 @@ We've built **defense-in-depth** protection for the async queue-and-poll archite
 8. ✅ maxPendingQueries = 5
 9. ✅ Documentation exists
 
-**Run**: `./scripts/validate-architecture.sh`
+**Run**: `./scripts/quality/verification/validate-architecture.sh`
 
 ---
 
@@ -120,13 +120,13 @@ We've built **defense-in-depth** protection for the async queue-and-poll archite
 
 ```bash
 # Before committing
-./scripts/quick-regression-check.sh  # 2 seconds
+./scripts/quality/verification/quick-regression-check.sh  # 2 seconds
 
 # Before pushing to PR
-./scripts/validate-architecture.sh   # 3 seconds
+./scripts/quality/verification/validate-architecture.sh   # 3 seconds
 
 # Full regression suite (optional)
-./scripts/verify-no-regressions.sh   # 30 seconds
+./scripts/quality/verification/verify-no-regressions.sh   # 30 seconds
 ```
 
 ### Code Review Workflow
@@ -148,7 +148,7 @@ claude --agent principal-engineer
 
 **Quick Regression Check** (2s):
 ```bash
-$ ./scripts/quick-regression-check.sh
+$ ./scripts/quality/verification/quick-regression-check.sh
 
 ⚡ Quick Regression Check
 ========================
@@ -244,7 +244,7 @@ git commit -m "test"  # Should BLOCK
 git checkout internal/capture/queries.go
 
 # Verify
-./scripts/validate-architecture.sh  # Should PASS
+./scripts/quality/verification/validate-architecture.sh  # Should PASS
 ```
 
 ---
@@ -313,14 +313,14 @@ Ask:
 ### Check Validation
 
 ```bash
-./scripts/validate-architecture.sh
+./scripts/quality/verification/validate-architecture.sh
 ```
 
 ### Check Regressions
 
 ```bash
-./scripts/quick-regression-check.sh  # Fast (2s)
-./scripts/verify-no-regressions.sh   # Comprehensive (30s)
+./scripts/quality/verification/quick-regression-check.sh  # Fast (2s)
+./scripts/quality/verification/verify-no-regressions.sh   # Comprehensive (30s)
 ```
 
 ### Emergency Restore
@@ -333,7 +333,7 @@ git log --oneline -- internal/capture/queries.go
 git checkout <commit-hash> -- internal/capture/
 
 # Verify
-./scripts/validate-architecture.sh
+./scripts/quality/verification/validate-architecture.sh
 ```
 
 ---
@@ -342,9 +342,9 @@ git checkout <commit-hash> -- internal/capture/
 
 **Enforcement**:
 - `.git/hooks/pre-commit` (119 lines)
-- `scripts/validate-architecture.sh` (160 lines)
-- `scripts/quick-regression-check.sh` (60 lines)
-- `scripts/verify-no-regressions.sh` (340 lines)
+- `scripts/quality/verification/validate-architecture.sh` (160 lines)
+- `scripts/quality/verification/quick-regression-check.sh` (60 lines)
+- `scripts/quality/verification/verify-no-regressions.sh` (340 lines)
 - `.github/workflows/architecture-validation.yml` (80 lines)
 
 **Documentation**:

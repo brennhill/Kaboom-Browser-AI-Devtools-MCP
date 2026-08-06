@@ -35,7 +35,7 @@ describe('comprehensive UAT harness regressions', () => {
   })
 
   test('offline and connected categories have explicit, disjoint suite boundaries', () => {
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     const categoryIds = (name) => {
       const match = runner.match(new RegExp(`^${name}="([^"]+)"$`, 'm'))
       assert.ok(match, `${name} must be declared`)
@@ -54,13 +54,13 @@ describe('comprehensive UAT harness regressions', () => {
   })
 
   test('comprehensive UAT never emits production telemetry', () => {
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     assert.match(
       runner,
       /export KABOOM_TELEMETRY=off/,
       'isolated UAT daemon states must not inflate production install analytics'
     )
-    const smokeRunner = readFileSync('scripts/smoke-test.sh', 'utf8')
+    const smokeRunner = readFileSync('scripts/uat/runners/smoke-test.sh', 'utf8')
     assert.match(
       smokeRunner,
       /export KABOOM_TELEMETRY=off/,
@@ -75,7 +75,7 @@ describe('comprehensive UAT harness regressions', () => {
   })
 
   test('offline suite is isolated from the extension port and connected suite is preflighted', () => {
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
 
     assert.ok(
       runner.indexOf('KABOOM_UAT_WRAPPER') < runner.indexOf('command -v kaboom-agentic-browser'),
@@ -225,7 +225,7 @@ describe('comprehensive UAT harness regressions', () => {
   })
 
   test('category discovery follows feature-family directories', () => {
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     const framework = readFileSync('scripts/tests/framework/framework.sh', 'utf8')
 
     assert.match(runner, /find "\$TESTS_DIR" -type f -name "cat-\$\{cat_id\}-\*\.sh"/)
@@ -235,7 +235,7 @@ describe('comprehensive UAT harness regressions', () => {
   })
 
   test('connected UAT derives action coverage from the live five-tool schema', () => {
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     const actionCoverage = readFileSync('scripts/tests/browser/cat-33-connected-action-coverage.sh', 'utf8')
 
     assert.match(runner, /CONNECTED_CAT_IDS="[^"]*\b33\b/)
@@ -317,7 +317,7 @@ describe('comprehensive UAT harness regressions', () => {
   })
 
   test('long-running categories retain complete result accounting', () => {
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     const dynamicUpgrade = readFileSync('scripts/tests/runtime/cat-26-dynamic-upgrade.sh', 'utf8')
 
     assert.match(runner, /19\) echo 600/)
@@ -325,7 +325,7 @@ describe('comprehensive UAT harness regressions', () => {
   })
 
   test('connected UAT includes deterministic QA fixture mutation and rollback coverage', () => {
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     const fixtureUAT = readFileSync('scripts/tests/browser/cat-35-qa-fixtures.sh', 'utf8')
 
     assert.match(runner, /CONNECTED_CAT_IDS=.*35/)
@@ -351,7 +351,7 @@ describe('comprehensive UAT harness regressions', () => {
       '/bin/bash',
       [
         '-c',
-        `source scripts/uat-result-lib.sh; parse_uat_category_result "$1"; printf '%s|%s|%s|%s\\n' "$UAT_RESULT_PASS" "$UAT_RESULT_FAIL" "$UAT_RESULT_SKIP" "$UAT_RESULT_ELAPSED"`,
+        `source scripts/uat/orchestration/uat-result-lib.sh; parse_uat_category_result "$1"; printf '%s|%s|%s|%s\\n' "$UAT_RESULT_PASS" "$UAT_RESULT_FAIL" "$UAT_RESULT_SKIP" "$UAT_RESULT_ELAPSED"`,
         'bash',
         valid
       ],
@@ -365,13 +365,13 @@ describe('comprehensive UAT harness regressions', () => {
     ]) {
       const result = require('node:child_process').spawnSync(
         '/bin/bash',
-        ['-c', 'source scripts/uat-result-lib.sh; parse_uat_category_result "$1"', 'bash', path],
+        ['-c', 'source scripts/uat/orchestration/uat-result-lib.sh; parse_uat_category_result "$1"', 'bash', path],
         { cwd: process.cwd(), encoding: 'utf8' }
       )
       assert.equal(result.status, status)
     }
 
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     assert.match(runner, /AGGREGATION_ERRORS/)
     assert.match(runner, /UAT_RESULT_SKIP/)
     assert.match(runner, /missing result file/)
@@ -430,7 +430,7 @@ describe('comprehensive UAT harness regressions', () => {
       const result =
       require('node:child_process').spawnSync(
         '/bin/bash',
-        ['scripts/test-all-tools-comprehensive.sh', '--suite', 'offline'],
+        ['scripts/uat/runners/test-all-tools-comprehensive.sh', '--suite', 'offline'],
         {
           cwd: process.cwd(),
           encoding: 'utf8',
@@ -516,7 +516,7 @@ describe('comprehensive UAT harness regressions', () => {
   })
 
   test('exit cleanup cannot kill a daemon that explicit restoration already replaced', () => {
-    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     const cleanup = runner.match(/_uat_cleanup\(\) \{([\s\S]*?)\n\}/)?.[1] ?? ''
     const restoredGuard = cleanup.indexOf('UAT_USER_STATE_RESTORED')
     const firstPortKill = cleanup.indexOf('lsof -tiTCP')
