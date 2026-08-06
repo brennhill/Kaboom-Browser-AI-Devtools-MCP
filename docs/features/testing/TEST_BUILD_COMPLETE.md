@@ -200,7 +200,7 @@ scripts/tests/runtime/cat-22-advanced.sh
 ### Documentation
 ```
 docs/features/TEST_BUILD_SUMMARY.md           # Initial summary
-docs/features/TEST_BUILD_COMPLETE.md          # This file
+docs/features/testing/TEST_BUILD_COMPLETE.md          # This file
 docs/features/feature/noise-filtering/test-plan.md (updated)
 ```
 

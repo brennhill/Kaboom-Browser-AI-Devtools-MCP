@@ -248,7 +248,7 @@ These would require Chrome Extension API changes or violate Web Store policies:
 
 ## Reference
 
-- **UAT Issue #4:** [UAT-ISSUES-TRACKER.md](../core/in-progress/UAT-ISSUES-TRACKER.md#-issue-4-network_bodies-no-data-captured-documented)
+- **UAT Issue #4:** [UAT-ISSUES-TRACKER.md](../../core/in-progress/UAT-ISSUES-TRACKER.md#-issue-4-network_bodies-no-data-captured-documented)
 - **Implementation:** [src/lib/net/network.ts](../../src/lib/net/network.ts) (lines 420-498)
 - **MCP Tool:** `observe({what: "network_bodies"})`
 - **Related Tools:** `observe({what: "network_waterfall"})`, `observe({what: "api"})`

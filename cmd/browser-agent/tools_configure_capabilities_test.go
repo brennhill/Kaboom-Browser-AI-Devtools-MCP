@@ -1,5 +1,5 @@
 // Purpose: Validate describe_capabilities handler behavior and guard against regressions.
-// Docs: docs/features/describe_capabilities.md
+// Docs: docs/features/generation/describe_capabilities.md
 
 // tools_configure_capabilities_test.go — Tests for describe_capabilities handler.
 package main

@@ -6,6 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - docs/features/capture/
+  - docs/features/generation/
+  - docs/features/pilot/
+  - docs/features/protocol/
+  - docs/features/testing/
   - docs/specs/contracts/
   - docs/specs/reviews/agent-workflows/
   - docs/specs/reviews/runtime-data/

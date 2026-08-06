@@ -1,7 +1,7 @@
 // capabilities.go — Capability package contract and response assembly.
 // Purpose: Builds describe_capabilities responses by introspecting tool schemas, modes, and per-mode parameter sets.
 // Docs: docs/features/feature/config-profiles/index.md
-// Docs: docs/features/describe_capabilities.md
+// Docs: docs/features/generation/describe_capabilities.md
 
 // Package capabilities turns MCP tool schemas into the machine-readable
 // metadata returned by configure(action="describe_capabilities"). Schema

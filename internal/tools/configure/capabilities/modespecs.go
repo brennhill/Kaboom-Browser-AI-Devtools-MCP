@@ -1,5 +1,5 @@
 // modespecs.go — Per-mode parameter specs for all tools.
-// Docs: docs/features/describe_capabilities.md
+// Docs: docs/features/generation/describe_capabilities.md
 //
 // One file per MCP tool below. That is not an accident of a past file split: the
 // repo has exactly five tools (observe, generate, configure, interact, analyze) and

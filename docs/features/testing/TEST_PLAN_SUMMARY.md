@@ -337,7 +337,7 @@ This document summarizes the comprehensive test plans created for 5 major Kaboom
 
 ### Summary Document
 
-6. **`/Users/brenn/dev/kaboom/docs/features/TEST_PLAN_SUMMARY.md`** (This file)
+6. **`/Users/brenn/dev/kaboom/docs/features/testing/TEST_PLAN_SUMMARY.md`** (This file)
    - Executive summary
    - Feature-by-feature status
    - Test coverage matrix
@@ -459,8 +459,8 @@ All test-plans follow the standard template in `/docs/features/_template/templat
 
 | Feature | Product Spec | Tech Spec | Test Plan | UAT Tests | Smoke Tests |
 |---------|--------------|-----------|-----------|-----------|------------|
-| **link-health** | ❌ None | ✅ [tech-spec.md](feature/link-health/tech-spec.md) | ✅ [test-plan.md](feature/link-health/test-plan.md) | ✅ [cat-19-link-health.sh](../../scripts/tests/browser/cat-19-link-health.sh) | ✅ [link-health-smoke.sh](../../scripts/smoke-tests/link-health-smoke.sh) |
-| **noise-filtering** | ✅ [product-spec.md](feature/noise-filtering/product-spec.md) | ✅ [tech-spec.md](feature/noise-filtering/tech-spec.md) | ✅ [test-plan.md](feature/noise-filtering/test-plan.md) | ✅ [cat-20-noise-persistence.sh](../../scripts/tests/capture/cat-20-noise-persistence.sh) | ❌ None |
-| **ai-web-pilot** | ✅ [product-spec.md](feature/ai-web-pilot/product-spec.md) | ✅ [tech-spec.md](feature/ai-web-pilot/tech-spec.md) | ✅ [test-plan.md](feature/ai-web-pilot/test-plan.md) | ✅ cat-13/14/15 (12 tests) | ❌ None |
-| **flow-recording** | ✅ [product-spec.md](feature/flow-recording/product-spec.md) | ✅ [tech-spec.md](feature/flow-recording/tech-spec.md) | ✅ [test-plan.md](feature/flow-recording/test-plan.md) | ✅ [cat-18-recording.sh](../../scripts/tests/capture/cat-18-recording.sh) | ❌ None |
-| **test-generation** | ✅ [product-spec.md](feature/test-generation/product-spec.md) | ✅ [tech-spec.md](feature/test-generation/tech-spec.md) | ✅ [test-plan.md](feature/test-generation/test-plan.md) | ✅ [cat-29-reproduction.sh](../../scripts/tests/workflows/cat-29-reproduction.sh) | ❌ None |
+| **link-health** | ❌ None | ✅ [tech-spec.md](../feature/link-health/tech-spec.md) | ✅ [test-plan.md](../feature/link-health/test-plan.md) | ✅ [cat-19-link-health.sh](../../../scripts/tests/browser/cat-19-link-health.sh) | ✅ [link-health-smoke.sh](../../../scripts/smoke-tests/link-health-smoke.sh) |
+| **noise-filtering** | ✅ [product-spec.md](../feature/noise-filtering/product-spec.md) | ✅ [tech-spec.md](../feature/noise-filtering/tech-spec.md) | ✅ [test-plan.md](../feature/noise-filtering/test-plan.md) | ✅ [cat-20-noise-persistence.sh](../../../scripts/tests/capture/cat-20-noise-persistence.sh) | ❌ None |
+| **ai-web-pilot** | ✅ [product-spec.md](../feature/ai-web-pilot/product-spec.md) | ✅ [tech-spec.md](../feature/ai-web-pilot/tech-spec.md) | ✅ [test-plan.md](../feature/ai-web-pilot/test-plan.md) | ✅ cat-13/14/15 (12 tests) | ❌ None |
+| **flow-recording** | ✅ [product-spec.md](../feature/flow-recording/product-spec.md) | ✅ [tech-spec.md](../feature/flow-recording/tech-spec.md) | ✅ [test-plan.md](../feature/flow-recording/test-plan.md) | ✅ [cat-18-recording.sh](../../../scripts/tests/capture/cat-18-recording.sh) | ❌ None |
+| **test-generation** | ✅ [product-spec.md](../feature/test-generation/product-spec.md) | ✅ [tech-spec.md](../feature/test-generation/tech-spec.md) | ✅ [test-plan.md](../feature/test-generation/test-plan.md) | ✅ [cat-29-reproduction.sh](../../../scripts/tests/workflows/cat-29-reproduction.sh) | ❌ None |

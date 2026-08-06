@@ -1,5 +1,5 @@
 // modespecs_configure.go — configure tool per-mode parameter specs.
-// Docs: docs/features/describe_capabilities.md
+// Docs: docs/features/generation/describe_capabilities.md
 package capabilities
 
 var configureModeSpecs = map[string]modeParamSpec{

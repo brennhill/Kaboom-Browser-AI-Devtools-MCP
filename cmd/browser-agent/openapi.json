@@ -665,7 +665,7 @@
           }
         ],
         "x-docs": {
-          "doc": "docs/features/network-capture.md"
+          "doc": "docs/features/capture/network-capture.md"
         },
         "requestBody": {
           "required": true,
@@ -718,7 +718,7 @@
           }
         ],
         "x-docs": {
-          "doc": "docs/features/network-capture.md",
+          "doc": "docs/features/capture/network-capture.md",
           "feature": "docs/features/feature/binary-format-detection/"
         },
         "requestBody": {
@@ -1372,7 +1372,7 @@
           }
         ],
         "x-docs": {
-          "doc": "docs/features/sync-endpoint.md"
+          "doc": "docs/features/protocol/sync-endpoint.md"
         },
         "requestBody": {
           "required": true,
@@ -3007,7 +3007,7 @@
         "type": "object",
         "description": "Network request timing entry derived from PerformanceResourceTiming. Captures URL, HTTP status, and duration for waterfall visualization and performance analysis.",
         "x-docs": {
-          "doc": "docs/features/network-capture.md"
+          "doc": "docs/features/capture/network-capture.md"
         },
         "properties": {
           "url": {
@@ -3032,7 +3032,7 @@
         "type": "object",
         "description": "Captured request and response body pair from a fetch() call. The extension intercepts fetch requests and clones response bodies for inspection. Binary content is detected and labeled rather than stored in full.",
         "x-docs": {
-          "doc": "docs/features/network-capture.md",
+          "doc": "docs/features/capture/network-capture.md",
           "feature": "docs/features/feature/binary-format-detection/"
         },
         "properties": {
@@ -3411,7 +3411,7 @@
         "type": "object",
         "description": "Extension-to-server sync payload. The Chrome extension sends its current state on each poll interval. Contains settings, internal logs, and results from async commands. This is the upstream half of the bidirectional sync protocol.",
         "x-docs": {
-          "doc": "docs/features/sync-endpoint.md"
+          "doc": "docs/features/protocol/sync-endpoint.md"
         },
         "properties": {
           "ext_session_id": {
@@ -3459,7 +3459,7 @@
         "type": "object",
         "description": "Server-to-extension sync response. Delivers pending commands, capture overrides, and timing for the next poll. This is the downstream half of the bidirectional sync protocol.",
         "x-docs": {
-          "doc": "docs/features/sync-endpoint.md"
+          "doc": "docs/features/protocol/sync-endpoint.md"
         },
         "properties": {
           "ack": {

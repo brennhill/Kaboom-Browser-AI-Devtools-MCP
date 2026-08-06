@@ -1,5 +1,5 @@
 // modespecs_test.go — Tests for per-mode parameter specs.
-// Docs: docs/features/describe_capabilities.md
+// Docs: docs/features/generation/describe_capabilities.md
 package capabilities
 
 import (

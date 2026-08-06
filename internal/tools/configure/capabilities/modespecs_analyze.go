@@ -1,5 +1,5 @@
 // modespecs_analyze.go — analyze tool per-mode parameter specs.
-// Docs: docs/features/describe_capabilities.md
+// Docs: docs/features/generation/describe_capabilities.md
 package capabilities
 
 var analyzeModeSpecs = map[string]modeParamSpec{
