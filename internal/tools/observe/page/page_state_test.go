@@ -194,6 +194,31 @@ func TestGetScreenshotValidatesAndPersistsSuccessfulCapture(t *testing.T) {
 	})
 }
 
+func TestGetScreenshotReturnsCanonicalJPEGAndTextOnlyShapes(t *testing.T) {
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 41}
+	for name, payload := range map[string]json.RawMessage{
+		"jpeg image": json.RawMessage(`{"filename":"shot.jpg","data_url":"data:image/jpeg;base64,aGVsbG8="}`),
+		"text only":  json.RawMessage(`{"filename":"shot.jpg","path":"/tmp/shot.jpg"}`),
+	} {
+		t.Run(name, func(t *testing.T) {
+			cap := capture.NewCapture()
+			defer cap.Close()
+			capturefixture.Track(cap, 1, "https://example.test")
+			go completeNextPageStateQuery(t, cap, payload)
+			result := testsupport.DecodeToolResult(t, GetScreenshot(testsupport.Deps(cap), req, json.RawMessage(`{}`)))
+			if result.IsError || len(result.Content) == 0 || result.Content[0].Type != "text" {
+				t.Fatalf("screenshot result = %+v", result)
+			}
+			if name == "text only" && len(result.Content) != 1 {
+				t.Fatalf("text-only content = %+v", result.Content)
+			}
+			if name == "jpeg image" && (len(result.Content) != 2 || result.Content[1].Type != "image" || result.Content[1].MimeType != "image/jpeg" || result.Content[1].Data != "aGVsbG8=") {
+				t.Fatalf("JPEG content = %+v", result.Content)
+			}
+		})
+	}
+}
+
 func TestGetIndexedDBValidatesTrackingAndReturnsRows(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 5}
 	cap := capture.NewCapture()
