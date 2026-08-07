@@ -3,6 +3,7 @@
 package daemonrecovery
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +25,8 @@ type host struct {
 	waitForPortRelease func(int, time.Duration) bool
 	terminatePID       func(int, bool)
 	findProcessOnPort  func(int) ([]int, error)
+	readPIDFile        func(int) int
+	removePIDFile      func(int) error
 }
 
 // Config supplies process-wide diagnostics and lifecycle state to a Reclaimer.
@@ -66,10 +69,49 @@ func New(config Config) *Reclaimer {
 			isServerRunning: corebridge.IsServerRunning, tryShutdown: tryShutdownViaHTTP,
 			waitForPortRelease: waitForPortRelease, terminatePID: terminatePIDQuiet,
 			findProcessOnPort: procctl.FindProcessOnPort,
+			readPIDFile:       procctl.ReadPIDFile,
+			removePIDFile: func(port int) error {
+				path := procctl.PIDFilePath(port)
+				if path == "" {
+					return nil
+				}
+				return os.Remove(path)
+			},
 		},
 		config:       config,
 		lifecycleLog: lifecycleLogger{log: config.LogLifecycle},
 	}
+}
+
+// CleanupStalePIDFile removes obsolete process identity without mistaking PID
+// reuse for ownership of the daemon port.
+func (r *Reclaimer) CleanupStalePIDFile(port int) error {
+	pid := r.host.readPIDFile(port)
+	if pid <= 0 {
+		// EXPECTED_ABSENCE: a first start has no PID file, and an invalid record
+		// cannot identify a process safely enough to emit an ownership incident.
+		return nil
+	}
+	if r.host.isProcessAlive(pid) {
+		ownerPIDs, err := r.host.findProcessOnPort(port)
+		if err != nil {
+			r.config.LogLifecycle("stale_pid_port_lookup_failed", port, map[string]any{"stale_pid": pid, "error": err.Error()})
+		} else {
+			for _, ownerPID := range ownerPIDs {
+				if ownerPID == pid {
+					r.config.LogLifecycle("port_conflict_detected", port, map[string]any{"existing_pid": pid})
+					return fmt.Errorf("port %d already in use by PID %d (run 'kaboom --stop --port %d' to stop it)", port, pid, port)
+				}
+			}
+			r.config.LogLifecycle("stale_pid_owner_mismatch", port, map[string]any{"stale_pid": pid, "owner_pids": ownerPIDs})
+		}
+	} else {
+		r.config.LogLifecycle("stale_pid_removed", port, map[string]any{"stale_pid": pid})
+	}
+	if err := r.host.removePIDFile(port); err != nil && !os.IsNotExist(err) {
+		r.config.LogLifecycle("stale_pid_remove_failed", port, map[string]any{"stale_pid": pid, "error": err.Error()})
+	}
+	return nil
 }
 
 // LifecycleDeps returns the complete process seam consumed by daemonlife policy.

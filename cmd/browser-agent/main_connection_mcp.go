@@ -12,8 +12,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -126,7 +124,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		return err
 	}
 
-	if err := cleanupStalePIDFile(server, port); err != nil {
+	if err := server.daemonRecovery.CleanupStalePIDFile(port); err != nil {
 		return err
 	}
 	httpDeps := daemonHTTPDeps(server)
@@ -271,67 +269,6 @@ func (s *Server) startScreenshotRateLimiterCleanup(ctx context.Context) {
 			}
 		}
 	})
-}
-
-// cleanupStalePIDFile checks for an existing PID file and removes it if the
-// process is dead. Returns an error if a live process already holds the port.
-func cleanupStalePIDFile(server *Server, port int) error {
-	pidFile := procctl.PIDFilePath(port)
-	if _, err := os.Stat(pidFile); err != nil {
-		return nil
-	}
-
-	pidBytes, err := os.ReadFile(pidFile)
-	if err != nil {
-		return nil
-	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(pidBytes)))
-	if err != nil {
-		return nil
-	}
-
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return nil
-	}
-
-	if process.Signal(syscall.Signal(0)) == nil {
-		ownerPIDs, findErr := procctl.FindProcessOnPort(port)
-		if findErr == nil {
-			for _, ownerPID := range ownerPIDs {
-				if ownerPID == pid {
-					server.logLifecycle("port_conflict_detected", port, map[string]any{"existing_pid": pid})
-					return fmt.Errorf("port %d already in use by PID %d (run 'kaboom --stop --port %d' to stop it)", port, pid, port)
-				}
-			}
-			server.logLifecycle("stale_pid_owner_mismatch", port, map[string]any{
-				"stale_pid":  pid,
-				"owner_pids": ownerPIDs,
-			})
-		} else {
-			server.logLifecycle("stale_pid_port_lookup_failed", port, map[string]any{
-				"stale_pid": pid,
-				"error":     findErr.Error(),
-			})
-		}
-
-		if err := os.Remove(pidFile); err != nil && !os.IsNotExist(err) {
-			server.logLifecycle("stale_pid_remove_failed", port, map[string]any{
-				"stale_pid": pid,
-				"error":     err.Error(),
-			})
-		}
-		return nil
-	}
-
-	server.logLifecycle("stale_pid_removed", port, map[string]any{"stale_pid": pid})
-	if err := os.Remove(pidFile); err != nil && !os.IsNotExist(err) {
-		server.logLifecycle("stale_pid_remove_failed", port, map[string]any{
-			"stale_pid": pid,
-			"error":     err.Error(),
-		})
-	}
-	return nil
 }
 
 func daemonHTTPDeps(server *Server) daemonhttp.Deps {

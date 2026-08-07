@@ -142,6 +142,55 @@ func TestIdentifyPortHolderFiltersInvalidSelfAndFailedLookups(t *testing.T) {
 	}
 }
 
+func TestCleanupStalePIDFileDistinguishesOwnerFromReusedPID(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		owners     []int
+		wantError  bool
+		wantEvent  string
+		wantRemove bool
+	}{
+		{name: "recorded process owns port", owners: []int{4242}, wantError: true, wantEvent: "port_conflict_detected"},
+		{name: "PID was reused by unrelated process", owners: []int{5151}, wantEvent: "stale_pid_owner_mismatch", wantRemove: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var events []recordedEvent
+			r := testReclaimer(&events)
+			r.host.readPIDFile = func(int) int { return 4242 }
+			r.host.isProcessAlive = func(int) bool { return true }
+			r.host.findProcessOnPort = func(int) ([]int, error) { return test.owners, nil }
+			removed := false
+			r.host.removePIDFile = func(int) error { removed = true; return nil }
+
+			err := r.CleanupStalePIDFile(7890)
+			if (err != nil) != test.wantError {
+				t.Fatalf("error = %v, wantError %v", err, test.wantError)
+			}
+			if removed != test.wantRemove {
+				t.Fatalf("removed = %v, want %v", removed, test.wantRemove)
+			}
+			if len(events) != 1 || events[0].name != test.wantEvent {
+				t.Fatalf("events = %#v, want %q", events, test.wantEvent)
+			}
+		})
+	}
+}
+
+func TestCleanupStalePIDFileRemovesDeadProcessRecord(t *testing.T) {
+	var events []recordedEvent
+	r := testReclaimer(&events)
+	r.host.readPIDFile = func(int) int { return 4242 }
+	r.host.isProcessAlive = func(int) bool { return false }
+	removed := false
+	r.host.removePIDFile = func(int) error { removed = true; return nil }
+	if err := r.CleanupStalePIDFile(7890); err != nil {
+		t.Fatal(err)
+	}
+	if !removed || len(events) != 1 || events[0].name != "stale_pid_removed" {
+		t.Fatalf("removed=%v events=%#v", removed, events)
+	}
+}
+
 func TestProcessLooksLikeOurDaemonUsesExecutableOnly(t *testing.T) {
 	for _, command := range []string{
 		"/usr/local/bin/kaboom-agentic-browser --daemon",

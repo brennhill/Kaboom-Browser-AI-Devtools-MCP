@@ -19,19 +19,23 @@ import (
 
 func TestCleanupPIDFilesRemovesCanonicalPIDFile(t *testing.T) {
 	t.Setenv("KABOOM_STATE_DIR", t.TempDir())
-	const port = 7890
-	path := PIDFilePath(port)
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		t.Fatalf("MkdirAll() error = %v", err)
-	}
-	if err := os.WriteFile(path, []byte("424242"), 0o600); err != nil {
-		t.Fatalf("WriteFile() error = %v", err)
+	ports := []int{7890, 7910, 17890}
+	for _, port := range ports {
+		path := PIDFilePath(port)
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatalf("MkdirAll() error = %v", err)
+		}
+		if err := os.WriteFile(path, []byte("424242"), 0o600); err != nil {
+			t.Fatalf("WriteFile() error = %v", err)
+		}
 	}
 
 	CleanupPIDFiles()
 
-	if pid := ReadPIDFile(port); pid != 0 {
-		t.Fatalf("ReadPIDFile(%d) = %d after cleanup, want 0", port, pid)
+	for _, port := range ports {
+		if pid := ReadPIDFile(port); pid != 0 {
+			t.Fatalf("ReadPIDFile(%d) = %d after cleanup, want 0", port, pid)
+		}
 	}
 }
 

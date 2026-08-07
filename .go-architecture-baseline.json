@@ -175,7 +175,7 @@
     },
     "cmd/browser-agent/internal/daemonrecovery/reclaimer.go": {
       "mutable_globals": 0,
-      "exports": 7
+      "exports": 8
     },
     "cmd/browser-agent/internal/dashboard/handler.go": {
       "mutable_globals": 5,
