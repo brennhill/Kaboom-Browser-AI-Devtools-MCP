@@ -62,6 +62,30 @@ func TestSendBridgeError(t *testing.T) {
 	}
 }
 
+func TestSendStartupErrorWritesJSONRPCError(t *testing.T) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := os.Stdout
+	os.Stdout = w
+	SendStartupError("boom")
+	os.Stdout = original
+	_ = w.Close()
+	output, readErr := io.ReadAll(r)
+	_ = r.Close()
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	var response mcp.JSONRPCResponse
+	if err := json.Unmarshal(output, &response); err != nil {
+		t.Fatalf("startup output is not JSON-RPC: %v; output=%q", err, output)
+	}
+	if response.ID != "startup" || response.Error == nil || response.Error.Code != -32603 || !strings.Contains(response.Error.Message, "boom") {
+		t.Fatalf("startup response = %#v", response)
+	}
+}
+
 func TestSendToolError(t *testing.T) {
 	r, w, err := os.Pipe()
 	if err != nil {

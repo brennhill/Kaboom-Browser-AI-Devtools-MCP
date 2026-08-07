@@ -13,6 +13,7 @@ code_paths:
   - cmd/browser-agent/config.go
   - cmd/browser-agent/internal/startupconfig/paths.go
   - cmd/browser-agent/internal/startupconfig/runtime.go
+  - cmd/browser-agent/internal/startupconfig/help.go
   - cmd/browser-agent/internal/runtimeconfig/parallel.go
   - cmd/browser-agent/internal/cli/cli_output.go
   - cmd/browser-agent/internal/cli/parser/commands.go
@@ -78,7 +79,7 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/runtimeflags/parsing_test.go
   - cmd/browser-agent/internal/runtimeflags/repeatable_test.go
-  - cmd/browser-agent/main_io_unit_test.go
+  - cmd/browser-agent/internal/startupconfig/help_test.go
   - cmd/browser-agent/internal/cli/parser/commands_test.go
   - cmd/browser-agent/internal/health/health_coverage_test.go
   - cmd/browser-agent/server_reliability_integration_test.go

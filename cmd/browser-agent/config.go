@@ -73,7 +73,7 @@ func handleEarlyExitModes(flags *runtimeflags.Values) {
 		os.Exit(0)
 	}
 	if flags.ShowHelp {
-		printHelp()
+		diag.Print(startupconfig.HelpText)
 		os.Exit(0)
 	}
 	if flags.ForceCleanup {

@@ -429,6 +429,10 @@
       "mutable_globals": 0,
       "exports": 1
     },
+    "cmd/browser-agent/internal/startupconfig/help.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/startupconfig/paths.go": {
       "mutable_globals": 0,
       "exports": 3
