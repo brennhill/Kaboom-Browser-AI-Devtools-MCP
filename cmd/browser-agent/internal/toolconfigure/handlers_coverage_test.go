@@ -12,6 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -517,4 +518,44 @@ func TestHandleDescribeCapabilities(t *testing.T) {
 			t.Fatalf("full listing should succeed: %s", text)
 		}
 	})
+}
+
+func TestHandleDescribeCapabilitiesCanonicalCatalog(t *testing.T) {
+	d := &fakeConfigureDeps{tools: schema.AllTools(), moduleExamples: map[string]any{"example": true}}
+	fullResponse := HandleDescribeCapabilities(d.deps(), newReq(), nil, "9.9.9")
+	full := parseRespJSON(t, fullResponse)
+	tools, ok := full["tools"].(map[string]any)
+	if !ok || len(tools) != 5 || full["version"] != "9.9.9" || full["protocol_version"] == nil {
+		t.Fatalf("canonical capabilities = %#v", full)
+	}
+	for _, name := range []string{"observe", "generate", "configure", "interact", "analyze"} {
+		tool, ok := tools[name].(map[string]any)
+		if !ok {
+			t.Errorf("missing tool %q: %#v", name, tools)
+			continue
+		}
+		for _, field := range []string{"dispatch_param", "description", "params"} {
+			if _, exists := tool[field]; !exists {
+				t.Errorf("tool %q missing %q: %#v", name, field, tool)
+			}
+		}
+	}
+
+	summaryResponse := HandleDescribeCapabilities(d.deps(), newReq(), json.RawMessage(`{"summary":true}`), "9.9.9")
+	summary := parseRespJSON(t, summaryResponse)
+	if len(summaryResponse.Result) >= len(fullResponse.Result) {
+		t.Fatalf("summary response %d bytes is not smaller than full response %d bytes", len(summaryResponse.Result), len(fullResponse.Result))
+	}
+	for name, raw := range summary["tools"].(map[string]any) {
+		tool := raw.(map[string]any)
+		if _, exists := tool["params"]; exists {
+			t.Errorf("summary tool %q retained params: %#v", name, tool)
+		}
+	}
+
+	filtered := parseRespJSON(t, HandleDescribeCapabilities(d.deps(), newReq(), json.RawMessage(`{"tool":"configure","mode":"store"}`), "9.9.9"))
+	params, ok := filtered["params"].(map[string]any)
+	if !ok || filtered["tool"] != "configure" || filtered["mode"] != "store" || params["store_action"] == nil || params["namespace"] == nil {
+		t.Fatalf("filtered capabilities = %#v", filtered)
+	}
 }

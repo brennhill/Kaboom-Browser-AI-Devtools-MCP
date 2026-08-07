@@ -4,7 +4,7 @@ feature_id: feature-persistent-memory
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/server.go
   - cmd/browser-agent/tools_core.go
@@ -26,7 +26,7 @@ test_paths:
   - internal/statediag/collector_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/tools_configure_persistence_actions_test.go
-  - cmd/browser-agent/tools_configure_capabilities_test.go
+  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/tools_configure_audit_test.go
   - cmd/browser-agent/tools_stdio_test.go
 last_verified_version: 0.7.12
@@ -58,7 +58,7 @@ last_verified_date: 2026-03-05
 
 - `cmd/browser-agent/internal/toolconfigure/session.go` owns the canonical store request contract: `store_action`, `namespace`, `key`, and `data`.
 - `internal/tools/configure/capabilities/modespecs_configure.go` exposes the same canonical parameters in capability metadata.
-- `cmd/browser-agent/tools_configure_persistence_actions_test.go` and `cmd/browser-agent/tools_configure_capabilities_test.go` cover store behavior and its advertised contract.
+- `cmd/browser-agent/tools_configure_persistence_actions_test.go` and `cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go` cover store behavior and its advertised contract.
 - `cmd/browser-agent/tools_configure_audit_test.go` and `cmd/browser-agent/tools_stdio_test.go` exercise the canonical store request through action and stdout-purity gates.
 - Project metadata and context loaders distinguish normal first-run absence from
   read or parse failures. Failures activate bounded defaults and publish

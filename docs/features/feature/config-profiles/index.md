@@ -30,7 +30,6 @@ test_paths:
   - internal/statediag/collector_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/tools_configure_persistence_actions_test.go
-  - cmd/browser-agent/tools_configure_capabilities_test.go
   - cmd/browser-agent/tools_configure_noise_test.go
   - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
