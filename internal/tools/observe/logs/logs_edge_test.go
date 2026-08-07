@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
+	"strings"
 	"testing"
 	"time"
 
@@ -150,6 +151,20 @@ func TestGetBrowserLogsRejectsMalformedCursor(t *testing.T) {
 	}
 	if !result.IsError {
 		t.Fatalf("expected structured cursor error, got %#v", result)
+	}
+}
+
+func TestGetBrowserErrorsReportsInvalidScopeAndPreservesValidScope(t *testing.T) {
+	t.Parallel()
+	deps := testsupport.Deps(capture.NewCapture())
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 4}
+	invalid := testsupport.ExtractMCPJSON(t, GetBrowserErrors(deps, req, json.RawMessage(`{"scope":"bogus"}`)))
+	if hint, _ := invalid["param_hint"].(string); !strings.Contains(hint, "Unknown scope bogus ignored") {
+		t.Fatalf("invalid scope hint = %q", hint)
+	}
+	valid := testsupport.ExtractMCPJSON(t, GetBrowserErrors(deps, req, json.RawMessage(`{"scope":"all"}`)))
+	if valid["scope"] != "all" {
+		t.Fatalf("scope = %#v", valid["scope"])
 	}
 }
 
