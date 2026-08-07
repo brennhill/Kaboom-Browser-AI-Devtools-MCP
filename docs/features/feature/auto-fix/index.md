@@ -49,6 +49,10 @@ last_verified_date: 2026-04-03
 
 # Auto-Fix
 
+Terminal intent delivery consumes explicit relay and store callbacks. There is
+no host adapter interface or forwarding type; unavailable resources produce
+the canonical local service-unavailable response.
+
 ## TL;DR
 - Status: shipped
 - Phase 1 audit workflow backed by one shared runtime bridge

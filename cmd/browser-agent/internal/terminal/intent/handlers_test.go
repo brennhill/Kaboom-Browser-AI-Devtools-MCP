@@ -24,13 +24,12 @@ func (f *fakeRelayMap) WriteToFirst(data []byte) bool {
 }
 func (f *fakeRelayMap) CloseAll() {}
 
-type fakeIntentDeps struct {
-	relays RelayMap
-	store  *Store
+func fakeRuntime(relays RelayMap, store *Store) Runtime {
+	return Runtime{
+		Relays: func() RelayMap { return relays },
+		Store:  func() *Store { return store },
+	}
 }
-
-func (f *fakeIntentDeps) GetPtyRelays() RelayMap { return f.relays }
-func (f *fakeIntentDeps) GetIntentStore() *Store { return f.store }
 
 func testDeps() HTTPDeps {
 	return HTTPDeps{
@@ -56,7 +55,7 @@ func TestHandleTerminalInject_CapsBodySize(t *testing.T) {
 	body := fmt.Sprintf(`{"text":%q}`, big)
 	req := httptest.NewRequest("POST", "/terminal/inject", strings.NewReader(body))
 	rec := httptest.NewRecorder()
-	handleTerminalInject(rec, req, deps, &fakeIntentDeps{relays: relays})
+	handleTerminalInject(rec, req, deps, fakeRuntime(relays, nil))
 
 	if rec.Code == http.StatusOK {
 		t.Fatalf("oversized inject body must be bounded/rejected, got 200")
@@ -76,7 +75,7 @@ func TestHandleCreate_CapsBodySize(t *testing.T) {
 	body := fmt.Sprintf(`{"page_url":%q,"action":"qa_scan"}`, big)
 	req := httptest.NewRequest("POST", "/intent", strings.NewReader(body))
 	rec := httptest.NewRecorder()
-	handleCreate(rec, req, deps, &fakeIntentDeps{store: store})
+	handleCreate(rec, req, deps, fakeRuntime(nil, store))
 
 	if rec.Code == http.StatusOK {
 		t.Fatalf("oversized intent body must be bounded/rejected, got 200")
@@ -90,12 +89,12 @@ func TestHandleTerminalInject_Success(t *testing.T) {
 	t.Parallel()
 	relays := &fakeRelayMap{writeOK: true}
 	deps := testDeps()
-	intentDeps := &fakeIntentDeps{relays: relays}
+	intentRuntime := fakeRuntime(relays, nil)
 
 	body, _ := json.Marshal(map[string]string{"text": "run tests"})
 	req := httptest.NewRequest("POST", "/terminal/inject", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	handleTerminalInject(rec, req, deps, intentDeps)
+	handleTerminalInject(rec, req, deps, intentRuntime)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -114,12 +113,12 @@ func TestHandleTerminalInject_NoActiveSession(t *testing.T) {
 	t.Parallel()
 	relays := &fakeRelayMap{writeOK: false}
 	deps := testDeps()
-	intentDeps := &fakeIntentDeps{relays: relays}
+	intentRuntime := fakeRuntime(relays, nil)
 
 	body, _ := json.Marshal(map[string]string{"text": "hi"})
 	req := httptest.NewRequest("POST", "/terminal/inject", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	handleTerminalInject(rec, req, deps, intentDeps)
+	handleTerminalInject(rec, req, deps, intentRuntime)
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", rec.Code)
@@ -135,12 +134,12 @@ func TestHandleTerminalInject_NoTerminalServer(t *testing.T) {
 	t.Parallel()
 	deps := testDeps()
 	// relays is a nil RelayMap interface value.
-	intentDeps := &fakeIntentDeps{relays: nil}
+	intentRuntime := Runtime{}
 
 	body, _ := json.Marshal(map[string]string{"text": "hi"})
 	req := httptest.NewRequest("POST", "/terminal/inject", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	handleTerminalInject(rec, req, deps, intentDeps)
+	handleTerminalInject(rec, req, deps, intentRuntime)
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", rec.Code)
@@ -157,7 +156,7 @@ func TestHandleTerminalInject_MethodNotAllowed(t *testing.T) {
 	deps := testDeps()
 	req := httptest.NewRequest("GET", "/terminal/inject", nil)
 	rec := httptest.NewRecorder()
-	handleTerminalInject(rec, req, deps, &fakeIntentDeps{})
+	handleTerminalInject(rec, req, deps, Runtime{})
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected 405, got %d", rec.Code)
 	}
@@ -178,7 +177,7 @@ func TestHandleTerminalInject_BadBody(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest("POST", "/terminal/inject", strings.NewReader(tc.body))
 			rec := httptest.NewRecorder()
-			handleTerminalInject(rec, req, deps, &fakeIntentDeps{relays: &fakeRelayMap{writeOK: true}})
+			handleTerminalInject(rec, req, deps, fakeRuntime(&fakeRelayMap{writeOK: true}, nil))
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("expected 400 for %s, got %d", tc.name, rec.Code)
 			}
@@ -190,12 +189,12 @@ func TestHandleCreate_Success(t *testing.T) {
 	t.Parallel()
 	store := NewStore()
 	deps := testDeps()
-	intentDeps := &fakeIntentDeps{store: store}
+	intentRuntime := fakeRuntime(nil, store)
 
 	body, _ := json.Marshal(map[string]string{"page_url": "http://localhost:3000", "action": "custom_scan"})
 	req := httptest.NewRequest("POST", "/intent", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	handleCreate(rec, req, deps, intentDeps)
+	handleCreate(rec, req, deps, intentRuntime)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -223,7 +222,7 @@ func TestHandleCreate_DefaultsAction(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{"page_url": "http://localhost:3000"})
 	req := httptest.NewRequest("POST", "/intent", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	handleCreate(rec, req, deps, &fakeIntentDeps{store: store})
+	handleCreate(rec, req, deps, fakeRuntime(nil, store))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
@@ -240,7 +239,7 @@ func TestHandleCreate_StoreNotInitialized(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{"page_url": "http://x"})
 	req := httptest.NewRequest("POST", "/intent", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	handleCreate(rec, req, deps, &fakeIntentDeps{store: nil})
+	handleCreate(rec, req, deps, Runtime{})
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", rec.Code)
 	}
@@ -252,14 +251,14 @@ func TestHandleCreate_MethodAndBadJSON(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/intent", nil)
 	rec := httptest.NewRecorder()
-	handleCreate(rec, req, deps, &fakeIntentDeps{store: NewStore()})
+	handleCreate(rec, req, deps, fakeRuntime(nil, NewStore()))
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected 405, got %d", rec.Code)
 	}
 
 	req = httptest.NewRequest("POST", "/intent", strings.NewReader("{bad"))
 	rec = httptest.NewRecorder()
-	handleCreate(rec, req, deps, &fakeIntentDeps{store: NewStore()})
+	handleCreate(rec, req, deps, fakeRuntime(nil, NewStore()))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rec.Code)
 	}
@@ -269,10 +268,10 @@ func TestRegisterRoutes_Dispatch(t *testing.T) {
 	t.Parallel()
 	deps := testDeps()
 	store := NewStore()
-	intentDeps := &fakeIntentDeps{relays: &fakeRelayMap{writeOK: true}, store: store}
+	intentRuntime := fakeRuntime(&fakeRelayMap{writeOK: true}, store)
 
 	mux := http.NewServeMux()
-	RegisterRoutes(mux, deps, intentDeps)
+	RegisterRoutes(mux, deps, intentRuntime)
 
 	// /intent route wired.
 	body, _ := json.Marshal(map[string]string{"page_url": "http://localhost", "action": "qa_scan"})

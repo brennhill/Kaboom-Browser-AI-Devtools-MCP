@@ -17,14 +17,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
-type fakeMuxIntentDeps struct {
-	store  *terminalintent.Store
-	relays *sessionrelay.Map
-}
-
-func (f *fakeMuxIntentDeps) GetPtyRelays() terminalintent.RelayMap { return f.relays }
-func (f *fakeMuxIntentDeps) GetIntentStore() *terminalintent.Store { return f.store }
-
 func TestSetupMux_WiresTerminalAndIntentRoutes(t *testing.T) {
 	t.Parallel()
 	deps := testDeps()
@@ -32,7 +24,12 @@ func TestSetupMux_WiresTerminalAndIntentRoutes(t *testing.T) {
 	defer mgr.StopAll()
 	store := capture.NewCapture()
 
-	mux, relays := SetupMux(deps, &fakeServerDeps{}, &fakeMuxIntentDeps{store: terminalintent.NewStore(), relays: sessionrelay.NewMap()}, mgr, store)
+	intentStore := terminalintent.NewStore()
+	intentRelays := sessionrelay.NewMap()
+	mux, relays := SetupMux(deps, &fakeServerDeps{}, terminalintent.Runtime{
+		Store:  func() *terminalintent.Store { return intentStore },
+		Relays: func() terminalintent.RelayMap { return intentRelays },
+	}, mgr, store)
 	if mux == nil || relays == nil {
 		t.Fatal("SetupMux returned nil mux or relays")
 	}

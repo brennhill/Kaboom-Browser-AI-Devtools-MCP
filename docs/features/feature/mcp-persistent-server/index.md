@@ -113,7 +113,6 @@ test_paths:
   - cmd/browser-agent/server_persistence_test.go
   - cmd/browser-agent/server_reliability_test.go
   - cmd/browser-agent/server_reliability_integration_test.go
-  - cmd/browser-agent/main_connection_adapters_test.go
   - cmd/browser-agent/main_connection_recovery_primitives_test.go
   - cmd/browser-agent/connection_lifecycle_helpers_test.go
   - cmd/browser-agent/internal/startupconfig/paths_test.go
@@ -286,6 +285,9 @@ The source root contains no compiled executables. A deterministic architecture
 gate rejects Mach-O, ELF, and PE signatures there, preventing local build
 artifacts from silently inflating releases or introducing platform-specific
 repository state.
+Terminal intent routes receive explicit live relay/store callbacks from root
+composition. The obsolete server adapter interface and its root-only test were
+deleted; missing runtime resources remain a typed service-unavailable state.
 
 Stdio isolation tests exercise the built bridge rather than the Go test binary.
 They close stdin and await the bridge's process-exit barrier, so transport

@@ -25,12 +25,12 @@ const PortOffset = 1
 // SetupMux creates a new ServeMux with only terminal routes.
 // No AuthMiddleware — terminal uses its own session token validation.
 // Returns the mux and the relay map for use in shutdown.
-func SetupMux(deps Deps, server ServerDeps, intentDeps terminalintent.RuntimeDeps, mgr *pty.Manager, cap *capture.Capture) (*http.ServeMux, *sessionrelay.Map) {
+func SetupMux(deps Deps, server ServerDeps, intentRuntime terminalintent.Runtime, mgr *pty.Manager, cap *capture.Capture) (*http.ServeMux, *sessionrelay.Map) {
 	mux := http.NewServeMux()
 	relays := RegisterRoutes(mux, deps, server, mgr, cap)
 	terminalintent.RegisterRoutes(mux, terminalintent.HTTPDeps{
 		JSONResponse: deps.JSONResponse, CORSMiddleware: deps.CORSMiddleware, MaxPostBody: deps.MaxPostBody,
-	}, intentDeps)
+	}, intentRuntime)
 	return mux, relays
 }
 

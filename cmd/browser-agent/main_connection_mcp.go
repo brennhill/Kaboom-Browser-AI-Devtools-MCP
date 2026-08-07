@@ -52,23 +52,13 @@ func terminalDeps() terminal.Deps {
 	}
 }
 
-type serverIntentDeps struct{ server *Server }
-
-func (deps *serverIntentDeps) GetPtyRelays() terminalintent.RelayMap {
-	if deps.server.ptyRelays == nil {
-		return nil
-	}
-	return deps.server.ptyRelays
-}
-
-func (deps *serverIntentDeps) GetIntentStore() *terminalintent.Store {
-	return deps.server.intentStore
-}
-
 func setupTerminalMux(server *Server, manager *pty.Manager, store *capture.Capture) (*http.ServeMux, *sessionrelay.Map) {
 	deps := terminalDeps()
 	deps.LogEvent = func(event string, fields map[string]any) { server.logLifecycle(event, 0, fields) }
-	return terminal.SetupMux(deps, server.activeCodebase, &serverIntentDeps{server: server}, manager, store)
+	return terminal.SetupMux(deps, server.activeCodebase, terminalintent.Runtime{
+		Relays: func() terminalintent.RelayMap { return server.ptyRelays },
+		Store:  func() *terminalintent.Store { return server.intentStore },
+	}, manager, store)
 }
 
 func startTerminalServer(port int, mux *http.ServeMux) (*http.Server, <-chan struct{}, error) {

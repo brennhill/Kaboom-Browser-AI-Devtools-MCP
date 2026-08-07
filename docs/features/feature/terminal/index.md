@@ -536,7 +536,7 @@ Note: `/config/active-codebase` is on the **main** daemon server (not terminal s
 | File | Responsibility |
 |------|---------------|
 | `cmd/browser-agent/internal/terminal/supervisor/supervisor.go` | Restart/backoff supervision and graceful shutdown behind explicit host callbacks |
-| `cmd/browser-agent/main_connection_mcp.go` | Terminal server startup, supervision, root adapters, and graceful shutdown |
+| `cmd/browser-agent/main_connection_mcp.go` | Terminal server startup, explicit live-state callback composition, supervision, and graceful shutdown |
 | `cmd/browser-agent/terminal_handlers.go` | All HTTP handlers: page, WS, start, stop, validate, config |
 | `cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html` | xterm.js terminal page with WS reconnect and postMessage bridge |
 | `extension/sidepanel.html` | Side panel shell that loads the terminal host |

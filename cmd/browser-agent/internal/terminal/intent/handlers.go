@@ -15,10 +15,11 @@ type RelayMap interface {
 	CloseAll()
 }
 
-// RuntimeDeps provides the live terminal relay and intent store.
-type RuntimeDeps interface {
-	GetPtyRelays() RelayMap
-	GetIntentStore() *Store
+// Runtime provides live terminal state through explicit callbacks. Missing
+// callbacks mean the corresponding runtime resource is not initialized.
+type Runtime struct {
+	Relays func() RelayMap
+	Store  func() *Store
 }
 
 // HTTPDeps owns the HTTP response and request-boundary collaborators.
@@ -35,7 +36,7 @@ type IntentRequest struct {
 }
 
 // RegisterIntentRoutes adds intent-related routes to the terminal mux.
-func RegisterRoutes(mux *http.ServeMux, deps HTTPDeps, runtime RuntimeDeps) {
+func RegisterRoutes(mux *http.ServeMux, deps HTTPDeps, runtime Runtime) {
 	// Inject text directly into the active PTY session.
 	mux.HandleFunc("/terminal/inject", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		handleTerminalInject(w, r, deps, runtime)
@@ -48,7 +49,7 @@ func RegisterRoutes(mux *http.ServeMux, deps HTTPDeps, runtime RuntimeDeps) {
 }
 
 // HandleTerminalInject writes text into the first active PTY session.
-func handleTerminalInject(w http.ResponseWriter, r *http.Request, deps HTTPDeps, runtime RuntimeDeps) {
+func handleTerminalInject(w http.ResponseWriter, r *http.Request, deps HTTPDeps, runtime Runtime) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
@@ -66,7 +67,10 @@ func handleTerminalInject(w http.ResponseWriter, r *http.Request, deps HTTPDeps,
 		return
 	}
 
-	relays := runtime.GetPtyRelays()
+	var relays RelayMap
+	if runtime.Relays != nil {
+		relays = runtime.Relays()
+	}
 	if relays == nil {
 		deps.JSONResponse(w, http.StatusServiceUnavailable, map[string]any{
 			"injected": false,
@@ -88,7 +92,7 @@ func handleTerminalInject(w http.ResponseWriter, r *http.Request, deps HTTPDeps,
 }
 
 // HandleIntentCreate creates an intent for the AI to pick up.
-func handleCreate(w http.ResponseWriter, r *http.Request, deps HTTPDeps, runtime RuntimeDeps) {
+func handleCreate(w http.ResponseWriter, r *http.Request, deps HTTPDeps, runtime Runtime) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
@@ -107,7 +111,10 @@ func handleCreate(w http.ResponseWriter, r *http.Request, deps HTTPDeps, runtime
 		req.Action = ActionQAScan
 	}
 
-	store := runtime.GetIntentStore()
+	var store *Store
+	if runtime.Store != nil {
+		store = runtime.Store()
+	}
 	if store == nil {
 		deps.JSONResponse(w, http.StatusServiceUnavailable, map[string]string{"error": "intent store not initialized"})
 		return
