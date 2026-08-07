@@ -98,6 +98,57 @@ func TestFormatCommandResultExpiredCannotFabricateDOMEvidence(t *testing.T) {
 	}
 }
 
+func TestFormatCommandResultFailsLoudForExtensionAndEmbeddedErrors(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name       string
+		status     string
+		commandErr string
+		result     json.RawMessage
+		want       []string
+	}{
+		{name: "completed transport error", status: "complete", commandErr: "Element not found", result: json.RawMessage(`null`), want: []string{"FAILED", "Element not found"}},
+		{name: "embedded failure", status: "complete", result: json.RawMessage(`{"success":false,"error":"selector_not_found"}`), want: []string{"FAILED", "selector_not_found"}},
+		{name: "CSP error", status: "error", commandErr: "csp_blocked_page", result: json.RawMessage(`{"success":false,"csp_blocked":true,"failure_cause":"csp"}`), want: []string{`"csp_blocked":true`, `"failure_cause":"csp"`, "navigate"}},
+		{name: "target recovery", status: "error", commandErr: "element_not_found", result: json.RawMessage(`{"success":false,"error":"element_not_found"}`), want: []string{"list_interactive", "scope"}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			captured := capture.NewCapture()
+			defer captured.Close()
+			created := time.Unix(100, 0)
+			result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+				queries.CommandResult{CorrelationID: "failed", Status: testCase.status, Error: testCase.commandErr, Result: testCase.result, CreatedAt: created, CompletedAt: created},
+				"failed",
+			))
+			if !result.IsError {
+				t.Fatalf("failure result is not marked error: %#v", result)
+			}
+			for _, expected := range testCase.want {
+				if !strings.Contains(result.Content[0].Text, expected) {
+					t.Fatalf("failure result %q missing %q", result.Content[0].Text, expected)
+				}
+			}
+		})
+	}
+}
+
+func TestFormatCommandResultExpiredIncludesDoctorHint(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	defer captured.Close()
+	result := decodeToolResult(t, New(Deps{
+		Capture: captured, DiagnosticHintString: func() string { return "pilot=ENABLED tracked_tab=42" },
+	}).FormatCommandResult(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+		queries.CommandResult{CorrelationID: "expired", Status: "expired", Error: "timeout", CreatedAt: time.Unix(100, 0)},
+		"expired",
+	))
+	if !result.IsError || !strings.Contains(result.Content[0].Text, "pilot=ENABLED") || !strings.Contains(result.Content[0].Text, "tracked_tab=42") {
+		t.Fatalf("expired result = %#v", result)
+	}
+}
+
 func saturateQueue(t *testing.T, captured *capture.Capture) {
 	t.Helper()
 	for index := 0; index < queries.MaxPendingQueries; index++ {

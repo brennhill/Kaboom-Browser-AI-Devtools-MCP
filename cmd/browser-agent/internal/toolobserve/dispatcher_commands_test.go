@@ -69,16 +69,19 @@ func TestPilotModeDoesNotReceiveDisconnectWarning(t *testing.T) {
 }
 
 type commandStoreStub struct {
-	failed []*queries.CommandResult
+	failed  []*queries.CommandResult
+	command *queries.CommandResult
 }
 
 func (s commandStoreStub) WaitForCommand(string, time.Duration) (*queries.CommandResult, bool) {
-	return nil, false
+	return s.command, s.command != nil
 }
-func (s commandStoreStub) GetCommandResult(string) (*queries.CommandResult, bool) { return nil, false }
-func (s commandStoreStub) GetPendingCommands() []*queries.CommandResult           { return nil }
-func (s commandStoreStub) GetCompletedCommands() []*queries.CommandResult         { return nil }
-func (s commandStoreStub) GetFailedCommands() []*queries.CommandResult            { return s.failed }
+func (s commandStoreStub) GetCommandResult(string) (*queries.CommandResult, bool) {
+	return s.command, s.command != nil
+}
+func (s commandStoreStub) GetPendingCommands() []*queries.CommandResult   { return nil }
+func (s commandStoreStub) GetCompletedCommands() []*queries.CommandResult { return nil }
+func (s commandStoreStub) GetFailedCommands() []*queries.CommandResult    { return s.failed }
 
 func TestFailedCommandsProjectsEmptyAndFailedStates(t *testing.T) {
 	t.Parallel()
@@ -148,6 +151,43 @@ func TestServerSideCommandAndPilotResponseContracts(t *testing.T) {
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(missingID.Result, &result); err != nil || !result.IsError || !strings.Contains(string(missingID.Result), mcp.ErrMissingParam) {
 		t.Fatalf("missing command state response = %s, err=%v", missingID.Result, err)
+	}
+}
+
+func TestCommandResultMissingAndAnnotationMissingAreTerminal(t *testing.T) {
+	t.Parallel()
+	dispatcher := NewDispatcher(Config{
+		Commands: commandStoreStub{}, DiagnosticHint: mcp.WithHint("doctor"),
+	})
+	for _, correlationID := range []string{"missing-command", "ann_missing-command"} {
+		response := dispatcher.CommandResult(
+			mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+			json.RawMessage(`{"correlation_id":"`+correlationID+`"}`),
+		)
+		var result mcp.MCPToolResult
+		if err := json.Unmarshal(response.Result, &result); err != nil || !result.IsError ||
+			!strings.Contains(result.Content[0].Text, mcp.ErrNoData) || !strings.Contains(result.Content[0].Text, `"final":true`) {
+			t.Fatalf("missing %s response = %s, err=%v", correlationID, response.Result, err)
+		}
+	}
+}
+
+func TestCommandResultDelegatesStoredCommandToFormatter(t *testing.T) {
+	t.Parallel()
+	command := &queries.CommandResult{CorrelationID: "complete", Status: "complete"}
+	formatted := false
+	dispatcher := NewDispatcher(Config{
+		Commands: commandStoreStub{command: command},
+		FormatCommand: func(req mcp.JSONRPCRequest, got queries.CommandResult, correlationID string) mcp.JSONRPCResponse {
+			formatted = got.CorrelationID == command.CorrelationID && correlationID == command.CorrelationID
+			return mcp.SucceedText(req, "formatted")
+		},
+	})
+	response := dispatcher.CommandResult(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, json.RawMessage(`{"correlation_id":"complete"}`),
+	)
+	if !formatted || strings.Contains(string(response.Result), `"isError":true`) {
+		t.Fatalf("formatted=%t response=%s", formatted, response.Result)
 	}
 }
 
