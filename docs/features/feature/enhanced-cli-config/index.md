@@ -109,6 +109,7 @@ test_paths:
   - npm/kaboom-agentic-browser/lib/contracts/no-compatibility.test.js
   - tests/packaging/kaboom-packaging-branding.test.js
   - tests/extension/release/install-script-extension-source.test.js
+  - tests/extension/release/daemon-service-lifecycle.test.js
   - server/scripts/install.test.js
   - tests/extension/release/release-extension-zip.test.js
   - tests/extension/release/release-extension-crx-fallback.test.js
@@ -134,6 +135,13 @@ last_verified_date: 2026-03-28
 ---
 
 # Enhanced Cli Config
+
+The macOS installer owns one testable LaunchAgent registration boundary. Every
+binary promotion unloads the prior service identity, bootstraps the rewritten
+plist, explicitly starts the service, and only then evaluates daemon health.
+This refreshes launchd's managed code-signing record after the executable inode
+changes and makes registration failures visible instead of leaving an offline
+daemon behind a premature health warning.
 
 Client configuration replacement is contingent on a successful adjacent
 backup. A backup I/O failure aborts the update and preserves the original file;

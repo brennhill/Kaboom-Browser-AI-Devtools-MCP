@@ -16,6 +16,56 @@
 # or a command in a pipeline fails (-o pipefail). This is critical for installer safety.
 set -euo pipefail
 
+# Re-register after binary promotion so launchd refreshes its code identity.
+# Arguments: <canonical binary> <plist path> <numeric uid>.
+register_macos_launch_agent() {
+    local canonical_bin="$1"
+    local plist_path="$2"
+    local user_id="$3"
+    local launchctl_bin="${KABOOM_LAUNCHCTL:-launchctl}"
+    local domain="gui/$user_id"
+    local service="$domain/com.kaboom.daemon"
+    cat > "$plist_path" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.kaboom.daemon</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$canonical_bin</string>
+        <string>--daemon</string>
+        <string>--port</string>
+        <string>7890</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/dev/null</string>
+    <key>StandardErrorPath</key>
+    <string>/dev/null</string>
+</dict>
+</plist>
+PLIST
+    # EXPECTED_ABSENCE: a first install normally has no service to unload;
+    # logging that absence as failure would mislead users.
+    "$launchctl_bin" bootout "$service" 2>/dev/null || true
+    if ! "$launchctl_bin" bootstrap "$domain" "$plist_path" 2>/dev/null &&
+       ! "$launchctl_bin" load "$plist_path" 2>/dev/null; then
+        echo "Kaboom LaunchAgent registration failed" >&2
+        return 1
+    fi
+    if ! "$launchctl_bin" kickstart "$service" 2>/dev/null; then
+        echo "Kaboom LaunchAgent startup failed" >&2
+        return 1
+    fi
+}
+# Tests source this function with fakes; skip installer side effects.
+if [ "${KABOOM_INSTALL_LIBRARY_ONLY:-0}" = "1" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────
 # CLI flag parsing
 # ─────────────────────────────────────────────────────────────
@@ -590,29 +640,6 @@ if ! "$CANONICAL_KABOOM_BIN" --install; then
 fi
 
 # ─────────────────────────────────────────────────────────────
-# 8. Post-install health verification
-# ─────────────────────────────────────────────────────────────
-
-# Give the daemon a moment to start.
-sleep 1
-HEALTH_OK=0
-HEALTH_RESPONSE=$(curl -sS --max-time 5 "http://127.0.0.1:7890/health" 2>/dev/null || true)
-# Require kaboom identity, not just any responder with a "status" field —
-# /health returns "name":"kaboom-browser-devtools" (handleHealth in
-# cmd/browser-agent/server_routes_health_diagnostics.go).
-if echo "$HEALTH_RESPONSE" | grep -q '"status"' 2>/dev/null && \
-   echo "$HEALTH_RESPONSE" | grep -q 'kaboom-browser-devtools' 2>/dev/null; then
-    HEALTH_OK=1
-fi
-
-if [ "$HEALTH_OK" = "1" ]; then
-    echo -e "${GREEN}Server health check passed (port 7890).${NC}"
-else
-    echo -e "${YELLOW}  Server not yet responding on port 7890 — may still be starting.${NC}"
-    echo -e "  Verify: curl http://127.0.0.1:7890/health"
-fi
-
-# ─────────────────────────────────────────────────────────────
 # 9. Register start-on-login
 # ─────────────────────────────────────────────────────────────
 
@@ -622,34 +649,7 @@ register_autostart() {
         local plist_path="$plist_dir/com.kaboom.daemon.plist"
         mkdir -p "$plist_dir"
 
-        cat > "$plist_path" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.kaboom.daemon</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>$CANONICAL_KABOOM_BIN</string>
-        <string>--daemon</string>
-        <string>--port</string>
-        <string>7890</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>/dev/null</string>
-    <key>StandardErrorPath</key>
-    <string>/dev/null</string>
-</dict>
-</plist>
-PLIST
-
-        # Unload previous registration (if any), then register fresh.
-        launchctl bootout "gui/$(id -u)/com.kaboom.daemon" 2>/dev/null || true
-        if launchctl bootstrap "gui/$(id -u)" "$plist_path" 2>/dev/null || \
-           launchctl load "$plist_path" 2>/dev/null; then
+        if register_macos_launch_agent "$CANONICAL_KABOOM_BIN" "$plist_path" "$(id -u)"; then
             echo -e "${GREEN}Registered to start on login (LaunchAgent).${NC}"
         else
             echo -e "${YELLOW}  Could not register LaunchAgent automatically.${NC}"
@@ -706,6 +706,29 @@ DESKTOP
 }
 
 register_autostart
+
+# ─────────────────────────────────────────────────────────────
+# 9b. Post-registration health verification
+# ─────────────────────────────────────────────────────────────
+
+# Verify only after service registration has refreshed launchd's executable
+# identity. Checking earlier can report a false warning while the old managed
+# code-signing record still prevents the replacement binary from launching.
+sleep 1
+HEALTH_OK=0
+HEALTH_RESPONSE=$(curl -sS --max-time 5 "http://127.0.0.1:7890/health" 2>/dev/null || true)
+# Require kaboom identity, not just any responder with a "status" field.
+if echo "$HEALTH_RESPONSE" | grep -q '"status"' 2>/dev/null && \
+   echo "$HEALTH_RESPONSE" | grep -q 'kaboom-browser-devtools' 2>/dev/null; then
+    HEALTH_OK=1
+fi
+
+if [ "$HEALTH_OK" = "1" ]; then
+    echo -e "${GREEN}Server health check passed (port 7890).${NC}"
+else
+    echo -e "${YELLOW}  Server did not become healthy after service registration.${NC}"
+    echo -e "  Verify: curl http://127.0.0.1:7890/health"
+fi
 
 fi # end HOOKS_ONLY guard
 
