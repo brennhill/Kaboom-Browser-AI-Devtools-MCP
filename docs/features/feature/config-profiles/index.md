@@ -98,6 +98,8 @@ negative attempts or occurrence counts.
   former broad host interfaces and twelve configure-only ToolHandler adapters
   are deleted and structurally prohibited; analyze-owned shared boundaries are
   unchanged.
+- Action-jitter configuration rejects malformed JSON before invoking its setter;
+  status reads remain available through an omitted payload.
 - Test-boundary start/end state and synchronization are owned together by
   `configure.BoundaryHandler`. The root `ToolHandler` router calls that owner
   directly and retains no boundary mutex, map, or forwarding methods.

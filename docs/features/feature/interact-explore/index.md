@@ -112,7 +112,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_result_lifecycle_test.go
   - cmd/browser-agent/tools_interact_result_ambiguity_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
-  - cmd/browser-agent/tools_interact_utils_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
   - internal/schema/interact/schema_test.go
   - cmd/browser-agent/tools_interact_evidence_test.go
@@ -364,3 +363,5 @@ plus deterministic preservation of the base response when no image is usable.
 The dispatcher owner rejects malformed, missing, unknown, and obsolete mode
 selectors before action execution. Required text, value, and attribute
 parameters are verified beside the canonical DOM validation function.
+Action jitter classification and bounds are verified directly on the action
+runtime, while configure-owner tests prove clamping and setter invocation.

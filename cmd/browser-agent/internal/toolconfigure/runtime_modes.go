@@ -142,7 +142,11 @@ func HandleActionJitter(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	var params struct {
 		ActionJitterMs *int `json:"action_jitter_ms"`
 	}
-	mcp.LenientUnmarshal(args, &params)
+	if len(args) > 0 {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+			return resp
+		}
+	}
 
 	if params.ActionJitterMs != nil {
 		value := *params.ActionJitterMs

@@ -284,11 +284,12 @@ func TestHandleActionJitter(t *testing.T) {
 		})
 	}
 
-	t.Run("malformed JSON is a lenient status read", func(t *testing.T) {
+	t.Run("malformed JSON is rejected without mutation", func(t *testing.T) {
 		d := &fakeConfigureDeps{jitterMs: 17, setJitterCalled: -1}
-		result := parseRespJSON(t, HandleActionJitter(d.deps(), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 42}, json.RawMessage(`{bad`)))
-		if result["action_jitter_ms"] != float64(17) || d.setJitterCalled != -1 {
-			t.Fatalf("lenient status result = %#v, set=%d", result, d.setJitterCalled)
+		resp := HandleActionJitter(d.deps(), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 42}, json.RawMessage(`{bad`))
+		isErr, text := parseResp(t, resp)
+		if !isErr || !strings.Contains(text, mcp.ErrInvalidJSON) || d.setJitterCalled != -1 {
+			t.Fatalf("malformed jitter response = %s, set=%d", text, d.setJitterCalled)
 		}
 	})
 }

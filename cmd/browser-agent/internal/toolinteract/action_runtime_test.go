@@ -33,6 +33,27 @@ func TestSecureJitterStaysWithinRequestedRange(t *testing.T) {
 	}
 }
 
+func TestApplyJitterContracts(t *testing.T) {
+	runtime := NewActionRuntime(RuntimeDeps{})
+	runtime.SetJitter(2)
+	for action := range ReadOnlyInteractActions {
+		if got := runtime.ApplyJitter(action); got != 0 {
+			t.Fatalf("read-only %q jitter = %d", action, got)
+		}
+	}
+	for _, action := range []string{"click", "type", "navigate", "select", "check", "focus", "scroll_to", "key_press"} {
+		for i := 0; i < 20; i++ {
+			if got := runtime.ApplyJitter(action); got < 0 || got >= 2 {
+				t.Fatalf("%q jitter = %d, want [0,2)", action, got)
+			}
+		}
+	}
+	runtime.SetJitter(0)
+	if got := runtime.ApplyJitter("click"); got != 0 || runtime.GetJitter() != 0 {
+		t.Fatalf("disabled jitter = %d, configured=%d", got, runtime.GetJitter())
+	}
+}
+
 func TestRetryContractStopsUnchangedSecondAttempt(t *testing.T) {
 	runtime := NewActionRuntime(RuntimeDeps{})
 	firstArgs := json.RawMessage(`{"what":"click","selector":"#save"}`)
