@@ -187,7 +187,6 @@ test_paths:
   - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
   - cmd/browser-agent/internal/daemonlife/helpers_test.go
   - cmd/browser-agent/daemon_lifecycle_policy_test.go
-  - cmd/browser-agent/daemon_lifecycle_wiring_test.go
   - cmd/browser-agent/internal/procctl/pidfile_test.go
   - cmd/browser-agent/internal/procctl/port_test.go
   - cmd/browser-agent/internal/procctl/port_netstat_test.go

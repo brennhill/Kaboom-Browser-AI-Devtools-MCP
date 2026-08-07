@@ -5,14 +5,41 @@ package daemonrecovery
 import (
 	"errors"
 	"os"
+	"reflect"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
 
 type recordedEvent struct {
 	name   string
 	port   int
 	fields map[string]any
+}
+
+func TestLifecycleDepsAreCompleteByConstruction(t *testing.T) {
+	reclaimer := New(Config{
+		Version: "test", Recovery: statediag.NewCollector(), Incidents: incident.NewStore(4),
+		LogLifecycle: func(string, int, map[string]any) {}, Diagnosticf: func(string, ...any) {},
+	})
+	deps := reclaimer.LifecycleDeps()
+	value := reflect.ValueOf(deps)
+	for index := 0; index < value.NumField(); index++ {
+		field := value.Field(index)
+		name := value.Type().Field(index).Name
+		switch field.Kind() {
+		case reflect.Func, reflect.Interface, reflect.Pointer:
+			if field.IsNil() {
+				t.Errorf("LifecycleDeps().%s is nil", name)
+			}
+		case reflect.String:
+			if field.String() == "" {
+				t.Errorf("LifecycleDeps().%s is empty", name)
+			}
+		}
+	}
 }
 
 func testReclaimer(events *[]recordedEvent) *Reclaimer {
