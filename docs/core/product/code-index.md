@@ -47,7 +47,7 @@ last_reviewed: 2026-02-16
 
 **Tests:**
 
-- cmd/browser-agent/tools_test.go (22 tests covering all tools)
+- cmd/browser-agent/internal/toolcatalog/catalog_test.go and feature-owner tests
 
 **Protected by:** Pre-commit hook, stub detection
 
@@ -78,7 +78,7 @@ last_reviewed: 2026-02-16
 - [Observe Tool](../features/feature/observe/)
 
 **Tests:**
-- cmd/browser-agent/tools_test.go (comprehensive coverage)
+- cmd/browser-agent/internal/toolcatalog/catalog_test.go (catalog coverage)
 
 **Protected by:** Pre-commit hook, GitHub Actions, architecture validation
 

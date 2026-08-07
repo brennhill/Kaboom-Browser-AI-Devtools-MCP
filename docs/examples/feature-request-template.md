@@ -536,12 +536,12 @@ Creating docs/features/feature/request-replay/tech-spec.md
 1. Add MCP tool schema to tools_schema.go
 2. Add handler to internal/toolgenerate/dispatcher.go
 3. Add format "replay" to generate tool
-4. Create tests in tools_test.go
+4. Create tests beside the canonical feature owner
 
 **Files Affected:**
 - cmd/browser-agent/tools_schema.go (+30 lines)
 - cmd/browser-agent/internal/toolgenerate/dispatcher.go (+80 lines)
-- cmd/browser-agent/tools_test.go (+50 lines)
+- cmd/browser-agent/internal/toolcatalog/catalog_test.go (+50 lines)
 
 All files stay under 800 lines ✅
 
@@ -605,7 +605,7 @@ Review qa-plan.md. Approve to start implementation.
 
 **Step 1: Write Failing Tests**
 
-Creating test in cmd/browser-agent/tools_test.go:
+Creating test beside its canonical feature owner:
 
 [Shows test code]
 

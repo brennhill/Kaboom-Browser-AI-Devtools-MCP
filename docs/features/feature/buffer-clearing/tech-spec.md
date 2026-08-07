@@ -347,7 +347,7 @@ func TestClearAllBuffers(t *testing.T) {
 
 ### Integration Tests
 
-**File:** `cmd/browser-agent/tools_test.go`
+**File:** `cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go`
 
 ```go
 func TestToolConfigureClearNetwork(t *testing.T) {
@@ -533,7 +533,7 @@ configure({what: "clear", buffer: "network"})
 | `cmd/browser-agent/buffer_clear.go` | +200 | NEW: Clear methods and helpers |
 | `cmd/browser-agent/buffer_clear_test.go` | +300 | NEW: Unit tests |
 | `cmd/browser-agent/tools_core.go` | +80 | Add buffer param, toolConfigureClear |
-| `cmd/browser-agent/tools_test.go` | +100 | Integration tests |
+| `cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go` | +100 | Configure-owner tests |
 | **Total** | **~680 lines** | **1-2 hours** |
 
 ---
