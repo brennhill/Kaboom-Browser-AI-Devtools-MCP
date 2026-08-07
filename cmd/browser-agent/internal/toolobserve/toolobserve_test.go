@@ -119,3 +119,12 @@ func TestAppendAlertsToResponse_EmptyAlerts(t *testing.T) {
 		t.Fatal("should have at least the original content block")
 	}
 }
+
+func TestAppendAlertsToResponseLeavesMalformedResultUnchanged(t *testing.T) {
+	t.Parallel()
+	response := mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: 1, Result: json.RawMessage(`"not an object"`)}
+	got := AppendAlertsToResponse(response, []types.Alert{{Title: "alert"}})
+	if string(got.Result) != string(response.Result) {
+		t.Fatalf("malformed result changed: %s", got.Result)
+	}
+}

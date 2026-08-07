@@ -30,7 +30,7 @@ test_paths:
   - internal/streaming/alertbuf/alertbuf_test.go
   - internal/push/inbox_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
-  - cmd/browser-agent/tools_observe_unit_test.go
+  - cmd/browser-agent/internal/toolobserve/toolobserve_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
 last_verified_version: 0.7.12
