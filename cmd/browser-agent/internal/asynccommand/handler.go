@@ -401,6 +401,7 @@ func (h *Handler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID stri
 			"status": "queued", "lifecycle_status": "queued",
 			"correlation_id": correlationID, "trace_id": correlationID,
 			"queued": true, "final": false,
+			"hint": "Use observe({what: 'command_result', correlation_id: '" + correlationID + "'}) to retrieve the result.",
 		})
 	}
 	if !h.deps.Capture.Extension().IsExtensionConnected() {

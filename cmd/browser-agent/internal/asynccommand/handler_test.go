@@ -319,6 +319,10 @@ func TestMaybeWaitForCommandBackgroundResponseIsQueued(t *testing.T) {
 	if data["status"] != "queued" || data["queued"] != true || data["final"] != false || data["correlation_id"] != "click-1" {
 		t.Fatalf("queued lifecycle data = %#v", data)
 	}
+	hint, ok := data["hint"].(string)
+	if !ok || !strings.Contains(hint, "observe") || !strings.Contains(hint, "command_result") || !strings.Contains(hint, "click-1") {
+		t.Fatalf("queued polling hint = %#v", data["hint"])
+	}
 }
 
 func TestMaybeWaitForCommandArgumentPolicy(t *testing.T) {

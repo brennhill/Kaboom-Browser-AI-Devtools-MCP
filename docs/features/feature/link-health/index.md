@@ -6,6 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-07
 code_paths:
+  - cmd/browser-agent/internal/asynccommand/handler.go
+  - cmd/browser-agent/internal/toolanalyze/navigation.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler.go
   - src/lib/analysis/link-health.ts
@@ -13,8 +15,12 @@ code_paths:
   - src/content/message-handlers.ts
   - src/inject/message-handlers.ts
 test_paths:
+  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler_test.go
+  - scripts/tests/browser/cat-19-link-health.sh
   - scripts/smoke-tests/links/link-health-smoke.sh
+  - tests/cli/contracts/uat-harness-regressions.test.cjs
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

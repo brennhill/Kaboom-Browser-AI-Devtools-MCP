@@ -89,14 +89,14 @@ begin_test "19.4" "analyze/link_health returns status='queued'" \
     "Verify response indicates query is queued for async execution" \
     "Status field indicates operation phase (queued, processing, complete)."
 run_test_19_4() {
-    RESPONSE=$(call_tool "analyze" '{"what":"link_health"}')
+    RESPONSE=$(call_tool "analyze" '{"what":"link_health","sync":false}')
     if ! check_not_error "$RESPONSE"; then
         fail "Expected success. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
     fi
     local text
     text=$(extract_content_text "$RESPONSE")
-    if ! check_contains "$text" "queued"; then
+    if ! check_matches "$text" '"status":\s*"queued"'; then
         fail "Status should be 'queued'. Content: $(truncate "$text")"
         return
     fi
@@ -109,7 +109,7 @@ begin_test "19.5" "analyze/link_health returns hint with command_result usage" \
     "Verify response includes hint for how to check async results" \
     "Hint guides users to observe({what:'command_result', correlation_id:'...'})."
 run_test_19_5() {
-    RESPONSE=$(call_tool "analyze" '{"what":"link_health"}')
+    RESPONSE=$(call_tool "analyze" '{"what":"link_health","sync":false}')
     if ! check_not_error "$RESPONSE"; then
         fail "Expected success. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return

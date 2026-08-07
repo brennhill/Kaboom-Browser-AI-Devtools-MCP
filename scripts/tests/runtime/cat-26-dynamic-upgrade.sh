@@ -14,7 +14,8 @@ begin_category "26" "Dynamic Binary Upgrade" "3"
 
 # We use a dedicated temp directory and build two binaries with different versions.
 UPGRADE_DIR="$TEMP_DIR/upgrade-test"
-mkdir -p "$UPGRADE_DIR"
+UPGRADE_STATE_DIR="$UPGRADE_DIR/state"
+mkdir -p "$UPGRADE_DIR" "$UPGRADE_STATE_DIR"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 UPGRADE_PORT=19160
 
@@ -23,6 +24,17 @@ build_version() {
     local ver="$1"
     local output="$2"
     go build -ldflags "-X main.version=$ver" -o "$output" "$PROJECT_ROOT/cmd/browser-agent/" 2>/dev/null
+}
+
+start_upgrade_daemon() {
+    local bin="$1"
+    "$bin" --daemon --parallel --state-dir "$UPGRADE_STATE_DIR" --port "$UPGRADE_PORT" >/dev/null 2>&1 &
+    UPGRADE_DAEMON_PID=$!
+}
+
+reset_upgrade_state() {
+    rm -rf "$UPGRADE_STATE_DIR"
+    mkdir -p "$UPGRADE_STATE_DIR"
 }
 
 # Kill any leftover on the upgrade test port
@@ -40,6 +52,7 @@ begin_test "26.1" "Binary replacement detected in health endpoint" \
 run_test_26_1() {
     local bin="$UPGRADE_DIR/kaboom-agentic-browser"
     cleanup_upgrade_test
+    reset_upgrade_state
 
     # Build and start old version
     if ! build_version "0.7.5" "$bin"; then
@@ -47,8 +60,8 @@ run_test_26_1() {
         return
     fi
 
-    "$bin" --port "$UPGRADE_PORT" >/dev/null 2>&1 &
-    local daemon_pid=$!
+    start_upgrade_daemon "$bin"
+    local daemon_pid="$UPGRADE_DAEMON_PID"
     sleep 2
 
     # Verify running
@@ -111,14 +124,15 @@ begin_test "26.2" "Daemon exits after upgrade grace period" \
 run_test_26_2() {
     local bin="$UPGRADE_DIR/kaboom-agentic-browser"
     cleanup_upgrade_test
+    reset_upgrade_state
 
     if ! build_version "0.7.5" "$bin"; then
         fail "Failed to build v0.7.5 binary"
         return
     fi
 
-    "$bin" --port "$UPGRADE_PORT" >/dev/null 2>&1 &
-    local daemon_pid=$!
+    start_upgrade_daemon "$bin"
+    local daemon_pid="$UPGRADE_DAEMON_PID"
     sleep 2
 
     # Verify running
@@ -162,8 +176,9 @@ begin_test "26.3" "Upgrade marker file persisted for new daemon" \
 
 run_test_26_3() {
     local bin="$UPGRADE_DIR/kaboom-agentic-browser"
-    local marker_path="$HOME/.kaboom/run/last-upgrade.json"
+    local marker_path="$UPGRADE_STATE_DIR/run/last-upgrade.json"
     cleanup_upgrade_test
+    reset_upgrade_state
 
     # Remove any existing marker
     rm -f "$marker_path"
@@ -173,7 +188,7 @@ run_test_26_3() {
         return
     fi
 
-    "$bin" --port "$UPGRADE_PORT" >/dev/null 2>&1 &
+    start_upgrade_daemon "$bin"
     sleep 2
 
     if ! curl -s --max-time 3 "http://127.0.0.1:$UPGRADE_PORT/health" >/dev/null 2>&1; then

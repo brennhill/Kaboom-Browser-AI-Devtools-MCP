@@ -325,6 +325,23 @@ describe('comprehensive UAT harness regressions', () => {
     assert.doesNotMatch(uploadCategory, /\.\.\/\.\.\/smoke-tests\/upload-server\.py/)
   })
 
+  test('dynamic-upgrade UAT launches an isolated daemon lifecycle', () => {
+    const upgradeCategory = readFileSync('scripts/tests/runtime/cat-26-dynamic-upgrade.sh', 'utf8')
+
+    assert.match(upgradeCategory, /UPGRADE_STATE_DIR="\$UPGRADE_DIR\/state"/)
+    assert.match(upgradeCategory, /"\$bin" --daemon --parallel --state-dir "\$UPGRADE_STATE_DIR" --port "\$UPGRADE_PORT"/)
+    assert.match(upgradeCategory, /marker_path="\$UPGRADE_STATE_DIR\/run\/last-upgrade\.json"/)
+    assert.doesNotMatch(upgradeCategory, /marker_path="\$HOME\//)
+  })
+
+  test('link-health UAT requests background mode for queued-response contracts', () => {
+    const linkCategory = readFileSync('scripts/tests/browser/cat-19-link-health.sh', 'utf8')
+    const queuedContractCalls = linkCategory.match(/call_tool "analyze" '\{"what":"link_health","sync":false\}'/g) || []
+
+    assert.equal(queuedContractCalls.length, 2, 'status and polling-hint contracts must inspect the queued response')
+    assert.ok(linkCategory.includes(`check_matches "$text" '"status":\\s*"queued"'`))
+  })
+
   test('long-running categories retain complete result accounting', () => {
     const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     const dynamicUpgrade = readFileSync('scripts/tests/runtime/cat-26-dynamic-upgrade.sh', 'utf8')
