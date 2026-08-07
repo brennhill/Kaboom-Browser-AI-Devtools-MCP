@@ -525,7 +525,7 @@ run_test_24_19() {
     UPLOAD_PORT=$((PORT + 100))
 
     # Start Python upload server
-    python3 "$SCRIPT_DIR/../../smoke-tests/upload-server.py" "$UPLOAD_PORT" &
+    python3 "$SCRIPT_DIR/../../smoke-tests/upload/upload-server.py" "$UPLOAD_PORT" &
     local UPLOAD_SERVER_PID=$!
     sleep 1
 
@@ -628,7 +628,7 @@ run_test_24_20() {
     # Start upload server
     local UPLOAD_PORT
     UPLOAD_PORT=$((PORT + 101))
-    python3 "$SCRIPT_DIR/../../smoke-tests/upload-server.py" "$UPLOAD_PORT" &
+    python3 "$SCRIPT_DIR/../../smoke-tests/upload/upload-server.py" "$UPLOAD_PORT" &
     local UPLOAD_SERVER_PID=$!
     sleep 1
 
@@ -681,7 +681,7 @@ run_test_24_21() {
     # Start upload server
     local UPLOAD_PORT
     UPLOAD_PORT=$((PORT + 102))
-    python3 "$SCRIPT_DIR/../../smoke-tests/upload-server.py" "$UPLOAD_PORT" &
+    python3 "$SCRIPT_DIR/../../smoke-tests/upload/upload-server.py" "$UPLOAD_PORT" &
     local UPLOAD_SERVER_PID=$!
     sleep 1
 

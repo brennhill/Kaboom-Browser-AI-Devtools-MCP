@@ -3,7 +3,7 @@
 
 const assert = require('node:assert/strict')
 const { execFileSync } = require('node:child_process')
-const { readFileSync } = require('node:fs')
+const { existsSync, readFileSync } = require('node:fs')
 const { describe, test } = require('node:test')
 const { chmodSync, copyFileSync, mkdirSync, mkdtempSync, writeFileSync } = require('node:fs')
 const { tmpdir } = require('node:os')
@@ -314,6 +314,15 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(actionCoverage, /visual_baseline_attempt=1/)
     assert.match(actionCoverage, /visual_baseline_attempt" -le 2/)
     assert.match(actionCoverage, /fail "Action coverage mismatch/)
+  })
+
+  test('upload UAT invokes the canonical change-coupled upload server fixture', () => {
+    const uploadCategory = readFileSync('scripts/tests/browser/cat-24-upload.sh', 'utf8')
+    const canonicalFixture = 'scripts/smoke-tests/upload/upload-server.py'
+
+    assert.equal(existsSync(canonicalFixture), true, 'canonical upload server fixture must exist')
+    assert.match(uploadCategory, /\.\.\/\.\.\/smoke-tests\/upload\/upload-server\.py/)
+    assert.doesNotMatch(uploadCategory, /\.\.\/\.\.\/smoke-tests\/upload-server\.py/)
   })
 
   test('long-running categories retain complete result accounting', () => {
