@@ -4,6 +4,8 @@ package netrecord
 
 import (
 	"encoding/json"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,6 +37,22 @@ func parseResp(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
 		text = r.Content[0].Text
 	}
 	return r.IsError, text
+}
+
+func parseRespJSON(t *testing.T, response mcp.JSONRPCResponse) map[string]any {
+	t.Helper()
+	isError, text := parseResp(t, response)
+	if isError {
+		t.Fatalf("unexpected tool error: %s", text)
+	}
+	if _, payload, found := strings.Cut(text, "\n"); found {
+		text = payload
+	}
+	var result map[string]any
+	if err := json.Unmarshal([]byte(text), &result); err != nil {
+		t.Fatalf("invalid result JSON: %v (text=%s)", err, text)
+	}
+	return result
 }
 
 func newReq() mcp.JSONRPCRequest { return mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1} }
@@ -106,6 +124,46 @@ func TestNetworkRecordingState_Info(t *testing.T) {
 	}
 	if info.Domain != "test.com" {
 		t.Errorf("Domain: want test.com, got %s", info.Domain)
+	}
+}
+
+func TestNetworkRecordingStateConcurrentLifecycleRemainsConsistent(t *testing.T) {
+	t.Parallel()
+	state := &NetworkRecordingState{}
+	const workers = 100
+	var wait sync.WaitGroup
+	starts := make(chan bool, workers)
+	stops := make(chan bool, workers)
+	for index := 0; index < workers; index++ {
+		wait.Add(1)
+		go func(start bool) {
+			defer wait.Done()
+			if start {
+				_, ok := state.TryStart("example.com", "GET")
+				starts <- ok
+				return
+			}
+			_, ok := state.Stop()
+			stops <- ok
+		}(index%2 == 0)
+	}
+	wait.Wait()
+	close(starts)
+	close(stops)
+	startCount, stopCount := 0, 0
+	for success := range starts {
+		if success {
+			startCount++
+		}
+	}
+	for success := range stops {
+		if success {
+			stopCount++
+		}
+	}
+	difference := startCount - stopCount
+	if startCount == 0 || difference < 0 || difference > 1 || state.Info().Active != (difference == 1) {
+		t.Fatalf("inconsistent lifecycle: starts=%d stops=%d active=%t", startCount, stopCount, state.Info().Active)
 	}
 }
 
@@ -292,9 +350,9 @@ func TestHandleNetworkRecording(t *testing.T) {
 		d := newBodyStore(nil)
 		state := &NetworkRecordingState{}
 		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"status"}`))
-		isErr, _ := parseResp(t, resp)
-		if isErr {
-			t.Fatal("status should not error")
+		result := parseRespJSON(t, resp)
+		if result["active"] != false {
+			t.Fatalf("inactive status = %#v", result)
 		}
 	})
 
@@ -312,13 +370,14 @@ func TestHandleNetworkRecording(t *testing.T) {
 		d := newBodyStore(nil)
 		state := &NetworkRecordingState{}
 		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"start","domain":"example.com","method":"POST"}`))
-		if isErr, text := parseResp(t, resp); isErr {
-			t.Fatalf("first start should succeed: %s", text)
+		started := parseRespJSON(t, resp)
+		if started["status"] != "recording" || started["domain_filter"] != "example.com" || started["method_filter"] != "POST" {
+			t.Fatalf("start response = %#v", started)
 		}
 		// status while active should report active + filters
 		statusResp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"status"}`))
-		if isErr, _ := parseResp(t, statusResp); isErr {
-			t.Fatal("status while active should not error")
+		if status := parseRespJSON(t, statusResp); status["active"] != true {
+			t.Fatalf("active status = %#v", status)
 		}
 		resp2 := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"start"}`))
 		if isErr, _ := parseResp(t, resp2); !isErr {
@@ -334,9 +393,9 @@ func TestHandleNetworkRecording(t *testing.T) {
 		state := &NetworkRecordingState{}
 		HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"start","domain":"example.com"}`))
 		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"stop"}`))
-		isErr, text := parseResp(t, resp)
-		if isErr {
-			t.Fatalf("stop should succeed: %s", text)
+		result := parseRespJSON(t, resp)
+		if result["count"] != float64(1) {
+			t.Fatalf("stop response = %#v", result)
 		}
 	})
 

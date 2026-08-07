@@ -104,8 +104,6 @@ test_paths:
   - tests/extension/reliability/diagnostic-log-queue.test.js
   - tests/extension/branding/install-identity-faults.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/tools_configure_network_recording_test.go
-  - cmd/browser-agent/tools_configure_network_recording_handler_test.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
   - internal/capture/syncruntime/sync_test.go
   - internal/capture/syncruntime/sync_test_helpers_test.go
