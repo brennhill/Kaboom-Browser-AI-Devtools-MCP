@@ -68,7 +68,7 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - cmd/browser-agent/tools_observe_telemetry_modes_test.go
-  - cmd/browser-agent/tools_observe_page_readiness_test.go
+  - internal/tools/observe/page/page_readiness_test.go
   - cmd/browser-agent/tools_observe_blackbox_test.go
   - cmd/browser-agent/tools_observe_audit_test.go
   - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go

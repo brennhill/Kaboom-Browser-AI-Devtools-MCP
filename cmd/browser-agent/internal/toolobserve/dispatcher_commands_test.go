@@ -9,8 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestDispatcherRegistersPageInventory(t *testing.T) {
@@ -42,6 +45,26 @@ func TestDispatcherDefaultsOptionalHooksAndReturnsStructuredRoutingErrors(t *tes
 				t.Fatalf("routing error is not structured: %s", result.Content[0].Text)
 			}
 		})
+	}
+}
+
+func TestPilotModeDoesNotReceiveDisconnectWarning(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	defer captured.Close()
+	dispatcher := NewDispatcher(Config{
+		Observe:              observecore.Deps{Capture: captured},
+		IsExtensionConnected: func() bool { return false },
+		InjectSummary:        func(args json.RawMessage) json.RawMessage { return args },
+		DrainAlerts:          func() []types.Alert { return nil },
+	})
+	response := dispatcher.Handle(mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, json.RawMessage(`{"what":"pilot"}`))
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil || result.IsError || len(result.Content) == 0 {
+		t.Fatalf("pilot response = %s, err=%v", response.Result, err)
+	}
+	if strings.Contains(result.Content[0].Text, "Extension is not connected") {
+		t.Fatalf("pilot received disconnect warning: %s", result.Content[0].Text)
 	}
 }
 
