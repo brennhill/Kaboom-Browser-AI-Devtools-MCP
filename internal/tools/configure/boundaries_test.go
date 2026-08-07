@@ -164,6 +164,14 @@ func TestBuildTestBoundaryStartResponse(t *testing.T) {
 	if !strings.Contains(text, "Label-1") {
 		t.Errorf("response should contain label, got: %s", text)
 	}
+	for _, field := range []string{`"status":"ok"`, `"test_id":"test-1"`, `"label":"Label-1"`, `"message":`} {
+		if !strings.Contains(text, field) {
+			t.Errorf("start response missing %s: %s", field, text)
+		}
+	}
+	if strings.Contains(text, "testId") {
+		t.Errorf("start response used camelCase wire field: %s", text)
+	}
 }
 
 // ============================================
@@ -216,5 +224,13 @@ func TestBuildTestBoundaryEndResponse(t *testing.T) {
 	}
 	if !strings.Contains(text, "was_active") {
 		t.Errorf("response should contain was_active, got: %s", text)
+	}
+	for _, field := range []string{`"status":"ok"`, `"test_id":"test-789"`, `"was_active":true`, `"message":`} {
+		if !strings.Contains(text, field) {
+			t.Errorf("end response missing %s: %s", field, text)
+		}
+	}
+	if strings.Contains(text, "wasActive") {
+		t.Errorf("end response used camelCase wire field: %s", text)
 	}
 }

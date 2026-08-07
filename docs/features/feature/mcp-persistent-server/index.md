@@ -119,7 +119,7 @@ test_paths:
   - cmd/browser-agent/internal/toolrouting/routing_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
-  - cmd/browser-agent/tools_configure_session_actions_test.go
+  - internal/tools/configure/boundaries_test.go
   - internal/mcp/response_test.go
   - cmd/browser-agent/internal/toolresp/toolresp_test.go
   - internal/mcp/errors_test.go
