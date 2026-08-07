@@ -36,11 +36,11 @@ func TestAnalyzeSchemaHasNoAnnotationURLAlias(t *testing.T) {
 	}
 }
 
-func TestAnalyzeSchemaIncludesNavigationFamily(t *testing.T) {
+func TestAnalyzeSchemaIncludesQueuedAnalysisFamilies(t *testing.T) {
 	t.Parallel()
 	properties := analyzeToolSchema().InputSchema["properties"].(map[string]any)
 	what := properties["what"].(map[string]any)["enum"].([]string)
-	for _, mode := range []string{"navigation", "page_structure"} {
+	for _, mode := range []string{"navigation", "page_structure", "form_state", "data_table"} {
 		if !slices.Contains(what, mode) {
 			t.Errorf("analyze what enum missing %q: %v", mode, what)
 		}

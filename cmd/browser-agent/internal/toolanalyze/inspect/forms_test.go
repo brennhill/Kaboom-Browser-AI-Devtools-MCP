@@ -54,6 +54,19 @@ func TestExtractFormsListNested(t *testing.T) {
 	}
 }
 
+func TestExtractFormsListDirectAndMissing(t *testing.T) {
+	t.Parallel()
+	direct := ExtractFormsList(map[string]any{
+		"forms": []any{map[string]any{"id": "login"}},
+	})
+	if len(direct) != 1 {
+		t.Fatalf("direct forms = %#v", direct)
+	}
+	if missing := ExtractFormsList(map[string]any{"other": "value"}); missing != nil {
+		t.Fatalf("missing forms = %#v", missing)
+	}
+}
+
 func TestInspectionHandlersQueueCanonicalQueries(t *testing.T) {
 	t.Parallel()
 	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}

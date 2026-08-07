@@ -63,7 +63,6 @@ test_paths:
   - cmd/browser-agent/tools_analyze_annotations_wait_test.go
   - cmd/browser-agent/tools_analyze_annotation_detail_test.go
   - cmd/browser-agent/tools_analyze_annotation_hints_test.go
-  - cmd/browser-agent/tools_analyze_inspect_test.go
   - cmd/browser-agent/tools_async_timeout_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
@@ -76,7 +75,6 @@ test_paths:
   - internal/verification/store_test.go
   - internal/annotation/store_lifecycle_test.go
   - cmd/browser-agent/tools_analyze_annotations_draw_test.go
-  - cmd/browser-agent/tools_analyze_structured_extraction_test.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
   - cmd/browser-agent/tools_analyze_handler_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
