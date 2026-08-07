@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - scripts/docs/
   - scripts/maintenance/
@@ -71,7 +71,6 @@ test_paths:
   - scripts/docs/lint-documentation.py
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go
-  - cmd/browser-agent/tools_configure_quality_gates_test.go
   - cmd/hooks/main_test.go
   - internal/hook/hook_policy_test.go
   - internal/hook/compress_output_test.go
