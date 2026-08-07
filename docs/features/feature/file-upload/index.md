@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/server.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/internal/startupconfig/paths.go
+  - cmd/browser-agent/internal/startupconfig/runtime.go
   - cmd/browser-agent/tools_core.go
   - internal/upload/httpapi/handlers.go
   - internal/upload/handlers.go
@@ -26,6 +27,7 @@ code_paths:
   - scripts/smoke-tests/upload/upload-server.py
 test_paths:
   - cmd/browser-agent/internal/startupconfig/paths_test.go
+  - cmd/browser-agent/internal/startupconfig/runtime_test.go
   - internal/upload/uploadsec/injectiontests/injection_test.go
   - scripts/contracts/smokeupload/contracts_test.go
   - internal/upload/osauto/pid_test.go
@@ -66,6 +68,8 @@ last_verified_date: 2026-03-05
 
 ## Canonical Note
 Upload is security-first: path validation and policy checks must pass before any OS-level dialog automation runs.
+Startup builds the upload boundary inside the deterministic `startupconfig`
+owner; root process composition receives only a validated immutable result.
 The local Stage 3 upload fixture accepts both fixed-length and chunked multipart
 requests so its CSRF verification matches the streaming production client.
 Permission-path integration coverage uses a local SSRF-enabled form target and

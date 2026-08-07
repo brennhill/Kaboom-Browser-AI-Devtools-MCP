@@ -8,6 +8,7 @@ last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/binarywatch/watcher.go
   - cmd/browser-agent/config.go
+  - cmd/browser-agent/internal/startupconfig/runtime.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/operationalapi/handler.go
@@ -20,6 +21,7 @@ test_paths:
   - internal/capture/healthreader/reader_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/binarywatch/watcher_test.go
+  - cmd/browser-agent/internal/startupconfig/runtime_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go
   - cmd/browser-agent/internal/mcpendpoint/handler_test.go
   - cmd/browser-agent/server_routes_unit_test.go

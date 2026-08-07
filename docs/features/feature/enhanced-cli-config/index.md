@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/internal/startupconfig/paths.go
+  - cmd/browser-agent/internal/startupconfig/runtime.go
   - cmd/browser-agent/internal/runtimeconfig/parallel.go
   - cmd/browser-agent/internal/cli/cli_output.go
   - cmd/browser-agent/internal/cli/parser/commands.go
@@ -67,6 +68,7 @@ code_paths:
   - docs/setup/mcp-install-guide.md
 test_paths:
   - cmd/browser-agent/internal/startupconfig/paths_test.go
+  - cmd/browser-agent/internal/startupconfig/runtime_test.go
   - cmd/browser-agent/internal/cli/parser/commands_test.go
   - cmd/browser-agent/internal/cli/parser/flags_test.go
   - cmd/browser-agent/internal/cli/cli_coverage_extra_test.go
@@ -143,7 +145,10 @@ the regression suite deterministically blocks the backup path to enforce this.
 - Tool: configure
 - Mode/Action: cli
 - Location: `docs/features/feature/enhanced-cli-config`
-- `cmd/browser-agent/config.go` owns flag-driven process policy; `internal/startupconfig` owns deterministic path and upload-boundary resolution without terminating the process.
+- `cmd/browser-agent/config.go` owns only process exits and launch callbacks;
+  `internal/startupconfig` builds the validated runtime, paths, and upload
+  boundary without terminating the process. Port, state, parallel-isolation,
+  log fallback, and upload failures are therefore deterministic unit contracts.
 - `VERSION` is the only human-edited release version. `make bump-version NEW_VERSION=X.Y.Z`, `make sync-version`, and `make validate-versions` all delegate to one explicit transactional implementation.
 - Release upgrade UAT packs and installs the public npm launcher plus the
   current platform package in a disposable home. It validates artifact hashes,

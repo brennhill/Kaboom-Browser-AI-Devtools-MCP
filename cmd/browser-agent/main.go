@@ -111,15 +111,15 @@ func main() {
 
 	cfg := parseAndValidateFlags()
 
-	server, err := NewServer(cfg.logFile, cfg.maxEntries)
+	server, err := NewServer(cfg.LogFile, cfg.MaxEntries)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] Error creating server: %v\n", err)
 		os.Exit(1)
 	}
 	server.runtime = runtime
-	server.uploadAutomation = cfg.uploadAutomation
-	server.uploadSecurity = cfg.uploadSecurity
-	for _, warning := range cfg.startupWarnings {
+	server.uploadAutomation = cfg.UploadAutomation
+	server.uploadSecurity = cfg.UploadSecurity
+	for _, warning := range cfg.Warnings {
 		server.warnings.Add(warning)
 	}
 

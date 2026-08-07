@@ -28,6 +28,7 @@ code_paths:
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/internal/startupconfig/paths.go
+  - cmd/browser-agent/internal/startupconfig/runtime.go
   - cmd/browser-agent/internal/runtimeconfig/parallel.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolusage/key.go
@@ -116,6 +117,7 @@ test_paths:
   - cmd/browser-agent/main_connection_recovery_primitives_test.go
   - cmd/browser-agent/connection_lifecycle_helpers_test.go
   - cmd/browser-agent/internal/startupconfig/paths_test.go
+  - cmd/browser-agent/internal/startupconfig/runtime_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go
   - internal/capture/healthreader/reader_test.go
   - cmd/browser-agent/internal/toolrouting/routing_test.go
@@ -278,6 +280,10 @@ through one explicit backend. `ToolHandler` is the composed runtime returned to
 the server directly; startup, health, telemetry, and shutdown never recover it
 through a backend type assertion. The executor contract has only
 `HandleToolCall`; no transport-policy getter remains on `ToolHandler`.
+Parsed flags are converted into a validated `startupconfig.Runtime` without
+process exits. Root startup retains only explicit early-exit and launch policy;
+port validation precedes all network/process modes, while path, parallel-state,
+log fallback, and upload-boundary failures are owner-tested.
 
 Stdio isolation tests exercise the built bridge rather than the Go test binary.
 They close stdin and await the bridge's process-exit barrier, so transport

@@ -1,5 +1,4 @@
-// Purpose: Defines serverConfig struct, CLI flag parsing, runtime mode constants, and startup orchestration.
-// Why: Centralizes all command-line configuration and mode selection logic for the daemon entry point.
+// config.go — Composes process exits and runtime-mode launch callbacks.
 
 package main
 
@@ -18,7 +17,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/nativeinstall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/runtimeconfig"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/runtimeflags"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/startupconfig"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
@@ -42,88 +40,31 @@ func runSetupCheckWithOptions(port int, options setupCheckOptions) bool {
 	})
 }
 
-// serverConfig holds the parsed command-line flags for the server.
-type serverConfig struct {
-	port             int
-	logFile          string
-	maxEntries       int
-	apiKey           string
-	stateDir         string
-	clientID         string
-	bridgeMode       bool
-	daemonMode       bool
-	parallelMode     bool
-	uploadAutomation bool
-	uploadSecurity   *uploadsec.Security
-	startupWarnings  []string
-}
-
 type setupCheckOptions struct {
 	minSamples      int
 	maxFailureRatio float64
 }
 
 // parseAndValidateFlags parses CLI flags, validates them, and handles early-exit modes.
-func parseAndValidateFlags() *serverConfig {
+func parseAndValidateFlags() *startupconfig.Runtime {
 	f, err := runtimeflags.Parse(os.Args[1:], os.Getenv("KABOOM_API_KEY"))
 	if err != nil {
 		diag.Printf("[Kaboom] Invalid command-line options: %v\n", err)
 		os.Exit(2)
 	}
+	if err := startupconfig.ValidatePort(f.Port); err != nil {
+		diag.Printf("[Kaboom] %v\n", err)
+		os.Exit(1)
+	}
 
-	uploadsec.SetSSRFAllowedHosts(f.SSRFAllowedHosts)
-	uploadSecurity, err := startupconfig.BuildUploadSecurity(f.EnableOSUpload, f.UploadDir, f.UploadDenyPatterns)
-	if err != nil {
-		diag.Printf("[Kaboom] Upload security configuration failed: %v\n", err)
-		os.Exit(1)
-	}
-	validatePort(f.Port)
-	f.StateDir, err = startupconfig.NormalizeStateDir(f.StateDir)
-	if err != nil {
-		diag.Printf("[Kaboom] Invalid --state-dir: %v\n", err)
-		os.Exit(1)
-	}
-	var warnings []string
-	resolvedStateDir, parallelWarnings, err := runtimeconfig.ApplyParallelStateDir(
-		f.ParallelMode,
-		f.StateDir,
-		time.Now(),
-		os.Getpid(),
-	)
-	if err != nil {
-		diag.Printf("[Kaboom] Invalid --parallel setup: %v\n", err)
-		os.Exit(1)
-	}
-	f.StateDir = resolvedStateDir
-	warnings = append(warnings, parallelWarnings...)
 	handleEarlyExitModes(&f)
-	var logWarning string
-	f.LogFile, logWarning = startupconfig.ResolveLogFile(f.LogFile)
-	if logWarning != "" {
-		warnings = append(warnings, logWarning)
-	}
-
-	return &serverConfig{
-		port:             f.Port,
-		logFile:          f.LogFile,
-		maxEntries:       f.MaxEntries,
-		apiKey:           f.APIKey,
-		stateDir:         f.StateDir,
-		clientID:         f.ClientID,
-		bridgeMode:       f.BridgeMode,
-		daemonMode:       f.DaemonMode,
-		parallelMode:     f.ParallelMode,
-		uploadAutomation: f.EnableOSUpload,
-		uploadSecurity:   uploadSecurity,
-		startupWarnings:  warnings,
-	}
-}
-
-func validatePort(port int) {
-	if port < 1 || port > 65535 {
-		diag.Printf("[Kaboom] Invalid port: %d (must be 1-65535)\n", port)
+	uploadsec.SetSSRFAllowedHosts(f.SSRFAllowedHosts)
+	config, err := startupconfig.BuildRuntime(f, time.Now(), os.Getpid())
+	if err != nil {
+		diag.Printf("[Kaboom] Invalid startup configuration: %v\n", err)
 		os.Exit(1)
 	}
+	return &config
 }
 
 func handleEarlyExitModes(flags *runtimeflags.Values) {
@@ -183,23 +124,23 @@ func detectStdinMode() (isTTY bool, stdinMode os.FileMode) {
 	return isTTY, stdinMode
 }
 
-func dispatchMode(server *Server, config *serverConfig) {
+func dispatchMode(server *Server, config *startupconfig.Runtime) {
 	isTTY, stdinMode := detectStdinMode()
 	mcpConfigPath := configdiscovery.Find()
-	mode := launchmode.SelectRuntimeMode(config.bridgeMode, config.daemonMode)
-	launchInfo := launchmode.Classify(config.daemonMode, isTTY, launchmode.DetectParentProcessName())
+	mode := launchmode.SelectRuntimeMode(config.BridgeMode, config.DaemonMode)
+	launchInfo := launchmode.Classify(config.DaemonMode, isTTY, launchmode.DetectParentProcessName())
 	launchmode.SetCurrent(launchInfo)
 	if mode == launchmode.RuntimeDaemon {
 		diag.SetSink(os.Stderr)
 	}
 
-	server.logLifecycle("mode_detection", config.port, map[string]any{
+	server.logLifecycle("mode_detection", config.Port, map[string]any{
 		"is_tty":           isTTY,
 		"stdin_mode":       fmt.Sprintf("%v", stdinMode),
 		"has_mcp_config":   mcpConfigPath != "",
 		"selected_runtime": mode,
 	})
-	server.logLifecycle("launch_mode_classified", config.port, map[string]any{
+	server.logLifecycle("launch_mode_classified", config.Port, map[string]any{
 		"launch_mode":      launchInfo.Mode,
 		"launch_reason":    launchInfo.Reason,
 		"parent_process":   launchInfo.ParentProcess,
@@ -209,11 +150,11 @@ func dispatchMode(server *Server, config *serverConfig) {
 		"selected_runtime": mode,
 	})
 
-	if warning := launchmode.Warning(launchInfo, config.port); warning != "" {
+	if warning := launchmode.Warning(launchInfo, config.Port); warning != "" {
 		server.warnings.Add(warning)
 		diag.Printf("[Kaboom] Kaboom appears to be running in non-persistent mode (%s).\n", launchInfo.Reason)
 		diag.Println("[Kaboom] This will disconnect the extension when the process exits.")
-		diag.Printf("[Kaboom] Start persistently: kaboom-agentic-browser --daemon --port %d\n", config.port)
+		diag.Printf("[Kaboom] Start persistently: kaboom-agentic-browser --daemon --port %d\n", config.Port)
 	}
 	if err := launchmode.EnforcePersistent(launchInfo, serverdefaults.Port); err != nil {
 		diag.Printf("[Kaboom] %v\n", err)
@@ -222,11 +163,11 @@ func dispatchMode(server *Server, config *serverConfig) {
 
 	switch mode {
 	case launchmode.RuntimeDaemon:
-		server.logLifecycle("daemon_mode_start", config.port, nil)
-		if err := runMCPMode(server, config.port, config.apiKey, daemonlife.LaunchOptions{Parallel: config.parallelMode}); err != nil {
+		server.logLifecycle("daemon_mode_start", config.Port, nil)
+		if err := runMCPMode(server, config.Port, config.APIKey, daemonlife.LaunchOptions{Parallel: config.ParallelMode}); err != nil {
 			telemetry.AppError(incident.CodeDaemonStartFailed)
 			diagnosticPath := server.runtime.ExitDiagnostics().Append("daemon_start_failed", map[string]any{
-				"port":  config.port,
+				"port":  config.Port,
 				"error": err.Error(),
 			})
 			if diagnosticPath != "" {
@@ -236,12 +177,12 @@ func dispatchMode(server *Server, config *serverConfig) {
 			os.Exit(1)
 		}
 	case launchmode.RuntimeBridge:
-		if err := server.runtime.BridgeRunner().EnsureIOIsolation(config.logFile); err != nil {
+		if err := server.runtime.BridgeRunner().EnsureIOIsolation(config.LogFile); err != nil {
 			bridge.SendStartupError("Bridge stdio isolation failed: " + err.Error())
 			os.Exit(1)
 		}
-		server.logLifecycle("bridge_mode_start", config.port, fingerprint.Capture(version, os.Executable))
-		if config.bridgeMode {
+		server.logLifecycle("bridge_mode_start", config.Port, fingerprint.Capture(version, os.Executable))
+		if config.BridgeMode {
 			diag.Println("[Kaboom] Starting in bridge mode (stdio -> HTTP)")
 		} else if isTTY && mcpConfigPath != "" {
 			diag.Printf("[Kaboom] MCP config detected at %s; running in bridge mode for tool compatibility.\n", mcpConfigPath)
@@ -252,8 +193,8 @@ func dispatchMode(server *Server, config *serverConfig) {
 			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDOUT")
 			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDERR")
 		}
-		server.runtime.BridgeRunner().RunMode(config.port, config.logFile, config.maxEntries)
+		server.runtime.BridgeRunner().RunMode(config.Port, config.LogFile, config.MaxEntries)
 	default:
-		server.runtime.BridgeRunner().RunMode(config.port, config.logFile, config.maxEntries)
+		server.runtime.BridgeRunner().RunMode(config.Port, config.LogFile, config.MaxEntries)
 	}
 }
