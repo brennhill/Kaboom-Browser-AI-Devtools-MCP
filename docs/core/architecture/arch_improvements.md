@@ -337,7 +337,7 @@ Validate behavior at boundaries, not just units.
 
 ### Concrete additions
 
-1. Extend `cmd/browser-agent/tools_schema_parity_test.go` style across all tools.
+1. Extend the schema/runtime parity contract in `cmd/browser-agent/composition_test.go` across all tools.
 2. Add fixture-based boundary tests under `tests/integration/contracts/`:
    - each fixture includes request, extension mock output, and expected MCP envelope
 3. Add shared lifecycle transition fixtures and expected envelopes:

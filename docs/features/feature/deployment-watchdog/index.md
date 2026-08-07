@@ -24,7 +24,7 @@ test_paths:
   - cmd/browser-agent/internal/startupconfig/runtime_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go
   - cmd/browser-agent/internal/mcpendpoint/handler_test.go
-  - cmd/browser-agent/server_routes_unit_test.go
+  - cmd/browser-agent/composition_test.go
   - tests/extension/contracts/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

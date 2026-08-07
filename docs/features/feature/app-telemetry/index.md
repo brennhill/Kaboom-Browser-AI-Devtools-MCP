@@ -30,7 +30,7 @@ test_paths:
   - internal/telemetry/usage_counter_test.go
   - cmd/browser-agent/internal/operationalapi/debug_test.go
   - cmd/browser-agent/internal/toolusage/key_test.go
-  - cmd/browser-agent/tools_core_unit_test.go
+  - cmd/browser-agent/composition_test.go
   - internal/statediag/collector_test.go
   - internal/incident/store_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs

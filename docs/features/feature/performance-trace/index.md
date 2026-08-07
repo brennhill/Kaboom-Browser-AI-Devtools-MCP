@@ -4,7 +4,7 @@ feature_id: feature-performance-trace
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-04
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace.go
@@ -23,7 +23,7 @@ code_paths:
   - src/types/wire/wire-performance-trace.ts
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace_test.go
-  - cmd/browser-agent/tools_schema_parity_test.go
+  - cmd/browser-agent/composition_test.go
   - internal/perftrace/http_test.go
   - internal/perftrace/manager_test.go
   - tests/extension/performance-trace/performance-trace.test.js

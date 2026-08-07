@@ -136,7 +136,7 @@ test_paths:
   - cmd/browser-agent/internal/appruntime/runtime_test.go
   - cmd/browser-agent/internal/mcptelemetry/owner_test.go
   - cmd/browser-agent/internal/toolusage/key_test.go
-  - cmd/browser-agent/tools_core_unit_test.go
+  - cmd/browser-agent/composition_test.go
   - cmd/browser-agent/internal/procctl/stop_parse_test.go
   - cmd/browser-agent/internal/procctl/stop_test.go
   - cmd/browser-agent/internal/runtimeflags/parsing_test.go
@@ -164,7 +164,6 @@ test_paths:
   - cmd/browser-agent/internal/versioncheck/checker_test.go
   - scripts/quality/contracts/check-bridge-stdout-invariant.sh
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/internal/dashboard/branding_test.go
   - scripts/contracts/openapibranding/branding_test.go
   - cmd/browser-agent/internal/operationalapi/debug_test.go

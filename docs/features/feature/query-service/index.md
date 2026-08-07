@@ -43,7 +43,7 @@ test_paths:
   - internal/queries/commands_test.go
   - internal/queries/command_trace_test.go
   - internal/queries/expire_signal_test.go
-  - cmd/browser-agent/tools_test_helpers_test.go
+  - cmd/browser-agent/composition_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
   - internal/capture/syncruntime/extension_state_unit_test.go
   - internal/capture/async_queue_integration_test.go

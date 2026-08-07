@@ -48,7 +48,7 @@ test_paths:
   - internal/analysis/apicontract/contract_report_test.go
   - internal/schema/invariants_test.go
   - internal/schema/interact/schema_test.go
-  - cmd/browser-agent/tools_schema_parity_test.go
+  - cmd/browser-agent/composition_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -122,4 +122,4 @@ MCP tool schemas (the `tools/list` contract, `internal/schema`):
 - Daemon delegation: `cmd/browser-agent/tools_core.go`
 - Claude-API schema invariants (no top-level/nested combiners, valid JSON round-trip): `internal/schema/invariants_test.go`
 - Interact enum/alias/registry invariants: `internal/schema/interact/schema_test.go`
-- Schema/runtime dispatch parity: `cmd/browser-agent/tools_schema_parity_test.go`
+- Schema/runtime dispatch parity: `cmd/browser-agent/composition_test.go`

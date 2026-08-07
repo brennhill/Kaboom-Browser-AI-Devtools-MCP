@@ -39,7 +39,7 @@ test_paths:
   - scripts/security/go-tool-versions.test.mjs
   - tests/extension/contracts/tooling-contracts.test.js
   - scripts/docs/features/check-feature-bundles.test.mjs
-  - cmd/browser-agent/tools_schema_parity_test.go
+  - cmd/browser-agent/composition_test.go
   - cmd/browser-agent/internal/toolpostprocess/postprocess_test.go
   - internal/mcp/errors_test.go
   - internal/queries/dispatcher_test.go

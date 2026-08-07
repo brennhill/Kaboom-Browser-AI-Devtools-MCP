@@ -20,7 +20,7 @@ internal/tool*/             # feature implementations
 ...
 ```
 
-Shared test helpers are consolidated in `tools_test_helpers_test.go`. The
+Composition-root test fixtures are local to `cmd/browser-agent/composition_test.go`. The
 cross-tool queue-to-result protocol lives in
 `internal/asynccommand/handler.go`; the composition root injects its functions
 directly into feature owners.

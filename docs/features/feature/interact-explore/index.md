@@ -103,7 +103,7 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/contracts/rich_action_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/performance_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go
-  - cmd/browser-agent/tools_schema_parity_test.go
+  - cmd/browser-agent/composition_test.go
   - internal/schema/interact/schema_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js

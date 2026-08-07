@@ -56,7 +56,7 @@ test_paths:
   - cmd/browser-agent/internal/mediaapi/annotation_store_test.go
   - cmd/browser-agent/internal/mediaapi/draw_mode_http_test.go
   - cmd/browser-agent/internal/mediaapi/handler_test.go
-  - cmd/browser-agent/server_routes_unit_test.go
+  - cmd/browser-agent/composition_test.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/sessions_test.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/wait_test.go
