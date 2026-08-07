@@ -4,7 +4,7 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -53,6 +53,7 @@ code_paths:
   - src/inject/message-handlers.ts
   - src/types/runtime-messages.ts
 test_paths:
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go

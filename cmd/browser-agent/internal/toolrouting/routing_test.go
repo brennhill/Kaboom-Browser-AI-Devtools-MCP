@@ -34,3 +34,17 @@ func TestDispatchUsesCanonicalWhat(t *testing.T) {
 		t.Fatalf("canonical selector should dispatch: %s", response.Result)
 	}
 }
+
+func TestDispatchUnknownModeIncludesCapabilityRecovery(t *testing.T) {
+	response := Dispatch("router", mcp.JSONRPCRequest{ID: 3}, json.RawMessage(`{"what":"network"}`), testRegistry())
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		t.Fatal(err)
+	}
+	text := result.Content[0].Text
+	for _, expected := range []string{"unknown_mode", "recovery_tool_call", "describe_capabilities", `"observe"`} {
+		if !strings.Contains(text, expected) {
+			t.Errorf("unknown-mode response missing %q: %s", expected, text)
+		}
+	}
+}
