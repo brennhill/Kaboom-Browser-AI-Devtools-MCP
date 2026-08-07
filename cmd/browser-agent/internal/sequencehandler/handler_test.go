@@ -78,13 +78,13 @@ func TestHandlerKeepsSequenceCRUDTogether(t *testing.T) {
 	handler := New(Deps{Store: store})
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	saved := handler.Save(req, json.RawMessage(`{"name":"checkout","tags":["smoke"],"steps":[{"what":"click","selector":"#buy"}]}`))
-	if responseIsError(saved) {
+	saved := handler.Save(req, json.RawMessage(`{"name":"checkout","description":"Checkout flow","tags":["smoke"],"steps":[{"what":"click","selector":"#buy"}]}`))
+	if responseIsError(saved) || !containsResult(saved, `status\":\"saved`) || !containsResult(saved, `step_count\":1`) {
 		t.Fatalf("save returned error: %s", saved.Result)
 	}
 
 	got := handler.Get(req, json.RawMessage(`{"name":"checkout"}`))
-	if responseIsError(got) || !containsResult(got, `step_count\":1`) {
+	if responseIsError(got) || !containsResult(got, `step_count\":1`) || !containsResult(got, `description\":\"Checkout flow`) {
 		t.Fatalf("get response = %s", got.Result)
 	}
 
@@ -94,8 +94,82 @@ func TestHandlerKeepsSequenceCRUDTogether(t *testing.T) {
 	}
 
 	deleted := handler.Delete(req, json.RawMessage(`{"name":"checkout"}`))
-	if responseIsError(deleted) {
+	if responseIsError(deleted) || !containsResult(deleted, `status\":\"deleted`) {
 		t.Fatalf("delete returned error: %s", deleted.Result)
+	}
+	if response := handler.Get(req, json.RawMessage(`{"name":"checkout"}`)); !responseIsError(response) {
+		t.Fatalf("deleted sequence remained readable: %s", response.Result)
+	}
+}
+
+func TestHandlerUpsertsAndFiltersSequences(t *testing.T) {
+	t.Parallel()
+	store := memoryStore{}
+	handler := New(Deps{Store: store})
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	for _, args := range []string{
+		`{"name":"checkout","tags":["smoke"],"steps":[{"what":"click"}]}`,
+		`{"name":"checkout","tags":["smoke"],"steps":[{"what":"click"},{"what":"type"}]}`,
+		`{"name":"admin","tags":["admin"],"steps":[{"what":"navigate"}]}`,
+	} {
+		if response := handler.Save(req, json.RawMessage(args)); responseIsError(response) {
+			t.Fatalf("Save(%s) = %s", args, response.Result)
+		}
+	}
+	got := handler.Get(req, json.RawMessage(`{"name":"checkout"}`))
+	if responseIsError(got) || !containsResult(got, `step_count\":2`) {
+		t.Fatalf("upsert did not replace checkout: %s", got.Result)
+	}
+	listed := handler.List(req, json.RawMessage(`{"tags":["smoke"]}`))
+	if responseIsError(listed) || !containsResult(listed, `count\":1`) || !containsResult(listed, `name\":\"checkout`) {
+		t.Fatalf("tag filter response = %s", listed.Result)
+	}
+}
+
+func TestHandlerValidatesSequenceContracts(t *testing.T) {
+	t.Parallel()
+	store := memoryStore{}
+	handler := New(Deps{Store: store})
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	tooManySteps := make([]map[string]string, MaxSequenceSteps+1)
+	for index := range tooManySteps {
+		tooManySteps[index] = map[string]string{"what": "click"}
+	}
+	encodedTooMany, err := json.Marshal(map[string]any{"name": "large", "steps": tooManySteps})
+	if err != nil {
+		t.Fatal(err)
+	}
+	longName := strings.Repeat("a", MaxSequenceNameLen+1)
+	for name, invoke := range map[string]func() mcp.JSONRPCResponse{
+		"missing save name": func() mcp.JSONRPCResponse {
+			return handler.Save(req, json.RawMessage(`{"steps":[{"what":"click"}]}`))
+		},
+		"invalid save name": func() mcp.JSONRPCResponse {
+			return handler.Save(req, json.RawMessage(`{"name":"invalid name!","steps":[{"what":"click"}]}`))
+		},
+		"long save name": func() mcp.JSONRPCResponse {
+			args, _ := json.Marshal(map[string]any{"name": longName, "steps": []map[string]string{{"what": "click"}}})
+			return handler.Save(req, args)
+		},
+		"empty steps": func() mcp.JSONRPCResponse {
+			return handler.Save(req, json.RawMessage(`{"name":"empty","steps":[]}`))
+		},
+		"missing step action": func() mcp.JSONRPCResponse {
+			return handler.Save(req, json.RawMessage(`{"name":"invalid","steps":[{"selector":"#button"}]}`))
+		},
+		"too many steps":      func() mcp.JSONRPCResponse { return handler.Save(req, encodedTooMany) },
+		"missing get name":    func() mcp.JSONRPCResponse { return handler.Get(req, json.RawMessage(`{}`)) },
+		"missing delete name": func() mcp.JSONRPCResponse { return handler.Delete(req, json.RawMessage(`{}`)) },
+		"missing replay name": func() mcp.JSONRPCResponse { return handler.Replay(req, json.RawMessage(`{}`)) },
+		"unknown get name": func() mcp.JSONRPCResponse {
+			return handler.Get(req, json.RawMessage(`{"name":"missing"}`))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if response := invoke(); !responseIsError(response) {
+				t.Fatalf("%s unexpectedly succeeded: %s", name, response.Result)
+			}
+		})
 	}
 }
 

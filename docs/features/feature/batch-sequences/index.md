@@ -4,7 +4,7 @@ feature_id: feature-batch-sequences
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/replay/contract.go
   - cmd/browser-agent/internal/sequencehandler/handler.go
@@ -26,7 +26,6 @@ test_paths:
   - cmd/browser-agent/internal/sequencehandler/handler_test.go
   - cmd/browser-agent/internal/sequencehandler/contract_test.go
   - cmd/browser-agent/tools_interact_batch_test.go
-  - cmd/browser-agent/tools_configure_sequence_test.go
   - internal/recording/actionlog/recorder_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
