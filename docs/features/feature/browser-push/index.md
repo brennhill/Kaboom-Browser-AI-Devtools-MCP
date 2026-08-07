@@ -25,7 +25,7 @@ test_paths:
   - cmd/browser-agent/internal/pushapi/runtime_test.go
   - cmd/browser-agent/internal/pushapi/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/draw_sessions_test.go
-  - cmd/browser-agent/tools_observe_inbox_test.go
+  - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/branding/push-handler-branding.test.js
@@ -76,8 +76,8 @@ Push browser content (annotations, screenshots, chat messages) to the AI automat
 | `internal/push/sampling.go` | MCP sampling/createMessage builder | `sampling_test.go` (5 tests) |
 | `cmd/browser-agent/internal/pushapi/runtime.go` | Negotiated capability/framing state and MCP outbound delivery | `runtime_test.go` |
 | `cmd/browser-agent/internal/pushapi/handler.go` | Push HTTP parsing, event delivery, draining, and annotation routing | `handler_test.go` |
-| `cmd/browser-agent/internal/toolobserve/dispatcher.go` | observe(inbox) adapter + piggyback wiring | `tools_observe_inbox_test.go` (6 tests) |
-| `cmd/browser-agent/internal/toolobserve/inbox.go` | inbox response and piggyback behavior | `tools_observe_inbox_test.go` (6 tests) |
+| `cmd/browser-agent/internal/toolobserve/dispatcher.go` | observe(inbox) adapter + piggyback wiring | `toolobserve_coverage_test.go` |
+| `cmd/browser-agent/internal/toolobserve/inbox.go` | inbox response and piggyback behavior | `toolobserve_coverage_test.go` |
 
 The observe dispatcher receives the inbox and command operations through an
 explicit local dependency bundle. It does not require a ToolHandler host or

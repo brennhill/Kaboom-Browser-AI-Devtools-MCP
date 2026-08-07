@@ -67,7 +67,6 @@ test_paths:
   - tests/extension/dom/page-query-targeting.test.js
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
-  - cmd/browser-agent/tools_observe_inbox_test.go
   - cmd/browser-agent/tools_observe_handler_test.go
   - cmd/browser-agent/tools_observe_telemetry_modes_test.go
   - cmd/browser-agent/tools_observe_page_readiness_test.go
