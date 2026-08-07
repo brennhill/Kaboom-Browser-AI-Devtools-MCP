@@ -6,12 +6,10 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +31,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/operationalapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/telemetryapi"
 	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
@@ -55,6 +54,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	uploadapi "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -248,89 +248,6 @@ func (s *Server) Close() {
 //go:embed openapi.json
 var openapiJSON []byte
 
-func handleTelemetry(server *Server, captured *capture.Capture) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		telemetryType := r.URL.Query().Get("type")
-		if telemetryType == "" {
-			httpapi.JSON(w, http.StatusBadRequest, map[string]string{
-				"error": "Missing required 'type' parameter",
-				"hint":  "Valid types: logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status",
-			})
-			return
-		}
-		limit := 0
-		if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
-			if parsed, err := strconv.Atoi(rawLimit); err == nil && parsed > 0 {
-				limit = parsed
-			}
-		}
-		var result any
-		var count int
-		switch telemetryType {
-		case "logs":
-			entries := server.logs.Entries()
-			if limit > 0 && len(entries) > limit {
-				entries = entries[len(entries)-limit:]
-			}
-			result, count = entries, len(entries)
-		case "network_waterfall":
-			entries := captured.Telemetry().NetworkWaterfall().Entries()
-			if limit > 0 && len(entries) > limit {
-				entries = entries[len(entries)-limit:]
-			}
-			result, count = entries, len(entries)
-		case "network_bodies":
-			entries := captured.Telemetry().NetworkBodies().Snapshot().Bodies
-			if limit > 0 && len(entries) > limit {
-				entries = entries[len(entries)-limit:]
-			}
-			result, count = entries, len(entries)
-		case "websocket_events":
-			entries := captured.Telemetry().WebSockets().Events(types.WebSocketEventFilter{})
-			if limit > 0 && len(entries) > limit {
-				entries = entries[len(entries)-limit:]
-			}
-			result, count = entries, len(entries)
-		case "actions":
-			entries := captured.Telemetry().Actions().Snapshot().Actions
-			if limit > 0 && len(entries) > limit {
-				entries = entries[len(entries)-limit:]
-			}
-			result, count = entries, len(entries)
-		case "performance_snapshots":
-			entries := captured.Performance().Entries()
-			if limit > 0 && len(entries) > limit {
-				entries = entries[len(entries)-limit:]
-			}
-			result, count = entries, len(entries)
-		case "extension_logs":
-			entries := captured.ExtensionLogs().Entries()
-			if limit > 0 && len(entries) > limit {
-				entries = entries[len(entries)-limit:]
-			}
-			result, count = entries, len(entries)
-		case "websocket_status":
-			status := captured.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
-			httpapi.JSON(w, http.StatusOK, map[string]any{
-				"type": telemetryType, "connections": status.Connections,
-				"closed": status.Closed, "count": len(status.Connections),
-			})
-			return
-		default:
-			httpapi.JSON(w, http.StatusBadRequest, map[string]string{
-				"error": "Unknown telemetry type: " + telemetryType,
-				"hint":  "Valid types: logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status",
-			})
-			return
-		}
-		httpapi.JSON(w, http.StatusOK, map[string]any{"type": telemetryType, "items": result, "count": count})
-	}
-}
-
 func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *MCPHandler) {
 	server.mediaHTTP = mediaapi.New(captured, server.annotationRuntime.Store(), server.pushRouter)
 	mux := http.NewServeMux()
@@ -374,7 +291,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	})))
 	mux.HandleFunc("/recordings/storage", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleRecordingStorage)))
 	mux.HandleFunc("/recordings/reveal", httpguard.CORS(httpguard.ExtensionOnly(screenrec.HandleReveal)))
-	mux.HandleFunc("/telemetry", httpguard.CORS(handleTelemetry(server, captured)))
+	mux.HandleFunc("/telemetry", httpguard.CORS(telemetryapi.Handler(server.logs, captured)))
 	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Snapshot(server.logs, captured))))
 	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, newRuntimeResetter(captured)))))
 	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(ciapi.TestBoundary(captured))))

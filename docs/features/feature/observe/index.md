@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - internal/capture/healthreader/reader.go
   - internal/queries/dispatcher_queries.go
@@ -35,6 +35,7 @@ code_paths:
   - internal/tools/observe/timeline/correlation.go
   - internal/tools/observe/page/page_state.go
   - cmd/browser-agent/internal/mcphttp/handler.go
+  - cmd/browser-agent/internal/telemetryapi/handler.go
   - internal/tools/observe/hints/hints.go
   - internal/tools/observe/idbquery/execute.go
   - internal/tools/observe/idbquery/scripts.go
@@ -55,6 +56,7 @@ code_paths:
   - src/lib/net/websocket.ts
   - src/lib/net/websocket-tracking.ts
 test_paths:
+  - cmd/browser-agent/internal/telemetryapi/handler_test.go
   - internal/tools/observe/core/filtering_test.go
   - cmd/browser-agent/waterfall_ondemand_test.go
   - internal/tools/observe/timeline/correlation_test.go
@@ -189,6 +191,10 @@ queue on a wall-clock interval.
 
 Cross-owner runtime health is read through `healthreader.Reader`; no aggregate
 health facade remains on the `Capture` composition root.
+The local `/telemetry` read endpoint is owned by `internal/telemetryapi`, which
+applies one generic bounded-tail policy across every buffer family. The root
+server only composes that handler and contains no telemetry switch or query
+parsing logic.
 Element collection, visibility filtering, limits, and tab metadata use the
 shared command helpers also consumed by `interact-explore`; viewport screenshot
 capture/upload has one implementation for both normal capture and CDP fallback.

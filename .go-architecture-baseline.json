@@ -421,6 +421,10 @@
       "mutable_globals": 0,
       "exports": 6
     },
+    "cmd/browser-agent/internal/telemetryapi/handler.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/terminal/assets/assets.go": {
       "mutable_globals": 1,
       "exports": 1

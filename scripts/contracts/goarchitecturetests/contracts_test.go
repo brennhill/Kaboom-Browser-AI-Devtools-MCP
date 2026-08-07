@@ -428,6 +428,20 @@ func TestClientRegistryHTTPDoesNotReturnToRootServer(t *testing.T) {
 	}
 }
 
+func TestTelemetryHTTPDoesNotReturnToRootServer(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "server.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read root server: %v", err)
+	}
+	if strings.Contains(string(source), "func handleTelemetry(") {
+		t.Error("root server retains local telemetry HTTP implementation")
+	}
+	if !strings.Contains(string(source), "telemetryapi.Handler(") {
+		t.Error("root server does not compose the canonical telemetryapi owner")
+	}
+}
+
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
 	if err != nil {
