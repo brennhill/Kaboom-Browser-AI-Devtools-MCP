@@ -25,6 +25,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/auditlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	qafixturehandler "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qafixture"
+	qafixturetransport "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qafixture/transport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
@@ -35,7 +36,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	fixturecontract "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/qafixture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -73,7 +73,7 @@ func buildQAFixtureHandler(h *ToolHandler) (*qafixturehandler.Handler, error) {
 	handler, err := qafixturehandler.New(qafixturehandler.Deps{
 		Context: h.shutdownCtx,
 		Execute: func(ctx context.Context, command string, params json.RawMessage, timeout time.Duration) (json.RawMessage, error) {
-			return executeQAFixtureCommand(ctx, h, command, params, timeout)
+			return qafixturetransport.Execute(ctx, h.capture, command, params, timeout)
 		},
 		NewCorrelationID:    func() string { return toolresp.NewCorrelationID("qa_fixture") },
 		NewTransactionID:    func() string { return toolresp.NewCorrelationID("fixture_transaction") },
@@ -247,28 +247,6 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return fixtureHandler.Handle(req, args)
 		},
 	})
-}
-
-func executeQAFixtureCommand(
-	ctx context.Context,
-	h *ToolHandler,
-	command string,
-	params json.RawMessage,
-	timeout time.Duration,
-) (json.RawMessage, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if h.capture == nil || !h.capture.Extension().IsExtensionConnected() {
-		return nil, context.Canceled
-	}
-	queryID, err := h.capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
-		Type: command, Params: params,
-	}, timeout, "")
-	if err != nil {
-		return nil, err
-	}
-	return h.capture.Queries().WaitForResultContext(ctx, queryID, timeout)
 }
 
 func configureLocal(

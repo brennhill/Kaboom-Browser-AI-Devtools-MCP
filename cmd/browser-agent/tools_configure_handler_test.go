@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
+	qafixturetransport "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qafixture/transport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -60,13 +61,13 @@ func TestConfigureHealthComposesServerRecoveryAndLaunchState(t *testing.T) {
 func TestExecuteQAFixtureCommandHonorsConnectionCancellationAndQueuePressure(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := executeQAFixtureCommand(ctx, &ToolHandler{}, "qa", nil, time.Second); err != context.Canceled {
+	if _, err := qafixturetransport.Execute(ctx, nil, "qa", nil, time.Second); err != context.Canceled {
 		t.Fatalf("cancelled context error = %v", err)
 	}
 
 	disconnected := capture.NewCapture()
 	defer disconnected.Close()
-	if _, err := executeQAFixtureCommand(context.Background(), &ToolHandler{capture: disconnected}, "qa", nil, time.Second); err != context.Canceled {
+	if _, err := qafixturetransport.Execute(context.Background(), disconnected, "qa", nil, time.Second); err != context.Canceled {
 		t.Fatalf("disconnected extension error = %v", err)
 	}
 
@@ -79,7 +80,7 @@ func TestExecuteQAFixtureCommandHonorsConnectionCancellationAndQueuePressure(t *
 			t.Fatalf("fill command queue: %v", err)
 		}
 	}
-	if _, err := executeQAFixtureCommand(context.Background(), &ToolHandler{capture: connected}, "qa", nil, time.Second); err == nil {
+	if _, err := qafixturetransport.Execute(context.Background(), connected, "qa", nil, time.Second); err == nil {
 		t.Fatal("saturated command queue accepted QA fixture command")
 	}
 }
@@ -97,7 +98,7 @@ func TestExecuteQAFixtureCommandReturnsExtensionResult(t *testing.T) {
 			cap.Queries().SetQueryResultWithClient(pending[0].ID, json.RawMessage(`{"restored":true}`), "")
 		}
 	}()
-	result, err := executeQAFixtureCommand(context.Background(), &ToolHandler{capture: cap}, "qa_restore", json.RawMessage(`{"fixture":"corrupt"}`), time.Second)
+	result, err := qafixturetransport.Execute(context.Background(), cap, "qa_restore", json.RawMessage(`{"fixture":"corrupt"}`), time.Second)
 	if err != nil || string(result) != `{"restored":true}` {
 		t.Fatalf("fixture command result = %s, err = %v", result, err)
 	}

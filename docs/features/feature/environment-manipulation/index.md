@@ -4,12 +4,13 @@ feature_id: feature-environment-manipulation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/cli/parser/generate_configure.go
   - cmd/browser-agent/internal/playbooks/resources/guides.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command.go
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolinteract/interact_page.go
@@ -41,11 +42,11 @@ code_paths:
 test_paths:
   - cmd/browser-agent/golden_test.go
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
-  - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/internal/toolinteract/interact_browser_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup_test.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command_test.go
   - internal/qafixture/fixture_test.go
   - internal/qafixture/transaction_test.go
   - internal/qafixture/registry_test.go
