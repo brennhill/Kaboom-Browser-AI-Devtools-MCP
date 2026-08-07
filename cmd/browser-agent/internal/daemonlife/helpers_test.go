@@ -5,12 +5,25 @@ package daemonlife
 
 import (
 	"context"
+	"os"
+	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
+
+func TestSignalSourceLabelsShutdownSignals(t *testing.T) {
+	for signal, want := range map[os.Signal]string{
+		os.Interrupt: "Ctrl+C", syscall.SIGTERM: "SIGTERM", syscall.SIGHUP: "SIGHUP", syscall.Signal(99): "signal 99",
+	} {
+		if got := SignalSource(signal); !strings.Contains(got, want) {
+			t.Errorf("SignalSource(%v) = %q, want %q", signal, got, want)
+		}
+	}
+}
 
 // loggedEvent is one captured lifecycle event.
 type loggedEvent struct {

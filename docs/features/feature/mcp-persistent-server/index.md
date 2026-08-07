@@ -60,6 +60,7 @@ code_paths:
   - internal/statefault/fault.go
   - internal/statefile/statefile.go
   - cmd/browser-agent/internal/daemonrecovery/reclaimer.go
+  - cmd/browser-agent/internal/daemonhttp/server.go
   - cmd/browser-agent/internal/procctl/stop.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/internal/procctl/pidfile.go
@@ -99,6 +100,8 @@ test_paths:
   - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
   - cmd/browser-agent/internal/daemonrecovery/primitives_test.go
   - cmd/browser-agent/internal/daemonrecovery/reclaimer_test.go
+  - cmd/browser-agent/internal/daemonhttp/server_test.go
+  - cmd/browser-agent/internal/daemonlife/helpers_test.go
   - internal/listenport/store_test.go
   - internal/warningqueue/queue_test.go
   - cmd/browser-agent/internal/httpapi/openapi_test.go
@@ -113,7 +116,6 @@ test_paths:
   - cmd/browser-agent/server_persistence_test.go
   - cmd/browser-agent/server_reliability_test.go
   - cmd/browser-agent/server_reliability_integration_test.go
-  - cmd/browser-agent/main_connection_recovery_primitives_test.go
   - cmd/browser-agent/connection_lifecycle_helpers_test.go
   - cmd/browser-agent/internal/startupconfig/paths_test.go
   - cmd/browser-agent/internal/startupconfig/runtime_test.go

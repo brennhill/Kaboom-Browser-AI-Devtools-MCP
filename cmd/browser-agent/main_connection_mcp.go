@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,6 +18,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/binarywatch"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonhttp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
@@ -129,13 +129,14 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	if err := cleanupStalePIDFile(server, port); err != nil {
 		return err
 	}
-	if err := preflightPortCheck(server, port); err != nil {
+	httpDeps := daemonHTTPDeps(server)
+	if err := daemonhttp.Preflight(httpDeps, port); err != nil {
 		// A leftover process holds the main port and the lock-based takeover did
 		// not clear it. Reclaim it (find + log + kill) so we stay single-instance,
 		// then re-check; only abort if it is still stuck.
 		server.logLifecycle("port_reclaim_attempt", port, map[string]any{"purpose": "main", "reason": err.Error()})
 		server.daemonRecovery.ReclaimPort(port, "main")
-		if err := preflightPortCheck(server, port); err != nil {
+		if err := daemonhttp.Preflight(httpDeps, port); err != nil {
 			return err
 		}
 	}
@@ -151,7 +152,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	// dark too). Never refuses to start; an upgrade/epoch takeover resets the counter.
 	daemonlife.ApplyStartupRestartThrottle(server.daemonRecovery.LifecycleDeps(), port)
 
-	srv, httpDone, err := startHTTPServer(server, port, apiKey, mux)
+	srv, httpDone, err := daemonhttp.Start(httpDeps, port, apiKey, mux)
 	if err != nil {
 		return err
 	}
@@ -333,62 +334,15 @@ func cleanupStalePIDFile(server *Server, port int) error {
 	return nil
 }
 
-// preflightPortCheck verifies the port is available before attempting to bind.
-func preflightPortCheck(server *Server, port int) error {
-	testAddr := fmt.Sprintf("127.0.0.1:%d", port)
-	testLn, err := net.Listen("tcp", testAddr)
-	if err != nil {
-		blockingPID, blockingCmd := server.daemonRecovery.IdentifyPortHolder(port)
-		server.logLifecycle("port_conflict_detected", port, map[string]any{
-			"error":          err.Error(),
-			"blocked_by_pid": blockingPID,
-			"blocked_by_cmd": blockingCmd,
-		})
-		if blockingPID > 0 {
-			return fmt.Errorf("port %d already in use by pid %d (%s); free that port or start Kaboom on a different one: %w",
-				port, blockingPID, blockingCmd, err)
-		}
-		return fmt.Errorf("port %d already in use (owner could not be identified, try '%s'): %w", port, procctl.PortKillHintForce(port), err)
+func daemonHTTPDeps(server *Server) daemonhttp.Deps {
+	return daemonhttp.Deps{
+		IdentifyPortHolder: server.daemonRecovery.IdentifyPortHolder,
+		LogLifecycle:       server.logLifecycle,
+		RecordFailure: func(event string, fields map[string]any) {
+			_ = server.runtime.ExitDiagnostics().Append(event, fields)
+		},
+		Diagnosticf: diag.Printf,
 	}
-	return testLn.Close()
-}
-
-// startHTTPServer launches the HTTP server and waits for it to bind.
-func startHTTPServer(server *Server, port int, apiKey string, mux *http.ServeMux) (*http.Server, <-chan struct{}, error) {
-	httpReady := make(chan error, 1)
-	httpDone := make(chan struct{})
-	srv := &http.Server{
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 65 * time.Second,
-		IdleTimeout:  120 * time.Second,
-		Handler:      httpguard.APIKey(apiKey)(mux),
-	}
-	util.SafeGo(func() {
-		defer close(httpDone)
-		addr := fmt.Sprintf("127.0.0.1:%d", port)
-		ln, err := net.Listen("tcp", addr)
-		if err != nil {
-			httpReady <- err
-			return
-		}
-		httpReady <- nil
-		// #nosec G114 -- localhost-only MCP background server
-		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
-			_ = server.runtime.ExitDiagnostics().Append("http_listener_error", map[string]any{
-				"port":  port,
-				"error": err.Error(),
-			})
-			diag.Printf("[Kaboom] HTTP server error: %v\n", err)
-		}
-	})
-
-	if err := <-httpReady; err != nil {
-		server.logLifecycle("http_bind_failed", port, map[string]any{"error": err.Error()})
-		return nil, nil, fmt.Errorf("cannot bind port %d: %w", port, err)
-	}
-
-	server.logLifecycle("http_bind_success", port, nil)
-	return srv, httpDone, nil
 }
 
 // persistDaemonRuntimeState records process metadata used by lifecycle/stop flows.
@@ -417,7 +371,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	var shutdownSource string
 	select {
 	case shutdownSignal = <-sigCh:
-		shutdownSource = mapSignalSource(shutdownSignal)
+		shutdownSource = daemonlife.SignalSource(shutdownSignal)
 	case <-httpDone:
 		shutdownSource = "http_listener_died"
 		shutdownSignal = syscall.SIGTERM
@@ -512,18 +466,5 @@ func persistTokenSavings(server *Server) {
 		if err := server.tokenTracker.SaveLifetime(lifetimePath); err != nil {
 			diag.Printf("[Kaboom] Failed to save lifetime token stats: %v\n", err)
 		}
-	}
-}
-
-func mapSignalSource(signal os.Signal) string {
-	switch signal {
-	case os.Interrupt:
-		return "Ctrl+C (SIGINT)"
-	case syscall.SIGTERM:
-		return "SIGTERM (likely --stop or kill)"
-	case syscall.SIGHUP:
-		return "SIGHUP (terminal closed)"
-	default:
-		return signal.String()
 	}
 }

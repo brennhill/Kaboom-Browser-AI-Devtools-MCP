@@ -10,11 +10,26 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
+
+// SignalSource describes a process signal for correlated shutdown diagnostics.
+func SignalSource(signal os.Signal) string {
+	switch signal {
+	case os.Interrupt:
+		return "Ctrl+C (SIGINT)"
+	case syscall.SIGTERM:
+		return "SIGTERM (likely --stop or kill)"
+	case syscall.SIGHUP:
+		return "SIGHUP (terminal closed)"
+	default:
+		return signal.String()
+	}
+}
 
 // LaunchOptions describes how this daemon instance was launched.
 type LaunchOptions struct {
