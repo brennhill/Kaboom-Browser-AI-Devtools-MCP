@@ -4,7 +4,7 @@ feature_id: feature-sarif-export
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
@@ -16,7 +16,6 @@ code_paths:
   - internal/export/sarif/types.go
 test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
-  - cmd/browser-agent/tools_generate_audit_test.go
   - internal/export/sarif/export_test.go
   - internal/export/sarif/document_test.go
   - internal/export/sarif/file_test.go

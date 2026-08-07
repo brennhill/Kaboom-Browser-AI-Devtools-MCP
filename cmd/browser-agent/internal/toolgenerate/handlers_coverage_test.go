@@ -34,6 +34,20 @@ type fakeGenerateDeps struct {
 	a11yErr      error
 }
 
+type fakeTestGenerator struct{}
+
+func (fakeTestGenerator) HandleGenerateTestFromContext(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+	return mcp.Succeed(req, "context test", map[string]any{"status": "ok"})
+}
+
+func (fakeTestGenerator) HandleGenerateTestHeal(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+	return mcp.Succeed(req, "healed test", map[string]any{"status": "ok"})
+}
+
+func (fakeTestGenerator) HandleGenerateTestClassify(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+	return mcp.Succeed(req, "classified test", map[string]any{"status": "ok"})
+}
+
 func (f *fakeGenerateDeps) deps() Deps {
 	return Deps{
 		Capture:         f.cap,
@@ -91,6 +105,26 @@ func parseResultJSON[T any](t *testing.T, response mcp.JSONRPCResponse) T {
 		t.Fatalf("invalid result JSON: %v (text=%s)", err, text)
 	}
 	return result
+}
+
+func TestDispatcherRoutesEveryGenerateModeAndRejectsInvalidRequests(t *testing.T) {
+	d := newGenDeps()
+	dispatcher := NewDispatcher(d.deps(), fakeTestGenerator{})
+	for _, args := range []json.RawMessage{nil, json.RawMessage(`{bad`), json.RawMessage(`{"what":"not_a_mode"}`)} {
+		if isError, _ := parseResult(t, dispatcher.Handle(genReq(), args)); !isError {
+			t.Errorf("invalid generate request %q succeeded", args)
+		}
+	}
+	for _, mode := range []string{
+		"reproduction", "test", "pr_summary", "sarif", "har", "csp", "sri",
+		"visual_test", "annotation_report", "annotation_issues",
+		"test_from_context", "test_heal", "test_classify",
+	} {
+		response := dispatcher.Handle(genReq(), json.RawMessage(`{"what":"`+mode+`"}`))
+		if len(response.Result) == 0 {
+			t.Errorf("generate mode %q returned no result", mode)
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -195,13 +229,16 @@ func TestHandlePRSummary(t *testing.T) {
 			{Level: "error", Message: "boom"},
 			{Level: "info", Message: "fine"},
 		})
-		resp := HandlePRSummary(d.deps(), genReq(), nil)
-		isErr, text := parseResult(t, resp)
-		if isErr {
-			t.Fatalf("pr summary should succeed: %s", text)
+		result := parseResultJSON[map[string]any](t, HandlePRSummary(d.deps(), genReq(), nil))
+		stats, _ := result["stats"].(map[string]any)
+		summary, _ := result["summary"].(string)
+		if stats["actions"] != float64(3) || !strings.Contains(summary, "## Session Summary") {
+			t.Fatalf("activity summary = %#v", result)
 		}
-		if len(text) == 0 {
-			t.Error("expected summary text")
+		for _, field := range []string{"commands_completed", "commands_failed", "console_errors", "network_errors", "network_captured"} {
+			if _, exists := stats[field]; !exists {
+				t.Errorf("summary stats missing %q: %#v", field, stats)
+			}
 		}
 	})
 }
@@ -365,9 +402,14 @@ func TestHandleGenerateTest(t *testing.T) {
 			{Type: "navigate", ToURL: "https://example.com", Timestamp: time.Now().UnixMilli()},
 			{Type: "click", Selectors: map[string]any{"css": "#btn"}, Timestamp: time.Now().UnixMilli()},
 		})
-		resp := HandleGenerateTest(d.deps(), genReq(), json.RawMessage(`{"test_name":"login","last_n":10}`))
-		if isErr, text := parseResult(t, resp); isErr {
-			t.Fatalf("generate test with actions should succeed: %s", text)
+		result := parseResultJSON[map[string]any](t, HandleGenerateTest(d.deps(), genReq(), json.RawMessage(`{"test_name":"login","last_n":10}`)))
+		metadata, _ := result["metadata"].(map[string]any)
+		script, _ := result["script"].(string)
+		if result["test_name"] != "login" || result["action_count"] != float64(2) || metadata["actions_available"] != float64(2) {
+			t.Fatalf("generated test metadata = %#v", result)
+		}
+		if !strings.Contains(script, "import { test, expect }") || !strings.Contains(script, "test.describe('login'") {
+			t.Fatalf("generated Playwright script = %q", script)
 		}
 	})
 
