@@ -284,6 +284,10 @@ Parsed flags are converted into a validated `startupconfig.Runtime` without
 process exits. Root startup retains only explicit early-exit and launch policy;
 port validation precedes all network/process modes, while path, parallel-state,
 log fallback, and upload-boundary failures are owner-tested.
+The source root contains no compiled executables. A deterministic architecture
+gate rejects Mach-O, ELF, and PE signatures there, preventing local build
+artifacts from silently inflating releases or introducing platform-specific
+repository state.
 
 Stdio isolation tests exercise the built bridge rather than the Go test binary.
 They close stdin and await the bridge's process-exit barrier, so transport

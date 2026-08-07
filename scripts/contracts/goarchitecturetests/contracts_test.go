@@ -7,6 +7,7 @@
 package goarchitecturetests
 
 import (
+	"bytes"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -16,6 +17,40 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestBrowserAgentRootContainsNoCompiledArtifacts(t *testing.T) {
+	root := filepath.Join(projectRoot(), "cmd", "browser-agent")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatalf("read browser-agent root: %v", err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		path := filepath.Join(root, entry.Name())
+		file, openErr := os.Open(path)
+		if openErr != nil {
+			t.Fatalf("open %s: %v", path, openErr)
+		}
+		header := make([]byte, 4)
+		count, readErr := file.Read(header)
+		closeErr := file.Close()
+		if closeErr != nil {
+			t.Fatalf("close %s: %v", path, closeErr)
+		}
+		if readErr != nil && count == 0 {
+			continue // EXPECTED_ABSENCE: empty source assets have no binary signature to classify.
+		}
+		binary := bytes.Equal(header, []byte{0x7f, 'E', 'L', 'F'}) ||
+			bytes.Equal(header, []byte{0xcf, 0xfa, 0xed, 0xfe}) ||
+			bytes.Equal(header, []byte{0xfe, 0xed, 0xfa, 0xcf}) ||
+			bytes.Equal(header[:2], []byte{'M', 'Z'})
+		if binary {
+			t.Errorf("compiled artifact is tracked in source root: %s", entry.Name())
+		}
+	}
+}
 
 // projectRoot returns the repository root containing go.mod.
 func projectRoot() string {

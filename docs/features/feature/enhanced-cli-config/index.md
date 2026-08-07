@@ -149,6 +149,8 @@ the regression suite deterministically blocks the backup path to enforce this.
   `internal/startupconfig` builds the validated runtime, paths, and upload
   boundary without terminating the process. Port, state, parallel-isolation,
   log fallback, and upload failures are therefore deterministic unit contracts.
+- Compiled CLI/daemon artifacts are prohibited in the source root by a binary
+  signature architecture gate; platform builds remain release outputs only.
 - `VERSION` is the only human-edited release version. `make bump-version NEW_VERSION=X.Y.Z`, `make sync-version`, and `make validate-versions` all delegate to one explicit transactional implementation.
 - Release upgrade UAT packs and installs the public npm launcher plus the
   current platform package in a disposable home. It validates artifact hashes,
