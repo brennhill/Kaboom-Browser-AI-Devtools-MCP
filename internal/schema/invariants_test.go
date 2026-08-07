@@ -2,10 +2,35 @@
 package schema
 
 import (
+	"bytes"
 	"encoding/json"
+	"os"
 	"slices"
 	"testing"
 )
+
+func TestAllToolsMatchGoldenContract(t *testing.T) {
+	t.Parallel()
+	actual, err := json.MarshalIndent(AllTools(), "", "  ")
+	if err != nil {
+		t.Fatalf("marshal tool schemas: %v", err)
+	}
+	actual = append(actual, '\n')
+	path := "../../cmd/browser-agent/testdata/mcp-tools-list.golden.json"
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.WriteFile(path, actual, 0o644); err != nil {
+			t.Fatalf("update golden: %v", err)
+		}
+		return
+	}
+	expected, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	if !bytes.Equal(actual, expected) {
+		t.Fatalf("tool schema golden mismatch; run UPDATE_GOLDEN=1 go test ./internal/schema -run TestAllToolsMatchGoldenContract")
+	}
+}
 
 // TestAllToolSchemas_NoTopLevelCombiners ensures no tool input_schema uses
 // oneOf, allOf, or anyOf at the top level. The Claude API rejects such schemas

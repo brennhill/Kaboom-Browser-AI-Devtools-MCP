@@ -41,7 +41,8 @@ code_paths:
   - src/types/runtime/queries.ts
   - src/types/wire/wire-qa-fixture.ts
 test_paths:
-  - cmd/browser-agent/golden_test.go
+  - internal/schema/invariants_test.go
+  - cmd/browser-agent/internal/mcpprotocol/responses_test.go
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
   - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/internal/toolinteract/interact_browser_test.go

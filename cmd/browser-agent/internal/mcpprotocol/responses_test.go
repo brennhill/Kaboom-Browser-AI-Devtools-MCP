@@ -3,12 +3,42 @@
 package mcpprotocol
 
 import (
+	"bytes"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+func TestInitializeMatchesGoldenContract(t *testing.T) {
+	t.Parallel()
+	request := mcp.JSONRPCRequest{
+		JSONRPC: mcp.JSONRPCVersion, ID: 1,
+		Params: json.RawMessage(`{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}`),
+	}
+	response := Initialize(request, "VERSION")
+	actual, err := json.MarshalIndent(json.RawMessage(response.Result), "", "  ")
+	if err != nil {
+		t.Fatalf("marshal initialize result: %v", err)
+	}
+	actual = append(actual, '\n')
+	path := "../../testdata/mcp-initialize.golden.json"
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.WriteFile(path, actual, 0o644); err != nil {
+			t.Fatalf("update golden: %v", err)
+		}
+		return
+	}
+	expected, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	if !bytes.Equal(actual, expected) {
+		t.Fatalf("initialize golden mismatch; run UPDATE_GOLDEN=1 go test ./cmd/browser-agent/internal/mcpprotocol -run TestInitializeMatchesGoldenContract")
+	}
+}
 
 func TestInitializeNegotiatesVersionAndAdvertisesKaboomWorkflow(t *testing.T) {
 	request := mcp.JSONRPCRequest{
