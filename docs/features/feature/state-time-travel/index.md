@@ -19,7 +19,6 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - internal/recording/actionlog/recorder_test.go
-  - cmd/browser-agent/tools_interact_gate_test.go
   - internal/schema/interact/schema_test.go
   - tests/extension/pilot/pilot-state.test.js
   - tests/extension/injection/inject-settings.test.js
@@ -85,7 +84,6 @@ last_verified_date: 2026-03-05
 - Tests:
   - `scripts/contracts/goarchitecturetests/contracts_test.go`
   - `cmd/browser-agent/internal/toolinteract/interactstate/state_test.go`
-  - `cmd/browser-agent/tools_interact_gate_test.go`
   - `internal/schema/interact/schema_test.go`
   - `tests/extension/pilot/pilot-state.test.js`
   - `tests/extension/injection/inject-settings.test.js`

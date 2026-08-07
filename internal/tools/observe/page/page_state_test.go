@@ -74,6 +74,36 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 	})
 }
 
+func TestGetPageInfoReportsCSPRestrictionsOnlyWhenActive(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		restricted bool
+		level      string
+		wantCount  int
+	}{
+		{name: "clear", level: "none"},
+		{name: "script execution", restricted: true, level: "script_exec", wantCount: 1},
+		{name: "page blocked", restricted: true, level: "page_blocked", wantCount: 16},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			captured := capture.NewCapture()
+			defer captured.Close()
+			capturefixture.SetCSP(captured, testCase.restricted, testCase.level)
+			data := testsupport.ExtractMCPJSON(t, GetPageInfo(testsupport.Deps(captured), mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, nil))
+			actions, present := data["blocked_actions"].([]any)
+			if testCase.wantCount == 0 {
+				if present || data["blocked_reason"] != nil {
+					t.Fatalf("clear page info includes CSP guidance: %#v", data)
+				}
+				return
+			}
+			if !present || len(actions) != testCase.wantCount || data["blocked_reason"] == "" || data["csp_level"] != testCase.level {
+				t.Fatalf("CSP page info = %#v", data)
+			}
+		})
+	}
+}
+
 func TestGetStorageFiltersSuccessfulCapture(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()

@@ -4,7 +4,7 @@ feature_id: feature-lazy-server-start
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
@@ -32,7 +32,8 @@ test_paths:
   - cmd/browser-agent/internal/bridge/daemoncmd/command_test.go
   - cmd/browser-agent/internal/launchmode/launch_mode_test.go
   - cmd/browser-agent/internal/launchmode/runtime_mode_test.go
-  - cmd/browser-agent/tools_coldstart_gate_test.go
+  - cmd/browser-agent/internal/toolguard/guards_test.go
+  - cmd/browser-agent/internal/asynccommand/handler_test.go
   - internal/identity/mcp_test.go
 ---
 

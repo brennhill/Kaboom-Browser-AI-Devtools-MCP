@@ -70,3 +70,119 @@ func TestDefaultExtensionReadinessTimeoutIsBounded(t *testing.T) {
 		t.Fatalf("DefaultExtensionReadinessTimeout = %v, want (0, 10s]", DefaultExtensionReadinessTimeout)
 	}
 }
+
+func TestRuntimeGuardPassAndRecoveryContracts(t *testing.T) {
+	request := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+	captured := capture.NewCapture()
+	capturefixture.SetPilot(captured, false)
+	guards := New(captured, context.Background(), time.Millisecond)
+
+	pilotResponse, blocked := guards.RequirePilot(request)
+	if !blocked || guardError(t, pilotResponse).RecoveryToolCall["tool"] != "observe" {
+		t.Fatalf("pilot recovery = %#v blocked=%v", guardError(t, pilotResponse), blocked)
+	}
+	capturefixture.SetPilot(captured, true)
+	if _, blocked = guards.RequirePilot(request); blocked {
+		t.Fatal("enabled pilot was blocked")
+	}
+
+	extensionResponse, blocked := guards.RequireExtension(request)
+	if !blocked || guardError(t, extensionResponse).RecoveryToolCall["tool"] == nil {
+		t.Fatalf("extension recovery = %#v blocked=%v", guardError(t, extensionResponse), blocked)
+	}
+	capturefixture.Connect(captured)
+	if _, blocked = guards.RequireExtension(request); blocked {
+		t.Fatal("connected extension was blocked")
+	}
+
+	trackingResponse, blocked := guards.RequireTabTracking(request)
+	if !blocked || guardError(t, trackingResponse).RecoveryToolCall != nil || guardError(t, trackingResponse).RecoveryPlaybook == "" {
+		t.Fatalf("tracking recovery = %#v blocked=%v", guardError(t, trackingResponse), blocked)
+	}
+	capturefixture.Track(captured, 42, "https://example.test")
+	if _, blocked = guards.RequireTabTracking(request); blocked {
+		t.Fatal("tracked tab was blocked")
+	}
+
+	capturefixture.SetCSP(captured, true, "script_exec")
+	response, blocked := guards.RequireCSPClear(request, "main")
+	if !blocked || guardError(t, response).RecoveryToolCall["tool"] != "interact" {
+		t.Fatalf("CSP recovery = %#v blocked=%v", guardError(t, response), blocked)
+	}
+	for _, world := range []string{"auto", "isolated"} {
+		if _, blocked = guards.RequireCSPClear(request, world); blocked {
+			t.Fatalf("world %q was blocked", world)
+		}
+	}
+	capturefixture.SetCSP(captured, false, "script_exec")
+	if _, blocked = guards.RequireCSPClear(request, "main"); blocked {
+		t.Fatal("unrestricted page was blocked")
+	}
+}
+
+func TestExtensionReadinessUnblocksOnConnectionEvent(t *testing.T) {
+	captured := capture.NewCapture()
+	guards := New(captured, context.Background(), 500*time.Millisecond)
+	done := make(chan bool, 1)
+	go func() {
+		_, blocked := guards.RequireExtension(mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1})
+		done <- blocked
+	}()
+	capturefixture.Connect(captured)
+	if blocked := <-done; blocked {
+		t.Fatal("connection event did not release readiness guard")
+	}
+}
+
+func TestInjectCSPBlockedActionsUsesCanonicalRestrictionMatrix(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		restricted bool
+		level      string
+		wantCount  int
+	}{
+		{name: "clear", level: "none"},
+		{name: "script execution", restricted: true, level: "script_exec", wantCount: 1},
+		{name: "page blocked", restricted: true, level: "page_blocked", wantCount: 16},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			captured := capture.NewCapture()
+			capturefixture.SetCSP(captured, testCase.restricted, testCase.level)
+			response := New(captured, context.Background(), time.Millisecond).InjectCSPBlockedActions(
+				mcp.Succeed(request(), "queued", map[string]any{"status": "queued"}),
+			)
+			data := guardResultData(t, response)
+			actions, present := data["blocked_actions"].([]any)
+			if testCase.wantCount == 0 {
+				if present || data["blocked_reason"] != nil {
+					t.Fatalf("clear response includes CSP guidance: %#v", data)
+				}
+				return
+			}
+			if !present || len(actions) != testCase.wantCount || data["blocked_reason"] == "" {
+				t.Fatalf("CSP guidance = %#v", data)
+			}
+			if testCase.level == "script_exec" && actions[0] != "execute_js" {
+				t.Fatalf("script-exec actions = %#v", actions)
+			}
+		})
+	}
+}
+
+func request() mcp.JSONRPCRequest {
+	return mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+}
+
+func guardResultData(t *testing.T, response mcp.JSONRPCResponse) map[string]any {
+	t.Helper()
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil || len(result.Content) == 0 {
+		t.Fatalf("decode result: %v (%#v)", err, result)
+	}
+	start := strings.IndexByte(result.Content[0].Text, '{')
+	var data map[string]any
+	if start < 0 || json.Unmarshal([]byte(result.Content[0].Text[start:]), &data) != nil {
+		t.Fatalf("decode result data: %#v", result)
+	}
+	return data
+}

@@ -25,7 +25,8 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_startup_contention_test.go
   - cmd/browser-agent/internal/launchmode/launch_mode_test.go
-  - cmd/browser-agent/tools_coldstart_gate_test.go
+  - cmd/browser-agent/internal/toolguard/guards_test.go
+  - cmd/browser-agent/internal/asynccommand/handler_test.go
 ---
 
 # Lazy Server Start Tech Spec

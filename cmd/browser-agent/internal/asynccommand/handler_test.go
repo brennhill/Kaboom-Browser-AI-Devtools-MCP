@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -145,6 +146,50 @@ func TestMaybeWaitForCommandBackgroundResponseIsQueued(t *testing.T) {
 	if data["status"] != "queued" || data["queued"] != true || data["final"] != false || data["correlation_id"] != "click-1" {
 		t.Fatalf("queued lifecycle data = %#v", data)
 	}
+}
+
+func TestMaybeWaitForCommandUsesCurrentConnectionAndResultEvents(t *testing.T) {
+	t.Run("disconnected fails without waiting for command expiry", func(t *testing.T) {
+		captured := capture.NewCapture()
+		defer captured.Close()
+		correlationID := "disconnected"
+		captured.Queries().RegisterCommand(correlationID, "query-disconnected", time.Hour)
+		response := New(Deps{Capture: captured}).MaybeWaitForCommand(
+			mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, correlationID, json.RawMessage(`{}`), "queued",
+		)
+		result := decodeToolResult(t, response)
+		if !result.IsError || !strings.Contains(result.Content[0].Text, mcp.ErrNoData) {
+			t.Fatalf("disconnected result = %#v", result)
+		}
+	})
+
+	t.Run("connected command completes from dispatcher event", func(t *testing.T) {
+		captured := capture.NewCapture()
+		defer captured.Close()
+		capturefixture.Connect(captured)
+		correlationID := "connected"
+		captured.Queries().RegisterCommand(correlationID, "query-connected", time.Hour)
+		responses := make(chan mcp.JSONRPCResponse, 1)
+		go func() {
+			responses <- New(Deps{Capture: captured}).MaybeWaitForCommand(
+				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, correlationID, json.RawMessage(`{}`), "queued",
+			)
+		}()
+		captured.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
+		result := decodeToolResult(t, <-responses)
+		if result.IsError || decodeResponseData(t, result)["status"] != "complete" {
+			t.Fatalf("connected result = %#v", result)
+		}
+	})
+}
+
+func decodeToolResult(t *testing.T, response mcp.JSONRPCResponse) mcp.MCPToolResult {
+	t.Helper()
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		t.Fatalf("decode tool result: %v", err)
+	}
+	return result
 }
 
 func decodeResponseData(t *testing.T, result mcp.MCPToolResult) map[string]any {

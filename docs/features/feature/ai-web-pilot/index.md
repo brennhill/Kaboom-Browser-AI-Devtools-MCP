@@ -4,7 +4,7 @@ feature_id: feature-ai-web-pilot
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/tools_core.go
@@ -27,8 +27,9 @@ code_paths:
   - src/content/ui/toast.ts
   - src/content/ui/tracked-hover-launcher.ts
 test_paths:
-  - cmd/browser-agent/tools_interact_gate_test.go
-  - cmd/browser-agent/tools_coldstart_gate_test.go
+  - cmd/browser-agent/internal/toolguard/guards_test.go
+  - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
+  - cmd/browser-agent/internal/asynccommand/handler_test.go
   - tests/extension/pilot/pilot-toggle.test.js
   - tests/extension/pilot/pilot-command-response.test.js
   - tests/extension/content/content-message-correlation.test.js

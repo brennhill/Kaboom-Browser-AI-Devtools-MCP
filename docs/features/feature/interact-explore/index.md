@@ -98,8 +98,8 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/contracts/explore_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_entrypoint_test.go
-  - cmd/browser-agent/tools_csp_blocked_test.go
-  - cmd/browser-agent/tools_interact_gate_test.go
+  - cmd/browser-agent/internal/toolguard/guards_test.go
+  - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
   - cmd/browser-agent/internal/toolinteract/action_runtime_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go
@@ -360,6 +360,10 @@ The former root audit suite and its skipped placeholders are deleted. Canonical
 dispatch, browser, DOM, state, and schema owners now provide its real coverage;
 rich-result tests use an explicitly connected shared fixture instead of hidden
 connection state owned by an unrelated audit file.
+Guard policy, readiness events, CSP response guidance, and cross-action gate
+ordering now run at their canonical owners. The async-command constructor also
+normalizes optional enrichment callbacks so disconnected or partial embeddings
+cannot panic while producing a structured error.
 Form, navigation, and accessibility/SARIF workflow validation lives with the
 workflow owner. Its deterministic SARIF contract proves one accessibility
 analysis is reused directly instead of issuing a duplicate browser query.

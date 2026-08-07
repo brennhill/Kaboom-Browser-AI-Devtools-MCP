@@ -10,7 +10,8 @@ last_verified_date: 2026-03-05
 # Cold-Start Queuing QA Plan
 
 ## Automated Coverage
-- `cmd/browser-agent/tools_coldstart_gate_test.go`
+- `cmd/browser-agent/internal/toolguard/guards_test.go`
+- `cmd/browser-agent/internal/asynccommand/handler_test.go`
 
 ## Required Scenarios
 1. Extension connects before timeout: command proceeds.

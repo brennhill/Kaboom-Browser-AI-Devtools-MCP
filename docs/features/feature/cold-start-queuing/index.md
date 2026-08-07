@@ -4,7 +4,7 @@ feature_id: feature-cold-start-queuing
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolguard/guards.go
@@ -14,7 +14,8 @@ test_paths:
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/bridge/bridge_startup_test.go
   - internal/capture/syncruntime/readiness_gate_test.go
-  - cmd/browser-agent/tools_coldstart_gate_test.go
+  - cmd/browser-agent/internal/toolguard/guards_test.go
+  - cmd/browser-agent/internal/asynccommand/handler_test.go
   - cmd/browser-agent/tools_async_timeout_test.go
   - cmd/browser-agent/tools_core_sync_test.go
 last_verified_version: 0.7.12

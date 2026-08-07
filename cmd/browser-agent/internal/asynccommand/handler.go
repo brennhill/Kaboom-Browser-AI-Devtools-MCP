@@ -51,6 +51,18 @@ type Handler struct {
 
 // New constructs an asynchronous command lifecycle owner.
 func New(deps Deps) *Handler {
+	if deps.DiagnosticHint == nil {
+		deps.DiagnosticHint = func(*mcp.StructuredError) {}
+	}
+	if deps.DiagnosticHintString == nil {
+		deps.DiagnosticHintString = func() string { return "" }
+	}
+	if deps.AttachEvidence == nil {
+		deps.AttachEvidence = func(string, map[string]any) {}
+	}
+	if deps.AttachRetryContext == nil {
+		deps.AttachRetryContext = func(string, map[string]any, string, string) {}
+	}
 	waitForCommand := func(string, time.Duration) (*queries.CommandResult, bool) {
 		return nil, false
 	}
