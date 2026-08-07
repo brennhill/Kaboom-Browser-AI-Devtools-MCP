@@ -89,3 +89,6 @@ production threshold is preserved while boundary tests operate on tiny files
 instead of allocating and encoding 100 MB fixtures. Core upload, HTTP adapter,
 security, and interact response contracts live with their respective owners;
 root tests retain only true installed-server integration coverage.
+OS-dialog dismissal status mapping is tested through injected stage functions
+in `upload/httpapi`; unit tests never invoke host `osascript`, `xdotool`, or
+PowerShell commands and therefore produce deterministic results on every CI OS.
