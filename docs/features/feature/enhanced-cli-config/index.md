@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-08
 code_paths:
   - cmd/browser-agent/internal/runtimeflags/flags.go
   - internal/serverdefaults/defaults.go
@@ -40,6 +40,7 @@ code_paths:
   - scripts/release/build-crx.js
   - scripts/release/daemon-health-identity.mjs
   - scripts/release/install-upgrade-regression.mjs
+  - scripts/release/npm-wrapper/run-tests.mjs
   - cmd/browser-agent/internal/nativeinstall/installer.go
   - cmd/browser-agent/internal/nativeinstall/codex.go
   - npm/kaboom-agentic-browser/lib/installation/extension.js
@@ -126,6 +127,7 @@ test_paths:
   - tests/cli/contracts/operator-script-branding.test.cjs
   - scripts/release/canonical-installer-scripts.test.mjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
+  - scripts/release/npm-wrapper/run-tests.test.mjs
   - scripts/release/version/version-sync.test.mjs
   - tests/extension/contracts/tooling-contracts.test.js
   - cmd/browser-agent/internal/cli/cli_test.go

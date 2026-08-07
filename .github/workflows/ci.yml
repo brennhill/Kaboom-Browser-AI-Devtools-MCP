@@ -134,7 +134,9 @@ jobs:
         run: node --test scripts/release/install-upgrade-regression.contract.test.mjs
 
       - name: npm wrapper tests
-        run: node scripts/release/run-npm-wrapper-tests.js
+        run: |
+          node --test scripts/release/npm-wrapper/run-tests.test.mjs
+          node scripts/release/npm-wrapper/run-tests.mjs
 
       - name: Platform-binary publish guard tests
         run: node --test scripts/release/verify-platform-binaries.test.mjs
