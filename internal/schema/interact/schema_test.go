@@ -128,6 +128,28 @@ func TestInteractToolSchema_IncludeScreenshotParam(t *testing.T) {
 	}
 }
 
+func TestInteractToolSchema_RichActionProperties(t *testing.T) {
+	t.Parallel()
+	properties, ok := ToolSchema().InputSchema["properties"].(map[string]any)
+	if !ok {
+		t.Fatal("schema properties missing")
+	}
+	for name, wantType := range map[string]string{"analyze": "boolean", "evidence": "string", "frame": "string"} {
+		property, ok := properties[name].(map[string]any)
+		if !ok || property["type"] != wantType {
+			t.Fatalf("%s property = %#v, want type %s", name, properties[name], wantType)
+		}
+		if description, _ := property["description"].(string); description == "" {
+			t.Fatalf("%s property has no description", name)
+		}
+	}
+	evidence := properties["evidence"].(map[string]any)
+	values := toSchemaStringSlice(t, evidence["enum"])
+	if strings.Join(values, ",") != "off,on_mutation,always" {
+		t.Fatalf("evidence enum = %v", values)
+	}
+}
+
 func TestInteractActionSpecs_EnumParity(t *testing.T) {
 	t.Parallel()
 

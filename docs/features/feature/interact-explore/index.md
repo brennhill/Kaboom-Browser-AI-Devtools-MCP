@@ -101,7 +101,7 @@ test_paths:
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
   - cmd/browser-agent/internal/toolinteract/action_runtime_test.go
-  - cmd/browser-agent/tools_interact_rich_test.go
+  - cmd/browser-agent/internal/toolinteract/contracts/rich_action_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/performance_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go
   - cmd/browser-agent/tools_schema_parity_test.go

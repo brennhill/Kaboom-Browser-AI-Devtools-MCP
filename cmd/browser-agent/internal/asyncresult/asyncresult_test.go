@@ -259,6 +259,35 @@ func TestEnrichCommandResponseData_MatchedSurfacedTopLevel(t *testing.T) {
 	}
 }
 
+func TestEnrichCommandResponseDataPromotesRichActionFields(t *testing.T) {
+	t.Parallel()
+	responseData := map[string]any{"result": json.RawMessage(`{
+		"success":true,
+		"dom_summary":"2 added",
+		"timing":{"total_ms":42},
+		"dom_changes":{"added":2,"summary":"2 added"},
+		"analysis":"click completed in 42ms"
+	}`)}
+	if embeddedError, failed := EnrichCommandResponseData(responseData["result"].(json.RawMessage), responseData); failed || embeddedError != "" {
+		t.Fatalf("enrichment error = %q, %t", embeddedError, failed)
+	}
+	StripEnrichedFieldsFromResult(responseData)
+	for _, key := range []string{"dom_summary", "timing", "dom_changes", "analysis"} {
+		if responseData[key] == nil {
+			t.Fatalf("rich field %q missing: %#v", key, responseData)
+		}
+	}
+	var nested map[string]any
+	if err := json.Unmarshal(responseData["result"].(json.RawMessage), &nested); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"dom_summary", "timing", "dom_changes", "analysis"} {
+		if _, duplicated := nested[key]; duplicated {
+			t.Fatalf("nested result duplicates %q: %#v", key, nested)
+		}
+	}
+}
+
 // ============================================
 // StripEnrichedFieldsFromResult tests
 // ============================================
