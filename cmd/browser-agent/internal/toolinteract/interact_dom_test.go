@@ -213,16 +213,30 @@ func TestValidateWaitForConditions(t *testing.T) {
 }
 
 func TestValidateDOMActionParams(t *testing.T) {
-	// select requires value.
-	if _, failed := ValidateDOMActionParams(testReq(), "select", "", "", ""); !failed {
-		t.Error("expected select to require value")
+	tests := []struct {
+		name, action, text, value, attribute string
+		wantFailure                          bool
+	}{
+		{"click", "click", "", "", "", false},
+		{"check", "check", "", "", "", false},
+		{"focus", "focus", "", "", "", false},
+		{"scroll", "scroll_to", "", "", "", false},
+		{"wait", "wait_for", "", "", "", false},
+		{"key", "key_press", "", "", "", false},
+		{"type missing", "type", "", "", "", true},
+		{"type", "type", "hello", "", "", false},
+		{"select missing", "select", "", "", "", true},
+		{"select", "select", "", "opt", "", false},
+		{"attribute missing", "get_attribute", "", "", "", true},
+		{"attribute", "get_attribute", "", "", "href", false},
 	}
-	if _, failed := ValidateDOMActionParams(testReq(), "select", "", "opt", ""); failed {
-		t.Error("expected select with value to pass")
-	}
-	// Unknown action has no required params.
-	if _, failed := ValidateDOMActionParams(testReq(), "click", "", "", ""); failed {
-		t.Error("expected click to have no required params")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, failed := ValidateDOMActionParams(testReq(), tc.action, tc.text, tc.value, tc.attribute)
+			if failed != tc.wantFailure {
+				t.Fatalf("ValidateDOMActionParams(%q) failed=%v, want %v", tc.action, failed, tc.wantFailure)
+			}
+		})
 	}
 }
 

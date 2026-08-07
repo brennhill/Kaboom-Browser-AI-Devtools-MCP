@@ -444,7 +444,7 @@ if (params.summary_script) {
 - Compact mode omits `nav_links`, `word_count`
 - Full mode includes all fields
 
-**Modify: `cmd/browser-agent/tools_interact_handler_test.go`**
+**Modify: `cmd/browser-agent/internal/interactdispatch/handler_test.go`**
 
 - Navigate with default params includes `summary_script` in queued query params
 - Navigate with `summary: false` omits `summary_script`

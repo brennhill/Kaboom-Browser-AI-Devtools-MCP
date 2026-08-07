@@ -166,3 +166,28 @@ func TestHandlerActionNamesAreSortedAndDefensive(t *testing.T) {
 		t.Fatal("caller mutated action-name surface")
 	}
 }
+
+func TestHandlerRejectsInvalidOrMissingModeSelectors(t *testing.T) {
+	h, fixture := newDispatchFixture(t)
+	tests := []struct{ name, args, code string }{
+		{"invalid JSON", `{bad`, mcp.ErrInvalidJSON},
+		{"empty object", `{}`, mcp.ErrMissingParam},
+		{"nil args", ``, mcp.ErrMissingParam},
+		{"action is not selector", `{"action":"click"}`, mcp.ErrMissingParam},
+		{"unknown", `{"what":"nonexistent_action"}`, mcp.ErrUnknownMode},
+		{"observe screenshot", `{"what":"screenshot"}`, mcp.ErrUnknownMode},
+		{"state alias", `{"what":"state_save"}`, mcp.ErrUnknownMode},
+		{"recording alias", `{"what":"record_start"}`, mcp.ErrUnknownMode},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := h.Handle(dispatchReq(), json.RawMessage(tc.args))
+			if text := resultText(t, resp); !strings.Contains(text, tc.code) {
+				t.Fatalf("response = %s, want %s", text, tc.code)
+			}
+		})
+	}
+	if len(fixture.actions) != 0 {
+		t.Fatalf("rejected modes invoked actions: %v", fixture.actions)
+	}
+}
