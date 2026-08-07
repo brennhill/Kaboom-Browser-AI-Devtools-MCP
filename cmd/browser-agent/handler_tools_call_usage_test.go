@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpcall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
@@ -164,7 +165,7 @@ func TestGetUsageTracker(t *testing.T) {
 
 	t.Run("test double returns nil", func(t *testing.T) {
 		mcpHandler := NewMCPHandler(nil, "test")
-		setFakeToolBackend(mcpHandler, &fakeToolHandlerForMCP{})
+		mcpHandler.SetToolBackend(mcpcall.Backend{})
 		got := mcpHandler.GetUsageTracker()
 		if got != nil {
 			t.Fatalf("GetUsageTracker() = %p, want nil for test double", got)

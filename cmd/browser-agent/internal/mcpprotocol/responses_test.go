@@ -23,8 +23,10 @@ func TestInitializeNegotiatesVersionAndAdvertisesKaboomWorkflow(t *testing.T) {
 	if result.ProtocolVersion != "2024-11-05" || result.ServerInfo.Version != "0.9.0" {
 		t.Fatalf("initialize result = %#v", result)
 	}
-	if !strings.Contains(result.Instructions, "USE KABOOM") || !strings.Contains(result.Instructions, "DO NOT use Chrome DevTools") {
-		t.Fatalf("instructions do not establish Kaboom ownership: %q", result.Instructions)
+	for _, required := range []string{"USE KABOOM", "DO NOT use Chrome DevTools", "DO NOT use Playwright", "user explicitly requests", "capability gap"} {
+		if !strings.Contains(result.Instructions, required) {
+			t.Fatalf("instructions missing %q: %q", required, result.Instructions)
+		}
 	}
 }
 

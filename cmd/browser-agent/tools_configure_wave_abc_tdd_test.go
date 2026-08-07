@@ -13,6 +13,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
+type waveExecutorFunc func(mcp.JSONRPCRequest, string, json.RawMessage) (mcp.JSONRPCResponse, bool)
+
+func (execute waveExecutorFunc) HandleToolCall(request mcp.JSONRPCRequest, name string, arguments json.RawMessage) (mcp.JSONRPCResponse, bool) {
+	return execute(request, name, arguments)
+}
+
 func configureSchemaPropertiesForTest(t *testing.T) map[string]any {
 	t.Helper()
 	server, err := NewServer(t.TempDir()+"/schema-wave-abc.jsonl", 10)
@@ -221,10 +227,10 @@ func TestWaveC_RedactionEngineIsWiredAndApplied(t *testing.T) {
 		Result:  json.RawMessage(`{"content":[{"type":"text","text":"Authorization: Bearer ghp_1234567890abcdef"}],"isError":false}`),
 	}
 	backend := h.tools
-	backend.Executor = &fakeToolHandlerForMCP{handleFn: func(request mcp.JSONRPCRequest, _ string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
+	backend.Executor = waveExecutorFunc(func(request mcp.JSONRPCRequest, _ string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 		input.ID = request.ID
 		return input, true
-	}}
+	})
 	output := mcpcall.Handle(mcp.JSONRPCRequest{
 		JSONRPC:  "2.0",
 		ID:       1,

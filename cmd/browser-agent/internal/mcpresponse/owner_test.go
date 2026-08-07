@@ -82,6 +82,27 @@ func TestOwnerWarnsUnknownArgumentsInStableOrder(t *testing.T) {
 	if len(warnings) != 2 || !strings.Contains(warnings[0], "'a'") || !strings.Contains(warnings[1], "'z'") {
 		t.Fatalf("warnings = %#v", warnings)
 	}
+	warnings = nil
+	owner.WarnUnknownArguments("observe", json.RawMessage(`{"what":"logs"}`), schemas)
+	if len(warnings) != 0 {
+		t.Fatalf("known arguments produced warnings: %#v", warnings)
+	}
+}
+
+func TestOwnerDrainsQueuedWarningsOnce(t *testing.T) {
+	warnings := []string{"state_dir_not_writable: test warning"}
+	owner := New(Config{DrainWarnings: func() []string {
+		drained := warnings
+		warnings = nil
+		return drained
+	}})
+	first := allResponseText(t, owner.Augment(textResponse(), true))
+	if !strings.Contains(first, "_warnings:") || !strings.Contains(first, "state_dir_not_writable") {
+		t.Fatalf("queued warning missing: %s", first)
+	}
+	if second := allResponseText(t, owner.Augment(textResponse(), true)); strings.Contains(second, "_warnings:") {
+		t.Fatalf("queued warning repeated: %s", second)
+	}
 }
 
 func TestOwnerAddsAlteredEnvironmentWarningAndMetadata(t *testing.T) {
@@ -121,4 +142,17 @@ func responseText(t *testing.T, response mcp.JSONRPCResponse) string {
 		t.Fatal(err)
 	}
 	return result.Content[0].Text
+}
+
+func allResponseText(t *testing.T, response mcp.JSONRPCResponse) string {
+	t.Helper()
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		t.Fatal(err)
+	}
+	var text strings.Builder
+	for _, block := range result.Content {
+		text.WriteString(block.Text)
+	}
+	return text.String()
 }

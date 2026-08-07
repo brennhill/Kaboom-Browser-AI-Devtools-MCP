@@ -126,7 +126,6 @@ test_paths:
   - cmd/browser-agent/internal/mcpresponse/owner_test.go
   - cmd/browser-agent/internal/appruntime/runtime_test.go
   - cmd/browser-agent/command_execution_readiness_test.go
-  - cmd/browser-agent/handler_unit_test.go
   - cmd/browser-agent/internal/mcptelemetry/owner_test.go
   - cmd/browser-agent/handler_tools_call_usage_test.go
   - cmd/browser-agent/internal/procctl/stop_parse_test.go
@@ -219,6 +218,9 @@ with `internal/mcpresponse`, independent of full tool-handler composition.
 Passive delta/mode coverage lives with `internal/mcptelemetry`; envelope and
 negotiation coverage lives with `internal/mcprouter`; malformed input,
 content-type, read-failure, and framing coverage lives with `internal/mcphttp`.
+Stateless resource and initialization contracts live with `internal/mcpprotocol`,
+and warning queues, schema-argument diagnostics, redaction, and rate limiting
+live with `internal/mcpresponse` and `internal/mcpcall`.
 
 MCP documentation resources are owned by the canonical
 `internal/playbooks/resources` package: catalog, URI resolution, guides,
