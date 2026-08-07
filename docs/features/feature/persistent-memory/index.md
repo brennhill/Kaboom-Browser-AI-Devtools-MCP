@@ -24,7 +24,6 @@ test_paths:
   - tests/architecture/user-state-loaders.test.cjs
   - internal/persistence/persistence_branches_test.go
   - internal/statediag/collector_test.go
-  - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/internal/toolconfigure/session_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/tools_stdio_test.go

@@ -119,7 +119,6 @@ test_paths:
   - internal/capture/healthreader/reader_test.go
   - cmd/browser-agent/internal/toolrouting/routing_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/tools_configure_handler_test.go
   - internal/tools/configure/boundaries_test.go
   - internal/mcp/response_test.go
   - cmd/browser-agent/internal/toolresp/toolresp_test.go

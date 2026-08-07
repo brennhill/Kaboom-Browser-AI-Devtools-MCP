@@ -18,7 +18,6 @@ test_paths:
   - internal/capture/actionstore/store_test.go
   - internal/capture/wsconn/store_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

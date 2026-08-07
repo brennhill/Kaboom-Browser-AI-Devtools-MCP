@@ -28,7 +28,6 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - internal/statediag/collector_test.go
-  - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/internal/toolconfigure/session_test.go
@@ -103,7 +102,7 @@ negative attempts or occurrence counts.
   `configure.BoundaryHandler`. The root `ToolHandler` router calls that owner
   directly and retains no boundary mutex, map, or forwarding methods.
 - Tests:
-  - `cmd/browser-agent/tools_configure_handler_test.go`
+  - `cmd/browser-agent/internal/toolconfigure/dispatcher_test.go`
   - `cmd/browser-agent/internal/toolconfigure/session_test.go`
   - `cmd/browser-agent/internal/toolconfigure/session_test.go`
   - `internal/tools/configure/boundaries_test.go`

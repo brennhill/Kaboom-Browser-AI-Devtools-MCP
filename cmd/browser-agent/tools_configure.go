@@ -25,6 +25,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/auditlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	qafixturehandler "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qafixture"
+	qafixtureshutdown "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qafixture/shutdown"
 	qafixturetransport "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qafixture/transport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
@@ -109,21 +110,7 @@ func fixtureRegistryPath(logFile string) (string, error) {
 }
 
 func (h *ToolHandler) closeWithFixtureRecovery() {
-	if h.fixtureRecovery != nil {
-		recoveryCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		failures := h.fixtureRecovery.RecoverPending(recoveryCtx)
-		cancel()
-		if len(failures) > 0 && h.stateRecovery != nil {
-			h.stateRecovery.Report(statediag.Diagnostic{
-				Name:   "fixture_transaction_shutdown_recovery",
-				Detail: "One or more fixture transactions could not be restored during daemon shutdown.",
-				Fix:    "Restart Kaboom, reconnect the extension, and inspect fixture transaction status.",
-			})
-		}
-	}
-	if h.shutdownCancel != nil {
-		h.shutdownCancel()
-	}
+	qafixtureshutdown.Run(h.fixtureRecovery, h.stateRecovery, h.shutdownCancel)
 }
 
 func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {

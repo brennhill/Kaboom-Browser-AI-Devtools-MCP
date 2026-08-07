@@ -629,6 +629,10 @@
       "mutable_globals": 0,
       "exports": 2
     },
+    "cmd/browser-agent/internal/toolconfigure/qafixture/shutdown/recovery.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/toolconfigure/qafixture/transport/command.go": {
       "mutable_globals": 0,
       "exports": 1

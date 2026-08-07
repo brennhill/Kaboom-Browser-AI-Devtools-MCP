@@ -11,6 +11,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/shutdown/recovery.go
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolinteract/interact_page.go
@@ -47,6 +48,7 @@ test_paths:
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command_test.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/shutdown/recovery_test.go
   - internal/qafixture/fixture_test.go
   - internal/qafixture/transaction_test.go
   - internal/qafixture/registry_test.go
