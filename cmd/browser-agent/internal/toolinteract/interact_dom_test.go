@@ -22,6 +22,12 @@ func TestHandleDOMPrimitive_ClickSuccess(t *testing.T) {
 	if fs.recordedCount() != 1 {
 		t.Fatalf("expected 1 recorded dom action, got %d", fs.recordedCount())
 	}
+	fs.mu.Lock()
+	queryType := fs.enqueued[0].Type
+	fs.mu.Unlock()
+	if queryType != "dom_action" {
+		t.Fatalf("plain click query type = %q, want dom_action", queryType)
+	}
 }
 
 func TestHandleDOMPrimitive_InvalidJSON(t *testing.T) {
@@ -82,8 +88,18 @@ func TestHandleDOMPrimitive_IndexNotFound(t *testing.T) {
 }
 
 func TestHandleHardwareClick_Success(t *testing.T) {
-	h, _ := newFakeDOMActions(t)
-	assertOK(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"x":5,"y":6}`)))
+	h, fs := newFakeDOMActions(t)
+	response := h.HandleHardwareClick(testReq(), json.RawMessage(`{"x":5,"y":6}`))
+	assertOK(t, response)
+	if !strings.Contains(string(response.Result), "cdp_click_") {
+		t.Fatalf("hardware click response missing correlation prefix: %s", response.Result)
+	}
+	fs.mu.Lock()
+	queryType := fs.enqueued[0].Type
+	fs.mu.Unlock()
+	if queryType != "cdp_action" {
+		t.Fatalf("hardware click query type = %q, want cdp_action", queryType)
+	}
 }
 
 func TestHandleHardwareClick_MissingX(t *testing.T) {

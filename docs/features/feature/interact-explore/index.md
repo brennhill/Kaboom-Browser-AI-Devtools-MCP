@@ -332,3 +332,6 @@ observe-specific root fixtures no longer provide cross-feature test helpers.
 DOM primitive parsing for index selection, scroll direction, and structured
 responses is tested with the canonical DOM action owner; no root parser suite
 mirrors its public parameter struct.
+Hardware-click validation, pilot gating, response correlation, and CDP-versus-
+DOM routing are tested at that same owner. Action enumeration remains sourced
+from the canonical interact schema instead of a root handler string check.
