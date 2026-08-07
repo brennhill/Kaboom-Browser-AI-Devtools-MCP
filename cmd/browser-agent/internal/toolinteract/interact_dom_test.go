@@ -225,12 +225,15 @@ func TestUpdateArgsSelector(t *testing.T) {
 }
 
 func TestParseDOMPrimitiveParams(t *testing.T) {
-	p, err := ParseDOMPrimitiveParams(json.RawMessage(`{"selector":"#a","tab_id":3}`))
-	if err != nil || p.Selector != "#a" || p.TabID != 3 {
+	p, err := ParseDOMPrimitiveParams(json.RawMessage(`{"selector":"#a","tab_id":3,"nth":-1,"direction":"bottom","structured":true}`))
+	if err != nil || p.Selector != "#a" || p.TabID != 3 || p.Nth == nil || *p.Nth != -1 || p.Direction != "bottom" || !p.Structured {
 		t.Fatalf("unexpected parse: %+v err=%v", p, err)
 	}
 	if _, err := ParseDOMPrimitiveParams(json.RawMessage(`bad`)); err == nil {
 		t.Fatal("expected parse error")
+	}
+	if _, err := ParseDOMPrimitiveParams(json.RawMessage(`{"nth":1.5}`)); err == nil {
+		t.Fatal("expected fractional nth to be rejected")
 	}
 }
 

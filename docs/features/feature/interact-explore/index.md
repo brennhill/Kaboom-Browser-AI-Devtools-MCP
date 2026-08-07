@@ -103,7 +103,6 @@ test_paths:
   - cmd/browser-agent/tools_csp_blocked_test.go
   - cmd/browser-agent/tools_interact_clipboard_test.go
   - cmd/browser-agent/tools_interact_coverage_test.go
-  - cmd/browser-agent/tools_interact_dom_params_test.go
   - cmd/browser-agent/tools_interact_draw_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_interact_helpers_test.go
@@ -330,3 +329,6 @@ Directional scrolling uses only `direction`; `value` remains reserved for
 actions whose canonical payload is a value.
 Pilot interaction assertions use the shared browser-agent MCP result decoder;
 observe-specific root fixtures no longer provide cross-feature test helpers.
+DOM primitive parsing for index selection, scroll direction, and structured
+responses is tested with the canonical DOM action owner; no root parser suite
+mirrors its public parameter struct.
