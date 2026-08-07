@@ -56,7 +56,7 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/screenrec_wiring_test.go
   - cmd/browser-agent/internal/interactdispatch/handler_test.go
-  - cmd/browser-agent/tools_interact_page_commands_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser_test.go
   - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go

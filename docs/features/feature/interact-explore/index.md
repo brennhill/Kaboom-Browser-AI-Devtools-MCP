@@ -97,7 +97,6 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_entrypoint_test.go
-  - cmd/browser-agent/tools_interact_page_commands_test.go
   - cmd/browser-agent/tools_csp_blocked_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/internal/toolinteract/action_runtime_test.go
@@ -348,6 +347,9 @@ identity, and background deferral require no polling goroutine or wall clock.
 Composable subtitle and action-diff payloads, unique correlation IDs, and state
 navigation acceptance/rejection are verified directly beside their owning
 runtime and state modules; the former root-only helper environment is deleted.
+Highlight, script execution, navigation, history, tab creation, and subtitle
+validation and command routing are verified at the canonical browser-action
+owner. The duplicate root page-command suite is deleted.
 Form, navigation, and accessibility/SARIF workflow validation lives with the
 workflow owner. Its deterministic SARIF contract proves one accessibility
 analysis is reused directly instead of issuing a duplicate browser query.
