@@ -39,6 +39,7 @@ code_paths:
   - internal/incident/projections.go
   - cmd/browser-agent/internal/health/response_builders.go
   - cmd/browser-agent/internal/health/response_types.go
+  - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/playbooks/resources/catalog.go
   - cmd/browser-agent/internal/playbooks/resources/resolver.go
   - cmd/browser-agent/internal/playbooks/resources/audits.go

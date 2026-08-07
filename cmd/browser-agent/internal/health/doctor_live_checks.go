@@ -15,7 +15,9 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 )
 
 type doctorCommandRuntime struct {
@@ -65,28 +67,52 @@ type DoctorTransition struct {
 
 // HandleDoctorHTTP serves the /doctor HTTP endpoint with JSON readiness checks.
 func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Capture, ver string, extraChecks ...DoctorCheck) {
-	checks := RunDoctorChecks(cap)
-	checks = append(checks, extraChecks...)
-
-	overallStatus := "healthy"
-	readyForInteraction := true
-	for _, c := range checks {
-		if c.Status == "fail" {
-			overallStatus = "unhealthy"
-			readyForInteraction = false
-		}
-		if c.Status == "warn" && overallStatus != "unhealthy" {
-			overallStatus = "degraded"
-			readyForInteraction = false
-		}
-	}
+	report := buildDoctorReport(append(RunDoctorChecks(cap), extraChecks...))
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"status":                overallStatus,
-		"ready_for_interaction": readyForInteraction,
+		"status":                report.status,
+		"ready_for_interaction": report.ready,
 		"version":               ver,
-		"checks":                checks,
+		"checks":                report.checks,
+	})
+}
+
+type doctorReport struct {
+	status string
+	ready  bool
+	checks []DoctorCheck
+}
+
+func buildDoctorReport(checks []DoctorCheck) doctorReport {
+	report := doctorReport{status: "healthy", ready: true, checks: checks}
+	for _, check := range checks {
+		if check.Status == "fail" {
+			report.status = "unhealthy"
+			report.ready = false
+		} else if check.Status == "warn" && report.status != "unhealthy" {
+			report.status = "degraded"
+			report.ready = false
+		}
+	}
+	return report
+}
+
+// HandleDoctorMCP serves configure Doctor from the same readiness model as HTTP.
+func HandleDoctorMCP(metrics *Metrics, cap *capture.Capture, alerts *alertbuf.AlertBuffer, diagnosticHint func() string, extraChecks []DoctorCheck, req mcp.JSONRPCRequest, version string) mcp.JSONRPCResponse {
+	checks := append(RunDoctorChecks(cap), BuildResourcePressureChecks(cap, alerts)...)
+	checks = append(checks, extraChecks...)
+	if metrics != nil {
+		checks = append(checks, DoctorCheck{Name: "server_uptime", Status: "pass", Detail: fmt.Sprintf("Server running for %s (version %s)", metrics.GetUptime().Round(time.Second), version)})
+	}
+	report := buildDoctorReport(checks)
+	hint := ""
+	if diagnosticHint != nil {
+		hint = diagnosticHint()
+	}
+	return mcp.Succeed(req, "Doctor: "+report.status, map[string]any{
+		"status": report.status, "ready_for_interaction": report.ready,
+		"checks": report.checks, "hint": hint,
 	})
 }
 

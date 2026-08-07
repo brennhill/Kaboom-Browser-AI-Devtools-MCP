@@ -13,9 +13,34 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestHandleDoctorMCPReportsReadinessExtraChecksAndHint(t *testing.T) {
+	t.Parallel()
+	captureStore := newTestCapture(t)
+	response := HandleDoctorMCP(
+		NewMetrics(), captureStore, nil,
+		func() string { return "inspect local lifecycle logs" },
+		[]DoctorCheck{{Name: "fixture_recovery", Status: "warn", Detail: "recovery pending"}},
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 42},
+		"test-version",
+	)
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError || len(result.Content) == 0 {
+		t.Fatalf("Doctor response = %+v", result)
+	}
+	for _, want := range []string{"Doctor: unhealthy", "ready_for_interaction", "fixture_recovery", "server_uptime", "inspect local lifecycle logs"} {
+		if !strings.Contains(result.Content[0].Text, want) {
+			t.Errorf("Doctor response missing %q: %s", want, result.Content[0].Text)
+		}
+	}
+}
 
 func TestRunDoctorChecksSurfacesExtensionStateRecovery(t *testing.T) {
 	c := newTestCapture(t)

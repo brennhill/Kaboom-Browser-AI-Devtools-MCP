@@ -154,13 +154,14 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			if response, handled := doctorsupport.Handle(req, args, incidentViews, version, runtime.GOOS+"-"+runtime.GOARCH, nil); handled {
 				return response
 			}
-			return handleConfigureDoctor(
+			return health.HandleDoctorMCP(
 				h.healthMetrics,
 				h.capture,
 				h.alertBuffer,
 				h.Guards.DiagnosticHintString,
 				checks,
 				req,
+				version,
 			)
 		},
 		"noise_rule": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -271,41 +272,6 @@ func handleConfigureHealth(
 	}
 	response := getHealthResponse(metrics, captureStore, server, alerts, recovery, version)
 	return mcp.Succeed(req, "Server health", response)
-}
-
-func handleConfigureDoctor(
-	metrics *health.Metrics,
-	captureStore *capture.Capture,
-	alerts *alertbuf.AlertBuffer,
-	diagnosticHint func() string,
-	extraChecks []health.DoctorCheck,
-	req mcp.JSONRPCRequest,
-) mcp.JSONRPCResponse {
-	checks := health.RunDoctorChecks(captureStore)
-	checks = append(checks, health.BuildResourcePressureChecks(captureStore, alerts)...)
-	checks = append(checks, extraChecks...)
-	if metrics != nil {
-		uptime := metrics.GetUptime()
-		checks = append(checks, health.DoctorCheck{
-			Name: "server_uptime", Status: "pass",
-			Detail: fmt.Sprintf("Server running for %s (version %s)", uptime.Round(time.Second), version),
-		})
-	}
-	overallStatus := "healthy"
-	readyForInteraction := true
-	for _, check := range checks {
-		if check.Status == "fail" {
-			overallStatus = "unhealthy"
-			readyForInteraction = false
-		} else if check.Status == "warn" && overallStatus != "unhealthy" {
-			overallStatus = "degraded"
-			readyForInteraction = false
-		}
-	}
-	return mcp.Succeed(req, "Doctor: "+overallStatus, map[string]any{
-		"status": overallStatus, "ready_for_interaction": readyForInteraction,
-		"checks": checks, "hint": diagnosticHint(),
-	})
 }
 
 type recoveryDiagnostics interface {

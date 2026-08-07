@@ -108,11 +108,12 @@ func TestHandleConfigureDoctorReportsReadinessAndExtraChecks(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()
 	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 42}
-	resp := handleConfigureDoctor(
+	resp := health.HandleDoctorMCP(
 		health.NewMetrics(), cap, nil,
 		func() string { return "inspect local lifecycle logs" },
 		[]health.DoctorCheck{{Name: "fixture_recovery", Status: "warn", Detail: "recovery pending"}},
 		req,
+		"test-version",
 	)
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
