@@ -102,7 +102,7 @@ test_paths:
   - internal/warningqueue/queue_test.go
   - cmd/browser-agent/internal/httpapi/openapi_test.go
   - cmd/browser-agent/internal/runtimeconfig/parallel_test.go
-  - cmd/browser-agent/noise_doctor_test.go
+  - cmd/browser-agent/internal/doctorsupport/projections_test.go
   - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/release/install-upgrade-regression.mjs

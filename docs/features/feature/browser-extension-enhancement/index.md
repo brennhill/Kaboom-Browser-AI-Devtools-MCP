@@ -83,7 +83,7 @@ code_paths:
 test_paths:
   - tests/extension/network-http/network-waterfall.test.js
   - tests/extension/content/message-handlers.test.js
-  - cmd/browser-agent/noise_doctor_test.go
+  - cmd/browser-agent/internal/doctorsupport/projections_test.go
   - scripts/contracts/check-silent-catches.test.cjs
   - tests/architecture/async-failure-evidence.test.cjs
   - tests/architecture/user-state-loaders.test.cjs

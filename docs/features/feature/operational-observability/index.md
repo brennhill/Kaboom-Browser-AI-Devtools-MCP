@@ -16,6 +16,7 @@ code_paths:
   - internal/statediag/collector.go
   - internal/telemetry/beacon.go
   - cmd/browser-agent/internal/doctorsupport/handler.go
+  - cmd/browser-agent/internal/doctorsupport/projections.go
   - cmd/browser-agent/internal/operationalapi/handler.go
   - internal/schema/configure/properties_core.go
 test_paths:
@@ -26,6 +27,7 @@ test_paths:
   - internal/incident/store_test.go
   - internal/incident/support_test.go
   - cmd/browser-agent/internal/doctorsupport/handler_test.go
+  - cmd/browser-agent/internal/doctorsupport/projections_test.go
   - cmd/browser-agent/internal/operationalapi/coverage_contract_test.go
   - internal/statediag/collector_test.go
   - internal/telemetry/contract_compliance_test.go

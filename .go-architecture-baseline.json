@@ -185,6 +185,10 @@
       "mutable_globals": 0,
       "exports": 1
     },
+    "cmd/browser-agent/internal/doctorsupport/projections.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/exitdiag/recorder.go": {
       "mutable_globals": 0,
       "exports": 5

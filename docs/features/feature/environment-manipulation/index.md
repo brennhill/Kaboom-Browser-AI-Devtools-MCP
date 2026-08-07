@@ -44,7 +44,7 @@ test_paths:
   - internal/schema/invariants_test.go
   - cmd/browser-agent/internal/mcpprotocol/responses_test.go
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
-  - cmd/browser-agent/noise_doctor_test.go
+  - cmd/browser-agent/internal/doctorsupport/projections_test.go
   - cmd/browser-agent/internal/toolinteract/interact_browser_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/handler_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/startup_test.go

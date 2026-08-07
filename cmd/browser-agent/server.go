@@ -20,6 +20,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/clientapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonrecovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/dashboard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/doctorsupport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
@@ -346,8 +347,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, _ *http.Request) {
 		var extraChecks []health.DoctorCheck
 		if handler, ok := mcpHandler.tools.Executor.(*ToolHandler); ok {
-			extraChecks = recoveryDoctorChecks(handler.stateRecovery)
-			extraChecks = append(extraChecks, incidentDoctorChecks(server.incidents)...)
+			extraChecks = doctorsupport.Checks(handler.stateRecovery, server.incidents)
 		}
 		health.HandleDoctorHTTP(w, captured, version, extraChecks...)
 	}))

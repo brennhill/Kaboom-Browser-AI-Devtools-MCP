@@ -22,13 +22,13 @@ code_paths:
   - internal/noise/noise_rules.go
   - internal/util/media.go
 test_paths:
-  - cmd/browser-agent/noise_doctor_test.go
+  - cmd/browser-agent/internal/doctorsupport/projections_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/internal/noiseautorun/autorun_test.go
-  - cmd/browser-agent/noise_first_connect_test.go
+  - cmd/browser-agent/internal/noiseautorun/autorun_test.go
   - cmd/browser-agent/internal/toolconfigure/auditlog/handler_test.go
   - internal/noise/noise_builtin_matching_test.go
   - internal/noise/noise_rule_management_test.go

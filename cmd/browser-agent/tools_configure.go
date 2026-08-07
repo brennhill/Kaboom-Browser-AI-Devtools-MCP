@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -129,12 +128,13 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return handleConfigureRestart(req)
 		},
 		"doctor": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			checks := recoveryDoctorChecks(h.stateRecovery)
+			var incidents *incident.Store
 			var incidentViews []incident.DoctorView
 			if h.server != nil {
+				incidents = h.server.incidents
 				incidentViews = h.server.incidents.DoctorSnapshot()
-				checks = append(checks, incidentDoctorChecks(h.server.incidents)...)
 			}
+			checks := doctorsupport.Checks(h.stateRecovery, incidents)
 			if response, handled := doctorsupport.Handle(req, args, incidentViews, version, runtime.GOOS+"-"+runtime.GOARCH, nil); handled {
 				return response
 			}
@@ -258,128 +258,6 @@ func handleConfigureHealth(
 	return mcp.Succeed(req, "Server health", response)
 }
 
-type recoveryDiagnostics interface {
-	Snapshot() []statediag.Diagnostic
-	Stats() statediag.CollectorStats
-}
-
-func recoveryDoctorChecks(diagnostics recoveryDiagnostics) []health.DoctorCheck {
-	if diagnostics == nil {
-		return nil
-	}
-	snapshot := diagnostics.Snapshot()
-	checks := make([]health.DoctorCheck, 0, len(snapshot))
-	for _, diagnostic := range snapshot {
-		status := "warn"
-		if diagnostic.Lifecycle == statediag.LifecycleRecovered {
-			status = "pass"
-		}
-		history := make([]health.DoctorTransition, 0, len(diagnostic.History))
-		for _, transition := range diagnostic.History {
-			history = append(history, health.DoctorTransition{
-				Lifecycle: string(transition.Lifecycle), At: transition.At.Format(time.RFC3339Nano),
-				Event: transition.Event, CorrelationID: transition.CorrelationID, Outcome: transition.Outcome,
-			})
-		}
-		checks = append(checks, health.DoctorCheck{
-			Name: diagnostic.Name, CorrelationID: diagnostic.CorrelationID, Status: status, Detail: diagnostic.Detail, Fix: diagnostic.Fix,
-			Lifecycle:                string(diagnostic.Lifecycle),
-			FirstSeenAt:              diagnostic.FirstSeenAt.Format(time.RFC3339Nano),
-			LastSeenAt:               diagnostic.LastSeenAt.Format(time.RFC3339Nano),
-			RecoveredAt:              formatDiagnosticTime(diagnostic.RecoveredAt),
-			Occurrences:              diagnostic.Occurrences,
-			LastSuccessfulTransition: diagnostic.LastSuccessfulTransition,
-			ExpectedNextTransition:   diagnostic.ExpectedNextTransition,
-			Deadline:                 formatDiagnosticTime(diagnostic.Deadline),
-			RecoveryAttempt:          diagnostic.RecoveryAttempt,
-			RecoveryOutcome:          diagnostic.RecoveryOutcome,
-			History:                  history,
-		})
-	}
-	stats := diagnostics.Stats()
-	if stats.DroppedRecovered > 0 {
-		checks = append(checks, health.DoctorCheck{
-			Name: "state_recovery_retention", Status: "pass", Lifecycle: string(statediag.LifecycleRecovered),
-			Detail: fmt.Sprintf("Doctor retained %d recovered incidents and dropped %d oldest recovered incidents at its %d-entry bound.",
-				stats.Recovered, stats.DroppedRecovered, stats.RecoveredLimit),
-			Fix: "No action required; active incidents remain retained.", Occurrences: stats.DroppedRecovered,
-		})
-	}
-	return checks
-}
-
-func incidentDoctorChecks(diagnostics *incident.Store) []health.DoctorCheck {
-	if diagnostics == nil {
-		return nil
-	}
-	views := diagnostics.DoctorSnapshot()
-	checks := make([]health.DoctorCheck, 0, len(views)+1)
-	for _, view := range views {
-		status := "warn"
-		if view.State == incident.StateRecovered {
-			status = "pass"
-		} else if view.State == incident.StateExhausted || view.Severity == incident.SeverityFatal {
-			status = "fail"
-		}
-		detail := view.Detail
-		if view.LocalDetail != "" {
-			detail += " Local context: " + view.LocalDetail
-		}
-		history := make([]health.DoctorTransition, 0, len(view.History))
-		for _, transition := range view.History {
-			history = append(history, health.DoctorTransition{
-				Lifecycle: string(transition.State), At: transition.At.Format(time.RFC3339Nano),
-				Event: string(transition.State), CorrelationID: view.CorrelationID, Outcome: string(incidentOutcome(transition.State)),
-			})
-		}
-		recoveredAt := ""
-		if view.State == incident.StateRecovered {
-			recoveredAt = formatDiagnosticTime(view.ResolvedAt)
-		}
-		checks = append(checks, health.DoctorCheck{
-			Name: string(view.Code), CorrelationID: view.CorrelationID, Fingerprint: view.Fingerprint, Status: status,
-			Detail: detail, Fix: view.Fix, Lifecycle: string(view.State),
-			FirstSeenAt: formatDiagnosticTime(view.DetectedAt), LastSeenAt: formatDiagnosticTime(view.UpdatedAt),
-			RecoveredAt: recoveredAt, RecoveryAttempt: boundedDiagnosticInt(uint64(view.Attempts)),
-			RecoveryOutcome: string(incidentOutcome(view.State)), History: history,
-		})
-	}
-	stats := diagnostics.Stats()
-	if stats.Dropped > 0 {
-		checks = append(checks, health.DoctorCheck{
-			Name: "operational_incident_retention", Status: "warn", Lifecycle: "capacity",
-			Detail: fmt.Sprintf("Doctor retained %d operational incidents and dropped %d entries at its %d-entry bound.", stats.Active+stats.Terminal, stats.Dropped, stats.Capacity),
-			Fix:    "Inspect recurring incidents and resource pressure before increasing retention.", Occurrences: boundedDiagnosticInt(stats.Dropped),
-		})
-	}
-	return checks
-}
-
-func boundedDiagnosticInt(value uint64) int {
-	const maxInt = int(^uint(0) >> 1)
-	if value > uint64(maxInt) {
-		return maxInt
-	}
-	return int(value)
-}
-
-func incidentOutcome(state incident.State) incident.Outcome {
-	if state == incident.StateRecovered {
-		return incident.OutcomeRecovered
-	}
-	if state == incident.StateExhausted {
-		return incident.OutcomeExhausted
-	}
-	return incident.OutcomePending
-}
-
-func formatDiagnosticTime(value time.Time) string {
-	if value.IsZero() {
-		return ""
-	}
-	return value.Format(time.RFC3339Nano)
-}
-
 type serverDepsAdapter struct{ s *Server }
 
 func (a *serverDepsAdapter) GetTerminalPort() int {
@@ -394,6 +272,11 @@ func (a *serverDepsAdapter) GetConsoleStats() (int, int, int64) {
 		return 0, serverdefaults.MaxLogEntries, 0
 	}
 	return a.s.logs.EntryCount(), a.s.logs.MaxEntries(), a.s.logs.DropCount()
+}
+
+type recoveryDiagnostics interface {
+	Snapshot() []statediag.Diagnostic
+	Stats() statediag.CollectorStats
 }
 
 func getHealthResponse(hm *health.Metrics, cap *capture.Capture, server *Server, alerts *alertbuf.AlertBuffer, recovery recoveryDiagnostics, ver string) health.MCPHealthResponse {

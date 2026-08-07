@@ -28,7 +28,7 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - internal/statediag/collector_test.go
-  - cmd/browser-agent/noise_doctor_test.go
+  - cmd/browser-agent/internal/doctorsupport/projections_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/internal/toolconfigure/session_test.go
   - internal/tools/configure/audit_test.go
