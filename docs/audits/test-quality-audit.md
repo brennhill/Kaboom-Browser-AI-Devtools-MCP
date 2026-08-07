@@ -261,10 +261,12 @@ No significant findings.
 
 ---
 
-### File: `cmd/browser-agent/tools_interact_dom_test.go`
+### DOM interaction contracts
 
-**[MEDIUM] Two tests permanently skipped without regression alternative**
-Lines 200-206: `TestDOMPrimitive_Click_ReturnsCorrelationID` and `TestDOMPrimitive_ListInteractive_ReturnsCorrelationID` are skipped with "covered by shell UAT." However, shell UAT requires a browser extension to be connected -- meaning this test path is only covered in manual smoke tests, not in automated CI.
+**Resolved:** DOM action validation, pilot gating, queue types, and correlation
+identities now run deterministically beside the canonical owner in
+`cmd/browser-agent/internal/toolinteract/interact_dom_test.go`; the skipped
+root-only substitutes were deleted.
 
 ---
 

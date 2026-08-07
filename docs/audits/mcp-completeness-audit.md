@@ -362,18 +362,18 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 | back | YES | interact_browser_test.go, handler_consistency_test.go |
 | forward | YES | interact_browser_test.go, handler_consistency_test.go |
 | new_tab | YES | interact_browser_test.go, handler_consistency_test.go |
-| click | YES | tools_interact_dom_test.go, handler_consistency_test.go |
-| type | YES | tools_interact_dom_test.go, handler_consistency_test.go |
-| select | YES | tools_interact_dom_test.go |
-| check | YES | tools_interact_dom_test.go |
-| get_text | YES | tools_interact_dom_test.go, handler_consistency_test.go |
-| get_value | YES | tools_interact_dom_test.go |
-| get_attribute | YES | tools_interact_dom_test.go |
-| set_attribute | YES | tools_interact_dom_test.go |
-| focus | YES | tools_interact_dom_test.go, handler_consistency_test.go |
-| scroll_to | YES | tools_interact_dom_test.go, handler_consistency_test.go |
-| wait_for | YES | tools_interact_dom_test.go |
-| key_press | YES | tools_interact_dom_test.go |
+| click | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
+| type | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
+| select | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
+| check | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
+| get_text | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
+| get_value | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
+| get_attribute | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
+| set_attribute | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
+| focus | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
+| scroll_to | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
+| wait_for | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
+| key_press | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
 | list_interactive | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
 | record_start | YES | tools_recording_video_test.go |
 | record_stop | YES | tools_recording_video_test.go |

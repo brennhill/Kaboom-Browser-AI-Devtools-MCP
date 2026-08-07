@@ -85,8 +85,11 @@ func TestHandleDOMPrimitiveActionFamilyContracts(t *testing.T) {
 		{"get_value", `{}`, "selector"},
 		{"focus", `{}`, "selector"},
 		{"scroll_to", `{}`, "selector"},
+		{"hover", `{}`, "selector"},
 		{"wait_for", `{}`, "selector"},
 		{"type", `{"selector":"input"}`, "text"},
+		{"paste", `{"selector":"input"}`, "text"},
+		{"paste", `{"text":"hello"}`, "selector"},
 		{"select", `{"selector":"select"}`, "value"},
 		{"get_attribute", `{"selector":"a"}`, "name"},
 		{"set_attribute", `{"selector":"div"}`, "name"},
@@ -113,6 +116,8 @@ func TestHandleDOMPrimitiveActionFamilyContracts(t *testing.T) {
 		{"set_attribute", `{"selector":"div","name":"data-test","value":"1"}`},
 		{"focus", `{"selector":"input"}`},
 		{"scroll_to", `{"selector":"footer"}`},
+		{"hover", `{"selector":"a"}`},
+		{"paste", `{"selector":"input","text":"hello"}`},
 		{"wait_for", `{"selector":"spinner"}`},
 		{"key_press", `{"selector":"input","text":"Enter"}`},
 		{"open_composer", `{}`},
@@ -128,6 +133,9 @@ func TestHandleDOMPrimitiveActionFamilyContracts(t *testing.T) {
 			if len(queued) != 1 || queued[0].Type != "dom_action" || !strings.HasPrefix(queued[0].CorrelationID, "dom_") || !strings.Contains(string(queued[0].Params), `"action":"`+testCase.action+`"`) {
 				t.Fatalf("%s enqueue = %#v", testCase.action, queued)
 			}
+			blocked, blockedState := newFakeDOMActions(t)
+			blockedState.blockPilot = true
+			assertErr(t, blocked.HandleDOMPrimitive(testReq(), json.RawMessage(testCase.args), testCase.action), mcp.ErrCodePilotDisabled)
 		})
 	}
 }

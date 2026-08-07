@@ -350,6 +350,8 @@ runtime and state modules; the former root-only helper environment is deleted.
 Highlight, script execution, navigation, history, tab creation, and subtitle
 validation and command routing are verified at the canonical browser-action
 owner. The duplicate root page-command suite is deleted.
+Every DOM action family—including paste and hover—has owner-level required
+parameter, pilot-gate, query type, action payload, and correlation coverage.
 Form, navigation, and accessibility/SARIF workflow validation lives with the
 workflow owner. Its deterministic SARIF contract proves one accessibility
 analysis is reused directly instead of issuing a duplicate browser query.
