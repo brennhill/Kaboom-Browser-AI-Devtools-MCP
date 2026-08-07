@@ -14,8 +14,48 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestOperationalDiagnosticsRedactsHTTPAndIncludesCommandTrace(t *testing.T) {
+	handler := newOperationalTestHandler(t)
+	const rawSecret = "Bearer tokenValue1234567890abcdef"
+	handler.options.Capture.DiagnosticLogs().AddHTTP(types.HTTPDebugEntry{
+		Timestamp: time.Now(), Endpoint: "/mcp", Method: http.MethodPost,
+		RequestBody: `{"auth":"` + rawSecret + `"}`, ResponseBody: `{"ok":true}`, DurationMs: 5,
+	})
+	queryID, err := handler.options.Capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+		Type: "browser_action", CorrelationID: "diag-trace-corr",
+	}, 30*time.Second, "test-client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = handler.options.Capture.Queries().GetPendingQueries()
+	handler.options.Capture.Queries().AcknowledgePendingQuery(queryID)
+	handler.options.Capture.Queries().ApplyCommandResult("diag-trace-corr", "complete", json.RawMessage(`{"ok":true}`), "")
+
+	recorder := httptest.NewRecorder()
+	handler.ServeDiagnostics(recorder, httptest.NewRequest(http.MethodGet, "/diagnostics", nil))
+	body := decodeOperationalResponse(t, recorder)
+	httpDebug := body["http_debug_log"].(map[string]any)
+	encodedDebug, err := json.Marshal(httpDebug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encodedDebug), rawSecret) || !strings.Contains(string(encodedDebug), "[REDACTED:bearer-token]") {
+		t.Fatalf("HTTP diagnostics were not redacted: %s", encodedDebug)
+	}
+	traces := body["command_traces"].(map[string]any)
+	entries := traces["entries"].([]any)
+	if traces["count"].(float64) < 1 || len(entries) == 0 {
+		t.Fatalf("command traces = %#v", traces)
+	}
+	first := entries[0].(map[string]any)
+	if first["trace_id"] == "" || first["timeline"] == "" {
+		t.Fatalf("command trace missing identity or timeline: %#v", first)
+	}
+}
 
 func newOperationalTestHandler(t *testing.T) *Handler {
 	t.Helper()
