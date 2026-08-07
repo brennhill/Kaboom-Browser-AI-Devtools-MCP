@@ -2,19 +2,20 @@
 // Why: Isolates security-focused analysis from general analyze dispatch.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package toolanalyze
+package securityaudit
 
 import (
 	"encoding/json"
 	"sort"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 )
 
 // HandleSecurityAudit handles analyze(what="security_audit").
-func HandleSecurityAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func HandleSecurityAudit(d toolanalyze.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		SeverityMin string   `json:"severity_min"`
 		Checks      []string `json:"checks"`
@@ -53,7 +54,7 @@ func HandleSecurityAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 }
 
 // HandleThirdPartyAudit handles analyze(what="third_party_audit").
-func HandleThirdPartyAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func HandleThirdPartyAudit(d toolanalyze.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Summary bool `json:"summary"`
 	}
@@ -96,7 +97,7 @@ func BuildSecurityAuditSummary(result scan.Result) map[string]any {
 	sorted := make([]scan.Finding, len(result.Findings))
 	copy(sorted, result.Findings)
 	sort.Slice(sorted, func(i, j int) bool {
-		return SeverityOrder[sorted[i].Severity] < SeverityOrder[sorted[j].Severity]
+		return toolanalyze.SeverityOrder[sorted[i].Severity] < toolanalyze.SeverityOrder[sorted[j].Severity]
 	})
 
 	topIssues := make([]map[string]any, topN)
@@ -132,7 +133,7 @@ func BuildThirdPartySummary(result thirdparty.ThirdPartyResult) map[string]any {
 	sorted := make([]thirdparty.ThirdPartyEntry, len(result.ThirdParties))
 	copy(sorted, result.ThirdParties)
 	sort.Slice(sorted, func(i, j int) bool {
-		return SeverityOrder[sorted[i].RiskLevel] < SeverityOrder[sorted[j].RiskLevel]
+		return toolanalyze.SeverityOrder[sorted[i].RiskLevel] < toolanalyze.SeverityOrder[sorted[j].RiskLevel]
 	})
 
 	top := make([]map[string]any, topN)

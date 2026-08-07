@@ -2,7 +2,7 @@
 // Why: Separates synchronous server validation from asynchronous browser link checks.
 // Docs: docs/features/feature/analyze-tool/index.md
 
-package toolanalyze
+package linkvalidation
 
 import (
 	"encoding/json"

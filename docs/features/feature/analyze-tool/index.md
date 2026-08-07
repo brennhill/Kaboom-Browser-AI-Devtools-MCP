@@ -26,8 +26,8 @@ code_paths:
   - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
   - cmd/browser-agent/internal/toolanalyze/navigation.go
-  - cmd/browser-agent/internal/toolanalyze/link_validation.go
-  - cmd/browser-agent/internal/toolanalyze/security.go
+  - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler.go
+  - cmd/browser-agent/internal/toolanalyze/securityaudit/handler.go
   - cmd/browser-agent/internal/toolresp/toolresp.go
   - internal/mcp/response.go
   - internal/annotation/store.go
@@ -76,6 +76,8 @@ test_paths:
   - internal/verification/store_test.go
   - internal/annotation/store_lifecycle_test.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
+  - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler_test.go
+  - cmd/browser-agent/internal/toolanalyze/securityaudit/handler_test.go
   - cmd/browser-agent/tools_analyze_handler_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - internal/annotation/store_test.go

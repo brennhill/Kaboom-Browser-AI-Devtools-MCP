@@ -3,12 +3,11 @@
 // Docs: docs/features/feature/analyze-tool/index.md
 
 // tools_analyze_security_test.go — Tests for security audit + third-party audit summary builders.
-package main
+package securityaudit
 
 import (
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 )
@@ -34,7 +33,7 @@ func TestBuildSecuritySummary_Basic(t *testing.T) {
 		},
 	}
 
-	summary := toolanalyze.BuildSecurityAuditSummary(result)
+	summary := BuildSecurityAuditSummary(result)
 
 	if summary["total"] != 5 {
 		t.Errorf("total = %v, want 5", summary["total"])
@@ -63,7 +62,7 @@ func TestBuildSecuritySummary_Basic(t *testing.T) {
 func TestBuildSecuritySummary_Empty(t *testing.T) {
 	t.Parallel()
 	result := scan.Result{}
-	summary := toolanalyze.BuildSecurityAuditSummary(result)
+	summary := BuildSecurityAuditSummary(result)
 	if summary["total"] != 0 {
 		t.Errorf("total = %v, want 0", summary["total"])
 	}
@@ -80,7 +79,7 @@ func TestBuildSecuritySummary_LimitTo5(t *testing.T) {
 		findings[i] = scan.Finding{Check: "headers", Severity: "medium", Title: "issue"}
 	}
 	result := scan.Result{Findings: findings}
-	summary := toolanalyze.BuildSecurityAuditSummary(result)
+	summary := BuildSecurityAuditSummary(result)
 	topIssues := summary["top_issues"].([]map[string]any)
 	if len(topIssues) > 5 {
 		t.Errorf("top_issues should be capped at 5, got %d", len(topIssues))
@@ -107,7 +106,7 @@ func TestBuildThirdPartySummary_Basic(t *testing.T) {
 		},
 	}
 
-	summary := toolanalyze.BuildThirdPartySummary(result)
+	summary := BuildThirdPartySummary(result)
 
 	if summary["total_origins"] != 3 {
 		t.Errorf("total_origins = %v, want 3", summary["total_origins"])
@@ -137,7 +136,7 @@ func TestBuildThirdPartySummary_Basic(t *testing.T) {
 func TestBuildThirdPartySummary_Empty(t *testing.T) {
 	t.Parallel()
 	result := thirdparty.ThirdPartyResult{}
-	summary := toolanalyze.BuildThirdPartySummary(result)
+	summary := BuildThirdPartySummary(result)
 	if summary["total_origins"] != 0 {
 		t.Errorf("total_origins = %v, want 0", summary["total_origins"])
 	}

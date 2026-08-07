@@ -553,7 +553,7 @@
       "mutable_globals": 0,
       "exports": 8
     },
-    "cmd/browser-agent/internal/toolanalyze/link_validation.go": {
+    "cmd/browser-agent/internal/toolanalyze/linkvalidation/handler.go": {
       "mutable_globals": 0,
       "exports": 1
     },
@@ -569,7 +569,7 @@
       "mutable_globals": 1,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolanalyze/security.go": {
+    "cmd/browser-agent/internal/toolanalyze/securityaudit/handler.go": {
       "mutable_globals": 0,
       "exports": 4
     },

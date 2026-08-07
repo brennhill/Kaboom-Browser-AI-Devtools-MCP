@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/securityaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 )
@@ -37,10 +38,10 @@ func defaultAuditCategories() []auditCategory {
 			return observepage.RunA11yAudit(d.Observe, req, args)
 		}, Weight: 1.0},
 		{Name: "security", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return toolanalyze.HandleSecurityAudit(d.Analyze, req, args)
+			return securityaudit.HandleSecurityAudit(d.Analyze, req, args)
 		}, Weight: 1.0},
 		{Name: "best_practices", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return toolanalyze.HandleThirdPartyAudit(d.Analyze, req, args)
+			return securityaudit.HandleThirdPartyAudit(d.Analyze, req, args)
 		}, Weight: 1.0},
 	}
 }

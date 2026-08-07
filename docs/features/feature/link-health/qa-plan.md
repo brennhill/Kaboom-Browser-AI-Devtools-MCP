@@ -3,7 +3,7 @@ doc_type: qa-plan
 feature_id: feature-link-health
 status: shipped
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-07
 links:
   product: ./product-spec.md
   tech: ./tech-spec.md
@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 # Link Health QA Plan (TARGET)
 
 ## Automated Coverage
-- `cmd/browser-agent/tools_analyze_validation_test.go`
+- `cmd/browser-agent/internal/toolanalyze/linkvalidation/handler_test.go`
 - `cmd/browser-agent/tools_analyze_route_test.go`
 - Extension/unit coverage for `src/lib/analysis/link-health.ts`
 

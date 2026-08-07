@@ -14,7 +14,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/linkvalidation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/pageissues"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/securityaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/verificationhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/visual"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
@@ -55,11 +57,11 @@ func NewDispatcher(config Config) *Dispatcher {
 		"page_summary": mode(config.PageSummary), "performance": wrapObserve(config.Observe, observesession.CheckPerformance),
 		"accessibility": wrapObserve(config.Observe, observepage.RunA11yAudit), "error_clusters": wrapObserve(config.Observe, observelogs.AnalyzeErrors),
 		"navigation_patterns": wrapObserve(config.Observe, observesession.AnalyzeHistory),
-		"security_audit":      wrapLocal(config.Analyze, toolanalyze.HandleSecurityAudit),
-		"third_party_audit":   wrapLocal(config.Analyze, toolanalyze.HandleThirdPartyAudit),
+		"security_audit":      wrapLocal(config.Analyze, securityaudit.HandleSecurityAudit),
+		"third_party_audit":   wrapLocal(config.Analyze, securityaudit.HandleThirdPartyAudit),
 		"link_health":         wrapLocal(config.Analyze, toolanalyze.HandleLinkHealth),
 		"link_validation": func(_ struct{}, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return toolanalyze.HandleLinkValidation(req, args, config.Version)
+			return linkvalidation.HandleLinkValidation(req, args, config.Version)
 		},
 		"annotations": mode(config.Annotations), "annotation_detail": mode(config.AnnotationDetail),
 		"draw_history": func(_ struct{}, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

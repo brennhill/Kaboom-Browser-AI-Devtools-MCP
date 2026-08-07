@@ -4,9 +4,9 @@ feature_id: feature-security-hardening
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
-  - cmd/browser-agent/internal/toolanalyze/security.go
+  - cmd/browser-agent/internal/toolanalyze/securityaudit/handler.go
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_security_impl.go
@@ -43,6 +43,7 @@ code_paths:
   - internal/security/httpsec/url.go
   - internal/security/httpsec/cookie.go
 test_paths:
+  - cmd/browser-agent/internal/toolanalyze/securityaudit/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - cmd/browser-agent/internal/toolanalyze/toolanalyze_test.go
   - internal/security/diff/diff_test.go
