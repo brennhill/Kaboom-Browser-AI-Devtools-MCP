@@ -18,7 +18,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/auditlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
@@ -402,13 +401,6 @@ func buildIssueReportDeps(h *ToolHandler) issuereport.HandlerDeps {
 			return issuereport.SubmitViaGH(h.shutdownCtx, report, h.issueCommandRunner)
 		},
 	}
-}
-
-func extractErrorMessage(response mcp.JSONRPCResponse) string {
-	if message := replay.ErrorMessage(response); message != "" {
-		return message
-	}
-	return "unknown error"
 }
 
 func handleConfigureRestart(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {

@@ -60,6 +60,8 @@ remain. Batch and replay audit entries use the same
 Malformed or unreadable saved sequences are isolated from valid siblings and
 omitted from listings. The handler reports the recovery through System Doctor
 without retaining the saved payload.
+Replay response parsing, including structured, plain-text, empty, and malformed
+errors, is tested directly beside the canonical replay contract.
 Read, list, write, and delete failures now share that same redacted Doctor
 incident; raw storage errors are never echoed through MCP. Canonical state-fault
 tests also prove corruption, partial writes, cancellation, and restart reloads.

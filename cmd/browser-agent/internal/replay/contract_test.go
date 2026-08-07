@@ -27,3 +27,24 @@ func TestCorrelationIDReadsMCPJSONContent(t *testing.T) {
 		t.Fatalf("CorrelationID = %q", got)
 	}
 }
+
+func TestErrorMessageHandlesStructuredPlainAndMalformedResults(t *testing.T) {
+	t.Parallel()
+	request := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+	structured := mcp.Succeed(request, "failed", map[string]any{"message": "boom"})
+	if got := ErrorMessage(structured); got != "boom" {
+		t.Fatalf("structured error = %q", got)
+	}
+	plainResult, err := json.Marshal(mcp.MCPToolResult{Content: []mcp.MCPContentBlock{{Type: "text", Text: "plain failure"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ErrorMessage(mcp.JSONRPCResponse{Result: plainResult}); got != "plain failure" {
+		t.Fatalf("plain error = %q", got)
+	}
+	for _, result := range []json.RawMessage{nil, json.RawMessage(`{bad`), json.RawMessage(`{"content":[]}`)} {
+		if got := ErrorMessage(mcp.JSONRPCResponse{Result: result}); got != "" {
+			t.Fatalf("malformed/empty error = %q", got)
+		}
+	}
+}
