@@ -4,7 +4,7 @@ feature_id: feature-operational-observability
 status: in_progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - internal/capture/pressure/stats.go
   - internal/capture/perfstore/store.go
@@ -16,6 +16,7 @@ code_paths:
   - internal/statediag/collector.go
   - internal/telemetry/beacon.go
   - cmd/browser-agent/internal/doctorsupport/handler.go
+  - cmd/browser-agent/internal/operationalapi/handler.go
   - internal/schema/configure/properties_core.go
 test_paths:
   - internal/capture/logstore/store_test.go
@@ -25,6 +26,7 @@ test_paths:
   - internal/incident/store_test.go
   - internal/incident/support_test.go
   - cmd/browser-agent/internal/doctorsupport/handler_test.go
+  - cmd/browser-agent/internal/operationalapi/coverage_contract_test.go
   - internal/statediag/collector_test.go
   - internal/telemetry/contract_compliance_test.go
   - internal/telemetry/beacon_test.go

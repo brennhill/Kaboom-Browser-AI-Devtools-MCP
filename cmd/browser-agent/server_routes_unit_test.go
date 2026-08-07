@@ -10,13 +10,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -268,128 +265,6 @@ func TestSetupHTTPRoutesBasicEndpoints(t *testing.T) {
 	}
 }
 
-func TestHealthEndpointExposesDroppedCount(t *testing.T) {
-	t.Parallel()
-
-	srv := newTestServerForHandlers(t)
-	cap := capture.NewCapture()
-	mux, _ := setupHTTPRoutes(srv, cap)
-
-	// Create a server with a channel of size 1 and NO async worker,
-	// so the channel stays full when we manually fill it.
-	tinyLogSrv := newTestServerForHandlers(t)
-	previousLogs := tinyLogSrv.logs
-	t.Cleanup(func() { previousLogs.Shutdown(2 * time.Second) })
-	tinyLogSrv.logs = logstore.New(logstore.Config{
-		LogFile:    filepath.Join(t.TempDir(), "drop.jsonl"),
-		MaxEntries: 100,
-		ChanSize:   1,
-		AddWarning: func(string) {},
-	})
-
-	tinyMux, _ := setupHTTPRoutes(tinyLogSrv, cap)
-
-	// Fill queue (no worker draining it), then trigger a drop
-	_ = tinyLogSrv.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "fill"}})
-	_ = tinyLogSrv.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop"}})
-
-	healthReq := localRequest(http.MethodGet, "/health", nil)
-	healthRR := httptest.NewRecorder()
-	tinyMux.ServeHTTP(healthRR, healthReq)
-	if healthRR.Code != http.StatusOK {
-		t.Fatalf("GET /health status = %d, want %d", healthRR.Code, http.StatusOK)
-	}
-
-	healthBody := decodeJSONMap(t, healthRR.Body.Bytes())
-	logs, ok := healthBody["logs"].(map[string]any)
-	if !ok {
-		t.Fatalf("health response missing logs object: %v", healthBody)
-	}
-
-	droppedCount, ok := logs["dropped_count"]
-	if !ok {
-		t.Fatal("health logs missing dropped_count field")
-	}
-	if droppedCount.(float64) != 1 {
-		t.Fatalf("dropped_count = %v, want 1", droppedCount)
-	}
-
-	// Shut down cleanly (no worker was started, so Shutdown times out fast)
-	tinyLogSrv.logs.Shutdown(10 * time.Millisecond)
-
-	// Verify zero-state too: fresh server should have 0 dropped_count
-	freshReq := localRequest(http.MethodGet, "/health", nil)
-	freshRR := httptest.NewRecorder()
-	mux.ServeHTTP(freshRR, freshReq)
-	freshBody := decodeJSONMap(t, freshRR.Body.Bytes())
-	freshLogs := freshBody["logs"].(map[string]any)
-	if freshLogs["dropped_count"].(float64) != 0 {
-		t.Fatalf("fresh server dropped_count = %v, want 0", freshLogs["dropped_count"])
-	}
-}
-
-func TestLogsEndpointValidationAndMethods(t *testing.T) {
-	t.Parallel()
-
-	srv := newTestServerForHandlers(t)
-	cap := capture.NewCapture()
-	t.Cleanup(cap.Close)
-	mux, _ := setupHTTPRoutes(srv, cap)
-
-	// GET /logs returns 405 (reads go through /telemetry?type=logs)
-	getReq := localRequest(http.MethodGet, "/logs", nil)
-	getReq.Header.Set("X-Kaboom-Client", "kaboom-extension")
-	getRR := httptest.NewRecorder()
-	mux.ServeHTTP(getRR, getReq)
-	if getRR.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("GET /logs status = %d, want %d", getRR.Code, http.StatusMethodNotAllowed)
-	}
-
-	badJSONReq := localRequest(http.MethodPost, "/logs", bytes.NewBufferString("{"))
-	badJSONReq.Header.Set("X-Kaboom-Client", "kaboom-extension")
-	badJSONRR := httptest.NewRecorder()
-	mux.ServeHTTP(badJSONRR, badJSONReq)
-	if badJSONRR.Code != http.StatusBadRequest {
-		t.Fatalf("POST /logs invalid json status = %d, want %d", badJSONRR.Code, http.StatusBadRequest)
-	}
-
-	missingEntriesReq := localRequest(http.MethodPost, "/logs", bytes.NewBufferString(`{"foo":"bar"}`))
-	missingEntriesReq.Header.Set("X-Kaboom-Client", "kaboom-extension")
-	missingEntriesRR := httptest.NewRecorder()
-	mux.ServeHTTP(missingEntriesRR, missingEntriesReq)
-	if missingEntriesRR.Code != http.StatusBadRequest {
-		t.Fatalf("POST /logs missing entries status = %d, want %d", missingEntriesRR.Code, http.StatusBadRequest)
-	}
-
-	validReq := localRequest(http.MethodPost, "/logs", bytes.NewBufferString(`{"entries":[{"level":"error","message":"boom"},{"level":"invalid","message":"skip"}]}`))
-	validReq.Header.Set("X-Kaboom-Client", "kaboom-extension")
-	validRR := httptest.NewRecorder()
-	mux.ServeHTTP(validRR, validReq)
-	if validRR.Code != http.StatusOK {
-		t.Fatalf("POST /logs valid payload status = %d, want %d", validRR.Code, http.StatusOK)
-	}
-	validBody := decodeJSONMap(t, validRR.Body.Bytes())
-	if validBody["received"].(float64) != 1 || validBody["rejected"].(float64) != 1 {
-		t.Fatalf("POST /logs counts unexpected: %v", validBody)
-	}
-
-	deleteReq := localRequest(http.MethodDelete, "/logs", nil)
-	deleteReq.Header.Set("X-Kaboom-Client", "kaboom-extension")
-	deleteRR := httptest.NewRecorder()
-	mux.ServeHTTP(deleteRR, deleteReq)
-	if deleteRR.Code != http.StatusOK {
-		t.Fatalf("DELETE /logs status = %d, want %d", deleteRR.Code, http.StatusOK)
-	}
-
-	putReq := localRequest(http.MethodPut, "/logs", nil)
-	putReq.Header.Set("X-Kaboom-Client", "kaboom-extension")
-	putRR := httptest.NewRecorder()
-	mux.ServeHTTP(putRR, putReq)
-	if putRR.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("PUT /logs status = %d, want %d", putRR.Code, http.StatusMethodNotAllowed)
-	}
-}
-
 func TestSetupHTTPRoutes_NilCaptureDoesNotPanic(t *testing.T) {
 	srv := newTestServerForHandlers(t)
 
@@ -402,29 +277,5 @@ func TestSetupHTTPRoutes_NilCaptureDoesNotPanic(t *testing.T) {
 	mux, handler := setupHTTPRoutes(srv, nil)
 	if mux == nil || handler == nil {
 		t.Fatal("setupHTTPRoutes returned a nil route dependency")
-	}
-}
-
-func TestTelemetryEndpointReadContract(t *testing.T) {
-	t.Parallel()
-
-	srv := newTestServerForHandlers(t)
-	srv.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "boom"}})
-	mux, _ := setupHTTPRoutes(srv, capture.NewCapture())
-
-	missingRR := httptest.NewRecorder()
-	mux.ServeHTTP(missingRR, localRequest(http.MethodGet, "/telemetry", nil))
-	if missingRR.Code != http.StatusBadRequest {
-		t.Fatalf("GET /telemetry without type status = %d, want %d", missingRR.Code, http.StatusBadRequest)
-	}
-
-	logsRR := httptest.NewRecorder()
-	mux.ServeHTTP(logsRR, localRequest(http.MethodGet, "/telemetry?type=logs&limit=1", nil))
-	if logsRR.Code != http.StatusOK {
-		t.Fatalf("GET /telemetry?type=logs status = %d, want %d", logsRR.Code, http.StatusOK)
-	}
-	body := decodeJSONMap(t, logsRR.Body.Bytes())
-	if body["type"] != "logs" || body["count"] != float64(1) {
-		t.Fatalf("telemetry response = %v, want type=logs count=1", body)
 	}
 }

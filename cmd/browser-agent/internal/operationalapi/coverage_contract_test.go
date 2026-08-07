@@ -51,6 +51,12 @@ func decodeOperationalResponse(t *testing.T, recorder *httptest.ResponseRecorder
 
 func TestOperationalHealthReportsOptionalRuntimeState(t *testing.T) {
 	handler := newOperationalTestHandler(t)
+	handler.options.Logs = logstore.New(logstore.Config{
+		MaxEntries: 8, ChanSize: 1, LogFile: filepath.Join(t.TempDir(), "bounded.jsonl"), AddWarning: func(string) {},
+	})
+	_ = handler.options.Logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "fill"}})
+	_ = handler.options.Logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop"}})
+	t.Cleanup(func() { handler.options.Logs.Shutdown(time.Millisecond) })
 	recorder := httptest.NewRecorder()
 	handler.ServeHealth(recorder, httptest.NewRequest(http.MethodGet, "/health", nil))
 
@@ -67,6 +73,10 @@ func TestOperationalHealthReportsOptionalRuntimeState(t *testing.T) {
 	blocked := body["terminal_blocked_by"].(map[string]any)
 	if blocked["pid"] != float64(42) || blocked["command"] != "other" {
 		t.Fatalf("terminal blocker = %#v", blocked)
+	}
+	logs := body["logs"].(map[string]any)
+	if logs["dropped_count"] != float64(1) {
+		t.Fatalf("health log pressure = %#v, want one dropped batch", logs)
 	}
 
 	methodRecorder := httptest.NewRecorder()
@@ -100,6 +110,17 @@ func TestOperationalLogsValidateIngestClearAndMethods(t *testing.T) {
 			}
 		})
 	}
+	mixedRecorder := httptest.NewRecorder()
+	mixedRequest := httptest.NewRequest(http.MethodPost, "/logs", strings.NewReader(
+		`{"entries":[{"level":"error","message":"boom"},{"level":"invalid","message":"skip"}]}`,
+	))
+	handler.ServeLogs(mixedRecorder, mixedRequest)
+	mixed := decodeOperationalResponse(t, mixedRecorder)
+	if mixed["received"] != float64(1) || mixed["rejected"] != float64(1) {
+		t.Fatalf("mixed ingest counts = %#v", mixed)
+	}
+	clearRecorder := httptest.NewRecorder()
+	handler.ServeLogs(clearRecorder, httptest.NewRequest(http.MethodDelete, "/logs", nil))
 	if handler.options.Logs.EntryCount() != 0 {
 		t.Fatalf("entries after clear = %d, want 0", handler.options.Logs.EntryCount())
 	}
