@@ -202,39 +202,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	logs := s.logs
 	util.SafeGo(logs.RunWorker)
 
-	// Ensure log directory exists
-	if s.logs.LogFile() != "" {
-		dir := filepath.Dir(s.logs.LogFile())
-		// #nosec G301 -- log directory: owner rwx, group rx for diagnostics
-		if err := os.MkdirAll(dir, 0o750); err != nil {
-			fallback := logstore.FallbackFilePath()
-			s.warnings.Add(fmt.Sprintf("state_dir_not_writable: %v; falling back to %s", err, fallback))
-			s.logs.SetLogFile(fallback)
-			_ = os.MkdirAll(filepath.Dir(s.logs.LogFile()), 0o750)
-		}
-		if err := logstore.EnsureFileWritable(s.logs.LogFile()); err != nil {
-			fallback := logstore.FallbackFilePath()
-			s.warnings.Add(fmt.Sprintf("state_dir_not_writable: %v; falling back to %s", err, fallback))
-			s.logs.SetLogFile(fallback)
-			if err := os.MkdirAll(filepath.Dir(s.logs.LogFile()), 0o750); err != nil {
-				s.warnings.Add(fmt.Sprintf("log_persistence_disabled: %v", err))
-				s.logs.SetLogFile("")
-			} else if err := logstore.EnsureFileWritable(s.logs.LogFile()); err != nil {
-				s.warnings.Add(fmt.Sprintf("log_persistence_disabled: %v", err))
-				s.logs.SetLogFile("")
-			}
-		}
-	}
-
-	// Load existing entries
-	if s.logs.LogFile() != "" {
-		if err := s.logs.LoadEntries(); err != nil {
-			// File might not exist yet, that's OK
-			if !os.IsNotExist(err) {
-				s.warnings.Add(fmt.Sprintf("log_load_failed: %v", err))
-			}
-		}
-	}
+	logstore.PreparePersistence(s.logs, s.warnings.Add)
 
 	return s, nil
 }

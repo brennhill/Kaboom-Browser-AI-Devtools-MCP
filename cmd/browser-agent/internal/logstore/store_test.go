@@ -422,6 +422,28 @@ func TestStoreSetLogFileRedirectsPersistence(t *testing.T) {
 	}
 }
 
+func TestPreparePersistenceFallsBackFromInvalidConfiguredParent(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	parentFile := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(parentFile, []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	configured := filepath.Join(parentFile, "kaboom.jsonl")
+	var warnings []string
+	store := New(Config{LogFile: configured, MaxEntries: 10, AddWarning: func(message string) {
+		warnings = append(warnings, message)
+	}})
+
+	PreparePersistence(store, func(message string) { warnings = append(warnings, message) })
+
+	if store.LogFile() == configured || store.LogFile() == "" {
+		t.Fatalf("prepared log file = %q, want a fallback", store.LogFile())
+	}
+	if len(warnings) == 0 || !strings.Contains(warnings[0], "state_dir_not_writable") {
+		t.Fatalf("warnings = %#v", warnings)
+	}
+}
+
 // TestStoreSeedEntriesBypassesIngest pins the test-support contract that
 // cmd/browser-agent's data-age and audit tests depend on: SeedEntries appends
 // to the window (and add-times) WITHOUT touching the counters, the trim, the

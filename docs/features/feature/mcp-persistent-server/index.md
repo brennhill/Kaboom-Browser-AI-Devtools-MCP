@@ -298,6 +298,10 @@ to validate.
 The asynchronous log worker captures the exact store created during server
 construction. Replacing a server's store in an isolated test cannot redirect a
 late-starting worker or race with its startup closure.
+Log destination creation, writability fallback, persistence disablement, and
+existing-entry loading are one `internal/logstore` startup operation. Its fault
+fixture uses an invalid parent shape rather than platform permission behavior;
+the server composition root only supplies the local warning sink.
 The execution modules, examples, and validation schemas used by that call path
 are constructed once in `internal/toolcatalog.Catalog`; the composition root
 does not maintain parallel lazy registries.

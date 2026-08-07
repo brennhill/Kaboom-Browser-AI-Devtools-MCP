@@ -112,3 +112,38 @@ func EnsureFileWritable(path string) error {
 	}
 	return f.Close()
 }
+
+// PreparePersistence creates and validates the configured log destination,
+// redirects an unusable destination to the local fallback, and loads existing
+// entries. It never terminates the process; all degradation is surfaced through
+// addWarning.
+func PreparePersistence(store *Store, addWarning func(string)) {
+	if store == nil || store.LogFile() == "" {
+		return
+	}
+	if addWarning == nil {
+		addWarning = func(string) {}
+	}
+	ensureDestination := func(path string) error {
+		// #nosec G301 -- local diagnostic directory needs owner rwx and group rx.
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			return err
+		}
+		return EnsureFileWritable(path)
+	}
+
+	if err := ensureDestination(store.LogFile()); err != nil {
+		fallback := FallbackFilePath()
+		addWarning(fmt.Sprintf("state_dir_not_writable: %v; falling back to %s", err, fallback))
+		store.SetLogFile(fallback)
+		if fallbackErr := ensureDestination(fallback); fallbackErr != nil {
+			addWarning(fmt.Sprintf("log_persistence_disabled: %v", fallbackErr))
+			store.SetLogFile("")
+			return
+		}
+	}
+
+	if err := store.LoadEntries(); err != nil && !os.IsNotExist(err) {
+		addWarning(fmt.Sprintf("log_load_failed: %v", err))
+	}
+}
