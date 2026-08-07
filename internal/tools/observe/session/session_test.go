@@ -209,3 +209,39 @@ func TestBuildHistorySummary_Empty(t *testing.T) {
 		t.Errorf("total = %d, want 0", total)
 	}
 }
+
+func TestSessionAnalysisHandlersExposeEmptyAndPopulatedContracts(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	deps := testsupport.Deps(cap)
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 31}
+
+	emptyVitals := testsupport.ExtractMCPJSON(t, GetWebVitals(deps, req, nil))
+	if emptyVitals["metrics"].(map[string]any)["has_data"] != false {
+		t.Fatalf("empty vitals = %#v", emptyVitals)
+	}
+	emptyHistory := testsupport.ExtractMCPJSON(t, AnalyzeHistory(deps, req, nil))
+	if emptyHistory["count"] != float64(0) {
+		t.Fatalf("empty history = %#v", emptyHistory)
+	}
+
+	lcp, fcp, cls := 2500.0, 1200.0, 0.05
+	cap.Performance().Add([]performance.PerformanceSnapshot{{
+		URL: "https://example.test", Timestamp: "2026-01-02T03:04:05Z",
+		Timing: performance.PerformanceTiming{LargestContentfulPaint: &lcp, FirstContentfulPaint: &fcp}, CLS: &cls,
+	}})
+	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{
+		{Type: "navigate", Timestamp: 1000, ToURL: "https://example.test/page"},
+		{Type: "navigate", Timestamp: 2000, ToURL: "https://example.test/page"},
+		{Type: "click", Timestamp: 3000, URL: "https://example.test/other"},
+	})
+	vitals := testsupport.ExtractMCPJSON(t, GetWebVitals(deps, req, nil))["metrics"].(map[string]any)
+	if vitals["has_data"] != true || vitals["lcp"] != lcp || vitals["fcp"] != fcp || vitals["cls"] != cls {
+		t.Fatalf("populated vitals = %#v", vitals)
+	}
+	history := testsupport.ExtractMCPJSON(t, AnalyzeHistory(deps, req, nil))
+	if history["count"] != float64(2) {
+		t.Fatalf("deduplicated history = %#v", history)
+	}
+}

@@ -194,6 +194,23 @@ func TestGetScreenshotValidatesAndPersistsSuccessfulCapture(t *testing.T) {
 	})
 }
 
+func TestLivePageAnalysisRejectsUntrackedCapture(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	deps := testsupport.Deps(cap)
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 40}
+	for name, response := range map[string]mcp.JSONRPCResponse{
+		"screenshot":    GetScreenshot(deps, req, nil),
+		"accessibility": RunA11yAudit(deps, req, nil),
+	} {
+		result := testsupport.DecodeToolResult(t, response)
+		if !result.IsError || !strings.Contains(strings.ToLower(result.Content[0].Text), "tab") {
+			t.Fatalf("%s untracked result = %+v", name, result)
+		}
+	}
+}
+
 func TestGetScreenshotReturnsCanonicalJPEGAndTextOnlyShapes(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 41}
 	for name, payload := range map[string]json.RawMessage{

@@ -210,6 +210,9 @@ Freshness metadata is verified at its canonical builder and at the page, log,
 network, and session handlers that select each stream's newest timestamp.
 Tracked-tab activity is likewise owned by the page-response contract, including
 the distinction between a known inactive tab and unknown activity state.
+Web-vital, history, error-cluster, screenshot, and accessibility edge contracts
+are tested by their session, log, and page owners rather than by a root-level
+coverage harness coupled to the browser-agent composition fixture.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

@@ -18,6 +18,7 @@ code_paths:
 test_paths:
   - internal/tools/observe/errorcluster/cluster_test.go
   - internal/tools/observe/errorcluster/normalize_test.go
+  - internal/tools/observe/logs/logs_edge_test.go
   - tests/extension/state-recovery/state-recovery-contract.test.js
   - tests/extension/state-recovery/validated-storage.test.js
 last_verified_version: 0.7.12
@@ -34,9 +35,9 @@ last_verified_date: 2026-07-26
 > Deleting it was correct; describing the whole feature as dead was not.
 >
 > A second correction: the live path was also described as "0.0% covered." That was a
-> per-package measurement artifact — `AnalyzeErrors` measures 100% once
-> `cmd/browser-agent/tools_observe_coverage_test.go` is counted with `-coverpkg`. What was
-> genuinely missing was not coverage but a *case*: the existing test clustered two
+> per-package measurement artifact. The canonical logs owner now exercises the
+> `AnalyzeErrors` handler directly. What was genuinely missing was not coverage but a
+> *case*: the earlier test clustered two
 > byte-identical messages, so nothing ever exercised whether siblings differing by an
 > embedded id collapse. They did not, and that is the defect fixed here.
 

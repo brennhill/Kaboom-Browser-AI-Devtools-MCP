@@ -208,3 +208,22 @@ func TestGetBrowserErrorsScopesTrackedPageAndSummarizesNoise(t *testing.T) {
 		t.Fatalf("top_messages = %#v", top)
 	}
 }
+
+func TestAnalyzeErrorsClustersRepeatedErrorsAndIgnoresNonErrors(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	entries := []types.LogEntry{
+		{"level": "error", "message": "TypeError: missing value", "timestamp": "2026-01-02T03:04:05Z"},
+		{"level": "error", "message": "TypeError: missing value", "timestamp": "2026-01-02T03:04:06Z"},
+		{"level": "info", "message": "ready"},
+	}
+	deps := testsupport.Deps(cap)
+	deps.LogEntries = func() ([]types.LogEntry, []time.Time) { return entries, nil }
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 5}
+	data := testsupport.ExtractMCPJSON(t, AnalyzeErrors(deps, req, nil))
+	clusters := data["clusters"].([]any)
+	if data["total_count"] != float64(1) || len(clusters) != 1 || clusters[0].(map[string]any)["count"] != float64(2) {
+		t.Fatalf("error clusters = %#v", data)
+	}
+}
