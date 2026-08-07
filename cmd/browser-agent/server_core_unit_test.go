@@ -6,37 +6,8 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
-
-func TestConfigPathsInitializeLocalStateAndUploadBoundary(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv(state.StateDirEnv, "")
-	security := initUploadSecurity(false, "", []string{"private-*"})
-	if security == nil {
-		t.Fatal("default upload security was not initialized")
-	}
-	if _, err := os.Stat(filepath.Join(home, "kaboom-upload-dir")); err != nil {
-		t.Fatalf("default upload directory: %v", err)
-	}
-
-	relative := filepath.Join(".", "test-state")
-	normalizeStateDir(&relative)
-	if !filepath.IsAbs(relative) || os.Getenv(state.StateDirEnv) != relative {
-		t.Fatalf("normalized state directory = %q env=%q", relative, os.Getenv(state.StateDirEnv))
-	}
-
-	var warnings []string
-	logFile := ""
-	resolveDefaultLogFile(&logFile, &warnings)
-	if logFile == "" || !strings.HasSuffix(logFile, "kaboom.jsonl") {
-		t.Fatalf("default log file = %q", logFile)
-	}
-}
 
 func TestServerRuntimeConfigurationIsInstanceOwned(t *testing.T) {
 	first := &Server{}

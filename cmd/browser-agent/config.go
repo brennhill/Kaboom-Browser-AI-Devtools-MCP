@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
@@ -21,12 +20,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/runtimeconfig"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/runtimeflags"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/startupconfig"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
@@ -73,9 +72,17 @@ func parseAndValidateFlags() *serverConfig {
 	}
 
 	uploadsec.SetSSRFAllowedHosts(f.SSRFAllowedHosts)
-	uploadSecurity := initUploadSecurity(f.EnableOSUpload, f.UploadDir, f.UploadDenyPatterns)
+	uploadSecurity, err := startupconfig.BuildUploadSecurity(f.EnableOSUpload, f.UploadDir, f.UploadDenyPatterns)
+	if err != nil {
+		diag.Printf("[Kaboom] Upload security configuration failed: %v\n", err)
+		os.Exit(1)
+	}
 	validatePort(f.Port)
-	normalizeStateDir(&f.StateDir)
+	f.StateDir, err = startupconfig.NormalizeStateDir(f.StateDir)
+	if err != nil {
+		diag.Printf("[Kaboom] Invalid --state-dir: %v\n", err)
+		os.Exit(1)
+	}
 	var warnings []string
 	resolvedStateDir, parallelWarnings, err := runtimeconfig.ApplyParallelStateDir(
 		f.ParallelMode,
@@ -90,7 +97,11 @@ func parseAndValidateFlags() *serverConfig {
 	f.StateDir = resolvedStateDir
 	warnings = append(warnings, parallelWarnings...)
 	handleEarlyExitModes(&f)
-	resolveDefaultLogFile(&f.LogFile, &warnings)
+	var logWarning string
+	f.LogFile, logWarning = startupconfig.ResolveLogFile(f.LogFile)
+	if logWarning != "" {
+		warnings = append(warnings, logWarning)
+	}
 
 	return &serverConfig{
 		port:             f.Port,
@@ -108,68 +119,11 @@ func parseAndValidateFlags() *serverConfig {
 	}
 }
 
-func initUploadSecurity(enabled bool, dir string, denyPatterns []string) *uploadsec.Security {
-	if dir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			if enabled {
-				diag.Printf("[Kaboom] Cannot determine home directory for default upload dir: %v\n", err)
-				os.Exit(1)
-			}
-			return &uploadsec.Security{}
-		}
-		dir = filepath.Join(home, "kaboom-upload-dir")
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			if enabled {
-				diag.Printf("[Kaboom] Cannot create default upload dir %s: %v\n", dir, err)
-				os.Exit(1)
-			}
-			return &uploadsec.Security{}
-		}
-	}
-	security, err := uploadsec.ValidateUploadDir(dir, denyPatterns)
-	if err != nil {
-		diag.Printf("[Kaboom] Upload security validation failed: %v\n", err)
-		os.Exit(1)
-	}
-	return security
-}
-
 func validatePort(port int) {
 	if port < 1 || port > 65535 {
 		diag.Printf("[Kaboom] Invalid port: %d (must be 1-65535)\n", port)
 		os.Exit(1)
 	}
-}
-
-func normalizeStateDir(stateDir *string) {
-	if *stateDir == "" {
-		return
-	}
-	absolute, err := filepath.Abs(*stateDir)
-	if err != nil {
-		diag.Printf("[Kaboom] Invalid --state-dir: %v\n", err)
-		os.Exit(1)
-	}
-	*stateDir = filepath.Clean(absolute)
-	if err := os.Setenv(state.StateDirEnv, *stateDir); err != nil {
-		diag.Printf("[Kaboom] Failed to set %s: %v\n", state.StateDirEnv, err)
-		os.Exit(1)
-	}
-}
-
-func resolveDefaultLogFile(logFile *string, warnings *[]string) {
-	if *logFile != "" {
-		return
-	}
-	defaultLogFile, err := state.DefaultLogFile()
-	if err != nil {
-		fallback := filepath.Join(os.TempDir(), "kaboom", "logs", "kaboom.jsonl")
-		*warnings = append(*warnings, fmt.Sprintf("state_dir_unwritable: %v; falling back to %s", err, fallback))
-		*logFile = fallback
-		return
-	}
-	*logFile = defaultLogFile
 }
 
 func handleEarlyExitModes(flags *runtimeflags.Values) {

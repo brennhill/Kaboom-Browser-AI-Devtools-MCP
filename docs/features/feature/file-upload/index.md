@@ -11,6 +11,7 @@ code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/server.go
   - cmd/browser-agent/config.go
+  - cmd/browser-agent/internal/startupconfig/paths.go
   - cmd/browser-agent/tools_core.go
   - internal/upload/httpapi/handlers.go
   - internal/upload/handlers.go
@@ -24,6 +25,7 @@ code_paths:
   - internal/upload/osauto/pid.go
   - scripts/smoke-tests/upload/upload-server.py
 test_paths:
+  - cmd/browser-agent/internal/startupconfig/paths_test.go
   - internal/upload/uploadsec/injectiontests/injection_test.go
   - scripts/contracts/smokeupload/contracts_test.go
   - internal/upload/osauto/pid_test.go
