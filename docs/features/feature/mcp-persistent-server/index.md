@@ -95,6 +95,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
   - cmd/browser-agent/internal/daemonrecovery/primitives_test.go
   - cmd/browser-agent/internal/daemonrecovery/reclaimer_test.go
   - internal/listenport/store_test.go

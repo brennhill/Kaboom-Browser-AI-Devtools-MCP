@@ -75,7 +75,7 @@ test_paths:
   - cmd/browser-agent/tools_observe_audit_test.go
   - cmd/browser-agent/tools_observe_screenshot_test.go
   - cmd/browser-agent/tools_observe_analysis_test.go
-  - cmd/browser-agent/tools_observe_commands_test.go
+  - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
   - cmd/browser-agent/tools_observe_indexeddb_test.go
   - extension/background/commands/observe.fullpage.test.js
   - internal/a11ysummary/summary_test.go
