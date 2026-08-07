@@ -67,7 +67,6 @@ test_paths:
   - tests/extension/dom/page-query-targeting.test.js
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
-  - cmd/browser-agent/tools_observe_telemetry_modes_test.go
   - internal/tools/observe/page/page_readiness_test.go
   - cmd/browser-agent/tools_observe_blackbox_test.go
   - cmd/browser-agent/tools_observe_audit_test.go
@@ -213,6 +212,9 @@ the distinction between a known inactive tab and unknown activity state.
 Web-vital, history, error-cluster, screenshot, and accessibility edge contracts
 are tested by their session, log, and page owners rather than by a root-level
 coverage harness coupled to the browser-agent composition fixture.
+Canonical response fields and filters for errors, browser logs, extension logs,
+network bodies, WebSockets, and actions are likewise asserted by their stream
+owners; telemetry modes have no parallel root-level response-shape suite.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

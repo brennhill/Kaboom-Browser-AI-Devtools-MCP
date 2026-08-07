@@ -227,3 +227,41 @@ func TestAnalyzeErrorsClustersRepeatedErrorsAndIgnoresNonErrors(t *testing.T) {
 		t.Fatalf("error clusters = %#v", data)
 	}
 }
+
+func TestErrorAndExtensionLogHandlersExposeCanonicalTelemetryShapes(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	now := time.Now().UTC()
+	cap.ExtensionLogs().Add([]types.ExtensionLog{{
+		Level: "info", Message: "started", Source: "background.js", Category: "lifecycle",
+		Data: json.RawMessage(`{"version":"0.9.0"}`), Timestamp: now,
+	}})
+	deps := testsupport.Deps(cap)
+	deps.LogEntries = func() ([]types.LogEntry, []time.Time) {
+		return []types.LogEntry{{
+			"level": "error", "message": "failed", "source": "app.js", "url": "https://example.test/app.js",
+			"line": float64(42), "column": float64(10), "stack": "Error: failed", "ts": now.Format(time.RFC3339), "tabId": float64(7),
+		}}, nil
+	}
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 6}
+
+	errors := testsupport.ExtractMCPJSON(t, GetBrowserErrors(deps, req, nil))
+	entry := errors["errors"].([]any)[0].(map[string]any)
+	for _, field := range []string{"message", "source", "url", "line", "column", "stack", "timestamp", "tab_id"} {
+		if _, ok := entry[field]; !ok {
+			t.Fatalf("error entry missing %q: %#v", field, entry)
+		}
+	}
+	if _, ok := errors["metadata"].(map[string]any)["data_age_ms"]; !ok {
+		t.Fatalf("error metadata = %#v", errors["metadata"])
+	}
+
+	extension := testsupport.ExtractMCPJSON(t, GetExtensionLogs(deps, req, nil))
+	extensionEntry := extension["logs"].([]any)[0].(map[string]any)
+	for _, field := range []string{"level", "message", "source", "category", "data", "timestamp"} {
+		if _, ok := extensionEntry[field]; !ok {
+			t.Fatalf("extension log missing %q: %#v", field, extensionEntry)
+		}
+	}
+}
