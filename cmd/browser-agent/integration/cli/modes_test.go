@@ -3,17 +3,20 @@
 
 //go:build integration
 
-package main
+package cliintegration
 
 import (
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
+	corebridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 )
 
 func TestCLIEarlyExitModes(t *testing.T) {
-	binary := buildTestBinary(t)
+	binary := testprocess.BuildBinary(t)
 	tests := []struct {
 		name       string
 		args       []string
@@ -30,7 +33,7 @@ func TestCLIEarlyExitModes(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			cmd := startServerCmd(t, binary, tc.args...)
+			cmd := testprocess.StartServer(t, binary, tc.args...)
 			cmd.Env = append(cmd.Env, "KABOOM_TELEMETRY_DISABLED=1")
 			output, err := cmd.CombinedOutput()
 			if tc.wantOK && err != nil {
@@ -47,7 +50,7 @@ func TestCLIEarlyExitModes(t *testing.T) {
 }
 
 func TestCLIExplicitStateAndUploadConfiguration(t *testing.T) {
-	binary := buildTestBinary(t)
+	binary := testprocess.BuildBinary(t)
 	tests := []struct {
 		name string
 		args func(port int) []string
@@ -74,8 +77,8 @@ func TestCLIExplicitStateAndUploadConfiguration(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			port := findFreePort(t)
-			cmd := startServerCmd(t, binary, tc.args(port)...)
+			port := testprocess.FreePort(t)
+			cmd := testprocess.StartServer(t, binary, tc.args(port)...)
 			cmd.Env = append(cmd.Env, "KABOOM_TELEMETRY_DISABLED=1")
 			if err := cmd.Start(); err != nil {
 				t.Fatal(err)
@@ -84,7 +87,7 @@ func TestCLIExplicitStateAndUploadConfiguration(t *testing.T) {
 				_ = cmd.Process.Kill()
 				_, _ = cmd.Process.Wait()
 			})
-			if bridgeRuntime().WaitForServer(port, 5*time.Second) {
+			if corebridge.WaitForServer(port, 5*time.Second) {
 				return
 			}
 			t.Fatalf("server did not start on port %d", port)

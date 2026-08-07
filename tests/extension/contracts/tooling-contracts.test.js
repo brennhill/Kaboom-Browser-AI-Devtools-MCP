@@ -96,7 +96,7 @@ describe('Tooling contracts', () => {
       'cmd/browser-agent/integration/bridge/faststart_extended_test.go',
       'cmd/browser-agent/integration/bridge/faststart_test.go',
       'cmd/browser-agent/integration/bridge/startup_contention_test.go',
-      'cmd/browser-agent/cli_modes_subprocess_test.go',
+      'cmd/browser-agent/integration/cli/modes_test.go',
       'cmd/browser-agent/integration_test.go',
       'cmd/browser-agent/server_persistence_test.go',
       'cmd/browser-agent/server_reliability_integration_test.go',

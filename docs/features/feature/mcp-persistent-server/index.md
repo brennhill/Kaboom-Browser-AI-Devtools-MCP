@@ -114,7 +114,7 @@ test_paths:
   - scripts/release/install-upgrade-regression.mjs
   - tests/architecture/user-state-loaders.test.cjs
   - internal/statediag/collector_test.go
-  - cmd/browser-agent/cli_modes_subprocess_test.go
+  - cmd/browser-agent/integration/cli/modes_test.go
   - cmd/browser-agent/server_persistence_test.go
   - cmd/browser-agent/server_reliability_test.go
   - cmd/browser-agent/server_reliability_integration_test.go
