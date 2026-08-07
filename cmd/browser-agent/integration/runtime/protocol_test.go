@@ -368,5 +368,4 @@ func TestIntegration_ToolsListMatchesImplementation(t *testing.T) {
 	}
 }
 
-// Note: waitForServer, findFreePort, and buildTestBinary helpers are defined
-// in connection_lifecycle_test.go and shared across test files in this package.
+// Process, port, readiness, and cleanup fixtures come from internal/integrationtest.

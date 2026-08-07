@@ -118,7 +118,6 @@ test_paths:
   - cmd/browser-agent/integration/runtime/persistence_test.go
   - cmd/browser-agent/integration/runtime/reliability_test.go
   - cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
-  - cmd/browser-agent/connection_lifecycle_helpers_test.go
   - cmd/browser-agent/internal/startupconfig/paths_test.go
   - cmd/browser-agent/internal/startupconfig/runtime_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go
@@ -142,7 +141,6 @@ test_paths:
   - cmd/browser-agent/internal/procctl/stop_test.go
   - cmd/browser-agent/internal/runtimeflags/parsing_test.go
   - cmd/browser-agent/internal/runtimeflags/repeatable_test.go
-  - cmd/browser-agent/test_daemon_cleanup_test.go
   - internal/diag/output_test.go
   - internal/diag/debug_file_test.go
   - cmd/browser-agent/internal/playbooks/resources/catalog_test.go
@@ -158,8 +156,6 @@ test_paths:
   - cmd/browser-agent/internal/terminal/status/status_test.go
   - cmd/browser-agent/integration/bridge/startup_contention_test.go
   - cmd/browser-agent/integration/bridge/faststart_extended_test.go
-  - cmd/browser-agent/start_timeout_norace_test.go
-  - cmd/browser-agent/start_timeout_race_test.go
   - cmd/browser-agent/internal/mcphttp/handler_test.go
   - cmd/browser-agent/internal/mcpcall/handler_test.go
   - cmd/browser-agent/internal/mcprouter/router_test.go
