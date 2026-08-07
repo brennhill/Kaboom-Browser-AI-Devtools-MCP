@@ -80,7 +80,6 @@ test_paths:
   - cmd/browser-agent/internal/runtimeflags/repeatable_test.go
   - cmd/browser-agent/main_io_unit_test.go
   - cmd/browser-agent/internal/cli/parser/commands_test.go
-  - cmd/browser-agent/main_helpers_more_test.go
   - cmd/browser-agent/internal/health/health_coverage_test.go
   - cmd/browser-agent/server_reliability_integration_test.go
   - scripts/smoke-tests/core/23-doctor-preflight.sh

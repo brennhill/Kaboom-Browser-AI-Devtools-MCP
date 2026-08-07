@@ -71,3 +71,39 @@ func TestFindDiscoversOnlyManagedUserConfigurations(t *testing.T) {
 		t.Fatalf("Find() = %q, want %q", got, cursor)
 	}
 }
+
+func TestFindDiscoversEveryManagedUserConfigurationLocation(t *testing.T) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(workingDir) })
+	project := t.TempDir()
+	if err := os.Chdir(project); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, relativePath := range []string{
+		".claude.json",
+		filepath.Join(".cursor", "mcp.json"),
+		filepath.Join(".codeium", "windsurf", "mcp_config.json"),
+		filepath.Join(".continue", "config.json"),
+		filepath.Join(".config", "zed", "settings.json"),
+	} {
+		t.Run(relativePath, func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			t.Setenv("USERPROFILE", home)
+			path := filepath.Join(home, relativePath)
+			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(`{"mcpServers":{"kaboom-browser-devtools":{}}}`), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if got := Find(); got != path {
+				t.Fatalf("Find() = %q, want %q", got, path)
+			}
+		})
+	}
+}
