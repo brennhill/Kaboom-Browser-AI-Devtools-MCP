@@ -83,13 +83,6 @@ func TestHandleNavigate_IncludeContent(t *testing.T) {
 	}
 }
 
-func TestHandleNavigate_InsecureURLRejected(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	// security mode is Normal by default => insecure prefix rejected.
-	resp := h.Handle("navigate", testReq(), json.RawMessage(`{"url":"kaboom-insecure://http://internal"}`))
-	assertErr(t, resp, mcp.ErrInvalidParam)
-}
-
 func TestHandleRefresh_Success(t *testing.T) {
 	h, fs := newFakeBrowserActions(t)
 	resp := h.Handle("refresh", testReq(), json.RawMessage(`{}`))
@@ -262,50 +255,6 @@ func TestHandleSubtitle_MissingText(t *testing.T) {
 func TestHandleSubtitle_InvalidJSON(t *testing.T) {
 	h, _ := newFakeBrowserActions(t)
 	assertErr(t, h.Handle("subtitle", testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
-}
-
-func TestResolveNavigateURL_PassThrough(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	got, err := h.resolveNavigateURL("https://example.com/x")
-	if err != nil || got != "https://example.com/x" {
-		t.Fatalf("plain url should pass through, got %q err=%v", got, err)
-	}
-}
-
-func TestResolveNavigateURL_InsecureRequiresMode(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	_, err := h.resolveNavigateURL("kaboom-insecure://http://internal.host/path")
-	if err == nil {
-		t.Fatal("expected error when security mode is not insecure_proxy")
-	}
-}
-
-func TestResolveNavigateURL_InsecureProxyRewrite(t *testing.T) {
-	h, fs := newFakeBrowserActions(t)
-	fs.cap.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, nil)
-	got, err := h.resolveNavigateURL("kaboom-insecure://http://internal.host/path")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !contains(got, "127.0.0.1:7890/insecure-proxy?target=") {
-		t.Fatalf("expected rewritten proxy URL, got %q", got)
-	}
-}
-
-func TestResolveNavigateURL_InsecureEmptyTarget(t *testing.T) {
-	h, fs := newFakeBrowserActions(t)
-	fs.cap.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, nil)
-	if _, err := h.resolveNavigateURL("kaboom-insecure://"); err == nil {
-		t.Fatal("expected error for empty insecure target")
-	}
-}
-
-func TestResolveNavigateURL_InsecureNonHTTPScheme(t *testing.T) {
-	h, fs := newFakeBrowserActions(t)
-	fs.cap.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, nil)
-	if _, err := h.resolveNavigateURL("kaboom-insecure://ftp://internal.host"); err == nil {
-		t.Fatal("expected error for non-http insecure target scheme")
-	}
 }
 
 func TestHandleContentExtractionRoutesDedicatedQueries(t *testing.T) {
@@ -772,5 +721,61 @@ func TestValidateStorageType(t *testing.T) {
 func TestJSQuote(t *testing.T) {
 	if jsQuote("a\"b") != `"a\"b"` {
 		t.Fatalf("unexpected jsQuote output: %s", jsQuote("a\"b"))
+	}
+}
+
+func TestHandleNavigate_InsecureURLRejected(t *testing.T) {
+	h, fs := newFakeBrowserActions(t)
+	resp := h.Handle("navigate", testReq(), json.RawMessage(`{"url":"kaboom-insecure://http://internal"}`))
+	assertErr(t, resp, mcp.ErrInvalidParam)
+	if !contains(firstText(parseToolResult(t, resp)), "security_mode") || fs.enqueuedCount() != 0 {
+		t.Fatalf("insecure rejection = %s; enqueued=%d", firstText(parseToolResult(t, resp)), fs.enqueuedCount())
+	}
+}
+
+func TestHandleInsecureProxyRewritesBrowserTargets(t *testing.T) {
+	for _, tc := range []struct{ action, target, encoded string }{
+		{"navigate", "https://example.com/path?q=1#frag", "https%3A%2F%2Fexample.com%2Fpath%3Fq%3D1%23frag"},
+		{"new_tab", "https://example.org", "https%3A%2F%2Fexample.org"},
+	} {
+		t.Run(tc.action, func(t *testing.T) {
+			h, fs := newFakeBrowserActions(t)
+			fs.cap.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, nil)
+			args := json.RawMessage(`{"url":"kaboom-insecure://` + tc.target + `"}`)
+			assertOK(t, h.Handle(tc.action, testReq(), args))
+			enqueued := fs.enqueuedSnapshot()
+			if len(enqueued) != 1 || enqueued[0].Type != "browser_action" {
+				t.Fatalf("insecure browser enqueue = %#v", enqueued)
+			}
+			var params map[string]any
+			if err := json.Unmarshal(enqueued[0].Params, &params); err != nil {
+				t.Fatalf("decode insecure browser params: %v", err)
+			}
+			urlValue, _ := params["url"].(string)
+			if !strings.Contains(urlValue, "http://127.0.0.1:7890/insecure-proxy?target=") || !strings.Contains(urlValue, tc.encoded) {
+				t.Fatalf("rewritten browser URL = %q", urlValue)
+			}
+		})
+	}
+}
+
+func TestResolveNavigateURLContracts(t *testing.T) {
+	h, fs := newFakeBrowserActions(t)
+	got, err := h.resolveNavigateURL("https://example.com/x")
+	if err != nil || got != "https://example.com/x" {
+		t.Fatalf("plain URL = %q, %v", got, err)
+	}
+	if _, err := h.resolveNavigateURL("kaboom-insecure://http://internal.host/path"); err == nil {
+		t.Fatal("insecure URL accepted in normal mode")
+	}
+	fs.cap.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, nil)
+	got, err = h.resolveNavigateURL("kaboom-insecure://http://internal.host/path")
+	if err != nil || !contains(got, "127.0.0.1:7890/insecure-proxy?target=") {
+		t.Fatalf("proxy rewrite = %q, %v", got, err)
+	}
+	for _, target := range []string{"kaboom-insecure://", "kaboom-insecure://ftp://internal.host"} {
+		if _, err := h.resolveNavigateURL(target); err == nil {
+			t.Fatalf("invalid insecure target accepted: %q", target)
+		}
 	}
 }

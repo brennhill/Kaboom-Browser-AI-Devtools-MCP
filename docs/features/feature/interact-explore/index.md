@@ -345,3 +345,6 @@ metadata, and invalid-input behavior.
 Draw-mode activation rejects malformed JSON before any state mutation and its
 owner-level contract verifies pilot gating, tab/session forwarding, queue
 metadata, and draw-lifecycle marking.
+Insecure-proxy navigation contracts live with the browser action owner and
+verify rejection without queue mutation, complete target encoding, and
+consistent rewriting for both current-tab and new-tab navigation.
