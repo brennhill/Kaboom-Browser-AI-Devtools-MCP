@@ -147,8 +147,6 @@ test_paths:
   - scripts/contracts/stdout_protocol_test.go
   - cmd/browser-agent/stdio_silence_test.go
   - scripts/uat/protocol/smoke-mcp-transport.sh
-  - cmd/browser-agent/mcp_protocol_test.go
-  - cmd/browser-agent/mcp_initialize_test.go
   - cmd/browser-agent/internal/mcpprotocol/responses_test.go
   - cmd/browser-agent/internal/bridge/bridge_unit_test.go
   - cmd/browser-agent/internal/toolmodule/registry_test.go

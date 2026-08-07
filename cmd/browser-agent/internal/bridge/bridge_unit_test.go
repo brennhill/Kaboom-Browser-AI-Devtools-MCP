@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -568,5 +569,73 @@ func TestIsIgnorableStdoutSyncError(t *testing.T) {
 				t.Fatalf("IsIgnorableStdoutSyncError(%v) = %v, want %v", tc.err, got, tc.want)
 			}
 		})
+	}
+}
+
+func captureMCPTransportOutput(t *testing.T, run func()) string {
+	t.Helper()
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe(stdout) error = %v", err)
+	}
+	previous := os.Stdout
+	os.Stdout = writer
+	defer func() { os.Stdout = previous }()
+
+	run()
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close stdout writer: %v", err)
+	}
+	output, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("read stdout: %v", err)
+	}
+	if err := reader.Close(); err != nil {
+		t.Fatalf("close stdout reader: %v", err)
+	}
+	return string(output)
+}
+
+func TestWriteMCPPayloadNormalizesLineFraming(t *testing.T) {
+	output := captureMCPTransportOutput(t, func() {
+		WriteMCPPayload([]byte(" \n\t"+`{"jsonrpc":"2.0","id":1,"result":{"ok":true}}`+"\n\n "), bridge.StdioFramingLine)
+	})
+	if !strings.HasSuffix(output, "\n") || strings.HasSuffix(output, "\n\n") {
+		t.Fatalf("line framing must have exactly one trailing newline: %q", output)
+	}
+	trimmed := strings.TrimSuffix(output, "\n")
+	if !json.Valid([]byte(trimmed)) || strings.TrimSpace(trimmed) != trimmed {
+		t.Fatalf("line framing did not normalize JSON payload: %q", output)
+	}
+}
+
+func TestWriteMCPPayloadUsesNormalizedContentLength(t *testing.T) {
+	output := captureMCPTransportOutput(t, func() {
+		WriteMCPPayload([]byte(" \n\t"+`{"jsonrpc":"2.0","id":9,"result":{"ok":true}}`+"\n\n "), bridge.StdioFramingContentLength)
+	})
+	parts := strings.SplitN(output, "\r\n\r\n", 2)
+	if len(parts) != 2 {
+		t.Fatalf("content-length output = %q", output)
+	}
+	lengthText := strings.TrimPrefix(strings.SplitN(parts[0], "\r\n", 2)[0], "Content-Length: ")
+	reportedLength, err := strconv.Atoi(lengthText)
+	if err != nil {
+		t.Fatalf("content length %q: %v", lengthText, err)
+	}
+	if reportedLength != len(parts[1]) || !json.Valid([]byte(parts[1])) || strings.TrimSpace(parts[1]) != parts[1] {
+		t.Fatalf("content-length framing mismatch: header=%d body=%q", reportedLength, parts[1])
+	}
+}
+
+func TestWriteMCPPayloadReplacesInvalidJSON(t *testing.T) {
+	output := captureMCPTransportOutput(t, func() {
+		WriteMCPPayload([]byte("not-json"), bridge.StdioFramingLine)
+	})
+	var response mcp.JSONRPCResponse
+	if err := json.Unmarshal([]byte(strings.TrimSuffix(output, "\n")), &response); err != nil {
+		t.Fatalf("decode fallback response: %v; output=%q", err, output)
+	}
+	if response.JSONRPC != mcp.JSONRPCVersion || response.ID != nil || response.Error == nil || response.Error.Code != -32603 {
+		t.Fatalf("fallback response = %#v", response)
 	}
 }

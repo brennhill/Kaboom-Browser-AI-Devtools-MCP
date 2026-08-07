@@ -4,35 +4,28 @@ scope: architecture/mcp
 ai-priority: high
 tags: [mcp, correctness, constraints, reference]
 relates-to: [../../.claude/refs/architecture.md, ../../.claude/refs/async-command-architecture.md]
-last-verified: 2026-02-11
+last-verified: 2026-08-07
 ---
 
 # MCP Correctness
 
 **See Also:** [.claude/refs/architecture.md](../../../.claude/refs/architecture.md) (canonical system design)
 
-Kaboom MCP implements [Model Context Protocol](https://modelcontextprotocol.io/specification/2025-11-25) JSON-RPC semantics with a stdio client boundary and a local HTTP bridge.
+Kaboom MCP implements Model Context Protocol JSON-RPC semantics with a stdio
+client boundary and a local HTTP bridge.
 
-**Protocol Version:** `2024-11-05` (with version negotiation for `2025-11-25`)
+**Protocol Versions:** `2024-11-05` and `2025-06-18`, negotiated from the
+client initialize request
 
 ## Compliance Status
 
 **All MUST constraints:** ✅ PASS
-**Intentional deviations:** 3 (documented below)
+**Intentional deviations:** None
 **Transport:** stdio JSON-RPC for MCP clients, local `/mcp` HTTP bridge for shared daemon
 
 ## Violations Summary
 
 **Current:** None (all violations fixed)
-
-## Intentional Deviations
-
-| ID | Deviation | Justification |
-|----|-----------|---------------|
-| L-6, J-6 | Respond to `initialized` notification with `{}` | Some MCP clients (including Claude Code) expect a response. Removing it could break compatibility. Track spec evolution. |
-| — | `_meta` field on tools with `data_counts` | Non-standard but uses `_` prefix convention. Provides AI with buffer state without extra tool call. No spec conflict. |
-| — | `X-Kaboom MCP-Client` header for multi-client | Not part of MCP spec. Internal transport-layer addition for our `/mcp` HTTP bridge. |
-| — | Only `type: "text"` content blocks | MCP allows image/resource content types. All our data is textual. No spec violation — we just don't use all content types. |
 
 ## Key Implementation Details
 
@@ -64,11 +57,18 @@ Kaboom MCP implements [Model Context Protocol](https://modelcontextprotocol.io/s
 
 ## Test Coverage
 
-80+ MCP constraints covered by:
-- `mcp_protocol_test.go` — JSON-RPC protocol correctness and invariants
-- `connection_lifecycle_test.go` — startup/retry/recovery lifecycle invariants
-- `multi_client_test.go` — concurrent client isolation behavior
-- `handler_unit_test.go` — HTTP bridge handler behavior and redaction paths
+MCP constraints are owned by the boundary they protect:
+
+- `cmd/browser-agent/internal/mcprouter/router_test.go` — JSON-RPC envelope,
+  method, ID, version-negotiation, and notification semantics
+- `cmd/browser-agent/internal/mcpprotocol/responses_test.go` — initialize,
+  discovery, and resource response contracts
+- `cmd/browser-agent/internal/mcphttp/handler_test.go` — HTTP request parsing,
+  error codes, notification status, and newline framing
+- `cmd/browser-agent/internal/bridge/bridge_unit_test.go` — line and
+  content-length stdio framing, including invalid-payload recovery
+- `scripts/uat/protocol/test-mcp-spec-compliance.sh` — installed-artifact
+  protocol verification through the complete bridge and daemon stack
 
 ## References
 

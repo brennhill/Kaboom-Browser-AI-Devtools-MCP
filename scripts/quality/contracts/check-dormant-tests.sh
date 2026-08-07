@@ -47,8 +47,6 @@ cmd/browser-agent/bridge_faststart_test.go
 cmd/browser-agent/bridge_startup_contention_test.go
 cmd/browser-agent/cli_modes_subprocess_test.go
 cmd/browser-agent/integration_test.go
-cmd/browser-agent/mcp_initialize_test.go
-cmd/browser-agent/mcp_protocol_test.go
 cmd/browser-agent/server_persistence_test.go
 cmd/browser-agent/server_reliability_integration_test.go
 cmd/browser-agent/server_reliability_test.go
