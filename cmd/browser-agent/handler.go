@@ -10,8 +10,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcprouter"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
 // MCPHandler owns JSON-RPC request routing and response post-processing for MCP.
@@ -67,11 +65,6 @@ func (h *MCPHandler) SetToolBackend(backend mcpcall.Backend) {
 	h.tools = backend
 	h.passiveTelemetry.SetCapture(backend.Capture)
 	h.responsePolicy.SetCapture(backend.Capture)
-}
-
-// GetUsageTracker returns the configured usage tracker.
-func (h *MCPHandler) GetUsageTracker() *telemetry.UsageTracker {
-	return h.tools.UsageTracker
 }
 
 // HandleRequest validates and routes one JSON-RPC request.

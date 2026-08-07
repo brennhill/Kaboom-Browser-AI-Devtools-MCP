@@ -5,10 +5,61 @@
 package main
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
+
+func TestToolHandlerRecordsUsageOutcomesAndSessionDepth(t *testing.T) {
+	t.Parallel()
+
+	handler := createTestToolHandler(t)
+	tracker := telemetry.NewUsageTracker()
+	handler.usageTracker = tracker
+	request := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1, Method: "tools/call"}
+
+	if _, handled := handler.HandleToolCall(request, "observe", json.RawMessage(`{"what":"errors"}`)); !handled {
+		t.Fatal("observe was not handled")
+	}
+	if _, handled := handler.HandleToolCall(request, "interact", json.RawMessage(`{}`)); !handled {
+		t.Fatal("interact was not handled")
+	}
+	counts := tracker.DebugCounts()
+	if counts["observe:errors"] != 1 || counts["interact:unknown"] != 1 || counts["err:interact:unknown"] != 1 {
+		t.Fatalf("usage counts = %#v", counts)
+	}
+	if tracker.SessionDepth() != 2 {
+		t.Fatalf("session depth = %d, want 2", tracker.SessionDepth())
+	}
+	snapshot := tracker.SwapAndReset()
+	if snapshot == nil || len(snapshot.ToolStats) == 0 {
+		t.Fatalf("usage snapshot = %#v", snapshot)
+	}
+}
+
+func TestToolResultPostProcessingRejectsAbsentAndMalformedPayloads(t *testing.T) {
+	t.Parallel()
+	for _, raw := range []json.RawMessage{nil, json.RawMessage(`not-json`)} {
+		if result, ok := parseToolResultForPostProcessing(raw); ok || result != nil || isToolResultError(raw) {
+			t.Fatalf("invalid result %q was accepted", raw)
+		}
+	}
+	for _, test := range []struct {
+		raw     json.RawMessage
+		isError bool
+	}{
+		{raw: json.RawMessage(`{"isError":false}`)},
+		{raw: json.RawMessage(`{"isError":true}`), isError: true},
+	} {
+		result, ok := parseToolResultForPostProcessing(test.raw)
+		if !ok || result == nil || result.IsError != test.isError || isToolResultError(test.raw) != test.isError {
+			t.Fatalf("result parsing for %s = %#v, %t", test.raw, result, ok)
+		}
+	}
+}
 
 func TestMCPCaptureConfigured(t *testing.T) {
 	t.Parallel()

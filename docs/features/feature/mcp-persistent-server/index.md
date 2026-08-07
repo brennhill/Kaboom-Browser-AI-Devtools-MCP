@@ -29,6 +29,7 @@ code_paths:
   - cmd/browser-agent/config.go
   - cmd/browser-agent/internal/runtimeconfig/parallel.go
   - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolusage/key.go
   - internal/session/snapshot-manager.go
   - cmd/browser-agent/internal/toolmodule/registry.go
   - cmd/browser-agent/internal/toolcatalog/catalog.go
@@ -126,7 +127,8 @@ test_paths:
   - cmd/browser-agent/internal/appruntime/runtime_test.go
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/internal/mcptelemetry/owner_test.go
-  - cmd/browser-agent/handler_tools_call_usage_test.go
+  - cmd/browser-agent/internal/toolusage/key_test.go
+  - cmd/browser-agent/tools_core_unit_test.go
   - cmd/browser-agent/internal/procctl/stop_parse_test.go
   - cmd/browser-agent/internal/procctl/stop_test.go
   - cmd/browser-agent/internal/runtimeflags/parsing_test.go

@@ -230,7 +230,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	server.logLifecycle("mcp_transport_ready", port, nil)
 
 	// Start periodic usage beacon loop (structured tool stats every 5 minutes).
-	if tracker := mcpHandler.GetUsageTracker(); tracker != nil {
+	if tracker := mcpHandler.tools.UsageTracker; tracker != nil {
 		telemetry.StartUsageBeaconLoop(ctx, tracker)
 	}
 

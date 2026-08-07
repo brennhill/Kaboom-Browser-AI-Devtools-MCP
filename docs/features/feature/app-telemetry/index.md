@@ -4,7 +4,7 @@ feature_id: feature-app-telemetry
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - internal/telemetry/usagecallback/callback.go
   - internal/telemetry/beacon.go
@@ -13,6 +13,7 @@ code_paths:
   - internal/statefault/fault.go
   - internal/statefile/statefile.go
   - cmd/browser-agent/internal/operationalapi/handler.go
+  - cmd/browser-agent/internal/toolusage/key.go
   - internal/statediag/collector.go
   - internal/incident/registry.go
   - internal/incident/store.go
@@ -28,6 +29,8 @@ test_paths:
   - internal/telemetry/install_id_test.go
   - internal/telemetry/usage_counter_test.go
   - cmd/browser-agent/internal/operationalapi/debug_test.go
+  - cmd/browser-agent/internal/toolusage/key_test.go
+  - cmd/browser-agent/tools_core_unit_test.go
   - internal/statediag/collector_test.go
   - internal/incident/store_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs

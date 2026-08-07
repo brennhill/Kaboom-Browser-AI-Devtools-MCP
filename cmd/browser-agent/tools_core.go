@@ -36,6 +36,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolusage"
 	apicontractruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract/runtime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
@@ -217,7 +218,7 @@ func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args j
 	// Usage tracker: per-call telemetry beaconed immediately + aggregated every 5 min.
 	// Separate from healthMetrics — different lifecycle and purpose.
 	if h.usageTracker != nil {
-		key := usageKey(args)
+		key := toolusage.Key(args)
 		if key == "" {
 			key = "unknown"
 		}
@@ -243,50 +244,6 @@ func buildToolCatalog(h *ToolHandler) *toolcatalog.Catalog {
 		},
 		schema.AllTools(),
 	)
-}
-
-// extractWhatParam extracts the "what" string from raw JSON args.
-// Returns empty string if missing or unparseable.
-func extractWhatParam(args json.RawMessage) string {
-	if len(args) == 0 {
-		return ""
-	}
-	var parsed struct {
-		What string `json:"what"`
-	}
-	if json.Unmarshal(args, &parsed) != nil {
-		return ""
-	}
-	return parsed.What
-}
-
-// usageKey builds the analytics key from tool args.
-// For command_result calls, extracts the original command prefix from correlation_id
-// (e.g. "nav_17083_123" → "command_result:nav") so analytics map back to the original action.
-// For all other calls, returns the "what" param as-is.
-func usageKey(args json.RawMessage) string {
-	if len(args) == 0 {
-		return ""
-	}
-	var parsed struct {
-		What          string `json:"what"`
-		CorrelationID string `json:"correlation_id"`
-	}
-	if json.Unmarshal(args, &parsed) != nil {
-		return ""
-	}
-	if parsed.What != "command_result" {
-		return parsed.What
-	}
-	// Extract the command prefix from correlation_id (format: prefix_timestamp_random).
-	if parsed.CorrelationID == "" {
-		return "command_result"
-	}
-	prefix := parsed.CorrelationID
-	if idx := strings.IndexByte(prefix, '_'); idx > 0 {
-		prefix = prefix[:idx]
-	}
-	return "command_result:" + prefix
 }
 
 func parseToolResultForPostProcessing(raw json.RawMessage) (*mcp.MCPToolResult, bool) {

@@ -348,7 +348,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 			}
 			return health.BuildUpgradeInfo(server.runtime.Upgrade())
 		},
-		UsageTracker:    mcpHandler.GetUsageTracker,
+		UsageTracker:    func() *telemetry.UsageTracker { return mcpHandler.tools.UsageTracker },
 		MaxPostBodySize: maxPostBodySize,
 	})
 
