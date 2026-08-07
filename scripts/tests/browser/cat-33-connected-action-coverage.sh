@@ -44,7 +44,7 @@ action_expectation() {
         configure/describe_capabilities|configure/diff_sessions|configure/audit_log|configure/restart|\
         configure/save_sequence|configure/get_sequence|configure/list_sequences|configure/delete_sequence|\
         configure/replay_sequence|configure/doctor|configure/security_mode|configure/network_recording|\
-        configure/action_jitter|configure/report_issue|\
+        configure/action_jitter|configure/report_issue|configure/qa_fixture|\
         interact/highlight|interact/subtitle|interact/save_state|interact/load_state|interact/list_states|\
         interact/delete_state|interact/set_storage|interact/delete_storage|interact/clear_storage|\
         interact/set_cookie|interact/delete_cookie|interact/execute_js|interact/navigate|interact/refresh|\
@@ -65,7 +65,8 @@ action_expectation() {
         analyze/draw_history|analyze/computed_styles|analyze/forms|analyze/form_state|\
         analyze/form_validation|analyze/data_table|analyze/visual_baseline|analyze/visual_diff|\
         analyze/visual_baselines|analyze/navigation|analyze/page_structure|analyze/audit|\
-        analyze/feature_gates|analyze/page_issues) echo "success" ;;
+        analyze/feature_gates|analyze/page_issues|analyze/performance_trace|analyze/react_profile|\
+        analyze/verification) echo "success" ;;
         *) echo "unclassified" ;;
     esac
 }
@@ -107,6 +108,7 @@ action_args() {
         configure/network_recording) echo '{"what":"network_recording","operation":"status"}' ;;
         configure/action_jitter) echo '{"what":"action_jitter","enabled":false}' ;;
         configure/report_issue) echo '{"what":"report_issue","operation":"preview","title":"Connected action coverage"}' ;;
+        configure/qa_fixture) echo '{"what":"qa_fixture","fixture_action":"validate","fixture":{"version":1}}' ;;
         configure/setup_quality_gates) echo '{"what":"setup_quality_gates","target_dir":'"$(json_string "$PROJECT_ROOT")"'}' ;;
         interact/highlight) echo '{"what":"highlight","selector":"#sf-btn"}' ;;
         interact/subtitle) echo '{"what":"subtitle","text":"Connected action coverage"}' ;;
@@ -158,6 +160,8 @@ action_args() {
         analyze/visual_baseline) echo '{"what":"visual_baseline","name":"connected-action-coverage"}' ;;
         analyze/visual_diff) echo '{"what":"visual_diff","name":"connected-action-coverage","baseline":"connected-action-coverage"}' ;;
         analyze/audit) echo '{"what":"audit","categories":["accessibility","performance"]}' ;;
+        analyze/performance_trace|analyze/react_profile) echo '{"what":"'"$mode"'","action":"stop"}' ;;
+        analyze/verification) echo '{"what":"verification","operation":"define","contract":{"schema_version":"1","contract_id":"connected-action-coverage","assertions":[{"assertion_id":"reachable","description":"The connected verification handler is reachable","required_evidence":["dom"]}]}}' ;;
         *) echo '{"what":"'"$mode"'"}' ;;
     esac
 }
@@ -281,6 +285,14 @@ prepare_action() {
                 return 1
             fi
             ;;
+        analyze/performance_trace|analyze/react_profile)
+            ensure_fixture_page || return 1
+            response="$(call_tool "analyze" '{"what":"'"$2"'","action":"start"}')"
+            if ! check_valid_jsonrpc "$response" || check_is_error "$response"; then
+                fail "Could not start $action lifecycle: $(truncate "$(extract_content_text "$response")")"
+                return 1
+            fi
+            ;;
         configure/event_recording_stop)
             ensure_event_recording
             ;;
@@ -330,6 +342,8 @@ if ! check_valid_jsonrpc "$tools_response"; then
     fail "tools/list did not return a valid JSON-RPC envelope"
     finish_category
 fi
+
+ensure_fixture_page || finish_category
 
 schema_count="$(printf '%s' "$tools_response" | jq --argjson tools '["observe","generate","configure","interact","analyze"]' '
     [.result.tools[] | select(.name as $name | $tools | index($name)) | .inputSchema.properties.what.enum[]] | length

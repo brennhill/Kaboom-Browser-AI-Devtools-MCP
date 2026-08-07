@@ -180,6 +180,14 @@ describe('comprehensive UAT harness regressions', () => {
     assert.equal(output, 'health=3 tab=2')
   })
 
+  test('connected readiness budget covers the extension maximum reconnect backoff', () => {
+    const userState = readFileSync('scripts/tests/framework/uat-user-state.sh', 'utf8')
+    const attempts = Number(userState.match(/UAT_CONNECTED_READY_ATTEMPTS="\$\{UAT_CONNECTED_READY_ATTEMPTS:-([0-9]+)\}"/)?.[1])
+
+    assert.ok(attempts >= 400, `connected readiness budget is only ${attempts * 100}ms`)
+    assert.match(userState, /uat_readiness_sleep\(\) \{[\s\S]*sleep 0\.1/)
+  })
+
   test('connected UAT creates, tracks, and closes a dedicated browser tab', () => {
     const output = userStateCall(`
       uat_call_tool() {
@@ -249,6 +257,13 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(actionCoverage, /expected_error:/)
     assert.match(actionCoverage, /user_mediated/)
     assert.match(actionCoverage, /classified_count/)
+    for (const mode of ['configure/qa_fixture', 'analyze/performance_trace', 'analyze/react_profile', 'analyze/verification']) {
+      assert.match(actionCoverage, new RegExp(mode.replace('/', '\\/')), `${mode} must have a connected contract`)
+    }
+    assert.match(actionCoverage, /configure\/qa_fixture\) echo '\{"what":"qa_fixture","fixture_action":"validate"/)
+    assert.match(actionCoverage, /analyze\/performance_trace\|analyze\/react_profile\)/)
+    assert.match(actionCoverage, /"action":"stop"/)
+    assert.match(actionCoverage, /analyze\/performance_trace\|analyze\/react_profile\)[\s\S]*ensure_fixture_page/)
     assert.match(actionCoverage, /KABOOM_UAT_ACTION/)
     assert.match(actionCoverage, /selected_count/)
     assert.match(actionCoverage, /No live schema action matched KABOOM_UAT_ACTION/)
@@ -259,6 +274,11 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(actionCoverage, /attempt" -le 3/)
     assert.match(actionCoverage, /uat_wait_for_connected_browser "\$PORT" "\$WRAPPER"/)
     assert.match(actionCoverage, /prepare_action "\$tool" "\$mode"/)
+    assert.match(actionCoverage, /ensure_fixture_page \|\| finish_category/)
+    assert.ok(
+      actionCoverage.indexOf('ensure_fixture_page || finish_category') < actionCoverage.indexOf('for tool in $TOOLS'),
+      'connected action coverage must establish its tracked fixture before invoking schema actions'
+    )
     assert.doesNotMatch(actionCoverage, /call_action_with_retry\(\)[\s\S]*sleep /)
     assert.match(actionCoverage, /if ! prepare_action[\s\S]*args="\$\(action_args/)
     assert.doesNotMatch(actionCoverage, /history\.pushState/)
@@ -357,6 +377,9 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(runner, /CONNECTED_CAT_IDS=.*35/)
     assert.match(runner, /35\) echo "QA Fixture Transactions"/)
     assert.match(fixtureUAT, /fixture_action":"apply"/)
+    assert.match(fixtureUAT, /restore_fixture_transaction/)
+    assert.match(fixtureUAT, /fixture_action:"restore"/)
+    assert.match(fixtureUAT, /transaction_id/)
     assert.match(fixtureUAT, /snapshot_failed/)
     assert.match(fixtureUAT, /apply_failed_rolled_back/)
     assert.match(fixtureUAT, /private-fixture-secret/)

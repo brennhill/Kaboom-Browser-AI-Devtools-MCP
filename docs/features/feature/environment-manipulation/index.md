@@ -140,6 +140,9 @@ last_verified_date: 2026-08-02
   survives MV3 service-worker suspension. Corrupt or unavailable storage emits
   stable lifecycle diagnostics without including captured values, and runtime
   registration lives in a dedicated composition root.
+- Connected QA fixture UAT restores every successful transaction through its
+  canonical opaque transaction ID, including when later verification fails;
+  it never substitutes ad-hoc page rewrites for the real recovery path.
 - Snapshot recovery distinguishes active, consumed, and unknown opaque handles.
   Successful restores atomically replace private snapshot data with bounded,
   value-free tombstones; unknown or corrupt handles fail closed so the daemon

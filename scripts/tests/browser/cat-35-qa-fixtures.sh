@@ -16,6 +16,20 @@ fixture_call() {
     call_tool "configure" '{"what":"qa_fixture","fixture_action":"apply","fixture":'"$1"'}'
 }
 
+restore_fixture_transaction() {
+    local apply_response="$1"
+    local transaction_id
+    transaction_id="$(extract_content_text "$apply_response" | tail -n 1 | jq -r '.transaction_id // empty' 2>/dev/null)"
+    if [ -z "$transaction_id" ]; then
+        # EXPECTED_ABSENCE: failed fixture applications never create a recovery
+        # obligation, so there is no transaction to restore or log here.
+        printf '%s' "$apply_response"
+        return
+    fi
+    call_tool "configure" "$(jq -nc --arg transaction_id "$transaction_id" \
+        '{what:"qa_fixture",fixture_action:"restore",transaction_id:$transaction_id}')"
+}
+
 execute_script() {
     call_tool "interact" '{"what":"execute_js","script":'"$(printf '%s' "$1" | jq -Rs .)"'}'
 }
@@ -44,7 +58,7 @@ run_test_35_1() {
     execute_script 'localStorage.setItem("kaboom_fixture","old"); sessionStorage.removeItem("kaboom_session"); "prepared"' >/dev/null
     response="$(fixture_call '{"version":1,"local_storage":{"kaboom_fixture":"new"},"session_storage":{"kaboom_session":"ready"},"feature_flags":{"kaboom_flag":true},"seed_data":{"kaboom_seed":{"value":7}}}')"
     verify="$(execute_script '({local:localStorage.getItem("kaboom_fixture"),session:sessionStorage.getItem("kaboom_session"),flag:localStorage.getItem("kaboom_flag"),seed:localStorage.getItem("kaboom_seed")})')"
-    cleanup="$(execute_script 'localStorage.setItem("kaboom_fixture","old"); sessionStorage.removeItem("kaboom_session"); localStorage.removeItem("kaboom_flag"); localStorage.removeItem("kaboom_seed"); "restored"')"
+    cleanup="$(restore_fixture_transaction "$response")"
     if ! assert_success "$response" || ! assert_success "$cleanup"; then
         fail "Fixture apply or cleanup failed: $(truncate "$(extract_content_text "$response")")"
     elif ! extract_content_text "$verify" | grep -q 'new' || ! extract_content_text "$verify" | grep -q 'ready'; then

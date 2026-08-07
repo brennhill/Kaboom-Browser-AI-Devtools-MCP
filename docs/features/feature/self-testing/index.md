@@ -101,6 +101,12 @@ last_verified_date: 2026-03-05
 
 # Self Testing
 
+Connected action coverage establishes the deterministic tracked fixture before
+the first schema-derived command and allows the extension's bounded production
+reconnect backoff to expire before declaring a handoff failure. Newly exposed
+modes must provide an explicit non-destructive health payload; trace and React
+profile checks exercise a paired start/stop lifecycle.
+
 The shared WebSocket codec encodes extended lengths through the standard
 big-endian primitives. Boundary tests cover short, 16-bit, and 64-bit headers,
 while the security gate rejects unchecked narrowing conversions.
