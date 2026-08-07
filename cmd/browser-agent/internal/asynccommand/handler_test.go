@@ -15,6 +15,44 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
+func saturateQueue(t *testing.T, captured *capture.Capture) {
+	t.Helper()
+	for index := 0; index < queries.MaxPendingQueries; index++ {
+		if _, err := captured.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+			Type: "pressure", Params: json.RawMessage(`{}`), CorrelationID: fmt.Sprintf("pressure-%d", index),
+		}, time.Hour, ""); err != nil {
+			t.Fatalf("saturate queue at %d: %v", index, err)
+		}
+	}
+}
+
+func TestEnqueuePendingQueryFailsLoudWithoutDiscardingAcceptedCommands(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	defer captured.Close()
+	saturateQueue(t, captured)
+	handler := New(Deps{Capture: captured, DiagnosticHint: func(errorData *mcp.StructuredError) {
+		errorData.Hint = "doctor"
+	}})
+	response, blocked := handler.EnqueuePendingQuery(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+		queries.PendingQuery{Type: "browser_action", CorrelationID: "rejected"}, time.Second,
+	)
+	result := decodeToolResult(t, response)
+	if !blocked || !result.IsError || !strings.Contains(result.Content[0].Text, mcp.ErrQueueFull) ||
+		!strings.Contains(result.Content[0].Text, "recovery_playbook") || captured.Queries().QueueDepth() != queries.MaxPendingQueries {
+		t.Fatalf("queue-full response = blocked:%t result:%#v depth:%d", blocked, result, captured.Queries().QueueDepth())
+	}
+
+	captured.Queries().ExpireAllPendingQueries("pressure released")
+	if response, blocked = handler.EnqueuePendingQuery(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 2},
+		queries.PendingQuery{Type: "browser_action", CorrelationID: "accepted"}, time.Second,
+	); blocked || response.Error != nil || captured.Queries().QueueDepth() != 1 {
+		t.Fatalf("recovery enqueue = blocked:%t response:%#v depth:%d", blocked, response, captured.Queries().QueueDepth())
+	}
+}
+
 func TestFormatCommandResultPreservesCancellationDiagnosis(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()

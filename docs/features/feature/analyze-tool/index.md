@@ -77,7 +77,6 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/securityaudit/handler_test.go
-  - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - internal/annotation/store_test.go
   - internal/tools/analyze/computed_styles_test.go
   - internal/tools/analyze/forms_test.go

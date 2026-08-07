@@ -15,8 +15,6 @@ code_paths:
   - src/lib/analysis/dom-queries.ts
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
-  - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
-  - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - tests/extension/a11y/a11y-runtime-error.test.js
   - tests/extension/a11y/on-demand-a11y-runtime.test.js
   - tests/extension/a11y/on-demand-fixture.js

@@ -12,12 +12,6 @@ import (
 	"time"
 )
 
-func TestBrowserActionsHandleIsTheCanonicalActionBoundary(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	assertOK(t, h.Handle("subtitle", testReq(), json.RawMessage(`{"text":"hello"}`)))
-	assertErr(t, h.Handle("unknown", testReq(), json.RawMessage(`{}`)), mcp.ErrInvalidParam)
-}
-
 func TestHandleNavigate_Success(t *testing.T) {
 	h, fs := newFakeBrowserActions(t)
 	resp := h.Handle("navigate", testReq(), json.RawMessage(`{"url":"https://example.org"}`))
@@ -46,6 +40,8 @@ func TestHandleNavigateValidation(t *testing.T) {
 		h, _ := newFakeBrowserActions(t)
 		assertErr(t, h.Handle("navigate", testReq(), json.RawMessage(testCase.args)), testCase.code)
 	}
+	h, _ := newFakeBrowserActions(t)
+	assertErr(t, h.Handle("unknown", testReq(), json.RawMessage(`{}`)), mcp.ErrInvalidParam)
 }
 
 func TestHandleNavigate_PilotBlocked(t *testing.T) {
@@ -55,6 +51,15 @@ func TestHandleNavigate_PilotBlocked(t *testing.T) {
 	assertErr(t, resp, mcp.ErrCodePilotDisabled)
 	if fs.enqueuedCount() != 0 {
 		t.Fatalf("blocked guard should not enqueue, got %d", fs.enqueuedCount())
+	}
+}
+
+func TestHandleNavigateReturnsQueueRejection(t *testing.T) {
+	h, state := newFakeBrowserActions(t)
+	state.blockEnqueue = true
+	assertErr(t, h.Handle("navigate", testReq(), json.RawMessage(`{"url":"https://example.org"}`)), mcp.ErrQueueFull)
+	if state.enqueuedCount() != 1 {
+		t.Fatalf("enqueue attempts = %d, want 1", state.enqueuedCount())
 	}
 }
 
@@ -78,19 +83,16 @@ func TestHandleNavigate_IncludeContent(t *testing.T) {
 	}
 }
 
-func TestHandleRefresh_Success(t *testing.T) {
+func TestHandleRefreshContracts(t *testing.T) {
 	h, fs := newFakeBrowserActions(t)
 	resp := h.Handle("refresh", testReq(), json.RawMessage(`{}`))
 	assertOK(t, resp)
 	if fs.enqueuedCount() != 1 {
 		t.Fatalf("expected 1 enqueue, got %d", fs.enqueuedCount())
 	}
-}
-
-func TestHandleRefresh_TabBlocked(t *testing.T) {
-	h, fs := newFakeBrowserActions(t)
+	h, fs = newFakeBrowserActions(t)
 	fs.blockTab = true
-	resp := h.Handle("refresh", testReq(), json.RawMessage(`{}`))
+	resp = h.Handle("refresh", testReq(), json.RawMessage(`{}`))
 	assertErr(t, resp, mcp.ErrNotInitialized)
 }
 
@@ -369,7 +371,6 @@ func TestQueueComposableHelpers(t *testing.T) {
 func TestHandleClipboardRead(t *testing.T) {
 	h, fs := newFakePageActions(t)
 	assertOK(t, h.HandleClipboardRead(testReq(), json.RawMessage(`{}`)))
-	// records clipboard_read on success.
 	if fs.recordedCount() != 1 {
 		t.Fatalf("expected 1 recorded action, got %d", fs.recordedCount())
 	}

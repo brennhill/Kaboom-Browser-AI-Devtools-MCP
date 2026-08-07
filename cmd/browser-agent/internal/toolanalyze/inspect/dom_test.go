@@ -14,10 +14,14 @@ import (
 type fakeDeps struct {
 	query queries.PendingQuery
 	args  json.RawMessage
+	block bool
 }
 
-func (f *fakeDeps) EnqueuePendingQuery(_ mcp.JSONRPCRequest, query queries.PendingQuery, _ time.Duration) (mcp.JSONRPCResponse, bool) {
+func (f *fakeDeps) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, _ time.Duration) (mcp.JSONRPCResponse, bool) {
 	f.query = query
+	if f.block {
+		return mcp.Fail(req, mcp.ErrQueueFull, "queue full", "retry"), true
+	}
 	return mcp.JSONRPCResponse{}, false
 }
 
@@ -66,5 +70,15 @@ func TestHandleDOMPreservesSelectorAndFrameTarget(t *testing.T) {
 				t.Fatalf("query params = %s, wait args = %s, want %s", deps.query.Params, deps.args, args)
 			}
 		})
+	}
+}
+
+func TestHandleDOMReturnsQueueRejection(t *testing.T) {
+	t.Parallel()
+	deps := &fakeDeps{block: true}
+	response := HandleDOM(deps.deps(), mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, json.RawMessage(`{"selector":"#target"}`))
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil || !result.IsError {
+		t.Fatalf("queue rejection = %#v, err=%v", response, err)
 	}
 }
