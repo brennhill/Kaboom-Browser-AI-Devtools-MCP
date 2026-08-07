@@ -591,7 +591,7 @@
     },
     "cmd/browser-agent/internal/toolconfigure/auditlog/handler.go": {
       "mutable_globals": 0,
-      "exports": 11
+      "exports": 10
     },
     "cmd/browser-agent/internal/toolconfigure/capabilities.go": {
       "mutable_globals": 0,
@@ -629,13 +629,13 @@
       "mutable_globals": 0,
       "exports": 7
     },
-    "cmd/browser-agent/internal/toolconfigure/qafixture/startup.go": {
-      "mutable_globals": 0,
-      "exports": 2
-    },
     "cmd/browser-agent/internal/toolconfigure/qafixture/shutdown/recovery.go": {
       "mutable_globals": 0,
       "exports": 1
+    },
+    "cmd/browser-agent/internal/toolconfigure/qafixture/startup.go": {
+      "mutable_globals": 0,
+      "exports": 2
     },
     "cmd/browser-agent/internal/toolconfigure/qafixture/transport/command.go": {
       "mutable_globals": 0,
@@ -718,8 +718,8 @@
       "exports": 12
     },
     "cmd/browser-agent/internal/toolinteract/action_owners.go": {
-      "mutable_globals": 2,
-      "exports": 29
+      "mutable_globals": 0,
+      "exports": 21
     },
     "cmd/browser-agent/internal/toolinteract/action_runtime.go": {
       "mutable_globals": 1,
@@ -744,6 +744,10 @@
     "cmd/browser-agent/internal/toolinteract/interact_workflow.go": {
       "mutable_globals": 0,
       "exports": 6
+    },
+    "cmd/browser-agent/internal/toolinteract/interactbatch/batch.go": {
+      "mutable_globals": 0,
+      "exports": 4
     },
     "cmd/browser-agent/internal/toolinteract/interactstate/state.go": {
       "mutable_globals": 0,
@@ -834,16 +838,12 @@
       "exports": 3
     },
     "cmd/browser-agent/tools_configure.go": {
-      "mutable_globals": 1,
+      "mutable_globals": 0,
       "exports": 2
     },
     "cmd/browser-agent/tools_core.go": {
       "mutable_globals": 0,
       "exports": 8
-    },
-    "cmd/browser-agent/tools_interact_dispatch.go": {
-      "mutable_globals": 3,
-      "exports": 0
     },
     "cmd/hooks/main.go": {
       "mutable_globals": 2,

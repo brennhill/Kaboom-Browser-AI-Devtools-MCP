@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"syscall"
 	"time"
 
@@ -48,8 +47,6 @@ import (
 )
 
 const restartSelfSignalDelay = 100 * time.Millisecond
-
-var replayMu sync.Mutex
 
 type fixtureRecoveryRunner interface {
 	RecoverPending(context.Context) []string

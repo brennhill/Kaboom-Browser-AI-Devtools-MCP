@@ -46,7 +46,7 @@ func TestInteractToolSchema_RequiresCanonicalWhat(t *testing.T) {
 	}
 
 	// Spot-check that well-known actions are present in the canonical 'what' enum.
-	mustContain := []string{"navigate", "click", "type", "execute_js", "upload", "auto_dismiss_overlays", "wait_for_stable"}
+	mustContain := []string{"navigate", "click", "type", "execute_js", "upload", "batch", "auto_dismiss_overlays", "wait_for_stable"}
 	whatSet := make(map[string]bool, len(whatEnum))
 	for _, v := range whatEnum {
 		whatSet[v] = true
@@ -69,6 +69,18 @@ func TestInteractToolSchema_RequiresCanonicalWhat(t *testing.T) {
 	required := toSchemaStringSlice(t, tool.InputSchema["required"])
 	if len(required) != 1 || required[0] != "what" {
 		t.Fatalf("interact schema required = %v, want [what]", required)
+	}
+}
+
+func TestInteractToolSchema_BatchStepsAreAnArray(t *testing.T) {
+	t.Parallel()
+	properties, ok := ToolSchema().InputSchema["properties"].(map[string]any)
+	if !ok {
+		t.Fatal("interact schema missing properties")
+	}
+	steps, ok := properties["steps"].(map[string]any)
+	if !ok || steps["type"] != "array" {
+		t.Fatalf("batch steps property = %#v", properties["steps"])
 	}
 }
 

@@ -68,7 +68,7 @@ func buildInteractActions(h *ToolHandler) map[string]interactdispatch.Action {
 		"screen_recording_start":    h.recordingInteractHandler.HandleRecordStart,
 		"screen_recording_stop":     h.recordingInteractHandler.HandleRecordStop,
 		"upload":                    h.uploadInteractHandler.HandleUpload,
-		"batch":                     h.batchActions.HandleBatch,
+		"batch":                     h.batchActions.Handle,
 	}
 	for action := range act.DOMPrimitiveActions {
 		if _, exists := actions[action]; exists {

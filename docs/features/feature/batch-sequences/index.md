@@ -10,7 +10,7 @@ code_paths:
   - cmd/browser-agent/internal/sequencehandler/handler.go
   - cmd/browser-agent/internal/sequencehandler/replay.go
   - cmd/browser-agent/internal/sequencehandler/contract.go
-  - cmd/browser-agent/internal/toolinteract/action_owners.go
+  - cmd/browser-agent/internal/toolinteract/interactbatch/batch.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -25,7 +25,8 @@ test_paths:
   - cmd/browser-agent/internal/replay/contract_test.go
   - cmd/browser-agent/internal/sequencehandler/handler_test.go
   - cmd/browser-agent/internal/sequencehandler/contract_test.go
-  - cmd/browser-agent/tools_interact_batch_test.go
+  - cmd/browser-agent/internal/toolinteract/interactbatch/batch_test.go
+  - internal/schema/interact/schema_test.go
   - internal/recording/actionlog/recorder_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -47,9 +48,10 @@ last_verified_date: 2026-03-05
 
 ## Canonical Note
 Batch execution and reusable configure sequences share replay primitives and one
-concurrency lock. Saved-sequence persistence, CRUD, and replay orchestration stay
+runtime-scoped concurrency lock. Saved-sequence persistence, CRUD, and replay orchestration stay
 together in `internal/sequencehandler`; interactive batch orchestration remains
-with the interact feature. Configure actions and saved interact steps both use
+in the dedicated `interactbatch` owner. The former package-global lock and
+unused action-runtime dependency are deleted. Configure actions and saved interact steps both use
 the canonical `what` discriminator. Tool composition constructs one
 `sequencehandler.Handler`, and all five configure sequence actions route to it
 directly; no ToolHandler forwarding methods or per-request handler factory

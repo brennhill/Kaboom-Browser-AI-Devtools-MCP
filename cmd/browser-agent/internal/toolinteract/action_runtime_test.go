@@ -246,7 +246,6 @@ type fakeState struct {
 
 	// Pluggable overrides (nil => default behavior).
 	waitFn     func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse
-	interactFn func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	screenshot func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	pageInfo   func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	analyzeFn  func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
@@ -264,7 +263,7 @@ type fakeCapabilities struct {
 	RecordAIAction                                     func(string, string, map[string]any)
 	RecordAIEnhancedAction                             func(types.EnhancedAction)
 	RecordDOMPrimitiveAction                           func(string, string, string, string)
-	ToolInteract, ToolAnalyze, ToolExportSARIF         func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	ToolAnalyze, ToolExportSARIF                       func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
 	InjectCSPBlockedActions                            func(mcp.JSONRPCResponse) mcp.JSONRPCResponse
 	GetScreenshot, GetPageInfo                         func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
 	MarkDrawStarted                                    func()
@@ -275,7 +274,6 @@ type fakeCapabilities struct {
 	DiagnosticHint                                     func() func(*mcp.StructuredError)
 	Redact                                             func(map[string]any) map[string]any
 	GetCommandResult                                   func(string) (*queries.CommandResult, bool)
-	ReplayMu                                           *sync.Mutex
 }
 
 // newFakeState builds a fakeState with pilot enabled, a tracked tab, and a connected extension.
@@ -372,12 +370,6 @@ func (fs *fakeState) deps() *fakeCapabilities {
 		RecordAIEnhancedAction:   func(action types.EnhancedAction) { fs.record("enhanced") },
 		RecordDOMPrimitiveAction: func(action, selector, text, value string) { fs.record("dom:" + action) },
 
-		ToolInteract: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			if fs.interactFn != nil {
-				return fs.interactFn(req, args)
-			}
-			return mcp.Succeed(req, "nested interact", map[string]any{"status": "complete"})
-		},
 		ToolAnalyze: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			if fs.analyzeFn != nil {
 				return fs.analyzeFn(req, args)
@@ -433,8 +425,6 @@ func (fs *fakeState) deps() *fakeCapabilities {
 		GetCommandResult: func(correlationID string) (*queries.CommandResult, bool) {
 			return fs.cap.Queries().GetCommandResult(correlationID)
 		},
-
-		ReplayMu: &sync.Mutex{},
 	}
 }
 
@@ -445,7 +435,6 @@ type fakeActionOwners struct {
 	page     *PageActions
 	workflow *WorkflowActions
 	storage  *StorageActions
-	batch    *BatchActions
 }
 
 func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
@@ -472,10 +461,7 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 		Capture: deps.Capture, ToolAnalyze: deps.ToolAnalyze,
 		ToolExportSARIF: deps.ToolExportSARIF, Now: time.Now,
 	})
-	batch := NewBatchActions(runtime, BatchDeps{
-		deps.RequirePilot, deps.RequireExtension, deps.Capture, deps.RecordAIAction, deps.ToolInteract, deps.ReplayMu,
-	})
-	return &fakeActionOwners{runtime, dom, browser, page, workflow, storage, batch}, fs
+	return &fakeActionOwners{runtime, dom, browser, page, workflow, storage}, fs
 }
 
 func newFakeDOMActions(t *testing.T) (*DOMActions, *fakeState) {

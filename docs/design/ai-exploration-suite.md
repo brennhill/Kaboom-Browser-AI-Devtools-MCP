@@ -1037,7 +1037,7 @@ Both test files validate the Go server layer only. No extension-side unit tests 
 | `TestExplorePage_JavascriptURL_Rejected` | `tools_interact_explore_test.go` | Section 9.7.2: `javascript:` URLs must be rejected |
 | `TestExplorePage_DataURL_Rejected` | `tools_interact_explore_test.go` | Section 9.7.2: `data:` URLs must be rejected |
 | `TestExplorePage_ChromeURL_Rejected` | `tools_interact_explore_test.go` | Section 9.7.2: `chrome://` URLs must be rejected |
-| `TestBatch_ConcurrentRejection` | `tools_interact_batch_test.go` (create) | Section 9.3.3: two simultaneous batch calls should fail |
+| `TestBatch_ConcurrentRejection` | `interactbatch/batch_test.go` | Section 9.3.3: two simultaneous batch calls should fail |
 | `TestExplorePage_ScreenshotAppend_OnSuccess` | `tools_interact_explore_test.go` | Section 9.2.1: verify screenshot is appended when command completes |
 | `TestExplorePage_NoScreenshot_OnError` | `tools_interact_explore_test.go` | Lines 56-58: verify screenshot is NOT appended on error |
 | `TestExplorePage_NoScreenshot_OnQueued` | `tools_interact_explore_test.go` | Lines 56-58: verify screenshot is NOT appended when queued |
@@ -1046,8 +1046,8 @@ Both test files validate the Go server layer only. No extension-side unit tests 
 
 | Test Case | File to Modify | Reason |
 |-----------|---------------|--------|
-| `TestBatch_WithExplorePageSteps` | `tools_interact_batch_test.go` | Nested explore_page in batch: verify no deadlock |
-| `TestBatch_IncludeScreenshot_Stripped` | `tools_interact_batch_test.go` | Section 9.2.2: screenshots in batch steps are wasted |
+| `TestBatch_WithExplorePageSteps` | `interactbatch/batch_test.go` | Nested explore_page in batch: verify no deadlock |
+| `TestBatch_IncludeScreenshot_Stripped` | `interactbatch/batch_test.go` | Section 9.2.2: screenshots in batch steps are wasted |
 | `TestComposable_WaitForStable_PlusScreenshot_Ordering` | `tools_interact_composable_test.go` (create) | Section 9.3.4: screenshot timing bug |
 | `TestComposable_ActionDiff_WiredUp` | `tools_interact_composable_test.go` | Section 9.7.1: after fix, verify action_diff is queued |
 | `TestExplorePage_NavigationDiscoveryScript_URLIncluded` | Extension test | Section 9.1: verify both implementations return same fields |

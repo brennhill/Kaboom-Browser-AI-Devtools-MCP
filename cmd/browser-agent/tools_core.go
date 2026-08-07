@@ -31,6 +31,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactbatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolmodule"
@@ -82,6 +83,7 @@ type ToolHandler struct {
 	shutdownCtx     context.Context
 	shutdownCancel  context.CancelFunc
 	closeOnce       sync.Once
+	replayMu        sync.Mutex
 	fixtureRecovery fixtureRecoveryRunner
 
 	// Health metrics for MCP get_health tool
@@ -129,7 +131,7 @@ type ToolHandler struct {
 	pageActions        *toolinteract.PageActions
 	workflowActions    *toolinteract.WorkflowActions
 	storageActions     *toolinteract.StorageActions
-	batchActions       *toolinteract.BatchActions
+	batchActions       *interactbatch.Handler
 
 	recordingInteractHandler *screenrec.InteractHandler
 	recordingHandler         *toolrecording.Handler
@@ -489,7 +491,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	}
 	handler.sequences = sequencehandler.New(sequencehandler.Deps{
 		Store:          handler.sessionStoreImpl,
-		ReplayMu:       &replayMu,
+		ReplayMu:       &handler.replayMu,
 		Interact:       handler.toolInteract,
 		WaitForCommand: waitForSequenceCommand,
 		RecordAction:   handler.actionRecorder.Record,
@@ -690,9 +692,9 @@ func initializeInteractActionOwners(h *ToolHandler) {
 			ToolExportSARIF: h.generateDispatcher.ExportSARIF, Now: time.Now,
 		},
 	)
-	h.batchActions = toolinteract.NewBatchActions(h.interactRuntime, toolinteract.BatchDeps{
+	h.batchActions = interactbatch.New(interactbatch.Deps{
 		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension, Capture: captureStore,
-		RecordAIAction: h.actionRecorder.Record, ToolInteract: h.toolInteract, ReplayMu: &replayMu,
+		RecordAIAction: h.actionRecorder.Record, Interact: h.toolInteract, ReplayMu: &h.replayMu,
 	})
 }
 
