@@ -35,7 +35,7 @@ test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/tools_generate_handler_test.go
-  - cmd/browser-agent/tools_generate_warning_filter_test.go
+  - cmd/browser-agent/internal/testgenhandler/entrypoints_test.go
   - cmd/browser-agent/internal/testgenhandler/context_test.go
   - cmd/browser-agent/internal/testgenhandler/heal_test.go
   - cmd/browser-agent/internal/testgenhandler/classify_test.go

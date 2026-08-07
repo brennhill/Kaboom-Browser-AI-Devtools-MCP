@@ -35,6 +35,16 @@ func TestAnalyzeSchemaHasNoAnnotationURLAlias(t *testing.T) {
 	}
 }
 
+func TestGenerateSchemaDeclaresSharedDispatchParameters(t *testing.T) {
+	t.Parallel()
+	properties := generateToolSchema().InputSchema["properties"].(map[string]any)
+	for _, name := range []string{"what", "context", "action", "telemetry_mode", "save_to"} {
+		if _, exists := properties[name]; !exists {
+			t.Errorf("generate schema missing shared dispatch parameter %q", name)
+		}
+	}
+}
+
 // TestAllToolSchemas_NoNestedCombiners checks that property-level schemas also
 // avoid combiners. Nested oneOf/anyOf/allOf in property definitions can cause
 // Claude API validation errors in some contexts. Walks recursively into items

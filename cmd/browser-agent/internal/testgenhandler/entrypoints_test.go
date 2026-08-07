@@ -30,6 +30,23 @@ func toolResult(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {
 	return r
 }
 
+func warningText(result mcp.MCPToolResult) (string, bool) {
+	for _, block := range result.Content {
+		if strings.HasPrefix(block.Text, "_warnings:") {
+			return block.Text, true
+		}
+	}
+	return "", false
+}
+
+func assertOnlyTypoWarning(t *testing.T, result mcp.MCPToolResult) {
+	t.Helper()
+	warnings, ok := warningText(result)
+	if !ok || !strings.Contains(warnings, "typo_field") || strings.Contains(warnings, "'what'") {
+		t.Fatalf("dispatch-filtered warnings = %q, found=%t", warnings, ok)
+	}
+}
+
 func TestHandleGenerateTestFromContext(t *testing.T) {
 	t.Parallel()
 
@@ -116,6 +133,17 @@ func TestHandleGenerateTestFromContext(t *testing.T) {
 			t.Fatalf("framework = %v, want playwright (the handler's default for an omitted framework)", test["framework"])
 		}
 	})
+
+	t.Run("filters dispatch fields but retains genuine typos", func(t *testing.T) {
+		t.Parallel()
+		env := newTestEnv()
+		env.cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click", URL: "https://example.com"}})
+		result := toolResult(t, env.h.HandleGenerateTestFromContext(req(), json.RawMessage(`{"what":"test_from_context","context":"interaction","typo_field":true}`)))
+		if result.IsError {
+			t.Fatalf("unexpected error: %s", result.Content[0].Text)
+		}
+		assertOnlyTypoWarning(t, result)
+	})
 }
 
 func TestHandleGenerateTestHeal(t *testing.T) {
@@ -144,6 +172,15 @@ func TestHandleGenerateTestHeal(t *testing.T) {
 		if !toolResult(t, newTestEnv().h.HandleGenerateTestHeal(req(), json.RawMessage(`{"action":"nope"}`))).IsError {
 			t.Fatal("expected an error result for an unknown action value")
 		}
+	})
+
+	t.Run("filters dispatch fields but retains genuine typos", func(t *testing.T) {
+		t.Parallel()
+		result := toolResult(t, newTestEnv().h.HandleGenerateTestHeal(req(), json.RawMessage(`{"what":"test_heal","action":"batch","test_dir":".","typo_field":true}`)))
+		if result.IsError {
+			t.Fatalf("unexpected error: %s", result.Content[0].Text)
+		}
+		assertOnlyTypoWarning(t, result)
 	})
 
 }
@@ -200,6 +237,16 @@ func TestHandleGenerateTestClassify(t *testing.T) {
 		if r.IsError {
 			t.Fatalf("unexpected error result: %s", r.Content[0].Text)
 		}
+	})
+
+	t.Run("filters dispatch fields but retains genuine typos", func(t *testing.T) {
+		t.Parallel()
+		args := json.RawMessage(`{"what":"test_classify","action":"failure","failure":{"test_name":"login test","error":"Timeout waiting for selector \"#login-btn\""},"typo_field":true}`)
+		result := toolResult(t, newTestEnv().h.HandleGenerateTestClassify(req(), args))
+		if result.IsError {
+			t.Fatalf("unexpected error: %s", result.Content[0].Text)
+		}
+		assertOnlyTypoWarning(t, result)
 	})
 }
 
