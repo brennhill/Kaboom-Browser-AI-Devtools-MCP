@@ -678,7 +678,7 @@ AND: ID matches generated name
 
 ## Integration Tests (End-to-End)
 
-**File:** `cmd/browser-agent/integration_test.go` (new)
+**File:** `cmd/browser-agent/integration/runtime/protocol_test.go` (new)
 
 ### Integration Test 1: Full Recording → Playback → Diff Workflow
 

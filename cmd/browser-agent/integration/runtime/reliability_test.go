@@ -22,7 +22,7 @@
 
 //go:build integration
 
-package main
+package runtimeintegration
 
 import (
 	"encoding/json"
@@ -35,6 +35,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
+	corebridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 )
 
 // ============================================================================
@@ -48,10 +51,10 @@ func TestReliability_Stress_ConcurrentConnections(t *testing.T) {
 		t.Skip("skipping stress test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -65,7 +68,7 @@ func TestReliability_Stress_ConcurrentConnections(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -160,10 +163,10 @@ func TestReliability_Stress_ExtendedOperation(t *testing.T) {
 		t.Skip("skipping extended operation test (set KABOOM_RELIABILITY_TESTS=1)")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -177,7 +180,7 @@ func TestReliability_Stress_ExtendedOperation(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -239,10 +242,10 @@ func TestReliability_ResourceLeaks_ConnectionDrain(t *testing.T) {
 		t.Skip("skipping connection drain test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -256,7 +259,7 @@ func TestReliability_ResourceLeaks_ConnectionDrain(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -293,10 +296,10 @@ func TestReliability_Recovery_MalformedJSON(t *testing.T) {
 		t.Skip("skipping recovery test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -310,7 +313,7 @@ func TestReliability_Recovery_MalformedJSON(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -371,10 +374,10 @@ func TestReliability_Recovery_InvalidToolCalls(t *testing.T) {
 		t.Skip("skipping recovery test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -388,7 +391,7 @@ func TestReliability_Recovery_InvalidToolCalls(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 

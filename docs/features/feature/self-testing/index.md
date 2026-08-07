@@ -44,8 +44,8 @@ test_paths:
   - tests/cli/contracts/smoke-layout-contract.test.cjs
   - tests/extension/contracts/tooling-contracts.test.js
   - cmd/browser-agent/integration/bridge/faststart_extended_test.go
-  - cmd/browser-agent/server_persistence_test.go
-  - cmd/browser-agent/server_reliability_integration_test.go
+  - cmd/browser-agent/integration/runtime/persistence_test.go
+  - cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
   - cmd/browser-agent/integration/bridge/stdio_silence_test.go
   - cmd/browser-agent/internal/testpages/websocket_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs

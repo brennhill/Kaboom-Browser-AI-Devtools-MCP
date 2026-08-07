@@ -115,9 +115,9 @@ test_paths:
   - tests/architecture/user-state-loaders.test.cjs
   - internal/statediag/collector_test.go
   - cmd/browser-agent/integration/cli/modes_test.go
-  - cmd/browser-agent/server_persistence_test.go
-  - cmd/browser-agent/server_reliability_test.go
-  - cmd/browser-agent/server_reliability_integration_test.go
+  - cmd/browser-agent/integration/runtime/persistence_test.go
+  - cmd/browser-agent/integration/runtime/reliability_test.go
+  - cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
   - cmd/browser-agent/connection_lifecycle_helpers_test.go
   - cmd/browser-agent/internal/startupconfig/paths_test.go
   - cmd/browser-agent/internal/startupconfig/runtime_test.go

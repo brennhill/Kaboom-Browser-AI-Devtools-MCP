@@ -19,7 +19,7 @@
 // See: docs/core/product/release.md#gate-8-mcp-command-completeness-mandatory
 //
 // Run: go test ./cmd/browser-agent -run "TestIntegration" -v
-package main
+package runtimeintegration
 
 import (
 	"encoding/json"
@@ -29,6 +29,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
+	corebridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 )
 
 // ============================================
@@ -42,14 +45,14 @@ func TestIntegration_ServerStartupUnder1Second(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
 	// Measure startup time
 	startTime := time.Now()
 
 	// Start server
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -64,7 +67,7 @@ func TestIntegration_ServerStartupUnder1Second(t *testing.T) {
 	}()
 
 	// Wait for server to be ready (health endpoint)
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start within 5 seconds")
 	}
 
@@ -100,11 +103,11 @@ func TestIntegration_AllMCPToolsReturnValidResponses(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
 	// Start server
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -118,7 +121,7 @@ func TestIntegration_AllMCPToolsReturnValidResponses(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -293,11 +296,11 @@ func TestIntegration_ToolsListMatchesImplementation(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
 	// Start server
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -311,7 +314,7 @@ func TestIntegration_ToolsListMatchesImplementation(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 

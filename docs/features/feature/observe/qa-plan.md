@@ -22,7 +22,7 @@ last_verified_date: 2026-03-05
 - `internal/tools/observe/page/page_readiness_test.go`
 - `internal/tools/observe/session/session_test.go`
 - `internal/tools/observe/timeline/correlation_test.go`
-- `cmd/browser-agent/integration_test.go`
+- `cmd/browser-agent/integration/runtime/protocol_test.go`
 - `extension/background/commands/observe.fullpage.test.js`
 
 ## Required Scenarios

@@ -82,7 +82,7 @@ test_paths:
   - cmd/browser-agent/internal/startupconfig/help_test.go
   - cmd/browser-agent/internal/cli/parser/commands_test.go
   - cmd/browser-agent/internal/health/health_coverage_test.go
-  - cmd/browser-agent/server_reliability_integration_test.go
+  - cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
   - scripts/smoke-tests/core/23-doctor-preflight.sh
   - cmd/browser-agent/internal/runtimeconfig/parallel_test.go
   - internal/configdiscovery/mcp_test.go

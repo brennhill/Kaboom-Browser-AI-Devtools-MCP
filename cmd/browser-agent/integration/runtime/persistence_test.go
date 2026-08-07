@@ -26,7 +26,7 @@
 
 //go:build integration
 
-package main
+package runtimeintegration
 
 import (
 	"fmt"
@@ -34,6 +34,9 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
+	corebridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 )
 
 // TestServerPersistence_StaysAliveWithOpenStdin verifies the server doesn't die
@@ -46,11 +49,11 @@ func TestServerPersistence_StaysAliveWithOpenStdin(t *testing.T) {
 		t.Skip("skipping persistence test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
 	// Start server with stdin pipe (simulates FIFO)
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -65,7 +68,7 @@ func TestServerPersistence_StaysAliveWithOpenStdin(t *testing.T) {
 	}()
 
 	// Wait for server to start
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start on port %d", port)
 	}
 
@@ -107,10 +110,10 @@ func TestServerPersistence_HealthResponseTime(t *testing.T) {
 		t.Skip("skipping persistence test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -124,7 +127,7 @@ func TestServerPersistence_HealthResponseTime(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -164,11 +167,11 @@ func TestServerPersistence_SurvivesStdinClose(t *testing.T) {
 		t.Skip("skipping persistence test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
 	// Start server (persist flag doesn't affect MCP stdin behavior)
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -181,7 +184,7 @@ func TestServerPersistence_SurvivesStdinClose(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -215,11 +218,11 @@ func TestServerPersistence_PersistModeKeepsAlive(t *testing.T) {
 		t.Skip("skipping persistence test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
 	// Start server (persistence is default behavior - server stays alive after stdin closes)
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -238,7 +241,7 @@ func TestServerPersistence_PersistModeKeepsAlive(t *testing.T) {
 		t.Fatalf("Failed to send initialize request: %v", err)
 	}
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -275,10 +278,10 @@ func TestServerPersistence_MultipleHealthChecksUnderLoad(t *testing.T) {
 		t.Skip("skipping persistence test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -292,7 +295,7 @@ func TestServerPersistence_MultipleHealthChecksUnderLoad(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -330,10 +333,10 @@ func TestServerPersistence_StdinNoDataExtendedPeriod(t *testing.T) {
 		t.Skip("skipping 30-second persistence test (set KABOOM_EXTENDED_TESTS=1 to enable)")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 
-	cmd := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--port", fmt.Sprintf("%d", port))
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatalf("Failed to create stdin pipe: %v", err)
@@ -347,7 +350,7 @@ func TestServerPersistence_StdinNoDataExtendedPeriod(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridgeRuntime().WaitForServer(port, serverStartTimeout) {
+	if !corebridge.WaitForServer(port, testprocess.StartTimeout()) {
 		t.Fatalf("Server failed to start")
 	}
 

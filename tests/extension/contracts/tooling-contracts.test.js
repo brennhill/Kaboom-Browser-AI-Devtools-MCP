@@ -83,6 +83,11 @@ describe('Tooling contracts', () => {
       'honest aggregate coverage must include the tagged real-binary suite'
     )
     assert.match(
+      readFileSync('scripts/build/run-go-integration.sh', 'utf8'),
+      /go test[\s\S]*-p 1[\s\S]*\.\/cmd\/browser-agent\/\.\.\./,
+      'integration packages must not race each other for process-global daemon resources'
+    )
+    assert.match(
       workflow,
       /TestFastStart_ResourceWorkflowSoak[\s\S]*-tags=integration|go test -race -tags=integration[\s\S]*TestFastStart_ResourceWorkflowSoak/
     )
@@ -97,10 +102,10 @@ describe('Tooling contracts', () => {
       'cmd/browser-agent/integration/bridge/faststart_test.go',
       'cmd/browser-agent/integration/bridge/startup_contention_test.go',
       'cmd/browser-agent/integration/cli/modes_test.go',
-      'cmd/browser-agent/integration_test.go',
-      'cmd/browser-agent/server_persistence_test.go',
-      'cmd/browser-agent/server_reliability_integration_test.go',
-      'cmd/browser-agent/server_reliability_test.go',
+      'cmd/browser-agent/integration/runtime/protocol_test.go',
+      'cmd/browser-agent/integration/runtime/persistence_test.go',
+      'cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go',
+      'cmd/browser-agent/integration/runtime/reliability_test.go',
       'cmd/browser-agent/integration/bridge/stdio_silence_test.go'
     ]) {
       assert.match(readFileSync(path, 'utf8'), /^\/\/go:build integration$/m)

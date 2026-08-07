@@ -41,3 +41,17 @@ func TestTimeoutPolicyAccountsForInstrumentation(t *testing.T) {
 		t.Fatal("ordinary environment detected as instrumented")
 	}
 }
+
+func TestConfiguredBinaryUsesRunnerArtifact(t *testing.T) {
+	t.Setenv("KABOOM_INTEGRATION_BINARY", "/tmp/prebuilt-kaboom")
+	if got := configuredBinary(); got != "/tmp/prebuilt-kaboom" {
+		t.Fatalf("configured binary = %q", got)
+	}
+}
+
+func TestRunnerInstrumentationActivatesExpandedBudget(t *testing.T) {
+	t.Setenv("KABOOM_INTEGRATION_INSTRUMENTED", "1")
+	if !instrumented() {
+		t.Fatal("runner-built covered binary was not classified as instrumented")
+	}
+}

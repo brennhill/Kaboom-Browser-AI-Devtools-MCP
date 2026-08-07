@@ -42,12 +42,15 @@ func buildArgs(outputPath string, collectSubprocessCoverage bool) []string {
 	return []string{"build", "-cover", "-o", outputPath, "."}
 }
 
+func configuredBinary() string { return os.Getenv("KABOOM_INTEGRATION_BINARY") }
+
 func usesCoverage(mode, coverageDirectory, subprocessCoverageDirectory string) bool {
 	return mode != "" || coverageDirectory != "" || subprocessCoverageDirectory != ""
 }
 
 func instrumented() bool {
-	return raceEnabled || usesCoverage(testing.CoverMode(), os.Getenv("GOCOVERDIR"), os.Getenv("KABOOM_GO_COVERDIR"))
+	return raceEnabled || os.Getenv("KABOOM_INTEGRATION_INSTRUMENTED") == "1" ||
+		usesCoverage(testing.CoverMode(), os.Getenv("GOCOVERDIR"), os.Getenv("KABOOM_GO_COVERDIR"))
 }
 
 // Instrumented reports whether race or coverage instrumentation is active.
@@ -88,6 +91,9 @@ func FreePort(t *testing.T) int {
 // BuildBinary builds the browser-agent once per integration test process.
 func BuildBinary(t *testing.T) string {
 	t.Helper()
+	if configured := configuredBinary(); configured != "" {
+		return configured
+	}
 	binaryCache.once.Do(func() {
 		directory, err := os.MkdirTemp("", "kaboom-integration-binary-*")
 		if err != nil {

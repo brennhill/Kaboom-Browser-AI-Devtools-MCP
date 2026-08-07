@@ -46,10 +46,10 @@ cmd/browser-agent/integration/bridge/faststart_extended_test.go
 cmd/browser-agent/integration/bridge/faststart_test.go
 cmd/browser-agent/integration/bridge/startup_contention_test.go
 cmd/browser-agent/integration/cli/modes_test.go
-cmd/browser-agent/integration_test.go
-cmd/browser-agent/server_persistence_test.go
-cmd/browser-agent/server_reliability_integration_test.go
-cmd/browser-agent/server_reliability_test.go
+cmd/browser-agent/integration/runtime/protocol_test.go
+cmd/browser-agent/integration/runtime/persistence_test.go
+cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
+cmd/browser-agent/integration/runtime/reliability_test.go
 cmd/browser-agent/integration/bridge/stdio_silence_test.go
 EOF
 )
