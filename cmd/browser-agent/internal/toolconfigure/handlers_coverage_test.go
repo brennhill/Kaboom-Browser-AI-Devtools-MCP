@@ -9,6 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
@@ -60,6 +63,28 @@ func TestHandleStreamingStatusAndValidation(t *testing.T) {
 		if isError, _ := parseResp(t, response); !isError {
 			t.Errorf("invalid streaming arguments %s succeeded", arguments)
 		}
+	}
+}
+
+func TestHandleClearAllClearsEveryAnnotationStateFamily(t *testing.T) {
+	captured := capture.NewCapture()
+	annotations := annotation.NewStore(0)
+	t.Cleanup(annotations.Close)
+	annotations.StoreSession(7, &annotation.Session{TabID: 7, PageURL: "https://example.com", Annotations: []annotation.Annotation{{ID: "anonymous", CorrelationID: "detail"}}})
+	annotations.AppendToNamedSession("review", &annotation.Session{TabID: 7, Annotations: []annotation.Annotation{{ID: "named"}}})
+	annotations.StoreDetail("detail", annotation.Detail{Selector: "#old"})
+	reset := resetter.New(resetter.Dependencies{
+		Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs(),
+	})
+	result := parseRespJSON(t, HandleClear(ClearTargets{
+		Capture: captured, Resetter: reset, ClearLogs: func() int { return 0 }, Annotations: annotations,
+	}, newReq(), json.RawMessage(`{"buffer":"all"}`)))
+	cleared := result["cleared"].(map[string]any)["annotations_cleared"].(map[string]any)
+	if cleared["sessions"] != float64(1) || cleared["named_sessions"] != float64(1) || cleared["details"] != float64(1) {
+		t.Fatalf("annotation clear counts = %#v", cleared)
+	}
+	if _, ok := annotations.GetDetail("detail"); ok || annotations.GetSession(7) != nil || annotations.GetNamedSession("review") != nil {
+		t.Fatal("clear all retained annotation state")
 	}
 }
 

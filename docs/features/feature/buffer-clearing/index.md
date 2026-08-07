@@ -4,7 +4,7 @@ feature_id: feature-buffer-clearing
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/clear.go
   - cmd/browser-agent/tools_configure.go
@@ -21,7 +21,7 @@ test_paths:
   - cmd/browser-agent/tools_configure_coverage_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/tools_configure_runtime_actions_test.go
-  - cmd/browser-agent/tools_configure_clear_annotations_test.go
+  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
