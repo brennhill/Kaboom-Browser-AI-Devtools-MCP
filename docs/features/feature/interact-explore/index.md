@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
@@ -95,6 +95,7 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
+  - cmd/browser-agent/tools_interact_entrypoint_test.go
   - cmd/browser-agent/tools_interact_screenshot_test.go
   - cmd/browser-agent/tools_interact_page_commands_test.go
   - cmd/browser-agent/tools_interact_dom_routing_test.go

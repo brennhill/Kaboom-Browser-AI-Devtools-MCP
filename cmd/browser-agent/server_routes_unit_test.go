@@ -37,6 +37,62 @@ func localRequest(method, path string, body io.Reader) *http.Request {
 	return httptest.NewRequest(method, "http://localhost"+path, body)
 }
 
+func extensionRouteRequest(method, path string, body io.Reader) *http.Request {
+	request := localRequest(method, path, body)
+	request.Header.Set("X-Kaboom-Client", "kaboom-extension/test")
+	return request
+}
+
+func TestSetupHTTPRoutesRejectsWrongMethodsForPostOnlyEndpoints(t *testing.T) {
+	t.Parallel()
+
+	server := newTestServerForHandlers(t)
+	mux, _ := setupHTTPRoutes(server, capture.NewCapture())
+	paths := []string{
+		"/websocket-events", "/network-bodies", "/network-waterfall", "/query-result",
+		"/enhanced-actions", "/performance-snapshots", "/sync", "/logs", "/screenshots",
+		"/draw-mode/complete", "/shutdown", "/clear", "/test-boundary",
+	}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			mux.ServeHTTP(recorder, extensionRouteRequest(http.MethodGet, path, nil))
+			if recorder.Code != http.StatusMethodNotAllowed {
+				t.Errorf("GET %s status = %d, want 405", path, recorder.Code)
+			}
+		})
+	}
+}
+
+func TestSetupHTTPRoutesReturnsJSONForMalformedIngestPayloads(t *testing.T) {
+	t.Parallel()
+
+	server := newTestServerForHandlers(t)
+	mux, _ := setupHTTPRoutes(server, capture.NewCapture())
+	paths := []string{
+		"/network-bodies", "/network-waterfall", "/query-result", "/enhanced-actions",
+		"/performance-snapshots", "/logs", "/draw-mode/complete",
+	}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			request := extensionRouteRequest(http.MethodPost, path, bytes.NewBufferString("{invalid"))
+			mux.ServeHTTP(recorder, request)
+			if recorder.Code != http.StatusBadRequest {
+				t.Errorf("POST %s status = %d, want 400", path, recorder.Code)
+			}
+			if contentType := recorder.Header().Get("Content-Type"); !strings.Contains(contentType, "application/json") {
+				t.Errorf("POST %s content type = %q, want application/json", path, contentType)
+			}
+			if body := decodeJSONMap(t, recorder.Body.Bytes()); body["error"] == nil {
+				t.Errorf("POST %s response missing error: %#v", path, body)
+			}
+		})
+	}
+}
+
 func TestSetupHTTPRoutesBasicEndpoints(t *testing.T) {
 	t.Parallel()
 

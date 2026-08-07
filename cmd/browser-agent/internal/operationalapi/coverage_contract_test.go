@@ -13,6 +13,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -25,6 +26,7 @@ func newOperationalTestHandler(t *testing.T) *Handler {
 	})
 	return New(Options{
 		Logs:            logs,
+		Capture:         capture.NewCapture(),
 		Version:         "0.9.0-test",
 		StartedAt:       time.Now().Add(-2 * time.Second),
 		MaxPostBodySize: 1024,
@@ -105,6 +107,15 @@ func TestOperationalLogsValidateIngestClearAndMethods(t *testing.T) {
 
 func TestOperationalDiagnosticsSummarizesLatestConsoleEvent(t *testing.T) {
 	handler := newOperationalTestHandler(t)
+	handler.options.Capture.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{
+		Type: "ws_connect", ID: "conn-1", URL: "wss://example.test",
+	}})
+	handler.options.Capture.Telemetry().AddNetworkBodies([]types.NetworkBody{{
+		URL: "https://example.test/api", Method: http.MethodGet, Status: http.StatusOK,
+	}})
+	handler.options.Capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{{
+		Type: "click", Timestamp: 1000,
+	}})
 	longMessage := strings.Repeat("x", 120)
 	handler.options.Logs.AddEntries([]types.LogEntry{{
 		"type": "console", "level": "warn", "args": []any{longMessage}, "ts": "2026-07-29T00:00:00Z",
@@ -123,6 +134,16 @@ func TestOperationalDiagnosticsSummarizesLatestConsoleEvent(t *testing.T) {
 	}
 	if body["launch_mode"] == nil || body["system"] == nil {
 		t.Fatalf("diagnostics missing runtime sections: %#v", body)
+	}
+	buffers := body["buffers"].(map[string]any)
+	for _, name := range []string{"websocket_events", "network_bodies", "actions"} {
+		if count, ok := buffers[name].(float64); !ok || count < 1 {
+			t.Errorf("buffers[%q] = %v, want a real captured count", name, buffers[name])
+		}
+	}
+	circuit := body["circuit"].(map[string]any)
+	if _, ok := circuit["open"]; !ok {
+		t.Errorf("circuit state missing open field: %#v", circuit)
 	}
 
 	methodRecorder := httptest.NewRecorder()
