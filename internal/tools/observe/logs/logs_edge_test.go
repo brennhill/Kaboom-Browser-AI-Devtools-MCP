@@ -166,6 +166,10 @@ func TestGetBrowserErrorsReportsInvalidScopeAndPreservesValidScope(t *testing.T)
 	if valid["scope"] != "all" {
 		t.Fatalf("scope = %#v", valid["scope"])
 	}
+	metadata := valid["metadata"].(map[string]any)
+	if metadata["data_age_ms"] != float64(-1) {
+		t.Fatalf("empty error data_age_ms = %#v, want -1", metadata["data_age_ms"])
+	}
 }
 
 func TestGetBrowserErrorsScopesTrackedPageAndSummarizesNoise(t *testing.T) {
@@ -194,6 +198,10 @@ func TestGetBrowserErrorsScopesTrackedPageAndSummarizesNoise(t *testing.T) {
 	}
 	if hint, _ := data["param_hint"].(string); hint == "" {
 		t.Fatalf("missing invalid-scope hint: %#v", data)
+	}
+	metadata := data["metadata"].(map[string]any)
+	if age, ok := metadata["data_age_ms"].(float64); !ok || age < 0 {
+		t.Fatalf("populated error data_age_ms = %#v", metadata["data_age_ms"])
 	}
 	top := data["top_messages"].([]any)
 	if len(top) != 1 || top[0].(map[string]any)["message"] != "kept" {

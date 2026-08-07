@@ -63,6 +63,11 @@ func TestNetworkBodyHandlerDistinguishesProspectiveCaptureFromAvailableBodies(t 
 	if nonEmpty.IsError || strings.Contains(nonEmpty.Content[0].Text, `"hint"`) {
 		t.Fatalf("non-empty body result = %+v", nonEmpty)
 	}
+	data := testsupport.ExtractMCPJSON(t, GetNetworkBodies(deps, req, nil))
+	metadata := data["metadata"].(map[string]any)
+	if age, ok := metadata["data_age_ms"].(float64); !ok || age < 0 {
+		t.Fatalf("network body data_age_ms = %#v", metadata["data_age_ms"])
+	}
 }
 
 func TestWaterfallEntryToMapDistinguishesUnavailableRichFields(t *testing.T) {

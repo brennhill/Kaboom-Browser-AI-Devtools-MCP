@@ -164,6 +164,10 @@ func TestGetEnhancedActions_TypeFilter(t *testing.T) {
 	if int(count) != 1 {
 		t.Errorf("count = %v, want 1 (only click)", count)
 	}
+	metadata := data["metadata"].(map[string]any)
+	if age, ok := metadata["data_age_ms"].(float64); !ok || age < 0 {
+		t.Fatalf("enhanced action data_age_ms = %#v", metadata["data_age_ms"])
+	}
 }
 
 func TestGetEnhancedActions_TypeFilterTransient(t *testing.T) {

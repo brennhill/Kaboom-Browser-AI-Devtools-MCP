@@ -206,6 +206,10 @@ wall-clock time.
 Error-bundle response, timestamp, limit, and correlation-window contracts live
 with the timeline owner; the browser-agent root does not duplicate its capture
 and log fixtures.
+Freshness metadata is verified at its canonical builder and at the page, log,
+network, and session handlers that select each stream's newest timestamp.
+Tracked-tab activity is likewise owned by the page-response contract, including
+the distinction between a known inactive tab and unknown activity state.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

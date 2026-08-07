@@ -58,3 +58,25 @@ func TestGetPageInfoProjectsCommandReadinessConditions(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPageInfoIncludesTrackedTabActivityOnlyWhenKnown(t *testing.T) {
+	t.Parallel()
+	for name, expected := range map[string]any{"active": true, "inactive": false, "unknown": nil} {
+		t.Run(name, func(t *testing.T) {
+			cap := capture.NewCapture()
+			defer cap.Close()
+			capturefixture.Track(cap, 42, "https://example.test")
+			if known, ok := expected.(bool); ok {
+				capturefixture.SetTrackedTabActive(cap, known)
+			}
+			data := testsupport.ExtractMCPJSON(t, GetPageInfo(testsupport.Deps(cap), mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 2}, nil))
+			value, exists := data["is_active"]
+			if expected == nil && exists {
+				t.Fatalf("unknown activity exposed as %v", value)
+			}
+			if expected != nil && (!exists || value != expected) {
+				t.Fatalf("is_active = %v, want %v", value, expected)
+			}
+		})
+	}
+}
