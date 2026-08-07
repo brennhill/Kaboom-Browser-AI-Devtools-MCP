@@ -23,7 +23,7 @@ code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/toolrouting/routing.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/handler.go
+  - cmd/browser-agent/internal/mcpendpoint/handler.go
   - cmd/browser-agent/internal/appruntime/runtime.go
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
@@ -128,6 +128,7 @@ test_paths:
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/health/health_test.go
   - cmd/browser-agent/internal/mcpresponse/owner_test.go
+  - cmd/browser-agent/internal/mcpendpoint/handler_test.go
   - cmd/browser-agent/internal/appruntime/runtime_test.go
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/internal/mcptelemetry/owner_test.go
@@ -272,9 +273,11 @@ HTTP MCP responses are marshaled once at the transport boundary and those exact
 validated bytes are written to the client. Upstream serialization failures are
 converted into a valid `-32603` JSON-RPC error with the original request ID, so
 HTTP 200 can never carry an empty or partially encoded protocol response.
-`MCPHandler` owns its capture, tool schemas, limiter, redactor, usage tracker,
-and execution backend through one `ToolBackend` value. The executor contract has
-only `HandleToolCall`; no transport-policy getter remains on `ToolHandler`.
+The canonical `mcpendpoint.Handler` owns JSON-RPC routing and response policy
+through one explicit backend. `ToolHandler` is the composed runtime returned to
+the server directly; startup, health, telemetry, and shutdown never recover it
+through a backend type assertion. The executor contract has only
+`HandleToolCall`; no transport-policy getter remains on `ToolHandler`.
 
 Stdio isolation tests exercise the built bridge rather than the Go test binary.
 They close stdin and await the bridge's process-exit barrier, so transport

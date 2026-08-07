@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Kaboom server is a zero-dependency Go binary that receives browser telemetry from the Chrome extension over HTTP and exposes it to AI coding agents via the MCP protocol (JSON-RPC 2.0 over stdio or HTTP). All data stays local -- nothing leaves the machine.
+The Kaboom server is a zero-dependency Go binary that receives browser telemetry from the Chrome extension over HTTP and exposes it to AI coding agents via the MCP protocol (JSON-RPC 2.0 over stdio or HTTP). Captured browser and user data stays local. Only anonymous product-usage telemetry may leave the machine, and users can disable it with `KABOOM_TELEMETRY=off`.
 
 For the extension half of the system, see [extension-architecture.md](extension-architecture.md).
 
@@ -27,7 +27,7 @@ cmd/browser-agent/               Main binary
   main_connection_mcp.go       Daemon mode: HTTP server startup, PID management, signals
   cli.go, cli_commands.go      CLI mode: arg parsing, HTTP dispatch, output formatting
   server.go                    Server state, subsystem startup, and HTTP route registration
-  handler.go                   MCPHandler: JSON-RPC dispatch, initialize/tools/list
+  internal/mcpendpoint/       JSON-RPC endpoint and response-policy composition
   tools_core.go                ToolHandler struct, rate limiter, response helpers
   internal/toolobserve/dispatcher.go             observe tool: dispatches to internal/tools/observe
   tools_analyze.go             analyze tool: DOM, a11y, security, performance
@@ -120,7 +120,7 @@ internal/
 
 ## Key Patterns
 
-**Tool composition root** -- `ToolHandler` in `tools_core.go` constructs the concrete feature owners and injects their narrow dependencies. Canonical dispatchers such as `internal/toolobserve/dispatcher.go` own their mode registries; the root does not mirror or forward those APIs.
+**Tool composition root** -- `ToolHandler` in `tools_core.go` constructs the concrete feature owners and injects their narrow dependencies. It embeds the canonical `internal/mcpendpoint.Handler` and is returned directly to lifecycle callers; no backend type assertion is used to recover runtime ownership. Canonical dispatchers such as `internal/toolobserve/dispatcher.go` own their mode registries; the root does not mirror or forward those APIs.
 
 **Explicit dependencies** -- Feature owners accept concrete owners or narrow
 function-field dependency values. Shared host/provider interfaces were deleted
@@ -148,10 +148,10 @@ functions are injected directly into tool handlers.
 | Add a wire type                         | `internal/types/wire_*.go` (Go source of truth), run `make check-wire-drift`                              |
 | Add a feature dependency                | The owning `internal/<feature>/` package; inject a concrete owner or narrow function field at `tools_core.go` |
 | Add a CLI command                       | `cli_commands.go` (parser), `cli.go` (if new output format needed)                                        |
-| Change MCP protocol handling            | `handler.go` (MCPHandler), `tools_core.go` (ToolHandler)                                                 |
+| Change MCP protocol handling            | `internal/mcpendpoint/`, `internal/mcprouter/`, and `internal/mcpprotocol/`                              |
 | Add an internal package                 | `internal/<name>/`, import from `cmd/browser-agent/` -- keep it zero-dep                                    |
 | Change bridge behavior                  | `bridge.go` (spawn/respawn), `internal/bridge/` (timeout logic)                                           |
-| Add a resource (kaboom://*)             | `handler.go` (resource registration in MCPHandler)                                                        |
+| Add a resource (kaboom://*)             | `internal/mcpprotocol/` and `internal/playbooks/resources/`                                               |
 
 ## Testing
 

@@ -14,6 +14,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interactdispatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpcall"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpendpoint"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/noiseautorun"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
@@ -73,9 +74,10 @@ import (
 // ToolHandler Definition
 // ============================================
 
-// ToolHandler extends MCPHandler with composite tool dispatch
+// ToolHandler owns the composite five-tool runtime and its MCP endpoint.
 type ToolHandler struct {
-	*MCPHandler
+	*mcpendpoint.Handler
+	server  *Server
 	capture *capture.Capture
 
 	// shutdownCtx lets readiness gates abort promptly when the handler closes,
@@ -256,10 +258,18 @@ func sessionStoreGuard(store *persistence.SessionStore, req mcp.JSONRPCRequest) 
 }
 
 // NewToolHandler constructs the composite five-tool backend and its MCP adapter.
-func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
+func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler {
 	shutdownContext, shutdownCancel := context.WithCancel(context.Background())
+	endpointConfig := mcpendpoint.Config{
+		Version: version, Runtime: server.runtime,
+		ErrorTotal: server.logs.ErrorTotalAdded, TelemetryMode: server.logs.TelemetryMode,
+		AddWarning: server.warnings.Add, DrainWarnings: server.warnings.Drain,
+		PendingAudit: func() bool {
+			return server.intentStore != nil && server.intentStore.NudgeAndClean()
+		},
+	}
 	handler := &ToolHandler{
-		MCPHandler:       NewMCPHandler(server, version),
+		server:           server,
 		capture:          captureStore,
 		shutdownCtx:      shutdownContext,
 		shutdownCancel:   shutdownCancel,
@@ -481,7 +491,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 			return sessionStoreGuard(handler.sessionStoreImpl, req)
 		},
 		InvalidateSummary: handler.summaryPrefs.Invalidate,
-		SetActiveCodebase: handler.MCPHandler.server.activeCodebase.SetActiveCodebase,
+		SetActiveCodebase: handler.server.activeCodebase.SetActiveCodebase,
 	},
 		handler.sessionStoreImpl,
 		handler.sessionManager,
@@ -500,8 +510,8 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	})
 	handler.configureDispatcher = buildConfigureDispatcher(handler)
 	handler.toolCatalog = buildToolCatalog(handler)
-	handler.MCPHandler.SetToolBackend(buildMCPToolBackend(handler))
-	return handler.MCPHandler
+	handler.Handler = mcpendpoint.New(endpointConfig, buildMCPToolBackend(handler))
+	return handler
 }
 
 type visualAnalyzeDeps struct{ h *ToolHandler }
@@ -706,7 +716,7 @@ func buildScreenrecDeps(h *ToolHandler) screenrec.Deps {
 	if h.Guards == nil {
 		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
 	}
-	var getCommandResult func(string) (*queries.CommandResult, bool)
+	getCommandResult := func(string) (*queries.CommandResult, bool) { return nil, false }
 	if h.capture != nil {
 		getCommandResult = h.capture.Queries().GetCommandResult
 	}

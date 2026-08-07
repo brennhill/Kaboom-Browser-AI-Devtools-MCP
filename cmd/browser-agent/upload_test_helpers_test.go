@@ -35,8 +35,7 @@ func newUploadTestEnv(t *testing.T) *uploadTestEnv {
 	}
 	cap := capture.NewCapture()
 	mockConnectedTrackedTab(t, cap)
-	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.tools.Executor.(*ToolHandler)
+	handler := NewToolHandler(server, cap)
 
 	handler.uploadSecurity = uploadsec.NewSecurity("/", nil)
 

@@ -230,7 +230,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	server.logLifecycle("mcp_transport_ready", port, nil)
 
 	// Start periodic usage beacon loop (structured tool stats every 5 minutes).
-	if tracker := mcpHandler.tools.UsageTracker; tracker != nil {
+	if tracker := mcpHandler.usageTracker; tracker != nil {
 		telemetry.StartUsageBeaconLoop(ctx, tracker)
 	}
 
@@ -419,7 +419,7 @@ const (
 
 // awaitShutdownSignal blocks until a termination signal is received or the
 // HTTP listener dies unexpectedly, then performs graceful cleanup.
-func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-chan struct{}, termSrv *http.Server, mcpHandler *MCPHandler) {
+func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-chan struct{}, termSrv *http.Server, mcpHandler *ToolHandler) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 
@@ -487,22 +487,18 @@ func shutdownTerminalServer(server *Server, termSrv *http.Server, port int) {
 	}
 }
 
-func closeToolHandler(handler *MCPHandler) {
-	if handler == nil || handler.tools.Executor == nil {
+func closeToolHandler(handler *ToolHandler) {
+	if handler == nil {
 		return
 	}
-	if toolHandler, ok := handler.tools.Executor.(*ToolHandler); ok {
-		toolHandler.Close()
-	}
+	handler.Close()
 }
 
-func closeCaptureStore(handler *MCPHandler) {
-	if handler == nil || handler.tools.Executor == nil {
+func closeCaptureStore(handler *ToolHandler) {
+	if handler == nil || handler.capture == nil {
 		return
 	}
-	if toolHandler, ok := handler.tools.Executor.(*ToolHandler); ok && toolHandler.capture != nil {
-		toolHandler.capture.Close()
-	}
+	handler.capture.Close()
 }
 
 func closeTerminalResources(server *Server) {

@@ -301,35 +301,3 @@ func TestNetworkWaterfall_ConcurrentWrites(t *testing.T) {
 		t.Errorf("Expected 100 entries, got %d", count)
 	}
 }
-
-// ============================================
-// MCP Tool Handler Tests (Skipped)
-// ============================================
-// NOTE: These tests are skipped because ToolHandler and MCPHandler
-// have not been moved to internal packages yet. They remain in cmd/browser-agent
-// and would create circular dependencies if imported here.
-
-func TestToolGetNetworkWaterfall_EmptyBuffer(t *testing.T) {
-	t.Parallel()
-	t.Skip("ToolHandler not available in internal packages - requires cmd/browser-agent refactoring")
-}
-
-func TestToolGetNetworkWaterfall_PopulatedBuffer(t *testing.T) {
-	t.Parallel()
-	t.Skip("ToolHandler not available in internal packages - requires cmd/browser-agent refactoring")
-}
-
-func TestToolGetNetworkWaterfall_LimitParameter(t *testing.T) {
-	t.Parallel()
-	t.Skip("ToolHandler not available in internal packages - requires cmd/browser-agent refactoring")
-}
-
-func TestToolGetNetworkWaterfall_URLFilter(t *testing.T) {
-	t.Parallel()
-	t.Skip("ToolHandler not available in internal packages - requires cmd/browser-agent refactoring")
-}
-
-func TestToolGetNetworkWaterfall_ConcurrentAccessSafety(t *testing.T) {
-	t.Parallel()
-	t.Skip("ToolHandler not available in internal packages - requires cmd/browser-agent refactoring")
-}

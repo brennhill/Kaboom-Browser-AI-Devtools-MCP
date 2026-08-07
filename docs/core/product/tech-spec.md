@@ -13,7 +13,7 @@ canonical: true
 
 ## Architecture
 1. MCP client sends JSON-RPC to `POST /mcp`.
-2. `MCPHandler` parses and validates the request.
+2. `internal/mcpendpoint.Handler` delegates validation and routing to the canonical MCP owners.
 3. `ToolHandler` dispatches to tool-specific handlers.
 4. Passive reads resolve from server/capture buffers.
 5. Active commands queue extension work and then:
@@ -22,7 +22,8 @@ canonical: true
 - require polling via `observe(command_result)`.
 
 Primary components:
-- Transport + MCP routing: `cmd/browser-agent/handler.go`
+- Endpoint composition: `cmd/browser-agent/internal/mcpendpoint/handler.go`
+- Transport + MCP routing: `cmd/browser-agent/internal/mcphttp/handler.go` and `cmd/browser-agent/internal/mcprouter/router.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
 - Tool schemas: `internal/schema/schema.go`
 - Queue/command lifecycle: `internal/capture/query_dispatcher.go`

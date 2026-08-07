@@ -11,7 +11,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/handler.go
+  - cmd/browser-agent/internal/mcpendpoint/handler.go
   - cmd/browser-agent/internal/mcpresponse/owner.go
   - cmd/browser-agent/internal/terminal/intent/store.go
   - cmd/browser-agent/internal/terminal/intent/handlers.go
@@ -30,6 +30,7 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - cmd/browser-agent/internal/mcpresponse/owner_test.go
+  - cmd/browser-agent/internal/mcpendpoint/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/internal/terminal/intent/store_test.go

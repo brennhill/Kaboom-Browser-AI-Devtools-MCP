@@ -25,7 +25,7 @@ func TestNewToolHandlerUsesServerSessionProjectPath(t *testing.T) {
 	}
 	t.Cleanup(server.Close)
 	server.sessionProjectPath = projectPath
-	handler := NewToolHandler(server, capture.NewCapture()).tools.Executor.(*ToolHandler)
+	handler := NewToolHandler(server, capture.NewCapture())
 	if handler.sessionStoreImpl == nil {
 		t.Fatal("session store was not initialized")
 	}
@@ -76,8 +76,8 @@ func TestMCPCaptureConfigured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
-	mcpHandler := NewToolHandler(server, cap)
-	if mcpHandler.tools.Capture != cap {
+	handler := NewToolHandler(server, cap)
+	if handler.capture != cap {
 		t.Fatal("MCP handler should retain the injected capture")
 	}
 }
@@ -101,8 +101,8 @@ func TestMCPToolCallLimiterConfigured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
-	mcpHandler := NewToolHandler(server, cap)
-	limiter := mcpHandler.tools.Limiter
+	handler := NewToolHandler(server, cap)
+	limiter := handler.toolCallLimiter
 	if limiter == nil {
 		t.Fatal("MCP tool call limiter should be configured")
 	}
@@ -120,8 +120,8 @@ func TestMCPRedactionEngineConfigured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
-	mcpHandler := NewToolHandler(server, cap)
-	if mcpHandler.tools.Redactor == nil {
+	handler := NewToolHandler(server, cap)
+	if handler.redactionEngine == nil {
 		t.Fatal("MCP redaction engine should be configured")
 	}
 }

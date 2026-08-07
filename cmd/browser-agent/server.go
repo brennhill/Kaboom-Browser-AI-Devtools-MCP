@@ -212,7 +212,7 @@ func (s *Server) Close() {
 //go:embed openapi.json
 var openapiJSON []byte
 
-func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *MCPHandler) {
+func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *ToolHandler) {
 	server.mediaHTTP = mediaapi.New(captured, server.annotationRuntime.Store(), server.pushRouter)
 	mux := http.NewServeMux()
 	if captured != nil {
@@ -285,7 +285,7 @@ func registerUploadRoutes(mux *http.ServeMux, server *Server) {
 	mux.HandleFunc("/api/os-automation/dismiss", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleOSAutomationDismiss)))
 }
 
-func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) *MCPHandler {
+func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) *ToolHandler {
 	mux.HandleFunc("/openapi.json", httpguard.CORS(httpapi.OpenAPI(openapiJSON)))
 
 	mcpHandler := NewToolHandler(server, captured)
@@ -312,7 +312,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 			}
 			return health.BuildUpgradeInfo(server.runtime.Upgrade())
 		},
-		UsageTracker:    func() *telemetry.UsageTracker { return mcpHandler.tools.UsageTracker },
+		UsageTracker:    func() *telemetry.UsageTracker { return mcpHandler.usageTracker },
 		MaxPostBodySize: maxPostBodySize,
 	})
 
@@ -330,14 +330,10 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 		},
 		ListenPort: server.listenPort.Get,
 		Audit: func() any {
-			if mcpHandler.tools.Executor == nil {
+			if mcpHandler.healthMetrics == nil {
 				return nil
 			}
-			handler, ok := mcpHandler.tools.Executor.(*ToolHandler)
-			if !ok || handler.healthMetrics == nil {
-				return nil
-			}
-			return handler.healthMetrics.BuildAuditInfo()
+			return mcpHandler.healthMetrics.BuildAuditInfo()
 		},
 	})))
 	mux.HandleFunc("/health", httpguard.CORS(operations.ServeHealth))
@@ -346,9 +342,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	mux.HandleFunc("/insecure-proxy", httpguard.CORS(proxyHandler.ServeHTTP))
 	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, _ *http.Request) {
 		var extraChecks []health.DoctorCheck
-		if handler, ok := mcpHandler.tools.Executor.(*ToolHandler); ok {
-			extraChecks = doctorsupport.Checks(handler.stateRecovery, server.incidents)
-		}
+		extraChecks = doctorsupport.Checks(mcpHandler.stateRecovery, server.incidents)
 		health.HandleDoctorHTTP(w, captured, version, extraChecks...)
 	}))
 	mux.HandleFunc("/api/token-savings", httpguard.CORS(tracking.HandleRecordTokenSavings(server.tokenTracker)))
@@ -398,13 +392,13 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	return mcpHandler
 }
 
-func newMCPHTTPHandler(handler *MCPHandler) *mcphttp.Handler {
+func newMCPHTTPHandler(handler *ToolHandler) *mcphttp.Handler {
 	return mcphttp.New(mcphttp.Config{
-		Version:       handler.version,
+		Version:       version,
 		MaxBodySize:   maxPostBodySize,
 		HandleRequest: handler.HandleRequest,
 		Capture: func() *capture.Capture {
-			return handler.tools.Capture
+			return handler.capture
 		},
 	})
 }

@@ -164,9 +164,9 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 }
 
 func TestMCPToolBackendIsExecutionOnly(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go"))
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpcall", "handler.go"))
 	if err != nil {
-		t.Fatalf("read MCP handler: %v", err)
+		t.Fatalf("read MCP call owner: %v", err)
 	}
 	for _, forbidden := range []string{
 		"type ToolHandlerInterface interface {",
@@ -318,17 +318,17 @@ func TestDaemonRecoveryPrimitivesDoNotReturnToMain(t *testing.T) {
 	}
 }
 
-func TestPassiveTelemetryDoesNotReturnToRootHandler(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+func TestPassiveTelemetryDoesNotLeakIntoEndpointOwner(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
-		t.Fatalf("read root MCP handler: %v", err)
+		t.Fatalf("read MCP endpoint owner: %v", err)
 	}
 	for _, forbidden := range []string{
 		"type passiveTelemetryCursor struct",
 		"telemetryCursors map[",
-		"func (h *MCPHandler) telemetryDeltasForClient(",
-		"func (h *MCPHandler) evictStaleCursorsLocked(",
+		"func (h *Handler) telemetryDeltasForClient(",
+		"func (h *Handler) evictStaleCursorsLocked(",
 		"func parseTelemetryModeOverride(",
 	} {
 		if strings.Contains(string(source), forbidden) {
@@ -337,19 +337,19 @@ func TestPassiveTelemetryDoesNotReturnToRootHandler(t *testing.T) {
 	}
 }
 
-func TestResponsePolicyDoesNotReturnToRootHandler(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+func TestResponsePolicyDoesNotLeakIntoEndpointOwner(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
-		t.Fatalf("read root MCP handler: %v", err)
+		t.Fatalf("read MCP endpoint owner: %v", err)
 	}
 	for _, forbidden := range []string{
-		"func (h *MCPHandler) warnUnknownToolArguments(",
-		"func (h *MCPHandler) maybeAddPendingIntents(",
-		"func (h *MCPHandler) maybeAddSecurityModeWarning(",
-		"func (h *MCPHandler) maybeAddVersionWarning(",
-		"func (h *MCPHandler) maybeAddUpdateAvailableWarning(",
-		"func (h *MCPHandler) maybeAddUpgradeWarning(",
+		"func (h *Handler) warnUnknownToolArguments(",
+		"func (h *Handler) maybeAddPendingIntents(",
+		"func (h *Handler) maybeAddSecurityModeWarning(",
+		"func (h *Handler) maybeAddVersionWarning(",
+		"func (h *Handler) maybeAddUpdateAvailableWarning(",
+		"func (h *Handler) maybeAddUpgradeWarning(",
 	} {
 		if strings.Contains(string(source), forbidden) {
 			t.Errorf("root MCP handler retains response-policy surface %q", forbidden)
@@ -357,19 +357,19 @@ func TestResponsePolicyDoesNotReturnToRootHandler(t *testing.T) {
 	}
 }
 
-func TestStatelessProtocolResponsesDoNotReturnToRootHandler(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+func TestStatelessProtocolResponsesDoNotLeakIntoEndpointOwner(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
-		t.Fatalf("read root MCP handler: %v", err)
+		t.Fatalf("read MCP endpoint owner: %v", err)
 	}
 	for _, forbidden := range []string{
 		"const serverInstructions =",
-		"func (h *MCPHandler) handleInitialize(",
-		"func (h *MCPHandler) handleResourcesList(",
-		"func (h *MCPHandler) handleResourcesRead(",
-		"func (h *MCPHandler) handleResourcesTemplatesList(",
-		"func (h *MCPHandler) handleToolsList(",
+		"func (h *Handler) handleInitialize(",
+		"func (h *Handler) handleResourcesList(",
+		"func (h *Handler) handleResourcesRead(",
+		"func (h *Handler) handleResourcesTemplatesList(",
+		"func (h *Handler) handleToolsList(",
 	} {
 		if strings.Contains(string(source), forbidden) {
 			t.Errorf("root MCP handler retains stateless protocol surface %q", forbidden)
@@ -377,20 +377,20 @@ func TestStatelessProtocolResponsesDoNotReturnToRootHandler(t *testing.T) {
 	}
 }
 
-func TestToolCallPipelineDoesNotReturnToRootHandler(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+func TestToolCallPipelineDoesNotLeakIntoEndpointOwner(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
-		t.Fatalf("read root MCP handler: %v", err)
+		t.Fatalf("read MCP endpoint owner: %v", err)
 	}
 	for _, forbidden := range []string{
 		"type ToolExecutor interface",
 		"type ToolBackend struct",
 		"type RateLimiter interface",
 		"type RedactionEngine interface",
-		"func (h *MCPHandler) handleToolsCall(",
-		"func (h *MCPHandler) checkToolRateLimit(",
-		"func (h *MCPHandler) applyToolResponsePostProcessing(",
+		"func (h *Handler) handleToolsCall(",
+		"func (h *Handler) checkToolRateLimit(",
+		"func (h *Handler) applyToolResponsePostProcessing(",
 	} {
 		if strings.Contains(string(source), forbidden) {
 			t.Errorf("root MCP handler retains tool-call pipeline surface %q", forbidden)
@@ -398,11 +398,11 @@ func TestToolCallPipelineDoesNotReturnToRootHandler(t *testing.T) {
 	}
 }
 
-func TestJSONRPCRouterDoesNotReturnToRootHandler(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go")
+func TestJSONRPCRouterDoesNotLeakIntoEndpointOwner(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
-		t.Fatalf("read root MCP handler: %v", err)
+		t.Fatalf("read MCP endpoint owner: %v", err)
 	}
 	for _, forbidden := range []string{
 		"type mcpMethodHandler ",

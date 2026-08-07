@@ -72,8 +72,7 @@ func makeToolHandler(t *testing.T) (*ToolHandler, *Server, *capture.Capture) {
 	server.sessionProjectPath = t.TempDir()
 	cap := capture.NewCapture()
 	capturefixture.SetPilot(cap, false) // keep legacy test default: explicitly disabled unless test opts in
-	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.tools.Executor.(*ToolHandler)
+	handler := NewToolHandler(server, cap)
 	return handler, server, cap
 }
 
@@ -99,8 +98,7 @@ func newToolTestEnv(t *testing.T) *toolTestEnv {
 	server.sessionProjectPath = t.TempDir()
 	cap := capture.NewCapture()
 	capturefixture.SetPilot(cap, false) // keep legacy test default: explicitly disabled unless test opts in
-	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.tools.Executor.(*ToolHandler)
+	handler := NewToolHandler(server, cap)
 	return &toolTestEnv{handler: handler, server: server, capture: cap}
 }
 
@@ -473,8 +471,8 @@ func newTestToolHandler() *ToolHandler {
 		warnings:       warningqueue.New(),
 	}
 	h := &ToolHandler{
-		MCPHandler: &MCPHandler{server: srv},
-		capture:    cap,
+		server:  srv,
+		capture: cap,
 	}
 	h.testGenHandler = testgenhandler.New(buildTestGenerationDeps(h))
 	h.generateDispatcher = toolgenerate.NewDispatcher(buildGenerateDeps(h), h.testGenHandler)

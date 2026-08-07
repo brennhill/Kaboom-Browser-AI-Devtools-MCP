@@ -1,10 +1,6 @@
 {
   "version": 1,
   "files": {
-    "cmd/browser-agent/handler.go": {
-      "mutable_globals": 0,
-      "exports": 4
-    },
     "cmd/browser-agent/internal/appruntime/runtime.go": {
       "mutable_globals": 0,
       "exports": 15
@@ -284,6 +280,10 @@
     "cmd/browser-agent/internal/mcpcall/handler.go": {
       "mutable_globals": 0,
       "exports": 2
+    },
+    "cmd/browser-agent/internal/mcpendpoint/handler.go": {
+      "mutable_globals": 0,
+      "exports": 4
     },
     "cmd/browser-agent/internal/mcphttp/handler.go": {
       "mutable_globals": 0,
