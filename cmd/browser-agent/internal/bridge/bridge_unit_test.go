@@ -639,3 +639,32 @@ func TestWriteMCPPayloadReplacesInvalidJSON(t *testing.T) {
 		t.Fatalf("fallback response = %#v", response)
 	}
 }
+
+func TestExtractToolAction(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		method     string
+		params     string
+		wantTool   string
+		wantAction string
+	}{
+		{name: "configure restart", method: "tools/call", params: `{"name":"configure","arguments":{"what":"restart"}}`, wantTool: "configure", wantAction: "restart"},
+		{name: "observe", method: "tools/call", params: `{"name":"observe","arguments":{"what":"errors"}}`, wantTool: "observe", wantAction: "errors"},
+		{name: "missing action", method: "tools/call", params: `{"name":"configure","arguments":{"buffer":"all"}}`, wantTool: "configure"},
+		{name: "non tool call", method: "initialize", params: `{}`},
+		{name: "invalid params", method: "tools/call", params: `{not json}`},
+		{name: "missing arguments", method: "tools/call", params: `{"name":"configure"}`, wantTool: "configure"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			tool, action := ExtractToolAction(mcp.JSONRPCRequest{
+				JSONRPC: mcp.JSONRPCVersion, ID: 1, Method: test.method, Params: json.RawMessage(test.params),
+			})
+			if tool != test.wantTool || action != test.wantAction {
+				t.Fatalf("ExtractToolAction() = (%q, %q), want (%q, %q)", tool, action, test.wantTool, test.wantAction)
+			}
+		})
+	}
+}
