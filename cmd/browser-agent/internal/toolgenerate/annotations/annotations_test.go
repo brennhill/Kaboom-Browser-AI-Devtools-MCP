@@ -52,11 +52,17 @@ func parseResult(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
 func addAnonymousSession(d *fakeAnnotationDeps) {
 	d.annStore.StoreSession(1, &annotation.Session{
 		PageURL:        "https://example.com/page",
-		ScreenshotPath: "/tmp/shot.png",
+		ScreenshotPath: "/tmp/draw_test_annotated.png",
 		Timestamp:      time.Now().UnixMilli(),
 		Annotations: []annotation.Annotation{
 			{ID: "a1", Text: "Fix header", ElementSummary: "h1 'Welcome'", CorrelationID: "c1"},
 		},
+	})
+	d.annStore.StoreDetail("c1", annotation.Detail{
+		Selector:           "button.btn-primary",
+		ID:                 "submit-btn",
+		SelectorCandidates: []string{"testid=checkout-submit", "role=button|Welcome"},
+		A11yFlags:          []string{"low-contrast"},
 	})
 }
 
@@ -80,6 +86,11 @@ func TestHandleVisualTest(t *testing.T) {
 		if len(text) == 0 {
 			t.Error("expected non-empty script text")
 		}
+		for _, expected := range []string{"page.goto", "resolveAnnotationLocator", "testid=checkout-submit", "getByTestId", "low-contrast", "Fix header"} {
+			if !strings.Contains(text, expected) {
+				t.Errorf("generated script missing %q: %s", expected, text)
+			}
+		}
 	})
 
 	t.Run("default test name when empty", func(t *testing.T) {
@@ -102,12 +113,18 @@ func TestHandleVisualTest(t *testing.T) {
 	t.Run("named session found", func(t *testing.T) {
 		d := newGenDeps()
 		d.annStore.AppendToNamedSession("flow", &annotation.Session{
-			PageURL:     "https://example.com/x",
+			PageURL:     "https://example.com/first",
 			Annotations: []annotation.Annotation{{ID: "n1", Text: "note"}},
+		})
+		d.annStore.AppendToNamedSession("flow", &annotation.Session{
+			PageURL:     "https://example.com/second",
+			Annotations: []annotation.Annotation{{ID: "n2", Text: "another note"}},
 		})
 		resp := HandleVisualTest(d.annStore, genReq(), json.RawMessage(`{"annot_session":"flow"}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("named session should generate script: %s", text)
+		} else if !strings.Contains(text, "/first") || !strings.Contains(text, "/second") {
+			t.Fatalf("named-session pages missing: %s", text)
 		}
 	})
 }
@@ -131,6 +148,11 @@ func TestHandleAnnotationReport(t *testing.T) {
 		if len(text) == 0 {
 			t.Error("expected markdown report text")
 		}
+		for _, expected := range []string{"Fix header", "draw_test_annotated.png", "low-contrast"} {
+			if !strings.Contains(text, expected) {
+				t.Errorf("annotation report missing %q: %s", expected, text)
+			}
+		}
 	})
 }
 
@@ -148,8 +170,43 @@ func TestHandleAnnotationIssues(t *testing.T) {
 		resp := HandleAnnotationIssues(d.annStore, genReq(), nil)
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("issues should succeed: %s", text)
+		} else {
+			for _, expected := range []string{`"issues"`, `"total_count":1`, "Fix header", "button.btn-primary"} {
+				if !strings.Contains(text, expected) {
+					t.Errorf("annotation issues missing %q: %s", expected, text)
+				}
+			}
 		}
 	})
+}
+
+func TestHandleVisualTestRecoversFromExpiredDetail(t *testing.T) {
+	d := newGenDeps()
+	d.annStore.StoreSession(1, &annotation.Session{
+		PageURL: "https://example.com",
+		Annotations: []annotation.Annotation{{
+			ID: "expired", Text: "fix this", ElementSummary: "div.foo 'bar'", CorrelationID: "detail_gone",
+		}},
+	})
+	_, text := parseResult(t, HandleVisualTest(d.annStore, genReq(), nil))
+	if !strings.Contains(text, "resolveAnnotationLocator(page") || !strings.Contains(text, "detail expired") {
+		t.Fatalf("expired-detail fallback missing: %s", text)
+	}
+}
+
+func TestHandleVisualTestEscapesGeneratedJavaScriptStrings(t *testing.T) {
+	d := newGenDeps()
+	d.annStore.StoreSession(1, &annotation.Session{
+		PageURL: "https://example.com/it's-a-test",
+		Annotations: []annotation.Annotation{{
+			ID: "escaped", Text: "button's color", ElementSummary: "div.o'malley 'Submit'", CorrelationID: "escaped_detail",
+		}},
+	})
+	d.annStore.StoreDetail("escaped_detail", annotation.Detail{Selector: "div.o'malley", ID: "btn-it's"})
+	_, text := parseResult(t, HandleVisualTest(d.annStore, genReq(), nil))
+	if strings.Contains(text, "goto('https://example.com/it's-a-test')") || !strings.Contains(text, `it\'s-a-test`) || !strings.Contains(text, `#btn-it\'s`) {
+		t.Fatalf("generated strings were not escaped: %s", text)
+	}
 }
 
 // ---------------------------------------------------------------------------

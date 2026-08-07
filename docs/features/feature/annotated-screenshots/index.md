@@ -57,7 +57,6 @@ test_paths:
   - cmd/browser-agent/internal/mediaapi/handler_test.go
   - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/tools_analyze_annotations_test.go
-  - cmd/browser-agent/tools_generate_annotations_test.go
   - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/contracts/entry-point-parity.test.js
@@ -144,8 +143,7 @@ last_verified_date: 2026-08-05
 - `internal/annotation/store_lifecycle_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
 - `cmd/browser-agent/tools_analyze_annotations_test.go` — enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, hints tests
 - `internal/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
-- `cmd/browser-agent/tools_generate_annotations_test.go` — resilient locator fallback generation tests
-- `cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go` — generator unit tests (JS escaping, locator candidates, Markdown report, issue list, Playwright script) and handler no-data/named-session paths
+- `cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go` — generator and handler contracts for JS escaping, locator fallbacks, expired detail recovery, named sessions, Markdown reports, structured issues, and Playwright output
 - `scripts/smoke-tests/media/31-annotation-parity.sh` — deterministic end-to-end ingest/retrieval/generation gate with bounded retries for transient startup/no_data windows
 - `scripts/smoke-tests/media/annotation-parity-benchmark.sh` — repeated pass-rate benchmark with threshold enforcement
 - `scripts/uat/runners/smoke-test.sh` — resume-mode daemon version parity guard prevents stale-daemon false negatives in `--only/--start-from` runs
