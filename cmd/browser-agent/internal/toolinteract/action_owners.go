@@ -27,6 +27,7 @@ type RuntimeDeps struct {
 	MaybeWaitForCommand    func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
 	RecordAIAction         func(string, string, map[string]any)
 	DefaultEvidenceCapture func(string) EvidenceShot
+	EvidenceRetryWait      func(time.Duration)
 }
 
 type DOMDeps struct {
@@ -494,10 +495,6 @@ const (
 	evidenceRetryDelay = 150 * time.Millisecond
 )
 
-// EvidenceCaptureFn is the pluggable evidence capture function.
-// Tests can replace it to avoid real screenshot I/O.
-var evidenceCaptureFn func(clientID string) EvidenceShot
-
 // CaptureEvidence captures one screenshot through the canonical query lifecycle.
 // It lives with evidence state because its error vocabulary is part of that contract.
 func CaptureEvidence(store *capture.Capture, clientID string) EvidenceShot {
@@ -546,14 +543,13 @@ func (h *ActionRuntime) captureEvidenceWithRetry(clientID string) EvidenceShot {
 	attempts := retries + 1
 	last := EvidenceShot{Error: "evidence_capture_not_attempted"}
 
-	captureFn := evidenceCaptureFn
-	if captureFn == nil && h.deps.DefaultEvidenceCapture != nil {
-		captureFn = func(cid string) EvidenceShot {
-			return h.deps.DefaultEvidenceCapture(cid)
-		}
-	}
+	captureFn := h.deps.DefaultEvidenceCapture
 	if captureFn == nil {
 		return EvidenceShot{Error: "evidence_capture_not_configured"}
+	}
+	wait := h.deps.EvidenceRetryWait
+	if wait == nil {
+		wait = time.Sleep
 	}
 
 	for i := 0; i < attempts; i++ {
@@ -567,21 +563,11 @@ func (h *ActionRuntime) captureEvidenceWithRetry(clientID string) EvidenceShot {
 		}
 		last = shot
 		if i < attempts-1 {
-			time.Sleep(evidenceRetryDelay)
+			wait(evidenceRetryDelay)
 		}
 	}
 
 	return last
-}
-
-// SetEvidenceCaptureFn overrides the evidence capture function (for testing).
-func SetEvidenceCaptureFn(fn func(clientID string) EvidenceShot) {
-	evidenceCaptureFn = fn
-}
-
-// ResetEvidenceCaptureFn restores the default evidence capture function.
-func ResetEvidenceCaptureFn() {
-	evidenceCaptureFn = nil
 }
 
 func (h *ActionRuntime) clearEvidenceState(correlationID string) {

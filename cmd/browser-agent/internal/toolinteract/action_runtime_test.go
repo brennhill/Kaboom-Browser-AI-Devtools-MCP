@@ -270,6 +270,7 @@ type fakeCapabilities struct {
 	MarkDrawStarted                                    func()
 	GetListenPort                                      func() int
 	DefaultEvidenceCapture                             func(string) EvidenceShot
+	EvidenceRetryWait                                  func(time.Duration)
 	RequireSessionStore                                func(mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool)
 	DiagnosticHint                                     func() func(*mcp.StructuredError)
 	Redact                                             func(map[string]any) map[string]any
@@ -455,6 +456,7 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 		RequireCSPClear: deps.RequireCSPClear, EnqueuePendingQuery: deps.EnqueuePendingQuery,
 		MaybeWaitForCommand: deps.MaybeWaitForCommand, RecordAIAction: deps.RecordAIAction,
 		DefaultEvidenceCapture: deps.DefaultEvidenceCapture,
+		EvidenceRetryWait:      deps.EvidenceRetryWait,
 	})
 	dom := NewDOMActions(runtime, DOMDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.RecordDOMPrimitiveAction})
 	storage := NewStorageActions(runtime, StorageDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking})
@@ -574,6 +576,87 @@ func TestEvidenceArgumentAndEnvironmentParsing(t *testing.T) {
 	}
 	if !isMutationAction(" Navigate ") || isMutationAction("get_text") {
 		t.Fatal("mutation classification mismatch")
+	}
+}
+
+func TestEvidenceLifecycleUsesRuntimeScopedCaptureAndDeterministicRetry(t *testing.T) {
+	t.Setenv(evidenceRetryEnv, "1")
+	shots := []EvidenceShot{
+		{Path: "/tmp/before.png"},
+		{Error: "screenshot_timeout"},
+		{Path: "/tmp/after.png"},
+	}
+	calls := 0
+	waits := make([]time.Duration, 0, 1)
+	runtime := NewActionRuntime(RuntimeDeps{
+		DefaultEvidenceCapture: func(string) EvidenceShot {
+			shot := shots[calls]
+			calls++
+			return shot
+		},
+		EvidenceRetryWait: func(delay time.Duration) { waits = append(waits, delay) },
+	})
+
+	runtime.ArmEvidenceForCommand("click-1", "click", json.RawMessage(`{"evidence":"always"}`), "client-1")
+	response := map[string]any{}
+	runtime.AttachEvidencePayload("click-1", response)
+	evidence, ok := response["evidence"].(map[string]any)
+	if !ok {
+		t.Fatalf("evidence payload = %#v", response["evidence"])
+	}
+	if evidence["before"] != "/tmp/before.png" || evidence["after"] != "/tmp/after.png" || evidence["partial"] == true {
+		t.Fatalf("evidence lifecycle = %#v", evidence)
+	}
+	if calls != 3 || len(waits) != 1 || waits[0] != evidenceRetryDelay {
+		t.Fatalf("capture calls=%d waits=%v", calls, waits)
+	}
+
+	// Finalization is idempotent and must not recapture or expose mutable state.
+	evidence["before"] = "mutated"
+	second := map[string]any{}
+	runtime.AttachEvidencePayload("click-1", second)
+	secondEvidence := second["evidence"].(map[string]any)
+	if secondEvidence["before"] != "/tmp/before.png" || calls != 3 {
+		t.Fatalf("cached evidence was aliased or recaptured: %#v calls=%d", secondEvidence, calls)
+	}
+}
+
+func TestEvidenceOnMutationClassifiesReadOnlyActionWithoutCapture(t *testing.T) {
+	calls := 0
+	runtime := NewActionRuntime(RuntimeDeps{
+		DefaultEvidenceCapture: func(string) EvidenceShot {
+			calls++
+			return EvidenceShot{Path: "/tmp/unexpected.png"}
+		},
+	})
+	runtime.ArmEvidenceForCommand("text-1", "get_text", json.RawMessage(`{"evidence":"on_mutation"}`), "client-1")
+	response := map[string]any{}
+	runtime.AttachEvidencePayload("text-1", response)
+	evidence, ok := response["evidence"].(map[string]any)
+	if !ok || evidence["skipped"] != "non_mutating_action" {
+		t.Fatalf("read-only evidence = %#v", response["evidence"])
+	}
+	if _, exists := evidence["before"]; exists || calls != 0 {
+		t.Fatalf("read-only evidence captured unexpectedly: %#v calls=%d", evidence, calls)
+	}
+}
+
+func TestEvidencePartialPayloadPreservesSuccessfulBeforeCapture(t *testing.T) {
+	t.Setenv(evidenceRetryEnv, "0")
+	shots := []EvidenceShot{{Path: "/tmp/before.png"}, {Error: "screenshot_timeout"}}
+	calls := 0
+	runtime := NewActionRuntime(RuntimeDeps{DefaultEvidenceCapture: func(string) EvidenceShot {
+		shot := shots[calls]
+		calls++
+		return shot
+	}})
+	runtime.ArmEvidenceForCommand("click-1", "click", json.RawMessage(`{"evidence":"always"}`), "client-1")
+	response := map[string]any{}
+	runtime.AttachEvidencePayload("click-1", response)
+	evidence := response["evidence"].(map[string]any)
+	errors, ok := evidence["errors"].(map[string]any)
+	if evidence["before"] != "/tmp/before.png" || evidence["partial"] != true || !ok || errors["after"] != "screenshot_timeout" {
+		t.Fatalf("partial evidence = %#v", evidence)
 	}
 }
 

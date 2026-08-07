@@ -111,7 +111,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
   - internal/schema/interact/schema_test.go
-  - cmd/browser-agent/tools_interact_evidence_test.go
   - cmd/browser-agent/tools_interact_state_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
@@ -189,6 +188,9 @@ continuations are private; an AST contract test rejects any new exported
 details.
 Composition also supplies evidence and query callbacks directly; dead or
 one-line ToolHandler forwarding methods are structurally prohibited.
+Evidence capture is runtime-scoped: no process-global test override exists.
+Its retry wait is injected for deterministic tests, and owner-level contracts
+cover complete, partial, read-only, cached, and mutation evidence lifecycles.
 Evidence screenshot tests await the query dispatcher's enqueue notification,
 complete the exact screenshot query, and close their capture runtime. No
 polling sleep or leaked cleanup goroutine participates in the result contract.
