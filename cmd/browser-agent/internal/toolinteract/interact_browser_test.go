@@ -622,34 +622,40 @@ func TestStorageActionValidation(t *testing.T) {
 
 func TestStorageAndCookieActionsPreserveSharedExecutionTarget(t *testing.T) {
 	tests := []struct {
-		name string
-		args json.RawMessage
-		run  func(*StorageActions, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+		name      string
+		args      json.RawMessage
+		fragments []string
+		run       func(*StorageActions, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
 	}{
 		{
-			name: "set",
-			args: json.RawMessage(`{"storage_type":"localStorage","key":"k","value":"v","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
-			run:  (*StorageActions).HandleSetStorage,
+			name:      "set",
+			args:      json.RawMessage(`{"storage_type":"localStorage","key":"k","value":"v","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			fragments: []string{"localStorage.setItem", `"k"`, `"v"`},
+			run:       (*StorageActions).HandleSetStorage,
 		},
 		{
-			name: "delete",
-			args: json.RawMessage(`{"storage_type":"localStorage","key":"k","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
-			run:  (*StorageActions).HandleDeleteStorage,
+			name:      "delete",
+			args:      json.RawMessage(`{"storage_type":"localStorage","key":"k","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			fragments: []string{"localStorage.removeItem", `"k"`},
+			run:       (*StorageActions).HandleDeleteStorage,
 		},
 		{
-			name: "clear",
-			args: json.RawMessage(`{"storage_type":"localStorage","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
-			run:  (*StorageActions).HandleClearStorage,
+			name:      "clear",
+			args:      json.RawMessage(`{"storage_type":"localStorage","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			fragments: []string{"localStorage.clear"},
+			run:       (*StorageActions).HandleClearStorage,
 		},
 		{
-			name: "set cookie",
-			args: json.RawMessage(`{"name":"sid","value":"abc","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
-			run:  (*StorageActions).HandleSetCookie,
+			name:      "set cookie",
+			args:      json.RawMessage(`{"name":"debug","value":"true","domain":".example.com","path":"/","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			fragments: []string{"document.cookie", "debug=true", "domain=.example.com", "path=/"},
+			run:       (*StorageActions).HandleSetCookie,
 		},
 		{
-			name: "delete cookie",
-			args: json.RawMessage(`{"name":"sid","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
-			run:  (*StorageActions).HandleDeleteCookie,
+			name:      "delete cookie",
+			args:      json.RawMessage(`{"name":"_ga","domain":".example.com","path":"/","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			fragments: []string{"document.cookie", "_ga=; expires=Thu, 01 Jan 1970", "domain=.example.com", "path=/"},
+			run:       (*StorageActions).HandleDeleteCookie,
 		},
 	}
 
@@ -661,6 +667,9 @@ func TestStorageAndCookieActionsPreserveSharedExecutionTarget(t *testing.T) {
 			queued := fs.enqueuedSnapshot()
 			if len(queued) != 1 {
 				t.Fatalf("queued commands = %d, want 1", len(queued))
+			}
+			if queued[0].Type != "execute" {
+				t.Fatalf("query type = %q, want execute", queued[0].Type)
 			}
 			if queued[0].TabID != 42 {
 				t.Fatalf("tab_id = %d, want 42", queued[0].TabID)
@@ -674,6 +683,12 @@ func TestStorageAndCookieActionsPreserveSharedExecutionTarget(t *testing.T) {
 			}
 			if params["world"] != "isolated" {
 				t.Fatalf("world = %v, want isolated", params["world"])
+			}
+			script, _ := params["script"].(string)
+			for _, fragment := range tt.fragments {
+				if !strings.Contains(script, fragment) {
+					t.Fatalf("script missing %q: %s", fragment, script)
+				}
 			}
 		})
 	}

@@ -365,3 +365,6 @@ selectors before action execution. Required text, value, and attribute
 parameters are verified beside the canonical DOM validation function.
 Action jitter classification and bounds are verified directly on the action
 runtime, while configure-owner tests prove clamping and setter invocation.
+Storage and cookie mutation contracts are colocated with their canonical owner
+and table-driven across queue type, exact script semantics, shared tab/world/
+timeout forwarding, required parameters, and invalid storage types.
