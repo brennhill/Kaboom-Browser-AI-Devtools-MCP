@@ -256,7 +256,7 @@ jobs:
         env:
           KABOOM_VERSION: ${{ needs.verify-tag.outputs.version }}
         run: |
-          bash scripts/install.sh
+          bash scripts/setup/install.sh
           "$HOME/.kaboom/bin/kaboom-agentic-browser" --version | grep -q "${KABOOM_VERSION}" \
             || { echo "::error::install.sh binary did not report ${KABOOM_VERSION}"; exit 1; }
           # install.sh installs the hooks CLI too — verify it (both binaries must ship).

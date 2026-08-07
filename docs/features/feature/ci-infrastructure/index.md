@@ -4,9 +4,12 @@ feature_id: feature-ci-infrastructure
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-08
 code_paths:
   - .github/workflows/ci.yml
+  - .github/workflows/release.yml
+  - Makefile
+  - scripts/quality/workflows/check-local-paths.mjs
   - scripts/uat/runners/test-js-sharded.sh
   - scripts/quality/verification/validate-architecture.sh
   - cmd/browser-agent/internal/ciapi/handlers.go
@@ -20,6 +23,7 @@ test_paths:
   - cmd/browser-agent/internal/ciapi/snapshot_test.go
   - cmd/browser-agent/internal/ciapi/compute_test.go
   - cmd/browser-agent/internal/ciapi/handlers_integration_test.go
+  - scripts/quality/workflows/check-local-paths.test.mjs
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -65,3 +69,7 @@ last_verified_date: 2026-03-05
   attributed only to the process that exited nonzero.
 - Architecture validation follows the canonical query, capture, observe,
   interact, and bridge owners and executes no-facade/integration contracts.
+- `check-structure` parses every explicit first-party script path in GitHub
+  workflows and fails when a refactor deletes or moves its target. Workflow
+  commands therefore migrate atomically with canonical script owners instead
+  of relying on compatibility wrappers or discovering stale paths in remote CI.
