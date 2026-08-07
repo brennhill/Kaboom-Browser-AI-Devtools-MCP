@@ -4,6 +4,7 @@ package tutorial
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -46,6 +47,22 @@ func parseResp(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
 	return r.IsError, text
 }
 
+func parseRespJSON(t *testing.T, response mcp.JSONRPCResponse) map[string]any {
+	t.Helper()
+	isError, text := parseResp(t, response)
+	if isError {
+		t.Fatalf("unexpected tool error: %s", text)
+	}
+	if _, payload, found := strings.Cut(text, "\n"); found {
+		text = payload
+	}
+	var result map[string]any
+	if err := json.Unmarshal([]byte(text), &result); err != nil {
+		t.Fatalf("invalid result JSON: %v (text=%s)", err, text)
+	}
+	return result
+}
+
 func newReq() mcp.JSONRPCRequest { return mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1} }
 
 // ---------------------------------------------------------------------------
@@ -62,9 +79,14 @@ func TestHandleTutorial(t *testing.T) {
 	})
 	playbooks := map[string]any{"foo": "bar"}
 
-	resp := HandleTutorial(d, newReq(), json.RawMessage(`{"what":"tutorial"}`), playbooks)
-	if isErr, text := parseResp(t, resp); isErr {
-		t.Fatalf("HandleTutorial should succeed: %s", text)
+	result := parseRespJSON(t, HandleTutorial(d, newReq(), json.RawMessage(`{"what":"tutorial"}`), playbooks))
+	if result["status"] != "ok" || result["mode"] != "tutorial" || result["failure_recovery_playbooks"] == nil {
+		t.Fatalf("tutorial response = %#v", result)
+	}
+	for _, field := range []string{"snippets", "context", "issues", "safe_automation_loop", "csp_fallback_playbook"} {
+		if result[field] == nil {
+			t.Errorf("tutorial response missing %q: %#v", field, result)
+		}
 	}
 }
 
@@ -220,6 +242,9 @@ func TestTutorialSnippets_RequiredFields(t *testing.T) {
 				t.Errorf("snippet %d missing required field %q", i, key)
 			}
 		}
+		if snippet, _ := s["snippet"].(string); strings.Contains(snippet, `selector:"text=Submit"`) {
+			t.Errorf("snippet %d uses ambiguous global submit selector: %s", i, snippet)
+		}
 	}
 }
 
@@ -235,11 +260,30 @@ func TestTutorialSafeAutomationLoop_NonEmpty(t *testing.T) {
 	if _, ok := playbook["title"]; !ok {
 		t.Error("playbook should have a 'title' field")
 	}
+	scenarios, ok := playbook["scenarios"].([]map[string]any)
+	if !ok {
+		t.Fatalf("scenarios = %T, want []map[string]any", playbook["scenarios"])
+	}
+	seen := make(map[string]bool)
+	for _, scenario := range scenarios {
+		seen[scenario["id"].(string)] = true
+	}
+	for _, id := range []string{"multi_dialog", "iframe", "csp_restricted_page"} {
+		if !seen[id] {
+			t.Errorf("safe automation loop missing scenario %q", id)
+		}
+	}
 }
 
 func TestTutorialCSPFallbackPlaybook_NonEmpty(t *testing.T) {
 	playbook := TutorialCSPFallbackPlaybook()
 	if len(playbook) == 0 {
 		t.Fatal("TutorialCSPFallbackPlaybook should return a non-empty map")
+	}
+	if playbook["exact_retry_guidance"] != "This page blocks script execution (CSP/restricted context). Use interact navigate/refresh/back/forward/new_tab/switch_tab/close_tab to move to another page." {
+		t.Fatalf("unexpected retry guidance: %#v", playbook["exact_retry_guidance"])
+	}
+	if playbook["fallback_status_pattern"] != "Error: MAIN world execution FAILED. Fallback in ISOLATED is SUCCESS|ERROR" {
+		t.Fatalf("unexpected fallback status pattern: %#v", playbook["fallback_status_pattern"])
 	}
 }

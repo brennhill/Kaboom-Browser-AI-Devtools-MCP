@@ -77,6 +77,22 @@ func TestDispatcherRejectsUnknownActionWithCanonicalList(t *testing.T) {
 	}
 }
 
+func TestDispatcherRejectsRemovedExamplesAlias(t *testing.T) {
+	dispatcher := NewDispatcher(map[string]Handler{
+		"tutorial": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+			return mcp.Succeed(req, "tutorial", nil)
+		},
+	})
+	response := dispatcher.Handle(mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, json.RawMessage(`{"what":"examples"}`))
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError || !strings.Contains(result.Content[0].Text, mcp.ErrUnknownMode) {
+		t.Fatalf("removed examples alias response = %#v", result)
+	}
+}
+
 func containsAll(value string, values ...string) bool {
 	for _, candidate := range values {
 		if !strings.Contains(value, candidate) {
