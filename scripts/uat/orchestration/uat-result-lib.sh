@@ -19,6 +19,19 @@ is_uat_non_negative_int() {
     esac
 }
 
+# uat_category_ids_match compares the numeric identity of category IDs while
+# accepting the zero-padded runner form (for example, 01) and the historical
+# framework form (1). Validation happens before arithmetic so malformed values
+# cannot be coerced into a valid category.
+uat_category_ids_match() {
+    local expected="${1:-}"
+    local actual="${2:-}"
+
+    is_uat_non_negative_int "$expected" || return 1
+    is_uat_non_negative_int "$actual" || return 1
+    [ "$((10#$expected))" -eq "$((10#$actual))" ]
+}
+
 parse_uat_category_result() {
     local result_file="$1"
     local parsed=""

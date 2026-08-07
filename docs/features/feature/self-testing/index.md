@@ -40,6 +40,7 @@ code_paths:
   - internal/statefault/store.go
   - internal/capturefixture/sync.go
 test_paths:
+  - scripts/uat/orchestration/uat-result-lib.test.mjs
   - cmd/browser-agent/internal/integrationtest/harness_test.go
   - tests/cli/contracts/smoke-layout-contract.test.cjs
   - tests/extension/contracts/tooling-contracts.test.js

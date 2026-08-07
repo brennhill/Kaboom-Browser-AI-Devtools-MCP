@@ -374,7 +374,7 @@ for cat_id in $CAT_IDS; do
     result_status="complete"
 
     if parse_uat_category_result "$results_file"; then
-        if [ "$UAT_RESULT_CATEGORY_ID" != "$cat_id" ]; then
+        if ! uat_category_ids_match "$cat_id" "$UAT_RESULT_CATEGORY_ID"; then
             echo "AGGREGATION ERROR: malformed result file for category $cat_id (CATEGORY_ID=$UAT_RESULT_CATEGORY_ID)" >&2
             cat_fail=1
             result_status="category_id_mismatch"
