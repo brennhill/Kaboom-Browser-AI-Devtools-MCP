@@ -98,7 +98,6 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
   - cmd/browser-agent/tools_interact_entrypoint_test.go
-  - cmd/browser-agent/tools_interact_screenshot_test.go
   - cmd/browser-agent/tools_interact_page_commands_test.go
   - cmd/browser-agent/tools_interact_dom_routing_test.go
   - cmd/browser-agent/tools_interact_state_queries_test.go
@@ -359,3 +358,7 @@ Overlay dismissal and stability waiting have owner-level queue contracts for
 pilot gating, correlation identity, tab forwarding, default and custom timing,
 and malformed-input rejection before mutation. Their navigate/click composition
 is verified deterministically by the dispatcher owner without browser waits.
+Screenshot composition is split across its true owners: the interact schema
+proves the boolean input contract, the immutable dispatcher proves successful
+post-action ordering, and the action runtime proves exact image-block transfer
+plus deterministic preservation of the base response when no image is usable.

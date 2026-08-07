@@ -104,6 +104,18 @@ func TestInteractToolSchema_StabilityMsParam(t *testing.T) {
 	}
 }
 
+func TestInteractToolSchema_IncludeScreenshotParam(t *testing.T) {
+	t.Parallel()
+	props, ok := ToolSchema().InputSchema["properties"].(map[string]any)
+	if !ok {
+		t.Fatal("schema properties missing")
+	}
+	property, ok := props["include_screenshot"].(map[string]any)
+	if !ok || property["type"] != "boolean" {
+		t.Fatalf("include_screenshot property = %#v", props["include_screenshot"])
+	}
+}
+
 func TestInteractActionSpecs_EnumParity(t *testing.T) {
 	t.Parallel()
 

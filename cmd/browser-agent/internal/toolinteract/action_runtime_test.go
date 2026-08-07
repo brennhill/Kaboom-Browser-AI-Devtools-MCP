@@ -612,3 +612,42 @@ func TestCaptureEvidenceResultContracts(t *testing.T) {
 		})
 	}
 }
+
+func TestAppendScreenshotToResponseAddsFirstImageBlock(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	fs.screenshot = func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+		return mcp.JSONRPCResponse{
+			JSONRPC: mcp.JSONRPCVersion,
+			ID:      req.ID,
+			Result: mustRuntimeJSON(t, mcp.MCPToolResult{Content: []mcp.MCPContentBlock{
+				{Type: "text", Text: "captured"},
+				{Type: "image", Data: "ZmFrZS1pbWFnZQ==", MimeType: "image/jpeg"},
+			}}),
+		}
+	}
+
+	got := h.AppendScreenshotToResponse(mcp.SucceedText(testReq(), "clicked"), testReq())
+	result := parseToolResult(t, got)
+	if len(result.Content) != 2 || result.Content[1].Type != "image" ||
+		result.Content[1].Data != "ZmFrZS1pbWFnZQ==" || result.Content[1].MimeType != "image/jpeg" {
+		t.Fatalf("enriched screenshot result = %#v", result.Content)
+	}
+}
+
+func TestAppendScreenshotToResponseKeepsBaseWithoutUsableImage(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	base := mcp.SucceedText(testReq(), "clicked")
+	for _, screenshotResult := range []json.RawMessage{
+		json.RawMessage(`bad`),
+		mustRuntimeJSON(t, mcp.MCPToolResult{Content: []mcp.MCPContentBlock{{Type: "text", Text: "no image"}}}),
+		mustRuntimeJSON(t, mcp.MCPToolResult{Content: []mcp.MCPContentBlock{{Type: "image", Data: ""}}}),
+	} {
+		fs.screenshot = func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+			return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Result: screenshotResult}
+		}
+		got := h.AppendScreenshotToResponse(base, testReq())
+		if string(got.Result) != string(base.Result) {
+			t.Fatalf("unusable screenshot changed base: %s", got.Result)
+		}
+	}
+}
