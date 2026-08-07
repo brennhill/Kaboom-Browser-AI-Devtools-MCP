@@ -5,7 +5,6 @@ package main
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
@@ -20,6 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/clientapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonrecovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/dashboard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
@@ -51,7 +51,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/perftrace"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -369,7 +368,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	mux.HandleFunc("/enhanced-actions", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleEnhancedActions)))
 	mux.HandleFunc("/performance-snapshots", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandlePerformanceSnapshots)))
 	mux.HandleFunc("/sync", httpguard.CORS(httpguard.ExtensionOnly(newSyncHandler(captured).HandleSync)))
-	registerClientRegistryRoutes(mux, captured)
+	clientapi.Register(mux, captured, maxPostBodySize)
 	mux.HandleFunc("/recordings/save", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
 		screenrec.HandleSave(w, r, captured.Queries(), server.stateRecovery)
 	})))
@@ -394,76 +393,6 @@ func newSyncHandler(captured *capture.Capture) *syncruntime.Handler {
 		ExtensionLogs:  captured.ExtensionLogs(),
 		DiagnosticLogs: captured.DiagnosticLogs(),
 	})
-}
-
-func resolveClientRegistry(captured *capture.Capture, w http.ResponseWriter) (*clientreg.ClientRegistry, bool) {
-	registry := captured.Clients().Registry()
-	if registry == nil {
-		httpapi.JSON(w, http.StatusServiceUnavailable, map[string]string{"error": "client_registry_unavailable"})
-		return nil, false
-	}
-	return registry, true
-}
-
-func registerClientRegistryRoutes(mux *http.ServeMux, captured *capture.Capture) {
-	mux.HandleFunc("/clients", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		handleClientsList(w, r, captured)
-	})))
-	mux.HandleFunc("/clients/", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		handleClientByID(w, r, captured)
-	})))
-}
-
-func handleClientsList(w http.ResponseWriter, r *http.Request, captured *capture.Capture) {
-	registry, ok := resolveClientRegistry(captured, w)
-	if !ok {
-		return
-	}
-	switch r.Method {
-	case http.MethodGet:
-		httpapi.JSON(w, http.StatusOK, map[string]any{"clients": registry.List(), "count": registry.Count()})
-	case http.MethodPost:
-		r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
-		var body struct {
-			CWD string `json:"cwd"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			httpapi.JSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
-			return
-		}
-		httpapi.JSON(w, http.StatusOK, map[string]any{"result": registry.Register(body.CWD)})
-	default:
-		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
-	}
-}
-
-func handleClientByID(w http.ResponseWriter, r *http.Request, captured *capture.Capture) {
-	registry, ok := resolveClientRegistry(captured, w)
-	if !ok {
-		return
-	}
-	clientID := strings.TrimPrefix(r.URL.Path, "/clients/")
-	if clientID == "" {
-		httpapi.JSON(w, http.StatusBadRequest, map[string]string{"error": "Missing client ID"})
-		return
-	}
-	switch r.Method {
-	case http.MethodGet:
-		client := registry.Get(clientID)
-		if client == nil {
-			httpapi.JSON(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
-			return
-		}
-		httpapi.JSON(w, http.StatusOK, client)
-	case http.MethodDelete:
-		if !registry.Unregister(clientID) {
-			httpapi.JSON(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
-			return
-		}
-		httpapi.JSON(w, http.StatusOK, map[string]bool{"unregistered": true})
-	default:
-		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
-	}
 }
 
 func registerUploadRoutes(mux *http.ServeMux, server *Server) {

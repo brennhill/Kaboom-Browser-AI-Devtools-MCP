@@ -141,6 +141,10 @@
       "mutable_globals": 0,
       "exports": 2
     },
+    "cmd/browser-agent/internal/clientapi/handler.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/connectmode/runner.go": {
       "mutable_globals": 0,
       "exports": 4

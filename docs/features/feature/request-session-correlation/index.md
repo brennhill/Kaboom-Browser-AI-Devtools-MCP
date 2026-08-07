@@ -4,13 +4,14 @@ feature_id: feature-request-session-correlation
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - internal/capture/clientstore/owner.go
   - internal/capture/perfstore/store.go
   - internal/capture/capture.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/server.go
+  - cmd/browser-agent/internal/clientapi/handler.go
   - internal/session/clientreg/registry.go
   - internal/session/clientreg/state.go
   - internal/session/snapshot-manager.go
@@ -28,7 +29,7 @@ test_paths:
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
   - internal/capture/clientstore/owner_test.go
   - internal/capture/perfstore/store_test.go
-  - cmd/browser-agent/server_routes_clients_test.go
+  - cmd/browser-agent/internal/clientapi/handler_test.go
   - internal/session/clientreg/clientreg_test.go
   - internal/session/snapshot_manager_test.go
   - internal/session/sessions_test.go
@@ -87,6 +88,10 @@ canonical owner directly and stores the concrete `clientreg.ClientRegistry`.
 Runtime routes and terminal CWD detection consume that registry without
 interfaces returning `any`, adapters, JSON round trips, Capture forwarding
 methods, or root-package contract aliases.
+The canonical `internal/clientapi` owner installs and handles `/clients`
+routes. It exposes only the snake_case `ClientInfo` projection, never internal
+cursor or checkpoint state, and the root server contains no client-route
+helpers or compatibility facade.
 Each client state owns a private activity clock used by `Touch`; tests advance
 that source explicitly. Concurrent register/unregister coverage starts all
 workers through a barrier rather than delaying between operations.

@@ -407,6 +407,27 @@ func TestJSONRPCRouterDoesNotReturnToRootHandler(t *testing.T) {
 	}
 }
 
+func TestClientRegistryHTTPDoesNotReturnToRootServer(t *testing.T) {
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "server.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read root server: %v", err)
+	}
+	for _, forbidden := range []string{
+		"func resolveClientRegistry(",
+		"func registerClientRegistryRoutes(",
+		"func handleClientsList(",
+		"func handleClientByID(",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("root server retains client registry HTTP surface %q", forbidden)
+		}
+	}
+	if !strings.Contains(string(source), "clientapi.Register(") {
+		t.Error("root server does not compose the canonical clientapi owner")
+	}
+}
+
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
 	if err != nil {
