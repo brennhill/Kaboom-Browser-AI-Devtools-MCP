@@ -95,6 +95,7 @@ test_paths:
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
+  - cmd/browser-agent/internal/toolinteract/contracts/explore_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_entrypoint_test.go
   - cmd/browser-agent/tools_csp_blocked_test.go
@@ -352,6 +353,9 @@ validation and command routing are verified at the canonical browser-action
 owner. The duplicate root page-command suite is deleted.
 Every DOM action family—including paste and hover—has owner-level required
 parameter, pilot-gate, query type, action payload, and correlation coverage.
+The bounded external contract suite covers explore-page URL security, parameter
+and tab forwarding, correlation identity, action recording, and guard ordering
+without constructing the daemon or connecting an extension.
 Form, navigation, and accessibility/SARIF workflow validation lives with the
 workflow owner. Its deterministic SARIF contract proves one accessibility
 analysis is reused directly instead of issuing a duplicate browser query.

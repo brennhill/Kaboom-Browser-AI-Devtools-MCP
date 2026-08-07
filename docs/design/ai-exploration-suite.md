@@ -1010,14 +1010,15 @@ As detailed in Section 9.3.4, `include_screenshot` executes synchronously while 
 
 #### 9.8.1 What Existing Tests Cover
 
-**`tools_interact_explore_test.go`** (7 tests):
-- Dispatch creates correct PendingQuery type and correlation_id prefix
-- URL-less calls use current tab (no url in params)
-- URL calls include url in params
-- Params (visible_only, limit) are forwarded
-- Schema enum includes `explore_page`
-- Valid actions list includes `explore_page`
-- Response structure (snake_case, content blocks)
+**`cmd/browser-agent/internal/toolinteract/contracts/explore_test.go`** (3 table-driven contracts):
+- Dispatch creates the canonical query type and correlation prefix
+- URL-less calls use the current tab; explicit tab targets are forwarded
+- URL, `visible_only`, and `limit` parameters are preserved
+- Malformed and non-HTTP(S) URLs are rejected before dispatch
+- Pilot rejection performs no enqueue or action recording
+
+Schema enum and capability discovery remain covered by the canonical schema and
+capability owner tests.
 
 **`tools_analyze_page_structure_test.go`** (5 tests):
 - Dispatch creates correct PendingQuery type
@@ -1034,13 +1035,9 @@ Both test files validate the Go server layer only. No extension-side unit tests 
 
 | Test Case | File to Modify | Reason |
 |-----------|---------------|--------|
-| `TestExplorePage_JavascriptURL_Rejected` | `tools_interact_explore_test.go` | Section 9.7.2: `javascript:` URLs must be rejected |
-| `TestExplorePage_DataURL_Rejected` | `tools_interact_explore_test.go` | Section 9.7.2: `data:` URLs must be rejected |
-| `TestExplorePage_ChromeURL_Rejected` | `tools_interact_explore_test.go` | Section 9.7.2: `chrome://` URLs must be rejected |
+| `TestExplorePageRejectsMalformedAndUnsafeURLsBeforeDispatch` | `internal/toolinteract/contracts/explore_test.go` | Section 9.7.2: non-HTTP(S) URLs are rejected before dispatch |
 | `TestBatch_ConcurrentRejection` | `interactbatch/batch_test.go` | Section 9.3.3: two simultaneous batch calls should fail |
-| `TestExplorePage_ScreenshotAppend_OnSuccess` | `tools_interact_explore_test.go` | Section 9.2.1: verify screenshot is appended when command completes |
-| `TestExplorePage_NoScreenshot_OnError` | `tools_interact_explore_test.go` | Lines 56-58: verify screenshot is NOT appended on error |
-| `TestExplorePage_NoScreenshot_OnQueued` | `tools_interact_explore_test.go` | Lines 56-58: verify screenshot is NOT appended when queued |
+| Explore screenshot completion branches | `internal/toolinteract/interact_browser_test.go` | Verify screenshot behavior for completed, error, and queued results |
 
 **Priority 2 -- Important (integration correctness):**
 
@@ -1077,7 +1074,7 @@ Both test files validate the Go server layer only. No extension-side unit tests 
 | 6 | MEDIUM | Maintenance | `navigationDiscoveryScript` duplicated with divergence | `interact-explore.ts:83`, `analyze-navigation.ts:13` | Extract to shared module |
 | 7 | MEDIUM | Correctness | explore_page navigation race (listener registered after tabs.update) | `interact-explore.ts:209-225` | Register onUpdated listener before calling tabs.update |
 | 8 | MEDIUM | Response Size | explore_page + screenshot regularly exceeds 100KB | Multiple files | Exempt image blocks from ClampResponseSize byte counting |
-| 9 | MEDIUM | Test Coverage | No security tests for URL validation | `tools_interact_explore_test.go` | Add javascript:/data:/chrome: URL rejection tests |
+| 9 | RESOLVED | Test Coverage | URL security matrix | `internal/toolinteract/contracts/explore_test.go` | Deterministically rejects malformed and non-HTTP(S) URLs before dispatch |
 | 10 | MEDIUM | Test Coverage | No concurrent batch rejection test | Missing file | Add TryLock contention test |
 | 11 | LOW | Performance | page_structure querySelectorAll('*') on huge DOMs | `analyze-page-structure.ts:148` | Add element count bail-out at 50k |
 | 12 | LOW | Maintenance | Cross-file `replayMu` dependency undocumented | `tools_interact_batch.go:54`, `tools_configure_sequence.go` | Add cross-reference comments |
