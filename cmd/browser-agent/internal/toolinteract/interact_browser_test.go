@@ -341,6 +341,15 @@ func TestHandleClipboardRead_PilotBlockedNoRecord(t *testing.T) {
 	}
 }
 
+func TestHandleClipboardWrite_PilotBlockedNoRecord(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	fs.blockPilot = true
+	assertErr(t, h.HandleClipboardWrite(testReq(), json.RawMessage(`{"text":"copy me"}`)), mcp.ErrCodePilotDisabled)
+	if fs.recordedCount() != 0 {
+		t.Fatalf("blocked clipboard write should not record, got %d", fs.recordedCount())
+	}
+}
+
 func TestHandleDrawModeStart_Success(t *testing.T) {
 	h, fs := newFakePageActions(t)
 	resp := h.HandleDrawModeStart(testReq(), json.RawMessage(`{"annot_session":"s1"}`))

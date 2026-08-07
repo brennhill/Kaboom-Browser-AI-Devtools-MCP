@@ -101,7 +101,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_dom_routing_test.go
   - cmd/browser-agent/tools_interact_state_queries_test.go
   - cmd/browser-agent/tools_csp_blocked_test.go
-  - cmd/browser-agent/tools_interact_clipboard_test.go
   - cmd/browser-agent/tools_interact_coverage_test.go
   - cmd/browser-agent/tools_interact_draw_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
@@ -335,3 +334,5 @@ mirrors its public parameter struct.
 Hardware-click validation, pilot gating, response correlation, and CDP-versus-
 DOM routing are tested at that same owner. Action enumeration remains sourced
 from the canonical interact schema instead of a root handler string check.
+Clipboard read/write validation and pilot gates live with the browser-action
+owner, including proof that blocked mutations do not record an action.
