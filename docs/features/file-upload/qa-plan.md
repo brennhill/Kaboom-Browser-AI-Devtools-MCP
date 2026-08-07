@@ -114,11 +114,12 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go` — MCP handler tests (security gating, parameter validation, queue payloads, and response contracts)
 - `internal/upload/behavior_test.go` — deterministic base64 boundaries, MIME/progress metadata, multipart form submission, and upstream errors
 - `internal/upload/httpapi/handlers_test.go` — HTTP endpoint status, gating, cancellation, and adapter contracts
-- `cmd/browser-agent/upload_integration_test.go` — Integration tests (concurrency, middleware, pending query payload, Content-Disposition, writeErr propagation, MaxBytesReader, correlation ID uniqueness)
+- `internal/upload/integrationtest/upload_test.go` — Integration tests for concurrency, response contracts, HTTP limits, and upload edge cases
+- `internal/upload/integrationtest/security_test.go` — Integration tests for upload security and request-boundary behavior
 
 ### Run all upload tests:
 ```bash
-go test ./cmd/browser-agent/ -run "TestUpload" -v -count=1 -race
+go test ./internal/upload/... -run "TestUpload" -v -count=1 -race
 ```
 
 | Category | Test Count | Status |

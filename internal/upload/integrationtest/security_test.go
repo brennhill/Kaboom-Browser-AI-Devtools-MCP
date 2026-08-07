@@ -8,7 +8,7 @@
 // WARNING: DO NOT use t.Parallel() — tests share global state (skipSSRFCheck, uploadSecurityConfig).
 //
 // Run: go test ./cmd/browser-agent -run "TestUploadInteg_(OSAutomation|ContentDisposition_Input|Validate|IsPrivate|FormSubmit_Context|FormSubmit_Server)" -v
-package main
+package uploadintegration_test
 
 import (
 	"context"

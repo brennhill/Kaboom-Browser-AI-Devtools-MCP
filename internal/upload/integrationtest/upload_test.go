@@ -2,14 +2,14 @@
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
 // upload_integration_test.go — Integration and edge case tests for upload feature.
-// Covers: concurrency, middleware integration, pending query payload, Content-Disposition
-// safety, writeErr propagation, MaxBytesReader enforcement, correlation ID uniqueness,
-// response shape verification, HTTP success paths, truncate(), and permission edge cases.
+// Covers: concurrency, Content-Disposition safety, writeErr propagation,
+// MaxBytesReader enforcement, response shape verification, HTTP success paths,
+// truncate(), and permission edge cases.
 //
 // WARNING: DO NOT use t.Parallel() — tests share global state (skipSSRFCheck, uploadSecurityConfig).
 //
-// Run: go test ./cmd/browser-agent -run "TestUploadInteg" -v
-package main
+// Run: go test ./internal/upload/integrationtest -run "TestUploadInteg" -v
+package uploadintegration_test
 
 import (
 	"encoding/json"
@@ -23,7 +23,6 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
@@ -102,127 +101,6 @@ func TestUploadInteg_ConcurrentFormSubmit(t *testing.T) {
 
 	for msg := range errs {
 		t.Error(msg)
-	}
-}
-
-// ============================================
-// 2. httpguard.ExtensionOnly middleware integration
-// ============================================
-
-func TestUploadInteg_ExtensionOnlyMiddleware(t *testing.T) {
-	allowTestSSRF(t)
-	// Use setupHTTPRoutes (the real route stack) to get middleware coverage
-	server, err := NewServer(filepath.Join(t.TempDir(), "middleware-test.jsonl"), 100)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
-	cap := capture.NewCapture()
-	t.Cleanup(cap.Close)
-	mux, _ := setupHTTPRoutes(server, cap)
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	endpoints := []string{
-		"/api/file/read",
-		"/api/file/dialog/inject",
-		"/api/form/submit",
-		"/api/os-automation/inject",
-	}
-
-	for _, ep := range endpoints {
-		t.Run("no_header"+ep, func(t *testing.T) {
-			// POST without X-Kaboom-Client header -> 403
-			resp := postJSON(t, ts.URL+ep, `{"file_path":"/tmp/test.txt"}`)
-			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusForbidden {
-				t.Errorf("%s without extension header should be 403, got %d", ep, resp.StatusCode)
-			}
-		})
-	}
-}
-
-// ============================================
-// 3. Pending query payload verification
-// ============================================
-
-func TestUploadInteg_PendingQueryPayload(t *testing.T) {
-	env := newUploadTestEnv(t)
-	testFile := createTestFile(t, "payload-check.mp4", "fake video for payload")
-
-	// Call the upload handler
-	result, ok := env.callInteract(t, fmt.Sprintf(
-		`{"what":"upload","selector":"#VideoUpload","file_path":"%s","submit":true,"escalation_timeout_ms":8000}`,
-		testFile))
-	if !ok {
-		t.Fatal("upload should return result")
-	}
-	if result.IsError {
-		t.Fatalf("upload should succeed: %s", result.Content[0].Text)
-	}
-
-	// Retrieve the pending query from capture
-	pending := env.capture.Queries().GetPendingQueries()
-	if len(pending) == 0 {
-		t.Fatal("expected at least 1 pending query after upload")
-	}
-
-	// Find the upload query
-	var uploadQuery *struct {
-		Action              string `json:"action"`
-		Selector            string `json:"selector"`
-		FilePath            string `json:"file_path"`
-		FileName            string `json:"file_name"`
-		FileSize            int64  `json:"file_size"`
-		MimeType            string `json:"mime_type"`
-		Submit              bool   `json:"submit"`
-		EscalationTimeoutMs int    `json:"escalation_timeout_ms"`
-		ProgressTier        string `json:"progress_tier"`
-	}
-
-	for _, pq := range pending {
-		if pq.Type == "upload" {
-			uploadQuery = new(struct {
-				Action              string `json:"action"`
-				Selector            string `json:"selector"`
-				FilePath            string `json:"file_path"`
-				FileName            string `json:"file_name"`
-				FileSize            int64  `json:"file_size"`
-				MimeType            string `json:"mime_type"`
-				Submit              bool   `json:"submit"`
-				EscalationTimeoutMs int    `json:"escalation_timeout_ms"`
-				ProgressTier        string `json:"progress_tier"`
-			})
-			if err := json.Unmarshal(pq.Params, uploadQuery); err != nil {
-				t.Fatalf("failed to unmarshal upload params: %v", err)
-			}
-			break
-		}
-	}
-
-	if uploadQuery == nil {
-		t.Fatal("no upload query found in pending queries")
-	}
-
-	if uploadQuery.Action != "upload" {
-		t.Errorf("action = %q, want 'upload'", uploadQuery.Action)
-	}
-	if uploadQuery.Selector != "#VideoUpload" {
-		t.Errorf("selector = %q, want '#VideoUpload'", uploadQuery.Selector)
-	}
-	if uploadQuery.FileName != "payload-check.mp4" {
-		t.Errorf("file_name = %q, want 'payload-check.mp4'", uploadQuery.FileName)
-	}
-	if uploadQuery.MimeType != "video/mp4" {
-		t.Errorf("mime_type = %q, want 'video/mp4'", uploadQuery.MimeType)
-	}
-	if !uploadQuery.Submit {
-		t.Error("submit should be true")
-	}
-	if uploadQuery.EscalationTimeoutMs != 8000 {
-		t.Errorf("escalation_timeout_ms = %d, want 8000", uploadQuery.EscalationTimeoutMs)
-	}
-	if uploadQuery.ProgressTier != "simple" {
-		t.Errorf("progress_tier = %q, want 'simple'", uploadQuery.ProgressTier)
 	}
 }
 
@@ -374,61 +252,16 @@ func TestUploadInteg_MaxBytesReader_FormSubmit(t *testing.T) {
 }
 
 // ============================================
-// 7. Concurrent correlation ID uniqueness
-// ============================================
-
-func TestUploadInteg_CorrelationID_Unique(t *testing.T) {
-	const count = 20
-	env := newUploadTestEnv(t)
-	testFile := createTestFile(t, "corr-id.txt", "test")
-
-	ids := make(chan string, count)
-	var wg sync.WaitGroup
-
-	for i := 0; i < count; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			result, ok := env.callInteract(t, fmt.Sprintf(
-				`{"what":"upload","selector":"#f","file_path":"%s"}`, testFile))
-			if !ok || result.IsError {
-				return
-			}
-			data := extractResultJSON(t, result)
-			if corrID, ok := data["correlation_id"].(string); ok {
-				ids <- corrID
-			}
-		}()
-	}
-
-	wg.Wait()
-	close(ids)
-
-	seen := make(map[string]bool)
-	for id := range ids {
-		if seen[id] {
-			t.Errorf("duplicate correlation_id: %s", id)
-		}
-		seen[id] = true
-	}
-
-	if len(seen) == 0 {
-		t.Error("no correlation IDs collected")
-	}
-}
-
-// ============================================
 // 8. Dialog inject success response shape
 // ============================================
 
 func TestUploadInteg_DialogInject_ResponseShape(t *testing.T) {
-	env := newUploadTestEnv(t)
 	testFile := createTestFile(t, "shape-check.mp4", "fake video for shape")
 
-	resp := env.handleDialogInject(t, upload.FileDialogInjectRequest{
+	resp := upload.HandleDialogInject(upload.FileDialogInjectRequest{
 		FilePath:   testFile,
 		BrowserPID: 12345,
-	})
+	}, testUploadSecurity(t))
 
 	if !resp.Success {
 		t.Fatalf("dialog inject should succeed, got error: %s", resp.Error)

@@ -13,7 +13,8 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go`
 - `internal/upload/behavior_test.go`
 - `internal/upload/httpapi/handlers_test.go`
-- `cmd/browser-agent/upload_integration_test.go`
+- `internal/upload/integrationtest/upload_test.go`
+- `internal/upload/integrationtest/security_test.go`
 - `internal/upload/uploadsec/path_test.go`
 - `internal/upload/osauto/osauto_test.go`
 

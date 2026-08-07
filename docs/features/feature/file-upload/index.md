@@ -35,7 +35,9 @@ test_paths:
   - internal/upload/httpapi/contracts_test.go
   - internal/upload/httpapi/handlers_test.go
   - internal/upload/httpapi/handler_instances_test.go
-  - cmd/browser-agent/upload_integration_test.go
+  - internal/upload/integrationtest/upload_test.go
+  - internal/upload/integrationtest/security_test.go
+  - internal/upload/integrationtest/helpers_test.go
   - internal/upload/behavior_test.go
   - internal/upload/handlers_test.go
   - internal/upload/form_submit_writer_test.go
