@@ -6,8 +6,52 @@ package parser
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 )
+
+func TestEverySchemaPropertyHasACLIFlag(t *testing.T) {
+	t.Parallel()
+	globalExceptions := map[string]bool{"what": true}
+	perTool := map[string]map[string]bool{
+		"observe":   {"telemetry_mode": true},
+		"analyze":   {"telemetry_mode": true},
+		"generate":  {"telemetry_mode": true, "format": true},
+		"configure": {"telemetry_mode": true, "action": true},
+		"interact":  {"telemetry_mode": true, "action": true},
+	}
+	parsers := map[string]func(string, []string) (map[string]any, error){
+		"observe": ParseObserveArgs, "analyze": ParseAnalyzeArgs,
+		"generate": ParseGenerateArgs, "configure": ParseConfigureArgs,
+		"interact": ParseInteractArgs,
+	}
+
+	for _, tool := range schema.AllTools() {
+		parse, exists := parsers[tool.Name]
+		if !exists {
+			continue
+		}
+		t.Run(tool.Name, func(t *testing.T) {
+			t.Parallel()
+			properties, ok := tool.InputSchema["properties"].(map[string]any)
+			if !ok {
+				t.Fatal("schema missing properties")
+			}
+			for property := range properties {
+				if globalExceptions[property] || perTool[tool.Name][property] {
+					continue
+				}
+				flag := "--" + strings.ReplaceAll(property, "_", "-")
+				_, err := parse("test", []string{flag, "1"})
+				if err != nil && strings.Contains(err.Error(), "unknown flag: "+flag) {
+					t.Errorf("schema property %q has no CLI flag", property)
+				}
+			}
+		})
+	}
+}
 
 func TestParserPackageRespectsTenFileBoundary(t *testing.T) {
 	entries, err := os.ReadDir(".")

@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli/parser"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -145,77 +144,6 @@ func toStringSlice(v any) ([]string, error) {
 	default:
 		return nil, fmt.Errorf("unsupported enum type %T", v)
 	}
-}
-
-// TestCLIParserParity_AllSchemaPropertiesMapped verifies that every MCP schema property
-// for each tool has a corresponding CLI flag in the parser. This prevents drift where
-// new schema properties are added but the CLI parser isn't updated.
-func TestCLIParserParity_AllSchemaPropertiesMapped(t *testing.T) {
-	t.Parallel()
-	tools := toolSchemasForTest()
-
-	// Known exceptions: params that are intentionally not CLI flags.
-	// "what" is the positional mode arg, not a flag.
-	// Deprecated aliases are handled at runtime, not exposed as CLI flags.
-	globalExceptions := map[string]bool{"what": true}
-	perTool := map[string]map[string]bool{
-		"observe":   {"telemetry_mode": true},
-		"analyze":   {"telemetry_mode": true},
-		"generate":  {"telemetry_mode": true, "format": true},
-		"configure": {"telemetry_mode": true, "action": true},
-		"interact":  {"telemetry_mode": true, "action": true},
-	}
-
-	cliParsers := map[string]func(string, []string) (map[string]any, error){
-		"observe":   parser.ParseObserveArgs,
-		"analyze":   parser.ParseAnalyzeArgs,
-		"generate":  parser.ParseGenerateArgs,
-		"configure": parser.ParseConfigureArgs,
-		"interact":  parser.ParseInteractArgs,
-	}
-
-	for _, tool := range tools {
-		parser, ok := cliParsers[tool.Name]
-		if !ok {
-			continue
-		}
-		t.Run(tool.Name, func(t *testing.T) {
-			t.Parallel()
-			props, ok := tool.InputSchema["properties"].(map[string]any)
-			if !ok {
-				t.Fatal("schema missing properties")
-			}
-
-			// Collect CLI mcpKeys by parsing a dummy call with no args.
-			// We can't easily extract keys from the parser function, so we check
-			// that the schema property count is reasonable vs the parser.
-			_ = parser // used below
-
-			exceptions := perTool[tool.Name]
-			var missing []string
-			for propName := range props {
-				if globalExceptions[propName] || exceptions[propName] {
-					continue
-				}
-				// Check that the flag is recognized by the parser. Pass a value
-				// that works for all flag kinds; only flag "unknown flag" as missing.
-				flag := "--" + schemaKeyToCLIFlag(propName)
-				_, err := parser("test", []string{flag, "1"})
-				if err != nil && strings.Contains(err.Error(), "unknown flag: "+flag) {
-					missing = append(missing, propName)
-				}
-			}
-			sort.Strings(missing)
-			if len(missing) > 0 {
-				t.Errorf("CLI parser for %s is missing flags for schema properties: %v", tool.Name, missing)
-			}
-		})
-	}
-}
-
-// schemaKeyToCLIFlag converts a snake_case MCP key to kebab-case CLI flag name.
-func schemaKeyToCLIFlag(key string) string {
-	return strings.ReplaceAll(key, "_", "-")
 }
 
 func assertSameStringSet(t *testing.T, label string, got, want []string) {

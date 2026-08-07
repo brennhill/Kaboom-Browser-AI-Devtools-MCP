@@ -97,7 +97,6 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/explore_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
-  - cmd/browser-agent/tools_interact_entrypoint_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
   - cmd/browser-agent/internal/toolinteract/action_runtime_test.go
