@@ -111,8 +111,9 @@ last_verified_date: 2026-03-05
 ## 5. Code-Level Test Coverage
 
 ### Test files:
-- `cmd/browser-agent/tools_interact_upload_test.go` — MCP handler tests (security gating, parameter validation, stage handlers, progress tiers, MIME detection, edge cases)
-- `cmd/browser-agent/upload_handlers_test.go` — HTTP endpoint tests (status codes, disabled/enabled gating, injection prevention, base64 roundtrip, form submit with httptest)
+- `cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go` — MCP handler tests (security gating, parameter validation, queue payloads, and response contracts)
+- `internal/upload/behavior_test.go` — deterministic base64 boundaries, MIME/progress metadata, multipart form submission, and upstream errors
+- `internal/upload/httpapi/handlers_test.go` — HTTP endpoint status, gating, cancellation, and adapter contracts
 - `cmd/browser-agent/upload_integration_test.go` — Integration tests (concurrency, middleware, pending query payload, Content-Disposition, writeErr propagation, MaxBytesReader, correlation ID uniqueness)
 
 ### Run all upload tests:

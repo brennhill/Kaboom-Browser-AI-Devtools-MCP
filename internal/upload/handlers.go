@@ -20,6 +20,10 @@ import (
 // Opens the file first, then fstats the open handle to avoid TOCTOU races.
 // #lizard forgives
 func HandleFileRead(req FileReadRequest, sec *uploadsec.Security, requireUploadDir bool) FileReadResponse {
+	return handleFileReadWithLimit(req, sec, requireUploadDir, MaxBase64FileSize)
+}
+
+func handleFileReadWithLimit(req FileReadRequest, sec *uploadsec.Security, requireUploadDir bool, base64Limit int64) FileReadResponse {
 	if req.FilePath == "" {
 		return FileReadResponse{
 			Success: false,
@@ -94,8 +98,8 @@ func HandleFileRead(req FileReadRequest, sec *uploadsec.Security, requireUploadD
 
 	// Only base64 encode files <= 100MB. Files above this threshold
 	// return metadata only; use Stage 3 streaming for the actual upload.
-	if fileSize <= MaxBase64FileSize {
-		data, err := io.ReadAll(io.LimitReader(file, MaxBase64FileSize+1))
+	if fileSize <= base64Limit {
+		data, err := io.ReadAll(io.LimitReader(file, base64Limit+1))
 		if err != nil {
 			return FileReadResponse{
 				Success: false,

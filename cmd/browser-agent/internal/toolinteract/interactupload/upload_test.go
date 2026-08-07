@@ -166,6 +166,11 @@ func TestHandleUpload_QueuesWithDefaultsAndArmsEvidence(t *testing.T) {
 	path := tempFile(t)
 	resp := h.HandleUpload(req(), json.RawMessage(`{"selector":"#f","file_path":"`+path+`","submit":true}`))
 	mustContain(t, resp, "queued")
+	for _, field := range []string{"status", "correlation_id", "file_name", "file_size", "mime_type", "progress_tier", "message"} {
+		mustContain(t, resp, field)
+	}
+	mustContain(t, resp, "payload.bin")
+	mustContain(t, resp, "application/octet-stream")
 
 	if len(f.enqueued) != 1 || f.enqueued[0].Type != "upload" {
 		t.Fatalf("expected one 'upload' query, got %+v", f.enqueued)

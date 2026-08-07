@@ -1,16 +1,20 @@
 // upload_test_helpers_test.go — Shared test helpers for upload tests.
-// Why: Provides uploadTestEnv and createTestFile used by upload_handlers_test.go,
-// upload_handlers_edge_test.go, and upload_integration_test.go.
+// Why: Provides the upload environment and HTTP fixture used by upload integration tests.
 
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	agenthttp "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	uploadapi "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/osauto"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
@@ -74,4 +78,26 @@ func (e *uploadTestEnv) handleFormSubmit(t *testing.T, req upload.FormSubmitRequ
 func (e *uploadTestEnv) handleOSAutomation(t *testing.T, req upload.OSAutomationInjectRequest) upload.StageResponse {
 	t.Helper()
 	return osauto.HandleOSAutomation(req, e.handler.uploadSecurity)
+}
+
+func newUploadHTTPServer(t *testing.T, osAutomationEnabled bool) *httptest.Server {
+	t.Helper()
+	uploadsec.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadsec.SetSkipSSRFCheck(false) })
+	handlers := uploadapi.NewHandlers(uploadsec.NewSecurity("/", nil), osAutomationEnabled, agenthttp.JSON)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/file/read", handlers.HandleFileRead)
+	mux.HandleFunc("/api/file/dialog/inject", handlers.HandleFileDialogInject)
+	mux.HandleFunc("/api/form/submit", handlers.HandleFormSubmit)
+	mux.HandleFunc("/api/os-automation/inject", handlers.HandleOSAutomation)
+	return httptest.NewServer(mux)
+}
+
+func postJSON(t *testing.T, url, body string) *http.Response {
+	t.Helper()
+	response, err := http.Post(url, "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("POST %s failed: %v", url, err)
+	}
+	return response
 }

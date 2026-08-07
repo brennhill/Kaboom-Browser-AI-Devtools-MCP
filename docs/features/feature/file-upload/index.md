@@ -4,7 +4,7 @@ feature_id: feature-file-upload
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
@@ -32,7 +32,7 @@ test_paths:
   - internal/upload/httpapi/handlers_test.go
   - internal/upload/httpapi/handler_instances_test.go
   - cmd/browser-agent/upload_integration_test.go
-  - cmd/browser-agent/upload_handlers_test.go
+  - internal/upload/behavior_test.go
   - internal/upload/handlers_test.go
   - internal/upload/form_submit_writer_test.go
   - internal/upload/uploadsec/path_test.go
@@ -84,3 +84,8 @@ All five upload endpoints are methods on one immutable `httpapi.Handlers`
 owner. Security policy, OS-automation enablement, response encoding, and stage
 dependencies are fixed per instance; no mutable package globals or free-handler
 facades remain. Tests can therefore run independently with isolated fakes.
+File-read size boundaries use a private injectable limit seam, so the exact
+production threshold is preserved while boundary tests operate on tiny files
+instead of allocating and encoding 100 MB fixtures. Core upload, HTTP adapter,
+security, and interact response contracts live with their respective owners;
+root tests retain only true installed-server integration coverage.
