@@ -138,6 +138,22 @@ func parseResp(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
 	return r.IsError, text
 }
 
+func parseRespJSON(t *testing.T, response mcp.JSONRPCResponse) map[string]any {
+	t.Helper()
+	isError, text := parseResp(t, response)
+	if isError {
+		t.Fatalf("unexpected tool error: %s", text)
+	}
+	if _, payload, found := strings.Cut(text, "\n"); found {
+		text = payload
+	}
+	var result map[string]any
+	if err := json.Unmarshal([]byte(text), &result); err != nil {
+		t.Fatalf("invalid result JSON: %v (text=%s)", err, text)
+	}
+	return result
+}
+
 func newReq() mcp.JSONRPCRequest { return mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1} }
 
 // sampleTool builds an MCPTool whose schema exposes a "what" dispatch param with modes.
@@ -194,8 +210,20 @@ func TestHandleActionJitter(t *testing.T) {
 			if d.jitterMs != tt.wantVal {
 				t.Errorf("final jitter = %d, want %d", d.jitterMs, tt.wantVal)
 			}
+			result := parseRespJSON(t, resp)
+			if result["action_jitter_ms"] != float64(tt.wantVal) {
+				t.Errorf("response jitter = %#v, want %d", result["action_jitter_ms"], tt.wantVal)
+			}
 		})
 	}
+
+	t.Run("malformed JSON is a lenient status read", func(t *testing.T) {
+		d := &fakeConfigureDeps{jitterMs: 17, setJitterCalled: -1}
+		result := parseRespJSON(t, HandleActionJitter(d.deps(), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 42}, json.RawMessage(`{bad`)))
+		if result["action_jitter_ms"] != float64(17) || d.setJitterCalled != -1 {
+			t.Fatalf("lenient status result = %#v, set=%d", result, d.setJitterCalled)
+		}
+	})
 }
 
 // ---------------------------------------------------------------------------
@@ -259,6 +287,10 @@ func TestHandleSecurityMode(t *testing.T) {
 		if d.setSecurityCalledWith != "" {
 			t.Error("SetSecurityMode should not be called for read")
 		}
+		result := parseRespJSON(t, resp)
+		if result["security_mode"] != syncruntime.SecurityModeNormal || result["production_parity"] != true {
+			t.Fatalf("security status = %#v", result)
+		}
 	})
 
 	t.Run("set normal", func(t *testing.T) {
@@ -297,6 +329,18 @@ func TestHandleSecurityMode(t *testing.T) {
 		}
 		if len(d.setSecurityRewrites) == 0 {
 			t.Error("expected rewrites to be applied for insecure_proxy")
+		}
+		result := parseRespJSON(t, resp)
+		if result["security_mode"] != syncruntime.SecurityModeInsecureProxy || result["production_parity"] != false {
+			t.Fatalf("insecure security response = %#v", result)
+		}
+	})
+
+	t.Run("normal disables insecure mode", func(t *testing.T) {
+		d := &fakeConfigureDeps{hasCapture: true, securityMode: syncruntime.SecurityModeInsecureProxy}
+		result := parseRespJSON(t, HandleSecurityMode(d.deps(), newReq(), json.RawMessage(`{"mode":"normal"}`)))
+		if result["security_mode"] != syncruntime.SecurityModeNormal || result["production_parity"] != true || d.setSecurityCalledWith != syncruntime.SecurityModeNormal {
+			t.Fatalf("normal security response = %#v, set=%q", result, d.setSecurityCalledWith)
 		}
 	})
 
