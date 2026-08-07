@@ -102,7 +102,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_interact_helpers_test.go
   - cmd/browser-agent/tools_interact_nav_test.go
-  - cmd/browser-agent/tools_interact_workflows_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go
   - cmd/browser-agent/tools_interact_rich_cmdresult_test.go
@@ -345,6 +344,9 @@ are verified beside the canonical async-command response formatter.
 Navigate and script-execution dispatch contracts live with the canonical
 browser action owner, including action payloads, queue types, correlation
 metadata, and invalid-input behavior.
+Form, navigation, and accessibility/SARIF workflow validation lives with the
+workflow owner. Its deterministic SARIF contract proves one accessibility
+analysis is reused directly instead of issuing a duplicate browser query.
 Draw-mode activation rejects malformed JSON before any state mutation and its
 owner-level contract verifies pilot gating, tab/session forwarding, queue
 metadata, and draw-lifecycle marking.

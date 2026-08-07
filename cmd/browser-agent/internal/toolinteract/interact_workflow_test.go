@@ -3,6 +3,7 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -164,6 +165,40 @@ func TestHandleNavigateAndDocument_NoResultAfterNavigationContinues(t *testing.T
 func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {
 	h, _ := newFakeWorkflowActions(t)
 	assertOK(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{"scope":"page"}`)))
+}
+
+func TestHandleRunA11yAndExportSARIFReusesSingleAnalyzePayload(t *testing.T) {
+	h, state := newFakeWorkflowActions(t)
+	analyzeCalls := 0
+	state.analyzeFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		analyzeCalls++
+		var input map[string]any
+		if err := json.Unmarshal(args, &input); err != nil {
+			t.Fatalf("decode analyze args: %v", err)
+		}
+		if input["what"] != "accessibility" || input["scope"] != "body" || input["tab_id"] != float64(42) {
+			t.Fatalf("analyze args = %#v", input)
+		}
+		return mcp.Succeed(req, "audit", map[string]any{"violations": []any{map[string]any{"id": "color-contrast"}}})
+	}
+	state.sarifFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		var input struct {
+			Scope      string          `json:"scope"`
+			SaveTo     string          `json:"save_to"`
+			A11yResult json.RawMessage `json:"a11y_result"`
+		}
+		if err := json.Unmarshal(args, &input); err != nil {
+			t.Fatalf("decode SARIF args: %v", err)
+		}
+		if input.Scope != "body" || input.SaveTo != "/tmp/audit.sarif" || !strings.Contains(string(input.A11yResult), "color-contrast") {
+			t.Fatalf("SARIF args = %#v", input)
+		}
+		return mcp.Succeed(req, "sarif", map[string]any{"status": "exported"})
+	}
+	assertOK(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{"scope":"body","save_to":"/tmp/audit.sarif","tab_id":42}`)))
+	if analyzeCalls != 1 {
+		t.Fatalf("analyze calls = %d, want 1", analyzeCalls)
+	}
 }
 
 func TestHandleRunA11yAndExportSARIF_A11yError(t *testing.T) {
