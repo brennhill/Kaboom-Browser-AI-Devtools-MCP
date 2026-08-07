@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - .github/workflows/ci.yml
   - scripts/uat/runners/smoke-test.sh
@@ -34,17 +34,19 @@ code_paths:
   - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/testpages/http.go
   - cmd/browser-agent/internal/testpages/websocket.go
+  - cmd/browser-agent/internal/integrationtest/harness.go
   - cmd/browser-agent/internal/wsframe/frame.go
   - internal/statefault/fault.go
   - internal/statefault/store.go
   - internal/capturefixture/sync.go
 test_paths:
+  - cmd/browser-agent/internal/integrationtest/harness_test.go
   - tests/cli/contracts/smoke-layout-contract.test.cjs
   - tests/extension/contracts/tooling-contracts.test.js
-  - cmd/browser-agent/bridge_faststart_extended_test.go
+  - cmd/browser-agent/integration/bridge/faststart_extended_test.go
   - cmd/browser-agent/server_persistence_test.go
   - cmd/browser-agent/server_reliability_integration_test.go
-  - cmd/browser-agent/stdio_silence_test.go
+  - cmd/browser-agent/integration/bridge/stdio_silence_test.go
   - cmd/browser-agent/internal/testpages/websocket_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - scripts/contracts/check-architecture-boundaries.test.cjs

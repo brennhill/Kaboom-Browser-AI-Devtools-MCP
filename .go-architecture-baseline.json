@@ -245,6 +245,10 @@
       "mutable_globals": 1,
       "exports": 4
     },
+    "cmd/browser-agent/internal/integrationtest/harness.go": {
+      "mutable_globals": 1,
+      "exports": 6
+    },
     "cmd/browser-agent/internal/interactdispatch/handler.go": {
       "mutable_globals": 0,
       "exports": 6

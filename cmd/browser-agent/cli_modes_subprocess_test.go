@@ -22,8 +22,8 @@ func TestCLIEarlyExitModes(t *testing.T) {
 	}{
 		{name: "version", args: []string{"--version"}, wantOK: true, wantOutput: "kaboom v"},
 		{name: "help", args: []string{"--help"}, wantOK: true, wantOutput: "Usage:"},
-		{name: "invalid low port", args: []string{"--port", "0"}, wantOK: false, wantOutput: "Invalid port"},
-		{name: "invalid high port", args: []string{"--port", "65536"}, wantOK: false, wantOutput: "Invalid port"},
+		{name: "invalid low port", args: []string{"--port", "0"}, wantOK: false, wantOutput: "invalid port"},
+		{name: "invalid high port", args: []string{"--port", "65536"}, wantOK: false, wantOutput: "invalid port"},
 		{name: "invalid install target", args: []string{"--install", "codxe"}, wantOK: false, wantOutput: "unknown install target"},
 		{name: "stop unused port", args: []string{"--stop", "--port", "65431"}, wantOK: true, wantOutput: "No server found"},
 	}

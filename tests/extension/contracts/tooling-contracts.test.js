@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { test, describe } from 'node:test'
 import assert from 'node:assert'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 
 import eslintConfig from '../../../eslint.config.js'
 
@@ -93,17 +93,15 @@ describe('Tooling contracts', () => {
     )
 
     for (const path of [
-      'cmd/browser-agent/bridge_faststart_extended_test.go',
-      'cmd/browser-agent/bridge_faststart_test.go',
-      'cmd/browser-agent/bridge_startup_contention_test.go',
+      'cmd/browser-agent/integration/bridge/faststart_extended_test.go',
+      'cmd/browser-agent/integration/bridge/faststart_test.go',
+      'cmd/browser-agent/integration/bridge/startup_contention_test.go',
       'cmd/browser-agent/cli_modes_subprocess_test.go',
       'cmd/browser-agent/integration_test.go',
-      'cmd/browser-agent/mcp_initialize_test.go',
-      'cmd/browser-agent/mcp_protocol_test.go',
       'cmd/browser-agent/server_persistence_test.go',
       'cmd/browser-agent/server_reliability_integration_test.go',
       'cmd/browser-agent/server_reliability_test.go',
-      'cmd/browser-agent/stdio_silence_test.go'
+      'cmd/browser-agent/integration/bridge/stdio_silence_test.go'
     ]) {
       assert.match(readFileSync(path, 'utf8'), /^\/\/go:build integration$/m)
     }
@@ -228,9 +226,12 @@ describe('Tooling contracts', () => {
 
   test('hardening lint is a named CI gate rather than a subprocess unit test', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
-    const hardeningTests = readFileSync('cmd/browser-agent/lint_hardening_test.go', 'utf8')
     assert.match(workflow, /name: Hardening lint[\s\S]*run: make lint-hardening/)
-    assert.doesNotMatch(hardeningTests, /exec\.Command\("bash", scriptPath\)/)
+    assert.equal(
+      existsSync('cmd/browser-agent/lint_hardening_test.go'),
+      false,
+      'removed subprocess lint facade must not be restored'
+    )
   })
 
   test('JavaScript shard reporting identifies only the shards that failed', () => {

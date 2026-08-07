@@ -26,7 +26,7 @@ test_paths:
   - cmd/browser-agent/internal/toolconfigure/session_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - scripts/contracts/stdout_protocol_test.go
-  - cmd/browser-agent/stdio_silence_test.go
+  - cmd/browser-agent/integration/bridge/stdio_silence_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

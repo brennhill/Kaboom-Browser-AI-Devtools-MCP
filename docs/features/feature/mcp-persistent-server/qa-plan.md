@@ -10,8 +10,8 @@ last_verified_date: 2026-03-05
 # MCP Persistent Server QA Plan
 
 ## Automated Coverage
-- `cmd/browser-agent/bridge_startup_contention_test.go`
-- `cmd/browser-agent/bridge_faststart_extended_test.go`
+- `cmd/browser-agent/integration/bridge/startup_contention_test.go`
+- `cmd/browser-agent/integration/bridge/faststart_extended_test.go`
 - `cmd/browser-agent/bridge_spawn_race_test.go`
 
 ## Required Scenarios

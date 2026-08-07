@@ -6,7 +6,7 @@
 // bridge_faststart_extended_test.go — Extended fast-start tests for MCP bridge mode.
 // Covers: client compatibility matrix, resource workflow soak, retry-when-booting,
 // and version verification.
-package main
+package bridgeintegration
 
 import (
 	"bufio"
@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -26,7 +27,7 @@ func TestFastStart_ClientCompatibilityMatrix(t *testing.T) {
 		t.Skip("skips server spawn in short mode")
 	}
 
-	binary := buildTestBinary(t)
+	binary := testprocess.BuildBinary(t)
 	clients := []struct {
 		name        string
 		clientName  string
@@ -41,8 +42,8 @@ func TestFastStart_ClientCompatibilityMatrix(t *testing.T) {
 
 	for _, tc := range clients {
 		t.Run(tc.name, func(t *testing.T) {
-			port := findFreePort(t)
-			cmd := startServerCmd(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
+			port := testprocess.FreePort(t)
+			cmd := testprocess.StartServer(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
 
 			stdin, err := cmd.StdinPipe()
 			if err != nil {
@@ -65,24 +66,24 @@ func TestFastStart_ClientCompatibilityMatrix(t *testing.T) {
 			reader := bufio.NewReader(stdout)
 			initReq := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"%s","version":"%s"}}}`, tc.clientName, tc.clientVer)
 			writeJSONRPCLine(t, stdin, initReq)
-			initResp := readJSONRPCLine(t, reader, serverStartTimeout)
+			initResp := readJSONRPCLine(t, reader, testprocess.StartTimeout())
 			if initResp.Error != nil {
 				t.Fatalf("initialize error: %+v", initResp.Error)
 			}
 
 			start := time.Now()
 			writeJSONRPCLine(t, stdin, `{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"kaboom://capabilities"}}`)
-			capResp := readJSONRPCLine(t, reader, integrationResponseTimeout(1*time.Second))
+			capResp := readJSONRPCLine(t, reader, testprocess.ResponseTimeout(1*time.Second))
 			if capResp.Error != nil {
 				t.Fatalf("resources/read capabilities error: %+v", capResp.Error)
 			}
-			if elapsed := time.Since(start); !coverageInstrumentedTest && elapsed > 500*time.Millisecond {
+			if elapsed := time.Since(start); !testprocess.Instrumented() && elapsed > 500*time.Millisecond {
 				t.Fatalf("resources/read capabilities elapsed = %v, want < 500ms", elapsed)
 			}
 
 			playbookReq := fmt.Sprintf(`{"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"%s"}}`, tc.playbookURI)
 			writeJSONRPCLine(t, stdin, playbookReq)
-			playbookResp := readJSONRPCLine(t, reader, integrationResponseTimeout(1*time.Second))
+			playbookResp := readJSONRPCLine(t, reader, testprocess.ResponseTimeout(1*time.Second))
 			if playbookResp.Error != nil {
 				t.Fatalf("resources/read playbook error: %+v", playbookResp.Error)
 			}
@@ -97,9 +98,9 @@ func TestFastStart_ResourceWorkflowSoak(t *testing.T) {
 		t.Skip("skips server spawn in short mode")
 	}
 
-	binary := buildTestBinary(t)
-	port := findFreePort(t)
-	cmd := startServerCmd(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
+	binary := testprocess.BuildBinary(t)
+	port := testprocess.FreePort(t)
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -121,7 +122,7 @@ func TestFastStart_ResourceWorkflowSoak(t *testing.T) {
 
 	reader := bufio.NewReader(stdout)
 	writeJSONRPCLine(t, stdin, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"soak-test","version":"1.0"}}}`)
-	initResp := readJSONRPCLine(t, reader, integrationResponseTimeout(5*time.Second))
+	initResp := readJSONRPCLine(t, reader, testprocess.ResponseTimeout(5*time.Second))
 	if initResp.Error != nil {
 		t.Fatalf("initialize error: %+v", initResp.Error)
 	}
@@ -131,13 +132,13 @@ func TestFastStart_ResourceWorkflowSoak(t *testing.T) {
 	for i := 0; i < iterations; i++ {
 		baseID := 100 + (i * 10)
 		writeJSONRPCLine(t, stdin, fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"resources/read","params":{"uri":"kaboom://capabilities"}}`, baseID))
-		capResp := readJSONRPCLine(t, reader, integrationResponseTimeout(1*time.Second))
+		capResp := readJSONRPCLine(t, reader, testprocess.ResponseTimeout(1*time.Second))
 		if capResp.Error != nil {
 			t.Fatalf("iteration %d capabilities error: %+v", i, capResp.Error)
 		}
 
 		writeJSONRPCLine(t, stdin, fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"resources/read","params":{"uri":"kaboom://playbook/security/quick"}}`, baseID+1))
-		playbookResp := readJSONRPCLine(t, reader, integrationResponseTimeout(1*time.Second))
+		playbookResp := readJSONRPCLine(t, reader, testprocess.ResponseTimeout(1*time.Second))
 		if playbookResp.Error != nil {
 			t.Fatalf("iteration %d playbook error: %+v", i, playbookResp.Error)
 		}
@@ -145,14 +146,14 @@ func TestFastStart_ResourceWorkflowSoak(t *testing.T) {
 		// Include tool calls intermittently to verify mixed workflow stability.
 		if i%4 == 0 {
 			writeJSONRPCLine(t, stdin, fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"tools/call","params":{"name":"observe","arguments":{"what":"errors"}}}`, baseID+2))
-			toolResp := readJSONRPCLine(t, reader, integrationResponseTimeout(1*time.Second))
+			toolResp := readJSONRPCLine(t, reader, testprocess.ResponseTimeout(1*time.Second))
 			if toolResp.Error != nil {
 				t.Fatalf("iteration %d tools/call protocol error: %+v", i, toolResp.Error)
 			}
 		}
 	}
 	elapsed := time.Since(start)
-	if !coverageInstrumentedTest && elapsed > 20*time.Second {
+	if !testprocess.Instrumented() && elapsed > 20*time.Second {
 		t.Fatalf("soak loop elapsed = %v, want <= 20s", elapsed)
 	}
 	t.Logf("soak completed: %d iterations in %v", iterations, elapsed.Round(time.Millisecond))
@@ -165,11 +166,11 @@ func TestFastStart_ToolsCallWaitsForDaemonBoot(t *testing.T) {
 		t.Skip("skips server spawn in short mode")
 	}
 
-	binary := buildTestBinary(t)
+	binary := testprocess.BuildBinary(t)
 	// Use a port that definitely has no server running
-	port := findFreePort(t)
+	port := testprocess.FreePort(t)
 
-	cmd := startServerCmd(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -262,10 +263,10 @@ func TestFastStart_VersionInResponse(t *testing.T) {
 		t.Skip("skips server spawn in short mode")
 	}
 
-	binary := buildTestBinary(t)
-	port := findFreePort(t)
+	binary := testprocess.BuildBinary(t)
+	port := testprocess.FreePort(t)
 
-	cmd := startServerCmd(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -339,9 +340,9 @@ func TestFastStart_ResourceWorkflowBeforeDaemonReady(t *testing.T) {
 		t.Skip("skips server spawn in short mode")
 	}
 
-	binary := buildTestBinary(t)
-	port := findFreePort(t)
-	cmd := startServerCmd(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
+	binary := testprocess.BuildBinary(t)
+	port := testprocess.FreePort(t)
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

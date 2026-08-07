@@ -1,6 +1,6 @@
 //go:build integration
 
-package main
+package bridgeintegration
 
 import (
 	"bufio"
@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -30,13 +31,13 @@ func TestBridgeStartupContention_AllClientsConverge(t *testing.T) {
 		t.Skip("skips bridge contention integration in short mode")
 	}
 
-	binary := buildTestBinary(t)
-	port := findFreePort(t)
+	binary := testprocess.BuildBinary(t)
+	port := testprocess.FreePort(t)
 	const clientCount = 3
 
 	clients := make([]contentionClient, 0, clientCount)
 	for i := 0; i < clientCount; i++ {
-		cmd := startServerCmd(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
+		cmd := testprocess.StartServer(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
 			t.Fatalf("client %d stdin pipe: %v", i, err)
@@ -92,7 +93,7 @@ func runContentionClientStartupFlow(client contentionClient) error {
 	if _, err := client.stdin.Write([]byte(initReq + "\n")); err != nil {
 		return fmt.Errorf("client %d initialize write: %w", client.index, err)
 	}
-	initResp, err := readJSONRPCWithTimeout(client.reader, integrationResponseTimeout(5*time.Second))
+	initResp, err := readJSONRPCWithTimeout(client.reader, testprocess.ResponseTimeout(5*time.Second))
 	if err != nil {
 		return fmt.Errorf("client %d initialize read: %w", client.index, err)
 	}
@@ -105,12 +106,12 @@ func runContentionClientStartupFlow(client contentionClient) error {
 	if _, err := client.stdin.Write([]byte(toolReq + "\n")); err != nil {
 		return fmt.Errorf("client %d tools/call write: %w", client.index, err)
 	}
-	toolResp, err := readJSONRPCWithTimeout(client.reader, integrationResponseTimeout(4*time.Second))
+	toolResp, err := readJSONRPCWithTimeout(client.reader, testprocess.ResponseTimeout(4*time.Second))
 	if err != nil {
 		return fmt.Errorf("client %d tools/call read: %w", client.index, err)
 	}
 	elapsed := time.Since(start)
-	if !coverageInstrumentedTest && elapsed > 4*time.Second {
+	if !testprocess.Instrumented() && elapsed > 4*time.Second {
 		return fmt.Errorf("client %d tools/call took %v, want <= 4s", client.index, elapsed)
 	}
 	if toolResp.Error != nil {

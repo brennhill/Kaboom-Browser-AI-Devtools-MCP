@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package main
+package bridgeintegration
 
 import (
 	"bufio"
@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -112,15 +113,15 @@ func TestStdioIsolation_StartupNoiseDoesNotPolluteMCPTransport(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 	stateDir := filepath.Join(t.TempDir(), "state")
 	coverDir := filepath.Join(t.TempDir(), "cover")
 	if err := os.MkdirAll(coverDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cover dir: %v", err)
 	}
 
-	cmd := startServerCmd(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
 	cmd.Env = append(os.Environ(), "KABOOM_TEST_BRIDGE_NOISE=1", "GOCOVERDIR="+coverDir)
 
 	var stdout, stderr bytes.Buffer
@@ -173,15 +174,15 @@ func TestStdioIsolation_ContentLengthFramingNotPollutedByStartupNoise(t *testing
 		t.Skip("skipping integration test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 	stateDir := filepath.Join(t.TempDir(), "state")
 	coverDir := filepath.Join(t.TempDir(), "cover")
 	if err := os.MkdirAll(coverDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cover dir: %v", err)
 	}
 
-	cmd := startServerCmd(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
 	cmd.Env = append(os.Environ(), "KABOOM_TEST_BRIDGE_NOISE=1", "GOCOVERDIR="+coverDir)
 
 	var stdout, stderr bytes.Buffer
@@ -236,15 +237,15 @@ func TestStdioIsolation_BridgeExitsAfterStdinEOF(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	port := findFreePort(t)
-	binary := buildTestBinary(t)
+	port := testprocess.FreePort(t)
+	binary := testprocess.BuildBinary(t)
 	stateDir := filepath.Join(t.TempDir(), "state")
 	coverDir := filepath.Join(t.TempDir(), "cover")
 	if err := os.MkdirAll(coverDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cover dir: %v", err)
 	}
 
-	cmd := startServerCmd(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
 	cmd.Env = append(os.Environ(), "GOCOVERDIR="+coverDir)
 
 	var stdout, stderr bytes.Buffer

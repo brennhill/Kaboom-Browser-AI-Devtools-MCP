@@ -16,8 +16,8 @@ Detailed coverage remains in [test-plan.md](./test-plan.md); this file is the no
 - `cmd/browser-agent/bridge_test.go`
 - `cmd/browser-agent/bridge_spawn_race_test.go`
 - `cmd/browser-agent/bridge_startup_lock_test.go`
-- `cmd/browser-agent/bridge_startup_contention_test.go`
-- `cmd/browser-agent/bridge_faststart_extended_test.go`
+- `cmd/browser-agent/integration/bridge/startup_contention_test.go`
+- `cmd/browser-agent/integration/bridge/faststart_extended_test.go`
 - `cmd/browser-agent/bridge_fastpath_unit_test.go`
 
 ## Required Scenarios

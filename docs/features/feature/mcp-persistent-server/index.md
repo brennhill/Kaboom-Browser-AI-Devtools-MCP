@@ -61,6 +61,7 @@ code_paths:
   - internal/statefile/statefile.go
   - cmd/browser-agent/internal/daemonrecovery/reclaimer.go
   - cmd/browser-agent/internal/daemonhttp/server.go
+  - cmd/browser-agent/internal/integrationtest/harness.go
   - cmd/browser-agent/internal/procctl/stop.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/internal/procctl/pidfile.go
@@ -101,6 +102,7 @@ test_paths:
   - cmd/browser-agent/internal/daemonrecovery/primitives_test.go
   - cmd/browser-agent/internal/daemonrecovery/reclaimer_test.go
   - cmd/browser-agent/internal/daemonhttp/server_test.go
+  - cmd/browser-agent/internal/integrationtest/harness_test.go
   - cmd/browser-agent/internal/daemonlife/helpers_test.go
   - internal/listenport/store_test.go
   - internal/warningqueue/queue_test.go
@@ -147,15 +149,15 @@ test_paths:
   - cmd/browser-agent/internal/playbooks/resources/resolver_test.go
   - cmd/browser-agent/internal/playbooks/resources/content_test.go
   - scripts/contracts/stdout_protocol_test.go
-  - cmd/browser-agent/stdio_silence_test.go
+  - cmd/browser-agent/integration/bridge/stdio_silence_test.go
   - scripts/uat/protocol/smoke-mcp-transport.sh
   - cmd/browser-agent/internal/mcpprotocol/responses_test.go
   - cmd/browser-agent/internal/bridge/bridge_unit_test.go
   - cmd/browser-agent/internal/toolmodule/registry_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go
   - cmd/browser-agent/internal/terminal/status/status_test.go
-  - cmd/browser-agent/bridge_startup_contention_test.go
-  - cmd/browser-agent/bridge_faststart_extended_test.go
+  - cmd/browser-agent/integration/bridge/startup_contention_test.go
+  - cmd/browser-agent/integration/bridge/faststart_extended_test.go
   - cmd/browser-agent/start_timeout_norace_test.go
   - cmd/browser-agent/start_timeout_race_test.go
   - cmd/browser-agent/internal/mcphttp/handler_test.go

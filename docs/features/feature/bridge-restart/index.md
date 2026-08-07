@@ -26,8 +26,8 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_test_support_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/bridge_startup_contention_test.go
-  - cmd/browser-agent/bridge_faststart_extended_test.go
+  - cmd/browser-agent/integration/bridge/startup_contention_test.go
+  - cmd/browser-agent/integration/bridge/faststart_extended_test.go
   - cmd/browser-agent/internal/bridge/bridge_startup_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/processsignal/resume_test.go

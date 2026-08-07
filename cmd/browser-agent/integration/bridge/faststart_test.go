@@ -5,7 +5,7 @@
 
 // bridge_faststart_test.go — Tests for MCP fast-start behavior.
 // Verifies that initialize and tools/list respond immediately without waiting for daemon.
-package main
+package bridgeintegration
 
 import (
 	"bufio"
@@ -15,7 +15,9 @@ import (
 	"testing"
 	"time"
 
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 )
 
 func readJSONRPCLine(t *testing.T, reader *bufio.Reader, timeout time.Duration) mcp.JSONRPCResponse {
@@ -61,13 +63,13 @@ func TestFastStart_InitializeRespondsImmediately(t *testing.T) {
 	}
 
 	// Build binary
-	binary := buildTestBinary(t)
+	binary := testprocess.BuildBinary(t)
 
 	// Use a port that's definitely not running
-	port := findFreePort(t)
+	port := testprocess.FreePort(t)
 
 	// Start bridge mode (which uses fast-start)
-	cmd := startServerCmd(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -170,10 +172,10 @@ func TestFastStart_ToolsListRespondsImmediately(t *testing.T) {
 		t.Skip("skips server spawn in short mode")
 	}
 
-	binary := buildTestBinary(t)
-	port := findFreePort(t)
+	binary := testprocess.BuildBinary(t)
+	port := testprocess.FreePort(t)
 
-	cmd := startServerCmd(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -288,7 +290,7 @@ func TestFastStart_ToolsListRespondsImmediately(t *testing.T) {
 // TestFastStart_ToolsListSchemaStability ensures the tools/list schema doesn't change
 // unexpectedly. This catches regressions in the MCP tool definitions.
 func TestFastStart_ToolsListSchemaStability(t *testing.T) {
-	tools := toolSchemasForTest()
+	tools := schema.AllTools()
 
 	// Expected tool names (must not change without intentional update)
 	// Updated in Phase 0 to include new "analyze" tool for active analysis operations
@@ -341,10 +343,10 @@ func TestFastStart_OtherMethodsReturnQuickly(t *testing.T) {
 		t.Skip("skips server spawn in short mode")
 	}
 
-	binary := buildTestBinary(t)
-	port := findFreePort(t)
+	binary := testprocess.BuildBinary(t)
+	port := testprocess.FreePort(t)
 
-	cmd := startServerCmd(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
+	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", fmt.Sprintf("%d", port))
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
