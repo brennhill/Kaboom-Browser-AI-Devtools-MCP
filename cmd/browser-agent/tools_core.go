@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interactdispatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpcall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/noiseautorun"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
@@ -121,13 +122,14 @@ type ToolHandler struct {
 	// Default: 5s. Set to 0 in tests to restore instant-fail behavior.
 	coldStartTimeout time.Duration
 
-	interactRuntime *toolinteract.ActionRuntime
-	domActions      *toolinteract.DOMActions
-	browserActions  *toolinteract.BrowserActions
-	pageActions     *toolinteract.PageActions
-	workflowActions *toolinteract.WorkflowActions
-	storageActions  *toolinteract.StorageActions
-	batchActions    *toolinteract.BatchActions
+	interactRuntime    *toolinteract.ActionRuntime
+	interactDispatcher *interactdispatch.Handler
+	domActions         *toolinteract.DOMActions
+	browserActions     *toolinteract.BrowserActions
+	pageActions        *toolinteract.PageActions
+	workflowActions    *toolinteract.WorkflowActions
+	storageActions     *toolinteract.StorageActions
+	batchActions       *toolinteract.BatchActions
 
 	recordingInteractHandler *screenrec.InteractHandler
 	recordingHandler         *toolrecording.Handler
@@ -470,6 +472,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 			return handler.redactionEngine.RedactMapValues(data)
 		},
 	}, handler.sessionStoreImpl)
+	handler.interactDispatcher = buildInteractDispatcher(handler)
 	handler.configureSessions = toolconfigure.NewSessionHandler(toolconfigure.SessionDeps{
 		RequireStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
 			return sessionStoreGuard(handler.sessionStoreImpl, req)

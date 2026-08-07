@@ -456,6 +456,7 @@ func newTestToolHandler() *ToolHandler {
 	h.testGenHandler = testgenhandler.New(buildTestGenerationDeps(h))
 	h.generateDispatcher = toolgenerate.NewDispatcher(buildGenerateDeps(h), h.testGenHandler)
 	initializeInteractActionOwners(h)
+	h.interactDispatcher = buildInteractDispatcher(h)
 	h.toolCatalog = toolcatalog.New(nil, schema.AllTools())
 	h.configureLocalDeps = buildConfigureLocalDeps(h)
 	h.tutorialDeps = buildTutorialDeps(h)

@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-07
 code_paths:
+  - cmd/browser-agent/internal/interactdispatch/handler.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
@@ -80,6 +81,7 @@ code_paths:
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
+  - cmd/browser-agent/internal/interactdispatch/handler_test.go
   - tests/extension/content/content.test.js
   - tests/extension/content/content-ui.test.js
   - scripts/contracts/check-architecture-boundaries.test.cjs
@@ -348,3 +350,8 @@ metadata, and draw-lifecycle marking.
 Insecure-proxy navigation contracts live with the browser action owner and
 verify rejection without queue mutation, complete target encoding, and
 consistent rewriting for both current-tab and new-tab navigation.
+Interact mode resolution and composable response enrichment are owned by one
+immutable per-handler dispatcher. It defensively copies the action surface,
+injects side-effect timing for deterministic tests, preserves request fields,
+and decorates only successful compatible actions; the root package now wires
+capabilities without mutable handler caches or routing globals.

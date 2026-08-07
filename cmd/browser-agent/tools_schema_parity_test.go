@@ -85,16 +85,7 @@ func sortedKeysObserveHandlers(h *ToolHandler) []string {
 }
 
 func sortedInteractRuntimeActions(h *ToolHandler) []string {
-	actions := make(map[string]bool)
-	for action := range getInteractHandlers() {
-		actions[action] = true
-	}
-	keys := make([]string, 0, len(actions))
-	for action := range actions {
-		keys = append(keys, action)
-	}
-	sort.Strings(keys)
-	return keys
+	return h.interactDispatcher.ActionNames()
 }
 
 func mustToolEnumValues(t *testing.T, tools []mcp.MCPTool, toolName, propertyName string) []string {
