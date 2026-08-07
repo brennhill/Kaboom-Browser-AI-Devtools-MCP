@@ -88,11 +88,13 @@ type Runtime struct {
 	mu               sync.RWMutex
 	state            runtimeState
 	connectionNotify chan struct{}
+	trackingNotify   chan struct{}
 }
 
 func New() *Runtime {
 	return &Runtime{
 		connectionNotify: make(chan struct{}),
+		trackingNotify:   make(chan struct{}),
 		state: runtimeState{
 			activeTestIDs:          make(map[string]bool),
 			missingInProgressSince: make(map[string]time.Time),
@@ -210,6 +212,48 @@ func (r *Runtime) connectionReadinessSnapshot() (bool, <-chan struct{}) {
 func (r *Runtime) signalConnectionChangeLocked() {
 	close(r.connectionNotify)
 	r.connectionNotify = make(chan struct{})
+}
+
+// WaitForTrackedURLChange blocks until the tracked tab reports a non-empty URL
+// different from beforeURL, the timeout elapses, or ctx is cancelled. Tracking
+// transitions rotate a generation channel under the state lock so a change
+// between the initial snapshot and the wait cannot be missed.
+func (r *Runtime) WaitForTrackedURLChange(ctx context.Context, beforeURL string, timeout time.Duration) (string, bool) {
+	url, notify := r.trackingReadinessSnapshot()
+	if url != "" && url != beforeURL {
+		return url, true
+	}
+	if timeout <= 0 {
+		return url, false
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			url, _ = r.trackingReadinessSnapshot()
+			return url, false
+		case <-timer.C:
+			url, _ = r.trackingReadinessSnapshot()
+			return url, false
+		case <-notify:
+			url, notify = r.trackingReadinessSnapshot()
+			if url != "" && url != beforeURL {
+				return url, true
+			}
+		}
+	}
+}
+
+func (r *Runtime) trackingReadinessSnapshot() (string, <-chan struct{}) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.trackedTabURL, r.trackingNotify
+}
+
+func (r *Runtime) signalTrackingChangeLocked() {
+	close(r.trackingNotify)
+	r.trackingNotify = make(chan struct{})
 }
 
 // IsExtensionConnected returns true if the extension has synced within the
@@ -427,11 +471,16 @@ func (r *Runtime) UpdateTrackedTab(tabID int, tabURL string, tabTitle string) {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	changed := !r.state.trackingEnabled || r.state.trackedTabID != tabID ||
+		r.state.trackedTabURL != tabURL || r.state.trackedTabTitle != tabTitle
 	r.state.trackingEnabled = true
 	r.state.trackedTabID = tabID
 	r.state.trackedTabURL = tabURL
 	r.state.trackedTabTitle = tabTitle
 	r.state.trackingUpdated = time.Now()
+	if changed {
+		r.signalTrackingChangeLocked()
+	}
 }
 
 // GetTrackedTabTitle returns the tracked tab's title (may be stale).

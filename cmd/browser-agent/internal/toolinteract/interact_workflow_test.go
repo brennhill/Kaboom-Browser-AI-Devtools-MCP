@@ -154,12 +154,47 @@ func TestHandleNavigateAndDocument_NoResultAfterNavigationContinues(t *testing.T
 		t.Fatalf("clickLostToNavigation did not classify response: %+v", noResult)
 	}
 	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
-		capturefixture.Track(fs.cap, 1, "https://example.test/after")
 		return noResult
+	}
+	fs.waitTrackedURLFn = func(beforeURL string, timeout time.Duration) (string, bool) {
+		if beforeURL != "https://example.test/before" || timeout != 5*time.Second {
+			t.Fatalf("wait args = %q, %s", beforeURL, timeout)
+		}
+		capturefixture.Track(fs.cap, 1, "https://example.test/after")
+		return "https://example.test/after", true
 	}
 
 	args := `{"selector":"#link","wait_for_url_change":true,"wait_for_stable":false}`
 	assertOK(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)))
+}
+
+func TestHandleNavigateAndDocument_URLChangeTimeoutUsesOwnerBoundary(t *testing.T) {
+	h, fs := newFakeWorkflowActions(t)
+	capturefixture.Track(fs.cap, 1, "https://example.test/before")
+	waits := 0
+	fs.waitTrackedURLFn = func(beforeURL string, timeout time.Duration) (string, bool) {
+		waits++
+		if beforeURL != "https://example.test/before" || timeout != 75*time.Millisecond {
+			t.Fatalf("wait args = %q, %s", beforeURL, timeout)
+		}
+		return beforeURL, false
+	}
+
+	resp := h.HandleNavigateAndDocument(testReq(), json.RawMessage(
+		`{"selector":"#link","timeout_ms":75,"wait_for_url_change":true,"wait_for_stable":false}`,
+	))
+	assertErr(t, resp, mcp.ErrExtTimeout)
+	if waits != 1 {
+		t.Fatalf("tracking waits = %d, want 1", waits)
+	}
+}
+
+func TestHandleNavigateAndDocument_TabIDRequiresTracking(t *testing.T) {
+	h, _ := newFakeWorkflowActions(t)
+	resp := h.HandleNavigateAndDocument(testReq(), json.RawMessage(
+		`{"selector":"#link","tab_id":42,"wait_for_url_change":false,"wait_for_stable":false}`,
+	))
+	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
 func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {

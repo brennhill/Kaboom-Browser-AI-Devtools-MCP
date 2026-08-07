@@ -143,3 +143,72 @@ func TestWaitForExtensionConnected_NegativeTimeout_AlreadyConnected(t *testing.T
 		t.Fatal("expected true with negative timeout when already connected")
 	}
 }
+
+func TestWaitForTrackedURLChange_DirectTransitionClosesGeneration(t *testing.T) {
+	t.Parallel()
+	runtime := New()
+	_, notify := runtime.trackingReadinessSnapshot()
+
+	runtime.UpdateTrackedTab(42, "https://example.test/after", "After")
+
+	select {
+	case <-notify:
+	default:
+		t.Fatal("tracking transition did not close readiness generation")
+	}
+	url, changed := runtime.WaitForTrackedURLChange(context.Background(), "https://example.test/before", 0)
+	if !changed || url != "https://example.test/after" {
+		t.Fatalf("tracked URL result = %q, %t; want after, true", url, changed)
+	}
+}
+
+func TestWaitForTrackedURLChange_SyncTransitionWakesWaiter(t *testing.T) {
+	t.Parallel()
+	state := newTestState()
+	result := make(chan struct {
+		url     string
+		changed bool
+	}, 1)
+	go func() {
+		url, changed := state.Extension().WaitForTrackedURLChange(
+			context.Background(), "https://example.test/before", time.Second,
+		)
+		result <- struct {
+			url     string
+			changed bool
+		}{url: url, changed: changed}
+	}()
+
+	runSyncRequest(t, state, SyncRequest{
+		ExtSessionID: "tracking-transition",
+		Settings: &SyncSettings{
+			TrackingEnabled: true,
+			TrackedTabID:    42,
+			TrackedTabURL:   "https://example.test/after",
+		},
+	})
+
+	select {
+	case got := <-result:
+		if !got.changed || got.url != "https://example.test/after" {
+			t.Fatalf("tracked URL result = %q, %t; want after, true", got.url, got.changed)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("tracking wait did not wake after sync transition")
+	}
+}
+
+func TestWaitForTrackedURLChange_TimeoutAndCancellation(t *testing.T) {
+	t.Parallel()
+	runtime := New()
+	runtime.UpdateTrackedTab(42, "https://example.test/before", "Before")
+
+	if url, changed := runtime.WaitForTrackedURLChange(context.Background(), "https://example.test/before", 0); changed || url != "https://example.test/before" {
+		t.Fatalf("zero-timeout result = %q, %t; want before, false", url, changed)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if url, changed := runtime.WaitForTrackedURLChange(ctx, "https://example.test/before", time.Second); changed || url != "https://example.test/before" {
+		t.Fatalf("cancelled result = %q, %t; want before, false", url, changed)
+	}
+}

@@ -361,7 +361,7 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 		} else if timeoutMs <= 0 {
 			timeoutMs = 5000
 		}
-		lastURL, changed := h.waitForTrackedURLChange(req, beforeURL, timeoutMs)
+		lastURL, changed := h.deps.WaitForTrackedURLChange(beforeURL, time.Duration(timeoutMs)*time.Millisecond)
 		if !changed {
 			failResp := mcp.Fail(req, mcp.ErrExtTimeout,
 				"URL did not change after click within timeout",
@@ -483,22 +483,6 @@ func (h *WorkflowActions) currentTrackedURL(req mcp.JSONRPCRequest) string {
 		}
 	}
 	return ""
-}
-
-func (h *WorkflowActions) waitForTrackedURLChange(req mcp.JSONRPCRequest, beforeURL string, timeoutMs int) (string, bool) {
-	if timeoutMs <= 0 {
-		timeoutMs = 5000
-	}
-	deadline := time.Now().Add(time.Duration(timeoutMs) * time.Millisecond)
-	lastURL := beforeURL
-	for time.Now().Before(deadline) {
-		lastURL = h.currentTrackedURL(req)
-		if lastURL != "" && lastURL != beforeURL {
-			return lastURL, true
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	return lastURL, false
 }
 
 // validateNavigateAndDocumentTab ensures workflow-level waits and page context are

@@ -40,7 +40,6 @@ test_paths:
   - tests/extension/contracts/tooling-contracts.test.js
   - scripts/docs/features/check-feature-bundles.test.mjs
   - cmd/browser-agent/tools_schema_parity_test.go
-  - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/internal/toolpostprocess/postprocess_test.go
   - internal/mcp/errors_test.go
   - internal/queries/dispatcher_test.go

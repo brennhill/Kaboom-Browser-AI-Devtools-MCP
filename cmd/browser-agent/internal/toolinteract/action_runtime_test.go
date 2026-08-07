@@ -245,13 +245,14 @@ type fakeState struct {
 	drawStarted     int
 
 	// Pluggable overrides (nil => default behavior).
-	waitFn     func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse
-	screenshot func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
-	pageInfo   func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
-	analyzeFn  func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
-	sarifFn    func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
-	listenPort int
-	evidenceFn func(clientID string) EvidenceShot
+	waitFn           func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse
+	waitTrackedURLFn func(beforeURL string, timeout time.Duration) (string, bool)
+	screenshot       func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	pageInfo         func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	analyzeFn        func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	sarifFn          func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	listenPort       int
+	evidenceFn       func(clientID string) EvidenceShot
 }
 
 type fakeCapabilities struct {
@@ -460,6 +461,13 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 	workflow := NewWorkflowActions(runtime, dom, browser, page, WorkflowDeps{
 		Capture: deps.Capture, ToolAnalyze: deps.ToolAnalyze,
 		ToolExportSARIF: deps.ToolExportSARIF, Now: time.Now,
+		WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
+			if fs.waitTrackedURLFn != nil {
+				return fs.waitTrackedURLFn(beforeURL, timeout)
+			}
+			_, _, currentURL := fs.cap.Extension().GetTrackingStatus()
+			return currentURL, currentURL != "" && currentURL != beforeURL
+		},
 	})
 	return &fakeActionOwners{runtime, dom, browser, page, workflow, storage}, fs
 }

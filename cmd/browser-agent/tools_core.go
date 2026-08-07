@@ -690,6 +690,9 @@ func initializeInteractActionOwners(h *ToolHandler) {
 		toolinteract.WorkflowDeps{
 			Capture: captureStore, ToolAnalyze: h.analyzeDispatcher.Handle,
 			ToolExportSARIF: h.generateDispatcher.ExportSARIF, Now: time.Now,
+			WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
+				return captureStore().Extension().WaitForTrackedURLChange(h.shutdownCtx, beforeURL, timeout)
+			},
 		},
 	)
 	h.batchActions = interactbatch.New(interactbatch.Deps{

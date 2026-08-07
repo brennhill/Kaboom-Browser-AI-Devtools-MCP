@@ -53,6 +53,7 @@ type WorkflowDeps struct {
 	Capture                      func() *capture.Capture
 	ToolAnalyze, ToolExportSARIF func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
 	Now                          func() time.Time
+	WaitForTrackedURLChange      func(string, time.Duration) (string, bool)
 }
 
 type StorageDeps struct {

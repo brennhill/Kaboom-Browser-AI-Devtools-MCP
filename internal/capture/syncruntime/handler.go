@@ -373,6 +373,12 @@ func (r *Runtime) updateSyncConnectionState(req SyncRequest, clientID string, no
 	state.extSessionID = r.state.extSessionID
 
 	if req.Settings != nil {
+		trackingChanged := r.state.trackingEnabled != req.Settings.TrackingEnabled ||
+			r.state.trackedTabID != req.Settings.TrackedTabID ||
+			r.state.trackedTabURL != req.Settings.TrackedTabURL ||
+			r.state.trackedTabTitle != req.Settings.TrackedTabTitle ||
+			r.state.tabStatus != normalizedTabStatus(req.Settings.TabStatus) ||
+			!optionalBoolEqual(r.state.trackedTabActive, req.Settings.TrackedTabActive)
 		r.state.pilotEnabled = req.Settings.PilotEnabled
 		r.state.pilotStatusKnown = true
 		r.state.pilotUpdatedAt = now
@@ -391,6 +397,9 @@ func (r *Runtime) updateSyncConnectionState(req SyncRequest, clientID string, no
 		r.state.trackedTabActive = req.Settings.TrackedTabActive
 		r.state.cspRestricted = req.Settings.CspRestricted
 		r.state.cspLevel = req.Settings.CspLevel
+		if trackingChanged {
+			r.signalTrackingChangeLocked()
+		}
 	}
 	if req.InProgress != nil {
 		r.state.inProgress = normalizeInProgressList(currentGenerationInProgress(req.InProgress, state.connectionGeneration))
@@ -399,6 +408,22 @@ func (r *Runtime) updateSyncConnectionState(req SyncRequest, clientID string, no
 	state.pilotEnabled = r.state.pilotEnabled
 	state.inProgressCount = len(r.state.inProgress)
 	return state
+}
+
+func normalizedTabStatus(status string) string {
+	switch status {
+	case "loading", "complete":
+		return status
+	default:
+		return ""
+	}
+}
+
+func optionalBoolEqual(left, right *bool) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	return *left == *right
 }
 
 func (r *Runtime) isCurrentSyncGeneration(sessionID string, generation uint64) (uint64, bool) {

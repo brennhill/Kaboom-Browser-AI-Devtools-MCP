@@ -105,7 +105,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_rich_test.go
   - cmd/browser-agent/tools_interact_rich_cmdresult_test.go
   - cmd/browser-agent/tools_interact_rich_perfdiff_test.go
-  - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
   - internal/schema/interact/schema_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
@@ -246,7 +245,7 @@ extension falls back to page history and reports success only after a bounded,
 correlation-logged URL/load transition; an unacknowledged fallback remains an
 error.
 
-`navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow. A page unload may destroy the old content-script context before its click acknowledgement arrives; an exact `no_result` is therefore accepted only when the bounded tracked-URL transition independently confirms that navigation completed. Other click errors still fail normally.
+`navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow. URL transitions use a generation-channel notification owned by the synchronized extension runtime; both direct tab retargeting and extension `/sync` state updates wake the bounded wait without polling or sleeps. A page unload may destroy the old content-script context before its click acknowledgement arrives; an exact `no_result` is therefore accepted only when that tracked-URL transition independently confirms that navigation completed. Other click errors still fail normally.
 
 The workflow owns an explicit clock dependency for its total timeout budget.
 Production supplies the system clock; tests advance a controlled clock after
