@@ -11,8 +11,19 @@ function notify(deps, code, faultKind) {
 }
 export function createPersistentEnvironmentSnapshotStore(deps) {
     const limit = Math.max(1, deps.limit);
+    let operationTail = Promise.resolve();
+    const serialize = (operation) => {
+        const result = operationTail.then(operation);
+        operationTail = result.then(() => undefined, () => {
+            // EXPECTED_ABSENCE: this rejection is expected at the private queue tail
+            // because the original caller receives and reports the exact failure.
+            // The tail only restores readiness; logging here would duplicate the
+            // same incident and misleadingly imply that two operations failed.
+        });
+        return result;
+    };
     return {
-        async save(snapshot) {
+        save: (snapshot) => serialize(async () => {
             const document = await readDocument(deps);
             const records = [...document.records];
             if (records.length >= limit) {
@@ -23,8 +34,8 @@ export function createPersistentEnvironmentSnapshotStore(deps) {
             records.push({ id, created_at: deps.now(), snapshot });
             await writeDocument(deps, { ...document, records });
             return id;
-        },
-        async lookup(id) {
+        }),
+        lookup: (id) => serialize(async () => {
             const document = await readDocument(deps);
             const active = document.records.find((record) => record.id === id);
             if (active)
@@ -32,8 +43,8 @@ export function createPersistentEnvironmentSnapshotStore(deps) {
             if (document.consumed.some((record) => record.id === id))
                 return { status: 'consumed' };
             return { status: 'missing' };
-        },
-        async consume(id) {
+        }),
+        consume: (id) => serialize(async () => {
             const document = await readDocument(deps);
             const records = document.records.filter((record) => record.id !== id);
             if (records.length === document.records.length) {
@@ -43,7 +54,20 @@ export function createPersistentEnvironmentSnapshotStore(deps) {
             }
             const consumed = [...document.consumed, { id, consumed_at: deps.now() }].slice(-limit);
             await writeDocument(deps, { version: DOCUMENT_VERSION, records, consumed });
-        }
+        }),
+        reconcile: (activeIDs) => serialize(async () => {
+            if (activeIDs.length > limit ||
+                activeIDs.some((id) => typeof id !== 'string' || id.length === 0 || id.length > 256)) {
+                throw new Error('environment_snapshot_reconcile_invalid');
+            }
+            const active = new Set(activeIDs);
+            const document = await readDocument(deps);
+            const records = document.records.filter((record) => active.has(record.id));
+            const pruned = document.records.length - records.length;
+            if (pruned > 0)
+                await writeDocument(deps, { ...document, records });
+            return { pruned, retained: records.length };
+        })
     };
 }
 async function readDocument(deps) {

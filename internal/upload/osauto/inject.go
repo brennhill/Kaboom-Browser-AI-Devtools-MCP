@@ -85,11 +85,11 @@ func HandleOSAutomation(req upload.OSAutomationInjectRequest, sec *uploadsec.Sec
 func DetectBrowserPID() (int, error) {
 	switch runtime.GOOS {
 	case "darwin":
-		return detectBrowserPIDDarwin()
+		return detectBrowserPIDDarwin(productionPIDCommandOutput)
 	case "linux":
-		return detectBrowserPIDLinux()
+		return detectBrowserPIDLinux(productionPIDCommandOutput)
 	case "windows":
-		return detectBrowserPIDWindows()
+		return detectBrowserPIDWindows(productionPIDCommandOutput)
 	default:
 		return 0, fmt.Errorf("browser PID auto-detection not supported on %s", runtime.GOOS)
 	}

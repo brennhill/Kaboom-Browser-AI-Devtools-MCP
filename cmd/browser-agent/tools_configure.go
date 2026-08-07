@@ -88,7 +88,7 @@ func buildQAFixtureHandler(h *ToolHandler) (*qafixturehandler.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	go handler.RecoverAtStartup(h.shutdownCtx, h.capture.Extension().WaitForExtensionConnected)
+	handler.StartStartupRecovery(h.shutdownCtx, h.capture.Extension().WaitForExtensionConnected)
 	h.fixtureRecovery = handler
 	return handler, nil
 }

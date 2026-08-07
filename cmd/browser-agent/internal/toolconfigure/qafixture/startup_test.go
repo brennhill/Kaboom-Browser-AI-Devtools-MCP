@@ -5,6 +5,7 @@ package qafixture
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -25,18 +26,66 @@ func TestRecoverAtStartupRestoresPersistedTransactionWhenExtensionIsReady(t *tes
 		case "environment_transaction_restore":
 			restores++
 			return json.RawMessage(`{"success":true,"restored":true}`), nil
+		case "environment_transaction_reconcile":
+			return json.RawMessage(`{"success":true,"pruned":0,"retained":1}`), nil
 		default:
 			return nil, context.Canceled
 		}
 	})
 	handler.Handle(mcp.JSONRPCRequest{ID: 1}, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1}}`))
 
-	handler.RecoverAtStartup(context.Background(), func(context.Context, time.Duration) bool { return true })
+	startRecoveryAndWait(t, handler, func(context.Context, time.Duration) bool { return true })
 	if restores != 1 || handler.registry.Len() != 0 {
 		t.Fatalf("restores=%d registry_len=%d", restores, handler.registry.Len())
 	}
 	if got := handler.diagnostics.(interface{ Snapshot() []statediag.Diagnostic }).Snapshot(); len(got) != 1 || got[0].Lifecycle != statediag.LifecycleRecovered {
 		t.Fatalf("diagnostics = %#v, want correlated recovered lifecycle", got)
+	}
+}
+
+func TestRecoverAtStartupReconcilesEmptyDurableRegistryBeforeFixtureUse(t *testing.T) {
+	var commands []string
+	var reconcilePayload string
+	handler := mustHandler(t, func(_ context.Context, command string, params json.RawMessage, _ time.Duration) (json.RawMessage, error) {
+		commands = append(commands, command)
+		if command != "environment_transaction_reconcile" {
+			return nil, errors.New("unexpected_command")
+		}
+		reconcilePayload = string(params)
+		return json.RawMessage(`{"success":true,"pruned":2,"retained":0}`), nil
+	})
+
+	startRecoveryAndWait(t, handler, func(context.Context, time.Duration) bool { return true })
+	if strings.Join(commands, ",") != "environment_transaction_reconcile" {
+		t.Fatalf("startup commands = %v", commands)
+	}
+	if reconcilePayload != `{"snapshot_ids":[]}` {
+		t.Fatalf("reconcile payload = %s, want opaque empty ownership set", reconcilePayload)
+	}
+	encoded, _ := json.Marshal(handler.diagnostics.(interface{ Snapshot() []statediag.Diagnostic }).Snapshot())
+	if strings.Contains(string(encoded), "opaque_") || strings.Contains(string(encoded), "private") {
+		t.Fatalf("reconciliation diagnostics leaked identifiers: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), `"name":"environment_snapshot_reconciliation"`) || !strings.Contains(string(encoded), `"lifecycle":"recovered"`) {
+		t.Fatalf("reconciliation recovery was not retained by Doctor: %s", encoded)
+	}
+}
+
+func TestRecoverAtStartupReportsReconciliationFailureWithoutLeakingIdentifiers(t *testing.T) {
+	handler := mustHandler(t, func(_ context.Context, command string, _ json.RawMessage, _ time.Duration) (json.RawMessage, error) {
+		if command == "environment_transaction_reconcile" {
+			return nil, errors.New("private snapshot opaque_secret")
+		}
+		return nil, errors.New("unexpected_command")
+	})
+
+	startRecoveryAndWait(t, handler, func(context.Context, time.Duration) bool { return true })
+	encoded, _ := json.Marshal(handler.diagnostics.(interface{ Snapshot() []statediag.Diagnostic }).Snapshot())
+	if !strings.Contains(string(encoded), `"name":"environment_snapshot_reconciliation"`) || !strings.Contains(string(encoded), `"lifecycle":"active"`) {
+		t.Fatalf("reconciliation failure missing from Doctor: %s", encoded)
+	}
+	if strings.Contains(string(encoded), "opaque_secret") || strings.Contains(string(encoded), "private snapshot") {
+		t.Fatalf("reconciliation failure leaked extension detail: %s", encoded)
 	}
 }
 
@@ -49,7 +98,7 @@ func TestRecoverAtStartupLeavesRedactedDoctorNoticeWhenExtensionIsUnavailable(t 
 	})
 	handler.Handle(mcp.JSONRPCRequest{ID: 1}, json.RawMessage(`{"fixture_action":"apply","fixture":{"version":1}}`))
 
-	handler.RecoverAtStartup(context.Background(), func(context.Context, time.Duration) bool { return false })
+	startRecoveryAndWait(t, handler, func(context.Context, time.Duration) bool { return false })
 	got := handler.diagnostics.(interface{ Snapshot() []statediag.Diagnostic }).Snapshot()
 	if len(got) != 1 || got[0].CorrelationID != "fixture_test_1" || got[0].Lifecycle != statediag.LifecycleActive {
 		t.Fatalf("diagnostics = %#v", got)
@@ -72,6 +121,8 @@ func TestRecoverAtStartupRehydratesDaemonRegistryAfterRestart(t *testing.T) {
 			return json.RawMessage(`{"success":true,"mutations":{}}`), nil
 		case "environment_transaction_restore":
 			return json.RawMessage(`{"success":true,"restored":true}`), nil
+		case "environment_transaction_reconcile":
+			return json.RawMessage(`{"success":true,"pruned":0,"retained":1}`), nil
 		default:
 			return nil, context.Canceled
 		}
@@ -84,11 +135,46 @@ func TestRecoverAtStartupRehydratesDaemonRegistryAfterRestart(t *testing.T) {
 		t.Fatalf("Load() len=%d notice=%q", rehydrated.Len(), notice)
 	}
 	second := mustRecoveryHandler(t, rehydrated, store.Save, execute)
-	second.RecoverAtStartup(context.Background(), func(context.Context, time.Duration) bool { return true })
+	startRecoveryAndWait(t, second, func(context.Context, time.Duration) bool { return true })
 	finalRegistry, finalNotice := store.Load()
 	if finalNotice != "" || finalRegistry.Len() != 0 {
 		t.Fatalf("final Load() len=%d notice=%q", finalRegistry.Len(), finalNotice)
 	}
+}
+
+func TestStartStartupRecoveryRegistersBarrierBeforeLaunchingWork(t *testing.T) {
+	handler := mustHandler(t, func(_ context.Context, command string, _ json.RawMessage, _ time.Duration) (json.RawMessage, error) {
+		if command != "environment_transaction_reconcile" {
+			t.Fatalf("unexpected command %q", command)
+		}
+		return json.RawMessage(`{"success":true,"pruned":0,"retained":0}`), nil
+	})
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	done := handler.StartStartupRecovery(context.Background(), func(context.Context, time.Duration) bool {
+		close(entered)
+		<-release
+		return true
+	})
+	if repeated := handler.StartStartupRecovery(context.Background(), func(context.Context, time.Duration) bool {
+		t.Fatal("repeated start launched a second recovery")
+		return false
+	}); repeated != done {
+		t.Fatal("repeated start returned a different lifecycle barrier")
+	}
+	<-entered
+	select {
+	case <-done:
+		t.Fatal("startup barrier closed before recovery completed")
+	default:
+	}
+	close(release)
+	<-done
+}
+
+func startRecoveryAndWait(t *testing.T, handler *Handler, waiter ExtensionReadinessWaiter) {
+	t.Helper()
+	<-handler.StartStartupRecovery(context.Background(), waiter)
 }
 
 func mustRecoveryHandler(

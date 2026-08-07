@@ -18,6 +18,11 @@ export function registerEnvironmentTransactionCommands(driver, snapshots) {
         const snapshotID = requireSnapshotID(params);
         ctx.sendResult(await restoreEnvironment(driver, snapshots, ctx.tabId, snapshotID));
     });
+    registerCommand('environment_transaction_reconcile', async (ctx) => {
+        const params = ctx.params;
+        const snapshotIDs = requireSnapshotIDs(params);
+        ctx.sendResult({ success: true, ...(await snapshots.reconcile(snapshotIDs)) });
+    });
 }
 export async function snapshotEnvironment(driver, snapshots, tabId, fixture) {
     try {
@@ -61,5 +66,11 @@ function requireSnapshotID(params) {
     if (!params.snapshot_id)
         throw new Error('fixture_snapshot_id_required');
     return params.snapshot_id;
+}
+function requireSnapshotIDs(params) {
+    if (!Array.isArray(params.snapshot_ids) || params.snapshot_ids.some((id) => typeof id !== 'string')) {
+        throw new Error('fixture_snapshot_ids_required');
+    }
+    return params.snapshot_ids;
 }
 //# sourceMappingURL=commands.js.map

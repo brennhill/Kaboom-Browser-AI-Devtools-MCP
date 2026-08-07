@@ -17,6 +17,10 @@ export interface EnvironmentSnapshotStore {
     readonly save: (snapshot: EnvironmentSnapshot) => Promise<string>;
     readonly lookup: (id: string) => Promise<EnvironmentSnapshotLookup>;
     readonly consume: (id: string) => Promise<void>;
+    readonly reconcile: (activeIDs: readonly string[]) => Promise<{
+        readonly pruned: number;
+        readonly retained: number;
+    }>;
 }
 export interface SnapshotStorageArea {
     readonly get: (key: string) => Promise<Record<string, unknown>>;

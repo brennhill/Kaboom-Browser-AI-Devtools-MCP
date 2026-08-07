@@ -3,8 +3,8 @@
 package osauto
 
 import (
-	"os"
-	"path/filepath"
+	"context"
+	"errors"
 	"runtime"
 	"strings"
 	"testing"
@@ -36,21 +36,21 @@ func TestParseFirstPIDLine(t *testing.T) {
 }
 
 func TestBrowserPIDDetectorsParseCommandOutput(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("test command fixtures use POSIX shell scripts")
-	}
-	bin := t.TempDir()
-	writeCommandFixture(t, bin, "pgrep", "#!/bin/sh\ncase \"$2\" in\nGoogle\\ Chrome) echo 111;;\nchromium) echo bad;;\ngoogle-chrome) echo 222;;\n*) exit 1;;\nesac\n")
-	writeCommandFixture(t, bin, "tasklist", "#!/bin/sh\nprintf '\"chrome.exe\",\"333\",\"Console\",\"1\",\"1 K\"\\n'\n")
-	t.Setenv("PATH", bin)
+	run := fakePIDCommandOutput(map[string]pidCommandResult{
+		"pgrep -x Google Chrome":                           {output: "111\n"},
+		"pgrep -x chrome":                                  {err: errors.New("not found")},
+		"pgrep -x chromium":                                {output: "bad\n"},
+		"pgrep -x google-chrome":                           {output: "222\n"},
+		"tasklist /FI IMAGENAME eq chrome.exe /FO CSV /NH": {output: "\"chrome.exe\",\"333\",\"Console\",\"1\",\"1 K\"\n"},
+	})
 
-	if got, err := detectBrowserPIDDarwin(); err != nil || got != 111 {
+	if got, err := detectBrowserPIDDarwin(run); err != nil || got != 111 {
 		t.Fatalf("darwin detector = %d, %v", got, err)
 	}
-	if got, err := detectBrowserPIDLinux(); err != nil || got != 222 {
+	if got, err := detectBrowserPIDLinux(run); err != nil || got != 222 {
 		t.Fatalf("linux detector = %d, %v", got, err)
 	}
-	if got, err := detectBrowserPIDWindows(); err != nil || got != 333 {
+	if got, err := detectBrowserPIDWindows(run); err != nil || got != 333 {
 		t.Fatalf("windows detector = %d, %v", got, err)
 	}
 }
@@ -59,18 +59,18 @@ func TestBrowserPIDDetectorFailuresAreActionable(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("test command fixtures use POSIX shell scripts")
 	}
-	bin := t.TempDir()
-	writeCommandFixture(t, bin, "pgrep", "#!/bin/sh\nif [ \"$2\" = \"Google Chrome\" ]; then echo nope; exit 0; fi\nexit 1\n")
-	writeCommandFixture(t, bin, "tasklist", "#!/bin/sh\necho 'No tasks are running'; exit 0\n")
-	t.Setenv("PATH", bin)
+	run := fakePIDCommandOutput(map[string]pidCommandResult{
+		"pgrep -x Google Chrome":                           {output: "nope\n"},
+		"tasklist /FI IMAGENAME eq chrome.exe /FO CSV /NH": {output: "No tasks are running\n"},
+	})
 
-	if _, err := detectBrowserPIDDarwin(); err == nil || !strings.Contains(err.Error(), "non-numeric") {
+	if _, err := detectBrowserPIDDarwin(run); err == nil || !strings.Contains(err.Error(), "non-numeric") {
 		t.Fatalf("darwin error = %v", err)
 	}
-	if _, err := detectBrowserPIDLinux(); err == nil || !strings.Contains(err.Error(), "pgrep found none") {
+	if _, err := detectBrowserPIDLinux(run); err == nil || !strings.Contains(err.Error(), "pgrep found none") {
 		t.Fatalf("linux error = %v", err)
 	}
-	if _, err := detectBrowserPIDWindows(); err == nil || !strings.Contains(err.Error(), "tasklist found no") {
+	if _, err := detectBrowserPIDWindows(run); err == nil || !strings.Contains(err.Error(), "tasklist found no") {
 		t.Fatalf("windows error = %v", err)
 	}
 }
@@ -79,23 +79,32 @@ func TestWindowsPIDDetectorRejectsMalformedRows(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("test command fixtures use POSIX shell scripts")
 	}
-	bin := t.TempDir()
-	writeCommandFixture(t, bin, "tasklist", "#!/bin/sh\necho malformed\n")
-	t.Setenv("PATH", bin)
-	if _, err := detectBrowserPIDWindows(); err == nil || !strings.Contains(err.Error(), "unexpected format") {
+	run := fakePIDCommandOutput(map[string]pidCommandResult{
+		"tasklist /FI IMAGENAME eq chrome.exe /FO CSV /NH": {output: "malformed\n"},
+	})
+	if _, err := detectBrowserPIDWindows(run); err == nil || !strings.Contains(err.Error(), "unexpected format") {
 		t.Fatalf("format error = %v", err)
 	}
 
-	writeCommandFixture(t, bin, "tasklist", "#!/bin/sh\nprintf '\"chrome.exe\",\"not-a-pid\"\\n'\n")
-	if _, err := detectBrowserPIDWindows(); err == nil || !strings.Contains(err.Error(), "non-numeric") {
+	run = fakePIDCommandOutput(map[string]pidCommandResult{
+		"tasklist /FI IMAGENAME eq chrome.exe /FO CSV /NH": {output: "\"chrome.exe\",\"not-a-pid\"\n"},
+	})
+	if _, err := detectBrowserPIDWindows(run); err == nil || !strings.Contains(err.Error(), "non-numeric") {
 		t.Fatalf("PID error = %v", err)
 	}
 }
 
-func writeCommandFixture(t *testing.T, dir, name, script string) {
-	t.Helper()
-	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
+type pidCommandResult struct {
+	output string
+	err    error
+}
+
+func fakePIDCommandOutput(results map[string]pidCommandResult) pidCommandOutput {
+	return func(_ context.Context, name string, args ...string) ([]byte, error) {
+		result, ok := results[strings.Join(append([]string{name}, args...), " ")]
+		if !ok {
+			return nil, errors.New("fixture command not found")
+		}
+		return []byte(result.output), result.err
 	}
 }

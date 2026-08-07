@@ -12,6 +12,7 @@ import type { EnvironmentSnapshotStore } from './snapshot-store.js'
 interface EnvironmentTransactionParams {
   readonly fixture?: WireQAFixture
   readonly snapshot_id?: string
+  readonly snapshot_ids?: readonly string[]
 }
 
 export function registerEnvironmentTransactionCommands(
@@ -32,6 +33,12 @@ export function registerEnvironmentTransactionCommands(
     const params = ctx.params as EnvironmentTransactionParams
     const snapshotID = requireSnapshotID(params)
     ctx.sendResult(await restoreEnvironment(driver, snapshots, ctx.tabId, snapshotID))
+  })
+
+  registerCommand('environment_transaction_reconcile', async (ctx) => {
+    const params = ctx.params as EnvironmentTransactionParams
+    const snapshotIDs = requireSnapshotIDs(params)
+    ctx.sendResult({ success: true, ...(await snapshots.reconcile(snapshotIDs)) })
   })
 }
 
@@ -88,4 +95,11 @@ function requireFixture(params: object): WireQAFixture {
 function requireSnapshotID(params: EnvironmentTransactionParams): string {
   if (!params.snapshot_id) throw new Error('fixture_snapshot_id_required')
   return params.snapshot_id
+}
+
+function requireSnapshotIDs(params: EnvironmentTransactionParams): readonly string[] {
+  if (!Array.isArray(params.snapshot_ids) || params.snapshot_ids.some((id) => typeof id !== 'string')) {
+    throw new Error('fixture_snapshot_ids_required')
+  }
+  return params.snapshot_ids
 }

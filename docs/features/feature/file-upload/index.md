@@ -100,6 +100,10 @@ root tests retain only true installed-server integration coverage.
 OS-dialog dismissal status mapping is tested through injected stage functions
 in `upload/httpapi`; unit tests never invoke host `osascript`, `xdotool`, or
 PowerShell commands and therefore produce deterministic results on every CI OS.
+Browser PID discovery likewise owns an explicit command-output boundary. Unit
+tests inject command results directly, while production keeps the same bounded
+platform commands; coverage and race runs therefore cannot fail because a
+temporary shell process was starved under host load.
 Installed upload integration assertions decode MCP payloads through the shared
 browser-agent result helper; the deleted observe-contract fixture owns no test
 parsing surface.

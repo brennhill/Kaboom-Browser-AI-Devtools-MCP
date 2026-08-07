@@ -42,8 +42,11 @@ type Handler struct {
 	persist     func(*fixturecontract.Registry) error
 	generation  func() string
 	restore     func(context.Context, string) error
+	reconcile   func(context.Context, []string) (int, error)
 	diagnostics LifecycleDiagnostics
 	lifecycleMu sync.Mutex
+	startupMu   sync.RWMutex
+	startupDone <-chan struct{}
 }
 
 func New(deps Deps) (*Handler, error) {
@@ -66,6 +69,27 @@ func New(deps Deps) (*Handler, error) {
 			return errors.New("invalid_fixture_restore_result")
 		}
 		return nil
+	}
+	reconcile := func(ctx context.Context, snapshotIDs []string) (int, error) {
+		payload, err := json.Marshal(struct {
+			SnapshotIDs []string `json:"snapshot_ids"`
+		}{SnapshotIDs: snapshotIDs})
+		if err != nil {
+			return 0, errors.New("fixture_reconcile_encoding_failed")
+		}
+		result, err := deps.Execute(ctx, "environment_transaction_reconcile", payload, time.Duration(fixturecontract.DefaultSetupTimeoutMs)*time.Millisecond)
+		if err != nil {
+			return 0, errors.New("fixture_reconcile_failed")
+		}
+		var reconciled struct {
+			Success  bool `json:"success"`
+			Pruned   int  `json:"pruned"`
+			Retained int  `json:"retained"`
+		}
+		if json.Unmarshal(result, &reconciled) != nil || !reconciled.Success || reconciled.Pruned < 0 || reconciled.Retained < 0 || reconciled.Retained > len(snapshotIDs) {
+			return 0, errors.New("invalid_fixture_reconcile_result")
+		}
+		return reconciled.Pruned, nil
 	}
 	coordinator, err := fixturecontract.NewCoordinator(fixturecontract.TransactionDeps{
 		NewCorrelationID:    deps.NewCorrelationID,
@@ -110,7 +134,7 @@ func New(deps Deps) (*Handler, error) {
 	}
 	return &Handler{
 		ctx: deps.Context, coordinator: coordinator, registry: deps.Registry,
-		persist: deps.Persist, generation: deps.ExtensionGeneration, restore: restore,
+		persist: deps.Persist, generation: deps.ExtensionGeneration, restore: restore, reconcile: reconcile,
 		diagnostics: deps.Diagnostics,
 	}, nil
 }
@@ -160,6 +184,9 @@ func (handler *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp
 }
 
 func (handler *Handler) applyFixture(fixture fixturecontract.WireQAFixture) (fixturecontract.TransactionResult, error) {
+	if err := handler.waitForStartupRecovery(handler.ctx); err != nil {
+		return fixturecontract.TransactionResult{Status: fixturecontract.StatusCanceled}, err
+	}
 	handler.lifecycleMu.Lock()
 	defer handler.lifecycleMu.Unlock()
 	return handler.coordinator.Apply(handler.ctx, fixture)
@@ -176,8 +203,15 @@ func (handler *Handler) RecoverPending(ctx context.Context) []string {
 }
 
 func (handler *Handler) restoreTransaction(ctx context.Context, transactionID string) (alreadyRestored bool, returnErr error) {
+	if err := handler.waitForStartupRecovery(ctx); err != nil {
+		return false, err
+	}
 	handler.lifecycleMu.Lock()
 	defer handler.lifecycleMu.Unlock()
+	return handler.restoreTransactionLocked(ctx, transactionID)
+}
+
+func (handler *Handler) restoreTransactionLocked(ctx context.Context, transactionID string) (alreadyRestored bool, returnErr error) {
 	record, exists := handler.registry.Get(transactionID)
 	if !exists {
 		return true, nil

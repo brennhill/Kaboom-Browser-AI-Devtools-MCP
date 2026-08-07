@@ -1656,6 +1656,7 @@ export interface components {
             ext_session_id: string;
             connection_generation?: number;
             extension_version?: string;
+            command_contract_id?: string;
             settings?: components['schemas']['SyncSettings'];
             extension_logs?: components['schemas']['ExtensionLog'][];
             last_command_ack?: string;

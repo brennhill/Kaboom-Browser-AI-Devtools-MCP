@@ -139,7 +139,17 @@ last_verified_date: 2026-08-02
 - Private snapshots use one bounded `chrome.storage.local` owner so recovery
   survives MV3 service-worker suspension. Corrupt or unavailable storage emits
   stable lifecycle diagnostics without including captured values, and runtime
-  registration lives in a dedicated composition root.
+  registration lives in a dedicated composition root. All snapshot save,
+  consume, lookup, and
+  reconciliation operations share one serialized mutation boundary, preventing
+  concurrent writes from overwriting durable recovery obligations. After the
+  extension becomes ready, daemon startup reconciles the extension store with
+  the daemon's durable registry using only opaque snapshot IDs. Referenced
+  snapshots remain recoverable; snapshots orphaned before registry persistence
+  are pruned, and Doctor retains a redacted failure/recovery transition without
+  exposing identifiers or captured browser state. Handler composition installs
+  this bounded startup-recovery barrier synchronously before publishing the
+  configure surface, so an early fixture mutation cannot overtake reconciliation.
 - Connected QA fixture UAT restores every successful transaction through its
   canonical opaque transaction ID, including when later verification fails;
   it never substitutes ad-hoc page rewrites for the real recovery path.

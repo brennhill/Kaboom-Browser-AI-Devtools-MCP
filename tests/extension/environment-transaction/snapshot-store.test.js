@@ -56,6 +56,55 @@ test('consume rejects an unknown snapshot without creating a false recovery tomb
   assert.deepEqual(await store.lookup('unknown'), { status: 'missing' })
 })
 
+test('startup reconciliation prunes only snapshots absent from the durable daemon registry', async () => {
+  const storage = memoryStorage()
+  let id = 0
+  const deps = { storage, limit: 3, now: () => 7, newID: () => `opaque_${++id}`, onNotice: () => {} }
+  const store = createPersistentEnvironmentSnapshotStore(deps)
+  await store.save(snapshot('orphan'))
+  await store.save(snapshot('owned'))
+
+  assert.deepEqual(await store.reconcile(['opaque_2']), { pruned: 1, retained: 1 })
+  assert.deepEqual(await store.lookup('opaque_1'), { status: 'missing' })
+  assert.equal((await store.lookup('opaque_2')).snapshot.tab_url, 'https://owned.test/')
+  assert.doesNotMatch(JSON.stringify(await storage.get('environment_transaction_snapshots_v1')), /orphan\.test/)
+})
+
+test('snapshot mutations serialize so concurrent saves cannot overwrite recovery obligations', async () => {
+  const storage = memoryStorage()
+  let releaseFirstSet
+  let markFirstSetEntered
+  const firstSetEntered = new Promise((resolve) => {
+    markFirstSetEntered = resolve
+  })
+  const firstSetReleased = new Promise((resolve) => {
+    releaseFirstSet = resolve
+  })
+  const write = storage.set
+  let first = true
+  storage.set = async (items) => {
+    if (first) {
+      first = false
+      markFirstSetEntered()
+      await firstSetReleased
+    }
+    await write(items)
+  }
+  let id = 0
+  const deps = { storage, limit: 3, now: () => 7, newID: () => `opaque_${++id}`, onNotice: () => {} }
+  const store = createPersistentEnvironmentSnapshotStore(deps)
+
+  const one = store.save(snapshot('one'))
+  await firstSetEntered
+  const two = store.save(snapshot('two'))
+  releaseFirstSet()
+  await Promise.all([one, two])
+
+  const reconstructed = createPersistentEnvironmentSnapshotStore(deps)
+  assert.equal((await reconstructed.lookup('opaque_1')).status, 'active')
+  assert.equal((await reconstructed.lookup('opaque_2')).status, 'active')
+})
+
 test('persistent snapshot store clears corrupt state and emits a stable notice', async () => {
   const notices = []
   const storage = memoryStorage({ environment_transaction_snapshots_v1: { version: 1, records: 'private-secret' } })
@@ -76,6 +125,7 @@ test('persistent snapshot store clears corrupt state and emits a stable notice',
 test('persistent snapshot store reports storage failures without leaking values', async () => {
   const notices = []
   const storage = memoryStorage()
+  const write = storage.set
   storage.set = async () => {
     throw new Error('private-cookie-value')
   }
@@ -90,6 +140,10 @@ test('persistent snapshot store reports storage failures without leaking values'
   await assert.rejects(store.save(snapshot('private')), { message: 'environment_snapshot_store_write_failed' })
   assert.deepEqual(notices, [notice('environment_snapshot_store_write_failed', 'write')])
   assert.equal(JSON.stringify(notices).includes('private'), false)
+
+  storage.set = write
+  assert.equal(await store.save(snapshot('recovered')), 'opaque_1')
+  assert.equal((await store.lookup('opaque_1')).status, 'active')
 })
 
 test('snapshot store classifies quota and cancellation without retaining private values', async () => {

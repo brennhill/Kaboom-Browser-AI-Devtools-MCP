@@ -1,5 +1,4 @@
-// Purpose: Detects browser process IDs on macOS for upload automation targeting.
-// Why: Isolates process detection from dialog injection and platform-specific execution.
+// pid.go — Detects browser process IDs for upload automation targeting.
 package osauto
 
 import (
@@ -10,10 +9,16 @@ import (
 	"time"
 )
 
-func detectBrowserPIDDarwin() (int, error) {
+type pidCommandOutput func(context.Context, string, ...string) ([]byte, error)
+
+func productionPIDCommandOutput(ctx context.Context, name string, args ...string) ([]byte, error) {
+	return exec.CommandContext(ctx, name, args...).Output()
+}
+
+func detectBrowserPIDDarwin(run pidCommandOutput) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "pgrep", "-x", "Google Chrome").Output()
+	out, err := run(ctx, "pgrep", "-x", "Google Chrome")
 	if err != nil {
 		return 0, fmt.Errorf("Cannot detect Chrome: pgrep -x 'Google Chrome' found no process. Launch Google Chrome first")
 	}
@@ -29,11 +34,11 @@ func detectBrowserPIDDarwin() (int, error) {
 	return pid, nil
 }
 
-func detectBrowserPIDLinux() (int, error) {
+func detectBrowserPIDLinux(run pidCommandOutput) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	for _, name := range []string{"chrome", "chromium", "google-chrome", "chromium-browser"} {
-		out, err := exec.CommandContext(ctx, "pgrep", "-x", name).Output()
+		out, err := run(ctx, "pgrep", "-x", name)
 		if err != nil {
 			continue
 		}
@@ -45,10 +50,10 @@ func detectBrowserPIDLinux() (int, error) {
 	return 0, fmt.Errorf("Cannot detect Chrome: pgrep found none of 'chrome', 'chromium', 'google-chrome', 'chromium-browser'. Launch Chrome/Chromium first")
 }
 
-func detectBrowserPIDWindows() (int, error) {
+func detectBrowserPIDWindows(run pidCommandOutput) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "tasklist", "/FI", "IMAGENAME eq chrome.exe", "/FO", "CSV", "/NH").Output()
+	out, err := run(ctx, "tasklist", "/FI", "IMAGENAME eq chrome.exe", "/FO", "CSV", "/NH")
 	if err != nil {
 		return 0, fmt.Errorf("Cannot detect Chrome: tasklist found no chrome.exe. Launch Google Chrome first")
 	}
