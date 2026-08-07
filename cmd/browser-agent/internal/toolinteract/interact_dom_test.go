@@ -74,6 +74,64 @@ func TestHandleDOMPrimitive_SelectorOptionalActions(t *testing.T) {
 	assertOK(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"action":"open_composer"}`), "open_composer"))
 }
 
+func TestHandleDOMPrimitiveActionFamilyContracts(t *testing.T) {
+	t.Parallel()
+	invalid := []struct {
+		action, args, missing string
+	}{
+		{"click", `{}`, "selector"},
+		{"check", `{}`, "selector"},
+		{"get_text", `{}`, "selector"},
+		{"get_value", `{}`, "selector"},
+		{"focus", `{}`, "selector"},
+		{"scroll_to", `{}`, "selector"},
+		{"wait_for", `{}`, "selector"},
+		{"type", `{"selector":"input"}`, "text"},
+		{"select", `{"selector":"select"}`, "value"},
+		{"get_attribute", `{"selector":"a"}`, "name"},
+		{"set_attribute", `{"selector":"div"}`, "name"},
+	}
+	for _, testCase := range invalid {
+		t.Run("reject "+testCase.action, func(t *testing.T) {
+			h, _ := newFakeDOMActions(t)
+			response := h.HandleDOMPrimitive(testReq(), json.RawMessage(testCase.args), testCase.action)
+			assertErr(t, response, mcp.ErrMissingParam)
+			if !strings.Contains(firstText(parseToolResult(t, response)), testCase.missing) {
+				t.Fatalf("%s error omitted %q: %s", testCase.action, testCase.missing, firstText(parseToolResult(t, response)))
+			}
+		})
+	}
+
+	valid := []struct{ action, args string }{
+		{"click", `{"selector":"#btn"}`},
+		{"type", `{"selector":"input","text":"hello"}`},
+		{"select", `{"selector":"select","value":"one"}`},
+		{"check", `{"selector":"input"}`},
+		{"get_text", `{"selector":"div"}`},
+		{"get_value", `{"selector":"input"}`},
+		{"get_attribute", `{"selector":"a","name":"href"}`},
+		{"set_attribute", `{"selector":"div","name":"data-test","value":"1"}`},
+		{"focus", `{"selector":"input"}`},
+		{"scroll_to", `{"selector":"footer"}`},
+		{"wait_for", `{"selector":"spinner"}`},
+		{"key_press", `{"selector":"input","text":"Enter"}`},
+		{"open_composer", `{}`},
+		{"submit_active_composer", `{}`},
+		{"confirm_top_dialog", `{}`},
+		{"dismiss_top_overlay", `{}`},
+	}
+	for _, testCase := range valid {
+		t.Run("queue "+testCase.action, func(t *testing.T) {
+			h, state := newFakeDOMActions(t)
+			assertOK(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(testCase.args), testCase.action))
+			queued := state.enqueuedSnapshot()
+			if len(queued) != 1 || queued[0].Type != "dom_action" || !strings.HasPrefix(queued[0].CorrelationID, "dom_") || !strings.Contains(string(queued[0].Params), `"action":"`+testCase.action+`"`) {
+				t.Fatalf("%s enqueue = %#v", testCase.action, queued)
+			}
+		})
+	}
+}
+
 func TestHandleDOMPrimitive_ClickWithCoordsRoutesCDP(t *testing.T) {
 	h, fs := newFakeDOMActions(t)
 	resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"x":10,"y":20,"action":"click"}`), "click")

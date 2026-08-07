@@ -4,7 +4,7 @@ feature_id: feature-tab-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/schema/interact/actions.go
@@ -57,7 +57,7 @@ test_paths:
   - cmd/browser-agent/screenrec_wiring_test.go
   - cmd/browser-agent/internal/interactdispatch/handler_test.go
   - cmd/browser-agent/tools_interact_page_commands_test.go
-  - cmd/browser-agent/tools_interact_dom_routing_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
   - internal/statediag/collector_test.go

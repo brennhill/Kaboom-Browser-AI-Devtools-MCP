@@ -98,7 +98,6 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_entrypoint_test.go
   - cmd/browser-agent/tools_interact_page_commands_test.go
-  - cmd/browser-agent/tools_interact_dom_routing_test.go
   - cmd/browser-agent/tools_csp_blocked_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_interact_helpers_test.go
@@ -326,6 +325,9 @@ observe-specific root fixtures no longer provide cross-feature test helpers.
 DOM primitive parsing for index selection, scroll direction, and structured
 responses is tested with the canonical DOM action owner; no root parser suite
 mirrors its public parameter struct.
+The same owner-level action-family table verifies required parameters,
+selector-optional intent actions, canonical queued action payloads, and
+correlation identity across every DOM primitive family.
 Hardware-click validation, pilot gating, response correlation, and CDP-versus-
 DOM routing are tested at that same owner. Action enumeration remains sourced
 from the canonical interact schema instead of a root handler string check.
