@@ -58,7 +58,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/telemetryapi/handler_test.go
   - internal/tools/observe/core/filtering_test.go
-  - cmd/browser-agent/waterfall_ondemand_test.go
+  - internal/tools/observe/network/network_test.go
   - internal/tools/observe/timeline/correlation_test.go
   - internal/tools/observe/logs/logs_edge_test.go
   - internal/tools/observe/idbquery/execute_test.go

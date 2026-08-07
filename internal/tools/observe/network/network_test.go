@@ -5,9 +5,11 @@ package network
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
 	"strings"
+	"sync"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -15,6 +17,84 @@ import (
 	"testing"
 	"time"
 )
+
+func answerNextWaterfallQuery(captured *capture.Capture, result any) <-chan error {
+	done := make(chan error, 1)
+	go func() {
+		captured.Queries().WaitForPendingQueries(time.Second)
+		for _, query := range captured.Queries().GetPendingQueries() {
+			if query.Type != "waterfall" {
+				continue
+			}
+			encoded, err := json.Marshal(result)
+			if err == nil {
+				captured.Queries().SetQueryResult(query.ID, encoded)
+			}
+			done <- err
+			return
+		}
+		done <- fmt.Errorf("waterfall query was not enqueued")
+	}()
+	return done
+}
+
+func TestWaterfallRefreshLifecycle(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	t.Cleanup(captured.Close)
+	captured.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{URL: "https://old.test"}}, "https://app.test")
+	addedAt := captured.Telemetry().NetworkWaterfall().Entries()[0].Timestamp
+	deps := testsupport.Deps(captured)
+	request := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+
+	deps.Now = func() time.Time { return addedAt.Add(time.Second - time.Nanosecond) }
+	_ = GetNetworkWaterfall(deps, request, nil)
+	if captured.Queries().QueueDepth() != 0 {
+		t.Fatal("fresh waterfall data enqueued a refresh")
+	}
+
+	deps.Now = func() time.Time { return addedAt.Add(time.Second) }
+	answered := answerNextWaterfallQuery(captured, map[string]any{
+		"entries":  []map[string]any{{"url": "https://fresh.test", "duration": 12}},
+		"page_url": "https://app.test/new",
+	})
+	result := testsupport.ExtractMCPJSON(t, GetNetworkWaterfall(deps, request, nil))
+	if err := <-answered; err != nil {
+		t.Fatal(err)
+	}
+	entries, ok := result["entries"].([]any)
+	if !ok || len(entries) != 2 {
+		t.Fatalf("refreshed entries = %#v, want cached plus fresh", result["entries"])
+	}
+}
+
+func TestWaterfallRefreshTimeoutAndConcurrencyRemainBounded(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	t.Cleanup(captured.Close)
+	deps := testsupport.Deps(captured)
+	deps.WaterfallRefreshTimeout = time.Nanosecond
+	request := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 2}
+
+	const callers = 10
+	var wait sync.WaitGroup
+	failures := make(chan error, callers)
+	for range callers {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			response := GetNetworkWaterfall(deps, request, nil)
+			if response.Result == nil || response.Error != nil {
+				failures <- fmt.Errorf("waterfall response = %#v", response)
+			}
+		}()
+	}
+	wait.Wait()
+	close(failures)
+	for err := range failures {
+		t.Error(err)
+	}
+}
 
 func TestNetworkBodyHandlerFiltersTransformsAndExplainsEmptyResults(t *testing.T) {
 	t.Parallel()
