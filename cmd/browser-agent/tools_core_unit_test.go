@@ -44,7 +44,7 @@ func TestNewToolHandlerUsesServerSessionProjectPath(t *testing.T) {
 func TestToolHandlerRecordsUsageOutcomesAndSessionDepth(t *testing.T) {
 	t.Parallel()
 
-	handler := createTestToolHandler(t)
+	handler, _, _ := makeToolHandler(t)
 	tracker := telemetry.NewUsageTracker()
 	handler.usageTracker = tracker
 	request := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1, Method: "tools/call"}
