@@ -21,9 +21,20 @@ func TestBrowserActionsHandleIsTheCanonicalActionBoundary(t *testing.T) {
 func TestHandleNavigate_Success(t *testing.T) {
 	h, fs := newFakeBrowserActions(t)
 	resp := h.Handle("navigate", testReq(), json.RawMessage(`{"url":"https://example.org"}`))
-	assertOK(t, resp)
-	if fs.enqueuedCount() != 1 {
-		t.Fatalf("expected 1 enqueued query, got %d", fs.enqueuedCount())
+	result := assertOK(t, resp)
+	if !contains(firstText(result), "correlation_id") || !contains(firstText(result), `"status":"complete"`) {
+		t.Fatalf("navigate response = %s", firstText(result))
+	}
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) != 1 || enqueued[0].Type != "browser_action" {
+		t.Fatalf("navigate enqueue = %#v", enqueued)
+	}
+	var params map[string]any
+	if err := json.Unmarshal(enqueued[0].Params, &params); err != nil {
+		t.Fatalf("decode navigate params: %v", err)
+	}
+	if params["action"] != "navigate" {
+		t.Fatalf("navigate action = %#v", params["action"])
 	}
 	if fs.recordedCount() != 1 {
 		t.Fatalf("expected 1 recorded action, got %d", fs.recordedCount())
@@ -197,8 +208,20 @@ func TestHandleHighlight_InvalidJSONAndPilotBlock(t *testing.T) {
 }
 
 func TestHandleExecuteJS_Success(t *testing.T) {
+	h, fs := newFakeBrowserActions(t)
+	result := assertOK(t, h.Handle("execute_js", testReq(), json.RawMessage(`{"script":"1+1"}`)))
+	if !contains(firstText(result), "correlation_id") || !contains(firstText(result), `"status":"complete"`) {
+		t.Fatalf("execute_js response = %s", firstText(result))
+	}
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) != 1 || enqueued[0].Type != "execute" {
+		t.Fatalf("execute_js enqueue = %#v", enqueued)
+	}
+}
+
+func TestHandleExecuteJS_InvalidJSON(t *testing.T) {
 	h, _ := newFakeBrowserActions(t)
-	assertOK(t, h.Handle("execute_js", testReq(), json.RawMessage(`{"script":"1+1"}`)))
+	assertErr(t, h.Handle("execute_js", testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleExecuteJS_MissingScript(t *testing.T) {

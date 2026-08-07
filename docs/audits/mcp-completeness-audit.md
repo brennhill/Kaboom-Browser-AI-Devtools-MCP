@@ -352,11 +352,11 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 |--------|---------------------|-----------------|
 | highlight | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
 | subtitle | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
-| save_state | YES | tools_interact_pilot_test.go |
-| load_state | YES | tools_interact_pilot_test.go |
-| list_states | YES | tools_interact_pilot_test.go, integration_test.go |
-| delete_state | YES | tools_interact_pilot_test.go |
-| execute_js | YES | tools_interact_pilot_test.go |
+| save_state | YES | tools_interact_state_queries_test.go, tools_interact_state_test.go |
+| load_state | YES | tools_interact_state_test.go |
+| list_states | YES | tools_interact_state_queries_test.go, integration_test.go |
+| delete_state | YES | tools_interact_state_queries_test.go |
+| execute_js | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
 | navigate | YES | tools_interact_nav_test.go, handler_consistency_test.go |
 | refresh | YES | tools_interact_nav_test.go, handler_consistency_test.go |
 | back | YES | tools_interact_nav_test.go, handler_consistency_test.go |
