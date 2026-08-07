@@ -6,11 +6,13 @@ package toolconfigure
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -37,6 +39,26 @@ func TestNormalizeTelemetryMode(t *testing.T) {
 				t.Errorf("mode: want %q, got %q", tt.want, got)
 			}
 		})
+	}
+}
+
+func TestHandleStreamingStatusAndValidation(t *testing.T) {
+	buffer := alertbuf.NewAlertBuffer()
+	response := HandleStreaming(buffer, newReq(), json.RawMessage(`{"streaming_action":"status"}`))
+	isError, text := parseResp(t, response)
+	if isError {
+		t.Fatalf("streaming status failed: %s", text)
+	}
+	for _, field := range []string{"config", "notify_count", "pending"} {
+		if !strings.Contains(text, `"`+field+`"`) {
+			t.Errorf("streaming status missing %q: %s", field, text)
+		}
+	}
+	for _, arguments := range []json.RawMessage{json.RawMessage(`{bad`), json.RawMessage(`{}`)} {
+		response = HandleStreaming(buffer, newReq(), arguments)
+		if isError, _ := parseResp(t, response); !isError {
+			t.Errorf("invalid streaming arguments %s succeeded", arguments)
+		}
 	}
 }
 

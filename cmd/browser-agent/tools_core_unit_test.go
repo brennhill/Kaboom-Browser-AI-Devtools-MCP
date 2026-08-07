@@ -40,27 +40,6 @@ func TestToolHandlerRecordsUsageOutcomesAndSessionDepth(t *testing.T) {
 	}
 }
 
-func TestToolResultPostProcessingRejectsAbsentAndMalformedPayloads(t *testing.T) {
-	t.Parallel()
-	for _, raw := range []json.RawMessage{nil, json.RawMessage(`not-json`)} {
-		if result, ok := parseToolResultForPostProcessing(raw); ok || result != nil || isToolResultError(raw) {
-			t.Fatalf("invalid result %q was accepted", raw)
-		}
-	}
-	for _, test := range []struct {
-		raw     json.RawMessage
-		isError bool
-	}{
-		{raw: json.RawMessage(`{"isError":false}`)},
-		{raw: json.RawMessage(`{"isError":true}`), isError: true},
-	} {
-		result, ok := parseToolResultForPostProcessing(test.raw)
-		if !ok || result == nil || result.IsError != test.isError || isToolResultError(test.raw) != test.isError {
-			t.Fatalf("result parsing for %s = %#v, %t", test.raw, result, ok)
-		}
-	}
-}
-
 func TestMCPCaptureConfigured(t *testing.T) {
 	t.Parallel()
 

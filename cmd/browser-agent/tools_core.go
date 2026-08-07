@@ -34,6 +34,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolmodule"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolpostprocess"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolusage"
@@ -179,27 +180,7 @@ func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args j
 		return mcp.JSONRPCResponse{}, false
 	}
 
-	parsedResult, parsedOK := parseToolResultForPostProcessing(resp.Result)
-	resultIsError := false
-	if parsedOK {
-		resultIsError = parsedResult.IsError
-	} else {
-		resultIsError = isToolResultError(resp.Result)
-	}
-
-	// Validate params against tool schema and append warnings for unknown fields.
-	// Skip validation for error responses (already failed, warnings would be noise).
-	if !resultIsError {
-		if inputSchema := h.toolCatalog.Schema(name); inputSchema != nil {
-			if warnings := mcp.ValidateParamsAgainstSchema(args, inputSchema); len(warnings) > 0 {
-				if parsedOK && mcp.AppendWarningsToToolResult(parsedResult, warnings) {
-					resp.Result = mcp.SafeMarshal(parsedResult, string(resp.Result))
-				} else {
-					resp = mcp.AppendWarningsToResponse(resp, warnings)
-				}
-			}
-		}
-	}
+	resp, resultIsError := toolpostprocess.Apply(resp, args, h.toolCatalog.Schema(name))
 
 	// Health metrics: local-only monotonic counters for the MCP health dashboard.
 	// Never beaconed — survives counter resets. Exposed via configure(what='health').
@@ -244,28 +225,6 @@ func buildToolCatalog(h *ToolHandler) *toolcatalog.Catalog {
 		},
 		schema.AllTools(),
 	)
-}
-
-func parseToolResultForPostProcessing(raw json.RawMessage) (*mcp.MCPToolResult, bool) {
-	if len(raw) == 0 {
-		return nil, false
-	}
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(raw, &result); err != nil {
-		return nil, false
-	}
-	return &result, true
-}
-
-func isToolResultError(raw json.RawMessage) bool {
-	if len(raw) == 0 {
-		return false
-	}
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(raw, &result); err != nil {
-		return false
-	}
-	return result.IsError
 }
 
 // Close cancels readiness gates and other in-flight work owned by this handler.

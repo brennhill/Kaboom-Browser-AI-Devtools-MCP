@@ -7,9 +7,39 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
+	configurecontract "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 )
+
+// HandleStreaming configures local alert streaming and reports its bounded
+// queue state.
+func HandleStreaming(alertBuffer *alertbuf.AlertBuffer, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	rewritten, err := configurecontract.RewriteStreamingArgs(args)
+	if err != nil {
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+	}
+	var params struct {
+		Action          string   `json:"action"`
+		Events          []string `json:"events"`
+		ThrottleSeconds int      `json:"throttle_seconds"`
+		URLFilter       string   `json:"url"`
+		SeverityMin     string   `json:"severity_min"`
+	}
+	if response, stop := mcp.ParseArgs(req, rewritten, &params); stop {
+		return response
+	}
+	if response, blocked := toolresp.RequireString(req, params.Action, "action", "Add the 'action' parameter and call again"); blocked {
+		return response
+	}
+	if alertBuffer == nil || alertBuffer.Stream == nil {
+		return mcp.Fail(req, mcp.ErrNotInitialized, "Streaming state is unavailable", "Restart the Kaboom daemon")
+	}
+	result := alertBuffer.Stream.Configure(params.Action, params.Events, params.ThrottleSeconds, params.URLFilter, params.SeverityMin)
+	return mcp.Succeed(req, "Streaming configuration", result)
+}
 
 // HandleSecurityMode handles configure(what="security_mode").
 func HandleSecurityMode(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

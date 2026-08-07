@@ -4,7 +4,7 @@ feature_id: feature-config-profiles
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/toolcatalog/catalog.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
   - cmd/browser-agent/internal/toolconfigure/session.go
+  - cmd/browser-agent/internal/toolconfigure/runtime_modes.go
   - cmd/browser-agent/internal/summarypref/cache.go
   - internal/statediag/collector.go
   - internal/session/snapshot-manager.go

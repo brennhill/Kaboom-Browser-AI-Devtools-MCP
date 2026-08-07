@@ -49,6 +49,37 @@ func TestStructuredErrorSerializesRetryAndRecoveryContract(t *testing.T) {
 	}
 }
 
+func TestEveryCanonicalErrorSerializesRequiredRecoveryFields(t *testing.T) {
+	t.Parallel()
+	for _, code := range []string{
+		ErrInvalidJSON,
+		ErrMissingParam,
+		ErrInvalidParam,
+		ErrUnknownMode,
+		ErrExtTimeout,
+		ErrExtError,
+		ErrInternal,
+		ErrNoData,
+		ErrRateLimited,
+		ErrNotInitialized,
+		ErrCursorExpired,
+		ErrMarshalFailed,
+	} {
+		t.Run(code, func(t *testing.T) {
+			decoded := structuredErrorFromResult(t, StructuredErrorResponse(code, "contract failure", "follow recovery steps"))
+			if decoded["error_code"] != code {
+				t.Fatalf("error_code = %#v, want %q", decoded["error_code"], code)
+			}
+			if decoded["recovery_playbook"] != "follow recovery steps" {
+				t.Fatalf("recovery_playbook = %#v", decoded["recovery_playbook"])
+			}
+			if _, exists := decoded["retryable"]; !exists {
+				t.Fatalf("retryable missing: %#v", decoded)
+			}
+		})
+	}
+}
+
 func TestStructuredErrorOmitsUnsetContext(t *testing.T) {
 	t.Parallel()
 	plain := structuredErrorFromResult(t, StructuredErrorResponse(ErrInternal, "Internal", "Do not retry"))

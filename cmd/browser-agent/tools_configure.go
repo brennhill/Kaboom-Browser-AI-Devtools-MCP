@@ -188,7 +188,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return handleConfigureAuditLog(h.auditTrail, h.auditRecorder, req, args)
 		},
 		"streaming": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return handleConfigureStreaming(h.alertBuffer, req, args)
+			return toolconfigure.HandleStreaming(h.alertBuffer, req, args)
 		},
 		"test_boundary_start": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return h.testBoundaries.Start(req, args)
@@ -636,38 +636,6 @@ func handleConfigureAuditLog(
 			"status": "ok", "operation": result.Operation, "entries": result.Entries, "count": result.Count,
 		})
 	}
-}
-
-func handleConfigureStreaming(
-	alertBuffer *alertbuf.AlertBuffer,
-	req mcp.JSONRPCRequest,
-	args json.RawMessage,
-) mcp.JSONRPCResponse {
-	rewritten, err := cfg.RewriteStreamingArgs(args)
-	if err != nil {
-		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
-	}
-	var params struct {
-		Action          string   `json:"action"`
-		Events          []string `json:"events"`
-		ThrottleSeconds int      `json:"throttle_seconds"`
-		URLFilter       string   `json:"url"`
-		SeverityMin     string   `json:"severity_min"`
-	}
-	if resp, stop := mcp.ParseArgs(req, rewritten, &params); stop {
-		return resp
-	}
-	if resp, blocked := toolresp.RequireString(req, params.Action, "action", "Add the 'action' parameter and call again"); blocked {
-		return resp
-	}
-	result := alertBuffer.Stream.Configure(
-		params.Action,
-		params.Events,
-		params.ThrottleSeconds,
-		params.URLFilter,
-		params.SeverityMin,
-	)
-	return mcp.Succeed(req, "Streaming configuration", result)
 }
 
 func handleConfigureRestart(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {

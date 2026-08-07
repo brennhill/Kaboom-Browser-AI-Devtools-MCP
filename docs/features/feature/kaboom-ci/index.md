@@ -4,7 +4,7 @@ feature_id: feature-kaboom-ci
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - Makefile
   - .github/workflows/architecture-validation.yml
@@ -41,7 +41,9 @@ test_paths:
   - scripts/docs/features/check-feature-bundles.test.mjs
   - cmd/browser-agent/tools_schema_parity_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
-  - cmd/browser-agent/tools_contract_enforcement_test.go
+  - cmd/browser-agent/internal/toolpostprocess/postprocess_test.go
+  - internal/mcp/errors_test.go
+  - internal/queries/dispatcher_test.go
   - tests/cli/runtime/cli-integration.test.cjs
   - tests/cli/runtime/config.test.cjs
   - tests/cli/runtime/doctor.test.cjs

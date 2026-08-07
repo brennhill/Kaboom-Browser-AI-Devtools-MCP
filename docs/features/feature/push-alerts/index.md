@@ -4,7 +4,7 @@ feature_id: feature-push-alerts
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - cmd/browser-agent/internal/toolconfigure/clear.go
+  - cmd/browser-agent/internal/toolconfigure/runtime_modes.go
   - internal/streaming/stream.go
   - internal/streaming/stream_emit.go
   - internal/streaming/types.go
@@ -30,7 +31,7 @@ test_paths:
   - internal/push/inbox_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
   - cmd/browser-agent/tools_observe_unit_test.go
-  - cmd/browser-agent/tools_contract_test.go
+  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

@@ -3,7 +3,7 @@
   "files": {
     "cmd/browser-agent/handler.go": {
       "mutable_globals": 0,
-      "exports": 5
+      "exports": 4
     },
     "cmd/browser-agent/internal/appruntime/runtime.go": {
       "mutable_globals": 0,
@@ -259,7 +259,7 @@
     },
     "cmd/browser-agent/internal/logstore/persistence.go": {
       "mutable_globals": 0,
-      "exports": 3
+      "exports": 4
     },
     "cmd/browser-agent/internal/logstore/seed.go": {
       "mutable_globals": 0,
@@ -416,6 +416,10 @@
     "cmd/browser-agent/internal/sequencehandler/replay.go": {
       "mutable_globals": 0,
       "exports": 1
+    },
+    "cmd/browser-agent/internal/startupconfig/paths.go": {
+      "mutable_globals": 0,
+      "exports": 3
     },
     "cmd/browser-agent/internal/summarypref/cache.go": {
       "mutable_globals": 0,
@@ -631,7 +635,7 @@
     },
     "cmd/browser-agent/internal/toolconfigure/runtime_modes.go": {
       "mutable_globals": 0,
-      "exports": 4
+      "exports": 5
     },
     "cmd/browser-agent/internal/toolconfigure/session.go": {
       "mutable_globals": 0,
@@ -769,6 +773,10 @@
       "mutable_globals": 0,
       "exports": 1
     },
+    "cmd/browser-agent/internal/toolpostprocess/postprocess.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/toolrecording/handler.go": {
       "mutable_globals": 0,
       "exports": 11
@@ -788,6 +796,10 @@
     "cmd/browser-agent/internal/toolrouting/routing.go": {
       "mutable_globals": 0,
       "exports": 4
+    },
+    "cmd/browser-agent/internal/toolusage/key.go": {
+      "mutable_globals": 0,
+      "exports": 1
     },
     "cmd/browser-agent/internal/versioncheck/checker.go": {
       "mutable_globals": 0,
