@@ -187,6 +187,21 @@ func TestEnqueuePendingQueryFailsLoudWithoutDiscardingAcceptedCommands(t *testin
 	}
 }
 
+func TestEnqueuePendingQueryRejectsConnectedCommandContractSkew(t *testing.T) {
+	captured := capture.NewCapture()
+	defer captured.Close()
+	capturefixture.ConnectWithCommandContract(captured, "sha256:stale-extension")
+
+	response, blocked := New(Deps{Capture: captured}).EnqueuePendingQuery(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+		queries.PendingQuery{Type: "performance_trace", CorrelationID: "skewed"}, time.Second,
+	)
+	result := decodeToolResult(t, response)
+	if !blocked || !result.IsError || !strings.Contains(result.Content[0].Text, "command_contract_mismatch") || captured.Queries().QueueDepth() != 0 {
+		t.Fatalf("contract-skew response = blocked:%t result:%#v depth:%d", blocked, result, captured.Queries().QueueDepth())
+	}
+}
+
 func TestFormatCommandResultPreservesCancellationDiagnosis(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()

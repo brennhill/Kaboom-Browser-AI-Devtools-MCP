@@ -15,6 +15,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/commandcontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
@@ -122,7 +123,7 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 }
 
 func runDoctorChecks(cap *capture.Capture, runtime doctorCommandRuntime) []DoctorCheck {
-	checks := make([]DoctorCheck, 0, 11)
+	checks := make([]DoctorCheck, 0, 12)
 	snap := healthreader.New(cap).Snapshot()
 
 	// 1. Extension connectivity.
@@ -140,6 +141,22 @@ func runDoctorChecks(cap *capture.Capture, runtime doctorCommandRuntime) []Docto
 			Name: "extension_connected", Status: "fail",
 			Detail: "Extension is not connected",
 			Fix:    "Open the Kaboom extension popup and verify it shows 'Connected'. If not, click the extension icon or reload the page.",
+		})
+	}
+
+	// A release version alone cannot distinguish two local builds made between
+	// version bumps. The generated command registry identity prevents those
+	// builds from silently losing or misrouting extension commands.
+	loadedContract := cap.Extension().CommandContractID()
+	if cap.Extension().IsExtensionConnected() && loadedContract == commandcontract.ID {
+		checks = append(checks, DoctorCheck{
+			Name: "command_contract", Status: "pass", Detail: "Daemon and extension command contracts match",
+		})
+	} else if cap.Extension().IsExtensionConnected() {
+		checks = append(checks, DoctorCheck{
+			Name: "command_contract", Status: "fail",
+			Detail: "The loaded extension command contract does not match this daemon build",
+			Fix:    "Reload the Kaboom extension so it loads the files packaged with this daemon, then rerun Doctor.",
 		})
 	}
 

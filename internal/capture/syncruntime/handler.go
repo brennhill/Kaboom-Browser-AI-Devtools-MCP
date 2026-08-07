@@ -487,6 +487,7 @@ func (h *Handler) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bo
 	if req.ExtensionVersion != "" {
 		h.runtime.SetExtensionVersion(req.ExtensionVersion)
 	}
+	h.runtime.setCommandContractID(req.CommandContractID)
 }
 
 // GetPendingQueriesDisconnectAware reconciles extension liveness before

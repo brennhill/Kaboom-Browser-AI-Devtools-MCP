@@ -45,6 +45,7 @@ type runtimeState struct {
 	connectionGeneration   uint64    // Monotonic daemon-owned generation for the active extension runtime.
 	lastExtensionConnected bool      // Previous connection state for transition detection.
 	extensionVersion       string    // Last reported extension version from sync request.
+	commandContractID      string    // Generated identity of the loaded extension command registry.
 	serverVersion          string    // Daemon version used for extension compatibility checks.
 
 	// Disconnect detection (P0-1 hardening)
@@ -137,6 +138,18 @@ func (r *Runtime) SetExtensionVersion(version string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.state.extensionVersion = version
+}
+
+func (r *Runtime) setCommandContractID(id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.commandContractID = id
+}
+
+func (r *Runtime) CommandContractID() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.commandContractID
 }
 
 // SetServerVersion stores the daemon version used for extension compatibility checks.

@@ -66,6 +66,7 @@ code_paths:
   - src/popup/recording/recording.ts
   - src/offscreen/recording-worker.ts
   - cmd/browser-agent/internal/health/doctor_live_checks.go
+  - internal/commandcontract/generated.go
   - cmd/browser-agent/internal/daemonlife/
   - cmd/browser-agent/internal/screenrec/
   - cmd/browser-agent/internal/sequencehandler/
@@ -91,6 +92,7 @@ test_paths:
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/system-doctor/system-doctor-ui.test.js
   - cmd/browser-agent/internal/health/health_coverage_test.go
+  - cmd/browser-agent/internal/asynccommand/handler_test.go
   - cmd/browser-agent/internal/health/health_test.go
   - internal/statediag/collector_test.go
   - tests/extension/popup-shell/popup-features.test.js

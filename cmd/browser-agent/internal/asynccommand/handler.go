@@ -16,6 +16,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asyncresult"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/commandcontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -95,6 +96,13 @@ func (h *Handler) AttachTransientElements(responseData map[string]any, since tim
 }
 
 func (h *Handler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
+	if h.deps.Capture.Extension().IsExtensionConnected() && h.deps.Capture.Extension().CommandContractID() != commandcontract.ID {
+		return mcp.Fail(req, mcp.ErrExtError,
+			"command_contract_mismatch: the loaded extension cannot safely execute this daemon's commands",
+			"Reload the Kaboom extension, then retry after System Doctor reports a matching command contract.",
+			h.deps.DiagnosticHint,
+		), true
+	}
 	_, err := h.deps.Capture.Queries().CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
 	if err == nil {
 		return mcp.JSONRPCResponse{}, false

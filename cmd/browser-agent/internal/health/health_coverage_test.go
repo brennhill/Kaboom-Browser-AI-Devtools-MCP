@@ -482,6 +482,9 @@ func TestRunDoctorChecks_HealthyState(t *testing.T) {
 	if got := findCheck(t, checks, "extension_connected").Status; got != "pass" {
 		t.Errorf("extension_connected: want pass, got %s", got)
 	}
+	if got := findCheck(t, checks, "command_contract").Status; got != "pass" {
+		t.Errorf("command_contract: want pass, got %s", got)
+	}
 	if got := findCheck(t, checks, "pilot_enabled").Status; got != "pass" {
 		t.Errorf("pilot_enabled: want pass, got %s", got)
 	}
@@ -493,6 +496,16 @@ func TestRunDoctorChecks_HealthyState(t *testing.T) {
 	}
 	if got := findCheck(t, checks, "command_queue").Status; got != "pass" {
 		t.Errorf("command_queue: want pass, got %s", got)
+	}
+}
+
+func TestRunDoctorChecks_RejectsSameVersionCommandContractSkew(t *testing.T) {
+	c := newTestCapture(t)
+	capturefixture.ConnectWithCommandContract(c, "sha256:stale-extension")
+
+	check := findCheck(t, RunDoctorChecks(c), "command_contract")
+	if check.Status != "fail" || !strings.Contains(check.Detail, "does not match") || !strings.Contains(check.Fix, "Reload") {
+		t.Fatalf("command contract check = %#v", check)
 	}
 }
 

@@ -81,6 +81,27 @@ func TestHandleSync_BasicRequest(t *testing.T) {
 	}
 }
 
+func TestHandleSync_StoresAndClearsCommandContractIdentity(t *testing.T) {
+	t.Parallel()
+	cap := newTestState()
+	defer cap.Close()
+
+	runSyncRequest(t, cap, SyncRequest{
+		ExtSessionID:      "contract-session",
+		CommandContractID: "sha256:loaded-contract",
+	})
+	if got := cap.Extension().CommandContractID(); got != "sha256:loaded-contract" {
+		t.Fatalf("CommandContractID() = %q, want loaded contract", got)
+	}
+
+	// Missing identity means the currently loaded extension predates the
+	// contract handshake; never retain a matching value from an older sync.
+	runSyncRequest(t, cap, SyncRequest{ExtSessionID: "contract-session"})
+	if got := cap.Extension().CommandContractID(); got != "" {
+		t.Fatalf("CommandContractID() = %q after absent identity, want empty", got)
+	}
+}
+
 func TestHandleSync_RejectsSupersededConnectionGeneration(t *testing.T) {
 	t.Parallel()
 	cap := newTestState()

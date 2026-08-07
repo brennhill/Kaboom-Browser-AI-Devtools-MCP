@@ -19,6 +19,9 @@ code_paths:
   - scripts/uat/runners/test-js-sharded.sh
   - scripts/build/run-go-integration.sh
   - scripts/build/run-go-coverage.sh
+  - scripts/build/generate-command-contract.js
+  - internal/commandcontract/generated.go
+  - src/types/runtime/command-contract.ts
   - scripts/uat/orchestration/uat-result-lib.sh
   - scripts/tests/framework/framework.sh
   - scripts/tests/framework/uat-artifacts.sh
@@ -29,6 +32,7 @@ code_paths:
   - scripts/contracts/check-architecture-boundaries.cjs
   - scripts/quality/contracts/check-dormant-tests.sh
   - .architecture-boundaries.json
+  - .go-architecture-baseline.json
   - scripts/uat/runners/test-all-tools-comprehensive.sh
   - scripts/maintenance/cleanup-test-daemons.sh
   - cmd/browser-agent/server.go
@@ -39,9 +43,11 @@ code_paths:
   - internal/statefault/fault.go
   - internal/statefault/store.go
   - internal/capturefixture/sync.go
+  - cmd/browser-agent/internal/asynccommand/handler.go
 test_paths:
   - scripts/uat/orchestration/uat-result-lib.test.mjs
   - cmd/browser-agent/internal/integrationtest/harness_test.go
+  - cmd/browser-agent/internal/asynccommand/handler_test.go
   - tests/cli/contracts/smoke-layout-contract.test.cjs
   - tests/extension/contracts/tooling-contracts.test.js
   - cmd/browser-agent/integration/bridge/faststart_extended_test.go
@@ -202,6 +208,11 @@ unsafe mutation methods that previously compiled into `internal/capture`.
   their prerequisite baseline. The connected preflight uses isolated daemon state
   so malformed user persistence cannot make the test environment
   nondeterministic; production persistence recovery is validated separately.
+- The extension's literal background command registrations generate one shared
+  SHA-256 command-contract identity for Go and TypeScript. Every sync reports
+  that identity, and CI rejects stale generated outputs. A connected mismatch
+  fails before queueing instead of allowing a command to disappear inside a
+  same-version daemon/extension build skew.
 - Packaged corruption recovery UAT builds and installs the public npm launcher
   plus its current-platform binary package, starts that artifact with isolated
   corrupt fixtures for every daemon-owned state family, and verifies startup,

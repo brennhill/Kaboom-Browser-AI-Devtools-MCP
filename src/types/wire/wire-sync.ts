@@ -18,6 +18,7 @@ export interface SyncRequest {
   readonly ext_session_id: string
   readonly connection_generation?: number
   readonly extension_version?: string
+  readonly command_contract_id?: string
   readonly settings?: SyncSettings
   readonly extension_logs?: readonly ExtensionLog[]
   readonly last_command_ack?: string

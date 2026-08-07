@@ -13,6 +13,7 @@ type SyncRequest struct {
 	ExtSessionID         string               `json:"ext_session_id"`
 	ConnectionGeneration uint64               `json:"connection_generation,omitempty"`
 	ExtensionVersion     string               `json:"extension_version,omitempty"`
+	CommandContractID    string               `json:"command_contract_id,omitempty"`
 	Settings             *SyncSettings        `json:"settings,omitempty"`
 	ExtensionLogs        []types.ExtensionLog `json:"extension_logs,omitempty"`
 	LastCommandAck       string               `json:"last_command_ack,omitempty"`

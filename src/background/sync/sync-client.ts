@@ -15,6 +15,7 @@ import { buildDaemonJSONRequestInit } from '../../lib/daemon-http.js'
 import { drainUIFeatures, restoreUIFeatures } from '../ui/ui-usage-tracker.js'
 import { getServerInstallId, updateServerInstallId } from './install-identity.js'
 import { setConnectionGeneration } from '../runtime-state/connection-generation.js'
+import { EXTENSION_COMMAND_CONTRACT_ID } from '../../types/runtime/command-contract.js'
 import type { ExtensionLog } from '../../types/wire/wire-extension-log.js'
 import type {
   SyncCommand,
@@ -240,6 +241,7 @@ export class SyncClient {
         ext_session_id: this.extSessionId,
         connection_generation: this.connectionGeneration || undefined,
         extension_version: this.extensionVersion || undefined,
+        command_contract_id: EXTENSION_COMMAND_CONTRACT_ID,
         settings,
         in_progress: this.getInProgressSnapshot(),
         ...(logs.length > 0 ? { extension_logs: logs } : {}),

@@ -11,6 +11,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/commandcontract"
 )
 
 // Sync applies an authoritative extension settings snapshot through /sync.
@@ -67,9 +68,13 @@ func currentSettings(state *capture.Capture) syncruntime.SyncSettings {
 	}
 }
 
-// Connect records a heartbeat without changing the effective extension state.
-func Connect(state *capture.Capture) {
-	send(state, syncruntime.SyncRequest{ExtSessionID: "capture-fixture"})
+// Connect records a current-build heartbeat without changing effective state.
+func Connect(state *capture.Capture) { ConnectWithCommandContract(state, commandcontract.ID) }
+
+// ConnectWithCommandContract models an extension build through the canonical
+// sync boundary. It exists for deterministic same-version skew tests.
+func ConnectWithCommandContract(state *capture.Capture, contractID string) {
+	send(state, syncruntime.SyncRequest{ExtSessionID: "capture-fixture", CommandContractID: contractID})
 }
 
 // Disconnect records a transport loss without fabricating stale wall time.

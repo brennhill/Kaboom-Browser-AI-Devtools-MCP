@@ -32,6 +32,7 @@ code_paths:
   - internal/queries/dispatcher_queries.go
   - internal/capture/syncruntime/handler.go
   - internal/capture/syncruntime/wire_sync.go
+  - internal/commandcontract/generated.go
   - internal/capturefixture/sync.go
   - internal/circuit/breaker.go
   - internal/debuglog/logger.go
@@ -68,6 +69,7 @@ code_paths:
   - src/background/sync/batcher-instances.ts
   - src/background/sync/sync-manager.ts
   - src/background/sync/sync-client.ts
+  - src/types/runtime/command-contract.ts
   - src/types/wire/wire-sync.ts
   - src/types/wire/wire-extension-log.ts
   - src/background/sync/install-identity.ts
@@ -106,6 +108,7 @@ test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
   - internal/capture/syncruntime/sync_test.go
+  - tests/extension/sync/sync-client.test.js
   - internal/capture/syncruntime/sync_test_helpers_test.go
   - internal/capturefixture/sync_test.go
   - internal/capture/syncruntime/sync_command_lifecycle_test.go

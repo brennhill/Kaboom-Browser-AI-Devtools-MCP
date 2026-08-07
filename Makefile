@@ -23,14 +23,14 @@ PLATFORMS := \
 
 .PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-performance test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly mutation-test \
 	dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
-	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-ts-json-casing check-openapi-types check-invariants check-schema ci \
+	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-command-contract check-ts-json-casing check-openapi-types check-invariants check-schema ci \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check install-security-tools pre-commit verify-all npm-binaries validate-semver \
 	verify-llm check-folder-size check-structure check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture go-architecture-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
-	generate-wire-types generate-dom-primitives \
+	generate-wire-types generate-command-contract generate-dom-primitives \
 	site-dev site-build site-preview \
 	$(PLATFORMS)
 
@@ -61,6 +61,9 @@ clean:
 generate-wire-types:
 	@node scripts/build/generate-wire-types.js
 
+generate-command-contract:
+	@node scripts/build/generate-command-contract.js
+
 generate-dom-primitives:
 	@node scripts/build/generate-dom-primitives.js
 
@@ -68,7 +71,7 @@ generate-draw-mode:
 	@node scripts/build/generate-draw-mode.js
 
 # Compile TypeScript to JavaScript (REQUIRED before tests)
-compile-ts: validate-versions generate-wire-types generate-dom-primitives generate-draw-mode
+compile-ts: validate-versions generate-wire-types generate-command-contract generate-dom-primitives generate-draw-mode
 	@echo "=== Compiling TypeScript ==="
 	@npx tsc
 	@if [ ! -f extension/background/init.js ]; then \
@@ -397,7 +400,10 @@ check-openapi-types:
 			echo "OpenAPI TypeScript output is stale; regenerate src/generated/openapi-types.ts." >&2; exit 1; \
 		}
 
-check-invariants: check-wire-drift check-ts-json-casing check-openapi-types
+check-command-contract:
+	@node scripts/build/generate-command-contract.js --check
+
+check-invariants: check-wire-drift check-command-contract check-ts-json-casing check-openapi-types
 
 check-schema:
 	@npm run docs:lint:reference-schema-sync

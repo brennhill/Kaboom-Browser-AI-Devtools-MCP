@@ -3423,6 +3423,9 @@
           "extension_version": {
             "type": "string"
           },
+          "command_contract_id": {
+            "type": "string"
+          },
           "settings": {
             "$ref": "#/components/schemas/SyncSettings"
           },

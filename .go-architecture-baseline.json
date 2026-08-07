@@ -1035,7 +1035,7 @@
     },
     "internal/capture/syncruntime/runtime.go": {
       "mutable_globals": 0,
-      "exports": 41
+      "exports": 42
     },
     "internal/capture/syncruntime/wire_sync.go": {
       "mutable_globals": 0,
@@ -1063,7 +1063,11 @@
     },
     "internal/capturefixture/sync.go": {
       "mutable_globals": 0,
-      "exports": 8
+      "exports": 9
+    },
+    "internal/commandcontract/generated.go": {
+      "mutable_globals": 0,
+      "exports": 1
     },
     "internal/circuit/breaker.go": {
       "mutable_globals": 0,

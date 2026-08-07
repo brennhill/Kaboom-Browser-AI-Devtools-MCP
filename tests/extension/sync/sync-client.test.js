@@ -325,7 +325,7 @@ describe('SyncClient — Request building', () => {
     client.stop()
   })
 
-  test('should send ext_session_id and extension_version in request body', async () => {
+  test('should send session, version, and generated command contract identity', async () => {
     client.start()
     await tick(50)
 
@@ -333,6 +333,7 @@ describe('SyncClient — Request building', () => {
     const body = JSON.parse(mockFetch.mock.calls[0].arguments[1].body)
     assert.strictEqual(body.ext_session_id, 'sess-1')
     assert.strictEqual(body.extension_version, '6.0.3')
+    assert.match(body.command_contract_id, /^sha256:[a-f0-9]{64}$/)
   })
 
   test('should include settings from callback', async () => {
