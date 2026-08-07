@@ -252,7 +252,6 @@ func TestQueueStateNavigation_QueuesBrowserAction(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 	env.enablePilot(t)
-	simulateExtensionConnection(t, env)
 
 	stateData := map[string]any{
 		"url":   "https://example.com/page",
@@ -379,7 +378,6 @@ func TestQueueStateNavigation_CorrelationIDHasNavPrefix(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 	env.enablePilot(t)
-	simulateExtensionConnection(t, env)
 
 	stateData := map[string]any{
 		"url": "https://example.com",

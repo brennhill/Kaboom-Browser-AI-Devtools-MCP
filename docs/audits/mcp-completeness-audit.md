@@ -352,16 +352,16 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 |--------|---------------------|-----------------|
 | highlight | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
 | subtitle | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
-| save_state | YES | cmd/browser-agent/internal/toolinteract/interactstate/state_test.go, tools_interact_state_test.go |
-| load_state | YES | tools_interact_state_test.go |
+| save_state | YES | cmd/browser-agent/internal/toolinteract/interactstate/state_test.go |
+| load_state | YES | cmd/browser-agent/internal/toolinteract/interactstate/state_test.go |
 | list_states | YES | cmd/browser-agent/internal/toolinteract/interactstate/state_test.go, integration_test.go |
 | delete_state | YES | cmd/browser-agent/internal/toolinteract/interactstate/state_test.go |
 | execute_js | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
-| navigate | YES | tools_interact_nav_test.go, handler_consistency_test.go |
-| refresh | YES | tools_interact_nav_test.go, handler_consistency_test.go |
-| back | YES | tools_interact_nav_test.go, handler_consistency_test.go |
-| forward | YES | tools_interact_nav_test.go, handler_consistency_test.go |
-| new_tab | YES | tools_interact_nav_test.go, handler_consistency_test.go |
+| navigate | YES | interact_browser_test.go, handler_consistency_test.go |
+| refresh | YES | interact_browser_test.go, handler_consistency_test.go |
+| back | YES | interact_browser_test.go, handler_consistency_test.go |
+| forward | YES | interact_browser_test.go, handler_consistency_test.go |
+| new_tab | YES | interact_browser_test.go, handler_consistency_test.go |
 | click | YES | tools_interact_dom_test.go, handler_consistency_test.go |
 | type | YES | tools_interact_dom_test.go, handler_consistency_test.go |
 | select | YES | tools_interact_dom_test.go |

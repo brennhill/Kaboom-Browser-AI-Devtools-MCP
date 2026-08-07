@@ -41,16 +41,11 @@ func TestHandleNavigate_Success(t *testing.T) {
 	}
 }
 
-func TestHandleNavigate_MissingURL(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	resp := h.Handle("navigate", testReq(), json.RawMessage(`{}`))
-	assertErr(t, resp, mcp.ErrMissingParam)
-}
-
-func TestHandleNavigate_InvalidJSON(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	resp := h.Handle("navigate", testReq(), json.RawMessage(`{bad`))
-	assertErr(t, resp, mcp.ErrInvalidJSON)
+func TestHandleNavigateValidation(t *testing.T) {
+	for _, testCase := range []struct{ args, code string }{{`{}`, mcp.ErrMissingParam}, {`{bad`, mcp.ErrInvalidJSON}} {
+		h, _ := newFakeBrowserActions(t)
+		assertErr(t, h.Handle("navigate", testReq(), json.RawMessage(testCase.args)), testCase.code)
+	}
 }
 
 func TestHandleNavigate_PilotBlocked(t *testing.T) {
@@ -110,17 +105,11 @@ func TestHandleBackForward(t *testing.T) {
 
 func TestHandleNewTab_Success(t *testing.T) {
 	h, fs := newFakeBrowserActions(t)
-	resp := h.Handle("new_tab", testReq(), json.RawMessage(`{"url":"https://example.org"}`))
-	assertOK(t, resp)
-	if fs.enqueuedCount() != 1 {
-		t.Fatalf("expected 1 enqueue, got %d", fs.enqueuedCount())
-	}
-}
-
-func TestHandleNewTab_NoURL(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	// No URL is valid for new_tab (opens blank).
+	assertOK(t, h.Handle("new_tab", testReq(), json.RawMessage(`{"url":"https://example.org"}`)))
 	assertOK(t, h.Handle("new_tab", testReq(), json.RawMessage(`{}`)))
+	if fs.enqueuedCount() != 2 {
+		t.Fatalf("expected URL and blank tab enqueues, got %d", fs.enqueuedCount())
+	}
 }
 
 func TestHandleNewTab_InvalidJSON(t *testing.T) {
@@ -128,40 +117,51 @@ func TestHandleNewTab_InvalidJSON(t *testing.T) {
 	assertErr(t, h.Handle("new_tab", testReq(), json.RawMessage(`nope`)), mcp.ErrInvalidJSON)
 }
 
-func TestHandleSwitchTab_MissingTarget(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	resp := h.Handle("switch_tab", testReq(), json.RawMessage(`{}`))
-	assertErr(t, resp, mcp.ErrMissingParam)
-}
-
-func TestHandleSwitchTab_NegativeIndex(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	resp := h.Handle("switch_tab", testReq(), json.RawMessage(`{"tab_index":-1}`))
-	assertErr(t, resp, mcp.ErrInvalidParam)
-}
-
-func TestHandleSwitchTab_Success(t *testing.T) {
-	h, fs := newFakeBrowserActions(t)
-	resp := h.Handle("switch_tab", testReq(), json.RawMessage(`{"tab_id":5}`))
-	assertOK(t, resp)
-	if fs.enqueuedCount() != 1 {
-		t.Fatalf("expected 1 enqueue, got %d", fs.enqueuedCount())
+func TestHandleSwitchTabValidation(t *testing.T) {
+	for _, testCase := range []struct{ args, code string }{{`{}`, mcp.ErrMissingParam}, {`{"tab_index":-1}`, mcp.ErrInvalidParam}} {
+		h, _ := newFakeBrowserActions(t)
+		assertErr(t, h.Handle("switch_tab", testReq(), json.RawMessage(testCase.args)), testCase.code)
 	}
 }
 
-func TestHandleSwitchTab_AppliesTrackingOnComplete(t *testing.T) {
-	h, fs := newFakeBrowserActions(t)
-	// Complete the switch_tab command so applySwitchTabTracking updates the tracked tab.
-	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
-		fs.cap.Queries().RegisterCommand(correlationID, correlationID, time.Minute)
-		fs.cap.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true,"tab_id":42,"url":"https://switched.example","title":"Switched"}`), "")
-		return mcp.Succeed(req, queuedSummary, map[string]any{"status": "complete", "correlation_id": correlationID})
+func TestHandleSwitchTabTrackingPolicy(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name, args, status, result string
+		wantTab                    int
+		wantURL                    string
+	}{
+		{"success retargets", `{"tab_id":42}`, "complete", `{"success":true,"tab_id":42,"url":"https://switched.example","title":"Switched"}`, 42, "https://switched.example"},
+		{"set tracked false preserves target", `{"tab_id":42,"set_tracked":false}`, "complete", `{"success":true,"tab_id":42,"url":"https://switched.example"}`, 1, "https://example.com/page"},
+		{"failed command preserves target", `{"tab_id":42}`, "error", `{"success":false,"error":"tab_not_found"}`, 1, "https://example.com/page"},
+		{"zero tab preserves target", `{"tab_id":42}`, "complete", `{"success":true,"tab_id":0,"url":"https://invalid.example"}`, 1, "https://example.com/page"},
+		{"missing tab preserves target", `{"tab_id":42}`, "complete", `{"success":true,"url":"https://invalid.example"}`, 1, "https://example.com/page"},
+		{"background defers retarget", `{"tab_id":42,"background":true}`, "pending", "", 1, "https://example.com/page"},
 	}
-	resp := h.Handle("switch_tab", testReq(), json.RawMessage(`{"tab_id":42}`))
-	assertOK(t, resp)
-	_, tabID, tabURL := fs.cap.Extension().GetTrackingStatus()
-	if tabID != 42 || tabURL != "https://switched.example" {
-		t.Fatalf("tracked tab not updated: tab=%d url=%s", tabID, tabURL)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			h, state := newFakeBrowserActions(t)
+			state.waitFn = func(req mcp.JSONRPCRequest, correlationID string, _ json.RawMessage, summary string) mcp.JSONRPCResponse {
+				if testCase.status == "pending" {
+					return mcp.Succeed(req, summary, map[string]any{"status": "queued", "correlation_id": correlationID})
+				}
+				state.cap.Queries().RegisterCommand(correlationID, correlationID, time.Minute)
+				commandError := ""
+				if testCase.status == "error" {
+					commandError = "tab_not_found"
+				}
+				state.cap.Queries().ApplyCommandResult(correlationID, testCase.status, json.RawMessage(testCase.result), commandError)
+				if testCase.status == "error" {
+					return mcp.Fail(req, mcp.ErrExtError, "tab_not_found", "choose another tab")
+				}
+				return mcp.Succeed(req, summary, map[string]any{"status": "complete", "correlation_id": correlationID})
+			}
+			h.Handle("switch_tab", testReq(), json.RawMessage(testCase.args))
+			_, tabID, tabURL := state.cap.Extension().GetTrackingStatus()
+			if tabID != testCase.wantTab || tabURL != testCase.wantURL {
+				t.Fatalf("tracked tab=(%d,%q), want (%d,%q)", tabID, tabURL, testCase.wantTab, testCase.wantURL)
+			}
+		})
 	}
 }
 

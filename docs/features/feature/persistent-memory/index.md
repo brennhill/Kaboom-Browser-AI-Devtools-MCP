@@ -19,7 +19,7 @@ code_paths:
   - internal/tools/configure/capabilities/modespecs_configure.go
 test_paths:
   - cmd/browser-agent/tools_interact_helpers_test.go
-  - cmd/browser-agent/tools_interact_state_test.go
+  - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - cmd/browser-agent/tools_test_helpers_test.go
   - tests/architecture/user-state-loaders.test.cjs
   - internal/persistence/persistence_branches_test.go

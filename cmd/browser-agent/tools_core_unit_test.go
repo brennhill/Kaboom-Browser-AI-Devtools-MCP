@@ -6,12 +6,40 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
+
+func TestNewToolHandlerUsesServerSessionProjectPath(t *testing.T) {
+	t.Parallel()
+	projectPath := t.TempDir()
+	server, err := NewServer(filepath.Join(t.TempDir(), "test.jsonl"), 10)
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	t.Cleanup(server.Close)
+	server.sessionProjectPath = projectPath
+	handler := NewToolHandler(server, capture.NewCapture()).tools.Executor.(*ToolHandler)
+	if handler.sessionStoreImpl == nil {
+		t.Fatal("session store was not initialized")
+	}
+	if err := handler.sessionStoreImpl.Save("saved_states", "isolated", []byte(`{"ok":true}`)); err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+	projectDir, err := state.ProjectDir(projectPath)
+	if err != nil {
+		t.Fatalf("ProjectDir() error = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(projectDir, "saved_states", "isolated.json")); err != nil {
+		t.Fatalf("isolated state missing: %v", err)
+	}
+}
 
 func TestToolHandlerRecordsUsageOutcomesAndSessionDepth(t *testing.T) {
 	t.Parallel()

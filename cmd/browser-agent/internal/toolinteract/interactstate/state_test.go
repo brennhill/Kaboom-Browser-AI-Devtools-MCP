@@ -267,6 +267,57 @@ func TestCaptureState_StatusMapping(t *testing.T) {
 	}
 }
 
+func TestStateSnapshotRoundTripPreservesRestorableBrowserState(t *testing.T) {
+	h, f := newHandler(t)
+	f.cmdFound = true
+	f.cmdResult = &queries.CommandResult{Status: "complete", Result: json.RawMessage(`{
+		"success":true,
+		"result":{
+			"form_values":{"#email":"person@example.test"},
+			"scroll_position":{"x":0,"y":150},
+			"local_storage":{"theme":"dark"},
+			"session_storage":{"cart_id":"abc123"},
+			"cookies":{"prefs":"compact"}
+		}
+	}`)}
+	saved := payload(t, h.HandleStateSave(req(), json.RawMessage(`{"snapshot_name":"browser-state"}`)))
+	if saved["state_capture"] != act.StateCaptureStatusCaptured {
+		t.Fatalf("state_capture = %v", saved["state_capture"])
+	}
+
+	f.enqueued = nil
+	loaded := payload(t, h.HandleStateLoad(req(), json.RawMessage(`{"snapshot_name":"browser-state"}`)))
+	stateData, ok := loaded["state"].(map[string]any)
+	if !ok {
+		t.Fatalf("loaded state = %#v", loaded["state"])
+	}
+	for _, key := range []string{"form_values", "scroll_position", "local_storage", "session_storage", "cookies"} {
+		if stateData[key] == nil {
+			t.Fatalf("loaded state omitted %q: %#v", key, stateData)
+		}
+	}
+	if loaded["state_restore"] != act.StateRestoreStatusQueued || len(f.enqueued) != 1 || f.enqueued[0].Type != "execute" {
+		t.Fatalf("restore result=%#v enqueued=%#v", loaded, f.enqueued)
+	}
+	var restore map[string]any
+	if err := json.Unmarshal(f.enqueued[0].Params, &restore); err != nil {
+		t.Fatalf("decode restore payload: %v", err)
+	}
+	script, ok := restore["script"].(string)
+	if !ok {
+		t.Fatalf("restore script = %#v", restore["script"])
+	}
+	for _, want := range []string{
+		`const lsData = {"theme":"dark"}`,
+		`const ssData = {"cart_id":"abc123"}`,
+		`const cookieData = {"prefs":"compact"}`,
+	} {
+		if !strings.Contains(script, want) {
+			t.Fatalf("restore script omitted %q: %s", want, script)
+		}
+	}
+}
+
 func TestHandleStateLoad_NotFound(t *testing.T) {
 	h, _ := newHandler(t)
 	resp := h.HandleStateLoad(req(), json.RawMessage(`{"snapshot_name":"absent"}`))

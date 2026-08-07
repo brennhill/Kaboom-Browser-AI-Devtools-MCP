@@ -452,7 +452,7 @@ if (params.summary_script) {
 - Refresh/back/forward include `summary_script` by default
 - Click/type do NOT include `summary_script`
 
-**Modify: `cmd/browser-agent/tools_interact_nav_test.go`**
+**Modify: `cmd/browser-agent/internal/toolinteract/interact_browser_test.go`**
 
 - Response with `summary` field passes through `formatCommandResult` unchanged
 - Response with `summary: null, summary_error: "..."` passes through correctly

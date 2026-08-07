@@ -4,7 +4,7 @@ feature_id: feature-state-time-travel
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/tools_core.go
@@ -21,7 +21,6 @@ test_paths:
   - internal/recording/actionlog/recorder_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_interact_helpers_test.go
-  - cmd/browser-agent/tools_interact_state_test.go
   - internal/schema/interact/schema_test.go
   - tests/extension/pilot/pilot-state.test.js
   - tests/extension/injection/inject-settings.test.js
@@ -79,10 +78,9 @@ last_verified_date: 2026-03-05
   safe list entry and report the redacted `page_snapshot_state` recovery to
   System Doctor.
 - State-capture tests share one extension-response driver that waits on the
-  query dispatcher's notification barrier, validates the expected capture
-  command, and propagates JSON encoding failures. Form, storage, redaction,
-  legacy-shape, and execution-failure scenarios no longer infer readiness from
-  wall-clock sleeps.
+  injected command-result seam and validate the expected capture command.
+  Form, storage, redaction, legacy-shape, and execution-failure scenarios are
+  covered beside the state owner without polling, goroutines, or wall clocks.
 - Canonical public action schemas:
   - `internal/schema/interact/actions.go`
 - Tests:
@@ -90,7 +88,6 @@ last_verified_date: 2026-03-05
   - `cmd/browser-agent/internal/toolinteract/interactstate/state_test.go`
   - `cmd/browser-agent/tools_interact_gate_test.go`
   - `cmd/browser-agent/tools_interact_helpers_test.go`
-  - `cmd/browser-agent/tools_interact_state_test.go`
   - `internal/schema/interact/schema_test.go`
   - `tests/extension/pilot/pilot-state.test.js`
   - `tests/extension/injection/inject-settings.test.js`
