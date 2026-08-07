@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/analyze-tool/index.md
 
 // tools_analyze_annotation_hints_test.go — Annotation design, accessibility, and runtime hint tests.
-package main
+package annotationanalysis
 
 import (
 	"encoding/json"

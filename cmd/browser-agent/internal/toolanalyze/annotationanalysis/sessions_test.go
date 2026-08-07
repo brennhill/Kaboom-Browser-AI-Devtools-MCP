@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/analyze-tool/index.md
 
 // tools_analyze_annotations_core_test.go — Core annotation list, flush, and response-shape tests.
-package main
+package annotationanalysis
 
 import (
 	"encoding/json"

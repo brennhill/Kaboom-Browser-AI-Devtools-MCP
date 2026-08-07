@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/analyze-tool/index.md
 
 // tools_analyze_annotations_wait_test.go — Annotation waiting, filtering, and named-session tests.
-package main
+package annotationanalysis
 
 import (
 	"encoding/json"

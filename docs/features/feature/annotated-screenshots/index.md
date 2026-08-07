@@ -22,6 +22,7 @@ code_paths:
   - internal/annotation/store_results.go
   - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/mediaapi/draw_mode.go
   - cmd/browser-agent/internal/mediaapi/screenshots.go
   - cmd/browser-agent/internal/mediaapi/handler.go
@@ -51,12 +52,16 @@ test_paths:
   - internal/annotation/named_test.go
   - internal/annotation/store_lifecycle_test.go
   - internal/annotation/store_maintenance_test.go
-  - cmd/browser-agent/tools_analyze_annotations_draw_test.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/draw_sessions_test.go
   - cmd/browser-agent/internal/mediaapi/annotation_store_test.go
   - cmd/browser-agent/internal/mediaapi/draw_mode_http_test.go
   - cmd/browser-agent/internal/mediaapi/handler_test.go
   - cmd/browser-agent/server_routes_unit_test.go
-  - cmd/browser-agent/tools_analyze_annotations_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/sessions_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/wait_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/detail_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/hints_test.go
   - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/contracts/entry-point-parity.test.js
@@ -140,8 +145,8 @@ last_verified_date: 2026-08-05
 - Annotation store tests synchronize waiters through store notifications and use
   the controlled clock for timestamp ordering and expiration; no test relies on
   `time.Sleep` for correctness.
-- `internal/annotation/store_lifecycle_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
-- `cmd/browser-agent/tools_analyze_annotations_test.go` — enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, hints tests
+- `internal/annotation/store_lifecycle_test.go` and `cmd/browser-agent/internal/toolanalyze/analyzedispatch/draw_sessions_test.go` — safe persisted-session loading and end-to-end store hydration
+- `cmd/browser-agent/internal/toolanalyze/annotationanalysis/` tests — session retrieval, waiting, enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, and hints
 - `internal/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
 - `cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go` — generator and handler contracts for JS escaping, locator fallbacks, expired detail recovery, named sessions, Markdown reports, structured issues, and Playwright output
 - `scripts/smoke-tests/media/31-annotation-parity.sh` — deterministic end-to-end ingest/retrieval/generation gate with bounded retries for transient startup/no_data windows

@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/analyze-tool/index.md
 
 // tools_analyze_annotation_detail_test.go — Annotation detail enrichment and correlation tests.
-package main
+package annotationanalysis
 
 import (
 	"encoding/json"

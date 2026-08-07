@@ -129,6 +129,18 @@ func extractJSONFromText(text string) string {
 	return text
 }
 
+func unmarshalMCPText(t *testing.T, raw json.RawMessage) string {
+	t.Helper()
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatalf("failed to unmarshal result: %v", err)
+	}
+	if len(result.Content) == 0 {
+		t.Fatal("expected at least one content block")
+	}
+	return result.Content[0].Text
+}
+
 // ============================================
 // Response Parsing
 // ============================================

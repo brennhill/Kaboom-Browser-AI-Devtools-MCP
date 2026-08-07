@@ -54,15 +54,16 @@ code_paths:
   - src/types/runtime-messages.ts
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher_test.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/draw_sessions_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/detail_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/hints_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/sessions_test.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/wait_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - internal/analysis/apicontract/runtime/handler_test.go
-  - cmd/browser-agent/tools_analyze_annotations_test.go
-  - cmd/browser-agent/tools_analyze_annotations_core_test.go
-  - cmd/browser-agent/tools_analyze_annotations_wait_test.go
-  - cmd/browser-agent/tools_analyze_annotation_detail_test.go
-  - cmd/browser-agent/tools_analyze_annotation_hints_test.go
   - cmd/browser-agent/tools_async_timeout_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
@@ -74,7 +75,6 @@ test_paths:
   - internal/verification/evidence_test.go
   - internal/verification/store_test.go
   - internal/annotation/store_lifecycle_test.go
-  - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
   - cmd/browser-agent/tools_analyze_handler_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go

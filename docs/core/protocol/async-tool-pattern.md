@@ -53,15 +53,15 @@ The call **blocks for up to 55 seconds** waiting for annotations to arrive. This
 
 ### Implementation Details
 
-1. **Server** (`tools_analyze_annotations.go`): When `wait: true`, checks if annotations are already available. If not, generates `ann_<timestamp>_<random>` correlation_id, registers it as a pending command in CommandTracker and as a waiter in AnnotationStore, returns immediately.
+1. **Server** (`cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`): When blocking annotation retrieval has no ready data, generates an `ann_<timestamp>_<random>` correlation ID, registers it as a pending command and annotation waiter, then returns the recovery handle.
 
 2. **AnnotationStore** (`internal/annotation/store.go`): Maintains annotation waiters. When `StoreSession()` or `AppendToNamedSession()` receives annotations, it completes matching waiters through the command-completion callback.
 
 3. **CommandTracker** (`internal/queries/dispatcher_commands.go`): Provides `WaitForCommand(correlationID, timeout)` which blocks using a `commandNotify` channel. `ApplyCommandResult(correlationID, status, result, err)` closes the channel to wake all waiters. The waiter registration uses a 10-minute TTL to give users ample drawing time.
 
-4. **Observe handler** (`tools_observe_analysis.go`): When `correlation_id` starts with `ann_`, calls `WaitForCommand(55s)` instead of returning immediately. Returns `pending` if still waiting after 55s, or the completed result if annotations arrived.
+4. **Observe handler** (`cmd/browser-agent/internal/asynccommand/handler.go`): Waits through the canonical command tracker and returns either the terminal result or the current pending lifecycle state.
 
-5. **Bridge** (`bridge.go`): Detects annotation observe calls (`observe` + `command_result` + `ann_*` correlation_id) and gives them a 65s timeout (55s server wait + 10s buffer). All other calls use standard 10s/35s timeouts.
+5. **Bridge** (`cmd/browser-agent/internal/bridge/`): Applies the bounded MCP request timeout policy while the daemon owns command waiting and lifecycle state.
 
 ### LLM Usage Patterns
 

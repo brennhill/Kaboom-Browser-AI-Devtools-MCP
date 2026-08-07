@@ -413,8 +413,8 @@ When `analyze({what: "annotations", wait: true})` is called:
 | `extension/content/draw-mode-export.js` | Screenshot capture with annotations, base64 encoding, result packaging | ~150 |
 | `extension/background/draw-mode-handler.js` | Message routing between content script and server, PendingQuery polling, result POST | ~100 |
 | `cmd/browser-agent/tools_interact_draw.go` | `draw_mode_start` action handler in interact tool, PendingQuery creation | ~100 |
-| `cmd/browser-agent/tools_analyze_annotations.go` | `annotations` and `annotation_detail` handlers in analyze tool, blocking wait logic | ~80 |
-| `cmd/browser-agent/annotation_store.go` | In-memory annotation storage with TTL, correlation_id lookup, cleanup | ~100 |
+| `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` | `annotations` and `annotation_detail` handlers, bounded waiting, response shaping | implemented |
+| `internal/annotation/` | In-memory annotation storage, TTL, detail lookup, persistence, and cleanup | implemented |
 
 ### Modified Files
 
