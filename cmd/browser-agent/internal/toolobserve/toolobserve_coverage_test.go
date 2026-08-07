@@ -260,6 +260,15 @@ func TestHandlePageInventory_QueuedSuccess(t *testing.T) {
 	}
 }
 
+func TestHandlePageInventory_ForwardsPublicParameters(t *testing.T) {
+	d := &fakeDeps{waitResp: mcp.Succeed(testReq(), "queued", map[string]any{"status": "queued"})}
+	args := json.RawMessage(`{"tab_id":8,"visible_only":true,"limit":50}`)
+	HandlePageInventory(d.deps(), testReq(), args)
+	if d.lastQuery.TabID != 8 || string(d.lastQuery.Params) != string(args) {
+		t.Fatalf("page inventory query = %#v, want params %s", d.lastQuery, args)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // HandleSiteMenus
 // ---------------------------------------------------------------------------

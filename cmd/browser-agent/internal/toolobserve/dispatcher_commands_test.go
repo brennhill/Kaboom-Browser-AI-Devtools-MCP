@@ -4,12 +4,20 @@ package toolobserve
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
+
+func TestDispatcherRegistersPageInventory(t *testing.T) {
+	t.Parallel()
+	if modes := NewDispatcher(Config{}).ValidModes(); !slices.Contains(modes, "page_inventory") {
+		t.Fatalf("page_inventory missing from observe modes: %v", modes)
+	}
+}
 
 type commandStoreStub struct {
 	failed []*queries.CommandResult

@@ -127,6 +127,15 @@ func TestObserveSchema_LevelNotExposed(t *testing.T) {
 	}
 }
 
+func TestObserveSchemaIncludesPageInventory(t *testing.T) {
+	t.Parallel()
+	properties := observeToolSchema().InputSchema["properties"].(map[string]any)
+	what := properties["what"].(map[string]any)["enum"].([]string)
+	if !slices.Contains(what, "page_inventory") {
+		t.Fatalf("observe what enum missing page_inventory: %v", what)
+	}
+}
+
 // TestAllToolSchemas_HavePropertiesAndObjectType ensures every tool schema has
 // type:object and a non-empty properties field, catching accidentally empty or
 // malformed schemas.
