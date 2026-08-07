@@ -21,6 +21,23 @@ func TestDispatcherRegistersNavigationPatterns(t *testing.T) {
 	}
 }
 
+func TestDispatcherModesAreSortedAndPageSummaryUsesConfiguredOwner(t *testing.T) {
+	t.Parallel()
+	called := false
+	dispatcher := NewDispatcher(Config{PageSummary: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		called = string(args) == `{"what":"page_summary","sync":false}`
+		return mcp.Succeed(req, "queued", map[string]any{"status": "queued"})
+	}})
+	if !slices.IsSorted(dispatcher.ValidModes()) {
+		t.Fatalf("analyze modes are not sorted: %v", dispatcher.ValidModes())
+	}
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+	response := dispatcher.Handle(req, json.RawMessage(`{"what":"page_summary","sync":false}`))
+	if !called || response.Error != nil {
+		t.Fatalf("page summary route called=%t response=%+v", called, response)
+	}
+}
+
 func TestDispatcherRoutesLinkHealthAndRejectsInvalidRequests(t *testing.T) {
 	t.Parallel()
 	called := false

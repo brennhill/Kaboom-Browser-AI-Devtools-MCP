@@ -4,7 +4,7 @@ feature_id: feature-query-dom
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/inspect/dom.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
@@ -15,7 +15,7 @@ code_paths:
   - src/lib/analysis/dom-queries.ts
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
-  - cmd/browser-agent/tools_analyze_handler_test.go
+  - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - tests/extension/a11y/a11y-runtime-error.test.js
   - tests/extension/a11y/on-demand-a11y-runtime.test.js

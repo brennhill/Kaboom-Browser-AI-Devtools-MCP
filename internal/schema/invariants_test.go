@@ -47,6 +47,15 @@ func TestAnalyzeSchemaIncludesQueuedAnalysisFamilies(t *testing.T) {
 	}
 }
 
+func TestAnalyzeSchemaDeclaresFrameTarget(t *testing.T) {
+	t.Parallel()
+	properties := analyzeToolSchema().InputSchema["properties"].(map[string]any)
+	frame, ok := properties["frame"].(map[string]any)
+	if !ok || frame["type"] != "string" {
+		t.Fatalf("analyze frame schema = %#v", properties["frame"])
+	}
+}
+
 func TestGenerateSchemaDeclaresSharedDispatchParameters(t *testing.T) {
 	t.Parallel()
 	properties := generateToolSchema().InputSchema["properties"].(map[string]any)

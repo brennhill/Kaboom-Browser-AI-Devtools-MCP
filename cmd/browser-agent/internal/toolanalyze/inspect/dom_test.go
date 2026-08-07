@@ -52,3 +52,19 @@ func TestHandleDOMDefaultsSelector(t *testing.T) {
 		t.Fatalf("selector = %#v", args["selector"])
 	}
 }
+
+func TestHandleDOMPreservesSelectorAndFrameTarget(t *testing.T) {
+	t.Parallel()
+	for name, args := range map[string]json.RawMessage{
+		"selector frame": json.RawMessage(`{"selector":".sidebar","frame":"iframe.editor"}`),
+		"indexed frame":  json.RawMessage(`{"selector":"#main","frame":0}`),
+	} {
+		t.Run(name, func(t *testing.T) {
+			deps := &fakeDeps{}
+			HandleDOM(deps.deps(), mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, args)
+			if string(deps.query.Params) != string(args) || string(deps.args) != string(args) {
+				t.Fatalf("query params = %s, wait args = %s, want %s", deps.query.Params, deps.args, args)
+			}
+		})
+	}
+}
