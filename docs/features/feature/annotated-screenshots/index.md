@@ -4,7 +4,7 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - src/content/draw-mode/lifecycle-overlay.js
   - src/content/draw-mode/input-rendering.js

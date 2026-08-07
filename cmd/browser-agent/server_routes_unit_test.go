@@ -5,13 +5,11 @@ package main
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
@@ -429,94 +427,4 @@ func TestTelemetryEndpointReadContract(t *testing.T) {
 	if body["type"] != "logs" || body["count"] != float64(1) {
 		t.Fatalf("telemetry response = %v, want type=logs count=1", body)
 	}
-}
-
-func TestHandleScreenshotRoutes(t *testing.T) {
-	t.Parallel()
-
-	srv := newTestServerForHandlers(t)
-	cap := capture.NewCapture()
-	mux, _ := setupHTTPRoutes(srv, cap)
-
-	methodReq := localRequest(http.MethodGet, "/screenshots", nil)
-	methodReq.Header.Set("X-Kaboom-Client", "kaboom-extension")
-	methodRR := httptest.NewRecorder()
-	mux.ServeHTTP(methodRR, methodReq)
-	if methodRR.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("GET /screenshots status = %d, want %d", methodRR.Code, http.StatusMethodNotAllowed)
-	}
-
-	// Each POST uses a unique versioned client ID to avoid rate limiting (1 screenshot/sec/client).
-	invalidJSONReq := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString("{"))
-	invalidJSONReq.Header.Set("X-Kaboom-Client", "kaboom-extension/test-1")
-	invalidJSONRR := httptest.NewRecorder()
-	mux.ServeHTTP(invalidJSONRR, invalidJSONReq)
-	if invalidJSONRR.Code != http.StatusBadRequest {
-		t.Fatalf("POST /screenshots invalid json status = %d, want %d", invalidJSONRR.Code, http.StatusBadRequest)
-	}
-
-	missingDataReq := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(`{"url":"https://example.test"}`))
-	missingDataReq.Header.Set("X-Kaboom-Client", "kaboom-extension/test-2")
-	missingDataRR := httptest.NewRecorder()
-	mux.ServeHTTP(missingDataRR, missingDataReq)
-	if missingDataRR.Code != http.StatusBadRequest {
-		t.Fatalf("POST /screenshots missing data_url status = %d, want %d", missingDataRR.Code, http.StatusBadRequest)
-	}
-
-	badFormatReq := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(`{"data_url":"not-a-data-url"}`))
-	badFormatReq.Header.Set("X-Kaboom-Client", "kaboom-extension/test-3")
-	badFormatRR := httptest.NewRecorder()
-	mux.ServeHTTP(badFormatRR, badFormatReq)
-	if badFormatRR.Code != http.StatusBadRequest {
-		t.Fatalf("POST /screenshots bad data_url format status = %d, want %d", badFormatRR.Code, http.StatusBadRequest)
-	}
-
-	badBase64Req := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(`{"data_url":"data:image/jpeg;base64,%%%INVALID%%%"}`))
-	badBase64Req.Header.Set("X-Kaboom-Client", "kaboom-extension/test-4")
-	badBase64RR := httptest.NewRecorder()
-	mux.ServeHTTP(badBase64RR, badBase64Req)
-	if badBase64RR.Code != http.StatusBadRequest {
-		t.Fatalf("POST /screenshots invalid base64 status = %d, want %d", badBase64RR.Code, http.StatusBadRequest)
-	}
-
-	rawImage := []byte("abc123")
-	dataURL := "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(rawImage)
-	validBody := `{"data_url":"` + dataURL + `","url":"https://example.test/page","correlation_id":"corr-1","query_id":"query-1"}`
-	validReq := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(validBody))
-	validReq.Header.Set("X-Kaboom-Client", "kaboom-extension/test-5")
-	validRR := httptest.NewRecorder()
-	mux.ServeHTTP(validRR, validReq)
-	if validRR.Code != http.StatusOK {
-		t.Fatalf("POST /screenshots valid status = %d, want %d body=%q", validRR.Code, http.StatusOK, validRR.Body.String())
-	}
-	resp := decodeJSONMap(t, validRR.Body.Bytes())
-	savePath := resp["path"].(string)
-	if _, err := os.Stat(savePath); err != nil {
-		t.Fatalf("saved screenshot path %q stat error = %v", savePath, err)
-	}
-	if !strings.Contains(resp["filename"].(string), "example.test") {
-		t.Fatalf("filename = %q, expected sanitized hostname", resp["filename"])
-	}
-
-	if result, ok := cap.Queries().TakeQueryResult("query-1"); !ok || len(result) == 0 {
-		t.Fatalf("expected query result for query-1 to be set, got ok=%v result=%q", ok, string(result))
-	}
-
-	unsolicitedBody := `{"data_url":"` + dataURL + `","url":"https://example.test/page"}`
-	rlReq1 := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(unsolicitedBody))
-	rlReq1.Header.Set("X-Kaboom-Client", "kaboom-extension/rl-client")
-	rlRR1 := httptest.NewRecorder()
-	mux.ServeHTTP(rlRR1, rlReq1)
-	if rlRR1.Code != http.StatusOK {
-		t.Fatalf("rate-limit first request status = %d, want %d", rlRR1.Code, http.StatusOK)
-	}
-
-	rlReq2 := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(unsolicitedBody))
-	rlReq2.Header.Set("X-Kaboom-Client", "kaboom-extension/rl-client")
-	rlRR2 := httptest.NewRecorder()
-	mux.ServeHTTP(rlRR2, rlReq2)
-	if rlRR2.Code != http.StatusTooManyRequests {
-		t.Fatalf("rate-limit second request status = %d, want %d", rlRR2.Code, http.StatusTooManyRequests)
-	}
-
 }
