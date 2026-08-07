@@ -42,3 +42,20 @@ func TestFormatCommandResultPreservesCancellationDiagnosis(t *testing.T) {
 		t.Fatalf("enrichment calls evidence=%d retry=%d outcomes=%v", evidenceCalls, retryCalls, outcomes)
 	}
 }
+
+func TestBuildA11yQueryParamsOmitsDefaultsAndPreservesTargets(t *testing.T) {
+	t.Parallel()
+	empty := BuildA11yQueryParams("", nil, nil, false)
+	for _, key := range []string{"scope", "tags", "frame", "force_refresh"} {
+		if _, exists := empty[key]; exists {
+			t.Errorf("empty params unexpectedly include %q: %#v", key, empty)
+		}
+	}
+	populated := BuildA11yQueryParams("#app", []string{"wcag2a"}, "iframe.editor", true)
+	if populated["scope"] != "#app" || populated["frame"] != "iframe.editor" || populated["force_refresh"] != true {
+		t.Fatalf("populated params = %#v", populated)
+	}
+	if tags, ok := populated["tags"].([]string); !ok || len(tags) != 1 || tags[0] != "wcag2a" {
+		t.Fatalf("tags = %#v", populated["tags"])
+	}
+}
