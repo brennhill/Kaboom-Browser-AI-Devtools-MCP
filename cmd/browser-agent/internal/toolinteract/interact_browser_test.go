@@ -262,17 +262,35 @@ func TestResolveNavigateURL_InsecureNonHTTPScheme(t *testing.T) {
 	}
 }
 
-func TestHandleGetReadable(t *testing.T) {
-	h, fs := newFakePageActions(t)
-	assertOK(t, h.HandleGetReadable(testReq(), json.RawMessage(`{}`)))
-	if fs.enqueuedCount() != 1 {
-		t.Fatalf("expected 1 enqueue, got %d", fs.enqueuedCount())
+func TestHandleContentExtractionRoutesDedicatedQueries(t *testing.T) {
+	for _, testCase := range []struct {
+		name, queryType, label string
+		args                   json.RawMessage
+		wantTimeout, wantTab   int
+	}{
+		{name: "readable defaults", queryType: "get_readable", label: "readable", args: json.RawMessage(`{}`), wantTimeout: 10000},
+		{name: "markdown custom", queryType: "get_markdown", label: "markdown", args: json.RawMessage(`{"timeout_ms":7000,"tab_id":88}`), wantTimeout: 7000, wantTab: 88},
+		{name: "page summary clamps", queryType: "page_summary", label: "page_summary", args: json.RawMessage(`{"timeout_ms":60000,"tab_id":77}`), wantTimeout: 30000, wantTab: 77},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			h, fs := newFakePageActions(t)
+			assertOK(t, h.HandleContentExtraction(testReq(), testCase.args, testCase.queryType, testCase.label))
+			enqueued := fs.enqueuedSnapshot()
+			if len(enqueued) != 1 || enqueued[0].Type != testCase.queryType || enqueued[0].TabID != testCase.wantTab {
+				t.Fatalf("enqueued = %#v", enqueued)
+			}
+			var params map[string]any
+			if err := json.Unmarshal(enqueued[0].Params, &params); err != nil {
+				t.Fatalf("decode params: %v", err)
+			}
+			if params["timeout_ms"] != float64(testCase.wantTimeout) {
+				t.Fatalf("timeout_ms = %v, want %d", params["timeout_ms"], testCase.wantTimeout)
+			}
+			if _, exists := params["script"]; exists {
+				t.Fatalf("%s must not route through execute script", testCase.queryType)
+			}
+		})
 	}
-}
-
-func TestHandleGetMarkdown(t *testing.T) {
-	h, _ := newFakePageActions(t)
-	assertOK(t, h.HandleGetMarkdown(testReq(), json.RawMessage(`{"timeout_ms":40000}`)))
 }
 
 func TestHandleContentExtraction_TabBlocked(t *testing.T) {

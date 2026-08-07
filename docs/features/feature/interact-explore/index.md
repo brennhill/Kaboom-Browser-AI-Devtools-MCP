@@ -336,3 +336,6 @@ DOM routing are tested at that same owner. Action enumeration remains sourced
 from the canonical interact schema instead of a root handler string check.
 Clipboard read/write validation and pilot gates live with the browser-action
 owner, including proof that blocked mutations do not record an action.
+Readable text, Markdown, and page-summary extraction share one owner-level
+routing contract for dedicated query types, tab forwarding, timeout defaults
+and clamping, and the absence of CSP-fragile injected scripts.
