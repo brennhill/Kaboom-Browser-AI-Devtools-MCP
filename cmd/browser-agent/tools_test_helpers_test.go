@@ -104,6 +104,29 @@ func newToolTestEnv(t *testing.T) *toolTestEnv {
 	return &toolTestEnv{handler: handler, server: server, capture: cap}
 }
 
+func newConnectedToolTestEnv(t *testing.T) *toolTestEnv {
+	t.Helper()
+	env := newToolTestEnv(t)
+	mockConnectedTrackedTab(t, env.capture)
+	return env
+}
+
+func (e *toolTestEnv) callInteract(t *testing.T, argsJSON string) (mcp.MCPToolResult, bool) {
+	t.Helper()
+	response := e.handler.toolInteract(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: float64(1)},
+		normalizeInteractArgsForAsync(argsJSON),
+	)
+	if response.Result == nil {
+		return mcp.MCPToolResult{}, false
+	}
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		t.Fatalf("decode interact result: %v", err)
+	}
+	return result, true
+}
+
 // mockConnectedTrackedTab simulates an extension sync and a tracked active tab.
 // Use this for tests that exercise interact flows requiring extension + tab state.
 func mockConnectedTrackedTab(t *testing.T, cap *capture.Capture) {

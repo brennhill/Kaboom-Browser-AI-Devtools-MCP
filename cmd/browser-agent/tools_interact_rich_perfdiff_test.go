@@ -23,7 +23,7 @@ import (
 // ============================================
 
 func TestRichAction_RefreshStoresBeforeSnapshot(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 	capturefixture.Track(env.capture, 1, "https://example.com/dashboard")
 
@@ -67,7 +67,7 @@ func TestRichAction_RefreshStoresBeforeSnapshot(t *testing.T) {
 }
 
 func TestRichAction_NavigateStoresBeforeSnapshot(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 	capturefixture.Track(env.capture, 1, "https://example.com/dashboard")
 
@@ -109,7 +109,7 @@ func TestRichAction_NavigateStoresBeforeSnapshot(t *testing.T) {
 }
 
 func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 	capturefixture.Track(env.capture, 1, "https://example.com/dashboard")
 
@@ -196,7 +196,7 @@ func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
 }
 
 func TestRichAction_CommandResultNoPerfDiffWhenNoSnapshots(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 	// No tracking status set, no snapshots
 
@@ -232,7 +232,7 @@ func TestRichAction_CommandResultNoPerfDiffWhenNoSnapshots(t *testing.T) {
 }
 
 func TestRichAction_CommandResultIncludesTimingMs(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	// Click action
@@ -275,7 +275,7 @@ func TestRichAction_CommandResultIncludesTimingMs(t *testing.T) {
 }
 
 func TestRichAction_PerfDiffWithFullWebVitals(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 	capturefixture.Track(env.capture, 1, "https://example.com/dashboard")
 
@@ -404,7 +404,7 @@ func TestRichAction_PerfDiffWithFullWebVitals(t *testing.T) {
 // expires and neither timing_ms nor dom_summary are available.
 // This is exactly what smoke test 9.2 observes: "timeout waiting for click".
 func TestRichAction_CompactClickMissingDomSummary_WhenExtensionHangs(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	// Queue a click command
@@ -453,7 +453,7 @@ func TestRichAction_CompactClickMissingDomSummary_WhenExtensionHangs(t *testing.
 // This test passes today — the Go server correctly passes through extension fields.
 // It exists to confirm the server isn't the problem.
 func TestRichAction_CompactClickHasDomSummary_WhenExtensionResponds(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	// Click without analyze:true (compact mode)

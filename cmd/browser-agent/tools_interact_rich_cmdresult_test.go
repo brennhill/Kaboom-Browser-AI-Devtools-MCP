@@ -19,7 +19,7 @@ import (
 // ============================================
 
 func TestCommandResult_ExpiredSetsIsError(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	// Queue a command
@@ -58,7 +58,7 @@ func TestCommandResult_ExpiredSetsIsError(t *testing.T) {
 }
 
 func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	// Queue a command
@@ -97,7 +97,7 @@ func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
 }
 
 func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -134,7 +134,7 @@ func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
 }
 
 func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"execute_js","script":"(() => 1)()","background":true}`)
@@ -172,7 +172,7 @@ func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
 }
 
 func TestCommandResult_ErrorStatusCSPFailureIncludesRetryHint(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"navigate","url":"https://example.com","background":true}`)
@@ -261,7 +261,7 @@ func TestCommandResult_InteractFailureCodesIncludeRecoveryRetryGuidance(t *testi
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			env := newInteractTestEnv(t)
+			env := newConnectedToolTestEnv(t)
 			capturefixture.SetPilot(env.capture, true)
 
 			result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -304,7 +304,7 @@ func TestCommandResult_InteractFailureCodesIncludeRecoveryRetryGuidance(t *testi
 }
 
 func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	// Queue a command
@@ -340,7 +340,7 @@ func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
 }
 
 func TestCommandResult_ExpiredHasFinalTrue(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -379,7 +379,7 @@ func TestCommandResult_ExpiredHasFinalTrue(t *testing.T) {
 }
 
 func TestCommandResult_TimeoutHasFinalTrue(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	cmd := queries.CommandResult{
@@ -413,7 +413,7 @@ func TestCommandResult_TimeoutHasFinalTrue(t *testing.T) {
 }
 
 func TestCommandResult_NotFoundHasFinalTrue(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"missing_corr_123"}`)
@@ -440,7 +440,7 @@ func TestCommandResult_NotFoundHasFinalTrue(t *testing.T) {
 }
 
 func TestCommandResult_AnnotationNotFoundHasFinalTrue(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"ann_missing_123"}`)
@@ -467,7 +467,7 @@ func TestCommandResult_AnnotationNotFoundHasFinalTrue(t *testing.T) {
 }
 
 func TestCommandResult_ExpiredIncludesDiagnosticHint(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -500,7 +500,7 @@ func TestCommandResult_ExpiredIncludesDiagnosticHint(t *testing.T) {
 }
 
 func TestCommandResult_PilotDisabledIncludesDiagnosticHint(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	// Pilot is disabled by default in test env
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)

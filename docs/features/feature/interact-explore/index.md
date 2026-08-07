@@ -356,6 +356,10 @@ parameter, pilot-gate, query type, action payload, and correlation coverage.
 The bounded external contract suite covers explore-page URL security, parameter
 and tab forwarding, correlation identity, action recording, and guard ordering
 without constructing the daemon or connecting an extension.
+The former root audit suite and its skipped placeholders are deleted. Canonical
+dispatch, browser, DOM, state, and schema owners now provide its real coverage;
+rich-result tests use an explicitly connected shared fixture instead of hidden
+connection state owned by an unrelated audit file.
 Form, navigation, and accessibility/SARIF workflow validation lives with the
 workflow owner. Its deterministic SARIF contract proves one accessibility
 analysis is reused directly instead of issuing a duplicate browser query.

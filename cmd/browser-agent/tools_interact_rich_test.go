@@ -22,7 +22,7 @@ import (
 // ============================================
 
 func TestRichAction_AnalyzeInPendingQueryParams(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 
 	// Enable pilot so the request gets queued (not rejected at pilot check)
 	capturefixture.SetPilot(env.capture, true)
@@ -57,7 +57,7 @@ func TestRichAction_AnalyzeInPendingQueryParams(t *testing.T) {
 }
 
 func TestRichAction_AnalyzeFalseNotForwarded(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","analyze":false,"background":true}`)
@@ -86,7 +86,7 @@ func TestRichAction_AnalyzeFalseNotForwarded(t *testing.T) {
 }
 
 func TestRichAction_AnalyzeOmittedByDefault(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -115,7 +115,7 @@ func TestRichAction_AnalyzeOmittedByDefault(t *testing.T) {
 }
 
 func TestRichAction_AnalyzeOnNavigationAction(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	// refresh doesn't use analyze (it always returns perf_diff)
@@ -131,7 +131,7 @@ func TestRichAction_AnalyzeOnNavigationAction(t *testing.T) {
 }
 
 func TestRichAction_FrameSelectorInPendingQueryParams(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#submit","frame":"iframe[name='payment']","sync":false}`)
@@ -158,7 +158,7 @@ func TestRichAction_FrameSelectorInPendingQueryParams(t *testing.T) {
 }
 
 func TestRichAction_FrameIndexInPendingQueryParams(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#submit","frame":0,"sync":false}`)
@@ -343,7 +343,7 @@ func TestRichAction_SchemaDescriptionMentionsPerf(t *testing.T) {
 // ============================================
 
 func TestRichAction_CorrelationID_HasAction(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","analyze":true,"background":true}`)
@@ -369,7 +369,7 @@ func TestRichAction_CorrelationID_HasAction(t *testing.T) {
 // ============================================
 
 func TestRichAction_AnalyzeFieldsSurfacedTopLevel(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	// Click with analyze:true
@@ -443,7 +443,7 @@ func TestRichAction_AnalyzeFieldsSurfacedTopLevel(t *testing.T) {
 }
 
 func TestRichAction_NoAnalyzeFieldsWhenAbsent(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -484,7 +484,7 @@ func TestRichAction_NoAnalyzeFieldsWhenAbsent(t *testing.T) {
 }
 
 func TestRichAction_MatchedDiagnosticsSurfacedTopLevel(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"text=Submit","background":true}`)
@@ -550,7 +550,7 @@ func TestRichAction_MatchedDiagnosticsSurfacedTopLevel(t *testing.T) {
 }
 
 func TestRichAction_TargetContextSurfacedTopLevel(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","tab_id":77,"background":true}`)
@@ -624,7 +624,7 @@ func TestRichAction_TargetContextSurfacedTopLevel(t *testing.T) {
 // ============================================
 
 func TestRichAction_DomSummaryPassthrough(t *testing.T) {
-	env := newInteractTestEnv(t)
+	env := newConnectedToolTestEnv(t)
 	capturefixture.SetPilot(env.capture, true)
 
 	// Click with analyze:true

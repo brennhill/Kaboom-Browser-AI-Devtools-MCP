@@ -20,7 +20,7 @@ import (
 )
 
 type uploadTestEnv struct {
-	*interactTestEnv
+	*toolTestEnv
 }
 
 // newUploadTestEnv creates a test environment with upload automation enabled.
@@ -41,7 +41,7 @@ func newUploadTestEnv(t *testing.T) *uploadTestEnv {
 	handler.uploadSecurity = uploadsec.NewSecurity("/", nil)
 
 	return &uploadTestEnv{
-		interactTestEnv: &interactTestEnv{handler: handler, server: server, capture: cap},
+		toolTestEnv: &toolTestEnv{handler: handler, server: server, capture: cap},
 	}
 }
 
