@@ -4,9 +4,12 @@ package auditlog
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func populatedTrail() *audit.AuditTrail {
@@ -17,7 +20,7 @@ func populatedTrail() *audit.AuditTrail {
 }
 
 func TestExecuteReportsFilteredEntries(t *testing.T) {
-	result, problem := New(populatedTrail()).Execute(json.RawMessage(`{"tool_name":"observe"}`))
+	result, problem := newHandler(populatedTrail()).execute(json.RawMessage(`{"tool_name":"observe"}`))
 	if problem != nil {
 		t.Fatalf("execute report: %v", problem)
 	}
@@ -30,7 +33,7 @@ func TestExecuteReportsFilteredEntries(t *testing.T) {
 }
 
 func TestExecuteAnalyzesEntries(t *testing.T) {
-	result, problem := New(populatedTrail()).Execute(json.RawMessage(`{"operation":"analyze"}`))
+	result, problem := newHandler(populatedTrail()).execute(json.RawMessage(`{"operation":"analyze"}`))
 	if problem != nil {
 		t.Fatalf("execute analysis: %v", problem)
 	}
@@ -44,7 +47,7 @@ func TestExecuteAnalyzesEntries(t *testing.T) {
 
 func TestExecuteClearsTrail(t *testing.T) {
 	trail := populatedTrail()
-	result, problem := New(trail).Execute(json.RawMessage(`{"operation":"clear"}`))
+	result, problem := newHandler(trail).execute(json.RawMessage(`{"operation":"clear"}`))
 	if problem != nil {
 		t.Fatalf("execute clear: %v", problem)
 	}
@@ -68,7 +71,7 @@ func TestExecuteRejectsInvalidInput(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, problem := New(populatedTrail()).Execute(tt.args)
+			_, problem := newHandler(populatedTrail()).execute(tt.args)
 			if problem == nil || problem.Kind != tt.kind {
 				t.Fatalf("expected %s problem, got %#v", tt.kind, problem)
 			}
@@ -77,8 +80,30 @@ func TestExecuteRejectsInvalidInput(t *testing.T) {
 }
 
 func TestExecuteRequiresTrail(t *testing.T) {
-	_, problem := New(nil).Execute(nil)
+	_, problem := newHandler(nil).execute(nil)
 	if problem == nil || problem.Kind != Unavailable {
 		t.Fatalf("expected unavailable problem, got %#v", problem)
+	}
+}
+
+func TestHandleOwnsResponsesAndResetsRecorderSessionsOnClear(t *testing.T) {
+	t.Parallel()
+	trail := populatedTrail()
+	recorder := audit.NewRecorder(trail)
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "client"}
+	recorder.Record(req, "observe", nil, mcp.Succeed(req, "ok", nil), time.Now())
+	if recorder.SessionID("client") == "" {
+		t.Fatal("test setup did not create audit session")
+	}
+
+	for operation, field := range map[string]string{"analyze": `\"summary\"`, "report": `\"entries\"`} {
+		response := Handle(trail, recorder, req, json.RawMessage(`{"operation":"`+operation+`"}`))
+		if !strings.Contains(string(response.Result), `operation\":\"`+operation) || !strings.Contains(string(response.Result), field) {
+			t.Fatalf("%s response = %s", operation, response.Result)
+		}
+	}
+	response := Handle(trail, recorder, req, json.RawMessage(`{"operation":"clear"}`))
+	if !strings.Contains(string(response.Result), `operation\":\"clear`) || recorder.SessionID("client") != "" {
+		t.Fatalf("clear response/session = %s / %q", response.Result, recorder.SessionID("client"))
 	}
 }

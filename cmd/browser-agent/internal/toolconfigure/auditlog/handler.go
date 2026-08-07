@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 )
 
@@ -24,6 +25,39 @@ const (
 type Problem struct {
 	Kind    ProblemKind
 	Message string
+}
+
+// Handle executes an audit-log operation and owns its complete MCP response boundary.
+func Handle(trail *audit.AuditTrail, recorder *audit.Recorder, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	result, problem := newHandler(trail).execute(args)
+	if problem != nil {
+		switch problem.Kind {
+		case Unavailable:
+			return mcp.Fail(req, mcp.ErrNotInitialized, problem.Message, "Internal error — do not retry")
+		case InvalidJSON:
+			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+problem.Message, "Fix JSON syntax and call again")
+		case InvalidOperation:
+			return mcp.Fail(req, mcp.ErrInvalidParam, problem.Message, "Use operation: analyze, report, or clear", mcp.WithParam("operation"))
+		default:
+			return mcp.Fail(req, mcp.ErrInvalidParam, problem.Message, "Use RFC3339 format, for example 2026-02-17T15:04:05Z", mcp.WithParam("since"))
+		}
+	}
+
+	switch result.Operation {
+	case "clear":
+		recorder.ResetSessions()
+		return mcp.Succeed(req, "Audit log cleared", map[string]any{
+			"status": "ok", "operation": result.Operation, "cleared": result.Cleared,
+		})
+	case "analyze":
+		return mcp.Succeed(req, "Audit log analysis", map[string]any{
+			"status": "ok", "operation": result.Operation, "summary": result.Summary,
+		})
+	default:
+		return mcp.Succeed(req, "Audit log entries", map[string]any{
+			"status": "ok", "operation": result.Operation, "entries": result.Entries, "count": result.Count,
+		})
+	}
 }
 
 func (p *Problem) Error() string {
@@ -42,11 +76,11 @@ type Handler struct {
 	trail *audit.AuditTrail
 }
 
-func New(trail *audit.AuditTrail) *Handler {
+func newHandler(trail *audit.AuditTrail) *Handler {
 	return &Handler{trail: trail}
 }
 
-func (h *Handler) Execute(args json.RawMessage) (Result, *Problem) {
+func (h *Handler) execute(args json.RawMessage) (Result, *Problem) {
 	if h.trail == nil {
 		return Result{}, &Problem{Kind: Unavailable, Message: "Audit trail not initialized"}
 	}

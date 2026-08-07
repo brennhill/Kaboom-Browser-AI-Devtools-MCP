@@ -28,7 +28,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
@@ -185,7 +184,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			}, req, args)
 		},
 		"audit_log": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return handleConfigureAuditLog(h.auditTrail, h.auditRecorder, req, args)
+			return auditlog.Handle(h.auditTrail, h.auditRecorder, req, args)
 		},
 		"streaming": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return toolconfigure.HandleStreaming(h.alertBuffer, req, args)
@@ -599,43 +598,6 @@ func extractErrorMessage(response mcp.JSONRPCResponse) string {
 		return message
 	}
 	return "unknown error"
-}
-
-func handleConfigureAuditLog(
-	trail *audit.AuditTrail,
-	recorder *audit.Recorder,
-	req mcp.JSONRPCRequest,
-	args json.RawMessage,
-) mcp.JSONRPCResponse {
-	result, problem := auditlog.New(trail).Execute(args)
-	if problem != nil {
-		switch problem.Kind {
-		case auditlog.Unavailable:
-			return mcp.Fail(req, mcp.ErrNotInitialized, problem.Message, "Internal error — do not retry")
-		case auditlog.InvalidJSON:
-			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+problem.Message, "Fix JSON syntax and call again")
-		case auditlog.InvalidOperation:
-			return mcp.Fail(req, mcp.ErrInvalidParam, problem.Message, "Use operation: analyze, report, or clear", mcp.WithParam("operation"))
-		default:
-			return mcp.Fail(req, mcp.ErrInvalidParam, problem.Message, "Use RFC3339 format, for example 2026-02-17T15:04:05Z", mcp.WithParam("since"))
-		}
-	}
-
-	switch result.Operation {
-	case "clear":
-		recorder.ResetSessions()
-		return mcp.Succeed(req, "Audit log cleared", map[string]any{
-			"status": "ok", "operation": result.Operation, "cleared": result.Cleared,
-		})
-	case "analyze":
-		return mcp.Succeed(req, "Audit log analysis", map[string]any{
-			"status": "ok", "operation": result.Operation, "summary": result.Summary,
-		})
-	default:
-		return mcp.Succeed(req, "Audit log entries", map[string]any{
-			"status": "ok", "operation": result.Operation, "entries": result.Entries, "count": result.Count,
-		})
-	}
 }
 
 func handleConfigureRestart(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {

@@ -61,6 +61,25 @@ func TestToolSchemaExposesAtomicQAFixtureApplyContract(t *testing.T) {
 	}
 }
 
+func TestToolSchemaExposesSessionDiffAuditAndTelemetryContracts(t *testing.T) {
+	t.Parallel()
+	props := ToolSchema().InputSchema["properties"].(map[string]any)
+	for _, field := range []string{"url", "operation", "telemetry_mode"} {
+		if _, ok := props[field]; !ok {
+			t.Errorf("configure schema missing %q", field)
+		}
+	}
+	operations, ok := props["operation"].(map[string]any)["enum"].([]string)
+	if !ok {
+		t.Fatalf("operation enum has unexpected shape: %#v", props["operation"])
+	}
+	for _, operation := range []string{"analyze", "report", "clear"} {
+		if !contains(operations, operation) {
+			t.Errorf("operation enum missing %q: %v", operation, operations)
+		}
+	}
+}
+
 func TestPerformanceBudgetSchemaMatchesRuntimeMetrics(t *testing.T) {
 	t.Parallel()
 

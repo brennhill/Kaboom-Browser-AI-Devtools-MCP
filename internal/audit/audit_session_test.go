@@ -4,9 +4,37 @@
 package audit
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+func TestRecorderSkipsAuditClearAndResetsCachedSessions(t *testing.T) {
+	t.Parallel()
+	trail := NewAuditTrail(AuditConfig{MaxEntries: 100, Enabled: true})
+	recorder := NewRecorder(trail)
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "client"}
+	recorder.Record(req, "observe", nil, mcp.Succeed(req, "ok", nil), time.Now())
+	oldSession := recorder.SessionID("client")
+	if oldSession == "" {
+		t.Fatal("normal call did not create an audit session")
+	}
+	recorder.Record(req, "configure", json.RawMessage(`{"what":"audit_log","operation":"clear"}`), mcp.Succeed(req, "cleared", nil), time.Now())
+	if entries := trail.Query(AuditFilter{}); len(entries) != 1 {
+		t.Fatalf("audit clear was reinserted: %#v", entries)
+	}
+	recorder.ResetSessions()
+	if recorder.SessionID("client") != "" {
+		t.Fatal("cached session survived reset")
+	}
+	recorder.Record(req, "observe", nil, mcp.Succeed(req, "ok", nil), time.Now())
+	if newSession := recorder.SessionID("client"); newSession == "" || newSession == oldSession {
+		t.Fatalf("session was not recreated after reset: old=%q new=%q", oldSession, newSession)
+	}
+}
 
 // ============================================
 // Test: Client identification from initialize message
