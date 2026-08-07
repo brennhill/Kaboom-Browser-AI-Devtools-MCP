@@ -132,7 +132,6 @@ test_paths:
   - cmd/browser-agent/internal/mcpresponse/owner_test.go
   - cmd/browser-agent/internal/mcpendpoint/handler_test.go
   - cmd/browser-agent/internal/appruntime/runtime_test.go
-  - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/internal/mcptelemetry/owner_test.go
   - cmd/browser-agent/internal/toolusage/key_test.go
   - cmd/browser-agent/tools_core_unit_test.go

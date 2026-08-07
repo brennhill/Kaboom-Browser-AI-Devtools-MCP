@@ -9,7 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -123,5 +125,22 @@ func TestMCPRedactionEngineConfigured(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 	if handler.redactionEngine == nil {
 		t.Fatal("MCP redaction engine should be configured")
+	}
+}
+
+func TestHealthResponseIncludesCommandExecution(t *testing.T) {
+	t.Parallel()
+
+	hm := health.NewMetrics()
+	captured := capture.NewCapture()
+	captured.Queries().RegisterCommand("warn-timeout", "query-warn-timeout", time.Minute)
+	captured.Queries().ApplyCommandResult("warn-timeout", "timeout", nil, "synthetic-timeout")
+
+	response := getHealthResponse(hm, captured, nil, nil, nil, "test")
+	if response.CommandExecution.Status != "warn" || response.CommandExecution.Ready {
+		t.Fatalf("command execution = %#v, want non-ready warning", response.CommandExecution)
+	}
+	if response.CommandExecution.RecentTimeoutCount != 1 {
+		t.Fatalf("recent timeout count = %d, want 1", response.CommandExecution.RecentTimeoutCount)
 	}
 }
