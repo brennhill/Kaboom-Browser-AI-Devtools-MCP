@@ -112,7 +112,6 @@ test_paths:
   - cmd/browser-agent/main_connection_adapters_test.go
   - cmd/browser-agent/main_connection_recovery_primitives_test.go
   - cmd/browser-agent/connection_lifecycle_helpers_test.go
-  - cmd/browser-agent/server_core_unit_test.go
   - cmd/browser-agent/internal/startupconfig/paths_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go
   - internal/capture/healthreader/reader_test.go
@@ -186,7 +185,6 @@ test_paths:
   - cmd/browser-agent/internal/daemonlife/helpers_test.go
   - cmd/browser-agent/daemon_lifecycle_policy_test.go
   - cmd/browser-agent/daemon_lifecycle_wiring_test.go
-  - cmd/browser-agent/server_core_unit_test.go
   - cmd/browser-agent/internal/procctl/pidfile_test.go
   - cmd/browser-agent/internal/procctl/port_test.go
   - cmd/browser-agent/internal/procctl/port_netstat_test.go

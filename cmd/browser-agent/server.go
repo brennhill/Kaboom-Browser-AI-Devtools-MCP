@@ -116,11 +116,6 @@ type Server struct {
 	daemonRecovery   *daemonrecovery.Reclaimer
 }
 
-func (s *Server) applyRuntimeConfig(config *serverConfig) {
-	s.uploadAutomation = config.uploadAutomation
-	s.uploadSecurity = config.uploadSecurity
-}
-
 func (s *Server) logLifecycle(event string, port int, fields map[string]any) {
 	entry := types.LogEntry{
 		"type":      "lifecycle",

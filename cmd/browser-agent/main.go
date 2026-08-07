@@ -117,7 +117,8 @@ func main() {
 		os.Exit(1)
 	}
 	server.runtime = runtime
-	server.applyRuntimeConfig(cfg)
+	server.uploadAutomation = cfg.uploadAutomation
+	server.uploadSecurity = cfg.uploadSecurity
 	for _, warning := range cfg.startupWarnings {
 		server.warnings.Add(warning)
 	}
