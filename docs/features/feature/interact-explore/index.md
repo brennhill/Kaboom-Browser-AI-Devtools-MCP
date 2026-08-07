@@ -108,7 +108,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_rich_test.go
   - cmd/browser-agent/tools_interact_rich_cmdresult_test.go
   - cmd/browser-agent/tools_interact_rich_perfdiff_test.go
-  - cmd/browser-agent/tools_interact_result_lifecycle_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
   - internal/schema/interact/schema_test.go
@@ -336,6 +335,9 @@ and clamping, and the absence of CSP-fragile injected scripts.
 Highlight, subtitle, and interactive-list response and failure contracts live
 with their browser/DOM owners, including invalid JSON, pilot gating, tab
 forwarding, queue type, and subtitle-clear semantics.
+Subtitle responses expose the exact queued correlation identifier from that
+owner. Async lifecycle markers and completed-command browser context promotion
+are verified beside the canonical async-command response formatter.
 Navigate and script-execution dispatch contracts live with the canonical
 browser action owner, including action payloads, queue types, correlation
 metadata, and invalid-input behavior.

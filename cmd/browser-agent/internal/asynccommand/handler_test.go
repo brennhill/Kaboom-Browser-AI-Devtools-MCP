@@ -43,6 +43,126 @@ func TestFormatCommandResultPreservesCancellationDiagnosis(t *testing.T) {
 	}
 }
 
+func TestFormatCommandResultLifecycleAndEffectiveContext(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	defer cap.Close()
+	handler := New(Deps{
+		Capture:              cap,
+		DiagnosticHintString: func() string { return "doctor" },
+		AttachEvidence:       func(string, map[string]any) {},
+		AttachRetryContext:   func(string, map[string]any, string, string) {},
+	})
+
+	tests := []struct {
+		name       string
+		command    queries.CommandResult
+		wantError  bool
+		wantFinal  bool
+		wantStatus string
+	}{
+		{
+			name: "completed result promotes effective browser context",
+			command: queries.CommandResult{
+				CorrelationID: "complete-1",
+				Status:        "complete",
+				Result: json.RawMessage(`{
+					"success":true,
+					"resolved_tab_id":42,
+					"resolved_url":"https://example.test/before",
+					"effective_tab_id":42,
+					"effective_url":"https://example.test/after"
+				}`),
+			},
+			wantFinal:  true,
+			wantStatus: "complete",
+		},
+		{
+			name: "failed result is terminal",
+			command: queries.CommandResult{
+				CorrelationID: "error-1",
+				Status:        "error",
+				Error:         "element_not_found",
+			},
+			wantError:  true,
+			wantFinal:  true,
+			wantStatus: "error",
+		},
+		{
+			name: "pending result remains nonterminal",
+			command: queries.CommandResult{
+				CorrelationID: "pending-1",
+				Status:        "pending",
+			},
+			wantFinal:  false,
+			wantStatus: "pending",
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			response := handler.FormatCommandResult(
+				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+				testCase.command,
+				testCase.command.CorrelationID,
+			)
+			var result mcp.MCPToolResult
+			if err := json.Unmarshal(response.Result, &result); err != nil {
+				t.Fatalf("decode tool result: %v", err)
+			}
+			if result.IsError != testCase.wantError {
+				t.Fatalf("is_error = %v, want %v", result.IsError, testCase.wantError)
+			}
+			data := decodeResponseData(t, result)
+			if data["status"] != testCase.wantStatus || data["final"] != testCase.wantFinal || data["queued"] != false {
+				t.Fatalf("lifecycle data = %#v", data)
+			}
+			if testCase.command.CorrelationID == "complete-1" {
+				if data["effective_tab_id"] != float64(42) || data["effective_url"] != "https://example.test/after" || data["resolved_url"] != "https://example.test/before" {
+					t.Fatalf("effective context = %#v", data)
+				}
+			}
+		})
+	}
+}
+
+func TestMaybeWaitForCommandBackgroundResponseIsQueued(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	defer cap.Close()
+	handler := New(Deps{Capture: cap})
+	response := handler.MaybeWaitForCommand(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+		"click-1",
+		json.RawMessage(`{"background":true}`),
+		"Click queued",
+	)
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		t.Fatalf("decode tool result: %v", err)
+	}
+	data := decodeResponseData(t, result)
+	if data["status"] != "queued" || data["queued"] != true || data["final"] != false || data["correlation_id"] != "click-1" {
+		t.Fatalf("queued lifecycle data = %#v", data)
+	}
+}
+
+func decodeResponseData(t *testing.T, result mcp.MCPToolResult) map[string]any {
+	t.Helper()
+	if len(result.Content) == 0 {
+		t.Fatal("tool result has no content")
+	}
+	start := strings.IndexByte(result.Content[0].Text, '{')
+	if start < 0 {
+		t.Fatalf("response has no structured data: %q", result.Content[0].Text)
+	}
+	var data map[string]any
+	if err := json.Unmarshal([]byte(result.Content[0].Text[start:]), &data); err != nil {
+		t.Fatalf("decode response data: %v", err)
+	}
+	return data
+}
+
 func TestBuildA11yQueryParamsOmitsDefaultsAndPreservesTargets(t *testing.T) {
 	t.Parallel()
 	empty := BuildA11yQueryParams("", nil, nil, false)

@@ -236,7 +236,7 @@ func TestHandleExecuteJS_MainWorldCSPBlocked(t *testing.T) {
 
 func TestHandleSubtitle_SetAndClear(t *testing.T) {
 	h, fs := newFakeBrowserActions(t)
-	assertOK(t, h.Handle("subtitle", testReq(), json.RawMessage(`{"text":"hello"}`)))
+	set := assertOK(t, h.Handle("subtitle", testReq(), json.RawMessage(`{"text":"hello"}`)))
 	cleared := assertOK(t, h.Handle("subtitle", testReq(), json.RawMessage(`{"text":""}`)))
 	if !strings.Contains(strings.ToLower(firstText(cleared)), "clear") {
 		t.Fatalf("subtitle clear response = %s", firstText(cleared))
@@ -244,6 +244,9 @@ func TestHandleSubtitle_SetAndClear(t *testing.T) {
 	enqueued := fs.enqueuedSnapshot()
 	if len(enqueued) != 2 || enqueued[0].Type != "subtitle" || enqueued[1].Type != "subtitle" {
 		t.Fatalf("subtitle enqueues = %#v", enqueued)
+	}
+	if !strings.Contains(firstText(set), enqueued[0].CorrelationID) || !strings.Contains(firstText(cleared), enqueued[1].CorrelationID) {
+		t.Fatalf("subtitle responses must expose their queued correlation IDs: set=%s clear=%s", firstText(set), firstText(cleared))
 	}
 }
 
