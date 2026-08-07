@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -85,6 +86,46 @@ func TestHandleClearAllClearsEveryAnnotationStateFamily(t *testing.T) {
 	}
 	if _, ok := annotations.GetDetail("detail"); ok || annotations.GetSession(7) != nil || annotations.GetNamedSession("review") != nil {
 		t.Fatal("clear all retained annotation state")
+	}
+}
+
+func TestHandleClearRoutesEveryBufferAndDrainsInbox(t *testing.T) {
+	captured := capture.NewCapture()
+	reset := resetter.New(resetter.Dependencies{
+		Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs(),
+	})
+	inbox := push.NewPushInbox(5)
+	inbox.Enqueue(push.PushEvent{ID: "one", Type: "chat"})
+	inbox.Enqueue(push.PushEvent{ID: "two", Type: "chat"})
+	logCount := 3
+	targets := ClearTargets{
+		Capture:  captured,
+		Resetter: reset,
+		Inbox:    inbox,
+		ClearLogs: func() int {
+			cleared := logCount
+			logCount = 0
+			return cleared
+		},
+	}
+	for _, buffer := range []string{"network", "websocket", "actions", "logs"} {
+		result := parseRespJSON(t, HandleClear(targets, newReq(), json.RawMessage(`{"buffer":"`+buffer+`"}`)))
+		if result["status"] != "ok" || result["buffer"] != buffer || result["cleared"] == nil {
+			t.Errorf("clear %q response = %#v", buffer, result)
+		}
+	}
+	result := parseRespJSON(t, HandleClear(targets, newReq(), json.RawMessage(`{"buffer":"inbox"}`)))
+	if inbox.Len() != 0 || result["cleared"].(map[string]any)["push_events"] != float64(2) {
+		t.Fatalf("inbox clear response = %#v, remaining=%d", result, inbox.Len())
+	}
+	defaulted := parseRespJSON(t, HandleClear(targets, newReq(), nil))
+	if defaulted["buffer"] != "all" {
+		t.Fatalf("default clear response = %#v", defaulted)
+	}
+	for _, args := range []json.RawMessage{json.RawMessage(`{bad`), json.RawMessage(`{"buffer":"invalid"}`)} {
+		if isError, _ := parseResp(t, HandleClear(targets, newReq(), args)); !isError {
+			t.Errorf("invalid clear request %q succeeded", args)
+		}
 	}
 }
 
@@ -284,6 +325,16 @@ func TestHandleTelemetry(t *testing.T) {
 			}
 			if d.setTelemetryCalled != tt.wantSet {
 				t.Errorf("SetTelemetryMode called with %q, want %q", d.setTelemetryCalled, tt.wantSet)
+			}
+			if !tt.wantErr {
+				result := parseRespJSON(t, resp)
+				wantMode := tt.current
+				if tt.wantSet != "" {
+					wantMode = tt.wantSet
+				}
+				if result["status"] != "ok" || result["telemetry_mode"] != wantMode {
+					t.Errorf("telemetry response = %#v, want mode %q", result, wantMode)
+				}
 			}
 		})
 	}
