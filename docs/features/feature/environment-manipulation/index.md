@@ -4,7 +4,7 @@ feature_id: feature-environment-manipulation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-08
 code_paths:
   - cmd/browser-agent/internal/cli/parser/generate_configure.go
   - cmd/browser-agent/internal/playbooks/resources/guides.go
@@ -77,6 +77,9 @@ last_verified_date: 2026-08-02
 - Tool: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical tool enums.
 - Mode/Action: See feature contract and `docs/core/protocol/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
 - Location: `docs/features/feature/environment-manipulation`
+- Startup fixture reconciliation uses the canonical panic-recovering goroutine
+  boundary while installing its mutation barrier synchronously, so a recovery
+  panic cannot crash the daemon or let fixture work overtake reconciliation.
 
 ## Specs
 

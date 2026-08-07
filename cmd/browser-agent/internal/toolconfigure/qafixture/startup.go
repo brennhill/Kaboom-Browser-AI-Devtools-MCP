@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 const startupRecoveryTimeout = 30 * time.Second
@@ -29,10 +30,10 @@ func (handler *Handler) StartStartupRecovery(
 	done := make(chan struct{})
 	handler.startupDone = done
 	handler.startupMu.Unlock()
-	go func() {
+	util.SafeGo(func() {
 		defer close(done)
 		handler.recoverAtStartup(ctx, waitForExtension)
-	}()
+	})
 	return done
 }
 

@@ -30,6 +30,7 @@ BARE_GO=$(grep -rn 'go func()' cmd/browser-agent/ internal/ \
   | grep -v '_test.go' \
   | grep -v 'SafeGo' \
   | grep -v 'safego\.go' \
+  | grep -v 'internal/util/response.go' \
   | grep -v '// lint:allow-bare-goroutine' \
   || true)
 
@@ -98,8 +99,10 @@ fi
 # ─────────────────────────────────────────────
 bold "4. Checking route ↔ OpenAPI sync..."
 
-# Public daemon route registration is owned by server.go.
-SERVER_ROUTE_FILES="cmd/browser-agent/server.go"
+# Public daemon route registration is owned by composition plus the canonical
+# client lifecycle feature. Keep this list explicit so test-only muxes and
+# internal helper routes cannot accidentally expand the public API contract.
+SERVER_ROUTE_FILES="cmd/browser-agent/server.go cmd/browser-agent/internal/clientapi/handler.go"
 
 # Extract registered routes from Go source
 GO_ROUTES=$(grep -h -o 'HandleFunc("[^"]*"' $SERVER_ROUTE_FILES \

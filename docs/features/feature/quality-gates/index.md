@@ -10,6 +10,7 @@ code_paths:
   - scripts/maintenance/
   - scripts/quality/contracts/
   - scripts/quality/verification/
+  - scripts/quality/verification/lint-hardening.sh
   - scripts/setup/
   - scripts/uat/orchestration/
   - scripts/uat/protocol/
@@ -82,6 +83,7 @@ test_paths:
   - scripts/quality/contracts/check-folder-size.test.mjs
   - scripts/contracts/check_go_test_determinism_test.go
   - scripts/contracts/goarchitecture/main_test.go
+  - scripts/contracts/goarchitecturetests/contracts_test.go
   - scripts/tests/contracts/go-coverage-profile.test.mjs
   - scripts/build/openapi-tooling.test.mjs
   - internal/testsync/testsync_test.go

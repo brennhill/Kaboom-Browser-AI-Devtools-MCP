@@ -32,6 +32,8 @@ func JSONResponse(w http.ResponseWriter, status int, data any) {
 // On panic: logs stack trace to stderr. Does NOT os.Exit — background
 // panics should be survivable so the daemon stays up.
 func SafeGo(fn func()) {
+	// lint:allow-bare-goroutine — This is the canonical panic-recovering
+	// goroutine boundary that every other production owner must call.
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {

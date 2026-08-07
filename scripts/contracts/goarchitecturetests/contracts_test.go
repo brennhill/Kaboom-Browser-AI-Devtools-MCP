@@ -648,6 +648,23 @@ func TestEvidenceCaptureHasNoCompatibilityShim(t *testing.T) {
 	}
 }
 
+func TestHardeningLintTracksCanonicalRouteAndGoroutineOwners(t *testing.T) {
+	scriptPath := filepath.Join(projectRoot(), "scripts", "quality", "verification", "lint-hardening.sh")
+	source, err := os.ReadFile(scriptPath)
+	if err != nil {
+		t.Fatalf("read hardening lint: %v", err)
+	}
+	text := string(source)
+	for _, canonicalOwner := range []string{
+		"cmd/browser-agent/internal/clientapi/handler.go",
+		"internal/util/response.go",
+	} {
+		if !strings.Contains(text, canonicalOwner) {
+			t.Errorf("hardening lint does not recognize canonical owner %s", canonicalOwner)
+		}
+	}
+}
+
 func TestFeaturePackagesDoNotMirrorGuardContract(t *testing.T) {
 	for _, relativePath := range []string{
 		"cmd/browser-agent/internal/toolinteract/action_owners.go",
