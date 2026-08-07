@@ -4,11 +4,12 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
   - internal/mcp/response_clamp.go
+  - internal/mcp/errors.go
   - internal/queries/dispatcher.go
   - internal/queries/dispatcher_commands.go
   - internal/queries/dispatcher_queries.go
@@ -37,6 +38,7 @@ code_paths:
   - scripts/quality/verification/validate-architecture.sh
 test_paths:
   - internal/mcp/response_test.go
+  - internal/mcp/errors_test.go
   - internal/queries/dispatcher_test.go
   - internal/queries/commands_test.go
   - internal/queries/command_trace_test.go
