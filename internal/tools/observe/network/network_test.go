@@ -31,12 +31,37 @@ func TestNetworkBodyHandlerFiltersTransformsAndExplainsEmptyResults(t *testing.T
 		t.Fatalf("filtered network bodies = %+v", response)
 	}
 	response = testsupport.DecodeToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"url":"missing","summary":true}`)))
-	if response.IsError || !strings.Contains(response.Content[0].Text, "hint") {
+	if response.IsError || !strings.Contains(response.Content[0].Text, "hint") || !strings.Contains(response.Content[0].Text, "filter") {
 		t.Fatalf("empty body summary = %+v", response)
 	}
 	response = testsupport.DecodeToolResult(t, GetNetworkBodies(deps, req, json.RawMessage(`{"body_path":"data["}`)))
 	if !response.IsError {
 		t.Fatalf("malformed body filter = %+v", response)
+	}
+}
+
+func TestNetworkBodyHandlerDistinguishesProspectiveCaptureFromAvailableBodies(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{
+		URL: "https://example.test/api/users", Timestamp: time.Now(),
+	}}, "https://example.test")
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 71}
+	deps := testsupport.Deps(cap)
+
+	empty := testsupport.DecodeToolResult(t, GetNetworkBodies(deps, req, nil))
+	if empty.IsError || !strings.Contains(empty.Content[0].Text, "waterfall") || !strings.Contains(empty.Content[0].Text, "after") {
+		t.Fatalf("prospective capture hint = %+v", empty)
+	}
+
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{{
+		URL: "https://example.test/api/users", Method: "GET", Status: 200,
+		Timestamp: time.Now().Format(time.RFC3339), ResponseBody: `{"users":[]}`,
+	}})
+	nonEmpty := testsupport.DecodeToolResult(t, GetNetworkBodies(deps, req, nil))
+	if nonEmpty.IsError || strings.Contains(nonEmpty.Content[0].Text, `"hint"`) {
+		t.Fatalf("non-empty body result = %+v", nonEmpty)
 	}
 }
 
@@ -103,7 +128,10 @@ func TestWaterfallAndWebSocketStatusHandlersExposeOperationalShapes(t *testing.T
 		t.Fatal("websocket status accepted invalid JSON")
 	}
 	result := testsupport.DecodeToolResult(t, GetWSStatus(deps, req, json.RawMessage(`{"summary":true}`)))
-	if result.IsError || !strings.Contains(result.Content[0].Text, "active_connection_ids") || !strings.Contains(result.Content[0].Text, "closed_connection_ids") {
+	if result.IsError || !strings.Contains(result.Content[0].Text, "active_connection_ids") || !strings.Contains(result.Content[0].Text, "closed_connection_ids") ||
+		!strings.Contains(result.Content[0].Text, `"active_urls":["wss://example.test/socket"]`) ||
+		!strings.Contains(result.Content[0].Text, `"closed_urls":["wss://other.test/socket"]`) ||
+		strings.Contains(result.Content[0].Text, `"connections"`) {
 		t.Fatalf("websocket status summary = %+v", result)
 	}
 	empty := capture.NewCapture()

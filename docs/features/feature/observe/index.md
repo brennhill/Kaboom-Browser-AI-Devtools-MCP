@@ -218,6 +218,9 @@ Sampled WebSocket capture snapshots mutable `ArrayBuffer` payloads and the exact
 byte range of outbound typed-array views before deferred formatting, preserving
 the wire bytes even when application code mutates or transfers the source buffer.
 Network-bodies empty-result hints now echo all active filters (`url`, `method`, `status_*`, `body_path`) so retry guidance is specific to the current query.
+Network and WebSocket empty-result, prospective-capture, and compact-summary
+contracts live with the canonical network observe owner; the browser-agent root
+does not maintain a duplicate integration fixture for those response shapes.
 Log severity filtering uses only `min_level`, with threshold semantics (for
 example, `warn` returns warning and error entries).
 Storage summary tests now share common assertions for `key_count`, `sample_keys`, and `total_bytes` shape checks.
