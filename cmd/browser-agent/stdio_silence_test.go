@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -20,6 +21,18 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+func waitForProcessExit(t *testing.T, command *exec.Cmd, timeout time.Duration) {
+	t.Helper()
+	done := make(chan error, 1)
+	go func() { done <- command.Wait() }()
+	select {
+	case <-done:
+	case <-time.After(timeout):
+		_ = command.Process.Kill()
+		t.Fatalf("process %d did not exit within %s", command.Process.Pid, timeout)
+	}
+}
 
 // contentLengthFrame wraps a JSON payload in Content-Length framing.
 func contentLengthFrame(payload string) string {

@@ -6,15 +6,45 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+var stdoutCaptureMu sync.Mutex
+
+func captureStdout(t *testing.T, run func()) string {
+	t.Helper()
+	stdoutCaptureMu.Lock()
+	defer stdoutCaptureMu.Unlock()
+	previous := os.Stdout
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe(stdout) error = %v", err)
+	}
+	os.Stdout = writer
+	defer func() { os.Stdout = previous }()
+	run()
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close stdout writer: %v", err)
+	}
+	var output bytes.Buffer
+	if _, err := io.Copy(&output, reader); err != nil {
+		t.Fatalf("read captured stdout: %v", err)
+	}
+	if err := reader.Close(); err != nil {
+		t.Fatalf("close stdout reader: %v", err)
+	}
+	return output.String()
+}
 
 func captureDiagnostics(t *testing.T, run func()) string {
 	t.Helper()
