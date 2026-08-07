@@ -4,7 +4,7 @@ feature_id: feature-har-export
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
@@ -16,7 +16,6 @@ code_paths:
   - internal/export/har/helpers.go
 test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
-  - cmd/browser-agent/tools_generate_har_test.go
   - internal/export/har/export_test.go
   - internal/export/har/coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go

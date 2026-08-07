@@ -4,6 +4,7 @@ package toolgenerate
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -86,12 +87,41 @@ func TestValidateGenerateParams_ValidFormat(t *testing.T) {
 }
 
 func TestValidateGenerateParams_UnknownParam(t *testing.T) {
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	args := json.RawMessage(`{"format":"reproduction","bogus_param":true}`)
+	for _, test := range []struct {
+		format string
+		args   string
+	}{
+		{format: "reproduction", args: `{"what":"reproduction","bogus":true}`},
+		{format: "test", args: `{"what":"test","scope":"page"}`},
+		{format: "har", args: `{"what":"har","include_passes":true}`},
+		{format: "csp", args: `{"what":"csp","resource_types":["script"]}`},
+	} {
+		resp := ValidateGenerateParams(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, test.format, json.RawMessage(test.args))
+		if resp == nil {
+			t.Fatalf("%s accepted unknown parameter", test.format)
+		}
+		var result mcp.MCPToolResult
+		if err := json.Unmarshal(resp.Result, &result); err != nil {
+			t.Fatal(err)
+		}
+		if !result.IsError || !strings.Contains(result.Content[0].Text, mcp.ErrInvalidParam) {
+			t.Fatalf("%s response = %#v", test.format, result)
+		}
+	}
+}
 
-	resp := ValidateGenerateParams(req, "reproduction", args)
-	if resp == nil {
-		t.Fatal("expected error response for unknown param")
+func TestValidateGenerateParams_AcceptsFormatSpecificParameters(t *testing.T) {
+	for _, test := range []struct {
+		format string
+		args   string
+	}{
+		{format: "reproduction", args: `{"what":"reproduction","error_message":"404","last_n":5}`},
+		{format: "test", args: `{"what":"test","test_name":"login","telemetry_mode":"auto"}`},
+		{format: "har", args: `{"what":"har","url":"/api","method":"GET"}`},
+	} {
+		if response := ValidateGenerateParams(mcp.JSONRPCRequest{ID: 1}, test.format, json.RawMessage(test.args)); response != nil {
+			t.Fatalf("%s rejected valid parameters: %#v", test.format, response)
+		}
 	}
 }
 

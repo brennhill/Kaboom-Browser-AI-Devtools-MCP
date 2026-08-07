@@ -6,6 +6,9 @@ package toolgenerate
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +17,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export/har"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -73,6 +77,22 @@ func parseResult(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
 	return r.IsError, text
 }
 
+func parseResultJSON[T any](t *testing.T, response mcp.JSONRPCResponse) T {
+	t.Helper()
+	isError, text := parseResult(t, response)
+	if isError {
+		t.Fatalf("unexpected tool error: %s", text)
+	}
+	if _, payload, found := strings.Cut(text, "\n"); found {
+		text = payload
+	}
+	var result T
+	if err := json.Unmarshal([]byte(text), &result); err != nil {
+		t.Fatalf("invalid result JSON: %v (text=%s)", err, text)
+	}
+	return result
+}
+
 // ---------------------------------------------------------------------------
 // HandleExportHAR
 // ---------------------------------------------------------------------------
@@ -81,8 +101,9 @@ func TestHandleExportHAR(t *testing.T) {
 	t.Run("no bodies yields empty export", func(t *testing.T) {
 		d := newGenDeps()
 		resp := HandleExportHAR(d.deps(), genReq(), json.RawMessage(`{}`))
-		if isErr, text := parseResult(t, resp); isErr {
-			t.Fatalf("empty HAR export should succeed: %s", text)
+		result := parseResultJSON[har.HARLog](t, resp)
+		if len(result.Log.Entries) != 0 {
+			t.Fatalf("empty HAR entries = %#v", result.Log.Entries)
 		}
 	})
 
@@ -114,6 +135,37 @@ func TestHandleExportHAR(t *testing.T) {
 	})
 }
 
+func TestHandleExportHARPreservesOutputFiltersAndFileContract(t *testing.T) {
+	d := newGenDeps()
+	d.cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
+		{Timestamp: "2026-01-23T10:30:00.000Z", Method: "GET", URL: "https://example.com/api", Status: 200},
+		{Timestamp: "2026-01-23T10:30:01.000Z", Method: "POST", URL: "https://example.com/api", Status: 500},
+	})
+
+	filtered := parseResultJSON[har.HARLog](t, HandleExportHAR(d.deps(), genReq(), json.RawMessage(`{"method":"POST","status_min":400}`)))
+	if len(filtered.Log.Entries) != 1 || filtered.Log.Entries[0].Request.Method != "POST" {
+		t.Fatalf("filtered entries = %#v", filtered.Log.Entries)
+	}
+
+	directory := filepath.Join(".tmp-har-export", strings.ReplaceAll(t.Name(), "/", "_"))
+	if err := os.MkdirAll(directory, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(directory); err != nil {
+			t.Errorf("remove HAR test directory: %v", err)
+		}
+	})
+	path := filepath.Join(directory, "owner.har")
+	summary := parseResultJSON[har.HARExportResult](t, HandleExportHAR(d.deps(), genReq(), json.RawMessage(`{"save_to":"`+path+`"}`)))
+	if summary.SavedTo != path || summary.EntriesCount != 2 {
+		t.Fatalf("save summary = %#v", summary)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("saved HAR unavailable: %v", err)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // HandlePRSummary
 // ---------------------------------------------------------------------------
@@ -121,10 +173,9 @@ func TestHandleExportHAR(t *testing.T) {
 func TestHandlePRSummary(t *testing.T) {
 	t.Run("no activity", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandlePRSummary(d.deps(), genReq(), nil)
-		isErr, text := parseResult(t, resp)
-		if isErr {
-			t.Fatalf("pr summary should succeed: %s", text)
+		result := parseResultJSON[map[string]any](t, HandlePRSummary(d.deps(), genReq(), nil))
+		if result["reason"] != "no_activity_captured" {
+			t.Fatalf("empty summary = %#v", result)
 		}
 	})
 
@@ -203,9 +254,9 @@ func TestHandleExportSARIF(t *testing.T) {
 func TestHandleGenerateCSP(t *testing.T) {
 	t.Run("no bodies unavailable", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleGenerateCSP(d.deps(), genReq(), json.RawMessage(`{}`))
-		if isErr, _ := parseResult(t, resp); isErr {
-			t.Fatal("unavailable should be a success response, not error")
+		result := parseResultJSON[map[string]any](t, HandleGenerateCSP(d.deps(), genReq(), json.RawMessage(`{}`)))
+		if result["status"] != "unavailable" || result["mode"] != "moderate" {
+			t.Fatalf("empty CSP result = %#v", result)
 		}
 	})
 
@@ -241,6 +292,32 @@ func TestHandleGenerateCSP(t *testing.T) {
 			t.Fatal("invalid JSON should error")
 		}
 	})
+}
+
+func TestHandleGenerateTestExplainsEmptyCapture(t *testing.T) {
+	d := newGenDeps()
+	result := parseResultJSON[map[string]any](t, HandleGenerateTest(d.deps(), genReq(), json.RawMessage(`{}`)))
+	if result["reason"] != "no_actions_captured" {
+		t.Fatalf("empty test result = %#v", result)
+	}
+}
+
+func TestHandleGenerateCSPPreservesPolicyContract(t *testing.T) {
+	d := newGenDeps()
+	d.cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
+		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", Method: "GET", Status: 200},
+		{URL: "https://cdn.example.com/style.css", ContentType: "text/css", Method: "GET", Status: 200},
+		{URL: "https://api.example.com/data", ContentType: "application/json", Method: "GET", Status: 200},
+		{URL: "https://cdn.example.com/logo.png", ContentType: "image/png", Method: "GET", Status: 200},
+	})
+	result := parseResultJSON[map[string]any](t, HandleGenerateCSP(d.deps(), genReq(), json.RawMessage(`{"mode":"strict"}`)))
+	policy, _ := result["policy"].(string)
+	if result["status"] != "ok" || !strings.Contains(policy, "default-src") || !strings.Contains(policy, "'self'") {
+		t.Fatalf("CSP result = %#v", result)
+	}
+	if result["origins_observed"] != float64(4) || result["directives"] == nil {
+		t.Fatalf("CSP attribution = %#v", result)
+	}
 }
 
 // ---------------------------------------------------------------------------

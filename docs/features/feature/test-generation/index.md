@@ -4,7 +4,7 @@ feature_id: feature-test-generation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-07
 code_paths:
   - cmd/browser-agent/internal/testgenhandler/handler.go
   - cmd/browser-agent/internal/testgenhandler/provider_adapter.go
@@ -35,7 +35,6 @@ test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/tools_generate_handler_test.go
-  - cmd/browser-agent/tools_generate_validation_test.go
   - cmd/browser-agent/tools_generate_warning_filter_test.go
   - cmd/browser-agent/internal/testgenhandler/context_test.go
   - cmd/browser-agent/internal/testgenhandler/heal_test.go
