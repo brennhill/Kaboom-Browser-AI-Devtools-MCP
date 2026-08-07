@@ -56,6 +56,10 @@ func parseAndValidateFlags() *startupconfig.Runtime {
 		diag.Printf("[Kaboom] %v\n", err)
 		os.Exit(1)
 	}
+	if err := activateEarlyModeStateDir(f); err != nil {
+		diag.Printf("[Kaboom] Invalid state directory: %v\n", err)
+		os.Exit(1)
+	}
 
 	handleEarlyExitModes(&f)
 	uploadsec.SetSSRFAllowedHosts(f.SSRFAllowedHosts)
@@ -65,6 +69,15 @@ func parseAndValidateFlags() *startupconfig.Runtime {
 		os.Exit(1)
 	}
 	return &config
+}
+
+func activateEarlyModeStateDir(flags runtimeflags.Values) error {
+	if flags.StateDir == "" || (!flags.ForceCleanup && !flags.DoctorMode && !flags.StopMode &&
+		!flags.InstallMode && !flags.ConnectMode) {
+		return nil
+	}
+	_, err := startupconfig.NormalizeStateDir(flags.StateDir)
+	return err
 }
 
 func handleEarlyExitModes(flags *runtimeflags.Values) {

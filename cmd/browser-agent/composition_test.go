@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/runtimeflags"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
@@ -36,6 +37,22 @@ func newTestServerForHandlers(t *testing.T) *Server {
 	}
 	t.Cleanup(server.Close)
 	return server
+}
+
+func TestEarlyDoctorActivatesExplicitStateDirectory(t *testing.T) {
+	t.Setenv(state.StateDirEnv, "")
+	stateRoot := t.TempDir()
+	flags := runtimeflags.Values{DoctorMode: true, StateDir: stateRoot}
+	if err := activateEarlyModeStateDir(flags); err != nil {
+		t.Fatalf("activate early Doctor state: %v", err)
+	}
+	resolved, err := state.RootDir()
+	if err != nil {
+		t.Fatalf("resolve state root: %v", err)
+	}
+	if resolved != stateRoot {
+		t.Fatalf("state root = %q, want %q", resolved, stateRoot)
+	}
 }
 
 func makeToolHandler(t *testing.T) (*ToolHandler, *Server, *capture.Capture) {

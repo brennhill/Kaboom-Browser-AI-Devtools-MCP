@@ -69,6 +69,7 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/contracts/validate-versions.js
   - docs/setup/mcp-install-guide.md
 test_paths:
+  - cmd/browser-agent/composition_test.go
   - cmd/browser-agent/internal/startupconfig/paths_test.go
   - cmd/browser-agent/internal/startupconfig/runtime_test.go
   - cmd/browser-agent/internal/cli/parser/commands_test.go

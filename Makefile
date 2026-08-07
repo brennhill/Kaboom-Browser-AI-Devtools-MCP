@@ -28,7 +28,7 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check install-security-tools pre-commit verify-all npm-binaries validate-semver \
-	verify-llm check-folder-size check-structure check-workflow-paths check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture go-architecture-baseline-update \
+	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture go-architecture-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-command-contract generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -222,11 +222,13 @@ go-architecture-baseline-update:
 
 # All structural gates: physical size, dependency direction, public surface,
 # cycles, dormant tests, and high-risk extension duplication.
-check-workflow-paths:
+check-workflow-contracts:
 	@node --test scripts/quality/workflows/check-local-paths.test.mjs
+	@node --test scripts/quality/workflows/check-go-test-targets.test.mjs
 	@node scripts/quality/workflows/check-local-paths.mjs
+	@node scripts/quality/workflows/check-go-test-targets.mjs
 
-check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture check-workflow-paths lint-boundaries lint-silent-catches lint-circular check-duplicates
+check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates
 
 validate-architecture:
 	@bash scripts/quality/verification/validate-architecture.sh
@@ -538,7 +540,6 @@ quality-gate: check-structure lint lint-hardening lint-dead lint-json-casing typ
 
 # Upgrade/install guardrail suite: prevents stale daemons from surviving release upgrades.
 test-upgrade-guards:
-	go test ./cmd/browser-agent -run 'TestConnectWithRetriesRejectsVersionMismatch' -count=1
 	node --test scripts/release/install-upgrade-regression.contract.test.mjs
 	node --test scripts/release/npm-wrapper/run-tests.test.mjs
 	node scripts/release/npm-wrapper/run-tests.mjs

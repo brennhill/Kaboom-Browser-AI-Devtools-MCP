@@ -4,8 +4,9 @@ feature_id: feature-lazy-server-start
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-08
 code_paths:
+  - .github/workflows/ci.yml
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
   - cmd/browser-agent/internal/bridge/healthprobe/probe.go
@@ -22,6 +23,7 @@ code_paths:
   - src/popup/shell/status-display.ts
   - extension/popup.html
 test_paths:
+  - cmd/browser-agent/integration/bridge/faststart_extended_test.go
   - cmd/browser-agent/internal/bridge/fastpathtelemetry/telemetry_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/bridge/bridge_test_support_test.go
@@ -47,6 +49,11 @@ Fast-path diagnostics use a bounded asynchronous queue. Request handling updates
 its counters and enqueues an immutable JSON record without filesystem I/O; the
 bridge drains accepted records when its stdio loop ends. A full queue drops
 diagnostics instead of delaying or corrupting MCP protocol traffic.
+
+The CI soak runs the bridge and Doctor against one explicit disposable state
+root. Early diagnostic modes activate `--state-dir` before reading telemetry,
+so the threshold evaluates the workload's 100+ isolated samples instead of a
+developer profile or an empty default directory.
 
 ## Contracts
 

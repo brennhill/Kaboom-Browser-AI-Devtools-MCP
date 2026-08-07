@@ -10,6 +10,7 @@ code_paths:
   - .github/workflows/release.yml
   - Makefile
   - scripts/quality/workflows/check-local-paths.mjs
+  - scripts/quality/workflows/check-go-test-targets.mjs
   - scripts/uat/runners/test-js-sharded.sh
   - scripts/quality/verification/validate-architecture.sh
   - cmd/browser-agent/internal/ciapi/handlers.go
@@ -24,6 +25,7 @@ test_paths:
   - cmd/browser-agent/internal/ciapi/compute_test.go
   - cmd/browser-agent/internal/ciapi/handlers_integration_test.go
   - scripts/quality/workflows/check-local-paths.test.mjs
+  - scripts/quality/workflows/check-go-test-targets.test.mjs
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -73,3 +75,6 @@ last_verified_date: 2026-03-05
   workflows and fails when a refactor deletes or moves its target. Workflow
   commands therefore migrate atomically with canonical script owners instead
   of relying on compatibility wrappers or discovering stale paths in remote CI.
+- Targeted Go workflow commands are also resolved semantically with `go test
+  -list`; CI fails if a named test moved or was deleted from the selected
+  package, preventing successful “no tests to run” release gates.

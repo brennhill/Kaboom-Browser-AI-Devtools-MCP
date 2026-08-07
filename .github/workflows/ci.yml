@@ -127,9 +127,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Go mismatch guard
-        run: go test ./cmd/browser-agent -run TestConnectWithRetriesRejectsVersionMismatch -count=1
-
       - name: Upgrade script contract tests
         run: node --test scripts/release/install-upgrade-regression.contract.test.mjs
 
@@ -238,7 +235,7 @@ jobs:
         run: |
           STATE_DIR="$(mktemp -d)"
           echo "Using state dir: ${STATE_DIR}"
-          KABOOM_STATE_DIR="${STATE_DIR}" go test -race -tags=integration ./cmd/browser-agent -run TestFastStart_ResourceWorkflowSoak -count=3 -timeout=12m
+          KABOOM_STATE_DIR="${STATE_DIR}" go test -race -tags=integration ./cmd/browser-agent/integration/bridge -run TestFastStart_ResourceWorkflowSoak -count=3 -timeout=12m
           go run ./cmd/browser-agent --doctor --state-dir "${STATE_DIR}" --fastpath-min-samples 100 --fastpath-max-failure-ratio 0.02
 
   javascript:
