@@ -33,7 +33,7 @@ test_paths:
   - cmd/browser-agent/tools_configure_noise_test.go
   - cmd/browser-agent/noise_doctor_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
-  - cmd/browser-agent/tools_configure_session_test.go
+  - cmd/browser-agent/internal/toolconfigure/session_test.go
   - internal/tools/configure/audit_test.go
   - internal/tools/configure/boundaries_test.go
   - internal/tools/configure/rewrite_test.go
@@ -107,6 +107,6 @@ negative attempts or occurrence counts.
 - Tests:
   - `cmd/browser-agent/tools_configure_handler_test.go`
   - `cmd/browser-agent/tools_configure_persistence_actions_test.go`
-  - `cmd/browser-agent/tools_configure_session_test.go`
+  - `cmd/browser-agent/internal/toolconfigure/session_test.go`
   - `internal/tools/configure/boundaries_test.go`
   - `internal/tools/configure/rewrite_test.go`
