@@ -318,7 +318,9 @@ func (h *PageActions) HandleDrawModeStart(req mcp.JSONRPCRequest, args json.RawM
 		AnnotSession string `json:"annot_session,omitempty"`
 	}
 	if len(args) > 0 {
-		mcp.LenientUnmarshal(args, &params)
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+			return resp
+		}
 	}
 
 	if resp, blocked := checkGuards(req, h.deps.RequirePilot, h.deps.RequireExtension); blocked {

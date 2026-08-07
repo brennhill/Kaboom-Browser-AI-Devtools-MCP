@@ -101,7 +101,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_dom_routing_test.go
   - cmd/browser-agent/tools_interact_state_queries_test.go
   - cmd/browser-agent/tools_csp_blocked_test.go
-  - cmd/browser-agent/tools_interact_draw_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_interact_helpers_test.go
   - cmd/browser-agent/tools_interact_nav_test.go
@@ -343,3 +342,6 @@ forwarding, queue type, and subtitle-clear semantics.
 Navigate and script-execution dispatch contracts live with the canonical
 browser action owner, including action payloads, queue types, correlation
 metadata, and invalid-input behavior.
+Draw-mode activation rejects malformed JSON before any state mutation and its
+owner-level contract verifies pilot gating, tab/session forwarding, queue
+metadata, and draw-lifecycle marking.

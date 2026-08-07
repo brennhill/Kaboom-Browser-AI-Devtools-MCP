@@ -378,7 +378,7 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 | record_start | YES | tools_recording_video_test.go |
 | record_stop | YES | tools_recording_video_test.go |
 | upload | YES | tools_interact_upload_test.go, upload_integration_test.go |
-| draw_mode_start | YES | tools_interact_draw_test.go |
+| draw_mode_start | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
 
 **Verdict:** All 29 interact actions have test coverage.
 

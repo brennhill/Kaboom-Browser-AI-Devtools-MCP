@@ -77,6 +77,17 @@ func TestToolGetAnnotationDetail_Missing(t *testing.T) {
 	}
 }
 
+func TestToolGetAnnotationDetail_InvalidJSON(t *testing.T) {
+	h := createTestToolHandler(t)
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{not valid json`))
+	text := unmarshalMCPText(t, resp.Result)
+	if !strings.Contains(text, mcp.ErrInvalidJSON) {
+		t.Fatalf("invalid detail response = %q", text)
+	}
+}
+
 func TestToolGetAnnotationDetail_Found(t *testing.T) {
 	h := createTestToolHandler(t)
 

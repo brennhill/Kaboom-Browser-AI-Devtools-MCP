@@ -416,16 +416,47 @@ func TestHandleClipboardWrite_PilotBlockedNoRecord(t *testing.T) {
 
 func TestHandleDrawModeStart_Success(t *testing.T) {
 	h, fs := newFakePageActions(t)
-	resp := h.HandleDrawModeStart(testReq(), json.RawMessage(`{"annot_session":"s1"}`))
-	assertOK(t, resp)
+	resp := h.HandleDrawModeStart(testReq(), json.RawMessage(`{"annot_session":"s1","tab_id":42}`))
+	result := assertOK(t, resp)
+	if !contains(firstText(result), "correlation_id") {
+		t.Fatalf("draw response = %s", firstText(result))
+	}
 	if fs.drawStarted != 1 {
 		t.Fatalf("expected MarkDrawStarted called once, got %d", fs.drawStarted)
+	}
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) != 1 || enqueued[0].Type != "draw_mode" || enqueued[0].TabID != 42 {
+		t.Fatalf("draw enqueue = %#v", enqueued)
+	}
+	var params map[string]string
+	if err := json.Unmarshal(enqueued[0].Params, &params); err != nil {
+		t.Fatalf("decode draw params: %v", err)
+	}
+	if params["action"] != "start" || params["annot_session"] != "s1" {
+		t.Fatalf("draw params = %#v", params)
 	}
 }
 
 func TestHandleDrawModeStart_NoArgs(t *testing.T) {
 	h, _ := newFakePageActions(t)
 	assertOK(t, h.HandleDrawModeStart(testReq(), nil))
+}
+
+func TestHandleDrawModeStart_InvalidJSON(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	assertErr(t, h.HandleDrawModeStart(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
+	if fs.enqueuedCount() != 0 || fs.drawStarted != 0 {
+		t.Fatalf("malformed draw mutated state: enqueued=%d started=%d", fs.enqueuedCount(), fs.drawStarted)
+	}
+}
+
+func TestHandleDrawModeStart_PilotBlocked(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	fs.blockPilot = true
+	assertErr(t, h.HandleDrawModeStart(testReq(), json.RawMessage(`{}`)), mcp.ErrCodePilotDisabled)
+	if fs.enqueuedCount() != 0 || fs.drawStarted != 0 {
+		t.Fatalf("pilot-blocked draw mutated state: enqueued=%d started=%d", fs.enqueuedCount(), fs.drawStarted)
+	}
 }
 
 func TestHandleDrawModeStart_ExtensionBlocked(t *testing.T) {

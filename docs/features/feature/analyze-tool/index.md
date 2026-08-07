@@ -129,6 +129,8 @@ runtime code import their focused owner modules rather than an entrypoint facade
 Synchronous analyze timeout coverage injects a terminal command-completion seam
 after the real queue and correlation registration run. This proves the caller's
 budget and exactly-once response without racing a short-lived queue entry.
+Annotation-detail parsing has an owner-level malformed-JSON contract so invalid
+requests fail before any store lookup or response enrichment.
 
 Structured extraction modes:
 - `analyze({what:"form_state"})` returns current form values and field metadata.

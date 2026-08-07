@@ -19,7 +19,7 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/tools_interact_rich_test.go`
 - `cmd/browser-agent/tools_interact_upload_test.go`
 - `cmd/browser-agent/tools_interact_state_test.go`
-- `cmd/browser-agent/tools_interact_draw_test.go`
+- `cmd/browser-agent/internal/toolinteract/interact_browser_test.go`
 
 ## Required Scenarios
 1. Action dispatch
