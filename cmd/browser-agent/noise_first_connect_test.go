@@ -98,22 +98,16 @@ func TestNoiseAutoDetectOnFirstSync_DoesNotRepeat(t *testing.T) {
 
 func TestNoiseAutoDetectOnFirstSync_ManualAutoDetectStillWorks(t *testing.T) {
 	t.Parallel()
-
-	env := newConfigureTestEnv(t)
+	handler, _, _ := makeToolHandler(t)
 
 	// Manual auto_detect should still work independently
-	result, ok := env.callConfigure(t, `{"what":"noise_rule","noise_action":"auto_detect"}`)
-	if !ok {
-		t.Fatal("manual noise auto_detect should return result")
-	}
+	result := parseToolResult(t, callConfigureRaw(handler, `{"what":"noise_rule","noise_action":"auto_detect"}`))
 	if result.IsError {
 		t.Fatalf("manual noise auto_detect should not error, got: %s", result.Content[0].Text)
 	}
 
-	data := parseResponseJSON(t, result)
+	data := extractResultJSON(t, result)
 	if _, ok := data["proposals"]; !ok {
 		t.Error("manual auto_detect response should contain proposals")
 	}
 }
-
-// parseResponseJSON already defined in contract_helpers_test.go — reused here.
