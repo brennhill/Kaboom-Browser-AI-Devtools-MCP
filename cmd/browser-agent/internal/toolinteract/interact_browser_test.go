@@ -294,19 +294,54 @@ func TestHandleContentExtraction_TabBlocked(t *testing.T) {
 	assertErr(t, h.HandleContentExtraction(testReq(), json.RawMessage(`{}`), "get_readable", "readable"), mcp.ErrNotInitialized)
 }
 
-func TestHandleWaitForStable(t *testing.T) {
-	h, _ := newFakePageActions(t)
-	assertOK(t, h.HandleWaitForStable(testReq(), json.RawMessage(`{}`)))
+func TestHandleWaitForStableContracts(t *testing.T) {
+	for _, tc := range []struct {
+		name, args              string
+		stability, timeout, tab int
+	}{
+		{"defaults", `{}`, 500, 5000, 0},
+		{"custom", `{"stability_ms":300,"timeout_ms":2000,"tab_id":42}`, 300, 2000, 42},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, fs := newFakePageActions(t)
+			assertOK(t, h.HandleWaitForStable(testReq(), json.RawMessage(tc.args)))
+			queued := fs.enqueuedSnapshot()
+			if len(queued) != 1 || queued[0].Type != "dom_action" || queued[0].TabID != tc.tab {
+				t.Fatalf("wait_for_stable enqueue = %#v", queued)
+			}
+			var params map[string]any
+			if err := json.Unmarshal(queued[0].Params, &params); err != nil {
+				t.Fatalf("decode wait params: %v", err)
+			}
+			if params["action"] != "wait_for_stable" || params["stability_ms"] != float64(tc.stability) || params["timeout_ms"] != float64(tc.timeout) {
+				t.Fatalf("wait params = %#v", params)
+			}
+		})
+	}
 }
 
-func TestHandleWaitForStable_WithParams(t *testing.T) {
-	h, _ := newFakePageActions(t)
-	assertOK(t, h.HandleWaitForStable(testReq(), json.RawMessage(`{"stability_ms":300,"timeout_ms":2000}`)))
+func TestHandleWaitForStableRejectsMalformedOrBlockedRequests(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	assertErr(t, h.HandleWaitForStable(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
+	fs.blockPilot = true
+	assertErr(t, h.HandleWaitForStable(testReq(), json.RawMessage(`{}`)), mcp.ErrCodePilotDisabled)
+	if fs.enqueuedCount() != 0 {
+		t.Fatalf("rejected waits enqueued %d queries", fs.enqueuedCount())
+	}
 }
 
-func TestHandleAutoDismissOverlays(t *testing.T) {
-	h, _ := newFakePageActions(t)
+func TestHandleAutoDismissOverlaysContracts(t *testing.T) {
+	h, fs := newFakePageActions(t)
 	assertOK(t, h.HandleAutoDismissOverlays(testReq(), json.RawMessage(`{}`)))
+	queued := fs.enqueuedSnapshot()
+	if len(queued) != 1 || queued[0].Type != "dom_action" || !strings.HasPrefix(queued[0].CorrelationID, "dom_auto_dismiss_overlays_") {
+		t.Fatalf("auto-dismiss enqueue = %#v", queued)
+	}
+	fs.blockPilot = true
+	assertErr(t, h.HandleAutoDismissOverlays(testReq(), json.RawMessage(`{}`)), mcp.ErrCodePilotDisabled)
+	if fs.enqueuedCount() != 1 {
+		t.Fatalf("blocked auto-dismiss enqueued query: %#v", fs.enqueuedSnapshot())
+	}
 }
 
 func TestQueueComposableHelpers(t *testing.T) {
@@ -316,8 +351,15 @@ func TestQueueComposableHelpers(t *testing.T) {
 	h.QueueComposableWaitForStable(testReq(), 0)
 	h.QueueComposableWaitForStable(testReq(), 250)
 	h.QueueComposableSubtitle(testReq(), "hello")
-	if fs.enqueuedCount() != 5 {
-		t.Fatalf("expected 5 composable enqueues, got %d", fs.enqueuedCount())
+	queued := fs.enqueuedSnapshot()
+	if len(queued) != 5 {
+		t.Fatalf("composable enqueues = %#v", queued)
+	}
+	wantTypes := []string{"dom_action", "dom_action", "dom_action", "dom_action", "subtitle"}
+	for i, want := range wantTypes {
+		if queued[i].Type != want {
+			t.Fatalf("composable query %d type = %q, want %q", i, queued[i].Type, want)
+		}
 	}
 }
 
@@ -547,68 +589,35 @@ func TestAppendInteractiveToResponseBestEffortFailures(t *testing.T) {
 	}
 }
 
-func TestHandleSetStorage_Success(t *testing.T) {
-	h, fs := newFakeStorageActions(t)
-	resp := h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","key":"k","value":"v"}`))
-	assertOK(t, resp)
-	if fs.enqueuedCount() != 1 {
-		t.Fatalf("expected 1 enqueue, got %d", fs.enqueuedCount())
+func TestStorageActionValidation(t *testing.T) {
+	tests := []struct {
+		name, args, wantErr string
+		run                 func(*StorageActions, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	}{
+		{"set", `{"storage_type":"localStorage","key":"k","value":"v"}`, "", (*StorageActions).HandleSetStorage},
+		{"set invalid type", `{"storage_type":"cookies","key":"k","value":"v"}`, mcp.ErrInvalidParam, (*StorageActions).HandleSetStorage},
+		{"set missing key", `{"storage_type":"localStorage","value":"v"}`, mcp.ErrMissingParam, (*StorageActions).HandleSetStorage},
+		{"set missing value", `{"storage_type":"localStorage","key":"k"}`, mcp.ErrMissingParam, (*StorageActions).HandleSetStorage},
+		{"set invalid JSON", `bad`, mcp.ErrInvalidJSON, (*StorageActions).HandleSetStorage},
+		{"set invalid world", `{"storage_type":"localStorage","key":"k","value":"v","world":"moon"}`, mcp.ErrInvalidParam, (*StorageActions).HandleSetStorage},
+		{"delete", `{"storage_type":"sessionStorage","key":"k"}`, "", (*StorageActions).HandleDeleteStorage},
+		{"delete missing key", `{"storage_type":"sessionStorage"}`, mcp.ErrMissingParam, (*StorageActions).HandleDeleteStorage},
+		{"delete invalid type", `{"storage_type":"bogus","key":"k"}`, mcp.ErrInvalidParam, (*StorageActions).HandleDeleteStorage},
+		{"clear", `{"storage_type":"localStorage"}`, "", (*StorageActions).HandleClearStorage},
+		{"clear invalid type", `{"storage_type":"bogus"}`, mcp.ErrInvalidParam, (*StorageActions).HandleClearStorage},
+		{"clear invalid JSON", `bad`, mcp.ErrInvalidJSON, (*StorageActions).HandleClearStorage},
 	}
-}
-
-func TestHandleSetStorage_InvalidType(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"cookies","key":"k","value":"v"}`)), mcp.ErrInvalidParam)
-}
-
-func TestHandleSetStorage_MissingKey(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","value":"v"}`)), mcp.ErrMissingParam)
-}
-
-func TestHandleSetStorage_MissingValue(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","key":"k"}`)), mcp.ErrMissingParam)
-}
-
-func TestHandleSetStorage_InvalidJSON(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
-}
-
-func TestHandleSetStorage_InvalidWorld(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","key":"k","value":"v","world":"moon"}`)), mcp.ErrInvalidParam)
-}
-
-func TestHandleDeleteStorage_Success(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertOK(t, h.HandleDeleteStorage(testReq(), json.RawMessage(`{"storage_type":"sessionStorage","key":"k"}`)))
-}
-
-func TestHandleDeleteStorage_MissingKey(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleDeleteStorage(testReq(), json.RawMessage(`{"storage_type":"sessionStorage"}`)), mcp.ErrMissingParam)
-}
-
-func TestHandleDeleteStorage_InvalidType(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleDeleteStorage(testReq(), json.RawMessage(`{"storage_type":"bogus","key":"k"}`)), mcp.ErrInvalidParam)
-}
-
-func TestHandleClearStorage_Success(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertOK(t, h.HandleClearStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage"}`)))
-}
-
-func TestHandleClearStorage_InvalidType(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleClearStorage(testReq(), json.RawMessage(`{"storage_type":"bogus"}`)), mcp.ErrInvalidParam)
-}
-
-func TestHandleClearStorage_InvalidJSON(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleClearStorage(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h, _ := newFakeStorageActions(t)
+			resp := tc.run(h, testReq(), json.RawMessage(tc.args))
+			if tc.wantErr == "" {
+				assertOK(t, resp)
+			} else {
+				assertErr(t, resp, tc.wantErr)
+			}
+		})
+	}
 }
 
 func TestStorageAndCookieActionsPreserveSharedExecutionTarget(t *testing.T) {
@@ -670,42 +679,30 @@ func TestStorageAndCookieActionsPreserveSharedExecutionTarget(t *testing.T) {
 	}
 }
 
-func TestHandleSetCookie_Success(t *testing.T) {
-	h, fs := newFakeStorageActions(t)
-	assertOK(t, h.HandleSetCookie(testReq(), json.RawMessage(`{"name":"sid","value":"abc","domain":"example.com","path":"/app"}`)))
-	if fs.enqueuedCount() != 1 {
-		t.Fatalf("expected 1 enqueue, got %d", fs.enqueuedCount())
+func TestCookieActionValidation(t *testing.T) {
+	tests := []struct {
+		name, args, wantErr string
+		run                 func(*StorageActions, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	}{
+		{"set explicit scope", `{"name":"sid","value":"abc","domain":"example.com","path":"/app"}`, "", (*StorageActions).HandleSetCookie},
+		{"set default path", `{"name":"sid","value":"abc"}`, "", (*StorageActions).HandleSetCookie},
+		{"set missing name", `{"value":"abc"}`, mcp.ErrMissingParam, (*StorageActions).HandleSetCookie},
+		{"set missing value", `{"name":"sid"}`, mcp.ErrMissingParam, (*StorageActions).HandleSetCookie},
+		{"delete explicit scope", `{"name":"sid","domain":"example.com","path":"/app"}`, "", (*StorageActions).HandleDeleteCookie},
+		{"delete default path", `{"name":"sid"}`, "", (*StorageActions).HandleDeleteCookie},
+		{"delete missing name", `{}`, mcp.ErrMissingParam, (*StorageActions).HandleDeleteCookie},
 	}
-}
-
-func TestHandleSetCookie_DefaultPath(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertOK(t, h.HandleSetCookie(testReq(), json.RawMessage(`{"name":"sid","value":"abc"}`)))
-}
-
-func TestHandleSetCookie_MissingName(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleSetCookie(testReq(), json.RawMessage(`{"value":"abc"}`)), mcp.ErrMissingParam)
-}
-
-func TestHandleSetCookie_MissingValue(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleSetCookie(testReq(), json.RawMessage(`{"name":"sid"}`)), mcp.ErrMissingParam)
-}
-
-func TestHandleDeleteCookie_Success(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertOK(t, h.HandleDeleteCookie(testReq(), json.RawMessage(`{"name":"sid","domain":"example.com","path":"/app"}`)))
-}
-
-func TestHandleDeleteCookie_DefaultPath(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertOK(t, h.HandleDeleteCookie(testReq(), json.RawMessage(`{"name":"sid"}`)))
-}
-
-func TestHandleDeleteCookie_MissingName(t *testing.T) {
-	h, _ := newFakeStorageActions(t)
-	assertErr(t, h.HandleDeleteCookie(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h, _ := newFakeStorageActions(t)
+			resp := tc.run(h, testReq(), json.RawMessage(tc.args))
+			if tc.wantErr == "" {
+				assertOK(t, resp)
+			} else {
+				assertErr(t, resp, tc.wantErr)
+			}
+		})
+	}
 }
 
 func TestValidateStorageType(t *testing.T) {

@@ -355,3 +355,7 @@ immutable per-handler dispatcher. It defensively copies the action surface,
 injects side-effect timing for deterministic tests, preserves request fields,
 and decorates only successful compatible actions; the root package now wires
 capabilities without mutable handler caches or routing globals.
+Overlay dismissal and stability waiting have owner-level queue contracts for
+pilot gating, correlation identity, tab forwarding, default and custom timing,
+and malformed-input rejection before mutation. Their navigate/click composition
+is verified deterministically by the dispatcher owner without browser waits.

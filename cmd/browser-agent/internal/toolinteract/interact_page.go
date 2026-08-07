@@ -372,7 +372,11 @@ func (h *PageActions) HandleWaitForStable(req mcp.JSONRPCRequest, args json.RawM
 		TimeoutMs   int `json:"timeout_ms,omitempty"`
 		TabID       int `json:"tab_id,omitempty"`
 	}
-	mcp.LenientUnmarshal(args, &params)
+	if len(args) > 0 {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+			return resp
+		}
+	}
 
 	// Apply defaults
 	if params.StabilityMs <= 0 {
@@ -383,9 +387,11 @@ func (h *PageActions) HandleWaitForStable(req mcp.JSONRPCRequest, args json.RawM
 	}
 
 	// Rewrite args with defaults injected
-	var rawArgs map[string]any
-	if err := json.Unmarshal(args, &rawArgs); err != nil {
-		rawArgs = make(map[string]any)
+	rawArgs := make(map[string]any)
+	if len(args) > 0 {
+		if err := json.Unmarshal(args, &rawArgs); err != nil {
+			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments", "Provide a valid JSON object")
+		}
 	}
 	rawArgs["stability_ms"] = params.StabilityMs
 	rawArgs["timeout_ms"] = params.TimeoutMs
