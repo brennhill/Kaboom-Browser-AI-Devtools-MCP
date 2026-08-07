@@ -162,6 +162,34 @@ func testDeps(cap *capture.Capture) Deps {
 	}
 }
 
+func TestNewInteractHandlerRejectsIncompleteDependencies(t *testing.T) {
+	complete := testDeps(capture.NewCapture())
+	tests := []struct {
+		name   string
+		remove func(*Deps)
+	}{
+		{name: "enqueue pending query", remove: func(deps *Deps) { deps.EnqueuePendingQuery = nil }},
+		{name: "pilot guard", remove: func(deps *Deps) { deps.RequirePilot = nil }},
+		{name: "extension guard", remove: func(deps *Deps) { deps.RequireExtension = nil }},
+		{name: "action recorder", remove: func(deps *Deps) { deps.RecordAIAction = nil }},
+		{name: "diagnostic hint", remove: func(deps *Deps) { deps.DiagnosticHint = nil }},
+		{name: "command result reader", remove: func(deps *Deps) { deps.GetCommandResult = nil }},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			deps := complete
+			tc.remove(&deps)
+			defer func() {
+				if recovered := recover(); recovered == nil {
+					t.Fatal("NewInteractHandler accepted incomplete dependencies")
+				}
+			}()
+			NewInteractHandler(deps)
+		})
+	}
+}
+
 func decodeMapResponse(t *testing.T, rr *httptest.ResponseRecorder) map[string]any {
 	t.Helper()
 	var body map[string]any

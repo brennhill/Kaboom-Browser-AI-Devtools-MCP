@@ -6,9 +6,28 @@ package screenrec
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
+
+func stateTestDeps(getCommandResult func(string) (*queries.CommandResult, bool)) Deps {
+	return Deps{
+		EnqueuePendingQuery: func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool) {
+			return mcp.JSONRPCResponse{}, false
+		},
+		RequirePilot: func(mcp.JSONRPCRequest, ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
+			return mcp.JSONRPCResponse{}, false
+		},
+		RequireExtension: func(mcp.JSONRPCRequest, ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
+			return mcp.JSONRPCResponse{}, false
+		},
+		RecordAIAction:   func(string, string, map[string]any) {},
+		DiagnosticHint:   func() func(*mcp.StructuredError) { return func(*mcp.StructuredError) {} },
+		GetCommandResult: getCommandResult,
+	}
+}
 
 func TestExtractRecordingLifecycleStatus(t *testing.T) {
 	for _, tc := range []struct {
@@ -27,10 +46,10 @@ func TestExtractRecordingLifecycleStatus(t *testing.T) {
 
 func TestResolveInteractRecordingStateTransitions(t *testing.T) {
 	results := map[string]*queries.CommandResult{}
-	handler := NewInteractHandler(Deps{GetCommandResult: func(id string) (*queries.CommandResult, bool) {
+	handler := NewInteractHandler(stateTestDeps(func(id string) (*queries.CommandResult, bool) {
 		result, ok := results[id]
 		return result, ok
-	}})
+	}))
 
 	if got := handler.resolveInteractRecordingState(); got.State != recordingStateIdle {
 		t.Fatalf("empty state = %+v", got)
@@ -64,9 +83,9 @@ func TestResolveInteractRecordingTerminalAndUnknownResults(t *testing.T) {
 		{Status: "complete", Result: json.RawMessage(`{"status":"awaiting_gesture"}`)},
 		{Status: "complete", Result: json.RawMessage(`{"status":"unexpected"}`)},
 	} {
-		handler := NewInteractHandler(Deps{GetCommandResult: func(string) (*queries.CommandResult, bool) {
+		handler := NewInteractHandler(stateTestDeps(func(string) (*queries.CommandResult, bool) {
 			return result, true
-		}})
+		}))
 		handler.setInteractRecordingStart("start")
 		got := handler.resolveInteractRecordingState()
 		if result.Status == "complete" && extractRecordingLifecycleStatus(result.Result) == recordingStateAwaitingGesture {

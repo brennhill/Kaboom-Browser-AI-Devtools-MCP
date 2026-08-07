@@ -54,7 +54,6 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/screenrec/state_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/screenrec_wiring_test.go
   - cmd/browser-agent/internal/interactdispatch/handler_test.go
   - cmd/browser-agent/internal/toolinteract/interact_browser_test.go
   - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
@@ -116,7 +115,9 @@ directly; there is no all-purpose storage facade or compatibility barrel.
 Screen-recording dependencies receive the query owner callback directly from
 the composition boundary through `buildScreenrecDeps`; dependency construction
 is not a `ToolHandler` method, and no root `getCommandResult` forwarding method
-is retained.
+is retained. The canonical handler constructor rejects every missing host seam
+immediately, so incomplete composition cannot survive startup and fail later as
+an unclassified nil-function crash.
 MCP-initiated start and stop operations carry the daemon connection generation
 through the offscreen bridge. Delayed confirmations from a superseded daemon
 are rejected with redacted Doctor evidence; a stale start is actively stopped

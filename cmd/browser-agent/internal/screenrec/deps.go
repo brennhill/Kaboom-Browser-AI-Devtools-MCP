@@ -14,6 +14,7 @@
 package screenrec
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -56,5 +57,27 @@ type InteractHandler struct {
 
 // NewInteractHandler builds the recording sub-handler from host-owned seams.
 func NewInteractHandler(deps Deps) *InteractHandler {
+	if missing := missingDependency(deps); missing != "" {
+		panic(fmt.Sprintf("screenrec: missing required dependency %s", missing))
+	}
 	return &InteractHandler{deps: deps}
+}
+
+func missingDependency(deps Deps) string {
+	switch {
+	case deps.EnqueuePendingQuery == nil:
+		return "EnqueuePendingQuery"
+	case deps.RequirePilot == nil:
+		return "RequirePilot"
+	case deps.RequireExtension == nil:
+		return "RequireExtension"
+	case deps.RecordAIAction == nil:
+		return "RecordAIAction"
+	case deps.DiagnosticHint == nil:
+		return "DiagnosticHint"
+	case deps.GetCommandResult == nil:
+		return "GetCommandResult"
+	default:
+		return ""
+	}
 }
