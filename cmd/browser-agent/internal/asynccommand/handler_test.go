@@ -181,6 +181,68 @@ func TestMaybeWaitForCommandUsesCurrentConnectionAndResultEvents(t *testing.T) {
 			t.Fatalf("connected result = %#v", result)
 		}
 	})
+
+	t.Run("disconnect during wait becomes terminal error", func(t *testing.T) {
+		captured := capture.NewCapture()
+		defer captured.Close()
+		capturefixture.Connect(captured)
+		correlationID := "disconnect-during-wait"
+		captured.Queries().RegisterCommand(correlationID, "query-disconnect", time.Hour)
+		waiting := make(chan struct{})
+		release := make(chan struct{})
+		handler := New(Deps{Capture: captured})
+		handler.Wait.Command = func(id string, _ time.Duration) (*queries.CommandResult, bool) {
+			if id != correlationID {
+				t.Fatalf("wait correlation ID = %q", id)
+			}
+			close(waiting)
+			<-release
+			return captured.Queries().GetCommandResult(id)
+		}
+		responses := make(chan mcp.JSONRPCResponse, 1)
+		go func() {
+			responses <- handler.MaybeWaitForCommand(
+				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, correlationID, json.RawMessage(`{}`), "queued",
+			)
+		}()
+		<-waiting
+		captured.Extension().MarkDisconnected()
+		close(release)
+		result := decodeToolResult(t, <-responses)
+		data := decodeResponseData(t, result)
+		if !result.IsError || data["status"] != "error" || data["error"] != "extension_disconnected" || data["final"] != true {
+			t.Fatalf("disconnect result = %#v data=%#v", result, data)
+		}
+	})
+}
+
+func TestFormatCommandResultIncludesExactTimingAndTraceSummary(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	defer captured.Close()
+	created := time.Unix(100, 0)
+	completed := created.Add(375 * time.Millisecond)
+	command := queries.CommandResult{
+		CorrelationID: "timed-command", TraceID: "trace-1", QueryID: "query-1",
+		Status: "complete", Result: json.RawMessage(`{"success":true}`),
+		CreatedAt: created, CompletedAt: completed,
+		TraceTimeline: "queued -> sent -> resolved",
+		TraceEvents:   []queries.CommandTraceEvent{{Stage: "queued"}, {Stage: "resolved"}},
+	}
+	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, command, command.CorrelationID,
+	))
+	data := decodeResponseData(t, result)
+	if data["elapsed_ms"] != float64(375) || data["timing_ms"] != float64(375) || data["final"] != true {
+		t.Fatalf("timing envelope = %#v", data)
+	}
+	trace, ok := data["trace"].(map[string]any)
+	if !ok || trace["trace_id"] != "trace-1" || trace["query_id"] != "query-1" || trace["last_stage"] != "resolved" {
+		t.Fatalf("trace summary = %#v", data["trace"])
+	}
+	if _, exists := trace["events"]; exists {
+		t.Fatalf("trace summary leaked verbose events: %#v", trace)
+	}
 }
 
 func decodeToolResult(t *testing.T, response mcp.JSONRPCResponse) mcp.MCPToolResult {

@@ -12,6 +12,23 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
+func parseAsyncResponseData(t *testing.T, rawResult json.RawMessage) map[string]any {
+	t.Helper()
+	var toolResult mcp.MCPToolResult
+	if err := json.Unmarshal(rawResult, &toolResult); err != nil {
+		t.Fatalf("decode MCP result: %v", err)
+	}
+	if len(toolResult.Content) == 0 {
+		t.Fatal("MCP result has no content")
+	}
+	jsonText := extractJSONFromText(toolResult.Content[0].Text)
+	var data map[string]any
+	if err := json.Unmarshal([]byte(jsonText), &data); err != nil {
+		t.Fatalf("decode response data: %v", err)
+	}
+	return data
+}
+
 // ============================================
 // Issue #275: Auto-poll async commands with timeout_ms
 // ============================================
@@ -37,7 +54,7 @@ func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 	resp := <-response
 	elapsed := time.Since(start)
 
-	result := parseMCPResponseData(t, resp.Result)
+	result := parseAsyncResponseData(t, resp.Result)
 	if result["status"] != "complete" {
 		t.Errorf("Expected status=complete with timeout_ms=2000, got %v", result["status"])
 	}
@@ -62,7 +79,7 @@ func TestMaybeWaitForCommand_TimeoutMs_ShortTimeout(t *testing.T) {
 	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":300}`), "Queued")
 	elapsed := time.Since(start)
 
-	result := parseMCPResponseData(t, resp.Result)
+	result := parseAsyncResponseData(t, resp.Result)
 
 	// Should return still_processing, not complete
 	status, _ := result["status"].(string)
@@ -88,7 +105,7 @@ func TestMaybeWaitForCommand_TimeoutMs_ZeroUsesDefault(t *testing.T) {
 	// (which fails fast since extension is not connected)
 	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":0}`), "Queued")
 
-	result := parseMCPResponseData(t, resp.Result)
+	result := parseAsyncResponseData(t, resp.Result)
 	// Without extension connected, should get an error
 	if _, hasError := result["error"]; !hasError {
 		// The response should be an error about extension not connected
@@ -109,7 +126,7 @@ func TestMaybeWaitForCommand_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 	// sync=false should return queued with correlation_id
 	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":false}`), "Queued")
 
-	result := parseMCPResponseData(t, resp.Result)
+	result := parseAsyncResponseData(t, resp.Result)
 	if result["status"] != "queued" {
 		t.Errorf("Expected status=queued with sync=false, got %v", result["status"])
 	}
@@ -130,7 +147,7 @@ func TestMaybeWaitForCommand_TimeoutMs_NegativeIgnored(t *testing.T) {
 	// Without extension, should fail fast
 	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":-1}`), "Queued")
 
-	result := parseMCPResponseData(t, resp.Result)
+	result := parseAsyncResponseData(t, resp.Result)
 	// Should not hang — verify we got a response
 	if result == nil {
 		t.Error("Should have gotten a response even with negative timeout_ms")
@@ -153,7 +170,7 @@ func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 	args := json.RawMessage(`{"what":"link_health","domain":"example.com"}`)
 	resp := handler.analyzeDispatcher.Handle(req, args)
 
-	result := parseMCPResponseData(t, resp.Result)
+	result := parseAsyncResponseData(t, resp.Result)
 	status, _ := result["status"].(string)
 	// With sync=true (default), it should either complete or still_processing
 	// (depending on timing), not "queued"
@@ -173,7 +190,7 @@ func TestAnalyze_LinkHealth_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 	args := json.RawMessage(`{"what":"link_health","sync":false}`)
 	resp := handler.analyzeDispatcher.Handle(req, args)
 
-	result := parseMCPResponseData(t, resp.Result)
+	result := parseAsyncResponseData(t, resp.Result)
 	if result["status"] != "queued" {
 		t.Errorf("sync=false should return queued, got %v", result["status"])
 	}
@@ -209,7 +226,7 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 		t.Fatalf("initial wait budget = %v, want the 750ms phase from timeout_ms=1000", (*waits)[0])
 	}
 
-	result := parseMCPResponseData(t, resp.Result)
+	result := parseAsyncResponseData(t, resp.Result)
 	status, _ := result["status"].(string)
 	if status == "queued" {
 		t.Error("With sync=true (default) and timeout_ms=1000, should not return queued")

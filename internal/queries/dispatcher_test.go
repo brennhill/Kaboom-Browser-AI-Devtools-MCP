@@ -86,6 +86,30 @@ func TestNewNewQueryDispatcher_Initialization(t *testing.T) {
 	}
 }
 
+func TestQueuePositionAndDepthPreserveInsertionOrder(t *testing.T) {
+	t.Parallel()
+	dispatcher := NewQueryDispatcher()
+	defer dispatcher.Close()
+	for _, correlationID := range []string{"position-0", "position-1", "position-2"} {
+		if _, err := dispatcher.CreatePendingQuery(PendingQuery{
+			Type: "dom", Params: json.RawMessage(`{}`), CorrelationID: correlationID,
+		}); err != nil {
+			t.Fatalf("queue %s: %v", correlationID, err)
+		}
+	}
+	if depth := dispatcher.QueueDepth(); depth != 3 {
+		t.Fatalf("queue depth = %d, want 3", depth)
+	}
+	for index, correlationID := range []string{"position-0", "position-1", "position-2"} {
+		if position := dispatcher.QueuePosition(correlationID); position != index {
+			t.Fatalf("queue position %s = %d, want %d", correlationID, position, index)
+		}
+	}
+	if position := dispatcher.QueuePosition("missing"); position != -1 {
+		t.Fatalf("missing queue position = %d, want -1", position)
+	}
+}
+
 func TestNewQueryDispatcher_QueryIDsAreUniqueAcrossDaemonLifetimes(t *testing.T) {
 	t.Parallel()
 

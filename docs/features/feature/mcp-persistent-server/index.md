@@ -166,7 +166,6 @@ test_paths:
   - cmd/browser-agent/internal/versioncheck/checker_test.go
   - scripts/quality/contracts/check-bridge-stdout-invariant.sh
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/tools_core_sync_test.go
   - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/internal/dashboard/branding_test.go
   - scripts/contracts/openapibranding/branding_test.go
