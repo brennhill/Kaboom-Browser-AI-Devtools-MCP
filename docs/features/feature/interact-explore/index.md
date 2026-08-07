@@ -109,7 +109,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_rich_cmdresult_test.go
   - cmd/browser-agent/tools_interact_rich_perfdiff_test.go
   - cmd/browser-agent/tools_interact_result_lifecycle_test.go
-  - cmd/browser-agent/tools_interact_result_ambiguity_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
   - internal/schema/interact/schema_test.go
@@ -369,3 +368,6 @@ and table-driven across queue type, exact script semantics, shared tab/world/
 timeout forwarding, required parameters, and invalid storage types.
 Snapshot response shapes live with the state owner, while list-interactive and
 structured DOM query identity/forwarding live with their DOM and page owners.
+Ambiguous-target candidate promotion, visible-candidate selection, and direct
+retry guidance live with the async-result enrichment owner instead of an
+end-to-end interact fixture.

@@ -8,6 +8,7 @@ package asyncresult
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
@@ -238,6 +239,12 @@ func TestAnnotateInteractFailureRecovery_SuggestsFirstVisibleCandidate(t *testin
 
 	if got := responseData["suggested_element_id"]; got != "visible-2" {
 		t.Fatalf("suggested_element_id = %v, want visible-2 (first visible with an id)", got)
+	}
+	retry, _ := responseData["retry"].(string)
+	for _, phrase := range []string{"candidates", "element_id", "suggested_element_id"} {
+		if !strings.Contains(strings.ToLower(retry), phrase) {
+			t.Fatalf("ambiguous retry guidance missing %q: %s", phrase, retry)
+		}
 	}
 
 	// An extension-supplied suggestion is authoritative and must not be replaced.

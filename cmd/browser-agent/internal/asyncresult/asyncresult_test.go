@@ -263,6 +263,27 @@ func TestEnrichCommandResponseData_MatchedSurfacedTopLevel(t *testing.T) {
 // StripEnrichedFieldsFromResult tests
 // ============================================
 
+func TestEnrichCommandResponseData_AmbiguousCandidatesSurfacedTopLevel(t *testing.T) {
+	result := json.RawMessage(`{
+		"success":false,
+		"error":"ambiguous_target",
+		"match_count":3,
+		"candidates":[
+			{"element_id":"el_1","visible":true},
+			{"element_id":"el_2","visible":true},
+			{"element_id":"el_3","visible":false}
+		]
+	}`)
+	responseData := map[string]any{}
+	if embeddedErr, hasErr := EnrichCommandResponseData(result, responseData); !hasErr || embeddedErr != "ambiguous_target" {
+		t.Fatalf("embedded error = %q, %v", embeddedErr, hasErr)
+	}
+	candidates, ok := responseData["candidates"].([]any)
+	if !ok || len(candidates) != 3 || responseData["match_count"] != float64(3) {
+		t.Fatalf("ambiguous promotion = %#v", responseData)
+	}
+}
+
 func TestStripEnrichedFieldsFromResult_RemovesDuplicates(t *testing.T) {
 	t.Parallel()
 
