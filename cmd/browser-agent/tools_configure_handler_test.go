@@ -12,11 +12,50 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
+	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestConfigureHealthComposesServerRecoveryAndLaunchState(t *testing.T) {
+	previousLaunchMode := launchmode.Current()
+	launchmode.SetCurrent(launchmode.Info{
+		Mode: launchmode.LikelyTransient, Reason: "interactive_shell_parent", ParentProcess: "zsh",
+	})
+	t.Cleanup(func() { launchmode.SetCurrent(previousLaunchMode) })
+
+	server := &Server{
+		terminalStatus: terminalstatus.New(),
+		logs: logstore.New(logstore.Config{
+			MaxEntries: 100, ChanSize: 1, AddWarning: func(string) {},
+		}),
+	}
+	t.Cleanup(func() { server.logs.Shutdown(10 * time.Millisecond) })
+	_ = server.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "fill"}})
+	_ = server.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop-1"}})
+	_ = server.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop-2"}})
+
+	recovery := statediag.NewCollector()
+	recovery.Report(statediag.Diagnostic{Name: "restart", CorrelationID: "corr-1", Detail: "recovering", Fix: "wait"})
+	recovery.Resolve("restart")
+	response := getHealthResponse(health.NewMetrics(), nil, server, nil, recovery, "test-version")
+
+	if response.Buffers.Console.DroppedCount != 2 {
+		t.Fatalf("console dropped count = %d, want 2", response.Buffers.Console.DroppedCount)
+	}
+	pressure := response.ResourcePressure["doctor_timeline"]
+	if pressure.Entries != 1 || pressure.ActiveEntries != 0 || pressure.Capacity == 0 {
+		t.Fatalf("doctor timeline pressure = %#v", pressure)
+	}
+	if response.Server.LaunchMode != launchmode.LikelyTransient || response.Server.ParentProcess != "zsh" {
+		t.Fatalf("launch metadata = %#v", response.Server)
+	}
+}
 
 func TestExecuteQAFixtureCommandHonorsConnectionCancellationAndQueuePressure(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

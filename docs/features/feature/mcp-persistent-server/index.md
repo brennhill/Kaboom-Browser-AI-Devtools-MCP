@@ -121,7 +121,6 @@ test_paths:
   - internal/mcp/response_test.go
   - cmd/browser-agent/internal/toolresp/toolresp_test.go
   - cmd/browser-agent/tools_errors_test.go
-  - cmd/browser-agent/health_unit_test.go
   - cmd/browser-agent/internal/health/health_test.go
   - cmd/browser-agent/internal/mcpresponse/owner_test.go
   - cmd/browser-agent/internal/appruntime/runtime_test.go
