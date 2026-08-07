@@ -4,6 +4,7 @@
 package asynccommand
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ const a11yQueryTimeout = 30 * time.Second
 
 // Deps names the owners and cross-feature enrichment operations used by commands.
 type Deps struct {
+	Context              context.Context
 	Capture              *capture.Capture
 	DiagnosticHint       func(*mcp.StructuredError)
 	DiagnosticHintString func() string
@@ -52,6 +54,9 @@ type Handler struct {
 
 // New constructs an asynchronous command lifecycle owner.
 func New(deps Deps) *Handler {
+	if deps.Context == nil {
+		deps.Context = context.Background()
+	}
 	if deps.DiagnosticHint == nil {
 		deps.DiagnosticHint = func(*mcp.StructuredError) {}
 	}
@@ -320,21 +325,13 @@ func (h *Handler) attachPerfDiffIfAvailable(corrID string, responseData map[stri
 		return
 	}
 
-	// The "after" perf snapshot arrives ~2.5s after page load (2s content script
-	// delay + 500ms batcher debounce). Poll briefly for a snapshot newer than
-	// the "before" baseline. Without this wait, we'd compare the same snapshot
-	// to itself (zero diff) or find nothing.
-	afterSnap, found := h.deps.Capture.Performance().ByURL(beforeSnap.URL)
-	if !found || afterSnap.Timestamp == beforeSnap.Timestamp {
-		for retry := 0; retry < 5; retry++ {
-			time.Sleep(500 * time.Millisecond)
-			afterSnap, found = h.deps.Capture.Performance().ByURL(beforeSnap.URL)
-			if found && afterSnap.Timestamp != beforeSnap.Timestamp {
-				break // Found a genuinely new snapshot.
-			}
-		}
-	}
-	if !found || afterSnap.Timestamp == beforeSnap.Timestamp {
+	// Content capture publishes the post-navigation snapshot asynchronously.
+	// The store's generation channel provides a bounded, cancellation-aware wait
+	// without polling the hot path or comparing a baseline to itself.
+	afterSnap, changed := h.deps.Capture.Performance().WaitForURLSnapshotChange(
+		h.deps.Context, beforeSnap.URL, beforeSnap.Timestamp, 2500*time.Millisecond,
+	)
+	if !changed {
 		return
 	}
 

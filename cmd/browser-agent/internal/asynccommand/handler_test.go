@@ -12,8 +12,91 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
+
+func TestFormatCommandResultAttachesAvailablePerformanceDiff(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	defer captured.Close()
+	before := performance.PerformanceSnapshot{
+		URL: "/dashboard", Timestamp: "before",
+		Timing: performance.PerformanceTiming{TimeToFirstByte: 400, Load: 1600},
+	}
+	captured.Performance().Add([]performance.PerformanceSnapshot{before})
+	captured.Performance().StoreBefore("perf-command", before)
+	captured.Performance().Add([]performance.PerformanceSnapshot{{
+		URL: "/dashboard", Timestamp: "after",
+		Timing: performance.PerformanceTiming{TimeToFirstByte: 100, Load: 800},
+	}})
+	created := time.Unix(100, 0)
+	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+		queries.CommandResult{CorrelationID: "perf-command", Status: "complete", Result: json.RawMessage(`{"success":true}`), CreatedAt: created, CompletedAt: created},
+		"perf-command",
+	))
+	data := decodeResponseData(t, result)
+	diff, ok := data["perf_diff"].(map[string]any)
+	if !ok || diff["verdict"] != "improved" {
+		t.Fatalf("performance diff = %#v", data["perf_diff"])
+	}
+}
+
+func TestFormatCommandResultOmitsPerformanceDiffWithoutBaseline(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	defer captured.Close()
+	created := time.Unix(100, 0)
+	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+		queries.CommandResult{CorrelationID: "no-baseline", Status: "complete", Result: json.RawMessage(`{"success":true}`), CreatedAt: created, CompletedAt: created},
+		"no-baseline",
+	))
+	if data := decodeResponseData(t, result); data["perf_diff"] != nil {
+		t.Fatalf("unexpected performance diff = %#v", data["perf_diff"])
+	}
+}
+
+func TestFormatCommandResultPromotesCompletedDOMSummary(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	defer captured.Close()
+	created := time.Unix(100, 0)
+	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+		queries.CommandResult{
+			CorrelationID: "dom-complete", Status: "complete", CreatedAt: created, CompletedAt: created,
+			Result: json.RawMessage(`{"success":true,"dom_summary":"1 added"}`),
+		},
+		"dom-complete",
+	))
+	data := decodeResponseData(t, result)
+	if result.IsError || data["dom_summary"] != "1 added" || data["timing_ms"] != float64(0) {
+		t.Fatalf("completed DOM result = %#v data=%#v", result, data)
+	}
+	nested, ok := data["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("nested result = %#v", data["result"])
+	}
+	if _, duplicated := nested["dom_summary"]; duplicated {
+		t.Fatalf("nested result duplicates DOM summary: %#v", nested)
+	}
+}
+
+func TestFormatCommandResultExpiredCannotFabricateDOMEvidence(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	defer captured.Close()
+	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
+		queries.CommandResult{CorrelationID: "dom-expired", Status: "expired", Error: "extension timeout", CreatedAt: time.Unix(100, 0)},
+		"dom-expired",
+	))
+	if !result.IsError || strings.Contains(result.Content[0].Text, "timing_ms") || strings.Contains(result.Content[0].Text, "dom_summary") {
+		t.Fatalf("expired DOM result = %#v", result)
+	}
+}
 
 func saturateQueue(t *testing.T, captured *capture.Capture) {
 	t.Helper()

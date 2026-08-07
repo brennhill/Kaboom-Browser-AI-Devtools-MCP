@@ -5,6 +5,7 @@
 package perfstore
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -40,6 +41,7 @@ type Store struct {
 	snapshotDropped int64
 	sampleDropped   int64
 	beforeDropped   int64
+	snapshotNotify  chan struct{}
 }
 
 // New constructs an empty production performance store.
@@ -55,6 +57,7 @@ func newStore(now func() time.Time) *Store {
 		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 		snapshotAdded:   make(map[string]time.Time),
 		beforeAdded:     make(map[string]time.Time),
+		snapshotNotify:  make(chan struct{}),
 	}
 }
 
@@ -63,6 +66,7 @@ func (s *Store) Add(snapshots []performance.PerformanceSnapshot) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := s.now()
+	changed := false
 	for _, snapshot := range snapshots {
 		if snapshot.URL == "" {
 			continue
@@ -74,8 +78,54 @@ func (s *Store) Add(snapshots []performance.PerformanceSnapshot) {
 		s.snapshots[snapshot.URL] = performance.CloneSnapshot(snapshot)
 		s.samples = append(s.samples, performance.CloneSnapshot(snapshot))
 		s.sampleAdded = append(s.sampleAdded, now)
+		changed = true
 	}
 	s.enforceCapacityLocked()
+	if changed {
+		s.signalSnapshotChangeLocked()
+	}
+}
+
+// WaitForURLSnapshotChange blocks until the URL has a snapshot whose timestamp
+// differs from baselineTimestamp, the timeout elapses, or ctx is cancelled.
+// Add rotates the generation channel while holding the store lock, preventing
+// missed transitions between the initial snapshot and the wait.
+func (s *Store) WaitForURLSnapshotChange(ctx context.Context, url, baselineTimestamp string, timeout time.Duration) (performance.PerformanceSnapshot, bool) {
+	snapshot, notify := s.snapshotChangeSnapshot(url)
+	if snapshot.URL != "" && snapshot.Timestamp != baselineTimestamp {
+		return snapshot, true
+	}
+	if timeout <= 0 {
+		return snapshot, false
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			snapshot, _ = s.snapshotChangeSnapshot(url)
+			return snapshot, false
+		case <-timer.C:
+			snapshot, _ = s.snapshotChangeSnapshot(url)
+			return snapshot, false
+		case <-notify:
+			snapshot, notify = s.snapshotChangeSnapshot(url)
+			if snapshot.URL != "" && snapshot.Timestamp != baselineTimestamp {
+				return snapshot, true
+			}
+		}
+	}
+}
+
+func (s *Store) snapshotChangeSnapshot(url string) (performance.PerformanceSnapshot, <-chan struct{}) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return performance.CloneSnapshot(s.snapshots[url]), s.snapshotNotify
+}
+
+func (s *Store) signalSnapshotChangeLocked() {
+	close(s.snapshotNotify)
+	s.snapshotNotify = make(chan struct{})
 }
 
 func (s *Store) enforceCapacityLocked() {
@@ -210,4 +260,5 @@ func (s *Store) Clear() {
 	s.snapshotAdded = make(map[string]time.Time)
 	s.beforeOrder = nil
 	s.beforeAdded = make(map[string]time.Time)
+	s.signalSnapshotChangeLocked()
 }

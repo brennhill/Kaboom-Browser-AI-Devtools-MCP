@@ -309,6 +309,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	}
 	handler.actionRecorder = actionlog.New(actionTelemetry)
 	handler.asyncCommands = asynccommand.New(asynccommand.Deps{
+		Context:              handler.shutdownCtx,
 		Capture:              handler.capture,
 		DiagnosticHint:       handler.Guards.DiagnosticHint(),
 		DiagnosticHintString: handler.Guards.DiagnosticHintString,

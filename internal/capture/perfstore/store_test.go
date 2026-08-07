@@ -2,12 +2,59 @@
 package perfstore
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
+
+func TestWaitForURLSnapshotChangeUsesGenerationEvents(t *testing.T) {
+	t.Parallel()
+	store := New()
+	baseline := performance.PerformanceSnapshot{URL: "/dashboard", Timestamp: "before"}
+	store.Add([]performance.PerformanceSnapshot{baseline})
+	_, notify := store.snapshotChangeSnapshot("/dashboard")
+	result := make(chan performance.PerformanceSnapshot, 1)
+	go func() {
+		snapshot, changed := store.WaitForURLSnapshotChange(context.Background(), baseline.URL, baseline.Timestamp, time.Second)
+		if !changed {
+			result <- performance.PerformanceSnapshot{}
+			return
+		}
+		result <- snapshot
+	}()
+	after := performance.PerformanceSnapshot{URL: baseline.URL, Timestamp: "after"}
+	store.Add([]performance.PerformanceSnapshot{after})
+	select {
+	case <-notify:
+	default:
+		t.Fatal("snapshot addition did not close the change generation")
+	}
+	select {
+	case snapshot := <-result:
+		if snapshot.Timestamp != "after" {
+			t.Fatalf("changed snapshot = %#v", snapshot)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("snapshot waiter did not wake")
+	}
+}
+
+func TestWaitForURLSnapshotChangeHonorsImmediateAndCancelledBounds(t *testing.T) {
+	t.Parallel()
+	store := New()
+	store.Add([]performance.PerformanceSnapshot{{URL: "/dashboard", Timestamp: "before"}})
+	if snapshot, changed := store.WaitForURLSnapshotChange(context.Background(), "/dashboard", "before", 0); changed || snapshot.Timestamp != "before" {
+		t.Fatalf("immediate result = %#v, %t", snapshot, changed)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if snapshot, changed := store.WaitForURLSnapshotChange(ctx, "/dashboard", "before", time.Second); changed || snapshot.Timestamp != "before" {
+		t.Fatalf("cancelled result = %#v, %t", snapshot, changed)
+	}
+}
 
 func TestStoreRetainsRepeatedSamplesAndEvictsOldestURL(t *testing.T) {
 	now := time.Unix(100, 0)

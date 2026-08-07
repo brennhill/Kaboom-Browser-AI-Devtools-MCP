@@ -991,7 +991,7 @@
     },
     "internal/capture/perfstore/store.go": {
       "mutable_globals": 0,
-      "exports": 11
+      "exports": 12
     },
     "internal/capture/pressure/stats.go": {
       "mutable_globals": 0,
