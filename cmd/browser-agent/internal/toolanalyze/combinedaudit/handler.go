@@ -54,9 +54,6 @@ var validAuditCategories = map[string]bool{
 	"best_practices": true,
 }
 
-// toolanalyze.AuditCategoryResult is defined in tools_analyze_audit_scoring.go as an alias
-// for toolanalyze.AuditCategoryResult.
-
 func Handle(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Categories []string `json:"categories"`

@@ -51,7 +51,7 @@ func TestDispatcherRoutesLinkHealthAndRejectsInvalidRequests(t *testing.T) {
 			}
 		})
 	}
-	for _, mode := range []string{"dom", "api_validation", "performance", "accessibility", "error_clusters", "navigation_patterns", "security_audit", "third_party_audit", "link_health", "form_state", "data_table"} {
+	for _, mode := range []string{"dom", "api_validation", "performance", "accessibility", "error_clusters", "navigation_patterns", "security_audit", "third_party_audit", "link_health", "form_state", "data_table", "audit"} {
 		if !slices.Contains(dispatcher.ValidModes(), mode) {
 			t.Errorf("analyze modes missing %q: %v", mode, dispatcher.ValidModes())
 		}
