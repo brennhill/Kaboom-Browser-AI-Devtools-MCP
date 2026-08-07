@@ -30,6 +30,22 @@ func TestHandleDOMPrimitive_ClickSuccess(t *testing.T) {
 	}
 }
 
+func TestHandleDOMPrimitive_PreservesStructuredQueryFlag(t *testing.T) {
+	h, fs := newFakeDOMActions(t)
+	assertOK(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"selector":".accordion","structured":true}`), "get_text"))
+	queued := fs.enqueuedSnapshot()
+	if len(queued) != 1 || queued[0].Type != "dom_action" || !strings.HasPrefix(queued[0].CorrelationID, "dom_get_text_") {
+		t.Fatalf("structured get_text enqueue = %#v", queued)
+	}
+	var params map[string]any
+	if err := json.Unmarshal(queued[0].Params, &params); err != nil {
+		t.Fatalf("decode get_text params: %v", err)
+	}
+	if params["action"] != "get_text" || params["structured"] != true {
+		t.Fatalf("structured get_text params = %#v", params)
+	}
+}
+
 func TestHandleDOMPrimitive_InvalidJSON(t *testing.T) {
 	h, _ := newFakeDOMActions(t)
 	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{bad`), "click"), mcp.ErrInvalidJSON)

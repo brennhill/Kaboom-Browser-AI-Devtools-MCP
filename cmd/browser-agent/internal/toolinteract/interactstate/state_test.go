@@ -187,8 +187,8 @@ func TestStateSnapshotHandlers_RejectInvalidJSON(t *testing.T) {
 func TestHandleStateSave_AcceptsSnapshotName(t *testing.T) {
 	h, _ := newHandler(t)
 	got := payload(t, h.HandleStateSave(req(), json.RawMessage(`{"snapshot_name":"new"}`)))
-	if got["snapshot_name"] != "new" {
-		t.Fatalf("snapshot_name = %v, want new", got["snapshot_name"])
+	if got["status"] != "saved" || got["snapshot_name"] != "new" || got["state"] == nil {
+		t.Fatalf("save response = %#v", got)
 	}
 }
 

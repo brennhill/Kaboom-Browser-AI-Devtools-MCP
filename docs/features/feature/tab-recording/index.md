@@ -58,7 +58,7 @@ test_paths:
   - cmd/browser-agent/internal/interactdispatch/handler_test.go
   - cmd/browser-agent/tools_interact_page_commands_test.go
   - cmd/browser-agent/tools_interact_dom_routing_test.go
-  - cmd/browser-agent/tools_interact_state_queries_test.go
+  - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
   - internal/statediag/collector_test.go
   - internal/recording/actionlog/recorder_test.go

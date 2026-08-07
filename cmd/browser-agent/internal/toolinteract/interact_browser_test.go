@@ -491,6 +491,9 @@ func TestHandleListInteractive_Success(t *testing.T) {
 	if len(enqueued) != 1 || enqueued[0].Type != "dom_action" || enqueued[0].TabID != 42 {
 		t.Fatalf("list_interactive enqueue = %#v", enqueued)
 	}
+	if !strings.HasPrefix(enqueued[0].CorrelationID, "dom_list_") || !strings.Contains(string(enqueued[0].Params), `"action":"list_interactive"`) {
+		t.Fatalf("list_interactive identity = %#v", enqueued[0])
+	}
 }
 
 func TestHandleListInteractive_InvalidJSONAndPilotBlock(t *testing.T) {

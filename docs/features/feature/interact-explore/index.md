@@ -99,7 +99,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_entrypoint_test.go
   - cmd/browser-agent/tools_interact_page_commands_test.go
   - cmd/browser-agent/tools_interact_dom_routing_test.go
-  - cmd/browser-agent/tools_interact_state_queries_test.go
   - cmd/browser-agent/tools_csp_blocked_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_interact_helpers_test.go
@@ -368,3 +367,5 @@ runtime, while configure-owner tests prove clamping and setter invocation.
 Storage and cookie mutation contracts are colocated with their canonical owner
 and table-driven across queue type, exact script semantics, shared tab/world/
 timeout forwarding, required parameters, and invalid storage types.
+Snapshot response shapes live with the state owner, while list-interactive and
+structured DOM query identity/forwarding live with their DOM and page owners.
