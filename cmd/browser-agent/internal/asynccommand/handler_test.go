@@ -4,6 +4,7 @@ package asynccommand
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -145,6 +146,73 @@ func TestMaybeWaitForCommandBackgroundResponseIsQueued(t *testing.T) {
 	data := decodeResponseData(t, result)
 	if data["status"] != "queued" || data["queued"] != true || data["final"] != false || data["correlation_id"] != "click-1" {
 		t.Fatalf("queued lifecycle data = %#v", data)
+	}
+}
+
+func TestMaybeWaitForCommandArgumentPolicy(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name string
+		args string
+	}{
+		{name: "background", args: `{"background":true}`},
+		{name: "sync false", args: `{"sync":false}`},
+		{name: "wait false", args: `{"wait":false}`},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			captured := capture.NewCapture()
+			defer captured.Close()
+			result := decodeToolResult(t, New(Deps{Capture: captured}).MaybeWaitForCommand(
+				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, "queued-1", json.RawMessage(testCase.args), "queued",
+			))
+			data := decodeResponseData(t, result)
+			if result.IsError || data["status"] != "queued" || data["correlation_id"] != "queued-1" || data["final"] != false {
+				t.Fatalf("queued response = %#v data=%#v", result, data)
+			}
+		})
+	}
+}
+
+func TestMaybeWaitForCommandClampsAndPartitionsTimeoutBudget(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name        string
+		timeoutMs   int
+		wantInitial time.Duration
+	}{
+		{name: "caller budget", timeoutMs: 1000, wantInitial: 750 * time.Millisecond},
+		{name: "minimum", timeoutMs: 1, wantInitial: 75 * time.Millisecond},
+		{name: "maximum", timeoutMs: 180000, wantInitial: 90 * time.Second},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			captured := capture.NewCapture()
+			defer captured.Close()
+			capturefixture.Connect(captured)
+			correlationID := "budget-" + testCase.name
+			captured.Queries().RegisterCommand(correlationID, "query-budget", time.Hour)
+			handler := New(Deps{Capture: captured})
+			fixedNow := time.Unix(200, 0)
+			handler.Wait.Now = func() time.Time { return fixedNow }
+			handler.Wait.PollInterval = time.Hour
+			var observed time.Duration
+			handler.Wait.Command = func(id string, timeout time.Duration) (*queries.CommandResult, bool) {
+				observed = timeout
+				command, found := captured.Queries().GetCommandResult(id)
+				if found {
+					command.Status = "complete"
+					command.Result = json.RawMessage(`{"success":true}`)
+					command.CompletedAt = command.CreatedAt
+				}
+				return command, found
+			}
+			args := json.RawMessage(fmt.Sprintf(`{"timeout_ms":%d}`, testCase.timeoutMs))
+			result := decodeToolResult(t, handler.MaybeWaitForCommand(
+				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, correlationID, args, "queued",
+			))
+			if result.IsError || observed != testCase.wantInitial {
+				t.Fatalf("timeout budget = %s, want %s; result=%#v", observed, testCase.wantInitial, result)
+			}
+		})
 	}
 }
 

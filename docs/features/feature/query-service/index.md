@@ -52,7 +52,7 @@ test_paths:
   - internal/capture/query_commands_test.go
   - cmd/browser-agent/internal/asyncresult/normalization_test.go
   - cmd/browser-agent/internal/asynccommand/formatting_test.go
-  - cmd/browser-agent/tools_async_timeout_test.go
+  - cmd/browser-agent/internal/asynccommand/handler_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - tests/extension/contracts/no-compatibility-facades.test.js
   - scripts/contracts/check-architecture-boundaries.test.cjs

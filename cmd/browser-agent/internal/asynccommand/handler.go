@@ -41,6 +41,7 @@ type WaitConfig struct {
 	Retry        time.Duration
 	PollInterval time.Duration
 	Command      func(string, time.Duration) (*queries.CommandResult, bool)
+	Now          func() time.Time
 }
 
 // Handler owns the complete asynchronous command lifecycle.
@@ -75,6 +76,7 @@ func New(deps Deps) *Handler {
 			Initial: 15 * time.Second, Retry: 5 * time.Second,
 			PollInterval: 500 * time.Millisecond,
 			Command:      waitForCommand,
+			Now:          time.Now,
 		},
 	}
 }
@@ -342,10 +344,10 @@ func (h *Handler) attachPerfDiffIfAvailable(corrID string, responseData map[stri
 }
 
 func (h *Handler) waitForCommandWithConnectivity(correlationID string, timeout time.Duration) (*queries.CommandResult, bool, bool, int64) {
-	deadline := time.Now().Add(timeout)
+	deadline := h.Wait.Now().Add(timeout)
 	waited := int64(0)
 	for {
-		remaining := time.Until(deadline)
+		remaining := deadline.Sub(h.Wait.Now())
 		if remaining <= 0 {
 			cmd, found := h.deps.Capture.Queries().GetCommandResult(correlationID)
 			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.deps.Capture.Extension().IsExtensionConnected()
@@ -355,9 +357,9 @@ func (h *Handler) waitForCommandWithConnectivity(correlationID string, timeout t
 		if waitStep <= 0 || waitStep > remaining {
 			waitStep = remaining
 		}
-		stepStart := time.Now()
+		stepStart := h.Wait.Now()
 		cmd, found := h.Wait.Command(correlationID, waitStep)
-		waited += time.Since(stepStart).Milliseconds()
+		waited += h.Wait.Now().Sub(stepStart).Milliseconds()
 		if !found {
 			return nil, false, false, waited
 		}

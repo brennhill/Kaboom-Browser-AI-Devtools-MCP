@@ -16,7 +16,6 @@ test_paths:
   - internal/capture/syncruntime/readiness_gate_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go
-  - cmd/browser-agent/tools_async_timeout_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

@@ -64,7 +64,6 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - internal/analysis/apicontract/runtime/handler_test.go
-  - cmd/browser-agent/tools_async_timeout_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
   - cmd/browser-agent/internal/toolanalyze/visual/handler_test.go
