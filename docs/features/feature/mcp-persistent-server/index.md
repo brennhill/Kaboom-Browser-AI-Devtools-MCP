@@ -147,7 +147,7 @@ test_paths:
   - cmd/browser-agent/mcp_initialize_test.go
   - cmd/browser-agent/internal/mcpprotocol/responses_test.go
   - cmd/browser-agent/internal/bridge/bridge_unit_test.go
-  - cmd/browser-agent/tools_registry_test.go
+  - cmd/browser-agent/internal/toolmodule/registry_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go
   - cmd/browser-agent/internal/terminal/status/status_test.go
   - cmd/browser-agent/bridge_startup_contention_test.go

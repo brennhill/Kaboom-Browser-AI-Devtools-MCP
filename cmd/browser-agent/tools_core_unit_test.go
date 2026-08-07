@@ -75,6 +75,17 @@ func TestMCPCaptureConfigured(t *testing.T) {
 	}
 }
 
+func TestNewToolHandlerWiresCanonicalFiveToolCatalog(t *testing.T) {
+	t.Parallel()
+	environment := newToolTestEnv(t)
+	for _, name := range []string{"observe", "analyze", "generate", "configure", "interact"} {
+		module, ok := environment.handler.toolCatalog.Get(name)
+		if !ok || module == nil || module.Describe().Name != name || len(module.Examples()) == 0 {
+			t.Errorf("tool catalog module %q = %#v, %t", name, module, ok)
+		}
+	}
+}
+
 func TestMCPToolCallLimiterConfigured(t *testing.T) {
 	t.Parallel()
 
