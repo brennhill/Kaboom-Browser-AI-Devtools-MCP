@@ -245,3 +245,20 @@ func TestSessionAnalysisHandlersExposeEmptyAndPopulatedContracts(t *testing.T) {
 		t.Fatalf("deduplicated history = %#v", history)
 	}
 }
+
+func TestGetTabsDistinguishesTrackedAndUntrackedState(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 32}
+
+	empty := testsupport.ExtractMCPJSON(t, GetTabs(testsupport.Deps(cap), req, nil))
+	if empty["tracking_active"] != false || len(empty["tabs"].([]any)) != 0 {
+		t.Fatalf("untracked tabs = %#v", empty)
+	}
+	cap.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
+	tracked := testsupport.ExtractMCPJSON(t, GetTabs(testsupport.Deps(cap), req, nil))
+	if tracked["tracking_active"] != true || len(tracked["tabs"].([]any)) != 1 {
+		t.Fatalf("tracked tabs = %#v", tracked)
+	}
+}

@@ -39,7 +39,6 @@ code_paths:
   - src/lib/storage/validated.ts
 test_paths:
   - internal/capture/httpingest/handlers_test.go
-  - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
@@ -93,6 +92,10 @@ last_verified_date: 2026-03-05
 - FEATURE_FLOW_RECORDING_003
 
 ## Code and Tests
+
+Recording list and lookup response contracts, including required identifiers
+and canonical list metadata, are owned by the recording handler tests rather
+than a root observe-contract fixture.
 
 Go callers use the canonical `Recording`, `RecordingAction`,
 `RecordingMetadata`, and `RecordingManager` contracts from

@@ -204,6 +204,10 @@ func TestErrorBundlesHandlerExplainsEmptyStateAndAcceptsExtensionTimestamp(t *te
 	if bundles, ok := empty["bundles"].([]any); !ok || len(bundles) != 0 || empty["hint"] == nil {
 		t.Fatalf("empty bundles = %#v", empty)
 	}
+	timeline := testsupport.ExtractMCPJSON(t, GetSessionTimeline(deps, req, nil))
+	if entries, ok := timeline["entries"].([]any); !ok || len(entries) != 0 {
+		t.Fatalf("empty timeline = %#v", timeline)
+	}
 
 	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	deps.LogEntries = func() ([]types.LogEntry, []time.Time) {

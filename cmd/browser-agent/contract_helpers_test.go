@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
-	"sort"
 	"testing"
 	"time"
 
@@ -188,63 +187,6 @@ func (s *scenario) loadFullScenario(t *testing.T) {
 	s.loadTrackingState(t)
 }
 
-// ============================================
-// Response Shape Assertions
-// ============================================
-
-// fieldSpec describes an expected field in a JSON response.
-type fieldSpec struct {
-	key      string
-	kind     string // "string", "number", "array", "object", "bool", "any"
-	required bool
-}
-
-func required(key, kind string) fieldSpec {
-	return fieldSpec{key: key, kind: kind, required: true}
-}
-
-func optional(key, kind string) fieldSpec {
-	return fieldSpec{key: key, kind: kind, required: false}
-}
-
-// assertResponseShape parses an MCP tool result's text content as JSON
-// and verifies field presence and types against the given spec.
-func assertResponseShape(t *testing.T, mode string, result mcp.MCPToolResult, fields []fieldSpec) {
-	t.Helper()
-	data := parseResponseJSON(t, result)
-	assertObjectShape(t, mode, data, fields)
-}
-
-// assertObjectShape checks field presence and types on a JSON object.
-func assertObjectShape(t *testing.T, label string, data map[string]any, fields []fieldSpec) {
-	t.Helper()
-
-	for _, f := range fields {
-		val, exists := data[f.key]
-
-		if f.required && !exists {
-			t.Errorf("%s contract VIOLATION: required field %q missing. Present: %v",
-				label, f.key, mapKeys(data))
-			continue
-		}
-
-		if !exists || f.kind == "any" {
-			continue
-		}
-
-		// Optional fields may be null (handler copies nil from source entry)
-		if !f.required && val == nil {
-			continue
-		}
-
-		actual := jsonKind(val)
-		if actual != f.kind {
-			t.Errorf("%s contract VIOLATION: field %q expected type %q, got %q (value: %v)",
-				label, f.key, f.kind, actual, val)
-		}
-	}
-}
-
 // assertStructuredError verifies the structured error shape on an isError response.
 func assertStructuredError(t *testing.T, label string, result mcp.MCPToolResult) {
 	t.Helper()
@@ -270,11 +212,11 @@ func assertStructuredErrorCode(t *testing.T, label string, result mcp.MCPToolRes
 		t.Fatalf("%s: structured error is not valid JSON: %v\ntext: %s", label, err, text[:min(len(text), 200)])
 	}
 
-	assertObjectShape(t, label+" (structured_error)", data, []fieldSpec{
-		required("error_code", "string"),
-		required("message", "string"),
-		required("recovery_playbook", "string"),
-	})
+	for _, field := range []string{"error_code", "message", "recovery_playbook"} {
+		if value, ok := data[field].(string); !ok || value == "" {
+			t.Errorf("%s: structured error field %q = %#v, want non-empty string", label, field, data[field])
+		}
+	}
 
 	if expectedCode != "" {
 		code, _ := data["error_code"].(string)
@@ -304,34 +246,4 @@ func parseResponseJSON(t *testing.T, result mcp.MCPToolResult) map[string]any {
 			text[:min(len(text), 300)], err)
 	}
 	return data
-}
-
-// jsonKind returns the JSON type name for a Go value from json.Unmarshal.
-func jsonKind(v any) string {
-	switch v.(type) {
-	case string:
-		return "string"
-	case float64:
-		return "number"
-	case bool:
-		return "bool"
-	case []any:
-		return "array"
-	case map[string]any:
-		return "object"
-	case nil:
-		return "null"
-	default:
-		return "unknown"
-	}
-}
-
-// mapKeys returns sorted keys of a map for error messages.
-func mapKeys(m map[string]any) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

@@ -111,3 +111,62 @@ func TestFailedCommandsProjectsEmptyAndFailedStates(t *testing.T) {
 		})
 	}
 }
+
+func TestServerSideCommandAndPilotResponseContracts(t *testing.T) {
+	t.Parallel()
+	captured := capture.NewCapture()
+	defer captured.Close()
+	dispatcher := NewDispatcher(Config{
+		Observe: observecore.Deps{Capture: captured}, Commands: commandStoreStub{},
+		IsExtensionConnected: func() bool { return true },
+		InjectSummary:        func(args json.RawMessage) json.RawMessage { return args },
+		DrainAlerts:          func() []types.Alert { return nil },
+	})
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 2}
+
+	for name, args := range map[string]json.RawMessage{
+		"pilot":            json.RawMessage(`{"what":"pilot"}`),
+		"pending commands": json.RawMessage(`{"what":"pending_commands"}`),
+	} {
+		data := decodeResponseData(t, dispatcher.Handle(req, args))
+		if name == "pilot" {
+			for _, field := range []string{"enabled", "source", "extension_connected"} {
+				if _, ok := data[field]; !ok {
+					t.Fatalf("pilot missing %q: %#v", field, data)
+				}
+			}
+			continue
+		}
+		for _, field := range []string{"pending", "completed", "failed", "extension_in_progress"} {
+			if values, ok := data[field].([]any); !ok || len(values) != 0 {
+				t.Fatalf("pending commands %q = %#v", field, data[field])
+			}
+		}
+	}
+
+	missingID := dispatcher.Handle(req, json.RawMessage(`{"what":"command_result"}`))
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(missingID.Result, &result); err != nil || !result.IsError || !strings.Contains(string(missingID.Result), mcp.ErrMissingParam) {
+		t.Fatalf("missing command state response = %s, err=%v", missingID.Result, err)
+	}
+}
+
+func decodeResponseData(t *testing.T, response mcp.JSONRPCResponse) map[string]any {
+	t.Helper()
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil || result.IsError || len(result.Content) == 0 {
+		t.Fatalf("response = %s, err=%v", response.Result, err)
+	}
+	for index, character := range result.Content[0].Text {
+		if character != '{' {
+			continue
+		}
+		var data map[string]any
+		if err := json.Unmarshal([]byte(result.Content[0].Text[index:]), &data); err != nil {
+			t.Fatalf("decode response data: %v", err)
+		}
+		return data
+	}
+	t.Fatal("response contains no JSON object")
+	return nil
+}

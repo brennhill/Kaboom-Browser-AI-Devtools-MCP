@@ -65,6 +65,13 @@ func TestRecordingLifecycleAndLookupSuccesses(t *testing.T) {
 		if err := json.Unmarshal(response.Result, &result); err != nil || result.IsError {
 			t.Fatalf("%s response = %s, %v", name, response.Result, err)
 		}
+		if name == "list" {
+			for _, field := range []string{`"recordings"`, `"count"`, `"limit"`} {
+				if len(result.Content) == 0 || !strings.Contains(result.Content[0].Text, field) {
+					t.Fatalf("recordings response missing %s: %s", field, response.Result)
+				}
+			}
+		}
 	}
 }
 

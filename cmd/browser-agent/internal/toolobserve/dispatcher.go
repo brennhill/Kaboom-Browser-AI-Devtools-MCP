@@ -181,6 +181,15 @@ func (d *Dispatcher) pendingCommands(_ observecore.Deps, req mcp.JSONRPCRequest,
 	}
 	pending, completed := d.commands.GetPendingCommands(), d.commands.GetCompletedCommands()
 	failed := d.commands.GetFailedCommands()
+	if pending == nil {
+		pending = []*queries.CommandResult{}
+	}
+	if completed == nil {
+		completed = []*queries.CommandResult{}
+	}
+	if failed == nil {
+		failed = []*queries.CommandResult{}
+	}
 	inProgress := []syncruntime.SyncInProgress{}
 	if d.config.InProgress != nil {
 		inProgress = d.config.InProgress()

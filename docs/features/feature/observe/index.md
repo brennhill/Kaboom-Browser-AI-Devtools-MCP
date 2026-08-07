@@ -215,6 +215,12 @@ coverage harness coupled to the browser-agent composition fixture.
 Canonical response fields and filters for errors, browser logs, extension logs,
 network bodies, WebSockets, and actions are likewise asserted by their stream
 owners; telemetry modes have no parallel root-level response-shape suite.
+Cross-mode response contracts are distributed to their canonical stream,
+command-state, and recording owners. This keeps dispatcher tests focused on
+routing and server-side projections instead of recreating every feature state.
+`pending_commands` always returns JSON arrays for pending, completed, failed,
+and extension-owned work, including when an attached command store has no
+entries; clients never need to distinguish an empty list from `null`.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

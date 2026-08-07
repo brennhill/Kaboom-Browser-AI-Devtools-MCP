@@ -210,6 +210,11 @@ Lines 132-178: Tests for `generate reproduction`, `generate test`, `generate pr_
 
 ### File: `cmd/browser-agent/tools_observe_contract_test.go`
 
+> Superseded 2026-08-07: this root-level suite was removed after its contracts
+> were migrated to the canonical observe stream, command-state, and recording
+> owners. The observations below describe the historical suite, not the current
+> test architecture.
+
 This file is well-structured with proper field-level type checking via `assertResponseShape` and `assertObjectShape`. Good use of nested object validation (e.g., checking `errors[0]` shape). One area for improvement:
 
 **[LOW] No boundary value tests for observe modes with data**

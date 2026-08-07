@@ -262,25 +262,25 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 | logs | YES | tools_observe_audit_test.go, tools_observe_handler_test.go |
 | extension_logs | YES | tools_observe_handler_test.go |
 | network_waterfall | YES | tools_observe_analysis_test.go |
-| network_bodies | YES | tools_observe_audit_test.go |
-| websocket_events | YES | tools_observe_handler_test.go |
-| websocket_status | YES | tools_observe_analysis_test.go |
-| actions | YES | tools_observe_audit_test.go |
-| vitals | YES | tools_observe_coverage_test.go |
-| page | YES | tools_observe_blackbox_test.go |
-| tabs | YES | tools_observe_analysis_test.go |
-| pilot | YES | tools_observe_handler_test.go |
-| timeline | YES | tools_observe_contract_test.go |
-| error_bundles | YES | tools_observe_bundling_test.go, tools_observe_contract_test.go |
-| screenshot | YES | tools_observe_coverage_test.go |
-| command_result | YES | tools_observe_commands_test.go |
-| pending_commands | YES | tools_observe_commands_test.go |
-| failed_commands | YES | tools_observe_commands_test.go |
-| saved_videos | YES | tools_recording_video_test.go, tools_observe_handler_test.go |
-| recordings | YES | tools_observe_contract_test.go, tools_recording_video_test.go |
-| recording_actions | YES | tools_observe_contract_test.go |
-| playback_results | YES | tools_observe_contract_test.go |
-| log_diff_report | YES | tools_observe_contract_test.go |
+| network_bodies | YES | internal/tools/observe/network/network_test.go |
+| websocket_events | YES | internal/tools/observe/network/network_test.go |
+| websocket_status | YES | internal/tools/observe/network/network_test.go |
+| actions | YES | internal/tools/observe/session/session_transients_test.go |
+| vitals | YES | internal/tools/observe/session/session_test.go |
+| page | YES | internal/tools/observe/page/page_readiness_test.go |
+| tabs | YES | internal/tools/observe/session/session_test.go |
+| pilot | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
+| timeline | YES | internal/tools/observe/timeline/correlation_test.go |
+| error_bundles | YES | internal/tools/observe/timeline/correlation_test.go |
+| screenshot | YES | internal/tools/observe/page/page_state_test.go |
+| command_result | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
+| pending_commands | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
+| failed_commands | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
+| saved_videos | YES | cmd/browser-agent/internal/screenrec/screenrec_test.go |
+| recordings | YES | cmd/browser-agent/internal/toolrecording/handler_test.go |
+| recording_actions | YES | cmd/browser-agent/internal/toolrecording/handler_test.go |
+| playback_results | YES | cmd/browser-agent/internal/toolrecording/handler_test.go |
+| log_diff_report | YES | cmd/browser-agent/internal/toolrecording/handler_test.go |
 
 **Verdict:** All 23 observe modes have test coverage.
 
@@ -289,10 +289,10 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 | Mode | Has Dedicated Test? | Coverage Source |
 |------|---------------------|-----------------|
 | dom | YES | tools_analyze_handler_test.go |
-| performance | YES | tools_observe_coverage_test.go (via toolCheckPerformance) |
-| accessibility | YES | tools_observe_coverage_test.go |
-| error_clusters | YES | tools_observe_coverage_test.go |
-| history | YES | tools_observe_coverage_test.go |
+| performance | YES | internal/tools/observe/session/session_test.go |
+| accessibility | YES | internal/tools/observe/page/page_state_test.go |
+| error_clusters | YES | internal/tools/observe/logs/logs_edge_test.go |
+| history | YES | internal/tools/observe/session/session_test.go |
 | security_audit | YES | tools_analyze_link_health_test.go |
 | third_party_audit | YES | tools_analyze_link_health_test.go |
 | link_health | YES | tools_analyze_link_health_test.go, tools_analyze_link_health_contract_test.go |
