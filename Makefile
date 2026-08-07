@@ -397,6 +397,7 @@ check-ts-json-casing:
 	@node scripts/contracts/check-ts-json-casing.js
 
 check-openapi-types:
+	@node --test scripts/build/openapi-tooling.test.mjs
 	@tmp_dir=$$(mktemp -d); tmp_file="$$tmp_dir/openapi-types.ts"; trap 'rm -f "$$tmp_file"; rmdir "$$tmp_dir"' EXIT; \
 		npx --no-install openapi-typescript cmd/browser-agent/openapi.json -o "$$tmp_file" >/dev/null; \
 		npx prettier --config .prettierrc --write "$$tmp_file" >/dev/null; \

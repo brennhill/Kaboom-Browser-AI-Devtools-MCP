@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-08
 code_paths:
   - scripts/docs/
   - scripts/maintenance/
@@ -62,6 +62,7 @@ code_paths:
   - scripts/uat/runners/test-js-sharded.sh
   - scripts/build/run-go-coverage.sh
   - scripts/build/merge-go-coverage.mjs
+  - scripts/build/openapi-tooling.test.mjs
   - .prettierignore
   - internal/testsync/testsync.go
   - package.json
@@ -82,6 +83,7 @@ test_paths:
   - scripts/contracts/check_go_test_determinism_test.go
   - scripts/contracts/goarchitecture/main_test.go
   - scripts/tests/contracts/go-coverage-profile.test.mjs
+  - scripts/build/openapi-tooling.test.mjs
   - internal/testsync/testsync_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/setup/test-install-hooks-only.sh
@@ -100,6 +102,11 @@ policy, convention discovery/detection, session persistence/tracking, blast
 radius, and output compression. Its package-level regression test enforces ten
 files, and every owner remains below 800 lines; no compatibility filenames or
 forwarding surfaces remain after the atomic migration.
+
+The OpenAPI drift gate uses an exact lockfile-pinned generator. Its explicit
+TypeScript 6 peer override is exercised by regenerating and comparing the full
+schema, and the vulnerable transitive YAML parser is pinned to its patched
+release so clean CI installs remain deterministic and audit-clean.
 
 | Field         | Value                                   |
 |---------------|-----------------------------------------|
