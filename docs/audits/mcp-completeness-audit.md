@@ -350,8 +350,8 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 
 | Action | Has Dedicated Test? | Coverage Source |
 |--------|---------------------|-----------------|
-| highlight | YES | tools_interact_coverage_test.go |
-| subtitle | YES | tools_interact_coverage_test.go |
+| highlight | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
+| subtitle | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
 | save_state | YES | tools_interact_pilot_test.go |
 | load_state | YES | tools_interact_pilot_test.go |
 | list_states | YES | tools_interact_pilot_test.go, integration_test.go |
@@ -374,7 +374,7 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 | scroll_to | YES | tools_interact_dom_test.go, handler_consistency_test.go |
 | wait_for | YES | tools_interact_dom_test.go |
 | key_press | YES | tools_interact_dom_test.go |
-| list_interactive | YES | tools_interact_coverage_test.go |
+| list_interactive | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
 | record_start | YES | tools_recording_video_test.go |
 | record_stop | YES | tools_recording_video_test.go |
 | upload | YES | tools_interact_upload_test.go, upload_integration_test.go |

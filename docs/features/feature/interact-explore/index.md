@@ -101,7 +101,6 @@ test_paths:
   - cmd/browser-agent/tools_interact_dom_routing_test.go
   - cmd/browser-agent/tools_interact_state_queries_test.go
   - cmd/browser-agent/tools_csp_blocked_test.go
-  - cmd/browser-agent/tools_interact_coverage_test.go
   - cmd/browser-agent/tools_interact_draw_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_interact_helpers_test.go
@@ -339,3 +338,6 @@ owner, including proof that blocked mutations do not record an action.
 Readable text, Markdown, and page-summary extraction share one owner-level
 routing contract for dedicated query types, tab forwarding, timeout defaults
 and clamping, and the absence of CSP-fragile injected scripts.
+Highlight, subtitle, and interactive-list response and failure contracts live
+with their browser/DOM owners, including invalid JSON, pilot gating, tab
+forwarding, queue type, and subtitle-clear semantics.

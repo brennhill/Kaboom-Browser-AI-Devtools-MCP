@@ -176,13 +176,24 @@ func TestHandleCloseTab_InvalidJSON(t *testing.T) {
 }
 
 func TestHandleHighlight_Success(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
-	assertOK(t, h.Handle("highlight", testReq(), json.RawMessage(`{"selector":"#btn"}`)))
+	h, fs := newFakeBrowserActions(t)
+	assertOK(t, h.Handle("highlight", testReq(), json.RawMessage(`{"selector":"#btn","tab_id":99}`)))
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) != 1 || enqueued[0].Type != "highlight" || enqueued[0].TabID != 99 {
+		t.Fatalf("highlight enqueue = %#v", enqueued)
+	}
 }
 
 func TestHandleHighlight_MissingSelector(t *testing.T) {
 	h, _ := newFakeBrowserActions(t)
 	assertErr(t, h.Handle("highlight", testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
+}
+
+func TestHandleHighlight_InvalidJSONAndPilotBlock(t *testing.T) {
+	h, fs := newFakeBrowserActions(t)
+	assertErr(t, h.Handle("highlight", testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
+	fs.blockPilot = true
+	assertErr(t, h.Handle("highlight", testReq(), json.RawMessage(`{"selector":"#btn"}`)), mcp.ErrCodePilotDisabled)
 }
 
 func TestHandleExecuteJS_Success(t *testing.T) {
@@ -208,14 +219,26 @@ func TestHandleExecuteJS_MainWorldCSPBlocked(t *testing.T) {
 }
 
 func TestHandleSubtitle_SetAndClear(t *testing.T) {
-	h, _ := newFakeBrowserActions(t)
+	h, fs := newFakeBrowserActions(t)
 	assertOK(t, h.Handle("subtitle", testReq(), json.RawMessage(`{"text":"hello"}`)))
-	assertOK(t, h.Handle("subtitle", testReq(), json.RawMessage(`{"text":""}`)))
+	cleared := assertOK(t, h.Handle("subtitle", testReq(), json.RawMessage(`{"text":""}`)))
+	if !strings.Contains(strings.ToLower(firstText(cleared)), "clear") {
+		t.Fatalf("subtitle clear response = %s", firstText(cleared))
+	}
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) != 2 || enqueued[0].Type != "subtitle" || enqueued[1].Type != "subtitle" {
+		t.Fatalf("subtitle enqueues = %#v", enqueued)
+	}
 }
 
 func TestHandleSubtitle_MissingText(t *testing.T) {
 	h, _ := newFakeBrowserActions(t)
 	assertErr(t, h.Handle("subtitle", testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
+}
+
+func TestHandleSubtitle_InvalidJSON(t *testing.T) {
+	h, _ := newFakeBrowserActions(t)
+	assertErr(t, h.Handle("subtitle", testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestResolveNavigateURL_PassThrough(t *testing.T) {
@@ -408,17 +431,28 @@ func TestHandleListInteractive_Success(t *testing.T) {
 			},
 		})
 	}
-	resp := h.dom.HandleListInteractive(testReq(), json.RawMessage(`{}`))
+	resp := h.dom.HandleListInteractive(testReq(), json.RawMessage(`{"tab_id":42}`))
 	result := assertOK(t, resp)
 	// index_generation should be annotated into the response text.
 	if !contains(firstText(result), "index_generation") {
 		t.Fatalf("expected index_generation annotation, got: %s", firstText(result))
 	}
 	// The element index should now resolve.
-	sel, ok, _, _ := h.dom.resolveIndexToSelector("client-test", 0, 1, "")
+	sel, ok, _, _ := h.dom.resolveIndexToSelector("client-test", 42, 1, "")
 	if !ok || sel != "#b" {
 		t.Fatalf("expected #b resolved, got %q ok=%v", sel, ok)
 	}
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) != 1 || enqueued[0].Type != "dom_action" || enqueued[0].TabID != 42 {
+		t.Fatalf("list_interactive enqueue = %#v", enqueued)
+	}
+}
+
+func TestHandleListInteractive_InvalidJSONAndPilotBlock(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	assertErr(t, h.dom.HandleListInteractive(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
+	fs.blockPilot = true
+	assertErr(t, h.dom.HandleListInteractive(testReq(), json.RawMessage(`{}`)), mcp.ErrCodePilotDisabled)
 }
 
 func TestHandleListInteractive_Truncation(t *testing.T) {
