@@ -258,10 +258,10 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 
 | Mode | Has Dedicated Test? | Coverage Source |
 |------|---------------------|-----------------|
-| errors | YES | tools_observe_audit_test.go, tools_observe_blackbox_test.go |
-| logs | YES | tools_observe_audit_test.go, tools_observe_handler_test.go |
-| extension_logs | YES | tools_observe_handler_test.go |
-| network_waterfall | YES | tools_observe_analysis_test.go |
+| errors | YES | internal/tools/observe/logs/logs_edge_test.go |
+| logs | YES | internal/tools/observe/logs/logs_edge_test.go |
+| extension_logs | YES | internal/tools/observe/logs/logs_edge_test.go |
+| network_waterfall | YES | internal/tools/observe/network/network_test.go |
 | network_bodies | YES | internal/tools/observe/network/network_test.go |
 | websocket_events | YES | internal/tools/observe/network/network_test.go |
 | websocket_status | YES | internal/tools/observe/network/network_test.go |

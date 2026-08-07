@@ -94,3 +94,6 @@ root tests retain only true installed-server integration coverage.
 OS-dialog dismissal status mapping is tested through injected stage functions
 in `upload/httpapi`; unit tests never invoke host `osascript`, `xdotool`, or
 PowerShell commands and therefore produce deterministic results on every CI OS.
+Installed upload integration assertions decode MCP payloads through the shared
+browser-agent result helper; the deleted observe-contract fixture owns no test
+parsing surface.

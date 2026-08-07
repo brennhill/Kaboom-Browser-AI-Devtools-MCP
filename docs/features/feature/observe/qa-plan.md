@@ -3,7 +3,7 @@ doc_type: qa-plan
 feature_id: feature-observe
 status: shipped
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-07
 links:
   product: ./product-spec.md
   tech: ./tech-spec.md
@@ -17,8 +17,12 @@ last_verified_date: 2026-03-05
 
 ## Automated Coverage
 - `cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go`
-- `cmd/browser-agent/tools_observe_blackbox_test.go`
-- `cmd/browser-agent/tools_observe_audit_test.go`
+- `internal/tools/observe/logs/logs_edge_test.go`
+- `internal/tools/observe/network/network_test.go`
+- `internal/tools/observe/page/page_readiness_test.go`
+- `internal/tools/observe/session/session_test.go`
+- `internal/tools/observe/timeline/correlation_test.go`
+- `cmd/browser-agent/integration_test.go`
 - `extension/background/commands/observe.fullpage.test.js`
 
 ## Required Scenarios

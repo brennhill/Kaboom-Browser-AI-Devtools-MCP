@@ -68,8 +68,6 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - internal/tools/observe/page/page_readiness_test.go
-  - cmd/browser-agent/tools_observe_blackbox_test.go
-  - cmd/browser-agent/tools_observe_audit_test.go
   - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
   - internal/tools/observe/idbquery/execute_test.go
   - extension/background/commands/observe.fullpage.test.js
@@ -221,6 +219,10 @@ routing and server-side projections instead of recreating every feature state.
 `pending_commands` always returns JSON arrays for pending, completed, failed,
 and extension-owned work, including when an attached command store has no
 entries; clients never need to distinguish an empty list from `null`.
+Composition-root MCP routing remains covered by the shared browser-agent
+integration suite. Stream ingestion and response behavior are tested at their
+HTTP and observe owners, avoiding root fixtures that only seeded internal state
+while describing themselves as browser-to-MCP black-box tests.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

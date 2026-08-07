@@ -9,6 +9,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestGetPageInfoProjectsCommandReadinessConditions(t *testing.T) {
@@ -78,5 +79,25 @@ func TestGetPageInfoIncludesTrackedTabActivityOnlyWhenKnown(t *testing.T) {
 				t.Fatalf("is_active = %v, want %v", value, expected)
 			}
 		})
+	}
+}
+
+func TestGetPageInfoPrefersTrackedURLOverWaterfallFallback(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	defer cap.Close()
+	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{
+		URL: "https://old.example.test/app.js", PageURL: "https://old.example.test/page",
+	}}, "https://old.example.test/page")
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 3}
+	data := testsupport.ExtractMCPJSON(t, GetPageInfo(testsupport.Deps(cap), req, nil))
+	if data["url"] != "https://old.example.test/page" {
+		t.Fatalf("waterfall fallback URL = %#v", data["url"])
+	}
+
+	capturefixture.Track(cap, 42, "https://current.example.test/page")
+	data = testsupport.ExtractMCPJSON(t, GetPageInfo(testsupport.Deps(cap), req, nil))
+	if data["url"] != "https://current.example.test/page" {
+		t.Fatalf("tracked URL did not override waterfall: %#v", data["url"])
 	}
 }

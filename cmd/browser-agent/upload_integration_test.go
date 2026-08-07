@@ -394,7 +394,7 @@ func TestUploadInteg_CorrelationID_Unique(t *testing.T) {
 			if !ok || result.IsError {
 				return
 			}
-			data := parseResponseJSON(t, result)
+			data := extractResultJSON(t, result)
 			if corrID, ok := data["correlation_id"].(string); ok {
 				ids <- corrID
 			}

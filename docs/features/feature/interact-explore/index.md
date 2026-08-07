@@ -328,3 +328,5 @@ All MCP tools route exclusively through `what`; `interact` does not accept
 Region targeting uses only `scope_rect`; `annotation_rect` is not translated.
 Directional scrolling uses only `direction`; `value` remains reserved for
 actions whose canonical payload is a value.
+Pilot interaction assertions use the shared browser-agent MCP result decoder;
+observe-specific root fixtures no longer provide cross-feature test helpers.

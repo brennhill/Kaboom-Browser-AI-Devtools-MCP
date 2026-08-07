@@ -36,8 +36,12 @@ Ensure every MCP tool command and documented option is valid end-to-end: schema 
 - MCP handler and tool call routing:
 - `cmd/browser-agent/handler_consistency_test.go`
 - Observe coverage and mode handlers:
-- `cmd/browser-agent/tools_observe_handler_test.go`
-- `cmd/browser-agent/tools_observe_blackbox_test.go`
+- `cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go`
+- `internal/tools/observe/logs/logs_edge_test.go`
+- `internal/tools/observe/network/network_test.go`
+- `internal/tools/observe/page/page_readiness_test.go`
+- `internal/tools/observe/session/session_test.go`
+- `internal/tools/observe/timeline/correlation_test.go`
 - Interact async and command result behavior:
 - `cmd/browser-agent/tools_interact_rich_test.go`
 - Analyze command paths:

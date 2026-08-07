@@ -45,7 +45,7 @@ func TestHandleBrowserActionNavigate_Success(t *testing.T) {
 		t.Fatalf("navigate action = %q, want navigate", action)
 	}
 
-	data := parseResponseJSON(t, result)
+	data := extractResultJSON(t, result)
 	if status, _ := data["status"].(string); status != "queued" {
 		t.Fatalf("status = %q, want queued", status)
 	}
@@ -89,7 +89,7 @@ func TestHandlePilotExecuteJS_Success(t *testing.T) {
 		t.Fatalf("execute_js should not error, got: %s", result.Content[0].Text)
 	}
 
-	data := parseResponseJSON(t, result)
+	data := extractResultJSON(t, result)
 	if status, _ := data["status"].(string); status != "queued" {
 		t.Fatalf("status = %q, want queued", status)
 	}

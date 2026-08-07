@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,7 +43,7 @@ func TestToolQueryDOM_QueueFullFailsFast(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := inspect.HandleDOM(buildInspectDeps(env.handler), req, json.RawMessage(`{"selector":"#target"}`))
 	result := parseToolResult(t, resp)
-	assertStructuredErrorCode(t, "toolQueryDOM queue full", result, mcp.ErrQueueFull)
+	assertQueueFullResult(t, "toolQueryDOM queue full", result)
 }
 
 func TestInteractNavigate_QueueFullFailsFast(t *testing.T) {
@@ -56,7 +57,19 @@ func TestInteractNavigate_QueueFullFailsFast(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.browserActions.Handle("navigate", req, json.RawMessage(`{"url":"https://example.com"}`))
 	result := parseToolResult(t, resp)
-	assertStructuredErrorCode(t, "interact navigate queue full", result, mcp.ErrQueueFull)
+	assertQueueFullResult(t, "interact navigate queue full", result)
+}
+
+func assertQueueFullResult(t *testing.T, label string, result mcp.MCPToolResult) {
+	t.Helper()
+	if !result.IsError || len(result.Content) == 0 || !strings.Contains(result.Content[0].Text, `"error_code":"`+mcp.ErrQueueFull+`"`) {
+		t.Fatalf("%s: expected structured %s response, got %#v", label, mcp.ErrQueueFull, result)
+	}
+	for _, field := range []string{`"message":`, `"recovery_playbook":`} {
+		if !strings.Contains(result.Content[0].Text, field) {
+			t.Fatalf("%s: response missing %s: %s", label, field, result.Content[0].Text)
+		}
+	}
 }
 
 func TestInteractNavigate_QueueRecoversWithoutDiscardingAcceptedCommands(t *testing.T) {
