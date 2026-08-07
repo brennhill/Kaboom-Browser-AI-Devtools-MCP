@@ -387,6 +387,55 @@ func TestHandleStateLoad_IncludeURLQueuesNavigation(t *testing.T) {
 	}
 }
 
+func TestQueueStateNavigationContracts(t *testing.T) {
+	for _, testCase := range []struct {
+		name      string
+		state     map[string]any
+		pilot     bool
+		extension bool
+		wantQueue bool
+	}{
+		{name: "valid", state: map[string]any{"url": "https://example.test/page"}, pilot: true, extension: true, wantQueue: true},
+		{name: "pilot disabled", state: map[string]any{"url": "https://example.test/page"}, extension: true},
+		{name: "extension disconnected", state: map[string]any{"url": "https://example.test/page"}, pilot: true},
+		{name: "empty URL", state: map[string]any{"url": ""}, pilot: true, extension: true},
+		{name: "missing URL", state: map[string]any{}, pilot: true, extension: true},
+		{name: "non-string URL", state: map[string]any{"url": 42}, pilot: true, extension: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			h, f := newHandler(t)
+			f.pilot, f.extension = testCase.pilot, testCase.extension
+			h.QueueStateNavigation(req(), testCase.state)
+			if len(f.enqueued) != boolCount(testCase.wantQueue) {
+				t.Fatalf("enqueued = %#v", f.enqueued)
+			}
+			if !testCase.wantQueue {
+				if testCase.state["navigation_queued"] != nil || testCase.state["correlation_id"] != nil {
+					t.Fatalf("rejected navigation mutated state: %#v", testCase.state)
+				}
+				return
+			}
+			var params map[string]any
+			if err := json.Unmarshal(f.enqueued[0].Params, &params); err != nil {
+				t.Fatalf("navigation params: %v", err)
+			}
+			correlationID, _ := testCase.state["correlation_id"].(string)
+			if f.enqueued[0].Type != "browser_action" || params["action"] != "navigate" ||
+				params["url"] != "https://example.test/page" || !strings.HasPrefix(correlationID, "nav_") ||
+				testCase.state["navigation_queued"] != true {
+				t.Fatalf("navigation command=%#v state=%#v", f.enqueued[0], testCase.state)
+			}
+		})
+	}
+}
+
+func boolCount(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
+}
+
 func TestHandleStateLoad_WithoutIncludeURLDoesNotNavigate(t *testing.T) {
 	h, f := newHandler(t)
 	h.HandleStateSave(req(), json.RawMessage(`{"snapshot_name":"snap"}`))

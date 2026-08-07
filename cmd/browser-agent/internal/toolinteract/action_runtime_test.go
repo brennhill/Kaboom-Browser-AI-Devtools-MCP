@@ -485,6 +485,36 @@ func newFakeStorageActions(t *testing.T) (*StorageActions, *fakeState) {
 	return o.storage, s
 }
 
+func TestComposablePageCommandsPreservePayloadsAndUniqueCorrelations(t *testing.T) {
+	h, state := newFakePageActions(t)
+	h.QueueComposableSubtitle(testReq(), "first")
+	h.QueueComposableSubtitle(testReq(), "")
+	h.QueueComposableActionDiff(testReq())
+	queued := state.enqueuedSnapshot()
+	if len(queued) != 3 {
+		t.Fatalf("queued commands = %#v", queued)
+	}
+	if queued[0].Type != "subtitle" || queued[1].Type != "subtitle" ||
+		!strings.HasPrefix(queued[0].CorrelationID, "subtitle_") ||
+		queued[0].CorrelationID == queued[1].CorrelationID {
+		t.Fatalf("subtitle commands = %#v", queued[:2])
+	}
+	for index, want := range []string{"first", ""} {
+		var params map[string]string
+		if err := json.Unmarshal(queued[index].Params, &params); err != nil || params["text"] != want {
+			t.Fatalf("subtitle %d params = %#v, err=%v", index, params, err)
+		}
+	}
+	var diff map[string]any
+	if err := json.Unmarshal(queued[2].Params, &diff); err != nil {
+		t.Fatalf("action diff params: %v", err)
+	}
+	if queued[2].Type != "dom_action" || !strings.HasPrefix(queued[2].CorrelationID, "dom_action_diff_") ||
+		diff["action"] != "action_diff" || diff["timeout_ms"].(float64) <= 0 {
+		t.Fatalf("action diff command = %#v params=%#v", queued[2], diff)
+	}
+}
+
 // testReq returns a standard JSON-RPC request for interact handler tests.
 func testReq() mcp.JSONRPCRequest {
 	return mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: float64(1), ClientID: "client-test"}

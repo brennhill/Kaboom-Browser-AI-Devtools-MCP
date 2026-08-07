@@ -100,7 +100,7 @@ test_paths:
   - cmd/browser-agent/tools_interact_page_commands_test.go
   - cmd/browser-agent/tools_csp_blocked_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
-  - cmd/browser-agent/tools_interact_helpers_test.go
+  - cmd/browser-agent/internal/toolinteract/action_runtime_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go
   - cmd/browser-agent/tools_interact_rich_cmdresult_test.go
@@ -345,6 +345,9 @@ metadata, and invalid-input behavior.
 Switch-tab tracking policy is also deterministic at that owner boundary:
 successful retarget, explicit opt-out, command failure, invalid extension tab
 identity, and background deferral require no polling goroutine or wall clock.
+Composable subtitle and action-diff payloads, unique correlation IDs, and state
+navigation acceptance/rejection are verified directly beside their owning
+runtime and state modules; the former root-only helper environment is deleted.
 Form, navigation, and accessibility/SARIF workflow validation lives with the
 workflow owner. Its deterministic SARIF contract proves one accessibility
 analysis is reused directly instead of issuing a duplicate browser query.
