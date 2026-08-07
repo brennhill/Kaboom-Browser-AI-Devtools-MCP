@@ -54,6 +54,55 @@ func TestHandleLinkHealthReturnsQueueRejection(t *testing.T) {
 	}
 }
 
+func TestNavigationFamilyQueuesTypedCommandsWithTabTargeting(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name      string
+		prefix    string
+		invoke    func(Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+		wantType  string
+		wantTabID int
+		arguments json.RawMessage
+	}{
+		{name: "navigation", prefix: "navigation_", invoke: HandleNavigation, wantType: "navigation", wantTabID: 7, arguments: json.RawMessage(`{"tab_id":7,"sync":false}`)},
+		{name: "page structure", prefix: "page_structure_", invoke: HandlePageStructure, wantType: "page_structure", wantTabID: 42, arguments: json.RawMessage(`{"tab_id":42,"sync":false}`)},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			var queued queries.PendingQuery
+			deps := Deps{
+				EnqueuePendingQuery: func(_ mcp.JSONRPCRequest, query queries.PendingQuery, _ time.Duration) (mcp.JSONRPCResponse, bool) {
+					queued = query
+					return mcp.JSONRPCResponse{}, false
+				},
+				MaybeWaitForCommand: func(req mcp.JSONRPCRequest, correlationID string, _ json.RawMessage, summary string) mcp.JSONRPCResponse {
+					return mcp.Succeed(req, summary, map[string]any{"status": "queued", "correlation_id": correlationID})
+				},
+			}
+			isError, text := az_parse(t, testCase.invoke(deps, az_newReq(), testCase.arguments))
+			if isError || !strings.Contains(text, `"status":"queued"`) || !strings.Contains(text, `"correlation_id":"`+testCase.prefix) {
+				t.Fatalf("response = %s", text)
+			}
+			if queued.Type != testCase.wantType || queued.TabID != testCase.wantTabID || string(queued.Params) != string(testCase.arguments) {
+				t.Fatalf("queued command = %#v", queued)
+			}
+		})
+	}
+}
+
+func TestNavigationFamilyRejectsInvalidTabIDType(t *testing.T) {
+	t.Parallel()
+	for name, invoke := range map[string]func(Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse{
+		"navigation": HandleNavigation, "page_structure": HandlePageStructure,
+	} {
+		t.Run(name, func(t *testing.T) {
+			isError, text := az_parse(t, invoke(Deps{}, az_newReq(), json.RawMessage(`{"tab_id":"invalid"}`)))
+			if !isError || !strings.Contains(text, mcp.ErrInvalidJSON) {
+				t.Fatalf("invalid tab response = error:%t text:%q", isError, text)
+			}
+		})
+	}
+}
+
 func TestToolAnalyzePackageRespectsTenFileBoundary(t *testing.T) {
 	entries, err := os.ReadDir(".")
 	if err != nil {

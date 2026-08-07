@@ -3,6 +3,7 @@ package schema
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 )
 
@@ -32,6 +33,17 @@ func TestAnalyzeSchemaHasNoAnnotationURLAlias(t *testing.T) {
 	properties := analyzeToolSchema().InputSchema["properties"].(map[string]any)
 	if _, exists := properties["url_pattern"]; exists {
 		t.Fatal("analyze schema retains url_pattern compatibility alias; use url")
+	}
+}
+
+func TestAnalyzeSchemaIncludesNavigationFamily(t *testing.T) {
+	t.Parallel()
+	properties := analyzeToolSchema().InputSchema["properties"].(map[string]any)
+	what := properties["what"].(map[string]any)["enum"].([]string)
+	for _, mode := range []string{"navigation", "page_structure"} {
+		if !slices.Contains(what, mode) {
+			t.Errorf("analyze what enum missing %q: %v", mode, what)
+		}
 	}
 }
 

@@ -4,12 +4,16 @@ feature_id: feature-page-structure-detection
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-08-07
 code_paths:
   - src/background/commands/analyze.ts
-  - cmd/browser-agent/tools_analyze_page_structure_test.go
+  - cmd/browser-agent/internal/toolanalyze/navigation.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
+  - internal/schema/analyze.go
 test_paths:
-  - cmd/browser-agent/tools_analyze_page_structure_test.go
+  - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher_test.go
+  - internal/schema/invariants_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
