@@ -4,11 +4,15 @@
 package timeline
 
 import (
+	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -187,4 +191,71 @@ func TestErrorEntryAndTimestampFallback(t *testing.T) {
 	if mapped["message"] != "boom" || mapped["source"] != "app" {
 		t.Fatalf("error map = %#v", mapped)
 	}
+}
+
+func TestErrorBundlesHandlerExplainsEmptyStateAndAcceptsExtensionTimestamp(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	deps := testsupport.Deps(cap)
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 21}
+
+	empty := testsupport.ExtractMCPJSON(t, GetErrorBundles(deps, req, nil))
+	if bundles, ok := empty["bundles"].([]any); !ok || len(bundles) != 0 || empty["hint"] == nil {
+		t.Fatalf("empty bundles = %#v", empty)
+	}
+
+	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	deps.LogEntries = func() ([]types.LogEntry, []time.Time) {
+		return []types.LogEntry{{
+			"type": "console", "level": "error", "message": "extension failure",
+			"source": "app.js", "ts": now.Format(time.RFC3339),
+		}}, nil
+	}
+	result := testsupport.ExtractMCPJSON(t, GetErrorBundles(deps, req, nil))
+	bundles, ok := result["bundles"].([]any)
+	if !ok || len(bundles) != 1 || !strings.Contains(resultText(t, bundles[0]), "extension failure") {
+		t.Fatalf("extension timestamp bundles = %#v", result)
+	}
+}
+
+func TestErrorBundlesHandlerAppliesLimitAndCustomContextWindow(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{{
+		URL: "/within-five-seconds", Method: "GET", Status: 500,
+		Timestamp: now.Add(-4 * time.Second).Format(time.RFC3339),
+	}})
+	deps := testsupport.Deps(cap)
+	deps.LogEntries = func() ([]types.LogEntry, []time.Time) {
+		return []types.LogEntry{
+			{"type": "console", "level": "error", "message": "older", "timestamp": now.Add(-time.Second).Format(time.RFC3339)},
+			{"type": "console", "level": "error", "message": "newer", "timestamp": now.Format(time.RFC3339)},
+		}, nil
+	}
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 22}
+	result := testsupport.ExtractMCPJSON(t, GetErrorBundles(deps, req, json.RawMessage(`{"limit":1,"window_seconds":5}`)))
+	bundles, ok := result["bundles"].([]any)
+	if !ok || len(bundles) != 1 {
+		t.Fatalf("limited bundles = %#v", result)
+	}
+	bundle, ok := bundles[0].(map[string]any)
+	if !ok || bundle["context_window_seconds"] != float64(5) {
+		t.Fatalf("custom-window bundle = %#v", bundles[0])
+	}
+	network, ok := bundle["network"].([]any)
+	if !ok || len(network) != 1 {
+		t.Fatalf("network context = %#v", bundle["network"])
+	}
+}
+
+func resultText(t *testing.T, value any) string {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	return string(encoded)
 }

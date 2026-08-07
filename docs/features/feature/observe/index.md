@@ -203,6 +203,9 @@ Screenshot response tests share that notification helper for inline JPEG/PNG,
 text-only, save-to, and validation flows. Completion remains bounded by an
 independent failure timeout, but query creation is never inferred from elapsed
 wall-clock time.
+Error-bundle response, timestamp, limit, and correlation-window contracts live
+with the timeline owner; the browser-agent root does not duplicate its capture
+and log fixtures.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

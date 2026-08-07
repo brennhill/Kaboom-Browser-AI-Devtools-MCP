@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
+  - internal/tools/observe/timeline/correlation.go
   - src/lib/ai-context/ai-context-parsing.ts
   - src/lib/ai-context/ai-context-enrichment.ts
   - src/lib/page/exceptions.ts
@@ -13,6 +14,7 @@ code_paths:
   - internal/capture/bodystore/store.go
   - internal/capture/actionstore/store.go
 test_paths:
+  - internal/tools/observe/timeline/correlation_test.go
   - tests/extension/ai-context/ai-context-fixture.js
   - tests/extension/ai-context/ai-context-frameworks.test.js
   - tests/extension/ai-context/ai-context-pipeline.test.js
@@ -49,7 +51,9 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Error-bundle collection, window correlation, limits, timestamp fallbacks, and
+response contracts are owned and tested together in the canonical observe
+timeline package. The browser-agent root only composes the observe dispatcher.
 
 Chrome and Firefox stack formats delegate matched-frame validation and
 construction to one canonical decoder; format-specific wrappers own only their

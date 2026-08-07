@@ -175,10 +175,10 @@ The bundling code normalizes all to `time.Time` for comparison, then serializes 
 
 ### Files Changed (3 modified, 1 new)
 
-#### 1. `cmd/browser-agent/tools_observe_bundling.go` (NEW, ~150 lines)
+#### 1. `internal/tools/observe/timeline/correlation.go`
 
 ```go
-func (h *ToolHandler) toolGetErrorBundles(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 ```
 
 - Parse params: `limit` (default 5), `window_seconds` (default 3, clamp 1-10)
@@ -205,7 +205,7 @@ Add `"error_bundles"` to the `what` enum and description.
 
 Regenerate (includes new enum value).
 
-### Tests: `cmd/browser-agent/tools_observe_bundling_test.go` (NEW, ~120 lines)
+### Tests: `internal/tools/observe/timeline/correlation_test.go`
 
 Following existing patterns in `tools_observe_test.go`:
 
