@@ -4,7 +4,7 @@ feature_id: feature-performance-trace
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-08
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace.go
@@ -57,6 +57,10 @@ Captured trace data remains local. It is not included in anonymous product-usage
 Trace artifacts have a five-minute and 512 MiB hard ceiling. A new MV3 worker
 atomically recovers any orphaned partial trace before starting, and that
 recovery is retained in the local Doctor diagnostic timeline.
+
+Chrome debugger startup failures identify the exact attach, domain-enable,
+tracing, navigation, or metadata stage. This keeps target and permission
+failures actionable without recording page data in diagnostics.
 
 ## Specs
 

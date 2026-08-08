@@ -117,23 +117,33 @@ export class PerformanceTraceController {
     }
     this.active = active
     try {
-      await this.deps.debuggerApi.attach({ tabId }, CDP_VERSION)
-      await this.deps.debuggerApi.sendCommand({ tabId }, 'Page.enable')
-      await this.deps.debuggerApi.sendCommand({ tabId }, 'Network.enable')
-      await this.deps.debuggerApi.sendCommand({ tabId }, 'Network.setCacheDisabled', {
-        cacheDisabled: cache === 'cold'
-      })
-      await this.deps.debuggerApi.sendCommand({ tabId }, 'Tracing.start', {
-        categories: TRACE_CATEGORIES,
-        options: 'record-as-much-as-possible',
-        transferMode: 'ReportEvents'
-      })
-      if (cache === 'cold') await this.deps.debuggerApi.sendCommand({ tabId }, 'Network.clearBrowserCache')
+      await traceStage('Debugger.attach', () => this.deps.debuggerApi.attach({ tabId }, CDP_VERSION))
+      await traceStage('Page.enable', () => this.deps.debuggerApi.sendCommand({ tabId }, 'Page.enable'))
+      await traceStage('Network.enable', () => this.deps.debuggerApi.sendCommand({ tabId }, 'Network.enable'))
+      await traceStage('Network.setCacheDisabled', () =>
+        this.deps.debuggerApi.sendCommand({ tabId }, 'Network.setCacheDisabled', {
+          cacheDisabled: cache === 'cold'
+        })
+      )
+      await traceStage('Tracing.start', () =>
+        this.deps.debuggerApi.sendCommand({ tabId }, 'Tracing.start', {
+          categories: TRACE_CATEGORIES,
+          options: 'record-as-much-as-possible',
+          transferMode: 'ReportEvents'
+        })
+      )
+      if (cache === 'cold') {
+        await traceStage('Network.clearBrowserCache', () =>
+          this.deps.debuggerApi.sendCommand({ tabId }, 'Network.clearBrowserCache')
+        )
+      }
       if (options.reload === true) {
         const navigation = new Promise<void>((resolve) => {
           active.navigation = { resolve }
         })
-        await this.deps.debuggerApi.sendCommand({ tabId }, 'Page.reload', { ignoreCache: cache === 'cold' })
+        await traceStage('Page.reload', () =>
+          this.deps.debuggerApi.sendCommand({ tabId }, 'Page.reload', { ignoreCache: cache === 'cold' })
+        )
         await withBoundedTimeout(navigation, this.completionTimeoutMs, 'Reload navigation did not start before timeout')
       }
       active.metadata = await this.readTargetMetadata(tabId)
@@ -304,14 +314,18 @@ export class PerformanceTraceController {
   }
 
   private async readTargetMetadata(tabId: number): Promise<PerformanceTraceTargetMetadata> {
-    const frameTree = (await this.deps.debuggerApi.sendCommand({ tabId }, 'Page.getFrameTree')) as
+    const frameTree = (await traceStage('Page.getFrameTree', () =>
+      this.deps.debuggerApi.sendCommand({ tabId }, 'Page.getFrameTree')
+    )) as
       { frameTree?: { frame?: { url?: unknown; loaderId?: unknown } } } | undefined
     const frame = frameTree?.frameTree?.frame
-    const evaluated = (await this.deps.debuggerApi.sendCommand({ tabId }, 'Runtime.evaluate', {
-      expression:
-        'document.querySelector(\'meta[name="build-sha"],meta[name="build_sha"],meta[name="commit-sha"]\')?.getAttribute(\'content\') || globalThis.__BUILD_SHA__ || globalThis.__COMMIT_SHA__ || document.documentElement.dataset.buildSha || \'unavailable\'',
-      returnByValue: true
-    })) as { result?: { value?: unknown } } | undefined
+    const evaluated = (await traceStage('Runtime.evaluate', () =>
+      this.deps.debuggerApi.sendCommand({ tabId }, 'Runtime.evaluate', {
+        expression:
+          'document.querySelector(\'meta[name="build-sha"],meta[name="build_sha"],meta[name="commit-sha"]\')?.getAttribute(\'content\') || globalThis.__BUILD_SHA__ || globalThis.__COMMIT_SHA__ || document.documentElement.dataset.buildSha || \'unavailable\'',
+        returnByValue: true
+      })
+    )) as { result?: { value?: unknown } } | undefined
     return {
       url: typeof frame?.url === 'string' && frame.url.length > 0 ? frame.url : 'unavailable',
       navigation_id: typeof frame?.loaderId === 'string' && frame.loaderId.length > 0 ? frame.loaderId : 'unavailable',
@@ -389,5 +403,13 @@ async function withBoundedTimeout<T>(promise: Promise<T>, timeoutMs: number, mes
     ])
   } finally {
     if (timeout !== undefined) globalThis.clearTimeout(timeout)
+  }
+}
+
+async function traceStage<T>(stage: string, operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation()
+  } catch (error) {
+    throw new Error(`${stage} failed: ${errorMessage(error, 'unknown Chrome debugger error')}`)
   }
 }

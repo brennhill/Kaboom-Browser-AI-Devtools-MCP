@@ -7,14 +7,17 @@ import { describe, test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { createPerformanceTraceController } from '../../../extension/background/dom/cdp/performance-trace.js'
 
-function fixture(completionParams = {}) {
+function fixture(completionParams = {}, failMethod = '') {
   let eventListener
   let detachListener
   const requests = []
   const debuggerApi = {
-    attach: mock.fn(async () => undefined),
+    attach: mock.fn(async () => {
+      if (failMethod === 'Debugger.attach') throw new Error('target rejected')
+    }),
     detach: mock.fn(async () => undefined),
     sendCommand: mock.fn(async (_target, method) => {
+      if (method === failMethod) throw new Error('target rejected')
       if (method === 'Tracing.end') {
         queueMicrotask(() => eventListener({ tabId: 41 }, 'Tracing.tracingComplete', completionParams))
       }
@@ -130,5 +133,13 @@ describe('Chrome performance trace controller', () => {
     const f = fixture({ dataLossOccurred: true })
     await f.controller.start(41)
     await assert.rejects(() => f.controller.stop(41), /lost trace data/)
+  })
+
+  test('identifies the exact startup stage when Chrome rejects a debugger command', async () => {
+    for (const stage of ['Debugger.attach', 'Page.enable', 'Network.enable', 'Network.setCacheDisabled', 'Tracing.start', 'Page.getFrameTree', 'Runtime.evaluate']) {
+      const f = fixture({}, stage)
+      await assert.rejects(() => f.controller.start(41), new RegExp(`${stage} failed: target rejected`))
+      assert.ok(f.requests.some((request) => request.path === '/performance-trace/abort'))
+    }
   })
 })
