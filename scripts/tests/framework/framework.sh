@@ -265,6 +265,31 @@ extract_content_text() {
     echo "$response" | jq -r '.result.content[0].text // empty' 2>/dev/null || true
 }
 
+# Extracts the stable nested command error from an MCP content response.
+# Falls back to the bounded human-readable envelope when older responses do not
+# include a structured command result.
+command_failure_message() {
+    local response="$1"
+    local text=""
+    local structured=""
+    text="$(extract_content_text "$response")"
+    structured="$(printf '%s\n' "$text" |
+        sed -n '/^{/,$p' |
+        jq -r '
+            (.result.error // .error // empty) as $error |
+            (.result.message // .message // empty) as $message |
+            if $error != "" and $message != "" then "\($error): \($message)"
+            elif $message != "" then $message
+            elif $error != "" then $error
+            else empty end
+        ' 2>/dev/null || true)"
+    if [ -n "$structured" ]; then
+        printf '%s\n' "$structured"
+        return 0
+    fi
+    truncate "$text"
+}
+
 # Truncates a string for display in pass/fail messages
 truncate() {
     local text="$1"

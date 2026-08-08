@@ -4,7 +4,7 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-08
 code_paths:
   - docs/architecture/diagrams/ui/flame-flicker-visual.md
   - src/lib/brand.ts
@@ -38,6 +38,7 @@ code_paths:
   - src/background/runtime-state/content-readiness.ts
   - src/background/runtime-state/state-recovery.ts
   - src/background/commands/registry.ts
+  - src/background/commands/helpers.ts
   - src/background/exec/browser-actions.ts
   - src/content/runtime-message-listener.ts
   - src/background/event-listeners.ts
@@ -75,6 +76,7 @@ test_paths:
   - tests/extension/tab-state/content-readiness.test.js
   - tests/extension/ui-controls/toggle-overlay.test.js
   - tests/extension/pilot/command-lifecycle.test.js
+  - tests/extension/sync/pending-query-targeting.test.js
   - tests/architecture/async-failure-evidence.test.cjs
   - tests/extension/injection/script-injection-ready.test.js
   - tests/extension/shared/background-message-router.js
@@ -109,6 +111,9 @@ last_verified_date: 2026-04-03
 - The hover launcher settings gear now points at `gokaboom.dev/docs` and the Kaboom repo, and tracked-tab-loss guidance tells users to reopen the Kaboom popup.
 - Invalid or unreadable tracked-tab state is treated as an untracked workspace,
   with a redacted recovery entry available in System Doctor.
+- A stored tab ID is revalidated against its live URL before every targeted
+  command. If that tab navigated to a browser-internal or another extension's
+  page, Kaboom clears the stale target and recovers to a trackable web tab.
 - Post-navigation readiness probes and command dispatch retain the daemon
   connection generation that originated them. A reconnect supersedes delayed
   acknowledgements and commands before they can mutate the current page, with

@@ -499,18 +499,20 @@ export async function resolveTargetTab(query, paramsObj) {
     if (trackedTabId) {
         diagnosticLog(`[Diagnostic] Using tracked tab ${trackedTabId} for query ${query.type}`);
         const trackedTab = await getTabWithRetry(trackedTabId, true);
-        if (trackedTab?.id) {
+        if (isTrackableTab(trackedTab)) {
             return {
                 target: {
                     tabId: trackedTab.id,
-                    url: trackedTab.url || storage.trackedTabUrl || '',
+                    url: trackedTab.url,
                     source: 'tracked_tab',
                     trackedTabId,
                     useActiveTab
                 }
             };
         }
-        diagnosticLog(`[Diagnostic] Tracked tab ${trackedTabId} unavailable, clearing tracking state`);
+        diagnosticLog(trackedTab?.id
+            ? `[Diagnostic] Tracked tab ${trackedTabId} became restricted, clearing tracking state`
+            : `[Diagnostic] Tracked tab ${trackedTabId} unavailable, clearing tracking state`);
         await clearTrackedTab();
         try {
             const toastTab = await getActiveTab();

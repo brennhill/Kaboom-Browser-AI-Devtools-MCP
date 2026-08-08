@@ -243,6 +243,42 @@ describe('pending query targeting', () => {
     )
   })
 
+  test('rejects a persisted tracked tab that navigated to another extension and recovers to a web tab', async () => {
+    globalThis.chrome = createMockChrome(41, 77)
+    globalThis.chrome.tabs.get = mock.fn((tabId) =>
+      Promise.resolve({
+        id: tabId,
+        windowId: 1,
+        status: 'complete',
+        url: tabId === 41 ? 'chrome-extension://other-extension/panel.html' : `https://tab/${tabId}`
+      })
+    )
+    globalThis.chrome.tabs.query = mock.fn((query, callback) => {
+      const result = query?.active
+        ? [{ id: 77, windowId: 1, url: 'https://app.example.com/fixture', title: 'Fixture' }]
+        : []
+      if (callback) callback(result)
+      return Promise.resolve(result)
+    })
+    const mockSyncClient = { queueCommandResult: mock.fn() }
+
+    await bgModule.handlePendingQuery(
+      {
+        id: 'q-stale-internal-target',
+        type: 'browser_action',
+        correlation_id: 'corr-stale-internal-target',
+        params: JSON.stringify({ action: 'back' })
+      },
+      mockSyncClient
+    )
+
+    assert.strictEqual(globalThis.chrome.tabs.goBack.mock.calls.length, 1)
+    assert.strictEqual(globalThis.chrome.tabs.goBack.mock.calls[0].arguments[0], 77)
+    const queued = mockSyncClient.queueCommandResult.mock.calls[0].arguments[0]
+    assert.strictEqual(queued.result.target_context.source, 'auto_tracked_active_tab')
+    assert.strictEqual(queued.result.target_context.tracked_tab_id, 77)
+  })
+
   test('returns deterministic missing_target error when no tab is targetable', async () => {
     globalThis.chrome = createMockChrome(null, 0)
     globalThis.chrome.tabs.query = mock.fn((query, callback) => {

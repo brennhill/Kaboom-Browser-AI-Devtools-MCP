@@ -34,6 +34,21 @@ describe('comprehensive UAT harness regressions', () => {
     assert.equal(frameworkCall(`json_boolean '{}' valid`), '')
   })
 
+  test('command failures retain the structured extension error instead of truncating the envelope', () => {
+    const response = JSON.stringify({
+      result: {
+        content: [{
+          type: 'text',
+          text: 'Command trace: complete\n{"result":{"error":"performance_trace_failed","message":"Runtime.evaluate failed: target rejected"}}'
+        }]
+      }
+    })
+    assert.equal(
+      frameworkCall(`command_failure_message '${response}'`),
+      'performance_trace_failed: Runtime.evaluate failed: target rejected'
+    )
+  })
+
   test('offline and connected categories have explicit, disjoint suite boundaries', () => {
     const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
     const categoryIds = (name) => {

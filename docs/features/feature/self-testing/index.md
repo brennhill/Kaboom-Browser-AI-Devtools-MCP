@@ -153,7 +153,9 @@ unsafe mutation methods that previously compiled into `internal/capture`.
 - Shared UAT result parsing: `scripts/uat/orchestration/uat-result-lib.sh`
 - Connected action coverage classifies every live five-tool action and supports
   `KABOOM_UAT_ACTION=tool/mode` for isolated reproduction without inheriting
-  state from unrelated actions.
+  state from unrelated actions. Structured extension failures retain their
+  error code and lifecycle-stage message instead of truncating the surrounding
+  command envelope, so order-dependent failures remain actionable.
 - Stateful focused actions prepare their prerequisites before materializing
   arguments; event-recording stop therefore proves a real start/ID/stop
   lifecycle instead of using a placeholder identifier.

@@ -289,7 +289,7 @@ prepare_action() {
             ensure_fixture_page || return 1
             response="$(call_tool "analyze" '{"what":"'"$2"'","action":"start"}')"
             if ! check_valid_jsonrpc "$response" || check_is_error "$response"; then
-                fail "Could not start $action lifecycle: $(truncate "$(extract_content_text "$response")")"
+                fail "Could not start $action lifecycle: $(command_failure_message "$response")"
                 return 1
             fi
             ;;
