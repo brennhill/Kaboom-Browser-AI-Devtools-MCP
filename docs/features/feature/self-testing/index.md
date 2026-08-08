@@ -45,6 +45,7 @@ code_paths:
   - internal/capturefixture/sync.go
   - cmd/browser-agent/internal/asynccommand/handler.go
 test_paths:
+  - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/uat/orchestration/uat-result-lib.test.mjs
   - cmd/browser-agent/internal/integrationtest/harness_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go

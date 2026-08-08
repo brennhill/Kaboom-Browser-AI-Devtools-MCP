@@ -45,6 +45,16 @@ test('upgrade regression exercises a packed artifact with validated replacement 
   }
 })
 
+test('upgrade regression executes npm through the Windows command shell', () => {
+  const source = fs.readFileSync(scriptPath, 'utf8')
+  assert.match(
+    source,
+    /shell:\s*windowsCommandNeedsShell\(cmd\)/,
+    'Windows cannot execute npm or generated .cmd wrappers directly through spawnSync'
+  )
+  assert.match(source, /cmd\s*===\s*['"]npm['"][\s\S]*endsWith\(['"]\.cmd['"]\)/)
+})
+
 test('scheduled and release platform matrices retain replayable lifecycle evidence', () => {
   const ci = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'ci.yml'), 'utf8')
   const release = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'release.yml'), 'utf8')

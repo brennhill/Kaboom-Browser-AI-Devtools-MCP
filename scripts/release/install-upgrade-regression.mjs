@@ -44,10 +44,15 @@ function persistEvidence() {
   }
 }
 
+function windowsCommandNeedsShell(cmd) {
+  return isWindows && (cmd === 'npm' || cmd.toLowerCase().endsWith('.cmd'))
+}
+
 function run(cmd, args, options = {}) {
   const result = spawnSync(cmd, args, {
     cwd: repoRoot,
     encoding: 'utf8',
+    shell: windowsCommandNeedsShell(cmd),
     ...options
   })
   if (result.status !== 0) {
@@ -67,6 +72,7 @@ function tryRun(cmd, args, options = {}) {
   return spawnSync(cmd, args, {
     cwd: repoRoot,
     encoding: 'utf8',
+    shell: windowsCommandNeedsShell(cmd),
     ...options
   })
 }
