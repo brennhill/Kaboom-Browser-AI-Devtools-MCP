@@ -10,9 +10,6 @@ source "$SCRIPT_DIR/../framework/framework.sh"
 
 PORT="${1:-17890}"
 OUTPUT_FILE="${2:-/dev/null}"
-init_framework "$PORT" "$OUTPUT_FILE"
-begin_category "34" "Packaged Corruption Recovery" "npm artifact"
-
 export KABOOM_TELEMETRY=off
 RAW_FIXTURE_SECRET="RAW_FIXTURE_SECRET_41i3"
 PACKAGE_ROOT="$(mktemp -d)"
@@ -30,8 +27,8 @@ case "$(go env GOOS)-$(go env GOARCH)" in
     linux-arm64) PLATFORM_DIR="linux-arm64"; PLATFORM_KEY="linux-arm64" ;;
     linux-amd64) PLATFORM_DIR="linux-x64"; PLATFORM_KEY="linux-x64" ;;
     *)
-        fail "Unsupported release-UAT platform: $(go env GOOS)-$(go env GOARCH)"
-        finish_category
+        echo "FATAL: unsupported release-UAT platform: $(go env GOOS)-$(go env GOARCH)" >&2
+        exit 1
         ;;
 esac
 
@@ -41,9 +38,6 @@ cp -R "$PROJECT_ROOT/npm/kaboom-agentic-browser" "$MAIN_PACKAGE"
 cp -R "$PROJECT_ROOT/npm/$PLATFORM_DIR" "$PLATFORM_PACKAGE"
 mkdir -p "$PLATFORM_PACKAGE/bin"
 
-begin_test "34.1" "Build and install npm artifacts" \
-    "Pack the public launcher and current-platform binary package" \
-    "Recovery must execute the same npm layout users install"
 VERSION="$(tr -d '[:space:]' < "$PROJECT_ROOT/VERSION")"
 GOOS="$(go env GOOS)" GOARCH="$(go env GOARCH)" CGO_ENABLED=0 \
     go build -ldflags="-X main.version=$VERSION" \
@@ -56,7 +50,18 @@ main_tgz="$(npm pack "$MAIN_PACKAGE" --pack-destination "$PACK_ROOT" --silent)"
 npm install --prefix "$INSTALL_ROOT" --ignore-scripts --omit=optional \
     "$PACK_ROOT/$platform_tgz" "$PACK_ROOT/$main_tgz" >/dev/null
 PACKAGED_WRAPPER="$INSTALL_ROOT/node_modules/.bin/kaboom-agentic-browser"
-if [ -x "$PACKAGED_WRAPPER" ] && "$PACKAGED_WRAPPER" --version 2>&1 | grep -q "$VERSION"; then
+export KABOOM_UAT_WRAPPER="$PACKAGED_WRAPPER"
+init_framework "$PORT" "$OUTPUT_FILE"
+framework_package_cleanup() {
+    framework_cleanup
+    rm -rf "$PACKAGE_ROOT"
+}
+trap framework_package_cleanup EXIT INT TERM
+begin_category "34" "Packaged Corruption Recovery" "npm artifact"
+begin_test "34.1" "Build and install npm artifacts" \
+    "Pack the public launcher and current-platform binary package" \
+    "Recovery must execute the same npm layout users install"
+if "$PACKAGED_WRAPPER" --version 2>&1 | grep -q "$VERSION"; then
     pass "Packed npm launcher resolves the packed $PLATFORM_KEY binary at version $VERSION"
 else
     fail "Packed npm launcher did not resolve the packed platform binary"

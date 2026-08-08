@@ -12,6 +12,11 @@ describe('packaged corruption recovery release UAT', () => {
     )
 
     assert.match(uat, /npm pack/)
+    assert.match(
+      uat,
+      /export KABOOM_UAT_WRAPPER="\$PACKAGED_WRAPPER"[\s\S]*init_framework/,
+      'the framework must initialize against the exact wrapper built by this category',
+    )
     assert.match(uat, /KABOOM_STATE_DIR/)
     assert.match(uat, /KABOOM_TELEMETRY=off/)
     assert.match(uat, /state_recovery_failed/)
