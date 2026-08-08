@@ -82,6 +82,34 @@ function createControlledBatcherRuntime() {
         timers.delete(id)
         timer.callback()
       }
+    },
+    async settleWithTimers(promise) {
+      let settled = false
+      void promise.then(
+        () => {
+          settled = true
+        },
+        () => {
+          settled = true
+        }
+      )
+      for (let iteration = 0; iteration < 20; iteration++) {
+        for (let microtask = 0; microtask < 100 && timers.size === 0 && !settled; microtask++) {
+          await Promise.resolve()
+        }
+        if (settled) return await promise
+        const nextDue = Math.min(...[...timers.values()].map((timer) => timer.due))
+        if (!Number.isFinite(nextDue)) {
+          throw new Error('controlled batcher promise is pending without a scheduled timer')
+        }
+        now = nextDue
+        const due = [...timers.entries()].filter(([, timer]) => timer.due <= now)
+        for (const [id, timer] of due) {
+          timers.delete(id)
+          timer.callback()
+        }
+      }
+      throw new Error('controlled batcher promise did not settle within 20 timer turns')
     }
   }
 }
@@ -492,18 +520,21 @@ describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
 
   // Spec scenario 23: Retry budget of 3 per batch -> after 3 failures, batch is retained
   test('23: Retry budget of 3 - batch retained after 3 attempts', async () => {
+    const { runtime, settleWithTimers } = createControlledBatcherRuntime()
     const sendFn = mock.fn(() => Promise.reject(new Error('Server error: 429')))
 
     const { batcher } = createBatcherWithCircuitBreaker(sendFn, {
       debounceMs: 1,
       maxBatchSize: 50,
       retryBudget: 3,
-      maxFailures: 10 // High so circuit doesn't open during this test
+      maxFailures: 10, // High so circuit doesn't open during this test
+      runtime
     })
 
     // Add a batch and flush - should retry up to 3 times, then retain it for recovery.
     batcher.add({ type: 'log', message: 'retry-test' })
-    await batcher.flush()
+    const flush = batcher.flush()
+    await settleWithTimers(flush)
 
     // The sendFn should have been called exactly 3 times (initial + 2 retries = 3 total)
     assert.strictEqual(sendFn.mock.calls.length, 3)

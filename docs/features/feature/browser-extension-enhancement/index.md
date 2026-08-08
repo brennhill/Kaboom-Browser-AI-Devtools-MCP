@@ -82,6 +82,7 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - tests/extension/performance/rate-limit.test.js
   - tests/extension/network-http/network-waterfall.test.js
   - tests/extension/content/message-handlers.test.js
   - cmd/browser-agent/internal/doctorsupport/projections_test.go
