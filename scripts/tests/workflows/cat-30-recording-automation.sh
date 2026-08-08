@@ -1,6 +1,18 @@
 #!/bin/bash
 # cat-30-recording-automation.sh — Recording UI Automation Tests (4 tests)
-# Tests element finding, waiting, error recovery during recording playback.
+#
+# Runs connected, against the daemon-served interaction fixture.
+#
+# These tests used to wrap every action in interact/screen_recording_start.
+# Screen recording captures video through getDisplayMedia and cannot begin
+# without an explicit browser user gesture — the extension answers "awaiting
+# user gesture" until someone clicks Approve in the popup — so an unattended run
+# could never get past the first step. (cat-33 skips those two modes for exactly
+# this reason.) Recording *user actions* is what these tests actually need, and
+# that is event recording, which requires no gesture.
+#
+# They also acted on elements the fixture does not define (`.modal`), so the
+# waits could only ever time out. Each test now drives real fixture behaviour.
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -11,130 +23,145 @@ init_framework "$1" "$2"
 
 begin_category "30" "Flow Recording: UI Automation" "4"
 
-ensure_daemon
+if ! start_daemon; then
+    fail "Failed to start daemon for recording automation tests."
+    finish_category
+fi
 
-# ── TEST 18.19: Wait for Element During Recording ───────────────────────
+# Puts the tracked tab on the fixture so each test starts from a known DOM.
+goto_fixture() {
+    local response
+    response="$(call_tool "interact" \
+        '{"what":"navigate_and_wait_for","url":'"$(json_string "$(connected_fixture_url)")"',"wait_for":"#sf-btn"}')"
+    if ! check_valid_jsonrpc "$response" || check_is_error "$response"; then
+        fail "Could not reach the interaction fixture: $(truncate "$(command_failure_message "$response")")"
+        return 1
+    fi
+    return 0
+}
+
+# ── TEST 30.19: Wait for an element that appears later ───────────────────
 
 begin_test "30.19" "record_wait_for: Wait for element to appear before clicking" \
-    "Action: wait_for selector with timeout, then click when ready" \
+    "Schedule the fixture's delayed element, wait for it, then read it back" \
     "Waiting prevents race conditions with dynamic content"
 
-run_test_18_19() {
-    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
+run_test_30_19() {
+    goto_fixture || return
+    start_event_recording "wait-test" || return
 
-    call_tool "interact" '{"what":"screen_recording_start","name":"wait-test"}' >/dev/null
-    sleep 0.1
+    # The fixture creates #delayed-el 800ms after scheduleDelayedEl runs, so the
+    # wait has something real to resolve rather than a selector that never exists.
+    call_tool "interact" '{"what":"execute_js","script":"scheduleDelayedEl(800); return \"scheduled\""}' >/dev/null 2>&1
 
-    # Record a wait action
-    response=$(call_tool "interact" '{"what":"wait_for","selector":".modal","timeout":5000}')
-
+    local response
+    response=$(call_tool "interact" '{"what":"wait_for","selector":"#delayed-el","timeout":5000}')
     if ! check_not_error "$response"; then
-        fail "wait_for during recording failed. Content: $(truncate "$(extract_content_text "$response")")"
+        fail "wait_for did not resolve the delayed element: $(truncate "$(command_failure_message "$response")")"
         return
     fi
 
-    sleep 0.1
-    call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null
+    local text
+    text=$(call_tool "interact" '{"what":"get_text","selector":"#delayed-el"}')
+    if ! check_contains "$(extract_content_text "$text")" "I appeared"; then
+        fail "Delayed element resolved but its text was not read back: $(truncate "$(extract_content_text "$text")")"
+        return
+    fi
 
-    pass "Wait action recorded successfully"
+    stop_event_recording || return
+    pass "wait_for resolved the delayed element and its text was read back"
 }
-run_test_18_19
+run_test_30_19
 
-# ── TEST 18.21: Form Filling with Validation ──────────────────────────
+# ── TEST 30.21: Form Filling with a Result Wait ──────────────────────────
 
 begin_test "30.21" "Recording form fills with validation waits" \
-    "Fill input, wait for validation message, then submit" \
+    "Fill the fixture form, submit it, and read the result element back" \
     "Proper sequencing prevents validation errors"
 
-run_test_18_21() {
-    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
+run_test_30_21() {
+    goto_fixture || return
+    start_event_recording "form-test" || return
 
-    call_tool "interact" '{"what":"screen_recording_start","name":"form-test"}' >/dev/null
-    sleep 0.1
+    local marker="uat30_21_$$"
+    call_tool "interact" '{"what":"type","selector":"#sf-name","text":"'"$marker"'"}' >/dev/null 2>&1
+    call_tool "interact" '{"what":"type","selector":"#sf-email","text":"uat@example.com"}' >/dev/null 2>&1
 
-    # Fill form field
-    call_tool "interact" '{"what":"type","selector":"input[name=email]","text":"test@example.com"}' >/dev/null 2>&1
-    sleep 0.1
-
-    # Wait for validation
-    response=$(call_tool "interact" '{"what":"wait_for","selector":".validation-success","timeout":3000}')
-
-    if check_transport_failure "$response"; then
-        fail "wait_for did not return a usable response during recording: $(truncate "$(extract_content_text "$response")")"
+    local response
+    response=$(call_tool "interact" '{"what":"click","selector":"#sf-btn"}')
+    if ! check_not_error "$response"; then
+        fail "Submitting the fixture form failed: $(truncate "$(command_failure_message "$response")")"
         return
     fi
-    if check_not_error "$response"; then
-        pass "Form filling with validation sequenced correctly"
-    else
-        skip "wait_for could not resolve '.validation-success' in this environment: $(truncate "$(command_failure_message "$response")" 160)"
+
+    # The fixture writes the submitted values into #sf-result, so reading the
+    # marker back proves the fill and the submit both landed, in order.
+    local text
+    text=$(call_tool "interact" '{"what":"get_text","selector":"#sf-result"}')
+    if ! check_contains "$(extract_content_text "$text")" "$marker"; then
+        fail "Form result does not contain the typed value '$marker': $(truncate "$(extract_content_text "$text")")"
+        return
     fi
 
-    sleep 0.1
-    call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null
+    stop_event_recording || return
+    pass "Form fill and submit sequenced correctly; the result reflected the typed value"
 }
-run_test_18_21
+run_test_30_21
 
-# ── TEST 18.23: Keyboard Navigation (Tab, Enter) ─────────────────────
+# ── TEST 30.23: Keyboard Navigation ─────────────────────
 
 begin_test "30.23" "Recording keyboard navigation (Tab, Enter, Escape)" \
-    "Record key presses and verify they replay correctly" \
+    "Record key presses during an event recording and verify the recording closes cleanly" \
     "Keyboard interactions essential for accessibility testing"
 
-run_test_18_23() {
-    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
+run_test_30_23() {
+    goto_fixture || return
+    start_event_recording "keyboard-test" || return
 
-    call_tool "interact" '{"what":"screen_recording_start","name":"keyboard-test"}' >/dev/null
-    sleep 0.1
+    local key response
+    for key in Tab Enter Escape; do
+        response=$(call_tool "interact" '{"what":"key_press","text":"'"$key"'"}')
+        if ! check_not_error "$response"; then
+            fail "key_press '$key' failed: $(truncate "$(command_failure_message "$response")")"
+            return
+        fi
+    done
 
-    # Record key presses
-    call_tool "interact" '{"what":"key_press","text":"Tab"}' >/dev/null 2>&1
-    sleep 0.1
-    call_tool "interact" '{"what":"key_press","text":"Enter"}' >/dev/null 2>&1
-    sleep 0.1
-
-    response=$(call_tool "interact" '{"what":"screen_recording_stop"}')
-
-    if ! check_not_error "$response"; then
-        fail "Keyboard recording failed"
-        return
-    fi
-
-    pass "Keyboard navigation recorded (Tab, Enter)"
+    stop_event_recording || return
+    pass "Recorded Tab, Enter and Escape key presses and closed the recording"
 }
-run_test_18_23
+run_test_30_23
 
-# ── TEST 18.24: Screenshot During Recording ──────────────────────────
+# ── TEST 30.24: Screenshot During Recording ──────────────────────────
 
 begin_test "30.24" "Recording includes screenshot at key moments" \
-    "Capture screenshot after major actions" \
+    "Capture a screenshot while an event recording is active" \
     "Screenshots aid debugging and visual regression detection"
 
-run_test_18_24() {
-    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
+run_test_30_24() {
+    goto_fixture || return
+    start_event_recording "screenshot-test" || return
 
-    call_tool "interact" '{"what":"screen_recording_start","name":"screenshot-test"}' >/dev/null
-    sleep 0.1
+    call_tool "interact" '{"what":"click","selector":"#sf-btn"}' >/dev/null 2>&1
 
-    # Perform action with screenshot
-    call_tool "interact" '{"what":"click","selector":"button"}' >/dev/null 2>&1
-    sleep 0.1
-
-    # Capture screenshot
+    local response
     response=$(call_tool "observe" '{"what":"screenshot"}')
-
-    if check_transport_failure "$response"; then
-        fail "observe(screenshot) did not return a usable response during recording: $(truncate "$(extract_content_text "$response")")"
+    if ! check_not_error "$response"; then
+        fail "observe(screenshot) failed during recording: $(truncate "$(command_failure_message "$response")")"
         return
     fi
-    if check_not_error "$response"; then
-        pass "Screenshot captured during recording"
-    else
-        skip "Screenshot capture unavailable in this environment: $(truncate "$(command_failure_message "$response")" 160)"
+
+    # A success envelope with no image would leave nothing to debug with.
+    local text
+    text=$(extract_content_text "$response")
+    if ! check_matches "$text" "image|screenshot|png|data:"; then
+        fail "Screenshot response carries no image payload: $(truncate "$text")"
+        return
     fi
 
-    sleep 0.1
-    call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null
+    stop_event_recording || return
+    pass "Captured a screenshot while an event recording was active"
 }
-run_test_18_24
+run_test_30_24
 
 finish_category

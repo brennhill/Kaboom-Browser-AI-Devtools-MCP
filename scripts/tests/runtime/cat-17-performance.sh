@@ -20,7 +20,7 @@ source "$SCRIPT_DIR/../framework/framework.sh"
 
 init_framework "$1" "$2"
 
-begin_category "17.performance" "Test Generation: Performance & Stress" "5"
+begin_category "17" "Test Generation: Performance & Stress" "5"
 
 ensure_daemon
 

@@ -172,11 +172,7 @@ action_args() {
     esac
 }
 
-recording_id_from_response() {
-    extract_content_text "$1" |
-        sed -n 's/.*"recording_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' |
-        head -n 1
-}
+# recording_id_from_response is a canonical framework helper.
 
 ensure_event_recording() {
     [ -n "${HEALTH_RECORDING_ID:-}" ] && return 0

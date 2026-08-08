@@ -119,7 +119,10 @@ func (h *Dispatcher) generateAnnotationIssues(req mcp.JSONRPCRequest, args json.
 func (h *Dispatcher) getReproductionScript(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	params := reproduction.ParseParams(args)
 	if err := reproduction.ValidateOutputFormat(params.OutputFormat); err != "" {
-		return mcp.Fail(req, mcp.ErrInvalidParam, err, "Use 'kaboom' or 'playwright'", mcp.WithParam("output_format"))
+		// The accepted value is 'kaboom-agentic-browser'; the hint used to say
+		// 'kaboom', which ValidateOutputFormat rejects, so a caller following the
+		// recovery advice retried forever on a value that could never work.
+		return mcp.Fail(req, mcp.ErrInvalidParam, err, "Use 'kaboom-agentic-browser' or 'playwright'", mcp.WithParam("output_format"))
 	}
 	allActions := h.deps.Capture.Telemetry().Actions().Snapshot().Actions
 	actions := reproduction.FilterLastN(allActions, params.LastN)

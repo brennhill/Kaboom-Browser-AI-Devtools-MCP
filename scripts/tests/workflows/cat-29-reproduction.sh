@@ -116,7 +116,7 @@ begin_test "29.2" "export kaboom format with all action types" \
     "Call generate(reproduction, output_format=kaboom). Verify all 5 action types in numbered steps." \
     "Kaboom natural language format must be complete and human-readable."
 run_test_17_2() {
-    RESPONSE=$(call_tool "generate" '{"what":"reproduction","output_format":"kaboom"}')
+    RESPONSE=$(call_tool "generate" '{"what":"reproduction","output_format":"kaboom-agentic-browser"}')
     if ! check_not_error "$RESPONSE"; then
         fail "generate(reproduction, kaboom) returned error: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -266,6 +266,7 @@ run_test_17_5() {
 
     local dispatched=0
     local total=0
+    local rejected_example=""
 
     # Parse each numbered step and attempt replay via interact
     while IFS= read -r line; do
@@ -278,38 +279,53 @@ run_test_17_5() {
         if echo "$line" | grep -q "Navigate to:"; then
             local url
             url="${line##*Navigate to: }"
-            resp=$(call_tool "interact" "{\"action\":\"navigate\",\"url\":\"${url}\"}")
+            resp=$(call_tool "interact" "{\"what\":\"navigate\",\"url\":\"${url}\"}")
 
         elif echo "$line" | grep -q "Click:"; then
             # Extract text between first pair of quotes (capture group requires sed)
             local sel_text
             # shellcheck disable=SC2001 # capture group extraction requires sed
             sel_text=$(echo "$line" | sed 's/.*Click: "\([^"]*\)".*/\1/')
-            resp=$(call_tool "interact" "{\"action\":\"click\",\"selector\":\"text=${sel_text}\"}")
+            resp=$(call_tool "interact" "{\"what\":\"click\",\"selector\":\"text=${sel_text}\"}")
 
         elif echo "$line" | grep -q "^[0-9]*\. Type"; then
             local val
             # shellcheck disable=SC2001 # capture group extraction requires sed
             val=$(echo "$line" | sed 's/.*Type "\([^"]*\)".*/\1/')
-            resp=$(call_tool "interact" "{\"action\":\"type\",\"selector\":\"body\",\"text\":\"${val}\"}")
+            resp=$(call_tool "interact" "{\"what\":\"type\",\"selector\":\"body\",\"text\":\"${val}\"}")
 
         elif echo "$line" | grep -q "Select "; then
             local val
             # shellcheck disable=SC2001 # capture group extraction requires sed
             val=$(echo "$line" | sed 's/.*Select "\([^"]*\)".*/\1/')
-            resp=$(call_tool "interact" "{\"action\":\"select\",\"selector\":\"body\",\"value\":\"${val}\"}")
+            resp=$(call_tool "interact" "{\"what\":\"select\",\"selector\":\"body\",\"value\":\"${val}\"}")
 
         elif echo "$line" | grep -q "Press:"; then
             local key
             key="${line##*Press: }"
-            resp=$(call_tool "interact" "{\"action\":\"key_press\",\"text\":\"${key}\"}")
+            resp=$(call_tool "interact" "{\"what\":\"key_press\",\"text\":\"${key}\"}")
         fi
 
-        # Verify we got a valid JSON-RPC response (command was dispatched to tool handler)
-        # Note: interact calls fail without pilot/extension, but that's expected —
-        # we're proving the FORMAT is parseable and the TOOL accepts the parameters.
+        # interact calls fail without pilot/extension, and that is expected — the
+        # claim here is only that the step parsed and the tool ACCEPTED the
+        # parameters. A valid JSON-RPC envelope alone does not show that:
+        # missing_param and unknown_mode are well-formed rejections, and this
+        # test passed for years while sending "action" instead of "what", so
+        # every step was rejected before reaching a handler.
+        local code=""
         if [ -n "$resp" ] && check_valid_jsonrpc "$resp"; then
-            dispatched=$((dispatched + 1))
+            code=$(extract_content_text "$resp" | sed -n '/^{/,$p' | jq -r '.error_code // empty' 2>/dev/null)
+            case "$code" in
+                missing_param | unknown_mode | unknown_action | invalid_param) ;;
+                *) dispatched=$((dispatched + 1)) ;;
+            esac
+        fi
+        if [ -n "$code" ] && [ -z "$rejected_example" ]; then
+            case "$code" in
+                missing_param | unknown_mode | unknown_action | invalid_param)
+                    rejected_example="$line -> $code"
+                    ;;
+            esac
         fi
     done < "$KABOOM_FILE"
 
@@ -319,11 +335,11 @@ run_test_17_5() {
     fi
 
     if [ "$dispatched" -ne "$total" ]; then
-        fail "Only $dispatched of $total steps returned valid JSON-RPC responses"
+        fail "Only $dispatched of $total steps were accepted by the interact tool. First rejection: ${rejected_example:-unknown}"
         return
     fi
 
-    pass "All $dispatched/$total steps parsed from kaboom file and dispatched to interact tool."
+    pass "All $dispatched/$total steps parsed from kaboom file and accepted by the interact tool."
 }
 run_test_17_5
 
@@ -332,7 +348,7 @@ begin_test "29.6" "last_n filter returns correct subset" \
     "Call generate(reproduction, last_n=2). Verify only the last 2 actions (select + keypress)." \
     "last_n is essential for focusing reproduction on recent actions."
 run_test_17_6() {
-    RESPONSE=$(call_tool "generate" '{"what":"reproduction","output_format":"kaboom","last_n":2}')
+    RESPONSE=$(call_tool "generate" '{"what":"reproduction","output_format":"kaboom-agentic-browser","last_n":2}')
     if ! check_not_error "$RESPONSE"; then
         fail "generate with last_n returned error: $(truncate "$(extract_content_text "$RESPONSE")")"
         return

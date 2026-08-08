@@ -162,7 +162,28 @@ describe('comprehensive UAT harness regressions', () => {
     const offline = categoryIds('OFFLINE_CAT_IDS')
     const connected = categoryIds('CONNECTED_CAT_IDS')
 
-    assert.equal(new Set([...offline, ...connected]).size, 27)
+    // Derived from disk, not a magic count: a category script that exists but is
+    // in neither list looks like coverage while never running. Seven were in that
+    // state, and one of them (32) reported 8/8 green while every call it made
+    // failed to parse. Category 27 is the sole permitted exclusion — it blocks on
+    // `read -r` for human visual verification and would hang the suite.
+    const HUMAN_INTERACTIVE = ['27']
+    const onDisk = globSync('scripts/tests/*/cat-*.sh')
+      .map((file) => file.match(/cat-(\d+)-/)[1])
+      .sort()
+    const scheduled = new Set([...offline, ...connected])
+    const unscheduled = onDisk.filter((id) => !scheduled.has(id) && !HUMAN_INTERACTIVE.includes(id))
+    assert.deepEqual(
+      unscheduled,
+      [],
+      `these category scripts exist but no suite runs them: ${unscheduled.join(', ')}`
+    )
+    for (const id of HUMAN_INTERACTIVE) {
+      assert.ok(
+        !scheduled.has(id),
+        `category ${id} pauses for human input and cannot be scheduled in an automated suite`
+      )
+    }
     assert.deepEqual(offline.filter((id) => connected.includes(id)), [])
     assert.ok(offline.includes('05'), 'Pilot-unavailable contract belongs offline')
     assert.ok(connected.includes('15'), 'Pilot success path belongs connected')
@@ -634,10 +655,13 @@ describe('comprehensive UAT harness regressions', () => {
           '13',
           '14',
           '16',
+          '17',
           '20',
+          '21',
           '25',
           '26',
           '28',
+          '29',
           '34'
         ]) {
           const script = join(testsDir, `cat-${id}-fake.sh`)
@@ -676,11 +700,11 @@ describe('comprehensive UAT harness regressions', () => {
 
     const complete = run(makeProject(true))
     assert.equal(complete.status, 0)
-    assert.match(complete.stdout, /TOTAL\s+\|\s+20\s+\|\s+0\s+\|\s+20\s+\|\s+40/)
-    assert.match(complete.stdout, /ALL 20 TESTS PASSED \(20 skipped\)/)
+    assert.match(complete.stdout, /TOTAL\s+\|\s+23\s+\|\s+0\s+\|\s+23\s+\|\s+46/)
+    assert.match(complete.stdout, /ALL 23 TESTS PASSED \(23 skipped\)/)
     const report = JSON.parse(readFileSync(join(complete.artifactDir, 'uat-results.json'), 'utf8'))
-    assert.equal(report.categories.length, 20)
-    assert.equal(report.totals.skip, 20)
+    assert.equal(report.categories.length, 23)
+    assert.equal(report.totals.skip, 23)
     assert.equal(report.restoration.status, 'not_required')
     assert.match(readFileSync(join(complete.artifactDir, 'uat-results.xml'), 'utf8'), /<testsuites/)
   })

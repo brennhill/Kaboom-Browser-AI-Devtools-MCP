@@ -4,6 +4,7 @@
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/../framework/framework.sh"
 
@@ -22,14 +23,16 @@ begin_test "22.1" "Full workflow: Record → Generate Test → Heal Broken → V
 run_test_22_1() {
     call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
 
-    # 1. Record
-    call_tool "interact" '{"what":"screen_recording_start","name":"workflow-test"}' >/dev/null
+    # 1. Record. Event recording captures the action stream; screen recording
+    # needs an explicit browser user gesture and can never start unattended.
+    start_event_recording "workflow-test" || return
     sleep 0.1
     call_tool "interact" '{"what":"navigate","url":"https://example.com"}' >/dev/null 2>&1
     sleep 0.1
     call_tool "interact" '{"what":"click","selector":"#old-button"}' >/dev/null 2>&1
     sleep 0.1
-    response=$(call_tool "interact" '{"what":"screen_recording_stop"}')
+    stop_event_recording || return
+    response="$LAST_RECORDING_RESPONSE"
 
     # Each stage must succeed for the cycle to mean anything. The previous version
     # emitted four passes from this one test — three of them conceding the stage
@@ -48,14 +51,35 @@ run_test_22_1() {
         return
     fi
 
-    # 3. Healing (fixes broken selectors).
-    response=$(call_tool "generate" '{"what":"reproduction","heal":true}')
+    # 3. Healing. test_heal inspects a real spec file and reports selectors that
+    # no longer resolve, so the stage needs a file with a deliberately broken
+    # selector. The previous call was generate(reproduction, heal=true) — `heal`
+    # is not a parameter of any generate mode, so the stage never ran; it was
+    # hidden behind a "Healing feature pending (workflow continues)" pass.
+    # The daemon sandboxes file access to the project directory, so the spec
+    # cannot live in TEMP_DIR; it is written under artifacts/ and removed below.
+    local spec_dir="$PROJECT_ROOT/artifacts/uat"
+    local spec="$spec_dir/heal-target-$$.spec.ts"
+    mkdir -p "$spec_dir"
+    cat > "$spec" <<'SPEC'
+import { test, expect } from "@playwright/test";
+test("uat heal target", async ({ page }) => {
+  await page.locator("#sf-btn-renamed-by-uat").click();
+});
+SPEC
+
+    response=$(call_tool "generate" '{"what":"test_heal","action":"analyze","test_file":'"$(json_string "$spec")"'}')
+    rm -f "$spec"
     if ! check_not_error "$response"; then
         fail "Heal stage failed: $(truncate "$(command_failure_message "$response")")"
         return
     fi
+    if ! check_contains "$(extract_content_text "$response")" "#sf-btn-renamed-by-uat"; then
+        fail "Heal analysis did not report the broken selector: $(truncate "$(extract_content_text "$response")")"
+        return
+    fi
 
-    pass "Full workflow cycle completed: recorded, generated a test, and healed it"
+    pass "Full workflow cycle completed: recorded, generated a test, and heal analysis found the broken selector"
 }
 run_test_22_1
 
@@ -78,17 +102,12 @@ run_test_22_2() {
 
     sleep 0.1
 
-    # Start recording with noise rules active
-    call_tool "interact" '{"what":"screen_recording_start","name":"with-filtering"}' >/dev/null
+    # Start recording with noise rules active.
+    start_event_recording "with-filtering" || return
     sleep 0.1
     call_tool "interact" '{"what":"navigate","url":"https://example.com"}' >/dev/null 2>&1
     sleep 0.1
-    response=$(call_tool "interact" '{"what":"screen_recording_stop"}')
-
-    if ! check_not_error "$response"; then
-        fail "Recording with noise rules active failed"
-        return
-    fi
+    stop_event_recording || return
 
     pass "Noise filtering + recording work together"
 }

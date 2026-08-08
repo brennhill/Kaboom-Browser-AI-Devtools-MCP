@@ -89,14 +89,14 @@ run_test_15_2() {
         return
     fi
 
+    # The script's value lands in `return_value`. `result` is the execution
+    # envelope ({"success":true}) and carries nothing the page computed, so
+    # reading it would assert only that the call was accepted.
     payload="$(tool_payload "$response")"
-    value="$(echo "$payload" | jq -r '.result // .value // empty' 2>/dev/null)"
-    if [ -z "$value" ]; then
-        value="$(extract_content_text "$response")"
-    fi
+    value="$(echo "$payload" | jq -r '.return_value // empty' 2>/dev/null)"
 
-    if ! echo "$value" | grep -q "42-btn"; then
-        fail "execute_js did not return the value computed in the page (expected '42-btn'). Got: $(truncate "$value")"
+    if [ "$value" != "42-btn" ]; then
+        fail "execute_js return_value was '$value', expected '42-btn' (payload: $(truncate "$payload" 200))"
         return
     fi
 

@@ -4,7 +4,7 @@ feature_id: feature-reproduction-scripts
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-09
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
@@ -16,6 +16,8 @@ code_paths:
   - src/lib/page/reproduction.ts
   - internal/capture/actionstore/store.go
 test_paths:
+  - cmd/browser-agent/internal/toolgenerate/toolgenerate_test.go
+  - scripts/tests/workflows/cat-29-reproduction.sh
   - internal/tools/interact/reproduction_test.go
   - internal/reproduction/reproduction_test.go
   - internal/reproduction/golden_test.go
@@ -52,6 +54,11 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - MCP adapter and script formatting: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
+- `output_format` accepts `kaboom-agentic-browser` or `playwright`. The rejection
+  advice used to read "Use 'kaboom' or 'playwright'" — a value
+  `ValidateOutputFormat` rejects — so a caller following the recovery playbook
+  retried forever on a value that could never succeed. A contract test asserts
+  every value named in the advice is one the validator accepts.
 - The dispatcher receives the canonical capture owner through explicit generate
   composition rather than a ToolHandler-satisfied host interface.
 - Page-side reproduction capture: `src/lib/page/reproduction.ts`

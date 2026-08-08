@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
 )
 
 // ---------------------------------------------------------------------------
@@ -157,4 +158,40 @@ func TestGenerateValidParams_AllFormatsPresent(t *testing.T) {
 			t.Errorf("GenerateValidParams missing format %q", format)
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Reproduction output_format recovery advice
+// ---------------------------------------------------------------------------
+
+// The recovery playbook must name a value ValidateOutputFormat actually accepts.
+// It previously said "Use 'kaboom' or 'playwright'", but the validator requires
+// 'kaboom-agentic-browser', so a caller that followed the advice retried forever
+// on a value that could never succeed.
+func TestReproductionOutputFormatAdviceNamesAnAcceptedValue(t *testing.T) {
+	const advice = "Use 'kaboom-agentic-browser' or 'playwright'"
+
+	for _, format := range []string{"kaboom-agentic-browser", "playwright"} {
+		if msg := reproduction.ValidateOutputFormat(format); msg != "" {
+			t.Fatalf("ValidateOutputFormat(%q) rejected an advertised value: %s", format, msg)
+		}
+	}
+	if msg := reproduction.ValidateOutputFormat("kaboom"); msg == "" {
+		t.Fatal("ValidateOutputFormat accepts 'kaboom'; the recovery advice below must be updated to match")
+	}
+	for _, quoted := range extractQuoted(advice) {
+		if msg := reproduction.ValidateOutputFormat(quoted); msg != "" {
+			t.Errorf("recovery advice names %q, which the validator rejects: %s", quoted, msg)
+		}
+	}
+}
+
+// extractQuoted returns every single-quoted token in s.
+func extractQuoted(s string) []string {
+	var out []string
+	parts := strings.Split(s, "'")
+	for i := 1; i < len(parts); i += 2 {
+		out = append(out, parts[i])
+	}
+	return out
 }

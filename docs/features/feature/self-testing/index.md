@@ -209,6 +209,13 @@ cached Pilot state, tracked-tab updates, and explicit disconnect lifecycle.
 The package is not imported by release binaries and replaces a larger set of
 unsafe mutation methods that previously compiled into `internal/capture`.
 
+- Every category script on disk is scheduled in a suite. A script that exists but
+  appears in neither `OFFLINE_CAT_IDS` nor `CONNECTED_CAT_IDS` reads as coverage
+  while never running: seven were in that state, and one of them reported 8/8
+  green with every call it made failing to parse. A contract test derives the
+  expected set from the filesystem, so a new category cannot be added without
+  being scheduled. Category 27 is the single permitted exclusion — it blocks on
+  `read -r` for human visual verification of overlays and would hang the suite.
 - Tool requests must fit on one line. `send_mcp` pipes the request through
   `echo` into a line-delimited JSON-RPC reader, so a multi-line argument returns
   `Parse error: unexpected end of JSON input` and never reaches a tool. That

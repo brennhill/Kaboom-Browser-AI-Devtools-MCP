@@ -429,6 +429,47 @@ connected_fixture_url() {
     echo "http://127.0.0.1:${PORT}/tests/interact.html"
 }
 
+# Extracts the recording_id from an event_recording_start response.
+recording_id_from_response() {
+    extract_content_text "$1" |
+        sed -n 's/.*"recording_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' |
+        head -n 1
+}
+
+# Starts DOM event recording and sets LAST_RECORDING_ID.
+#
+# Use this rather than interact/screen_recording_start when a test needs to
+# record user actions. Screen recording captures video through getDisplayMedia
+# and cannot start without an explicit browser user gesture — the extension
+# replies "awaiting user gesture" until someone clicks Approve in the popup, so
+# any unattended test that requires it to succeed will always fail. Event
+# recording captures the action stream and needs no gesture.
+start_event_recording() {
+    local name="$1"
+    local response
+    response="$(call_tool "configure" '{"what":"event_recording_start","name":'"$(json_string "$name")"'}')"
+    LAST_RECORDING_ID="$(recording_id_from_response "$response")"
+    if [ -z "$LAST_RECORDING_ID" ]; then
+        fail "event_recording_start returned no recording_id: $(truncate "$(command_failure_message "$response")")"
+        return 1
+    fi
+    return 0
+}
+
+# Stops the recording started by start_event_recording. The stop action requires
+# the recording_id the start returned.
+stop_event_recording() {
+    local recording_id="${1:-$LAST_RECORDING_ID}"
+    local response
+    response="$(call_tool "configure" '{"what":"event_recording_stop","recording_id":'"$(json_string "$recording_id")"'}')"
+    if ! check_not_error "$response"; then
+        fail "event_recording_stop failed for '$recording_id': $(truncate "$(command_failure_message "$response")")"
+        return 1
+    fi
+    LAST_RECORDING_RESPONSE="$response"
+    return 0
+}
+
 # ── Extension-Facing HTTP Helpers ──────────────────────────
 # Every helper records LAST_HTTP_STATUS and LAST_HTTP_BODY so callers assert on
 # the status code. Parsing the reply is not an assertion: the daemon answers
