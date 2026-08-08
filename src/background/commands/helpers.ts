@@ -15,7 +15,7 @@ import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { setLocals } from '../../lib/storage/local.js'
-import { isInternalUrl } from '../../lib/tabs/internal-url.js'
+import { isInternalTab } from '../../lib/tabs/internal-url.js'
 
 // =============================================================================
 // EXPORTED TYPE ALIASES (used by browser-actions.ts, dom-dispatch.ts, etc.)
@@ -54,6 +54,8 @@ type TargetResolutionSource =
 export interface TargetResolution {
   tabId: number
   url: string
+  /** Destination of a navigation Chrome has started but not committed, when one is in flight. */
+  pendingUrl?: string
   source: TargetResolutionSource
   requestedTabId?: number
   trackedTabId?: number | null
@@ -372,7 +374,21 @@ export async function persistTrackedTab(tab: chrome.tabs.Tab): Promise<void> {
 }
 
 function isTrackableTab(tab: chrome.tabs.Tab | null | undefined): tab is chrome.tabs.Tab & { id: number; url: string } {
-  return !!tab?.id && typeof tab.url === 'string' && !isRestrictedUrl(tab.url)
+  return !!tab?.id && typeof tab.url === 'string' && !isInternalTab(tab)
+}
+
+/**
+ * Build a resolved target from the tab Chrome handed us.
+ * Carries `pendingUrl` alongside the committed URL so every downstream
+ * restriction gate sees the same navigation state the resolver did — a tab
+ * mid-navigation to a restricted page must not read as scriptable.
+ */
+function targetFromTab(
+  tab: { id: number; url?: string; pendingUrl?: string },
+  source: TargetResolutionSource,
+  rest: Omit<TargetResolution, 'tabId' | 'url' | 'pendingUrl' | 'source'>
+): TargetResolution {
+  return { tabId: tab.id, url: tab.url || '', pendingUrl: tab.pendingUrl, source, ...rest }
 }
 
 function pickRandom<T>(items: T[]): T | null {
@@ -421,13 +437,7 @@ async function tryAutoTrackFallback(
     })
     diagnosticLog(`[Diagnostic] Auto-tracked active tab ${activeTab.id} for query ${queryType}`)
     return {
-      target: {
-        tabId: activeTab.id,
-        url: activeTab.url,
-        source: 'auto_tracked_active_tab',
-        trackedTabId: activeTab.id,
-        useActiveTab
-      }
+      target: targetFromTab(activeTab, 'auto_tracked_active_tab', { trackedTabId: activeTab.id, useActiveTab })
     }
   }
 
@@ -460,13 +470,7 @@ async function tryAutoTrackFallback(
       })
       diagnosticLog(`[Diagnostic] Auto-tracked non-internal tab ${resolved.id} for query ${queryType}`)
       return {
-        target: {
-          tabId: resolved.id,
-          url: resolved.url,
-          source: 'auto_tracked_random_tab',
-          trackedTabId: resolved.id,
-          useActiveTab: true
-        }
+        target: targetFromTab(resolved, 'auto_tracked_random_tab', { trackedTabId: resolved.id, useActiveTab: true })
       }
     }
 
@@ -498,13 +502,10 @@ async function tryAutoTrackFallback(
       })
       diagnosticLog(`[Diagnostic] Auto-opened and tracked tab ${hydratedTab.id} for query ${queryType}`)
       return {
-        target: {
-          tabId: hydratedTab.id,
-          url: hydratedTab.url,
-          source: 'auto_tracked_new_tab',
+        target: targetFromTab(hydratedTab, 'auto_tracked_new_tab', {
           trackedTabId: hydratedTab.id,
           useActiveTab: true
-        }
+        })
       }
     }
 
@@ -538,6 +539,25 @@ export async function resolveTargetTab(
     typeof paramsObj.tab_id === 'number' && paramsObj.tab_id > 0 ? paramsObj.tab_id : undefined
   const useActiveTab = paramsObj.use_active_tab === true
 
+  /**
+   * Keep a restricted tab as the target when the command is the user's way off it.
+   * Escape actions (navigate/refresh/back/forward/new_tab/switch_tab/close_tab) must
+   * move the very tab that is stuck on chrome:// or another extension's page —
+   * recovering to a different tab would leave the user stranded while some other tab
+   * navigated. The registry's restricted-page gate exempts the same action set.
+   * Returns undefined when the command is not an escape action, so the caller falls
+   * through to its normal recovery path.
+   */
+  function restrictedEscapeTarget(
+    tab: chrome.tabs.Tab | null | undefined,
+    source: TargetResolutionSource,
+    rest: Omit<TargetResolution, 'tabId' | 'url' | 'pendingUrl' | 'source'>
+  ): { target: TargetResolution } | undefined {
+    if (!tab?.id || !isBrowserEscapeAction(query.type, paramsObj)) return undefined
+    diagnosticLog(`[Diagnostic] Keeping restricted tab ${tab.id} for escape action ${query.type}`)
+    return { target: targetFromTab({ ...tab, id: tab.id }, source, rest) }
+  }
+
   async function resolveAutoTrackOrEscapeFallback(
     trackedTabId: number | null,
     fallbackMessage: string
@@ -554,13 +574,10 @@ export async function resolveTargetTab(
       if (activeTab?.id) {
         diagnosticLog(`[Diagnostic] ${fallbackMessage} ${activeTab.id} for escape action ${query.type}`)
         return {
-          target: {
-            tabId: activeTab.id,
-            url: activeTab.url || '',
-            source: 'active_tab_fallback',
+          target: targetFromTab({ ...activeTab, id: activeTab.id }, 'active_tab_fallback', {
             trackedTabId,
             useActiveTab: true
-          }
+          })
         }
       }
     }
@@ -599,6 +616,12 @@ export async function resolveTargetTab(
           }
         }
       }
+      const escape = restrictedEscapeTarget(explicitTab, 'explicit_tab', {
+        requestedTabId: explicitTabId,
+        trackedTabId: null,
+        useActiveTab
+      })
+      if (escape) return escape
       diagnosticLog(
         `[Diagnostic] Daemon-resolved tab ${explicitTabId} became restricted, clearing tracking state`
       )
@@ -606,14 +629,11 @@ export async function resolveTargetTab(
       return resolveAutoTrackOrEscapeFallback(explicitTabId, 'Recovering from restricted daemon target on active tab')
     }
     return {
-      target: {
-        tabId: explicitTab.id,
-        url: explicitTab.url,
-        source: 'explicit_tab',
+      target: targetFromTab(explicitTab, 'explicit_tab', {
         requestedTabId: explicitTabId,
         trackedTabId: null,
         useActiveTab
-      }
+      })
     }
   }
 
@@ -641,13 +661,10 @@ export async function resolveTargetTab(
     }
 
     return {
-      target: {
-        tabId: activeTab.id,
-        url: activeTab.url || '',
-        source: 'active_tab',
+      target: targetFromTab({ ...activeTab, id: activeTab.id }, 'active_tab', {
         trackedTabId: latchedTrackedTabId,
         useActiveTab
-      }
+      })
     }
   }
 
@@ -658,15 +675,12 @@ export async function resolveTargetTab(
     const trackedTab = await getTabWithRetry(trackedTabId, true)
     if (isTrackableTab(trackedTab)) {
       return {
-        target: {
-          tabId: trackedTab.id,
-          url: trackedTab.url,
-          source: 'tracked_tab',
-          trackedTabId,
-          useActiveTab
-        }
+        target: targetFromTab(trackedTab, 'tracked_tab', { trackedTabId, useActiveTab })
       }
     }
+
+    const escape = restrictedEscapeTarget(trackedTab, 'tracked_tab', { trackedTabId, useActiveTab })
+    if (escape) return escape
 
     diagnosticLog(
       trackedTab?.id
@@ -700,15 +714,6 @@ export async function resolveTargetTab(
   }
 
   return resolveAutoTrackOrEscapeFallback(trackedTabId, 'Using active tab fallback')
-}
-
-/**
- * Check if a URL is restricted — content scripts cannot run on these pages.
- * Covers internal browser pages and known CSP-restricted origins.
- * Delegates to the canonical predicate so the blocked-prefix list lives once.
- */
-export function isRestrictedUrl(url: string | undefined): boolean {
-  return isInternalUrl(url)
 }
 
 // =============================================================================

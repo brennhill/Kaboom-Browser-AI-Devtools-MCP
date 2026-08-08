@@ -15,3 +15,22 @@ export function isInternalUrl(url: string | undefined): boolean {
   const internalPrefixes = ['chrome://', 'chrome-extension://', 'about:', 'edge://', 'brave://', 'devtools://']
   return internalPrefixes.some((prefix) => url.startsWith(prefix))
 }
+
+/** The two URLs Chrome exposes for a tab: the committed one and any in-flight destination. */
+export interface InternalUrlTarget {
+  url?: string
+  pendingUrl?: string
+}
+
+/**
+ * Check if a tab is internal, accounting for navigations that have not committed yet.
+ * Chrome keeps reporting the outgoing document in `url` while an uncommitted
+ * navigation's destination is visible only through `pendingUrl`, so a tab racing
+ * toward a restricted page still looks scriptable through `url` alone. Fails
+ * closed: either URL being internal makes the tab internal.
+ */
+export function isInternalTab(tab: InternalUrlTarget | null | undefined): boolean {
+  if (!tab) return true
+  if (isInternalUrl(tab.url)) return true
+  return typeof tab.pendingUrl === 'string' && tab.pendingUrl.length > 0 && isInternalUrl(tab.pendingUrl)
+}

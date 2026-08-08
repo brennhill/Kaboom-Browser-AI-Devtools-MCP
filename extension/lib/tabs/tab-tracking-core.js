@@ -7,7 +7,7 @@
  *      gate both entry points go through, so the guards can never diverge again.
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
-import { isInternalUrl } from './internal-url.js';
+import { isInternalTab } from './internal-url.js';
 import { isDomainCloaked } from './cloaked-domains.js';
 import { setTrackedTab, clearTrackedTab } from './tracked-tab-storage.js';
 function hostnameOf(url) {
@@ -53,7 +53,7 @@ function ensureContentScript(tabId) {
  * than 'tracked' means nothing was persisted.
  */
 export async function trackTab(tab) {
-    if (isInternalUrl(tab.url))
+    if (isInternalTab(tab))
         return 'internal_page';
     if (await isDomainCloaked(hostnameOf(tab.url)))
         return 'cloaked';

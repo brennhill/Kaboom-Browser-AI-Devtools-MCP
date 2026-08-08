@@ -570,3 +570,69 @@ func TestUpdateSyncConnectionState_ReconnectAfterDisconnectThreshold(t *testing.
 		t.Fatal("expected isReconnect=true after disconnect threshold is crossed")
 	}
 }
+
+// A harness that validates the /sync contract is not a second browser extension.
+// Adopting it as the authoritative session bumps the connection generation, which
+// supersedes the real extension's in-flight poll, and its partial settings erase the
+// tracked tab the real extension reported — the connected UAT's intermittent
+// "no tracked browser tab" failures.
+func TestHandleSync_ProbeClientNeverBecomesTheAuthoritativeSession(t *testing.T) {
+	t.Parallel()
+	cap := newTestState()
+	defer cap.Close()
+
+	runSyncRequestAsClient(t, cap, "kaboom-extension/0.9.0", SyncRequest{
+		ExtSessionID: "real-extension",
+		Settings: &SyncSettings{
+			PilotEnabled: true, TrackingEnabled: true, TrackedTabID: 41,
+			TrackedTabURL: "https://app.example.com/fixture",
+		},
+	})
+	before := extensionStateSnapshotForTest(cap.Extension())
+	if !before.trackingEnabled || before.trackedTabID != 41 {
+		t.Fatalf("expected the real extension to own tracking, got %#v", before)
+	}
+
+	cap.Queries().CreatePendingQuery(queries.PendingQuery{Type: "query_dom", Params: []byte(`{"selector":".x"}`)})
+
+	w := runSyncRequestAsClient(t, cap, "kaboom-probe/0.9.0", SyncRequest{
+		ExtSessionID: "pilot-success-js",
+		Settings:     &SyncSettings{PilotEnabled: true},
+	})
+	if w.Code != http.StatusOK {
+		t.Fatalf("probe sync status = %d, want 200 so contract tests can validate the endpoint", w.Code)
+	}
+	resp := decodeSyncResponse(t, w)
+	if !resp.Ack {
+		t.Error("probe sync must still acknowledge a well-formed payload")
+	}
+	if len(resp.Commands) != 0 {
+		t.Fatalf("probe received %d commands; only the extension may drain the queue", len(resp.Commands))
+	}
+
+	after := extensionStateSnapshotForTest(cap.Extension())
+	if after.extSessionID != "real-extension" {
+		t.Errorf("extSessionID = %q, want the real extension to keep the session", after.extSessionID)
+	}
+	if after.connectionGeneration != before.connectionGeneration {
+		t.Errorf("connectionGeneration = %d, want %d unchanged", after.connectionGeneration, before.connectionGeneration)
+	}
+	if !after.trackingEnabled || after.trackedTabID != 41 {
+		t.Errorf("probe erased tracking: trackingEnabled=%v trackedTabID=%d", after.trackingEnabled, after.trackedTabID)
+	}
+	if pending := cap.Queries().GetPendingQueries(); len(pending) != 1 {
+		t.Errorf("pending queries = %d, want the command still queued for the extension", len(pending))
+	}
+}
+
+func TestHandleSync_ProbeClientDoesNotMakeTheExtensionLookConnected(t *testing.T) {
+	t.Parallel()
+	cap := newTestState()
+	defer cap.Close()
+
+	runSyncRequestAsClient(t, cap, "kaboom-probe/0.9.0", SyncRequest{ExtSessionID: "probe-only"})
+
+	if cap.Extension().IsExtensionConnected() {
+		t.Fatal("a probe must never present itself as a connected extension")
+	}
+}

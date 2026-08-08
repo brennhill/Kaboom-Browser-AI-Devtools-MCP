@@ -14,6 +14,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/extclient"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -134,6 +135,15 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	clientID := r.Header.Get("X-Kaboom-Client")
 
+	// A probe validates this endpoint's contract; it is not a browser. Adopting it
+	// would bump the connection generation — superseding the real extension's
+	// in-flight poll — let its partial settings erase the tracked tab the extension
+	// reported, and drain commands the extension will never run.
+	if extclient.IsProbe(clientID) {
+		h.respondProbeSync(w, now)
+		return
+	}
+
 	state := h.runtime.updateSyncConnectionState(req, clientID, now)
 	if state.staleGeneration {
 		h.rejectStaleGeneration(w, req, state.connectionGeneration, "extension_sync")
@@ -243,6 +253,20 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	util.JSONResponse(w, http.StatusOK, resp)
+}
+
+// respondProbeSync answers a contract probe with a well-formed, empty envelope.
+// It deliberately adopts nothing: no session, no generation, no settings, no
+// commands, and no evidence that an extension is connected.
+func (h *Handler) respondProbeSync(w http.ResponseWriter, now time.Time) {
+	util.JSONResponse(w, http.StatusOK, SyncResponse{
+		Ack:              true,
+		Commands:         []SyncCommand{},
+		NextPollMs:       1000,
+		ServerTime:       now.Format(time.RFC3339),
+		ServerVersion:    h.runtime.ServerVersion(),
+		CaptureOverrides: map[string]string{},
+	})
 }
 
 func (h *Handler) rejectStaleGeneration(w http.ResponseWriter, req SyncRequest, currentGeneration uint64, bridge string) {

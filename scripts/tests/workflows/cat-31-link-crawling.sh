@@ -20,12 +20,7 @@ begin_test "31.16" "Link crawl stays within same domain" \
     "Domain boundary enforcement prevents external dependency checks"
 
 run_test_19_16() {
-    response=$(call_tool "analyze" '{
-        "what":"link_health",
-        "mode":"crawl",
-        "start_url":"https://example.com",
-        "same_domain_only":true
-    }')
+    response=$(call_tool "analyze" '{"what":"link_health","mode":"crawl","start_url":"https://example.com","same_domain_only":true}')
 
     if ! check_not_error "$response"; then
         fail "Link crawl query failed. Content: $(truncate "$(extract_content_text "$response")")"
@@ -50,12 +45,7 @@ begin_test "31.17" "Crawl respects CORS boundaries" \
     "CORS-blocked links marked differently than unreachable"
 
 run_test_19_17() {
-    response=$(call_tool "analyze" '{
-        "what":"link_health",
-        "mode":"crawl",
-        "start_url":"https://example.com",
-        "check_cors":true
-    }')
+    response=$(call_tool "analyze" '{"what":"link_health","mode":"crawl","start_url":"https://example.com","check_cors":true}')
 
     if ! check_not_error "$response"; then
         fail "CORS-aware crawl query failed. Content: $(truncate "$(extract_content_text "$response")")"
@@ -80,12 +70,7 @@ begin_test "31.18" "Crawl respects max_depth parameter" \
     "Depth limiting prevents infinite crawls"
 
 run_test_19_18() {
-    response=$(call_tool "analyze" '{
-        "what":"link_health",
-        "mode":"crawl",
-        "start_url":"https://example.com",
-        "max_depth":2
-    }')
+    response=$(call_tool "analyze" '{"what":"link_health","mode":"crawl","start_url":"https://example.com","max_depth":2}')
 
     if ! check_not_error "$response"; then
         fail "Depth-limited crawl failed. Content: $(truncate "$(extract_content_text "$response")")"
@@ -110,12 +95,7 @@ begin_test "31.19" "Crawl excludes links matching patterns" \
     "Filtering prevents unnecessary checks"
 
 run_test_19_19() {
-    response=$(call_tool "analyze" '{
-        "what":"link_health",
-        "mode":"crawl",
-        "start_url":"https://example.com",
-        "exclude_patterns":["*/admin","*/api","*/health"]
-    }')
+    response=$(call_tool "analyze" '{"what":"link_health","mode":"crawl","start_url":"https://example.com","exclude_patterns":["*/admin","*/api","*/health"]}')
 
     if ! check_not_error "$response"; then
         fail "Filtered crawl failed. Content: $(truncate "$(extract_content_text "$response")")"
@@ -141,11 +121,7 @@ begin_test "31.20" "Running same crawl twice produces consistent results" \
 
 run_test_19_20() {
     # First crawl
-    response1=$(call_tool "analyze" '{
-        "what":"link_health",
-        "mode":"crawl",
-        "start_url":"https://example.com"
-    }')
+    response1=$(call_tool "analyze" '{"what":"link_health","mode":"crawl","start_url":"https://example.com"}')
 
     if ! check_not_error "$response1"; then
         fail "First crawl failed"
@@ -155,11 +131,7 @@ run_test_19_20() {
     sleep 1
 
     # Second crawl (same URL)
-    response2=$(call_tool "analyze" '{
-        "what":"link_health",
-        "mode":"crawl",
-        "start_url":"https://example.com"
-    }')
+    response2=$(call_tool "analyze" '{"what":"link_health","mode":"crawl","start_url":"https://example.com"}')
 
     if ! check_not_error "$response2"; then
         fail "Second crawl failed"
@@ -185,12 +157,7 @@ begin_test "31.21" "Crawl operation times out after specified duration" \
     "Timeout prevents indefinite crawls"
 
 run_test_19_21() {
-    response=$(call_tool "analyze" '{
-        "what":"link_health",
-        "mode":"crawl",
-        "start_url":"https://example.com",
-        "timeout_ms":5000
-    }')
+    response=$(call_tool "analyze" '{"what":"link_health","mode":"crawl","start_url":"https://example.com","timeout_ms":5000}')
 
     if ! check_not_error "$response"; then
         fail "Timeout-controlled crawl failed. Content: $(truncate "$(extract_content_text "$response")")"

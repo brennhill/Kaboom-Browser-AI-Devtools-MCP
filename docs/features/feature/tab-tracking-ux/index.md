@@ -72,6 +72,8 @@ test_paths:
   - tests/extension/terminal-sidepanel/sidepanel-terminal-ui.test.js
   - tests/extension/terminal-sidepanel/sidepanel-terminal.test.js
   - tests/extension/tab-state/tab-tracking-core.test.js
+  - tests/extension/tab-state/internal-url.test.js
+  - extension/background/registry_csp_navigation.test.js
   - tests/extension/tab-state/tracking-continuity.test.js
   - tests/extension/tab-state/content-readiness.test.js
   - tests/extension/ui-controls/toggle-overlay.test.js
@@ -116,6 +118,19 @@ last_verified_date: 2026-04-03
   page, Kaboom clears the stale target and recovers to a trackable web tab.
   The same validation covers daemon-resolved `query.tab_id` context; a tab ID
   explicitly requested by the user fails closed instead of being retargeted.
+- Browser escape actions (`navigate`, `refresh`, `back`, `forward`, `new_tab`,
+  `switch_tab`, `close_tab`) are the exception: they keep the restricted tab as
+  their target, because they are how the user gets off it. Recovering to a
+  different tab would navigate that tab while leaving the stuck one in place.
+  The registry's restricted-page gate exempts the same action set.
+- Trackability is decided from both URLs Chrome reports for a tab. While a
+  navigation is in flight, `url` still names the outgoing document and only
+  `pendingUrl` names the destination, so a tab racing toward a browser-internal
+  or another extension's page used to read as scriptable and strand commands
+  (a performance trace attached mid-navigation failed with "Cannot access a
+  chrome-extension:// URL of different extension"). The canonical
+  `isInternalTab` predicate fails closed on either URL, and target resolution
+  carries `pendingUrl` through to the restricted-page gate.
 - Post-navigation readiness probes and command dispatch retain the daemon
   connection generation that originated them. A reconnect supersedes delayed
   acknowledgements and commands before they can mutate the current page, with

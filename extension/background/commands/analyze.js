@@ -12,7 +12,7 @@ import { errorMessage } from '../../lib/error-utils.js';
 import { domFrameProbe } from '../dom/primitives/dom-frame-probe.js';
 import { normalizeFrameArg, resolveMatchedFrameIds } from '../exec/frame-targeting.js';
 import { recordExtensionDiagnosticLifecycle } from '../runtime-state/log-queue.js';
-import { createDefaultPerformanceTraceController } from '../dom/cdp/performance-trace.js';
+import { createDefaultPerformanceTraceController, isTargetNotDebuggableError } from '../dom/cdp/performance-trace.js';
 let performanceTraceController;
 function getPerformanceTraceController() {
     performanceTraceController ??= createDefaultPerformanceTraceController();
@@ -379,6 +379,29 @@ registerPassthrough('computed_styles', 'computed_styles_query', 'Computed styles
 registerPassthrough('form_discovery', 'form_discovery_query', 'Form discovery failed');
 registerPassthrough('form_state', 'form_state_query', 'Form state extraction failed');
 registerPassthrough('data_table', 'data_table_query', 'Data table extraction failed');
+/**
+ * Report a target Chrome will never let the debugger attach to.
+ *
+ * A profile describes one tab, so this fails against the tab that was refused and
+ * is never retargeted: handing back an artifact for a page the caller did not ask
+ * about is worse than handing back nothing. It is also not retryable — Chrome will
+ * refuse the same target again.
+ *
+ * Tracking is deliberately left alone. Only CDP attach was refused; the same tab
+ * still serves execute_js, DOM primitives, and every other tool, so untracking it
+ * would discard a working workspace over one unavailable capability.
+ */
+function reportUndebuggableTarget(ctx, error) {
+    const message = errorMessage(error, 'Chrome refused to attach the debugger');
+    recordExtensionDiagnosticLifecycle('performance_trace_target_not_debuggable', ctx.query.correlation_id || ctx.query.id || '', { tab_id: ctx.tabId });
+    return {
+        error: 'performance_trace_target_not_debuggable',
+        message: `${message} (tab ${ctx.tabId}). Chrome will not expose this target to the extension. ` +
+            'Profile a different tab with tab_id, or move this workspace to a normal web page.',
+        tab_id: ctx.tabId,
+        retryable: false
+    };
+}
 registerCommand('performance_trace', async (ctx) => {
     const action = typeof ctx.params.action === 'string' ? ctx.params.action : '';
     try {
@@ -411,6 +434,10 @@ registerCommand('performance_trace', async (ctx) => {
         });
     }
     catch (error) {
+        if (isTargetNotDebuggableError(error)) {
+            ctx.sendResult(reportUndebuggableTarget(ctx, error));
+            return;
+        }
         ctx.sendResult({
             error: 'performance_trace_failed',
             message: errorMessage(error, 'Performance trace command failed')

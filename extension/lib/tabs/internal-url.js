@@ -15,4 +15,18 @@ export function isInternalUrl(url) {
     const internalPrefixes = ['chrome://', 'chrome-extension://', 'about:', 'edge://', 'brave://', 'devtools://'];
     return internalPrefixes.some((prefix) => url.startsWith(prefix));
 }
+/**
+ * Check if a tab is internal, accounting for navigations that have not committed yet.
+ * Chrome keeps reporting the outgoing document in `url` while an uncommitted
+ * navigation's destination is visible only through `pendingUrl`, so a tab racing
+ * toward a restricted page still looks scriptable through `url` alone. Fails
+ * closed: either URL being internal makes the tab internal.
+ */
+export function isInternalTab(tab) {
+    if (!tab)
+        return true;
+    if (isInternalUrl(tab.url))
+        return true;
+    return typeof tab.pendingUrl === 'string' && tab.pendingUrl.length > 0 && isInternalUrl(tab.pendingUrl);
+}
 //# sourceMappingURL=internal-url.js.map

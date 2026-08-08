@@ -14,30 +14,34 @@ begin_category "23" "Draw Mode" "9"
 ensure_daemon
 
 # ── 23.1 — Draw mode activates via MCP interact tool ───────
-begin_test "23.1" "Draw mode activates via interact(draw_mode)" \
-    "Send interact draw_mode query; verify activation response" \
+# The previous version claimed to activate draw mode but ran execute_js instead,
+# then reported pass on success and skip on every failure — so it could not fail.
+# This category is scheduled with the connected suite, which guarantees an
+# attached extension, so an unreachable browser is a failure here rather than a
+# reason to silently skip the remaining eight tests.
+begin_test "23.1" "Draw mode activates via interact(draw_mode_start)" \
+    "Send interact draw_mode_start query; verify activation response" \
     "Core: LLM-initiated draw mode activation."
 run_test_23_1() {
-    # Check if extension is connected first
-    RESPONSE=$(call_tool "observe" '{"what":"page"}')
+    RESPONSE=$(call_tool "interact" '{"what":"draw_mode_start","annot_session":"cat-23-draw-mode"}')
+
+    if ! check_valid_jsonrpc "$RESPONSE"; then
+        fail "interact(draw_mode_start) did not return a valid JSON-RPC envelope: $(truncate "$RESPONSE")"
+        return
+    fi
+    if check_is_error "$RESPONSE"; then
+        fail "interact(draw_mode_start) failed: $(truncate "$(command_failure_message "$RESPONSE")")"
+        return
+    fi
+
     local text
     text=$(extract_content_text "$RESPONSE")
-
-    if check_matches "$text" "no extension|not connected|no data"; then
-        skip "Extension not connected — skipping draw mode tests."
+    if ! check_contains "$text" "correlation_id"; then
+        fail "draw_mode_start response has no correlation_id to track activation. Content: $(truncate "$text")"
         return
     fi
 
-    # Activate draw mode via interact tool (this creates a pending query)
-    RESPONSE=$(call_tool "interact" '{"what":"execute_js","script":"document.title"}')
-    text=$(extract_content_text "$RESPONSE")
-
-    if check_is_error "$RESPONSE"; then
-        skip "Cannot reach content script — extension may not be on an active page."
-        return
-    fi
-
-    pass "Extension is connected and responding to queries."
+    pass "interact(draw_mode_start) activated draw mode and returned a correlation_id."
 }
 run_test_23_1
 

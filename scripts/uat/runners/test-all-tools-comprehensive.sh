@@ -144,8 +144,13 @@ echo ""
 # Pilot-unavailable assertions cannot be invalidated by a live browser.
 OFFLINE_UAT_PORT="${KABOOM_UAT_OFFLINE_PORT:-17890}"
 CONNECTED_UAT_PORT="${KABOOM_UAT_CONNECTED_PORT:-7890}"
-OFFLINE_CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 20 25 26 28 34"
-CONNECTED_CAT_IDS="14 15 16 33 35 18 19 23 24"
+# 14 and 16 verify the server's half of the /sync contract, so they speak as the
+# extension to prove settings were applied. That identity is only safe where no
+# real extension is attached, which is why they run offline: on the connected
+# port they would have to pose as a probe, and the daemon answers probes with a
+# canned envelope that adopts nothing — leaving them unable to assert anything.
+OFFLINE_CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 14 16 20 25 26 28 34"
+CONNECTED_CAT_IDS="15 33 35 18 19 23 24"
 
 # shellcheck source=tests/framework/uat-user-state.sh
 source "$TESTS_DIR/framework/uat-user-state.sh"

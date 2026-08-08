@@ -3,7 +3,7 @@
 
 const assert = require('node:assert/strict')
 const { execFileSync } = require('node:child_process')
-const { existsSync, readFileSync } = require('node:fs')
+const { existsSync, globSync, readFileSync } = require('node:fs')
 const { describe, test } = require('node:test')
 const { chmodSync, copyFileSync, mkdirSync, mkdtempSync, writeFileSync } = require('node:fs')
 const { tmpdir } = require('node:os')
@@ -39,14 +39,117 @@ describe('comprehensive UAT harness regressions', () => {
       result: {
         content: [{
           type: 'text',
-          text: 'Command trace: complete\n{"result":{"error":"performance_trace_failed","message":"Runtime.evaluate failed: target rejected"}}'
+          text: 'Command trace: complete\n{"result":{"error":"performance_trace_failed","message":"Runtime.evaluate failed: target rejected","resolved_tab_id":41,"resolved_url":"chrome-extension://other/panel.html","target_context":{"source":"tracked_tab"}}}'
         }]
       }
     })
     assert.equal(
       frameworkCall(`command_failure_message '${response}'`),
-      'performance_trace_failed: Runtime.evaluate failed: target rejected'
+      'performance_trace_failed: Runtime.evaluate failed: target rejected [tab_id=41 source=tracked_tab url=chrome-extension://other/panel.html]'
     )
+  })
+
+  test('unknown command failure envelopes remain complete for local diagnosis', () => {
+    const detail = `unclassified:${'x'.repeat(400)}`
+    const response = JSON.stringify({ result: { content: [{ type: 'text', text: detail }] } })
+    assert.equal(frameworkCall(`command_failure_message '${response}'`), detail)
+  })
+
+  // The /sync wire field is `ext_session_id`. A payload using `session_id` leaves
+  // ExtSessionID empty, so the daemon's apply phase rejects the whole request with
+  // 409 stale_connection_generation — after it has already overwritten settings. The
+  // 409 body is still valid JSON, so tests that only assert "a JSON response came
+  // back" pass while exercising nothing. cat-11.7 asserted harder and failed for it.
+  test('UAT sync payloads use the real wire session field', () => {
+    for (const script of globSync('scripts/tests/*/cat-*.sh')) {
+      // Comments are stripped: prose explaining the bug legitimately names the
+      // wrong field, and only the payloads sent on the wire are in scope here.
+      const payloads = readFileSync(script, 'utf8')
+        .split('\n')
+        .filter((line) => !/^\s*#/.test(line))
+        .join('\n')
+      assert.ok(
+        !payloads.includes('"session_id"'),
+        `${script} posts "session_id"; the SyncRequest wire field is "ext_session_id"`
+      )
+    }
+  })
+
+  // A connected category runs beside a real extension. Posting /sync as the extension
+  // client makes the daemon apply the mock's settings over the real ones: TrackingEnabled
+  // and TrackedTabID are plain bool/int, so a payload carrying only pilot_enabled erases
+  // the tracked tab the extension reported. The extension restores it on its next full
+  // heartbeat, so this is a race — the source of the intermittent "no tracked browser
+  // tab" failures in categories scheduled after the /sync-posting ones.
+  //
+  // Categories 14 and 16 verify that settings are applied, which a probe cannot observe,
+  // so they claim the extension identity and run offline where no browser is attached.
+  test('connected categories never impersonate the extension session on /sync', () => {
+    const connectedScripts = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
+      .match(/^CONNECTED_CAT_IDS="([^"]+)"$/m)[1]
+      .split(' ')
+      .flatMap((id) => globSync(`scripts/tests/*/cat-${id}-*.sh`))
+
+    assert.ok(connectedScripts.length > 0, 'connected category scripts must be discoverable')
+    for (const script of connectedScripts) {
+      const source = readFileSync(script, 'utf8')
+      const lines = source.split('\n')
+      lines.forEach((line, index) => {
+        if (!line.includes('X-Kaboom-Client: kaboom-extension')) return
+        const target = lines.slice(index + 1, index + 15).find((next) => /localhost:\$\{PORT\}\//.test(next))
+        assert.ok(
+          !target || !target.includes('/sync'),
+          `${script}:${index + 1} posts /sync as the extension; use kaboom-probe so the real session is untouched`
+        )
+      })
+
+      // post_extension/post_logs are framework helpers that send the extension
+      // identity, so a connected category can claim the session without the
+      // header literal ever appearing in its own source.
+      for (const helper of ['post_extension', 'post_logs']) {
+        assert.ok(
+          !new RegExp(`(^|[\\s;&|(){}])${helper}\\s`, 'm').test(source),
+          `${script} calls ${helper}, which posts as the extension and would overwrite the live session`
+        )
+      }
+    }
+  })
+
+  // Every connected category restarts the daemon, and the suite toggles pilot state,
+  // so a tracked tab established once by the preflight cannot be assumed to survive to
+  // the last category. A category that finds the extension up but nothing tracked must
+  // re-establish its own disposable fixture instead of failing the whole category.
+  test('connected categories re-establish a lost fixture tab before failing', () => {
+    const output = frameworkCall(`
+      KABOOM_UAT_REQUIRE_CONNECTED=1
+      PORT=7890
+      WRAPPER=/test/wrapper
+      UAT_CONNECTED_READY_ATTEMPTS=1
+      uat_readiness_sleep() { :; }
+      TRACKED=""
+      uat_connected_health_payload() { printf '%s\\n' '{"capture":{"extension_connected":true}}'; }
+      uat_connected_tracked_tab() { printf '%s\\n' "$TRACKED"; }
+      uat_create_disposable_tab() { printf 'created\\n'; TRACKED='73\thttps://test.example/'; }
+      wait_for_required_connected_browser && printf 'ready\\n'
+    `)
+    assert.match(output, /created/, 'a missing tracked tab must trigger disposable-tab recovery')
+    assert.match(output, /ready/, 'recovery must let the category proceed')
+  })
+
+  test('connected categories do not attempt tab recovery while the extension is down', () => {
+    const output = frameworkCall(`
+      KABOOM_UAT_REQUIRE_CONNECTED=1
+      PORT=7890
+      WRAPPER=/test/wrapper
+      UAT_CONNECTED_READY_ATTEMPTS=1
+      uat_readiness_sleep() { :; }
+      uat_connected_health_payload() { printf '%s\\n' '{"capture":{"extension_connected":false,"extension_last_seen":"never"}}'; }
+      uat_connected_tracked_tab() { printf '\\n'; }
+      uat_create_disposable_tab() { printf 'created\\n'; }
+      wait_for_required_connected_browser || printf 'failed\\n'
+    `)
+    assert.doesNotMatch(output, /created/, 'a disconnected extension cannot open a tab; recovery must not be attempted')
+    assert.match(output, /failed/)
   })
 
   test('offline and connected categories have explicit, disjoint suite boundaries', () => {
@@ -279,6 +382,24 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(actionCoverage, /analyze\/performance_trace\|analyze\/react_profile\)/)
     assert.match(actionCoverage, /"action":"stop"/)
     assert.match(actionCoverage, /analyze\/performance_trace\|analyze\/react_profile\)[\s\S]*ensure_fixture_page/)
+    // A profile names one tab, so start and stop must both target the fixture
+    // explicitly rather than whatever happens to be tracked when each call lands.
+    assert.match(actionCoverage, /tracked_tab_id\(\)/)
+    assert.match(
+      actionCoverage,
+      /analyze\/performance_trace\|analyze\/react_profile\)[\s\S]*"action":"start","tab_id":/,
+      'the trace lifecycle must start against an explicit tab'
+    )
+    assert.match(
+      actionCoverage,
+      /analyze\/performance_trace\|analyze\/react_profile\) echo '\{"what":"'"\$mode"'","action":"stop","tab_id":/,
+      'the trace lifecycle must stop against the same explicit tab it started'
+    )
+    // Chrome refuses the same target every time; retrying only wastes the budget.
+    assert.doesNotMatch(actionCoverage, /performance_trace_target_not_debuggable/)
+    // HEALTH_TRACKED_TAB_ID carries "id<TAB>url"; interpolating it raw into a
+    // tab_id field emits malformed JSON that silently stops testing the action.
+    assert.doesNotMatch(actionCoverage, /"tab_id":'"\$\{HEALTH_TRACKED_TAB_ID/)
     assert.match(actionCoverage, /KABOOM_UAT_ACTION/)
     assert.match(actionCoverage, /selected_count/)
     assert.match(actionCoverage, /No live schema action matched KABOOM_UAT_ACTION/)
@@ -289,7 +410,45 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(actionCoverage, /attempt" -le 3/)
     assert.match(actionCoverage, /uat_wait_for_connected_browser "\$PORT" "\$WRAPPER"/)
     assert.match(actionCoverage, /prepare_action "\$tool" "\$mode"/)
+    assert.match(actionCoverage, /report_target_drift "\$tool" "\$mode"/)
+    // Clipboard read depends on a browser permission no script can grant, so the
+    // contract is a bounded classification — never a generic execution_timeout.
+    assert.match(actionCoverage, /interact\/clipboard_read\) echo "permission_gated"/)
+    assert.match(actionCoverage, /evaluate_permission_gated\(\)[\s\S]*execution_timeout/)
+    assert.match(actionCoverage, /expectation" = "permission_gated"[\s\S]*evaluate_permission_gated "\$tool" "\$mode"/)
+    for (const outcome of [
+      'clipboard_permission_denied',
+      'clipboard_permission_prompt_required',
+      'clipboard_read_navigation_cancelled',
+      'clipboard_read_context_destroyed',
+      'clipboard_document_not_focused',
+      'clipboard_read_timeout'
+    ]) {
+      assert.match(actionCoverage, new RegExp(outcome), `${outcome} must be an accepted bounded clipboard outcome`)
+    }
     assert.match(actionCoverage, /ensure_fixture_page \|\| finish_category/)
+    // Establishing the fixture must not require the tracking it is about to create:
+    // navigate_and_wait_for re-tracks the tab, so gating on a tracked tab first turns
+    // any transient tracking loss into an unrecoverable category failure.
+    const fixtureBody = actionCoverage.slice(
+      actionCoverage.indexOf('ensure_fixture_page() {'),
+      actionCoverage.indexOf('report_target_drift() {')
+    )
+    assert.match(fixtureBody, /uat_wait_for_extension "\$PORT"/)
+    const fixtureNavigation = fixtureBody.indexOf('\'{"what":"navigate_and_wait_for"')
+    assert.ok(fixtureNavigation > 0, 'fixture setup must navigate to the fixture page')
+    assert.ok(
+      fixtureBody.indexOf('uat_wait_for_extension "$PORT"') < fixtureNavigation,
+      'fixture setup must wait for the extension before navigating'
+    )
+    assert.ok(
+      fixtureNavigation < fixtureBody.indexOf('uat_wait_for_connected_browser "$PORT" "$WRAPPER"'),
+      'the tracked-tab gate must come after the navigation that establishes tracking'
+    )
+    // A tracked tab lost mid-sequence must re-establish the fixture and retry, not
+    // fail every remaining action that needs a target.
+    assert.match(actionCoverage, /No tab is being tracked/)
+    assert.match(actionCoverage, /call_action_with_retry\(\)[\s\S]*ensure_fixture_page/)
     assert.ok(
       actionCoverage.indexOf('ensure_fixture_page || finish_category') < actionCoverage.indexOf('for tool in $TOOLS'),
       'connected action coverage must establish its tracked fixture before invoking schema actions'
@@ -303,7 +462,7 @@ describe('comprehensive UAT harness regressions', () => {
       /interact\/forward\)[\s\S]*"what":"navigate"[\s\S]*"what":"back"/,
     )
     assert.match(actionCoverage, /HEALTH_TRACKED_TAB_ID/)
-    assert.match(actionCoverage, /interact\/switch_tab.*HEALTH_TRACKED_TAB_ID/)
+    assert.match(actionCoverage, /interact\/switch_tab.*tracked_tab_id/)
     assert.match(actionCoverage, /"fields":\[\{/)
     assert.match(actionCoverage, /ensure_fixture_page\(\)/)
     assert.match(actionCoverage, /fixture_attempt=1/)
@@ -340,7 +499,7 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(actionCoverage, /interact\/close_tab\)[\s\S]*HEALTH_EXTRA_TAB_ID/)
     assert.match(
       actionCoverage,
-      /interact\/hardware_click\).*"tab_id":'"\$\{HEALTH_TRACKED_TAB_ID:-0\}"'/,
+      /interact\/hardware_click\).*"tab_id":'"\$\(tracked_tab_id\)"'/,
     )
     assert.match(
       actionCoverage,
@@ -473,6 +632,8 @@ describe('comprehensive UAT harness regressions', () => {
           '11',
           '12',
           '13',
+          '14',
+          '16',
           '20',
           '25',
           '26',
@@ -515,11 +676,11 @@ describe('comprehensive UAT harness regressions', () => {
 
     const complete = run(makeProject(true))
     assert.equal(complete.status, 0)
-    assert.match(complete.stdout, /TOTAL\s+\|\s+18\s+\|\s+0\s+\|\s+18\s+\|\s+36/)
-    assert.match(complete.stdout, /ALL 18 TESTS PASSED \(18 skipped\)/)
+    assert.match(complete.stdout, /TOTAL\s+\|\s+20\s+\|\s+0\s+\|\s+20\s+\|\s+40/)
+    assert.match(complete.stdout, /ALL 20 TESTS PASSED \(20 skipped\)/)
     const report = JSON.parse(readFileSync(join(complete.artifactDir, 'uat-results.json'), 'utf8'))
-    assert.equal(report.categories.length, 18)
-    assert.equal(report.totals.skip, 18)
+    assert.equal(report.categories.length, 20)
+    assert.equal(report.totals.skip, 20)
     assert.equal(report.restoration.status, 'not_required')
     assert.match(readFileSync(join(complete.artifactDir, 'uat-results.xml'), 'utf8'), /<testsuites/)
   })

@@ -234,6 +234,26 @@ export default [
     }
   },
 
+  // Daemon-embedded page scripts (evaluated in the page's MAIN world). Each file
+  // is a single expression the injected executor compiles with `return (<script>)`,
+  // so it is a script, not a module.
+  {
+    files: ['cmd/browser-agent/internal/toolinteract/pagescripts/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'script',
+      globals: {
+        ...globals.browser
+      }
+    },
+    plugins: {
+      security
+    },
+    rules: {
+      'no-empty': ['error', { allowEmptyCatch: false }]
+    }
+  },
+
   // Website demo/public snippets (run in browser)
   {
     files: ['gokaboom.dev/public/**/*.js'],

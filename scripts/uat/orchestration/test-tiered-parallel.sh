@@ -28,7 +28,7 @@ GLOBAL_START=$(date +%s)
 # Define test tiers
 TIER1_TESTS=("cat-01-protocol" "cat-04-configure" "cat-08-security" "cat-09-http")
 TIER2_TESTS=("cat-02-observe" "cat-03-generate" "cat-05-interact" "cat-06-lifecycle" "cat-20-security")
-TIER3_TESTS=("cat-07-concurrency" "cat-10-regression" "cat-11-data-pipeline" "cat-12-rich-actions" "cat-13-pilot-contract" "cat-14-extension-startup" "cat-15-extended" "cat-15-pilot-success-path" "cat-16-api-contract" "cat-17-generation-logic" "cat-17-healing-logic" "cat-17-performance" "cat-29-reproduction" "cat-18-recording-logic" "cat-30-recording-automation" "cat-18-playback-logic" "cat-18-recording" "cat-19-extended" "cat-31-link-crawling" "cat-19-link-health" "cat-20-filtering-logic" "cat-32-auto-detect" "cat-20-noise-persistence" "cat-21-stress" "cat-22-advanced")
+TIER3_TESTS=("cat-07-concurrency" "cat-10-regression" "cat-11-data-pipeline" "cat-12-rich-actions" "cat-13-pilot-contract" "cat-14-extension-startup" "cat-15-extended" "cat-15-pilot-success-path" "cat-16-api-contract" "cat-17-generation-logic" "cat-17-healing-logic" "cat-17-performance" "cat-29-reproduction" "cat-18-recording-logic" "cat-30-recording-automation" "cat-18-playback-logic" "cat-18-recording" "cat-19-extended" "cat-31-link-crawling" "cat-19-link-health" "cat-20-filtering-logic" "cat-20-noise-persistence" "cat-21-stress" "cat-22-advanced")
 
 # ============================================================================
 # LAUNCH ALL TIERS IN PARALLEL (TIER 1, 2, 3 ALL START NOW)

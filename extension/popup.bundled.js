@@ -1364,6 +1364,13 @@
     const internalPrefixes = ["chrome://", "chrome-extension://", "about:", "edge://", "brave://", "devtools://"];
     return internalPrefixes.some((prefix) => url.startsWith(prefix));
   }
+  function isInternalTab(tab) {
+    if (!tab)
+      return true;
+    if (isInternalUrl(tab.url))
+      return true;
+    return typeof tab.pendingUrl === "string" && tab.pendingUrl.length > 0 && isInternalUrl(tab.pendingUrl);
+  }
 
   // extension/lib/tabs/tracked-tab-storage.js
   var TRACKED_TAB_STORAGE_KEYS = [
@@ -1473,7 +1480,7 @@
     });
   }
   async function trackTab(tab) {
-    if (isInternalUrl(tab.url))
+    if (isInternalTab(tab))
       return "internal_page";
     if (await isDomainCloaked(hostnameOf(tab.url)))
       return "cloaked";

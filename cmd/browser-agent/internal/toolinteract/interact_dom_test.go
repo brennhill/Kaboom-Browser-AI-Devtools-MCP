@@ -5,6 +5,7 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/pagescripts"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 	"strings"
@@ -720,4 +721,45 @@ func firstText(result mcp.MCPToolResult) string {
 		}
 	}
 	return ""
+}
+
+// The clipboard read must queue the embedded page script verbatim. An inline copy
+// would drift from the Node fixtures that prove the bounded permission, focus,
+// navigation, and context-destruction outcomes.
+func TestClipboardReadQueuesTheBoundedPageScript(t *testing.T) {
+	handler, state := newFakePageActions(t)
+	assertOK(t, handler.HandleClipboardRead(testReq(), json.RawMessage(`{}`)))
+
+	queued := state.enqueuedSnapshot()
+	if len(queued) != 1 || queued[0].Type != "execute" || !strings.HasPrefix(queued[0].CorrelationID, "exec_") {
+		t.Fatalf("clipboard read enqueue = %#v", queued)
+	}
+	var params map[string]any
+	if err := json.Unmarshal(queued[0].Params, &params); err != nil {
+		t.Fatalf("decode clipboard read params: %v", err)
+	}
+	if params["script"] != pagescripts.ClipboardRead {
+		t.Fatalf("clipboard read must queue the embedded page script, got %v", params["script"])
+	}
+	if params["world"] != "main" || params["reason"] != "clipboard_read" {
+		t.Fatalf("clipboard read routing = %#v", params)
+	}
+	// The page script's own deadline must fit inside the executor budget, or the
+	// generic execution_timeout wins the race and the classification is lost.
+	timeout, ok := params["timeout_ms"].(float64)
+	if !ok || timeout <= 2000 {
+		t.Fatalf("clipboard read timeout_ms = %v, want a budget above the page deadline", params["timeout_ms"])
+	}
+}
+
+func TestClipboardReadNeverEnqueuesWhenGuardsBlock(t *testing.T) {
+	handler, state := newFakePageActions(t)
+	state.blockPilot = true
+	assertErr(t, handler.HandleClipboardRead(testReq(), json.RawMessage(`{}`)), mcp.ErrCodePilotDisabled)
+	if state.enqueuedCount() != 0 {
+		t.Fatalf("blocked clipboard read enqueued %d queries", state.enqueuedCount())
+	}
+	if state.recordedCount() != 0 {
+		t.Fatalf("blocked clipboard read recorded %d AI actions", state.recordedCount())
+	}
 }

@@ -36,7 +36,6 @@ TESTS=(
     "cat-31-link-crawling"
     "cat-20-security"
     "cat-20-filtering-logic"
-    "cat-32-auto-detect"
     "cat-21-stress"
     "cat-22-advanced"
 )

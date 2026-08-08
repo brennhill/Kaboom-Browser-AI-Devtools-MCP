@@ -31,33 +31,31 @@ run_test_22_1() {
     sleep 0.1
     response=$(call_tool "interact" '{"what":"screen_recording_stop"}')
 
+    # Each stage must succeed for the cycle to mean anything. The previous version
+    # emitted four passes from this one test — three of them conceding the stage
+    # had not happened ("Test generation pending (workflow continues)") — which
+    # both hid the breakage and inflated the category's pass count.
     if ! check_not_error "$response"; then
-        fail "Recording failed in workflow"
+        fail "Recording stage failed: $(truncate "$(command_failure_message "$response")")"
         return
     fi
 
-    pass "Recording completed"
-
-    # 2. Generate test (would normally be from recorded actions)
+    # 2. Generate a test from the recorded actions.
     sleep 0.2
-    response=$(call_tool "generate" '{"what":"test","name":"generated-test"}')
-
+    response=$(call_tool "generate" '{"what":"test","test_name":"generated-test"}')
     if ! check_not_error "$response"; then
-        pass "Test generation pending (workflow continues)"
-    else
-        pass "Test generated from recording"
+        fail "Generate stage failed: $(truncate "$(command_failure_message "$response")")"
+        return
     fi
 
-    # 3. Healing (would fix broken selectors)
+    # 3. Healing (fixes broken selectors).
     response=$(call_tool "generate" '{"what":"reproduction","heal":true}')
-
     if ! check_not_error "$response"; then
-        pass "Healing feature pending (workflow continues)"
-    else
-        pass "Test healing applied"
+        fail "Heal stage failed: $(truncate "$(command_failure_message "$response")")"
+        return
     fi
 
-    pass "Full workflow cycle: Record → Generate → Heal completed"
+    pass "Full workflow cycle completed: recorded, generated a test, and healed it"
 }
 run_test_22_1
 
@@ -71,15 +69,7 @@ run_test_22_2() {
     call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
 
     # Add noise rule
-    response=$(call_tool "configure" '{
-        "action":"noise_rule",
-        "noise_action":"add",
-        "rules":[{
-            "category":"console",
-            "classification":"debug_logs",
-            "match_spec":{"message_regex":"^\\[DEBUG\\]"}
-        }]
-    }')
+    response=$(call_tool "configure" '{"what":"noise_rule","noise_action":"add","rules":[{"category":"console","classification":"debug_logs","match_spec":{"message_regex":"^\\[DEBUG\\]"}}]}')
 
     if ! check_not_error "$response"; then
         fail "Noise rule add failed"
@@ -117,15 +107,29 @@ run_test_22_3() {
     # Queue performance analysis simultaneously
     response2=$(call_tool "analyze" '{"what":"performance"}')
 
+    # Neither analysis can queue without an attached browser, so the assertion
+    # that holds in every environment is that concurrent async analyses do not
+    # block or corrupt each other's responses. Whether they queued is reported
+    # honestly as pass or skip rather than as an unconditional pass.
+    if check_transport_failure "$response1"; then
+        fail "analyze(link_health) did not return a usable response: $(truncate "$(extract_content_text "$response1")")"
+        return
+    fi
+    if check_transport_failure "$response2"; then
+        fail "analyze(performance) did not return a usable response: $(truncate "$(extract_content_text "$response2")")"
+        return
+    fi
+
     local id1 id2
-    id1=$(echo "$response1" | jq -r '.result.content[0].text' 2>/dev/null | grep -o 'link_health_[a-z0-9]*' | head -1 || true)
-    id2=$(echo "$response2" | jq -r '.result.content[0].text' 2>/dev/null | grep -o 'performance_[a-z0-9]*' | head -1 || true)
+    id1=$(extract_content_text "$response1" | grep -o 'link_health_[a-z0-9]*' | head -1 || true)
+    id2=$(extract_content_text "$response2" | grep -o 'performance_[a-z0-9]*' | head -1 || true)
 
     if [ -n "$id1" ] && [ -n "$id2" ]; then
-        pass "Link health and performance analyses queued concurrently"
-    else
-        pass "Concurrent analyze calls handled"
+        pass "Link health and performance analyses queued concurrently ($id1, $id2)"
+        return
     fi
+
+    skip "Concurrent analyses did not queue in this environment (requires an attached browser): link_health='${id1:-none}' performance='${id2:-none}'"
 }
 run_test_22_3
 
@@ -136,13 +140,7 @@ begin_test "22.4" "CORS detection and framework detection work together in link 
     "Combined heuristics provide richer analysis"
 
 run_test_22_4() {
-    response=$(call_tool "analyze" '{
-        "what":"link_health",
-        "mode":"crawl",
-        "start_url":"https://example.com",
-        "check_cors":true,
-        "detect_framework":true
-    }')
+    response=$(call_tool "analyze" '{"what":"link_health","mode":"crawl","start_url":"https://example.com","check_cors":true,"detect_framework":true}')
 
     if ! check_not_error "$response"; then
         fail "Combined crawl features failed. Content: $(truncate "$(extract_content_text "$response")")"
@@ -171,30 +169,25 @@ run_test_22_5() {
 
     # Save state
     response=$(call_tool "interact" '{"what":"save_state","snapshot_name":"pre-generation"}')
-
     if ! check_not_error "$response"; then
-        pass "State save pending (feature TBD)"
-    else
-        pass "State snapshot saved"
+        fail "save_state failed: $(truncate "$(command_failure_message "$response")")"
+        return
     fi
 
     sleep 0.1
 
-    # Perform operation (generate)
+    # Perform an operation that could modify state.
     call_tool "generate" '{"what":"test"}' >/dev/null 2>&1
 
     sleep 0.1
 
-    # Could restore if needed
     response=$(call_tool "interact" '{"what":"load_state","snapshot_name":"pre-generation"}')
-
     if ! check_not_error "$response"; then
-        pass "State restore pending (feature TBD)"
-    else
-        pass "State restored from snapshot"
+        fail "load_state failed for the snapshot saved above: $(truncate "$(command_failure_message "$response")")"
+        return
     fi
 
-    pass "State snapshot and restore capability verified"
+    pass "State snapshot saved before generation and restored afterwards"
 }
 run_test_22_5
 

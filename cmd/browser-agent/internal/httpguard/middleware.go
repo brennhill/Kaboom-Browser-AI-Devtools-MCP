@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/extclient"
 )
 
 func isValidExtensionID(id string) bool {
@@ -134,20 +136,15 @@ func CORS(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// ExtensionOnly wraps a handler to require the X-Kaboom-Client header
-// from the Kaboom browser extension. Accepts:
-//   - "kaboom-extension" (exact match)
-//   - "kaboom-extension/{version}" (e.g., kaboom-extension/6.0.3)
-//   - "kaboom-extension-offscreen" (offscreen recording worker)
+// ExtensionOnly wraps a handler to require an X-Kaboom-Client header naming a client
+// allowed on extension-facing endpoints — the browser extension, its offscreen worker,
+// or a "kaboom-probe" harness validating the contract. Admission is not authority: see
+// extclient.IsProbe for what a probe may not do once inside.
 //
-// Rejects with 403 if missing or invalid. This ensures only the Kaboom
-// browser extension can call extension-facing endpoints.
+// Rejects with 403 if missing or invalid.
 func ExtensionOnly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		client := r.Header.Get("X-Kaboom-Client")
-		if client != "kaboom-extension" &&
-			client != "kaboom-extension-offscreen" &&
-			!strings.HasPrefix(client, "kaboom-extension/") {
+		if !extclient.Allowed(r.Header.Get("X-Kaboom-Client")) {
 			http.Error(w, `{"error":"forbidden: missing or invalid X-Kaboom-Client header"}`, http.StatusForbidden)
 			return
 		}

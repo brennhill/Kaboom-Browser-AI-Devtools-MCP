@@ -1,7 +1,13 @@
 #!/bin/bash
-# cat-13-pilot-contract.sh — Contract tests for AI Web Pilot state
-# Verifies the regression where pilot state cache wasn't initialized properly
-# These tests WOULD HAVE CAUGHT the pilot_disabled bug
+# cat-13-pilot-contract.sh — Contract tests for AI Web Pilot gating.
+#
+# Runs offline and drives pilot state explicitly by speaking as the extension.
+# The earlier version relied on pilot being OFF "by default" and asserted only
+# that some error came back — which it always did, because no extension is
+# attached offline. That passed for the wrong reason and would not have caught a
+# gating regression. These tests distinguish the two failure modes:
+#   pilot OFF → error_code pilot_disabled
+#   pilot ON  → a different error (extension_error), because no browser is attached
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -15,86 +21,94 @@ init_framework "$PORT" "$OUTPUT_FILE"
 begin_category "13" "Pilot State Contract Tests" "3"
 ensure_daemon
 
-# ── 13.1 — Pilot-gated actions fail when pilot OFF (regression guard) ──
-begin_test "13.1" "navigate fails when pilot OFF (regression guard)" \
-    "This test would have CAUGHT the pilot state regression" \
-    "If pilot wasn't initialized properly, this test would fail"
+# Reports the pilot state the extension claims, failing the caller if the daemon
+# did not accept or apply it.
+report_pilot_state() {
+    local enabled="$1"
+    post_extension "/sync" '{"ext_session_id":"pilot-contract","settings":{"pilot_enabled":'"${enabled}"'}}'
+    expect_http_status 200 "reporting pilot_enabled=${enabled}" || return 1
+    local expected="enabled"
+    [ "$enabled" = "false" ] && expected="explicitly_disabled"
+    local actual
+    actual="$(capture_state_field pilot_state)"
+    if [ "$actual" != "$expected" ]; then
+        fail "Reported pilot_enabled=${enabled} but capture.pilot_state is '$actual', expected '$expected'"
+        return 1
+    fi
+    return 0
+}
+
+# Extracts the structured error_code from an MCP tool response.
+tool_error_code() {
+    extract_content_text "$1" | sed -n '/^{/,$p' | jq -r '.error_code // empty' 2>/dev/null
+}
+
+# ── 13.1 — navigate is refused while pilot is OFF ──
+begin_test "13.1" "navigate is refused with pilot_disabled when pilot is OFF" \
+    "Report pilot_enabled=false as the extension, then call interact(navigate)" \
+    "Regression guard: the pilot cache once defaulted to enabled, letting gated actions through"
 
 run_test_13_1() {
-    # First attempt should fail because extension reports pilot OFF by default
-    local response
-    response=$(call_tool "interact" '{"what":"navigate","url":"https://example.com"}')
+    report_pilot_state false || return
 
-    local is_error
-    is_error=$(echo "$response" | jq -r '.result.isError // false' 2>/dev/null)
+    local response code
+    response="$(call_tool "interact" '{"what":"navigate","url":"https://example.com"}')"
+    code="$(tool_error_code "$response")"
 
-    if [ "$is_error" = "true" ]; then
-        pass "navigate correctly fails when pilot OFF"
-    else
-        # If not error, check if it's a startup message
-        local content
-        content=$(extract_content_text "$response" 2>/dev/null | head -c 100)
-        if echo "$content" | grep -qi "starting\|retry"; then
-            # Server is still starting - that's ok for first test
-            pass "navigate correctly rejected (server startup message ok)"
-        else
-            fail "navigate should fail with isError but got: $is_error"
-        fi
+    if [ "$code" != "pilot_disabled" ]; then
+        fail "navigate returned error_code '$code' with pilot OFF, expected 'pilot_disabled'. Content: $(truncate "$(extract_content_text "$response")")"
+        return
     fi
+
+    pass "navigate refused with error_code=pilot_disabled while pilot is OFF"
 }
 run_test_13_1
 
-# ── 13.2 — Sync endpoint accepts both pilot enabled and disabled ──
-begin_test "13.2" "Sync endpoint accepts pilot state in payload" \
-    "Both pilot_enabled=true and false should be accepted" \
-    "Contract: Server must accept pilot state from extension"
+# ── 13.2 — /sync applies both pilot states ──
+begin_test "13.2" "/sync applies pilot_enabled in both directions" \
+    "Report pilot OFF then ON, reading capture state back after each" \
+    "Contract: a 200 that does not apply the state leaves the UI and the server disagreeing"
 
 run_test_13_2() {
-    # Test with pilot OFF
-    local response_off
-    response_off=$(curl -s -X POST \
-        -H "X-Kaboom-Client: kaboom-extension/${VERSION}" \
-        -H "Content-Type: application/json" \
-        -d '{"session_id":"test-pilot-off","settings":{"pilot_enabled":false}}' \
-        "http://localhost:${PORT}/sync" 2>&1)
+    report_pilot_state false || return
+    report_pilot_state true || return
+    report_pilot_state false || return
 
-    # Test with pilot ON
-    local response_on
-    response_on=$(curl -s -X POST \
-        -H "X-Kaboom-Client: kaboom-extension/${VERSION}" \
-        -H "Content-Type: application/json" \
-        -d '{"session_id":"test-pilot-on","settings":{"pilot_enabled":true}}' \
-        "http://localhost:${PORT}/sync" 2>&1)
-
-    if echo "$response_off" | jq . >/dev/null 2>&1 && echo "$response_on" | jq . >/dev/null 2>&1; then
-        pass "/sync accepts both pilot_enabled=false and true"
-    else
-        fail "/sync rejected one of the payloads"
-    fi
+    pass "/sync applied pilot_enabled in both directions (explicitly_disabled ⇄ enabled)"
 }
 run_test_13_2
 
-# ── 13.3 — execute_js also fails when pilot OFF ──
-begin_test "13.3" "execute_js fails when pilot OFF (double-check gating)" \
-    "Like navigate, execute_js should also fail when pilot OFF" \
-    "Ensures pilot gating works for all pilot-dependent actions"
+# ── 13.3 — gating applies to execute_js and lifts when pilot is ON ──
+begin_test "13.3" "execute_js is gated with pilot OFF and no longer gated with pilot ON" \
+    "Call execute_js with pilot OFF, enable pilot, then call it again" \
+    "Contract: proves the refusal tracks pilot state rather than failing for an unrelated reason"
 
 run_test_13_3() {
-    local response
-    response=$(call_tool "interact" '{"what":"execute_js","script":"console.log(1)"}')
+    report_pilot_state false || return
 
-    # Check if it's an error by looking at content
-    local content
-    content=$(extract_content_text "$response" 2>/dev/null)
-
-    if echo "$content" | grep -qi "pilot_disabled\|not enabled\|error"; then
-        pass "execute_js correctly fails when pilot OFF"
-    else
-        # Just note that it succeeded - might be due to test timing
-        pass "execute_js test completed (pilot gating may differ by action type)"
+    local off_response off_code
+    off_response="$(call_tool "interact" '{"what":"execute_js","script":"console.log(1)"}')"
+    off_code="$(tool_error_code "$off_response")"
+    if [ "$off_code" != "pilot_disabled" ]; then
+        fail "execute_js returned error_code '$off_code' with pilot OFF, expected 'pilot_disabled'. Content: $(truncate "$(extract_content_text "$off_response")")"
+        return
     fi
+
+    report_pilot_state true || return
+
+    # No browser is attached offline, so this cannot succeed — but it must fail
+    # for a different reason. Still seeing pilot_disabled would mean the gate
+    # ignores the state the extension reported.
+    local on_response on_code
+    on_response="$(call_tool "interact" '{"what":"execute_js","script":"console.log(1)"}')"
+    on_code="$(tool_error_code "$on_response")"
+    if [ "$on_code" = "pilot_disabled" ]; then
+        fail "execute_js still reports pilot_disabled after the extension enabled pilot; the gate ignores reported state"
+        return
+    fi
+
+    pass "execute_js gated with pilot OFF (pilot_disabled) and released with pilot ON (error_code=${on_code:-none})"
 }
 run_test_13_3
 
-# ── Summary ──
 finish_category

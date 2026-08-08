@@ -195,7 +195,11 @@ describe('Restricted/CSP page handling', () => {
     assert.strictEqual(queuedResults[0].result.target_context.source, 'tracked_tab')
   })
 
-  test('non-browser actions on restricted pages return explicit CSP error', async () => {
+  // A tracked tab that drifted onto a restricted page no longer dead-ends every
+  // scripted command; it is recovered to a trackable tab and the stale tracking is
+  // cleared. What must never happen is the script running against the restricted
+  // page, and the retarget must be visible to the caller.
+  test('non-browser actions recover off a restricted tracked tab instead of scripting it', async () => {
     const trackedTab = { id: 9, url: 'chrome://extensions', status: 'complete', title: 'Extensions' }
     tabsByID.set(9, trackedTab)
     activeTabs = [trackedTab]
@@ -215,12 +219,13 @@ describe('Restricted/CSP page handling', () => {
       makeSyncClient()
     )
 
+    assert.strictEqual(createCalls.length, 1, 'only the restricted tab existed, so recovery must open a trackable tab')
     assert.strictEqual(queuedResults.length, 1)
-    assert.strictEqual(queuedResults[0].status, 'error')
-    assert.strictEqual(queuedResults[0].error, 'csp_blocked_page')
-    assert.strictEqual(queuedResults[0].result.error, 'csp_blocked_page')
-    assert.strictEqual(queuedResults[0].result.csp_blocked, true)
-    assert.strictEqual(queuedResults[0].result.failure_cause, 'csp')
+    const recovered = queuedResults[0].result
+    assert.strictEqual(recovered.target_context.source, 'auto_tracked_new_tab')
+    assert.strictEqual(recovered.resolved_tab_id, createCalls[0].id)
+    assert.notStrictEqual(recovered.resolved_tab_id, 9, 'a restricted page must never receive a scripted command')
+    assert.strictEqual(storageState.trackedTabId, createCalls[0].id)
   })
 
   test('browser_action navigate falls back to active tab when tracking is missing', async () => {

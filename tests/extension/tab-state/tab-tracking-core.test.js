@@ -72,6 +72,21 @@ describe('shared tab-tracking core (F2 guards)', () => {
     assert.strictEqual(globalThis.chrome.storage.local.set.mock.calls.length, 0)
   })
 
+  test('trackTab refuses a tab already navigating to an internal browser page', async () => {
+    const outcome = await trackTab({
+      id: 9,
+      url: 'https://example.com/app',
+      pendingUrl: 'chrome-extension://other-extension/panel.html',
+      title: 'App'
+    })
+    assert.strictEqual(outcome, 'internal_page')
+    assert.strictEqual(
+      globalThis.chrome.storage.local.set.mock.calls.length,
+      0,
+      'a tab racing toward a restricted page must never be persisted as tracked'
+    )
+  })
+
   test('trackTab persists a normal tab and pings the content script', async () => {
     const outcome = await trackTab({ id: 9, url: 'https://example.com/app', title: 'App' })
     assert.strictEqual(outcome, 'tracked')

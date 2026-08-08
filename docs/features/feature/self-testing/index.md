@@ -24,6 +24,9 @@ code_paths:
   - src/types/runtime/command-contract.ts
   - scripts/uat/orchestration/uat-result-lib.sh
   - scripts/tests/framework/framework.sh
+  - internal/extclient/extclient.go
+  - internal/capture/syncruntime/handler.go
+  - cmd/browser-agent/internal/httpguard/middleware.go
   - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
   - scripts/tests/framework/uat-user-state.test.sh
@@ -58,6 +61,7 @@ test_paths:
   - cmd/browser-agent/integration/bridge/stdio_silence_test.go
   - cmd/browser-agent/internal/testpages/websocket_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
+  - tests/cli/uat-assertions/assertion-falsifiability.test.cjs
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/cli/contracts/test-layout-contract.test.cjs
   - scripts/smoke-tests/interact/14-browser-push.sh
@@ -96,13 +100,14 @@ test_paths:
   - scripts/tests/workflows/cat-29-reproduction.sh
   - scripts/tests/workflows/cat-30-recording-automation.sh
   - scripts/tests/workflows/cat-31-link-crawling.sh
-  - scripts/tests/workflows/cat-32-auto-detect.sh
   - cmd/browser-agent/internal/testpages/testpages_test.go
   - cmd/browser-agent/internal/wsframe/frame_test.go
   - internal/statefault/fault_test.go
   - internal/statefault/boundary_test.go
   - internal/statefault/store_test.go
   - internal/capturefixture/sync_test.go
+  - internal/extclient/extclient_test.go
+  - internal/capture/syncruntime/sync_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -114,6 +119,63 @@ the first schema-derived command and allows the extension's bounded production
 reconnect backoff to expire before declaring a handoff failure. Newly exposed
 modes must provide an explicit non-destructive health payload; trace and React
 profile checks exercise a paired start/stop lifecycle.
+
+A connected category runs beside a real extension, so its contract probes must
+not impersonate one. Any `/sync` post from a connected category identifies as
+`kaboom-probe/<version>`: the guard admits that client class, but the sync
+runtime never adopts it as the authoritative session.
+
+The corollary is that a probe cannot verify very much. Because the daemon answers
+it with a canned envelope that adopts no session, settings, or commands, every
+payload gets a byte-identical reply — `{}` and a fully populated settings block
+are indistinguishable. Categories 14 and 16 exist to prove settings are *applied*,
+so they claim the extension identity and run on the offline port, where no browser
+is attached and the claim is harmless. Category 15 no longer posts `/sync` at all;
+pilot gating moved to category 13, which drives pilot state offline and asserts
+the resulting `error_code`.
+
+Posting as `kaboom-extension` erased the tracked tab. `updateSyncConnectionState`
+applies `req.Settings` unconditionally, and `TrackingEnabled` / `TrackedTabID` are
+plain `bool` / `int`, so a payload carrying only `pilot_enabled` deserializes the
+rest as `false` / `0` and overwrites what the real extension had reported. The
+real extension restores it on its next full heartbeat, which makes this a race:
+measured at roughly two seconds on an idle daemon, and far longer during a run
+where every category restarts the daemon. That was the source of the intermittent
+`no tracked browser tab on port 7890` failures in categories scheduled after them.
+
+The overwrite happens *before* the request is rejected. Because the UAT payloads
+used `session_id` rather than the wire field `ext_session_id`, `ExtSessionID`
+arrived empty and the apply phase answered 409 `stale_connection_generation` —
+a valid JSON body, so every test that only asserted "a JSON response came back"
+passed while exercising nothing. The payloads now use `ext_session_id`, and a
+contract test fails the build if `session_id` reappears.
+
+Every connected category restarts the daemon and the suite toggles pilot state,
+so the preflight's tracked tab cannot be assumed to survive to the last
+category. When a category finds the extension connected but nothing tracked, it
+re-establishes its own disposable fixture tab and continues; only a
+disconnected extension is a hard readiness failure, because nothing can open a
+tab without it.
+
+Fixture setup waits for the extension heartbeat, not for a tracked tab: the
+fixture navigation is itself what establishes tracking, so requiring a tracked
+tab first turned any transient target loss into an unrecoverable failure for
+every later action needing a target. The tracked-tab gate runs after the
+navigation. For the same reason, a `No tab is being tracked` response is a
+recoverable target loss — the action re-establishes the fixture and retries.
+
+The trace lifecycle is the exception to ambient targeting: a profile describes
+one tab, so `analyze/performance_trace` and `analyze/react_profile` pass an
+explicit `tab_id` to both `start` and `stop`. That keeps the two halves on the
+same target and makes a `performance_trace_target_not_debuggable` refusal name
+the tab the run meant to profile, instead of silently producing an artifact for
+some other page. The refusal is not retried — Chrome refuses the same target
+every time.
+
+Actions gated on a browser permission no script can grant are classified
+`permission_gated` rather than `success`. `interact/clipboard_read` passes on a
+granted read or on any bounded, named permission outcome, and fails on a generic
+`execution_timeout` or an unclassified body.
 
 The shared WebSocket codec encodes extended lengths through the standard
 big-endian primitives. Boundary tests cover short, 16-bit, and 64-bit headers,
@@ -147,6 +209,36 @@ cached Pilot state, tracked-tab updates, and explicit disconnect lifecycle.
 The package is not imported by release binaries and replaces a larger set of
 unsafe mutation methods that previously compiled into `internal/capture`.
 
+- Tool requests must fit on one line. `send_mcp` pipes the request through
+  `echo` into a line-delimited JSON-RPC reader, so a multi-line argument returns
+  `Parse error: unexpected end of JSON input` and never reaches a tool. That
+  envelope carries no `result.isError`, so `check_not_error` reports success and
+  the test continues as though the call worked. Twenty tests across five
+  categories were built this way; category 32 reported 8/8 green while every one
+  of its calls failed, and was deleted rather than rewritten. Categories 22 and
+  31 failed loudly instead of lying, so their requests were repaired in place and
+  now fail with the real cause rather than an empty body.
+- Assertion falsifiability is a contract, enforced by
+  `tests/cli/uat-assertions/assertion-falsifiability.test.cjs`. Every UAT test
+  that can report pass must also be able to report fail; a block that can only
+  skip is a precondition gate and is exempt. The check follows calls into
+  category-local and framework helpers, so delegating an assertion to
+  `expect_http_status` still counts. Two further rules apply to `/sync`: tests
+  must assert an HTTP status, and no test may gate on bare JSON validity. The
+  daemon answers 400 (invalid JSON), 403 (bad client header) and 409 (stale
+  generation) with well-formed JSON bodies, so `jq .` succeeds on every one of
+  them — cat-16.3 concluded from a 403 that the server does *not* validate the
+  client header, and passed in both branches.
+- Client identity decides where a category can run. `kaboom-probe` requests are
+  answered with a canned empty envelope that adopts no session, settings, or
+  commands, so a probe cannot prove a payload was applied. Categories 14 and 16
+  need that proof, so they claim the extension identity and run offline where no
+  browser is attached; connected categories must never post as the extension,
+  directly or through the `post_extension`/`post_logs` helpers.
+- `send_mcp` captures stdout/stderr into per-call temporary files. A backgrounded
+  subshell inherits `MCP_ID` unchanged (bash 3.2 has no `BASHPID` and `$$` is
+  shared), so concurrent callers previously interleaved into one file and read
+  back a corrupted response; concurrency tests could not have worked.
 - Smoke runner lifecycle and post-run daemon availability: `scripts/uat/runners/smoke-test.sh`, `scripts/smoke-tests/harness/framework-smoke.sh`
 - Smoke module contracts for push/upload/framework resilience/stability: `scripts/smoke-tests/interact/14-browser-push.sh`, `scripts/smoke-tests/upload/15-file-upload.sh`, `scripts/smoke-tests/framework/29-framework-selector-resilience.sh`, `scripts/smoke-tests/core/30-stability-shutdown.sh`
 - Split UAT orchestration + integrity checks: `scripts/uat/runners/test-all-split.sh`, `scripts/uat/runners/test-original-uat.sh`, `scripts/uat/runners/test-new-uat.sh`

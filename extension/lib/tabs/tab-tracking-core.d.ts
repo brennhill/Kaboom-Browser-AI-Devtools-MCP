@@ -14,7 +14,9 @@ export type TrackTabOutcome = 'tracked' | 'internal_page' | 'cloaked';
  * Returns the outcome so UI callers can render the right state; any outcome other
  * than 'tracked' means nothing was persisted.
  */
-export declare function trackTab(tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 'title'>): Promise<TrackTabOutcome>;
+export declare function trackTab(tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 'title'> & {
+    pendingUrl?: string;
+}): Promise<TrackTabOutcome>;
 /**
  * Stop tracking. `onStopped` lets each context stop screen recording its own way
  * — the popup messages the background, the background stops the handler directly,

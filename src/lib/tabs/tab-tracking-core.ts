@@ -8,7 +8,7 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 
-import { isInternalUrl } from './internal-url.js'
+import { isInternalTab } from './internal-url.js'
 import { isDomainCloaked } from './cloaked-domains.js'
 import { setTrackedTab, clearTrackedTab } from './tracked-tab-storage.js'
 import type { TrackingStateChangedMessage } from '../../types/runtime/tracking.js'
@@ -59,8 +59,10 @@ function ensureContentScript(tabId: number): void {
  * Returns the outcome so UI callers can render the right state; any outcome other
  * than 'tracked' means nothing was persisted.
  */
-export async function trackTab(tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 'title'>): Promise<TrackTabOutcome> {
-  if (isInternalUrl(tab.url)) return 'internal_page'
+export async function trackTab(
+  tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 'title'> & { pendingUrl?: string }
+): Promise<TrackTabOutcome> {
+  if (isInternalTab(tab)) return 'internal_page'
   if (await isDomainCloaked(hostnameOf(tab.url))) return 'cloaked'
   await setTrackedTab(tab)
   if (tab.id) ensureContentScript(tab.id)

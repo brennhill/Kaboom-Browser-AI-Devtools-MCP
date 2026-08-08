@@ -338,6 +338,23 @@ export function createPerformanceTraceController(deps: ControllerDeps): Performa
   return new PerformanceTraceController(deps)
 }
 
+/**
+ * Chrome refused the debugger because the extension may not access this target.
+ *
+ * This is a property of the target, not of tracing: a tab whose DevTools target
+ * URL belongs to a browser-internal page or another extension can look perfectly
+ * scriptable through the tabs API and still reject every attach. Retrying against
+ * the same tab can never succeed, so the caller must release an auto-resolved
+ * target instead of reporting a generic tracing fault forever.
+ *
+ * "Another debugger is already attached" is deliberately excluded — that target is
+ * accessible and the condition clears on its own.
+ */
+export function isTargetNotDebuggableError(error: unknown): boolean {
+  const message = errorMessage(error)
+  return /Cannot access (a |contents of )/i.test(message) || /Cannot attach to this target/i.test(message)
+}
+
 async function postLocalJSON(path: string, payload: unknown): Promise<unknown> {
   const response = await fetch(`${getServerUrl()}${path}`, buildDaemonJSONRequestInit(payload))
   if (!response.ok) {

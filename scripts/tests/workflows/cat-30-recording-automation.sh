@@ -1,5 +1,5 @@
 #!/bin/bash
-# cat-18-recording-automation.sh — Recording UI Automation Tests (7 tests)
+# cat-30-recording-automation.sh — Recording UI Automation Tests (4 tests)
 # Tests element finding, waiting, error recovery during recording playback.
 set -eo pipefail
 
@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/../framework/framework.sh"
 
 init_framework "$1" "$2"
 
-begin_category "30" "Flow Recording: UI Automation" "7"
+begin_category "30" "Flow Recording: UI Automation" "4"
 
 ensure_daemon
 
@@ -40,37 +40,6 @@ run_test_18_19() {
 }
 run_test_18_19
 
-# ── TEST 18.20: Multiple Selectors - Try Fallback ──────────────────────
-
-begin_test "30.20" "Recording click with multiple selectors (fallback chain)" \
-    "Try primary selector, fallback to secondary if not found" \
-    "Resilience: multiple selectors reduce brittleness"
-
-run_test_18_20() {
-    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
-
-    call_tool "interact" '{"what":"screen_recording_start","name":"fallback-test"}' >/dev/null
-    sleep 0.1
-
-    # Record click with potential fallback
-    response=$(call_tool "interact" '{
-        "action":"click",
-        "selector":"#primary-button",
-        "fallback_selectors":["button.primary","[data-testid=submit]"]
-    }')
-
-    if ! check_not_error "$response"; then
-        fail "Multi-selector click failed. Content: $(truncate "$(extract_content_text "$response")")"
-        return
-    fi
-
-    sleep 0.1
-    call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null
-
-    pass "Multi-selector click recorded with fallback chain"
-}
-run_test_18_20
-
 # ── TEST 18.21: Form Filling with Validation ──────────────────────────
 
 begin_test "30.21" "Recording form fills with validation waits" \
@@ -90,46 +59,20 @@ run_test_18_21() {
     # Wait for validation
     response=$(call_tool "interact" '{"what":"wait_for","selector":".validation-success","timeout":3000}')
 
-    if ! check_not_error "$response"; then
-        pass "Form validation wait recorded (implementation may vary)"
-    else
+    if check_transport_failure "$response"; then
+        fail "wait_for did not return a usable response during recording: $(truncate "$(extract_content_text "$response")")"
+        return
+    fi
+    if check_not_error "$response"; then
         pass "Form filling with validation sequenced correctly"
+    else
+        skip "wait_for could not resolve '.validation-success' in this environment: $(truncate "$(command_failure_message "$response")" 160)"
     fi
 
     sleep 0.1
     call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null
 }
 run_test_18_21
-
-# ── TEST 18.22: Drag and Drop Recording ────────────────────────────────
-
-begin_test "30.22" "Recording drag-drop actions with coordinates" \
-    "Drag source element to target, verify coordinates recorded" \
-    "Complex interactions require precise coordinate capture"
-
-run_test_18_22() {
-    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
-
-    call_tool "interact" '{"what":"screen_recording_start","name":"drag-test"}' >/dev/null
-    sleep 0.1
-
-    # Record drag operation
-    response=$(call_tool "interact" '{
-        "action":"drag_drop",
-        "selector":"[draggable=true]",
-        "target":"#drop-zone"
-    }')
-
-    if ! check_not_error "$response"; then
-        pass "Drag-drop not yet implemented (future enhancement)"
-    else
-        pass "Drag-drop action recorded with coordinates"
-    fi
-
-    sleep 0.1
-    call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null
-}
-run_test_18_22
 
 # ── TEST 18.23: Keyboard Navigation (Tab, Enter) ─────────────────────
 
@@ -179,53 +122,19 @@ run_test_18_24() {
     # Capture screenshot
     response=$(call_tool "observe" '{"what":"screenshot"}')
 
-    if ! check_not_error "$response"; then
-        pass "Screenshot capture not yet in recording (future feature)"
-    else
+    if check_transport_failure "$response"; then
+        fail "observe(screenshot) did not return a usable response during recording: $(truncate "$(extract_content_text "$response")")"
+        return
+    fi
+    if check_not_error "$response"; then
         pass "Screenshot captured during recording"
+    else
+        skip "Screenshot capture unavailable in this environment: $(truncate "$(command_failure_message "$response")" 160)"
     fi
 
     sleep 0.1
     call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null
 }
 run_test_18_24
-
-# ── TEST 18.25: Error Injection During Playback ────────────────────────
-
-begin_test "30.25" "Playback handles injected errors gracefully" \
-    "Mock network failure, element not found, timeout during playback" \
-    "Error recovery must not crash playback"
-
-run_test_18_25() {
-    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
-
-    # Record a session
-    call_tool "interact" '{"what":"screen_recording_start","name":"error-inject"}' >/dev/null
-    sleep 0.1
-    call_tool "interact" '{"what":"navigate","url":"https://example.com"}' >/dev/null 2>&1
-    sleep 0.1
-    call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null
-
-    sleep 0.2
-
-    # Playback with injected error
-    response=$(call_tool "observe" '{
-        "what":"playback_results",
-        "inject_error":"element_not_found",
-        "on_selector":"#nonexistent"
-    }')
-
-    if ! check_not_error "$response"; then
-        pass "Error injection feature not yet implemented (future)"
-    else
-        content=$(extract_content_text "$response")
-        if echo "$content" | grep -qi "error\|failed\|skipped"; then
-            pass "Playback handled injected error and continued"
-        else
-            pass "Playback executed with error injection"
-        fi
-    fi
-}
-run_test_18_25
 
 finish_category

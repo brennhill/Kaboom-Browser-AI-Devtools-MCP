@@ -54,6 +54,19 @@ export declare class PerformanceTraceController {
     private readTargetMetadata;
 }
 export declare function createPerformanceTraceController(deps: ControllerDeps): PerformanceTraceController;
+/**
+ * Chrome refused the debugger because the extension may not access this target.
+ *
+ * This is a property of the target, not of tracing: a tab whose DevTools target
+ * URL belongs to a browser-internal page or another extension can look perfectly
+ * scriptable through the tabs API and still reject every attach. Retrying against
+ * the same tab can never succeed, so the caller must release an auto-resolved
+ * target instead of reporting a generic tracing fault forever.
+ *
+ * "Another debugger is already attached" is deliberately excluded — that target is
+ * accessible and the condition clears on its own.
+ */
+export declare function isTargetNotDebuggableError(error: unknown): boolean;
 export declare function createDefaultPerformanceTraceController(): PerformanceTraceController;
 export {};
 //# sourceMappingURL=performance-trace.d.ts.map

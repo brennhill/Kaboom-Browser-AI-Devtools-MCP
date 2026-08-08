@@ -12,6 +12,8 @@ type TargetResolutionSource = 'explicit_tab' | 'tracked_tab' | 'active_tab' | 'a
 export interface TargetResolution {
     tabId: number;
     url: string;
+    /** Destination of a navigation Chrome has started but not committed, when one is in flight. */
+    pendingUrl?: string;
     source: TargetResolutionSource;
     requestedTabId?: number;
     trackedTabId?: number | null;
@@ -37,12 +39,6 @@ export declare function resolveTargetTab(query: PendingQuery, paramsObj: QueryPa
     target?: TargetResolution;
     error?: TargetResolutionError;
 }>;
-/**
- * Check if a URL is restricted — content scripts cannot run on these pages.
- * Covers internal browser pages and known CSP-restricted origins.
- * Delegates to the canonical predicate so the blocked-prefix list lives once.
- */
-export declare function isRestrictedUrl(url: string | undefined): boolean;
 /** Check if an error indicates the content script is not loaded on the target page. */
 export declare function isContentScriptUnreachableError(err: unknown): boolean;
 /**

@@ -16,8 +16,13 @@ TOOLS="observe generate configure interact analyze"
 ACTION_FILTER="${KABOOM_UAT_ACTION:-}"
 begin_category "33" "Connected Action Coverage" "schema-derived"
 
-json_string() {
-    printf '%s' "$1" | jq -Rs .
+# json_string and connected_fixture_url are canonical framework helpers.
+
+# uat_connected_tracked_tab returns "id<TAB>url"; only the id belongs in JSON.
+# Interpolating the raw value emits malformed JSON, which silently stops the
+# action under test from being exercised at all.
+tracked_tab_id() {
+    printf '%s' "${HEALTH_TRACKED_TAB_ID:-0}" | cut -f1
 }
 
 action_expectation() {
@@ -28,6 +33,7 @@ action_expectation() {
         configure/playback|configure/log_diff) echo "expected_error:internal_error" ;;
         configure/setup_quality_gates) echo "destructive" ;;
         interact/screen_recording_start|interact/screen_recording_stop) echo "user_mediated" ;;
+        interact/clipboard_read) echo "permission_gated" ;;
         analyze/annotation_detail|analyze/draw_session) echo "expected_error:no_data" ;;
         observe/errors|observe/logs|observe/extension_logs|observe/network_waterfall|observe/network_bodies|\
         observe/websocket_events|observe/websocket_status|observe/actions|observe/vitals|observe/page|\
@@ -57,7 +63,7 @@ action_expectation() {
         interact/get_readable|interact/get_markdown|interact/navigate_and_wait_for|\
         interact/navigate_and_document|interact/fill_form_and_submit|interact/fill_form|\
         interact/run_a11y_and_export_sarif|interact/upload|interact/draw_mode_start|interact/hardware_click|\
-        interact/activate_tab|interact/explore_page|interact/batch|interact/clipboard_read|\
+        interact/activate_tab|interact/explore_page|interact/batch|\
         interact/clipboard_write|\
         analyze/dom|analyze/performance|analyze/accessibility|analyze/error_clusters|\
         analyze/navigation_patterns|analyze/security_audit|analyze/third_party_audit|analyze/link_health|\
@@ -122,7 +128,7 @@ action_args() {
         interact/execute_js) echo '{"what":"execute_js","script":"({title: document.title, ready: document.readyState})"}' ;;
         interact/navigate) echo '{"what":"navigate","url":'"$(json_string "${base_url}?navigation=1")"'}' ;;
         interact/new_tab) echo '{"what":"new_tab","url":'"$(json_string "$base_url")"'}' ;;
-        interact/switch_tab) echo '{"what":"switch_tab","tab_id":'"${HEALTH_TRACKED_TAB_ID:-0}"'}' ;;
+        interact/switch_tab) echo '{"what":"switch_tab","tab_id":'"$(tracked_tab_id)"'}' ;;
         interact/close_tab) echo '{"what":"close_tab","tab_id":'"${HEALTH_EXTRA_TAB_ID:-0}"'}' ;;
         interact/activate_tab) echo '{"what":"activate_tab"}' ;;
         interact/click|interact/focus|interact/hover) echo '{"what":"'"$mode"'","selector":"#sf-btn"}' ;;
@@ -146,7 +152,7 @@ action_args() {
         interact/fill_form_and_submit) echo '{"what":"fill_form_and_submit","fields":[{"selector":"#sf-user","value":"kaboom"},{"selector":"#sf-email2","value":"uat@example.com"}],"submit_selector":"#sf-submit"}' ;;
         interact/upload) echo '{"what":"upload","selector":"#file-input","file_path":"/tmp/kaboom-connected-action-coverage.txt"}' ;;
         interact/draw_mode_start) echo '{"what":"draw_mode_start","annot_session":"connected-action-coverage"}' ;;
-        interact/hardware_click) echo '{"what":"hardware_click","x":10,"y":10,"tab_id":'"${HEALTH_TRACKED_TAB_ID:-0}"'}' ;;
+        interact/hardware_click) echo '{"what":"hardware_click","x":10,"y":10,"tab_id":'"$(tracked_tab_id)"'}' ;;
         interact/batch) echo '{"what":"batch","steps":[{"what":"get_text","selector":"body"}]}' ;;
         interact/clipboard_write) echo '{"what":"clipboard_write","text":"Kaboom connected coverage"}' ;;
         analyze/dom|analyze/computed_styles) echo '{"what":"'"$mode"'","selector":"#sf-btn"}' ;;
@@ -160,7 +166,7 @@ action_args() {
         analyze/visual_baseline) echo '{"what":"visual_baseline","name":"connected-action-coverage"}' ;;
         analyze/visual_diff) echo '{"what":"visual_diff","name":"connected-action-coverage","baseline":"connected-action-coverage"}' ;;
         analyze/audit) echo '{"what":"audit","categories":["accessibility","performance"]}' ;;
-        analyze/performance_trace|analyze/react_profile) echo '{"what":"'"$mode"'","action":"stop"}' ;;
+        analyze/performance_trace|analyze/react_profile) echo '{"what":"'"$mode"'","action":"stop","tab_id":'"$(tracked_tab_id)"'}' ;;
         analyze/verification) echo '{"what":"verification","operation":"define","contract":{"schema_version":"1","contract_id":"connected-action-coverage","assertions":[{"assertion_id":"reachable","description":"The connected verification handler is reachable","required_evidence":["dom"]}]}}' ;;
         *) echo '{"what":"'"$mode"'"}' ;;
     esac
@@ -185,10 +191,15 @@ ensure_event_recording() {
 }
 
 ensure_fixture_page() {
-    local fixture_url="http://127.0.0.1:${PORT}/tests/interact.html"
+    local fixture_url
+    fixture_url="$(connected_fixture_url)"
     local fixture_attempt=1
     local response
-    if ! uat_wait_for_connected_browser "$PORT" "$WRAPPER"; then
+    # Wait for the extension only. navigate_and_wait_for is an escape action that
+    # re-tracks the tab it lands on, so demanding a tracked tab up front would turn
+    # any transient tracking loss — a closed tab, a released undebuggable target —
+    # into an unrecoverable failure for every later action that needs a target.
+    if ! uat_wait_for_extension "$PORT"; then
         fail "Connected browser was unavailable before fixture navigation"
         return 1
     fi
@@ -211,6 +222,53 @@ ensure_fixture_page() {
         return 1
     fi
     HEALTH_TRACKED_TAB_ID="$(uat_connected_tracked_tab "$PORT" "$WRAPPER")"
+}
+
+report_target_drift() {
+    local tool="$1"
+    local mode="$2"
+    local tracked=""
+    local tracked_id=""
+    local tracked_url=""
+    tracked="$(uat_connected_tracked_tab "$PORT" "$WRAPPER")"
+    tracked_id="$(printf '%s' "$tracked" | cut -f1)"
+    tracked_url="$(printf '%s' "$tracked" | cut -f2-)"
+    case "$tracked_url" in
+        http://*|https://*)
+            if [ -n "$UAT_DISPOSABLE_TAB_ID" ] && [ "$tracked_id" != "$UAT_DISPOSABLE_TAB_ID" ]; then
+                echo "  TARGET DRIFT after $tool/$mode: tab_id=$tracked_id expected=$UAT_DISPOSABLE_TAB_ID url=$tracked_url"
+            fi
+            ;;
+        *)
+            echo "  TARGET DRIFT after $tool/$mode: tab_id=$tracked_id expected=$UAT_DISPOSABLE_TAB_ID url=$tracked_url"
+            ;;
+    esac
+}
+
+# Bounded, self-classifying outcomes a browser-permission-gated action may report.
+# The browser alone decides whether the permission is granted, so the contract is
+# that the action always names its outcome — never hangs into a generic timeout.
+CLIPBOARD_BOUNDED_OUTCOMES='clipboard_permission_denied|clipboard_permission_prompt_required'
+CLIPBOARD_BOUNDED_OUTCOMES="$CLIPBOARD_BOUNDED_OUTCOMES|clipboard_read_navigation_cancelled"
+CLIPBOARD_BOUNDED_OUTCOMES="$CLIPBOARD_BOUNDED_OUTCOMES|clipboard_read_context_destroyed"
+CLIPBOARD_BOUNDED_OUTCOMES="$CLIPBOARD_BOUNDED_OUTCOMES|clipboard_document_not_focused|clipboard_read_timeout"
+
+evaluate_permission_gated() {
+    local tool="$1"
+    local mode="$2"
+    local body=""
+    body="$(extract_content_text "$3")"
+    if check_is_error "$3"; then
+        fail "$tool/$mode rejected its connected health payload: $(command_failure_message "$3")"
+    elif printf '%s' "$body" | grep -q 'execution_timeout'; then
+        fail "$tool/$mode hung into a generic execution_timeout instead of naming its permission outcome"
+    elif printf '%s' "$body" | grep -qE "\"($CLIPBOARD_BOUNDED_OUTCOMES)\""; then
+        pass "$tool/$mode reported a bounded, classified permission outcome"
+    elif printf '%s' "$body" | grep -q '"text"'; then
+        pass "$tool/$mode completed against a granted browser permission"
+    else
+        fail "$tool/$mode returned an unclassified permission outcome: $(truncate "$body")"
+    fi
 }
 
 prepare_action() {
@@ -286,8 +344,11 @@ prepare_action() {
             fi
             ;;
         analyze/performance_trace|analyze/react_profile)
+            # A profile describes one tab. Name the fixture explicitly so start and
+            # stop cannot land on different targets, and so a refusal is reported
+            # against the tab we meant to profile.
             ensure_fixture_page || return 1
-            response="$(call_tool "analyze" '{"what":"'"$2"'","action":"start"}')"
+            response="$(call_tool "analyze" '{"what":"'"$2"'","action":"start","tab_id":'"$(tracked_tab_id)"'}')"
             if ! check_valid_jsonrpc "$response" || check_is_error "$response"; then
                 fail "Could not start $action lifecycle: $(command_failure_message "$response")"
                 return 1
@@ -310,8 +371,10 @@ call_action_with_retry() {
     while [ "$attempt" -le 3 ]; do
         response="$(call_tool "$tool" "$args")"
         response_text="$(extract_content_text "$response")"
+        # 'No tab is being tracked' is a recoverable target loss, not an action
+        # defect: the fixture is re-established below and the action retried.
         if ! printf '%s\n%s' "$response" "$response_text" |
-                grep -qE 'context deadline exceeded|extension_timeout|no_result|dismiss_loop_detected|extension_lost_command|screenshot_failed'; then
+                grep -qE 'context deadline exceeded|extension_timeout|no_result|dismiss_loop_detected|extension_lost_command|screenshot_failed|No tab is being tracked'; then
             printf '%s' "$response"
             return 0
         fi
@@ -321,8 +384,9 @@ call_action_with_retry() {
         if [ "$tool/$mode" = "interact/close_tab" ]; then
             HEALTH_EXTRA_TAB_ID=""
         fi
-        if ! uat_wait_for_connected_browser "$PORT" "$WRAPPER" ||
-            ! prepare_action "$tool" "$mode"; then
+        # ensure_fixture_page waits for the extension, re-navigates, and re-tracks,
+        # so it recovers targets that uat_wait_for_connected_browser can only observe.
+        if ! ensure_fixture_page || ! prepare_action "$tool" "$mode"; then
             break
         fi
         args="$(action_args "$tool" "$mode")"
@@ -399,6 +463,7 @@ for tool in $TOOLS; do
         fi
         response="$(call_action_with_retry "$tool" "$mode" "$args")"
         executed_count=$((executed_count + 1))
+        report_target_drift "$tool" "$mode"
         if [ "$tool/$mode" = "interact/new_tab" ]; then
             HEALTH_EXTRA_TAB_ID="$(uat_new_tab_id "$response")"
         fi
@@ -416,6 +481,8 @@ for tool in $TOOLS; do
             else
                 pass "$tool/$mode reached its expected $expected_code contract"
             fi
+        elif [ "$expectation" = "permission_gated" ]; then
+            evaluate_permission_gated "$tool" "$mode" "$response"
         elif check_is_error "$response"; then
             fail "$tool/$mode rejected its connected health payload: $(truncate "$(extract_content_text "$response")")"
         else

@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-08
 code_paths:
   - cmd/browser-agent/internal/interactdispatch/handler.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
@@ -15,6 +15,8 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_dom.go
   - cmd/browser-agent/internal/toolinteract/interact_browser.go
   - cmd/browser-agent/internal/toolinteract/interact_page.go
+  - cmd/browser-agent/internal/toolinteract/pagescripts/pagescripts.go
+  - cmd/browser-agent/internal/toolinteract/pagescripts/clipboard-read.js
   - cmd/browser-agent/internal/toolinteract/interact_workflow.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
   - cmd/browser-agent/tools_core.go
@@ -94,6 +96,8 @@ test_paths:
   - internal/recording/actionlog/recorder_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
+  - tests/cli/runtime/clipboard-read-page-script.test.cjs
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/explore_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
@@ -236,6 +240,19 @@ failure is retryable and retained by System Doctor.
 `get_text` supports `structured:true` for hierarchical extraction (for example accordion/list sections), and this option must be forwarded through DOM dispatch into extension primitives.
 
 `execute_js` host-object serialization must preserve prototype-backed values (for example `DOMRect`) so return payloads remain structured and parse-safe.
+
+`clipboard_read` runs an embedded page script
+(`internal/toolinteract/pagescripts/clipboard-read.js`) rather than an inline
+Go string, so the exact bytes the browser evaluates are covered by Node
+fixtures. The script reads the `clipboard-read` permission state before it
+touches `navigator.clipboard`: a `prompt` origin returns
+`clipboard_permission_prompt_required` without raising a modal no agent can
+answer, and `denied` returns `clipboard_permission_denied`. A granted read is
+bounded at 2s and classified as `clipboard_read_timeout`,
+`clipboard_read_navigation_cancelled`, `clipboard_read_context_destroyed`,
+`clipboard_document_not_focused`, or `clipboard_permission_denied`. A generic
+`execution_timeout` is no longer a reachable clipboard outcome, and failure
+payloads never carry clipboard contents — only a bounded, redacted `detail`.
 
 Back/forward navigation uses Chrome's tab-history API first so restricted pages
 remain controllable. If Chrome incorrectly rejects an available transition, the

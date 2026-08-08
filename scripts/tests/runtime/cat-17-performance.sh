@@ -1,6 +1,17 @@
 #!/bin/bash
-# cat-17-performance.sh — Test Generation Performance & Stress Tests (6 tests)
-# Tests performance under load, large action sequences, concurrent generation.
+# cat-17-performance.sh — Test Generation Performance & Stress Tests (5 tests)
+#
+# Every test here previously called generate() with {"format":..., "actions":[...]}
+# — parameters the tool does not define. The tool requires "what", so all five
+# calls failed with missing_param. Four of the five reported pass anyway, via
+# branches like "Template rendering feature pending (planned)", so the category
+# looked green while generating nothing. Only 17.19 had a real failure path, and
+# it was the only one reporting the breakage.
+#
+# The generator reads captured actions from the daemon's buffer rather than
+# taking them as arguments, so these tests seed the buffer over the extension
+# data pipeline and then measure generation against it. Each test enforces the
+# latency budget it claims.
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -9,221 +20,231 @@ source "$SCRIPT_DIR/../framework/framework.sh"
 
 init_framework "$1" "$2"
 
-begin_category "17.performance" "Test Generation: Performance & Stress" "6"
+begin_category "17.performance" "Test Generation: Performance & Stress" "5"
 
 ensure_daemon
+
+# Seeds the action buffer with N synthetic recorded actions.
+seed_actions() {
+    local count="$1"
+    local payload='{"actions":['
+    local i
+    for i in $(seq 1 "$count"); do
+        [ "$i" -gt 1 ] && payload+=','
+        payload+="{\"type\":\"click\",\"timestamp\":$((1738843200000 + i)),\"url\":\"https://uat.example.com/step$i\",\"selectors\":{\"css\":\"#btn$i\",\"text\":\"Button $i\"}}"
+    done
+    payload+=']}'
+    post_extension "/enhanced-actions" "$payload"
+    if [ "$LAST_HTTP_STATUS" != "200" ]; then
+        fail "Seeding $count actions returned HTTP $LAST_HTTP_STATUS. Body: $(truncate "$LAST_HTTP_BODY")"
+        return 1
+    fi
+    return 0
+}
+
+# Milliseconds elapsed since a `date +%s%N` reading.
+millis_since() {
+    echo "$(( ($(date +%s%N) - $1) / 1000000 ))"
+}
+
+# Parses the structured payload a tool appends after its summary line.
+tool_payload() {
+    extract_content_text "$1" | sed -n '/^{/,$p'
+}
 
 # ── TEST 17.19: Generate Test from 100-Action Sequence ───────────────────
 
 begin_test "17.19" "generate({what:'test'}) handles 100 recorded actions" \
-    "Build 100-action sequence (1000+ lines of code), generate completes < 10s" \
+    "Seed 100 captured actions, generate a test, require completion under 10s" \
     "Performance must scale for complex user journeys"
 
 run_test_17_19() {
-    # Build 100-action sequence
-    local actions='['
-    for i in {1..100}; do
-        if [ "$i" -gt 1 ]; then actions+=','; fi
-        if [ $((i % 3)) -eq 0 ]; then
-            actions+="{\"action\":\"wait_for\",\"selector\":\"#elem$i\",\"timeout\":1000}"
-        elif [ $((i % 3)) -eq 1 ]; then
-            actions+="{\"action\":\"click\",\"selector\":\"#btn$i\"}"
-        else
-            actions+="{\"action\":\"type\",\"selector\":\"input$i\",\"text\":\"test\"}"
-        fi
-    done
-    actions+=']'
+    seed_actions 100 || return
 
     local start
     start=$(date +%s%N)
-
-    response=$(call_tool "generate" "{\"format\":\"test\",\"actions\":$(echo "$actions" | jq -c .)}")
-
-    local end
-    end=$(date +%s%N)
-    local duration_ms=$(( (end - start) / 1000000 ))
+    response=$(call_tool "generate" '{"what":"test","test_name":"perf-100-actions"}')
+    local duration_ms
+    duration_ms=$(millis_since "$start")
 
     if ! check_not_error "$response"; then
-        fail "100-action generation failed. Content: $(truncate "$(extract_content_text "$response")")"
+        fail "100-action generation failed. Content: $(truncate "$(command_failure_message "$response")")"
         return
     fi
 
-    local _text
-    _text=$(extract_content_text "$response")
-
-    if [ "$duration_ms" -lt 10000 ]; then
-        pass "Generated 100-action test in ${duration_ms}ms (< 10s)"
-    else
-        pass "Generated 100-action test in ${duration_ms}ms (acceptable for large sequences)"
+    local included
+    included="$(tool_payload "$response" | jq -r '.action_count // .metadata.actions_included // empty' 2>/dev/null)"
+    if [ "$included" != "100" ]; then
+        fail "Generated test covered '$included' actions, expected 100. Content: $(truncate "$(extract_content_text "$response")")"
+        return
     fi
+
+    if [ "$duration_ms" -ge 10000 ]; then
+        fail "100-action generation took ${duration_ms}ms, above the 10000ms budget"
+        return
+    fi
+
+    pass "Generated a 100-action test in ${duration_ms}ms (< 10s)"
 }
 run_test_17_19
 
 # ── TEST 17.20: Concurrent Test Generation Requests ───────────────────
 
 begin_test "17.20" "5 concurrent generate() calls don't interfere" \
-    "Queue 5 generation requests without waiting for responses" \
+    "Issue 5 generation requests in parallel and check every response" \
     "Concurrency must not cause data corruption or deadlocks"
 
 run_test_17_20() {
-    local actions='[{"action":"navigate","url":"https://example.com"}]'
+    seed_actions 20 || return
 
-    # Queue 5 generate requests in parallel
+    local out_dir="$TEMP_DIR/concurrent-17-20"
+    mkdir -p "$out_dir"
+
     local pids=()
-    for i in {1..5}; do
-        call_tool "generate" "{\"format\":\"test\",\"actions\":$(echo "$actions" | jq -c .),\"name\":\"concurrent-$i\"}" >/dev/null 2>&1 &
+    local i
+    for i in $(seq 1 5); do
+        call_tool "generate" "{\"what\":\"test\",\"test_name\":\"concurrent-$i\"}" \
+            >"$out_dir/$i.json" 2>/dev/null &
         pids+=($!)
     done
-
-    # Wait for all to complete (with per-job error tolerance)
     for pid in "${pids[@]}"; do
         wait "$pid" 2>/dev/null || true
     done
 
-    sleep 0.2
-
-    # Verify all completed
-    response=$(call_tool "observe" '{"what":"command_results"}')
-
-    if ! check_not_error "$response"; then
-        pass "Concurrent generation handled (results tracking TBD)"
-    else
-        content=$(extract_content_text "$response")
-        if echo "$content" | grep -q "concurrent"; then
-            pass "All 5 concurrent generation requests completed without interference"
-        else
-            pass "Concurrent generation requests processed"
+    # Every response is inspected. Discarding them, as this test used to, makes
+    # a deadlock or a corrupted envelope indistinguishable from success.
+    for i in $(seq 1 5); do
+        local response
+        response="$(cat "$out_dir/$i.json" 2>/dev/null)"
+        if ! check_valid_jsonrpc "$response"; then
+            fail "Concurrent generate #$i returned no valid JSON-RPC envelope: $(truncate "$response")"
+            return
         fi
-    fi
+        if check_is_error "$response"; then
+            fail "Concurrent generate #$i failed: $(truncate "$(command_failure_message "$response")")"
+            return
+        fi
+    done
+
+    pass "All 5 concurrent generate() calls returned successful, well-formed responses"
 }
 run_test_17_20
 
-# ── TEST 17.21: Large Response Format (SARIF with 1000 issues) ────────
+# ── TEST 17.21: SARIF Export Over a Large Error Set ────────
 
-begin_test "17.21" "generate({what:'sarif'}) with 1000 test issues" \
-    "Generate SARIF with many results, verify JSON valid and < 10MB" \
+begin_test "17.21" "generate({what:'sarif'}) over a large error set" \
+    "Seed 200 captured errors, export SARIF, require valid JSON under 10MB and 5s" \
     "Large exports must remain performant"
 
 run_test_17_21() {
-    # Build mock error data with 1000 items
-    local errors='['
-    for i in {1..1000}; do
-        if [ "$i" -gt 1 ]; then errors+=','; fi
-        errors+="{\"message\":\"Error $i\",\"line\":$i,\"column\":1,\"rule\":\"rule-$((i % 50))\"}"
+    local entries='{"entries":['
+    local i
+    for i in $(seq 1 200); do
+        [ "$i" -gt 1 ] && entries+=','
+        entries+="{\"type\":\"console\",\"level\":\"error\",\"message\":\"UAT_PERF_17_21 Error $i\",\"url\":\"https://uat.example.com/bundle.js\",\"source\":\"https://uat.example.com/bundle.js\",\"line\":$i,\"column\":1,\"timestamp\":\"2026-02-06T12:00:00Z\"}"
     done
-    errors+=']'
+    entries+=']}'
 
-    local start
-    start=$(date +%s%N)
-
-    response=$(call_tool "generate" "{\"format\":\"sarif\",\"errors\":$(echo "$errors" | jq -c .)}")
-
-    local end
-    end=$(date +%s%N)
-    local duration_ms=$(( (end - start) / 1000000 ))
-
-    if ! check_not_error "$response"; then
-        skip "SARIF generation with 1000 items not yet optimized"
+    post_logs "$entries"
+    if [ "$LAST_HTTP_STATUS" != "200" ]; then
+        fail "Seeding 200 errors returned HTTP $LAST_HTTP_STATUS. Body: $(truncate "$LAST_HTTP_BODY")"
         return
     fi
 
-    local _text
-    _text=$(extract_content_text "$response")
+    local start
+    start=$(date +%s%N)
+    response=$(call_tool "generate" '{"what":"sarif"}')
+    local duration_ms
+    duration_ms=$(millis_since "$start")
 
-    if [ "$duration_ms" -lt 5000 ]; then
-        pass "Generated SARIF with 1000 issues in ${duration_ms}ms"
-    else
-        pass "Generated SARIF export in ${duration_ms}ms (acceptable)"
+    if ! check_not_error "$response"; then
+        fail "SARIF export failed. Content: $(truncate "$(command_failure_message "$response")")"
+        return
     fi
+
+    local payload
+    payload="$(tool_payload "$response")"
+    if ! echo "$payload" | jq -e '.runs | type == "array"' >/dev/null 2>&1; then
+        fail "SARIF export is not a valid SARIF document (no runs array). Content: $(truncate "$payload")"
+        return
+    fi
+
+    local bytes=${#payload}
+    if [ "$bytes" -gt 10485760 ]; then
+        fail "SARIF export is ${bytes} bytes, above the 10MB ceiling"
+        return
+    fi
+    if [ "$duration_ms" -ge 5000 ]; then
+        fail "SARIF export took ${duration_ms}ms, above the 5000ms budget"
+        return
+    fi
+
+    pass "Exported valid SARIF (${bytes} bytes) in ${duration_ms}ms"
 }
 run_test_17_21
 
-# ── TEST 17.22: Template Rendering Performance ────────────────────────
+# ── TEST 17.22: Reproduction Script Generation ────────────────────────
 
-begin_test "17.22" "generate() with custom template renders quickly" \
-    "Template with loops/conditionals, 50 actions, render < 2s" \
-    "Template systems must not add significant overhead"
+begin_test "17.22" "generate({what:'reproduction'}) renders quickly" \
+    "Generate a reproduction script from the seeded buffer, require completion under 2s" \
+    "A second generator path must not add significant overhead"
 
 run_test_17_22() {
-    local template='
-    import { test, expect } from "@playwright/test";
-
-    test.describe("Generated Test Suite", () => {
-        {{#actions}}
-        test("Step {{@index}}", async ({ page }) => {
-            {{#if action.navigate}}
-            await page.goto("{{action.url}}");
-            {{/if}}
-            {{#if action.click}}
-            await page.click("{{action.selector}}");
-            {{/if}}
-        });
-        {{/actions}}
-    });
-    '
-
-    local actions='['
-    for i in {1..50}; do
-        if [ "$i" -gt 1 ]; then actions+=','; fi
-        if [ $((i % 2)) -eq 0 ]; then
-            actions+="{\"action\":\"navigate\",\"url\":\"https://example.com/page$i\"}"
-        else
-            actions+="{\"action\":\"click\",\"selector\":\"#btn$i\"}"
-        fi
-    done
-    actions+=']'
+    seed_actions 50 || return
 
     local start
     start=$(date +%s%N)
-
-    response=$(call_tool "generate" "{\"format\":\"test\",\"template\":$(echo "$template" | jq -Rs .),\"actions\":$(echo "$actions" | jq -c .)}")
-
-    local end
-    end=$(date +%s%N)
-    local duration_ms=$(( (end - start) / 1000000 ))
+    response=$(call_tool "generate" '{"what":"reproduction"}')
+    local duration_ms
+    duration_ms=$(millis_since "$start")
 
     if ! check_not_error "$response"; then
-        pass "Template rendering feature pending (planned)"
-    else
-        if [ $duration_ms -lt 2000 ]; then
-            pass "Template rendering completed in ${duration_ms}ms (< 2s)"
-        else
-            pass "Template rendering completed in ${duration_ms}ms"
-        fi
+        fail "Reproduction generation failed. Content: $(truncate "$(command_failure_message "$response")")"
+        return
     fi
+
+    if ! echo "$(tool_payload "$response")" | jq -e '.script | type == "string" and length > 0' >/dev/null 2>&1; then
+        fail "Reproduction response carries no script. Content: $(truncate "$(extract_content_text "$response")")"
+        return
+    fi
+
+    if [ "$duration_ms" -ge 2000 ]; then
+        fail "Reproduction generation took ${duration_ms}ms, above the 2000ms budget"
+        return
+    fi
+
+    pass "Rendered a reproduction script in ${duration_ms}ms (< 2s)"
 }
 run_test_17_22
 
-# ── TEST 17.23: Memory Stability Under Repeated Generation ────────────
+# ── TEST 17.23: Stability Under Repeated Generation ────────────
 
-begin_test "17.23" "Generate 10 large tests in sequence without memory leak" \
-    "Generate 10 x 50-action tests sequentially, verify no memory growth" \
+begin_test "17.23" "Generate 10 tests in sequence without degradation" \
+    "Run 10 sequential generations over a 50-action buffer, require the batch under 20s" \
     "Long-running operations must free memory properly"
 
 run_test_17_23() {
-    local actions='['
-    for j in {1..50}; do
-        if [ "$j" -gt 1 ]; then actions+=','; fi
-        actions+="{\"action\":\"click\",\"selector\":\"#btn$j\"}"
-    done
-    actions+=']'
+    seed_actions 50 || return
 
     local start
     start=$(date +%s%N)
-
-    for i in {1..10}; do
-        call_tool "generate" "{\"format\":\"test\",\"actions\":$(echo "$actions" | jq -c .),\"name\":\"batch-$i\"}" >/dev/null 2>&1
+    local i
+    for i in $(seq 1 10); do
+        response=$(call_tool "generate" "{\"what\":\"test\",\"test_name\":\"batch-$i\"}")
+        if ! check_not_error "$response"; then
+            fail "Sequential generation #$i failed. Content: $(truncate "$(command_failure_message "$response")")"
+            return
+        fi
     done
+    local duration_ms
+    duration_ms=$(millis_since "$start")
 
-    local end
-    end=$(date +%s%N)
-    local duration_ms=$(( (end - start) / 1000000 ))
-
-    if [ $duration_ms -lt 20000 ]; then
-        pass "Generated 10 large tests in ${duration_ms}ms (no apparent memory leak)"
-    else
-        pass "Generated 10 tests in ${duration_ms}ms (acceptable for batch)"
+    if [ "$duration_ms" -ge 20000 ]; then
+        fail "10 sequential generations took ${duration_ms}ms, above the 20000ms budget"
+        return
     fi
+
+    pass "Completed 10 sequential generations in ${duration_ms}ms with no failures"
 }
 run_test_17_23
 

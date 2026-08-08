@@ -162,3 +162,13 @@ func assertJSONRoundTrip[T any](t *testing.T, raw json.RawMessage) {
 		t.Fatalf("wire round trip drift:\n got: %s\nwant: %s", roundTrip, raw)
 	}
 }
+
+func runSyncRequestAsClient(t *testing.T, cap *testState, clientID string, payload SyncRequest) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest("POST", "/sync", bytes.NewReader(mustMarshalJSON(t, payload)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Kaboom-Client", clientID)
+	w := httptest.NewRecorder()
+	newTestHandler(cap).HandleSync(w, req)
+	return w
+}

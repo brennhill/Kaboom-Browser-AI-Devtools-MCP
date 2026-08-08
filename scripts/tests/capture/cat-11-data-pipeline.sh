@@ -12,52 +12,7 @@ init_framework "$1" "$2"
 begin_category "11" "Data Pipeline" "31"
 ensure_daemon
 
-# ── Helpers ──────────────────────────────────────────────
-# POST to extension-protected endpoint (requires X-Kaboom-Client header)
-post_extension() {
-    local endpoint="$1"
-    local payload="$2"
-    local response_file="$TEMP_DIR/http_post_${MCP_ID}.txt"
-    LAST_HTTP_STATUS=$(curl -s -o "$response_file" -w "%{http_code}" \
-        -X POST \
-        -H "Content-Type: application/json" \
-        -H "X-Kaboom-Client: kaboom-extension/${VERSION}" \
-        "http://localhost:${PORT}${endpoint}" \
-        -d "$payload" 2>/dev/null)
-    LAST_HTTP_BODY=$(cat "$response_file" 2>/dev/null)
-}
-
-# POST to /logs endpoint (requires X-Kaboom-Client header)
-post_logs() {
-    local payload="$1"
-    local response_file="$TEMP_DIR/http_post_${MCP_ID}.txt"
-    LAST_HTTP_STATUS=$(curl -s -o "$response_file" -w "%{http_code}" \
-        -X POST \
-        -H "Content-Type: application/json" \
-        -H "X-Kaboom-Client: kaboom-extension/${VERSION}" \
-        "http://localhost:${PORT}/logs" \
-        -d "$payload" 2>/dev/null)
-    LAST_HTTP_BODY=$(cat "$response_file" 2>/dev/null)
-}
-
-# POST raw (no headers except content-type, for negative tests)
-post_raw() {
-    local url="$1"
-    local payload="$2"
-    local extra_headers="$3"
-    local response_file="$TEMP_DIR/http_post_${MCP_ID}.txt"
-    if [ -n "$extra_headers" ]; then
-        LAST_HTTP_STATUS=$(curl -s -o "$response_file" -w "%{http_code}" \
-            -X POST -H "Content-Type: application/json" \
-            -H "$extra_headers" \
-            "$url" -d "$payload" 2>/dev/null)
-    else
-        LAST_HTTP_STATUS=$(curl -s -o "$response_file" -w "%{http_code}" \
-            -X POST -H "Content-Type: application/json" \
-            "$url" -d "$payload" 2>/dev/null)
-    fi
-    LAST_HTTP_BODY=$(cat "$response_file" 2>/dev/null)
-}
+# post_extension / post_logs / post_raw are canonical framework helpers.
 
 ###########################################################
 # GROUP A: Happy Path Roundtrips (7 tests)
@@ -228,7 +183,7 @@ begin_test "11.7" "Extension logs roundtrip (POST /sync with extension_logs -> o
     "POST extension internal logs via /sync, call observe(extension_logs), verify message appears" \
     "Extension logs enable debugging the extension itself. Logs are sent via the unified /sync endpoint."
 run_test_11_7() {
-    post_extension "/sync" '{"session_id":"uat-11-7","extension_logs":[{"level":"info","message":"UAT_PIPELINE_11_7: Extension initialized","source":"background","category":"CONNECTION"}]}'
+    post_extension "/sync" '{"ext_session_id":"uat-11-7","extension_logs":[{"level":"info","message":"UAT_PIPELINE_11_7: Extension initialized","source":"background","category":"CONNECTION"}]}'
     if [ "$LAST_HTTP_STATUS" != "200" ]; then
         fail "POST /sync (extension_logs) returned HTTP $LAST_HTTP_STATUS. Body: $(truncate "$LAST_HTTP_BODY")"
         return

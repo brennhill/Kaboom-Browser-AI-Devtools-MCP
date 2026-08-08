@@ -187,8 +187,14 @@ send_mcp() {
     fi
 
     for attempt in $(seq 0 "$max_retries"); do
-        local stdout_file="$TEMP_DIR/${prefix}_${MCP_ID}_stdout.txt"
-        local stderr_file="$TEMP_DIR/${prefix}_${MCP_ID}_stderr.txt"
+        # Unique per call, not per MCP_ID: a background subshell inherits the
+        # parent's MCP_ID unchanged (bash 3.2 has no BASHPID and $$ is shared),
+        # so concurrent callers would otherwise interleave into one file and
+        # read back a corrupted response.
+        local capture_base
+        capture_base="$(mktemp "$TEMP_DIR/${prefix}_XXXXXXXX")"
+        local stdout_file="${capture_base}.out"
+        local stderr_file="${capture_base}.err"
         local stderr_text=""
 
         # Use || true to prevent set -eo pipefail from killing the script on timeout (exit 124)
@@ -234,8 +240,10 @@ send_mcp() {
 send_mcp_multi() {
     local requests="$1"
     local prefix="${2:-multi}"
-    local stdout_file="$TEMP_DIR/${prefix}_${MCP_ID}_stdout.txt"
-    local stderr_file="$TEMP_DIR/${prefix}_${MCP_ID}_stderr.txt"
+    local capture_base
+    capture_base="$(mktemp "$TEMP_DIR/${prefix}_XXXXXXXX")"
+    local stdout_file="${capture_base}.out"
+    local stderr_file="${capture_base}.err"
 
     echo "$requests" | "$TIMEOUT_CMD" "$MCP_MULTI_TIMEOUT_SECONDS" "$WRAPPER" --port "$PORT" > "$stdout_file" 2>"$stderr_file" || true
     # shellcheck disable=SC2034 # LAST_EXIT_CODE used by sourcing scripts
@@ -278,7 +286,11 @@ command_failure_message() {
         jq -r '
             (.result.error // .error // empty) as $error |
             (.result.message // .message // empty) as $message |
-            if $error != "" and $message != "" then "\($error): \($message)"
+            (.result.resolved_tab_id // .resolved_tab_id // empty) as $tab_id |
+            (.result.resolved_url // .resolved_url // empty) as $url |
+            (.result.target_context.source // .target_context.source // empty) as $source |
+            (if $tab_id != "" then " [tab_id=\($tab_id) source=\($source) url=\($url)]" else "" end) as $target |
+            if $error != "" and $message != "" then "\($error): \($message)\($target)"
             elif $message != "" then $message
             elif $error != "" then $error
             else empty end
@@ -287,7 +299,7 @@ command_failure_message() {
         printf '%s\n' "$structured"
         return 0
     fi
-    truncate "$text"
+    printf '%s\n' "$text"
 }
 
 # Truncates a string for display in pass/fail messages
@@ -377,6 +389,19 @@ check_bridge_timeout() {
     echo "$text" | grep -qiE "transport_no_response|deadline exceeded|connection refused|Server connection error|EOF"
 }
 
+# Returns 0 when the harness never received a usable answer — a malformed
+# envelope, or the synthesized transport_no_response placeholder send_mcp emits
+# on timeout. This is the difference between "the tool reported an error" (a
+# legitimate outcome worth asserting on) and "the call hung or the protocol
+# broke" (always a defect, whatever the feature's implementation status).
+check_transport_failure() {
+    local response="$1"
+    if ! check_valid_jsonrpc "$response"; then
+        return 0
+    fi
+    extract_content_text "$response" | grep -q "transport_no_response"
+}
+
 check_http_status() {
     local url="$1"
     local expected="$2"
@@ -388,6 +413,107 @@ check_http_status() {
         actual="$(curl -s --max-time 10 --connect-timeout 3 -o /dev/null -w "%{http_code}" "$url" 2>/dev/null)"
     fi
     [ "$actual" = "$expected" ]
+}
+
+# Quotes an arbitrary string as a JSON scalar, for safe interpolation into
+# tool arguments. Raw interpolation emits malformed JSON, which silently stops
+# the action under test from being exercised at all.
+json_string() {
+    printf '%s' "$1" | jq -Rs .
+}
+
+# The daemon-served interaction fixture used by connected categories. Serving it
+# from the daemon keeps connected tests off the public internet and gives them a
+# known DOM (#sf-btn and friends) to assert against.
+connected_fixture_url() {
+    echo "http://127.0.0.1:${PORT}/tests/interact.html"
+}
+
+# ── Extension-Facing HTTP Helpers ──────────────────────────
+# Every helper records LAST_HTTP_STATUS and LAST_HTTP_BODY so callers assert on
+# the status code. Parsing the reply is not an assertion: the daemon answers
+# 400 (invalid JSON), 403 (bad client header) and 409 (stale generation) with
+# well-formed JSON bodies, so `jq .` succeeds on all of them.
+
+# POST to an extension-protected endpoint under a chosen client identity.
+# Client classes are defined in internal/extclient:
+#   kaboom-extension — owns the extension session (adopts settings, bumps generation)
+#   kaboom-probe     — contract prober; the daemon answers with an empty envelope
+#                      and adopts nothing, so it cannot disturb a live extension.
+post_as_client() {
+    local client="$1"
+    local endpoint="$2"
+    local payload="$3"
+    local response_file="$TEMP_DIR/http_post_${MCP_ID:-0}.txt"
+    LAST_HTTP_STATUS=$(curl -s -o "$response_file" -w "%{http_code}" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -H "X-Kaboom-Client: ${client}" \
+        "http://localhost:${PORT}${endpoint}" \
+        -d "$payload" 2>/dev/null)
+    LAST_HTTP_BODY=$(cat "$response_file" 2>/dev/null)
+}
+
+# POST to an extension-protected endpoint as the extension itself.
+post_extension() {
+    post_as_client "kaboom-extension/${VERSION}" "$1" "$2"
+}
+
+# POST to /logs as the extension.
+post_logs() {
+    post_extension "/logs" "$1"
+}
+
+# POST to an absolute URL, optionally with a single extra header. Used for
+# negative tests that omit or corrupt the client identity header.
+post_raw() {
+    local url="$1"
+    local payload="$2"
+    local extra_headers="${3:-}"
+    local response_file="$TEMP_DIR/http_post_raw_${MCP_ID:-0}.txt"
+    if [ -n "$extra_headers" ]; then
+        LAST_HTTP_STATUS=$(curl -s -o "$response_file" -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -H "$extra_headers" \
+            "$url" -d "$payload" 2>/dev/null)
+    else
+        LAST_HTTP_STATUS=$(curl -s -o "$response_file" -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            "$url" -d "$payload" 2>/dev/null)
+    fi
+    LAST_HTTP_BODY=$(cat "$response_file" 2>/dev/null)
+}
+
+# Asserts the last POST returned an expected status; reports the body on mismatch.
+# Returns 0 on match so callers can early-return.
+expect_http_status() {
+    local expected="$1"
+    local context="$2"
+    if [ "$LAST_HTTP_STATUS" = "$expected" ]; then
+        return 0
+    fi
+    fail "$context: expected HTTP $expected, got $LAST_HTTP_STATUS. Body: $(truncate "$LAST_HTTP_BODY")"
+    return 1
+}
+
+# Validates the SyncResponse envelope the extension depends on. A reply missing
+# any of these fields breaks the extension's poll loop even with a 200 status.
+check_sync_envelope() {
+    local body="$1"
+    echo "$body" | jq -e '
+        (.ack | type == "boolean")
+        and (.commands | type == "array")
+        and (.next_poll_ms | type == "number" and . > 0)
+        and (.server_time | type == "string" and length > 0)
+        and (.server_version | type == "string" and length > 0)
+    ' >/dev/null 2>&1
+}
+
+# Reads a capture-state field the extension reported, so tests can prove the
+# daemon applied a payload instead of merely returning 200 for it.
+capture_state_field() {
+    curl -s --max-time 5 "http://127.0.0.1:${PORT}/health" 2>/dev/null |
+        jq -r --arg field "$1" '.capture[$field] // empty' 2>/dev/null
 }
 
 elapsed_seconds() {
@@ -458,7 +584,21 @@ wait_for_health() {
 
 wait_for_required_connected_browser() {
     [ "${KABOOM_UAT_REQUIRE_CONNECTED:-0}" = "1" ] || return 0
-    if ! uat_wait_for_connected_browser "$PORT" "$WRAPPER"; then
+    if uat_wait_for_connected_browser "$PORT" "$WRAPPER"; then
+        echo "  Connected browser ready: extension heartbeat and tracked tab available"
+        return 0
+    fi
+    # Every category restarts the daemon and the suite toggles pilot state, so the
+    # preflight's tracked tab cannot be assumed to survive to the last category.
+    # A live extension with nothing tracked is recoverable: open a fresh disposable
+    # fixture rather than failing every remaining test that needs a target.
+    if ! uat_check_extension_readiness "$PORT"; then
+        echo "WARNING: connected browser readiness failed: $UAT_CONNECTED_READINESS_REASON" >&2
+        return 1
+    fi
+    echo "  Tracked tab lost; re-establishing the disposable connected fixture"
+    if ! uat_create_disposable_tab "$PORT" "$WRAPPER" ||
+        ! uat_wait_for_connected_browser "$PORT" "$WRAPPER"; then
         echo "WARNING: connected browser readiness failed: $UAT_CONNECTED_READINESS_REASON" >&2
         return 1
     fi

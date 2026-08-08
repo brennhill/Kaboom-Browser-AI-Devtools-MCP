@@ -8,7 +8,8 @@ import { errorMessage } from '../../lib/error-utils.js';
 import { contentReadiness, requiresContentReadiness } from '../runtime-state/content-readiness.js';
 import { getConnectionGeneration, isConnectionGenerationCurrent } from '../runtime-state/connection-generation.js';
 import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js';
-import { debugLog, sendResult, sendAsyncResult, requiresTargetTab, resolveTargetTab, parseQueryParamsObject, withTargetContext, actionToast, isRestrictedUrl, isBrowserEscapeAction } from './helpers.js';
+import { debugLog, sendResult, sendAsyncResult, requiresTargetTab, resolveTargetTab, parseQueryParamsObject, withTargetContext, actionToast, isBrowserEscapeAction } from './helpers.js';
+import { isInternalTab } from '../../lib/tabs/internal-url.js';
 // =============================================================================
 // REGISTRY
 // =============================================================================
@@ -243,7 +244,7 @@ export async function dispatch(query, syncClient, signal) {
         return;
     }
     // Restricted page detection: content scripts cannot run on internal browser pages
-    if (needsTarget && isRestrictedUrl(target?.url) && !canRunOnRestrictedPage(query.type, paramsObj)) {
+    if (needsTarget && isInternalTab(target) && !canRunOnRestrictedPage(query.type, paramsObj)) {
         const payload = {
             success: false,
             error: 'csp_blocked_page',

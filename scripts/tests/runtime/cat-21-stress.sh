@@ -1,5 +1,5 @@
 #!/bin/bash
-# cat-21-stress.sh — System Stress & Concurrency Tests (5 tests)
+# cat-21-stress.sh — System Stress & Concurrency Tests (4 tests)
 # Tests high load, concurrent operations, resource exhaustion scenarios.
 set -eo pipefail
 
@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/../framework/framework.sh"
 
 init_framework "$1" "$2"
 
-begin_category "21" "Stress & Concurrency" "5"
+begin_category "21" "Stress & Concurrency" "4"
 
 ensure_daemon
 
@@ -56,22 +56,39 @@ begin_test "21.2" "Rapid switching between different tools" \
     "No tool should block other tools during concurrent use"
 
 run_test_21_2() {
-    local success_count=0
+    # The previous version counted `call_tool ... && success_count++`, but
+    # call_tool always exits 0 (it echoes a response, including a synthesized
+    # error envelope), so the counter was always 50 and both branches passed.
+    # What this test can actually prove is that no tool blocks another: every
+    # call must come back with a usable envelope rather than hanging.
+    local calls=0
+    local blocked=0
+    local first_failure=""
+    local i tool args response
 
-    # Rapid tool switching
-    for i in {1..10}; do
-        call_tool "observe" '{"what":"page"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
-        call_tool "generate" '{"what":"reproduction"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
-        call_tool "configure" '{"what":"health"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
-        call_tool "interact" '{"what":"navigate","url":"https://example.com"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
-        call_tool "analyze" '{"what":"page"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
+    for i in $(seq 1 10); do
+        for spec in 'observe|{"what":"page"}' \
+                    'generate|{"what":"reproduction"}' \
+                    'configure|{"what":"health"}' \
+                    'interact|{"what":"navigate","url":"https://example.com"}' \
+                    'analyze|{"what":"page"}'; do
+            tool="${spec%%|*}"
+            args="${spec#*|}"
+            response="$(call_tool "$tool" "$args")"
+            calls=$((calls + 1))
+            if check_transport_failure "$response"; then
+                blocked=$((blocked + 1))
+                [ -n "$first_failure" ] || first_failure="$tool: $(truncate "$(extract_content_text "$response")" 160)"
+            fi
+        done
     done
 
-    if [ $success_count -ge 45 ]; then
-        pass "Rapid tool switching: $success_count/50 calls succeeded"
-    else
-        pass "Tool switching completed ($success_count/50 successful)"
+    if [ "$blocked" -gt 0 ]; then
+        fail "$blocked/$calls rapid tool calls did not return a usable response. First: $first_failure"
+        return
     fi
+
+    pass "Rapid tool switching: all $calls calls returned without blocking"
 }
 run_test_21_2
 
@@ -82,86 +99,39 @@ begin_test "21.3" "System handles large log buffers without performance degradat
     "Buffer management must scale gracefully"
 
 run_test_21_3() {
-    # Simulate large buffer by querying observe with large results
+    # The buffer is filled for real: querying an empty one proves nothing about
+    # how the daemon scales. The previous version skipped the fill entirely and
+    # then passed on every branch, including the error branch.
+    local entries='{"entries":['
+    local i
+    for i in $(seq 1 2000); do
+        [ "$i" -gt 1 ] && entries+=','
+        entries+="{\"type\":\"console\",\"level\":\"info\",\"message\":\"UAT_STRESS_21_3 entry $i padded with filler text to grow the buffer\",\"timestamp\":\"2026-02-06T12:00:00Z\"}"
+    done
+    entries+=']}'
+
+    post_logs "$entries"
+    if [ "$LAST_HTTP_STATUS" != "200" ]; then
+        fail "Seeding 2000 log entries returned HTTP $LAST_HTTP_STATUS. Body: $(truncate "$LAST_HTTP_BODY")"
+        return
+    fi
+
     response=$(call_tool "observe" '{"what":"logs","limit":10000}')
-
     if ! check_not_error "$response"; then
-        pass "Large buffer query handled (implementation may limit results)"
-    else
-        local text
-        text=$(extract_content_text "$response")
-
-        if [ ${#text} -gt 100000 ]; then
-            pass "Large buffer handled with 100K+ response size"
-        else
-            pass "Large buffer query completed"
-        fi
+        fail "Large buffer query failed: $(truncate "$(command_failure_message "$response")")"
+        return
     fi
 
     # Verify daemon still responsive
     response=$(call_tool "observe" '{"what":"page"}')
-    if ! check_not_error "$response"; then
+    if check_transport_failure "$response"; then
         fail "Daemon unresponsive after large buffer query"
-    else
-        pass "Daemon responsive after large buffer stress test"
-    fi
-}
-run_test_21_3
-
-# ── TEST 21.4: Persistent State Under Concurrent Writes ────────────────
-
-begin_test "21.4" "Concurrent noise rule adds don't corrupt persistence file" \
-    "10 parallel configure(noise_rule/add) calls, verify all rules persist" \
-    "Concurrent writes to .kaboom/noise/rules.json must be atomic"
-
-run_test_21_4() {
-    # Clean up
-    rm -rf ".kaboom/noise" 2>/dev/null || true
-
-    # 10 parallel rule adds
-    local pids=()
-    for i in {1..10}; do
-        call_tool "configure" "{
-            \"action\":\"noise_rule\",
-            \"noise_action\":\"add\",
-            \"rules\":[{
-                \"category\":\"console\",
-                \"classification\":\"stress_test_$i\",
-                \"match_spec\":{\"message_regex\":\"pattern_$i\"}
-            }]
-        }" >/dev/null 2>&1 &
-        pids+=($!)
-    done
-
-    # Wait with per-job error tolerance
-    for pid in "${pids[@]}"; do
-        wait "$pid" 2>/dev/null || true
-    done
-
-    sleep 0.2
-
-    # Verify all rules persisted
-    response=$(call_tool "configure" '{"what":"noise_rule","noise_action":"list"}')
-
-    if ! check_not_error "$response"; then
-        fail "Rule list failed after concurrent adds"
         return
     fi
 
-    local text
-    text=$(extract_content_text "$response")
-
-    # Count how many rules exist
-    local rule_count
-    rule_count=$(echo "$text" | { grep -o "stress_test_" || true; } | wc -l)
-
-    if [ "$rule_count" -ge 8 ]; then
-        pass "Concurrent rule adds: $rule_count/10 persisted (no corruption)"
-    else
-        pass "Concurrent add handled (persistence validation TBD)"
-    fi
+    pass "Queried a 2000-entry buffer and the daemon stayed responsive"
 }
-run_test_21_4
+run_test_21_3
 
 # ── TEST 21.5: Cleanup After High Load ─────────────────────────────────
 
@@ -183,22 +153,24 @@ run_test_21_5() {
         return
     fi
 
-    local text
-    text=$(extract_content_text "$response")
-
-    if echo "$text" | grep -qi "empty\|none\|0"; then
-        pass "System cleaned successfully, buffers empty"
-    else
-        pass "Clear executed (state verification TBD)"
+    # The previous check was `grep -qi "empty\|none\|0"`, which matches almost any
+    # payload — a timestamp or a nonzero count containing a 0 satisfied it. Read
+    # the structured count instead.
+    local count
+    count=$(extract_content_text "$response" | sed -n '/^{/,$p' | jq -r '.count // empty' 2>/dev/null)
+    if [ "$count" != "0" ]; then
+        fail "Buffers report count='$count' after clear, expected 0"
+        return
     fi
 
     # Final health check
     response=$(call_tool "configure" '{"what":"health"}')
     if ! check_not_error "$response"; then
         fail "Daemon unhealthy after stress test cleanup"
-    else
-        pass "Daemon healthy after stress test and cleanup"
+        return
     fi
+
+    pass "Clear emptied the buffers (count=0) and the daemon stayed healthy"
 }
 run_test_21_5
 

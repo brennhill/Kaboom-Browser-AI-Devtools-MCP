@@ -27,6 +27,7 @@ test_paths:
   - internal/perftrace/http_test.go
   - internal/perftrace/manager_test.go
   - tests/extension/performance-trace/performance-trace.test.js
+  - tests/extension/performance-trace/performance-trace-target-refusal.test.js
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
 ---
@@ -61,6 +62,25 @@ recovery is retained in the local Doctor diagnostic timeline.
 Chrome debugger startup failures identify the exact attach, domain-enable,
 tracing, navigation, or metadata stage. This keeps target and permission
 failures actionable without recording page data in diagnostics.
+
+A target Chrome will not expose to the extension is reported separately as
+`performance_trace_target_not_debuggable`. Chrome refuses `Debugger.attach` for
+these tabs ("Cannot access a chrome-extension:// URL of different extension")
+even when the tabs API reports an ordinary web URL and content scripts run
+there.
+
+A profile describes one tab, so the refusal is reported against the tab that was
+refused and the trace is never retargeted: an artifact attributed to a page the
+caller did not ask about is worse than no artifact. The result is not
+`retryable` — Chrome refuses the same target every time — and it names the tab
+so the caller can profile a different one with `tab_id` or move the workspace to
+a normal web page.
+
+Tracking is deliberately left intact. Only CDP attach was refused; the same tab
+still serves `execute_js`, DOM primitives, and every other tool, so untracking it
+would discard a working workspace over one unavailable capability. The refusal is
+recorded in the Doctor diagnostic timeline as
+`performance_trace_target_not_debuggable`.
 
 ## Specs
 

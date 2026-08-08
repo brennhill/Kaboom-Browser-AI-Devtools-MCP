@@ -24,9 +24,9 @@ import {
   parseQueryParamsObject,
   withTargetContext,
   actionToast,
-  isRestrictedUrl,
   isBrowserEscapeAction
 } from './helpers.js'
+import { isInternalTab } from '../../lib/tabs/internal-url.js'
 
 // =============================================================================
 // COMMAND CONTEXT
@@ -347,7 +347,7 @@ export async function dispatch(query: PendingQuery, syncClient: SyncClient, sign
   }
 
   // Restricted page detection: content scripts cannot run on internal browser pages
-  if (needsTarget && isRestrictedUrl(target?.url) && !canRunOnRestrictedPage(query.type, paramsObj)) {
+  if (needsTarget && isInternalTab(target) && !canRunOnRestrictedPage(query.type, paramsObj)) {
     const payload = {
       success: false,
       error: 'csp_blocked_page',

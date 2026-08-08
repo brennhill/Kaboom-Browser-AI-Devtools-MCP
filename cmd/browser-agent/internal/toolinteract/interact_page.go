@@ -6,6 +6,7 @@ package toolinteract
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/pagescripts"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/menus"
@@ -256,18 +257,11 @@ func enrichExploreWithMenus(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	})
 }
 
-// handleClipboardRead reads text from the clipboard via navigator.clipboard.readText().
+// HandleClipboardRead reads clipboard text through the bounded page script, which
+// classifies permission, focus, navigation, and context-destruction outcomes itself
+// instead of hanging until the injected executor reports a generic execution_timeout.
 func (h *PageActions) HandleClipboardRead(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	script := `(async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    return { text };
-  } catch (e) {
-    return { error: 'clipboard_read_failed', message: e.message };
-  }
-})()`
-
-	resp := h.storage.queueExecuteScript(req, args, "exec", 0, 0, "main", script, "clipboard_read", "Clipboard read queued")
+	resp := h.storage.queueExecuteScript(req, args, "exec", 0, 0, "main", pagescripts.ClipboardRead, "clipboard_read", "Clipboard read queued")
 
 	// Record AI action only on success (queueExecuteScript handles guards).
 	if !act.IsErrorResponse(resp) {

@@ -5,7 +5,10 @@
 
 import { describe, test, mock } from 'node:test'
 import assert from 'node:assert/strict'
-import { createPerformanceTraceController } from '../../../extension/background/dom/cdp/performance-trace.js'
+import {
+  createPerformanceTraceController,
+  isTargetNotDebuggableError
+} from '../../../extension/background/dom/cdp/performance-trace.js'
 
 function fixture(completionParams = {}, failMethod = '') {
   let eventListener
@@ -140,6 +143,33 @@ describe('Chrome performance trace controller', () => {
       const f = fixture({}, stage)
       await assert.rejects(() => f.controller.start(41), new RegExp(`${stage} failed: target rejected`))
       assert.ok(f.requests.some((request) => request.path === '/performance-trace/abort'))
+    }
+  })
+})
+
+// Chrome refuses to attach the debugger to a target the extension may not access.
+// The refusal is a property of the target, not of tracing, so it must be
+// distinguishable from a genuine tracing fault before the caller retries.
+describe('debugger target access classification', () => {
+  test('recognizes every Chrome refusal that names an inaccessible target', () => {
+    for (const message of [
+      'Debugger.attach failed: Cannot access a chrome-extension:// URL of different extension',
+      'Debugger.attach failed: Cannot access a chrome:// URL',
+      'Debugger.attach failed: Cannot attach to this target.',
+      'Debugger.attach failed: Cannot access contents of the page'
+    ]) {
+      assert.equal(isTargetNotDebuggableError(new Error(message)), true, message)
+    }
+  })
+
+  test('does not misclassify genuine tracing faults as target refusals', () => {
+    for (const message of [
+      'Tracing.start failed: target rejected',
+      'Debugger.attach failed: Another debugger is already attached to the tab with id: 41',
+      'Chrome lost trace data before the CPU flamechart completed',
+      'performance trace daemon returned an invalid start response'
+    ]) {
+      assert.equal(isTargetNotDebuggableError(new Error(message)), false, message)
     }
   })
 })

@@ -243,6 +243,44 @@ describe('pending query targeting', () => {
     )
   })
 
+  for (const restricted of [
+    { name: 'a committed internal page', url: 'chrome://extensions', pendingUrl: undefined },
+    {
+      name: 'an in-flight navigation to another extension',
+      url: 'https://app.example.com/fixture',
+      pendingUrl: 'chrome-extension://other-extension/panel.html'
+    }
+  ]) {
+    test(`blocks a scripted command on ${restricted.name} instead of executing against it`, async () => {
+      globalThis.chrome = createMockChrome(null, 55)
+      globalThis.chrome.tabs.query = mock.fn((query, callback) => {
+        const result = [{ id: 55, windowId: 1, url: restricted.url, pendingUrl: restricted.pendingUrl, title: 'Tab' }]
+        if (callback) callback(result)
+        return Promise.resolve(result)
+      })
+      const mockSyncClient = { queueCommandResult: mock.fn() }
+
+      await bgModule.handlePendingQuery(
+        {
+          id: 'q-restricted-scripted',
+          type: 'highlight',
+          correlation_id: 'corr-restricted-scripted',
+          params: JSON.stringify({ selector: '#target', use_active_tab: true })
+        },
+        mockSyncClient
+      )
+
+      assert.strictEqual(globalThis.chrome.tabs.sendMessage.mock.calls.length, 0)
+      const queued = mockSyncClient.queueCommandResult.mock.calls[0].arguments[0]
+      assert.strictEqual(queued.status, 'error')
+      assert.strictEqual(queued.result.error, 'csp_blocked_page')
+    })
+  }
+
+  // The performance-trace failure: the daemon resolved the tracked tab, but by the
+  // time the command arrived that tab was navigating onto another extension's page
+  // and only `pendingUrl` said so. A scripted command must recover to a real web tab
+  // rather than attach a debugger to a chrome-extension:// target.
   test('rejects a persisted tracked tab that navigated to another extension and recovers to a web tab', async () => {
     globalThis.chrome = createMockChrome(41, 77)
     globalThis.chrome.tabs.get = mock.fn((tabId) =>
@@ -250,7 +288,8 @@ describe('pending query targeting', () => {
         id: tabId,
         windowId: 1,
         status: 'complete',
-        url: tabId === 41 ? 'chrome-extension://other-extension/panel.html' : `https://tab/${tabId}`
+        url: tabId === 41 ? 'https://app.example.com/fixture' : `https://tab/${tabId}`,
+        pendingUrl: tabId === 41 ? 'chrome-extension://other-extension/panel.html' : undefined
       })
     )
     globalThis.chrome.tabs.query = mock.fn((query, callback) => {
@@ -265,8 +304,36 @@ describe('pending query targeting', () => {
     await bgModule.handlePendingQuery(
       {
         id: 'q-stale-internal-target',
-        type: 'browser_action',
+        type: 'highlight',
         correlation_id: 'corr-stale-internal-target',
+        tab_id: 41,
+        params: JSON.stringify({ selector: '#target' })
+      },
+      mockSyncClient
+    )
+
+    const highlighted = globalThis.chrome.tabs.sendMessage.mock.calls.map((call) => call.arguments[0])
+    assert.ok(highlighted.includes(77), 'the recovered web tab must receive the command')
+    assert.ok(!highlighted.includes(41), 'the tab racing onto another extension must never be scripted')
+    const queued = mockSyncClient.queueCommandResult.mock.calls[0].arguments[0]
+    assert.strictEqual(queued.result.target_context.source, 'auto_tracked_active_tab')
+    assert.strictEqual(queued.result.target_context.tracked_tab_id, 77)
+  })
+
+  test('keeps a restricted daemon-resolved tab for the escape action that gets off it', async () => {
+    // Retargeting here would strand the user: `back` would run on some other tab
+    // while the restricted page they are stuck on never moves.
+    globalThis.chrome = createMockChrome(41, 77)
+    globalThis.chrome.tabs.get = mock.fn((tabId) =>
+      Promise.resolve({ id: tabId, windowId: 1, status: 'complete', url: 'chrome://extensions' })
+    )
+    const mockSyncClient = { queueCommandResult: mock.fn() }
+
+    await bgModule.handlePendingQuery(
+      {
+        id: 'q-restricted-escape',
+        type: 'browser_action',
+        correlation_id: 'corr-restricted-escape',
         tab_id: 41,
         params: JSON.stringify({ action: 'back' })
       },
@@ -274,10 +341,11 @@ describe('pending query targeting', () => {
     )
 
     assert.strictEqual(globalThis.chrome.tabs.goBack.mock.calls.length, 1)
-    assert.strictEqual(globalThis.chrome.tabs.goBack.mock.calls[0].arguments[0], 77)
+    assert.strictEqual(globalThis.chrome.tabs.goBack.mock.calls[0].arguments[0], 41)
     const queued = mockSyncClient.queueCommandResult.mock.calls[0].arguments[0]
-    assert.strictEqual(queued.result.target_context.source, 'auto_tracked_active_tab')
-    assert.strictEqual(queued.result.target_context.tracked_tab_id, 77)
+    assert.strictEqual(queued.status, 'complete')
+    assert.strictEqual(queued.result.resolved_tab_id, 41)
+    assert.strictEqual(queued.result.target_context.source, 'explicit_tab')
   })
 
   test('rejects a user-explicit restricted tab without silently retargeting the command', async () => {
