@@ -335,7 +335,11 @@ uat_restore_user_state() {
         fi
     fi
     if [ "$UAT_PRIOR_DAEMON_RUNNING" = "1" ]; then
-        if [ "$UAT_PRIOR_LAUNCHAGENT_RUNNING" = "1" ]; then
+        # A registered service is the durable daemon owner even when launchctl
+        # transiently reports it waiting/stopped while another process holds
+        # the port. Restoring that state as an unmanaged nohup child allows the
+        # runner shell or service supervisor to kill it after cleanup.
+        if [ "$UAT_PRIOR_LAUNCHAGENT_REGISTERED" = "1" ]; then
             if ! uat_restore_launchagent; then
                 UAT_USER_STATE_RESTORE_STATUS="failed"
                 echo "WARNING: failed to restore Kaboom LaunchAgent" >&2

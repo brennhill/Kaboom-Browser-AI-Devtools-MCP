@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-08
 code_paths:
   - .github/workflows/ci.yml
   - scripts/uat/runners/smoke-test.sh
@@ -26,6 +26,7 @@ code_paths:
   - scripts/tests/framework/framework.sh
   - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
+  - scripts/tests/framework/uat-user-state.test.sh
   - scripts/tests/browser/cat-33-connected-action-coverage.sh
   - scripts/tests/browser/cat-35-qa-fixtures.sh
   - scripts/tests/release/cat-34-packaged-corruption-recovery.sh
