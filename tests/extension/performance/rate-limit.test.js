@@ -626,15 +626,17 @@ describe('Rate Limit: Connection Status Updates', () => {
   })
 
   test('Failed send updates connectionStatus.connected to false', async () => {
+    const { runtime, settleWithTimers } = createControlledBatcherRuntime()
     const sendFn = mock.fn(() => Promise.reject(new Error('Server error: 429')))
 
     const { batcher, getConnectionStatus } = createBatcherWithCircuitBreaker(sendFn, {
       debounceMs: 1,
-      maxBatchSize: 50
+      maxBatchSize: 50,
+      runtime
     })
 
     batcher.add({ type: 'log', message: 'test' })
-    await batcher.flush()
+    await settleWithTimers(batcher.flush())
 
     assert.strictEqual(getConnectionStatus().connected, false)
   })
