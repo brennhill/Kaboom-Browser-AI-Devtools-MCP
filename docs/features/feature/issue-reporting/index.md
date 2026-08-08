@@ -4,7 +4,7 @@ feature_id: feature-issue-reporting
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-08
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
@@ -16,6 +16,7 @@ code_paths:
   - internal/issuereport/sanitize.go
   - internal/issuereport/submit.go
 test_paths:
+  - cmd/browser-agent/composition_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - internal/issuereport/handler_test.go

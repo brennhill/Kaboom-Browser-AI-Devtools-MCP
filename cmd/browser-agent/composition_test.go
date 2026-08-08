@@ -27,6 +27,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func newTestServerForHandlers(t *testing.T) *Server {
@@ -312,6 +313,55 @@ func TestSchemaParity_ObserveWhatEnumMatchesHandlers(t *testing.T) {
 		}
 	}
 	assertSameStringSet(t, "observe.what enum vs observe dispatcher", mustToolEnumValues(t, "observe", "what"), runtimeModes)
+}
+
+func TestIssueReportCompositionCollectsAvailableRuntimeEvidence(t *testing.T) {
+	handler, server, captured := makeToolHandler(t)
+	server.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "fixture"}})
+	captured.Telemetry().AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test", Method: http.MethodGet}})
+	captured.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click"}})
+
+	report := handler.issueReportDeps.Collect("bug", "Runtime evidence", "local context")
+	if report.Template != "bug" || report.Title != "Runtime evidence" || report.UserContext != "local context" {
+		t.Fatalf("report identity = %#v", report)
+	}
+	if report.Diagnostics.Server.Version != version || report.Diagnostics.Platform.OS == "" || report.Diagnostics.Platform.Arch == "" {
+		t.Fatalf("report runtime identity = %#v", report.Diagnostics)
+	}
+	if report.Diagnostics.Buffers.ConsoleEntries != 1 || report.Diagnostics.Buffers.NetworkEntries != 1 || report.Diagnostics.Buffers.ActionEntries != 1 {
+		t.Fatalf("report buffer evidence = %#v", report.Diagnostics.Buffers)
+	}
+
+	minimal := buildIssueReportDeps(&ToolHandler{}).Collect("feature", "Minimal", "")
+	if minimal.Template != "feature" || minimal.Diagnostics.Buffers.ConsoleEntries != 0 {
+		t.Fatalf("minimal report = %#v", minimal)
+	}
+}
+
+func TestConfigureCompositionReadsCanonicalRuntimeOwners(t *testing.T) {
+	handler, server, captured := makeToolHandler(t)
+	server.logs.AddEntries([]types.LogEntry{{"level": "warn", "message": "fixture"}})
+	captured.Telemetry().AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test/api"}})
+	captured.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{Type: "ws_connect", ID: "fixture"}})
+
+	deps := handler.configureLocalDeps
+	if deps.NoiseConfig() != handler.noiseConfig || !deps.HasCapture() {
+		t.Fatal("configure dependencies are detached from canonical runtime owners")
+	}
+	if len(deps.ConsoleEntries()) != 1 || len(deps.NetworkBodies()) != 1 || len(deps.AllWebSocketEvents()) != 1 {
+		t.Fatalf("configure runtime evidence is incomplete: logs=%d network=%d websocket=%d",
+			len(deps.ConsoleEntries()), len(deps.NetworkBodies()), len(deps.AllWebSocketEvents()))
+	}
+	if len(deps.ToolsList()) != len(schema.AllTools()) || deps.GetToolModuleExamples("observe") == nil {
+		t.Fatal("configure schema dependencies are not canonical")
+	}
+	if deps.GetToolModuleExamples("missing-tool") != nil {
+		t.Fatal("unknown tool unexpectedly returned module examples")
+	}
+	deps.InteractActionSetJitter(17)
+	if deps.InteractActionGetJitter() != 17 || deps.GetTelemetryMode() == "" {
+		t.Fatal("configure mutable settings are detached from their runtime owners")
+	}
 }
 
 func mustToolEnumValues(t *testing.T, toolName, propertyName string) []string {
