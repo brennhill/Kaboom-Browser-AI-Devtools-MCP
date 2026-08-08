@@ -267,6 +267,7 @@ describe('pending query targeting', () => {
         id: 'q-stale-internal-target',
         type: 'browser_action',
         correlation_id: 'corr-stale-internal-target',
+        tab_id: 41,
         params: JSON.stringify({ action: 'back' })
       },
       mockSyncClient
@@ -277,6 +278,31 @@ describe('pending query targeting', () => {
     const queued = mockSyncClient.queueCommandResult.mock.calls[0].arguments[0]
     assert.strictEqual(queued.result.target_context.source, 'auto_tracked_active_tab')
     assert.strictEqual(queued.result.target_context.tracked_tab_id, 77)
+  })
+
+  test('rejects a user-explicit restricted tab without silently retargeting the command', async () => {
+    globalThis.chrome = createMockChrome(41, 77)
+    globalThis.chrome.tabs.get = mock.fn((tabId) =>
+      Promise.resolve({ id: tabId, windowId: 1, status: 'complete', url: 'chrome://extensions' })
+    )
+    const mockSyncClient = { queueCommandResult: mock.fn() }
+
+    await bgModule.handlePendingQuery(
+      {
+        id: 'q-explicit-restricted-target',
+        type: 'browser_action',
+        correlation_id: 'corr-explicit-restricted-target',
+        tab_id: 41,
+        params: JSON.stringify({ action: 'back', tab_id: 41 })
+      },
+      mockSyncClient
+    )
+
+    assert.strictEqual(globalThis.chrome.tabs.goBack.mock.calls.length, 0)
+    const queued = mockSyncClient.queueCommandResult.mock.calls[0].arguments[0]
+    assert.strictEqual(queued.status, 'error')
+    assert.strictEqual(queued.result.error, 'target_tab_restricted')
+    assert.strictEqual(queued.result.requested_tab_id, 41)
   })
 
   test('returns deterministic missing_target error when no tab is targetable', async () => {

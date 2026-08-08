@@ -114,6 +114,8 @@ last_verified_date: 2026-04-03
 - A stored tab ID is revalidated against its live URL before every targeted
   command. If that tab navigated to a browser-internal or another extension's
   page, Kaboom clears the stale target and recovers to a trackable web tab.
+  The same validation covers daemon-resolved `query.tab_id` context; a tab ID
+  explicitly requested by the user fails closed instead of being retargeted.
 - Post-navigation readiness probes and command dispatch retain the daemon
   connection generation that originated them. A reconnect supersedes delayed
   acknowledgements and commands before they can mutate the current page, with
