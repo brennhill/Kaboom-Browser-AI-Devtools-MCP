@@ -53,6 +53,11 @@ test('upgrade regression executes npm through the Windows command shell', () => 
     'Windows cannot execute npm or generated .cmd wrappers directly through spawnSync'
   )
   assert.match(source, /cmd\s*===\s*['"]npm['"][\s\S]*endsWith\(['"]\.cmd['"]\)/)
+  assert.match(
+    source,
+    /ensureMcpRoundTrip[\s\S]*run\(binaryPath,\s*\[['"]--port['"]/, 
+    'the generated Windows wrapper must use the same portable command runner'
+  )
 })
 
 test('scheduled and release platform matrices retain replayable lifecycle evidence', () => {

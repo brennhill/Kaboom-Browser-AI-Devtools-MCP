@@ -347,7 +347,7 @@ function ensureMcpRoundTrip(binaryPath, port, env) {
       id: 1,
       method: 'tools/list'
     }) + '\n'
-  const result = spawnSync(binaryPath, ['--port', String(port)], {
+  const result = run(binaryPath, ['--port', String(port)], {
     cwd: repoRoot,
     env,
     encoding: 'utf8',
