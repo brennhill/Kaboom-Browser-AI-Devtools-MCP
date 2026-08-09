@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-08
+last_reviewed: 2026-08-09
 code_paths:
   - .github/workflows/ci.yml
   - scripts/uat/runners/smoke-test.sh
@@ -39,10 +39,11 @@ code_paths:
   - .go-architecture-baseline.json
   - scripts/uat/runners/test-all-tools-comprehensive.sh
   - scripts/maintenance/cleanup-test-daemons.sh
+  - cmd/browser-agent/internal/testowner/testowner.go
+  - cmd/browser-agent/internal/integrationtest/harness.go
   - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/testpages/http.go
   - cmd/browser-agent/internal/testpages/websocket.go
-  - cmd/browser-agent/internal/integrationtest/harness.go
   - cmd/browser-agent/internal/wsframe/frame.go
   - internal/statefault/fault.go
   - internal/statefault/store.go
@@ -62,6 +63,9 @@ test_paths:
   - cmd/browser-agent/internal/testpages/websocket_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - tests/cli/uat-assertions/assertion-falsifiability.test.cjs
+  - cmd/browser-agent/internal/testowner/testowner_test.go
+  - cmd/browser-agent/integration/runtime/orphan_reaping_test.go
+  - tests/cli/uat-assertions/test-daemon-cleanup.test.cjs
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/cli/contracts/test-layout-contract.test.cjs
   - scripts/smoke-tests/interact/14-browser-push.sh
@@ -209,6 +213,24 @@ cached Pilot state, tracked-tab updates, and explicit disconnect lifecycle.
 The package is not imported by release binaries and replaces a larger set of
 unsafe mutation methods that previously compiled into `internal/capture`.
 
+- A test daemon never outlives the process that started it. `t.Cleanup` stops
+  each daemon on the normal path, but it does not run when the test binary is
+  killed outright — a `go test` timeout, a cancelled CI job, Ctrl-C — so the
+  daemon supervises its owner instead: the harness passes `KABOOM_TEST_OWNER_PID`
+  and the daemon exits once that pid disappears. The variable is unset in
+  production, where the watchdog is inert.
+- The sweeper matches versioned process titles. Daemons rewrite their own title
+  to include a compact version tag (`kaboom-test-binary-090`), so the previous
+  pattern `kaboom-test-binary --daemon` — which requires a space after the base
+  name — selected nothing. The cleaner ran after every category and still left
+  twelve daemons alive for twenty hours, each holding a port and a state
+  directory. A contract test now checks the patterns against a versioned title
+  and asserts none of them can match the production daemon.
+- A strict "one test daemon at a time" is deliberately *not* enforced: `go test`
+  runs the four integration packages in parallel, and
+  `TestBridgeStartupContention_AllClientsConverge` races concurrent clients on
+  purpose. The guarantee is instead one daemon per port, zero orphans, and a
+  sweeper that can actually see them.
 - Every category script on disk is scheduled in a suite. A script that exists but
   appears in neither `OFFLINE_CAT_IDS` nor `CONNECTED_CAT_IDS` reads as coverage
   while never running: seven were in that state, and one of them reported 8/8

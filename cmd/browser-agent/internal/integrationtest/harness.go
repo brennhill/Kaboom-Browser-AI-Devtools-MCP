@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testowner"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -134,7 +135,14 @@ func StartServer(t *testing.T, binary string, args ...string) *exec.Cmd {
 		t.Cleanup(func() { stopServer(t, binary, port, stateDirectory) })
 	}
 	command := exec.Command(binary, args...) // #nosec G204 -- test-owned binary and arguments
-	command.Env = append(os.Environ(), statecfg.StateDirEnv+"="+stateDirectory)
+	// The daemon exits on its own once this test process is gone. t.Cleanup
+	// above covers the normal path, but it never runs when the test binary is
+	// killed (go test timeout, CI cancellation, Ctrl-C), which is how strays
+	// accumulate and hold ports for hours.
+	command.Env = append(os.Environ(),
+		statecfg.StateDirEnv+"="+stateDirectory,
+		testowner.OwnerPIDEnv+"="+strconv.Itoa(os.Getpid()),
+	)
 	if root := os.Getenv("KABOOM_GO_COVERDIR"); root != "" {
 		coverageDirectory, err := os.MkdirTemp(root, "browser-")
 		if err != nil {

@@ -17,6 +17,7 @@ import (
 	playbookresources "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks/resources"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testowner"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -122,6 +123,15 @@ func main() {
 	for _, warning := range cfg.Warnings {
 		server.warnings.Add(warning)
 	}
+
+	// Inert unless the integration harness started this process: a daemon owned
+	// by a test exits when that test process dies, so a killed `go test` — which
+	// never runs t.Cleanup — cannot leave the port and state directory held.
+	stopOwnerWatch, _ := testowner.Watch(procctl.IsProcessAlive, func() {
+		fmt.Fprintln(os.Stderr, "[Kaboom] test owner exited; shutting down test daemon")
+		os.Exit(0)
+	}, testowner.DefaultInterval)
+	defer stopOwnerWatch()
 
 	dispatchMode(server, cfg)
 }

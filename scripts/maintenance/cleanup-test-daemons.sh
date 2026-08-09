@@ -105,8 +105,12 @@ cleanup_pid_files() {
 if [[ "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
   taskkill /F /IM kaboom-test-binary.exe >/dev/null 2>&1 || true
 else
-  kill_pattern "kaboom-test-binary --daemon --port" "kaboom test daemons"
-  kill_pattern "kaboom-test-binary --port" "kaboom test clients"
+  # The daemon rewrites its own process title to include a compact version tag
+  # (kaboom-test-binary-090), so a pattern with a space after the base name never
+  # matched and these processes survived every sweep — twelve were found alive
+  # after twenty hours. Match the optional suffix.
+  kill_pattern "kaboom-test-binary[^ ]* --daemon --port" "kaboom test daemons"
+  kill_pattern "kaboom-test-binary[^ ]* --port" "kaboom test clients"
   kill_test_ports 7890 7910
   kill_test_ports 17890 17999
 fi

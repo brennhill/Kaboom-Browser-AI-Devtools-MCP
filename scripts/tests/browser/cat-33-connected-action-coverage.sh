@@ -25,6 +25,17 @@ tracked_tab_id() {
     printf '%s' "${HEALTH_TRACKED_TAB_ID:-0}" | cut -f1
 }
 
+# Chrome refuses chrome.debugger access to a target it considers another
+# extension's page, and refuses to expose some targets to the debugger at all.
+# That is a browser security boundary working as intended — an extension being
+# able to attach a debugger to another extension's page would be the bug — so an
+# action blocked by it is reported as skipped, not failed. Anything else that
+# goes wrong with the same action still fails.
+is_debugger_refusal() {
+    printf '%s' "$1" |
+        grep -qE 'chrome-extension:// URL of different extension|Cannot attach to this target|performance_trace_target_not_debuggable'
+}
+
 action_expectation() {
     case "$1/$2" in
         observe/command_result) echo "expected_error:no_data" ;;
@@ -345,6 +356,10 @@ prepare_action() {
             # against the tab we meant to profile.
             ensure_fixture_page || return 1
             response="$(call_tool "analyze" '{"what":"'"$2"'","action":"start","tab_id":'"$(tracked_tab_id)"'}')"
+            if is_debugger_refusal "$(command_failure_message "$response")"; then
+                skip "$action: Chrome refused debugger access to the target (browser security boundary, not a product failure)"
+                return 1
+            fi
             if ! check_valid_jsonrpc "$response" || check_is_error "$response"; then
                 fail "Could not start $action lifecycle: $(command_failure_message "$response")"
                 return 1
@@ -479,6 +494,8 @@ for tool in $TOOLS; do
             fi
         elif [ "$expectation" = "permission_gated" ]; then
             evaluate_permission_gated "$tool" "$mode" "$response"
+        elif is_debugger_refusal "$(extract_content_text "$response")"; then
+            skip "$tool/$mode: Chrome refused debugger access to the target (browser security boundary, not a product failure)"
         elif check_is_error "$response"; then
             fail "$tool/$mode rejected its connected health payload: $(truncate "$(extract_content_text "$response")")"
         else

@@ -416,8 +416,29 @@ describe('comprehensive UAT harness regressions', () => {
       /analyze\/performance_trace\|analyze\/react_profile\) echo '\{"what":"'"\$mode"'","action":"stop","tab_id":/,
       'the trace lifecycle must stop against the same explicit tab it started'
     )
-    // Chrome refuses the same target every time; retrying only wastes the budget.
-    assert.doesNotMatch(actionCoverage, /performance_trace_target_not_debuggable/)
+    // Chrome refuses the same target every time, so the refusal must never enter
+    // the retry set — retrying only wastes the budget. It may, and should, be
+    // classified: refusing an extension debugger access to another extension's
+    // page is a browser security boundary working as intended, so an action
+    // blocked by it is reported as skipped rather than as a product failure.
+    const retryBody = actionCoverage.slice(actionCoverage.indexOf('call_action_with_retry() {'))
+    const retryPattern = retryBody.match(/grep -qE '([^']*)'/)
+    assert.ok(retryPattern, 'call_action_with_retry must declare a retry pattern')
+    assert.doesNotMatch(
+      retryPattern[1],
+      /performance_trace_target_not_debuggable|chrome-extension:\/\/ URL of different extension/,
+      'a permanent debugger refusal must not be retried'
+    )
+    assert.match(
+      actionCoverage,
+      /is_debugger_refusal\(\)[\s\S]*performance_trace_target_not_debuggable/,
+      'a debugger refusal must be classified rather than reported as a product failure'
+    )
+    assert.match(
+      actionCoverage,
+      /is_debugger_refusal[^\n]*\n\s*skip /,
+      'a classified debugger refusal must skip, not fail'
+    )
     // HEALTH_TRACKED_TAB_ID carries "id<TAB>url"; interpolating it raw into a
     // tab_id field emits malformed JSON that silently stops testing the action.
     assert.doesNotMatch(actionCoverage, /"tab_id":'"\$\{HEALTH_TRACKED_TAB_ID/)
@@ -687,7 +708,12 @@ describe('comprehensive UAT harness regressions', () => {
             ...process.env,
             KABOOM_PROJECT_ROOT: root,
             KABOOM_UAT_WRAPPER: wrapper,
-            KABOOM_UAT_ARTIFACT_DIR: artifactDir
+            KABOOM_UAT_ARTIFACT_DIR: artifactDir,
+            // Without this the spawned runner defaults to 17890 — the port a real
+            // UAT run uses — so `npm test` during a UAT restarts daemons underneath
+            // it and empties the capture buffers. That corrupted cat-11 and cat-29
+            // in a full run and looked like two unrelated product failures.
+            KABOOM_UAT_OFFLINE_PORT: '17801'
           }
         }
       )
