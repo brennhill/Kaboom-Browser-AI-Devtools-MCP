@@ -95,11 +95,18 @@ run_test_30_21() {
     fi
 
     # The fixture writes the submitted values into #sf-result, so reading the
-    # marker back proves the fill and the submit both landed, in order.
-    local text
-    text=$(call_tool "interact" '{"what":"get_text","selector":"#sf-result"}')
-    if ! check_contains "$(extract_content_text "$text")" "$marker"; then
-        fail "Form result does not contain the typed value '$marker': $(truncate "$(extract_content_text "$text")")"
+    # marker back proves the fill and the submit both landed, in order. The
+    # handler runs asynchronously, so poll rather than reading once: a single
+    # read raced the click under load and reported a stale result.
+    local text="" attempt=1
+    while [ "$attempt" -le 10 ]; do
+        text="$(extract_content_text "$(call_tool "interact" '{"what":"get_text","selector":"#sf-result"}')")"
+        check_contains "$text" "$marker" && break
+        attempt=$((attempt + 1))
+        sleep 0.3
+    done
+    if ! check_contains "$text" "$marker"; then
+        fail "Form result never contained the typed value '$marker' after $attempt reads: $(truncate "$text")"
         return
     fi
 

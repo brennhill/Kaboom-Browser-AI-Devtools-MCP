@@ -278,6 +278,17 @@ evaluate_permission_gated() {
     fi
 }
 
+# Actions whose arguments name fixture DOM (or the fixture's IndexedDB) only mean
+# anything on the fixture page. Nineteen of them never established it, so whether
+# they passed depended on what the previous action happened to leave on screen —
+# which is why this category failed on a different pair of actions in every run.
+# interact/highlight looked for #sf-btn on whatever page an earlier navigate had
+# landed on, and observe/indexeddb created its database against that page's origin.
+action_targets_fixture_dom() {
+    printf '%s' "$1" |
+        grep -qE '#sf-|#delayed|kaboom_uat|dup-|react-|honeypot|#ls-|#real-target|#smoke-form|#file-input'
+}
+
 prepare_action() {
     local action="$1/$2"
     local response=""
@@ -463,6 +474,13 @@ for tool in $TOOLS; do
                 continue
                 ;;
         esac
+        # Establish the fixture before prepare_action, not after: observe/indexeddb
+        # seeds its database with a script, and that must run against the fixture's
+        # origin rather than whatever page preceded it. prepare_action may then
+        # ensure again and inject DOM, which survives because nothing navigates after.
+        if action_targets_fixture_dom "$(action_args "$tool" "$mode")"; then
+            ensure_fixture_page || continue
+        fi
         if ! prepare_action "$tool" "$mode"; then
             continue
         fi

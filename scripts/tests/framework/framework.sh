@@ -449,6 +449,23 @@ start_event_recording() {
     local response
     response="$(call_tool "configure" '{"what":"event_recording_start","name":'"$(json_string "$name")"'}')"
     LAST_RECORDING_ID="$(recording_id_from_response "$response")"
+
+    # Only one recording can be active at a time, so a test that fails before
+    # stopping its own leaves every later start failing with already_recording.
+    # That turned one real failure in cat-30 into three. The invariant belongs
+    # here rather than in each caller's error paths: adopt and close the stale
+    # recording, then start the one that was asked for.
+    if [ -z "$LAST_RECORDING_ID" ]; then
+        local stale
+        stale="$(command_failure_message "$response" |
+            sed -n 's/.*already active (id: \([^)]*\)).*/\1/p' | head -n 1)"
+        if [ -n "$stale" ]; then
+            call_tool "configure" '{"what":"event_recording_stop","recording_id":'"$(json_string "$stale")"'}' >/dev/null 2>&1
+            response="$(call_tool "configure" '{"what":"event_recording_start","name":'"$(json_string "$name")"'}')"
+            LAST_RECORDING_ID="$(recording_id_from_response "$response")"
+        fi
+    fi
+
     if [ -z "$LAST_RECORDING_ID" ]; then
         fail "event_recording_start returned no recording_id: $(truncate "$(command_failure_message "$response")")"
         return 1

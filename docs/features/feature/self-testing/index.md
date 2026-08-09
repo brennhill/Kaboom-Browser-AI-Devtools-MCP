@@ -62,10 +62,12 @@ test_paths:
   - cmd/browser-agent/integration/bridge/stdio_silence_test.go
   - cmd/browser-agent/internal/testpages/websocket_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
+  - tests/cli/uat-runner/uat-runner-accounting.test.cjs
   - tests/cli/uat-assertions/assertion-falsifiability.test.cjs
   - cmd/browser-agent/internal/testowner/testowner_test.go
   - cmd/browser-agent/integration/runtime/orphan_reaping_test.go
   - tests/cli/uat-assertions/test-daemon-cleanup.test.cjs
+  - tests/cli/uat-assertions/connected-fixture-determinism.test.cjs
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/cli/contracts/test-layout-contract.test.cjs
   - scripts/smoke-tests/interact/14-browser-push.sh
@@ -213,6 +215,22 @@ cached Pilot state, tracked-tab updates, and explicit disconnect lifecycle.
 The package is not imported by release binaries and replaces a larger set of
 unsafe mutation methods that previously compiled into `internal/capture`.
 
+- An action whose arguments name fixture DOM establishes the fixture first.
+  Nineteen actions did not: `interact/highlight` looked for `#sf-btn` on whatever
+  page a preceding navigate had left up, and `observe/indexeddb` seeded its
+  database against that page's origin. Whether they passed depended on execution
+  order, so the category failed on a *different* pair of actions in every run.
+  The gate is data-driven — any argument naming a fixture selector triggers a
+  re-navigation before the action is prepared — and a contract test fails if a
+  new fixture selector is not recognised by it. This costs roughly 100 seconds
+  on the sweep, which buys determinism: the re-navigation also discards DOM the
+  previous action mutated, so no action inherits another's leftovers.
+- Chrome refusing `chrome.debugger` access to a target it treats as another
+  extension's page is a security boundary working as intended — an extension
+  able to debug another extension's page would be the defect. Such a refusal is
+  classified and skipped, not failed; any other error from the same action still
+  fails, and the refusal never enters the retry set because Chrome refuses the
+  same target every time.
 - A test daemon never outlives the process that started it. `t.Cleanup` stops
   each daemon on the normal path, but it does not run when the test binary is
   killed outright — a `go test` timeout, a cancelled CI job, Ctrl-C — so the
