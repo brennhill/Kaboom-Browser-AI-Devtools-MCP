@@ -4,6 +4,7 @@
 package recording
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -116,6 +117,30 @@ func ValidateRecordingID(id string) error {
 // Recording Lifecycle Methods
 // ============================================================================
 
+// ErrAlreadyRecording marks the expected condition that a recording is already
+// running. Callers must be able to tell it apart from a real failure: it was
+// previously collapsed into a generic error whose recovery advice blamed storage
+// quota, so an agent hunted for disk space instead of stopping the recording.
+var ErrAlreadyRecording = errors.New("already_recording")
+
+// ErrNoActiveRecording marks a stop request when nothing is running.
+var ErrNoActiveRecording = errors.New("no_active_recording")
+
+// IsAlreadyRecording reports whether a start failed only because one was active.
+func IsAlreadyRecording(err error) bool { return errors.Is(err, ErrAlreadyRecording) }
+
+// IsNoActiveRecording reports whether a stop found nothing to close.
+func IsNoActiveRecording(err error) bool { return errors.Is(err, ErrNoActiveRecording) }
+
+// ActiveRecordingID returns the running recording, or "" when none is running.
+// Without this the active recording is invisible: stop needs an id that only
+// start returned, and the recordings listing contains completed sessions only.
+func (r *RecordingManager) ActiveRecordingID() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.activeRecordingID
+}
+
 // StartRecording starts a new recording session.
 // Returns recording_id and error status.
 func (r *RecordingManager) StartRecording(name string, pageURL string, sensitiveDataEnabled bool) (string, error) {
@@ -124,7 +149,7 @@ func (r *RecordingManager) StartRecording(name string, pageURL string, sensitive
 
 	// Check if already recording.
 	if r.activeRecordingID != "" {
-		return "", fmt.Errorf("already_recording: A recording is already active (id: %s)", r.activeRecordingID)
+		return "", fmt.Errorf("%w: A recording is already active (id: %s)", ErrAlreadyRecording, r.activeRecordingID)
 	}
 
 	// Check storage quota.
@@ -190,9 +215,19 @@ func recordingIDName(name string) string {
 
 // StopRecording stops the current recording and persists it to disk.
 // Returns action count and duration.
+// StopRecording closes a recording. An empty recordingID stops whichever
+// recording is active, so a caller that no longer holds the id from start is
+// not stuck with an unstoppable session it can never replace.
 func (r *RecordingManager) StopRecording(recordingID string) (int, int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if recordingID == "" {
+		if r.activeRecordingID == "" {
+			return 0, 0, fmt.Errorf("%w: No recording is currently active", ErrNoActiveRecording)
+		}
+		recordingID = r.activeRecordingID
+	}
 
 	// Validate recording exists.
 	recording, exists := r.recordings[recordingID]

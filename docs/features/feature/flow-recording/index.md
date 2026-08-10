@@ -4,7 +4,7 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-08-10
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -45,6 +45,7 @@ test_paths:
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/internal/toolrecording/playback_result_test.go
   - internal/capture/recordingtest/recording_manager_test.go
+  - internal/recording/manager_active_test.go
   - internal/capture/recordingtest/recording_store_integration_test.go
   - internal/capture/recordingtest/recording_logdiff_integration_test.go
   - internal/capture/recordingtest/recording_extension_lifecycle_test.go
@@ -121,6 +122,16 @@ canonical owners directly; root one-line forwarding wrappers are prohibited.
   - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
   - `cmd/browser-agent/tools_core.go`
   - `cmd/browser-agent/internal/toolrecording/handler.go`
+- Only one recording runs at a time, and the running one must stay reachable.
+  `event_recording_stop` accepts no `recording_id`, meaning "stop whatever is
+  active", and `observe(recordings)` reports `active_recording_id` alongside the
+  completed sessions it lists. Without both, an agent that lost the id start
+  returned could never record again: stop demanded that id, the listing showed
+  only finished recordings, and start refused while one was running.
+- Starting while a recording is active returns `already_recording` and a playbook
+  naming the stop call. It previously returned `internal_error` with "Check
+  storage quota and try again", so a caller acting on the code and the playbook
+  went looking for disk space while the actual remedy went unmentioned.
   - `cmd/browser-agent/internal/toolrecording/helpers.go`
   - `internal/capture/httpingest/handlers.go`
   - `src/background/recording/index.ts`

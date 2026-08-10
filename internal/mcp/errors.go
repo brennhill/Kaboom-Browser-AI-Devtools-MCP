@@ -22,6 +22,7 @@ const (
 	ErrNotInitialized       = "not_initialized"
 	ErrNoData               = "no_data"
 	ErrCodePilotDisabled    = "pilot_disabled"
+	ErrAlreadyRecording     = "already_recording"
 	ErrOsAutomationDisabled = "os_automation_disabled"
 	ErrRateLimited          = "rate_limited"
 	ErrCursorExpired        = "cursor_expired"

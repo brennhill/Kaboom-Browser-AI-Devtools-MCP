@@ -6,6 +6,7 @@ package toolrecording
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -23,18 +24,43 @@ type fakeCapture struct {
 	stopErr        error
 	listErr        error
 	recording      *recording.Recording
+
+	activeRecordingID string
+	startErr          error
+}
+
+// responseText returns the first content block of an MCP response.
+func responseText(t *testing.T, response mcp.JSONRPCResponse) string {
+	t.Helper()
+	var result struct {
+		Content []struct {
+			Text string `json:"text"`
+		} `json:"content"`
+	}
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(result.Content) == 0 {
+		t.Fatal("response carried no content")
+	}
+	return result.Content[0].Text
 }
 
 func (f *fakeCapture) StartRecording(name, pageURL string, sensitive bool) (string, error) {
 	f.startName = name
 	f.startURL = pageURL
 	f.startSensitive = sensitive
+	if f.startErr != nil {
+		return "", f.startErr
+	}
 	return "rec-123", nil
 }
 
 func (f *fakeCapture) StopRecording(string) (int, int64, error) {
 	return 3, 125, f.stopErr
 }
+
+func (f *fakeCapture) ActiveRecordingID() string { return f.activeRecordingID }
 
 func (f *fakeCapture) ListRecordings(int) ([]recording.Recording, error) {
 	return f.recordings, f.listErr
@@ -227,5 +253,53 @@ func TestRecordingIDHandlersRejectInvalidJSON(t *testing.T) {
 				t.Fatalf("expected %s, got %s", mcp.ErrInvalidJSON, string(resp.Result))
 			}
 		})
+	}
+}
+
+// An already-running recording is an expected condition with an obvious remedy.
+// It used to return internal_error with "Check storage quota and try again", so a
+// caller acting on the code and the playbook hunted for disk space while the real
+// fix went unmentioned — and the id it needed appeared nowhere else.
+func TestEventRecordingStartClassifiesAlreadyRecording(t *testing.T) {
+	deps := &fakeCapture{startErr: fmt.Errorf("%w: A recording is already active (id: rec-1)", recording.ErrAlreadyRecording)}
+	handler := NewHandler(deps, nil)
+
+	resp := handler.EventRecordingStart(mcp.JSONRPCRequest{}, json.RawMessage(`{"name":"x"}`))
+	text := responseText(t, resp)
+
+	if !strings.Contains(text, `"error_code":"already_recording"`) {
+		t.Fatalf("start must classify the conflict, got: %s", text)
+	}
+	if strings.Contains(text, "Check storage quota") {
+		t.Fatalf("start must not blame storage for an active recording, got: %s", text)
+	}
+	if !strings.Contains(text, "event_recording_stop") {
+		t.Fatalf("the playbook must name the remedy, got: %s", text)
+	}
+}
+
+// Omitting recording_id stops whatever is active. Requiring it made a lost id
+// unrecoverable: the active recording is not listed, and start refuses while one runs.
+func TestEventRecordingStopWithoutIDIsAccepted(t *testing.T) {
+	handler := NewHandler(&fakeCapture{}, nil)
+
+	resp := handler.EventRecordingStop(mcp.JSONRPCRequest{}, json.RawMessage(`{}`))
+	text := responseText(t, resp)
+
+	if strings.Contains(text, "missing_param") {
+		t.Fatalf("stop must not demand a recording_id, got: %s", text)
+	}
+	if !strings.Contains(text, "Recording stopped") {
+		t.Fatalf("stop without an id must close the active recording, got: %s", text)
+	}
+}
+
+// The running recording must be visible to a caller that no longer holds its id.
+func TestRecordingsListingExposesTheActiveRecording(t *testing.T) {
+	handler := NewHandler(&fakeCapture{activeRecordingID: "rec-live"}, nil)
+
+	text := responseText(t, handler.Recordings(mcp.JSONRPCRequest{}, json.RawMessage(`{}`)))
+	if !strings.Contains(text, `"active_recording_id":"rec-live"`) {
+		t.Fatalf("recordings listing must expose the active recording, got: %s", text)
 	}
 }

@@ -400,6 +400,15 @@ call_action_with_retry() {
             printf '%s' "$response"
             return 0
         fi
+        # navigate_and_document reports "URL did not change" as extension_timeout,
+        # which the pattern above would retry. The click itself already succeeded,
+        # so an identical retry reproduces it: three attempts, each a 15s URL wait
+        # plus two fixture navigations, turned this one action into a ~16 minute
+        # stall and a 971s category. Report it once instead of paying for it thrice.
+        if printf '%s\n%s' "$response" "$response_text" | grep -q 'URL did not change after click'; then
+            printf '%s' "$response"
+            return 0
+        fi
         if [ "$attempt" -eq 3 ]; then
             break
         fi

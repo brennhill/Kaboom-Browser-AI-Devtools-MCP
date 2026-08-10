@@ -22,6 +22,7 @@ import (
 type Store interface {
 	StartRecording(name, pageURL string, sensitiveDataEnabled bool) (string, error)
 	StopRecording(recordingID string) (int, int64, error)
+	ActiveRecordingID() string
 	ListRecordings(limit int) ([]recording.Recording, error)
 	GetRecording(recordingID string) (*recording.Recording, error)
 	LookupRecording(recordingID string) (*recording.Recording, error)
@@ -69,6 +70,18 @@ func (h *Handler) EventRecordingStart(req mcp.JSONRPCRequest, args json.RawMessa
 
 	recordingID, err := h.recordings.StartRecording(params.Name, params.URL, params.SensitiveDataEnabled)
 	if err != nil {
+		// An already-running recording is an expected condition with an obvious
+		// remedy, not an internal failure. It used to return ErrInternal with
+		// "Check storage quota and try again", so a caller acting on the code and
+		// the playbook went looking for disk space while the real fix — stopping
+		// the active recording — went unmentioned, and the id it needed appeared
+		// nowhere but this message.
+		if recording.IsAlreadyRecording(err) {
+			return mcp.Fail(req, mcp.ErrAlreadyRecording,
+				fmt.Sprintf("Failed to start recording: %v", err),
+				"Stop the active recording first: configure({what: 'event_recording_stop'}). "+
+					"Its id is also reported by observe({what: 'recordings'}) as active_recording_id.")
+		}
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to start recording: %v", err),
 			"Check storage quota and try again")
@@ -93,16 +106,30 @@ func (h *Handler) EventRecordingStart(req mcp.JSONRPCRequest, args json.RawMessa
 
 // EventRecordingStop stops capture and records the lifecycle event.
 func (h *Handler) EventRecordingStop(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	recordingID, resp := parseRecordingID(req, args, "Provide the recording_id from event_recording_start")
-	if resp != nil {
-		return *resp
+	// recording_id is optional: omitting it stops whichever recording is active.
+	// Requiring it made a lost id unrecoverable, because the active recording is
+	// not listed by observe(recordings) and start refuses while one is running.
+	var params recordingIDParams
+	if len(args) > 0 {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+			return resp
+		}
 	}
+	recordingID := params.RecordingID
 
 	actionCount, duration, err := h.recordings.StopRecording(recordingID)
 	if err != nil {
+		if recording.IsNoActiveRecording(err) {
+			return mcp.Fail(req, mcp.ErrNoData,
+				fmt.Sprintf("Failed to stop recording: %v", err),
+				"Nothing is recording. Start one first: configure({what: 'event_recording_start', name: 'my-recording'})")
+		}
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to stop recording: %v", err),
 			"No active recording with this ID. Start one first: configure({what: 'event_recording_start', name: 'my-recording'})")
+	}
+	if recordingID == "" {
+		recordingID = "(active)"
 	}
 
 	h.log(types.LogEntry{
@@ -143,10 +170,19 @@ func (h *Handler) Recordings(req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 			fmt.Sprintf("Failed to list recordings: %v", err),
 			"Check that recordings directory exists")
 	}
-	return mcp.Succeed(req, fmt.Sprintf("%d recording(s) found", len(recordings)), map[string]any{
-		"recordings": recordings,
-		"count":      len(recordings),
-		"limit":      params.Limit,
+	// ListRecordings returns completed sessions only, so without this the running
+	// recording is invisible everywhere — and stopping it needs an id that only
+	// start ever returned.
+	active := h.recordings.ActiveRecordingID()
+	summary := fmt.Sprintf("%d recording(s) found", len(recordings))
+	if active != "" {
+		summary += fmt.Sprintf("; recording in progress: %s", active)
+	}
+	return mcp.Succeed(req, summary, map[string]any{
+		"recordings":          recordings,
+		"count":               len(recordings),
+		"limit":               params.Limit,
+		"active_recording_id": active,
 	})
 }
 

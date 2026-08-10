@@ -439,6 +439,14 @@ describe('comprehensive UAT harness regressions', () => {
       /is_debugger_refusal[^\n]*\n\s*skip /,
       'a classified debugger refusal must skip, not fail'
     )
+    // navigate_and_document reports "URL did not change" as extension_timeout, which
+    // the retry pattern matches. The click already succeeded, so identical retries
+    // reproduce it — three attempts turned one action into a ~16 minute stall.
+    assert.match(
+      retryBody,
+      /URL did not change after click[\s\S]{0,120}return 0/,
+      'an unchanged-URL outcome must be reported once rather than retried'
+    )
     // HEALTH_TRACKED_TAB_ID carries "id<TAB>url"; interpolating it raw into a
     // tab_id field emits malformed JSON that silently stops testing the action.
     assert.doesNotMatch(actionCoverage, /"tab_id":'"\$\{HEALTH_TRACKED_TAB_ID/)
