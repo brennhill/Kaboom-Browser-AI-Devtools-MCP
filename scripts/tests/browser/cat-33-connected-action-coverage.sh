@@ -7,6 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/../framework/framework.sh"
+# shellcheck source=cat-33-expectations.sh
+source "$SCRIPT_DIR/cat-33-expectations.sh"
 
 PORT="${1:-7890}"
 OUTPUT_FILE="${2:-/dev/null}"
@@ -445,6 +447,8 @@ schema_count="$(printf '%s' "$tools_response" | jq --argjson tools '["observe","
 ')"
 executed_count=0
 classified_count=0
+reachability_only_count=0
+asserted_content_count=0
 selected_count=0
 HEALTH_TRACKED_TAB_ID="$(uat_connected_tracked_tab "$PORT" "$WRAPPER")"
 HEALTH_RECORDING_ID=""
@@ -526,13 +530,33 @@ for tool in $TOOLS; do
         elif check_is_error "$response"; then
             fail "$tool/$mode rejected its connected health payload: $(truncate "$(extract_content_text "$response")")"
         else
-            pass "$tool/$mode returned a successful connected response"
+            expected_content="$(action_content_expectation "$tool" "$mode")"
+            if [ "$expected_content" = "reachability_only" ]; then
+                reachability_only_count=$((reachability_only_count + 1))
+                pass "$tool/$mode reached the connected dispatcher (reachability only — no content assertion yet)"
+            elif ! extract_content_text "$response" | grep -qE "$expected_content"; then
+                fail "$tool/$mode returned a success envelope without its documented payload (wanted $expected_content): $(truncate "$(extract_content_text "$response")")"
+            else
+                asserted_content_count=$((asserted_content_count + 1))
+                pass "$tool/$mode returned its documented payload ($expected_content)"
+            fi
         fi
     done
 done
 
 if [ -n "$ACTION_FILTER" ] && [ "$selected_count" -eq 0 ]; then
     fail "No live schema action matched KABOOM_UAT_ACTION=$ACTION_FILTER"
+fi
+
+# The ratchet. Without it a new mode gets free apparent coverage: the sweep
+# invokes it, reports a pass, and nothing records that nobody checked what came
+# back. That mechanism is how 95 of 163 modes accumulated.
+if [ -z "$ACTION_FILTER" ]; then
+    if [ "$reachability_only_count" -gt "$UAT_REACHABILITY_BASELINE" ]; then
+        fail "Reachability-only modes rose to $reachability_only_count, above the baseline of $UAT_REACHABILITY_BASELINE. Give the new mode a content expectation in cat-33-expectations.sh."
+    else
+        pass "Reachability-only modes: $reachability_only_count of $classified_count (baseline $UAT_REACHABILITY_BASELINE); $asserted_content_count assert their documented payload"
+    fi
 fi
 
 if [ "$classified_count" -ne "$schema_count" ]; then

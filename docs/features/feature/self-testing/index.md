@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-09
+last_reviewed: 2026-08-11
 code_paths:
   - .github/workflows/ci.yml
   - scripts/uat/runners/smoke-test.sh
@@ -114,6 +114,8 @@ test_paths:
   - internal/capturefixture/sync_test.go
   - internal/extclient/extclient_test.go
   - internal/capture/syncruntime/sync_test.go
+  - scripts/tests/browser/cat-33-expectations.sh
+  - scripts/tests/framework/uat-fixture-state.sh
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
