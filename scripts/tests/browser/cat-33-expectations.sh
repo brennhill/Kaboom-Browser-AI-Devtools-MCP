@@ -35,6 +35,12 @@ action_content_expectation() {
         configure/doctor) echo '"checks"|"diagnostics"|"status"' ;;
         observe/inbox) echo '"events"' ;;
         generate/test_classify) echo '"classification"' ;;
+
+        # KNOWN-WEAK. Browser-mediated modes return an async lifecycle envelope
+        # (queued/status/result/correlation_id) with the real payload nested
+        # under .result, so matching "result" proves the query was queued and
+        # nothing about what came back. Replace once the payload shape is
+        # declared — see kaboom-jp5i.
         analyze/feature_gates) echo '"result"' ;;
 
         # ── DOM: asserted against interact.html ────────────
