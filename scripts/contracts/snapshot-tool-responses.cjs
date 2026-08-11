@@ -189,7 +189,9 @@ for (const [tool, modes] of Object.entries(surface)) {
       continue
     }
     const args = argTable[key] || `{"what":"${mode}"}`
-    rows.push({ key, tool, mode, args, ...shapeOf(callMode(tool, args), key) })
+    const rpc = callMode(tool, args)
+    const bytes = (rpc?.result?.content?.[0]?.text || '').length
+    rows.push({ key, tool, mode, args, response_bytes: bytes, ...shapeOf(rpc, key) })
     process.stderr.write('.')
   }
 }
@@ -207,6 +209,10 @@ console.log(`  responses flagged isError: ${rows.filter((r) => r.is_error).lengt
 
 // The review list the owner asked for: current behaviour that may be an accident
 // rather than a decision, and should be looked at before it is locked in.
+const big = rows.filter((r) => (r.response_bytes || 0) > 10000).sort((a, b) => b.response_bytes - a.response_bytes)
+console.log(`\nLARGEST RESPONSES — ${big.length} modes over 10KB:`)
+for (const r of big) console.log(`  ${String(r.response_bytes).padStart(7)} bytes  ${r.key}`)
+
 const thin = rows.filter((r) => !r.kind.match(/excluded|rpc_error/) && !r.is_error && (r.payload_keys || []).length <= 1)
 console.log(`\nREVIEW BEFORE LOCKING — ${thin.length} modes return 0-1 payload fields:`)
 for (const r of thin) console.log(`  ${r.key.padEnd(34)} kind=${r.kind.padEnd(12)} payload=${JSON.stringify(r.payload_keys)}`)
