@@ -11,6 +11,8 @@ FRAMEWORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEST_DAEMON_CLEANER="$FRAMEWORK_DIR/../../cleanup-test-daemons.sh"
 # shellcheck source=uat-user-state.sh
 source "$FRAMEWORK_DIR/uat-user-state.sh"
+# shellcheck source=uat-fixture-state.sh
+source "$FRAMEWORK_DIR/uat-fixture-state.sh"
 
 # ── Timeout Compatibility ──────────────────────────────────
 # macOS doesn't ship with `timeout`. Use gtimeout from coreutils if available.
@@ -422,11 +424,122 @@ json_string() {
     printf '%s' "$1" | jq -Rs .
 }
 
-# The daemon-served interaction fixture used by connected categories. Serving it
-# from the daemon keeps connected tests off the public internet and gives them a
-# known DOM (#sf-btn and friends) to assert against.
+# ── Fixture Routing ────────────────────────────────────────
+#
+# The daemon embeds a corpus of deterministic pages at /tests/ (see
+# cmd/browser-agent/internal/testpages/pages). Until now every connected test
+# drove interact.html, so modes that read console errors, network traffic,
+# websocket frames, long tasks or layout shift were invoked against a page that
+# contains none of those. They returned empty, and empty is not an error, so
+# they passed while verifying nothing.
+#
+# fixture_url names a page; arm_fixture puts known state into it. Assert against
+# uat-fixture-state.sh, which declares what each armed fixture contains.
+
+# Resolves a fixture name to its daemon-served URL. Unknown names are a hard
+# error rather than a silent fallback: falling back to interact.html is exactly
+# how a mode ends up asserting against a page that cannot exercise it.
+fixture_url() {
+    local name="${1:-interact}"
+    case "$name" in
+        interact | telemetry | performance | a11y | recording | interaction-test | cdp-smoke-test)
+            echo "http://127.0.0.1:${PORT}/tests/${name}.html"
+            ;;
+        *)
+            echo "FATAL: unknown fixture '$name'" >&2
+            return 1
+            ;;
+    esac
+}
+
+# The default fixture for connected categories that only need a known DOM.
 connected_fixture_url() {
-    echo "http://127.0.0.1:${PORT}/tests/interact.html"
+    fixture_url interact
+}
+
+# Navigates the tracked tab to a fixture and waits for its readiness anchor.
+ensure_fixture() {
+    local name="${1:-interact}"
+    local anchor=""
+    case "$name" in
+        interact) anchor="#sf-btn" ;;
+        telemetry) anchor="#console-count" ;;
+        performance) anchor="#cls-box" ;;
+        a11y) anchor="#bad-input-name" ;;
+        recording) anchor="#rec-indicator" ;;
+        *) anchor="body" ;;
+    esac
+
+    local url
+    url="$(fixture_url "$name")" || return 1
+
+    local response
+    response="$(call_tool "interact" \
+        '{"what":"navigate_and_wait_for","url":'"$(json_string "$url")"',"wait_for":'"$(json_string "$anchor")"'}')"
+    if ! check_valid_jsonrpc "$response" || check_is_error "$response"; then
+        return 1
+    fi
+    return 0
+}
+
+# Clears the capture buffers an assertion is about to read.
+#
+# Without this, counts are cumulative across every navigation the category has
+# already performed, so "exactly three errors" is unassertable and tests degrade
+# to "at least one of something". Clearing first is what makes exact counts
+# meaningful, and it is why arming is clear -> navigate -> trigger rather than
+# just navigate.
+clear_capture_buffer() {
+    local buffer="${1:-all}"
+    call_tool "configure" '{"what":"clear","buffer":"'"$buffer"'"}' >/dev/null 2>&1 || true
+}
+
+# Runs a fixture's in-page generator and gives the capture pipeline time to
+# deliver. Returns non-zero if the generator itself failed, so a caller never
+# asserts against state that was never produced.
+trigger_fixture() {
+    local script="$1"
+    local settle_seconds="${2:-2}"
+    local response
+    response="$(call_tool "interact" '{"what":"execute_js","script":'"$(json_string "$script")"'}')"
+    if ! check_valid_jsonrpc "$response" || check_is_error "$response"; then
+        return 1
+    fi
+    # The generator runs in the page; capture has to travel page -> extension ->
+    # daemon before a read can see it. Measured delivery for the telemetry arm
+    # was under 2s; asserting immediately reads an empty buffer and looks like a
+    # capture failure.
+    sleep "$settle_seconds"
+    return 0
+}
+
+# Establishes a fixture in a known, asserted-against state.
+#
+# Idempotent by construction: the buffer clear means a retry re-establishes the
+# same state rather than doubling the counts a caller is about to assert on.
+arm_fixture() {
+    local name="$1"
+    local buffer="${2:-all}"
+
+    clear_capture_buffer "$buffer"
+    ensure_fixture "$name" || return 1
+    # Clear again after navigation: the page load itself emits requests (and
+    # telemetry.html auto-fires 404/500/CORS fetches 300ms in), which would
+    # otherwise land in the buffer the caller is about to read.
+    clear_capture_buffer "$buffer"
+
+    case "$name" in
+        telemetry)
+            trigger_fixture "$UAT_ARM_TELEMETRY" || return 1
+            ;;
+        performance)
+            trigger_fixture "$UAT_ARM_PERFORMANCE" 3 || return 1
+            ;;
+        a11y | interact | recording | *)
+            # These fixtures carry their state statically; nothing to trigger.
+            ;;
+    esac
+    return 0
 }
 
 # Extracts the recording_id from an event_recording_start response.

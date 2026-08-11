@@ -4,12 +4,13 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-11
 code_paths:
   - internal/capture/healthreader/reader.go
   - internal/queries/dispatcher_queries.go
   - internal/capture/syncruntime/handler.go
   - internal/capture/telemetrystore/store.go
+  - internal/capture/waterfallstore/store.go
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/store.go
   - internal/capture/wsconn/tracker.go
@@ -89,6 +90,7 @@ test_paths:
   - cmd/browser-agent/internal/mcphttp/handler_test.go
   - internal/tools/observe/page/page_state_storage_test.go
   - internal/tools/observe/page/page_state_screenshot_test.go
+  - internal/capture/waterfallstore/store_test.go
 
   - internal/tools/observe/hints/hints_test.go
   - tests/extension/injection/inject-console-network-exceptions.test.js

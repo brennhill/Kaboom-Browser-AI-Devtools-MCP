@@ -137,7 +137,18 @@ func TestTelemetryPressureReportsSaturationAndRecovery(t *testing.T) {
 	assertPressure("websocket", pressure.WebSocket, 500, 2)
 	assertPressure("actions", pressure.Actions, 1000, 1)
 	store = telemetrystore.New(telemetrystore.Dependencies{NetworkBodies: store.NetworkBodies(), Actions: store.Actions(), WebSockets: store.WebSockets(), Waterfall: waterfallstore.New(3)})
-	store.NetworkWaterfall().Add(make([]types.NetworkWaterfallEntry, 7), "https://example.test")
+	// Distinct entries: the waterfall store deduplicates by request identity, so
+	// seven zero-valued entries would be one request repeated and would exercise
+	// dedup rather than the bounded retention this test is about.
+	waterfallEntries := make([]types.NetworkWaterfallEntry, 7)
+	for i := range waterfallEntries {
+		waterfallEntries[i] = types.NetworkWaterfallEntry{
+			Name:      fmt.Sprintf("https://example.test/asset-%d.js", i),
+			URL:       fmt.Sprintf("https://example.test/asset-%d.js", i),
+			StartTime: float64(i + 1),
+		}
+	}
+	store.NetworkWaterfall().Add(waterfallEntries, "https://example.test")
 	if got := store.Pressure().NetworkWaterfall; got.Size != 3 || got.Dropped != 4 {
 		t.Fatalf("network waterfall pressure = %#v, want bounded with four drops", got)
 	}
