@@ -36,6 +36,8 @@ code_paths:
   - internal/schema/interact/properties_form_wait.go
   - internal/schema/interact/properties_output_batch.go
   - internal/schema/interact/properties_targeting.go
+  - internal/mcp/response_clamp.go
+  - scripts/contracts/snapshot-tool-responses.cjs
 test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go
@@ -49,6 +51,7 @@ test_paths:
   - internal/schema/invariants_test.go
   - internal/schema/interact/schema_test.go
   - cmd/browser-agent/composition_test.go
+  - internal/mcp/response_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

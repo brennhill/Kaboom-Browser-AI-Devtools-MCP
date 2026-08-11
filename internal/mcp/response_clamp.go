@@ -55,19 +55,28 @@ func ClampResponseSize(result json.RawMessage) json.RawMessage {
 		overhead = 200
 	}
 
-	// Target text size to fit within effective limit
-	truncNote := fmt.Sprintf("\n\n[truncated: original %d bytes, limit %d bytes. Use pagination parameters (limit, offset, last_n) to page through results.]", originalSize, MaxResponseBytes)
+	// The note goes BEFORE the JSON, never after it. Appending it to the body
+	// undid every byte of bracket-closing below and handed the client prose
+	// glued onto JSON, which does not parse at all — a 717KB draw_history
+	// response clamped to 100KB was unreadable rather than merely shortened.
+	truncNote := fmt.Sprintf("[truncated: original %d bytes, limit %d bytes. Use pagination parameters (limit, offset, last_n) to page through results.]", originalSize, MaxResponseBytes)
 	targetTextLen := effectiveLimit - overhead - len(truncNote) - 100 // 100 bytes margin
 	if targetTextLen < 100 {
 		targetTextLen = 100
 	}
 
 	if len(text) > targetTextLen {
-		// JSON-aware truncation: find the last valid JSON boundary to avoid
-		// producing malformed JSON that agents cannot parse.
-		truncatedText := text[:targetTextLen]
-		truncatedText = truncateAtJSONBoundary(truncatedText)
-		toolResult.Content[0].Text = truncatedText + truncNote
+		header, body := splitProseAndJSON(text)
+		if body == "" {
+			// No JSON body to protect; plain prose truncates in place.
+			toolResult.Content[0].Text = text[:targetTextLen] + "\n\n" + truncNote
+		} else {
+			budget := targetTextLen - len(header)
+			if budget < 2 {
+				budget = 2
+			}
+			toolResult.Content[0].Text = header + truncNote + "\n" + truncateJSONBody(body, budget)
+		}
 	}
 
 	clamped, err := json.Marshal(toolResult)
@@ -75,6 +84,44 @@ func ClampResponseSize(result json.RawMessage) json.RawMessage {
 		return result
 	}
 	return json.RawMessage(clamped)
+}
+
+// splitProseAndJSON separates a response's human-readable header from its JSON
+// body. Responses are conventionally "summary line\n{...}", and the header can
+// itself contain braces (recovery hints embed examples like {what:'draw_history'}),
+// so the body starts at the first line that BEGINS with '{'.
+func splitProseAndJSON(text string) (header, body string) {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, "{") {
+			return strings.Join(lines[:i], "\n") + "\n", strings.Join(lines[i:], "\n")
+		}
+	}
+	return text, ""
+}
+
+// truncateJSONBody shortens a JSON document to fit budget and guarantees the
+// result still parses. Closing brackets alone is not enough: a cut can land
+// inside a string literal, so the candidate is validated and walked back to
+// earlier boundaries until it is genuinely valid.
+func truncateJSONBody(body string, budget int) string {
+	if len(body) <= budget {
+		return body
+	}
+	candidate := body[:budget]
+	for attempt := 0; attempt < 500; attempt++ {
+		if closed := truncateAtJSONBoundary(candidate); json.Valid([]byte(closed)) {
+			return closed
+		}
+		idx := strings.LastIndexAny(candidate, ",}]")
+		if idx <= 0 {
+			break
+		}
+		candidate = candidate[:idx]
+	}
+	// Never emit something unparseable. An empty object is honest: the note
+	// already tells the caller the payload was too large and how to page it.
+	return "{}"
 }
 
 // truncateAtJSONBoundary finds the last safe truncation point in a JSON string.

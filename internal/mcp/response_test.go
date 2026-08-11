@@ -6,6 +6,7 @@ package mcp
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -270,9 +271,14 @@ func TestClampResponseSize_TruncatedTextContainsValidishJSON(t *testing.T) {
 
 	// The text content should be parseable as JSON (truncateAtJSONBoundary should close brackets)
 	text := toolResult.Content[0].Text
-	// Strip trailing truncation note if present
-	if idx := strings.Index(text, "\n\n[truncated"); idx > 0 {
-		text = text[:idx]
+	// The truncation note now precedes the JSON body instead of following it:
+	// appended after, it made the very payload this test guards unparseable.
+	// The body is everything from the first line that begins with '{'.
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(line, "{") {
+			text = text[strings.Index(text, line):]
+			break
+		}
 	}
 
 	var inner2 any
@@ -504,5 +510,56 @@ func TestImageContentBlock_SerializesCorrectly(t *testing.T) {
 	// Should NOT have "text" field
 	if strings.Contains(s, `"text"`) {
 		t.Errorf("image block JSON should not contain 'text' field, got: %s", s)
+	}
+}
+
+// An oversized response must stay machine-readable. Truncation appended the
+// "[truncated: ...]" note AFTER the JSON body, so every byte of bracket-closing
+// work in truncateAtJSONBoundary was undone by the note itself and the client
+// received unparseable JSON. Observed on analyze/draw_history: a 717KB payload
+// clamped to 100KB came back as JSON followed by prose, and json.Unmarshal on
+// the body failed outright rather than returning a shortened result.
+func TestClampKeepsTheJSONBodyParseable(t *testing.T) {
+	sessions := make([]map[string]any, 4000)
+	for i := range sessions {
+		sessions[i] = map[string]any{"file": fmt.Sprintf("draw-session-%d.json", i), "path": strings.Repeat("p", 60)}
+	}
+	body, err := json.Marshal(map[string]any{"count": len(sessions), "sessions": sessions})
+	if err != nil {
+		t.Fatalf("marshal fixture: %v", err)
+	}
+	// Real responses are a prose header followed by the JSON body.
+	text := "Draw history\n" + string(body)
+
+	raw, err := json.Marshal(MCPToolResult{Content: []MCPContentBlock{{Type: "text", Text: text}}})
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	if len(raw) <= MaxResponseBytes {
+		t.Fatalf("fixture must exceed the clamp limit, got %d bytes", len(raw))
+	}
+
+	var clamped MCPToolResult
+	if err := json.Unmarshal(ClampResponseSize(raw), &clamped); err != nil {
+		t.Fatalf("unmarshal clamped result: %v", err)
+	}
+	got := clamped.Content[0].Text
+
+	if !strings.Contains(got, "truncated") {
+		t.Fatal("a clamped response must say it was truncated")
+	}
+
+	// The JSON body is everything from the first line that starts with '{'.
+	idx := strings.Index(got, "\n{")
+	if idx == -1 {
+		t.Fatalf("clamped text lost its JSON body: %.120q", got)
+	}
+	jsonBody := got[idx+1:]
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(jsonBody), &parsed); err != nil {
+		t.Fatalf("clamped JSON body does not parse (%v); tail was %.160q", err, jsonBody[max(0, len(jsonBody)-160):])
+	}
+	if _, ok := parsed["sessions"]; !ok {
+		t.Fatal("clamped body should retain the sessions field, shortened")
 	}
 }
