@@ -118,7 +118,17 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 			// (exit 0) and let it keep serving — do NOT start a rival server or
 			// kill the incumbent. Returning nil unwinds to a graceful exit.
 			server.logLifecycle("daemon_deferred_exit", port, nil)
-			diag.Printf("[Kaboom] A healthy daemon is already serving on port %d; this instance is exiting.\n", port)
+			// Name the incumbent, not the port we were asked for: the lock is
+			// per state directory, so the daemon we are deferring to may be on
+			// a different port entirely, and saying otherwise sends an operator
+			// looking for a listener that was never there.
+			var deferral *daemonlife.Deferral
+			if errors.As(err, &deferral) {
+				diag.Printf("[Kaboom] Deferring to the daemon already registered for this state directory (pid=%d, port=%d, version=%s); this instance is exiting.\n",
+					deferral.PID, deferral.Port, deferral.Version)
+			} else {
+				diag.Printf("[Kaboom] A healthy daemon is already serving on port %d; this instance is exiting.\n", port)
+			}
 			return nil
 		}
 		return err

@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-11
 code_paths:
   - internal/listenport/store.go
   - cmd/browser-agent/internal/runtimeflags/flags.go

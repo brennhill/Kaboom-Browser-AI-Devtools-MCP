@@ -125,6 +125,28 @@ const (
 // when a redundant instance is launched (bridge respawn, second MCP client).
 var ErrDeferToHealthyDaemon = errors.New("existing healthy daemon is serving; deferring")
 
+// Deferral carries WHICH daemon is being deferred to.
+//
+// The lock is per state directory, not per port, so the incumbent may be
+// serving a different port than the one this instance was asked to bind. The
+// old message interpolated the REQUESTED port and so announced "a healthy
+// daemon is already serving on port 7890" while the healthy daemon was on
+// 19310 and nothing listened on 7890 at all — which is precisely the case an
+// operator most needs named accurately.
+type Deferral struct {
+	PID     int
+	Port    int
+	Version string
+}
+
+func (d *Deferral) Error() string {
+	return fmt.Sprintf("existing healthy daemon (pid=%d, port=%d, version=%s) is serving; deferring", d.PID, d.Port, d.Version)
+}
+
+// Unwrap keeps errors.Is(err, ErrDeferToHealthyDaemon) working for callers that
+// only need to know they must exit cleanly.
+func (d *Deferral) Unwrap() error { return ErrDeferToHealthyDaemon }
+
 // daemonProbeHealth reports whether the daemon on port answers /health, its
 // reported version, and whether the failure was connection-refused (nothing
 // listening — definitively gone, so retrying is pointless). Never blocks past
@@ -202,7 +224,7 @@ func classifyExistingDaemon(d Deps, port int, rec *daemonLockRecord) error {
 			"existing_port": rec.Port,
 			"age_ms":        age.Milliseconds(),
 		})
-		return ErrDeferToHealthyDaemon
+		return &Deferral{PID: rec.PID, Port: rec.Port, Version: rec.Version}
 	}
 
 	// Probe liveness, retried across the window so a momentarily busy-but-healthy
@@ -259,10 +281,11 @@ func classifyExistingDaemon(d Deps, port int, rec *daemonLockRecord) error {
 
 	d.Log.LogLifecycle("daemon_defer_healthy", port, map[string]any{
 		"existing_pid":     rec.PID,
+		"existing_port":    rec.Port,
 		"existing_version": existingVersion,
 		"our_version":      d.Version,
 	})
-	return ErrDeferToHealthyDaemon
+	return &Deferral{PID: rec.PID, Port: rec.Port, Version: existingVersion}
 }
 
 // EnforceStartupPolicy is the single-instance gate a starting daemon must pass.

@@ -503,3 +503,94 @@ func TestIsNewerVersion(t *testing.T) {
 		}
 	}
 }
+
+// The startup grace window exists so a daemon still binding its ports is not
+// killed by a near-simultaneous launch. That rationale requires a live process.
+// When an instance writes its lock and then exits — a crash, or losing a
+// takeover race — the fresh lock kept every subsequent launch deferring for the
+// whole window, and each one exited announcing "a healthy daemon is already
+// serving" while nothing at all listened on the port. Observed in the field:
+// repeated restarts all exited with that message, `lsof -iTCP:7890` empty, and
+// the extension unable to reach localhost:7890.
+func TestEnforceStartupPolicy_GraceWindowDoesNotDeferToADeadOwner(t *testing.T) {
+	dir := isolatedStateDir(t)
+	now := time.Now().UTC()
+	const deadPID = 999002
+	seedLock(t, daemonLockRecord{
+		PID: deadPID, Port: 7890, StateDir: dir, Version: "0.8.8",
+		UpdatedAt: now.Add(-time.Second).Format(time.RFC3339), // inside the 5s grace
+	})
+	freezeClock(t, now)
+
+	deps, _ := newTestDeps(t)
+	deps.IsProcessAlive = func(int) bool { return false }
+	deps.ReadPIDFile = func(int) int { return deadPID }
+
+	if err := EnforceStartupPolicy(deps, 7890, LaunchOptions{}); err != nil {
+		t.Fatalf("a dead owner inside the grace window must not block startup, got %v", err)
+	}
+}
+
+// A live owner inside the window must still be deferred to: that is the
+// ping-pong protection the window is for, and it must not regress.
+func TestEnforceStartupPolicy_GraceWindowStillDefersToALiveOwner(t *testing.T) {
+	dir := isolatedStateDir(t)
+	now := time.Now().UTC()
+	seedLock(t, daemonLockRecord{
+		PID: 999003, Port: 7890, StateDir: dir, Version: "0.8.8",
+		UpdatedAt: now.Add(-time.Second).Format(time.RFC3339),
+	})
+	freezeClock(t, now)
+
+	deps, log := newTestDeps(t)
+	deps.IsProcessAlive = func(int) bool { return true }
+	deps.ReadPIDFile = func(int) int { return 999003 }
+
+	if err := EnforceStartupPolicy(deps, 7890, LaunchOptions{}); !errors.Is(err, ErrDeferToHealthyDaemon) {
+		t.Fatalf("a live starting owner must still be deferred to, got %v", err)
+	}
+	if evt := log.find("daemon_defer_starting"); evt == nil {
+		t.Fatal("deferring to a starting daemon must be logged as such, not as a verified-healthy defer")
+	}
+}
+
+// The lock is per state directory, not per port, so a daemon serving a
+// different port can legitimately block this one. When that happens the
+// deferral must name the incumbent's port: the old message interpolated the
+// REQUESTED port and announced "a healthy daemon is already serving on port
+// 7890" while the incumbent was on 19310 and nothing listened on 7890, sending
+// the operator to look for a listener that never existed.
+func TestDeferralNamesTheIncumbentPortNotTheRequestedOne(t *testing.T) {
+	dir := isolatedStateDir(t)
+	now := time.Now().UTC()
+	seedLock(t, daemonLockRecord{
+		PID: 999004, Port: 19310, StateDir: dir, Version: "0.9.0",
+		UpdatedAt: now.Add(-time.Hour).Format(time.RFC3339), // well outside the grace window
+	})
+	freezeClock(t, now)
+
+	deps, _ := newTestDeps(t)
+	deps.IsProcessAlive = func(int) bool { return true }
+	deps.ReadPIDFile = func(int) int { return 999004 }
+	deps.FetchHealth = func(_ context.Context, probedPort int, _ time.Duration) (bool, string, bool) {
+		if probedPort != 19310 {
+			t.Fatalf("health probe hit port %d, want the incumbent's 19310", probedPort)
+		}
+		return true, "0.9.0", false
+	}
+
+	err := EnforceStartupPolicy(deps, 7890, LaunchOptions{})
+	if !errors.Is(err, ErrDeferToHealthyDaemon) {
+		t.Fatalf("want a deferral, got %v", err)
+	}
+	var deferral *Deferral
+	if !errors.As(err, &deferral) {
+		t.Fatalf("deferral must carry the incumbent's identity, got %T", err)
+	}
+	if deferral.Port != 19310 || deferral.PID != 999004 {
+		t.Fatalf("deferral = %+v, want pid=999004 port=19310", *deferral)
+	}
+	if !strings.Contains(err.Error(), "19310") {
+		t.Fatalf("error %q must name the incumbent's port", err.Error())
+	}
+}
