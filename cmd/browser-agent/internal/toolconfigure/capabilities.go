@@ -74,7 +74,7 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 
 		result := map[string]any{
 			"version":          version,
-			"protocol_version": "2024-11-05",
+			"protocol_version": mcp.ProtocolVersionLatest,
 			"tools":            map[string]any{params.Tool: toolCap},
 		}
 		if examples := d.GetToolModuleExamples(params.Tool); examples != nil {
@@ -93,7 +93,7 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 
 	return mcp.Succeed(req, "Capabilities", map[string]any{
 		"version":          version,
-		"protocol_version": "2024-11-05",
+		"protocol_version": mcp.ProtocolVersionLatest,
 		"tools":            toolsMap,
 		"deprecated":       []string{},
 	})

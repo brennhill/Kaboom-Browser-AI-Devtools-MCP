@@ -6,6 +6,7 @@ package toolconfigure
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
@@ -634,5 +635,20 @@ func TestHandleDescribeCapabilitiesCanonicalCatalog(t *testing.T) {
 	params, ok := filtered["params"].(map[string]any)
 	if !ok || filtered["tool"] != "configure" || filtered["mode"] != "store" || params["store_action"] == nil || params["namespace"] == nil {
 		t.Fatalf("filtered capabilities = %#v", filtered)
+	}
+}
+
+// The capabilities response hardcoded "2024-11-05" while NegotiateProtocolVersion
+// defaults every connection to 2025-06-18. An agent reading capabilities to decide
+// which protocol features it may use was told the older revision, and would rule
+// out anything the newer one added — including the outputSchema this codebase is
+// about to depend on.
+func TestCapabilitiesDoesNotHardcodeAProtocolVersion(t *testing.T) {
+	source, err := os.ReadFile("capabilities.go")
+	if err != nil {
+		t.Fatalf("read capabilities.go: %v", err)
+	}
+	if strings.Contains(string(source), `"protocol_version": "`) {
+		t.Fatal("protocol_version is a hardcoded literal; report mcp.ProtocolVersionLatest so it cannot drift from what the server negotiates")
 	}
 }
