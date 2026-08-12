@@ -4,7 +4,7 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-12
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -16,6 +16,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/inspect/dom.go
   - cmd/browser-agent/internal/toolanalyze/visual/handler.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
+  - cmd/browser-agent/internal/toolanalyze/designdrift/handler.go
   - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler.go
   - internal/verification/contract.go
   - internal/verification/evidence.go

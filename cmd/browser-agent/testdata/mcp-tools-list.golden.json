@@ -287,7 +287,7 @@
           "type": "string"
         },
         "categories": {
-          "description": "Categories to include (audit: performance, accessibility, security, best_practices; page_issues: console_errors, network_failures, accessibility, security)",
+          "description": "Categories to include (audit: performance, accessibility, security, best_practices; page_issues: console_errors, network_failures, accessibility, security; design_audit: style_consistency, design_tokens, spacing)",
           "items": {
             "type": "string"
           },
@@ -420,7 +420,7 @@
           "type": "string"
         },
         "selector": {
-          "description": "CSS selector (dom, accessibility, computed_styles, forms, form_state, data_table)",
+          "description": "CSS selector (dom, accessibility, computed_styles, forms, form_state, data_table, design_audit)",
           "type": "string"
         },
         "severity_min": {
@@ -433,6 +433,10 @@
             "info"
           ],
           "type": "string"
+        },
+        "spec": {
+          "description": "Declared design system (design_audit): spacing_scale, font_families, colors, font_sizes. Overrides inference per property — a partial spec leaves the families it does not name to inference. Breaking a declared rule is reported as an error; deviating from an inferred majority is a warning.",
+          "type": "object"
         },
         "summary": {
           "description": "Return compact summary instead of full details (accessibility, security_audit, third_party_audit, form_validation, audit, page_issues)",
@@ -514,7 +518,8 @@
             "audit",
             "feature_gates",
             "page_issues",
-            "verification"
+            "verification",
+            "design_audit"
           ],
           "type": "string"
         },

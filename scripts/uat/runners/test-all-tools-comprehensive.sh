@@ -156,7 +156,7 @@ CONNECTED_UAT_PORT="${KABOOM_UAT_CONNECTED_PORT:-7890}"
 # coverage while never running, which is how category 32 sat at 8/8 green with
 # every one of its calls failing to parse.
 OFFLINE_CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 14 16 17 20 21 25 26 28 29 34"
-CONNECTED_CAT_IDS="15 33 35 18 19 22 23 24 30 31"
+CONNECTED_CAT_IDS="15 33 35 36 18 19 22 23 24 30 31"
 
 # shellcheck source=tests/framework/uat-user-state.sh
 source "$TESTS_DIR/framework/uat-user-state.sh"

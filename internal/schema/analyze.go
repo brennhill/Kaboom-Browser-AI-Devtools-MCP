@@ -16,7 +16,7 @@ func analyzeToolSchema() mcp.MCPTool {
 				"what": map[string]any{
 					"type":        "string",
 					"description": "Analysis mode to run against the page",
-					"enum":        []string{"dom", "performance", "performance_trace", "react_profile", "accessibility", "error_clusters", "navigation_patterns", "security_audit", "third_party_audit", "link_health", "link_validation", "page_summary", "annotations", "annotation_detail", "api_validation", "draw_history", "draw_session", "computed_styles", "forms", "form_state", "form_validation", "data_table", "visual_baseline", "visual_diff", "visual_baselines", "navigation", "page_structure", "audit", "feature_gates", "page_issues", "verification"},
+					"enum":        []string{"dom", "performance", "performance_trace", "react_profile", "accessibility", "error_clusters", "navigation_patterns", "security_audit", "third_party_audit", "link_health", "link_validation", "page_summary", "annotations", "annotation_detail", "api_validation", "draw_history", "draw_session", "computed_styles", "forms", "form_state", "form_validation", "data_table", "visual_baseline", "visual_diff", "visual_baselines", "navigation", "page_structure", "audit", "feature_gates", "page_issues", "verification", "design_audit"},
 				},
 				"telemetry_mode": map[string]any{
 					"type":        "string",
@@ -25,7 +25,7 @@ func analyzeToolSchema() mcp.MCPTool {
 				},
 				"selector": map[string]any{
 					"type":        "string",
-					"description": "CSS selector (dom, accessibility, computed_styles, forms, form_state, data_table)",
+					"description": "CSS selector (dom, accessibility, computed_styles, forms, form_state, data_table, design_audit)",
 				},
 				"frame": map[string]any{
 					"description": "Target iframe: CSS selector, 0-based index, or \"all\" (dom, accessibility)",
@@ -193,12 +193,16 @@ func analyzeToolSchema() mcp.MCPTool {
 				},
 				"categories": map[string]any{
 					"type":        "array",
-					"description": "Categories to include (audit: performance, accessibility, security, best_practices; page_issues: console_errors, network_failures, accessibility, security)",
+					"description": "Categories to include (audit: performance, accessibility, security, best_practices; page_issues: console_errors, network_failures, accessibility, security; design_audit: style_consistency, design_tokens, spacing)",
 					"items":       map[string]any{"type": "string"},
 				},
 				"limit": map[string]any{
 					"type":        "number",
 					"description": "Max issues per section (page_issues, default 50)",
+				},
+				"spec": map[string]any{
+					"type":        "object",
+					"description": "Declared design system (design_audit): spacing_scale, font_families, colors, font_sizes. Overrides inference per property — a partial spec leaves the families it does not name to inference. Breaking a declared rule is reported as an error; deviating from an inferred majority is a warning.",
 				},
 			},
 			"required": []string{"what"},

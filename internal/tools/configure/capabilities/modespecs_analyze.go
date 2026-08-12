@@ -152,6 +152,12 @@ var analyzeModeSpecs = map[string]modeParamSpec{
 		Returns:  "Everything currently wrong with the page, grouped by category and severity.",
 		Optional: []string{"categories", "limit", "summary"},
 	},
+	"design_audit": {
+		Hint:     "Detect design drift across a group of matching elements: computed-style outliers, near-misses of declared CSS tokens, and uneven sibling spacing. Pass spec to declare your design system; deviations from a declared rule are errors, deviations from an inferred majority are warnings",
+		Returns:  "A list of design-drift findings grouped by category, each naming the element, the property, what it renders and what it should be.",
+		Required: []string{"selector"},
+		Optional: []string{"categories", "spec"},
+	},
 	"verification": {
 		Hint:     "Define or evaluate a versioned QA contract; missing required evidence produces UNVERIFIED",
 		Returns:  "Whether a declared verification contract holds, assertion by assertion.",

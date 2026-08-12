@@ -365,6 +365,13 @@ interface LinkHealthMessage {
 }
 /**
  * Computed styles query message
+ *
+ * params: { selector, properties?, max_elements?, include_custom_properties? }
+ * The response is a WireStyleProbeResult (src/types/wire/wire-style-probe.ts),
+ * which carries the matched elements plus the truncation facts and, when
+ * requested, the CSS custom-property tables the design-drift analyzers match
+ * against. This message is the single probe surface — design_audit extends it
+ * rather than adding a parallel query.
  */
 interface ComputedStylesQueryMessage {
     readonly type: 'computed_styles_query';

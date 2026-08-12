@@ -103,14 +103,18 @@ function handleBridgePingMessage(data) {
 function handleComputedStylesMessage(data) {
     try {
         const params = (data.params || {});
-        const result = queryComputedStyles({
-            selector: params.selector || '*',
-            properties: params.properties
-        });
+        // queryComputedStyles now returns the full WireStyleProbeResult envelope —
+        // elements plus the truncation facts and the token table — so the response
+        // is the payload itself rather than a count rebuilt here.
         postResponse({
             type: 'kaboom_computed_styles_response',
             requestId: data.requestId,
-            result: { elements: result, count: result.length }
+            result: queryComputedStyles({
+                selector: params.selector || '*',
+                properties: params.properties,
+                max_elements: params.max_elements,
+                include_custom_properties: params.include_custom_properties
+            })
         });
     }
     catch (err) {

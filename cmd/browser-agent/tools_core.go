@@ -24,6 +24,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/analyzedispatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/annotationanalysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/designdrift"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolcatalog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
@@ -397,6 +398,13 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 		Observe: observeDeps,
 		Audit:   combinedaudit.Deps{Analyze: analyzeDeps, Observe: observeDeps},
 		Version: version, AnnotationStore: handler.annotationStore, Visual: visualAnalyzeDeps{h: handler},
+		DesignDrift: designdrift.Deps{
+			ProbeStyles: handler.asyncCommands.ExecuteStyleProbe,
+			TrackingStatus: func() (bool, string) {
+				enabled, _, tabURL := analyzeDeps.GetTrackingStatus()
+				return enabled, tabURL
+			},
+		},
 		ValidateAPI: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.apiContractRuntime.Handle(req, args, handler.capture.Telemetry().NetworkBodies().Snapshot().Bodies)
 		},

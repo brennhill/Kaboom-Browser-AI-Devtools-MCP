@@ -442,7 +442,7 @@ json_string() {
 fixture_url() {
     local name="${1:-interact}"
     case "$name" in
-        interact | telemetry | performance | a11y | recording | interaction-test | cdp-smoke-test)
+        interact | telemetry | performance | a11y | recording | interaction-test | cdp-smoke-test | design-drift)
             echo "http://127.0.0.1:${PORT}/tests/${name}.html"
             ;;
         *)
@@ -467,6 +467,7 @@ ensure_fixture() {
         performance) anchor="#cls-box" ;;
         a11y) anchor="#bad-input-name" ;;
         recording) anchor="#rec-indicator" ;;
+        design-drift) anchor="#design-drift-ready" ;;
         *) anchor="body" ;;
     esac
 

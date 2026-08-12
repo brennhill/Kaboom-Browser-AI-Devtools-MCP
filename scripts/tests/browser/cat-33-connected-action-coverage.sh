@@ -85,6 +85,7 @@ action_expectation() {
         analyze/form_validation|analyze/data_table|analyze/visual_baseline|analyze/visual_diff|\
         analyze/visual_baselines|analyze/navigation|analyze/page_structure|analyze/audit|\
         analyze/feature_gates|analyze/page_issues|analyze/performance_trace|analyze/react_profile|\
+        analyze/design_audit|\
         analyze/verification) echo "success" ;;
         *) echo "unclassified" ;;
     esac
@@ -169,6 +170,11 @@ action_args() {
         interact/batch) echo '{"what":"batch","steps":[{"what":"get_text","selector":"body"}]}' ;;
         interact/clipboard_write) echo '{"what":"clipboard_write","text":"Kaboom connected coverage"}' ;;
         analyze/dom|analyze/computed_styles) echo '{"what":"'"$mode"'","selector":"#sf-btn"}' ;;
+        # design_audit compares a GROUP, so a single-element selector would only
+        # ever report insufficient_peers. cat-33 runs against interact.html, so
+        # this asserts reachability only; the real verdict assertions live in
+        # cat-36 against the design-drift fixture.
+        analyze/design_audit) echo '{"what":"design_audit","selector":"button"}' ;;
         analyze/link_validation) echo '{"what":"link_validation","urls":['"$(json_string "$base_url")"']}' ;;
         analyze/link_health) echo '{"what":"link_health","domain":'"$(json_string "$base_url")"',"max_workers":1}' ;;
         analyze/annotation_detail) echo '{"what":"annotation_detail","correlation_id":"uat-missing-annotation"}' ;;

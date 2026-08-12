@@ -153,6 +153,33 @@ func (h *Handler) ExecuteA11yQuery(scope string, tags []string, frame any, force
 	return h.deps.Capture.Queries().WaitForResult(queryID, a11yQueryTimeout)
 }
 
+// ExecuteStyleProbe runs one computed-style query and returns the raw payload.
+//
+// design_audit needs the probe result as data, not as an MCP response, because
+// it runs three analyzers over the same capture — so it takes the same
+// create-and-wait path as ExecuteA11yQuery rather than the queue-and-format
+// path the computed_styles mode uses to hand a result straight to the caller.
+func (h *Handler) ExecuteStyleProbe(selector string, maxElements int, includeCustomProperties bool) (json.RawMessage, error) {
+	params := map[string]any{"selector": selector}
+	if maxElements > 0 {
+		params["max_elements"] = maxElements
+	}
+	if includeCustomProperties {
+		params["include_custom_properties"] = true
+	}
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	queryID, err := h.deps.Capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+		Type: "computed_styles", Params: paramsJSON,
+	}, a11yQueryTimeout, "")
+	if err != nil {
+		return nil, err
+	}
+	return h.deps.Capture.Queries().WaitForResult(queryID, a11yQueryTimeout)
+}
+
 // finalizeResponseEnrichment attaches evidence, transient elements, and retry context
 // to the response data in a single call. Consolidates the repeated triplet pattern.
 func (h *Handler) finalizeResponseEnrichment(corrID string, responseData map[string]any, cmd queries.CommandResult) {

@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/designdrift"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/linkvalidation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/pageissues"
@@ -36,6 +37,7 @@ type Config struct {
 	Version          string
 	AnnotationStore  *annotation.Store
 	Visual           visual.Deps
+	DesignDrift      designdrift.Deps
 	ValidateAPI      ModeHandler
 	PageSummary      ModeHandler
 	Annotations      ModeHandler
@@ -84,6 +86,9 @@ func NewDispatcher(config Config) *Dispatcher {
 			return combinedaudit.Handle(config.Audit, req, args)
 		},
 		"page_issues": wrapLocal(config.Analyze, pageissues.Handle), "feature_gates": mode(config.FeatureGates),
+		"design_audit": func(_ struct{}, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return designdrift.Handle(config.DesignDrift, req, args)
+		},
 		"performance_trace": wrapLocal(config.Analyze, HandlePerformanceTrace),
 		"react_profile":     wrapLocal(config.Analyze, HandleReactProfile),
 		"verification": func(_ struct{}, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

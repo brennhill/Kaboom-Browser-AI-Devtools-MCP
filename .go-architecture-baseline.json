@@ -7,7 +7,7 @@
     },
     "cmd/browser-agent/internal/asynccommand/handler.go": {
       "mutable_globals": 0,
-      "exports": 12
+      "exports": 13
     },
     "cmd/browser-agent/internal/asyncresult/enrichment.go": {
       "mutable_globals": 1,
@@ -2032,6 +2032,14 @@
     "cmd/browser-agent/internal/toolresp/element_projection.go": {
       "mutable_globals": 0,
       "exports": 1
+    },
+    "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "internal/styleprobe/wire_style_probe.go": {
+      "mutable_globals": 0,
+      "exports": 3
     }
   }
 }

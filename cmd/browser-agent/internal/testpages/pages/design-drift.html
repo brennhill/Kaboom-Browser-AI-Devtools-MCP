@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kaboom — Design Drift Fixture</title>
+    <!--
+      Fixture for analyze/design_audit (GitHub #693, #694, #695).
+
+      Every group below is either a PLANTED POSITIVE (drift the analyzers must
+      find) or a NEGATIVE CONTROL (legitimate variation they must not flag).
+      The controls are the important half: an analyzer that flags everything
+      passes a positive-only fixture with full marks.
+
+      The expected verdicts live in
+      cmd/browser-agent/internal/toolanalyze/designdrift/testdata/expected-findings.json
+      and are asserted by both the Go analyzer tests and UAT category 36. Change
+      this page and you must change that table.
+
+      Geometry rules that keep this deterministic:
+        * stacks use flex-column so adjacent margins never collapse, making the
+          rendered gap exactly the declared margin-top
+        * line-height is set explicitly in px everywhere, because a `normal`
+          line-height resolves proportionally to font-size and would turn one
+          planted font-size difference into two findings
+        * colours are written as hex and compared perceptually, so the near-miss
+          pair really is one unit per channel apart
+    -->
+    <style>
+      :root {
+        --spacing-md: 16px;
+        --spacing-lg: 24px;
+        --color-primary-main: #2a55e1;
+        --color-text: #111827;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: Inter, sans-serif;
+        color: var(--color-text);
+        background: #ffffff;
+      }
+
+      section {
+        margin-bottom: 48px;
+      }
+
+      h2 {
+        font-size: 14px;
+        line-height: 20px;
+        margin: 0 0 12px;
+      }
+
+      /* ── #693 positive: one header drifts in family and size ────────── */
+      .step-card__header {
+        font-family: Inter, sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 20px;
+        letter-spacing: 0px;
+        color: #111827;
+        margin: 0 0 8px;
+      }
+      .step-card__header.is-drifted {
+        font-family: Roboto, sans-serif;
+        font-size: 11px;
+      }
+
+      /* ── #694 positive: near-miss padding and background ────────────── */
+      .token-card {
+        margin: 0;
+        border: 0;
+        line-height: 20px;
+        font-size: 12px;
+        color: #111827;
+        border-color: #111827;
+      }
+      .token-card--drift {
+        padding: 15px;
+        background-color: #2b56e2;
+      }
+      .token-card--exact {
+        padding: 16px;
+        background-color: #2a55e1;
+      }
+
+      /* ── #695 positive: gaps run 24 / 24 / 14 / 24 ──────────────────── */
+      .rhythm-stack {
+        display: flex;
+        flex-direction: column;
+      }
+      .rhythm-card {
+        height: 32px;
+        background: #eef2ff;
+        margin-top: 24px;
+      }
+      .rhythm-card:first-child {
+        margin-top: 0;
+      }
+      .rhythm-card.is-squeezed {
+        margin-top: 14px;
+      }
+
+      /* ── control: state variants differ on purpose ──────────────────── */
+      .state-stack {
+        display: flex;
+        flex-direction: column;
+      }
+      .state-item {
+        font-family: Inter, sans-serif;
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 20px;
+        letter-spacing: 0px;
+        color: #111827;
+        height: 24px;
+        margin-top: 16px;
+      }
+      .state-item:first-child {
+        margin-top: 0;
+      }
+      .state-item--active {
+        font-weight: 700;
+        color: #2a55e1;
+      }
+
+      /* ── control: first child drops its margin by design ────────────── */
+      .fc-stack {
+        display: flex;
+        flex-direction: column;
+      }
+      .fc-item {
+        height: 24px;
+        background: #f3f4f6;
+        margin-top: 24px;
+      }
+      .fc-item:first-child {
+        margin-top: 48px;
+      }
+
+      /* ── control: spacing owned by the parent's gap ─────────────────── */
+      .flex-row {
+        display: flex;
+        flex-direction: row;
+        gap: 24px;
+      }
+      .flex-item {
+        width: 80px;
+        height: 24px;
+        background: #f3f4f6;
+      }
+
+      /* ── control: a two-element group has no majority ───────────────── */
+      .pair-item {
+        font-size: 12px;
+        line-height: 20px;
+        color: #111827;
+      }
+      .pair-item.is-other {
+        font-family: Roboto, sans-serif;
+      }
+      .pair-item.is-one {
+        font-family: Inter, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="design-drift-ready" style="font-size: 18px; line-height: 24px">Design drift fixture</h1>
+
+    <!-- POSITIVE #693: element index 1 drifts in font-family and font-size. -->
+    <section id="step-cards">
+      <h2>Step cards (#693 positive)</h2>
+      <div class="step-card"><p class="step-card__header">Step 1</p></div>
+      <div class="step-card"><p class="step-card__header is-drifted">Step 2</p></div>
+      <div class="step-card"><p class="step-card__header">Step 3</p></div>
+    </section>
+
+    <!-- POSITIVE #694: index 0 near-misses two tokens; index 1 matches exactly. -->
+    <section id="token-cards">
+      <h2>Token cards (#694 positive + exact-match control)</h2>
+      <div class="token-card token-card--drift">Hardcoded near-miss</div>
+      <div class="token-card token-card--exact">Exactly on token</div>
+    </section>
+
+    <!-- POSITIVE #695: gap before index 3 is 14px where the rhythm is 24px. -->
+    <section id="rhythm">
+      <h2>Rhythm stack (#695 positive)</h2>
+      <div class="rhythm-stack">
+        <div class="rhythm-card"></div>
+        <div class="rhythm-card"></div>
+        <div class="rhythm-card"></div>
+        <div class="rhythm-card is-squeezed"></div>
+        <div class="rhythm-card"></div>
+      </div>
+    </section>
+
+    <!-- CONTROL: the active item is meant to look different. -->
+    <section id="state-variants">
+      <h2>State variants (control)</h2>
+      <div class="state-stack">
+        <div class="state-item">Inbox</div>
+        <div class="state-item state-item--active">Drafts</div>
+        <div class="state-item">Sent</div>
+        <div class="state-item">Archive</div>
+      </div>
+    </section>
+
+    <!-- CONTROL: structural position, not drift. -->
+    <section id="first-child">
+      <h2>First-child margin (control)</h2>
+      <div class="fc-stack">
+        <div class="fc-item"></div>
+        <div class="fc-item"></div>
+        <div class="fc-item"></div>
+      </div>
+    </section>
+
+    <!-- CONTROL: the parent's gap owns this spacing. -->
+    <section id="flex-gap">
+      <h2>Flex gap (control)</h2>
+      <div class="flex-row">
+        <div class="flex-item"></div>
+        <div class="flex-item"></div>
+        <div class="flex-item"></div>
+      </div>
+    </section>
+
+    <!-- CONTROL: two elements have no majority to deviate from. -->
+    <section id="pair">
+      <h2>Two-element group (control)</h2>
+      <p class="pair-item is-one">One</p>
+      <p class="pair-item is-other">Two</p>
+    </section>
+  </body>
+</html>

@@ -2724,13 +2724,22 @@ var DEFAULT_PROPERTIES = [
   "font-family",
   "font-weight",
   "line-height",
+  "letter-spacing",
   "display",
   "position",
   "width",
   "height",
-  "margin",
-  "padding",
-  "border",
+  "margin-top",
+  "margin-right",
+  "margin-bottom",
+  "margin-left",
+  "padding-top",
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+  "border-top-width",
+  "border-radius",
+  "border-color",
   "opacity",
   "visibility",
   "z-index",
@@ -2739,6 +2748,8 @@ var DEFAULT_PROPERTIES = [
   "text-decoration",
   "box-sizing"
 ];
+var MAX_ELEMENTS_CEILING = 500;
+var DEFAULT_MAX_ELEMENTS = 50;
 function relativeLuminance(r, g, b) {
   const [rs, gs, bs] = [r / 255, g / 255, b / 255].map((c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
@@ -2767,12 +2778,47 @@ function buildSelector(el) {
   const classes = Array.from(el.classList).slice(0, 3).map((c) => `.${c}`).join("");
   return tag + classes;
 }
+function collectCustomProperties(style) {
+  const props = {};
+  for (let i = 0; i < style.length; i++) {
+    const name = style.item(i);
+    if (name && name.startsWith("--")) {
+      props[name] = style.getPropertyValue(name).trim();
+    }
+  }
+  return props;
+}
+function collectRootTokens() {
+  const root = document.documentElement;
+  if (!root)
+    return {};
+  return collectCustomProperties(window.getComputedStyle(root));
+}
+function isInFlow(style, rect) {
+  const position = style.getPropertyValue("position");
+  if (position === "absolute" || position === "fixed")
+    return false;
+  if (style.getPropertyValue("display") === "none")
+    return false;
+  if (style.getPropertyValue("visibility") === "hidden")
+    return false;
+  if (style.getPropertyValue("float") !== "none")
+    return false;
+  return rect.width > 0 && rect.height > 0;
+}
+function resolveMaxElements(requested) {
+  if (typeof requested !== "number" || !Number.isFinite(requested) || requested <= 0) {
+    return DEFAULT_MAX_ELEMENTS;
+  }
+  return Math.min(Math.floor(requested), MAX_ELEMENTS_CEILING);
+}
 function queryComputedStyles(params) {
   const elements = document.querySelectorAll(params.selector);
   const propList = params.properties && params.properties.length > 0 ? params.properties : DEFAULT_PROPERTIES;
   const results = [];
-  const MAX_ELEMENTS = 50;
-  for (let i = 0; i < elements.length && results.length < MAX_ELEMENTS; i++) {
+  const maxElements = resolveMaxElements(params.max_elements);
+  const wantCustomProperties = params.include_custom_properties === true;
+  for (let i = 0; i < elements.length && results.length < maxElements; i++) {
     const el = elements[i];
     const style = window.getComputedStyle(el);
     const rect = el.getBoundingClientRect();
@@ -2780,6 +2826,8 @@ function queryComputedStyles(params) {
     for (const prop of propList) {
       computedStyles[prop] = style.getPropertyValue(prop);
     }
+    const parent = el.parentElement;
+    const parentStyle = parent ? window.getComputedStyle(parent) : null;
     const result = {
       selector: buildSelector(el),
       tag: el.tagName.toLowerCase(),
@@ -2793,19 +2841,33 @@ function queryComputedStyles(params) {
         right: Math.round(rect.right),
         bottom: Math.round(rect.bottom),
         left: Math.round(rect.left)
-      }
+      },
+      index: i,
+      in_flow: isInFlow(style, rect),
+      ...parentStyle ? {
+        parent_display: parentStyle.getPropertyValue("display"),
+        parent_gap: parentStyle.getPropertyValue("gap")
+      } : {},
+      ...wantCustomProperties ? { custom_properties: collectCustomProperties(style) } : {}
     };
     const color = style.getPropertyValue("color");
     const bgColor = style.getPropertyValue("background-color");
     if (color && bgColor && bgColor !== "rgba(0, 0, 0, 0)") {
       const ratio = computeContrastRatio(color, bgColor);
       if (ratio !== void 0) {
+        ;
         result.contrast_ratio = ratio;
       }
     }
     results.push(result);
   }
-  return results;
+  return {
+    elements: results,
+    count: results.length,
+    match_count: elements.length,
+    truncated: elements.length > results.length,
+    ...wantCustomProperties ? { root_tokens: collectRootTokens() } : {}
+  };
 }
 
 // extension/inject/form-discovery.js
@@ -4436,14 +4498,15 @@ function handleBridgePingMessage(data) {
 function handleComputedStylesMessage(data) {
   try {
     const params = data.params || {};
-    const result = queryComputedStyles({
-      selector: params.selector || "*",
-      properties: params.properties
-    });
     postResponse({
       type: "kaboom_computed_styles_response",
       requestId: data.requestId,
-      result: { elements: result, count: result.length }
+      result: queryComputedStyles({
+        selector: params.selector || "*",
+        properties: params.properties,
+        max_elements: params.max_elements,
+        include_custom_properties: params.include_custom_properties
+      })
     });
   } catch (err) {
     postResponse({
