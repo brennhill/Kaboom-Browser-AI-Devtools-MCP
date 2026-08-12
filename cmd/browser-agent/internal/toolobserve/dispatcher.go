@@ -189,21 +189,27 @@ func (d *Dispatcher) pendingCommands(_ observecore.Deps, req mcp.JSONRPCRequest,
 	}
 	pending, completed := d.commands.GetPendingCommands(), d.commands.GetCompletedCommands()
 	failed := d.commands.GetFailedCommands()
-	if pending == nil {
-		pending = []*queries.CommandResult{}
-	}
-	if completed == nil {
-		completed = []*queries.CommandResult{}
-	}
-	if failed == nil {
-		failed = []*queries.CommandResult{}
-	}
 	inProgress := []syncruntime.SyncInProgress{}
 	if d.config.InProgress != nil {
 		inProgress = d.config.InProgress()
 	}
-	data := map[string]any{"pending": pending, "completed": completed, "failed": failed, "extension_in_progress": inProgress, "extension_in_progress_count": len(inProgress)}
-	return mcp.Succeed(req, fmt.Sprintf("Pending: %d, Completed: %d, Failed: %d, Extension in-progress: %d", len(pending), len(completed), len(failed), len(inProgress)), data)
+
+	pendingTotal, completedTotal, failedTotal := len(pending), len(completed), len(failed)
+	truncated := false
+	pending, truncated = boundCommandList(pending, truncated)
+	completed, truncated = boundCommandList(completed, truncated)
+	failed, truncated = boundCommandList(failed, truncated)
+
+	data := map[string]any{
+		"pending": pending, "completed": completed, "failed": failed,
+		"extension_in_progress": inProgress, "extension_in_progress_count": len(inProgress),
+		"pending_total": pendingTotal, "completed_total": completedTotal, "failed_total": failedTotal,
+	}
+	if truncated {
+		data["truncated"] = true
+		data["hint"] = "Showing the most recent commands. Totals reflect everything the daemon is holding."
+	}
+	return mcp.Succeed(req, fmt.Sprintf("Pending: %d, Completed: %d, Failed: %d, Extension in-progress: %d", pendingTotal, completedTotal, failedTotal, len(inProgress)), data)
 }
 
 func (d *Dispatcher) FailedCommands(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
@@ -220,4 +226,23 @@ func (d *Dispatcher) FailedCommands(req mcp.JSONRPCRequest, _ json.RawMessage) m
 
 func (d *Dispatcher) savedVideos(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return screenrec.HandleObserveSavedVideos(req, args, d.config.StateDiagnostics)
+}
+
+// commandListDefaultLimit bounds each command collection in a pending_commands
+// response. The completed list in particular grows for the whole life of the
+// daemon, so an agent checking whether one command finished was handed the
+// entire history — measured at 48,949 bytes on a daemon up for a working day
+// against 162 bytes on a fresh one.
+const commandListDefaultLimit = 50
+
+// boundCommandList keeps the most recent entries and reports whether any were
+// withheld. Commands accumulate in order, so the tail is the recent end.
+func boundCommandList(list []*queries.CommandResult, truncated bool) ([]*queries.CommandResult, bool) {
+	if list == nil {
+		return []*queries.CommandResult{}, truncated
+	}
+	if len(list) <= commandListDefaultLimit {
+		return list, truncated
+	}
+	return list[len(list)-commandListDefaultLimit:], true
 }

@@ -5,6 +5,7 @@ package toolobserve
 import (
 	"encoding/json"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -69,8 +70,10 @@ func TestPilotModeDoesNotReceiveDisconnectWarning(t *testing.T) {
 }
 
 type commandStoreStub struct {
-	failed  []*queries.CommandResult
-	command *queries.CommandResult
+	failed    []*queries.CommandResult
+	completed []*queries.CommandResult
+	pending   []*queries.CommandResult
+	command   *queries.CommandResult
 }
 
 func (s commandStoreStub) WaitForCommand(string, time.Duration) (*queries.CommandResult, bool) {
@@ -79,8 +82,8 @@ func (s commandStoreStub) WaitForCommand(string, time.Duration) (*queries.Comman
 func (s commandStoreStub) GetCommandResult(string) (*queries.CommandResult, bool) {
 	return s.command, s.command != nil
 }
-func (s commandStoreStub) GetPendingCommands() []*queries.CommandResult   { return nil }
-func (s commandStoreStub) GetCompletedCommands() []*queries.CommandResult { return nil }
+func (s commandStoreStub) GetPendingCommands() []*queries.CommandResult   { return s.pending }
+func (s commandStoreStub) GetCompletedCommands() []*queries.CommandResult { return s.completed }
 func (s commandStoreStub) GetFailedCommands() []*queries.CommandResult    { return s.failed }
 
 func TestFailedCommandsProjectsEmptyAndFailedStates(t *testing.T) {
@@ -209,4 +212,67 @@ func decodeResponseData(t *testing.T, response mcp.JSONRPCResponse) map[string]a
 	}
 	t.Fatal("response contains no JSON object")
 	return nil
+}
+
+// pending_commands returned every pending, completed and failed command the
+// daemon had ever seen. The completed list grows for the whole life of the
+// process, so an agent asking "did my command finish?" was handed the entire
+// command history — 48,949 bytes on a daemon that had been up for a working
+// day, against 162 on a fresh one.
+func TestPendingCommandsBoundsEachCollection(t *testing.T) {
+	t.Parallel()
+	completed := make([]*queries.CommandResult, commandListDefaultLimit+30)
+	for i := range completed {
+		completed[i] = &queries.CommandResult{CorrelationID: "done-" + strconv.Itoa(i), Status: "complete"}
+	}
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+	response := NewDispatcher(Config{Commands: commandStoreStub{completed: completed}}).
+		pendingCommands(observecore.Deps{}, req, nil)
+
+	data := commandsPayload(t, response)
+	list, _ := data["completed"].([]any)
+	if len(list) != commandListDefaultLimit {
+		t.Fatalf("returned %d completed commands, want the default page of %d", len(list), commandListDefaultLimit)
+	}
+	if total, _ := data["completed_total"].(float64); int(total) != commandListDefaultLimit+30 {
+		t.Errorf("completed_total = %v, want every command counted", data["completed_total"])
+	}
+	if truncated, _ := data["truncated"].(bool); !truncated {
+		t.Error("truncated must be true when commands were withheld")
+	}
+}
+
+// A daemon with little history must not claim its listing was cut.
+func TestPendingCommandsDoesNotClaimTruncationWhenComplete(t *testing.T) {
+	t.Parallel()
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+	response := NewDispatcher(Config{Commands: commandStoreStub{
+		completed: []*queries.CommandResult{{CorrelationID: "done-1", Status: "complete"}},
+	}}).pendingCommands(observecore.Deps{}, req, nil)
+
+	data := commandsPayload(t, response)
+	if truncated, ok := data["truncated"].(bool); ok && truncated {
+		t.Error("a complete listing must not report truncated")
+	}
+	if total, _ := data["completed_total"].(float64); int(total) != 1 {
+		t.Errorf("completed_total = %v, want 1", data["completed_total"])
+	}
+}
+
+func commandsPayload(t *testing.T, response mcp.JSONRPCResponse) map[string]any {
+	t.Helper()
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil || len(result.Content) == 0 {
+		t.Fatalf("response = %s, err=%v", response.Result, err)
+	}
+	text := result.Content[0].Text
+	start := strings.Index(text, "{")
+	if start < 0 {
+		t.Fatalf("no JSON body in %.120q", text)
+	}
+	var data map[string]any
+	if err := json.Unmarshal([]byte(text[start:]), &data); err != nil {
+		t.Fatalf("parse payload: %v", err)
+	}
+	return data
 }
