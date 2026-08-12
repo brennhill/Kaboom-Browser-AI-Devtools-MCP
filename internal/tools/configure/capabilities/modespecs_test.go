@@ -3,6 +3,7 @@
 package capabilities
 
 import (
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -227,7 +228,7 @@ func equalStringSlices(a, b []string) bool {
 // This is a ratchet. The count of modes without a stated response may only
 // shrink; a new mode must state one.
 func TestModesWithoutAStatedResponseOnlyShrink(t *testing.T) {
-	const baseline = 155
+	const baseline = 0
 
 	missing := []string{}
 	for tool, specs := range toolModeSpecs {
@@ -243,9 +244,8 @@ func TestModesWithoutAStatedResponseOnlyShrink(t *testing.T) {
 		t.Fatalf("%d modes have no stated response, above the baseline of %d. A new mode must set Returns: what fields come back, and anything a reader would expect but will not find.\n%s",
 			len(missing), baseline, strings.Join(missing, "\n"))
 	}
-	if len(missing) < baseline {
-		t.Fatalf("%d modes now state a response, below the baseline of %d — lower the baseline in this test to lock the gain in", len(missing), baseline)
-	}
+	// Baseline is zero: every mode states what it returns, and a new one must
+	// too. There is nothing left to ratchet down.
 }
 
 // A stated response must describe the payload, not restate the action.
@@ -255,11 +255,18 @@ func TestStatedResponsesNameTheirFields(t *testing.T) {
 			if spec.Returns == "" {
 				continue
 			}
-			if len(spec.Returns) < 30 {
-				t.Errorf("%s/%s Returns is too short to be a contract: %q", tool, mode, spec.Returns)
-			}
+			// Plain English, not a field dump: a sentence saying what KIND of
+			// thing comes back. "The current telemetry mode." is a complete
+			// answer; length is not the measure. A leading "field[]:" is the
+			// schema restated, which the input schema already carries.
 			if spec.Returns == spec.Hint {
 				t.Errorf("%s/%s Returns just repeats Hint; it must say what comes back", tool, mode)
+			}
+			if !strings.HasSuffix(spec.Returns, ".") {
+				t.Errorf("%s/%s Returns must read as a sentence: %q", tool, mode, spec.Returns)
+			}
+			if matched, _ := regexp.MatchString(`^[a-z_]+\[\]:`, spec.Returns); matched {
+				t.Errorf("%s/%s Returns is a field dump, not plain English: %q", tool, mode, spec.Returns)
 			}
 		}
 	}
