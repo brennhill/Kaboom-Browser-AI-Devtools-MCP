@@ -47,6 +47,37 @@ func (action RecordingAction) IsFragileSelectorAction(fragileSelectors map[strin
 	return fragileSelectors[key]
 }
 
+// RecordingSummary is one entry in a recordings LISTING.
+//
+// CONTRACT: identifies a recording and describes its size and origin so a
+// caller can choose one. It deliberately omits Actions — the listing answers
+// "which recordings exist", and observe(recording_actions) answers "what
+// happened in this one". Embedding the actions here meant answering a question
+// about names with the entire corpus of captured interactions: 480,992 bytes
+// for 1000 recordings, past the response backstop, which then dropped the
+// listing wholesale. ActionCount is how a caller learns the size without
+// paying for it.
+type RecordingSummary struct {
+	ID                   string       `json:"id"`
+	Name                 string       `json:"name"`
+	CreatedAt            string       `json:"created_at"`
+	StartURL             string       `json:"start_url"`
+	Viewport             ViewportInfo `json:"viewport,omitempty"`
+	Duration             int64        `json:"duration_ms"`
+	ActionCount          int          `json:"action_count"`
+	SensitiveDataEnabled bool         `json:"sensitive_data_enabled"`
+	TestID               string       `json:"test_id,omitempty"`
+}
+
+// Summary projects a recording to its listing entry.
+func (r Recording) Summary() RecordingSummary {
+	return RecordingSummary{
+		ID: r.ID, Name: r.Name, CreatedAt: r.CreatedAt, StartURL: r.StartURL,
+		Viewport: r.Viewport, Duration: r.Duration, ActionCount: r.ActionCount,
+		SensitiveDataEnabled: r.SensitiveDataEnabled, TestID: r.TestID,
+	}
+}
+
 // ViewportInfo captures the browser viewport dimensions
 type ViewportInfo struct {
 	Width  int `json:"width"`

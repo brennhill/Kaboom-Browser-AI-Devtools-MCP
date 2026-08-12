@@ -333,3 +333,61 @@ func TestRecordingsKeepsTheDefaultWhenNoLimitGiven(t *testing.T) {
 		t.Fatalf("default limit = %d, want 10", capture.requestedLimit)
 	}
 }
+
+// observe(recordings) is a LISTING. It answers "which recordings exist" so a
+// caller can pick one; observe(recording_actions) answers "what happened in
+// this one". The listing embedded every recording's full actions array, so it
+// returned the entire corpus of captured interactions to answer a question
+// about names — 480,992 bytes for 1000 recordings, enough to trip the response
+// backstop, which then dropped the array wholesale.
+//
+// Capping the count was treating the symptom. A listing entry has no business
+// carrying the actions.
+func TestRecordingsListingOmitsActions(t *testing.T) {
+	capture := &fakeCapture{recordings: []recording.Recording{{
+		ID: "demo-1", Name: "demo", CreatedAt: "2026-08-12T00:00:00Z",
+		StartURL: "https://example.test/", Duration: 1200, ActionCount: 3,
+		Actions: []recording.RecordingAction{{Type: "click"}, {Type: "type"}, {Type: "click"}},
+	}}}
+
+	resp := NewHandler(capture, func(types.LogEntry) {}).
+		Recordings(mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, nil)
+
+	entry := firstRecordingEntry(t, resp)
+	if _, present := entry["actions"]; present {
+		t.Error("a listing entry must not carry the recording's actions; use observe(recording_actions) for those")
+	}
+	// The fields that let a caller choose a recording must survive.
+	for _, keep := range []string{"id", "name", "created_at", "action_count", "duration_ms", "start_url"} {
+		if _, ok := entry[keep]; !ok {
+			t.Errorf("listing entry must keep %q so a caller can choose a recording", keep)
+		}
+	}
+	// action_count is how the caller learns the size without paying for it.
+	if count, _ := entry["action_count"].(float64); int(count) != 3 {
+		t.Errorf("action_count = %v, want 3", entry["action_count"])
+	}
+}
+
+func firstRecordingEntry(t *testing.T, resp mcp.JSONRPCResponse) map[string]any {
+	t.Helper()
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil || len(result.Content) == 0 {
+		t.Fatalf("response = %s, err=%v", resp.Result, err)
+	}
+	text := result.Content[0].Text
+	start := strings.Index(text, "{")
+	if start < 0 {
+		t.Fatalf("no JSON body in %.120q", text)
+	}
+	var payload struct {
+		Recordings []map[string]any `json:"recordings"`
+	}
+	if err := json.Unmarshal([]byte(text[start:]), &payload); err != nil {
+		t.Fatalf("parse payload: %v", err)
+	}
+	if len(payload.Recordings) == 0 {
+		t.Fatal("expected one recording in the listing")
+	}
+	return payload.Recordings[0]
+}

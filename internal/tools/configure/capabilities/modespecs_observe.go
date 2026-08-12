@@ -83,10 +83,10 @@ var observeModeSpecs = map[string]modeParamSpec{
 		Hint: "List recently failed or expired async commands",
 	},
 	"saved_videos": {
-		Hint: "List saved browser recording videos",
+		Hint: "List saved SCREEN-CAPTURE VIDEO files (webm) with their paths and sizes. Not action recordings — see 'recordings' for those.",
 	},
 	"recordings": {
-		Hint:     "List captured browser session recordings",
+		Hint:     "List ACTION recordings (captured user-action sequences for playback and test generation): id, name, created_at, duration, action_count, start_url. Entries omit the actions themselves — use 'recording_actions' with an id for those. Not video files; see 'saved_videos'.",
 		Optional: []string{"limit"},
 	},
 	"recording_actions": {

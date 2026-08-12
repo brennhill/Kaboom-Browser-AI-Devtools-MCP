@@ -182,8 +182,14 @@ func (h *Handler) Recordings(req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	if active != "" {
 		summary += fmt.Sprintf("; recording in progress: %s", active)
 	}
+	// Project to listing entries: an entry identifies a recording, it does not
+	// replay it. See recording.RecordingSummary for the contract.
+	entries := make([]recording.RecordingSummary, len(recordings))
+	for i, rec := range recordings {
+		entries[i] = rec.Summary()
+	}
 	return mcp.Succeed(req, summary, map[string]any{
-		"recordings":          recordings,
+		"recordings":          entries,
 		"count":               len(recordings),
 		"limit":               params.Limit,
 		"active_recording_id": active,
