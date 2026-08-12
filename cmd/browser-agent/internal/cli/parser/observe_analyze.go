@@ -11,6 +11,7 @@ func ParseObserveArgs(mode string, args []string) (map[string]any, error) {
 		// Cross-cutting
 		"--telemetry-mode": {MCPKey: "telemetry_mode", Kind: FlagString},
 		"--limit":          {MCPKey: "limit", Kind: FlagInt},
+		"--verbose":        {MCPKey: "verbose", Kind: FlagBool},
 		"--summary":        {MCPKey: "summary", Kind: FlagBool},
 		"--scope":          {MCPKey: "scope", Kind: FlagString},
 		// Pagination

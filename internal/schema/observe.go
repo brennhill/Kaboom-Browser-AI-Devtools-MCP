@@ -39,6 +39,10 @@ func observeToolSchema() mcp.MCPTool {
 					"type":        "string",
 					"description": "Return all entries newer than cursor (no limit)",
 				},
+				"verbose": map[string]any{
+					"type":        "boolean",
+					"description": "Return every field of each element including bbox, tag, landmark and overlay context (page_inventory). Default false returns element_id, label, element_type, selector and index — enough to choose and act on an element at a fraction of the tokens.",
+				},
 				"restart_on_eviction": map[string]any{
 					"type":        "boolean",
 					"description": "Auto-restart if cursor expired",

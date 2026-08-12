@@ -193,6 +193,10 @@
           "description": "Filter by URL substring (errors, logs, network_waterfall, network_bodies, websocket_events, actions, transients, error_bundles)",
           "type": "string"
         },
+        "verbose": {
+          "description": "Return every field of each element including bbox, tag, landmark and overlay context (page_inventory). Default false returns element_id, label, element_type, selector and index — enough to choose and act on an element at a fraction of the tokens.",
+          "type": "boolean"
+        },
         "visible_only": {
           "description": "Only return visible elements (page_inventory)",
           "type": "boolean"

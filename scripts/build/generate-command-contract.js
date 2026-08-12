@@ -33,7 +33,10 @@ if (sorted.length === 0) throw new Error('no extension command registrations fou
 const id = `sha256:${createHash('sha256').update(sorted.join('\n')).digest('hex')}`
 
 const go = `// generated.go — Generated extension command-contract identity; DO NOT EDIT.\n// Source: literal registerCommand calls under src/background.\n\npackage commandcontract\n\nconst ID = ${JSON.stringify(id)}\n`
-const ts = `// command-contract.ts — Generated extension command-contract identity; DO NOT EDIT.\n// Source: literal registerCommand calls under src/background.\n\nexport const EXTENSION_COMMAND_CONTRACT_ID = ${JSON.stringify(id)}\n`
+// Single-quoted to match .prettierrc (singleQuote: true). JSON.stringify emits
+// double quotes, which left the generated file permanently prettier-dirty and
+// made `make format` and regeneration overwrite each other.
+const ts = `// command-contract.ts — Generated extension command-contract identity; DO NOT EDIT.\n// Source: literal registerCommand calls under src/background.\n\nexport const EXTENSION_COMMAND_CONTRACT_ID = '${id}'\n`
 
 function emit(path, content) {
   if (check) {

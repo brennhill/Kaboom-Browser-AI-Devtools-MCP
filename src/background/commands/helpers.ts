@@ -535,8 +535,7 @@ export async function resolveTargetTab(
   error?: TargetResolutionError
 }> {
   const explicitTabId = typeof query.tab_id === 'number' && query.tab_id > 0 ? query.tab_id : undefined
-  const userRequestedTabId =
-    typeof paramsObj.tab_id === 'number' && paramsObj.tab_id > 0 ? paramsObj.tab_id : undefined
+  const userRequestedTabId = typeof paramsObj.tab_id === 'number' && paramsObj.tab_id > 0 ? paramsObj.tab_id : undefined
   const useActiveTab = paramsObj.use_active_tab === true
 
   /**
@@ -622,9 +621,7 @@ export async function resolveTargetTab(
         useActiveTab
       })
       if (escape) return escape
-      diagnosticLog(
-        `[Diagnostic] Daemon-resolved tab ${explicitTabId} became restricted, clearing tracking state`
-      )
+      diagnosticLog(`[Diagnostic] Daemon-resolved tab ${explicitTabId} became restricted, clearing tracking state`)
       await clearTrackedTab()
       return resolveAutoTrackOrEscapeFallback(explicitTabId, 'Recovering from restricted daemon target on active tab')
     }

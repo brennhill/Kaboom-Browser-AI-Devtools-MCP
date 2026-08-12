@@ -14,8 +14,14 @@ test('local, hook, docs, and CI consume one pinned Go security-tool owner', () =
   const installer = read('scripts/security/install-go-tools.sh')
   assert.match(installer, /source "\$SCRIPT_DIR\/go-tool-versions\.env"/)
   assert.match(installer, /GO_TOOL_BIN=.*go env GOPATH/)
-  assert.match(installer, /GOBIN="\$GO_TOOL_BIN" go install "github\.com\/securego\/gosec\/v2\/cmd\/gosec@\$GOSEC_VERSION"/)
-  assert.match(installer, /GOBIN="\$GO_TOOL_BIN" go install "golang\.org\/x\/vuln\/cmd\/govulncheck@\$GOVULNCHECK_VERSION"/)
+  assert.match(
+    installer,
+    /GOBIN="\$GO_TOOL_BIN" go install "github\.com\/securego\/gosec\/v2\/cmd\/gosec@\$GOSEC_VERSION"/
+  )
+  assert.match(
+    installer,
+    /GOBIN="\$GO_TOOL_BIN" go install "golang\.org\/x\/vuln\/cmd\/govulncheck@\$GOVULNCHECK_VERSION"/
+  )
 
   const workflow = read('.github/workflows/ci.yml')
   assert.match(workflow, /scripts\/security\/install-go-tools\.sh/)

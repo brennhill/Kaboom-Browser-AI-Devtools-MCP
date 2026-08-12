@@ -55,7 +55,7 @@ test('upgrade regression executes npm through the Windows command shell', () => 
   assert.match(source, /cmd\s*===\s*['"]npm['"][\s\S]*endsWith\(['"]\.cmd['"]\)/)
   assert.match(
     source,
-    /ensureMcpRoundTrip[\s\S]*run\(binaryPath,\s*\[['"]--port['"]/, 
+    /ensureMcpRoundTrip[\s\S]*run\(binaryPath,\s*\[['"]--port['"]/,
     'the generated Windows wrapper must use the same portable command runner'
   )
 })

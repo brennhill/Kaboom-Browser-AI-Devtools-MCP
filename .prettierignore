@@ -42,3 +42,9 @@ src/background/dom/primitives/dom-primitives-form.ts
 src/background/dom/primitives/dom-primitives-pointer.ts
 src/background/dom/primitives/dom-primitives-read.ts
 .golangci.yml
+
+# Golden files and test fixtures are byte-compared and are written by their own
+# generators (Go's json.MarshalIndent, not Prettier). Reformatting them breaks
+# the comparison outright — internal/export/sarif/golden_test.go uses
+# bytes.Equal — and a fixture's odd formatting is often the thing under test.
+**/testdata/

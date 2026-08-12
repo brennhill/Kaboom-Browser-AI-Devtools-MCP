@@ -512,6 +512,14 @@ for tool in $TOOLS; do
         if [ "$tool/$mode" = "configure/event_recording_start" ]; then
             HEALTH_RECORDING_ID="$(recording_id_from_response "$response")"
         fi
+        # A clamp firing is a defect signal, not routine: it means this mode has
+        # no adequate limit of its own and the 100KB backstop had to cut the
+        # payload, keeping whichever bytes came first rather than the ones that
+        # mattered. Reported once per mode so it is visible without failing a
+        # suite that is measuring something else.
+        if extract_content_text "$response" | grep -q '"response_truncated":true'; then
+            echo "  OVERSIZED: $tool/$mode exceeded the response limit and was clamped — it needs its own limit (kaboom-qney)"
+        fi
         if ! check_valid_jsonrpc "$response"; then
             fail "$tool/$mode returned an invalid JSON-RPC envelope: $(truncate "$response")"
         elif echo "$expectation" | grep -q '^expected_error:'; then

@@ -19,6 +19,7 @@ func HandlePageInventory(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		TabID       int  `json:"tab_id"`
 		VisibleOnly bool `json:"visible_only"`
 		Limit       int  `json:"limit"`
+		Verbose     bool `json:"verbose"`
 	}
 	if len(args) > 0 {
 		if err := json.Unmarshal(args, &params); err != nil {
@@ -38,5 +39,11 @@ func HandlePageInventory(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		return enqueueResp
 	}
 
-	return d.MaybeWaitForCommand(req, correlationID, args, "Page inventory queued")
+	// page_inventory is 92% interactive_elements — 33 elements cost 8,471 of its
+	// 9,190 bytes — and they are the same shape list_interactive returns, so the
+	// same projection applies. verbose=true restores every field.
+	return toolresp.ProjectElementsInResponse(
+		d.MaybeWaitForCommand(req, correlationID, args, "Page inventory queued"),
+		params.Verbose,
+	)
 }

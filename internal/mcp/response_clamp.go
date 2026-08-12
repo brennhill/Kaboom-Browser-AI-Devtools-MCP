@@ -79,6 +79,18 @@ func ClampResponseSize(result json.RawMessage) json.RawMessage {
 		}
 	}
 
+	// Report the clamp as structured metadata, not only as English inside the
+	// text body. A clamp firing means the mode that produced this response has
+	// no adequate limit of its own — the backstop is doing a paginator's job —
+	// and until this was machine-readable nothing could detect that: not a test,
+	// not a dashboard, not the agent deciding whether to trust the payload.
+	if toolResult.Metadata == nil {
+		toolResult.Metadata = map[string]any{}
+	}
+	toolResult.Metadata["response_truncated"] = true
+	toolResult.Metadata["original_bytes"] = originalSize
+	toolResult.Metadata["limit_bytes"] = MaxResponseBytes
+
 	clamped, err := json.Marshal(toolResult)
 	if err != nil {
 		return result

@@ -316,8 +316,7 @@ export class PerformanceTraceController {
   private async readTargetMetadata(tabId: number): Promise<PerformanceTraceTargetMetadata> {
     const frameTree = (await traceStage('Page.getFrameTree', () =>
       this.deps.debuggerApi.sendCommand({ tabId }, 'Page.getFrameTree')
-    )) as
-      { frameTree?: { frame?: { url?: unknown; loaderId?: unknown } } } | undefined
+    )) as { frameTree?: { frame?: { url?: unknown; loaderId?: unknown } } } | undefined
     const frame = frameTree?.frameTree?.frame
     const evaluated = (await traceStage('Runtime.evaluate', () =>
       this.deps.debuggerApi.sendCommand({ tabId }, 'Runtime.evaluate', {

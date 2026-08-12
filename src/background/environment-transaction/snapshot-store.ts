@@ -80,49 +80,53 @@ export function createPersistentEnvironmentSnapshotStore(deps: PersistentStoreDe
     return result
   }
   return {
-    save: (snapshot) => serialize(async () => {
-      const document = await readDocument(deps)
-      const records = [...document.records]
-      if (records.length >= limit) {
-        notify(deps, 'environment_snapshot_store_full', 'quota')
-        throw new Error('environment_snapshot_store_full')
-      }
-      const id = deps.newID()
-      records.push({ id, created_at: deps.now(), snapshot })
-      await writeDocument(deps, { ...document, records })
-      return id
-    }),
-    lookup: (id) => serialize(async () => {
-      const document = await readDocument(deps)
-      const active = document.records.find((record) => record.id === id)
-      if (active) return { status: 'active', snapshot: active.snapshot }
-      if (document.consumed.some((record) => record.id === id)) return { status: 'consumed' }
-      return { status: 'missing' }
-    }),
-    consume: (id) => serialize(async () => {
-      const document = await readDocument(deps)
-      const records = document.records.filter((record) => record.id !== id)
-      if (records.length === document.records.length) {
-        if (document.consumed.some((record) => record.id === id)) return
-        throw new Error('environment_snapshot_store_consume_missing')
-      }
-      const consumed = [...document.consumed, { id, consumed_at: deps.now() }].slice(-limit)
-      await writeDocument(deps, { version: DOCUMENT_VERSION, records, consumed })
-    }),
-    reconcile: (activeIDs) => serialize(async () => {
-      if (
-        activeIDs.length > limit ||
-        activeIDs.some((id) => typeof id !== 'string' || id.length === 0 || id.length > 256)
-      ) {
-        throw new Error('environment_snapshot_reconcile_invalid')
-      }
-      const active = new Set(activeIDs)
-      const document = await readDocument(deps)
-      const records = document.records.filter((record) => active.has(record.id))
-      const pruned = document.records.length - records.length
-      if (pruned > 0) await writeDocument(deps, { ...document, records })
-      return { pruned, retained: records.length }
-    })
+    save: (snapshot) =>
+      serialize(async () => {
+        const document = await readDocument(deps)
+        const records = [...document.records]
+        if (records.length >= limit) {
+          notify(deps, 'environment_snapshot_store_full', 'quota')
+          throw new Error('environment_snapshot_store_full')
+        }
+        const id = deps.newID()
+        records.push({ id, created_at: deps.now(), snapshot })
+        await writeDocument(deps, { ...document, records })
+        return id
+      }),
+    lookup: (id) =>
+      serialize(async () => {
+        const document = await readDocument(deps)
+        const active = document.records.find((record) => record.id === id)
+        if (active) return { status: 'active', snapshot: active.snapshot }
+        if (document.consumed.some((record) => record.id === id)) return { status: 'consumed' }
+        return { status: 'missing' }
+      }),
+    consume: (id) =>
+      serialize(async () => {
+        const document = await readDocument(deps)
+        const records = document.records.filter((record) => record.id !== id)
+        if (records.length === document.records.length) {
+          if (document.consumed.some((record) => record.id === id)) return
+          throw new Error('environment_snapshot_store_consume_missing')
+        }
+        const consumed = [...document.consumed, { id, consumed_at: deps.now() }].slice(-limit)
+        await writeDocument(deps, { version: DOCUMENT_VERSION, records, consumed })
+      }),
+    reconcile: (activeIDs) =>
+      serialize(async () => {
+        if (
+          activeIDs.length > limit ||
+          activeIDs.some((id) => typeof id !== 'string' || id.length === 0 || id.length > 256)
+        ) {
+          throw new Error('environment_snapshot_reconcile_invalid')
+        }
+        const active = new Set(activeIDs)
+        const document = await readDocument(deps)
+        const records = document.records.filter((record) => active.has(record.id))
+        const pruned = document.records.length - records.length
+        if (pruned > 0) await writeDocument(deps, { ...document, records })
+        return { pruned, retained: records.length }
+      })
   }
 }
 

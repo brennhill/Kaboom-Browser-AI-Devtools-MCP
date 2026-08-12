@@ -364,7 +364,7 @@ func (h *DOMActions) HandleListInteractive(req mcp.JSONRPCRequest, args json.Raw
 		resp = truncateListInteractiveResponse(resp, params.Limit)
 	}
 	// Last, after the element index and truncation have read the full payload.
-	return projectElementsInResponse(resp, params.Verbose)
+	return toolresp.ProjectElementsInResponse(resp, params.Verbose)
 }
 
 func (h *DOMActions) buildElementIndexFromResponse(clientID string, tabID int, generation string, resp mcp.JSONRPCResponse) string {

@@ -563,3 +563,52 @@ func TestClampKeepsTheJSONBodyParseable(t *testing.T) {
 		t.Fatal("clamped body should retain the sessions field, shortened")
 	}
 }
+
+// A clamp firing means the mode that produced the response has no adequate
+// limit of its own — the backstop is doing a paginator's job. That was only
+// ever reported as English prose inside the text body, so nothing could detect
+// it: not a test, not a dashboard, not the agent deciding whether to trust the
+// payload. Report it as structured metadata as well.
+func TestClampReportsItselfInMetadata(t *testing.T) {
+	inner := `{"items":[` + strings.Repeat(`{"id":1,"val":"data"},`, MaxResponseBytes/25) + `{"id":999}]}`
+	raw, err := json.Marshal(MCPToolResult{Content: []MCPContentBlock{{Type: "text", Text: inner}}})
+	if err != nil {
+		t.Fatalf("marshal fixture: %v", err)
+	}
+	if len(raw) <= MaxResponseBytes {
+		t.Fatalf("fixture must exceed the clamp limit, got %d bytes", len(raw))
+	}
+
+	var clamped MCPToolResult
+	if err := json.Unmarshal(ClampResponseSize(raw), &clamped); err != nil {
+		t.Fatalf("unmarshal clamped: %v", err)
+	}
+	if clamped.Metadata == nil {
+		t.Fatal("a clamped response must carry metadata saying so")
+	}
+	if truncated, _ := clamped.Metadata["response_truncated"].(bool); !truncated {
+		t.Errorf("response_truncated = %v, want true", clamped.Metadata["response_truncated"])
+	}
+	original, _ := clamped.Metadata["original_bytes"].(float64)
+	if int(original) != len(raw) {
+		t.Errorf("original_bytes = %v, want %d", clamped.Metadata["original_bytes"], len(raw))
+	}
+	if limit, _ := clamped.Metadata["limit_bytes"].(float64); int(limit) != MaxResponseBytes {
+		t.Errorf("limit_bytes = %v, want %d", clamped.Metadata["limit_bytes"], MaxResponseBytes)
+	}
+}
+
+// A response that fits must not claim it was clamped, or the signal is noise.
+func TestClampLeavesSmallResponsesUnmarked(t *testing.T) {
+	raw, err := json.Marshal(MCPToolResult{Content: []MCPContentBlock{{Type: "text", Text: `{"ok":true}`}}})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var out MCPToolResult
+	if err := json.Unmarshal(ClampResponseSize(raw), &out); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, marked := out.Metadata["response_truncated"]; marked {
+		t.Error("a response within the limit must not be marked truncated")
+	}
+}
