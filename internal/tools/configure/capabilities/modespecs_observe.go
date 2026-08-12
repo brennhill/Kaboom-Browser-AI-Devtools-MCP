@@ -5,10 +5,12 @@ package capabilities
 var observeModeSpecs = map[string]modeParamSpec{
 	"errors": {
 		Hint:     "Raw JavaScript console errors. summary=true returns counts by source + top messages",
+		Returns:  "errors[]: message, stack, source, timestamp for uncaught errors and console.error entries.",
 		Optional: []string{"scope", "limit", "summary"},
 	},
 	"logs": {
 		Hint:     "Console log messages with level/source filtering. summary=true returns counts by level/source",
+		Returns:  "logs[]: level, message, source, timestamp. Noise-filtered — dev-server chatter matching the builtin rules is suppressed and will not appear.",
 		Optional: []string{"min_level", "source", "include_internal", "include_extension_logs", "extension_limit", "limit", "scope", "summary"},
 	},
 	"extension_logs": {
@@ -17,6 +19,7 @@ var observeModeSpecs = map[string]modeParamSpec{
 	},
 	"network_waterfall": {
 		Hint:     "HTTP request/response timeline with status and timing. summary=true returns compact {url,ms,type} entries",
+		Returns:  "entries[]: one per resource request with url, status, timing breakdown (dns/connect/ttfb/download), sizes and initiator. Deduplicated per page load.",
 		Optional: []string{"url", "method", "status_min", "status_max", "limit", "summary", "after_cursor", "before_cursor", "since_cursor", "restart_on_eviction"},
 	},
 	"network_bodies": {
@@ -77,20 +80,24 @@ var observeModeSpecs = map[string]modeParamSpec{
 		Required: []string{"correlation_id"},
 	},
 	"pending_commands": {
-		Hint: "List in-flight async commands awaiting results",
+		Hint:    "List in-flight async commands awaiting results",
+		Returns: "pending[], completed[], failed[] (each capped at the 50 most recent, with pending_total/completed_total/failed_total for the true counts and truncated when any were withheld), plus extension_in_progress[] and its count.",
 	},
 	"failed_commands": {
 		Hint: "List recently failed or expired async commands",
 	},
 	"saved_videos": {
-		Hint: "List saved SCREEN-CAPTURE VIDEO files (webm) with their paths and sizes. Not action recordings — see 'recordings' for those.",
+		Hint:    "List saved SCREEN-CAPTURE VIDEO files (webm) with their paths and sizes. Not action recordings — see 'recordings' for those.",
+		Returns: "videos[]: file path, size and creation time for each saved screen-capture file. No action data.",
 	},
 	"recordings": {
 		Hint:     "List ACTION recordings (captured user-action sequences for playback and test generation): id, name, created_at, duration, action_count, start_url. Entries omit the actions themselves — use 'recording_actions' with an id for those. Not video files; see 'saved_videos'.",
+		Returns:  "recordings[]: id, name, created_at, start_url, duration_ms, action_count, viewport. Entries OMIT the actions themselves — call recording_actions with an id for those. Also active_recording_id (empty when nothing is recording), count, limit.",
 		Optional: []string{"limit"},
 	},
 	"recording_actions": {
 		Hint:     "Action log from a specific recording",
+		Returns:  "The ordered actions of ONE recording: type, selector, value and timing per action, plus the recording metadata.",
 		Required: []string{"recording_id"},
 		Optional: []string{"limit"},
 	},
@@ -109,6 +116,7 @@ var observeModeSpecs = map[string]modeParamSpec{
 	},
 	"page_inventory": {
 		Hint:     "Combined page info + interactive elements in one call. For a richer snapshot (readable text, navigation links, screenshot), use interact(what='explore_page') instead.",
+		Returns:  "Page identity (url, title, favicon, tab_status) plus interactive_elements[]: element_id, element_type, label, selector, index. Pass verbose=true for bbox, tag, landmark and overlay context.",
 		Optional: []string{"visible_only", "limit"},
 	},
 	"transients": {

@@ -3,6 +3,8 @@
 package capabilities
 
 import (
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -214,4 +216,51 @@ func equalStringSlices(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// Every mode must eventually say what its RESPONSE CONTAINS, not only what it
+// does. A Hint is not a contract: "List captured browser session recordings"
+// and "List saved browser recording videos" were indistinguishable, and neither
+// disclosed that a recordings entry carried every captured action — so the
+// listing shipped its whole corpus to answer a question about names.
+//
+// This is a ratchet. The count of modes without a stated response may only
+// shrink; a new mode must state one.
+func TestModesWithoutAStatedResponseOnlyShrink(t *testing.T) {
+	const baseline = 155
+
+	missing := []string{}
+	for tool, specs := range toolModeSpecs {
+		for mode, spec := range specs {
+			if spec.Returns == "" {
+				missing = append(missing, tool+"/"+mode)
+			}
+		}
+	}
+	sort.Strings(missing)
+
+	if len(missing) > baseline {
+		t.Fatalf("%d modes have no stated response, above the baseline of %d. A new mode must set Returns: what fields come back, and anything a reader would expect but will not find.\n%s",
+			len(missing), baseline, strings.Join(missing, "\n"))
+	}
+	if len(missing) < baseline {
+		t.Fatalf("%d modes now state a response, below the baseline of %d — lower the baseline in this test to lock the gain in", len(missing), baseline)
+	}
+}
+
+// A stated response must describe the payload, not restate the action.
+func TestStatedResponsesNameTheirFields(t *testing.T) {
+	for tool, specs := range toolModeSpecs {
+		for mode, spec := range specs {
+			if spec.Returns == "" {
+				continue
+			}
+			if len(spec.Returns) < 30 {
+				t.Errorf("%s/%s Returns is too short to be a contract: %q", tool, mode, spec.Returns)
+			}
+			if spec.Returns == spec.Hint {
+				t.Errorf("%s/%s Returns just repeats Hint; it must say what comes back", tool, mode)
+			}
+		}
+	}
 }

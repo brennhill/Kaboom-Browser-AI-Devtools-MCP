@@ -14,6 +14,7 @@ func buildInteractModeSpecs() map[string]modeParamSpec {
 	for _, spec := range specs {
 		out[spec.Name] = modeParamSpec{
 			Hint:     spec.Hint,
+			Returns:  spec.Returns,
 			Required: append([]string(nil), spec.Required...),
 			Optional: append([]string(nil), spec.Optional...),
 		}

@@ -118,13 +118,21 @@ func FilterToolByMode(toolCap map[string]any, toolName, mode string) (map[string
 	if !ok {
 		return nil, false
 	}
-	return map[string]any{
+	filtered := map[string]any{
 		"tool":     toolName,
 		"mode":     mode,
 		"required": modeEntry["required"],
 		"optional": modeEntry["optional"],
 		"params":   modeEntry["params"],
-	}, true
+	}
+	// Carry the response contract through the single-mode view too. Asking
+	// about one mode is exactly when a caller most needs to know what comes
+	// back, and dropping it here would have left the field invisible on the
+	// path an agent actually uses.
+	if returns, ok := modeEntry["returns"]; ok {
+		filtered["returns"] = returns
+	}
+	return filtered, true
 }
 
 func buildModeParams(
@@ -177,11 +185,20 @@ func buildModeParams(
 
 		applyConfigureModeDefaults(toolName, mode, params)
 
-		modeParams[mode] = map[string]any{
+		entry := map[string]any{
 			"required": spec.Required,
 			"optional": spec.Optional,
 			"params":   params,
 		}
+		// Surface the response contract where an agent asking "what does this
+		// mode do?" will actually see it. Omitted when unstated rather than
+		// emitted empty, so a missing contract is visibly missing.
+		if toolSpecs, ok := toolModeSpecs[toolName]; ok {
+			if modeSpec, ok := toolSpecs[mode]; ok && modeSpec.Returns != "" {
+				entry["returns"] = modeSpec.Returns
+			}
+		}
+		modeParams[mode] = entry
 	}
 
 	return modeParams

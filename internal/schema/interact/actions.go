@@ -5,8 +5,10 @@ package interact
 // ActionSpec defines per-action metadata used across schema + runtime capability docs.
 // Keep this as the single source of truth for interact action surface metadata.
 type ActionSpec struct {
-	Name     string
+	Name string
+	// Hint says what the action DOES; Returns says what the RESPONSE CONTAINS.
 	Hint     string
+	Returns  string
 	Required []string
 	Optional []string
 }

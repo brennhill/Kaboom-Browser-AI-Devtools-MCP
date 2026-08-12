@@ -9,7 +9,16 @@ package capabilities
 
 // modeParamSpec is the shape of every entry in the per-tool spec tables below.
 type modeParamSpec struct {
-	Hint     string
+	// Hint says what the mode DOES.
+	Hint string
+	// Returns says what the RESPONSE CONTAINS: the fields a caller gets back,
+	// and anything a reader would reasonably expect but will not find.
+	//
+	// Hint alone is not a contract. "List captured browser session recordings"
+	// and "List saved browser recording videos" were indistinguishable, and
+	// neither said that a recordings entry carried every captured action — so
+	// the listing shipped its whole corpus to answer a question about names.
+	Returns  string
 	Required []string
 	Optional []string
 }
