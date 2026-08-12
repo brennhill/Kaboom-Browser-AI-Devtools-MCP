@@ -15,7 +15,32 @@
 const http = require('node:http');
 const { isEnvFlagSet } = require('../config/config');
 
-const DEFAULT_PORT = 7890;
+// The port a real user's extension connects to.
+const USER_PORT = 7890;
+
+// The fixed port integration tests use instead. Fixed rather than ephemeral on
+// purpose: a known port can be inspected and cleaned up after a crash, and a
+// leak on it is harmless to the developer's own daemon. A leaked test daemon
+// was found holding USER_PORT — it answered health checks, so a freshly built
+// daemon could not bind and exited silently while every query went to the
+// stale test binary.
+const INTEGRATION_TEST_PORT = 7899;
+
+// KABOOM_PORT is honoured here because the Go daemon already honours it
+// (cmd/browser-agent/internal/cli/cli.go). Without it the launcher was pinned
+// to USER_PORT, so any test exercising it necessarily targeted the developer's
+// own daemon.
+function resolveDefaultPort() {
+  const raw = process.env.KABOOM_PORT;
+  if (!raw) return USER_PORT;
+  const parsed = Number.parseInt(raw, 10);
+  // An unparseable or out-of-range value falls back rather than binding
+  // something arbitrary.
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) return USER_PORT;
+  return parsed;
+}
+
+const DEFAULT_PORT = resolveDefaultPort();
 // One /health read should be quick on localhost; cap it so a hung socket can
 // never wedge the connect loop.
 const DEFAULT_REQUEST_TIMEOUT_MS = 800;
@@ -234,6 +259,8 @@ function connectWaitDisabled(env = process.env) {
 
 module.exports = {
   DEFAULT_PORT,
+  USER_PORT,
+  INTEGRATION_TEST_PORT,
   summarizeHealth,
   defaultRequest,
   fetchHealth,

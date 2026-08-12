@@ -10,6 +10,7 @@ const fs = require('fs')
 const path = require('path')
 const os = require('os')
 const doctor = require('../../../npm/kaboom-agentic-browser/lib/daemon/doctor')
+const { INTEGRATION_TEST_PORT } = require('../../../npm/kaboom-agentic-browser/lib/daemon/health')
 
 // --doctor now exits non-zero on a HARD failure — a missing/broken platform
 // binary — and 0 when tooling is healthy (a not-running daemon / not-connected
@@ -47,7 +48,34 @@ const HERMETIC_ENV = {
   KABOOM_NO_DAEMON: '1',
   KABOOM_NO_OPEN: '1',
   KABOOM_NO_WAIT: '1',
+  // Belt as well as braces. KABOOM_NO_DAEMON should stop any daemon starting,
+  // but a leaked test daemon was once found holding the real user port 7890,
+  // where it answered health checks and shadowed the developer's own daemon.
+  // Pinning the port means that if one does escape, it lands somewhere
+  // harmless and can be found and killed by a known number.
+  KABOOM_PORT: String(INTEGRATION_TEST_PORT),
 }
+
+// Shut down anything this suite left on the integration port. Killing by port
+// rather than by pid catches a daemon spawned by a subprocess we never held a
+// handle to — which is exactly how the original leak survived.
+process.on('exit', () => {
+  try {
+    const held = execSync(`lsof -tiTCP:${INTEGRATION_TEST_PORT} -sTCP:LISTEN 2>/dev/null || true`, {
+      encoding: 'utf8',
+    }).trim()
+    for (const pid of held.split('\n').filter(Boolean)) {
+      try {
+        process.kill(Number(pid), 'SIGTERM')
+      } catch {
+        // Already gone between listing and signalling; nothing to clean up.
+      }
+    }
+  } catch {
+    // lsof is unavailable on this platform: leave the port alone rather than
+    // guessing at pids.
+  }
+})
 function runCommand(args) {
   try {
     const cmd = `npm/kaboom-agentic-browser/bin/kaboom-agentic-browser ${args}`.trim()

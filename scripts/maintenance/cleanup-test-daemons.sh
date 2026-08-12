@@ -72,9 +72,17 @@ kill_test_ports() {
   done
 }
 
+# USER_DAEMON_PORT is what a real extension connects to, and the daemon runs its
+# terminal server on port+1. Neither is ever a test port: this predicate gates
+# cleanup_pid_files, which has no binary-name guard, so including 7890 meant
+# maintenance deleted the production daemon's own pid file.
+readonly USER_DAEMON_PORT=7890
+readonly USER_TERMINAL_PORT=7891
+
 is_test_port() {
   local port="$1"
-  (( (port >= 7890 && port <= 7910) || (port >= 17890 && port <= 17999) ))
+  (( port == USER_DAEMON_PORT || port == USER_TERMINAL_PORT )) && return 1
+  (( (port >= 7899 && port <= 7910) || (port >= 17890 && port <= 17999) ))
 }
 
 cleanup_pid_files() {
@@ -111,7 +119,7 @@ else
   # after twenty hours. Match the optional suffix.
   kill_pattern "kaboom-test-binary[^ ]* --daemon --port" "kaboom test daemons"
   kill_pattern "kaboom-test-binary[^ ]* --port" "kaboom test clients"
-  kill_test_ports 7890 7910
+  kill_test_ports 7899 7910
   kill_test_ports 17890 17999
 fi
 

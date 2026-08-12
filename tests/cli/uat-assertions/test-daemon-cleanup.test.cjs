@@ -62,3 +62,39 @@ describe('test daemon cleanup', () => {
     execFileSync('/bin/bash', ['-n', SCRIPT])
   })
 })
+
+// The sweeper classified 7890-7910 as "test ports". 7890 is the port a real
+// user's daemon serves and 7891 is its terminal server, so cleanup_pid_files —
+// which has no binary-name guard, unlike the process killer — deleted the
+// production daemon's own pid file. Running maintenance broke the thing it was
+// maintaining.
+describe('test-port classification excludes the user daemon', () => {
+  const sweeper = 'scripts/maintenance/cleanup-test-daemons.sh'
+
+  // The sweeper runs main() on load, so extract just the predicate rather than
+  // sourcing the whole script and triggering a real sweep from a test.
+  const predicate = (() => {
+    const src = readFileSync(sweeper, 'utf8')
+    const start = src.indexOf('is_test_port() {')
+    assert.notEqual(start, -1, 'is_test_port must exist')
+    return src.slice(start, src.indexOf('\n}', start) + 2)
+  })()
+
+  function isTestPort(port) {
+    const out = execFileSync('/bin/bash', ['-c', `${predicate}\nis_test_port ${port} && echo yes || echo no`], {
+      encoding: 'utf8'
+    })
+    return out.trim().endsWith('yes')
+  }
+
+  test('the user daemon port and its terminal companion are never test ports', () => {
+    assert.equal(isTestPort(7890), false, '7890 is the port a real extension connects to')
+    assert.equal(isTestPort(7891), false, '7891 is the production terminal server (daemon port + 1)')
+  })
+
+  test('the reserved integration band is still swept', () => {
+    for (const port of [7899, 7905, 7910, 17890, 17999]) {
+      assert.equal(isTestPort(port), true, `${port} is a reserved test port and must still be swept`)
+    }
+  })
+})

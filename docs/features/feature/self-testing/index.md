@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-11
+last_reviewed: 2026-08-12
 code_paths:
   - .github/workflows/ci.yml
   - scripts/uat/runners/smoke-test.sh
