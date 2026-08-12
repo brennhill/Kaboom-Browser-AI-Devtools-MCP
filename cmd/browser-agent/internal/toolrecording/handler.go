@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
+	core "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -160,9 +161,12 @@ func (h *Handler) Recordings(req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 			return resp
 		}
 	}
-	if params.Limit <= 0 {
-		params.Limit = 10
-	}
+	// core.ClampLimit applies the ceiling the observe schema has always
+	// documented ("max 1000"). Without it, limit=100000 built a 2.9MB response
+	// from 4761 recordings that the size clamp then cut back — dropping the
+	// recordings array entirely, since it is the last key, and answering a
+	// request for more data with none.
+	params.Limit = core.ClampLimit(params.Limit, 10)
 
 	recordings, err := h.recordings.ListRecordings(params.Limit)
 	if err != nil {

@@ -12,10 +12,12 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
+	core "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 type fakeCapture struct {
+	requestedLimit int
 	startName      string
 	startURL       string
 	startSensitive bool
@@ -62,7 +64,8 @@ func (f *fakeCapture) StopRecording(string) (int, int64, error) {
 
 func (f *fakeCapture) ActiveRecordingID() string { return f.activeRecordingID }
 
-func (f *fakeCapture) ListRecordings(int) ([]recording.Recording, error) {
+func (f *fakeCapture) ListRecordings(limit int) ([]recording.Recording, error) {
+	f.requestedLimit = limit
 	return f.recordings, f.listErr
 }
 
@@ -301,5 +304,32 @@ func TestRecordingsListingExposesTheActiveRecording(t *testing.T) {
 	text := responseText(t, handler.Recordings(mcp.JSONRPCRequest{}, json.RawMessage(`{}`)))
 	if !strings.Contains(text, `"active_recording_id":"rec-live"`) {
 		t.Fatalf("recordings listing must expose the active recording, got: %s", text)
+	}
+}
+
+// observe(recordings) applied a default of 10 but no ceiling, so limit=100000
+// built a 2,900,631-byte response from 4761 recordings. The response clamp then
+// cut it back to the size limit — and because the recordings array is the last
+// key, what survived was the counts with no recordings at all. The caller asked
+// for more data and received none.
+//
+// The observe schema has documented "max 1000" all along; core.MaxObserveLimit
+// encodes it and several observe modes apply it. This one did not.
+func TestRecordingsCapsAnOverlargeLimit(t *testing.T) {
+	capture := &fakeCapture{}
+	NewHandler(capture, func(types.LogEntry) {}).
+		Recordings(mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, json.RawMessage(`{"limit":100000}`))
+
+	if capture.requestedLimit > core.MaxObserveLimit {
+		t.Fatalf("store was asked for %d recordings, want it capped at %d", capture.requestedLimit, core.MaxObserveLimit)
+	}
+}
+
+func TestRecordingsKeepsTheDefaultWhenNoLimitGiven(t *testing.T) {
+	capture := &fakeCapture{}
+	NewHandler(capture, func(types.LogEntry) {}).
+		Recordings(mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, nil)
+	if capture.requestedLimit != 10 {
+		t.Fatalf("default limit = %d, want 10", capture.requestedLimit)
 	}
 }
