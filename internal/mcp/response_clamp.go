@@ -8,6 +8,15 @@ import (
 	"strings"
 )
 
+// ClampReport says whether a response had to be cut and by how much. A firing
+// means the mode that produced it has no adequate limit of its own, so callers
+// treat it as a defect signal rather than routine housekeeping.
+type ClampReport struct {
+	Truncated     bool
+	OriginalBytes int
+	LimitBytes    int
+}
+
 // MaxResponseBytes is the safety-net limit for MCP tool result payloads.
 // Responses exceeding this size are truncated with a note.
 const MaxResponseBytes = 100_000
@@ -17,14 +26,14 @@ const MaxResponseBytes = 100_000
 // Image content blocks are excluded from the byte count to prevent
 // screenshots from triggering truncation of text data (#9.4).
 // JSON-aware truncation ensures the truncated text is still valid JSON (#9.4.1).
-func ClampResponseSize(result json.RawMessage) json.RawMessage {
+func ClampResponseSize(result json.RawMessage) (json.RawMessage, ClampReport) {
 	if len(result) <= MaxResponseBytes {
-		return result
+		return result, ClampReport{}
 	}
 
 	var toolResult MCPToolResult
 	if err := json.Unmarshal(result, &toolResult); err != nil || len(toolResult.Content) == 0 {
-		return result
+		return result, ClampReport{}
 	}
 
 	// Calculate the byte size of image content blocks (excluded from limit).
@@ -41,12 +50,12 @@ func ClampResponseSize(result json.RawMessage) json.RawMessage {
 	effectiveLimit := MaxResponseBytes + imageBytes
 	originalSize := len(result)
 	if originalSize <= effectiveLimit {
-		return result
+		return result, ClampReport{}
 	}
 
 	text := toolResult.Content[0].Text
 	if text == "" {
-		return result
+		return result, ClampReport{}
 	}
 
 	// Calculate overhead (everything except the first text content)
@@ -93,9 +102,9 @@ func ClampResponseSize(result json.RawMessage) json.RawMessage {
 
 	clamped, err := json.Marshal(toolResult)
 	if err != nil {
-		return result
+		return result, ClampReport{}
 	}
-	return json.RawMessage(clamped)
+	return json.RawMessage(clamped), ClampReport{Truncated: true, OriginalBytes: originalSize, LimitBytes: MaxResponseBytes}
 }
 
 // splitProseAndJSON separates a response's human-readable header from its JSON

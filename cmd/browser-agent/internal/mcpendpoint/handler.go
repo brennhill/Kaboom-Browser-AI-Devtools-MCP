@@ -3,6 +3,7 @@
 package mcpendpoint
 
 import (
+	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpcall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpresponse"
@@ -26,6 +27,7 @@ type Config struct {
 type Handler struct {
 	backend          mcpcall.Backend
 	version          string
+	addWarning       func(string)
 	passiveTelemetry *mcptelemetry.Owner
 	responsePolicy   *mcpresponse.Owner
 }
@@ -39,6 +41,7 @@ func New(config Config, backend mcpcall.Backend) *Handler {
 	}
 	handler := &Handler{
 		backend: backend, version: config.Version,
+		addWarning: config.AddWarning,
 		passiveTelemetry: mcptelemetry.New(mcptelemetry.Config{
 			ErrorTotal: config.ErrorTotal,
 			Mode:       config.TelemetryMode,
@@ -61,5 +64,19 @@ func (h *Handler) HandleRequest(request mcp.JSONRPCRequest) *mcp.JSONRPCResponse
 		ToolCall: func(request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 			return mcpcall.Handle(request, h.backend, h.responsePolicy, h.passiveTelemetry)
 		},
+		OnOversizedResponse: h.warnOversizedResponse,
 	})
+}
+
+// warnOversizedResponse surfaces a size-backstop firing through the daemon's
+// existing warning channel. The clamp only ever said so in English inside the
+// response body, where nothing could act on it; a firing means the mode that
+// produced the response has no adequate limit of its own.
+func (h *Handler) warnOversizedResponse(method string, report mcp.ClampReport) {
+	if h.addWarning == nil {
+		return
+	}
+	h.addWarning(fmt.Sprintf(
+		"%s returned %d bytes and was truncated to the %d byte limit; that mode needs its own limit or pagination",
+		method, report.OriginalBytes, report.LimitBytes))
 }

@@ -48,3 +48,8 @@ src/background/dom/primitives/dom-primitives-read.ts
 # the comparison outright — internal/export/sarif/golden_test.go uses
 # bytes.Equal — and a fixture's odd formatting is often the thing under test.
 **/testdata/
+
+# Generated: written by scripts/build/generate-command-contract.js from the
+# literal registerCommand calls under src/background. Formatting it here would
+# fight the generator on every regeneration.
+src/types/runtime/command-contract.ts

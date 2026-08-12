@@ -1191,7 +1191,7 @@
     },
     "internal/mcp/response_clamp.go": {
       "mutable_globals": 0,
-      "exports": 2
+      "exports": 3
     },
     "internal/mcp/response_content.go": {
       "mutable_globals": 0,

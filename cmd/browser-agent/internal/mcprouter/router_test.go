@@ -4,6 +4,7 @@ package mcprouter
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -103,5 +104,64 @@ func TestHandleNegotiatesVersionsAndRejectsInvalidVersionOrNullID(t *testing.T) 
 	response := Handle(nullID, Config{})
 	if response == nil || response.Error == nil || response.Error.Code != -32600 || response.ID != nil {
 		t.Fatalf("null ID response = %#v", response)
+	}
+}
+
+// A size-backstop firing must reach the host. It means the mode that produced
+// the response has no adequate limit of its own, and the clamp only ever said
+// so in English inside the response body, where nothing could act on it.
+func TestHandleReportsAnOversizedResponse(t *testing.T) {
+	oversized, err := json.Marshal(mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: strings.Repeat("x", mcp.MaxResponseBytes+5000)}},
+	})
+	if err != nil {
+		t.Fatalf("marshal fixture: %v", err)
+	}
+
+	var gotMethod string
+	var gotReport mcp.ClampReport
+	response := Handle(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1, Method: "tools/call",
+			Params: json.RawMessage(`{"name":"observe","arguments":{"what":"recordings"}}`)},
+		Config{
+			ToolCall: func(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+				return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Result: oversized}
+			},
+			OnOversizedResponse: func(method string, report mcp.ClampReport) {
+				gotMethod, gotReport = method, report
+			},
+		},
+	)
+	if response == nil {
+		t.Fatal("expected a response")
+	}
+	// "tools/call" would name every mode identically and tell an operator
+	// nothing about which handler needs a limit.
+	if gotMethod != "observe/recordings" {
+		t.Errorf("reported subject = %q, want observe/recordings", gotMethod)
+	}
+	if !gotReport.Truncated || gotReport.OriginalBytes <= gotReport.LimitBytes {
+		t.Errorf("report = %+v, want a truncation larger than the limit", gotReport)
+	}
+}
+
+// A response within the limit must not raise the signal, or it becomes noise.
+func TestHandleDoesNotReportResponsesWithinTheLimit(t *testing.T) {
+	small, err := json.Marshal(mcp.MCPToolResult{Content: []mcp.MCPContentBlock{{Type: "text", Text: "ok"}}})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	reported := false
+	Handle(
+		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1, Method: "tools/call"},
+		Config{
+			ToolCall: func(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+				return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Result: small}
+			},
+			OnOversizedResponse: func(string, mcp.ClampReport) { reported = true },
+		},
+	)
+	if reported {
+		t.Error("a response within the limit must not be reported as oversized")
 	}
 }

@@ -15,6 +15,10 @@ type Config struct {
 	Version  string
 	Schemas  []mcp.MCPTool
 	ToolCall func(mcp.JSONRPCRequest) mcp.JSONRPCResponse
+	// OnOversizedResponse is called when the size backstop had to cut a
+	// response, which means the mode that produced it has no adequate limit of
+	// its own. Optional: nil leaves the clamp silent, as it was.
+	OnOversizedResponse func(method string, report mcp.ClampReport)
 }
 
 // Handle validates and routes one JSON-RPC request. Notifications return nil.
@@ -30,7 +34,11 @@ func Handle(request mcp.JSONRPCRequest, config Config) *mcp.JSONRPCResponse {
 	}
 	if response, ok := dynamicResponse(request, config); ok {
 		if response.Result != nil {
-			response.Result = mcp.ClampResponseSize(response.Result)
+			clamped, report := mcp.ClampResponseSize(response.Result)
+			response.Result = clamped
+			if report.Truncated && config.OnOversizedResponse != nil {
+				config.OnOversizedResponse(oversizedSubject(request), report)
+			}
 		}
 		return &response
 	}
@@ -79,5 +87,28 @@ func responseError(id any, code int, message string) *mcp.JSONRPCResponse {
 		JSONRPC: mcp.JSONRPCVersion,
 		ID:      id,
 		Error:   &mcp.JSONRPCError{Code: code, Message: message},
+	}
+}
+
+// oversizedSubject names the tool and mode that produced an oversized response.
+// The JSON-RPC method alone is always "tools/call", which tells an operator
+// nothing about which handler needs a limit.
+func oversizedSubject(request mcp.JSONRPCRequest) string {
+	var params struct {
+		Name      string `json:"name"`
+		Arguments struct {
+			What string `json:"what"`
+		} `json:"arguments"`
+	}
+	if len(request.Params) > 0 {
+		_ = json.Unmarshal(request.Params, &params)
+	}
+	switch {
+	case params.Name != "" && params.Arguments.What != "":
+		return params.Name + "/" + params.Arguments.What
+	case params.Name != "":
+		return params.Name
+	default:
+		return request.Method
 	}
 }

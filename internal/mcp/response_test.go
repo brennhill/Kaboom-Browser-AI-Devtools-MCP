@@ -46,7 +46,7 @@ func buildRawToolResult(text string) json.RawMessage {
 func TestClampResponseSize_UnderLimit(t *testing.T) {
 	t.Parallel()
 	result := buildRawToolResult("hello world")
-	clamped := ClampResponseSize(result)
+	clamped, _ := ClampResponseSize(result)
 	if string(clamped) != string(result) {
 		t.Errorf("expected no change for small response")
 	}
@@ -56,7 +56,7 @@ func TestClampResponseSize_OverLimit(t *testing.T) {
 	t.Parallel()
 	bigText := strings.Repeat("x", MaxResponseBytes+1000)
 	result := buildRawToolResult(bigText)
-	clamped := ClampResponseSize(result)
+	clamped, _ := ClampResponseSize(result)
 
 	if len(clamped) >= len(result) {
 		t.Errorf("expected clamped to be smaller: clamped=%d, original=%d", len(clamped), len(result))
@@ -71,7 +71,7 @@ func TestClampResponseSize_PreservesStructure(t *testing.T) {
 	t.Parallel()
 	bigText := strings.Repeat("a", MaxResponseBytes+5000)
 	result := buildRawToolResult(bigText)
-	clamped := ClampResponseSize(result)
+	clamped, _ := ClampResponseSize(result)
 
 	var toolResult MCPToolResult
 	if err := json.Unmarshal(clamped, &toolResult); err != nil {
@@ -89,7 +89,7 @@ func TestClampResponseSize_JSONPayload(t *testing.T) {
 	t.Parallel()
 	bigJSON := `{"key":"` + strings.Repeat("z", MaxResponseBytes+1000) + `"}`
 	result := buildRawToolResult(bigJSON)
-	clamped := ClampResponseSize(result)
+	clamped, _ := ClampResponseSize(result)
 
 	if len(clamped) >= len(result) {
 		t.Errorf("expected clamped JSON response to be smaller")
@@ -104,7 +104,7 @@ func TestClampResponseSize_ErrorResponse(t *testing.T) {
 		IsError: true,
 	}
 	raw, _ := json.Marshal(result)
-	clamped := ClampResponseSize(json.RawMessage(raw))
+	clamped, _ := ClampResponseSize(json.RawMessage(raw))
 
 	var toolResult MCPToolResult
 	if err := json.Unmarshal(clamped, &toolResult); err != nil {
@@ -119,7 +119,7 @@ func TestClampResponseSize_PaginationHint(t *testing.T) {
 	t.Parallel()
 	bigText := strings.Repeat("p", MaxResponseBytes+5000)
 	result := buildRawToolResult(bigText)
-	clamped := ClampResponseSize(result)
+	clamped, _ := ClampResponseSize(result)
 
 	if !strings.Contains(string(clamped), "pagination") {
 		t.Error("expected pagination hint in truncation note")
@@ -246,7 +246,7 @@ func TestClampResponseSize_JSONBoundaryTruncation(t *testing.T) {
 	// After clamping, the result should still be valid JSON (parseable).
 	inner := `{"items":[` + strings.Repeat(`{"id":1,"name":"test item with some content"},`, MaxResponseBytes/50) + `{"id":999}]}`
 	result := buildRawToolResult(inner)
-	clamped := ClampResponseSize(result)
+	clamped, _ := ClampResponseSize(result)
 
 	var toolResult MCPToolResult
 	if err := json.Unmarshal(clamped, &toolResult); err != nil {
@@ -262,7 +262,7 @@ func TestClampResponseSize_TruncatedTextContainsValidishJSON(t *testing.T) {
 	// The inner text (which is JSON) should remain parseable after truncation (#9.QA7).
 	inner := `{"items":[` + strings.Repeat(`{"id":1,"val":"data"},`, MaxResponseBytes/25) + `{"id":999}]}`
 	result := buildRawToolResult(inner)
-	clamped := ClampResponseSize(result)
+	clamped, _ := ClampResponseSize(result)
 
 	var toolResult MCPToolResult
 	if err := json.Unmarshal(clamped, &toolResult); err != nil {
@@ -300,7 +300,7 @@ func TestClampResponseSize_DeeplyNestedJSON(t *testing.T) {
 	}
 	inner := prefix + strings.Repeat(`"data",`, MaxResponseBytes/8) + `"end"` + suffix
 	result := buildRawToolResult(inner)
-	clamped := ClampResponseSize(result)
+	clamped, _ := ClampResponseSize(result)
 
 	var toolResult MCPToolResult
 	if err := json.Unmarshal(clamped, &toolResult); err != nil {
@@ -322,7 +322,7 @@ func TestClampResponseSize_PreservesImageBlocks(t *testing.T) {
 		},
 	}
 	raw, _ := json.Marshal(result)
-	clamped := ClampResponseSize(json.RawMessage(raw))
+	clamped, _ := ClampResponseSize(json.RawMessage(raw))
 
 	var toolResult MCPToolResult
 	if err := json.Unmarshal(clamped, &toolResult); err != nil {
@@ -353,7 +353,7 @@ func TestClampResponseSize_TextExceedsLimitWithImageBlock(t *testing.T) {
 		},
 	}
 	raw, _ := json.Marshal(result)
-	clamped := ClampResponseSize(json.RawMessage(raw))
+	clamped, _ := ClampResponseSize(json.RawMessage(raw))
 
 	var toolResult MCPToolResult
 	if err := json.Unmarshal(clamped, &toolResult); err != nil {
@@ -540,7 +540,7 @@ func TestClampKeepsTheJSONBodyParseable(t *testing.T) {
 	}
 
 	var clamped MCPToolResult
-	if err := json.Unmarshal(ClampResponseSize(raw), &clamped); err != nil {
+	if err := json.Unmarshal(clampFirst(ClampResponseSize(raw)), &clamped); err != nil {
 		t.Fatalf("unmarshal clamped result: %v", err)
 	}
 	got := clamped.Content[0].Text
@@ -580,7 +580,7 @@ func TestClampReportsItselfInMetadata(t *testing.T) {
 	}
 
 	var clamped MCPToolResult
-	if err := json.Unmarshal(ClampResponseSize(raw), &clamped); err != nil {
+	if err := json.Unmarshal(clampFirst(ClampResponseSize(raw)), &clamped); err != nil {
 		t.Fatalf("unmarshal clamped: %v", err)
 	}
 	if clamped.Metadata == nil {
@@ -605,10 +605,13 @@ func TestClampLeavesSmallResponsesUnmarked(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	var out MCPToolResult
-	if err := json.Unmarshal(ClampResponseSize(raw), &out); err != nil {
+	if err := json.Unmarshal(clampFirst(ClampResponseSize(raw)), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	if _, marked := out.Metadata["response_truncated"]; marked {
 		t.Error("a response within the limit must not be marked truncated")
 	}
 }
+
+// clampFirst drops the report so a test can assert on the payload alone.
+func clampFirst(result json.RawMessage, _ ClampReport) json.RawMessage { return result }
