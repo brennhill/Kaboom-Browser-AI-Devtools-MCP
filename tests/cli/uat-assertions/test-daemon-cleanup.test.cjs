@@ -98,3 +98,35 @@ describe('test-port classification excludes the user daemon', () => {
     }
   })
 })
+
+// Three places name the reserved band: the Go harness allocates from it, the
+// sweeper cleans it, and the CLI suite pins one port inside it. If they drift,
+// a leaked daemon sits in a range nothing sweeps — which is the whole failure
+// this band exists to prevent.
+describe('reserved test-port band agrees across Go, the sweeper and the CLI suite', () => {
+  const harness = readFileSync('cmd/browser-agent/internal/integrationtest/harness.go', 'utf8')
+  const sweeper = readFileSync('scripts/maintenance/cleanup-test-daemons.sh', 'utf8')
+  const health = readFileSync('npm/kaboom-agentic-browser/lib/daemon/health.js', 'utf8')
+
+  const goBase = Number(/ReservedPortBase\s*=\s*(\d+)/.exec(harness)[1])
+  const goEnd = Number(/ReservedPortEnd\s*=\s*(\d+)/.exec(harness)[1])
+  const cliPort = Number(/INTEGRATION_TEST_PORT\s*=\s*(\d+)/.exec(health)[1])
+
+  test('the sweeper covers the whole Go band', () => {
+    const swept = /kill_test_ports (\d+) (\d+)/.exec(sweeper)
+    assert.ok(swept, 'the sweeper must sweep an explicit range')
+    const [, sweptStart, sweptEnd] = swept.map(Number)
+    assert.ok(sweptStart <= goBase, `sweep starts at ${sweptStart}, above the Go band base ${goBase}`)
+    assert.ok(sweptEnd >= goEnd, `sweep ends at ${sweptEnd}, below the Go band end ${goEnd}`)
+  })
+
+  test("the CLI suite's port is swept but outside the Go allocation band", () => {
+    assert.ok(cliPort < goBase, `CLI port ${cliPort} must sit below the Go band so the two never contend`)
+    assert.match(sweeper, new RegExp(`port >= ${cliPort}`), 'the sweeper must cover the CLI port')
+  })
+
+  test('no part of the band touches the user daemon', () => {
+    assert.ok(goBase > 7891, `Go band starts at ${goBase}, which reaches the user's daemon or terminal port`)
+    assert.ok(cliPort > 7891, `CLI port ${cliPort} reaches the user's daemon or terminal port`)
+  })
+})

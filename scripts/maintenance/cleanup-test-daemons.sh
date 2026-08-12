@@ -82,7 +82,9 @@ readonly USER_TERMINAL_PORT=7891
 is_test_port() {
   local port="$1"
   (( port == USER_DAEMON_PORT || port == USER_TERMINAL_PORT )) && return 1
-  (( (port >= 7899 && port <= 7910) || (port >= 17890 && port <= 17999) ))
+  # 7899 is the CLI integration suite; 7900-7998 is the Go integration band
+  # (ReservedPortBase/End in cmd/browser-agent/internal/integrationtest).
+  (( (port >= 7899 && port <= 7998) || (port >= 17890 && port <= 17999) ))
 }
 
 cleanup_pid_files() {
@@ -119,7 +121,7 @@ else
   # after twenty hours. Match the optional suffix.
   kill_pattern "kaboom-test-binary[^ ]* --daemon --port" "kaboom test daemons"
   kill_pattern "kaboom-test-binary[^ ]* --port" "kaboom test clients"
-  kill_test_ports 7899 7910
+  kill_test_ports 7899 7998
   kill_test_ports 17890 17999
 fi
 

@@ -75,9 +75,56 @@ func ResponseTimeout(ordinary time.Duration) time.Duration {
 	return ordinary
 }
 
-// FreePort returns a currently unbound loopback TCP port.
+// ReservedPortBase and ReservedPortEnd bound the range integration daemons
+// prefer.
+//
+// A daemon that outlives its test used to land on an OS-assigned port, so it
+// could not be found or killed by number — the hunt for twelve stale daemons
+// had to match on process name instead. A known band makes a leak diagnosable.
+//
+// The band deliberately starts above the user's daemon (7890), its terminal
+// server (7891) and the CLI integration suite's pinned 7899.
+const (
+	ReservedPortBase = 7900
+	ReservedPortEnd  = 7998
+)
+
+// freePortInBand returns a bindable port in [base, end], or 0 if none is free.
+//
+// Safety comes from binding, not from bookkeeping: a port is only returned
+// after this process has successfully bound it, so two packages running in
+// parallel cannot both be handed the same one however their scans overlap.
+// The starting offset is derived from the pid so parallel test processes begin
+// at different points and do not all contend for the bottom of the band.
+func freePortInBand(base, end int) int {
+	span := end - base + 1
+	if span <= 0 {
+		return 0
+	}
+	offset := os.Getpid() % span
+	for i := 0; i < span; i++ {
+		port := base + (offset+i)%span
+		listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			continue
+		}
+		if closeErr := listener.Close(); closeErr != nil {
+			continue
+		}
+		return port
+	}
+	return 0
+}
+
+// FreePort returns a currently unbound loopback TCP port, preferring the
+// reserved band so a leaked daemon can be found by number.
 func FreePort(t *testing.T) int {
 	t.Helper()
+	if port := freePortInBand(ReservedPortBase, ReservedPortEnd); port != 0 {
+		return port
+	}
+	// Band exhausted — a heavily parallel run, or leftovers holding it. Fall
+	// back to an ephemeral port rather than failing tests over port supply.
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("find free port: %v", err)
