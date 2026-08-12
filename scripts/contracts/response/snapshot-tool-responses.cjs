@@ -56,7 +56,9 @@ function health() {
 function requireAttachedExtension(stage) {
   const h = health()
   if (h?.capture?.extension_connected !== true) {
-    die(`extension is not attached to the daemon (${stage}). Browser-mediated modes would be captured in a degraded state.`)
+    die(
+      `extension is not attached to the daemon (${stage}). Browser-mediated modes would be captured in a degraded state.`
+    )
   }
 }
 
@@ -66,7 +68,8 @@ const surface = JSON.parse(fs.readFileSync(surfacePath, 'utf8'))
 // Reuse cat-33's argument table so the snapshot matches what the sweep sends.
 const sweep = fs.readFileSync('scripts/tests/browser/cat-33-connected-action-coverage.sh', 'utf8')
 const argsStart = sweep.indexOf('action_args() {')
-if (argsStart === -1) die('cat-33 action_args table not found; the snapshot must send the same arguments the sweep does')
+if (argsStart === -1)
+  die('cat-33 action_args table not found; the snapshot must send the same arguments the sweep does')
 const argsBody = sweep.slice(argsStart, sweep.indexOf('\n}', argsStart))
 const argTable = {}
 for (const m of argsBody.matchAll(/^\s+([a-z_|/]+)\)\s+echo\s+'([^']+)'\s*;;/gm)) {
@@ -83,9 +86,25 @@ const EXCLUDED = {
 }
 
 function callMode(tool, args) {
-  const body = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: tool, arguments: JSON.parse(args) } })
+  const body = JSON.stringify({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'tools/call',
+    params: { name: tool, arguments: JSON.parse(args) }
+  })
   const raw = curl(
-    ['-s', '--max-time', '30', '-X', 'POST', `http://127.0.0.1:${PORT}/mcp`, '-H', 'Content-Type: application/json', '-d', body],
+    [
+      '-s',
+      '--max-time',
+      '30',
+      '-X',
+      'POST',
+      `http://127.0.0.1:${PORT}/mcp`,
+      '-H',
+      'Content-Type: application/json',
+      '-d',
+      body
+    ],
     `${tool} call`
   )
   if (!raw.trim()) die(`${tool} returned an empty body — the daemon accepted the connection but answered nothing`)
@@ -140,7 +159,13 @@ function shapeOf(rpc, key) {
     if (!resolved) {
       return { kind: 'pending_unresolved', payload_keys: [], is_error: isError, envelope_keys: top }
     }
-    return { kind: 'envelope', envelope_keys: top, resolved_via: 'command_result', ...payloadShape(resolved), is_error: isError }
+    return {
+      kind: 'envelope',
+      envelope_keys: top,
+      resolved_via: 'command_result',
+      ...payloadShape(resolved),
+      is_error: isError
+    }
   }
   if (lifecycle) {
     return { kind: 'envelope', envelope_keys: top, ...payloadShape(parsed.result), is_error: isError }
@@ -169,7 +194,11 @@ function resolveQueuedCommand(correlationID) {
     const body = jsonBodyOf(text)
     if (!body) continue
     let parsed
-    try { parsed = JSON.parse(body) } catch { continue }
+    try {
+      parsed = JSON.parse(body)
+    } catch {
+      continue
+    }
     const status = parsed.lifecycle_status || parsed.status
     if (status && String(status).match(/complete|resolved|success|failed|error/i)) {
       return 'result' in parsed ? parsed.result : parsed
@@ -203,8 +232,10 @@ fs.writeFileSync(outPath, JSON.stringify(rows, null, 2))
 
 const count = (k) => rows.filter((r) => r.kind === k).length
 console.log(`captured ${rows.length} modes -> ${outPath}`)
-console.log(`  direct=${count('direct')} envelope=${count('envelope')} prose_only=${count('prose_only')} ` +
-  `non_object=${count('non_object')} unparseable=${count('unparseable_body')} rpc_error=${count('rpc_error')} excluded=${count('excluded')}`)
+console.log(
+  `  direct=${count('direct')} envelope=${count('envelope')} prose_only=${count('prose_only')} ` +
+    `non_object=${count('non_object')} unparseable=${count('unparseable_body')} rpc_error=${count('rpc_error')} excluded=${count('excluded')}`
+)
 console.log(`  responses flagged isError: ${rows.filter((r) => r.is_error).length}`)
 
 // The review list the owner asked for: current behaviour that may be an accident
@@ -213,6 +244,9 @@ const big = rows.filter((r) => (r.response_bytes || 0) > 10000).sort((a, b) => b
 console.log(`\nLARGEST RESPONSES — ${big.length} modes over 10KB:`)
 for (const r of big) console.log(`  ${String(r.response_bytes).padStart(7)} bytes  ${r.key}`)
 
-const thin = rows.filter((r) => !r.kind.match(/excluded|rpc_error/) && !r.is_error && (r.payload_keys || []).length <= 1)
+const thin = rows.filter(
+  (r) => !r.kind.match(/excluded|rpc_error/) && !r.is_error && (r.payload_keys || []).length <= 1
+)
 console.log(`\nREVIEW BEFORE LOCKING — ${thin.length} modes return 0-1 payload fields:`)
-for (const r of thin) console.log(`  ${r.key.padEnd(34)} kind=${r.kind.padEnd(12)} payload=${JSON.stringify(r.payload_keys)}`)
+for (const r of thin)
+  console.log(`  ${r.key.padEnd(34)} kind=${r.kind.padEnd(12)} payload=${JSON.stringify(r.payload_keys)}`)

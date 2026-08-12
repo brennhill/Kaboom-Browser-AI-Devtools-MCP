@@ -338,6 +338,7 @@ func (h *DOMActions) HandleListInteractive(req mcp.JSONRPCRequest, args json.Raw
 		TabID       int  `json:"tab_id,omitempty"`
 		VisibleOnly bool `json:"visible_only,omitempty"`
 		Limit       int  `json:"limit,omitempty"`
+		Verbose     bool `json:"verbose,omitempty"`
 	}
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
@@ -362,7 +363,8 @@ func (h *DOMActions) HandleListInteractive(req mcp.JSONRPCRequest, args json.Raw
 	if params.Limit > 0 {
 		resp = truncateListInteractiveResponse(resp, params.Limit)
 	}
-	return resp
+	// Last, after the element index and truncation have read the full payload.
+	return projectElementsInResponse(resp, params.Verbose)
 }
 
 func (h *DOMActions) buildElementIndexFromResponse(clientID string, tabID int, generation string, resp mcp.JSONRPCResponse) string {

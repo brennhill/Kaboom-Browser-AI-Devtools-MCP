@@ -54,6 +54,10 @@ func targetingProperties() map[string]any {
 			"type":        "number",
 			"description": "Max elements to return (list_interactive, default all)",
 		},
+		"verbose": map[string]any{
+			"type":        "boolean",
+			"description": "Return every element field including bbox, tag, landmark and overlay context (list_interactive, explore_page). Default false returns element_id, label, element_type, selector and index — enough to choose and act on an element at a fraction of the tokens. Ask for verbose only when you need geometry or landmark grouping.",
+		},
 		"text_contains": map[string]any{
 			"type":        "string",
 			"description": "Filter list_interactive elements whose label contains this substring (case-insensitive)",

@@ -3,9 +3,8 @@
 
 const assert = require('node:assert/strict')
 const { execFileSync } = require('node:child_process')
-const { existsSync, globSync, readFileSync } = require('node:fs')
+const { existsSync, globSync, mkdtempSync, readFileSync, writeFileSync } = require('node:fs')
 const { describe, test } = require('node:test')
-const { chmodSync, copyFileSync, mkdirSync, mkdtempSync, writeFileSync } = require('node:fs')
 const { tmpdir } = require('node:os')
 const { join } = require('node:path')
 

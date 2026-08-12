@@ -54,9 +54,17 @@ func TestTestDaemonExitsWhenItsOwnerIsKilled(t *testing.T) {
 		_, _ = daemon.Process.Wait()
 	})
 
-	deadline := time.Now().Add(testprocess.StartTimeout())
-	for !procctl.IsProcessAlive(daemonPID) && time.Now().Before(deadline) {
-		time.Sleep(50 * time.Millisecond)
+	// Ticker rather than Sleep: the repo bans wall-clock sleeps in tests because
+	// they encode a guess about timing instead of waiting on the condition.
+	startupPoll := time.NewTicker(50 * time.Millisecond)
+	defer startupPoll.Stop()
+	deadline := time.After(testprocess.StartTimeout())
+	for !procctl.IsProcessAlive(daemonPID) {
+		select {
+		case <-deadline:
+			t.Fatal("daemon did not come up before the startup timeout")
+		case <-startupPoll.C:
+		}
 	}
 	if !procctl.IsProcessAlive(daemonPID) {
 		t.Fatal("daemon did not come up")

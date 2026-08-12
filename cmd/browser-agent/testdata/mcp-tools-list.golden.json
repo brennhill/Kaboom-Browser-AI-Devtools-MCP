@@ -1696,6 +1696,10 @@
           "description": "Value for select or set_attribute.",
           "type": "string"
         },
+        "verbose": {
+          "description": "Return every element field including bbox, tag, landmark and overlay context (list_interactive, explore_page). Default false returns element_id, label, element_type, selector and index — enough to choose and act on an element at a fraction of the tokens. Ask for verbose only when you need geometry or landmark grouping.",
+          "type": "boolean"
+        },
         "visible_only": {
           "description": "Only return visible elements (list_interactive)",
           "type": "boolean"

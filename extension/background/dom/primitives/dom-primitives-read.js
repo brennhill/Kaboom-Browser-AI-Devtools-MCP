@@ -722,13 +722,15 @@ r" ? rect.bottom : top + rect.height;
             y === "number" ? rect.y : 0;
         const width = Number.isFinite(rect.width) ? rect.width : 0;
         const height = Number.isFinite(rect.height) ? rect.height : 0;
-        return { x, y, width, height };
+        return { x: Math.round(x), y: Math.
+                round(y), width: Math.round(width), height: Math.round(height) };
     }
     function summarizeCandidates(matches) {
         return matches.slice(0, 8).map(candidate => {
             const htmlEl = candidate;
             const fallback = candidate.tagName.toLowerCase();
-            return { tag: fallback, role: candidate.getAttribute("role") || void 0, aria_label: candidate.getAttribute("aria-label") || void 0, text_preview: (htmlEl.textContent || "").trim().slice(0, 80) || void 0, selector: buildUniqueSelector(candidate, htmlEl, fallback), element_id: getOrCreateElementID(candidate), bbox: extractBoundingBox(candidate), visible: isActionableVisible(candidate) };
+            return { tag: fallback, role: candidate.getAttribute("role") || void 0, aria_label: candidate.getAttribute("aria-label") ||
+                    void 0, text_preview: (htmlEl.textContent || "").trim().slice(0, 80) || void 0, selector: buildUniqueSelector(candidate, htmlEl, fallback), element_id: getOrCreateElementID(candidate), bbox: extractBoundingBox(candidate), visible: isActionableVisible(candidate) };
         });
     }
     function uniqueElements(elements) {
@@ -753,16 +755,17 @@ r" ? rect.bottom : top + rect.height;
         return parsed;
     }
     function areaScore(el2, max) {
-        if (!(el2 instanceof HTMLElement) || typeof el2.getBoundingClientRect !== "function")
+        if (!(el2 instanceof
+            HTMLElement) || typeof el2.getBoundingClientRect !== "function")
             return 0;
         const rect = el2.getBoundingClientRect();
         if (rect.width <= 0 || rect.height <= 0)
             return 0;
-        return Math.min(max, Math.round(rect.width * rect.height / 1e4));
+        return Math.
+            min(max, Math.round(rect.width * rect.height / 1e4));
     }
     function collectDialogs() {
-        const selectors = ['[role="dialog"\
-]', '[aria-modal="true"]', "dialog[open]"];
+        const selectors = ['[role="dialog"]', '[aria-modal="true"]', "dialog[open]"];
         const dialogs = [];
         for (const dialogSelector of selectors) {
             dialogs.push(...querySelectorAllDeep(dialogSelector));
@@ -772,52 +775,53 @@ r" ? rect.bottom : top + rect.height;
     function pickTopDialog(dialogs) {
         if (dialogs.length === 0)
             return null;
-        const ranked = dialogs.map((dialog, index) => ({ element: dialog,
-            score: elementZIndexScore(dialog) * 1e3 + areaScore(dialog, 200) + index })).sort((a, b) => b.score - a.score);
+        const ranked = dialogs.map((dialog, index) => ({ element: dialog, score: elementZIndexScore(dialog) * 1e3 + areaScore(dialog, 200) + index })).
+            sort((a, b) => b.score - a.score);
         return ranked[0]?.element || null;
     }
     function rankAmbiguousCandidates(candidates, action2, selectorText) {
         const dialogs = collectDialogs();
-        const topDialog = dialogs.length > 0 ? pickTopDialog(dialogs) : null;
+        const topDialog = dialogs.
+            length > 0 ? pickTopDialog(dialogs) : null;
         const selectorLabel = (() => {
             if (selectorText.startsWith("text="))
-                return selectorText.
-                    slice(5);
-            if (selectorText.startsWith("aria-label="))
+                return selectorText.slice(5);
+            if (selectorText.startsWith("aria\
+-label="))
                 return selectorText.slice(11);
             if (selectorText.startsWith("label="))
                 return selectorText.slice(6);
-            if (selectorText.
-                startsWith("placeholder="))
-                return selectorText.slice(12);
+            if (selectorText.startsWith("placeholder="))
+                return selectorText.
+                    slice(12);
             return "";
         })();
-        const clickLikeActions = new Set(["click", "key_press", "focus", "scroll_to", "set_attribute", "p\
-aste"]);
-        const typeLikeActions = new Set(["type", "select", "check"]);
+        const clickLikeActions = new Set(["click", "key_press", "focus", "scroll_to", "set_attribute", "paste"]);
+        const typeLikeActions = new Set(["type", "\
+select", "check"]);
         const scored = candidates.map(el2 => {
             const tag = el2.tagName.toLowerCase();
             const role = el2.getAttribute("role") || "";
             let score = 0;
-            if (topDialog && typeof topDialog.contains === "function" && topDialog.contains(el2)) {
+            if (topDialog && typeof topDialog.
+                contains === "function" && topDialog.contains(el2)) {
                 score += 200;
             }
             if (clickLikeActions.has(action2)) {
-                if (tag === "bu\
-tton" || role === "button" || tag === "input" && (el2.type === "submit" || el2.type === "button")) {
+                if (tag === "button" || role === "button" || tag === "input" && (el2.type === "sub\
+mit" || el2.type === "button")) {
                     score += 100;
                 }
                 else if (tag === "a" || role === "link") {
                     score += 40;
                 }
             }
-            else if (typeLikeActions.
-                has(action2)) {
-                if (tag === "input" || tag === "textarea" || tag === "select" || el2.getAttribute("contenteditable") === "true" || role === "textbox") {
+            else if (typeLikeActions.has(action2)) {
+                if (tag === "input" || tag === "textarea" || tag ===
+                    "select" || el2.getAttribute("contenteditable") === "true" || role === "textbox") {
                     score += 100;
                 }
-                else if (tag === "butt\
-on" || role === "button") {
+                else if (tag === "button" || role === "button") {
                     score += 10;
                 }
             }
@@ -825,24 +829,25 @@ on" || role === "button") {
                 const elLabel = extractElementLabel(el2);
                 const trimmedLabel = elLabel.trim();
                 if (trimmedLabel === selectorLabel) {
-                    score +=
-                        80;
+                    score += 80;
                 }
-                else if (trimmedLabel.startsWith(selectorLabel) && trimmedLabel.length <= selectorLabel.length + 5) {
+                else if (trimmedLabel.startsWith(selectorLabel) && trimmedLabel.length <= selectorLabel.
+                    length + 5) {
                     score += 60;
                 }
             }
             if (tag === "button" || role === "button") {
                 const htmlEl = el2;
                 const cls = (typeof htmlEl.className === "string" ? htmlEl.className : "").toLowerCase();
-                const type = el2.getAttribute("type") || "";
+                const type = el2.
+                    getAttribute("type") || "";
                 if (type === "submit")
                     score += 60;
-                else if (/\bprimary\b|\bbtn-primary\b|\bcta\b/.
-                    test(cls))
+                else if (/\bprimary\b|\bbtn-primary\b|\bcta\b/.test(cls))
                     score += 60;
                 else {
-                    const style = typeof getComputedStyle === "function" ? getComputedStyle(htmlEl) : null;
+                    const style = typeof getComputedStyle ===
+                        "function" ? getComputedStyle(htmlEl) : null;
                     if (style) {
                         const bg = style.backgroundColor || "";
                         if (bg && !/transparent|rgba\(0,\s*0,\s*0,\s*0\)|rgb\(255,\s*255,\s*255\)|rgb\(2[45]\d,\s*2[45]\d,\s*2[45]\d\)/.

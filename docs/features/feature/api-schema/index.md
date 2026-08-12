@@ -37,7 +37,7 @@ code_paths:
   - internal/schema/interact/properties_output_batch.go
   - internal/schema/interact/properties_targeting.go
   - internal/mcp/response_clamp.go
-  - scripts/contracts/snapshot-tool-responses.cjs
+  - scripts/contracts/response/snapshot-tool-responses.cjs
 test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go

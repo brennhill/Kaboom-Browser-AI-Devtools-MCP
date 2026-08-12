@@ -208,7 +208,10 @@ export function domPrimitiveIntent(action, options) {
         const y = typeof rect.top === 'number' ? rect.top : typeof rect.y === 'number' ? rect.y : 0;
         const width = Number.isFinite(rect.width) ? rect.width : 0;
         const height = Number.isFinite(rect.height) ? rect.height : 0;
-        return { x, y, width, height };
+        // Round to whole pixels. getBoundingClientRect returns sub-pixel floats, and
+        // serializing 94.30208587646484 for a width costs ~15 bytes per element for
+        // precision no consumer uses — clicks and highlights are integer-pixel.
+        return { x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height) };
     }
     function captureViewport() {
         const w = typeof window !== 'undefined' ? window : null;

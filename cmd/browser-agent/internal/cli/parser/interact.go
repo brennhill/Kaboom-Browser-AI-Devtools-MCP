@@ -41,6 +41,7 @@ func ParseInteractArgs(action string, args []string) (map[string]any, error) {
 		"--y":                {MCPKey: "y", Kind: FlagInt},
 		// List/query filters
 		"--visible-only":    {MCPKey: "visible_only", Kind: FlagBool},
+		"--verbose":         {MCPKey: "verbose", Kind: FlagBool},
 		"--limit":           {MCPKey: "limit", Kind: FlagInt},
 		"--text-contains":   {MCPKey: "text_contains", Kind: FlagString},
 		"--role":            {MCPKey: "role", Kind: FlagString},

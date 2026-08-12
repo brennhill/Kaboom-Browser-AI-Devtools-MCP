@@ -128,28 +128,29 @@ Number(document.documentElement.clientWidth||0):0;const left=typeof rect.left===
 r"?rect.bottom:top+rect.height;const intersectsX=viewWidth<=0||right>0&&left<viewWidth;const intersectsY=viewHeight<=0||bottom>0&&top<viewHeight;return intersectsX&&
 intersectsY}function extractBoundingBox(el2){if(!(el2 instanceof HTMLElement)||typeof el2.getBoundingClientRect!=="function"){return{x:0,y:0,width:0,height:0}}const rect=el2.
 getBoundingClientRect();const x=typeof rect.left==="number"?rect.left:typeof rect.x==="number"?rect.x:0;const y=typeof rect.top==="number"?rect.top:typeof rect.
-y==="number"?rect.y:0;const width=Number.isFinite(rect.width)?rect.width:0;const height=Number.isFinite(rect.height)?rect.height:0;return{x,y,width,height}}function summarizeCandidates(matches){
-return matches.slice(0,8).map(candidate=>{const htmlEl=candidate;const fallback=candidate.tagName.toLowerCase();return{tag:fallback,role:candidate.getAttribute(
-"role")||void 0,aria_label:candidate.getAttribute("aria-label")||void 0,text_preview:(htmlEl.textContent||"").trim().slice(0,80)||void 0,selector:buildUniqueSelector(
-candidate,htmlEl,fallback),element_id:getOrCreateElementID(candidate),bbox:extractBoundingBox(candidate),visible:isActionableVisible(candidate)}})}function uniqueElements(elements){
-const out=[];const seen=new Set;for(const element of elements){if(seen.has(element))continue;seen.add(element);out.push(element)}return out}function elementZIndexScore(el2){
-if(!(el2 instanceof HTMLElement))return 0;const style=getComputedStyle(el2);const raw=style.zIndex||"";const parsed=Number.parseInt(raw,10);if(Number.isNaN(parsed))
-return 0;return parsed}function areaScore(el2,max){if(!(el2 instanceof HTMLElement)||typeof el2.getBoundingClientRect!=="function")return 0;const rect=el2.getBoundingClientRect();
-if(rect.width<=0||rect.height<=0)return 0;return Math.min(max,Math.round(rect.width*rect.height/1e4))}function collectDialogs(){const selectors=['[role="dialog"\
-]','[aria-modal="true"]',"dialog[open]"];const dialogs=[];for(const dialogSelector of selectors){dialogs.push(...querySelectorAllDeep(dialogSelector))}return uniqueElements(
-dialogs).filter(isActionableVisible)}function pickTopDialog(dialogs){if(dialogs.length===0)return null;const ranked=dialogs.map((dialog,index)=>({element:dialog,
-score:elementZIndexScore(dialog)*1e3+areaScore(dialog,200)+index})).sort((a,b)=>b.score-a.score);return ranked[0]?.element||null}function rankAmbiguousCandidates(candidates,action2,selectorText){
-const dialogs=collectDialogs();const topDialog=dialogs.length>0?pickTopDialog(dialogs):null;const selectorLabel=(()=>{if(selectorText.startsWith("text="))return selectorText.
-slice(5);if(selectorText.startsWith("aria-label="))return selectorText.slice(11);if(selectorText.startsWith("label="))return selectorText.slice(6);if(selectorText.
-startsWith("placeholder="))return selectorText.slice(12);return""})();const clickLikeActions=new Set(["click","key_press","focus","scroll_to","set_attribute","p\
-aste"]);const typeLikeActions=new Set(["type","select","check"]);const scored=candidates.map(el2=>{const tag=el2.tagName.toLowerCase();const role=el2.getAttribute(
-"role")||"";let score=0;if(topDialog&&typeof topDialog.contains==="function"&&topDialog.contains(el2)){score+=200}if(clickLikeActions.has(action2)){if(tag==="bu\
-tton"||role==="button"||tag==="input"&&(el2.type==="submit"||el2.type==="button")){score+=100}else if(tag==="a"||role==="link"){score+=40}}else if(typeLikeActions.
-has(action2)){if(tag==="input"||tag==="textarea"||tag==="select"||el2.getAttribute("contenteditable")==="true"||role==="textbox"){score+=100}else if(tag==="butt\
-on"||role==="button"){score+=10}}if(selectorLabel){const elLabel=extractElementLabel(el2);const trimmedLabel=elLabel.trim();if(trimmedLabel===selectorLabel){score+=
-80}else if(trimmedLabel.startsWith(selectorLabel)&&trimmedLabel.length<=selectorLabel.length+5){score+=60}}if(tag==="button"||role==="button"){const htmlEl=el2;
-const cls=(typeof htmlEl.className==="string"?htmlEl.className:"").toLowerCase();const type=el2.getAttribute("type")||"";if(type==="submit")score+=60;else if(/\bprimary\b|\bbtn-primary\b|\bcta\b/.
-test(cls))score+=60;else{const style=typeof getComputedStyle==="function"?getComputedStyle(htmlEl):null;if(style){const bg=style.backgroundColor||"";if(bg&&!/transparent|rgba\(0,\s*0,\s*0,\s*0\)|rgb\(255,\s*255,\s*255\)|rgb\(2[45]\d,\s*2[45]\d,\s*2[45]\d\)/.
+y==="number"?rect.y:0;const width=Number.isFinite(rect.width)?rect.width:0;const height=Number.isFinite(rect.height)?rect.height:0;return{x:Math.round(x),y:Math.
+round(y),width:Math.round(width),height:Math.round(height)}}function summarizeCandidates(matches){return matches.slice(0,8).map(candidate=>{const htmlEl=candidate;
+const fallback=candidate.tagName.toLowerCase();return{tag:fallback,role:candidate.getAttribute("role")||void 0,aria_label:candidate.getAttribute("aria-label")||
+void 0,text_preview:(htmlEl.textContent||"").trim().slice(0,80)||void 0,selector:buildUniqueSelector(candidate,htmlEl,fallback),element_id:getOrCreateElementID(
+candidate),bbox:extractBoundingBox(candidate),visible:isActionableVisible(candidate)}})}function uniqueElements(elements){const out=[];const seen=new Set;for(const element of elements){
+if(seen.has(element))continue;seen.add(element);out.push(element)}return out}function elementZIndexScore(el2){if(!(el2 instanceof HTMLElement))return 0;const style=getComputedStyle(
+el2);const raw=style.zIndex||"";const parsed=Number.parseInt(raw,10);if(Number.isNaN(parsed))return 0;return parsed}function areaScore(el2,max){if(!(el2 instanceof
+HTMLElement)||typeof el2.getBoundingClientRect!=="function")return 0;const rect=el2.getBoundingClientRect();if(rect.width<=0||rect.height<=0)return 0;return Math.
+min(max,Math.round(rect.width*rect.height/1e4))}function collectDialogs(){const selectors=['[role="dialog"]','[aria-modal="true"]',"dialog[open]"];const dialogs=[];
+for(const dialogSelector of selectors){dialogs.push(...querySelectorAllDeep(dialogSelector))}return uniqueElements(dialogs).filter(isActionableVisible)}function pickTopDialog(dialogs){
+if(dialogs.length===0)return null;const ranked=dialogs.map((dialog,index)=>({element:dialog,score:elementZIndexScore(dialog)*1e3+areaScore(dialog,200)+index})).
+sort((a,b)=>b.score-a.score);return ranked[0]?.element||null}function rankAmbiguousCandidates(candidates,action2,selectorText){const dialogs=collectDialogs();const topDialog=dialogs.
+length>0?pickTopDialog(dialogs):null;const selectorLabel=(()=>{if(selectorText.startsWith("text="))return selectorText.slice(5);if(selectorText.startsWith("aria\
+-label="))return selectorText.slice(11);if(selectorText.startsWith("label="))return selectorText.slice(6);if(selectorText.startsWith("placeholder="))return selectorText.
+slice(12);return""})();const clickLikeActions=new Set(["click","key_press","focus","scroll_to","set_attribute","paste"]);const typeLikeActions=new Set(["type","\
+select","check"]);const scored=candidates.map(el2=>{const tag=el2.tagName.toLowerCase();const role=el2.getAttribute("role")||"";let score=0;if(topDialog&&typeof topDialog.
+contains==="function"&&topDialog.contains(el2)){score+=200}if(clickLikeActions.has(action2)){if(tag==="button"||role==="button"||tag==="input"&&(el2.type==="sub\
+mit"||el2.type==="button")){score+=100}else if(tag==="a"||role==="link"){score+=40}}else if(typeLikeActions.has(action2)){if(tag==="input"||tag==="textarea"||tag===
+"select"||el2.getAttribute("contenteditable")==="true"||role==="textbox"){score+=100}else if(tag==="button"||role==="button"){score+=10}}if(selectorLabel){const elLabel=extractElementLabel(
+el2);const trimmedLabel=elLabel.trim();if(trimmedLabel===selectorLabel){score+=80}else if(trimmedLabel.startsWith(selectorLabel)&&trimmedLabel.length<=selectorLabel.
+length+5){score+=60}}if(tag==="button"||role==="button"){const htmlEl=el2;const cls=(typeof htmlEl.className==="string"?htmlEl.className:"").toLowerCase();const type=el2.
+getAttribute("type")||"";if(type==="submit")score+=60;else if(/\bprimary\b|\bbtn-primary\b|\bcta\b/.test(cls))score+=60;else{const style=typeof getComputedStyle===
+"function"?getComputedStyle(htmlEl):null;if(style){const bg=style.backgroundColor||"";if(bg&&!/transparent|rgba\(0,\s*0,\s*0,\s*0\)|rgb\(255,\s*255,\s*255\)|rgb\(2[45]\d,\s*2[45]\d,\s*2[45]\d\)/.
 test(bg)){score+=30}}}}score+=Math.min(50,Math.max(0,elementZIndexScore(el2)));score+=areaScore(el2,30);return{element:el2,score}});scored.sort((a,b)=>b.score-a.
 score);const topScore=scored[0]?.score??0;const secondScore=scored[1]?.score??0;const gap=topScore-secondScore;const winner=gap>=50?scored[0]?.element??null:null;
 return{winner,gap,ranked:scored}}function resolveActionTarget(){const requestedScope=(options.scope_selector||"").trim();if(requestedScope&&!scopeRoot){return{error:domError(

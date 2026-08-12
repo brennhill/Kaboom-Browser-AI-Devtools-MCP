@@ -52,7 +52,7 @@ test_paths:
   - internal/capture/no_facade_test.go
   - internal/recording/playback/playback_test.go
   - internal/recording/logdiff/logdiff_test.go
-  - internal/recording/no_facade_test.go
+  - internal/recording/types_test.go
   - internal/recording/actionlog/recorder_test.go
   - tests/extension/recording-lifecycle/recording-fixture.js
   - tests/extension/recording-lifecycle/recording-lifecycle.test.js

@@ -13,13 +13,20 @@ func TestWatchIsInertWithoutAnOwner(t *testing.T) {
 	t.Setenv(OwnerPIDEnv, "")
 
 	var exited atomic.Bool
-	stop, watching := Watch(func(int) bool { return false }, func() { exited.Store(true) }, time.Millisecond)
+	// Tripwire rather than a sleep. Watch returns before starting a goroutine
+	// when there is no owner, so exit is structurally unreachable and waiting
+	//20ms proved nothing. Failing the moment the liveness probe is called at all
+	// catches a future regression that does start one, whenever it fires.
+	stop, watching := Watch(
+		func(int) bool { t.Error("an unowned daemon must never be polled for liveness"); return false },
+		func() { exited.Store(true) },
+		time.Millisecond,
+	)
 	defer stop()
 
 	if watching {
 		t.Fatal("Watch must not supervise a daemon that was not started by a test")
 	}
-	time.Sleep(20 * time.Millisecond)
 	if exited.Load() {
 		t.Fatal("Watch terminated a production daemon that has no test owner")
 	}
@@ -29,13 +36,16 @@ func TestWatchIgnoresAnUnparseableOwner(t *testing.T) {
 	t.Setenv(OwnerPIDEnv, "not-a-pid")
 
 	var exited atomic.Bool
-	stop, watching := Watch(func(int) bool { return false }, func() { exited.Store(true) }, time.Millisecond)
+	stop, watching := Watch(
+		func(int) bool { t.Error("an unparseable owner must never be polled for liveness"); return false },
+		func() { exited.Store(true) },
+		time.Millisecond,
+	)
 	defer stop()
 
 	if watching {
 		t.Fatal("an unparseable owner pid must not start the watchdog")
 	}
-	time.Sleep(20 * time.Millisecond)
 	if exited.Load() {
 		t.Fatal("an unparseable owner pid must not terminate the daemon")
 	}
