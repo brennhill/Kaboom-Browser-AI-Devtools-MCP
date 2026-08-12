@@ -20,7 +20,20 @@ type sessionSummary struct {
 	ModTime   int64  `json:"mod_time"`
 }
 
-func ListDrawHistory(req mcp.JSONRPCRequest, dir string, dirErr error) mcp.JSONRPCResponse {
+// drawHistoryDefaultLimit bounds a listing that would otherwise return every
+// session on disk. Measured on a real machine: 4051 sessions, 1,084,063 bytes,
+// clamped by the response safety net rather than by anything that understood
+// what the caller wanted. Newest sessions are the useful ones, and the listing
+// is sorted newest-first, so a page from the front is the right default.
+const drawHistoryDefaultLimit = 200
+
+// ListDrawHistory lists draw sessions newest-first, returning at most limit of
+// them. A non-positive limit falls back to the default rather than meaning
+// "unbounded": an accidental zero must not resurrect the megabyte response.
+func ListDrawHistory(req mcp.JSONRPCRequest, dir string, dirErr error, limit int) mcp.JSONRPCResponse {
+	if limit <= 0 {
+		limit = drawHistoryDefaultLimit
+	}
 	if dirErr != nil {
 		return mcp.Fail(req, mcp.ErrNoData, "Cannot access screenshots directory: "+dirErr.Error(), "Check file permissions")
 	}
@@ -43,9 +56,23 @@ func ListDrawHistory(req mcp.JSONRPCRequest, dir string, dirErr error) mcp.JSONR
 		})
 	}
 	sort.Slice(sessions, func(i, j int) bool { return sessions[i].ModTime > sessions[j].ModTime })
-	return mcp.Succeed(req, "Draw session history", map[string]any{
+	total := len(sessions)
+	truncated := total > limit
+	if truncated {
+		sessions = sessions[:limit]
+	}
+	payload := map[string]any{
+		// count keeps its existing meaning — how many sessions are in this
+		// response — because callers already read it that way. total is the new
+		// field, and the pair is what tells a caller the listing was cut.
 		"sessions": sessions, "count": len(sessions), "storage_dir": dir,
-	})
+		"total": total,
+	}
+	if truncated {
+		payload["truncated"] = true
+		payload["hint"] = "Showing the newest sessions. Pass limit to widen the page."
+	}
+	return mcp.Succeed(req, "Draw session history", payload)
 }
 
 func LoadDrawSession(store *Store, req mcp.JSONRPCRequest, args json.RawMessage, dir string, dirErr error) mcp.JSONRPCResponse {

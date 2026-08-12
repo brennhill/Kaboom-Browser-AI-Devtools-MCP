@@ -131,9 +131,17 @@ func (d *Dispatcher) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 
 func (d *Dispatcher) ValidModes() []string { return util.SortedMapKeys(d.registry.Handlers) }
 
-func (d *Dispatcher) drawHistory(_ observecore.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) drawHistory(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params struct {
+		Limit int `json:"limit,omitempty"`
+	}
+	if len(args) > 0 {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+			return resp
+		}
+	}
 	dir, err := mediaapi.ScreenshotsDir()
-	return annotation.ListDrawHistory(req, dir, err)
+	return annotation.ListDrawHistory(req, dir, err, params.Limit)
 }
 
 func (d *Dispatcher) drawSession(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

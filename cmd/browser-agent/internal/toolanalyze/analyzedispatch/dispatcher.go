@@ -109,9 +109,19 @@ func (d *Dispatcher) ValidateAPI(req mcp.JSONRPCRequest, args json.RawMessage) m
 	return d.config.ValidateAPI(req, args)
 }
 
-func (d *Dispatcher) DrawHistory(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) DrawHistory(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	// limit was previously ignored, so the listing returned every session on
+	// disk and relied on the response clamp to cut it.
+	var params struct {
+		Limit int `json:"limit,omitempty"`
+	}
+	if len(args) > 0 {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+			return resp
+		}
+	}
 	dir, err := mediaapi.ScreenshotsDir()
-	return annotation.ListDrawHistory(req, dir, err)
+	return annotation.ListDrawHistory(req, dir, err, params.Limit)
 }
 
 func (d *Dispatcher) DrawSession(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

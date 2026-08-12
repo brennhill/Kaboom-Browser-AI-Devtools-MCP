@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -388,10 +389,10 @@ func TestLoadDrawSessionRejectsTraversal(t *testing.T) {
 func TestDrawSessionHistoryFiltersSortsAndReportsDirectoryFailures(t *testing.T) {
 	t.Parallel()
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	if result := decodeDrawResult(t, ListDrawHistory(req, "", errors.New("unavailable"))); !result.IsError {
+	if result := decodeDrawResult(t, ListDrawHistory(req, "", errors.New("unavailable"), 0)); !result.IsError {
 		t.Fatal("directory resolution error was ignored")
 	}
-	if result := decodeDrawResult(t, ListDrawHistory(req, filepath.Join(t.TempDir(), "missing"), nil)); !result.IsError {
+	if result := decodeDrawResult(t, ListDrawHistory(req, filepath.Join(t.TempDir(), "missing"), nil, 0)); !result.IsError {
 		t.Fatal("missing directory error was ignored")
 	}
 	dir := t.TempDir()
@@ -405,7 +406,7 @@ func TestDrawSessionHistoryFiltersSortsAndReportsDirectoryFailures(t *testing.T)
 	}
 	old := time.Now().Add(-time.Hour)
 	_ = os.Chtimes(filepath.Join(dir, "draw-session-old.json"), old, old)
-	result := decodeDrawResult(t, ListDrawHistory(req, dir, nil))
+	result := decodeDrawResult(t, ListDrawHistory(req, dir, nil, 0))
 	if result.IsError || !strings.Contains(result.Content[0].Text, `"count":2`) ||
 		strings.Index(result.Content[0].Text, "draw-session-new") > strings.Index(result.Content[0].Text, "draw-session-old") {
 		t.Fatalf("history = %+v", result)
@@ -460,4 +461,92 @@ func decodeDrawResult(t *testing.T, response mcp.JSONRPCResponse) mcp.MCPToolRes
 		t.Fatal(err)
 	}
 	return result
+}
+
+// draw_history returned every session it could find — 4051 of them on a real
+// machine, 1,084,063 bytes — and leaned on the 100KB response clamp to cut it
+// down. That is a safety net doing a paginator's job: the clamp keeps whatever
+// bytes came first, which has no relationship to what the caller wanted, and
+// the truncation used to leave the body unparseable.
+func TestListDrawHistoryAppliesADefaultPageSize(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < drawHistoryDefaultLimit+40; i++ {
+		name := filepath.Join(dir, "draw-session-"+strconv.Itoa(i)+"-1700000000000.json")
+		if err := os.WriteFile(name, []byte(`{"annotations":[]}`), 0o600); err != nil {
+			t.Fatalf("seed session: %v", err)
+		}
+	}
+
+	resp := ListDrawHistory(mcp.JSONRPCRequest{}, dir, nil, 0)
+	payload := drawHistoryPayload(t, resp)
+
+	sessions, _ := payload["sessions"].([]any)
+	if len(sessions) != drawHistoryDefaultLimit {
+		t.Fatalf("returned %d sessions, want the default page of %d", len(sessions), drawHistoryDefaultLimit)
+	}
+	// The caller must be able to tell the listing was cut, from the data rather
+	// than from prose it may never parse.
+	if total, _ := payload["total"].(float64); int(total) != drawHistoryDefaultLimit+40 {
+		t.Errorf("total = %v, want every session counted even when not returned", payload["total"])
+	}
+	if count, _ := payload["count"].(float64); int(count) != drawHistoryDefaultLimit {
+		t.Errorf("count = %v, want the number actually returned", payload["count"])
+	}
+	if truncated, _ := payload["truncated"].(bool); !truncated {
+		t.Error("truncated must be true when sessions were withheld")
+	}
+}
+
+func TestListDrawHistoryHonoursAnExplicitLimit(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 12; i++ {
+		name := filepath.Join(dir, "draw-session-"+strconv.Itoa(i)+"-1700000000000.json")
+		if err := os.WriteFile(name, []byte(`{"annotations":[]}`), 0o600); err != nil {
+			t.Fatalf("seed session: %v", err)
+		}
+	}
+
+	resp := ListDrawHistory(mcp.JSONRPCRequest{}, dir, nil, 5)
+	payload := drawHistoryPayload(t, resp)
+	sessions, _ := payload["sessions"].([]any)
+	if len(sessions) != 5 {
+		t.Fatalf("returned %d sessions, want the requested 5", len(sessions))
+	}
+	if truncated, _ := payload["truncated"].(bool); !truncated {
+		t.Error("truncated must be true when a limit withheld sessions")
+	}
+}
+
+// A listing that fits must not claim it was cut.
+func TestListDrawHistoryDoesNotClaimTruncationWhenComplete(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "draw-session-1-1700000000000.json"), []byte(`{}`), 0o600); err != nil {
+		t.Fatalf("seed session: %v", err)
+	}
+	payload := drawHistoryPayload(t, ListDrawHistory(mcp.JSONRPCRequest{}, dir, nil, 0))
+	if truncated, ok := payload["truncated"].(bool); ok && truncated {
+		t.Error("a complete listing must not report truncated")
+	}
+}
+
+func drawHistoryPayload(t *testing.T, resp mcp.JSONRPCResponse) map[string]any {
+	t.Helper()
+	raw, err := json.Marshal(resp.Result)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(raw, &result); err != nil || len(result.Content) == 0 {
+		t.Fatalf("unmarshal tool result: %v", err)
+	}
+	text := result.Content[0].Text
+	start := strings.Index(text, "{")
+	if start < 0 {
+		t.Fatalf("no JSON body in %.120q", text)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(text[start:]), &payload); err != nil {
+		t.Fatalf("parse payload: %v", err)
+	}
+	return payload
 }

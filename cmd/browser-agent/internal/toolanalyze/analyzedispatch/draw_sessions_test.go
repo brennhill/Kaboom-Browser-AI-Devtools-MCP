@@ -17,10 +17,16 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 func newDrawTestDispatcher(t *testing.T) (*Dispatcher, *annotation.Store) {
 	t.Helper()
+	// Isolate the state directory. Without this these tests read the developer's
+	// real ~/.kaboom/screenshots — 4051 sessions on the machine where this was
+	// found — so "EmptyDir" was not empty, results depended on whose laptop ran
+	// them, and every case walked thousands of files.
+	t.Setenv(state.StateDirEnv, t.TempDir())
 	store := annotation.NewStore(10 * time.Minute)
 	t.Cleanup(store.Close)
 	return NewDispatcher(Config{AnnotationStore: store}), store
