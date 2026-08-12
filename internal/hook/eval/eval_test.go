@@ -4,6 +4,7 @@ package eval
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +12,29 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/hook"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
+
+// TestMain isolates the eval rig from the developer's real Kaboom state root.
+// The quality-gate hook persists discovered conventions there, and a cache
+// carried over from a previous run would let the latency fixtures measure a
+// warm project instead of the cold walk they exist to bound.
+func TestMain(m *testing.M) {
+	root, err := os.MkdirTemp("", "kaboom-eval-state-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cannot create eval state root: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.Setenv(state.StateDirEnv, root); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot set eval state root: %v\n", err)
+		os.Exit(1)
+	}
+	code := m.Run()
+	if err := os.RemoveAll(root); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot remove eval state root: %v\n", err)
+	}
+	os.Exit(code)
+}
 
 // findRepoRoot walks up from dir looking for go.mod.
 func findRepoRoot(dir string) string {

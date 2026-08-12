@@ -5,6 +5,7 @@
 package hook
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
 
 const (
@@ -322,8 +326,8 @@ const (
 
 // DiscoveredConvention is a call-site pattern found in multiple files.
 type DiscoveredConvention struct {
-	Pattern   string
-	FileCount int
+	Pattern   string `json:"pattern"`
+	FileCount int    `json:"file_count"`
 }
 
 // discoveryCache stores discovered conventions per project root + language.
@@ -428,6 +432,14 @@ func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
 	}
 	discoveryCache.mu.RUnlock()
 
+	// The in-process cache above cannot help the shipped configuration: each
+	// hook is its own short-lived process, so it writes the cache and exits.
+	// The project-scoped file is what actually spares the next edit the walk.
+	if conventions, ok := loadPersistedConventions(projectRoot, ext); ok {
+		rememberConventions(key, conventions)
+		return conventions
+	}
+
 	exts := extensionFamily(ext)
 	noise := noiseSetForExt(ext)
 	callSite := callSiteForExt(ext)
@@ -494,15 +506,109 @@ func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
 		conventions = conventions[:discoveryMaxProbes]
 	}
 
-	// Cache.
+	rememberConventions(key, conventions)
+	persistConventions(projectRoot, ext, conventions)
+
+	return conventions
+}
+
+func rememberConventions(key string, conventions []DiscoveredConvention) {
 	discoveryCache.mu.Lock()
 	discoveryCache.entries[key] = &discoveryCacheEntry{
 		conventions: conventions,
 		timestamp:   time.Now(),
 	}
 	discoveryCache.mu.Unlock()
+}
 
-	return conventions
+// --- Persisted discovery cache ---
+
+// Discovery is the quality-gate hook's dominant cost, and the process-level
+// cache above never survives to be read: cmd/hooks runs exactly one hook and
+// exits, so every edit re-walked the project to rediscover conventions that had
+// not changed. The results depend only on the project's own source, so they are
+// cached per project rather than per session — a new agent session inherits a
+// warm cache instead of paying the walk again.
+const conventionCacheDirName = "hook-conventions"
+
+// persistedConventions is the on-disk form of one discovery result.
+type persistedConventions struct {
+	Conventions []DiscoveredConvention `json:"conventions"`
+	BuiltAt     time.Time              `json:"built_at"`
+}
+
+// conventionCachePath locates the cache file for one project and language.
+// Each language gets its own file so a hook discovering Go conventions cannot
+// clobber the TypeScript entry written by a concurrently running hook.
+func conventionCachePath(projectRoot, ext string) (string, error) {
+	dir, err := state.ProjectDir(projectRoot)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, conventionCacheDirName, "conventions-"+extensionSlug(ext)+".json"), nil
+}
+
+// extensionSlug reduces a file extension to a safe filename component.
+func extensionSlug(ext string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(strings.TrimPrefix(ext, ".")) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	if b.Len() == 0 {
+		return "none"
+	}
+	return b.String()
+}
+
+// loadPersistedConventions returns a cached discovery result that is still
+// within the TTL. A miss is always safe: the caller re-walks the project.
+func loadPersistedConventions(projectRoot, ext string) ([]DiscoveredConvention, bool) {
+	path, err := conventionCachePath(projectRoot, ext)
+	if err != nil {
+		logHookDiagnostic("convention_cache_path_failed")
+		return nil, false
+	}
+	data, err := os.ReadFile(path) // #nosec G304 -- path is derived from the state root, not from user input.
+	if err != nil {
+		// EXPECTED_ABSENCE: the first discovery for a project has nothing cached,
+		// and reporting that as a fault would fire on every clean checkout.
+		return nil, false
+	}
+	var cached persistedConventions
+	if json.Unmarshal(data, &cached) != nil {
+		logHookDiagnostic("convention_cache_corrupt")
+		return nil, false
+	}
+	if cached.BuiltAt.IsZero() || time.Since(cached.BuiltAt) > discoveryCacheTTL {
+		return nil, false
+	}
+	return cached.Conventions, true
+}
+
+// persistConventions records a discovery result for the next hook process.
+// Failure costs only a slower next edit, so it never blocks the current one,
+// but it is reported rather than swallowed: a cache that silently never writes
+// is exactly the defect this replaced.
+func persistConventions(projectRoot, ext string, conventions []DiscoveredConvention) {
+	path, err := conventionCachePath(projectRoot, ext)
+	if err != nil {
+		logHookDiagnostic("convention_cache_path_failed")
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		logHookDiagnostic("convention_cache_dir_failed")
+		return
+	}
+	data, err := json.Marshal(persistedConventions{Conventions: conventions, BuiltAt: time.Now()})
+	if err != nil {
+		logHookDiagnostic("convention_cache_encode_failed")
+		return
+	}
+	if err := statefile.Write(path, data, 0o600); err != nil {
+		logHookDiagnostic("convention_cache_write_failed")
+	}
 }
 
 // DiscoveredProbes returns just the pattern strings from discovery, suitable

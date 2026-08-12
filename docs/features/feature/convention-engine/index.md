@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-08-12
 code_paths:
   - internal/hook/conventions.go
+  - internal/state/paths.go
   - internal/hook/hook_policy.go
 test_paths:
   - internal/hook/conventions_test.go

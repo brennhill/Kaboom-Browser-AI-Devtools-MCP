@@ -10,7 +10,31 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
+
+// TestMain gives the package its own state root. Convention discovery persists
+// its results under the Kaboom state directory, and without this every test run
+// would deposit cache files in the developer's real ~/.kaboom and read back
+// results a previous run had written.
+func TestMain(m *testing.M) {
+	root, err := os.MkdirTemp("", "kaboom-hook-state-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cannot create test state root: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.Setenv(state.StateDirEnv, root); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot set test state root: %v\n", err)
+		os.Exit(1)
+	}
+	code := m.Run()
+	if err := os.RemoveAll(root); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot remove test state root: %v\n", err)
+	}
+	os.Exit(code)
+}
 
 func mustMarshal(v any) json.RawMessage {
 	data, _ := json.Marshal(v)
@@ -350,6 +374,142 @@ func TestRunQualityGate_WithConventions(t *testing.T) {
 	}
 	if !strings.Contains(result.Context, "http.Client{") {
 		t.Error("expected http.Client{ convention in output")
+	}
+}
+
+// setupDiscoverableProject builds a project whose call sites clear
+// discoveryMinFiles, so discovery has something to return and a cache has
+// something worth holding.
+func setupDiscoverableProject(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	for i := 0; i < discoveryMinFiles+1; i++ {
+		writeFile(t, root, fmt.Sprintf("store%d.go", i),
+			fmt.Sprintf("package main\n\nfunc use%d() {\n\tdb.Query(\"SELECT %d\")\n\tcache.Get(\"k%d\")\n}\n", i, i, i))
+	}
+	return root
+}
+
+// forgetDiscoveredConventions drops the in-process cache so a test can observe
+// what a freshly started hook process would see. Each hook is its own
+// short-lived process in production, so this is the state that actually matters.
+func forgetDiscoveredConventions(t *testing.T) {
+	t.Helper()
+	discoveryCache.mu.Lock()
+	discoveryCache.entries = make(map[string]*discoveryCacheEntry)
+	discoveryCache.mu.Unlock()
+}
+
+// TestDiscoverConventions_SurvivesProcessRestart is the regression guard for the
+// cache that never worked. The process-level map is written and then discarded
+// when the hook exits, so before conventions were persisted every edit re-walked
+// the project. Deleting the sources after the first discovery proves the second
+// answer came from the cache and not from a second walk.
+func TestDiscoverConventions_SurvivesProcessRestart(t *testing.T) {
+	root := setupDiscoverableProject(t)
+
+	first := DiscoverConventions(root, ".go")
+	if len(first) == 0 {
+		t.Fatal("expected conventions from the initial walk")
+	}
+
+	forgetDiscoveredConventions(t)
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if err := os.Remove(filepath.Join(root, entry.Name())); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	second := DiscoverConventions(root, ".go")
+	if len(second) != len(first) {
+		t.Fatalf("after restart got %d conventions, want the %d cached ones; a walk of the emptied project would find none",
+			len(second), len(first))
+	}
+	for i := range first {
+		if second[i] != first[i] {
+			t.Errorf("cached convention %d = %+v, want %+v", i, second[i], first[i])
+		}
+	}
+}
+
+// TestDiscoverConventions_CacheIsScopedPerLanguage proves one language's cache
+// file cannot answer for another, which is why each extension gets its own file.
+func TestDiscoverConventions_CacheIsScopedPerLanguage(t *testing.T) {
+	root := setupDiscoverableProject(t)
+	for i := 0; i < discoveryMinFiles+1; i++ {
+		writeFile(t, root, fmt.Sprintf("view%d.ts", i),
+			fmt.Sprintf("export const v%d = 1;\nrouter.push('/p%d');\nstore.commit('m%d');\n", i, i, i))
+	}
+
+	goConventions := DiscoverConventions(root, ".go")
+	tsConventions := DiscoverConventions(root, ".ts")
+
+	goPath, err := conventionCachePath(root, ".go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tsPath, err := conventionCachePath(root, ".ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if goPath == tsPath {
+		t.Fatalf("both languages share cache file %q", goPath)
+	}
+	for _, path := range []string{goPath, tsPath} {
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("expected a cache file at %s: %v", path, err)
+		}
+	}
+
+	forgetDiscoveredConventions(t)
+	if got := DiscoverConventions(root, ".go"); len(got) != len(goConventions) {
+		t.Errorf("Go cache returned %d conventions, want %d", len(got), len(goConventions))
+	}
+	forgetDiscoveredConventions(t)
+	if got := DiscoverConventions(root, ".ts"); len(got) != len(tsConventions) {
+		t.Errorf("TS cache returned %d conventions, want %d", len(got), len(tsConventions))
+	}
+}
+
+// TestDiscoverConventions_RewalksWhenCacheIsStaleOrCorrupt keeps a bad cache
+// from becoming a wrong answer: both an expired entry and an unreadable file
+// must fall back to walking the project.
+func TestDiscoverConventions_RewalksWhenCacheIsStaleOrCorrupt(t *testing.T) {
+	root := setupDiscoverableProject(t)
+	fresh := DiscoverConventions(root, ".go")
+	if len(fresh) == 0 {
+		t.Fatal("expected conventions from the initial walk")
+	}
+	path, err := conventionCachePath(root, ".go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expired, err := json.Marshal(persistedConventions{
+		Conventions: []DiscoveredConvention{{Pattern: "stale.Call(", FileCount: 99}},
+		BuiltAt:     time.Now().Add(-2 * discoveryCacheTTL),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, contents := range map[string][]byte{"expired": expired, "corrupt": []byte("{not json")} {
+		if err := os.WriteFile(path, contents, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		forgetDiscoveredConventions(t)
+		got := DiscoverConventions(root, ".go")
+		if len(got) != len(fresh) {
+			t.Errorf("%s cache: got %d conventions, want the %d a real walk finds", name, len(got), len(fresh))
+		}
+		for _, c := range got {
+			if c.Pattern == "stale.Call(" {
+				t.Errorf("%s cache: served the stale entry instead of re-walking", name)
+			}
+		}
 	}
 }
 

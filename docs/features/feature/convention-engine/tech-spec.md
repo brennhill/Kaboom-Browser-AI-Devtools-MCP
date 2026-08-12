@@ -56,7 +56,15 @@ Caps that protect latency:
 
 ### Discovery cache
 
-`discoveryCache` is a process-level `sync.RWMutex`-guarded map keyed by `projectRoot + "\x00" + ext`. A cache hit within the 5-minute TTL returns the prior result without re-walking. Because hooks are short-lived, separate invocations within a session benefit only when the process is reused; the cache primarily protects repeated calls within a single hook process and keeps the design ready for a long-lived host.
+Discovery is cached in two layers, both keyed by project root and file extension and both bounded by the same 5-minute TTL.
+
+**In process.** `discoveryCache` is a `sync.RWMutex`-guarded map keyed by `projectRoot + "\x00" + ext`. It serves the two discovery calls a single quality-gate invocation makes (`ConventionSummary` and `DiscoveredProbes`).
+
+**On disk.** Results are persisted to `<state root>/projects/<abs project path>/hook-conventions/conventions-<ext>.json`, written atomically via `statefile.Write`. This is the layer that matters in the shipped configuration: `cmd/hooks` runs exactly one hook and exits, so the in-process map is written and then discarded on every edit. Until the file cache existed, it never once produced a cross-invocation hit, and every edit re-walked the project to rediscover conventions that had not changed — measured at ~450ms per edit on this repository against ~95ms with a warm cache.
+
+The cache is scoped to the **project**, not the session, because discovery depends only on the project's own source. A new agent session inherits a warm cache instead of paying the walk again. One file per language keeps a hook discovering Go conventions from clobbering the TypeScript entry a concurrent hook wrote.
+
+Every miss is safe — a missing, expired, or unreadable cache falls back to walking the project. Absence is expected on a first run and is not reported; a corrupt or unwritable cache emits a `kaboom_hook_diagnostic` code, because a cache that silently never writes is the exact defect this layer replaced.
 
 ### Detection — `DetectConventions(filePath, projectRoot, newContent)`
 
@@ -145,9 +153,10 @@ The engine is implemented entirely inside `internal/hook`. It introduces no new 
 
 | Operation | Budget | Method |
 |-----------|--------|--------|
-| Discovery walk (cold) | within the quality-gate hook budget | capped at 500 files, 100KB each |
-| Discovery (warm) | negligible | 5-minute in-memory cache |
-| Per-edit detection + search | a few example searches | capped at 3 reported patterns, 5 examples each |
+| Discovery walk (cold) | within the quality-gate hook budget | capped at 500 files, 100KB each; ~450ms measured on this repository |
+| Discovery (warm) | negligible | 5-minute cache, in memory and on disk |
+| Per-edit detection + search | one walk for all probes | capped at 3 reported patterns, 5 examples each |
+| Whole hook, warm cache | ~95ms measured | dominated by the single probe-search walk, which is edit-specific and not cached |
 
 ## Validation
 
