@@ -87,16 +87,21 @@ func DetectConventions(filePath, projectRoot, newContent string) []ConventionMat
 		return nil
 	}
 
-	// Search the project for each probe.
+	// Search the project for every probe in a single walk. Searching one probe
+	// per walk re-read the same files once per probe, which is the dominant cost
+	// of this hook on a cold page cache.
+	found := searchProject(projectRoot, probes, filePath, exts)
+
 	var results []ConventionMatch
 	for _, probe := range probes {
-		examples := searchProject(projectRoot, probe, filePath, exts)
-		if len(examples) > 0 {
-			results = append(results, ConventionMatch{
-				Pattern:  probe,
-				Examples: examples,
-			})
+		examples := found[probe]
+		if len(examples) == 0 {
+			continue
 		}
+		results = append(results, ConventionMatch{
+			Pattern:  probe,
+			Examples: examples,
+		})
 		if len(results) >= maxConventionsToReport {
 			break
 		}
@@ -129,10 +134,26 @@ func ConventionSummary(projectRoot, ext string) string {
 	return b.String()
 }
 
-// searchProject walks the project tree and finds lines containing the search term.
-func searchProject(root, term, excludeFile string, exts []string) []string {
+// searchProject walks the project tree once and, for each term, collects up to
+// maxExamplesPerProbe example lines (at most one per file). Terms are searched
+// together because the walk — not the matching — is what costs; a per-term walk
+// multiplied the file reads by the number of probes for identical results.
+func searchProject(root string, terms []string, excludeFile string, exts []string) map[string][]string {
+	examples := make(map[string][]string, len(terms))
+	// A repeated term must not collect two examples from the same file; callers
+	// can legitimately produce one (the same type declared twice in an edit).
+	unique := make([]string, 0, len(terms))
+	for _, term := range terms {
+		if _, seen := examples[term]; seen {
+			continue
+		}
+		examples[term] = nil
+		unique = append(unique, term)
+	}
+	if len(unique) == 0 {
+		return examples
+	}
 	absExclude, _ := filepath.Abs(excludeFile)
-	var examples []string
 	filesScanned := 0
 
 	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -160,28 +181,45 @@ func searchProject(root, term, excludeFile string, exts []string) []string {
 		}
 
 		lines := strings.Split(string(data), "\n")
-		for i, line := range lines {
-			if strings.Contains(line, term) {
-				relPath, _ := filepath.Rel(root, path)
-				if relPath == "" {
-					relPath = path
+		unsatisfied := 0
+		for _, term := range unique {
+			if len(examples[term]) < maxExamplesPerProbe {
+				if example, found := firstMatchingLine(root, path, lines, term); found {
+					examples[term] = append(examples[term], example)
 				}
-				trimmed := strings.TrimSpace(line)
-				if len([]rune(trimmed)) > 120 {
-					trimmed = string([]rune(trimmed)[:117]) + "..."
-				}
-				examples = append(examples, fmt.Sprintf("  %s:%d: %s", relPath, i+1, trimmed))
-				if len(examples) >= maxExamplesPerProbe {
-					return filepath.SkipAll
-				}
-				break // one example per file
 			}
+			if len(examples[term]) < maxExamplesPerProbe {
+				unsatisfied++
+			}
+		}
+		if unsatisfied == 0 {
+			return filepath.SkipAll
 		}
 
 		return nil
 	})
 
 	return examples
+}
+
+// firstMatchingLine formats the first line of a file containing term. Only the
+// first match is reported so one file contributes one example per probe.
+func firstMatchingLine(root, path string, lines []string, term string) (string, bool) {
+	for i, line := range lines {
+		if !strings.Contains(line, term) {
+			continue
+		}
+		relPath, _ := filepath.Rel(root, path)
+		if relPath == "" {
+			relPath = path
+		}
+		trimmed := strings.TrimSpace(line)
+		if len([]rune(trimmed)) > 120 {
+			trimmed = string([]rune(trimmed)[:117]) + "..."
+		}
+		return fmt.Sprintf("  %s:%d: %s", relPath, i+1, trimmed), true
+	}
+	return "", false
 }
 
 // projectDirectoryDecision centralizes repository-walk pruning shared by hook

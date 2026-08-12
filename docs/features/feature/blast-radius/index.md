@@ -4,7 +4,7 @@ feature_id: feature-blast-radius
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-12
 code_paths:
   - internal/hook/blast_radius.go
   - cmd/hooks/main.go

@@ -4,7 +4,7 @@ feature_id: feature-convention-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-12
 code_paths:
   - internal/hook/conventions.go
   - internal/hook/hook_policy.go

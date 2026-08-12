@@ -242,14 +242,72 @@ func saveCachedGraph(sessionDir string, g *ImportGraph) {
 	_ = os.WriteFile(filepath.Join(sessionDir, graphCacheFile), data, 0o644)
 }
 
+// importResolver memoizes the filesystem lookups that import extraction repeats
+// across files. Every importer of a package asked the disk for that package's
+// file list, and every relative TypeScript import re-probed the same candidate
+// extensions, so one graph build issued thousands of syscalls for a few hundred
+// distinct answers. Resolution is pure per (project, path), so caching it is
+// behaviour-preserving; the walk is I/O bound, and this is the I/O.
+type importResolver struct {
+	projectRoot string
+	goModPath   string
+	pkgFiles    map[string][]string // package directory -> relative .go files
+	statted     map[string]bool     // absolute path -> os.Stat succeeded
+
+	// readDirCalls and statCalls count syscalls actually issued (cache misses).
+	// The hook's latency budget is a syscall budget, so the regression test
+	// asserts on these rather than on wall-clock, which varies with page-cache
+	// warmth and machine load.
+	readDirCalls int
+	statCalls    int
+}
+
+func newImportResolver(projectRoot string) *importResolver {
+	return &importResolver{
+		projectRoot: projectRoot,
+		goModPath:   detectGoModulePath(projectRoot),
+		pkgFiles:    make(map[string][]string),
+		statted:     make(map[string]bool),
+	}
+}
+
+// goFilesInDir returns the package's non-test .go files, reading each directory
+// at most once per graph build.
+func (r *importResolver) goFilesInDir(dir string) []string {
+	if files, ok := r.pkgFiles[dir]; ok {
+		return files
+	}
+	r.readDirCalls++
+	files := findGoFilesInDir(dir, r.projectRoot)
+	r.pkgFiles[dir] = files
+	return files
+}
+
+// exists reports whether path is present, reusing the answer for repeated
+// probes of the same candidate.
+func (r *importResolver) exists(path string) bool {
+	if present, ok := r.statted[path]; ok {
+		return present
+	}
+	r.statCalls++
+	_, err := os.Stat(path)
+	present := err == nil
+	r.statted[path] = present
+	return present
+}
+
 func buildImportGraph(projectRoot string) *ImportGraph {
+	return buildImportGraphWith(newImportResolver(projectRoot))
+}
+
+// buildImportGraphWith is the implementation; tests supply their own resolver so
+// they can assert how many syscalls one build actually issues.
+func buildImportGraphWith(resolver *importResolver) *ImportGraph {
+	projectRoot := resolver.projectRoot
 	graph := &ImportGraph{
 		Importers: make(map[string][]string),
 		BuiltAt:   time.Now(),
 	}
-
-	// Detect Go module path for import resolution.
-	goModPath := detectGoModulePath(projectRoot)
 
 	filesScanned := 0
 	_ = filepath.WalkDir(projectRoot, func(path string, d os.DirEntry, err error) error {
@@ -276,7 +334,7 @@ func buildImportGraph(projectRoot string) *ImportGraph {
 		}
 
 		relPath, _ := filepath.Rel(projectRoot, path)
-		imports := extractImports(path, ext, projectRoot, goModPath)
+		imports := extractImports(path, ext, resolver)
 		for _, imp := range imports {
 			graph.Importers[imp] = append(graph.Importers[imp], relPath)
 		}
@@ -296,7 +354,7 @@ func isSupportedExt(ext string) bool {
 }
 
 // extractImports parses import statements from a file and returns relative paths.
-func extractImports(filePath, ext, projectRoot, goModPath string) []string {
+func extractImports(filePath, ext string, resolver *importResolver) []string {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil
@@ -308,13 +366,13 @@ func extractImports(filePath, ext, projectRoot, goModPath string) []string {
 
 	switch ext {
 	case ".go":
-		imports = extractGoImports(scanner, projectRoot, goModPath)
+		imports = extractGoImports(scanner, resolver)
 	case ".ts", ".tsx", ".js", ".jsx":
-		imports = extractTSImports(scanner, filePath, projectRoot)
+		imports = extractTSImports(scanner, filePath, resolver)
 	case ".py":
-		imports = extractPyImports(scanner, filePath, projectRoot)
+		imports = extractPyImports(scanner, filePath, resolver)
 	case ".rs":
-		imports = extractRsImports(scanner, filePath, projectRoot)
+		imports = extractRsImports(scanner, filePath, resolver)
 	}
 
 	return imports
@@ -330,9 +388,10 @@ var (
 	rsModUsePattern  = regexp.MustCompile(`^\s*(?:mod|use)\s+(?:crate::)?(\S+)`)
 )
 
-func extractGoImports(scanner *bufio.Scanner, projectRoot, goModPath string) []string {
+func extractGoImports(scanner *bufio.Scanner, resolver *importResolver) []string {
 	var imports []string
 	inImportBlock := false
+	goModPath := resolver.goModPath
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -354,9 +413,8 @@ func extractGoImports(scanner *bufio.Scanner, projectRoot, goModPath string) []s
 					rel := strings.TrimPrefix(importPath, goModPath)
 					rel = strings.TrimPrefix(rel, "/")
 					// Find .go files in this package directory.
-					pkgDir := filepath.Join(projectRoot, rel)
-					goFiles := findGoFilesInDir(pkgDir, projectRoot)
-					imports = append(imports, goFiles...)
+					pkgDir := filepath.Join(resolver.projectRoot, rel)
+					imports = append(imports, resolver.goFilesInDir(pkgDir)...)
 				}
 			}
 		}
@@ -364,7 +422,7 @@ func extractGoImports(scanner *bufio.Scanner, projectRoot, goModPath string) []s
 	return imports
 }
 
-func extractTSImports(scanner *bufio.Scanner, filePath, projectRoot string) []string {
+func extractTSImports(scanner *bufio.Scanner, filePath string, resolver *importResolver) []string {
 	var imports []string
 	fileDir := filepath.Dir(filePath)
 
@@ -380,7 +438,7 @@ func extractTSImports(scanner *bufio.Scanner, filePath, projectRoot string) []st
 					if !strings.HasPrefix(imp, ".") {
 						continue
 					}
-					resolved := resolveRelativeImport(fileDir, imp, projectRoot)
+					resolved := resolveRelativeImport(fileDir, imp, resolver)
 					if resolved != "" {
 						imports = append(imports, resolved)
 					}
@@ -391,9 +449,10 @@ func extractTSImports(scanner *bufio.Scanner, filePath, projectRoot string) []st
 	return imports
 }
 
-func extractPyImports(scanner *bufio.Scanner, filePath, projectRoot string) []string {
+func extractPyImports(scanner *bufio.Scanner, filePath string, resolver *importResolver) []string {
 	var imports []string
 	fileDir := filepath.Dir(filePath)
+	projectRoot := resolver.projectRoot
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -412,7 +471,7 @@ func extractPyImports(scanner *bufio.Scanner, filePath, projectRoot string) []st
 			parts := strings.Split(importName, ".")
 			candidate := filepath.Join(projectRoot, filepath.Join(parts...)) + ".py"
 			if rel, err := filepath.Rel(projectRoot, candidate); err == nil {
-				if _, err := os.Stat(candidate); err == nil {
+				if resolver.exists(candidate) {
 					imports = append(imports, rel)
 				}
 			}
@@ -435,7 +494,7 @@ func extractPyImports(scanner *bufio.Scanner, filePath, projectRoot string) []st
 		}
 		candidate := filepath.Join(base, strings.ReplaceAll(name, ".", string(filepath.Separator))) + ".py"
 		if rel, err := filepath.Rel(projectRoot, candidate); err == nil {
-			if _, err := os.Stat(candidate); err == nil {
+			if resolver.exists(candidate) {
 				imports = append(imports, rel)
 			}
 		}
@@ -443,9 +502,10 @@ func extractPyImports(scanner *bufio.Scanner, filePath, projectRoot string) []st
 	return imports
 }
 
-func extractRsImports(scanner *bufio.Scanner, filePath, projectRoot string) []string {
+func extractRsImports(scanner *bufio.Scanner, filePath string, resolver *importResolver) []string {
 	var imports []string
 	fileDir := filepath.Dir(filePath)
+	projectRoot := resolver.projectRoot
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -462,7 +522,7 @@ func extractRsImports(scanner *bufio.Scanner, filePath, projectRoot string) []st
 			filepath.Join(fileDir, modName, "mod.rs"),
 		} {
 			if rel, err := filepath.Rel(projectRoot, candidate); err == nil {
-				if _, err := os.Stat(candidate); err == nil {
+				if resolver.exists(candidate) {
 					imports = append(imports, rel)
 					break
 				}
@@ -509,14 +569,14 @@ func findGoFilesInDir(dir, projectRoot string) []string {
 	return files
 }
 
-func resolveRelativeImport(fromDir, importPath, projectRoot string) string {
+func resolveRelativeImport(fromDir, importPath string, resolver *importResolver) string {
 	candidate := filepath.Join(fromDir, importPath)
 
 	// Try exact match, then with extensions.
 	for _, ext := range []string{"", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js", "/index.jsx"} {
 		full := candidate + ext
-		if _, err := os.Stat(full); err == nil {
-			rel, err := filepath.Rel(projectRoot, full)
+		if resolver.exists(full) {
+			rel, err := filepath.Rel(resolver.projectRoot, full)
 			if err == nil {
 				return rel
 			}

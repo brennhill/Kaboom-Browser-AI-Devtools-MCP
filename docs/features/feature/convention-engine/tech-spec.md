@@ -67,7 +67,9 @@ http.Client{   map[string]func   sync.Mutex   sync.RWMutex
 new Map<        new Set<          chrome.storage.   chrome.runtime.
 ```
 
-It also detects `type X struct` declarations via `typePattern` and adds `type X struct` as a duplicate-detection probe. For every probe that appears in the edit's new content, `searchProject` walks the codebase (same caps and skip rules) and collects up to `maxExamplesPerProbe` (5) example lines in `relative/path:line: content` form, one per file. Detection reports at most `maxConventionsToReport` (3) patterns per edit.
+It also detects `type X struct` declarations via `typePattern` and adds `type X struct` as a duplicate-detection probe. Every probe that appears in the edit's new content is then handed to `searchProject`, which walks the codebase **once for all probes** (same caps and skip rules) and collects up to `maxExamplesPerProbe` (5) example lines per probe in `relative/path:line: content` form, one per file. Detection reports at most `maxConventionsToReport` (3) patterns per edit.
+
+Searching every probe in one pass is a performance requirement, not a style choice: a walk per probe re-read the same files once per probe for identical results, because each walk covered the same first `maxFilesToScan` files in the same order. The walk stops early once every probe has its 5 examples.
 
 ### Convention summary — `ConventionSummary(projectRoot, ext)`
 
@@ -100,7 +102,7 @@ AI calls Edit/Write
        5. DetectConventions(filePath, projectRoot, newContent)
             - merge discovered + static probes
             - match probes against the edit
-            - searchProject for examples
+            - searchProject for examples (one walk, all probes)
             - FormatConventions (+ helper suggestion at 2+)
        6. Append the review instruction
   -> additionalContext returned to the agent

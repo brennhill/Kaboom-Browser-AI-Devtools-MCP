@@ -4,6 +4,7 @@ package hook
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -196,6 +197,62 @@ func TestBuildImportGraph(t *testing.T) {
 	}
 }
 
+// TestBuildImportGraphResolvesEachPathOnce pins the hook's filesystem work.
+// Import resolution used to re-ask the disk for the same answer once per
+// importer: every file importing a package triggered its own directory listing,
+// and every relative TypeScript import re-probed the same candidate extensions.
+// The cost is invisible on a warm page cache and dominates a busy one, so this
+// asserts on syscalls issued rather than on elapsed time, which varies with
+// machine load and would flake instead of catching the regression.
+func TestBuildImportGraphResolvesEachPathOnce(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writeFile(t, root, "go.mod", "module example.com/proj\n")
+
+	const importers = 12
+	mkdir(t, root, filepath.Join("pkg", "shared"))
+	writeFile(t, root, filepath.Join("pkg", "shared", "a.go"), "package shared\n\nfunc A() {}\n")
+	writeFile(t, root, filepath.Join("pkg", "shared", "b.go"), "package shared\n\nfunc B() {}\n")
+	for i := 0; i < importers; i++ {
+		dir := filepath.Join("cmd", fmt.Sprintf("app%d", i))
+		mkdir(t, root, dir)
+		writeFile(t, root, filepath.Join(dir, "main.go"),
+			"package main\n\nimport (\n\t\"example.com/proj/pkg/shared\"\n)\n\nfunc main() { shared.A() }\n")
+	}
+
+	// Every TypeScript file resolves the same relative import, so the candidate
+	// extension probes must be answered once for the whole build, not once per file.
+	mkdir(t, root, "web")
+	writeFile(t, root, filepath.Join("web", "shared.ts"), "export const value = 1;\n")
+	for i := 0; i < importers; i++ {
+		writeFile(t, root, filepath.Join("web", fmt.Sprintf("view%d.ts", i)),
+			"import { value } from './shared';\nexport const v = value;\n")
+	}
+
+	resolver := newImportResolver(root)
+	graph := buildImportGraphWith(resolver)
+
+	// The graph itself must be unchanged by the memoization.
+	for _, pkgFile := range []string{filepath.Join("pkg", "shared", "a.go"), filepath.Join("pkg", "shared", "b.go")} {
+		if got := len(graph.Importers[pkgFile]); got != importers {
+			t.Errorf("graph.Importers[%q] = %d importers, want %d", pkgFile, got, importers)
+		}
+	}
+	if got := len(graph.Importers[filepath.Join("web", "shared.ts")]); got != importers {
+		t.Errorf("web/shared.ts importers = %d, want %d", got, importers)
+	}
+
+	// One directory listing for the single imported package, not one per importer.
+	if resolver.readDirCalls != 1 {
+		t.Errorf("readDirCalls = %d, want 1 (one listing per distinct imported package)", resolver.readDirCalls)
+	}
+	// './shared' probes the extension-less path then '.ts', and both answers are
+	// then reused; a per-file probe would cost 2 stats for each importer.
+	if resolver.statCalls > 2 {
+		t.Errorf("statCalls = %d, want at most 2 (one probe per distinct candidate path)", resolver.statCalls)
+	}
+}
+
 func TestExtractImportsForPythonAndRust(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, "pkg"), 0o755); err != nil {
@@ -205,7 +262,7 @@ func TestExtractImportsForPythonAndRust(t *testing.T) {
 	writeFile(t, root, "pkg/helper.py", "VALUE = 2\n")
 	writeFile(t, root, "pkg/app.py", "import shared\nfrom .helper import VALUE\nimport external_package\n")
 
-	pythonImports := extractImports(filepath.Join(root, "pkg/app.py"), ".py", root, "")
+	pythonImports := extractImports(filepath.Join(root, "pkg/app.py"), ".py", newImportResolver(root))
 	for _, want := range []string{"shared.py", filepath.Join("pkg", "helper.py")} {
 		found := false
 		for _, got := range pythonImports {
@@ -224,7 +281,7 @@ func TestExtractImportsForPythonAndRust(t *testing.T) {
 	writeFile(t, root, "src/client.rs", "pub fn call() {}\n")
 	writeFile(t, root, "src/model/mod.rs", "pub struct Model;\n")
 	writeFile(t, root, "src/main.rs", "mod client;\nuse crate::model::Model;\nuse external::Thing;\n")
-	rustImports := extractImports(filepath.Join(root, "src/main.rs"), ".rs", root, "")
+	rustImports := extractImports(filepath.Join(root, "src/main.rs"), ".rs", newImportResolver(root))
 	for _, want := range []string{filepath.Join("src", "client.rs"), filepath.Join("src", "model", "mod.rs")} {
 		found := false
 		for _, got := range rustImports {
@@ -319,6 +376,13 @@ func writeFile(t *testing.T, root, relPath, content string) {
 	t.Helper()
 	full := filepath.Join(root, relPath)
 	if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func mkdir(t *testing.T, root, relPath string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Join(root, relPath), 0o750); err != nil {
 		t.Fatal(err)
 	}
 }

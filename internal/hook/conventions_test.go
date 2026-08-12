@@ -5,6 +5,7 @@ package hook
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -349,6 +350,40 @@ func TestRunQualityGate_WithConventions(t *testing.T) {
 	}
 	if !strings.Contains(result.Context, "http.Client{") {
 		t.Error("expected http.Client{ convention in output")
+	}
+}
+
+// TestSearchProject_OneWalkServesEveryTerm covers the contract that lets probe
+// search read the project once instead of once per probe: each term is capped
+// independently at maxExamplesPerProbe, a file contributes at most one example
+// per term, the edited file is excluded, and a repeated term is not counted twice.
+func TestSearchProject_OneWalkServesEveryTerm(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	// Every file carries both patterns twice, so per-file and per-term caps are
+	// both exercised at once.
+	const body = "package p\n\nfunc a() { alpha.Do() }\nfunc b() { beta.Do() }\nfunc c() { alpha.Do() }\n"
+	for i := 0; i < maxExamplesPerProbe+3; i++ {
+		writeFile(t, root, fmt.Sprintf("file%d.go", i), body)
+	}
+	edited := filepath.Join(root, "file0.go")
+
+	got := searchProject(root, []string{"alpha.Do(", "beta.Do(", "alpha.Do("}, edited, []string{".go"})
+
+	for _, term := range []string{"alpha.Do(", "beta.Do("} {
+		if len(got[term]) != maxExamplesPerProbe {
+			t.Errorf("%q got %d examples, want %d", term, len(got[term]), maxExamplesPerProbe)
+		}
+		for _, example := range got[term] {
+			if strings.Contains(example, "file0.go") {
+				t.Errorf("%q reported the edited file: %s", term, example)
+			}
+		}
+	}
+	// A duplicated term is one term: the file that supplies an example supplies
+	// exactly one, so the count matches the non-duplicated term above.
+	if len(got) != 2 {
+		t.Errorf("searchProject returned %d distinct terms, want 2", len(got))
 	}
 }
 

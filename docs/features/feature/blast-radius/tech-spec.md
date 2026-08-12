@@ -83,6 +83,8 @@ var importPatterns = map[string][]*regexp.Regexp{
 
 Import paths are resolved relative to the importing file's directory. For Go, package paths are matched against directory structure. For TS/JS, `./` and `../` relative imports are resolved; bare specifiers (npm packages) are ignored.
 
+Resolution runs through a per-build `importResolver` that memoizes the two filesystem questions the walk repeats: a package's `.go` file listing, and whether a candidate path exists. Both answers are pure for the duration of a build, and both were previously asked once per importer — every file importing a package listed that package's directory again, and every relative TS import re-probed the same nine candidate extensions. On this repository that was 1034 directory listings for 164 distinct packages and 835 existence probes for 242 distinct paths. The memoized resolver is what keeps the build's cost proportional to the number of distinct paths rather than to importers × imports; `TestBuildImportGraphResolvesEachPathOnce` pins it.
+
 ### Cache invalidation
 
 The cached graph is invalidated when:
@@ -182,8 +184,16 @@ Verify these files are compatible with your changes.
 | Operation | Budget | Method |
 |-----------|--------|--------|
 | Warm graph lookup | < 10ms | JSON unmarshal of cached graph.json |
-| Cold graph build | < 200ms | Concurrent file walk + regex scan |
+| Cold graph build | < 200ms | Sequential file walk + regex scan, memoized path resolution |
 | Export detection | < 2ms | Regex match on new_string |
 | Session annotation | < 5ms | Scan touches.jsonl |
 | Total (warm) | < 50ms | |
 | Total (cold) | < 250ms | |
+
+The walk is sequential, not concurrent — the table said otherwise before 2026-08-12 and the
+code never was. Measured on this repository (4412 tracked files, `maxFilesForGraph` = 1000
+scanned) a cold build is **~330ms with a warm page cache**, so the 200ms budget is currently
+a target rather than a description. The eval fixture budget the hook is actually gated on is
+`max_latency_ms: 5000`, which it meets with roughly an order of magnitude of margin. Cutting
+the remaining cost means reading fewer files, not resolving them more cheaply: the 1000 file
+reads now dominate, and the metadata syscalls around them no longer do.
