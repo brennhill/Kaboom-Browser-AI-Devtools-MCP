@@ -391,3 +391,56 @@ func firstRecordingEntry(t *testing.T, resp mcp.JSONRPCResponse) map[string]any 
 	}
 	return payload.Recordings[0]
 }
+
+// A count ceiling is not a size ceiling. 1000 summaries are ~276 bytes each,
+// so limit=1000 built a 276KB response and the size backstop cut it — leaving
+// count reporting 1000 while roughly 100 entries survived. The mode has to
+// bound its own response so the backstop never has to, because the backstop
+// keeps whichever bytes came first rather than whole entries.
+func TestRecordingsBoundsItsResponseByBytes(t *testing.T) {
+	many := make([]recording.Recording, 1000)
+	for i := range many {
+		many[i] = recording.Recording{
+			ID:        fmt.Sprintf("session-with-a-realistic-identifier-%04d-20260812T000000Z", i),
+			Name:      fmt.Sprintf("a realistic recording name %04d", i),
+			CreatedAt: "2026-08-12T00:00:00Z",
+			StartURL:  "https://example.test/some/reasonably/long/path?with=query",
+		}
+	}
+	resp := NewHandler(&fakeCapture{recordings: many}, func(types.LogEntry) {}).
+		Recordings(mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, json.RawMessage(`{"limit":1000}`))
+
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if size := len(result.Content[0].Text); size > mcp.MaxResponseBytes {
+		t.Fatalf("response is %d bytes, over the %d limit the backstop would cut", size, mcp.MaxResponseBytes)
+	}
+
+	entry := firstRecordingEntry(t, resp)
+	if entry["id"] == nil {
+		t.Fatal("entries must survive; the point is to return fewer, not none")
+	}
+
+	var payload struct {
+		Recordings []map[string]any `json:"recordings"`
+		Count      int              `json:"count"`
+		Total      int              `json:"total"`
+		Truncated  bool             `json:"truncated"`
+	}
+	text := result.Content[0].Text
+	if err := json.Unmarshal([]byte(text[strings.Index(text, "{"):]), &payload); err != nil {
+		t.Fatalf("parse payload: %v", err)
+	}
+	// count must describe what is actually here, and total what exists.
+	if payload.Count != len(payload.Recordings) {
+		t.Errorf("count=%d but %d recordings are present; count must not overstate the payload", payload.Count, len(payload.Recordings))
+	}
+	if payload.Total != 1000 {
+		t.Errorf("total=%d, want every recording counted", payload.Total)
+	}
+	if !payload.Truncated {
+		t.Error("truncated must be true when entries were withheld for size")
+	}
+}

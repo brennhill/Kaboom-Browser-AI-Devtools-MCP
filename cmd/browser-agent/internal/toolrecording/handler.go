@@ -184,16 +184,52 @@ func (h *Handler) Recordings(req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	}
 	// Project to listing entries: an entry identifies a recording, it does not
 	// replay it. See recording.RecordingSummary for the contract.
-	entries := make([]recording.RecordingSummary, len(recordings))
-	for i, rec := range recordings {
-		entries[i] = rec.Summary()
-	}
-	return mcp.Succeed(req, summary, map[string]any{
-		"recordings":          entries,
-		"count":               len(recordings),
+	entries, sizeTruncated := boundSummariesToBudget(recordings)
+	payload := map[string]any{
+		"recordings": entries,
+		// count describes what is in THIS response; total is what exists. They
+		// used to be the same number even after the backstop cut the payload,
+		// so a caller was told it had 1000 entries while holding about 100.
+		"count":               len(entries),
+		"total":               len(recordings),
 		"limit":               params.Limit,
 		"active_recording_id": active,
-	})
+	}
+	if sizeTruncated {
+		payload["truncated"] = true
+		payload["hint"] = "Showing the newest recordings that fit the response budget. Narrow with limit, or fetch one with recording_actions."
+	}
+	return mcp.Succeed(req, summary, payload)
+}
+
+// recordingsByteBudget leaves room under the MCP response backstop for the
+// envelope, the summary line and the surrounding fields.
+//
+// The mode bounds its own response because the backstop cannot: it keeps
+// whichever bytes came first, which cuts an entry in half and, when the
+// recordings array is the last key, drops it entirely.
+const recordingsByteBudget = mcp.MaxResponseBytes / 2
+
+// boundSummariesToBudget returns as many newest-first summaries as fit the
+// byte budget, and whether any were withheld.
+func boundSummariesToBudget(recordings []recording.Recording) ([]recording.RecordingSummary, bool) {
+	entries := make([]recording.RecordingSummary, 0, len(recordings))
+	used := 0
+	for _, rec := range recordings {
+		summary := rec.Summary()
+		encoded, err := json.Marshal(summary)
+		if err != nil {
+			// An entry that cannot be encoded is skipped rather than failing the
+			// listing; the caller still gets every other recording.
+			continue
+		}
+		if used+len(encoded) > recordingsByteBudget && len(entries) > 0 {
+			return entries, true
+		}
+		used += len(encoded)
+		entries = append(entries, summary)
+	}
+	return entries, false
 }
 
 // RecordingActions returns the actions and metadata for one recording.
