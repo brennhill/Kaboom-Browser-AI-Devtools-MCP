@@ -183,6 +183,31 @@ func run() {
 	}
 }
 
+// The convention is a Wire prefix followed by a capital, not any identifier
+// beginning with those four letters. Matching the prefix alone would drag
+// unrelated types into a contract written for peer payloads.
+func TestScanIgnoresTypesMerelyStartingWithWire(t *testing.T) {
+	root := t.TempDir()
+	writeGo(t, root, "internal/thing/thing.go", `package thing
+
+import "encoding/json"
+
+func run(raw []byte) {
+	var frame Wireframe
+	_ = json.Unmarshal(raw, &frame)
+	var w Wire
+	_ = json.Unmarshal(raw, &w)
+}
+`)
+	sites, err := scan(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sites) != 0 {
+		t.Fatalf("sites = %+v, want Wireframe and Wire ignored", sites)
+	}
+}
+
 func TestScanIgnoresDecodesIntoNonWireTypes(t *testing.T) {
 	root := t.TempDir()
 	writeGo(t, root, "internal/thing/thing.go", `package thing

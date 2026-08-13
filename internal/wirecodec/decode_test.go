@@ -74,6 +74,32 @@ func TestInto_ErrorFieldBelongingToTheTypeIsDecodedNotHijacked(t *testing.T) {
 	}
 }
 
+// An empty error string is not a failure report. Treating it as one would make
+// any payload that merely carries the key undecodable.
+func TestInto_EmptyErrorValueIsNotAFailureReport(t *testing.T) {
+	var got sampleWire
+	if err := Into([]byte(`{"error":"","tab_id":5}`), &got); err != nil {
+		t.Fatalf("Into() = %v, want an empty error value ignored", err)
+	}
+	if got.TabID != 5 {
+		t.Errorf("TabID = %d, want 5", got.TabID)
+	}
+}
+
+// An empty error alongside nothing recognizable is still unrecognized, just not
+// a reported failure — the two rejections must not be conflated.
+func TestInto_EmptyErrorValueAloneIsUnrecognizedNotReported(t *testing.T) {
+	var got sampleWire
+	err := Into([]byte(`{"error":""}`), &got)
+	if err == nil {
+		t.Fatal("a body with only an empty error key decoded as success")
+	}
+	var remote *RemoteError
+	if errors.As(err, &remote) {
+		t.Errorf("err = %v, want a shape error rather than a reported failure", err)
+	}
+}
+
 // The general form of the same defect: any body sharing no keys with the target
 // yields a zero value that reads as a legitimate empty result.
 func TestInto_RejectsPayloadWhereNoKnownFieldWasObserved(t *testing.T) {
@@ -124,11 +150,14 @@ func TestInto_CountsFieldsPromotedFromEmbeddedStructs(t *testing.T) {
 }
 
 // json:"-" opts a field out of the wire contract, so a body naming it has still
-// not been understood.
+// not been understood. Both spellings are checked: the Go field name, and the
+// literal "-" that a naive tag reader would register as the key.
 func TestInto_IgnoresFieldsOptedOutOfJSON(t *testing.T) {
-	var got sampleWire
-	if err := Into([]byte(`{"Ignored":"x"}`), &got); err == nil {
-		t.Fatal("a body naming only a json:\"-\" field decoded as success")
+	for _, body := range []string{`{"Ignored":"x"}`, `{"-":"x"}`} {
+		var got sampleWire
+		if err := Into([]byte(body), &got); err == nil {
+			t.Errorf("%s decoded as success, want a json:\"-\" field to count for nothing", body)
+		}
 	}
 }
 
@@ -146,10 +175,19 @@ func TestInto_RejectsNonObjectBodyForStructTargets(t *testing.T) {
 	}
 }
 
+// An empty body is its own diagnosis. Letting it fall through to the JSON
+// syntax error reports "unexpected end of JSON input", which sends the reader
+// looking for a truncated payload instead of a peer that answered with nothing.
 func TestInto_RejectsEmptyInput(t *testing.T) {
-	var got sampleWire
-	if err := Into(nil, &got); err == nil {
-		t.Fatal("an empty body decoded as success")
+	for _, body := range [][]byte{nil, []byte(""), []byte("   \n")} {
+		var got sampleWire
+		err := Into(body, &got)
+		if err == nil {
+			t.Fatalf("%q decoded as success", body)
+		}
+		if !contains(err.Error(), "empty") {
+			t.Errorf("err = %q for %q, want it to name the payload as empty", err, body)
+		}
 	}
 }
 
@@ -182,13 +220,26 @@ func TestDecode_ReturnsTheTypedValue(t *testing.T) {
 	}
 }
 
+// The payload here decodes successfully before the trailing-data check fails,
+// so a Decode that returned its working value would hand back a populated
+// struct alongside an error — the exact half-truth a caller ignoring the error
+// would then act on.
 func TestDecode_ReturnsTheZeroValueOnFailure(t *testing.T) {
-	got, err := Decode[sampleWire]([]byte(`{"error":"boom"}`))
-	if err == nil {
-		t.Fatal("Decode() accepted an error envelope")
+	failures := map[string]string{
+		"error envelope":    `{"error":"boom"}`,
+		"trailing data":     `{"tab_id":9,"trace_id":"t"}{"tab_id":2}`,
+		"unrecognized body": `{"status":"queued"}`,
 	}
-	if got.TabID != 0 || got.TraceID != "" {
-		t.Errorf("got = %+v, want the zero value on failure", got)
+	for name, payload := range failures {
+		t.Run(name, func(t *testing.T) {
+			got, err := Decode[sampleWire]([]byte(payload))
+			if err == nil {
+				t.Fatalf("Decode(%s) succeeded", payload)
+			}
+			if got.TabID != 0 || got.TraceID != "" {
+				t.Errorf("got = %+v, want the zero value on failure", got)
+			}
+		})
 	}
 }
 
