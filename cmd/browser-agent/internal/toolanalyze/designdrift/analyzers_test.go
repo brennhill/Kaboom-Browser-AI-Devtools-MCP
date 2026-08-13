@@ -532,3 +532,61 @@ func TestTieBreaksAreDeterministicOnTheLowestValue(t *testing.T) {
 		t.Errorf("modalGap tie = (%v, %d), want (16, 2) — the smallest gap in sorted order", gap, gapCount)
 	}
 }
+
+// TestClassMarksState_MatchesStateNamesNotStateWords pins all three shapes the
+// exclusion recognises and, more importantly, the ordinary component names it
+// must leave alone. Substring matching silently deleted every one of the
+// negatives below from every audit.
+func TestClassMarksState_MatchesStateNamesNotStateWords(t *testing.T) {
+	t.Parallel()
+	states := []string{
+		"active", "selected", "disabled", // bare state word
+		"tab--active", "card--selected", "pricing-card--primary", // BEM modifier
+		"is-active", "is-open", "has-error", // stateful prefix
+	}
+	for _, class := range states {
+		if !classMarksState(class) {
+			t.Errorf("%q names a state and should be excluded from the peer group", class)
+		}
+	}
+
+	components := []string{
+		"error-message", "success-banner", "open-hours", "interactive-tile",
+		"featured-post", "focus-area", "current-balance", "danger-zone",
+		"checked-baggage", "readonly-viewer", "highlight-reel", "expanded-content",
+		"is-drifted", "is-squeezed", // the fixture's own defect markers
+	}
+	for _, class := range components {
+		if classMarksState(class) {
+			t.Errorf("%q is an ordinary component name; excluding it deletes real drift from the audit", class)
+		}
+	}
+}
+
+// TestEligiblePeers_KeepsComponentsWhoseNamesContainStateWords is the same rule
+// at the analyzer boundary: drift inside .error-message peers must be found.
+func TestEligiblePeers_KeepsComponentsWhoseNamesContainStateWords(t *testing.T) {
+	t.Parallel()
+	peer := func(i int, family, size string) elementView {
+		return makeElement(i, "div.error-message", map[string]string{
+			"font-family": family, "font-size": size,
+			"font-weight": "400", "line-height": "20px", "color": "rgb(200, 30, 30)",
+		})
+	}
+	findings, skip := analyzeConsistency([]elementView{
+		peer(0, "Inter, sans-serif", "14px"), peer(1, "Inter, sans-serif", "14px"),
+		peer(2, "Roboto, sans-serif", "11px"),
+		peer(3, "Inter, sans-serif", "14px"),
+	}, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip %+v — the whole group was excluded by its block name", skip)
+	}
+	if !equalStringSets(propertiesOf(findings), []string{"font-family", "font-size"}) {
+		t.Fatalf("flagged %v, want the Roboto/11px outlier's two properties", propertiesOf(findings))
+	}
+	for _, f := range findings {
+		if f.ElementIndex != 2 {
+			t.Errorf("blamed element %d, want 2", f.ElementIndex)
+		}
+	}
+}
