@@ -34,6 +34,7 @@ func TestAutoDetect_AllEmptyInputs(t *testing.T) {
 // ============================================
 
 func TestAutoDetect_RepetitiveMessagesBelowThreshold(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -101,6 +102,7 @@ func TestAutoDetect_RepetitiveMessagesExactThreshold(t *testing.T) {
 // ============================================
 
 func TestAutoDetect_ConfidenceCappedAt099(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -127,6 +129,7 @@ func TestAutoDetect_ConfidenceCappedAt099(t *testing.T) {
 // ============================================
 
 func TestAutoDetect_EmptyMessageStringsIgnored(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -152,6 +155,7 @@ func TestAutoDetect_EmptyMessageStringsIgnored(t *testing.T) {
 // ============================================
 
 func TestAutoDetect_NodeModulesSourceBelowThreshold(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -177,6 +181,7 @@ func TestAutoDetect_NodeModulesSourceBelowThreshold(t *testing.T) {
 // ============================================
 
 func TestAutoDetect_NonNodeModulesSourceIgnored(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -202,6 +207,7 @@ func TestAutoDetect_NonNodeModulesSourceIgnored(t *testing.T) {
 // ============================================
 
 func TestAutoDetect_EmptySourceFieldIgnored(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -227,6 +233,7 @@ func TestAutoDetect_EmptySourceFieldIgnored(t *testing.T) {
 // ============================================
 
 func TestAutoDetect_InfraURLsBelowThreshold(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -253,6 +260,7 @@ func TestAutoDetect_InfraURLsBelowThreshold(t *testing.T) {
 // ============================================
 
 func TestAutoDetect_NonInfraPathIgnored(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -566,6 +574,7 @@ func TestAutoDetect_InfraReasonString(t *testing.T) {
 // ============================================
 
 func TestAutoDetect_EmptyURLPathIgnored(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -629,6 +638,7 @@ func TestNoiseAutoDetectFrequency(t *testing.T) {
 // ============================================
 
 func TestNoiseAutoDetectNoDuplicates(t *testing.T) {
+	requireDetectorDiscriminates(t)
 	t.Parallel()
 	nc := NewNoiseConfig()
 
@@ -742,5 +752,30 @@ func TestNoiseAutoDetectSourceAnalysis(t *testing.T) {
 	}
 	if !found {
 		t.Error("expected auto-detect to flag node_modules source entries")
+	}
+}
+
+// requireDetectorDiscriminates is the positive half of an "is ignored" or
+// "below threshold" assertion.
+//
+// Those tests assert only that no proposal of some shape came back, which a
+// detector returning nothing at all satisfies. Verified: with AutoDetect
+// stubbed to return nil, ten of them still passed while only five failed. This
+// runs the same detector over input it must react to, so a case that expects
+// silence proves the detector was listening.
+func requireDetectorDiscriminates(t *testing.T) {
+	t.Helper()
+	nc := NewNoiseConfig()
+	entries := make([]types.LogEntry, 5)
+	for i := range entries {
+		entries[i] = types.LogEntry{
+			"level":   "warn",
+			"message": "discriminator warning " + string(rune('A'+i)),
+			"source":  "http://localhost:3000/node_modules/discriminator-lib/dist/index.js",
+		}
+	}
+	if len(nc.AutoDetect(entries, nil, nil)) == 0 {
+		t.Fatal("the detector produced no proposal for input it must react to, so an " +
+			"'ignored' result proves nothing about the rule under test")
 	}
 }
