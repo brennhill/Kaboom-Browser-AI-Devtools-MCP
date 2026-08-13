@@ -69,3 +69,20 @@ type Contract struct{}
 		t.Fatalf("exports = %d, want 4", entry.Exports)
 	}
 }
+
+// Git worktrees live under .claude/worktrees, so scanning dot-directories
+// reported an entire second copy of the repo as unbaselined growth. Any
+// developer with a worktree open saw hundreds of violations unrelated to their
+// change, which is how a gate stops being read.
+func TestIgnoredDirSkipsDotDirectoriesIncludingWorktrees(t *testing.T) {
+	for _, name := range []string{".claude", ".git", ".beads", "node_modules", "vendor", "dist", "coverage"} {
+		if !ignoredDir(name) {
+			t.Errorf("ignoredDir(%q) = false, want it skipped", name)
+		}
+	}
+	for _, name := range []string{"internal", "cmd", "scripts", "styleprobe"} {
+		if ignoredDir(name) {
+			t.Errorf("ignoredDir(%q) = true, want real source scanned", name)
+		}
+	}
+}

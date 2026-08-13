@@ -28,7 +28,7 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check install-security-tools pre-commit verify-all npm-binaries validate-semver \
-	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture go-architecture-baseline-update \
+	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture check-wire-decode go-architecture-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-command-contract generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -216,6 +216,12 @@ check-go-architecture:
 	@go test ./scripts/contracts/goarchitecture
 	@go run ./scripts/contracts/goarchitecture
 
+# Every decode into a Wire* type must go through internal/wirecodec, so a peer's
+# error envelope cannot decode into a zero value and read as an empty result.
+check-wire-decode:
+	@go test ./scripts/contracts/wiredecode
+	@go run ./scripts/contracts/wiredecode
+
 # Only lowers existing allowances; intentional growth requires reviewed baseline edits.
 go-architecture-baseline-update:
 	@go run ./scripts/contracts/goarchitecture --update
@@ -228,7 +234,7 @@ check-workflow-contracts:
 	@node scripts/quality/workflows/check-local-paths.mjs
 	@node scripts/quality/workflows/check-go-test-targets.mjs
 
-check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates
+check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates
 
 validate-architecture:
 	@bash scripts/quality/verification/validate-architecture.sh

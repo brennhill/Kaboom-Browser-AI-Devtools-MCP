@@ -1,0 +1,10 @@
+{
+  "_comment": "Decode sites into Wire* types that deliberately do not use internal/wirecodec. Enforced by scripts/contracts/wiredecode (make check-wire-decode). Every entry needs a reason, and an entry whose site no longer exists is itself a failure, so this list cannot outlive the code it excuses.",
+  "exemptions": [
+    {
+      "file": "internal/qafixture/wire_fixture.go",
+      "type": "WireQAFixture",
+      "reason": "Fixture documents are authored by hand, not sent by a peer, so a misspelled key is a mistake to report rather than forward compatibility to tolerate. Parse already rejects unknown fields outright, which is strictly stronger than wirecodec's at-least-one-known-field rule; routing it through wirecodec would weaken it."
+    }
+  ]
+}

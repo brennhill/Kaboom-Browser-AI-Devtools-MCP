@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/wirecodec"
 )
 
 const maxChunkBodyBytes int64 = 4 << 20
@@ -72,8 +74,8 @@ func decodePOST(w http.ResponseWriter, r *http.Request, dst any, limit int64) bo
 		return false
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, limit)
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(dst); err != nil {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
 		status := http.StatusBadRequest
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
@@ -82,8 +84,12 @@ func decodePOST(w http.ResponseWriter, r *http.Request, dst any, limit int64) bo
 		writeError(w, status, err)
 		return false
 	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		writeError(w, http.StatusBadRequest, errors.New("request body must contain one JSON value"))
+	// wirecodec, not a bare Decode: these endpoints accepted any well-formed
+	// JSON object, so a body sharing no field with the request type — an error
+	// envelope, a renamed field after a wire change — started a trace for tab 0
+	// instead of being rejected.
+	if err := wirecodec.Into(body, dst); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return false
 	}
 	return true

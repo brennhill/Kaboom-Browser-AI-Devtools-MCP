@@ -525,6 +525,10 @@
       "mutable_globals": 0,
       "exports": 3
     },
+    "cmd/browser-agent/internal/testowner/testowner.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
     "cmd/browser-agent/internal/testpages/http.go": {
       "mutable_globals": 1,
       "exports": 1
@@ -568,6 +572,10 @@
     "cmd/browser-agent/internal/toolanalyze/deps.go": {
       "mutable_globals": 0,
       "exports": 2
+    },
+    "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go": {
+      "mutable_globals": 0,
+      "exports": 3
     },
     "cmd/browser-agent/internal/toolanalyze/inspect/dom.go": {
       "mutable_globals": 0,
@@ -777,6 +785,10 @@
       "mutable_globals": 0,
       "exports": 5
     },
+    "cmd/browser-agent/internal/toolinteract/pagescripts/pagescripts.go": {
+      "mutable_globals": 1,
+      "exports": 1
+    },
     "cmd/browser-agent/internal/toolmodule/registry.go": {
       "mutable_globals": 0,
       "exports": 14
@@ -818,6 +830,10 @@
       "exports": 11
     },
     "cmd/browser-agent/internal/toolrecording/helpers.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolresp/element_projection.go": {
       "mutable_globals": 0,
       "exports": 1
     },
@@ -1065,13 +1081,13 @@
       "mutable_globals": 0,
       "exports": 9
     },
-    "internal/commandcontract/generated.go": {
-      "mutable_globals": 0,
-      "exports": 1
-    },
     "internal/circuit/breaker.go": {
       "mutable_globals": 0,
       "exports": 15
+    },
+    "internal/commandcontract/generated.go": {
+      "mutable_globals": 0,
+      "exports": 1
     },
     "internal/configdiscovery/mcp.go": {
       "mutable_globals": 0,
@@ -1100,6 +1116,10 @@
     "internal/export/sarif/types.go": {
       "mutable_globals": 0,
       "exports": 2
+    },
+    "internal/extclient/extclient.go": {
+      "mutable_globals": 0,
+      "exports": 6
     },
     "internal/flakerepro/runner.go": {
       "mutable_globals": 0,
@@ -1681,6 +1701,10 @@
       "mutable_globals": 0,
       "exports": 11
     },
+    "internal/styleprobe/wire_style_probe.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
     "internal/telemetry/beacon.go": {
       "mutable_globals": 10,
       "exports": 13
@@ -2013,33 +2037,13 @@
       "mutable_globals": 0,
       "exports": 4
     },
+    "internal/wirecodec/decode.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
     "internal/workflowverify/runner.go": {
       "mutable_globals": 0,
       "exports": 13
-    },
-    "cmd/browser-agent/internal/testowner/testowner.go": {
-      "mutable_globals": 0,
-      "exports": 3
-    },
-    "cmd/browser-agent/internal/toolinteract/pagescripts/pagescripts.go": {
-      "mutable_globals": 1,
-      "exports": 1
-    },
-    "internal/extclient/extclient.go": {
-      "mutable_globals": 0,
-      "exports": 6
-    },
-    "cmd/browser-agent/internal/toolresp/element_projection.go": {
-      "mutable_globals": 0,
-      "exports": 1
-    },
-    "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go": {
-      "mutable_globals": 0,
-      "exports": 3
-    },
-    "internal/styleprobe/wire_style_probe.go": {
-      "mutable_globals": 0,
-      "exports": 3
     }
   }
 }

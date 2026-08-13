@@ -27,13 +27,19 @@ type baselineFile struct {
 	Files   inventory `json:"files"`
 }
 
+// ignoredDir skips trees that are not this checkout's hand-written source.
+//
+// Every dot-directory is skipped, not just a named few: git worktrees live
+// under .claude/worktrees, and scanning them reported a second copy of the repo
+// as unbaselined growth — hundreds of violations that say nothing about the
+// change under review. A gate that cries wolf whenever a worktree exists is a
+// gate people learn to skip.
 func ignoredDir(name string) bool {
 	switch name {
-	case ".git", ".beads", "node_modules", "vendor", "dist", "coverage":
+	case "node_modules", "vendor", "dist", "coverage":
 		return true
-	default:
-		return false
 	}
+	return strings.HasPrefix(name, ".")
 }
 
 func immutableVarValue(expr ast.Expr) bool {
