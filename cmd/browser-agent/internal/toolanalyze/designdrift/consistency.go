@@ -63,6 +63,9 @@ func stateVariantMarkers() []string {
 // analyzeConsistency flags minority computed values within the peer group.
 func analyzeConsistency(elements []elementView, spec *designSpec) ([]finding, *skipped) {
 	peers := eligiblePeers(elements)
+	if len(peers) == 0 && len(elements) > 0 {
+		return nil, &skipped{Category: categoryStyleConsistency, Reason: reasonAllPeersExcluded}
+	}
 	if len(peers) < minimumPeersForMajority {
 		return nil, &skipped{
 			Category: categoryStyleConsistency,
@@ -95,9 +98,59 @@ func eligiblePeers(elements []elementView) []elementView {
 }
 
 func isStateVariant(el elementView) bool {
-	lower := strings.ToLower(el.Selector)
+	for _, class := range classesOf(el.Selector) {
+		if classMarksState(class) {
+			return true
+		}
+	}
+	return false
+}
+
+// classesOf splits the generated selector (tag + up to three classes) into its
+// class names.
+func classesOf(selector string) []string {
+	parts := strings.Split(selector, ".")
+	if len(parts) <= 1 {
+		return nil
+	}
+	return parts[1:]
+}
+
+// classMarksState reports whether a class NAMES a state rather than merely
+// containing a state word.
+//
+// Substring matching deleted ordinary components from every audit:
+// .error-message, .success-banner, .open-hours, .interactive-tile ("active"),
+// .featured-post and .focus-area were all silently dropped, and when the word
+// sat in the block name every peer went with it — reported, wrongly, as
+// insufficient_peers. Real state classes announce themselves in one of three
+// shapes, so match those instead:
+//
+//	active                 the bare state word
+//	card--active           a BEM modifier
+//	is-active / has-error  the stateful-prefix convention
+//
+// .is-drifted and .is-squeezed in the fixture are deliberately NOT states: they
+// carry the planted defects and must stay in the peer group.
+func classMarksState(class string) bool {
+	lower := strings.ToLower(class)
+	if isStateWord(lower) {
+		return true
+	}
+	if idx := strings.LastIndex(lower, "--"); idx >= 0 {
+		return isStateWord(lower[idx+2:])
+	}
+	for _, prefix := range []string{"is-", "has-"} {
+		if strings.HasPrefix(lower, prefix) {
+			return isStateWord(strings.TrimPrefix(lower, prefix))
+		}
+	}
+	return false
+}
+
+func isStateWord(candidate string) bool {
 	for _, marker := range stateVariantMarkers() {
-		if strings.Contains(lower, marker) {
+		if candidate == marker {
 			return true
 		}
 	}

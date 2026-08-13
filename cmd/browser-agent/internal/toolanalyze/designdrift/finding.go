@@ -134,6 +134,10 @@ const (
 	// itself — reporting both as insufficient_peers would send someone looking
 	// for missing elements that are actually there.
 	reasonNoInFlowElements = "no_in_flow_elements"
+	// reasonAllPeersExcluded means every match was a deliberate state variant.
+	// Reporting that as insufficient_peers sends the reader looking for missing
+	// elements when the elements are present and were judged ineligible.
+	reasonAllPeersExcluded = "all_peers_excluded"
 )
 
 // auditResult is the response envelope.

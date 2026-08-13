@@ -146,11 +146,41 @@ func runCategory(category string, elements []elementView, tokens tokenTable, spe
 	return nil, nil
 }
 
+// probeFailure is how the extension reports a failure: in-band, as a JSON body
+// carrying an error key, with no transport error and no isError flag.
+//
+// Decoding such a body straight into WireStyleProbeResult succeeds — Go ignores
+// unknown fields — and yields a zero value, so a dead service worker, a query
+// timeout and a selector that matched nothing all became "no elements matched".
+// Rule 25: a real failure must not be masked as an expected state.
+type probeFailure struct {
+	Error   string `json:"error"`
+	Message string `json:"message"`
+}
+
+// decodeProbeFailure recognises the extension's in-band error shape.
+func decodeProbeFailure(raw json.RawMessage) (error, bool) {
+	var failure probeFailure
+	if json.Unmarshal(raw, &failure) != nil || failure.Error == "" {
+		// EXPECTED_ABSENCE: a successful probe carries no error key, and a body
+		// that will not decode at all is reported by the caller's own unmarshal.
+		return nil, false
+	}
+	detail := failure.Error
+	if failure.Message != "" {
+		detail = failure.Error + ": " + failure.Message
+	}
+	return fmt.Errorf("the page could not be probed (%s)", detail), true
+}
+
 // captureProbe asks the page for the style payload the analyzers consume.
 func captureProbe(d Deps, selector string) (styleprobe.WireStyleProbeResult, error) {
 	raw, err := d.ProbeStyles(selector, maxProbeElements, true)
 	if err != nil {
 		return styleprobe.WireStyleProbeResult{}, err
+	}
+	if failure, reported := decodeProbeFailure(raw); reported {
+		return styleprobe.WireStyleProbeResult{}, failure
 	}
 	var probe styleprobe.WireStyleProbeResult
 	if err := json.Unmarshal(raw, &probe); err != nil {

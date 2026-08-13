@@ -305,7 +305,7 @@ func TestExpectedFindingsTableIsConsistentWithTheCode(t *testing.T) {
 		t.Fatal("the expected-findings table is empty")
 	}
 
-	knownReasons := map[string]bool{reasonNoTokens: true, reasonInsufficientPeers: true, reasonNoElements: true, reasonNoInFlowElements: true}
+	knownReasons := map[string]bool{reasonNoTokens: true, reasonInsufficientPeers: true, reasonNoElements: true, reasonNoInFlowElements: true, reasonAllPeersExcluded: true}
 	knownSeverity := map[string]bool{severityError: true, severityWarning: true}
 	knownProvenance := map[string]bool{provenanceDeclared: true, provenanceInferred: true}
 	knownConfidence := map[string]bool{confidenceHigh: true, confidenceLow: true}
@@ -700,5 +700,94 @@ func TestResolveCategories_DefaultsToEveryCategory(t *testing.T) {
 		if !selected[category] {
 			t.Errorf("default set is missing %q", category)
 		}
+	}
+}
+
+// --- TDD red: defects confirmed by the code review ---
+
+// TestCaptureProbe_RejectsInBandExtensionErrors covers kaboom-ccog.
+//
+// The extension reports failures as a JSON body carrying an `error` key, not as
+// a transport error. Go ignores unknown fields, so those payloads decode
+// cleanly into a zero-valued result and the audit reports "ran no checks" — a
+// dead service worker, a timeout and a selector that matched nothing become
+// indistinguishable. CLAUDE.md rule 25 forbids masking a failure as an expected
+// state.
+func TestCaptureProbe_RejectsInBandExtensionErrors(t *testing.T) {
+	t.Parallel()
+	for _, payload := range []string{
+		`{"error":"computed_styles_failed","message":"Could not establish connection. Receiving end does not exist."}`,
+		`{"error":"Computed styles query timeout"}`,
+		`{"error":"computed_styles_error","message":"Failed to query computed styles"}`,
+	} {
+		deps := Deps{
+			ProbeStyles:    func(string, int, bool) (json.RawMessage, error) { return json.RawMessage(payload), nil },
+			TrackingStatus: func() (bool, string) { return true, "x" },
+		}
+		if _, err := captureProbe(deps, ".card"); err == nil {
+			t.Errorf("in-band extension error was accepted as a clean probe: %s", payload)
+		}
+	}
+}
+
+// TestHandle_InBandExtensionErrorIsNotACleanAudit is the same defect at the
+// mode boundary: the caller must see a failure, not a clean page.
+func TestHandle_InBandExtensionErrorIsNotACleanAudit(t *testing.T) {
+	t.Parallel()
+	deps := Deps{
+		ProbeStyles: func(string, int, bool) (json.RawMessage, error) {
+			return json.RawMessage(`{"error":"computed_styles_failed","message":"Receiving end does not exist"}`), nil
+		},
+		TrackingStatus: func() (bool, string) { return true, "x" },
+	}
+	body := string(Handle(deps, request(), json.RawMessage(`{"what":"design_audit","selector":".card"}`)).Result)
+	if strings.Contains(body, reasonNoElements) {
+		t.Errorf("an extension failure was reported as 'no elements matched': %s", body)
+	}
+	if !strings.Contains(body, "Receiving end does not exist") {
+		t.Errorf("the underlying extension error did not reach the caller: %s", body)
+	}
+}
+
+// TestEnvelopeReportsWhatWasActuallyJudged covers kaboom-zxa0.
+//
+// elements_audited counts PROBED elements, not judged ones, and there is no
+// field for exclusions. A group where the state-variant filter removed three of
+// seven reports "across 7 element(s)" while the evidence says "3 of 4 peers" —
+// and when everything is excluded it reports insufficient_peers, sending the
+// reader to look for elements that are present.
+func TestEnvelopeReportsWhatWasActuallyJudged(t *testing.T) {
+	t.Parallel()
+	mk := func(i int, sel, family string) elementView {
+		return makeElement(i, sel, map[string]string{"font-family": family, "font-size": "14px"})
+	}
+	els := []elementView{
+		mk(0, "div.card", "Inter, sans-serif"), mk(1, "div.card", "Inter, sans-serif"),
+		mk(2, "div.card", "Inter, sans-serif"), mk(3, "div.card", "Roboto, sans-serif"),
+		mk(4, "div.interactive-card", "Inter, sans-serif"),
+		mk(5, "div.opening-hours", "Inter, sans-serif"),
+	}
+	if excluded := len(els) - len(eligiblePeers(els)); excluded != 0 {
+		t.Errorf("%d ordinary component(s) were excluded as state variants: substring matching is too broad", excluded)
+	}
+}
+
+// TestAllPeersExcludedIsItsOwnReason: when the state filter removes every peer,
+// "insufficient_peers" sends the reader hunting for elements that are present
+// and visible. The two situations have different fixes and must be
+// distinguishable.
+func TestAllPeersExcludedIsItsOwnReason(t *testing.T) {
+	t.Parallel()
+	variant := func(i int) elementView {
+		return makeElement(i, "div.tab.tab--active", map[string]string{
+			"font-family": "Inter, sans-serif", "font-size": "14px",
+		})
+	}
+	findings, skip := analyzeConsistency([]elementView{variant(0), variant(1), variant(2), variant(3)}, nil)
+	if len(findings) != 0 {
+		t.Fatalf("expected no findings, got %+v", findings)
+	}
+	if skip == nil || skip.Reason != reasonAllPeersExcluded {
+		t.Fatalf("skip = %+v, want reason %q", skip, reasonAllPeersExcluded)
 	}
 }
