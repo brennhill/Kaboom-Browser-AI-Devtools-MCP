@@ -56,8 +56,15 @@ run_test_36_1() {
     fi
     # Five rhythm cards is the fixture's own signature; a different count means
     # the page changed and the expected-findings table is stale.
+    #
+    # tail BEFORE jq, not after: the response text is a prose summary line
+    # followed by the JSON envelope, and jq given both aborts on the prose and
+    # emits nothing at all, which reads as a count of zero rather than a parse
+    # failure. match_count is hoisted onto the async envelope; the result object
+    # carries count.
     local count
-    count="$(extract_content_text "$probe" | jq -r '(.result // .) | .match_count // .count // 0' 2>/dev/null | tail -n 1)"
+    count="$(extract_content_text "$probe" | tail -n 1 |
+        jq -r '.match_count // .result.match_count // .result.count // .count // 0' 2>/dev/null)"
     if [ "$count" != "5" ]; then
         fail "Fixture rendered $count rhythm cards, expected 5 — the fixture and the expected-findings table disagree"
         return
