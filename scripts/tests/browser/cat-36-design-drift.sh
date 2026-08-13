@@ -73,22 +73,42 @@ run_test_36_1() {
 }
 run_test_36_1
 
-# audit_findings runs one case and echoes the findings array as compact JSON.
+# audit_findings runs one case and echoes the audit envelope as compact JSON.
+#
+# It reports three distinguishable outcomes — ERROR:, UNPARSEABLE:, and a JSON
+# object carrying `envelope: true|false` — because a control case expects zero
+# findings, so "the response had no findings" and "there was no response" are
+# otherwise identical strings. Every empty payload ({}, null, {"ok":true}, an
+# envelope with no sections) used to satisfy three of the four controls.
 audit_findings() {
     local args="$1"
-    local response
+    local response text parsed
     response="$(call_tool "analyze" "$args")"
     if ! check_valid_jsonrpc "$response" || check_is_error "$response"; then
         printf 'ERROR:%s' "$(truncate "$(extract_content_text "$response")")"
-        return
+        return 0
     fi
-    extract_content_text "$response" | tail -n 1 | jq -c '
+    text="$(extract_content_text "$response" | tail -n 1)"
+    # `|| true` keeps a jq failure inside this function. Without it the non-zero
+    # exit propagates through the command substitution and `set -e` kills the
+    # whole category before finish_category runs, losing every prior result and
+    # reporting only a missing-results-file aggregation error.
+    parsed="$(printf '%s' "$text" | jq -c '
         (.result // .) as $r
-        | {
+        | if ($r | type) != "object" or ($r | has("elements_audited") | not) then {envelope: false}
+          else {
+            envelope: true,
+            elements: $r.elements_audited,
+            covered: ([($r.checks_completed // [])[], ($r.checks_skipped // [])[].category] | unique),
             findings: [ ($r.sections // {}) | to_entries[] | .value.findings[]?
-                        | {category, property, element_index, severity, expected_from} ],
+                        | {category, property, element_index, severity, expected_from, confidence} ],
             skipped: [ ($r.checks_skipped // [])[] | {category, reason} ]
-          }' 2>/dev/null
+          } end' 2>/dev/null || true)"
+    if [ -z "$parsed" ]; then
+        printf 'UNPARSEABLE:%s' "$(truncate "$text")"
+        return 0
+    fi
+    printf '%s' "$parsed"
 }
 
 # ── One test per case in the shared table ──────────────────
@@ -100,6 +120,8 @@ while [ "$case_index" -le "$CASE_COUNT" ]; do
     why="$(jq -r ".cases[$idx].why" "$EXPECTED_TABLE")"
     selector="$(jq -r ".cases[$idx].selector" "$EXPECTED_TABLE")"
     args="$(jq -c ".cases[$idx] | {what:\"design_audit\", selector} + (if .categories then {categories} else {} end) + (if .spec then {spec} else {} end)" "$EXPECTED_TABLE")"
+    expected_elements="$(jq -r ".cases[$idx].expect_elements" "$EXPECTED_TABLE")"
+    expected_categories="$(jq -c ".cases[$idx].categories // [\"design_tokens\",\"spacing\",\"style_consistency\"] | sort" "$EXPECTED_TABLE")"
     expected_findings="$(jq -c ".cases[$idx].expect_findings | sort_by(.category, .element_index, .property)" "$EXPECTED_TABLE")"
     expected_skipped="$(jq -c ".cases[$idx].expect_skipped | sort_by(.category, .reason)" "$EXPECTED_TABLE")"
 
@@ -108,17 +130,31 @@ while [ "$case_index" -le "$CASE_COUNT" ]; do
         "$why"
 
     actual="$(audit_findings "$args")"
+    actual_elements=""
+    actual_covered=""
+    if [ -n "$actual" ] && [ "${actual:0:6}" != "ERROR:" ] && [ "${actual:0:12}" != "UNPARSEABLE:" ]; then
+        actual_elements="$(printf '%s' "$actual" | jq -r '.elements // ""')"
+        actual_covered="$(printf '%s' "$actual" | jq -c '.covered // []')"
+    fi
+
     if [ -z "$actual" ]; then
-        fail "$name: could not parse the design_audit response"
+        fail "$name: audit_findings produced nothing at all"
     elif [ "${actual:0:6}" = "ERROR:" ]; then
         fail "$name: design_audit returned an error — ${actual:6}"
+    elif [ "${actual:0:12}" = "UNPARSEABLE:" ]; then
+        fail "$name: response was not parseable JSON — ${actual:12}"
+    elif [ "$(printf '%s' "$actual" | jq -r '.envelope')" != "true" ]; then
+        # The positive assertion that makes a control meaningful. Without it an
+        # empty payload satisfies "expected zero findings" and reads as a pass.
+        fail "$name: response carried no design_audit envelope (no elements_audited field)"
+    elif [ "$actual_elements" != "$expected_elements" ]; then
+        fail "$name: audited $actual_elements element(s), expected $expected_elements — the fixture and the expected-findings table disagree"
+    elif [ "$actual_covered" != "$expected_categories" ]; then
+        fail "$name: categories accounted for = $actual_covered, requested $expected_categories — every requested category must be completed or explicitly skipped"
     else
-        actual_findings="$(printf '%s' "$actual" | jq -c '[.findings[] | {category, property, element_index, severity, expected_from}] | sort_by(.category, .element_index, .property)')"
+        actual_findings="$(printf '%s' "$actual" | jq -c '[.findings[] | {category, property, element_index, severity, expected_from, confidence}] | sort_by(.category, .element_index, .property)')"
         actual_skipped="$(printf '%s' "$actual" | jq -c '[.skipped[] | {category, reason}] | sort_by(.category, .reason)')"
-
-        # Compare only the fields the table declares, so adding a field to the
-        # finding contract does not break every UAT case.
-        expected_trimmed="$(printf '%s' "$expected_findings" | jq -c '[.[] | {category, property, element_index, severity, expected_from}]')"
+        expected_trimmed="$(printf '%s' "$expected_findings" | jq -c '[.[] | {category, property, element_index, severity, expected_from, confidence}]')"
 
         if [ "$actual_findings" != "$expected_trimmed" ]; then
             fail "$name: findings did not match the expected table
@@ -129,9 +165,9 @@ while [ "$case_index" -le "$CASE_COUNT" ]; do
   expected: $expected_skipped
   actual:   $actual_skipped"
         elif [ "$kind" = "control" ]; then
-            pass "$name: legitimate variation produced no findings, as required"
+            pass "$name: $actual_elements element(s) audited across $expected_categories, and legitimate variation produced no findings"
         else
-            pass "$name: every planted finding was detected and nothing extra"
+            pass "$name: $actual_elements element(s) audited, every planted finding detected and nothing extra"
         fi
     fi
 

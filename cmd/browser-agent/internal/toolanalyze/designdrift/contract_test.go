@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/styleprobe"
 )
 
 // TestSeverityIsDerivedFromProvenance pins the invariant the whole triage axis
@@ -89,11 +90,17 @@ func TestMixedSpecProducesBothSeveritiesInOneResponse(t *testing.T) {
 	byCategory[categoryStyleConsistency] = consistencyFindings
 
 	result := buildAuditResult(".card", elements, len(elements), false, byCategory, nil)
-	if result.BySeverity[severityError] == 0 {
-		t.Error("the declared spacing scale was violated but no error was reported")
+	// Exact counts, not "at least one of each": >0 would be satisfied by almost
+	// any wrong behaviour, and the point of the case is that the two provenances
+	// coexist in known quantity.
+	if got := result.BySeverity[severityError]; got != 2 {
+		t.Errorf("declared spacing violations = %d errors, want 2 (both gaps are off the scale)", got)
 	}
-	if result.BySeverity[severityWarning] == 0 {
-		t.Error("the undeclared font family drifted but no warning was reported")
+	if got := result.BySeverity[severityWarning]; got != 1 {
+		t.Errorf("inferred font drift = %d warnings, want 1", got)
+	}
+	if result.TotalFindings != 3 {
+		t.Errorf("total_findings = %d, want 3", result.TotalFindings)
 	}
 }
 
@@ -161,8 +168,10 @@ func TestHandle_RequiresASelector(t *testing.T) {
 	if !strings.Contains(string(resp.Result), "missing_param") {
 		t.Fatalf("a design audit without a selector should be a missing_param error: %s", resp.Result)
 	}
-	if !strings.Contains(string(resp.Result), "selector") {
-		t.Errorf("the error should name the missing parameter: %s", resp.Result)
+	// "selector" appears as the envelope's own field name on every response, so
+	// assert the structured param rather than a bare substring.
+	if !strings.Contains(string(resp.Result), `\"param\":\"selector\"`) {
+		t.Errorf("the error should name selector as the missing param: %s", resp.Result)
 	}
 }
 
@@ -252,6 +261,7 @@ type expectedTable struct {
 		Name           string   `json:"name"`
 		Kind           string   `json:"kind"`
 		Selector       string   `json:"selector"`
+		ExpectElements int      `json:"expect_elements"`
 		Categories     []string `json:"categories"`
 		ExpectFindings []struct {
 			Category     string `json:"category"`
@@ -298,7 +308,7 @@ func TestExpectedFindingsTableIsConsistentWithTheCode(t *testing.T) {
 	knownReasons := map[string]bool{reasonNoTokens: true, reasonInsufficientPeers: true, reasonNoElements: true, reasonNoInFlowElements: true}
 	knownSeverity := map[string]bool{severityError: true, severityWarning: true}
 	knownProvenance := map[string]bool{provenanceDeclared: true, provenanceInferred: true}
-	knownConfidence := map[string]bool{confidenceHigh: true, confidenceLow: true, "": true}
+	knownConfidence := map[string]bool{confidenceHigh: true, confidenceLow: true}
 
 	positives, controls := 0, 0
 	for _, tc := range table.Cases {
@@ -406,6 +416,22 @@ func TestFixtureProducesExactlyTheExpectedFindings(t *testing.T) {
 			}
 			result := runAudit(params, probe, categories)
 
+			// Positive assertions first. A case whose only checks are "these
+			// findings are present" and "nothing extra" is satisfied by an empty
+			// result — which is how three of the four UAT controls used to pass
+			// on a blank response.
+			if tc.ExpectElements == 0 {
+				t.Fatalf("case %q declares no expect_elements; every case must assert something positive", tc.Name)
+			}
+			if result.ElementsAudited != tc.ExpectElements {
+				t.Errorf("audited %d element(s), table expects %d — fixture and table disagree",
+					result.ElementsAudited, tc.ExpectElements)
+			}
+			if accounted := len(result.ChecksCompleted) + len(result.ChecksSkipped); accounted != len(categories) {
+				t.Errorf("%d of %d requested categories accounted for; each must be completed or skipped",
+					accounted, len(categories))
+			}
+
 			assertFindingsMatch(t, tc.Name, tc.ExpectFindings, collectFindings(result))
 			assertSkipsMatch(t, tc.ExpectSkipped, result.ChecksSkipped)
 		})
@@ -486,7 +512,7 @@ func assertFindingsMatch(t *testing.T, caseName string, want []struct {
 			t.Errorf("%s element %d %s: provenance %q, want %q",
 				expected.Category, expected.ElementIndex, expected.Property, actual.ExpectedFrom, expected.ExpectedFrom)
 		}
-		if expected.Confidence != "" && actual.Confidence != expected.Confidence {
+		if actual.Confidence != expected.Confidence {
 			t.Errorf("%s element %d %s: confidence %q, want %q",
 				expected.Category, expected.ElementIndex, expected.Property, actual.Confidence, expected.Confidence)
 		}
@@ -545,4 +571,134 @@ func isProducibleProperty(category, property string) bool {
 		return strings.HasPrefix(property, "gap-") || strings.HasPrefix(property, "overlap-")
 	}
 	return false
+}
+
+// TestViewsFrom_CarriesEveryWireFieldIntoTheAnalyzers covers the wire→analyzer
+// translation, which had no test at all. Every analyzer test builds elementView
+// directly and every element in the captured fixture is in flow, so viewsFrom
+// could hardcode InFlow:true and the whole suite stayed green while the
+// out-of-flow protection silently stopped working in production.
+func TestViewsFrom_CarriesEveryWireFieldIntoTheAnalyzers(t *testing.T) {
+	t.Parallel()
+	payload := `{"elements":[
+	  {"selector":"div.a","tag":"div","computed_styles":{"color":"#111"},"index":0,"in_flow":true,
+	   "parent_display":"flex","parent_gap":"24px","custom_properties":{"--x":"1px"},
+	   "box_model":{"top":10,"bottom":42,"left":1,"right":201,"width":200,"height":32}},
+	  {"selector":"div.b","tag":"div","computed_styles":{},"index":1,"in_flow":false,
+	   "box_model":{}}],
+	  "count":2,"match_count":2,"truncated":false}`
+	var probe styleprobe.WireStyleProbeResult
+	if err := json.Unmarshal([]byte(payload), &probe); err != nil {
+		t.Fatal(err)
+	}
+	views := viewsFrom(probe)
+	if len(views) != 2 {
+		t.Fatalf("got %d views, want 2", len(views))
+	}
+	if !views[0].InFlow {
+		t.Error("in_flow:true did not survive translation")
+	}
+	if views[1].InFlow {
+		t.Error("in_flow:false did not survive translation — out-of-flow elements would rejoin the rhythm")
+	}
+	if views[1].Index != 1 {
+		t.Errorf("index = %d, want 1", views[1].Index)
+	}
+	if views[0].ParentDisplay != "flex" || views[0].ParentGap != "24px" {
+		t.Errorf("parent layout context lost: %q/%q", views[0].ParentDisplay, views[0].ParentGap)
+	}
+	if views[0].Box.Top != 10 || views[0].Box.Bottom != 42 {
+		t.Errorf("box geometry lost: %+v", views[0].Box)
+	}
+	if views[0].Styles["color"] != "#111" {
+		t.Errorf("computed styles lost: %v", views[0].Styles)
+	}
+}
+
+// TestCaptureProbe_RejectsAMalformedPayload: a payload that is not JSON must be
+// an error, not an empty audit that reads as a clean page.
+func TestCaptureProbe_RejectsAMalformedPayload(t *testing.T) {
+	t.Parallel()
+	deps := Deps{
+		ProbeStyles:    func(string, int, bool) (json.RawMessage, error) { return json.RawMessage(`not json`), nil },
+		TrackingStatus: func() (bool, string) { return true, "x" },
+	}
+	if _, err := captureProbe(deps, ".card"); err == nil {
+		t.Fatal("a malformed probe payload was accepted; the audit would report a clean page")
+	}
+}
+
+// TestBuildAuditResult_CountsAndOrdersFindings pins the envelope arithmetic.
+// total_findings, by_severity and the sort were all unasserted, so the totals
+// could report zero while the sections were full.
+func TestBuildAuditResult_CountsAndOrdersFindings(t *testing.T) {
+	t.Parallel()
+	byCategory := map[string][]finding{
+		categorySpacing: {
+			{Category: categorySpacing, Severity: severityWarning, ElementIndex: 4, Property: "gap-vertical"},
+			{Category: categorySpacing, Severity: severityError, ElementIndex: 2, Property: "gap-vertical"},
+		},
+		categoryDesignTokens: {
+			{Category: categoryDesignTokens, Severity: severityError, ElementIndex: 1, Property: "padding-top"},
+		},
+	}
+	result := buildAuditResult(".card", make([]elementView, 6), 6, false, byCategory, nil)
+
+	if result.TotalFindings != 3 {
+		t.Errorf("total_findings = %d, want 3", result.TotalFindings)
+	}
+	if result.BySeverity[severityError] != 2 || result.BySeverity[severityWarning] != 1 {
+		t.Errorf("by_severity = %v, want 2 errors and 1 warning", result.BySeverity)
+	}
+	if result.ElementsAudited != 6 {
+		t.Errorf("elements_audited = %d, want 6", result.ElementsAudited)
+	}
+	section := result.Sections[categorySpacing].(map[string]any)
+	ordered := section["findings"].([]finding)
+	if ordered[0].Severity != severityError {
+		t.Errorf("findings were not sorted errors-first: %+v", ordered)
+	}
+}
+
+// TestSummarize_ReportsWhatWasFound: two tests assert the "no drift" headline is
+// ABSENT on error paths; none asserted it is correct when there are findings, so
+// summarize could always claim a clean page.
+func TestSummarize_ReportsWhatWasFound(t *testing.T) {
+	t.Parallel()
+	withFindings := auditResult{
+		TotalFindings: 3, ElementsAudited: 6,
+		BySeverity:      map[string]int{severityError: 2, severityWarning: 1},
+		ChecksCompleted: []string{categorySpacing},
+	}
+	got := summarize(withFindings)
+	for _, want := range []string{"3 finding", "6 element", "2 error", "1 warning"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("summary %q is missing %q", got, want)
+		}
+	}
+	clean := auditResult{ChecksCompleted: []string{categorySpacing}, ElementsAudited: 4, BySeverity: map[string]int{}}
+	if !strings.Contains(summarize(clean), "no drift") {
+		t.Errorf("a clean audit should say so, got %q", summarize(clean))
+	}
+	if strings.Contains(summarize(auditResult{BySeverity: map[string]int{}}), "no drift") {
+		t.Error("an audit that ran no checks must not claim a clean page")
+	}
+}
+
+// TestResolveCategories_DefaultsToEveryCategory: no test called the mode without
+// narrowing categories, so the default set could have shrunk unnoticed.
+func TestResolveCategories_DefaultsToEveryCategory(t *testing.T) {
+	t.Parallel()
+	selected, invalid := resolveCategories(nil)
+	if invalid != "" {
+		t.Fatalf("unexpected invalid category %q", invalid)
+	}
+	if len(selected) != len(allCategories()) {
+		t.Fatalf("default set has %d categories, want all %d", len(selected), len(allCategories()))
+	}
+	for _, category := range allCategories() {
+		if !selected[category] {
+			t.Errorf("default set is missing %q", category)
+		}
+	}
 }

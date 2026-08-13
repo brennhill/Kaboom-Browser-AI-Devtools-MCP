@@ -431,3 +431,104 @@ func TestAnalyzeSpacing_AllOutOfFlowIsItsOwnReason(t *testing.T) {
 		t.Fatalf("skip = %+v, want reason %q", skip, reasonNoInFlowElements)
 	}
 }
+
+// TestAnalyzeSpacing_GapToleranceIsLoadBearing pins gapDeviationTolerance from
+// both sides. TestAnalyzeSpacing_ToleratesSubPixelRounding does not: its inputs
+// all round to exactly 24 in measureGaps, so the tolerance is never consulted
+// and the constant could be set to zero without failing anything.
+func TestAnalyzeSpacing_GapToleranceIsLoadBearing(t *testing.T) {
+	t.Parallel()
+	stack := func(gaps ...float64) []elementView {
+		els := []elementView{stackedElement(0, "div.card", 0, 32)}
+		top := 32.0
+		for i, g := range gaps {
+			top += g
+			els = append(els, stackedElement(i+1, "div.card", top, 32))
+			top += 32
+		}
+		return els
+	}
+
+	within, skip := analyzeSpacing(stack(24, 24, 26), nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(within) != 0 {
+		t.Errorf("a 2px deviation is inside gapDeviationTolerance but produced %d finding(s): %+v", len(within), within)
+	}
+
+	beyond, skip := analyzeSpacing(stack(24, 24, 27), nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(beyond) != 1 {
+		t.Fatalf("a 3px deviation exceeds gapDeviationTolerance; expected 1 finding, got %d: %+v", len(beyond), beyond)
+	}
+	if beyond[0].Observed != "27px" {
+		t.Errorf("observed = %s, want 27px", beyond[0].Observed)
+	}
+}
+
+// TestAnalyzeSpacing_OrdersByLayoutNotDOMOrder covers the documented flex
+// `order` hazard: DOM order stops being layout order the moment order, RTL or
+// absolute placement is involved, and measuring in DOM order then invents
+// overlaps between elements that do not touch.
+func TestAnalyzeSpacing_OrdersByLayoutNotDOMOrder(t *testing.T) {
+	t.Parallel()
+	els := []elementView{
+		stackedElement(0, "div.card", 168, 32),
+		stackedElement(1, "div.card", 0, 32),
+		stackedElement(2, "div.card", 112, 32),
+		stackedElement(3, "div.card", 56, 32),
+	}
+	findings, skip := analyzeSpacing(els, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 0 {
+		t.Errorf("a uniform stack in scrambled DOM order produced %d finding(s): %+v", len(findings), findings)
+	}
+}
+
+// TestAnalyzeConsistency_AuditsColour keeps `color` in the audited set. It is
+// the one audited property with no dedicated case, so dropping it from
+// auditedProperties() changed nothing that any test observed.
+func TestAnalyzeConsistency_AuditsColour(t *testing.T) {
+	t.Parallel()
+	peer := func(i int, colour string) elementView {
+		return makeElement(i, "p.label", map[string]string{
+			"font-family": "Inter, sans-serif", "font-size": "13px",
+			"font-weight": "400", "line-height": "20px", "color": colour,
+		})
+	}
+	findings, skip := analyzeConsistency([]elementView{
+		peer(0, "rgb(17, 24, 39)"), peer(1, "rgb(17, 24, 39)"),
+		peer(2, "rgb(200, 30, 30)"), peer(3, "rgb(17, 24, 39)"),
+	}, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 1 || findings[0].Property != "color" {
+		t.Fatalf("expected one colour finding, got %+v", findings)
+	}
+	if findings[0].ElementIndex != 2 {
+		t.Errorf("blamed element %d, want 2", findings[0].ElementIndex)
+	}
+}
+
+// TestTieBreaksAreDeterministicOnTheLowestValue pins both majority tie-breaks.
+// With counts equal, `>` keeps the first candidate in sorted order; `>=` would
+// keep the last. Either is defensible, but the choice must be fixed or the
+// reported "expected" value flips between runs of identical input.
+func TestTieBreaksAreDeterministicOnTheLowestValue(t *testing.T) {
+	t.Parallel()
+	value, count := dominantValue(map[string]int{"beta": 2, "alpha": 2})
+	if value != "alpha" || count != 2 {
+		t.Errorf("dominantValue tie = (%q, %d), want (alpha, 2) — the first value in sorted order", value, count)
+	}
+
+	gap, gapCount := modalGap([]siblingGap{{size: 24}, {size: 16}, {size: 24}, {size: 16}})
+	if gap != 16 || gapCount != 2 {
+		t.Errorf("modalGap tie = (%v, %d), want (16, 2) — the smallest gap in sorted order", gap, gapCount)
+	}
+}

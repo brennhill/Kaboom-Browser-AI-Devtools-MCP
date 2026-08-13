@@ -1,5 +1,5 @@
 {
-  "_comment": "Expected verdicts for the design-drift fixture (cmd/browser-agent/internal/testpages/pages/design-drift.html). ONE source of truth: the Go analyzer tests and UAT category 36 both assert against this file. Three hand-maintained lists would drift apart, and the negative controls are the half that actually constrains precision, so they are listed here as explicit zero-finding expectations rather than left implicit.",
+  "_comment": "Expected verdicts for the design-drift fixture (cmd/browser-agent/internal/testpages/pages/design-drift.html). ONE source of truth: the Go analyzer tests and UAT category 36 both assert against this file. Three hand-maintained lists would drift apart, and the negative controls are the half that actually constrains precision, so they are listed here as explicit zero-finding expectations rather than left implicit. Every case also declares expect_elements and a confidence for each finding, so a case cannot pass on a blank or malformed response: an empty payload fails the element-count and envelope assertions before the (vacuously equal) empty finding lists are ever compared.",
   "fixture": "design-drift.html",
   "cases": [
     {
@@ -8,7 +8,10 @@
       "kind": "positive",
       "why": "Step 2's header renders Roboto 11px while Steps 1 and 3 render Inter 12px. The majority is 2 of 3, which is a real majority but not a strong one, so confidence is low.",
       "selector": ".step-card__header",
-      "categories": ["style_consistency"],
+      "expect_elements": 3,
+      "categories": [
+        "style_consistency"
+      ],
       "expect_findings": [
         {
           "category": "style_consistency",
@@ -35,13 +38,51 @@
       "kind": "positive",
       "why": "padding:15px near-misses --spacing-md:16px on all four longhands, and #2b56e2 near-misses --color-primary-main:#2a55e1. A page token is a declaration, so breaking it is an error, not a warning. Element 1 is the exact-match control and must contribute nothing.",
       "selector": ".token-card",
-      "categories": ["design_tokens"],
+      "expect_elements": 2,
+      "categories": [
+        "design_tokens"
+      ],
       "expect_findings": [
-        { "category": "design_tokens", "property": "padding-top", "element_index": 0, "severity": "error", "expected_from": "declared" },
-        { "category": "design_tokens", "property": "padding-right", "element_index": 0, "severity": "error", "expected_from": "declared" },
-        { "category": "design_tokens", "property": "padding-bottom", "element_index": 0, "severity": "error", "expected_from": "declared" },
-        { "category": "design_tokens", "property": "padding-left", "element_index": 0, "severity": "error", "expected_from": "declared" },
-        { "category": "design_tokens", "property": "background-color", "element_index": 0, "severity": "error", "expected_from": "declared" }
+        {
+          "category": "design_tokens",
+          "property": "padding-top",
+          "element_index": 0,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "high"
+        },
+        {
+          "category": "design_tokens",
+          "property": "padding-right",
+          "element_index": 0,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "high"
+        },
+        {
+          "category": "design_tokens",
+          "property": "padding-bottom",
+          "element_index": 0,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "high"
+        },
+        {
+          "category": "design_tokens",
+          "property": "padding-left",
+          "element_index": 0,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "high"
+        },
+        {
+          "category": "design_tokens",
+          "property": "background-color",
+          "element_index": 0,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "high"
+        }
       ],
       "expect_skipped": []
     },
@@ -51,7 +92,10 @@
       "kind": "positive",
       "why": "Gaps run 24/24/14/24 down the stack. The modal gap is 24 (3 of 4), so the 14px gap before element 3 is the outlier. Reported against the element that follows the bad gap, which is the one whose margin produced it. Confidence is low, not high: 3 of 4 is 0.75, under the 0.8 strong-majority bar, and a four-gap stack genuinely is weaker evidence than a ten-gap one.",
       "selector": ".rhythm-card",
-      "categories": ["spacing"],
+      "expect_elements": 5,
+      "categories": [
+        "spacing"
+      ],
       "expect_findings": [
         {
           "category": "spacing",
@@ -70,22 +114,62 @@
       "kind": "positive",
       "why": "With a declared spacing scale that omits 24 and 14, every gap violates a stated rule. This is the case inference alone cannot catch: the page is uniformly wrong, so the majority IS the wrong value. Severity flips to error because a declared rule was broken.",
       "selector": ".rhythm-card",
-      "categories": ["spacing"],
-      "spec": { "spacing_scale": [8, 16, 32] },
+      "expect_elements": 5,
+      "categories": [
+        "spacing"
+      ],
+      "spec": {
+        "spacing_scale": [
+          8,
+          16,
+          32
+        ]
+      },
       "expect_findings": [
-        { "category": "spacing", "property": "gap-vertical", "element_index": 1, "severity": "error", "expected_from": "declared" },
-        { "category": "spacing", "property": "gap-vertical", "element_index": 2, "severity": "error", "expected_from": "declared" },
-        { "category": "spacing", "property": "gap-vertical", "element_index": 3, "severity": "error", "expected_from": "declared" },
-        { "category": "spacing", "property": "gap-vertical", "element_index": 4, "severity": "error", "expected_from": "declared" }
+        {
+          "category": "spacing",
+          "property": "gap-vertical",
+          "element_index": 1,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "low"
+        },
+        {
+          "category": "spacing",
+          "property": "gap-vertical",
+          "element_index": 2,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "low"
+        },
+        {
+          "category": "spacing",
+          "property": "gap-vertical",
+          "element_index": 3,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "low"
+        },
+        {
+          "category": "spacing",
+          "property": "gap-vertical",
+          "element_index": 4,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "low"
+        }
       ],
       "expect_skipped": []
     },
     {
       "name": "state_variant_control",
       "kind": "control",
-      "why": "The active item is bold and blue on purpose. State is not drift, so it is excluded from the peer group rather than reported at low confidence — a finding about it would be noise however it is labelled, and leaving it in would also skew the majority the other items are judged against.",
+      "why": "The active item is bold and blue on purpose. State is not drift, so it is excluded from the peer group rather than reported at low confidence \u2014 a finding about it would be noise however it is labelled, and leaving it in would also skew the majority the other items are judged against.",
       "selector": ".state-item",
-      "categories": ["style_consistency"],
+      "expect_elements": 4,
+      "categories": [
+        "style_consistency"
+      ],
       "expect_findings": [],
       "expect_skipped": []
     },
@@ -94,7 +178,10 @@
       "kind": "control",
       "why": "The first card carries a 48px top margin where its siblings carry 24px. Structural position is not drift, and a first child's own top margin creates no gap between siblings, so the measured rhythm stays uniform.",
       "selector": ".fc-item",
-      "categories": ["spacing"],
+      "expect_elements": 3,
+      "categories": [
+        "spacing"
+      ],
       "expect_findings": [],
       "expect_skipped": []
     },
@@ -103,18 +190,29 @@
       "kind": "control",
       "why": "Spacing here belongs to the parent's gap property, not to any child margin. The gaps are uniform so nothing is reported; the attribution path itself is covered by the Go table test, which asserts the message names the parent.",
       "selector": ".flex-item",
-      "categories": ["spacing"],
+      "expect_elements": 3,
+      "categories": [
+        "spacing"
+      ],
       "expect_findings": [],
       "expect_skipped": []
     },
     {
       "name": "two_element_group_control",
       "kind": "control",
-      "why": "Two elements with different fonts have no majority — each value is as likely to be the correct one. Reporting insufficient_peers is the honest answer; picking one would be a coin flip presented as a verdict.",
+      "why": "Two elements with different fonts have no majority \u2014 each value is as likely to be the correct one. Reporting insufficient_peers is the honest answer; picking one would be a coin flip presented as a verdict.",
       "selector": ".pair-item",
-      "categories": ["style_consistency"],
+      "expect_elements": 2,
+      "categories": [
+        "style_consistency"
+      ],
       "expect_findings": [],
-      "expect_skipped": [{ "category": "style_consistency", "reason": "insufficient_peers" }]
+      "expect_skipped": [
+        {
+          "category": "style_consistency",
+          "reason": "insufficient_peers"
+        }
+      ]
     }
   ]
 }

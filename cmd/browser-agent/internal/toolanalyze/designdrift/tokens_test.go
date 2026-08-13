@@ -281,3 +281,153 @@ func equalStringSets(got, want []string) bool {
 	}
 	return true
 }
+
+// TestOKLab_MatchesPublishedReferenceValues pins the colour transform against
+// an EXTERNAL reference (Björn Ottosson's published sRGB→OKLab values) rather
+// than against itself.
+//
+// Without this the transform is only ever checked through distance
+// comparisons, so any coefficient or the sRGB linearisation cutoff can be
+// changed and every relative judgement still looks plausible.
+func TestOKLab_MatchesPublishedReferenceValues(t *testing.T) {
+	t.Parallel()
+	const tolerance = 0.0005
+	cases := []struct {
+		hex     string
+		l, a, b float64
+	}{
+		{"#ffffff", 1.0000, 0.0000, 0.0000},
+		{"#000000", 0.0000, 0.0000, 0.0000},
+		{"#ff0000", 0.6280, 0.2249, 0.1258},
+		{"#00ff00", 0.8664, -0.2339, 0.1795},
+		{"#0000ff", 0.4520, -0.0324, -0.3115},
+	}
+	for _, tc := range cases {
+		c, ok := parseColor(tc.hex)
+		if !ok {
+			t.Fatalf("parseColor(%s) failed", tc.hex)
+		}
+		l, a, b := oklab(c)
+		if absFloat(l-tc.l) > tolerance || absFloat(a-tc.a) > tolerance || absFloat(b-tc.b) > tolerance {
+			t.Errorf("oklab(%s) = (%.4f, %.4f, %.4f), want (%.4f, %.4f, %.4f) within %v",
+				tc.hex, l, a, b, tc.l, tc.a, tc.b, tolerance)
+		}
+	}
+}
+
+// TestColorNearMissThreshold_IsBracketedOnBothSides makes the threshold's value
+// load-bearing. The original calibration compared a pair at distance 0.003
+// against pairs at 0.35 — a 100x gap in which any threshold passes, so the
+// constant was free to drift by 4x undetected.
+func TestColorNearMissThreshold_IsBracketedOnBothSides(t *testing.T) {
+	t.Parallel()
+	base, _ := parseColor("#2a55e1")
+
+	inside, _ := parseColor("#2d58e4")
+	if d := colorDistance(base, inside); d > colorNearMissThreshold {
+		t.Errorf("#2d58e4 is %.5f from the token, outside the %.3f band; a plausible typo would be missed", d, colorNearMissThreshold)
+	}
+	outside, _ := parseColor("#3060e8")
+	if d := colorDistance(base, outside); d <= colorNearMissThreshold {
+		t.Errorf("#3060e8 is %.5f from the token, inside the %.3f band; a visibly different colour would be called a typo", d, colorNearMissThreshold)
+	}
+}
+
+// TestScaleContains_ToleranceBoundary pins subPixelTolerance from both sides.
+func TestScaleContains_ToleranceBoundary(t *testing.T) {
+	t.Parallel()
+	scale := []float64{8, 16, 32}
+	for _, tc := range []struct {
+		value float64
+		want  bool
+		why   string
+	}{
+		{16.0, true, "exact"},
+		{16.4, true, "within sub-pixel tolerance"},
+		{15.6, true, "within sub-pixel tolerance below"},
+		{16.6, false, "beyond tolerance"},
+		{15.4, false, "beyond tolerance below"},
+	} {
+		if got := scaleContains(scale, tc.value); got != tc.want {
+			t.Errorf("scaleContains(%v) = %v, want %v (%s)", tc.value, got, tc.want, tc.why)
+		}
+	}
+}
+
+// TestLengthNearMissRatio_IsBracketed keeps the relative band load-bearing.
+func TestLengthNearMissRatio_IsBracketed(t *testing.T) {
+	t.Parallel()
+	tokens := buildTokenTable(map[string]string{"--spacing-md": "16px"})
+	if _, _, found := nearestLengthToken(tokens, 14); !found {
+		t.Errorf("14px is %.0f%% off a 16px token and should be a near-miss", 100*2.0/16)
+	}
+	if _, _, found := nearestLengthToken(tokens, 13); found {
+		t.Errorf("13px is %.0f%% off a 16px token and is a different value, not a typo", 100*3.0/16)
+	}
+}
+
+// TestAnalyzeTokens_DeclaredSpecIgnoresDefaultsAndTransparency covers the
+// declared-spec branch, which had ZERO coverage while carrying the package's
+// worst false-positive hazard. Every element on every page has margin:0 and a
+// transparent background; losing either guard yields ~8 spurious errors per
+// element, and nothing caught that.
+func TestAnalyzeTokens_DeclaredSpecIgnoresDefaultsAndTransparency(t *testing.T) {
+	t.Parallel()
+	spec := &designSpec{SpacingScale: []float64{8, 16, 32}, Colors: []string{"#2a55e1"}}
+	el := makeElement(0, "div.plain", map[string]string{
+		"margin-top": "0px", "margin-left": "0px",
+		"padding-top": "0px", "padding-bottom": "0px",
+		"background-color": "rgba(0, 0, 0, 0)",
+	})
+
+	findings, skip := analyzeTokens([]elementView{el}, buildTokenTable(nil), spec)
+	if skip != nil {
+		t.Fatalf("a declared spec must run even with no page tokens, got skip %+v", skip)
+	}
+	if len(findings) != 0 {
+		t.Errorf("CSS defaults were reported as spec violations (%d findings): %+v", len(findings), findings)
+	}
+}
+
+// TestAnalyzeTokens_DeclaredSpecFlagsOffScaleAndOffPalette is the happy path of
+// that same previously-uncovered branch.
+func TestAnalyzeTokens_DeclaredSpecFlagsOffScaleAndOffPalette(t *testing.T) {
+	t.Parallel()
+	spec := &designSpec{SpacingScale: []float64{8, 16, 32}, Colors: []string{"#2a55e1"}}
+	el := makeElement(0, "div.card", map[string]string{
+		"padding-top":      "15px",
+		"background-color": "#c81e1e",
+	})
+
+	findings, skip := analyzeTokens([]elementView{el}, buildTokenTable(nil), spec)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if !equalStringSets(propertiesOf(findings), []string{"padding-top", "background-color"}) {
+		t.Fatalf("flagged %v, want padding-top and background-color", propertiesOf(findings))
+	}
+	for _, f := range findings {
+		if f.Severity != severityError || f.ExpectedFrom != provenanceDeclared {
+			t.Errorf("a declared-rule violation must be a declared error, got %s/%s", f.Severity, f.ExpectedFrom)
+		}
+	}
+}
+
+// TestParseAlpha_PercentAndDecimalForms pins the percent branch.
+func TestParseAlpha_PercentAndDecimalForms(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		raw  string
+		want float64
+	}{
+		{"0.5", 0.5}, {"1", 1}, {"50%", 0.5}, {"0%", 0}, {"100%", 1},
+	} {
+		if got := parseAlpha(tc.raw); got != tc.want {
+			t.Errorf("parseAlpha(%q) = %v, want %v", tc.raw, got, tc.want)
+		}
+	}
+	c, ok := parseColor("rgba(1, 2, 3, 50%)")
+	if !ok || c.A != 0.5 {
+		t.Errorf("rgba(...,50%%) parsed as %+v, want alpha 0.5", c)
+	}
+}
