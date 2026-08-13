@@ -39,6 +39,9 @@ A command with no recorded answer is replayed as an **error**, never as an empty
 success, so a stale transcript fails loudly instead of turning every category
 green against a fixture that answers nothing.
 
-The `Connected Canary` workflow re-records nightly on a browser-equipped
-self-hosted runner and fails when the live command set differs from what is
-committed here.
+The `Connected Canary` workflow re-records on a browser-equipped self-hosted
+runner and fails when the live command set differs from what is committed here.
+It runs when something that can change the exchange changes — the extension, the
+daemon's command dispatch, the wire contracts, these fixtures, or the record and
+replay machinery — not on a schedule. A transcript goes stale because code
+changed, so a clock-driven run on an unchanged tree proves nothing.

@@ -9,21 +9,61 @@
 # when the new recording differs from the committed one — which is exactly the
 # signal "the fixtures are stale, re-record and review the diff".
 #
+# WHEN IT RUNS: on changes that can alter what the extension returns, not on a
+# clock. A transcript goes stale because code changed, so a nightly run on an
+# unchanged tree burns the one browser runner to re-confirm yesterday's answer,
+# and — worse — trains people to treat a red canary as background noise.
+#
+# The path filter is the exchange surface: the extension itself, the daemon's
+# command dispatch and wire contracts, the recorded fixtures, and the record and
+# replay machinery. It is deliberately broad, because a command shape can move
+# from either side and a missed drift is worse than an extra run.
+#
+# It fires post-merge rather than on pull requests: the runner has one browser,
+# so PR-triggered runs would queue behind each other, and fork PRs cannot use a
+# self-hosted runner at all. The fix for a red canary is "re-record", never
+# "revert", so learning about it at the merge point costs nothing.
+#
 # REQUIREMENTS: a self-hosted runner labelled `kaboom-browser` with Chrome
 # running and the Kaboom extension loaded and connected. There is no hosted
 # GitHub runner that can satisfy this; without such a runner the workflow will
-# queue and never start, which is why it is schedule/dispatch only and is never
-# a required check.
+# queue and never start, which is why it is never a required check.
 name: Connected Canary
 
 on:
-  schedule:
-    # Daily, offset from the nightly fuzz run so the two do not contend.
-    - cron: "15 5 * * *"
+  push:
+    branches: [UNSTABLE, STABLE]
+    paths:
+      # The extension: what it returns is half the exchange.
+      - "src/**"
+      - "extension/**"
+      # The daemon side: command dispatch, the sync transport, wire contracts.
+      - "cmd/browser-agent/**"
+      - "internal/capture/**"
+      - "internal/queries/**"
+      - "internal/commandcontract/**"
+      # Covers internal/types/wire_*.go and every other package's wire pair.
+      - "internal/**/wire_*.go"
+      - "src/types/wire/**"
+      # The fixtures themselves — a re-record must be checked against reality.
+      - "scripts/tests/transcripts/**"
+      # The record and replay machinery.
+      - "internal/synctranscript/**"
+      - "cmd/kaboom-replay-extension/**"
+      - "scripts/tests/record-connected-transcripts.sh"
+      - "scripts/tests/framework/uat-replay.sh"
+      - ".github/workflows/connected-canary.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# One browser on the runner. Concurrent runs would put two daemons and two
+# sessions against a single extension, and the loser of that race reports
+# drift that is really just contention.
+concurrency:
+  group: connected-canary
+  cancel-in-progress: false
 
 jobs:
   canary:
