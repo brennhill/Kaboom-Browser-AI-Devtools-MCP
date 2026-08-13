@@ -285,6 +285,7 @@ func TestSecurityScan_WithAuthNoFinding(t *testing.T) {
 		},
 	}
 	result := scanner.Scan(input)
+	requireScanObservedInput(t, result)
 
 	// Should not flag endpoints that have auth
 	for _, f := range result.Findings {

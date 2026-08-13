@@ -150,6 +150,7 @@ func TestSecurityScan_LocalhostSkipsHSTS(t *testing.T) {
 		},
 	}
 	result := scanner.Scan(input)
+	requireScanObservedInput(t, result)
 
 	// HSTS check should skip localhost
 	for _, f := range result.Findings {
@@ -259,6 +260,7 @@ func TestSecurityScan_SecureCookieNoFindings(t *testing.T) {
 		},
 	}
 	result := scanner.Scan(input)
+	requireScanObservedInput(t, result)
 
 	for _, f := range result.Findings {
 		if f.Check == "cookies" {
@@ -304,6 +306,7 @@ func TestSecurityScan_HTTPLocalhostNotFlagged(t *testing.T) {
 		},
 	}
 	result := scanner.Scan(input)
+	requireScanObservedInput(t, result)
 
 	for _, f := range result.Findings {
 		if f.Check == "transport" {
@@ -325,6 +328,7 @@ func TestSecurityScan_HTTP127NotFlagged(t *testing.T) {
 		},
 	}
 	result := scanner.Scan(input)
+	requireScanObservedInput(t, result)
 
 	for _, f := range result.Findings {
 		if f.Check == "transport" {
@@ -353,4 +357,33 @@ func TestSecurityScan_MixedContent(t *testing.T) {
 	if found == nil {
 		t.Fatal("expected transport finding for mixed content")
 	}
+}
+
+// requireScanObservedInput is the positive half of a "should not be flagged"
+// assertion.
+//
+// A test whose only check is a loop over result.Findings passes when the
+// scanner returns nothing at all, so it proves the exemption works and equally
+// proves the check never ran. Verified: with Scan stubbed to return an empty
+// Result, ten such tests still passed. URLsScanned is the cheapest evidence
+// that the input actually reached the scanner.
+func requireScanObservedInput(t *testing.T, result Result) {
+	t.Helper()
+	if result.Summary.URLsScanned == 0 {
+		t.Fatal("the scanner observed no URLs, so a 'not flagged' result proves nothing about the exemption")
+	}
+}
+
+// requireCheckDiscriminates proves an exemption is doing work rather than the
+// check being absent: the same scanner over the non-exempt equivalent input
+// must produce the finding the exempt case is asserting the absence of.
+func requireCheckDiscriminates(t *testing.T, control Result, check string) {
+	t.Helper()
+	for _, f := range control.Findings {
+		if f.Check == check {
+			return
+		}
+	}
+	t.Fatalf("the non-exempt control produced no %q finding, so the exemption test cannot distinguish "+
+		"a working exemption from a check that never runs", check)
 }

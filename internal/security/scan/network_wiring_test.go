@@ -109,6 +109,19 @@ func TestScan_NetworkCheckSafeOriginNoFindings(t *testing.T) {
 
 	result := scanner.Scan(input)
 
+	// URLsScanned counts network bodies, and this input is waterfall-based, so
+	// the positive evidence here is discrimination: the same scanner over a
+	// suspicious origin must produce the finding this case asserts the absence
+	// of. Without it, "no network findings" is equally satisfied by a network
+	// check that never ran.
+	requireCheckDiscriminates(t, scanner.Scan(Input{
+		WaterfallEntries: []types.NetworkWaterfallEntry{
+			{URL: "https://cdn-analytics.xyz/tracker.js", InitiatorType: "script"},
+		},
+		PageURLs: []string{"https://myapp.com"},
+		Checks:   []string{"network"},
+	}), "network")
+
 	for _, f := range result.Findings {
 		if f.Check == "network" {
 			t.Errorf("Safe origin should not produce network findings, got: %s", f.Title)

@@ -202,6 +202,7 @@ func TestSecurityScan_TestKeyNotFlagged(t *testing.T) {
 		},
 	}
 	result := scanner.Scan(input)
+	requireScanObservedInput(t, result)
 
 	// Test/dev keys should either not be flagged or be flagged at low severity
 	for _, f := range result.Findings {
