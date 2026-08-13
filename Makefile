@@ -231,8 +231,13 @@ go-architecture-baseline-update:
 check-workflow-contracts:
 	@node --test scripts/quality/workflows/check-local-paths.test.mjs
 	@node --test scripts/quality/workflows/check-go-test-targets.test.mjs
+	@node --test scripts/quality/workflows/check-raw-jq.test.mjs
+	@node --test scripts/quality/workflows/check-destructive-git.test.mjs
 	@node scripts/quality/workflows/check-local-paths.mjs
 	@node scripts/quality/workflows/check-go-test-targets.mjs
+	@node scripts/quality/workflows/check-raw-jq.mjs
+	@node scripts/quality/workflows/check-destructive-git.mjs
+	@bash scripts/tests/framework/json.test.sh
 
 check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates
 

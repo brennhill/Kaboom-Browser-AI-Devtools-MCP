@@ -13,6 +13,8 @@ TEST_DAEMON_CLEANER="$FRAMEWORK_DIR/../../cleanup-test-daemons.sh"
 source "$FRAMEWORK_DIR/uat-user-state.sh"
 # shellcheck source=uat-fixture-state.sh
 source "$FRAMEWORK_DIR/uat-fixture-state.sh"
+# shellcheck source=json.sh
+source "$FRAMEWORK_DIR/json.sh"
 
 # ── Timeout Compatibility ──────────────────────────────────
 # macOS doesn't ship with `timeout`. Use gtimeout from coreutils if available.
@@ -334,24 +336,27 @@ check_is_error() {
     [ "$is_error" = "true" ]
 }
 
+# Both helpers route through json_field so an unparseable response can never
+# satisfy an assertion. The old form compared jq's output to the expectation,
+# and jq prints nothing when it cannot parse — so a response that never arrived
+# matched any expectation of "".
 check_json_field() {
     local json="$1"
     local jq_path="$2"
     local expected="$3"
-    local actual
-    actual="$(echo "$json" | jq -r "$jq_path" 2>/dev/null)"
+    local actual status
+    actual="$(json_field "$json" "$jq_path")"
+    status=$?
+    if [ "$status" -eq "$JSON_PARSE_FAILED" ]; then
+        return 1
+    fi
     [ "$actual" = "$expected" ]
 }
 
 check_json_has() {
     local json="$1"
     local jq_path="$2"
-    local value
-    if value="$(echo "$json" | jq -e "$jq_path" 2>/dev/null)"; then
-        [ "$value" != "null" ]
-    else
-        return 1
-    fi
+    json_field "$json" "$jq_path" >/dev/null 2>&1
 }
 
 check_contains() {
