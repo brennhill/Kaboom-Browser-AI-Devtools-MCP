@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/commandcontract"
 )
 
 // fakeDaemon is the daemon side of /sync: it hands out a queued command and
@@ -279,5 +280,51 @@ func TestRunStopsWhenTheContextIsCancelled(t *testing.T) {
 		}
 	case <-t.Context().Done():
 		t.Fatal("Run did not return after cancellation")
+	}
+}
+
+// The daemon prepends a version-mismatch warning to every tool response when
+// the extension's version differs from its own, and the UAT categories assert
+// on response text. A cosmetic mismatch would surface as content failures with
+// nothing to do with the feature under test.
+func TestClientReportsTheConfiguredVersion(t *testing.T) {
+	daemon := newFakeDaemon(t)
+	client := NewClient(Options{
+		Endpoint:   daemon.server.URL,
+		Transcript: NewTranscript(nil),
+		Version:    "0.9.0",
+	})
+	if err := client.SyncOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := daemon.received()[0].ExtensionVersion; got != "0.9.0" {
+		t.Errorf("ExtensionVersion = %q, want the configured 0.9.0", got)
+	}
+}
+
+// With no version configured the client must still identify itself as a
+// replay, so daemon diagnostics do not claim a browser was attached.
+func TestClientFallsBackToTheReplayVersionMarker(t *testing.T) {
+	daemon := newFakeDaemon(t)
+	client := newTestClient(t, daemon, nil)
+	if err := client.SyncOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := daemon.received()[0].ExtensionVersion; got != replayVersion {
+		t.Errorf("ExtensionVersion = %q, want %q", got, replayVersion)
+	}
+}
+
+// The daemon refuses commands to an extension whose command contract it does
+// not recognise, so a wrong or absent id makes every replayed category fail
+// with a mismatch that looks like a browser problem.
+func TestClientSendsTheGeneratedCommandContractID(t *testing.T) {
+	daemon := newFakeDaemon(t)
+	client := newTestClient(t, daemon, nil)
+	if err := client.SyncOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := daemon.received()[0].CommandContractID; got != commandcontract.ID {
+		t.Errorf("CommandContractID = %q, want the generated %q", got, commandcontract.ID)
 	}
 }

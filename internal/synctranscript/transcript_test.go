@@ -225,3 +225,70 @@ func TestMissesRecordsWhatWasAskedButNeverRecorded(t *testing.T) {
 		t.Errorf("Misses() = %v, want analyze twice and observe once", misses)
 	}
 }
+
+// The UAT harness gates readiness on a tracked tab reported by the browser, so
+// a replay has to claim the same tab the recording did. Reading it out of the
+// transcript keeps the fixture self-describing: no side-channel metadata file
+// to drift out of step with the recording it belongs to.
+func TestTrackedTabFromRecordsFindsTheRecordedTrackedTab(t *testing.T) {
+	records := []Record{
+		{Type: "logs", Status: "complete", Result: json.RawMessage(`{"entries":[]}`)},
+		{Type: "tabs", Status: "complete", Result: json.RawMessage(
+			`{"tabs":[{"id":11,"url":"http://a","tracked":false},{"id":42,"url":"http://b/fixture.html","title":"B","tracked":true}]}`)},
+	}
+	tab, found := TrackedTabFromRecords(records)
+	if !found {
+		t.Fatal("no tracked tab found in a transcript that recorded one")
+	}
+	if tab.ID != 42 || tab.URL != "http://b/fixture.html" || tab.Title != "B" {
+		t.Errorf("tab = %+v, want id 42 at http://b/fixture.html", tab)
+	}
+}
+
+func TestTrackedTabFromRecordsIgnoresUntrackedTabs(t *testing.T) {
+	records := []Record{{Type: "tabs", Status: "complete", Result: json.RawMessage(
+		`{"tabs":[{"id":11,"url":"http://a","tracked":false}]}`)}}
+	if _, found := TrackedTabFromRecords(records); found {
+		t.Error("an untracked tab was reported as the tracked one")
+	}
+}
+
+func TestTrackedTabFromRecordsReportsAbsence(t *testing.T) {
+	records := []Record{{Type: "logs", Status: "complete", Result: json.RawMessage(`{"entries":[]}`)}}
+	if _, found := TrackedTabFromRecords(records); found {
+		t.Error("a transcript with no tabs recording reported a tracked tab")
+	}
+}
+
+// A failed recording carries no trustworthy state; taking a tab from it would
+// pin the replay to whatever the browser reported while it was broken.
+func TestTrackedTabFromRecordsSkipsFailedExchanges(t *testing.T) {
+	records := []Record{{Type: "tabs", Status: "error", Error: "detached", Result: json.RawMessage(
+		`{"tabs":[{"id":42,"url":"http://b","tracked":true}]}`)}}
+	if _, found := TrackedTabFromRecords(records); found {
+		t.Error("a tracked tab was taken from a failed exchange")
+	}
+}
+
+// Later recordings win: the tab can be re-tracked mid-run, and the last
+// observation is the one the harness will be comparing against.
+func TestTrackedTabFromRecordsPrefersTheLastObservation(t *testing.T) {
+	records := []Record{
+		{Type: "tabs", Status: "complete", Result: json.RawMessage(`{"tabs":[{"id":1,"url":"http://a","tracked":true}]}`)},
+		{Type: "tabs", Status: "complete", Result: json.RawMessage(`{"tabs":[{"id":2,"url":"http://b","tracked":true}]}`)},
+	}
+	tab, _ := TrackedTabFromRecords(records)
+	if tab.ID != 2 {
+		t.Errorf("tab.ID = %d, want the later observation 2", tab.ID)
+	}
+}
+
+// The payload shape varies by command; a tabs array can arrive nested.
+func TestTrackedTabFromRecordsFindsANestedTabsArray(t *testing.T) {
+	records := []Record{{Type: "tabs", Status: "complete", Result: json.RawMessage(
+		`{"result":{"tabs":[{"id":7,"url":"http://c","tracked":true}]}}`)}}
+	tab, found := TrackedTabFromRecords(records)
+	if !found || tab.ID != 7 {
+		t.Errorf("tab = %+v found = %v, want id 7", tab, found)
+	}
+}

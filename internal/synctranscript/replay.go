@@ -55,6 +55,10 @@ type Options struct {
 	TrackedTab TrackedTab
 	SessionID  string
 	HTTPClient *http.Client
+	// Version is reported as the extension version. Left empty it falls back to
+	// a marker string, which makes the daemon prepend a version-mismatch
+	// warning to every tool response.
+	Version string
 }
 
 // Client plays the extension's half of the sync protocol.
@@ -64,6 +68,7 @@ type Client struct {
 	transcript *Transcript
 	tab        TrackedTab
 	session    string
+	version    string
 
 	generation uint64
 	pending    []syncruntime.SyncCommandResult
@@ -83,12 +88,17 @@ func NewClient(options Options) *Client {
 	if transcript == nil {
 		transcript = NewTranscript(nil)
 	}
+	version := options.Version
+	if version == "" {
+		version = replayVersion
+	}
 	return &Client{
 		endpoint:   options.Endpoint,
 		http:       client,
 		transcript: transcript,
 		tab:        options.TrackedTab,
 		session:    session,
+		version:    version,
 	}
 }
 
@@ -138,7 +148,7 @@ func (c *Client) buildRequest() syncruntime.SyncRequest {
 	return syncruntime.SyncRequest{
 		ExtSessionID:         c.session,
 		ConnectionGeneration: c.generation,
-		ExtensionVersion:     replayVersion,
+		ExtensionVersion:     c.version,
 		// Taken from the generated constant rather than pinned here: the daemon
 		// refuses commands to an extension whose contract it does not recognise,
 		// and a hardcoded copy would go stale on the next contract change and

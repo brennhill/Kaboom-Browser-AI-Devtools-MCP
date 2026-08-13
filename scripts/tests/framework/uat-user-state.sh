@@ -177,6 +177,19 @@ uat_create_disposable_tab() {
     local wrapper="$2"
     local response=""
 
+    # In replay mode there is no browser to open a tab in. The fake extension
+    # already reports the tab its transcript recorded, so creating one would
+    # need a recorded answer for a command the live run never issued.
+    if declare -f uat_replay_enabled >/dev/null 2>&1 && uat_replay_enabled; then
+        UAT_DISPOSABLE_TAB_ID="$(uat_replay_tracked_tab_id "$port" "$wrapper")"
+        if [ -z "$UAT_DISPOSABLE_TAB_ID" ]; then
+            echo "Replay transcript reports no tracked tab; re-record it" >&2
+            return 1
+        fi
+        UAT_DISPOSABLE_TAB_CLOSED=1
+        return 0
+    fi
+
     UAT_USER_DAEMON_PORT="$port"
     UAT_USER_WRAPPER="$wrapper"
     UAT_DISPOSABLE_TAB_URL="${KABOOM_UAT_TEST_URL:-http://127.0.0.1:${port}/tests/interact.html}"
@@ -209,6 +222,11 @@ uat_ensure_cleanup_daemon() {
 }
 
 uat_close_disposable_tab() {
+    # EXPECTED_ABSENCE: replay mode never opened a real tab, so there is
+    # nothing to close and no browser to close it in.
+    if declare -f uat_replay_enabled >/dev/null 2>&1 && uat_replay_enabled; then
+        return 0
+    fi
     [ -n "$UAT_DISPOSABLE_TAB_ID" ] || return 0
     [ "$UAT_DISPOSABLE_TAB_CLOSED" = "0" ] || return 0
     uat_ensure_cleanup_daemon || return 1

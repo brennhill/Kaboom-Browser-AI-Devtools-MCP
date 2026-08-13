@@ -1,0 +1,94 @@
+# connected-canary.yml — Re-records the connected transcripts against a real browser and diffs them.
+#
+# The replay job in ci.yml proves the connected categories still pass against
+# what the browser said *last time it was recorded*. That is a regression gate,
+# not a truth gate: if the extension starts returning a different shape, replay
+# keeps passing on the old recording and the drift is invisible.
+#
+# This canary closes that hole. It re-records against a live browser and fails
+# when the new recording differs from the committed one — which is exactly the
+# signal "the fixtures are stale, re-record and review the diff".
+#
+# REQUIREMENTS: a self-hosted runner labelled `kaboom-browser` with Chrome
+# running and the Kaboom extension loaded and connected. There is no hosted
+# GitHub runner that can satisfy this; without such a runner the workflow will
+# queue and never start, which is why it is schedule/dispatch only and is never
+# a required check.
+name: Connected Canary
+
+on:
+  schedule:
+    # Daily, offset from the nightly fuzz run so the two do not contend.
+    - cron: "15 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: Live browser transcript canary
+    runs-on: [self-hosted, kaboom-browser]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
+        with:
+          go-version: "1.25.12"
+
+      - name: Build the daemon
+        run: go build -o dist/kaboom-agentic-browser ./cmd/browser-agent
+
+      - name: Re-record against the live browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Record into a scratch directory so the committed fixtures stay
+          # untouched and the diff below compares like with like.
+          KABOOM_UAT_REPLAY="$RUNNER_TEMP/transcripts" \
+            ./scripts/tests/record-connected-transcripts.sh
+
+      # Volatile fields are already excluded from the fingerprint, but the
+      # recorded params and results still carry ids and timestamps that change
+      # every run. The diff is on the command shapes and result *structure*,
+      # which is what a replay actually depends on.
+      - name: Compare command coverage against the committed transcripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          committed="scripts/tests/transcripts"
+          fresh="$RUNNER_TEMP/transcripts"
+          if [ ! -d "$committed" ]; then
+            echo "::error title=No committed transcripts::Nothing to compare against. Commit $fresh."
+            exit 1
+          fi
+          status=0
+          for file in "$fresh"/*.jsonl; do
+            name="$(basename "$file")"
+            if [ ! -f "$committed/$name" ]; then
+              echo "::warning title=New transcript::$name was recorded but is not committed."
+              status=1
+              continue
+            fi
+            shapes_fresh="$(jq -r '.type' "$file" | sort | uniq -c | sort -k2)"
+            shapes_committed="$(jq -r '.type' "$committed/$name" | sort | uniq -c | sort -k2)"
+            if [ "$shapes_fresh" != "$shapes_committed" ]; then
+              echo "::error title=Transcript drift in $name::The live browser answered a different set of commands than the committed recording."
+              diff <(echo "$shapes_committed") <(echo "$shapes_fresh") || true
+              status=1
+            fi
+          done
+          if [ "$status" -ne 0 ]; then
+            echo "Re-record and review: scripts/tests/record-connected-transcripts.sh" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
+      - name: Retain the fresh recording
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: connected-transcripts-${{ github.run_id }}
+          path: ${{ runner.temp }}/transcripts
+          if-no-files-found: warn
+          retention-days: 14

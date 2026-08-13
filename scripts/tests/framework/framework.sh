@@ -15,6 +15,8 @@ source "$FRAMEWORK_DIR/uat-user-state.sh"
 source "$FRAMEWORK_DIR/uat-fixture-state.sh"
 # shellcheck source=json.sh
 source "$FRAMEWORK_DIR/json.sh"
+# shellcheck source=uat-replay.sh
+source "$FRAMEWORK_DIR/uat-replay.sh"
 
 # ── Timeout Compatibility ──────────────────────────────────
 # macOS doesn't ship with `timeout`. Use gtimeout from coreutils if available.
@@ -720,6 +722,9 @@ get_http_body() {
 
 # ── Daemon Lifecycle ───────────────────────────────────────
 kill_server() {
+    # The fake extension polls this daemon, so it goes first: left running it
+    # would spend the teardown window logging connection failures.
+    uat_replay_stop
     # Prefer killing the tracked daemon PID over indiscriminate lsof
     if [ -n "$DAEMON_PID" ]; then
         # SIGTERM first for clean shutdown, then SIGKILL if still alive
@@ -798,6 +803,11 @@ start_daemon() {
         echo "WARNING: daemon on port $PORT not healthy after startup (PID $DAEMON_PID)" >&2
         return 1
     fi
+    # The fake extension has to be attached before the connected-browser gate,
+    # which is what it exists to satisfy.
+    if uat_replay_enabled; then
+        uat_replay_start "$PORT" "${CATEGORY_ID:-}" || return 1
+    fi
     wait_for_required_connected_browser || return 1
     # Print daemon version to catch stale binary issues
     local daemon_ver
@@ -820,6 +830,9 @@ start_daemon_with_flags() {
     if ! wait_for_health 50; then
         echo "WARNING: daemon on port $PORT not healthy after startup (PID $DAEMON_PID)" >&2
         return 1
+    fi
+    if uat_replay_enabled; then
+        uat_replay_start "$PORT" "${CATEGORY_ID:-}" || return 1
     fi
     wait_for_required_connected_browser || return 1
     # Print daemon version to catch stale binary issues

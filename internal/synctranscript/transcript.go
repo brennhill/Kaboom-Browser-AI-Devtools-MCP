@@ -254,3 +254,85 @@ func Decode(reader io.Reader) ([]Record, error) {
 	}
 	return records, nil
 }
+
+// TrackedTabFromRecords recovers the tracked tab a recording observed.
+//
+// The UAT harness gates readiness on a tracked tab reported by the browser, so
+// a replay has to claim the tab its recording did. Reading it out of the
+// transcript keeps the fixture self-describing — a side-channel metadata file
+// would be one more thing to drift out of step with the recording.
+//
+// The tabs array is searched for wherever it appears, because the payload shape
+// differs by command and a nested envelope is common.
+func TrackedTabFromRecords(records []Record) (TrackedTab, bool) {
+	var found TrackedTab
+	var located bool
+	for _, record := range records {
+		if record.Status != "complete" || len(record.Result) == 0 {
+			// EXPECTED_ABSENCE: a failed or empty exchange carries no
+			// trustworthy state, and pinning the replay to what the browser
+			// reported while broken would be worse than having no tab.
+			continue
+		}
+		var payload any
+		if json.Unmarshal(record.Result, &payload) != nil {
+			// EXPECTED_ABSENCE: a result that is not JSON cannot contain a tabs
+			// array; Decode already rejected anything structurally invalid.
+			continue
+		}
+		if tab, ok := trackedTabIn(payload); ok {
+			// Later observations win: a tab can be re-tracked mid-run, and the
+			// last one is what the harness will compare against.
+			found, located = tab, true
+		}
+	}
+	return found, located
+}
+
+// trackedTabIn walks a decoded payload for a tabs array holding a tracked entry.
+func trackedTabIn(value any) (TrackedTab, bool) {
+	switch typed := value.(type) {
+	case map[string]any:
+		if tabs, present := typed["tabs"].([]any); present {
+			if tab, ok := trackedEntry(tabs); ok {
+				return tab, true
+			}
+		}
+		keys := make([]string, 0, len(typed))
+		for key := range typed {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			if tab, ok := trackedTabIn(typed[key]); ok {
+				return tab, true
+			}
+		}
+	case []any:
+		for _, element := range typed {
+			if tab, ok := trackedTabIn(element); ok {
+				return tab, true
+			}
+		}
+	}
+	return TrackedTab{}, false
+}
+
+func trackedEntry(tabs []any) (TrackedTab, bool) {
+	for _, entry := range tabs {
+		fields, ok := entry.(map[string]any)
+		if !ok || fields["tracked"] != true {
+			continue
+		}
+		id, numeric := fields["id"].(float64)
+		if !numeric {
+			// EXPECTED_ABSENCE: an entry with no numeric id cannot be claimed
+			// by the replay client, which must report one the daemon accepts.
+			continue
+		}
+		url, _ := fields["url"].(string)
+		title, _ := fields["title"].(string)
+		return TrackedTab{ID: int(id), URL: url, Title: title}, true
+	}
+	return TrackedTab{}, false
+}

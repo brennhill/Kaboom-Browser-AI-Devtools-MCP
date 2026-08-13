@@ -160,6 +160,51 @@ jobs:
         shell: bash
         run: bash scripts/tests/release/cat-34-packaged-corruption-recovery.sh 17890 /dev/stdout
 
+  connected-replay:
+    name: Connected Suite (Replay)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
+        with:
+          go-version: "1.25.12"
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Build daemon and replay extension
+        run: |
+          go build -o dist/kaboom-agentic-browser ./cmd/browser-agent
+          go build -o dist/kaboom-replay-extension ./cmd/kaboom-replay-extension
+
+      # The connected categories are the only tests that prove a browser feature
+      # still works. Without recorded transcripts they cannot run here, and a
+      # silently-green job would read as coverage that does not exist — so the
+      # absence is annotated rather than skipped quietly.
+      - name: Connected categories against recorded transcripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          transcripts="scripts/tests/transcripts"
+          if [ ! -d "$transcripts" ] || [ -z "$(ls -A "$transcripts"/*.jsonl 2>/dev/null || true)" ]; then
+            echo "::warning title=Connected suite unverified::No transcripts in $transcripts. The connected UAT categories did not run. Record them with scripts/tests/record-connected-transcripts.sh and commit the result."
+            {
+              echo "### Connected suite: NOT VERIFIED"
+              echo ""
+              echo "No recorded transcripts were found in \`$transcripts\`, so the connected"
+              echo "categories did not run in this build. Browser features are unguarded until"
+              echo "\`scripts/tests/record-connected-transcripts.sh\` is run against a live"
+              echo "browser and its output committed."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          KABOOM_UAT_REPLAY="$PWD/$transcripts" \
+          KABOOM_UAT_REPLAY_BINARY="$PWD/dist/kaboom-replay-extension" \
+          KABOOM_UAT_WRAPPER="$PWD/dist/kaboom-agentic-browser" \
+          KABOOM_UAT_REQUIRE_CONNECTED=1 \
+            ./scripts/uat/runners/test-all-tools-comprehensive.sh --suite connected
+
   go:
     name: Go Checks
     runs-on: ubuntu-latest

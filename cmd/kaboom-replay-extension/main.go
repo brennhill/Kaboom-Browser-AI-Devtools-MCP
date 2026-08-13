@@ -60,9 +60,9 @@ func parseFlags() options {
 	var opts options
 	flag.IntVar(&opts.port, "port", 7890, "daemon port")
 	flag.StringVar(&opts.transcript, "transcript", "", "path to a recorded command transcript (required)")
-	flag.IntVar(&opts.tabID, "tab-id", 1, "tab id to report as tracked")
-	flag.StringVar(&opts.tabURL, "tab-url", "http://127.0.0.1:7890/testpages/interact.html", "URL to report as tracked")
-	flag.StringVar(&opts.tabTitle, "tab-title", "kaboom replay", "title to report as tracked")
+	flag.IntVar(&opts.tabID, "tab-id", 0, "tab id to report as tracked (default: the one the transcript recorded)")
+	flag.StringVar(&opts.tabURL, "tab-url", "", "URL to report as tracked (default: the one the transcript recorded)")
+	flag.StringVar(&opts.tabTitle, "tab-title", "", "title to report as tracked")
 	flag.BoolVar(&opts.force, "force", false, "replay even if a real extension is already connected")
 	flag.BoolVar(&opts.strict, "strict", true, "exit non-zero if any command had no recorded answer")
 	flag.Parse()
@@ -90,17 +90,25 @@ func run(opts options) error {
 	}
 
 	endpoint := fmt.Sprintf("http://127.0.0.1:%d", opts.port)
-	if err := guardAgainstRealExtension(endpoint, opts.force); err != nil {
-		return err
+	daemon := probeDaemon(endpoint)
+	if daemon.extensionConnected && !opts.force {
+		return fmt.Errorf("a real extension is already connected to %s; replaying would take over its session. Pass --force if that is intended", endpoint)
 	}
 
+	tab := resolveTrackedTab(opts, records)
 	transcript := synctranscript.NewTranscript(records)
 	client := synctranscript.NewClient(synctranscript.Options{
 		Endpoint:   endpoint,
 		Transcript: transcript,
-		TrackedTab: synctranscript.TrackedTab{ID: opts.tabID, URL: opts.tabURL, Title: opts.tabTitle},
+		TrackedTab: tab,
 		SessionID:  fmt.Sprintf("replay-%d", os.Getpid()),
+		// Report the daemon's own version. Anything else makes the daemon
+		// prepend a version-mismatch warning to every tool response, and the
+		// categories assert on response text — so a cosmetic mismatch would
+		// show up as content failures that have nothing to do with the feature.
+		Version: daemon.version,
 	})
+	fmt.Fprintf(os.Stderr, "kaboom-replay-extension: reporting tracked tab %d (%s)\n", tab.ID, tab.URL)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -112,55 +120,76 @@ func run(opts options) error {
 	return report(transcript, client, opts.strict)
 }
 
-// guardAgainstRealExtension refuses to displace a live browser session.
+// resolveTrackedTab prefers the tab the transcript recorded, because the UAT
+// harness compares the tracked id against what `observe tabs` returns — and
+// that answer comes from the same transcript. A hand-set id that disagrees with
+// the recording makes readiness fail for a reason nobody would guess.
+func resolveTrackedTab(opts options, records []synctranscript.Record) synctranscript.TrackedTab {
+	tab, found := synctranscript.TrackedTabFromRecords(records)
+	if !found {
+		// EXPECTED_ABSENCE: a transcript covering only offline commands never
+		// observed the tab list, so the flags are the only source.
+		tab = synctranscript.TrackedTab{ID: 1, URL: "http://127.0.0.1/replay", Title: "kaboom replay"}
+	}
+	if opts.tabID != 0 {
+		tab.ID = opts.tabID
+	}
+	if opts.tabURL != "" {
+		tab.URL = opts.tabURL
+	}
+	if opts.tabTitle != "" {
+		tab.Title = opts.tabTitle
+	}
+	return tab
+}
+
+// daemonState is what the pre-flight learns about the daemon being replayed to.
+type daemonState struct {
+	extensionConnected bool
+	version            string
+}
+
+// probeDaemon reads /health once, for two decisions: whether a real browser is
+// already attached, and which version to impersonate.
 //
 // The replay client identifies as the extension because a probe is never
 // adopted as the session and never receives commands. That means starting it
 // against a developer's daemon would take over their browser's session and
 // silently break their tooling.
-func guardAgainstRealExtension(endpoint string, force bool) error {
-	if force {
-		return nil
-	}
+//
+// A daemon that cannot be read yields the zero value: the harness starts the
+// daemon and the client together, so "not up yet" is normal and the sync loop
+// retries on its own. Absence of an answer is not evidence of a real browser.
+func probeDaemon(endpoint string) daemonState {
 	client := &http.Client{Timeout: healthTimeout}
 	response, err := client.Get(endpoint + "/health")
 	if err != nil {
-		// EXPECTED_ABSENCE: the daemon may not be up yet when the harness
-		// starts both together, and the sync loop retries on its own.
-		return nil
+		// EXPECTED_ABSENCE: see above — the daemon may not be listening yet.
+		return daemonState{}
 	}
 	defer func() { _ = response.Body.Close() }()
 
-	health, err := decodeHealth(response)
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxHealthBody))
 	if err != nil {
 		// EXPECTED_ABSENCE: an unreadable health body is not evidence that a
 		// real extension is attached, and blocking on it would make the guard
 		// more disruptive than the case it protects against.
-		return nil
+		return daemonState{}
 	}
-	if health {
-		return fmt.Errorf("a real extension is already connected to %s; replaying would take over its session. Pass --force if that is intended", endpoint)
-	}
-	return nil
-}
-
-func decodeHealth(response *http.Response) (bool, error) {
 	// extension_connected is nested under capture. Reading the top level
-	// would make this guard always pass, so it would never protect the
+	// would make the guard always pass, so it would never protect the
 	// developer session it exists to protect.
 	var payload struct {
+		Version string `json:"version"`
 		Capture struct {
 			ExtensionConnected bool `json:"extension_connected"`
 		} `json:"capture"`
 	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxHealthBody))
-	if err != nil {
-		return false, err
-	}
 	if err := json.Unmarshal(body, &payload); err != nil {
-		return false, err
+		// EXPECTED_ABSENCE: as above.
+		return daemonState{}
 	}
-	return payload.Capture.ExtensionConnected, nil
+	return daemonState{extensionConnected: payload.Capture.ExtensionConnected, version: payload.Version}
 }
 
 // report summarises coverage. Under --strict an unanswered command fails the

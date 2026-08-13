@@ -162,6 +162,8 @@ CONNECTED_CAT_IDS="15 33 35 36 18 19 22 23 24 30 31"
 source "$TESTS_DIR/framework/uat-user-state.sh"
 # shellcheck source=tests/framework/uat-artifacts.sh
 source "$TESTS_DIR/framework/uat-artifacts.sh"
+# shellcheck source=tests/framework/uat-replay.sh
+source "$TESTS_DIR/framework/uat-replay.sh"
 # shellcheck source=uat-result-lib.sh
 source "$SCRIPT_DIR/../orchestration/uat-result-lib.sh"
 if [ "$SUITE" = "connected" ] || [ "$SUITE" = "all" ]; then
@@ -192,6 +194,15 @@ stop_preflight_daemon() {
 
 preflight_connected_extension() {
     local preflight_pid=""
+
+    # The preflight exists to fail fast when no browser is attached. In replay
+    # mode there is no browser to check, and each category attaches its own fake
+    # extension in start_daemon, so a preflight here would only start a daemon
+    # nothing is polling and time out.
+    if uat_replay_enabled; then
+        echo "Pre-flight: replay mode — answering from ${KABOOM_UAT_REPLAY}, no browser required."
+        return 0
+    fi
 
     lsof -tiTCP:"$CONNECTED_UAT_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
     sleep 0.3

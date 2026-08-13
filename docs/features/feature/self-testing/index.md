@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-12
+last_reviewed: 2026-08-13
 code_paths:
   - .github/workflows/ci.yml
   - scripts/uat/runners/smoke-test.sh
@@ -49,6 +49,22 @@ code_paths:
   - internal/statefault/store.go
   - internal/capturefixture/sync.go
   - cmd/browser-agent/internal/asynccommand/handler.go
+  - internal/synctranscript/transcript.go
+  - internal/synctranscript/replay.go
+  - internal/synctranscript/capture.go
+  - cmd/kaboom-replay-extension/main.go
+  - scripts/tests/framework/uat-replay.sh
+  - scripts/tests/framework/json.sh
+  - scripts/tests/record-connected-transcripts.sh
+  - scripts/tests/transcripts/README.md
+  - scripts/quality/workflows/check-raw-jq.mjs
+  - scripts/quality/workflows/check-destructive-git.mjs
+  - .github/workflows/connected-canary.yml
+  - .raw-jq-baseline.json
+  - internal/wirecodec/decode.go
+  - scripts/contracts/wiredecode/main.go
+  - .wire-decode-exemptions.json
+  - scripts/contracts/goarchitecture/main.go
 test_paths:
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/uat/orchestration/uat-result-lib.test.mjs
@@ -68,6 +84,16 @@ test_paths:
   - cmd/browser-agent/integration/runtime/orphan_reaping_test.go
   - tests/cli/uat-assertions/test-daemon-cleanup.test.cjs
   - tests/cli/uat-assertions/connected-fixture-determinism.test.cjs
+  - internal/synctranscript/transcript_test.go
+  - internal/synctranscript/replay_test.go
+  - internal/synctranscript/capture_test.go
+  - cmd/browser-agent/integration/replay/replay_test.go
+  - scripts/tests/framework/json.test.sh
+  - scripts/quality/workflows/check-raw-jq.test.mjs
+  - scripts/quality/workflows/check-destructive-git.test.mjs
+  - internal/wirecodec/decode_test.go
+  - scripts/contracts/wiredecode/main_test.go
+  - internal/perftrace/http_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/cli/contracts/test-layout-contract.test.cjs
   - scripts/smoke-tests/interact/14-browser-push.sh
