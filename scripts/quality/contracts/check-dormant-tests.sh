@@ -51,6 +51,11 @@ cmd/browser-agent/integration/runtime/persistence_test.go
 cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
 cmd/browser-agent/integration/runtime/reliability_test.go
 cmd/browser-agent/integration/bridge/stdio_silence_test.go
+# Starts a real daemon and a replayed extension against it, so it belongs in
+# the same "Go Integration Checks" job as the lifecycle tests above rather than
+# in every unit and coverage pass. Its test names carry the TestIntegration_
+# prefix that scripts/build/run-go-integration.sh selects for.
+cmd/browser-agent/integration/replay/replay_test.go
 EOF
 )
 

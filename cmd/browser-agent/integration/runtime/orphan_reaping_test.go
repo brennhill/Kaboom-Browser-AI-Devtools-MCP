@@ -1,6 +1,6 @@
 // orphan_reaping_test.go — A test daemon must not outlive the process that started it.
 
-package runtime_test
+package runtimeintegration
 
 import (
 	"os"

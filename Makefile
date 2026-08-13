@@ -28,7 +28,7 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check install-security-tools pre-commit verify-all npm-binaries validate-semver \
-	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture check-wire-decode go-architecture-baseline-update \
+	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture check-wire-decode check-tagged-builds go-architecture-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-command-contract generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -222,6 +222,14 @@ check-wire-decode:
 	@go test ./scripts/contracts/wiredecode
 	@go run ./scripts/contracts/wiredecode
 
+# Tag-gated code must still compile. cmd/browser-agent/integration/runtime held
+# two conflicting package names, so the package built for nobody and its
+# integration tests silently stopped running — the ordinary suite never sees
+# these files, so only an explicit tagged vet catches it.
+check-tagged-builds:
+	@go vet -tags=integration ./cmd/... ./internal/...
+	@echo "OK: integration-tagged packages compile"
+
 # Only lowers existing allowances; intentional growth requires reviewed baseline edits.
 go-architecture-baseline-update:
 	@go run ./scripts/contracts/goarchitecture --update
@@ -239,7 +247,7 @@ check-workflow-contracts:
 	@node scripts/quality/workflows/check-destructive-git.mjs
 	@bash scripts/tests/framework/json.test.sh
 
-check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates
+check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-tagged-builds check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates
 
 validate-architecture:
 	@bash scripts/quality/verification/validate-architecture.sh

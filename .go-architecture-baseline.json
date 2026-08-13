@@ -1047,7 +1047,7 @@
     },
     "internal/capture/syncruntime/handler.go": {
       "mutable_globals": 0,
-      "exports": 5
+      "exports": 6
     },
     "internal/capture/syncruntime/runtime.go": {
       "mutable_globals": 0,
@@ -1704,6 +1704,18 @@
     "internal/styleprobe/wire_style_probe.go": {
       "mutable_globals": 0,
       "exports": 3
+    },
+    "internal/synctranscript/capture.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "internal/synctranscript/replay.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/synctranscript/transcript.go": {
+      "mutable_globals": 0,
+      "exports": 15
     },
     "internal/telemetry/beacon.go": {
       "mutable_globals": 10,

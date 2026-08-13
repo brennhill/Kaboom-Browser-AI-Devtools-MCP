@@ -53,6 +53,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/synctranscript"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -273,7 +274,23 @@ func newSyncHandler(captured *capture.Capture) *syncruntime.Handler {
 		FeatureUsage:   captured.FeatureUsage(),
 		ExtensionLogs:  captured.ExtensionLogs(),
 		DiagnosticLogs: captured.DiagnosticLogs(),
+		Recorder:       newExchangeRecorder(),
 	})
+}
+
+// newExchangeRecorder enables command-exchange recording when
+// KABOOM_SYNC_TRANSCRIPT names a file. Off by default and nil in production;
+// one live run with it set produces the transcript the replay extension needs
+// to run the connected UAT categories without a browser.
+func newExchangeRecorder() syncruntime.ExchangeRecorder {
+	path := strings.TrimSpace(os.Getenv("KABOOM_SYNC_TRANSCRIPT"))
+	if path == "" {
+		// EXPECTED_ABSENCE: recording is opt-in, so an unset variable is the
+		// normal production configuration rather than a missing setting.
+		return nil
+	}
+	fmt.Fprintf(os.Stderr, "kaboom: recording sync command exchanges to %s\n", path)
+	return synctranscript.NewFileRecorder(path)
 }
 
 func registerUploadRoutes(mux *http.ServeMux, server *Server) {

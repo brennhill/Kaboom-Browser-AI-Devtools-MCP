@@ -31,6 +31,9 @@ type Dependencies struct {
 	FeatureUsage   *featureusage.Observer
 	ExtensionLogs  *logstore.Extension
 	DiagnosticLogs *logstore.Diagnostic
+	// Recorder is optional: when set, the command exchange is captured for
+	// offline replay. Nil in production.
+	Recorder ExchangeRecorder
 }
 
 // Handler owns the extension heartbeat, command transport, and
@@ -43,6 +46,7 @@ type Handler struct {
 	extensionLogs         *logstore.Extension
 	diagnosticLogs        *logstore.Diagnostic
 	waitForPendingQueries func(time.Duration)
+	recorder              ExchangeRecorder
 }
 
 const maxSyncPostBody = 5 << 20
@@ -57,6 +61,7 @@ func NewHandler(deps Dependencies) *Handler {
 		extensionLogs:         deps.ExtensionLogs,
 		diagnosticLogs:        deps.DiagnosticLogs,
 		waitForPendingQueries: deps.Queries.WaitForPendingQueries,
+		recorder:              deps.Recorder,
 	}
 }
 
@@ -168,6 +173,7 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 			if filtered := enabledFeatures(req.FeaturesUsed); len(filtered) > 0 {
 				h.featureUsage.Notify(filtered)
 			}
+			h.recordCompleted(req.CommandResults)
 			h.processSyncCommandResults(req.CommandResults, clientID, state.connectionGeneration)
 			if req.LastCommandAck != "" {
 				h.queries.AcknowledgePendingQuery(req.LastCommandAck)
@@ -221,6 +227,7 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	h.updateSyncLogs(req, now, state.pilotEnabled, len(pendingQueries))
 
 	commands := buildSyncCommands(pendingQueries, state.connectionGeneration)
+	h.recordIssued(commands)
 
 	nextPollMs := 1000
 	if len(commands) > 0 {
@@ -298,6 +305,45 @@ func buildSyncCommands(pending []queries.PendingQueryResponse, generation uint64
 		}
 	}
 	return commands
+}
+
+// ExchangeRecorder observes the two halves of a command exchange, so one live
+// run can be recorded and replayed by a fake extension. That is what lets the
+// connected UAT categories — the only tests that prove a browser feature still
+// works — run without Chrome, an extension and a person.
+//
+// The interface lives here, with the code that has the data; the implementation
+// lives in internal/synctranscript and is wired at composition, which keeps this
+// package free of any dependency on the replay machinery. A nil recorder is the
+// normal production state and every hook is then a no-op.
+type ExchangeRecorder interface {
+	// Issued notes a command handed to the extension.
+	Issued(id, kind string, params json.RawMessage)
+	// Completed notes the terminal outcome the extension returned for it.
+	Completed(id, status string, result json.RawMessage, failure string)
+}
+
+// recordIssued reports every command in a delivered batch.
+func (h *Handler) recordIssued(commands []SyncCommand) {
+	if h.recorder == nil {
+		// EXPECTED_ABSENCE: recording is opt-in and off in production, so the
+		// nil case is the overwhelmingly common one, not a fault.
+		return
+	}
+	for _, command := range commands {
+		h.recorder.Issued(command.ID, command.Type, command.Params)
+	}
+}
+
+// recordCompleted reports every terminal outcome in an incoming batch.
+func (h *Handler) recordCompleted(results []SyncCommandResult) {
+	if h.recorder == nil {
+		// EXPECTED_ABSENCE: as above — no recorder configured.
+		return
+	}
+	for _, result := range results {
+		h.recorder.Completed(result.ID, result.Status, result.Result, result.Error)
+	}
 }
 
 // shouldEmitSyncSnapshot determines whether lifecycle telemetry should include a sync snapshot.
