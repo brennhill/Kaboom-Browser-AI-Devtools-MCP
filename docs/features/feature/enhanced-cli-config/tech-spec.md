@@ -17,12 +17,18 @@ last_verified_date: 2026-03-28
 The enhancement extends **both wrappers** with the same CLI commands:
 
 ### NPM Wrapper (`npm/kaboom-agentic-browser/bin/kaboom-agentic-browser`)
-Node.js CLI entry point. Current structure:
-- **Lines 32-68**: `findBinary()` - Locates the Kaboom binary on disk
-- **Lines 70-81**: `generateMCPConfig()` - Builds MCP config object
-- **Lines 83-102**: `showConfigCommand()` - Displays config template + locations
-- **Lines 104-151**: `installCommand()` - Writes config to first matching location
-- **Lines 153-169**: Command routing (--config, --install, --help)
+A POSIX `sh` exec shim, not a Node entry point. Structure:
+- Resolve the script's real directory (npm links `node_modules/.bin` as a symlink)
+- CLI commands (`--config`, `--install`, `--doctor`, ...) → `exec node lib/cli/cli.js`
+- MCP server mode → resolve the binary, then `exec` it, replacing the shim's own
+  process image so no launcher process survives
+- Resolution order: `KABOOM_BINARY_PATH`, source-tree `dist/`, platform
+  optionalDependency, then a loud JSON-RPC failure. PATH is never consulted.
+
+`bin/kaboom-hooks` is the same shim for the hooks binary. `bin/*.cmd` are the
+Windows launchers (no `exec()` on Windows, so `cmd.exe` remains a thin parent).
+`lib/runtime/resolve-binary.js` is the single resolver the shims mirror; see
+`tests/cli/launcher/launcher-shim.contract.test.cjs` for the enforced contract.
 
 ### PyPI Wrapper (`pypi/kaboom-agentic-browser/kaboom_agentic_browser/__main__.py`)
 Python CLI entry point. Current structure:

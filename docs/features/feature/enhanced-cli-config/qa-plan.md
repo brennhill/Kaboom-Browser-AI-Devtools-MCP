@@ -400,8 +400,15 @@ last_verified_date: 2026-03-28
   - Verification: Shows --config, --install, --help, --doctor, --uninstall, --env, --dry-run, --verbose
 
 - [ ] Binary path resolution
-  - Expected: findBinary() still works (unchanged)
-  - Verification: `kaboom-agentic-browser` finds the binary correctly on macOS/Linux/Windows
+  - Expected: the `sh` exec shim resolves via `KABOOM_BINARY_PATH`, source-tree
+    `dist/`, then the platform optionalDependency — never via PATH
+  - Verification: `kaboom-agentic-browser` finds the binary on macOS/Linux/Windows,
+    and the process the client spawned IS the Go binary (no launcher in between)
+
+- [ ] Missing platform package fails loudly
+  - Expected: a JSON-RPC error naming the missing optionalDependency and the
+    repair command; no silent PATH fallback to another kaboom on the machine
+  - Verification: remove `node_modules/@brennhill/kaboom-agentic-browser-*` and run
 
 - [ ] Unsupported platform error
   - Expected: Shows clear error for unsupported OS (unchanged)

@@ -73,26 +73,39 @@ func checkPortAvailable(port int) error {
 }
 ```
 
-### 4. Wrapper --stop on Restart (To Implement)
+### 4. The Launcher Must Not Outlive Its Child (Implemented)
 
-In wrapper, before spawning:
-```javascript
-// Check if server is running
-const isRunning = checkHealth(port);
-if (isRunning) {
-    // Server already running, connect to it
-    execFileSync(binary, args);
-} else {
-    // Clean up any stale processes first
-    try {
-        execFileSync(binary, ['--stop', '--port', port]);
-    } catch (e) {
-        // Ignore errors - server might not be running
-    }
-    // Now spawn fresh
-    execFileSync(binary, args);
-}
+The npm `bin` entries are POSIX `sh` exec shims. In MCP server mode the shim
+`exec`s the Go binary, replacing its own process image:
+
+```sh
+exec "$candidate" "$@"
 ```
+
+The process the MCP client spawned *is* the server, so there is no launcher left
+to leak. Do not reintroduce a Node launcher here.
+
+The Node launcher this replaced blocked in `execFileSync`, which is what made the
+leak permanent:
+
+- `execFileSync` does not return until the child exits, so the launcher could not
+  act on `SIGTERM`/`SIGINT` aimed at the process group.
+- The real teardown was worse than a missed signal: when the client ended a
+  session it killed `npx`, and **no signal reached the launcher at all**. The
+  launcher and the Go binary below it were orphaned and reparented to PID 1.
+- Nothing else unwound them. The Go bridge exits on stdin `io.EOF`
+  (`cmd/browser-agent/internal/bridge/bridge.go`), but the client held its end of
+  the stdin pipe open, so EOF never arrived.
+
+Signal forwarding alone would not have fixed this — an orphaned process receives
+no signal to forward. Removing the extra process is what closes the hole.
+
+Windows has no `exec()`, so `bin/*.cmd` invokes the binary from `cmd.exe`, which
+remains a thin parent and exits with its child. No Node runtime sits in either
+chain.
+
+Enforced by `tests/cli/launcher/launcher-shim.contract.test.cjs`, which spawns
+the shim and asserts the PID it spawned is the binary itself, with no descendants.
 
 ### 5. npx Cache Cleanup
 

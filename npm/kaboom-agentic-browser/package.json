@@ -9,7 +9,7 @@
   },
   "scripts": {
     "preinstall": "node lib/daemon/kill-daemon.js",
-    "postinstall": "node lib/installation/postinstall-skills.js",
+    "postinstall": "node lib/runtime/postinstall-shims.js && node lib/installation/postinstall-skills.js",
     "preuninstall": "node lib/daemon/kill-daemon.js"
   },
   "files": [

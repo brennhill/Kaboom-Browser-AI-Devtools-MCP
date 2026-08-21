@@ -19,6 +19,7 @@ const {
   getValidAliases,
   resolveManagedBinaryPath,
 } = require('./config');
+const { BinaryNotFoundError } = require('../runtime/resolve-binary');
 
 // --- resolveManagedBinaryPath ---
 
@@ -60,11 +61,13 @@ test('resolveManagedBinaryPath never resolves a repo-root dist for an installed 
   // project must be ignored (supply-chain boundary).
   const root = path.join(path.sep, 'proj', 'node_modules', 'kaboom-agentic-browser');
   const distBin = path.resolve(root, '..', '..', 'dist', 'kaboom-agentic-browser-darwin-arm64');
-  const p = resolveManagedBinaryPath({
-    env: {}, platform: 'darwin', arch: 'arm64', packageRoot: root,
-    existsFn: (f) => f === distBin, // even though it "exists", it must be skipped
-  });
-  assert.equal(p, 'kaboom-agentic-browser');
+  assert.throws(
+    () => resolveManagedBinaryPath({
+      env: {}, platform: 'darwin', arch: 'arm64', packageRoot: root,
+      existsFn: (f) => f === distBin, // even though it "exists", it must be skipped
+    }),
+    BinaryNotFoundError
+  );
 });
 
 test('resolveManagedBinaryPath maps win32/arm64 to the x64 .exe dist name', () => {
@@ -77,9 +80,24 @@ test('resolveManagedBinaryPath maps win32/arm64 to the x64 .exe dist name', () =
   assert.equal(p, distBin);
 });
 
-test('resolveManagedBinaryPath falls back to the command name on an unknown platform', () => {
-  const p = resolveManagedBinaryPath({ env: {}, platform: 'sunos', arch: 'sparc', existsFn: () => false });
-  assert.equal(p, 'kaboom-agentic-browser');
+test('resolveManagedBinaryPath throws on an unknown platform instead of writing a PATH lookup', () => {
+  // The bare command name used to be written into every MCP client config, making
+  // the client resolve "kaboom-agentic-browser" through PATH at spawn time.
+  assert.throws(
+    () => resolveManagedBinaryPath({ env: {}, platform: 'sunos', arch: 'sparc', existsFn: () => false }),
+    BinaryNotFoundError
+  );
+});
+
+test('resolveManagedBinaryPath throws rather than returning a bare command name when nothing is installed', () => {
+  assert.throws(
+    () => resolveManagedBinaryPath({
+      env: {}, platform: 'darwin', arch: 'arm64',
+      packageRoot: path.join(path.sep, 'proj', 'node_modules', 'kaboom-agentic-browser'),
+      existsFn: () => false,
+    }),
+    (e) => e instanceof BinaryNotFoundError && /optionalDependency/.test(e.message)
+  );
 });
 
 // --- CLIENT_DEFINITIONS ---

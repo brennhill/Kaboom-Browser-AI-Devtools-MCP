@@ -1,120 +1,93 @@
-#!/usr/bin/env node
+#!/bin/sh
+# bin/kaboom-agentic-browser — POSIX exec shim for the Kaboom Agentic Browser server.
+#
+# MCP mode (default): execs the Go binary, REPLACING this shell's process image.
+# No launcher process survives, so there is nothing to orphan when the MCP client
+# goes away. The previous Node launcher blocked in execFileSync, could not react to
+# signals, and was reparented to PID 1 when its parent (npx) died — that leaked
+# ~36 MB of idle Node runtime per session, permanently.
+#
+# CLI mode (--install, --doctor, ...): execs Node for lib/cli/cli.js, which owns the
+# install/config/doctor flows the Go binary does not implement.
+#
+# Binary resolution mirrors lib/runtime/resolve-binary.js and is enforced by
+# tests/cli/contracts/launcher-shim.contract.test.cjs. PATH is never consulted.
 
-// bin/kaboom-agentic-browser — Cross-platform launcher for the Kaboom Agentic Browser server.
-// MCP mode (default): finds the Go binary and spawns it.
-// CLI commands (--install, --config, etc.): delegates to lib/cli/cli.js.
+set -u
 
-const { execFileSync } = require('child_process')
-const path = require('path')
-const fs = require('fs')
+# --- Resolve this script's real directory (npm links node_modules/.bin as a symlink) ---
+SELF="$0"
+while [ -L "$SELF" ]; do
+  link=$(readlink "$SELF")
+  case "$link" in
+    /*) SELF="$link" ;;
+    *) SELF="$(dirname "$SELF")/$link" ;;
+  esac
+done
+BIN_DIR=$(cd -P "$(dirname "$SELF")" && pwd)
+PKG_DIR=$(cd -P "$BIN_DIR/.." && pwd)
+LIB_DIR="$PKG_DIR/lib"
 
-const KABOOM_VERSION = require('../package.json').version
-const SCRIPT_DIR = __dirname
-const LIB_DIR = path.join(SCRIPT_DIR, '..', 'lib')
+# --- CLI commands are Node's job; hand the process over and stop here ---
+for arg in "$@"; do
+  case "$arg" in
+    --config|-c|--install|-i|--update|--doctor|--connect|--uninstall|--help|-h|--version|-v)
+      exec node "$LIB_DIR/cli/cli.js" "$@"
+      ;;
+  esac
+done
 
-// --- Platform detection ---
+# --- MCP server mode ---
 
-function detectPlatform() {
-  const platformMap = { darwin: 'darwin', linux: 'linux', win32: 'win32' }
-  const archMap = { x64: 'x64', arm64: 'arm64' }
-
-  const platform = platformMap[process.platform]
-  const arch = archMap[process.arch]
-
-  if (!platform || !arch) {
-    return null
-  }
-
-  const ext = process.platform === 'win32' ? '.exe' : ''
-  // Windows x64 binary runs on arm64 via emulation
-  const effectiveArch = (platform === 'win32') ? 'x64' : arch
-  const platformKey = `${platform}-${effectiveArch}`
-  const binaryName = `kaboom-agentic-browser${ext}`
-  const pkgName = `@brennhill/kaboom-agentic-browser-${platformKey}`
-
-  return { platform, arch: effectiveArch, platformKey, binaryName, pkgName, ext }
+# Report a resolution failure as a JSON-RPC error so the MCP client shows a
+# protocol error instead of a process that vanished without explanation.
+fail() {
+  printf '%s\n' "$1" >&2
+  printf '{"jsonrpc":"2.0","id":null,"error":{"code":-32603,"message":"%s","data":{"isError":true}}}\n' "$1"
+  exit 1
 }
 
-// --- Binary search ---
+case "$(uname -s)" in
+  Darwin) PLATFORM=darwin; EXT= ;;
+  Linux)  PLATFORM=linux;  EXT= ;;
+  # Git Bash / MSYS2 / Cygwin: npm's generated .cmd shim runs this script through sh.
+  MINGW*|MSYS*|CYGWIN*) PLATFORM=win32; EXT=.exe ;;
+  *) fail "Unsupported platform: $(uname -s). Kaboom ships binaries for darwin, linux, and win32." ;;
+esac
 
-function findBinary(info) {
-  // 1. Dev build — repo-root dist/ (source tree only). The parent of the package
-  // dir is "npm" in the source tree and "node_modules" once installed, so this
-  // never execs a dist/ planted in a user's project. Name matches the Makefile's
-  // dist output ($(BINARY_NAME)-<platformKey>), not the old kaboom-<platformKey>.
-  const packageDir = path.join(SCRIPT_DIR, '..')
-  if (path.basename(path.dirname(packageDir)) === 'npm') {
-    const devBin = path.join(SCRIPT_DIR, '..', '..', '..', 'dist', `kaboom-agentic-browser-${info.platformKey}${info.ext}`)
-    if (fs.existsSync(devBin)) return devBin
-  }
+case "$(uname -m)" in
+  arm64|aarch64) ARCH=arm64 ;;
+  x86_64|amd64)  ARCH=x64 ;;
+  *) fail "Unsupported architecture: $(uname -m). Kaboom ships x64 and arm64 binaries." ;;
+esac
 
-  // 2. node_modules candidates (3 depths: local dep, hoisted, global)
-  const candidates = [
-    path.join(SCRIPT_DIR, '..', 'node_modules', info.pkgName, 'bin', info.binaryName),
-    path.join(SCRIPT_DIR, '..', '..', info.pkgName, 'bin', info.binaryName),
-    path.join(SCRIPT_DIR, '..', '..', '..', info.pkgName, 'bin', info.binaryName),
-  ]
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate
-  }
+# No arm64 Windows build ships; the x64 binary runs there under emulation.
+[ "$PLATFORM" = "win32" ] && ARCH=x64
 
-  // 3. Global PATH — check version matches
-  try {
-    const { execSync } = require('child_process')
-    const which = process.platform === 'win32' ? 'where kaboom-agentic-browser' : 'command -v kaboom-agentic-browser'
-    const globalBin = execSync(which, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim().split('\n')[0]
-    if (globalBin && fs.existsSync(globalBin)) {
-      const verOut = execFileSync(globalBin, ['--version'], { encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] })
-      const verMatch = verOut.match(/(\d+\.\d+\.\d+)/)
-      if (verMatch && verMatch[1] === KABOOM_VERSION) return globalBin
-    }
-  } catch {
-    // Not found in PATH or version mismatch — continue
-  }
+PLATFORM_KEY="$PLATFORM-$ARCH"
+PKG_NAME="@brennhill/kaboom-agentic-browser-$PLATFORM_KEY"
+BIN_NAME="kaboom-agentic-browser$EXT"
 
-  return null
-}
+# 1. Explicit operator override. Set but missing is a real failure, not a fallthrough.
+if [ -n "${KABOOM_BINARY_PATH:-}" ]; then
+  [ -x "$KABOOM_BINARY_PATH" ] || fail "KABOOM_BINARY_PATH is set to '$KABOOM_BINARY_PATH' but no executable exists there."
+  exec "$KABOOM_BINARY_PATH" "$@"
+fi
 
-// --- CLI flag detection ---
+# 2. Source-tree dist build. The package dir's parent is 'npm' in the repo and
+# 'node_modules' once installed, so a dist/ planted in a user's project is unreachable.
+if [ "$(basename "$(dirname "$PKG_DIR")")" = "npm" ]; then
+  DEV_BIN="$PKG_DIR/../../dist/kaboom-agentic-browser-$PLATFORM_KEY$EXT"
+  [ -x "$DEV_BIN" ] && exec "$DEV_BIN" "$@"
+fi
 
-function isCliCommand(args) {
-  const cliFlags = new Set(['--config', '-c', '--install', '-i', '--update', '--doctor', '--connect', '--uninstall', '--help', '-h', '--version', '-v'])
-  return args.some(arg => cliFlags.has(arg))
-}
+# 3. The platform optionalDependency, at the depths npm may place it.
+for candidate in \
+  "$PKG_DIR/node_modules/$PKG_NAME/bin/$BIN_NAME" \
+  "$PKG_DIR/../$PKG_NAME/bin/$BIN_NAME" \
+  "$PKG_DIR/../../$PKG_NAME/bin/$BIN_NAME"
+do
+  [ -x "$candidate" ] && exec "$candidate" "$@"
+done
 
-// --- JSON-RPC error (so MCP clients see a protocol error, not a vanished process) ---
-
-function mcpError(message) {
-  const err = { jsonrpc: '2.0', id: null, error: { code: -32603, message, data: { isError: true } } }
-  process.stdout.write(JSON.stringify(err) + '\n')
-}
-
-// --- Main ---
-
-const info = detectPlatform()
-if (!info) {
-  mcpError(`Unsupported platform: ${process.platform}-${process.arch}`)
-  process.exit(1)
-}
-
-const args = process.argv.slice(2)
-
-// CLI commands → delegate to Node.js
-if (isCliCommand(args)) {
-  require(path.join(LIB_DIR, 'cli', 'cli.js'))
-  // cli/cli.js handles process.argv directly
-} else {
-  // MCP server mode — find and exec the Go binary
-  const binary = findBinary(info)
-  if (!binary) {
-    const msg = `Kaboom binary not found for ${info.platformKey}. Expected package: ${info.pkgName}. Try reinstalling: npm install -g kaboom-agentic-browser@latest`
-    mcpError(msg)
-    process.exit(1)
-  }
-
-  try {
-    execFileSync(binary, args, { stdio: 'inherit', windowsHide: false })
-  } catch (e) {
-    process.exit(e.status ?? 1)
-  }
-}
+fail "Kaboom binary not found for $PLATFORM_KEY. Expected the platform package $PKG_NAME, which installs as an optionalDependency. Repair: npm install -g kaboom-agentic-browser@latest (without --no-optional). To point at a binary yourself, set KABOOM_BINARY_PATH."

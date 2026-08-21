@@ -8,6 +8,7 @@
  */
 
 const fs = require('fs');
+const { resolveBinary, SERVER_BINARY } = require('../runtime/resolve-binary');
 const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
@@ -23,58 +24,26 @@ const MCP_SERVER_NAME = 'kaboom-browser-devtools';
 
 /**
  * Resolve the managed Kaboom binary path from the installed npm package layout.
- * Falls back to command name when an absolute binary path cannot be discovered.
- * @returns {string} Absolute binary path when discoverable, else command name
+ * @returns {string} Absolute path to the binary
+ * @throws {BinaryNotFoundError} when no explicit override, source-tree dist build,
+ *   or platform optionalDependency resolves. PATH is never consulted.
  */
 function resolveManagedBinaryPath(deps = {}) {
-  const env = deps.env || process.env;
-  const platformName = deps.platform || process.platform;
-  const archName = deps.arch || process.arch;
-  const existsFn = deps.existsFn || fs.existsSync;
-  const packageRoot = deps.packageRoot || path.resolve(__dirname, '..', '..');
-
-  const envOverride = env.KABOOM_BINARY_PATH;
-  if (envOverride && existsFn(envOverride)) {
-    return path.resolve(envOverride);
-  }
-
-  const platformMap = { darwin: 'darwin', linux: 'linux', win32: 'win32' };
-  const archMap = { x64: 'x64', arm64: 'arm64' };
-  const platform = platformMap[platformName];
-  const arch = archMap[archName];
-  if (!platform || !arch) {
-    return 'kaboom-agentic-browser';
-  }
-
-  const effectiveArch = platform === 'win32' ? 'x64' : arch;
-  const ext = platform === 'win32' ? '.exe' : '';
-  const platformKey = `${platform}-${effectiveArch}`;
-  const binaryName = `kaboom-agentic-browser${ext}`;
-  const pkgName = `@brennhill/kaboom-agentic-browser-${platformKey}`;
-
-  const candidates = [
-    path.join(packageRoot, 'node_modules', pkgName, 'bin', binaryName),
-    path.join(packageRoot, '..', pkgName, 'bin', binaryName),
-    path.join(packageRoot, '..', '..', pkgName, 'bin', binaryName),
-  ];
-
-  // Dev source tree only: when running from <repo>/npm/kaboom-agentic-browser
-  // (parent dir "npm", never "node_modules"), prefer the freshly built repo-root
-  // dist binary so --install and daemon-start use it instead of a stale global on
-  // PATH. Skipped for an installed package, so a dist/ planted in a user's
-  // project can never be resolved. Name matches the Makefile's dist output
-  // ($(BINARY_NAME)-<platformKey>), not the old kaboom-<platformKey>.
-  if (path.basename(path.dirname(packageRoot)) === 'npm') {
-    candidates.push(path.resolve(packageRoot, '..', '..', 'dist', `kaboom-agentic-browser-${platformKey}${ext}`));
-  }
-
-  for (const candidate of candidates) {
-    if (existsFn(candidate)) {
-      return path.resolve(candidate);
-    }
-  }
-
-  return 'kaboom-agentic-browser';
+  // Delegates to the single resolver so the MCP config, the bin shims, and the
+  // hooks launcher can never disagree about where the binary lives.
+  //
+  // This used to return the bare string 'kaboom-agentic-browser' when nothing was
+  // found, which wrote a PATH dependency into every client config: the client then
+  // launched whatever kaboom happened to be on PATH at spawn time, or failed with a
+  // bare ENOENT. A missing platform package is an install fault and now says so.
+  return resolveBinary({
+    spec: SERVER_BINARY,
+    env: deps.env || process.env,
+    platform: deps.platform || process.platform,
+    arch: deps.arch || process.arch,
+    packageRoot: deps.packageRoot || path.resolve(__dirname, '..', '..'),
+    existsFn: deps.existsFn || fs.existsSync,
+  });
 }
 
 /**

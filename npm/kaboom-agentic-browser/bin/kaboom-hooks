@@ -1,73 +1,74 @@
-#!/usr/bin/env node
+#!/bin/sh
+# bin/kaboom-hooks — POSIX exec shim for the kaboom-hooks binary.
+#
+# Execs the Go hooks binary, REPLACING this shell's process image, so no launcher
+# process survives to be orphaned. Hooks run on every Edit/Write, so a launcher
+# that outlived its child would leak once per tool call.
+#
+# Resolution mirrors lib/runtime/resolve-binary.js; PATH is never consulted.
 
-// bin/kaboom-hooks — Cross-platform launcher for the kaboom-hooks binary.
-// Finds the Go hooks binary from platform-specific npm packages and spawns it.
+set -u
 
-const { execFileSync, execSync } = require('child_process')
-const path = require('path')
-const fs = require('fs')
+# --- Resolve this script's real directory (npm links node_modules/.bin as a symlink) ---
+SELF="$0"
+while [ -L "$SELF" ]; do
+  link=$(readlink "$SELF")
+  case "$link" in
+    /*) SELF="$link" ;;
+    *) SELF="$(dirname "$SELF")/$link" ;;
+  esac
+done
+BIN_DIR=$(cd -P "$(dirname "$SELF")" && pwd)
+PKG_DIR=$(cd -P "$BIN_DIR/.." && pwd)
 
-function detectPlatform() {
-  const platformMap = { darwin: 'darwin', linux: 'linux', win32: 'win32' }
-  const archMap = { x64: 'x64', arm64: 'arm64' }
-
-  const platform = platformMap[process.platform]
-  const arch = archMap[process.arch]
-
-  if (!platform || !arch) return null
-
-  const ext = process.platform === 'win32' ? '.exe' : ''
-  const effectiveArch = (platform === 'win32') ? 'x64' : arch
-  const platformKey = `${platform}-${effectiveArch}`
-  const binaryName = `kaboom-hooks${ext}`
-  const pkgName = `@brennhill/kaboom-agentic-browser-${platformKey}`
-
-  return { platformKey, binaryName, pkgName, ext }
+# Hooks speak the Claude Code hook protocol, not JSON-RPC, so failures are plain stderr.
+fail() {
+  printf '%s\n' "$1" >&2
+  exit 1
 }
 
-function findHooksBinary(info) {
-  const scriptDir = __dirname
+case "$(uname -s)" in
+  Darwin) PLATFORM=darwin; EXT= ;;
+  Linux)  PLATFORM=linux;  EXT= ;;
+  # Git Bash / MSYS2 / Cygwin: npm's generated .cmd shim runs this script through sh.
+  MINGW*|MSYS*|CYGWIN*) PLATFORM=win32; EXT=.exe ;;
+  *) fail "Unsupported platform: $(uname -s). Kaboom ships binaries for darwin, linux, and win32." ;;
+esac
 
-  // 1. Dev build — dist/ directory
-  const devBin = path.join(scriptDir, '..', '..', '..', 'dist', `kaboom-hooks${info.ext}`)
-  if (fs.existsSync(devBin)) return devBin
+case "$(uname -m)" in
+  arm64|aarch64) ARCH=arm64 ;;
+  x86_64|amd64)  ARCH=x64 ;;
+  *) fail "Unsupported architecture: $(uname -m). Kaboom ships x64 and arm64 binaries." ;;
+esac
 
-  // 2. node_modules candidates
-  const candidates = [
-    path.join(scriptDir, '..', 'node_modules', info.pkgName, 'bin', info.binaryName),
-    path.join(scriptDir, '..', '..', info.pkgName, 'bin', info.binaryName),
-    path.join(scriptDir, '..', '..', '..', info.pkgName, 'bin', info.binaryName),
-  ]
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate
-  }
+# No arm64 Windows build ships; the x64 binary runs there under emulation.
+[ "$PLATFORM" = "win32" ] && ARCH=x64
 
-  // 3. Global PATH
-  try {
-    const which = process.platform === 'win32' ? 'where kaboom-hooks' : 'command -v kaboom-hooks'
-    const globalBin = execSync(which, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim().split('\n')[0]
-    if (globalBin && fs.existsSync(globalBin)) return globalBin
-  } catch {
-    // Not found in PATH
-  }
+PLATFORM_KEY="$PLATFORM-$ARCH"
+PKG_NAME="@brennhill/kaboom-agentic-browser-$PLATFORM_KEY"
+BIN_NAME="kaboom-hooks$EXT"
 
-  return null
-}
+# 1. Explicit operator override. Set but missing is a real failure, not a fallthrough.
+if [ -n "${KABOOM_HOOKS_BINARY_PATH:-}" ]; then
+  [ -x "$KABOOM_HOOKS_BINARY_PATH" ] || fail "KABOOM_HOOKS_BINARY_PATH is set to '$KABOOM_HOOKS_BINARY_PATH' but no executable exists there."
+  exec "$KABOOM_HOOKS_BINARY_PATH" "$@"
+fi
 
-const info = detectPlatform()
-if (!info) {
-  console.error(`Unsupported platform: ${process.platform}-${process.arch}`)
-  process.exit(1)
-}
+# 2. Source-tree dist build. The guard keeps a dist/ planted in a user's project
+# unreachable — the old launcher probed this path unconditionally.
+# The hooks build is not platform-suffixed, unlike the server build.
+if [ "$(basename "$(dirname "$PKG_DIR")")" = "npm" ]; then
+  DEV_BIN="$PKG_DIR/../../dist/kaboom-hooks$EXT"
+  [ -x "$DEV_BIN" ] && exec "$DEV_BIN" "$@"
+fi
 
-const binary = findHooksBinary(info)
-if (!binary) {
-  console.error(`kaboom-hooks binary not found for ${info.platformKey}. Try reinstalling: npm install -g kaboom-agentic-browser@latest`)
-  process.exit(1)
-}
+# 3. The platform optionalDependency, at the depths npm may place it.
+for candidate in \
+  "$PKG_DIR/node_modules/$PKG_NAME/bin/$BIN_NAME" \
+  "$PKG_DIR/../$PKG_NAME/bin/$BIN_NAME" \
+  "$PKG_DIR/../../$PKG_NAME/bin/$BIN_NAME"
+do
+  [ -x "$candidate" ] && exec "$candidate" "$@"
+done
 
-try {
-  execFileSync(binary, process.argv.slice(2), { stdio: 'inherit', windowsHide: false })
-} catch (e) {
-  process.exit(e.status ?? 1)
-}
+fail "kaboom-hooks binary not found for $PLATFORM_KEY. Expected the platform package $PKG_NAME, which installs as an optionalDependency. Repair: npm install -g kaboom-agentic-browser@latest (without --no-optional). To point at a binary yourself, set KABOOM_HOOKS_BINARY_PATH."

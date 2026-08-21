@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-08
+last_reviewed: 2026-08-22
 code_paths:
   - cmd/browser-agent/internal/runtimeflags/flags.go
   - internal/serverdefaults/defaults.go
@@ -57,6 +57,11 @@ code_paths:
   - scripts/setup/uninstall.ps1
   - server/scripts/install.js
   - npm/kaboom-agentic-browser/bin/kaboom-agentic-browser
+  - npm/kaboom-agentic-browser/bin/kaboom-agentic-browser.cmd
+  - npm/kaboom-agentic-browser/bin/kaboom-hooks
+  - npm/kaboom-agentic-browser/bin/kaboom-hooks.cmd
+  - npm/kaboom-agentic-browser/lib/runtime/resolve-binary.js
+  - npm/kaboom-agentic-browser/lib/runtime/postinstall-shims.js
   - npm/kaboom-agentic-browser/lib/config/config.js
   - npm/kaboom-agentic-browser/lib/daemon/doctor.js
   - npm/kaboom-agentic-browser/lib/installation/install.js
@@ -109,6 +114,9 @@ test_paths:
   - npm/kaboom-agentic-browser/lib/daemon/kill-daemon.test.js
   - npm/kaboom-agentic-browser/lib/installation/skills.test.js
   - npm/kaboom-agentic-browser/lib/contracts/no-compatibility.test.js
+  - npm/kaboom-agentic-browser/lib/runtime/resolve-binary.test.js
+  - npm/kaboom-agentic-browser/lib/runtime/postinstall-shims.test.js
+  - tests/cli/launcher/launcher-shim.contract.test.cjs
   - tests/packaging/kaboom-packaging-branding.test.js
   - tests/extension/release/install-script-extension-source.test.js
   - tests/extension/release/daemon-service-lifecycle.test.js
@@ -211,6 +219,24 @@ ownership boundary without compatibility wrappers.
   owns browser discovery, `cli/` owns orchestration and presentation, and
   `contracts/` owns package invariants. Every owner contains at most ten files;
   callers use these canonical modules directly with no root-level facades.
+- The npm `bin` entries are POSIX `sh` exec shims, not Node launchers. In MCP
+  server mode the shim `exec`s the Go binary, replacing its own process image, so
+  the process the client spawns *is* the server and nothing survives to be
+  orphaned. The previous Node launcher blocked in `execFileSync`: it could not act
+  on signals aimed at the process group, and when the client killed `npx` above it
+  the launcher and its child were reparented to PID 1 with no signal delivered and
+  no stdin EOF to unwind them. Windows has no `exec()`, so `bin/*.cmd` runs the
+  binary from `cmd.exe` and a postinstall step repoints npm's generated `.bin`
+  shims at it — npm would otherwise route the `#!/bin/sh` shebang through `sh`,
+  which Windows may not have.
+- Binary resolution has one owner, `lib/runtime/resolve-binary.js`, shared by the
+  MCP client config writer; the shims mirror it and a contract test enforces the
+  parity. Resolution order is the explicit `KABOOM_BINARY_PATH` /
+  `KABOOM_HOOKS_BINARY_PATH` override, then the source-tree `dist/` build, then the
+  platform optionalDependency — and then a loud failure. PATH is never consulted:
+  the launchers no longer probe `command -v`/`where`, and `resolveManagedBinaryPath`
+  no longer returns a bare command name that clients resolved through PATH at spawn
+  time. A missing platform package is an install fault and reports itself as one.
 - Skill-install and doctor output report only fields produced by the canonical
   installers; obsolete legacy-removal counters and warning renderers are gone.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
