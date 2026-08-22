@@ -8,8 +8,8 @@
 # needs it once per meaningful change to what the extension returns.
 #
 # Usage (with Chrome open and the Kaboom extension connected):
-#   scripts/tests/record-connected-transcripts.sh
-#   scripts/tests/record-connected-transcripts.sh --category 36
+#   scripts/tests/transcripts/record-connected-transcripts.sh
+#   scripts/tests/transcripts/record-connected-transcripts.sh --category 36
 #
 # Then replay them:
 #   KABOOM_UAT_REPLAY=scripts/tests/transcripts \
@@ -17,7 +17,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TESTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 OUTPUT_DIR="${KABOOM_UAT_REPLAY:-$REPO_ROOT/scripts/tests/transcripts}"
 
 # Mirrors CONNECTED_CAT_IDS in scripts/uat/runners/test-all-tools-comprehensive.sh.
@@ -43,7 +44,7 @@ mkdir -p "$OUTPUT_DIR"
 
 category_script() {
     local id="$1"
-    find "$SCRIPT_DIR" -name "cat-${id}-*.sh" -type f | head -n 1
+    find "$TESTS_ROOT" -name "cat-${id}-*.sh" -type f | head -n 1
 }
 
 RECORD_PORT="${KABOOM_UAT_RECORD_PORT:-7893}"

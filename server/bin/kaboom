@@ -1,37 +1,49 @@
-#!/usr/bin/env node
+#!/bin/sh
+# bin/kaboom — POSIX exec shim for the kaboom-agentic-browser binary.
+#
+# Execs the binary that scripts/install.js downloads into this directory,
+# REPLACING this shell's process image. No launcher process survives, so there is
+# nothing to orphan when the MCP client goes away.
+#
+# This replaced a Node launcher that blocked in execFileSync: it could not act on
+# signals aimed at the process group, and when its parent died it was reparented
+# to PID 1 with no signal delivered and no stdin EOF to unwind it.
+#
+# Binary name must match scripts/install.js: kaboom-agentic-browser-<plat>-<arch>.
 
-// bin/kaboom — Cross-platform launcher for the kaboom-agentic-browser binary.
-// npm's bin field points here. Works on Unix (via shebang) and Windows (via node).
+set -u
 
-const { execFileSync } = require('child_process')
-const path = require('path')
-const fs = require('fs')
+SELF="$0"
+while [ -L "$SELF" ]; do
+  link=$(readlink "$SELF")
+  case "$link" in
+    /*) SELF="$link" ;;
+    *) SELF="$(dirname "$SELF")/$link" ;;
+  esac
+done
+BIN_DIR=$(cd -P "$(dirname "$SELF")" && pwd)
 
-const platform = { darwin: 'darwin', linux: 'linux', win32: 'win32' }[process.platform]
-const arch = { x64: 'x64', arm64: 'arm64' }[process.arch]
-
-if (!platform || !arch) {
-  console.error(`Unsupported platform: ${process.platform}-${process.arch}`)
-  process.exit(1)
+fail() {
+  printf '%s\n' "$1" >&2
+  exit 1
 }
 
-const ext = process.platform === 'win32' ? '.exe' : ''
-// Must match the binary name downloaded by scripts/install.js (BINARY_NAME-<plat>-<arch>).
-const binaryName = `kaboom-agentic-browser-${platform}-${arch}${ext}`
-const binaryPath = path.join(__dirname, binaryName)
+case "$(uname -s)" in
+  Darwin) PLATFORM=darwin; EXT= ;;
+  Linux)  PLATFORM=linux;  EXT= ;;
+  MINGW*|MSYS*|CYGWIN*) PLATFORM=win32; EXT=.exe ;;
+  *) fail "Unsupported platform: $(uname -s)" ;;
+esac
 
-if (!fs.existsSync(binaryPath)) {
-  console.error(`Binary not found: ${binaryPath}`)
-  console.error('Run "npm install kaboom-agentic-browser" to download the binary for your platform.')
-  process.exit(1)
-}
+case "$(uname -m)" in
+  arm64|aarch64) ARCH=arm64 ;;
+  x86_64|amd64)  ARCH=x64 ;;
+  *) fail "Unsupported architecture: $(uname -m)" ;;
+esac
 
-try {
-  const result = execFileSync(binaryPath, process.argv.slice(2), {
-    stdio: 'inherit',
-    windowsHide: false
-  })
-} catch (e) {
-  // execFileSync throws on non-zero exit — forward the exit code
-  process.exit(e.status ?? 1)
-}
+BINARY="$BIN_DIR/kaboom-agentic-browser-$PLATFORM-$ARCH$EXT"
+
+[ -x "$BINARY" ] || fail "Binary not found: $BINARY
+Run \"npm install kaboom-agentic-browser\" to download the binary for your platform."
+
+exec "$BINARY" "$@"

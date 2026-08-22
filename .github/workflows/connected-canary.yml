@@ -50,7 +50,7 @@ on:
       # The record and replay machinery.
       - "internal/synctranscript/**"
       - "cmd/kaboom-replay-extension/**"
-      - "scripts/tests/record-connected-transcripts.sh"
+      - "scripts/tests/transcripts/record-connected-transcripts.sh"
       - "scripts/tests/framework/uat-replay.sh"
       - ".github/workflows/connected-canary.yml"
   workflow_dispatch:
@@ -87,7 +87,7 @@ jobs:
           # Record into a scratch directory so the committed fixtures stay
           # untouched and the diff below compares like with like.
           KABOOM_UAT_REPLAY="$RUNNER_TEMP/transcripts" \
-            ./scripts/tests/record-connected-transcripts.sh
+            ./scripts/tests/transcripts/record-connected-transcripts.sh
 
       # Volatile fields are already excluded from the fingerprint, but the
       # recorded params and results still carry ids and timestamps that change
@@ -120,7 +120,7 @@ jobs:
             fi
           done
           if [ "$status" -ne 0 ]; then
-            echo "Re-record and review: scripts/tests/record-connected-transcripts.sh" >> "$GITHUB_STEP_SUMMARY"
+            echo "Re-record and review: scripts/tests/transcripts/record-connected-transcripts.sh" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
 

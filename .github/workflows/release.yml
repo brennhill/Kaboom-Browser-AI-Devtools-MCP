@@ -248,6 +248,78 @@ jobs:
           echo "$OUT"
           echo "$OUT" | grep -q "${VERSION}" || { echo "::error::npx launcher did not report ${VERSION}"; exit 1; }
 
+      # The bin shim is what `require.resolve` above deliberately bypasses, and what
+      # the npx step reaches only through Git Bash. Exercise it in each platform's
+      # NATIVE shell so a shim that silently depends on `sh` fails here.
+      - name: npm channel — .bin shim + MCP handshake (POSIX)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify-tag.outputs.version }}
+        run: |
+          work="$(mktemp -d)"
+          cd "$work"
+          npm init -y >/dev/null 2>&1
+          npm install "kaboom-agentic-browser@${VERSION}" >/dev/null 2>&1
+
+          for cmd in kaboom-agentic-browser kaboom-hooks; do
+            OUT=$(./node_modules/.bin/$cmd --version 2>&1)
+            echo "$cmd: $OUT"
+            echo "$OUT" | grep -q "${VERSION}" \
+              || { echo "::error::.bin/$cmd did not report ${VERSION}"; exit 1; }
+          done
+
+          # MCP server mode is the path the CLI checks above never touch: the shim
+          # must exec the Go binary and that binary must answer on stdio. Closing
+          # stdin ends it (the bridge breaks on io.EOF); the watchdog bounds a
+          # regression so CI fails fast instead of hanging to the job timeout.
+          req='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}'
+          printf '%s\n' "$req" | ./node_modules/.bin/kaboom-agentic-browser > handshake.json 2>&1 &
+          probe=$!
+          ( sleep 60; kill -9 "$probe" 2>/dev/null ) &
+          watchdog=$!
+          wait "$probe" || true
+          kill "$watchdog" 2>/dev/null || true
+
+          cat handshake.json
+          grep -q '"result"' handshake.json \
+            || { echo "::error::shim did not exec a working MCP server"; exit 1; }
+
+      - name: npm channel — .bin shim (Windows cmd.exe, no sh available)
+        if: runner.os == 'Windows'
+        shell: cmd
+        env:
+          VERSION: ${{ needs.verify-tag.outputs.version }}
+        run: |
+          mkdir "%RUNNER_TEMP%\shimcmd"
+          cd /d "%RUNNER_TEMP%\shimcmd"
+          call npm init -y >nul 2>&1
+          call npm install kaboom-agentic-browser@%VERSION% >nul 2>&1
+          call ".\node_modules\.bin\kaboom-agentic-browser.cmd" --version > shimout.txt 2>&1
+          type shimout.txt
+          findstr /C:"%VERSION%" shimout.txt >nul
+          if errorlevel 1 (
+            echo ::error::.bin cmd shim did not report %VERSION%
+            exit /b 1
+          )
+
+      - name: npm channel — .bin shim (Windows PowerShell)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.verify-tag.outputs.version }}
+        run: |
+          $work = Join-Path $env:RUNNER_TEMP 'shimps1'
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+          Set-Location $work
+          npm init -y | Out-Null
+          npm install "kaboom-agentic-browser@$env:VERSION" | Out-Null
+          $out = & ".\node_modules\.bin\kaboom-agentic-browser.ps1" --version 2>&1 | Out-String
+          Write-Host $out
+          if ($out -notmatch [regex]::Escape($env:VERSION)) {
+            throw ".bin ps1 shim did not report $($env:VERSION): $out"
+          }
+
       # GitHub Release channel: run the REAL installer (pinned to the released tag). This
       # downloads the release binaries, enforces checksums, and smoke-execs the binary —
       # exactly the install.ps1 path that 404'd on 0.8.4. Installer scripts self-verify.

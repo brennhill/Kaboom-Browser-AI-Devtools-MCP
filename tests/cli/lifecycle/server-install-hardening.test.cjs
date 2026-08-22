@@ -158,8 +158,19 @@ test('server bin shim launches the kaboom binary name downloaded by install.js',
   const shim = fs.readFileSync(SHIM_SCRIPT, 'utf8')
   assert.match(
     shim,
-    /kaboom-agentic-browser-\$\{platform\}-\$\{arch\}/,
+    /kaboom-agentic-browser-\$PLATFORM-\$ARCH/,
     'shim must reference the kaboom-agentic-browser-<plat>-<arch> binary'
   )
-  assert.doesNotMatch(shim, /gasoline-\$\{platform\}/, 'shim must not look for legacy gasoline binaries')
+  assert.doesNotMatch(shim, /gasoline/, 'shim must not look for legacy gasoline binaries')
+})
+
+test('server bin shim execs the binary instead of outliving it', () => {
+  // The Node launcher this replaced blocked in execFileSync, so it could not act on
+  // signals aimed at the process group; when its parent died it was reparented to
+  // PID 1 and never exited. Replacing the process image removes the launcher entirely.
+  const shim = fs.readFileSync(SHIM_SCRIPT, 'utf8')
+  assert.match(shim, /^#!\/bin\/sh\n/, 'shim must be a POSIX exec shim, not a Node launcher')
+  assert.match(shim, /^exec "\$BINARY" "\$@"$/m, 'shim must exec the binary')
+  const code = shim.split('\n').filter((l) => !l.trimStart().startsWith('#')).join('\n')
+  assert.doesNotMatch(code, /execFileSync|spawnSync|child_process/, 'shim still uses a Node child-process API')
 })

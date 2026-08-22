@@ -13,7 +13,7 @@
 # so a category that passes here is asserting the same things it asserts live.
 #
 # Record with:
-#   scripts/tests/record-connected-transcripts.sh
+#   scripts/tests/transcripts/record-connected-transcripts.sh
 # Replay with:
 #   KABOOM_UAT_REPLAY=scripts/tests/transcripts \
 #     scripts/uat/runners/test-all-tools-comprehensive.sh --suite connected
@@ -78,7 +78,7 @@ uat_replay_start() {
 
     if ! UAT_REPLAY_TRANSCRIPT="$(uat_replay_transcript_for "$category")"; then
         echo "FATAL: no transcript for category ${category} in ${KABOOM_UAT_REPLAY}" >&2
-        echo "       record one with scripts/tests/record-connected-transcripts.sh" >&2
+        echo "       record one with scripts/tests/transcripts/record-connected-transcripts.sh" >&2
         return 1
     fi
 

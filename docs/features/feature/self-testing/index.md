@@ -55,7 +55,7 @@ code_paths:
   - cmd/kaboom-replay-extension/main.go
   - scripts/tests/framework/uat-replay.sh
   - scripts/tests/framework/json.sh
-  - scripts/tests/record-connected-transcripts.sh
+  - scripts/tests/transcripts/record-connected-transcripts.sh
   - scripts/tests/transcripts/README.md
   - scripts/quality/workflows/check-raw-jq.mjs
   - scripts/quality/workflows/check-destructive-git.mjs

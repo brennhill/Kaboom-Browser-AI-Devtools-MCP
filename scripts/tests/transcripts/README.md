@@ -15,8 +15,8 @@ Needs Chrome open with the Kaboom extension connected. Once per meaningful
 change to what the extension returns:
 
 ```bash
-scripts/tests/record-connected-transcripts.sh            # every category
-scripts/tests/record-connected-transcripts.sh --category 36
+scripts/tests/transcripts/record-connected-transcripts.sh            # every category
+scripts/tests/transcripts/record-connected-transcripts.sh --category 36
 ```
 
 The script refuses to run when this directory has uncommitted changes: a

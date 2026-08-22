@@ -4,7 +4,7 @@ feature_id: feature-design-drift-audit
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-12
+last_reviewed: 2026-08-22
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/designdrift/handler.go
   - cmd/browser-agent/internal/toolanalyze/designdrift/finding.go
@@ -36,6 +36,12 @@ test_paths:
 | **Tool**    | `analyze`                                           |
 | **Mode**    | `design_audit`                                      |
 | **Issues**  | [#693](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/issues/693), [#694](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/issues/694), [#695](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/issues/695) |
+
+## Specs
+
+- Product Spec: [product-spec.md](./product-spec.md)
+- Tech Spec: [tech-spec.md](./tech-spec.md)
+- QA Plan: [qa-plan.md](./qa-plan.md)
 
 ## Summary
 
