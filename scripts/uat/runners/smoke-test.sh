@@ -121,6 +121,15 @@ _smoke_check_deps
 # shellcheck source=/dev/null
 export SMOKE_KEEP_DAEMON_ON_EXIT="${SMOKE_KEEP_DAEMON_ON_EXIT:-1}"
 source "$SMOKE_DIR/harness/framework-smoke.sh"
+# shellcheck source=../../tests/framework/process-census.sh
+source "$SMOKE_DIR/../tests/framework/process-census.sh"
+
+# Smoke intentionally keeps ONE daemon alive between modules, so growth from a
+# start-of-run baseline is the wrong question here. These two are always true:
+# no module may leave a second process on a port, and a Node launcher must never
+# exist at all. Checking costs a settle window per module; a leak that escapes
+# into a developer's session costs far more.
+SMOKE_PROCESS_LEAK=""
 init_smoke "$PORT"
 # Note: init_smoke sets the EXIT trap (_smoke_master_cleanup).
 # Do NOT set another EXIT trap here — use register_cleanup instead.
@@ -298,6 +307,13 @@ SKIP_COUNT=$SKIP_COUNT
 DAEMON_PID=$DAEMON_PID
 STATE_EOF
     ) || true
+
+    if ! assert_no_duplicate_daemons "module $module"; then
+        SMOKE_PROCESS_LEAK="$SMOKE_PROCESS_LEAK $module"
+    fi
+    if ! assert_no_launcher_processes "module $module"; then
+        SMOKE_PROCESS_LEAK="$SMOKE_PROCESS_LEAK ${module}(launcher)"
+    fi
     # Import state from subshell
     if [ -f "$_state_file" ]; then
         # shellcheck source=/dev/null
@@ -358,7 +374,10 @@ ELAPSED=$(( $(date +%s) - START_TIME ))
     echo "  Skipped: $SKIP_COUNT"
     echo "  Time:    ${ELAPSED}s"
     echo ""
-    if [ "$FAIL_COUNT" -eq 0 ]; then
+    if [ -n "$SMOKE_PROCESS_LEAK" ]; then
+        echo "  PROCESS LEAK:$SMOKE_PROCESS_LEAK"
+    fi
+    if [ "$FAIL_COUNT" -eq 0 ] && [ -z "$SMOKE_PROCESS_LEAK" ]; then
         if [ "$SKIP_COUNT" -gt 0 ]; then
             echo "  Result: PASSED (with $SKIP_COUNT skipped)"
         else
@@ -373,7 +392,7 @@ ELAPSED=$(( $(date +%s) - START_TIME ))
     echo ""
 } | tee -a "$OUTPUT_FILE"
 
-if [ "$FAIL_COUNT" -gt 0 ]; then
+if [ "$FAIL_COUNT" -gt 0 ] || [ -n "$SMOKE_PROCESS_LEAK" ]; then
     exit 1
 fi
 exit 0

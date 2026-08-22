@@ -164,11 +164,20 @@ source "$TESTS_DIR/framework/uat-user-state.sh"
 source "$TESTS_DIR/framework/uat-artifacts.sh"
 # shellcheck source=tests/framework/uat-replay.sh
 source "$TESTS_DIR/framework/uat-replay.sh"
+# shellcheck source=tests/framework/process-census.sh
+source "$TESTS_DIR/framework/process-census.sh"
 # shellcheck source=uat-result-lib.sh
 source "$SCRIPT_DIR/../orchestration/uat-result-lib.sh"
+
+# Categories that leak processes must cost a red run. Each category registers
+# framework_cleanup on EXIT, so the census returns to baseline after every one;
+# anything still standing outlived the work that started it.
+PROCESS_LEAK_CATEGORIES=""
 if [ "$SUITE" = "connected" ] || [ "$SUITE" = "all" ]; then
     uat_snapshot_user_state "$CONNECTED_UAT_PORT" "$WRAPPER"
 fi
+
+record_census_baseline
 
 case "$SUITE" in
     offline) CAT_IDS="$OFFLINE_CAT_IDS" ;;
@@ -284,6 +293,23 @@ run_category() {
             "$uat_port" "$RESULTS_DIR/results-${cat_id}.txt" \
             > "$RESULTS_DIR/output-${cat_id}.txt" 2>&1
     ) || true
+
+    # Counted before any sweep, so the census reports what the category actually
+    # left behind rather than what cleanup managed to hide.
+    if ! assert_no_process_growth "category ${cat_id}"; then
+        PROCESS_LEAK_CATEGORIES="$PROCESS_LEAK_CATEGORIES $cat_id"
+        # Re-baseline so one leak reports once instead of failing every category
+        # after it, then clear it so the suite does not compound.
+        KABOOM_CENSUS_BASELINE="$(kaboom_census_count)"
+        bash "$SCRIPT_DIR/../../maintenance/cleanup-test-daemons.sh" --quiet >/dev/null 2>&1 || true
+        KABOOM_CENSUS_BASELINE="$(kaboom_census_count)"
+    fi
+    if ! assert_no_duplicate_daemons "category ${cat_id}"; then
+        PROCESS_LEAK_CATEGORIES="$PROCESS_LEAK_CATEGORIES ${cat_id}(duplicate)"
+    fi
+    if ! assert_no_launcher_processes "category ${cat_id}"; then
+        PROCESS_LEAK_CATEGORIES="$PROCESS_LEAK_CATEGORIES ${cat_id}(launcher)"
+    fi
 }
 
 run_suite() {
@@ -461,7 +487,12 @@ printf "%-28s | %4d | %4d | %4d | %5d | %3ss\n" \
 echo ""
 
 # ── Final Verdict ─────────────────────────────────────────
-if [ "$TOTAL_FAIL" -eq 0 ] && [ "$TOTAL_PASS" -gt 0 ] && [ "$AGGREGATION_ERRORS" -eq 0 ]; then
+if [ -n "$PROCESS_LEAK_CATEGORIES" ]; then
+    echo "PROCESS LEAK:$PROCESS_LEAK_CATEGORIES"
+    echo "A category left kaboom processes running. Nothing would have reaped them."
+fi
+
+if [ "$TOTAL_FAIL" -eq 0 ] && [ "$TOTAL_PASS" -gt 0 ] && [ "$AGGREGATION_ERRORS" -eq 0 ] && [ -z "$PROCESS_LEAK_CATEGORIES" ]; then
     echo "ALL $TOTAL_PASS TESTS PASSED ($TOTAL_SKIP skipped)"
 else
     echo "FAILURES: $TOTAL_FAIL failed, $TOTAL_SKIP skipped of $TOTAL_ALL tests ($AGGREGATION_ERRORS aggregation errors)"
@@ -485,7 +516,7 @@ else
 fi
 
 # Exit code
-if [ "$TOTAL_FAIL" -gt 0 ] || [ "$AGGREGATION_ERRORS" -gt 0 ]; then
+if [ "$TOTAL_FAIL" -gt 0 ] || [ "$AGGREGATION_ERRORS" -gt 0 ] || [ -n "$PROCESS_LEAK_CATEGORIES" ]; then
     exit 1
 fi
 exit 0

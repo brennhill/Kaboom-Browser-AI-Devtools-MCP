@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-13
+last_reviewed: 2026-08-22
 code_paths:
   - .github/workflows/ci.yml
   - scripts/uat/runners/smoke-test.sh
@@ -24,6 +24,8 @@ code_paths:
   - src/types/runtime/command-contract.ts
   - scripts/uat/orchestration/uat-result-lib.sh
   - scripts/tests/framework/framework.sh
+  - scripts/tests/framework/process-census.sh
+  - scripts/uat/runners/test-all-tools-comprehensive.sh
   - internal/extclient/extclient.go
   - internal/capture/syncruntime/handler.go
   - cmd/browser-agent/internal/httpguard/middleware.go
@@ -66,6 +68,7 @@ code_paths:
   - .wire-decode-exemptions.json
   - scripts/contracts/goarchitecture/main.go
 test_paths:
+  - tests/cli/uat-assertions/process-census.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/uat/orchestration/uat-result-lib.test.mjs
   - cmd/browser-agent/internal/integrationtest/harness_test.go

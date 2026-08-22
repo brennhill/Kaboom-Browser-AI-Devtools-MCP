@@ -107,6 +107,44 @@ chain.
 Enforced by `tests/cli/launcher/launcher-shim.contract.test.cjs`, which spawns
 the shim and asserts the PID it spawned is the binary itself, with no descendants.
 
+### 4b. The Process Census (Implemented)
+
+Cleanup is not verification. `cleanup-test-daemons.sh` sweeps, but a sweep that
+silently matches nothing looks exactly like a clean run — which is how twelve
+daemons stayed alive for twenty hours behind green suites, and how ~6,900 orphaned
+launchers accumulated unnoticed. Both were invisible because nothing ever counted.
+
+`scripts/tests/framework/process-census.sh` counts, and a leak fails the run:
+
+| Assertion | Question it answers |
+| --- | --- |
+| `assert_no_process_growth <label>` | Did this unit of work leave more kaboom processes than it found? |
+| `assert_no_duplicate_daemons <label>` | Are two processes serving the same port? |
+| `assert_no_launcher_processes <label>` | Has a Node launcher reappeared in front of a binary? |
+
+Wired into `test-all-tools-comprehensive.sh` after **every category** and
+`smoke-test.sh` after **every module**, and both gate the exit code. A category
+whose tests all pass still turns the run red if it leaks.
+
+Rules the guard follows, each of which cost something to learn:
+
+- **Count before sweeping.** The census runs before cleanup, so it reports what
+  the work left behind rather than what cleanup managed to hide.
+- **Baseline-relative.** A developer legitimately has their own daemon running.
+  The census measures growth caused by the suite, never absolute presence, and
+  the production daemon (`~/.kaboom/bin/...`, port 7890) matches no pattern.
+- **Settle, then fail.** Shutdown is not instantaneous, so the growth assertion
+  polls for `KABOOM_CENSUS_SETTLE_SECONDS` (default 15) before declaring a leak.
+  Waiting is the deliberate cost of never missing one.
+- **Duplicates are checked by port**, not by count, so the check still holds where
+  one long-lived daemon is intentional (smoke keeps one alive between modules).
+- **A launcher is never acceptable at any count.** The bin entries are exec shims;
+  the only way such a process exists is a regression.
+
+`tests/cli/uat-assertions/process-census.test.cjs` checks every assertion in both
+directions — that it fires on the real leak and stays quiet on the thing that
+only resembles one. An assertion that cannot fail buys confidence it did not earn.
+
 ### 5. npx Cache Cleanup
 
 Regular cleanup command:
