@@ -89,109 +89,137 @@ export function domPrimitiveQuery(
   }
 
   // Resolve scope root
-  let scopeRoot: ParentNode = document
-  if (options?.scope_selector) {
+  function resolveScopeRoot(): ParentNode {
+    if (!options?.scope_selector) return document
     try {
       const scopeEl = document.querySelector(options.scope_selector)
-      if (scopeEl) scopeRoot = scopeEl
+      if (scopeEl) return scopeEl
     } catch {
       // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
       // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
       /* use document */
     }
+    return document
   }
 
-  const elements = resolveElements(selector, scopeRoot)
+  const elements = resolveElements(selector, resolveScopeRoot())
+
+  function queryExists(): { success: boolean; query_type: string; selector: string; exists: boolean; count: number } {
+    return {
+      success: true,
+      query_type: queryType,
+      selector,
+      exists: elements.length > 0,
+      count: elements.length
+    }
+  }
+
+  function queryCount(): { success: boolean; query_type: string; selector: string; count: number } {
+    return {
+      success: true,
+      query_type: queryType,
+      selector,
+      count: elements.length
+    }
+  }
+
+  function queryText():
+    | { success: boolean; query_type: string; selector: string; exists: boolean; text: string | null }
+    | { success: boolean; query_type: string; selector: string; exists: boolean; text: null } {
+    if (elements.length === 0) {
+      return {
+        success: true,
+        query_type: queryType,
+        selector,
+        exists: false,
+        text: null
+      }
+    }
+    const el = elements[0] as HTMLElement
+    const text = el.innerText ?? el.textContent ?? null
+    return {
+      success: true,
+      query_type: queryType,
+      selector,
+      exists: true,
+      text: text ? text.trim() : text
+    }
+  }
+
+  function queryTextAll(): { success: boolean; query_type: string; selector: string; count: number; texts: string[] } {
+    const texts: string[] = []
+    const limit = Math.min(elements.length, 100)
+    for (let i = 0; i < limit; i++) {
+      const el = elements[i] as HTMLElement
+      const text = el.innerText ?? el.textContent ?? ''
+      texts.push(text.trim())
+    }
+    return {
+      success: true,
+      query_type: queryType,
+      selector,
+      count: elements.length,
+      texts
+    }
+  }
+
+  function queryAttributes():
+    | { success: false; query_type: string; selector: string; error: string; message: string }
+    | {
+        success: true
+        query_type: string
+        selector: string
+        exists: boolean
+        attributes: Record<string, string | null>
+      } {
+    const attrNames = options?.attribute_names || []
+    if (attrNames.length === 0) {
+      return {
+        success: false,
+        query_type: queryType,
+        selector,
+        error: 'missing_attribute_names',
+        message: 'attribute_names parameter is required for query_type "attributes"'
+      }
+    }
+    if (elements.length === 0) {
+      return {
+        success: true,
+        query_type: queryType,
+        selector,
+        exists: false,
+        attributes: {}
+      }
+    }
+    const el = elements[0]!
+    const attrs: Record<string, string | null> = {}
+    for (const name of attrNames.slice(0, 20)) {
+      attrs[name] = el.getAttribute(name)
+    }
+    return {
+      success: true,
+      query_type: queryType,
+      selector,
+      exists: true,
+      attributes: attrs
+    }
+  }
 
   switch (queryType) {
     case 'exists':
-      return {
-        success: true,
-        query_type: queryType,
-        selector,
-        exists: elements.length > 0,
-        count: elements.length
-      }
+      return queryExists()
 
     case 'count':
-      return {
-        success: true,
-        query_type: queryType,
-        selector,
-        count: elements.length
-      }
+      return queryCount()
 
-    case 'text': {
-      if (elements.length === 0) {
-        return {
-          success: true,
-          query_type: queryType,
-          selector,
-          exists: false,
-          text: null
-        }
-      }
-      const el = elements[0] as HTMLElement
-      const text = el.innerText ?? el.textContent ?? null
-      return {
-        success: true,
-        query_type: queryType,
-        selector,
-        exists: true,
-        text: text ? text.trim() : text
-      }
-    }
+    case 'text':
+      return queryText()
 
-    case 'text_all': {
-      const texts: string[] = []
-      const limit = Math.min(elements.length, 100)
-      for (let i = 0; i < limit; i++) {
-        const el = elements[i] as HTMLElement
-        const text = el.innerText ?? el.textContent ?? ''
-        texts.push(text.trim())
-      }
-      return {
-        success: true,
-        query_type: queryType,
-        selector,
-        count: elements.length,
-        texts
-      }
-    }
+    case 'text_all':
+      return queryTextAll()
 
-    case 'attributes': {
-      const attrNames = options?.attribute_names || []
-      if (attrNames.length === 0) {
-        return {
-          success: false,
-          query_type: queryType,
-          selector,
-          error: 'missing_attribute_names',
-          message: 'attribute_names parameter is required for query_type "attributes"'
-        }
-      }
-      if (elements.length === 0) {
-        return {
-          success: true,
-          query_type: queryType,
-          selector,
-          exists: false,
-          attributes: {}
-        }
-      }
-      const el = elements[0]!
-      const attrs: Record<string, string | null> = {}
-      for (const name of attrNames.slice(0, 20)) {
-        attrs[name] = el.getAttribute(name)
-      }
-      return {
-        success: true,
-        query_type: queryType,
-        selector,
-        exists: true,
-        attributes: attrs
-      }
-    }
+    case 'attributes':
+      return queryAttributes()
 
     default:
       return {

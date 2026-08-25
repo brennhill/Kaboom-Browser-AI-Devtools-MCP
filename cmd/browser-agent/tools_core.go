@@ -260,7 +260,6 @@ func sessionStoreGuard(store *persistence.SessionStore, req mcp.JSONRPCRequest) 
 
 // NewToolHandler constructs the composite five-tool backend and its MCP adapter.
 func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler {
-	shutdownContext, shutdownCancel := context.WithCancel(context.Background())
 	endpointConfig := mcpendpoint.Config{
 		Version: version, Runtime: server.runtime,
 		ErrorTotal: server.logs.ErrorTotalAdded, TelemetryMode: server.logs.TelemetryMode,
@@ -269,6 +268,23 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 			return server.intentStore != nil && server.intentStore.NudgeAndClean()
 		},
 	}
+	handler := initToolHandlerCore(server, captureStore)
+	initAsyncCommandRuntime(handler)
+	initAnnotationAnalysis(handler)
+	initNoiseAutoDetection(handler)
+	initSessionAndAuditState(handler)
+	observeDeps := initAnalyzeAndGenerateDispatchers(handler)
+	initInteractAndObserveDispatchers(handler, observeDeps)
+	initSessionConfigHandlers(handler)
+	handler.toolCatalog = buildToolCatalog(handler)
+	handler.Handler = mcpendpoint.New(endpointConfig, buildMCPToolBackend(handler))
+	return handler
+}
+
+// initToolHandlerCore builds the ToolHandler shell plus its stateful core:
+// guards, recording, usage tracking, session/noise preferences, and redaction.
+func initToolHandlerCore(server *Server, captureStore *capture.Capture) *ToolHandler {
+	shutdownContext, shutdownCancel := context.WithCancel(context.Background())
 	handler := &ToolHandler{
 		server:           server,
 		capture:          captureStore,
@@ -319,6 +335,11 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 		actionTelemetry = captureStore.Telemetry()
 	}
 	handler.actionRecorder = actionlog.New(actionTelemetry)
+	return handler
+}
+
+// initAsyncCommandRuntime wires the pending-query/async-result engine.
+func initAsyncCommandRuntime(handler *ToolHandler) {
 	handler.asyncCommands = asynccommand.New(asynccommand.Deps{
 		Context:              handler.shutdownCtx,
 		Capture:              handler.capture,
@@ -333,8 +354,11 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 		SummaryEnabled:     handler.summaryPrefs.Enabled,
 		RecordAsyncOutcome: handler.usageTracker.RecordAsyncOutcome,
 	})
+}
 
-	handler.annotationStore = server.annotationRuntime.Store()
+// initAnnotationAnalysis wires the draw-mode annotation store and analyzers.
+func initAnnotationAnalysis(handler *ToolHandler) {
+	handler.annotationStore = handler.server.annotationRuntime.Store()
 	handler.annotationAnalysis = annotationanalysis.New(
 		handler.annotationStore,
 		handler.capture,
@@ -346,6 +370,11 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 			handler.capture.Queries().ApplyCommandResult(correlationID, "complete", result, "")
 		})
 	}
+}
+
+// initNoiseAutoDetection wires noise auto-detect to navigation and the first
+// extension connection.
+func initNoiseAutoDetection(handler *ToolHandler) {
 	detectNoise := func() {
 		noiseautorun.Detect(handler.noiseConfig, handler.capture, handler.server.logs.Entries())
 	}
@@ -360,17 +389,18 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 			diag.Printf("[Kaboom] noise auto-detect: ran on first extension connection\n")
 		})
 	}
+}
+
+// initSessionAndAuditState wires session observation, audit trails, upload
+// security, and the screen-recording interact handler.
+func initSessionAndAuditState(handler *ToolHandler) {
 	handler.securityScannerImpl = scan.NewScanner()
 	handler.thirdPartyAuditorImpl = thirdparty.NewThirdPartyAuditor()
 	handler.apiContractRuntime = apicontractruntime.NewRuntime()
 	var performanceEntries func() []performance.PerformanceSnapshot
-	var queryStore toolobserve.CommandStore
-	var inProgress func() []syncruntime.SyncInProgress
 	var captureReader session.RuntimeCaptureReader
 	if handler.capture != nil {
 		performanceEntries = handler.capture.Performance().Samples
-		queryStore = handler.capture.Queries()
-		inProgress = handler.capture.Extension().GetInProgressCommands
 		captureReader = handler.capture
 	}
 	handler.sessionManager = session.NewSessionManager(
@@ -388,8 +418,13 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 	})
 	handler.auditRecorder = audit.NewRecorder(handler.auditTrail)
 
-	handler.uploadSecurity = server.uploadSecurity
+	handler.uploadSecurity = handler.server.uploadSecurity
 	handler.recordingInteractHandler = screenrec.NewInteractHandler(buildScreenrecDeps(handler))
+}
+
+// initAnalyzeAndGenerateDispatchers wires the analyze and generate tool
+// dispatchers, returning the shared observe deps built along the way.
+func initAnalyzeAndGenerateDispatchers(handler *ToolHandler) observecore.Deps {
 	analyzeDeps := buildAnalyzeDeps(handler)
 	observeDeps := buildObserveReadDeps(handler)
 	handler.analyzeDispatcher = analyzedispatch.NewDispatcher(analyzedispatch.Config{
@@ -418,6 +453,12 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 	})
 	handler.testGenHandler = testgenhandler.New(buildTestGenerationDeps(handler))
 	handler.generateDispatcher = toolgenerate.NewDispatcher(buildGenerateDeps(handler), handler.testGenHandler)
+	return observeDeps
+}
+
+// initInteractAndObserveDispatchers wires the interact action owners plus the
+// observe dispatcher.
+func initInteractAndObserveDispatchers(handler *ToolHandler, observeDeps observecore.Deps) {
 	initializeInteractActionOwners(handler)
 	handler.configureLocalDeps = buildConfigureLocalDeps(handler)
 	handler.tutorialDeps = buildTutorialDeps(handler)
@@ -427,6 +468,12 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 		RequireTabTracking:  handler.Guards.RequireTabTracking,
 		EnqueuePendingQuery: handler.asyncCommands.EnqueuePendingQuery, RecordAIAction: handler.actionRecorder.Record,
 	}, handler.interactRuntime)
+	var queryStore toolobserve.CommandStore
+	var inProgress func() []syncruntime.SyncInProgress
+	if handler.capture != nil {
+		queryStore = handler.capture.Queries()
+		inProgress = handler.capture.Extension().GetInProgressCommands
+	}
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
 		Observe: observeDeps, Local: buildObserveLocalDeps(handler),
 		IsExtensionConnected: func() bool { return handler.capture.Extension().IsExtensionConnected() },
@@ -454,6 +501,11 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 		DrainAlerts: handler.alertBuffer.DrainAlerts, DiagnosticHint: handler.Guards.DiagnosticHint(),
 		StateDiagnostics: handler.stateRecovery,
 	})
+}
+
+// initSessionConfigHandlers wires stateful interact handling, sequences, and
+// the configure dispatcher.
+func initSessionConfigHandlers(handler *ToolHandler) {
 	handler.stateInteractHandler = interactstate.New(&interactstate.Deps{
 		IsPilotActionAllowed: func() bool {
 			return handler.capture != nil && handler.capture.Extension().IsPilotActionAllowed()
@@ -505,8 +557,8 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 		handler.sessionManager,
 	)
 	var waitForSequenceCommand func(string, time.Duration) (*queries.CommandResult, bool)
-	if captureStore != nil {
-		waitForSequenceCommand = captureStore.Queries().WaitForCommand
+	if handler.capture != nil {
+		waitForSequenceCommand = handler.capture.Queries().WaitForCommand
 	}
 	handler.sequences = sequencehandler.New(sequencehandler.Deps{
 		Store:          handler.sessionStoreImpl,
@@ -517,9 +569,6 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 		Diagnostics:    handler.stateRecovery,
 	})
 	handler.configureDispatcher = buildConfigureDispatcher(handler)
-	handler.toolCatalog = buildToolCatalog(handler)
-	handler.Handler = mcpendpoint.New(endpointConfig, buildMCPToolBackend(handler))
-	return handler
 }
 
 type visualAnalyzeDeps struct{ h *ToolHandler }

@@ -87,6 +87,21 @@ interface NetworkBodyPostMessage {
   }
 }
 
+/**
+ * One captured request/response exchange ready to post to the content script.
+ */
+interface CapturedNetworkBody {
+  url: string
+  method: string
+  status: number
+  contentType: string
+  requestBody: BodyInit | null | undefined
+  duration: number
+  truncResp: string
+  truncReq: string | null
+  responseTruncated: boolean
+}
+
 // =============================================================================
 // MODULE STATE
 // =============================================================================
@@ -505,29 +520,18 @@ async function readCapturedBody(url: string, cloned: Response | null, contentTyp
   return readResponseBodyWithTimeout(cloned)
 }
 
-function postNetworkBody(
-  win: Window,
-  url: string,
-  method: string,
-  response: Response,
-  contentType: string,
-  requestBody: BodyInit | null | undefined,
-  duration: number,
-  truncResp: string,
-  truncReq: string | null,
-  responseTruncated: boolean
-): void {
+function postNetworkBody(win: Window, capture: CapturedNetworkBody): void {
   const message: NetworkBodyPostMessage = {
     type: 'kaboom_network_body',
     payload: {
-      url,
-      method,
-      status: response.status,
-      content_type: contentType,
-      request_body: truncReq || (typeof requestBody === 'string' ? requestBody : undefined),
-      response_body: truncResp,
-      ...(responseTruncated ? { response_truncated: true } : {}),
-      duration
+      url: capture.url,
+      method: capture.method,
+      status: capture.status,
+      content_type: capture.contentType,
+      request_body: capture.truncReq || (typeof capture.requestBody === 'string' ? capture.requestBody : undefined),
+      response_body: capture.truncResp,
+      ...(capture.responseTruncated ? { response_truncated: true } : {}),
+      duration: capture.duration
     }
   }
   win.postMessage(message, window.location.origin)
@@ -598,23 +602,17 @@ export function wrapXHRWithBodies(): void {
 
           const win = typeof window !== 'undefined' ? window : null
           if (win) {
-            // Build a minimal Response-like shim for postNetworkBody
-            const responseShim = {
-              status: this.status,
-              headers: { get: (h: string) => this.getResponseHeader(h) }
-            } as unknown as Response
-            postNetworkBody(
-              win,
+            postNetworkBody(win, {
               url,
               method,
-              responseShim,
+              status: this.status,
               contentType,
               requestBody,
               duration,
-              truncResp || '',
+              truncResp: truncResp || '',
               truncReq,
-              respTruncated
-            )
+              responseTruncated: respTruncated
+            })
           }
         } catch {
           // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
@@ -736,18 +734,17 @@ export function wrapFetchWithBodies(fetchFn: FetchLike): FetchLike {
               : null
           const { body: truncReq } = truncateRequestBody(rawReq)
           if (win && networkBodyCaptureEnabled) {
-            postNetworkBody(
-              win,
+            postNetworkBody(win, {
               url,
               method,
-              response,
+              status: response.status,
               contentType,
               requestBody,
               duration,
-              truncResp || responseBody,
+              truncResp: truncResp || responseBody,
               truncReq,
-              respTruncated
-            )
+              responseTruncated: respTruncated
+            })
           }
         } catch {
           // EXPECTED_ABSENCE: page-owned access can normally throw for detached,

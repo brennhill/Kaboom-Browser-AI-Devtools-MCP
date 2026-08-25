@@ -84,6 +84,42 @@
       return Promise.resolve(result)
     }
 
+    function describeMutationSummary(): { added: number; removed: number; modified: number; summary: string } {
+      const added = mutations.reduce((s, m) => s + m.addedNodes.length, 0)
+      const removed = mutations.reduce((s, m) => s + m.removedNodes.length, 0)
+      const modified = mutations.filter((m) => m.type === 'attributes').length
+      const parts: string[] = []
+      if (added > 0) parts.push(`${added} added`)
+      if (removed > 0) parts.push(`${removed} removed`)
+      if (modified > 0) parts.push(`${modified} modified`)
+      return { added, removed, modified, summary: parts.length > 0 ? parts.join(', ') : 'no DOM changes' }
+    }
+
+    function pushNodeEntries(nodes: NodeList, type: 'added' | 'removed', entries: DOMMutationEntry[], maxEntries: number): void {
+      for (let i = 0; i < nodes.length && entries.length < maxEntries; i++) {
+        const n = nodes[i] as Node | undefined
+        if (n && n.nodeType === 1) {
+          const el = n as Element
+          entries.push({ type, tag: el.tagName?.toLowerCase(), id: el.id || undefined, class: el.className?.toString()?.slice(0, 80) || undefined, text_preview: el.textContent?.slice(0, 100) || undefined })
+        }
+      }
+    }
+
+    function collectMutationEntries(maxEntries: number): DOMMutationEntry[] {
+      const entries: DOMMutationEntry[] = []
+      for (const m of mutations) {
+        if (entries.length >= maxEntries) break
+        if (m.type === 'childList') {
+          pushNodeEntries(m.addedNodes, 'added', entries, maxEntries)
+          pushNodeEntries(m.removedNodes, 'removed', entries, maxEntries)
+        } else if (m.type === 'attributes' && m.target.nodeType === 1) {
+          const el = m.target as Element
+          entries.push({ type: 'attribute', tag: el.tagName?.toLowerCase(), id: el.id || undefined, attribute: m.attributeName || undefined, old_value: m.oldValue?.slice(0, 100) || undefined, new_value: el.getAttribute(m.attributeName || '')?.slice(0, 100) || undefined })
+        }
+      }
+      return entries
+    }
+
     return new Promise((resolve) => {
       let resolved = false
       function finish() {
@@ -91,14 +127,7 @@
         resolved = true
         observer.disconnect()
         const totalMs = Math.round(performance.now() - t0)
-        const added = mutations.reduce((s, m) => s + m.addedNodes.length, 0)
-        const removed = mutations.reduce((s, m) => s + m.removedNodes.length, 0)
-        const modified = mutations.filter((m) => m.type === 'attributes').length
-        const parts: string[] = []
-        if (added > 0) parts.push(`${added} added`)
-        if (removed > 0) parts.push(`${removed} removed`)
-        if (modified > 0) parts.push(`${modified} modified`)
-        const summary = parts.length > 0 ? parts.join(', ') : 'no DOM changes'
+        const { added, removed, modified, summary } = describeMutationSummary()
 
         const enriched: DOMResult = { ...result, dom_summary: summary }
 
@@ -109,31 +138,7 @@
         }
 
         if (options.observe_mutations) {
-          const maxEntries = 50
-          const entries: DOMMutationEntry[] = []
-          for (const m of mutations) {
-            if (entries.length >= maxEntries) break
-            if (m.type === 'childList') {
-              for (let i = 0; i < m.addedNodes.length && entries.length < maxEntries; i++) {
-                const n = m.addedNodes[i] as Node | undefined
-                if (n && n.nodeType === 1) {
-                  const el = n as Element
-                  entries.push({ type: 'added', tag: el.tagName?.toLowerCase(), id: el.id || undefined, class: el.className?.toString()?.slice(0, 80) || undefined, text_preview: el.textContent?.slice(0, 100) || undefined })
-                }
-              }
-              for (let i = 0; i < m.removedNodes.length && entries.length < maxEntries; i++) {
-                const n = m.removedNodes[i] as Node | undefined
-                if (n && n.nodeType === 1) {
-                  const el = n as Element
-                  entries.push({ type: 'removed', tag: el.tagName?.toLowerCase(), id: el.id || undefined, class: el.className?.toString()?.slice(0, 80) || undefined, text_preview: el.textContent?.slice(0, 100) || undefined })
-                }
-              }
-            } else if (m.type === 'attributes' && m.target.nodeType === 1) {
-              const el = m.target as Element
-              entries.push({ type: 'attribute', tag: el.tagName?.toLowerCase(), id: el.id || undefined, attribute: m.attributeName || undefined, old_value: m.oldValue?.slice(0, 100) || undefined, new_value: el.getAttribute(m.attributeName || '')?.slice(0, 100) || undefined })
-            }
-          }
-          enriched.dom_mutations = entries
+          enriched.dom_mutations = collectMutationEntries(50)
         }
 
         resolve(enriched)
@@ -279,12 +284,7 @@
   function isElementOutsideViewport(el: Element): boolean {
     if (!(el instanceof HTMLElement) || typeof el.getBoundingClientRect !== 'function') return false
     const rect = el.getBoundingClientRect()
-    const viewHeight = typeof window !== 'undefined' && typeof window.innerHeight === 'number'
-      ? window.innerHeight
-      : (typeof document !== 'undefined' && document.documentElement ? document.documentElement.clientHeight : 0)
-    const viewWidth = typeof window !== 'undefined' && typeof window.innerWidth === 'number'
-      ? window.innerWidth
-      : (typeof document !== 'undefined' && document.documentElement ? document.documentElement.clientWidth : 0)
+    const { width: viewWidth, height: viewHeight } = viewportSize()
     if (viewHeight === 0 && viewWidth === 0) return false
     return rect.bottom < 0 || rect.top > viewHeight || rect.right < 0 || rect.left > viewWidth
   }

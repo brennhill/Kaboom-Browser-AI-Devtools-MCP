@@ -107,15 +107,11 @@ registerCommand('upload', async (ctx) => {
 registerCommand('screen_recording_start', async (ctx) => {
   if (!requireAiWebPilot(ctx)) return
   const params = ctx.params as { name?: string; fps?: number; audio?: string }
-  const result = await startRecording(
-    params.name ?? 'recording',
-    params.fps ?? 15,
-    ctx.query.id,
-    params.audio ?? '',
-    false,
-    ctx.tabId,
-    ctx.query.connection_generation
-  )
+  const result = await startRecording(params.name ?? 'recording', params.fps ?? 15, params.audio ?? '', {
+    queryId: ctx.query.id,
+    targetTabId: ctx.tabId,
+    connectionGeneration: ctx.query.connection_generation
+  })
   ctx.sendResult(result)
 })
 

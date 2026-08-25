@@ -753,6 +753,53 @@
   var MAX_PAYLOAD_NODES = 5e3;
   var MAX_ARRAY_ITEMS = 1e3;
   var MAX_OBJECT_KEYS = 200;
+  function accountScalarBytes(value, state) {
+    if (typeof value === "string") {
+      state.bytes += value.length * 2;
+      return true;
+    }
+    if (typeof value === "number" || typeof value === "bigint") {
+      state.bytes += 8;
+      return true;
+    }
+    if (typeof value === "boolean") {
+      state.bytes++;
+      return true;
+    }
+    return false;
+  }
+  function inspectArrayItems(value, seen, depth, state) {
+    if (value.length > MAX_ARRAY_ITEMS) {
+      state.rejection = "payload_too_large";
+      return;
+    }
+    for (const item of value)
+      inspectValue(item, seen, depth + 1, state);
+  }
+  function inspectObjectEntries(value, seen, depth, state) {
+    const entries = Object.entries(value);
+    if (entries.length > MAX_OBJECT_KEYS) {
+      state.rejection = "payload_too_large";
+      return;
+    }
+    for (const [key, child] of entries) {
+      state.bytes += key.length * 2;
+      inspectValue(child, seen, depth + 1, state);
+    }
+  }
+  function inspectContainer(value, seen, depth, state) {
+    if (seen.has(value)) {
+      state.rejection = "invalid_schema";
+      return;
+    }
+    seen.add(value);
+    if (Array.isArray(value)) {
+      inspectArrayItems(value, seen, depth, state);
+    } else {
+      inspectObjectEntries(value, seen, depth, state);
+    }
+    seen.delete(value);
+  }
   function inspectValue(value, seen, depth, state) {
     if (state.rejection)
       return;
@@ -765,37 +812,10 @@
       state.rejection = "payload_too_large";
       return;
     }
-    if (typeof value === "string") {
-      state.bytes += value.length * 2;
-    } else if (typeof value === "number" || typeof value === "bigint") {
-      state.bytes += 8;
-    } else if (typeof value === "boolean") {
-      state.bytes++;
-    } else if (value && typeof value === "object") {
-      if (seen.has(value)) {
-        state.rejection = "invalid_schema";
-        return;
-      }
-      seen.add(value);
-      if (Array.isArray(value)) {
-        if (value.length > MAX_ARRAY_ITEMS) {
-          state.rejection = "payload_too_large";
-          return;
-        }
-        for (const item of value)
-          inspectValue(item, seen, depth + 1, state);
-      } else {
-        const entries = Object.entries(value);
-        if (entries.length > MAX_OBJECT_KEYS) {
-          state.rejection = "payload_too_large";
-          return;
-        }
-        for (const [key, child] of entries) {
-          state.bytes += key.length * 2;
-          inspectValue(child, seen, depth + 1, state);
-        }
-      }
-      seen.delete(value);
+    if (value && typeof value === "object") {
+      inspectContainer(value, seen, depth, state);
+    } else {
+      accountScalarBytes(value, state);
     }
     if (state.bytes > MAX_PAYLOAD_BYTES)
       state.rejection = "payload_too_large";
@@ -809,23 +829,17 @@
   function hasNumber(value, key) {
     return typeof value[key] === "number" && Number.isFinite(value[key]);
   }
+  var TELEMETRY_SCHEMA_VALIDATORS = {
+    kaboom_log: (p) => hasString(p, "ts") && hasString(p, "level"),
+    kaboom_ws: (p) => hasString(p, "event") && hasString(p, "id"),
+    kaboom_network_body: (p) => hasString(p, "method") && hasString(p, "url") && hasNumber(p, "status"),
+    kaboom_enhanced_action: (p) => hasString(p, "type") && hasNumber(p, "timestamp"),
+    kaboom_performance_snapshot: (p) => hasString(p, "url") && hasString(p, "timestamp") && isRecord(p.timing),
+    kaboom_capture_diagnostic: (p) => hasString(p, "category") && hasString(p, "message") && hasString(p, "error_type")
+  };
   function matchesTelemetrySchema(messageType, payload) {
-    switch (messageType) {
-      case "kaboom_log":
-        return hasString(payload, "ts") && hasString(payload, "level");
-      case "kaboom_ws":
-        return hasString(payload, "event") && hasString(payload, "id");
-      case "kaboom_network_body":
-        return hasString(payload, "method") && hasString(payload, "url") && hasNumber(payload, "status");
-      case "kaboom_enhanced_action":
-        return hasString(payload, "type") && hasNumber(payload, "timestamp");
-      case "kaboom_performance_snapshot":
-        return hasString(payload, "url") && hasString(payload, "timestamp") && isRecord(payload.timing);
-      case "kaboom_capture_diagnostic":
-        return hasString(payload, "category") && hasString(payload, "message") && hasString(payload, "error_type");
-      default:
-        return false;
-    }
+    const validator = TELEMETRY_SCHEMA_VALIDATORS[messageType];
+    return validator ? validator(payload) : false;
   }
   function validatePageTelemetry(messageType, payload) {
     if (!isRecord(payload) || !matchesTelemetrySchema(messageType, payload))
@@ -857,39 +871,46 @@
     kaboom_a11y_query_response: (id, result) => resolveA11yRequest(id, result),
     kaboom_dom_query_response: (id, result) => resolveDomRequest(id, result)
   };
-  function initWindowMessageListener() {
-    window.addEventListener("message", (event) => {
-      if (event.source !== window || event.origin !== window.location.origin)
-        return;
-      const { type: messageType, requestId, result, payload } = event.data || {};
-      const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : void 0;
-      if (responseHandler) {
-        if (event.data._nonce !== getPageNonce())
-          return;
-        if (requestId !== void 0)
-          responseHandler(requestId, result);
-        return;
-      }
-      if (!getIsTrackedTab())
-        return;
-      if (event.data._nonce !== getPageNonce())
-        return;
-      if (messageType && messageType in MESSAGE_MAP && payload && typeof payload === "object") {
-        const mappedType = MESSAGE_MAP[messageType];
-        if (mappedType) {
-          const rejection = validatePageTelemetry(messageType, payload);
-          if (rejection) {
-            reportTelemetryRejection(rejection);
-            return;
-          }
-          safeSendMessage({
-            type: mappedType,
-            payload,
-            tabId: getCurrentTabId()
-          });
-        }
-      }
+  function handlePageResponse(data, requestId, result, handler) {
+    if (data._nonce !== getPageNonce())
+      return;
+    if (requestId !== void 0)
+      handler(requestId, result);
+  }
+  function forwardTelemetryMessage(messageType, payload) {
+    if (!messageType || !(messageType in MESSAGE_MAP) || !payload || typeof payload !== "object")
+      return;
+    const mappedType = MESSAGE_MAP[messageType];
+    if (!mappedType)
+      return;
+    const rejection = validatePageTelemetry(messageType, payload);
+    if (rejection) {
+      reportTelemetryRejection(rejection);
+      return;
+    }
+    safeSendMessage({
+      type: mappedType,
+      payload,
+      tabId: getCurrentTabId()
     });
+  }
+  function onWindowMessage(event) {
+    if (event.source !== window || event.origin !== window.location.origin)
+      return;
+    const { type: messageType, requestId, result, payload } = event.data || {};
+    const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : void 0;
+    if (responseHandler) {
+      handlePageResponse(event.data, requestId, result, responseHandler);
+      return;
+    }
+    if (!getIsTrackedTab())
+      return;
+    if (event.data._nonce !== getPageNonce())
+      return;
+    forwardTelemetryMessage(messageType, payload);
+  }
+  function initWindowMessageListener() {
+    window.addEventListener("message", onWindowMessage);
   }
 
   // extension/lib/timeout-utils.js
@@ -1057,6 +1078,95 @@
     }
     return md;
   }
+  var HEADING_MARKS = {
+    h1: "#",
+    h2: "##",
+    h3: "###",
+    h4: "####",
+    h5: "#####",
+    h6: "######"
+  };
+  var INLINE_WRAPS = {
+    strong: "**",
+    b: "**",
+    em: "*",
+    i: "*",
+    code: "`"
+  };
+  function collectChildren(el, depth, budget) {
+    let children = "";
+    for (let i = 0; i < el.childNodes.length; i++) {
+      if (budget.remaining <= 0)
+        break;
+      const child = el.childNodes[i];
+      if (child)
+        children += nodeToMarkdown(child, depth + 1, budget);
+    }
+    return children.replace(/\n{3,}/g, "\n\n");
+  }
+  function resolvePageUrl(value) {
+    try {
+      return new URL(value, window.location.href).href;
+    } catch {
+      return value;
+    }
+  }
+  function renderLinkMarkdown(el, children) {
+    const href = el.getAttribute("href") || "";
+    if (href && href !== "#" && !href.startsWith("javascript:")) {
+      return "[" + children.trim() + "](" + resolvePageUrl(href) + ")";
+    }
+    return children;
+  }
+  function renderImageMarkdown(el) {
+    const src = el.getAttribute("src") || "";
+    const alt = el.getAttribute("alt") || "";
+    if (src) {
+      return "![" + alt + "](" + resolvePageUrl(src) + ")";
+    }
+    return "";
+  }
+  function renderListItemMarkdown(el, children) {
+    const parent = el.parentElement;
+    if (parent && parent.tagName.toLowerCase() === "ol") {
+      const idx = Array.from(parent.children).indexOf(el) + 1;
+      return idx + ". " + children.trim() + "\n";
+    }
+    return "- " + children.trim() + "\n";
+  }
+  function renderElementMarkdown(tag, el, children) {
+    const headingMark = HEADING_MARKS[tag];
+    if (headingMark)
+      return "\n" + headingMark + " " + children.trim() + "\n\n";
+    const wrap = INLINE_WRAPS[tag];
+    if (wrap)
+      return wrap + children.trim() + wrap;
+    switch (tag) {
+      case "p":
+        return "\n" + children.trim() + "\n\n";
+      case "br":
+        return "\n";
+      case "hr":
+        return "\n---\n\n";
+      case "pre":
+        return "\n```\n" + (el.innerText || "").trim() + "\n```\n\n";
+      case "a":
+        return renderLinkMarkdown(el, children);
+      case "img":
+        return renderImageMarkdown(el);
+      case "ul":
+      case "ol":
+        return "\n" + children + "\n";
+      case "li":
+        return renderListItemMarkdown(el, children);
+      case "blockquote":
+        return "\n> " + children.trim().replace(/\n/g, "\n> ") + "\n\n";
+      case "table":
+        return "\n" + tableToMarkdown(el) + "\n\n";
+      default:
+        return children;
+    }
+  }
   function nodeToMarkdown(node, depth, budget) {
     if (!node || budget.remaining <= 0)
       return "";
@@ -1077,90 +1187,7 @@
       return "";
     if (el.getAttribute("aria-hidden") === "true")
       return "";
-    let children = "";
-    for (let i = 0; i < el.childNodes.length; i++) {
-      if (budget.remaining <= 0)
-        break;
-      const child = el.childNodes[i];
-      if (child)
-        children += nodeToMarkdown(child, depth + 1, budget);
-    }
-    children = children.replace(/\n{3,}/g, "\n\n");
-    switch (tag) {
-      case "h1":
-        return "\n# " + children.trim() + "\n\n";
-      case "h2":
-        return "\n## " + children.trim() + "\n\n";
-      case "h3":
-        return "\n### " + children.trim() + "\n\n";
-      case "h4":
-        return "\n#### " + children.trim() + "\n\n";
-      case "h5":
-        return "\n##### " + children.trim() + "\n\n";
-      case "h6":
-        return "\n###### " + children.trim() + "\n\n";
-      case "p":
-        return "\n" + children.trim() + "\n\n";
-      case "br":
-        return "\n";
-      case "hr":
-        return "\n---\n\n";
-      case "strong":
-      case "b":
-        return "**" + children.trim() + "**";
-      case "em":
-      case "i":
-        return "*" + children.trim() + "*";
-      case "code":
-        return "`" + children.trim() + "`";
-      case "pre":
-        return "\n```\n" + (el.innerText || "").trim() + "\n```\n\n";
-      case "a": {
-        let href = el.getAttribute("href") || "";
-        if (href && href !== "#" && !href.startsWith("javascript:")) {
-          try {
-            href = new URL(href, window.location.href).href;
-          } catch {
-          }
-          return "[" + children.trim() + "](" + href + ")";
-        }
-        return children;
-      }
-      case "img": {
-        let src = el.getAttribute("src") || "";
-        const alt = el.getAttribute("alt") || "";
-        if (src) {
-          try {
-            src = new URL(src, window.location.href).href;
-          } catch {
-          }
-          return "![" + alt + "](" + src + ")";
-        }
-        return "";
-      }
-      case "ul":
-      case "ol":
-        return "\n" + children + "\n";
-      case "li": {
-        const parent = el.parentElement;
-        if (parent && parent.tagName.toLowerCase() === "ol") {
-          const idx = Array.from(parent.children).indexOf(el) + 1;
-          return idx + ". " + children.trim() + "\n";
-        }
-        return "- " + children.trim() + "\n";
-      }
-      case "blockquote":
-        return "\n> " + children.trim().replace(/\n/g, "\n> ") + "\n\n";
-      case "table":
-        return "\n" + tableToMarkdown(el) + "\n\n";
-      case "div":
-      case "section":
-      case "article":
-      case "main":
-        return children;
-      default:
-        return children;
-    }
+    return renderElementMarkdown(tag, el, collectChildren(el, depth, budget));
   }
   function extractMarkdown() {
     const main = findMainContentElement(100);
@@ -1214,30 +1241,60 @@
   function findMainNode() {
     return findMainContentElement(120);
   }
-  function classifyPage(forms, interactiveCount, linkCount, paragraphCount, headingCount, previewText) {
-    const hasSearchInput = !!document.querySelector('input[type="search"], input[name*="search" i], input[placeholder*="search" i]');
-    const likelySearchURL = /[?&](q|query|search)=/i.test(window.location.search);
-    const hasArticle = document.querySelectorAll("article").length > 0;
-    const hasTable = document.querySelectorAll("table").length > 0;
+  function collectClassSignals(forms, interactiveCount, linkCount, paragraphCount, headingCount, previewText) {
     let totalFormFields = 0;
     for (const form of forms) {
       totalFormFields += form.fields.length;
     }
-    if (hasSearchInput && (likelySearchURL || linkCount > 10))
+    return {
+      hasSearchInput: !!document.querySelector('input[type="search"], input[name*="search" i], input[placeholder*="search" i]'),
+      likelySearchURL: /[?&](q|query|search)=/i.test(window.location.search),
+      hasArticle: document.querySelectorAll("article").length > 0,
+      hasTable: document.querySelectorAll("table").length > 0,
+      formCount: forms.length,
+      totalFormFields,
+      interactiveCount,
+      linkCount,
+      paragraphCount,
+      headingCount,
+      previewText
+    };
+  }
+  function isSearchResultsPage(s) {
+    return s.hasSearchInput && (s.likelySearchURL || s.linkCount > 10);
+  }
+  function isFormPage(s) {
+    return s.formCount > 0 && s.totalFormFields >= 3 && s.paragraphCount < 8;
+  }
+  function isArticlePage(s) {
+    return s.hasArticle || s.paragraphCount >= 8 && s.linkCount < s.paragraphCount * 2;
+  }
+  function isDashboardPage(s) {
+    return s.hasTable || s.interactiveCount > 25 && s.headingCount >= 2;
+  }
+  function isLinkListPage(s) {
+    return s.linkCount > 30 && s.paragraphCount < 10;
+  }
+  function isAppPage(s) {
+    return s.previewText.length < 80 && s.interactiveCount > 10;
+  }
+  function classifyPage(forms, interactiveCount, linkCount, paragraphCount, headingCount, previewText) {
+    const s = collectClassSignals(forms, interactiveCount, linkCount, paragraphCount, headingCount, previewText);
+    if (isSearchResultsPage(s))
       return "search_results";
-    if (forms.length > 0 && totalFormFields >= 3 && paragraphCount < 8)
+    if (isFormPage(s))
       return "form";
-    if (hasArticle || paragraphCount >= 8 && linkCount < paragraphCount * 2)
+    if (isArticlePage(s))
       return "article";
-    if (hasTable || interactiveCount > 25 && headingCount >= 2)
+    if (isDashboardPage(s))
       return "dashboard";
-    if (linkCount > 30 && paragraphCount < 10)
+    if (isLinkListPage(s))
       return "link_list";
-    if (previewText.length < 80 && interactiveCount > 10)
+    if (isAppPage(s))
       return "app";
     return "generic";
   }
-  function extractPageSummary() {
+  function collectHeadings() {
     const headingNodes = document.querySelectorAll("h1, h2, h3");
     const headings = [];
     for (const heading of Array.from(headingNodes)) {
@@ -1248,6 +1305,9 @@
         continue;
       headings.push(heading.tagName.toLowerCase() + ": " + text);
     }
+    return headings;
+  }
+  function collectNavLinks() {
     const navCandidates = document.querySelectorAll('nav a[href], header a[href], [role="navigation"] a[href]');
     const navLinks = [];
     const seenNav = {};
@@ -1264,30 +1324,42 @@
       seenNav[key] = true;
       navLinks.push({ text: linkText, href });
     }
+    return navLinks;
+  }
+  function collectFormFieldNames(form) {
+    const fieldNodes = form.querySelectorAll("input, select, textarea");
+    const fields = [];
+    const seenFields = {};
+    for (const field of Array.from(fieldNodes)) {
+      if (fields.length >= 25)
+        break;
+      const candidate = field.getAttribute("name") || field.getAttribute("id") || field.getAttribute("aria-label") || field.getAttribute("type") || field.tagName.toLowerCase();
+      const cleaned = cleanText2(candidate || "", 60);
+      if (!cleaned || seenFields[cleaned])
+        continue;
+      seenFields[cleaned] = true;
+      fields.push(cleaned);
+    }
+    return fields;
+  }
+  function collectForms() {
     const forms = [];
     const formNodes = document.querySelectorAll("form");
     for (const form of Array.from(formNodes)) {
       if (forms.length >= 10)
         break;
-      const fieldNodes = form.querySelectorAll("input, select, textarea");
-      const fields = [];
-      const seenFields = {};
-      for (const field of Array.from(fieldNodes)) {
-        if (fields.length >= 25)
-          break;
-        const candidate = field.getAttribute("name") || field.getAttribute("id") || field.getAttribute("aria-label") || field.getAttribute("type") || field.tagName.toLowerCase();
-        const cleaned = cleanText2(candidate || "", 60);
-        if (!cleaned || seenFields[cleaned])
-          continue;
-        seenFields[cleaned] = true;
-        fields.push(cleaned);
-      }
       forms.push({
         action: absoluteHref(form.getAttribute("action") || window.location.href),
         method: (form.getAttribute("method") || "GET").toUpperCase(),
-        fields
+        fields: collectFormFieldNames(form)
       });
     }
+    return forms;
+  }
+  function extractPageSummary() {
+    const headings = collectHeadings();
+    const navLinks = collectNavLinks();
+    const forms = collectForms();
     const mainNode = findMainNode();
     const mainText = cleanText2(mainNode ? mainNode.innerText || mainNode.textContent || "" : "", 2e4);
     const preview = mainText.slice(0, 500);
@@ -1629,31 +1701,38 @@
     style.textContent = TOAST_ANIMATION_CSS;
     document.head.appendChild(style);
   }
-  function showActionToast(text, detail, state = "trying", durationMs = 3e3) {
-    const existing = document.getElementById("kaboom-action-toast");
-    if (existing)
-      existing.remove();
-    injectToastAnimationStyles();
-    const theme = TOAST_THEMES[state] ?? TOAST_THEMES.trying;
-    const isAudioPrompt = state === "audio" || detail && detail.toLowerCase().includes("audio") && detail.toLowerCase().includes("click");
-    const arrowChar = "\u2191";
-    const toast = document.createElement("div");
-    toast.id = "kaboom-action-toast";
-    toast.setAttribute?.("data-kaboom-owned", "true");
-    if (isAudioPrompt) {
-      toast.className = "kaboom-toast-pulse";
-    }
-    if (isAudioPrompt) {
-      const icon = document.createElement("img");
-      icon.src = chrome.runtime.getURL("icons/icon-48.png");
-      Object.assign(icon.style, {
-        width: "20px",
-        height: "20px",
-        marginRight: "8px",
-        flexShrink: "0"
-      });
-      toast.appendChild(icon);
-    }
+  function isAudioPromptToast(state, detail) {
+    if (state === "audio")
+      return true;
+    if (!detail)
+      return false;
+    const lower = detail.toLowerCase();
+    return lower.includes("audio") && lower.includes("click");
+  }
+  function appendAudioIcon(toast) {
+    const icon = document.createElement("img");
+    icon.src = chrome.runtime.getURL("icons/icon-48.png");
+    Object.assign(icon.style, {
+      width: "20px",
+      height: "20px",
+      marginRight: "8px",
+      flexShrink: "0"
+    });
+    toast.appendChild(icon);
+  }
+  function appendAudioArrow(toast) {
+    const arrow = document.createElement("span");
+    arrow.className = "kaboom-toast-arrow";
+    arrow.textContent = "\u2191";
+    Object.assign(arrow.style, {
+      fontSize: "16px",
+      fontWeight: "700",
+      marginLeft: "12px",
+      display: "inline-block"
+    });
+    toast.appendChild(arrow);
+  }
+  function appendToastText(toast, text, detail) {
     const label = document.createElement("span");
     label.textContent = text;
     Object.assign(label.style, { fontWeight: "700" });
@@ -1668,19 +1747,9 @@
       Object.assign(det.style, { fontWeight: "400", opacity: "0.9" });
       toast.appendChild(det);
     }
-    if (isAudioPrompt) {
-      const arrow = document.createElement("span");
-      arrow.className = "kaboom-toast-arrow";
-      arrow.textContent = arrowChar;
-      Object.assign(arrow.style, {
-        fontSize: "16px",
-        fontWeight: "700",
-        marginLeft: "12px",
-        display: "inline-block"
-      });
-      toast.appendChild(arrow);
-    }
-    Object.assign(toast.style, {
+  }
+  function toastStyleFor(theme, isAudioPrompt) {
+    return {
       position: "fixed",
       top: "16px",
       right: isAudioPrompt ? "80px" : "auto",
@@ -1708,7 +1777,29 @@
       gap: "0",
       "--toast-shadow": theme.shadow,
       "--toast-shadow-intense": theme.shadow.replace("0.4)", "0.7)")
-    });
+    };
+  }
+  function showActionToast(text, detail, state = "trying", durationMs = 3e3) {
+    const existing = document.getElementById("kaboom-action-toast");
+    if (existing)
+      existing.remove();
+    injectToastAnimationStyles();
+    const theme = TOAST_THEMES[state] ?? TOAST_THEMES.trying;
+    const isAudioPrompt = isAudioPromptToast(state, detail);
+    const toast = document.createElement("div");
+    toast.id = "kaboom-action-toast";
+    toast.setAttribute?.("data-kaboom-owned", "true");
+    if (isAudioPrompt) {
+      toast.className = "kaboom-toast-pulse";
+    }
+    if (isAudioPrompt) {
+      appendAudioIcon(toast);
+    }
+    appendToastText(toast, text, detail);
+    if (isAudioPrompt) {
+      appendAudioArrow(toast);
+    }
+    Object.assign(toast.style, toastStyleFor(theme, isAudioPrompt));
     const target = document.body || document.documentElement;
     if (!target)
       return;

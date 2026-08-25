@@ -56,6 +56,16 @@ Tests: cold start, tool calls, concurrent clients, stdout purity, persistence, g
 
 **JSON API fields:** ALL JSON fields use `snake_case`. No exceptions. External spec fields (MCP protocol, SARIF) are tagged with `// SPEC:<name>` comments.
 
+**Cyclomatic complexity:** Max 15 per authored function (gocyclo counting: if/for/range/case/comm-clause + `&&`/`||`). Enforced by `make check-complexity` over production Go (`cmd/`, `internal/`) and TS/JS (`src/`, `scripts/`, `packages/`); tests and generated output are excluded — fix the template/generator source instead.
+
+**Function budgets:** params ≤6 (hard) and body length ≤80 lines (ratcheting via `.function-length-baseline{-go,-ts}.json`, only-down; injected/serialized functions are frozen, not exempt). Run `make function-length-baseline-update` after shrinking one.
+
+**TS strictness:** No `@ts-nocheck` and no new explicit `any` in authored `src/` TS (`make check-ts-strictness`; ratchet in `.ts-strictness-baseline.json`).
+
+**Secrets:** Never commit credentials. Pre-commit and `make check-secrets` pattern-scan staged/tracked files; gitleaks (pinned, `make security-check` + CI) scans full git history. Intentional fake-credential fixtures must be listed in `.secrets-allowlist` (and `.gitleaks.toml`) with a reason.
+
+**Coverage & bundles:** Go coverage has an upward-only floor (`.coverage-baseline.json`, `make coverage-baseline-update` to lock in gains). Extension bundle output is capped (250KB/file, 600KB total) by `make check-bundle-size`.
+
 **TypeScript:**
 
 - No dynamic imports in service worker (background/)

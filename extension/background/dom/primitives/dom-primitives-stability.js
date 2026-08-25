@@ -235,36 +235,24 @@ export function domPrimitiveActionDiff(options) {
             }
             return tag;
         }
-        function classifyAndResolve() {
-            observer.disconnect();
-            if (perfObserver) {
+        function collectSelectorMatches(selectors, into) {
+            for (const sel of selectors) {
                 try {
-                    perfObserver.disconnect();
-                }
-                catch {
-                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-                    /* ignore */
-                }
-            }
-            const urlChanged = location.href !== beforeURL;
-            const titleChanged = document.title !== beforeTitle;
-            const overlaysOpened = [];
-            const overlaysClosed = [];
-            const afterOverlays = new Set();
-            for (const oSel of overlaySelectors) {
-                try {
-                    const matches = document.querySelectorAll(oSel);
-                    for (let i = 0; i < matches.length; i++) {
-                        afterOverlays.add(matches[i]);
+                    const found = document.querySelectorAll(sel);
+                    for (let i = 0; i < found.length; i++) {
+                        into.add(found[i]);
                     }
                 }
                 catch {
                     // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
                     // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-                    /* ignore */
+                    /* ignore invalid selectors */
                 }
             }
+        }
+        function collectAfterOverlays() {
+            const afterOverlays = new Set();
+            collectSelectorMatches(overlaySelectors, afterOverlays);
             for (const added of addedNodes) {
                 if (isOverlayElement(added))
                     afterOverlays.add(added);
@@ -282,6 +270,11 @@ export function domPrimitiveActionDiff(options) {
                     /* ignore */
                 }
             }
+            return afterOverlays;
+        }
+        function diffOverlays(afterOverlays) {
+            const overlaysOpened = [];
+            const overlaysClosed = [];
             for (const el of afterOverlays) {
                 if (!beforeOverlays.has(el)) {
                     overlaysOpened.push({
@@ -298,6 +291,28 @@ export function domPrimitiveActionDiff(options) {
                     });
                 }
             }
+            return { opened: overlaysOpened, closed: overlaysClosed };
+        }
+        function collectDescendantTextEntries(added, selectors, entries) {
+            try {
+                for (const sel of selectors) {
+                    const children = added.querySelectorAll(sel);
+                    for (let i = 0; i < children.length; i++) {
+                        const child = children[i];
+                        const text = (child.textContent || '').trim().slice(0, 200);
+                        if (text) {
+                            entries.push({ text, type: classifyToastType(child) });
+                        }
+                    }
+                }
+            }
+            catch {
+                // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+                /* ignore */
+            }
+        }
+        function collectToasts() {
             const toasts = [];
             const toastSelectors = [
                 '[role="alert"]',
@@ -319,25 +334,11 @@ export function domPrimitiveActionDiff(options) {
                         toasts.push({ text, type: classifyToastType(added) });
                     }
                 }
-                try {
-                    for (const tSel of toastSelectors) {
-                        const children = added.querySelectorAll(tSel);
-                        for (let i = 0; i < children.length; i++) {
-                            const child = children[i];
-                            const text = (child.textContent || '').trim().slice(0, 200);
-                            if (text) {
-                                toasts.push({ text, type: classifyToastType(child) });
-                            }
-                        }
-                    }
-                }
-                catch {
-                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-                    /* ignore */
-                }
+                collectDescendantTextEntries(added, toastSelectors, toasts);
             }
-            // Detect form errors
+            return toasts;
+        }
+        function collectFormErrors() {
             const formErrors = [];
             const errorSelectors = [
                 '.error',
@@ -371,7 +372,9 @@ export function domPrimitiveActionDiff(options) {
                     /* ignore */
                 }
             }
-            // Detect loading indicators
+            return formErrors;
+        }
+        function collectLoadingIndicators() {
             const loadingIndicators = [];
             const loadingSelectors = [
                 '.spinner',
@@ -387,6 +390,9 @@ export function domPrimitiveActionDiff(options) {
                     loadingIndicators.push(describeSelector(added));
                 }
             }
+            return loadingIndicators;
+        }
+        function collectTextChanges() {
             const textChanges = [];
             for (const [el, oldText] of textSnapshots) {
                 if (!document.contains(el))
@@ -400,6 +406,33 @@ export function domPrimitiveActionDiff(options) {
                     });
                 }
             }
+            return textChanges;
+        }
+        function classifyAndResolve() {
+            observer.disconnect();
+            if (perfObserver) {
+                try {
+                    perfObserver.disconnect();
+                }
+                catch {
+                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+                    /* ignore */
+                }
+            }
+            const urlChanged = location.href !== beforeURL;
+            const titleChanged = document.title !== beforeTitle;
+            // Detect overlays opened/closed
+            const afterOverlays = collectAfterOverlays();
+            const { opened: overlaysOpened, closed: overlaysClosed } = diffOverlays(afterOverlays);
+            // Detect toasts / notifications
+            const toasts = collectToasts();
+            // Detect form errors
+            const formErrors = collectFormErrors();
+            // Detect loading indicators
+            const loadingIndicators = collectLoadingIndicators();
+            // Detect text changes
+            const textChanges = collectTextChanges();
             resolve({
                 success: true,
                 action: 'action_diff',

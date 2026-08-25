@@ -18,13 +18,21 @@ type Deps struct {
 	MaybeWaitForCommand func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
 }
 
-func queue(d Deps, req mcp.JSONRPCRequest, prefix, queryType string, args json.RawMessage, tabID int, summary string) mcp.JSONRPCResponse {
-	correlationID := toolresp.NewCorrelationID(prefix)
-	query := queries.PendingQuery{Type: queryType, Params: args, TabID: tabID, CorrelationID: correlationID}
+// queueSpec describes one inspection command to queue: the correlation ID
+// prefix, the extension query type, and the summary shown while waiting.
+type queueSpec struct {
+	correlationPrefix string
+	queryType         string
+	summary           string
+}
+
+func queue(d Deps, req mcp.JSONRPCRequest, spec queueSpec, args json.RawMessage, tabID int) mcp.JSONRPCResponse {
+	correlationID := toolresp.NewCorrelationID(spec.correlationPrefix)
+	query := queries.PendingQuery{Type: spec.queryType, Params: args, TabID: tabID, CorrelationID: correlationID}
 	if response, blocked := d.EnqueuePendingQuery(req, query, queries.AsyncCommandTimeout); blocked {
 		return response
 	}
-	return d.MaybeWaitForCommand(req, correlationID, args, summary)
+	return d.MaybeWaitForCommand(req, correlationID, args, spec.summary)
 }
 
 func HandleComputedStyles(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -32,7 +40,7 @@ func HandleComputedStyles(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) 
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrMissingParam, err.Error(), "Add the 'selector' parameter with a CSS selector", mcp.WithParam("selector"))
 	}
-	return queue(d, req, "computed_styles", "computed_styles", args, parsed.TabID, "Computed styles query queued")
+	return queue(d, req, queueSpec{correlationPrefix: "computed_styles", queryType: "computed_styles", summary: "Computed styles query queued"}, args, parsed.TabID)
 }
 
 func HandleFormDiscovery(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -40,7 +48,7 @@ func HandleFormDiscovery(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	if err != nil {
 		return invalidJSON(req, err)
 	}
-	return queue(d, req, "form_discovery", "form_discovery", args, parsed.TabID, "Form discovery queued")
+	return queue(d, req, queueSpec{correlationPrefix: "form_discovery", queryType: "form_discovery", summary: "Form discovery queued"}, args, parsed.TabID)
 }
 
 func HandleFormState(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -48,7 +56,7 @@ func HandleFormState(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	if err != nil {
 		return invalidJSON(req, err)
 	}
-	return queue(d, req, "form_state", "form_state", args, parsed.TabID, "Form state extraction queued")
+	return queue(d, req, queueSpec{correlationPrefix: "form_state", queryType: "form_state", summary: "Form state extraction queued"}, args, parsed.TabID)
 }
 
 func HandleDataTable(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -56,7 +64,7 @@ func HandleDataTable(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	if err != nil {
 		return invalidJSON(req, err)
 	}
-	return queue(d, req, "data_table", "data_table", args, parsed.TabID, "Data table extraction queued")
+	return queue(d, req, queueSpec{correlationPrefix: "data_table", queryType: "data_table", summary: "Data table extraction queued"}, args, parsed.TabID)
 }
 
 func HandleFormValidation(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -70,7 +78,7 @@ func HandleFormValidation(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) 
 	}
 	augmentedArgs, _ := json.Marshal(params)
 	wantSummary, _ := params["summary"].(bool)
-	response := queue(d, req, "form_validation", "form_discovery", augmentedArgs, parsed.TabID, "Form validation queued")
+	response := queue(d, req, queueSpec{correlationPrefix: "form_validation", queryType: "form_discovery", summary: "Form validation queued"}, augmentedArgs, parsed.TabID)
 	if wantSummary {
 		return BuildFormValidationSummary(response)
 	}

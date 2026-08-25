@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-08
+last_reviewed: 2026-08-25
 code_paths:
   - scripts/docs/
   - scripts/maintenance/
@@ -52,8 +52,20 @@ code_paths:
   - internal/tracking/token_tracker.go
   - internal/tracking/stats_endpoint.go
   - cmd/hooks/main.go
-  - scripts/quality/contracts/check-file-length.sh
   - scripts/quality/contracts/check-folder-size.cjs
+  - scripts/contracts/complexity/main.go
+  - scripts/quality/contracts/complexity/check-complexity.mjs
+  - scripts/quality/contracts/file-length/check-file-length.sh
+  - scripts/quality/contracts/ts-strictness/check-ts-strictness.mjs
+  - scripts/quality/contracts/bundle-size/check-bundle-size.cjs
+  - scripts/security/check-secrets.sh
+  - scripts/build/run-go-coverage.sh
+  - .secrets-allowlist
+  - .gitleaks.toml
+  - .function-length-baseline-go.json
+  - .function-length-baseline-ts.json
+  - .ts-strictness-baseline.json
+  - .coverage-baseline.json
   - scripts/docs/generate-feature-navigation.py
   - scripts/docs/generate-feature-navigation.sh
   - scripts/quality/contracts/check-dormant-tests.sh
@@ -79,8 +91,13 @@ test_paths:
   - internal/hook/conventions_test.go
   - internal/tracking/token_tracker_test.go
   - internal/tracking/stats_endpoint_test.go
-  - scripts/quality/contracts/check-file-length.test.mjs
+  - scripts/quality/contracts/file-length/check-file-length.test.mjs
   - scripts/quality/contracts/check-folder-size.test.mjs
+  - scripts/contracts/complexity/main_test.go
+  - scripts/quality/contracts/complexity/check-complexity.test.mjs
+  - scripts/quality/contracts/ts-strictness/check-ts-strictness.test.mjs
+  - scripts/quality/contracts/bundle-size/check-bundle-size.test.mjs
+  - scripts/security/check-secrets.test.sh
   - scripts/contracts/check_go_test_determinism_test.go
   - scripts/contracts/goarchitecture/main_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
@@ -154,6 +171,44 @@ Tests, fixtures, Markdown, shell scripts, schemas, and assets count toward the
 same ten-file ownership limit; only generated/build output and vendored code are
 explicitly exempt. Existing violations are recorded in a downward-only baseline,
 and CI independently regenerates that baseline to reject stale improvements.
+
+`make check-complexity` enforces a cyclomatic complexity budget of 15 per
+authored function over production Go (`cmd/`, `internal/`, gocyclo counting)
+and authored TS/JS (`src/`, `scripts/`, `packages/`, ESLint-style counting with
+nested functions judged separately). Tests and generated output are exempt —
+generated dom-primitives files are covered through their
+`scripts/templates/*.tpl` sources, and wire types through their Go source of
+truth. The Go checker is dependency-free (`go/ast`); the TS checker resolves
+the repo's pinned TypeScript dev dependency for parsing. Both report worst-first
+with file:line and fail the run; waivers are not allowed.
+
+The same checkers enforce two further per-function budgets: at most six
+parameters (hard limit — wider call sites must group into a parameter struct)
+and at most 80 body lines, ratcheting like the folder gate through
+`.function-length-baseline-go.json` / `.function-length-baseline-ts.json` so
+injected/serialized functions that legitimately carry a whole payload are
+frozen at their current size and may only shrink.
+
+`make check-ts-strictness` ratchets TypeScript strictness escapes out of
+authored `src/`: zero `@ts-nocheck` directives and a never-growing explicit
+`any` annotation count (`.ts-strictness-baseline.json`, updated only via
+`make ts-strictness-baseline-update`).
+
+`make check-secrets` pattern-scans tracked files for full credential formats
+(AWS/GitHub/Stripe/Slack/Anthropic keys, private key blocks, and similar) in
+under twenty seconds; the pre-commit hook runs the same scan over exactly the
+staged files. `make security-check` adds pinned gitleaks over the full git
+history (`.gitleaks.toml` extends the default rules). Intentional fake-key
+fixtures are listed with reasons in `.secrets-allowlist` and mirrored in
+`.gitleaks.toml`; a path on those lists may never contain a real credential.
+
+Go coverage floors are enforced by `run-go-coverage.sh` as the maximum of the
+historical minimum and the upward-only ratchet in `.coverage-baseline.json`;
+`GO_COVERAGE_MINIMUM` can only raise the bar, and
+`make coverage-baseline-update` locks in demonstrated improvements.
+`make check-bundle-size` caps every artifact `compile-ts` emits at 250KB per
+file and 600KB total, so extension footprint growth is a reviewable event;
+missing bundle artifacts fail rather than passing as a size win.
 
 Prettier checks authored source and configuration while excluding the three
 minified action-family DOM primitives whose canonical representation is owned

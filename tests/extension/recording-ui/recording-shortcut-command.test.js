@@ -55,8 +55,8 @@ describe('recording shortcut command listener', () => {
     assert.strictEqual(handlers.stopRecording.mock.calls.length, 0)
     assert.ok(/^action-sequence--\d{4}-\d{2}-\d{2}-\d{6}$/.test(calls[0][0]), 'name should be timestamped slug')
     assert.strictEqual(calls[0][1], 15, 'default FPS should be 15')
-    assert.strictEqual(calls[0][4], true, 'shortcut should use popup-style start path')
-    assert.strictEqual(calls[0][5], 17, 'shortcut should target active tab')
+    assert.strictEqual(calls[0][3]?.fromPopup, true, 'shortcut should use popup-style start path')
+    assert.strictEqual(calls[0][3]?.targetTabId, 17, 'shortcut should target active tab')
   })
 
   test('stops recording when active', async () => {

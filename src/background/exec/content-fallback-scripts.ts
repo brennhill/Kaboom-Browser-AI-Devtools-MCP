@@ -2,116 +2,97 @@
  * Purpose: Self-contained extraction fallbacks used when content scripts are unavailable.
  * Why: Keep fallback script implementations centralized and reusable across command handlers.
  * Docs: docs/features/feature/interact-explore/index.md
+ *
+ * Each exported script function is injected via chrome.scripting.executeScript({func}):
+ * Chrome serializes the function alone, so every helper and selector list MUST be
+ * nested inside the function body — module-scope references are lost on injection.
  */
 
-const READABLE_MAIN_SELECTORS = [
-  'main',
-  'article',
-  '[role="main"]',
-  '#main',
-  '.main',
-  '.post-content',
-  '.entry-content',
-  '.article-body',
-  '.article-content',
-  '.story-body',
-  '.article',
-  '.post',
-  '#content',
-  '.content',
-  '.results'
-]
-
-const MARKDOWN_MAIN_SELECTORS = [
-  'main',
-  'article',
-  '[role="main"]',
-  '#main',
-  '.main',
-  '.post-content',
-  '.entry-content',
-  '.article-body',
-  '.article-content'
-]
-
-const PAGE_SUMMARY_MAIN_SELECTORS = [
-  'main',
-  'article',
-  '[role="main"]',
-  '#main',
-  '.main',
-  '.post-content',
-  '.entry-content'
-]
-
-const COMMON_REMOVE_SELECTORS = [
-  'nav',
-  'header',
-  'footer',
-  'aside',
-  'script',
-  'style',
-  'noscript',
-  'svg',
-  '[role="navigation"]',
-  '[role="banner"]',
-  '[role="contentinfo"]',
-  '[aria-hidden="true"]'
-]
-
-const READABLE_EXTRA_REMOVE_SELECTORS = [
-  '.ad',
-  '.ads',
-  '.advertisement',
-  '.social-share',
-  '.comments',
-  '.sidebar',
-  '.related-posts',
-  '.newsletter'
-]
-
-function pickMainElement(mainSelectors: string[], minTextLength: number): Element {
-  const fallback = document.body || document.documentElement
-  for (const selector of mainSelectors) {
-    const el = document.querySelector(selector)
-    if (!el) continue
-    const text = ((el as HTMLElement).innerText || el.textContent || '').trim()
-    if (text.length > minTextLength) {
-      return el
-    }
-  }
-  return fallback
-}
-
-function extractCleanMainText(mainEl: Element, removeSelectors: string[]): string {
-  const clone = mainEl.cloneNode(true) as Element
-  for (const sel of removeSelectors) {
-    for (const child of Array.from(clone.querySelectorAll(sel))) child.remove()
-  }
-  return ((clone as HTMLElement).innerText || clone.textContent || '').replace(/\s+/g, ' ').trim()
-}
-
 export function readableFallbackScript(): Record<string, unknown> {
-  const mainEl = pickMainElement(READABLE_MAIN_SELECTORS, 100)
-  const content = extractCleanMainText(mainEl, [...COMMON_REMOVE_SELECTORS, ...READABLE_EXTRA_REMOVE_SELECTORS])
+  const mainSelectors = [
+    'main',
+    'article',
+    '[role="main"]',
+    '#main',
+    '.main',
+    '.post-content',
+    '.entry-content',
+    '.article-body',
+    '.article-content',
+    '.story-body',
+    '.article',
+    '.post',
+    '#content',
+    '.content',
+    '.results'
+  ]
+  const removeSelectors = [
+    'nav',
+    'header',
+    'footer',
+    'aside',
+    'script',
+    'style',
+    'noscript',
+    'svg',
+    '[role="navigation"]',
+    '[role="banner"]',
+    '[role="contentinfo"]',
+    '[aria-hidden="true"]',
+    '.ad',
+    '.ads',
+    '.advertisement',
+    '.social-share',
+    '.comments',
+    '.sidebar',
+    '.related-posts',
+    '.newsletter'
+  ]
 
-  let byline = ''
-  for (const sel of ['.author', '[rel="author"]', '.byline', '.post-author', 'meta[name="author"]']) {
-    const el = document.querySelector(sel)
-    if (el) {
-      const text = (el.getAttribute('content') || (el as HTMLElement).innerText || '').trim()
-      if (text.length > 0 && text.length < 200) {
-        byline = text
-        break
+  // jscpd:ignore-start -- each fallback script must be self-contained for chrome.scripting
+  // serialization; the shared pickMainElement logic is deliberately duplicated.
+  const pickMainElement = (minTextLength: number): Element => {
+    const fallback = document.body || document.documentElement
+    for (const selector of mainSelectors) {
+      const el = document.querySelector(selector)
+      if (!el) continue
+      const text = ((el as HTMLElement).innerText || el.textContent || '').trim()
+      if (text.length > minTextLength) {
+        return el
       }
     }
+    return fallback
   }
+  // jscpd:ignore-end
+
+  const extractCleanMainText = (): string => {
+    const clone = pickMainElement(100).cloneNode(true) as Element
+    for (const sel of removeSelectors) {
+      for (const child of Array.from(clone.querySelectorAll(sel))) child.remove()
+    }
+    return ((clone as HTMLElement).innerText || clone.textContent || '').replace(/\s+/g, ' ').trim()
+  }
+
+  const readByline = (): string => {
+    for (const sel of ['.author', '[rel="author"]', '.byline', '.post-author', 'meta[name="author"]']) {
+      const el = document.querySelector(sel)
+      if (el) {
+        const text = (el.getAttribute('content') || (el as HTMLElement).innerText || '').trim()
+        if (text.length > 0 && text.length < 200) {
+          return text
+        }
+      }
+    }
+    return ''
+  }
+
+  const content = extractCleanMainText()
 
   return {
     title: document.title || '',
     content,
     excerpt: content.slice(0, 300),
-    byline,
+    byline: readByline(),
     word_count: content.split(/\s+/).filter(Boolean).length,
     url: window.location.href,
     fallback: true
@@ -119,9 +100,54 @@ export function readableFallbackScript(): Record<string, unknown> {
 }
 
 function markdownFallbackScript(): Record<string, unknown> {
+  const mainSelectors = [
+    'main',
+    'article',
+    '[role="main"]',
+    '#main',
+    '.main',
+    '.post-content',
+    '.entry-content',
+    '.article-body',
+    '.article-content'
+  ]
+  const removeSelectors = [
+    'nav',
+    'header',
+    'footer',
+    'aside',
+    'script',
+    'style',
+    'noscript',
+    'svg',
+    '[role="navigation"]',
+    '[role="banner"]',
+    '[role="contentinfo"]',
+    '[aria-hidden="true"]'
+  ]
+
+  // jscpd:ignore-start -- each fallback script must be self-contained for chrome.scripting
+  // serialization; the shared pickMainElement logic is deliberately duplicated.
+  const pickMainElement = (minTextLength: number): Element => {
+    const fallback = document.body || document.documentElement
+    for (const selector of mainSelectors) {
+      const el = document.querySelector(selector)
+      if (!el) continue
+      const text = ((el as HTMLElement).innerText || el.textContent || '').trim()
+      if (text.length > minTextLength) {
+        return el
+      }
+    }
+    return fallback
+  }
+  // jscpd:ignore-end
+
   const MAX_OUTPUT = 200000
-  const mainEl = pickMainElement(MARKDOWN_MAIN_SELECTORS, 100)
-  let markdown = extractCleanMainText(mainEl, COMMON_REMOVE_SELECTORS)
+  const clone = pickMainElement(100).cloneNode(true) as Element
+  for (const sel of removeSelectors) {
+    for (const child of Array.from(clone.querySelectorAll(sel))) child.remove()
+  }
+  let markdown = ((clone as HTMLElement).innerText || clone.textContent || '').replace(/\s+/g, ' ').trim()
   if (markdown.length > MAX_OUTPUT) {
     markdown = markdown.slice(0, MAX_OUTPUT)
   }
@@ -136,43 +162,48 @@ function markdownFallbackScript(): Record<string, unknown> {
 }
 
 function pageSummaryFallbackScript(): Record<string, unknown> {
-  const headings: string[] = []
-  for (const heading of Array.from(document.querySelectorAll('h1, h2, h3'))) {
-    if (headings.length >= 30) break
-    const text = ((heading as HTMLElement).innerText || heading.textContent || '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 200)
-    if (text) headings.push(heading.tagName.toLowerCase() + ': ' + text)
-  }
+  const mainSelectors = ['main', 'article', '[role="main"]', '#main', '.main', '.post-content', '.entry-content']
 
-  const navCandidates = document.querySelectorAll('nav a[href], header a[href], [role="navigation"] a[href]')
-  const navLinks: Array<{ text: string; href: string }> = []
-  const seenNav: Record<string, boolean> = {}
-  for (const link of Array.from(navCandidates)) {
-    if (navLinks.length >= 25) break
-    const linkText = ((link as HTMLElement).innerText || link.textContent || '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 80)
-    let href = link.getAttribute('href') || ''
+  const cleanText = (value: string): string => value.replace(/\s+/g, ' ').trim()
+
+  const normalizeURL = (value: string): string => {
     try {
-      href = new URL(href, window.location.href).href
+      return new URL(value, window.location.href).href
     } catch {
       // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
       // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
-      /* keep as-is */
+      return value
     }
-    if (!href) continue
-    const key = linkText + '|' + href
-    if (seenNav[key]) continue
-    seenNav[key] = true
-    navLinks.push({ text: linkText, href })
   }
 
-  const forms: Array<{ action: string; method: string; fields: string[] }> = []
-  for (const form of Array.from(document.querySelectorAll('form'))) {
-    if (forms.length >= 10) break
+  const collectHeadings = (): string[] => {
+    const headings: string[] = []
+    for (const heading of Array.from(document.querySelectorAll('h1, h2, h3'))) {
+      if (headings.length >= 30) break
+      const text = cleanText((heading as HTMLElement).innerText || heading.textContent || '').slice(0, 200)
+      if (text) headings.push(heading.tagName.toLowerCase() + ': ' + text)
+    }
+    return headings
+  }
+
+  const collectNavLinks = (): Array<{ text: string; href: string }> => {
+    const navCandidates = document.querySelectorAll('nav a[href], header a[href], [role="navigation"] a[href]')
+    const navLinks: Array<{ text: string; href: string }> = []
+    const seenNav: Record<string, boolean> = {}
+    for (const link of Array.from(navCandidates)) {
+      if (navLinks.length >= 25) break
+      const linkText = cleanText((link as HTMLElement).innerText || link.textContent || '').slice(0, 80)
+      const href = normalizeURL(link.getAttribute('href') || '')
+      if (!href) continue
+      const key = linkText + '|' + href
+      if (seenNav[key]) continue
+      seenNav[key] = true
+      navLinks.push({ text: linkText, href })
+    }
+    return navLinks
+  }
+
+  const collectFormFields = (form: Element): string[] => {
     const fields: string[] = []
     const seenFields: Record<string, boolean> = {}
     for (const field of Array.from(form.querySelectorAll('input, select, textarea'))) {
@@ -183,27 +214,85 @@ function pageSummaryFallbackScript(): Record<string, unknown> {
         field.getAttribute('aria-label') ||
         field.getAttribute('type') ||
         field.tagName.toLowerCase()
-      const cleaned = (name || '').replace(/\s+/g, ' ').trim().slice(0, 60)
+      const cleaned = cleanText(name || '').slice(0, 60)
       if (!cleaned || seenFields[cleaned]) continue
       seenFields[cleaned] = true
       fields.push(cleaned)
     }
-    let action = form.getAttribute('action') || window.location.href
-    try {
-      action = new URL(action, window.location.href).href
-    } catch {
-      // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
-      // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
-      /* keep as-is */
-    }
-    forms.push({ action, method: (form.getAttribute('method') || 'GET').toUpperCase(), fields })
+    return fields
   }
 
-  const mainEl = pickMainElement(PAGE_SUMMARY_MAIN_SELECTORS, 120)
-  const mainText = ((mainEl as HTMLElement).innerText || mainEl.textContent || '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 20000)
+  const collectForms = (): Array<{ action: string; method: string; fields: string[] }> => {
+    const forms: Array<{ action: string; method: string; fields: string[] }> = []
+    for (const form of Array.from(document.querySelectorAll('form'))) {
+      if (forms.length >= 10) break
+      forms.push({
+        action: normalizeURL(form.getAttribute('action') || window.location.href),
+        method: (form.getAttribute('method') || 'GET').toUpperCase(),
+        fields: collectFormFields(form)
+      })
+    }
+    return forms
+  }
+
+  // jscpd:ignore-start -- each fallback script must be self-contained for chrome.scripting
+  // serialization; the shared pickMainElement logic is deliberately duplicated.
+  const pickMainElement = (minTextLength: number): Element => {
+    const fallback = document.body || document.documentElement
+    for (const selector of mainSelectors) {
+      const el = document.querySelector(selector)
+      if (!el) continue
+      const text = ((el as HTMLElement).innerText || el.textContent || '').trim()
+      if (text.length > minTextLength) {
+        return el
+      }
+    }
+    return fallback
+  }
+  // jscpd:ignore-end
+
+  const countFormFields = (forms: Array<{ fields: string[] }>): number => {
+    let totalFormFields = 0
+    for (const f of forms) totalFormFields += f.fields.length
+    return totalFormFields
+  }
+
+  const looksLikeArticle = (paragraphCount: number, linkCount: number): boolean =>
+    document.querySelectorAll('article').length > 0 || (paragraphCount >= 8 && linkCount < paragraphCount * 2)
+
+  const looksLikeSearchResults = (linkCount: number): boolean => {
+    const hasSearchInput = !!document.querySelector(
+      'input[type="search"], input[name*="search" i], input[placeholder*="search" i]'
+    )
+    const likelySearchURL = /[?&](q|query|search)=/i.test(window.location.search)
+    return hasSearchInput && (likelySearchURL || linkCount > 10)
+  }
+
+  const classifyPageType = (
+    headings: string[],
+    forms: Array<{ fields: string[] }>,
+    preview: string,
+    interactiveCount: number
+  ): string => {
+    const linkCount = document.querySelectorAll('a[href]').length
+    const paragraphCount = document.querySelectorAll('p').length
+    const hasTable = document.querySelectorAll('table').length > 0
+
+    if (looksLikeSearchResults(linkCount)) return 'search_results'
+    if (forms.length > 0 && countFormFields(forms) >= 3 && paragraphCount < 8) return 'form'
+    if (looksLikeArticle(paragraphCount, linkCount)) return 'article'
+    if (hasTable || (interactiveCount > 25 && headings.length >= 2)) return 'dashboard'
+    if (linkCount > 30 && paragraphCount < 10) return 'link_list'
+    if (preview.length < 80 && interactiveCount > 10) return 'app'
+    return 'generic'
+  }
+
+  const headings = collectHeadings()
+  const navLinks = collectNavLinks()
+  const forms = collectForms()
+
+  const mainEl = pickMainElement(120)
+  const mainText = cleanText((mainEl as HTMLElement).innerText || mainEl.textContent || '').slice(0, 20000)
   const preview = mainText.slice(0, 500)
   const wordCount = mainText ? mainText.split(/\s+/).filter(Boolean).length : 0
 
@@ -211,29 +300,10 @@ function pageSummaryFallbackScript(): Record<string, unknown> {
     'a[href],button,input:not([type="hidden"]),select,textarea,[role="button"],[role="link"]'
   ).length
 
-  const linkCount = document.querySelectorAll('a[href]').length
-  const paragraphCount = document.querySelectorAll('p').length
-  const hasSearchInput = !!document.querySelector(
-    'input[type="search"], input[name*="search" i], input[placeholder*="search" i]'
-  )
-  const likelySearchURL = /[?&](q|query|search)=/i.test(window.location.search)
-  const hasArticle = document.querySelectorAll('article').length > 0
-  const hasTable = document.querySelectorAll('table').length > 0
-  let totalFormFields = 0
-  for (const f of forms) totalFormFields += f.fields.length
-
-  let type = 'generic'
-  if (hasSearchInput && (likelySearchURL || linkCount > 10)) type = 'search_results'
-  else if (forms.length > 0 && totalFormFields >= 3 && paragraphCount < 8) type = 'form'
-  else if (hasArticle || (paragraphCount >= 8 && linkCount < paragraphCount * 2)) type = 'article'
-  else if (hasTable || (interactiveCount > 25 && headings.length >= 2)) type = 'dashboard'
-  else if (linkCount > 30 && paragraphCount < 10) type = 'link_list'
-  else if (preview.length < 80 && interactiveCount > 10) type = 'app'
-
   return {
     url: window.location.href,
     title: document.title || '',
-    type,
+    type: classifyPageType(headings, forms, preview, interactiveCount),
     headings,
     nav_links: navLinks,
     forms,

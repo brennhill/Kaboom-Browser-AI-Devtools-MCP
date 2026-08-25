@@ -94,19 +94,27 @@ func analyzeSpacing(elements []elementView, spec *designSpec) ([]finding, *skipp
 		} else if absFloat(gap.size-rhythm) <= gapDeviationTolerance {
 			continue
 		}
-		findings = append(findings, spacingFinding(gap, axis, expected, provenance, rhythm, rhythmCount, len(positive)))
+		findings = append(findings, spacingFinding(gap, axis, expected, provenance, gapRhythm{modal: rhythm, count: rhythmCount, total: len(positive)}))
 	}
 	return findings, nil
 }
 
+// gapRhythm summarizes the modal-gap evidence a spacing verdict rests on: the
+// modal gap size, how many gaps share it, and how many positive gaps were measured.
+type gapRhythm struct {
+	modal float64
+	count int
+	total int
+}
+
 // spacingFinding builds one gap finding, attributing the cause to whichever
 // rule actually owns the spacing.
-func spacingFinding(gap siblingGap, axis stackAxis, expected, provenance string, rhythm float64, rhythmCount, totalGaps int) finding {
+func spacingFinding(gap siblingGap, axis stackAxis, expected, provenance string, rhythm gapRhythm) finding {
 	confidence := confidenceLow
-	if float64(rhythmCount)/float64(totalGaps) >= strongMajorityRatio {
+	if float64(rhythm.count)/float64(rhythm.total) >= strongMajorityRatio {
 		confidence = confidenceHigh
 	}
-	evidence := fmt.Sprintf("%d of %d %s gaps measure %s", rhythmCount, totalGaps, axis, formatPx(rhythm))
+	evidence := fmt.Sprintf("%d of %d %s gaps measure %s", rhythm.count, rhythm.total, axis, formatPx(rhythm.modal))
 
 	// A flex or grid parent's gap belongs to no child's margin at all. Naming
 	// the child would send an agent editing a rule that does not control this
@@ -116,10 +124,11 @@ func spacingFinding(gap siblingGap, axis stackAxis, expected, provenance string,
 		owner = fmt.Sprintf("the parent's %s gap property", gap.after.ParentDisplay)
 	}
 
-	return newFinding(categorySpacing, "gap-"+axis.String(), gap.after,
-		formatPx(gap.size), expected, provenance, confidence, evidence,
-		fmt.Sprintf("the %s gap before this element is %s where the rhythm is %s; the spacing is controlled by %s",
-			axis, formatPx(gap.size), expected, owner))
+	return newFinding(findingSpec{category: categorySpacing, property: "gap-" + axis.String(), el: gap.after,
+		observed: formatPx(gap.size), expected: expected, provenance: provenance,
+		confidence: confidence, evidence: evidence,
+		message: fmt.Sprintf("the %s gap before this element is %s where the rhythm is %s; the spacing is controlled by %s",
+			axis, formatPx(gap.size), expected, owner)})
 }
 
 // overlapFindings reports negative gaps separately. An overlap is a different
@@ -131,10 +140,10 @@ func overlapFindings(gaps []siblingGap, axis stackAxis) []finding {
 		if gap.size >= -subPixelTolerance {
 			continue
 		}
-		findings = append(findings, newFinding(categorySpacing, "overlap-"+axis.String(), gap.after,
-			formatPx(gap.size), "no overlap", provenanceInferred, confidenceHigh,
-			fmt.Sprintf("overlaps %s by %s", gap.before.Selector, formatPx(-gap.size)),
-			fmt.Sprintf("this element overlaps the previous one by %s along the %s axis", formatPx(-gap.size), axis)))
+		findings = append(findings, newFinding(findingSpec{category: categorySpacing, property: "overlap-" + axis.String(), el: gap.after,
+			observed: formatPx(gap.size), expected: "no overlap", provenance: provenanceInferred, confidence: confidenceHigh,
+			evidence: fmt.Sprintf("overlaps %s by %s", gap.before.Selector, formatPx(-gap.size)),
+			message:  fmt.Sprintf("this element overlaps the previous one by %s along the %s axis", formatPx(-gap.size), axis)}))
 	}
 	return findings
 }

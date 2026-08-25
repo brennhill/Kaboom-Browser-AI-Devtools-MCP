@@ -224,7 +224,7 @@ func (r *Runner) StdioToHTTPFast(endpoint string, state *daemonState, port int) 
 		wg.Add(1)
 		util.SafeGo(func() {
 			defer wg.Done()
-			r.bridgeForwardRequest(client, endpoint, reqCopy, lineCopy, timeout, state, signalResponseSent, framing)
+			r.bridgeForwardRequest(forwardTarget{client: client, endpoint: endpoint, timeout: timeout}, reqCopy, lineCopy, state, signalResponseSent, framing)
 		})
 	}
 
@@ -237,10 +237,11 @@ func bridgeDoHTTP(ctx context.Context, client *http.Client, endpoint string, lin
 	return internbridge.DoHTTP(ctx, client, endpoint, line)
 }
 
-// bridgeForwardRequest forwards a JSON-RPC request to the HTTP server and writes the response.
-// If state is non-nil and the daemon is unreachable, attempts a single respawn + retry.
-// #lizard forgives
-func (r *Runner) bridgeForwardRequest(client *http.Client, endpoint string, req mcp.JSONRPCRequest, line []byte, timeout time.Duration, state *daemonState, signal func(), framing internbridge.StdioFraming) {
+// bridgeSendWithRespawn performs the initial HTTP forward and, on a connection
+// error while state is non-nil, attempts a single respawn + retry with a fresh
+// context (the original context may have little time left after respawn delay).
+// The returned cancel func must be deferred by the caller.
+func bridgeSendWithRespawn(client *http.Client, endpoint string, line []byte, timeout time.Duration, state *daemonState) (*http.Response, error, context.CancelFunc, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	activeCancel := cancel
 	fallbackUsed := false
@@ -248,8 +249,6 @@ func (r *Runner) bridgeForwardRequest(client *http.Client, endpoint string, req 
 	resp, err := bridgeDoHTTP(ctx, client, endpoint, line)
 	if err != nil && isConnectionError(err) && state != nil {
 		fallbackUsed = true
-		// Daemon died — attempt respawn and retry with fresh context
-		// (original context may have little time left after respawn delay).
 		if state.respawnIfNeeded() {
 			cancel()
 			retryCtx, retryCancel := context.WithTimeout(context.Background(), timeout)
@@ -257,23 +256,43 @@ func (r *Runner) bridgeForwardRequest(client *http.Client, endpoint string, req 
 			activeCancel = retryCancel
 		}
 	}
+	return resp, err, activeCancel, fallbackUsed
+}
+
+// sendForwardFailure writes a forwarding failure as a structured tool error for
+// tools/call requests and as a plain JSON-RPC error otherwise.
+func (r *Runner) sendForwardFailure(req mcp.JSONRPCRequest, message string, framing internbridge.StdioFraming, fallbackUsed bool, toolOpts bridgeToolErrorOptions) {
+	if req.Method == "tools/call" {
+		toolOpts.FallbackUsed = fallbackUsed
+		r.sendToolErrorWithOptions(req.ID, message, framing, toolOpts)
+		return
+	}
+	r.sendBridgeError(req.ID, -32603, message, framing)
+}
+
+// forwardTarget names the daemon HTTP endpoint a forwarded request is sent to,
+// bundling the client, URL, and per-request timeout the forwarder needs.
+type forwardTarget struct {
+	client   *http.Client
+	endpoint string
+	timeout  time.Duration
+}
+
+// bridgeForwardRequest forwards a JSON-RPC request to the HTTP server and writes the response.
+// If state is non-nil and the daemon is unreachable, attempts a single respawn + retry.
+func (r *Runner) bridgeForwardRequest(target forwardTarget, req mcp.JSONRPCRequest, line []byte, state *daemonState, signal func(), framing internbridge.StdioFraming) {
+	resp, err, activeCancel, fallbackUsed := bridgeSendWithRespawn(target.client, target.endpoint, line, target.timeout, state)
 	defer activeCancel()
 	if err != nil {
 		telemetry.AppError(incident.CodeBridgeConnectionError)
-		message := "Server connection error: " + err.Error()
-		if req.Method == "tools/call" {
-			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
-				ErrorCode:    "bridge_connection_error",
-				Subsystem:    "bridge_http_forwarder",
-				Reason:       "http_forward_failed",
-				Retryable:    true,
-				RetryAfterMs: 2000,
-				FallbackUsed: fallbackUsed,
-				Detail:       err.Error(),
-			})
-		} else {
-			r.sendBridgeError(req.ID, -32603, message, framing)
-		}
+		r.sendForwardFailure(req, "Server connection error: "+err.Error(), framing, fallbackUsed, bridgeToolErrorOptions{
+			ErrorCode:    "bridge_connection_error",
+			Subsystem:    "bridge_http_forwarder",
+			Reason:       "http_forward_failed",
+			Retryable:    true,
+			RetryAfterMs: 2000,
+			Detail:       err.Error(),
+		})
 		signal()
 		return
 	}
@@ -281,100 +300,70 @@ func (r *Runner) bridgeForwardRequest(client *http.Client, endpoint string, req 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, r.transport.MaxBodySize))
 	_ = resp.Body.Close() //nolint:errcheck // best-effort cleanup
 	if err != nil {
-		message := "Failed to read response: " + err.Error()
-		if req.Method == "tools/call" {
-			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
-				ErrorCode:    "bridge_response_read_error",
-				Subsystem:    "bridge_http_forwarder",
-				Reason:       "response_read_failed",
-				Retryable:    true,
-				RetryAfterMs: 1000,
-				FallbackUsed: fallbackUsed,
-				Detail:       err.Error(),
-			})
-		} else {
-			r.sendBridgeError(req.ID, -32603, message, framing)
-		}
+		r.sendForwardFailure(req, "Failed to read response: "+err.Error(), framing, fallbackUsed, bridgeToolErrorOptions{
+			ErrorCode:    "bridge_response_read_error",
+			Subsystem:    "bridge_http_forwarder",
+			Reason:       "response_read_failed",
+			Retryable:    true,
+			RetryAfterMs: 1000,
+			Detail:       err.Error(),
+		})
 		signal()
 		return
 	}
 
 	if resp.StatusCode == 204 {
 		if req.HasID() {
-			message := "Server returned no content for request with an id"
-			if req.Method == "tools/call" {
-				r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
-					ErrorCode:    "bridge_unexpected_no_content",
-					Subsystem:    "bridge_http_forwarder",
-					Reason:       "unexpected_no_content",
-					Retryable:    true,
-					RetryAfterMs: 500,
-					FallbackUsed: fallbackUsed,
-				})
-			} else {
-				r.sendBridgeError(req.ID, -32603, message, framing)
-			}
+			r.sendForwardFailure(req, "Server returned no content for request with an id", framing, fallbackUsed, bridgeToolErrorOptions{
+				ErrorCode:    "bridge_unexpected_no_content",
+				Subsystem:    "bridge_http_forwarder",
+				Reason:       "unexpected_no_content",
+				Retryable:    true,
+				RetryAfterMs: 500,
+			})
 		}
 		signal()
 		return
 	}
 
 	if resp.StatusCode != 200 {
-		message := fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body))
-		if req.Method == "tools/call" {
-			retryable := resp.StatusCode >= 500
-			retryAfter := 0
-			if retryable {
-				retryAfter = 1000
-			}
-			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
-				ErrorCode:    "bridge_http_status_error",
-				Subsystem:    "bridge_http_forwarder",
-				Reason:       "http_status_error",
-				Retryable:    retryable,
-				RetryAfterMs: retryAfter,
-				FallbackUsed: fallbackUsed,
-				Detail:       fmt.Sprintf("status_code=%d", resp.StatusCode),
-			})
-		} else {
-			r.sendBridgeError(req.ID, -32603, message, framing)
+		retryable := resp.StatusCode >= 500
+		retryAfter := 0
+		if retryable {
+			retryAfter = 1000
 		}
+		r.sendForwardFailure(req, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body)), framing, fallbackUsed, bridgeToolErrorOptions{
+			ErrorCode:    "bridge_http_status_error",
+			Subsystem:    "bridge_http_forwarder",
+			Reason:       "http_status_error",
+			Retryable:    retryable,
+			RetryAfterMs: retryAfter,
+			Detail:       fmt.Sprintf("status_code=%d", resp.StatusCode),
+		})
 		signal()
 		return
 	}
 
 	if req.HasID() && len(bytes.TrimSpace(body)) == 0 {
-		message := "Server returned an empty body for request with an id"
-		if req.Method == "tools/call" {
-			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
-				ErrorCode:    "bridge_empty_response",
-				Subsystem:    "bridge_http_forwarder",
-				Reason:       "empty_response",
-				Retryable:    true,
-				RetryAfterMs: 500,
-				FallbackUsed: fallbackUsed,
-			})
-		} else {
-			r.sendBridgeError(req.ID, -32603, message, framing)
-		}
+		r.sendForwardFailure(req, "Server returned an empty body for request with an id", framing, fallbackUsed, bridgeToolErrorOptions{
+			ErrorCode:    "bridge_empty_response",
+			Subsystem:    "bridge_http_forwarder",
+			Reason:       "empty_response",
+			Retryable:    true,
+			RetryAfterMs: 500,
+		})
 		signal()
 		return
 	}
 
 	if req.HasID() && !json.Valid(body) {
-		message := "Server returned invalid JSON response"
-		if req.Method == "tools/call" {
-			r.sendToolErrorWithOptions(req.ID, message, framing, bridgeToolErrorOptions{
-				ErrorCode:    "bridge_invalid_response",
-				Subsystem:    "bridge_http_forwarder",
-				Reason:       "invalid_json_response",
-				Retryable:    true,
-				RetryAfterMs: 1000,
-				FallbackUsed: fallbackUsed,
-			})
-		} else {
-			r.sendBridgeError(req.ID, -32603, message, framing)
-		}
+		r.sendForwardFailure(req, "Server returned invalid JSON response", framing, fallbackUsed, bridgeToolErrorOptions{
+			ErrorCode:    "bridge_invalid_response",
+			Subsystem:    "bridge_http_forwarder",
+			Reason:       "invalid_json_response",
+			Retryable:    true,
+			RetryAfterMs: 1000,
+		})
 		signal()
 		return
 	}

@@ -32,20 +32,36 @@ func EnrichCommandResponseData(result json.RawMessage, responseData map[string]a
 		return "", false
 	}
 
-	// Surface extension enrichment fields to top-level for easier LLM consumption.
-	// Non-tab fields are always surfaced.
+	surfaceEnrichedFields(extResult, responseData)
+	surfaceTabContext(extResult, responseData)
+
+	cid := ""
+	if len(corrID) > 0 {
+		cid = corrID[0]
+	}
+	surfaceReturnValue(extResult, responseData, cid)
+
+	return embeddedFailure(extResult)
+}
+
+// surfaceEnrichedFields promotes the extension's enrichment fields to the
+// top-level response for easier LLM consumption. Non-tab fields are always surfaced.
+func surfaceEnrichedFields(extResult, responseData map[string]any) {
 	for _, key := range enrichedFieldKeys {
 		if v, ok := extResult[key]; ok {
 			responseData[key] = v
 		}
 	}
+}
 
-	// Deduplicate tab context: only include resolved_*/final_url/title when URLs changed.
+// surfaceTabContext deduplicates tab context: effective_* fields are always
+// surfaced, while resolved_*/final_url/title only appear when the URL changed
+// (navigation/redirect).
+func surfaceTabContext(extResult, responseData map[string]any) {
 	resolvedURL, _ := extResult["resolved_url"].(string)
 	effectiveURL, _ := extResult["effective_url"].(string)
 	effectiveTitle, _ := extResult["effective_title"].(string)
 
-	// Always surface effective_* when present.
 	if effectiveURL != "" {
 		responseData["effective_url"] = effectiveURL
 	}
@@ -56,7 +72,6 @@ func EnrichCommandResponseData(result json.RawMessage, responseData map[string]a
 		responseData["effective_title"] = effectiveTitle
 	}
 
-	// Only surface resolved_*/final_url/title when URL changed (navigation/redirect).
 	if resolvedURL != "" && effectiveURL != "" && resolvedURL != effectiveURL {
 		responseData["resolved_tab_id"] = extResult["resolved_tab_id"]
 		responseData["resolved_url"] = resolvedURL
@@ -70,20 +85,22 @@ func EnrichCommandResponseData(result json.RawMessage, responseData map[string]a
 		responseData["navigation_detected"] = true
 		responseData["navigation_note"] = fmt.Sprintf("Page navigated from %s to %s", resolvedURL, effectiveURL)
 	}
+}
 
-	// Surface execute_js return values prominently so agents don't have to
-	// dig into result.result. The field is named "return_value" to distinguish
-	// the script's return value from the overall command result envelope.
-	// Only applies to execute_js commands (corrID prefix "exec_") to avoid
-	// leaking internal result fields from other action types.
-	cid := ""
-	if len(corrID) > 0 {
-		cid = corrID[0]
-	}
+// surfaceReturnValue promotes an execute_js return value prominently so agents
+// don't have to dig into result.result. The field is named "return_value" to
+// distinguish the script's return value from the overall command result envelope.
+// Only applies to execute_js commands (corrID prefix "exec_") to avoid leaking
+// internal result fields from other action types.
+func surfaceReturnValue(extResult, responseData map[string]any, cid string) {
 	if v, ok := extResult["result"]; ok && strings.HasPrefix(cid, "exec_") {
 		responseData["return_value"] = v
 	}
+}
 
+// embeddedFailure reports whether the extension result carries an embedded
+// failure and extracts its human-readable message.
+func embeddedFailure(extResult map[string]any) (string, bool) {
 	if success, ok := extResult["success"].(bool); ok && !success {
 		msg := embeddedCommandError(extResult)
 		if msg == "" {
@@ -93,8 +110,7 @@ func EnrichCommandResponseData(result json.RawMessage, responseData map[string]a
 	}
 
 	if _, ok := extResult["error"]; ok {
-		msg := embeddedCommandError(extResult)
-		if msg != "" {
+		if msg := embeddedCommandError(extResult); msg != "" {
 			return msg, true
 		}
 	}

@@ -95,7 +95,7 @@ describe('startRecording when already recording', () => {
 
     // We need to simulate a successful start first. To do this, we trigger
     // startRecording and have the offscreen doc confirm via message listener.
-    const startPromise = startRecording('first-rec', 15, 'q1', '', true)
+    const startPromise = startRecording('first-rec', 15, '', { queryId: 'q1', fromPopup: true })
     // Give the async chain a tick to register the message listener
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
@@ -103,7 +103,7 @@ describe('startRecording when already recording', () => {
 
     if (firstResult.status === 'recording') {
       // Now try to start another recording
-      const secondResult = await startRecording('second-rec', 15, 'q2', '', true)
+      const secondResult = await startRecording('second-rec', 15, '', { queryId: 'q2', fromPopup: true })
       assert.strictEqual(secondResult.status, 'error')
       assert.ok(secondResult.error.includes('Already recording'))
 
@@ -123,7 +123,7 @@ describe('startRecording when already recording', () => {
 describe('startRecording with no active tab', () => {
   test('should return error when no tab is found', async () => {
     globalThis.chrome = createRecordingChromeMock({ tabsQueryResult: [] })
-    const result = await startRecording('test-rec', 15, 'q1', '', true)
+    const result = await startRecording('test-rec', 15, '', { queryId: 'q1', fromPopup: true })
     assert.strictEqual(result.status, 'error')
     assert.ok(result.error.includes('No active tab'))
     assert.strictEqual(isRecording(), false)
@@ -131,7 +131,7 @@ describe('startRecording with no active tab', () => {
 
   test('should return error when tab has no id', async () => {
     globalThis.chrome = createRecordingChromeMock({ tabsQueryResult: [{ url: 'http://example.com' }] })
-    const result = await startRecording('test-rec', 15, 'q1', '', true)
+    const result = await startRecording('test-rec', 15, '', { queryId: 'q1', fromPopup: true })
     assert.strictEqual(result.status, 'error')
     assert.ok(result.error.includes('No active tab'))
     assert.strictEqual(isRecording(), false)
@@ -166,7 +166,7 @@ describe('MCP-initiated recording flow', () => {
       })
     )
 
-    const startPromise = startRecording('mcp-target-tab', 15, 'query-mcp-1', '', false, 77)
+    const startPromise = startRecording('mcp-target-tab', 15, '', { queryId: 'query-mcp-1', targetTabId: 77 })
 
     await waitForPendingRecordingIntent()
     simulateRecordingGestureGranted()
@@ -204,7 +204,12 @@ describe('MCP-initiated recording flow', () => {
     const generation = await import('../../../extension/background/runtime-state/connection-generation.js')
     generation.setConnectionGeneration(1)
 
-    const startPromise = startRecording('stale-mcp-recording', 15, 'query-stale', '', true, 42, 1)
+    const startPromise = startRecording('stale-mcp-recording', 15, '', {
+      queryId: 'query-stale',
+      fromPopup: true,
+      targetTabId: 42,
+      connectionGeneration: 1
+    })
     await new Promise((resolve) => setTimeout(resolve, 50))
 
     generation.setConnectionGeneration(2)
@@ -218,7 +223,7 @@ describe('MCP-initiated recording flow', () => {
 
   test('rejects an offscreen stop acknowledgement from a superseded daemon generation', async () => {
     globalThis.chrome = createRecordingChromeMock()
-    const startPromise = startRecording('stale-stop-recording', 15, '', '', true)
+    const startPromise = startRecording('stale-stop-recording', 15, '', { fromPopup: true })
     await new Promise((resolve) => setTimeout(resolve, 50))
     simulateOffscreenStarted(true)
     assert.strictEqual((await startPromise).status, 'recording')
@@ -249,7 +254,7 @@ describe('MCP-initiated recording flow', () => {
       })
     )
 
-    const startPromise = startRecording('mcp-denied', 15, 'query-mcp-denied', '', false, 77)
+    const startPromise = startRecording('mcp-denied', 15, '', { queryId: 'query-mcp-denied', targetTabId: 77 })
 
     await waitForPendingRecordingIntent()
     simulateRecordingGestureDenied()
@@ -273,7 +278,7 @@ describe('FPS Clamping', () => {
 
   test('should clamp fps below 5 to 5', async () => {
     globalThis.chrome = createRecordingChromeMock()
-    const startPromise = startRecording('test-fps', 1, '', '', true)
+    const startPromise = startRecording('test-fps', 1, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     const result = await startPromise
@@ -297,7 +302,7 @@ describe('FPS Clamping', () => {
 
   test('should clamp fps above 60 to 60', async () => {
     globalThis.chrome = createRecordingChromeMock()
-    const startPromise = startRecording('test-fps', 120, '', '', true)
+    const startPromise = startRecording('test-fps', 120, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     const result = await startPromise
@@ -319,7 +324,7 @@ describe('FPS Clamping', () => {
 
   test('should accept fps within valid range', async () => {
     globalThis.chrome = createRecordingChromeMock()
-    const startPromise = startRecording('test-fps', 30, '', '', true)
+    const startPromise = startRecording('test-fps', 30, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     const result = await startPromise
@@ -347,7 +352,7 @@ describe('FPS Clamping', () => {
 describe('startRecording with empty stream', () => {
   test('should return error when stream ID is empty', async () => {
     globalThis.chrome = createRecordingChromeMock({ tabCaptureStreamId: '' })
-    const result = await startRecording('test-rec', 15, 'q1', '', true)
+    const result = await startRecording('test-rec', 15, '', { queryId: 'q1', fromPopup: true })
     assert.strictEqual(result.status, 'error')
     assert.ok(result.error.includes('getMediaStreamId returned empty'))
     assert.strictEqual(isRecording(), false)
@@ -363,7 +368,7 @@ describe('startRecording with tabCapture error', () => {
     globalThis.chrome = createRecordingChromeMock({
       tabCaptureError: 'Permission denied for tab capture'
     })
-    const result = await startRecording('test-rec', 15, 'q1', '', true)
+    const result = await startRecording('test-rec', 15, '', { queryId: 'q1', fromPopup: true })
     assert.strictEqual(result.status, 'error')
     assert.ok(result.error.includes('Permission denied') || result.error.includes('RECORD_START'))
     assert.strictEqual(isRecording(), false)
@@ -381,7 +386,7 @@ describe('startRecording with offscreen failure', () => {
 
   test('should return error when offscreen document rejects', async () => {
     globalThis.chrome = createRecordingChromeMock()
-    const startPromise = startRecording('test-rec', 15, 'q1', '', true)
+    const startPromise = startRecording('test-rec', 15, '', { queryId: 'q1', fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(false, 'MediaRecorder not supported')
     const result = await startPromise

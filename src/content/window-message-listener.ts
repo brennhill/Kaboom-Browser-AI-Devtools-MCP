@@ -53,40 +53,53 @@ const RESPONSE_HANDLERS: Record<string, ResponseResolver> = {
   kaboom_dom_query_response: (id, result) => resolveDomRequest(id as number, result as DomQueryResult)
 }
 
+function handlePageResponse(
+  data: PageMessageEventData,
+  requestId: number | string | undefined,
+  result: unknown,
+  handler: ResponseResolver
+): void {
+  if (data._nonce !== getPageNonce()) return
+  if (requestId !== undefined) handler(requestId, result)
+}
+
+function forwardTelemetryMessage(messageType: string | undefined, payload: unknown): void {
+  if (!messageType || !(messageType in MESSAGE_MAP) || !payload || typeof payload !== 'object') return
+  const mappedType = MESSAGE_MAP[messageType]
+  if (!mappedType) return
+  const rejection = validatePageTelemetry(messageType, payload)
+  if (rejection) {
+    reportTelemetryRejection(rejection)
+    return
+  }
+  safeSendMessage({
+    type: mappedType,
+    payload,
+    tabId: getCurrentTabId()
+  } as BackgroundMessageFromContent)
+}
+
+function onWindowMessage(event: MessageEvent<PageMessageEventData>): void {
+  if (event.source !== window || event.origin !== window.location.origin) return
+
+  const { type: messageType, requestId, result, payload } = event.data || {}
+
+  const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : undefined
+  if (responseHandler) {
+    handlePageResponse(event.data, requestId, result, responseHandler)
+    return
+  }
+
+  // Tab isolation filter: only forward captured data from the tracked tab.
+  // Response messages (highlight, execute JS, a11y) are NOT filtered because
+  // they are responses to explicit commands from the background script.
+  if (!getIsTrackedTab()) return
+
+  if (event.data._nonce !== getPageNonce()) return
+
+  forwardTelemetryMessage(messageType, payload)
+}
+
 export function initWindowMessageListener(): void {
-  window.addEventListener('message', (event: MessageEvent<PageMessageEventData>) => {
-    if (event.source !== window || event.origin !== window.location.origin) return
-
-    const { type: messageType, requestId, result, payload } = event.data || {}
-
-    const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : undefined
-    if (responseHandler) {
-      if (event.data._nonce !== getPageNonce()) return
-      if (requestId !== undefined) responseHandler(requestId, result)
-      return
-    }
-
-    // Tab isolation filter: only forward captured data from the tracked tab.
-    // Response messages (highlight, execute JS, a11y) are NOT filtered because
-    // they are responses to explicit commands from the background script.
-    if (!getIsTrackedTab()) return
-
-    if (event.data._nonce !== getPageNonce()) return
-
-    if (messageType && messageType in MESSAGE_MAP && payload && typeof payload === 'object') {
-      const mappedType = MESSAGE_MAP[messageType]
-      if (mappedType) {
-        const rejection = validatePageTelemetry(messageType, payload)
-        if (rejection) {
-          reportTelemetryRejection(rejection)
-          return
-        }
-        safeSendMessage({
-          type: mappedType,
-          payload,
-          tabId: getCurrentTabId()
-        } as BackgroundMessageFromContent)
-      }
-    }
-  })
+  window.addEventListener('message', onWindowMessage)
 }

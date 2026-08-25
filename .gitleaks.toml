@@ -1,0 +1,55 @@
+# .gitleaks.toml — deep secrets scan configuration.
+#
+# Extends the default gitleaks rule set and allows the same fixture paths as
+# scripts/security/check-secrets.sh (.secrets-allowlist), plus build output and
+# vendored assets that only ever contain fake keys or false-positive entropy.
+# A path listed here must contain NO real credentials — fixtures only.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Intentional credential-shaped fixtures, docs examples, vendored assets, and build output"
+paths = [
+  # AI assistant session state (never shipped, never source)
+  '''^\.claude/''',
+  '''^\.agents/''',
+  '''^\.codex/''',
+  # Redaction / scanner / sanitizer self-test fixtures (fake keys by design)
+  '''internal/redaction/.*_test\.go$''',
+  '''internal/security/scan/.*_test\.go$''',
+  '''internal/issuereport/.*_test\.go$''',
+  '''internal/audit/.*_test\.go$''',
+  '''internal/capture/.*_test\.go$''',
+  '''cmd/browser-agent/internal/httpguard/.*_test\.go$''',
+  '''cmd/browser-agent/internal/terminal/wstransport/.*_test\.go$''',
+  # Test fixtures and harnesses with fake credentials
+  '''^tests/extension/network-http/''',
+  '''^tests/extension/network-bod(y|ies)[^/]*\.test\.js$''',
+  '''^scripts/tests/release/''',
+  '''^scripts/security/check-secrets\.test\.sh$''',
+  # Historical fixture paths deleted before the kaboom rename; entries exist
+  # only so full-history scans stay green on commits that still contain them.
+  '''^cmd/dev-console/''',
+  '''^cmd/browser-agent/(auth|version_check)_test\.go$''',
+  '''^cmd/browser-agent/internal/terminal/(ws_integration_test|handlers_replay_deadline_test)\.go$''',
+  '''^internal/security/.*_test\.go$''',
+  '''^extension-tests/''',
+  '''^cookwithgasoline\.com/''',
+  '''^getstrum\.dev/''',
+  '''^docs/codacy-analysis-.*\.md$''',
+  '''^docs/features/feature/gasoline-ci/''',
+  # Docs and docs-site pages showing example keys as documentation
+  '''^docs/features/feature/(redaction-patterns|environment-manipulation|kaboom-ci|test-generation)/''',
+  '''^docs/audits/historical/''',
+  '''^docs/setup/codacy-integration\.md$''',
+  '''^gokaboom\.dev/src/content/docs/guides/security-auditing/''',
+  # Build output (site dist, astro cache, next fixtures, bundled/vendored assets)
+  '''^gokaboom\.dev/dist/''',
+  '''^gokaboom\.dev/\.astro/''',
+  '''^scripts/smoke-tests/framework/framework-fixtures/''',
+  '''cmd/browser-agent/internal/terminal/assets/terminal_assets/''',
+  '''^dist/''',
+  '''^coverage/''',
+  '''^node_modules/''',
+]

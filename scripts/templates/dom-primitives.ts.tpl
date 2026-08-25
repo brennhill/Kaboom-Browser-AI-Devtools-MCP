@@ -43,25 +43,13 @@ export function domPrimitive(
 
   // @include _dom-ranking.tpl
 
-  function resolveActionTarget(): {
-    element?: Element
-    error?: DOMResult
-    match_count?: number
-    match_strategy?: string
-    scope_selector_used?: string
-    ranked_candidates?: { element_id: string; tag: string; text_preview?: string; score: number }[]
-    ambiguous_matches?: { total_count: number; warning: string; candidates: { tag: string; element_id: string; text_preview?: string }[] }
-  } {
-    const requestedScope = (options.scope_selector || '').trim()
-    if (requestedScope && !scopeRoot) {
-      return {
-        error: domError('scope_not_found', `No scope element matches selector: ${requestedScope}`)
-      }
-    }
-    const activeScope = scopeRoot || document
-    const scopeSelectorUsed = requestedScope || undefined
-    const scopeRectUsed = scopeRect || undefined
+  const requestedScope = (options.scope_selector || '').trim()
+  const activeScope = scopeRoot || document
+  const scopeSelectorUsed = requestedScope || undefined
+  const scopeRectUsed = scopeRect || undefined
 
+  // Intent actions and selector-less key_press bypass selector resolution entirely.
+  function resolveIntentShortcut(): { element?: Element; match_count?: number; match_strategy?: string } | null {
     // #502: wait_for_text and wait_for_absent target document.body — no selector resolution needed.
     // Other former intent actions (open_composer, submit_active_composer, confirm_top_dialog,
     // dismiss_top_overlay, auto_dismiss_overlays, wait_for_stable, action_diff) are now
@@ -69,7 +57,6 @@ export function domPrimitive(
     if (action === 'wait_for_text' || action === 'wait_for_absent') {
       return { element: document.body, match_count: 1, match_strategy: action }
     }
-
     // key_press without selector: dispatch on activeElement or body (#321)
     if (action === 'key_press' && !selector && !options.element_id) {
       const target = document.activeElement || document.body
@@ -81,128 +68,170 @@ export function domPrimitive(
         }
       }
     }
+    return null
+  }
 
-    const requestedElementID = (options.element_id || '').trim()
-    if (requestedElementID) {
-      const resolvedByID = resolveElementByID(requestedElementID)
-      if (!resolvedByID) {
-        return {
-          error: domError(
-            'stale_element_id',
-            `Element handle is stale or unknown: ${requestedElementID}. Call list_interactive again.`
-          )
-        }
+  function resolveElementIDTarget(requestedElementID: string, requestedScope: string, scopeSelectorUsed?: string): {
+    element?: Element
+    error?: DOMResult
+    match_count?: number
+    match_strategy?: string
+    scope_selector_used?: string
+  } {
+    const resolvedByID = resolveElementByID(requestedElementID)
+    if (!resolvedByID) {
+      return {
+        error: domError(
+          'stale_element_id',
+          `Element handle is stale or unknown: ${requestedElementID}. Call list_interactive again.`
+        )
       }
-      if (activeScope !== document && typeof (activeScope as Element).contains === 'function') {
-        const contains = (activeScope as Element).contains(resolvedByID)
-        if (!contains) {
-          return {
-            error: domError(
-              'element_id_scope_mismatch',
-              `Element handle does not belong to scope: ${requestedScope || '<none>'}`
-            )
-          }
-        }
-      }
-      if (scopeRect && !intersectsScopeRect(resolvedByID)) {
+    }
+    if (activeScope !== document && typeof (activeScope as Element).contains === 'function') {
+      const contains = (activeScope as Element).contains(resolvedByID)
+      if (!contains) {
         return {
           error: domError(
             'element_id_scope_mismatch',
-            `Element handle does not intersect scope_rect (${scopeRect.x}, ${scopeRect.y}, ${scopeRect.width}, ${scopeRect.height}).`
+            `Element handle does not belong to scope: ${requestedScope || '<none>'}`
           )
         }
       }
+    }
+    if (scopeRect && !intersectsScopeRect(resolvedByID)) {
       return {
-        element: resolvedByID,
-        match_count: 1,
-        match_strategy: 'element_id',
-        scope_selector_used: scopeSelectorUsed
+        error: domError(
+          'element_id_scope_mismatch',
+          `Element handle does not intersect scope_rect (${scopeRect.x}, ${scopeRect.y}, ${scopeRect.width}, ${scopeRect.height}).`
+        )
       }
     }
+    return {
+      element: resolvedByID,
+      match_count: 1,
+      match_strategy: 'element_id',
+      scope_selector_used: scopeSelectorUsed
+    }
+  }
 
-    // #385: nth parameter for explicit disambiguation — works for all selector-based actions
+  // #385: nth parameter for explicit disambiguation — works for all selector-based actions
+  function resolveNthTarget(): {
+    element?: Element
+    error?: DOMResult
+    match_count?: number
+    match_strategy?: string
+    scope_selector_used?: string
+  } | null {
     const nthParam = options.nth
-    if (nthParam !== undefined && nthParam !== null) {
-      const nth = Number(nthParam)
-      if (!Number.isInteger(nth)) {
-        return { error: domError('invalid_nth', `nth must be an integer, got: ${nthParam}`) }
-      }
-      const allMatches = resolveElements(selector, activeScope)
-      const uniqueAll = uniqueElements(allMatches)
-      const rectFiltered = filterByScopeRect(uniqueAll)
-      const visibleFiltered = rectFiltered.filter(isActionableVisible)
-      const candidates = visibleFiltered.length > 0 ? visibleFiltered : rectFiltered
-      if (candidates.length === 0) {
-        return { error: domError('element_not_found', `No element matches selector: ${selector}`) }
-      }
-      const resolvedIndex = nth < 0 ? candidates.length + nth : nth
-      if (resolvedIndex < 0 || resolvedIndex >= candidates.length) {
-        return {
-          error: domError(
-            'nth_out_of_range',
-            `nth=${nth} is out of range — selector matched ${candidates.length} element(s). Use nth 0..${candidates.length - 1} or -1..-${candidates.length}.`
-          )
-        }
-      }
+    if (nthParam === undefined || nthParam === null) return null
+    const nth = Number(nthParam)
+    if (!Number.isInteger(nth)) {
+      return { error: domError('invalid_nth', `nth must be an integer, got: ${nthParam}`) }
+    }
+    const allMatches = resolveElements(selector, activeScope)
+    const uniqueAll = uniqueElements(allMatches)
+    const rectFiltered = filterByScopeRect(uniqueAll)
+    const visibleFiltered = rectFiltered.filter(isActionableVisible)
+    const candidates = visibleFiltered.length > 0 ? visibleFiltered : rectFiltered
+    if (candidates.length === 0) {
+      return { error: domError('element_not_found', `No element matches selector: ${selector}`) }
+    }
+    const resolvedIndex = nth < 0 ? candidates.length + nth : nth
+    if (resolvedIndex < 0 || resolvedIndex >= candidates.length) {
       return {
-        element: candidates[resolvedIndex]!,
-        match_count: candidates.length,
-        match_strategy: 'nth_param',
-        scope_selector_used: scopeSelectorUsed
+        error: domError(
+          'nth_out_of_range',
+          `nth=${nth} is out of range — selector matched ${candidates.length} element(s). Use nth 0..${candidates.length - 1} or -1..-${candidates.length}.`
+        )
       }
     }
+    return {
+      element: candidates[resolvedIndex]!,
+      match_count: candidates.length,
+      match_strategy: 'nth_param',
+      scope_selector_used: scopeSelectorUsed
+    }
+  }
 
-    const ambiguitySensitiveActions = new Set([
-      'click', 'type', 'select', 'check', 'set_attribute',
-      'paste', 'key_press', 'focus', 'scroll_to', 'hover'
-    ])
+  function selectorStrategy(): string {
+    if (selector.includes(':nth-match(')) return 'nth_match_selector'
+    if (scopeRectUsed) return 'rect_selector'
+    if (requestedScope) return 'scoped_selector'
+    return 'selector'
+  }
 
-    if (!ambiguitySensitiveActions.has(action)) {
-      // #316: For text= selectors, always check total match count to add disambiguation warning
-      const allMatches = selector.startsWith('text=') ? resolveElements(selector, activeScope) : null
-      const ambiguousInfo = (() => {
-        if (!allMatches || allMatches.length <= 1) return undefined
-        const uniqueAll = uniqueElements(allMatches)
-        if (uniqueAll.length <= 1) return undefined
-        return {
-          total_count: uniqueAll.length,
-          warning: `Selector "${selector}" matched ${uniqueAll.length} elements. First match was used. Use nth, :nth-match(N), or scope_selector to disambiguate.`,
-          candidates: uniqueAll.slice(0, 5).map((c) => ({
-            tag: c.tagName.toLowerCase(),
-            element_id: getOrCreateElementID(c),
-            text_preview: ((c as HTMLElement).textContent || '').trim().slice(0, 60) || undefined
-          }))
-        }
-      })()
+  function buildAmbiguousInfo(): {
+    total_count: number
+    warning: string
+    candidates: { tag: string; element_id: string; text_preview?: string }[]
+  } | undefined {
+    // #316: For text= selectors, always check total match count to add disambiguation warning
+    const allMatches = selector.startsWith('text=') ? resolveElements(selector, activeScope) : null
+    if (!allMatches || allMatches.length <= 1) return undefined
+    const uniqueAll = uniqueElements(allMatches)
+    if (uniqueAll.length <= 1) return undefined
+    return {
+      total_count: uniqueAll.length,
+      warning: `Selector "${selector}" matched ${uniqueAll.length} elements. First match was used. Use nth, :nth-match(N), or scope_selector to disambiguate.`,
+      candidates: uniqueAll.slice(0, 5).map((c) => ({
+        tag: c.tagName.toLowerCase(),
+        element_id: getOrCreateElementID(c),
+        text_preview: ((c as HTMLElement).textContent || '').trim().slice(0, 60) || undefined
+      }))
+    }
+  }
 
-      const direct = resolveElement(selector, activeScope)
-      if (direct && intersectsScopeRect(direct)) {
-        return {
-          element: direct,
-          match_count: 1,
-          match_strategy: selector.includes(':nth-match(')
-            ? 'nth_match_selector'
-            : (scopeRect ? 'rect_selector' : (requestedScope ? 'scoped_selector' : 'selector')),
-          scope_selector_used: scopeSelectorUsed,
-          ...(ambiguousInfo ? { ambiguous_matches: ambiguousInfo } : {})
-        }
-      }
-      const scopedMatches = filterByScopeRect(uniqueElements(resolveElements(selector, activeScope)))
-      const found = (() => {
-        if (scopedMatches.length === 0) return null
-        const visible = scopedMatches.filter(isActionableVisible)
-        return visible[0] || scopedMatches[0] || null
-      })()
-      if (!found) return { error: domError('element_not_found', `No element matches selector: ${selector}`) }
+  function resolveUnambiguousTarget(): {
+    element?: Element
+    error?: DOMResult
+    match_count?: number
+    match_strategy?: string
+    scope_selector_used?: string
+    ambiguous_matches?: { total_count: number; warning: string; candidates: { tag: string; element_id: string; text_preview?: string }[] }
+  } {
+    const ambiguousInfo = buildAmbiguousInfo()
+
+    const direct = resolveElement(selector, activeScope)
+    if (direct && intersectsScopeRect(direct)) {
       return {
-        element: found,
+        element: direct,
         match_count: 1,
-        match_strategy: scopeRect ? 'rect_selector' : (requestedScope ? 'scoped_selector' : 'selector'),
+        match_strategy: selectorStrategy(),
         scope_selector_used: scopeSelectorUsed,
         ...(ambiguousInfo ? { ambiguous_matches: ambiguousInfo } : {})
       }
     }
+    const scopedMatches = filterByScopeRect(uniqueElements(resolveElements(selector, activeScope)))
+    const found = (() => {
+      if (scopedMatches.length === 0) return null
+      const visible = scopedMatches.filter(isActionableVisible)
+      return visible[0] || scopedMatches[0] || null
+    })()
+    if (!found) return { error: domError('element_not_found', `No element matches selector: ${selector}`) }
+    return {
+      element: found,
+      match_count: 1,
+      match_strategy: scopeRect ? 'rect_selector' : (requestedScope ? 'scoped_selector' : 'selector'),
+      scope_selector_used: scopeSelectorUsed,
+      ...(ambiguousInfo ? { ambiguous_matches: ambiguousInfo } : {})
+    }
+  }
 
+  function viableCandidates(uniqueMatches: Element[]): Element[] {
+    const rectScopedMatches = filterByScopeRect(uniqueMatches)
+    if (rectScopedMatches.length === 0) return rectScopedMatches
+    const visible = rectScopedMatches.filter(isActionableVisible)
+    return visible.length > 0 ? visible : rectScopedMatches
+  }
+
+  function resolveRankedTarget(): {
+    element?: Element
+    error?: DOMResult
+    match_count?: number
+    match_strategy?: string
+    scope_selector_used?: string
+    ranked_candidates?: { element_id: string; tag: string; text_preview?: string; score: number }[]
+  } {
     const rawMatches = resolveElements(selector, activeScope)
     const uniqueMatches: Element[] = []
     const seen = new Set<Element>()
@@ -212,13 +241,7 @@ export function domPrimitive(
       uniqueMatches.push(match)
     }
 
-    const rectScopedMatches = filterByScopeRect(uniqueMatches)
-
-    const viableMatches = (() => {
-      if (rectScopedMatches.length === 0) return rectScopedMatches
-      const visible = rectScopedMatches.filter(isActionableVisible)
-      return visible.length > 0 ? visible : rectScopedMatches
-    })()
+    const viableMatches = viableCandidates(uniqueMatches)
 
     if (viableMatches.length > 1) {
       const ranking = rankAmbiguousCandidates(viableMatches, action, selector)
@@ -258,18 +281,50 @@ export function domPrimitive(
 
     const found = viableMatches[0] || null
     if (!found) return { error: domError('element_not_found', `No element matches selector: ${selector}`) }
-    const strategy = (() => {
-      if (selector.includes(':nth-match(')) return 'nth_match_selector'
-      if (scopeRectUsed) return 'rect_selector'
-      if (requestedScope) return 'scoped_selector'
-      return 'selector'
-    })()
     return {
       element: found,
       match_count: 1,
-      match_strategy: strategy,
+      match_strategy: selectorStrategy(),
       scope_selector_used: scopeSelectorUsed
     }
+  }
+
+  function resolveActionTarget(): {
+    element?: Element
+    error?: DOMResult
+    match_count?: number
+    match_strategy?: string
+    scope_selector_used?: string
+    ranked_candidates?: { element_id: string; tag: string; text_preview?: string; score: number }[]
+    ambiguous_matches?: { total_count: number; warning: string; candidates: { tag: string; element_id: string; text_preview?: string }[] }
+  } {
+    const requestedScope = (options.scope_selector || '').trim()
+    if (requestedScope && !scopeRoot) {
+      return {
+        error: domError('scope_not_found', `No scope element matches selector: ${requestedScope}`)
+      }
+    }
+
+    const intentShortcut = resolveIntentShortcut()
+    if (intentShortcut) return intentShortcut
+
+    const requestedElementID = (options.element_id || '').trim()
+    if (requestedElementID) {
+      return resolveElementIDTarget(requestedElementID, requestedScope, scopeSelectorUsed)
+    }
+
+    const nthResolved = resolveNthTarget()
+    if (nthResolved) return nthResolved
+
+    const ambiguitySensitiveActions = new Set([
+      'click', 'type', 'select', 'check', 'set_attribute',
+      'paste', 'key_press', 'focus', 'scroll_to', 'hover'
+    ])
+
+    if (!ambiguitySensitiveActions.has(action)) {
+      return resolveUnambiguousTarget()
+    }
+    return resolveRankedTarget()
   }
 
   const resolved = resolveActionTarget()

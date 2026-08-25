@@ -92,7 +92,7 @@ describe('recording listeners popup target selection', () => {
     assert.strictEqual(deps.startRecording.mock.calls.length, 1)
 
     const startCall = deps.startRecording.mock.calls[0].arguments
-    assert.strictEqual(startCall[5], 99, 'Expected tracked tab ID as targetTabId')
+    assert.strictEqual(startCall[3]?.targetTabId, 99, 'Expected tracked tab ID as targetTabId')
     assert.ok(String(startCall[0]).includes('tracked-example-com'), 'Expected slug derived from tracked tab URL')
   })
 

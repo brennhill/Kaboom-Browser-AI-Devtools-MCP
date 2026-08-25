@@ -94,6 +94,47 @@ export function truncateWsMessage(message) {
 // =============================================================================
 // CONNECTION TRACKER
 // =============================================================================
+function parseSchemaKeys(data) {
+    try {
+        const parsed = JSON.parse(data);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+            return null;
+        return Object.keys(parsed)
+            .sort()
+            .join(',');
+    }
+    catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+        // Not JSON, no schema
+        return null;
+    }
+}
+function recordSchemaSample(tracker, data) {
+    const keyStr = parseSchemaKeys(data);
+    if (keyStr === null)
+        return;
+    tracker._schemaKeys.push(keyStr);
+    // Track variants
+    tracker._schemaVariants.set(keyStr, (tracker._schemaVariants.get(keyStr) || 0) + 1);
+    // Check consistency after 2+ messages
+    if (tracker._schemaKeys.length >= 2) {
+        const first = tracker._schemaKeys[0];
+        tracker._schemaConsistent = tracker._schemaKeys.every((k) => k === first);
+    }
+    if (tracker._schemaKeys.length >= 5) {
+        tracker._schemaDetected = true;
+    }
+}
+function recordSchemaVariant(tracker, data) {
+    const keyStr = parseSchemaKeys(data);
+    if (keyStr === null)
+        return;
+    // Only add new variants if under cap; always increment existing
+    if (tracker._schemaVariants.has(keyStr) || tracker._schemaVariants.size < 50) {
+        tracker._schemaVariants.set(keyStr, (tracker._schemaVariants.get(keyStr) || 0) + 1);
+    }
+}
 /**
  * Create a connection tracker for adaptive sampling and schema detection
  */
@@ -199,50 +240,15 @@ export function createConnectionTracker(id, url) {
          * Enrich a sampled message after the application callback has returned.
          */
         recordSampledMessage(direction, data) {
+            if (direction !== 'incoming' || !data || typeof data !== 'string')
+                return;
             // Schema detection from first 5 sampled incoming JSON messages
-            if (direction === 'incoming' && data && typeof data === 'string' && this._schemaKeys.length < 5) {
-                try {
-                    const parsed = JSON.parse(data);
-                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                        const keys = Object.keys(parsed).sort();
-                        const keyStr = keys.join(',');
-                        this._schemaKeys.push(keyStr);
-                        // Track variants
-                        this._schemaVariants.set(keyStr, (this._schemaVariants.get(keyStr) || 0) + 1);
-                        // Check consistency after 2+ messages
-                        if (this._schemaKeys.length >= 2) {
-                            const first = this._schemaKeys[0];
-                            this._schemaConsistent = this._schemaKeys.every((k) => k === first);
-                        }
-                        if (this._schemaKeys.length >= 5) {
-                            this._schemaDetected = true;
-                        }
-                    }
-                }
-                catch {
-                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-                    // Not JSON, no schema
-                }
+            if (this._schemaKeys.length < 5) {
+                recordSchemaSample(this, data);
             }
             // Track variants for messages beyond the first 5 (cap at 50 to bound memory)
-            if (direction === 'incoming' && data && typeof data === 'string' && this._schemaDetected) {
-                try {
-                    const parsed = JSON.parse(data);
-                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                        const keys = Object.keys(parsed).sort();
-                        const keyStr = keys.join(',');
-                        // Only add new variants if under cap; always increment existing
-                        if (this._schemaVariants.has(keyStr) || this._schemaVariants.size < 50) {
-                            this._schemaVariants.set(keyStr, (this._schemaVariants.get(keyStr) || 0) + 1);
-                        }
-                    }
-                }
-                catch {
-                    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-                    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-                    // Not JSON
-                }
+            if (this._schemaDetected) {
+                recordSchemaVariant(this, data);
             }
         },
         /**

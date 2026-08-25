@@ -137,34 +137,24 @@ export class PerformanceTraceController {
         }
         return this.active;
     }
-    onEvent(source, method, params) {
-        const active = this.active;
-        if (!active || source.tabId !== active.tabId)
-            return;
-        if (method === 'Page.frameNavigated') {
-            const frame = params?.frame;
-            if (frame && frame.parentId === undefined) {
-                if (typeof frame.url === 'string')
-                    active.metadata.url = frame.url;
-                if (typeof frame.loaderId === 'string' && frame.loaderId.length > 0)
-                    active.metadata.navigation_id = frame.loaderId;
-                active.navigation?.resolve();
-                active.navigation = undefined;
-            }
-            return;
+    handleFrameNavigated(active, params) {
+        const frame = params?.frame;
+        if (frame && frame.parentId === undefined) {
+            if (typeof frame.url === 'string')
+                active.metadata.url = frame.url;
+            if (typeof frame.loaderId === 'string' && frame.loaderId.length > 0)
+                active.metadata.navigation_id = frame.loaderId;
+            active.navigation?.resolve();
+            active.navigation = undefined;
         }
-        if (method === 'Tracing.tracingComplete') {
-            if (params?.dataLossOccurred === true) {
-                active.failure = new Error('Chrome lost trace data before the CPU flamechart completed');
-            }
-            active.completion?.resolve();
-            return;
+    }
+    handleTracingComplete(active, params) {
+        if (params?.dataLossOccurred === true) {
+            active.failure = new Error('Chrome lost trace data before the CPU flamechart completed');
         }
-        if (method !== 'Tracing.dataCollected')
-            return;
-        const events = params?.value;
-        if (!Array.isArray(events) || events.length === 0)
-            return;
+        active.completion?.resolve();
+    }
+    uploadTraceEvents(active, events) {
         try {
             for (const batch of boundedEventBatches(events)) {
                 const request = {
@@ -183,6 +173,25 @@ export class PerformanceTraceController {
         catch (error) {
             active.failure = new Error(errorMessage(error, 'performance trace event could not be serialized'));
         }
+    }
+    onEvent(source, method, params) {
+        const active = this.active;
+        if (!active || source.tabId !== active.tabId)
+            return;
+        if (method === 'Page.frameNavigated') {
+            this.handleFrameNavigated(active, params);
+            return;
+        }
+        if (method === 'Tracing.tracingComplete') {
+            this.handleTracingComplete(active, params);
+            return;
+        }
+        if (method !== 'Tracing.dataCollected')
+            return;
+        const events = params?.value;
+        if (!Array.isArray(events) || events.length === 0)
+            return;
+        this.uploadTraceEvents(active, events);
     }
     onDetach(source, reason) {
         const active = this.active;

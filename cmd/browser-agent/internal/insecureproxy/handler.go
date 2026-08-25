@@ -88,29 +88,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target := strings.TrimSpace(r.URL.Query().Get("target"))
-	if target == "" {
-		h.respond(w, http.StatusBadRequest, map[string]string{"error": "Missing target query parameter"})
+	targetURL, ok := h.parseTargetURL(w, r)
+	if !ok {
 		return
 	}
-	targetURL, err := url.Parse(target)
-	if err != nil || targetURL.Host == "" || (targetURL.Scheme != "http" && targetURL.Scheme != "https") {
-		h.respond(w, http.StatusBadRequest, map[string]string{"error": "Invalid target URL"})
-		return
-	}
-
-	// #nosec G704 -- targetURL is restricted to HTTP(S), and the client's
-	// DNS-pinning transport rejects every private, loopback, and reserved address.
-	upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodGet, targetURL.String(), nil)
+	upstreamReq, err := buildUpstreamRequest(r, targetURL)
 	if err != nil {
 		h.respond(w, http.StatusBadRequest, map[string]string{"error": "Invalid target URL"})
 		return
-	}
-	if accept := r.Header.Get("Accept"); accept != "" {
-		upstreamReq.Header.Set("Accept", accept)
-	}
-	if ua := r.Header.Get("User-Agent"); ua != "" {
-		upstreamReq.Header.Set("User-Agent", ua)
 	}
 
 	// Use pooled SSRF-safe client that pins DNS resolution at the dial layer,
@@ -120,11 +105,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// and dials the resolved public IP directly to prevent DNS rebinding.
 	upstreamResp, err := h.client.Do(upstreamReq)
 	if err != nil {
-		if strings.Contains(err.Error(), "ssrf_blocked") {
-			h.respond(w, http.StatusForbidden, map[string]string{"error": "Target URL resolves to private/internal network address"})
-			return
-		}
-		h.respond(w, http.StatusBadGateway, map[string]string{"error": "Failed to fetch target URL"})
+		respondUpstreamFetchError(h.respond, w, err)
 		return
 	}
 	defer upstreamResp.Body.Close() //nolint:errcheck
@@ -134,15 +115,63 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	responseBody, err := stageResponseBody(upstreamResp.Body, h.responseLimit)
 	if err != nil {
-		message := "Failed to read target response"
-		if errors.Is(err, errResponseTooLarge) {
-			message = "Target response exceeds proxy size limit"
-		}
-		h.respond(w, http.StatusBadGateway, map[string]string{"error": message})
+		respondStageError(h.respond, w, err)
 		return
 	}
 
-	for key, values := range upstreamResp.Header {
+	writeProxiedHeaders(w, upstreamResp.Header, mode, productionParity, rewrites)
+	w.WriteHeader(upstreamResp.StatusCode)
+	_, _ = w.Write(responseBody)
+}
+
+func (h *Handler) parseTargetURL(w http.ResponseWriter, r *http.Request) (*url.URL, bool) {
+	target := strings.TrimSpace(r.URL.Query().Get("target"))
+	if target == "" {
+		h.respond(w, http.StatusBadRequest, map[string]string{"error": "Missing target query parameter"})
+		return nil, false
+	}
+	targetURL, err := url.Parse(target)
+	if err != nil || targetURL.Host == "" || (targetURL.Scheme != "http" && targetURL.Scheme != "https") {
+		h.respond(w, http.StatusBadRequest, map[string]string{"error": "Invalid target URL"})
+		return nil, false
+	}
+	return targetURL, true
+}
+
+func buildUpstreamRequest(r *http.Request, targetURL *url.URL) (*http.Request, error) {
+	// #nosec G704 -- targetURL is restricted to HTTP(S), and the client's
+	// DNS-pinning transport rejects every private, loopback, and reserved address.
+	upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodGet, targetURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if accept := r.Header.Get("Accept"); accept != "" {
+		upstreamReq.Header.Set("Accept", accept)
+	}
+	if ua := r.Header.Get("User-Agent"); ua != "" {
+		upstreamReq.Header.Set("User-Agent", ua)
+	}
+	return upstreamReq, nil
+}
+
+func respondUpstreamFetchError(respond JSONResponder, w http.ResponseWriter, err error) {
+	if strings.Contains(err.Error(), "ssrf_blocked") {
+		respond(w, http.StatusForbidden, map[string]string{"error": "Target URL resolves to private/internal network address"})
+		return
+	}
+	respond(w, http.StatusBadGateway, map[string]string{"error": "Failed to fetch target URL"})
+}
+
+func respondStageError(respond JSONResponder, w http.ResponseWriter, err error) {
+	message := "Failed to read target response"
+	if errors.Is(err, errResponseTooLarge) {
+		message = "Target response exceeds proxy size limit"
+	}
+	respond(w, http.StatusBadGateway, map[string]string{"error": message})
+}
+
+func writeProxiedHeaders(w http.ResponseWriter, upstream http.Header, mode string, productionParity bool, rewrites []string) {
+	for key, values := range upstream {
 		if insecureProxyStripHeaders[strings.ToLower(key)] {
 			continue
 		}
@@ -158,6 +187,4 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if productionParity {
 		w.Header().Set("X-Kaboom-Production-Parity", "true")
 	}
-	w.WriteHeader(upstreamResp.StatusCode)
-	_, _ = w.Write(responseBody)
 }

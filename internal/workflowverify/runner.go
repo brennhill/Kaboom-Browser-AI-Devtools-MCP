@@ -200,22 +200,38 @@ func validateWorkflow(workflow Workflow, executor Executor) error {
 		return fmt.Errorf("workflow requires preconditions, steps, and cleanup")
 	}
 	seen := make(map[string]bool)
-	for _, invariant := range workflow.Preconditions {
+	if err := validateInvariants(workflow.Preconditions, seen); err != nil {
+		return err
+	}
+	if err := validateSteps(workflow.Steps, seen); err != nil {
+		return err
+	}
+	return validateCleanupSteps(workflow.Cleanup)
+}
+
+func validateInvariants(invariants []Invariant, seen map[string]bool) error {
+	for _, invariant := range invariants {
 		if err := validateInvariant(invariant, seen); err != nil {
 			return err
 		}
 	}
-	for _, step := range workflow.Steps {
+	return nil
+}
+
+func validateSteps(steps []Step, seen map[string]bool) error {
+	for _, step := range steps {
 		if strings.TrimSpace(step.ID) == "" || strings.TrimSpace(step.Description) == "" || len(step.Invariants) == 0 {
 			return fmt.Errorf("every step requires step_id, description, and invariants")
 		}
-		for _, invariant := range step.Invariants {
-			if err := validateInvariant(invariant, seen); err != nil {
-				return err
-			}
+		if err := validateInvariants(step.Invariants, seen); err != nil {
+			return err
 		}
 	}
-	for _, step := range workflow.Cleanup {
+	return nil
+}
+
+func validateCleanupSteps(steps []CleanupStep) error {
+	for _, step := range steps {
 		if strings.TrimSpace(step.ID) == "" {
 			return fmt.Errorf("every cleanup step requires cleanup_id")
 		}

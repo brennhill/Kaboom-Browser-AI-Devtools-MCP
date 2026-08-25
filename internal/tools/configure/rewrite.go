@@ -59,20 +59,71 @@ func maybeFlattenSingleNoiseRule(rawMap map[string]any) {
 	rawMap["rules"] = []any{rule}
 }
 
-func buildFlatNoiseRule(rawMap map[string]any) (map[string]any, bool) {
+type noiseMatchCriteria struct {
+	messageRegex string
+	sourceRegex  string
+	urlRegex     string
+	method       string
+	level        string
+	statusMin    any
+	hasStatusMin bool
+	statusMax    any
+	hasStatusMax bool
+}
+
+func flatNoiseCriteria(rawMap map[string]any) noiseMatchCriteria {
 	messageRegex := stringOrEmpty(rawMap["message_regex"])
 	if messageRegex == "" {
 		messageRegex = stringOrEmpty(rawMap["pattern"])
 	}
-	sourceRegex := stringOrEmpty(rawMap["source_regex"])
-	urlRegex := stringOrEmpty(rawMap["url_regex"])
-	method := stringOrEmpty(rawMap["method"])
-	level := stringOrEmpty(rawMap["level"])
-
 	statusMin, hasStatusMin := rawMap["status_min"]
 	statusMax, hasStatusMax := rawMap["status_max"]
+	return noiseMatchCriteria{
+		messageRegex: messageRegex,
+		sourceRegex:  stringOrEmpty(rawMap["source_regex"]),
+		urlRegex:     stringOrEmpty(rawMap["url_regex"]),
+		method:       stringOrEmpty(rawMap["method"]),
+		level:        stringOrEmpty(rawMap["level"]),
+		statusMin:    statusMin,
+		hasStatusMin: hasStatusMin,
+		statusMax:    statusMax,
+		hasStatusMax: hasStatusMax,
+	}
+}
 
-	if messageRegex == "" && sourceRegex == "" && urlRegex == "" && method == "" && level == "" && !hasStatusMin && !hasStatusMax {
+func (c noiseMatchCriteria) empty() bool {
+	return c.messageRegex == "" && c.sourceRegex == "" && c.urlRegex == "" && c.method == "" && c.level == "" && !c.hasStatusMin && !c.hasStatusMax
+}
+
+func (c noiseMatchCriteria) matchSpec() map[string]any {
+	spec := map[string]any{}
+	if c.messageRegex != "" {
+		spec["message_regex"] = c.messageRegex
+	}
+	if c.sourceRegex != "" {
+		spec["source_regex"] = c.sourceRegex
+	}
+	if c.urlRegex != "" {
+		spec["url_regex"] = c.urlRegex
+	}
+	if c.method != "" {
+		spec["method"] = c.method
+	}
+	if c.level != "" {
+		spec["level"] = c.level
+	}
+	if c.hasStatusMin {
+		spec["status_min"] = c.statusMin
+	}
+	if c.hasStatusMax {
+		spec["status_max"] = c.statusMax
+	}
+	return spec
+}
+
+func buildFlatNoiseRule(rawMap map[string]any) (map[string]any, bool) {
+	criteria := flatNoiseCriteria(rawMap)
+	if criteria.empty() {
 		return nil, false
 	}
 
@@ -81,32 +132,9 @@ func buildFlatNoiseRule(rawMap map[string]any) (map[string]any, bool) {
 		category = "console"
 	}
 
-	matchSpec := map[string]any{}
-	if messageRegex != "" {
-		matchSpec["message_regex"] = messageRegex
-	}
-	if sourceRegex != "" {
-		matchSpec["source_regex"] = sourceRegex
-	}
-	if urlRegex != "" {
-		matchSpec["url_regex"] = urlRegex
-	}
-	if method != "" {
-		matchSpec["method"] = method
-	}
-	if level != "" {
-		matchSpec["level"] = level
-	}
-	if hasStatusMin {
-		matchSpec["status_min"] = statusMin
-	}
-	if hasStatusMax {
-		matchSpec["status_max"] = statusMax
-	}
-
 	rule := map[string]any{
 		"category":   category,
-		"match_spec": matchSpec,
+		"match_spec": criteria.matchSpec(),
 	}
 	if classification := stringOrEmpty(rawMap["classification"]); classification != "" {
 		rule["classification"] = classification

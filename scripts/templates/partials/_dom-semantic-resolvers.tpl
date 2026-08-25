@@ -2,6 +2,32 @@
   // Purpose: Text, label, aria-label, and CSS selector resolution with nth-match support.
   // Why: Separated from _dom-selectors.tpl to keep each partial under 500 LOC.
 
+  // #449: Filter interactive child candidates with visibility/actionability checks
+  // and exclude hidden inputs to avoid selecting non-actionable elements.
+  function closestInteractiveTarget(parent: Element): Element {
+    const interactive = parent.closest('a, button, [role="button"], [role="link"], label, summary')
+    if (interactive) return interactive
+    if (typeof parent.querySelectorAll === 'function') {
+      const childCandidates = parent.querySelectorAll('a[href], button, input:not([type="hidden"]), select, textarea, [role="button"], [role="link"]')
+      for (let ci = 0; ci < childCandidates.length; ci++) {
+        const child = childCandidates[ci]!
+        if (isActionableVisible(child)) return child
+      }
+    }
+    return parent
+  }
+
+  function walkShadowScopes(root: ParentNode, visit: (shadow: ShadowRoot) => void): void {
+    const children = 'children' in root
+      ? (root as Element).children
+      : (root as Document).body?.children || (root as Document).documentElement?.children
+    if (!children) return
+    for (let i = 0; i < children.length; i++) {
+      const shadow = getShadowRoot(children[i]!)
+      if (shadow) visit(shadow)
+    }
+  }
+
   function resolveByTextAll(searchText: string, scope: ParentNode = document): Element[] {
     const results: Element[] = []
     const seen = new Set<Element>()
@@ -13,18 +39,7 @@
         if (node.textContent && node.textContent.trim().includes(searchText)) {
           const parent = node.parentElement
           if (!parent) continue
-          const interactive = parent.closest('a, button, [role="button"], [role="link"], label, summary')
-          // #449: Filter interactive child candidates with visibility/actionability checks
-          // and exclude hidden inputs to avoid selecting non-actionable elements.
-          let interactiveChild: Element | null = null
-          if (!interactive && typeof parent.querySelectorAll === 'function') {
-            const childCandidates = parent.querySelectorAll('a[href], button, input:not([type="hidden"]), select, textarea, [role="button"], [role="link"]')
-            for (let ci = 0; ci < childCandidates.length; ci++) {
-              const child = childCandidates[ci]!
-              if (isActionableVisible(child)) { interactiveChild = child; break }
-            }
-          }
-          const target = interactive || interactiveChild || parent
+          const target = closestInteractiveTarget(parent)
           if (isKaboomOwnedElement(target) || !isVisible(target)) continue
           if (!seen.has(target)) {
             seen.add(target)
@@ -32,16 +47,7 @@
           }
         }
       }
-      const children = 'children' in root
-        ? (root as Element).children
-        : (root as Document).body?.children || (root as Document).documentElement?.children
-      if (children) {
-        for (let i = 0; i < children.length; i++) {
-          const child = children[i]!
-          const shadow = getShadowRoot(child)
-          if (shadow) walkScope(shadow)
-        }
-      }
+      walkShadowScopes(root, walkScope)
     }
 
     walkScope(scope)
@@ -95,37 +101,17 @@
         if (node.textContent && node.textContent.trim().includes(searchText)) {
           const parent = node.parentElement
           if (!parent) continue
-          const interactive = parent.closest('a, button, [role="button"], [role="link"], label, summary')
-          // #449: Filter interactive child candidates with visibility/actionability checks
-          // and exclude hidden inputs to avoid selecting non-actionable elements.
-          let interactiveChild: Element | null = null
-          if (!interactive && typeof parent.querySelectorAll === 'function') {
-            const childCandidates = parent.querySelectorAll('a[href], button, input:not([type="hidden"]), select, textarea, [role="button"], [role="link"]')
-            for (let ci = 0; ci < childCandidates.length; ci++) {
-              const child = childCandidates[ci]!
-              if (isActionableVisible(child)) { interactiveChild = child; break }
-            }
-          }
-          const target = interactive || interactiveChild || parent
+          const target = closestInteractiveTarget(parent)
           if (isKaboomOwnedElement(target)) continue
           if (!fallback) fallback = target
           if (isVisible(target)) return target
         }
       }
-      const children = 'children' in root
-        ? (root as Element).children
-        : (root as Document).body?.children || (root as Document).documentElement?.children
-      if (children) {
-        for (let i = 0; i < children.length; i++) {
-          const child = children[i]!
-          const shadow = getShadowRoot(child)
-          if (shadow) {
-            const result = walkScope(shadow)
-            if (result) return result
-          }
-        }
-      }
-      return null
+      let shadowResult: Element | null = null
+      walkShadowScopes(root, (shadow) => {
+        if (!shadowResult) shadowResult = walkScope(shadow)
+      })
+      return shadowResult
     }
 
     return walkScope(scope) || fallback
@@ -253,21 +239,23 @@
     return parts.join(' >>> ')
   }
 
+  function classifyInput(el: Element): string {
+    const inputType = (el as HTMLInputElement).type || 'text'
+    if (inputType === 'submit' || inputType === 'button' || inputType === 'reset') return 'button'
+    if (inputType === 'checkbox' || inputType === 'radio') return 'checkbox'
+    return 'input'
+  }
+
   function classifyElement(el: Element): string {
     const tag = el.tagName.toLowerCase()
     if (tag === 'a') return 'link'
     if (tag === 'button' || el.getAttribute('role') === 'button') return 'button'
-    if (tag === 'input') {
-      const inputType = (el as HTMLInputElement).type || 'text'
-      if (inputType === 'submit' || inputType === 'button' || inputType === 'reset') return 'button'
-      if (inputType === 'checkbox' || inputType === 'radio') return 'checkbox'
-      return 'input'
-    }
+    if (tag === 'input') return classifyInput(el)
     if (tag === 'select') return 'select'
     if (tag === 'textarea') return 'textarea'
-    if (el.getAttribute('role') === 'link') return 'link'
-    if (el.getAttribute('role') === 'tab') return 'tab'
-    if (el.getAttribute('role') === 'menuitem') return 'menuitem'
+    const roleClass: Record<string, string> = { link: 'link', tab: 'tab', menuitem: 'menuitem' }
+    const byRole = roleClass[el.getAttribute('role') || '']
+    if (byRole) return byRole
     if (el.getAttribute('contenteditable') === 'true') return 'textarea'
     return 'interactive'
   }

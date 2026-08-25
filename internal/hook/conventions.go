@@ -423,12 +423,27 @@ func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
 	}
 
 	key := projectRoot + "\x00" + ext
+	if conventions, ok := cachedConventions(key, projectRoot, ext); ok {
+		return conventions
+	}
+
+	exts := extensionFamily(ext)
+	noise := noiseSetForExt(ext)
+	callSite := callSiteForExt(ext)
+
+	conventions := rankConventions(discoverPatternFiles(projectRoot, exts, noise, callSite))
+
+	rememberConventions(key, conventions)
+	persistConventions(projectRoot, ext, conventions)
+
+	return conventions
+}
+
+func cachedConventions(key, projectRoot, ext string) ([]DiscoveredConvention, bool) {
 	discoveryCache.mu.RLock()
-	if entry, ok := discoveryCache.entries[key]; ok {
-		if time.Since(entry.timestamp) < discoveryCacheTTL {
-			discoveryCache.mu.RUnlock()
-			return entry.conventions
-		}
+	if entry, ok := discoveryCache.entries[key]; ok && time.Since(entry.timestamp) < discoveryCacheTTL {
+		discoveryCache.mu.RUnlock()
+		return entry.conventions, true
 	}
 	discoveryCache.mu.RUnlock()
 
@@ -437,13 +452,12 @@ func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
 	// The project-scoped file is what actually spares the next edit the walk.
 	if conventions, ok := loadPersistedConventions(projectRoot, ext); ok {
 		rememberConventions(key, conventions)
-		return conventions
+		return conventions, true
 	}
+	return nil, false
+}
 
-	exts := extensionFamily(ext)
-	noise := noiseSetForExt(ext)
-	callSite := callSiteForExt(ext)
-
+func discoverPatternFiles(projectRoot string, exts []string, noise map[string]bool, callSite *regexp.Regexp) map[string]map[string]bool {
 	// Map: pattern -> set of files it appears in.
 	patternFiles := make(map[string]map[string]bool)
 	filesScanned := 0
@@ -467,23 +481,29 @@ func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
 		}
 
 		relPath, _ := filepath.Rel(projectRoot, path)
-		content := string(data)
-		seen := make(map[string]bool)
-
-		for _, m := range callSite.FindAllString(content, -1) {
-			if seen[m] || noise[m] {
-				continue
-			}
-			seen[m] = true
-			if patternFiles[m] == nil {
-				patternFiles[m] = make(map[string]bool)
-			}
-			patternFiles[m][relPath] = true
-		}
+		recordFilePatterns(patternFiles, string(data), relPath, noise, callSite)
 
 		return nil
 	})
 
+	return patternFiles
+}
+
+func recordFilePatterns(patternFiles map[string]map[string]bool, content, relPath string, noise map[string]bool, callSite *regexp.Regexp) {
+	seen := make(map[string]bool)
+	for _, m := range callSite.FindAllString(content, -1) {
+		if seen[m] || noise[m] {
+			continue
+		}
+		seen[m] = true
+		if patternFiles[m] == nil {
+			patternFiles[m] = make(map[string]bool)
+		}
+		patternFiles[m][relPath] = true
+	}
+}
+
+func rankConventions(patternFiles map[string]map[string]bool) []DiscoveredConvention {
 	// Filter: keep patterns in 3+ files, sort by frequency descending.
 	var conventions []DiscoveredConvention
 	for pattern, files := range patternFiles {
@@ -505,9 +525,6 @@ func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
 	if len(conventions) > discoveryMaxProbes {
 		conventions = conventions[:discoveryMaxProbes]
 	}
-
-	rememberConventions(key, conventions)
-	persistConventions(projectRoot, ext, conventions)
 
 	return conventions
 }

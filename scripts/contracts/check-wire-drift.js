@@ -123,6 +123,39 @@ function extractGoFields(content, typeName) {
 // ============================================
 
 /**
+ * Extract the body of the interface whose opening brace is at `braceStart`.
+ */
+function interfaceBody(content, braceStart) {
+  let depth = 1
+  let pos = braceStart + 1
+  while (pos < content.length && depth > 0) {
+    if (content[pos] === '{') depth++
+    if (content[pos] === '}') depth--
+    pos++
+  }
+  return content.slice(braceStart + 1, pos - 1)
+}
+
+/**
+ * Net brace depth delta across one line.
+ */
+function lineDepthDelta(line) {
+  let delta = 0
+  for (const ch of line) {
+    if (ch === '{') delta++
+    if (ch === '}') delta--
+  }
+  return delta
+}
+
+/**
+ * True when a trimmed interface line is a comment, blank, or closing brace.
+ */
+function isNonFieldLine(trimmed) {
+  return trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*') || !trimmed || trimmed === '}'
+}
+
+/**
  * Extract field names from a TypeScript interface definition.
  * Returns a Set of field names.
  */
@@ -136,38 +169,19 @@ function extractTsFields(content, typeName) {
   const braceStart = content.indexOf('{', interfaceStart)
   if (braceStart === -1) return null
 
-  // Find the matching closing brace
-  let depth = 1
-  let pos = braceStart + 1
-  while (pos < content.length && depth > 0) {
-    if (content[pos] === '{') depth++
-    if (content[pos] === '}') depth--
-    pos++
-  }
-
-  const body = content.slice(braceStart + 1, pos - 1)
+  const body = interfaceBody(content, braceStart)
   const fields = new Set()
 
   // Match field declarations at the top level only (depth 0)
   // readonly field_name: type or readonly field_name?: type
-  const lines = body.split('\n')
   let lineDepth = 0
-  for (const line of lines) {
-    // Track brace depth to skip nested objects
-    for (const ch of line) {
-      if (ch === '{') lineDepth++
-      if (ch === '}') lineDepth--
-    }
-
+  for (const line of body.split('\n')) {
+    lineDepth += lineDepthDelta(line)
     if (lineDepth > 0) continue
 
-    // Skip comments
-    const trimmed = line.trim()
-    if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) continue
-    if (!trimmed || trimmed === '}') continue
+    if (isNonFieldLine(line.trim())) continue
 
-    // Match: readonly field_name?: type  OR  field_name: type
-    const fieldMatch = trimmed.match(/^\s*(?:readonly\s+)?(\w+)\??\s*:/)
+    const fieldMatch = line.trim().match(/^\s*(?:readonly\s+)?(\w+)\??\s*:/)
     if (fieldMatch) {
       fields.add(fieldMatch[1])
     }

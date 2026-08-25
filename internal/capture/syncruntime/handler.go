@@ -126,14 +126,8 @@ func enabledFeatures(raw *SyncFeaturesUsed) map[string]bool {
 // - Extension disconnect transitions expire pending queries to avoid indefinite LLM waits.
 // - Long-poll returns within bounded timeout even when no commands are queued.
 func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
-	if !util.RequireMethod(w, r, "POST") {
-		return
-	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, maxSyncPostBody)
-	var req SyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+	req, ok := h.decodeSyncRequest(w, r)
+	if !ok {
 		return
 	}
 
@@ -155,67 +149,20 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !state.wasConnected || state.isReconnect {
-		util.SafeGo(func() {
-			h.lifecycle.Emit(lifecycle.EventExtensionConnected, map[string]any{
-				"ext_session_id":     state.extSessionID,
-				"is_reconnect":       state.isReconnect,
-				"disconnect_seconds": state.timeSinceLastPoll.Seconds(),
-			})
-		})
-	}
-
+	h.emitExtensionConnected(state)
 	if currentGeneration, applied := h.runtime.applyIfCurrentSyncGeneration(
 		req.ExtSessionID,
 		state.connectionGeneration,
-		func() {
-			// Only known UI-originated keys are forwarded to prevent unbounded cardinality.
-			if filtered := enabledFeatures(req.FeaturesUsed); len(filtered) > 0 {
-				h.featureUsage.Notify(filtered)
-			}
-			h.recordCompleted(req.CommandResults)
-			h.processSyncCommandResults(req.CommandResults, clientID, state.connectionGeneration)
-			if req.LastCommandAck != "" {
-				h.queries.AcknowledgePendingQuery(req.LastCommandAck)
-			}
-		},
+		func() { h.reconcileSyncExchange(req, clientID, state.connectionGeneration) },
 	); !applied {
 		h.rejectStaleGeneration(w, req, currentGeneration, "extension_sync_apply")
 		return
 	}
 
-	if state.wasDisconnected {
-		telemetry.AppError(incident.CodeExtensionDisconnect)
-		h.queries.ExpireAllPendingQueries("extension_disconnected")
-		util.SafeGo(func() {
-			h.lifecycle.Emit(lifecycle.EventExtensionDisconnected, map[string]any{
-				"ext_session_id": state.extSessionID,
-				"client_id":      clientID,
-			})
-		})
-	}
+	h.handleSyncDisconnect(state, clientID)
+	h.reconcileSyncProgress(req, state, now)
 
-	// Reconcile started commands against extension heartbeat state.
-	// If a command disappears from heartbeat in_progress without a terminal result,
-	// fail it fast instead of waiting for eventual timeout.
-	currentInProgress := currentGenerationInProgress(req.InProgress, state.connectionGeneration)
-	for _, entry := range req.InProgress {
-		if entry.ConnectionGeneration != 0 && entry.ConnectionGeneration != state.connectionGeneration {
-			h.lifecycle.Emit(lifecycle.EventStaleGenerationRejected, map[string]any{
-				"correlation_id":      entry.CorrelationID,
-				"received_generation": entry.ConnectionGeneration,
-				"current_generation":  state.connectionGeneration,
-				"bridge":              "sync_command_progress",
-			})
-		}
-	}
-	h.reconcileInProgressCommandState(currentInProgress, now)
-
-	pendingQueries := h.queries.GetPendingQueries()
-	if len(pendingQueries) == 0 {
-		h.waitForPendingQueries(syncLongPollTimeout())
-		pendingQueries = h.queries.GetPendingQueries()
-	}
+	pendingQueries := h.awaitPendingQueries()
 	if currentGeneration, current := h.runtime.isCurrentSyncGeneration(
 		req.ExtSessionID,
 		state.connectionGeneration,
@@ -228,25 +175,8 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 
 	commands := buildSyncCommands(pendingQueries, state.connectionGeneration)
 	h.recordIssued(commands)
-
-	nextPollMs := 1000
-	if len(commands) > 0 {
-		nextPollMs = 200
-	}
-	if shouldEmitSyncSnapshot(req, state, len(commands)) {
-		util.SafeGo(func() {
-			h.lifecycle.Emit(lifecycle.EventSyncSnapshot, map[string]any{
-				"ext_session_id":       state.extSessionID,
-				"client_id":            clientID,
-				"pilot_enabled":        state.pilotEnabled,
-				"in_progress_count":    state.inProgressCount,
-				"pending_commands_out": len(commands),
-				"command_results_in":   len(req.CommandResults),
-				"last_command_ack":     req.LastCommandAck,
-				"next_poll_ms":         nextPollMs,
-			})
-		})
-	}
+	nextPollMs := syncNextPollMs(len(commands))
+	h.emitSyncSnapshotEvent(req, state, len(commands), nextPollMs, clientID)
 
 	resp := SyncResponse{
 		Ack:                  true,
@@ -260,6 +190,110 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	util.JSONResponse(w, http.StatusOK, resp)
+}
+
+func (h *Handler) decodeSyncRequest(w http.ResponseWriter, r *http.Request) (SyncRequest, bool) {
+	if !util.RequireMethod(w, r, "POST") {
+		return SyncRequest{}, false
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxSyncPostBody)
+	var req SyncRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return SyncRequest{}, false
+	}
+	return req, true
+}
+
+func (h *Handler) emitExtensionConnected(state syncConnectionState) {
+	if !state.wasConnected || state.isReconnect {
+		util.SafeGo(func() {
+			h.lifecycle.Emit(lifecycle.EventExtensionConnected, map[string]any{
+				"ext_session_id":     state.extSessionID,
+				"is_reconnect":       state.isReconnect,
+				"disconnect_seconds": state.timeSinceLastPoll.Seconds(),
+			})
+		})
+	}
+}
+
+func (h *Handler) reconcileSyncExchange(req SyncRequest, clientID string, connectionGeneration uint64) {
+	// Only known UI-originated keys are forwarded to prevent unbounded cardinality.
+	if filtered := enabledFeatures(req.FeaturesUsed); len(filtered) > 0 {
+		h.featureUsage.Notify(filtered)
+	}
+	h.recordCompleted(req.CommandResults)
+	h.processSyncCommandResults(req.CommandResults, clientID, connectionGeneration)
+	if req.LastCommandAck != "" {
+		h.queries.AcknowledgePendingQuery(req.LastCommandAck)
+	}
+}
+
+func (h *Handler) handleSyncDisconnect(state syncConnectionState, clientID string) {
+	if !state.wasDisconnected {
+		return
+	}
+	telemetry.AppError(incident.CodeExtensionDisconnect)
+	h.queries.ExpireAllPendingQueries("extension_disconnected")
+	util.SafeGo(func() {
+		h.lifecycle.Emit(lifecycle.EventExtensionDisconnected, map[string]any{
+			"ext_session_id": state.extSessionID,
+			"client_id":      clientID,
+		})
+	})
+}
+
+// Reconcile started commands against extension heartbeat state.
+// If a command disappears from heartbeat in_progress without a terminal result,
+// fail it fast instead of waiting for eventual timeout.
+func (h *Handler) reconcileSyncProgress(req SyncRequest, state syncConnectionState, now time.Time) {
+	currentInProgress := currentGenerationInProgress(req.InProgress, state.connectionGeneration)
+	for _, entry := range req.InProgress {
+		if entry.ConnectionGeneration != 0 && entry.ConnectionGeneration != state.connectionGeneration {
+			h.lifecycle.Emit(lifecycle.EventStaleGenerationRejected, map[string]any{
+				"correlation_id":      entry.CorrelationID,
+				"received_generation": entry.ConnectionGeneration,
+				"current_generation":  state.connectionGeneration,
+				"bridge":              "sync_command_progress",
+			})
+		}
+	}
+	h.reconcileInProgressCommandState(currentInProgress, now)
+}
+
+func (h *Handler) awaitPendingQueries() []queries.PendingQueryResponse {
+	pendingQueries := h.queries.GetPendingQueries()
+	if len(pendingQueries) == 0 {
+		h.waitForPendingQueries(syncLongPollTimeout())
+		pendingQueries = h.queries.GetPendingQueries()
+	}
+	return pendingQueries
+}
+
+func syncNextPollMs(commandsOut int) int {
+	if commandsOut > 0 {
+		return 200
+	}
+	return 1000
+}
+
+func (h *Handler) emitSyncSnapshotEvent(req SyncRequest, state syncConnectionState, commandsOut, nextPollMs int, clientID string) {
+	if !shouldEmitSyncSnapshot(req, state, commandsOut) {
+		return
+	}
+	util.SafeGo(func() {
+		h.lifecycle.Emit(lifecycle.EventSyncSnapshot, map[string]any{
+			"ext_session_id":       state.extSessionID,
+			"client_id":            clientID,
+			"pilot_enabled":        state.pilotEnabled,
+			"in_progress_count":    state.inProgressCount,
+			"pending_commands_out": commandsOut,
+			"command_results_in":   len(req.CommandResults),
+			"last_command_ack":     req.LastCommandAck,
+			"next_poll_ms":         nextPollMs,
+		})
+	})
 }
 
 // respondProbeSync answers a contract probe with a well-formed, empty envelope.
@@ -415,61 +449,21 @@ func (r *Runtime) updateSyncConnectionState(req SyncRequest, clientID string, no
 	if r.state.connectionGeneration == 0 {
 		r.state.connectionGeneration = 1
 	}
-	if r.state.extSessionID != "" && req.ConnectionGeneration != 0 && req.ConnectionGeneration != r.state.connectionGeneration {
+	if r.syncGenerationStale(req) {
 		state.connectionGeneration = r.state.connectionGeneration
 		state.staleGeneration = true
 		return state
 	}
-	if req.ExtSessionID != "" && req.ExtSessionID != r.state.extSessionID {
-		if r.state.extSessionID != "" {
-			r.state.connectionGeneration++
-		}
-	}
+	r.bumpSyncGenerationForNewSession(req)
 	state.connectionGeneration = r.state.connectionGeneration
 	state.wasDisconnected = !r.state.lastSyncSeen.IsZero() && !extensionStateConnected(r.state, now)
 	state.isReconnect = state.wasDisconnected
 
-	r.state.lastPollAt = now
-	r.state.lastExtensionConnected = true
-	r.state.lastSyncSeen = now
-	r.state.lastSyncClientID = clientID
-	if !wasActuallyConnected {
-		r.signalConnectionChangeLocked()
-	}
-	if req.ExtSessionID != "" && req.ExtSessionID != r.state.extSessionID {
-		r.state.extSessionID = req.ExtSessionID
-		r.state.extSessionChangedAt = now
-	}
-	state.extSessionID = r.state.extSessionID
+	r.markSyncSeen(clientID, now, wasActuallyConnected)
+	state.extSessionID = r.adoptExtSession(req, now)
 
 	if req.Settings != nil {
-		trackingChanged := r.state.trackingEnabled != req.Settings.TrackingEnabled ||
-			r.state.trackedTabID != req.Settings.TrackedTabID ||
-			r.state.trackedTabURL != req.Settings.TrackedTabURL ||
-			r.state.trackedTabTitle != req.Settings.TrackedTabTitle ||
-			r.state.tabStatus != normalizedTabStatus(req.Settings.TabStatus) ||
-			!optionalBoolEqual(r.state.trackedTabActive, req.Settings.TrackedTabActive)
-		r.state.pilotEnabled = req.Settings.PilotEnabled
-		r.state.pilotStatusKnown = true
-		r.state.pilotUpdatedAt = now
-		r.state.pilotSource = PilotSourceExtensionSync
-		r.state.trackingEnabled = req.Settings.TrackingEnabled
-		r.state.trackedTabID = req.Settings.TrackedTabID
-		r.state.trackedTabURL = req.Settings.TrackedTabURL
-		r.state.trackedTabTitle = req.Settings.TrackedTabTitle
-		r.state.trackingUpdated = now
-		switch req.Settings.TabStatus {
-		case "loading", "complete":
-			r.state.tabStatus = req.Settings.TabStatus
-		default:
-			r.state.tabStatus = ""
-		}
-		r.state.trackedTabActive = req.Settings.TrackedTabActive
-		r.state.cspRestricted = req.Settings.CspRestricted
-		r.state.cspLevel = req.Settings.CspLevel
-		if trackingChanged {
-			r.signalTrackingChangeLocked()
-		}
+		r.applySyncSettingsLocked(req.Settings, now)
 	}
 	if req.InProgress != nil {
 		r.state.inProgress = normalizeInProgressList(currentGenerationInProgress(req.InProgress, state.connectionGeneration))
@@ -478,6 +472,66 @@ func (r *Runtime) updateSyncConnectionState(req SyncRequest, clientID string, no
 	state.pilotEnabled = r.state.pilotEnabled
 	state.inProgressCount = len(r.state.inProgress)
 	return state
+}
+
+func (r *Runtime) syncGenerationStale(req SyncRequest) bool {
+	return r.state.extSessionID != "" && req.ConnectionGeneration != 0 &&
+		req.ConnectionGeneration != r.state.connectionGeneration
+}
+
+func (r *Runtime) bumpSyncGenerationForNewSession(req SyncRequest) {
+	if req.ExtSessionID != "" && req.ExtSessionID != r.state.extSessionID {
+		if r.state.extSessionID != "" {
+			r.state.connectionGeneration++
+		}
+	}
+}
+
+func (r *Runtime) markSyncSeen(clientID string, now time.Time, wasActuallyConnected bool) {
+	r.state.lastPollAt = now
+	r.state.lastExtensionConnected = true
+	r.state.lastSyncSeen = now
+	r.state.lastSyncClientID = clientID
+	if !wasActuallyConnected {
+		r.signalConnectionChangeLocked()
+	}
+}
+
+func (r *Runtime) adoptExtSession(req SyncRequest, now time.Time) string {
+	if req.ExtSessionID != "" && req.ExtSessionID != r.state.extSessionID {
+		r.state.extSessionID = req.ExtSessionID
+		r.state.extSessionChangedAt = now
+	}
+	return r.state.extSessionID
+}
+
+func (r *Runtime) applySyncSettingsLocked(settings *SyncSettings, now time.Time) {
+	trackingChanged := r.trackingChangedLocked(settings)
+	r.state.pilotEnabled = settings.PilotEnabled
+	r.state.pilotStatusKnown = true
+	r.state.pilotUpdatedAt = now
+	r.state.pilotSource = PilotSourceExtensionSync
+	r.state.trackingEnabled = settings.TrackingEnabled
+	r.state.trackedTabID = settings.TrackedTabID
+	r.state.trackedTabURL = settings.TrackedTabURL
+	r.state.trackedTabTitle = settings.TrackedTabTitle
+	r.state.trackingUpdated = now
+	r.state.tabStatus = normalizedTabStatus(settings.TabStatus)
+	r.state.trackedTabActive = settings.TrackedTabActive
+	r.state.cspRestricted = settings.CspRestricted
+	r.state.cspLevel = settings.CspLevel
+	if trackingChanged {
+		r.signalTrackingChangeLocked()
+	}
+}
+
+func (r *Runtime) trackingChangedLocked(settings *SyncSettings) bool {
+	return r.state.trackingEnabled != settings.TrackingEnabled ||
+		r.state.trackedTabID != settings.TrackedTabID ||
+		r.state.trackedTabURL != settings.TrackedTabURL ||
+		r.state.trackedTabTitle != settings.TrackedTabTitle ||
+		r.state.tabStatus != normalizedTabStatus(settings.TabStatus) ||
+		!optionalBoolEqual(r.state.trackedTabActive, settings.TrackedTabActive)
 }
 
 func normalizedTabStatus(status string) string {

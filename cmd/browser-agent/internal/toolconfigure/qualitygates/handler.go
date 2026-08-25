@@ -39,116 +39,165 @@ func Handle(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCRes
 		}
 	}
 
-	// Resolve the project root directory.
-	projectDir := d.GetActiveCodebase()
-	if projectDir == "" {
-		return mcp.Fail(req, mcp.ErrNotInitialized,
-			"No active codebase set. Cannot determine project directory.",
-			"Set active_codebase via configure(what='store', key='active_codebase', data='<path>') first")
+	absTarget, resp, ok := resolveTargetDir(d, req, params.TargetDir)
+	if !ok {
+		return resp
 	}
 
-	targetDir := projectDir
-	if params.TargetDir != "" {
-		targetDir = params.TargetDir
+	configPath, configExisted, resp, ok := ensureKaboomConfig(req, absTarget)
+	if !ok {
+		return resp
 	}
 
-	// Security: target_dir must be within the project directory.
-	absTarget, err := filepath.Abs(targetDir)
-	if err != nil {
-		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid target_dir: "+err.Error(), "Provide a valid directory path", mcp.WithParam("target_dir"))
-	}
-	absProject, _ := filepath.Abs(projectDir)
-	if !strings.HasPrefix(absTarget+string(filepath.Separator), absProject+string(filepath.Separator)) && absTarget != absProject {
-		return mcp.Fail(req, mcp.ErrPathNotAllowed,
-			"target_dir is outside the project directory",
-			"Use a path within "+absProject, mcp.WithParam("target_dir"))
-	}
+	codeStandardsRef := resolveCodeStandardsRef(configPath, configExisted)
 
-	// Ensure target directory exists.
-	if stat, err := os.Stat(absTarget); err != nil || !stat.IsDir() {
-		return mcp.Fail(req, mcp.ErrInvalidParam,
-			"target_dir does not exist or is not a directory: "+absTarget,
-			"Provide an existing directory path", mcp.WithParam("target_dir"))
-	}
-
-	configPath := filepath.Join(absTarget, hook.KaboomConfigFile)
-	configExisted := false
-	standardsCreated := false
-	standardsPath := ""
-
-	// Write .kaboom.json if it doesn't exist.
-	if _, err := os.Stat(configPath); err == nil {
-		configExisted = true
-	} else {
-		cfg := hook.KaboomConfig{
-			CodeStandards:      hook.DefaultCodeStandardsFile,
-			FileSizeLimit:      hook.DefaultFileSizeLimit,
-			DuplicateThreshold: defaultDuplicateThreshold,
-		}
-		cfgJSON, err := json.MarshalIndent(cfg, "", "  ")
-		if err != nil {
-			return mcp.Fail(req, mcp.ErrInternal, "Failed to marshal config: "+err.Error(), "Internal error — do not retry")
-		}
-		cfgJSON = append(cfgJSON, '\n')
-		if err := os.WriteFile(configPath, cfgJSON, 0644); err != nil {
-			return mcp.Fail(req, mcp.ErrInternal, "Failed to write "+hook.KaboomConfigFile+": "+err.Error(), "Check file system permissions")
-		}
-	}
-
-	// Determine code_standards path from config.
-	codeStandardsRef := hook.DefaultCodeStandardsFile
-	if configExisted {
-		existingCfg, err := os.ReadFile(configPath)
-		if err == nil {
-			var parsed hook.KaboomConfig
-			if json.Unmarshal(existingCfg, &parsed) == nil && parsed.CodeStandards != "" {
-				codeStandardsRef = parsed.CodeStandards
-			}
-		}
-	}
-
-	// Only create the standards file if it's the default name (not a custom path).
-	if codeStandardsRef == hook.DefaultCodeStandardsFile {
-		standardsPath = filepath.Join(absTarget, hook.DefaultCodeStandardsFile)
-		if _, err := os.Stat(standardsPath); err != nil {
-			if err := os.WriteFile(standardsPath, []byte(defaultCodeStandardsContent), 0644); err != nil {
-				return mcp.Fail(req, mcp.ErrInternal, "Failed to write "+hook.DefaultCodeStandardsFile+": "+err.Error(), "Check file system permissions")
-			}
-			standardsCreated = true
-		}
+	standardsPath, standardsCreated, resp, ok := ensureStandardsFile(req, absTarget, codeStandardsRef)
+	if !ok {
+		return resp
 	}
 
 	// Install Claude Code hooks into .claude/settings.json.
 	hooksInstalled, settingsPath, hookErr := installClaudeCodeHooks(absTarget)
 
-	// Build response.
-	defaults := map[string]any{
-		"code_standards":      codeStandardsRef,
-		"file_size_limit":     hook.DefaultFileSizeLimit,
-		"duplicate_threshold": defaultDuplicateThreshold,
-	}
-
-	suggestions := buildQualityGateSuggestions(configExisted, standardsCreated, codeStandardsRef, hooksInstalled)
-
-	responseData := map[string]any{
-		"config_path":     configPath,
-		"config_existed":  configExisted,
-		"defaults":        defaults,
-		"suggestions":     suggestions,
-		"hooks_installed": hooksInstalled,
-		"settings_path":   settingsPath,
-	}
-	if hookErr != nil {
-		responseData["hooks_error"] = hookErr.Error()
-	}
-	if standardsPath != "" {
-		responseData["standards_path"] = standardsPath
-		responseData["standards_created"] = standardsCreated
-	}
-
 	summary := buildSetupSummary(configExisted, hooksInstalled, hookErr)
+	responseData := buildGateResponseData(gateSetupOutcome{
+		configPath:       configPath,
+		configExisted:    configExisted,
+		codeStandardsRef: codeStandardsRef,
+		standardsPath:    standardsPath,
+		standardsCreated: standardsCreated,
+		hooksInstalled:   hooksInstalled,
+		settingsPath:     settingsPath,
+		hookErr:          hookErr,
+	})
 
 	return mcp.Succeed(req, summary, responseData)
+}
+
+// resolveTargetDir resolves and validates the target directory within the project.
+func resolveTargetDir(d Deps, req mcp.JSONRPCRequest, targetDirParam string) (string, mcp.JSONRPCResponse, bool) {
+	projectDir := d.GetActiveCodebase()
+	if projectDir == "" {
+		return "", mcp.Fail(req, mcp.ErrNotInitialized,
+			"No active codebase set. Cannot determine project directory.",
+			"Set active_codebase via configure(what='store', key='active_codebase', data='<path>') first"), false
+	}
+
+	targetDir := projectDir
+	if targetDirParam != "" {
+		targetDir = targetDirParam
+	}
+
+	// Security: target_dir must be within the project directory.
+	absTarget, err := filepath.Abs(targetDir)
+	if err != nil {
+		return "", mcp.Fail(req, mcp.ErrInvalidParam, "Invalid target_dir: "+err.Error(), "Provide a valid directory path", mcp.WithParam("target_dir")), false
+	}
+	absProject, _ := filepath.Abs(projectDir)
+	if !strings.HasPrefix(absTarget+string(filepath.Separator), absProject+string(filepath.Separator)) && absTarget != absProject {
+		return "", mcp.Fail(req, mcp.ErrPathNotAllowed,
+			"target_dir is outside the project directory",
+			"Use a path within "+absProject, mcp.WithParam("target_dir")), false
+	}
+
+	// Ensure target directory exists.
+	if stat, err := os.Stat(absTarget); err != nil || !stat.IsDir() {
+		return "", mcp.Fail(req, mcp.ErrInvalidParam,
+			"target_dir does not exist or is not a directory: "+absTarget,
+			"Provide an existing directory path", mcp.WithParam("target_dir")), false
+	}
+	return absTarget, mcp.JSONRPCResponse{}, true
+}
+
+// ensureKaboomConfig writes .kaboom.json if it doesn't exist.
+func ensureKaboomConfig(req mcp.JSONRPCRequest, absTarget string) (string, bool, mcp.JSONRPCResponse, bool) {
+	configPath := filepath.Join(absTarget, hook.KaboomConfigFile)
+	if _, err := os.Stat(configPath); err == nil {
+		return configPath, true, mcp.JSONRPCResponse{}, true
+	}
+	cfg := hook.KaboomConfig{
+		CodeStandards:      hook.DefaultCodeStandardsFile,
+		FileSizeLimit:      hook.DefaultFileSizeLimit,
+		DuplicateThreshold: defaultDuplicateThreshold,
+	}
+	cfgJSON, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return "", false, mcp.Fail(req, mcp.ErrInternal, "Failed to marshal config: "+err.Error(), "Internal error — do not retry"), false
+	}
+	cfgJSON = append(cfgJSON, '\n')
+	if err := os.WriteFile(configPath, cfgJSON, 0644); err != nil {
+		return "", false, mcp.Fail(req, mcp.ErrInternal, "Failed to write "+hook.KaboomConfigFile+": "+err.Error(), "Check file system permissions"), false
+	}
+	return configPath, false, mcp.JSONRPCResponse{}, true
+}
+
+// resolveCodeStandardsRef determines the code_standards path from config.
+func resolveCodeStandardsRef(configPath string, configExisted bool) string {
+	codeStandardsRef := hook.DefaultCodeStandardsFile
+	if !configExisted {
+		return codeStandardsRef
+	}
+	existingCfg, err := os.ReadFile(configPath)
+	if err != nil {
+		return codeStandardsRef
+	}
+	var parsed hook.KaboomConfig
+	if json.Unmarshal(existingCfg, &parsed) == nil && parsed.CodeStandards != "" {
+		codeStandardsRef = parsed.CodeStandards
+	}
+	return codeStandardsRef
+}
+
+// ensureStandardsFile creates the standards file if it's the default name (not a custom path).
+func ensureStandardsFile(req mcp.JSONRPCRequest, absTarget, codeStandardsRef string) (string, bool, mcp.JSONRPCResponse, bool) {
+	if codeStandardsRef != hook.DefaultCodeStandardsFile {
+		return "", false, mcp.JSONRPCResponse{}, true
+	}
+	standardsPath := filepath.Join(absTarget, hook.DefaultCodeStandardsFile)
+	if _, err := os.Stat(standardsPath); err != nil {
+		if err := os.WriteFile(standardsPath, []byte(defaultCodeStandardsContent), 0644); err != nil {
+			return "", false, mcp.Fail(req, mcp.ErrInternal, "Failed to write "+hook.DefaultCodeStandardsFile+": "+err.Error(), "Check file system permissions"), false
+		}
+		return standardsPath, true, mcp.JSONRPCResponse{}, true
+	}
+	return standardsPath, false, mcp.JSONRPCResponse{}, true
+}
+
+// gateSetupOutcome records what setup_quality_gates found and did, for the
+// response payload and its suggestions.
+type gateSetupOutcome struct {
+	configPath       string
+	configExisted    bool
+	codeStandardsRef string
+	standardsPath    string
+	standardsCreated bool
+	hooksInstalled   bool
+	settingsPath     string
+	hookErr          error
+}
+
+// buildGateResponseData builds the response payload for setup_quality_gates.
+func buildGateResponseData(outcome gateSetupOutcome) map[string]any {
+	responseData := map[string]any{
+		"config_path":    outcome.configPath,
+		"config_existed": outcome.configExisted,
+		"defaults": map[string]any{
+			"code_standards":      outcome.codeStandardsRef,
+			"file_size_limit":     hook.DefaultFileSizeLimit,
+			"duplicate_threshold": defaultDuplicateThreshold,
+		},
+		"suggestions":     buildQualityGateSuggestions(outcome.configExisted, outcome.standardsCreated, outcome.codeStandardsRef, outcome.hooksInstalled),
+		"hooks_installed": outcome.hooksInstalled,
+		"settings_path":   outcome.settingsPath,
+	}
+	if outcome.hookErr != nil {
+		responseData["hooks_error"] = outcome.hookErr.Error()
+	}
+	if outcome.standardsPath != "" {
+		responseData["standards_path"] = outcome.standardsPath
+		responseData["standards_created"] = outcome.standardsCreated
+	}
+	return responseData
 }
 
 // buildQualityGateSuggestions returns contextual suggestions based on setup state.

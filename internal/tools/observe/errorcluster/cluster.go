@@ -63,33 +63,39 @@ func build(entries []types.LogEntry) map[string]*cluster {
 		url, _ := entry["url"].(string)
 		stack, _ := entry["stackTrace"].(string)
 
-		addToCluster(clusters, key, msg, level, timestamp, url, stack)
+		addToCluster(clusters, clusterEntry{key: key, msg: msg, level: level, timestamp: timestamp, url: url, stack: stack})
 	}
 	return clusters
 }
 
-func addToCluster(clusters map[string]*cluster, key, msg, level, timestamp, url, stack string) {
-	if existing, ok := clusters[key]; ok {
+// clusterEntry is the error-level fields of one log entry, extracted and ready
+// for clustering. key is the capped normalized fingerprint.
+type clusterEntry struct {
+	key, msg, level, timestamp, url, stack string
+}
+
+func addToCluster(clusters map[string]*cluster, entry clusterEntry) {
+	if existing, ok := clusters[entry.key]; ok {
 		existing.count++
-		existing.lastSeen = timestamp
-		if url != "" {
-			existing.urls[url] = true
+		existing.lastSeen = entry.timestamp
+		if entry.url != "" {
+			existing.urls[entry.url] = true
 		}
 		return
 	}
 	urls := make(map[string]bool)
-	if url != "" {
-		urls[url] = true
+	if entry.url != "" {
+		urls[entry.url] = true
 	}
-	clusters[key] = &cluster{
-		message:    msg,
-		pattern:    key,
-		level:      level,
+	clusters[entry.key] = &cluster{
+		message:    entry.msg,
+		pattern:    entry.key,
+		level:      entry.level,
 		count:      1,
-		firstSeen:  timestamp,
-		lastSeen:   timestamp,
+		firstSeen:  entry.timestamp,
+		lastSeen:   entry.timestamp,
 		urls:       urls,
-		stackTrace: stack,
+		stackTrace: entry.stack,
 	}
 }
 

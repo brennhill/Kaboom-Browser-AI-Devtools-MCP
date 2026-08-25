@@ -205,6 +205,43 @@ export async function handleTrackedTabClosed(
 // STORAGE LISTENERS
 // =============================================================================
 
+function handlePilotStorageChange(
+  change: StorageChange<unknown> | undefined,
+  onChange?: (newValue: boolean) => void
+): void {
+  if (!change || !onChange) return
+  const nextPilot = change.newValue
+  if (typeof nextPilot === 'boolean') {
+    resolveStateRecovery('extension_storage_change_state')
+    onChange(nextPilot)
+  } else if (nextPilot !== undefined) {
+    reportStorageChangeRecovery('Saved AI Web Pilot change was malformed; the current setting remains active.')
+  }
+}
+
+function handleTrackedTabStorageChange(
+  change: StorageChange<unknown> | undefined,
+  onChange?: (newTabId: number | null, oldTabId: number | null) => void
+): void {
+  if (!change || !onChange) return
+  const newValue = change.newValue
+  const oldValue = change.oldValue
+  if (newValue !== undefined && (typeof newValue !== 'number' || !Number.isInteger(newValue))) {
+    reportStorageChangeRecovery('Saved tracked-tab change was malformed; automatic tab selection remains active.')
+    return
+  }
+  const newTabId = newValue ?? null
+  const oldTabId = typeof oldValue === 'number' ? oldValue : null
+  resolveStateRecovery('extension_storage_change_state')
+  if (typeof newTabId === 'number') {
+    if (oldTabId !== null && oldTabId !== newTabId) trackingContinuity.close(oldTabId)
+    trackingContinuity.establish(newTabId)
+  } else if (oldTabId !== null) {
+    trackingContinuity.close(oldTabId)
+  }
+  onChange(newTabId, oldTabId)
+}
+
 /**
  * Install storage change listener
  */
@@ -213,35 +250,9 @@ export function installStorageChangeListener(handlers: {
   onTrackedTabChanged?: (newTabId: number | null, oldTabId: number | null) => void
 }): void {
   onStorageChanged((changes: { [key: string]: StorageChange<unknown> }, areaName: string) => {
-    if (areaName === 'local') {
-      if (changes[StorageKey.AI_WEB_PILOT_ENABLED] && handlers.onAiWebPilotChanged) {
-        const nextPilot = changes[StorageKey.AI_WEB_PILOT_ENABLED]!.newValue
-        if (typeof nextPilot === 'boolean') {
-          resolveStateRecovery('extension_storage_change_state')
-          handlers.onAiWebPilotChanged(nextPilot)
-        } else if (nextPilot !== undefined) {
-          reportStorageChangeRecovery('Saved AI Web Pilot change was malformed; the current setting remains active.')
-        }
-      }
-      if (changes[StorageKey.TRACKED_TAB_ID] && handlers.onTrackedTabChanged) {
-        const newValue = changes[StorageKey.TRACKED_TAB_ID]!.newValue
-        const oldValue = changes[StorageKey.TRACKED_TAB_ID]!.oldValue
-        if (newValue !== undefined && (typeof newValue !== 'number' || !Number.isInteger(newValue))) {
-          reportStorageChangeRecovery('Saved tracked-tab change was malformed; automatic tab selection remains active.')
-          return
-        }
-        const newTabId = newValue ?? null
-        const oldTabId = typeof oldValue === 'number' ? oldValue : null
-        resolveStateRecovery('extension_storage_change_state')
-        if (typeof newTabId === 'number') {
-          if (oldTabId !== null && oldTabId !== newTabId) trackingContinuity.close(oldTabId)
-          trackingContinuity.establish(newTabId)
-        } else if (oldTabId !== null) {
-          trackingContinuity.close(oldTabId)
-        }
-        handlers.onTrackedTabChanged(newTabId, oldTabId)
-      }
-    }
+    if (areaName !== 'local') return
+    handlePilotStorageChange(changes[StorageKey.AI_WEB_PILOT_ENABLED], handlers.onAiWebPilotChanged)
+    handleTrackedTabStorageChange(changes[StorageKey.TRACKED_TAB_ID], handlers.onTrackedTabChanged)
   })
 }
 

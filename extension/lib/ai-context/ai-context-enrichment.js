@@ -183,35 +183,18 @@ export function generateAiSummary(data) {
 // =============================================================================
 // ERROR ENRICHMENT PIPELINE
 // =============================================================================
-/**
- * Full error enrichment pipeline
- * @param error - The error entry to enrich
- * @returns The enriched error entry
- */
-// #lizard forgives
-async function buildAiContext(error) {
-    const result = {};
-    const frames = parseStackFrames(error.stack);
-    if (frames.length === 0)
-        return { summary: error.message || 'Unknown error' };
+async function attachSourceSnippets(result, frames) {
     const topFrame = frames[0];
-    // Source snippets (from cache)
-    if (topFrame) {
-        const cached = getSourceMapCache(topFrame.filename);
-        if (cached) {
-            const snippets = await extractSourceSnippets(frames, { [topFrame.filename]: cached });
-            if (snippets.length > 0)
-                result.sourceSnippets = snippets;
-        }
-    }
-    // Component ancestry from activeElement
-    result.componentAncestry = extractComponentAncestry() || undefined;
-    // State snapshot (if enabled)
-    if (aiContextStateSnapshotEnabled) {
-        const snapshot = captureStateSnapshot(error.message || '');
-        if (snapshot)
-            result.stateSnapshot = snapshot;
-    }
+    if (!topFrame)
+        return;
+    const cached = getSourceMapCache(topFrame.filename);
+    if (!cached)
+        return;
+    const snippets = await extractSourceSnippets(frames, { [topFrame.filename]: cached });
+    if (snippets.length > 0)
+        result.sourceSnippets = snippets;
+}
+function buildAiSummaryText(error, result, topFrame) {
     result.summary = generateAiSummary({
         errorType: error.message?.split(':')[0] || 'Error',
         message: error.message || '',
@@ -220,6 +203,28 @@ async function buildAiContext(error) {
         componentAncestry: result.componentAncestry || null,
         stateSnapshot: result.stateSnapshot || null
     });
+}
+/**
+ * Full error enrichment pipeline
+ * @param error - The error entry to enrich
+ * @returns The enriched error entry
+ */
+async function buildAiContext(error) {
+    const result = {};
+    const frames = parseStackFrames(error.stack);
+    if (frames.length === 0)
+        return { summary: error.message || 'Unknown error' };
+    // Source snippets (from cache)
+    await attachSourceSnippets(result, frames);
+    // Component ancestry from activeElement
+    result.componentAncestry = extractComponentAncestry() || undefined;
+    // State snapshot (if enabled)
+    if (aiContextStateSnapshotEnabled) {
+        const snapshot = captureStateSnapshot(error.message || '');
+        if (snapshot)
+            result.stateSnapshot = snapshot;
+    }
+    buildAiSummaryText(error, result, frames[0]);
     return result;
 }
 function extractComponentAncestry() {

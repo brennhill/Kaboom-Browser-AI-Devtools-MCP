@@ -371,6 +371,157 @@ async function escalateToStage4Internal(
 // Main Upload Handler
 // ============================================
 
+interface InjectionOutcome {
+  success: boolean
+  file_name?: string
+  file_size?: number
+  error?: string
+}
+
+/** Shared context for reporting upload progress: toast surface plus async result routing. */
+interface UploadOutcomeContext {
+  tabId: number
+  syncClient: SyncClient
+  query: PendingQuery
+  correlationId: string
+  sendAsyncResult: SendAsyncResultFn
+  actionToast: ActionToastFn
+}
+
+function pickInjectionResult(results: chrome.scripting.InjectionResult[]): InjectionOutcome | null {
+  let picked: InjectionOutcome | null = null
+  for (const r of results) {
+    const res = r.result as InjectionOutcome | null
+    if (res?.success) {
+      picked = res
+      break
+    }
+  }
+  if (!picked) {
+    // Fall back to main frame result for error message
+    picked = (results[0]?.result as InjectionOutcome | null) || null
+  }
+  return picked
+}
+
+async function reportUploadError(ctx: UploadOutcomeContext, toastDetail: string, message: string): Promise<void> {
+  ctx.actionToast(ctx.tabId, 'upload', toastDetail, 'error')
+  ctx.sendAsyncResult(ctx.syncClient, ctx.query.id, ctx.correlationId, 'error', null, message)
+}
+
+/** Stage 1: fetch file data from the Go daemon. Returns null after reporting the failure. */
+async function fetchUploadFileData(
+  ctx: UploadOutcomeContext,
+  filePath: string
+): Promise<(FileReadResponse & { data_base64: string }) | null> {
+  let fileData: FileReadResponse
+  try {
+    const response = await fetchWithTimeout(
+      `${getServerUrl()}/api/file/read`,
+      buildDaemonJSONRequestInit({ file_path: filePath }),
+      DAEMON_FETCH_TIMEOUT_MS
+    )
+    if (!response.ok) {
+      ctx.sendAsyncResult(
+        ctx.syncClient,
+        ctx.query.id,
+        ctx.correlationId,
+        'error',
+        null,
+        `file_read_failed: HTTP ${response.status}`
+      )
+      ctx.actionToast(ctx.tabId, 'upload', `HTTP ${response.status}`, 'error')
+      return null
+    }
+    fileData = (await response.json()) as FileReadResponse
+  } catch (err) {
+    const msg =
+      (err as Error).name === 'AbortError'
+        ? `file_read_timeout: daemon did not respond within ${DAEMON_FETCH_TIMEOUT_MS}ms`
+        : `file_read_failed: ${errorMessage(err)}`
+    ctx.sendAsyncResult(ctx.syncClient, ctx.query.id, ctx.correlationId, 'error', null, msg)
+    ctx.actionToast(ctx.tabId, 'upload', 'fetch failed', 'error')
+    return null
+  }
+
+  if (!fileData.success || !fileData.data_base64) {
+    ctx.sendAsyncResult(
+      ctx.syncClient,
+      ctx.query.id,
+      ctx.correlationId,
+      'error',
+      null,
+      `file_read_failed: ${fileData.error || 'no data'}`
+    )
+    ctx.actionToast(ctx.tabId, 'upload', fileData.error || 'no data', 'error')
+    return null
+  }
+  return fileData as FileReadResponse & { data_base64: string }
+}
+
+/** Stage 1 injection succeeded — verify persistence, escalating to Stage 4 if the form cleared the file. */
+async function handleInjectionOutcome(
+  ctx: UploadOutcomeContext,
+  selector: string,
+  filePath: string,
+  file_name: string | undefined,
+  fileData: FileReadResponse,
+  picked: InjectionOutcome
+): Promise<void> {
+  const fileName = file_name || fileData.file_name || 'file'
+  debugLog(DebugCategory.CONNECTION, 'Upload injected, verifying persistence...', { selector, fileName })
+
+  const verification = await verifyFileOnInput(ctx.tabId, selector)
+  if (verification.has_file) {
+    // Stage 1 success — file persisted
+    debugLog(DebugCategory.CONNECTION, 'Upload Stage 1 verified', {
+      selector,
+      fileName,
+      fileSize: picked.file_size
+    })
+    ctx.actionToast(ctx.tabId, 'upload', fileName, 'success')
+    ctx.sendAsyncResult(ctx.syncClient, ctx.query.id, ctx.correlationId, 'complete', {
+      success: true,
+      stage: 1,
+      file_name: picked.file_name,
+      file_size: picked.file_size,
+      selector
+    })
+    return
+  }
+
+  // Stage 1 file was cleared by the form — escalate to Stage 4
+  debugLog(DebugCategory.CONNECTION, 'Upload Stage 1 file cleared, escalating to Stage 4', { selector })
+  ctx.actionToast(ctx.tabId, 'upload', 'Escalating to OS automation...', 'trying', 30000)
+
+  const escalation = await escalateToStage4(ctx.tabId, selector, filePath, getServerUrl())
+  if (escalation.success) {
+    debugLog(DebugCategory.CONNECTION, 'Upload Stage 4 succeeded', { selector, fileName: escalation.file_name })
+    ctx.actionToast(ctx.tabId, 'upload', escalation.file_name || fileName, 'success')
+    ctx.sendAsyncResult(ctx.syncClient, ctx.query.id, ctx.correlationId, 'complete', {
+      success: true,
+      stage: 4,
+      escalation_reason: escalation.escalation_reason,
+      file_name: escalation.file_name,
+      selector
+    })
+    return
+  }
+  debugLog(DebugCategory.CONNECTION, 'Upload Stage 4 failed', { selector, error: escalation.error })
+  ctx.actionToast(ctx.tabId, 'upload', escalation.error || 'Stage 4 failed', 'error')
+  ctx.sendAsyncResult(
+    ctx.syncClient,
+    ctx.query.id,
+    ctx.correlationId,
+    'error',
+    {
+      stage: 4,
+      escalation_reason: escalation.escalation_reason
+    },
+    escalation.error || 'stage4_failed'
+  )
+}
+
 export async function executeUpload(
   query: PendingQuery,
   tabId: number,
@@ -399,45 +550,11 @@ export async function executeUpload(
 
   actionToast(tabId, 'upload', file_name || 'file', 'trying', 10000)
 
-  // Stage 1: Fetch file data from Go server
-  let fileData: FileReadResponse
-  try {
-    const response = await fetchWithTimeout(
-      `${getServerUrl()}/api/file/read`,
-      buildDaemonJSONRequestInit({ file_path }),
-      DAEMON_FETCH_TIMEOUT_MS
-    )
-    if (!response.ok) {
-      sendAsyncResult(syncClient, query.id, correlationId, 'error', null, `file_read_failed: HTTP ${response.status}`)
-      actionToast(tabId, 'upload', `HTTP ${response.status}`, 'error')
-      return
-    }
-    fileData = (await response.json()) as FileReadResponse
-  } catch (err) {
-    const msg =
-      (err as Error).name === 'AbortError'
-        ? `file_read_timeout: daemon did not respond within ${DAEMON_FETCH_TIMEOUT_MS}ms`
-        : `file_read_failed: ${errorMessage(err)}`
-    sendAsyncResult(syncClient, query.id, correlationId, 'error', null, msg)
-    actionToast(tabId, 'upload', 'fetch failed', 'error')
-    return
-  }
+  const ctx: UploadOutcomeContext = { tabId, syncClient, query, correlationId, sendAsyncResult, actionToast }
 
-  if (!fileData.success || !fileData.data_base64) {
-    sendAsyncResult(
-      syncClient,
-      query.id,
-      correlationId,
-      'error',
-      null,
-      `file_read_failed: ${fileData.error || 'no data'}`
-    )
-    actionToast(tabId, 'upload', fileData.error || 'no data', 'error')
-    return
-  }
+  const fileData = await fetchUploadFileData(ctx, file_path)
+  if (!fileData) return
 
-  // Stage 1: Inject file into DOM input element via DataTransfer
-  const fileName = file_name || fileData.file_name || 'file'
   const mimeType = mime_type || fileData.mime_type || 'application/octet-stream'
 
   try {
@@ -445,86 +562,20 @@ export async function executeUpload(
       target: { tabId, allFrames: true },
       world: 'MAIN',
       func: injectFileIntoInput,
-      args: [selector, fileData.data_base64, fileName, mimeType]
+      args: [selector, fileData.data_base64, file_name || fileData.file_name || 'file', mimeType]
     })
 
-    // Pick first successful frame result
-    type InjectResult = { success: boolean; file_name?: string; file_size?: number; error?: string }
-    let picked: InjectResult | null = null
-    for (const r of results) {
-      const res = r.result as InjectResult | null
-      if (res?.success) {
-        picked = res
-        break
-      }
-    }
-    if (!picked) {
-      // Fall back to main frame result for error message
-      picked = (results[0]?.result as InjectResult | null) || null
-    }
-
+    const picked = pickInjectionResult(results)
     if (picked?.success) {
-      // Stage 1 injection succeeded — verify file persisted (polls with delay)
-      debugLog(DebugCategory.CONNECTION, 'Upload injected, verifying persistence...', { selector, fileName })
-
-      const verification = await verifyFileOnInput(tabId, selector)
-      if (verification.has_file) {
-        // Stage 1 success — file persisted
-        debugLog(DebugCategory.CONNECTION, 'Upload Stage 1 verified', {
-          selector,
-          fileName,
-          fileSize: picked.file_size
-        })
-        actionToast(tabId, 'upload', fileName, 'success')
-        sendAsyncResult(syncClient, query.id, correlationId, 'complete', {
-          success: true,
-          stage: 1,
-          file_name: picked.file_name,
-          file_size: picked.file_size,
-          selector
-        })
-      } else {
-        // Stage 1 file was cleared by the form — escalate to Stage 4
-        debugLog(DebugCategory.CONNECTION, 'Upload Stage 1 file cleared, escalating to Stage 4', { selector })
-        actionToast(tabId, 'upload', 'Escalating to OS automation...', 'trying', 30000)
-
-        const escalation = await escalateToStage4(tabId, selector, file_path, getServerUrl())
-        if (escalation.success) {
-          debugLog(DebugCategory.CONNECTION, 'Upload Stage 4 succeeded', { selector, fileName: escalation.file_name })
-          actionToast(tabId, 'upload', escalation.file_name || fileName, 'success')
-          sendAsyncResult(syncClient, query.id, correlationId, 'complete', {
-            success: true,
-            stage: 4,
-            escalation_reason: escalation.escalation_reason,
-            file_name: escalation.file_name,
-            selector
-          })
-        } else {
-          debugLog(DebugCategory.CONNECTION, 'Upload Stage 4 failed', { selector, error: escalation.error })
-          actionToast(tabId, 'upload', escalation.error || 'Stage 4 failed', 'error')
-          sendAsyncResult(
-            syncClient,
-            query.id,
-            correlationId,
-            'error',
-            {
-              stage: 4,
-              escalation_reason: escalation.escalation_reason
-            },
-            escalation.error || 'stage4_failed'
-          )
-        }
-      }
+      await handleInjectionOutcome(ctx, selector, file_path, file_name, fileData, picked)
     } else {
       const error = picked?.error || 'injection_failed'
       debugLog(DebugCategory.CONNECTION, 'Upload injection failed', { selector, error })
-      actionToast(tabId, 'upload', error, 'error')
-      sendAsyncResult(syncClient, query.id, correlationId, 'error', null, error)
+      await reportUploadError(ctx, error, error)
     }
   } catch (err) {
     const error = errorMessage(err, 'script_execution_failed')
     debugLog(DebugCategory.CONNECTION, 'Upload executeScript failed', { error })
-    actionToast(tabId, 'upload', error, 'error')
-    sendAsyncResult(syncClient, query.id, correlationId, 'error', null, error)
+    await reportUploadError(ctx, error, error)
   }
 }

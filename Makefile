@@ -28,6 +28,8 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check install-security-tools pre-commit verify-all npm-binaries validate-semver \
+	check-complexity check-complexity-go check-complexity-ts function-length-baseline-update \
+	check-ts-strictness ts-strictness-baseline-update check-bundle-size check-secrets coverage-baseline-update \
 	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture check-wire-decode check-tagged-builds go-architecture-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-command-contract generate-dom-primitives \
@@ -48,6 +50,7 @@ GO_TOOL_BIN := $(shell go env GOPATH)/bin
 endif
 GOSEC_BIN := $(GO_TOOL_BIN)/gosec
 GOVULNCHECK_BIN := $(GO_TOOL_BIN)/govulncheck
+GITLEAKS_BIN := $(GO_TOOL_BIN)/gitleaks
 
 uat:
 	./scripts/uat/runners/test-all-tools-comprehensive.sh --suite all
@@ -92,10 +95,11 @@ compile-ts: validate-versions generate-wire-types generate-command-contract gene
 		echo "❌ ERROR: Early-patch script bundling failed"; \
 		exit 1; \
 	fi
+	@node scripts/quality/contracts/bundle-size/check-bundle-size.cjs
 	@echo "✅ TypeScript compilation successful"
 
-# "All tests" (documented contract): file-length gate + Go (-short) + JS suites.
-test: check-file-length
+# "All tests" (documented contract): structural gates + Go (-short) + JS suites.
+test: check-file-length check-complexity
 	$(MAKE) test-go-quick
 	$(MAKE) test-performance
 	$(MAKE) test-js
@@ -138,6 +142,10 @@ test-race:
 
 test-cover:
 	./scripts/build/run-go-coverage.sh
+
+# Lock in a demonstrated coverage improvement (upward-only ratchet).
+coverage-baseline-update:
+	KABOOM_COVERAGE_UPDATE_BASELINE=1 $(MAKE) test-cover
 
 test-integration:
 	@set -e; trap 'bash ./scripts/maintenance/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
@@ -191,7 +199,41 @@ verify-size:
 
 # Check file line limits (800 lines, hand-written source only)
 check-file-length:
-	@bash scripts/quality/contracts/check-file-length.sh
+	@bash scripts/quality/contracts/file-length/check-file-length.sh
+
+# Cyclomatic complexity + parameter + length budgets (max 15 / 6 / 80; length ratchets).
+check-complexity: check-complexity-go check-complexity-ts
+
+check-complexity-go:
+	@go test ./scripts/contracts/complexity
+	@go run ./scripts/contracts/complexity
+
+check-complexity-ts:
+	@node --test scripts/quality/contracts/complexity/check-complexity.test.mjs
+	@node scripts/quality/contracts/complexity/check-complexity.mjs
+
+# Re-freeze the function-length ratchets after shrinking a function.
+function-length-baseline-update:
+	@go run ./scripts/contracts/complexity --update-length-baseline
+	@node scripts/quality/contracts/complexity/check-complexity.mjs --update-length-baseline
+
+# TS strictness ratchet (AGENTS rule 2: no @ts-nocheck, never more explicit any).
+check-ts-strictness:
+	@node --test scripts/quality/contracts/ts-strictness/check-ts-strictness.test.mjs
+	@node scripts/quality/contracts/ts-strictness/check-ts-strictness.mjs
+
+ts-strictness-baseline-update:
+	@node scripts/quality/contracts/ts-strictness/check-ts-strictness.mjs --update
+
+# Shipped extension bundle footprint (per-file and total caps).
+check-bundle-size:
+	@node --test scripts/quality/contracts/bundle-size/check-bundle-size.test.mjs
+	@node scripts/quality/contracts/bundle-size/check-bundle-size.cjs
+
+# Fast credential-pattern scan of tracked files (gitleaks runs in security-check).
+check-secrets:
+	@bash scripts/security/check-secrets.test.sh
+	@bash scripts/security/check-secrets.sh
 
 # Ratcheting per-folder source-file limit (10 files; existing folders frozen at
 # their current count and may only shrink).
@@ -247,7 +289,7 @@ check-workflow-contracts:
 	@node scripts/quality/workflows/check-destructive-git.mjs
 	@bash scripts/tests/framework/json.test.sh
 
-check-structure: check-file-length check-folder-size check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-tagged-builds check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates
+check-structure: check-file-length check-folder-size check-complexity check-ts-strictness check-bundle-size check-secrets check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-tagged-builds check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates
 
 validate-architecture:
 	@bash scripts/quality/verification/validate-architecture.sh
@@ -511,10 +553,14 @@ security-check:
 	@echo "Running security checks..."
 	@test -x "$(GOSEC_BIN)" || { echo "gosec $(GOSEC_VERSION) is required at $(GOSEC_BIN). Run: make install-security-tools"; exit 1; }
 	@test -x "$(GOVULNCHECK_BIN)" || { echo "govulncheck $(GOVULNCHECK_VERSION) is required at $(GOVULNCHECK_BIN). Run: make install-security-tools"; exit 1; }
+	@test -x "$(GITLEAKS_BIN)" || { echo "gitleaks $(GITLEAKS_VERSION) is required at $(GITLEAKS_BIN). Run: make install-security-tools"; exit 1; }
 	"$(GOSEC_BIN)" -quiet -exclude=G104,G114,G204,G301,G304,G306 -severity=high ./cmd/browser-agent/... ./internal/...
 	GOTOOLCHAIN=$(SUPPORTED_GO_TOOLCHAIN) "$(GOVULNCHECK_BIN)" ./cmd/browser-agent/... ./internal/...
+	"$(GITLEAKS_BIN)" git --redact --no-banner .
 	node --test scripts/security/check-npm-audit.test.mjs
 	node scripts/security/check-npm-audit.mjs
+	bash scripts/security/check-secrets.test.sh
+	bash scripts/security/check-secrets.sh
 	npx eslint extension/ tests/extension/
 	@echo "All security checks passed"
 
@@ -538,7 +584,7 @@ verify-llm: check-invariants check-schema
 
 # Quality gate for top 1% standards (comprehensive)
 # `test` already includes the JS suite (test-js).
-quality-gate: check-structure lint lint-hardening lint-dead lint-json-casing typecheck security-check test validate-deps-versions
+quality-gate: check-structure 	lint lint-hardening lint-dead lint-json-casing typecheck security-check test validate-deps-versions
 	@echo ""
 	@echo "═══════════════════════════════════════════"
 	@echo "✅ QUALITY GATE PASSED - Top 1% Standards"

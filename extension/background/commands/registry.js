@@ -178,6 +178,68 @@ function createDispatchLifecycle(query, syncClient, wrapResult, signal) {
         sent: () => terminalSent
     };
 }
+async function resolveCommandTarget(query, paramsObj, lifecycle) {
+    try {
+        const resolved = await resolveTargetTab(query, paramsObj);
+        if (resolved.error) {
+            lifecycle.sendError(resolved.error.payload, resolved.error.message);
+            return { target: undefined, handled: true };
+        }
+        return { target: resolved.target, handled: false };
+    }
+    catch (err) {
+        const targetErr = errorMessage(err, 'target_resolution_failed');
+        lifecycle.sendError({
+            success: false,
+            error: 'target_resolution_failed',
+            message: targetErr
+        }, targetErr);
+        return { target: undefined, handled: true };
+    }
+}
+async function awaitContentReadinessIfNeeded(queryType, tabId, lifecycle) {
+    if (!requiresContentReadiness(queryType) || !contentReadiness.hasPending(tabId))
+        return true;
+    const readiness = await contentReadiness.waitUntilReady(tabId);
+    if (readiness.ready)
+        return true;
+    lifecycle.sendError({
+        success: false,
+        error: readiness.error,
+        message: readiness.error === 'content_readiness_timeout'
+            ? 'The page loaded, but its content script did not acknowledge readiness.'
+            : 'A newer navigation superseded this command readiness check.',
+        correlation_id: readiness.correlation_id,
+        retryable: true
+    }, readiness.error);
+    return false;
+}
+async function executeHandler(handler, ctx, lifecycle, signal) {
+    try {
+        signal.throwIfAborted();
+        await handler(ctx);
+        signal.throwIfAborted();
+        if (!lifecycle.sent()) {
+            lifecycle.sendError({
+                error: 'no_result',
+                message: `Command handler for '${ctx.query.type}' completed without sending a terminal result`
+            }, 'no_result');
+        }
+    }
+    catch (err) {
+        if (signal.aborted)
+            throw err;
+        const errMsg = errorMessage(err, 'Unexpected error handling query');
+        debugLog(DebugCategory.CONNECTION, 'Error handling pending query', {
+            type: ctx.query.type,
+            id: ctx.query.id,
+            error: errMsg
+        });
+        if (!lifecycle.sent()) {
+            lifecycle.sendError({ error: 'query_handler_error', message: errMsg }, errMsg);
+        }
+    }
+}
 export async function dispatch(query, syncClient, signal) {
     signal.throwIfAborted();
     // Wait for initialization to complete (max 2s) so pilot cache is populated
@@ -215,23 +277,10 @@ export async function dispatch(query, syncClient, signal) {
         return;
     }
     if (needsTarget) {
-        try {
-            const resolved = await resolveTargetTab(query, paramsObj);
-            if (resolved.error) {
-                lifecycle.sendError(resolved.error.payload, resolved.error.message);
-                return;
-            }
-            target = resolved.target;
-        }
-        catch (err) {
-            const targetErr = errorMessage(err, 'target_resolution_failed');
-            lifecycle.sendError({
-                success: false,
-                error: 'target_resolution_failed',
-                message: targetErr
-            }, targetErr);
+        const resolved = await resolveCommandTarget(query, paramsObj, lifecycle);
+        if (resolved.handled)
             return;
-        }
+        target = resolved.target;
     }
     const tabId = target?.tabId ?? 0;
     if (needsTarget && !tabId) {
@@ -256,21 +305,8 @@ export async function dispatch(query, syncClient, signal) {
         lifecycle.sendError(payload, payload.error);
         return;
     }
-    if (requiresContentReadiness(query.type) && contentReadiness.hasPending(tabId)) {
-        const readiness = await contentReadiness.waitUntilReady(tabId);
-        if (!readiness.ready) {
-            lifecycle.sendError({
-                success: false,
-                error: readiness.error,
-                message: readiness.error === 'content_readiness_timeout'
-                    ? 'The page loaded, but its content script did not acknowledge readiness.'
-                    : 'A newer navigation superseded this command readiness check.',
-                correlation_id: readiness.correlation_id,
-                retryable: true
-            }, readiness.error);
-            return;
-        }
-    }
+    if (!(await awaitContentReadinessIfNeeded(query.type, tabId, lifecycle)))
+        return;
     if (rejectSupersededCommand(query, lifecycle, 'command_execute'))
         return;
     const ctx = {
@@ -284,29 +320,6 @@ export async function dispatch(query, syncClient, signal) {
         sendAsyncResult: lifecycle.sendAsyncResult,
         actionToast
     };
-    try {
-        signal.throwIfAborted();
-        await handler(ctx);
-        signal.throwIfAborted();
-        if (!lifecycle.sent()) {
-            lifecycle.sendError({
-                error: 'no_result',
-                message: `Command handler for '${query.type}' completed without sending a terminal result`
-            }, 'no_result');
-        }
-    }
-    catch (err) {
-        if (signal.aborted)
-            throw err;
-        const errMsg = errorMessage(err, 'Unexpected error handling query');
-        debugLog(DebugCategory.CONNECTION, 'Error handling pending query', {
-            type: query.type,
-            id: query.id,
-            error: errMsg
-        });
-        if (!lifecycle.sent()) {
-            lifecycle.sendError({ error: 'query_handler_error', message: errMsg }, errMsg);
-        }
-    }
+    await executeHandler(handler, ctx, lifecycle, signal);
 }
 //# sourceMappingURL=registry.js.map

@@ -86,29 +86,35 @@ type Definition struct {
 }
 
 var definitions = map[Code]Definition{
-	CodeUncleanDaemonExit:           definition(SubsystemDaemon, StageLifecycle, SeverityFatal, true, ErrorKindInternal, "The previous daemon run did not record a clean shutdown.", "Restart Kaboom and inspect the correlated local incident timeline if this repeats."),
-	CodeDaemonRestartLoop:           definition(SubsystemDaemon, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "Kaboom repeatedly restarted inside the protected startup window.", "Inspect System Doctor before starting another daemon."),
-	CodeExtensionReconnectExhausted: definition(SubsystemBridge, StageReconnect, SeverityError, true, ErrorKindIntegration, "The extension exhausted its bounded reconnect attempts.", "Reload the extension and tracked page, then retry."),
-	CodeTrackedTabRecoveryFailed:    definition(SubsystemTracking, StageTracking, SeverityError, true, ErrorKindIntegration, "Kaboom could not restore the previously tracked tab.", "Select the intended tab in the extension and retry."),
-	CodeContentReadinessTimeout:     definition(SubsystemBridge, StageReadiness, SeverityError, true, ErrorKindIntegration, "The content script did not acknowledge readiness before the deadline.", "Reload the tracked page and retry the command."),
-	CodeStaleCommandResultRejected:  definition(SubsystemCommand, StageResolution, SeverityWarning, true, ErrorKindInternal, "A result from an obsolete connection generation was rejected.", "Retry if the current command did not complete."),
-	CodeQueueSaturated:              definition(SubsystemQueue, StageCapacity, SeverityWarning, true, ErrorKindInternal, "A bounded operational queue reached capacity.", "Wait for active work to drain, then retry."),
-	CodeStateRecoveryFailed:         definition(SubsystemState, StageRecovery, SeverityError, true, ErrorKindInternal, "Persisted state could not be recovered safely.", "Reset the affected state through System Doctor and retry."),
-	CodeDaemonPanic:                 definition(SubsystemDaemon, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "The daemon recovered a panic.", "Inspect local crash diagnostics and restart Kaboom."),
-	CodeDaemonStartFailed:           definition(SubsystemStartup, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "The daemon could not start.", "Inspect local startup diagnostics and retry."),
-	CodeToolRateLimited:             definition(SubsystemDaemon, StageCapacity, SeverityWarning, true, ErrorKindIntegration, "A tool call exceeded the bounded request rate.", "Retry after the reported backoff."),
-	CodeBridgeConnectionError:       definition(SubsystemBridge, StageReconnect, SeverityError, true, ErrorKindIntegration, "The MCP bridge could not connect.", "Retry the connection or inspect System Doctor."),
-	CodeBridgePortBlocked:           definition(SubsystemBridge, StageLifecycle, SeverityError, false, ErrorKindIntegration, "The bridge port is owned by another process.", "Free the configured port and retry."),
-	CodeBridgeSpawnBuildError:       definition(SubsystemBridge, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "The bridge daemon binary could not be built.", "Inspect local build diagnostics."),
-	CodeBridgeSpawnStartError:       definition(SubsystemBridge, StageLifecycle, SeverityFatal, false, ErrorKindInternal, "The bridge daemon process could not start.", "Inspect local process diagnostics."),
-	CodeBridgeSpawnTimeout:          definition(SubsystemBridge, StageReadiness, SeverityError, true, ErrorKindInternal, "The spawned daemon did not become ready before its deadline.", "Retry after inspecting System Doctor."),
-	CodeBridgeExitError:             definition(SubsystemBridge, StageLifecycle, SeverityError, false, ErrorKindInternal, "The bridge exited unexpectedly.", "Inspect local bridge diagnostics."),
-	CodeExtensionDisconnect:         definition(SubsystemExtension, StageReconnect, SeverityWarning, false, ErrorKindIntegration, "The extension disconnected.", "Reload the extension if it does not reconnect."),
-	CodeInstallConfigError:          definition(SubsystemInstaller, StageRecovery, SeverityError, false, ErrorKindInternal, "Installation configuration could not be updated.", "Inspect local installer diagnostics and retry."),
+	CodeUncleanDaemonExit:           definition(SubsystemDaemon, StageLifecycle, SeverityFatal, true, ErrorKindInternal, doctorProse{detail: "The previous daemon run did not record a clean shutdown.", fix: "Restart Kaboom and inspect the correlated local incident timeline if this repeats."}),
+	CodeDaemonRestartLoop:           definition(SubsystemDaemon, StageLifecycle, SeverityFatal, false, ErrorKindInternal, doctorProse{detail: "Kaboom repeatedly restarted inside the protected startup window.", fix: "Inspect System Doctor before starting another daemon."}),
+	CodeExtensionReconnectExhausted: definition(SubsystemBridge, StageReconnect, SeverityError, true, ErrorKindIntegration, doctorProse{detail: "The extension exhausted its bounded reconnect attempts.", fix: "Reload the extension and tracked page, then retry."}),
+	CodeTrackedTabRecoveryFailed:    definition(SubsystemTracking, StageTracking, SeverityError, true, ErrorKindIntegration, doctorProse{detail: "Kaboom could not restore the previously tracked tab.", fix: "Select the intended tab in the extension and retry."}),
+	CodeContentReadinessTimeout:     definition(SubsystemBridge, StageReadiness, SeverityError, true, ErrorKindIntegration, doctorProse{detail: "The content script did not acknowledge readiness before the deadline.", fix: "Reload the tracked page and retry the command."}),
+	CodeStaleCommandResultRejected:  definition(SubsystemCommand, StageResolution, SeverityWarning, true, ErrorKindInternal, doctorProse{detail: "A result from an obsolete connection generation was rejected.", fix: "Retry if the current command did not complete."}),
+	CodeQueueSaturated:              definition(SubsystemQueue, StageCapacity, SeverityWarning, true, ErrorKindInternal, doctorProse{detail: "A bounded operational queue reached capacity.", fix: "Wait for active work to drain, then retry."}),
+	CodeStateRecoveryFailed:         definition(SubsystemState, StageRecovery, SeverityError, true, ErrorKindInternal, doctorProse{detail: "Persisted state could not be recovered safely.", fix: "Reset the affected state through System Doctor and retry."}),
+	CodeDaemonPanic:                 definition(SubsystemDaemon, StageLifecycle, SeverityFatal, false, ErrorKindInternal, doctorProse{detail: "The daemon recovered a panic.", fix: "Inspect local crash diagnostics and restart Kaboom."}),
+	CodeDaemonStartFailed:           definition(SubsystemStartup, StageLifecycle, SeverityFatal, false, ErrorKindInternal, doctorProse{detail: "The daemon could not start.", fix: "Inspect local startup diagnostics and retry."}),
+	CodeToolRateLimited:             definition(SubsystemDaemon, StageCapacity, SeverityWarning, true, ErrorKindIntegration, doctorProse{detail: "A tool call exceeded the bounded request rate.", fix: "Retry after the reported backoff."}),
+	CodeBridgeConnectionError:       definition(SubsystemBridge, StageReconnect, SeverityError, true, ErrorKindIntegration, doctorProse{detail: "The MCP bridge could not connect.", fix: "Retry the connection or inspect System Doctor."}),
+	CodeBridgePortBlocked:           definition(SubsystemBridge, StageLifecycle, SeverityError, false, ErrorKindIntegration, doctorProse{detail: "The bridge port is owned by another process.", fix: "Free the configured port and retry."}),
+	CodeBridgeSpawnBuildError:       definition(SubsystemBridge, StageLifecycle, SeverityFatal, false, ErrorKindInternal, doctorProse{detail: "The bridge daemon binary could not be built.", fix: "Inspect local build diagnostics."}),
+	CodeBridgeSpawnStartError:       definition(SubsystemBridge, StageLifecycle, SeverityFatal, false, ErrorKindInternal, doctorProse{detail: "The bridge daemon process could not start.", fix: "Inspect local process diagnostics."}),
+	CodeBridgeSpawnTimeout:          definition(SubsystemBridge, StageReadiness, SeverityError, true, ErrorKindInternal, doctorProse{detail: "The spawned daemon did not become ready before its deadline.", fix: "Retry after inspecting System Doctor."}),
+	CodeBridgeExitError:             definition(SubsystemBridge, StageLifecycle, SeverityError, false, ErrorKindInternal, doctorProse{detail: "The bridge exited unexpectedly.", fix: "Inspect local bridge diagnostics."}),
+	CodeExtensionDisconnect:         definition(SubsystemExtension, StageReconnect, SeverityWarning, false, ErrorKindIntegration, doctorProse{detail: "The extension disconnected.", fix: "Reload the extension if it does not reconnect."}),
+	CodeInstallConfigError:          definition(SubsystemInstaller, StageRecovery, SeverityError, false, ErrorKindInternal, doctorProse{detail: "Installation configuration could not be updated.", fix: "Inspect local installer diagnostics and retry."}),
 }
 
-func definition(subsystem Subsystem, stage Stage, severity Severity, retryable bool, kind ErrorKind, detail, fix string) Definition {
-	return Definition{Subsystem: subsystem, Stage: stage, Severity: severity, Retryable: retryable, ErrorKind: kind, Privacy: PrivacyBoundedProductMetadata, DoctorDetail: detail, DoctorFix: fix}
+// doctorProse pairs the Doctor detail and fix strings every definition carries.
+type doctorProse struct {
+	detail string
+	fix    string
+}
+
+func definition(subsystem Subsystem, stage Stage, severity Severity, retryable bool, kind ErrorKind, prose doctorProse) Definition {
+	return Definition{Subsystem: subsystem, Stage: stage, Severity: severity, Retryable: retryable, ErrorKind: kind, Privacy: PrivacyBoundedProductMetadata, DoctorDetail: prose.detail, DoctorFix: prose.fix}
 }
 
 func Lookup(code Code) (Definition, bool) {

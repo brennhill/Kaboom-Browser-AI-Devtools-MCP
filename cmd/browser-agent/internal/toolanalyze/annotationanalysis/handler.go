@@ -366,6 +366,20 @@ func (h *Handler) GetAnnotationDetail(req mcp.JSONRPCRequest, args json.RawMessa
 		return mcp.Fail(req, mcp.ErrNoData, "Annotation detail not found or expired for correlation_id: "+params.CorrelationID, "Detail data expires after 10 minutes. Re-run draw mode to capture fresh data.")
 	}
 
+	result := buildAnnotationDetailPayload(detail)
+
+	// Error correlation: find console errors near the annotation's timestamp
+	hasCorrelatedErrors := h.attachCorrelatedErrors(result, params.CorrelationID)
+
+	// Detail-level LLM hints (context-aware)
+	if detailHints := toolanalyze.BuildDetailHints(detail.CSSFramework, detail.JSFramework, detail.A11yFlags, hasCorrelatedErrors); detailHints != nil {
+		result["hints"] = detailHints
+	}
+
+	return mcp.Succeed(req, "Annotation detail", result)
+}
+
+func buildAnnotationDetailPayload(detail *annotation.Detail) map[string]any {
 	result := map[string]any{
 		"correlation_id":  detail.CorrelationID,
 		"selector":        detail.Selector,
@@ -411,24 +425,19 @@ func (h *Handler) GetAnnotationDetail(req mcp.JSONRPCRequest, args json.RawMessa
 	if len(detail.Component) > 0 {
 		result["component"] = detail.Component
 	}
+	return result
+}
 
-	// Error correlation: find console errors near the annotation's timestamp
-	hasCorrelatedErrors := false
-	if annotTS := h.annotationStore.FindAnnotationTimestamp(params.CorrelationID); annotTS > 0 {
+func (h *Handler) attachCorrelatedErrors(result map[string]any, correlationID string) bool {
+	if annotTS := h.annotationStore.FindAnnotationTimestamp(correlationID); annotTS > 0 {
 		correlatedErrors := h.findErrorsNearTimestamp(annotTS, annotationErrorCorrelationWindow)
 		if len(correlatedErrors) > 0 {
 			result["correlated_errors"] = correlatedErrors
 			result["error_correlation_window_seconds"] = 5
-			hasCorrelatedErrors = true
+			return true
 		}
 	}
-
-	// Detail-level LLM hints (context-aware)
-	if detailHints := toolanalyze.BuildDetailHints(detail.CSSFramework, detail.JSFramework, detail.A11yFlags, hasCorrelatedErrors); detailHints != nil {
-		result["hints"] = detailHints
-	}
-
-	return mcp.Succeed(req, "Annotation detail", result)
+	return false
 }
 
 func (h *Handler) findErrorsNearTimestamp(timestampMillis int64, window time.Duration) []map[string]string {

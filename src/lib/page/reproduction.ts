@@ -168,10 +168,44 @@ export function computeCssPath(element: Element | null): string {
   return parts.join(' > ')
 }
 
+function readTestId(el: ElementWithProperties): string | undefined {
+  return (
+    (el.getAttribute &&
+      (el.getAttribute('data-testid') || el.getAttribute('data-test-id') || el.getAttribute('data-cy'))) ||
+    undefined
+  )
+}
+
+function applyRoleSelector(
+  selectors: Partial<SelectorStrategies>,
+  element: Element,
+  el: ElementWithProperties,
+  ariaLabel: string | false | null
+): void {
+  const explicitRole = el.getAttribute && el.getAttribute('role')
+  const role = explicitRole || getImplicitRole(element)
+  const name = ariaLabel || (el.textContent && el.textContent.trim().slice(0, SELECTOR_TEXT_MAX_LENGTH))
+  if (role && name) {
+    selectors.role = { role, name: ariaLabel || name }
+  }
+}
+
+function applyClickableTextSelector(
+  selectors: Partial<SelectorStrategies>,
+  element: Element,
+  el: ElementWithProperties
+): void {
+  const isClickable =
+    (element.tagName && CLICKABLE_TAGS.has(element.tagName.toUpperCase())) ||
+    (el.getAttribute && el.getAttribute('role') === 'button')
+  if (!isClickable) return
+  const text = (el.textContent || el.innerText || '').trim()
+  if (text) selectors.text = text.slice(0, SELECTOR_TEXT_MAX_LENGTH)
+}
+
 /**
  * Compute multi-strategy selectors for an element
  */
-// #lizard forgives
 export function computeSelectors(element: Element | null): SelectorStrategies {
   if (!element) return { cssPath: '' }
 
@@ -234,10 +268,7 @@ export function computeSelectors(element: Element | null): SelectorStrategies {
   //   - Dynamically created elements: All text/ID strategies remain valid; CSS path may shift.
 
   // Priority 1: Test ID
-  const testId =
-    (el.getAttribute &&
-      (el.getAttribute('data-testid') || el.getAttribute('data-test-id') || el.getAttribute('data-cy'))) ||
-    undefined
+  const testId = readTestId(el)
   if (testId) selectors.testId = testId
 
   // Priority 2: ARIA label
@@ -245,24 +276,13 @@ export function computeSelectors(element: Element | null): SelectorStrategies {
   if (ariaLabel) selectors.ariaLabel = ariaLabel
 
   // Priority 3: Role + accessible name
-  const explicitRole = el.getAttribute && el.getAttribute('role')
-  const role = explicitRole || getImplicitRole(element)
-  const name = ariaLabel || (el.textContent && el.textContent.trim().slice(0, SELECTOR_TEXT_MAX_LENGTH))
-  if (role && name) {
-    selectors.role = { role, name: ariaLabel || name }
-  }
+  applyRoleSelector(selectors, element, el, ariaLabel)
 
   // Priority 4: ID
   if (element.id) selectors.id = element.id
 
   // Priority 5: Text content (for clickable elements or role="button")
-  const isClickable =
-    (element.tagName && CLICKABLE_TAGS.has(element.tagName.toUpperCase())) ||
-    (el.getAttribute && el.getAttribute('role') === 'button')
-  if (isClickable) {
-    const text = (el.textContent || el.innerText || '').trim()
-    if (text) selectors.text = text.slice(0, SELECTOR_TEXT_MAX_LENGTH)
-  }
+  applyClickableTextSelector(selectors, element, el)
 
   // Priority 6: CSS path (always computed as fallback)
   selectors.cssPath = computeCssPath(element)
@@ -409,19 +429,17 @@ function actionToPlaywrightStep(action: EnhancedActionRecord, baseUrl: string | 
   return generator ? generator(action, locator, baseUrl) : null
 }
 
-/**
- * Generate a Playwright test script from captured actions
- */
-export function generatePlaywrightScript(actions: EnhancedActionRecord[], opts: ScriptOptions = {}): string {
-  const { errorMessage, baseUrl, lastNActions } = opts
-
-  // Apply lastNActions filter
-  let filteredActions = actions
+function filterRecentActions(
+  actions: EnhancedActionRecord[],
+  lastNActions: number | undefined
+): EnhancedActionRecord[] {
   if (lastNActions && lastNActions > 0 && actions.length > lastNActions) {
-    filteredActions = actions.slice(-lastNActions)
+    return actions.slice(-lastNActions)
   }
+  return actions
+}
 
-  // Determine start URL
+function resolveStartUrl(filteredActions: EnhancedActionRecord[], baseUrl: string | undefined): string {
   let startUrl = ''
   if (filteredActions.length > 0) {
     const firstAction = filteredActions[0]
@@ -437,11 +455,10 @@ export function generatePlaywrightScript(actions: EnhancedActionRecord[], opts: 
       startUrl = baseUrl
     }
   }
+  return startUrl
+}
 
-  // Build test name
-  const testName = errorMessage ? `reproduction: ${errorMessage.slice(0, 80)}` : 'reproduction: captured user actions'
-
-  // Generate step code
+function buildPlaywrightSteps(filteredActions: EnhancedActionRecord[], baseUrl: string | undefined): string[] {
   const steps: string[] = []
   let prevTimestamp: number | null = null
 
@@ -456,7 +473,15 @@ export function generatePlaywrightScript(actions: EnhancedActionRecord[], opts: 
     if (step) steps.push(step)
   }
 
-  // Assemble script
+  return steps
+}
+
+function assemblePlaywrightScript(
+  testName: string,
+  startUrl: string,
+  steps: string[],
+  errorMessage: string | undefined
+): string {
   let script = `import { test, expect } from '@playwright/test';\n\n` // nosemgrep: missing-template-string-indicator
   script += `test('${escapeString(testName)}', async ({ page }) => {\n` // nosemgrep: missing-template-string-indicator
   if (startUrl) {
@@ -468,6 +493,23 @@ export function generatePlaywrightScript(actions: EnhancedActionRecord[], opts: 
     script += `\n  // Error occurred here: ${errorMessage}\n`
   }
   script += `});\n`
+  return script
+}
+
+/**
+ * Generate a Playwright test script from captured actions
+ */
+export function generatePlaywrightScript(actions: EnhancedActionRecord[], opts: ScriptOptions = {}): string {
+  const { errorMessage, baseUrl, lastNActions } = opts
+
+  const filteredActions = filterRecentActions(actions, lastNActions)
+  const startUrl = resolveStartUrl(filteredActions, baseUrl)
+
+  // Build test name
+  const testName = errorMessage ? `reproduction: ${errorMessage.slice(0, 80)}` : 'reproduction: captured user actions'
+
+  const steps = buildPlaywrightSteps(filteredActions, baseUrl)
+  let script = assemblePlaywrightScript(testName, startUrl, steps, errorMessage)
 
   // Cap output size
   if (script.length > SCRIPT_MAX_SIZE) {

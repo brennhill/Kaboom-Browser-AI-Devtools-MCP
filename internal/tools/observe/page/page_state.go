@@ -227,6 +227,30 @@ func GetStorage(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 		)
 	}
 
+	stateResult, errResp := fetchStorageState(deps, req, cap)
+	if errResp != nil {
+		return *errResp
+	}
+
+	response := map[string]any{
+		"url":      stateResult["url"],
+		"metadata": core.BuildResponseMetadata(cap, time.Now()),
+	}
+	attachStorageSections(response, stateResult, params)
+
+	// IndexedDB listing is best-effort (skip if storage_type filter excludes it)
+	if params.StorageType == "" {
+		attachIndexedDBListing(response, cap)
+	}
+
+	return mcp.Succeed(req, "Browser storage", response)
+}
+
+func (p storageParams) includesType(storageType string) bool {
+	return p.StorageType == "" || p.StorageType == storageType
+}
+
+func fetchStorageState(deps core.Deps, req mcp.JSONRPCRequest, cap *capture.Capture) (map[string]any, *mcp.JSONRPCResponse) {
 	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:   "state_capture",
@@ -236,94 +260,89 @@ func GetStorage(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 		"",
 	)
 	if qerr != nil {
-		return queueFullResponse(req, qerr)
+		resp := queueFullResponse(req, qerr)
+		return nil, &resp
 	}
 
 	result, err := cap.Queries().WaitForResult(queryID, 10*time.Second)
 	if err != nil {
-		return mcp.Fail(req,
+		resp := mcp.Fail(req,
 			mcp.ErrExtTimeout,
 			"Storage capture timeout: "+err.Error(),
 			"Ensure the extension is connected and the page has loaded.",
 			mcp.WithHint(deps.DiagnosticHintString()),
 		)
+		return nil, &resp
 	}
 
 	var stateResult map[string]any
 	if err := json.Unmarshal(result, &stateResult); err != nil {
-		return mcp.Fail(req,
+		resp := mcp.Fail(req,
 			mcp.ErrInvalidJSON,
 			"Failed to parse storage result: "+err.Error(),
 			"Check extension logs for errors",
 		)
+		return nil, &resp
 	}
 
 	if errMsg, ok := stateResult["error"].(string); ok {
-		return mcp.Fail(req,
+		resp := mcp.Fail(req,
 			mcp.ErrExtError,
 			"Storage capture failed: "+errMsg,
 			"Check that the tab is accessible.",
 			mcp.WithHint(deps.DiagnosticHintString()),
 		)
+		return nil, &resp
 	}
 
-	response := map[string]any{
-		"url":      stateResult["url"],
-		"metadata": core.BuildResponseMetadata(cap, time.Now()),
-	}
+	return stateResult, nil
+}
 
-	includeLocal := params.StorageType == "" || params.StorageType == "local"
-	includeSession := params.StorageType == "" || params.StorageType == "session"
-	includeCookies := params.StorageType == "" || params.StorageType == "cookies"
-
-	if params.Summary {
-		if includeLocal {
-			if v, ok := stateResult["localStorage"].(map[string]any); ok {
-				response["local_storage"] = summarizeStorageMap(filterStorageMap(v, params.Key))
-			}
-		}
-		if includeSession {
-			if v, ok := stateResult["sessionStorage"].(map[string]any); ok {
-				response["session_storage"] = summarizeStorageMap(filterStorageMap(v, params.Key))
-			}
-		}
-		if includeCookies {
-			if v, ok := stateResult["cookies"].([]any); ok {
-				response["cookies"] = summarizeCookies(filterCookies(v, params.Key))
-			}
-		}
-	} else {
-		if includeLocal {
-			if v, ok := stateResult["localStorage"].(map[string]any); ok {
-				response["local_storage"] = filterStorageMap(v, params.Key)
-			}
-		}
-		if includeSession {
-			if v, ok := stateResult["sessionStorage"].(map[string]any); ok {
-				response["session_storage"] = filterStorageMap(v, params.Key)
-			}
-		}
-		if includeCookies {
-			if v, ok := stateResult["cookies"].([]any); ok {
-				response["cookies"] = filterCookies(v, params.Key)
-			}
+func attachStorageSections(response map[string]any, stateResult map[string]any, params storageParams) {
+	if params.includesType("local") {
+		if v, ok := stateResult["localStorage"].(map[string]any); ok {
+			response["local_storage"] = storageMapValue(v, params.Key, params.Summary)
 		}
 	}
-
-	// IndexedDB listing is best-effort (skip if storage_type filter excludes it)
-	if params.StorageType == "" {
-		if indexeddb, err := idbquery.Listing(cap); err != nil {
-			response["indexeddb"] = map[string]any{
-				"supported": false,
-				"databases": []any{},
-			}
-			response["indexeddb_error"] = err.Error()
-		} else {
-			response["indexeddb"] = indexeddb
+	if params.includesType("session") {
+		if v, ok := stateResult["sessionStorage"].(map[string]any); ok {
+			response["session_storage"] = storageMapValue(v, params.Key, params.Summary)
 		}
 	}
+	if params.includesType("cookies") {
+		if v, ok := stateResult["cookies"].([]any); ok {
+			response["cookies"] = cookiesValue(v, params.Key, params.Summary)
+		}
+	}
+}
 
-	return mcp.Succeed(req, "Browser storage", response)
+func storageMapValue(v map[string]any, key string, summary bool) map[string]any {
+	filtered := filterStorageMap(v, key)
+	if summary {
+		return summarizeStorageMap(filtered)
+	}
+	return filtered
+}
+
+func cookiesValue(v []any, name string, summary bool) any {
+	filtered := filterCookies(v, name)
+	if summary {
+		return summarizeCookies(filtered)
+	}
+	return filtered
+}
+
+func attachIndexedDBListing(response map[string]any, cap *capture.Capture) {
+	indexeddb, err := idbquery.Listing(cap)
+	if err != nil {
+		response["indexeddb"] = map[string]any{
+			"supported": false,
+			"databases": []any{},
+		}
+		response["indexeddb_error"] = err.Error()
+		return
+	}
+	response["indexeddb"] = indexeddb
 }
 
 // GetIndexedDB returns rows from one IndexedDB object store.
@@ -412,6 +431,15 @@ func toInt(v any) (int, bool) {
 	}
 }
 
+type screenshotParams struct {
+	Format        string `json:"format,omitempty"`
+	Quality       int    `json:"quality,omitempty"`
+	FullPage      bool   `json:"full_page,omitempty"`
+	Selector      string `json:"selector,omitempty"`
+	WaitForStable bool   `json:"wait_for_stable,omitempty"`
+	SaveTo        string `json:"save_to,omitempty"`
+}
+
 // GetScreenshot captures a screenshot of the current page via the extension.
 func GetScreenshot(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	cap := deps.Capture
@@ -420,49 +448,73 @@ func GetScreenshot(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 		return mcp.Fail(req, mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))
 	}
 
-	var params struct {
-		Format        string `json:"format,omitempty"`
-		Quality       int    `json:"quality,omitempty"`
-		FullPage      bool   `json:"full_page,omitempty"`
-		Selector      string `json:"selector,omitempty"`
-		WaitForStable bool   `json:"wait_for_stable,omitempty"`
-		SaveTo        string `json:"save_to,omitempty"`
-	}
+	var params screenshotParams
 	mcp.LenientUnmarshal(args, &params)
+	if resp := screenshotParamsError(req, params); resp != nil {
+		return *resp
+	}
 
+	screenshotResult, errResp := fetchScreenshotResult(deps, req, cap, buildScreenshotQueryParams(params))
+	if errResp != nil {
+		return *errResp
+	}
+
+	// Extract data_url before building text block to avoid duplicating
+	// the large base64 payload in both text and image content blocks.
+	dataURL := extractDataURL(screenshotResult)
+
+	// #386: save_to — copy screenshot to user-specified path
+	applyScreenshotSaveTo(screenshotResult, params, dataURL)
+
+	// Build text response with file path info (backward compatible)
+	resp := mcp.Succeed(req, "Screenshot captured", screenshotResult)
+
+	return appendImageBlock(resp, dataURL)
+}
+
+func screenshotParamsError(req mcp.JSONRPCRequest, params screenshotParams) *mcp.JSONRPCResponse {
 	if params.Format != "" && params.Format != "png" && params.Format != "jpeg" {
-		return mcp.Fail(req,
+		resp := mcp.Fail(req,
 			mcp.ErrInvalidParam, "Invalid screenshot format: "+params.Format,
 			"Use 'png' or 'jpeg'", mcp.WithParam("format"),
 		)
+		return &resp
 	}
 
 	if params.Quality != 0 && (params.Quality < 1 || params.Quality > 100) {
-		return mcp.Fail(req,
+		resp := mcp.Fail(req,
 			mcp.ErrInvalidParam, fmt.Sprintf("Invalid quality: %d (must be 1-100)", params.Quality),
 			"Use a value between 1 and 100", mcp.WithParam("quality"),
 		)
+		return &resp
 	}
 
-	screenshotParams := map[string]any{}
+	return nil
+}
+
+func buildScreenshotQueryParams(params screenshotParams) []byte {
+	screenshotParamsMap := map[string]any{}
 	if params.Format != "" {
-		screenshotParams["format"] = params.Format
+		screenshotParamsMap["format"] = params.Format
 	}
 	if params.Quality > 0 {
-		screenshotParams["quality"] = params.Quality
+		screenshotParamsMap["quality"] = params.Quality
 	}
 	if params.FullPage {
-		screenshotParams["full_page"] = true
+		screenshotParamsMap["full_page"] = true
 	}
 	if params.Selector != "" {
-		screenshotParams["selector"] = params.Selector
+		screenshotParamsMap["selector"] = params.Selector
 	}
 	if params.WaitForStable {
-		screenshotParams["wait_for_stable"] = true
+		screenshotParamsMap["wait_for_stable"] = true
 	}
 
-	queryParams, _ := json.Marshal(screenshotParams)
+	queryParams, _ := json.Marshal(screenshotParamsMap)
+	return queryParams
+}
 
+func fetchScreenshotResult(deps core.Deps, req mcp.JSONRPCRequest, cap *capture.Capture, queryParams []byte) (map[string]any, *mcp.JSONRPCResponse) {
 	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:   "screenshot",
@@ -472,52 +524,59 @@ func GetScreenshot(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 		"",
 	)
 	if qerr != nil {
-		return queueFullResponse(req, qerr)
+		resp := queueFullResponse(req, qerr)
+		return nil, &resp
 	}
 
 	result, err := cap.Queries().WaitForResult(queryID, 20*time.Second)
 	if err != nil {
-		return mcp.Fail(req, mcp.ErrExtTimeout, "Screenshot capture timeout: "+err.Error(), "Ensure the extension is connected and the page has loaded. Try refreshing the page, then retry.", mcp.WithHint(deps.DiagnosticHintString()))
+		resp := mcp.Fail(req, mcp.ErrExtTimeout, "Screenshot capture timeout: "+err.Error(), "Ensure the extension is connected and the page has loaded. Try refreshing the page, then retry.", mcp.WithHint(deps.DiagnosticHintString()))
+		return nil, &resp
 	}
 
 	var screenshotResult map[string]any
 	if err := json.Unmarshal(result, &screenshotResult); err != nil {
-		return mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to parse screenshot result: "+err.Error(), "Check extension logs for errors")
+		resp := mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to parse screenshot result: "+err.Error(), "Check extension logs for errors")
+		return nil, &resp
 	}
 
 	if errMsg, ok := screenshotResult["error"].(string); ok {
-		return mcp.Fail(req, mcp.ErrExtError, "Screenshot capture failed: "+errMsg, "Check that the tab is visible and accessible. The extension reported an error.", mcp.WithHint(deps.DiagnosticHintString()))
+		resp := mcp.Fail(req, mcp.ErrExtError, "Screenshot capture failed: "+errMsg, "Check that the tab is visible and accessible. The extension reported an error.", mcp.WithHint(deps.DiagnosticHintString()))
+		return nil, &resp
 	}
 
-	// Extract data_url before building text block to avoid duplicating
-	// the large base64 payload in both text and image content blocks.
+	return screenshotResult, nil
+}
+
+func extractDataURL(screenshotResult map[string]any) string {
 	var dataURL string
 	if du, ok := screenshotResult["data_url"].(string); ok && du != "" {
 		dataURL = du
 		delete(screenshotResult, "data_url")
 	}
+	return dataURL
+}
 
-	// #386: save_to — copy screenshot to user-specified path
-	if params.SaveTo != "" && dataURL != "" {
-		if saveErr := saveScreenshotToPath(params.SaveTo, dataURL); saveErr != nil {
-			screenshotResult["save_to_error"] = saveErr.Error()
-		} else {
-			screenshotResult["save_to"] = params.SaveTo
-		}
+func applyScreenshotSaveTo(screenshotResult map[string]any, params screenshotParams, dataURL string) {
+	if params.SaveTo == "" || dataURL == "" {
+		return
 	}
-
-	// Build text response with file path info (backward compatible)
-	resp := mcp.Succeed(req, "Screenshot captured", screenshotResult)
-
-	// Append inline image content block if data_url was present
-	if dataURL != "" {
-		base64Data, mimeType := parseDataURL(dataURL)
-		if base64Data != "" {
-			resp = mcp.AppendImageToResponse(resp, base64Data, mimeType)
-		}
+	if saveErr := saveScreenshotToPath(params.SaveTo, dataURL); saveErr != nil {
+		screenshotResult["save_to_error"] = saveErr.Error()
+		return
 	}
+	screenshotResult["save_to"] = params.SaveTo
+}
 
-	return resp
+func appendImageBlock(resp mcp.JSONRPCResponse, dataURL string) mcp.JSONRPCResponse {
+	if dataURL == "" {
+		return resp
+	}
+	base64Data, mimeType := parseDataURL(dataURL)
+	if base64Data == "" {
+		return resp
+	}
+	return mcp.AppendImageToResponse(resp, base64Data, mimeType)
 }
 
 func queueFullResponse(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {

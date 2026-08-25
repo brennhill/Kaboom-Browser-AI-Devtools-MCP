@@ -150,9 +150,10 @@ func lengthFinding(el elementView, property string, tokens tokenTable, spec *des
 		if scaleContains(spec.SpacingScale, value) {
 			return finding{}, false
 		}
-		return newFinding(categoryDesignTokens, property, el, formatPx(value), formatScale(spec.SpacingScale),
-			provenanceDeclared, confidenceHigh, "declared spec spacing scale",
-			fmt.Sprintf("%s is %s, which is not on the declared spacing scale", property, formatPx(value))), true
+		return newFinding(findingSpec{category: categoryDesignTokens, property: property, el: el,
+			observed: formatPx(value), expected: formatScale(spec.SpacingScale),
+			provenance: provenanceDeclared, confidence: confidenceHigh, evidence: "declared spec spacing scale",
+			message: fmt.Sprintf("%s is %s, which is not on the declared spacing scale", property, formatPx(value))}), true
 	}
 
 	name, tokenValue, found := nearestLengthToken(tokens, value)
@@ -163,9 +164,11 @@ func lengthFinding(el elementView, property string, tokens tokenTable, spec *des
 		// Exact match: the success state this feature steers toward.
 		return finding{}, false
 	}
-	return newFinding(categoryDesignTokens, property, el, formatPx(value), fmt.Sprintf("%s (%s)", name, formatPx(tokenValue)),
-		provenanceDeclared, confidenceHigh, fmt.Sprintf("page token %s = %s", name, formatPx(tokenValue)),
-		fmt.Sprintf("%s is %s, a near-miss of the declared token %s (%s)", property, formatPx(value), name, formatPx(tokenValue))), true
+	return newFinding(findingSpec{category: categoryDesignTokens, property: property, el: el,
+		observed: formatPx(value), expected: fmt.Sprintf("%s (%s)", name, formatPx(tokenValue)),
+		provenance: provenanceDeclared, confidence: confidenceHigh,
+		evidence: fmt.Sprintf("page token %s = %s", name, formatPx(tokenValue)),
+		message:  fmt.Sprintf("%s is %s, a near-miss of the declared token %s (%s)", property, formatPx(value), name, formatPx(tokenValue))}), true
 }
 
 // colorFinding compares one colour property against the palette or the page's
@@ -187,9 +190,10 @@ func colorFinding(el elementView, property string, tokens tokenTable, spec *desi
 				return finding{}, false
 			}
 		}
-		return newFinding(categoryDesignTokens, property, el, value.css(), strings.Join(spec.Colors, ", "),
-			provenanceDeclared, confidenceHigh, "declared spec palette",
-			fmt.Sprintf("%s is %s, which is not in the declared palette", property, value.css())), true
+		return newFinding(findingSpec{category: categoryDesignTokens, property: property, el: el,
+			observed: value.css(), expected: strings.Join(spec.Colors, ", "),
+			provenance: provenanceDeclared, confidence: confidenceHigh, evidence: "declared spec palette",
+			message: fmt.Sprintf("%s is %s, which is not in the declared palette", property, value.css())}), true
 	}
 
 	name, tokenValue, distance, found := nearestColorToken(tokens, value)
@@ -199,9 +203,11 @@ func colorFinding(el elementView, property string, tokens tokenTable, spec *desi
 	if distance == 0 {
 		return finding{}, false
 	}
-	return newFinding(categoryDesignTokens, property, el, value.css(), fmt.Sprintf("%s (%s)", name, tokenValue.css()),
-		provenanceDeclared, confidenceHigh, fmt.Sprintf("page token %s = %s", name, tokenValue.css()),
-		fmt.Sprintf("%s is %s, a near-miss of the declared token %s (%s)", property, value.css(), name, tokenValue.css())), true
+	return newFinding(findingSpec{category: categoryDesignTokens, property: property, el: el,
+		observed: value.css(), expected: fmt.Sprintf("%s (%s)", name, tokenValue.css()),
+		provenance: provenanceDeclared, confidence: confidenceHigh,
+		evidence: fmt.Sprintf("page token %s = %s", name, tokenValue.css()),
+		message:  fmt.Sprintf("%s is %s, a near-miss of the declared token %s (%s)", property, value.css(), name, tokenValue.css())}), true
 }
 
 // nearestLengthToken returns the closest length token within the relative

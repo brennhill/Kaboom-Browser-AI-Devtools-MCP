@@ -148,16 +148,18 @@ export function domPrimitiveListInteractive(
     return parts.join(' >>> ')
   }
 
+  function classifyInputElement(el: Element): string {
+    const inputType = (el as HTMLInputElement).type || 'text'
+    if (inputType === 'submit' || inputType === 'button' || inputType === 'reset') return 'button'
+    if (inputType === 'checkbox' || inputType === 'radio') return 'checkbox'
+    return 'input'
+  }
+
   function classifyElement(el: Element): string {
     const tag = el.tagName.toLowerCase()
     if (tag === 'a') return 'link'
     if (tag === 'button' || el.getAttribute('role') === 'button') return 'button'
-    if (tag === 'input') {
-      const inputType = (el as HTMLInputElement).type || 'text'
-      if (inputType === 'submit' || inputType === 'button' || inputType === 'reset') return 'button'
-      if (inputType === 'checkbox' || inputType === 'radio') return 'checkbox'
-      return 'input'
-    }
+    if (tag === 'input') return classifyInputElement(el)
     if (tag === 'select') return 'select'
     if (tag === 'textarea') return 'textarea'
     if (el.getAttribute('role') === 'link') return 'link'
@@ -402,6 +404,7 @@ export function domPrimitiveListInteractive(
     landmarkTag?: string
     landmarkRole?: string
   }[] = []
+  const finalEntries: typeof rawEntries = []
 
   const scopeRoot = resolveScopeRoot(scopeSelector)
   if (!scopeRoot) {
@@ -413,73 +416,177 @@ export function domPrimitiveListInteractive(
     }
   }
 
-  for (const cssSelector of interactiveSelectors) {
-    const matches = querySelectorAllDeep(cssSelector, scopeRoot)
-    for (const el of matches) {
-      if (seen.has(el)) continue
-      seen.add(el)
+  function isElementVisible(htmlEl: HTMLElement): boolean {
+    const rect = htmlEl.getBoundingClientRect()
+    return rect.width > 0 && rect.height > 0 && htmlEl.offsetParent !== null
+  }
 
-      const htmlEl = el as HTMLElement
-      const rect = htmlEl.getBoundingClientRect()
-      const visible = rect.width > 0 && rect.height > 0 && htmlEl.offsetParent !== null
-      if (!intersectsScopeRect(el)) continue
+  function hasVisibleRect(htmlEl: HTMLElement): boolean {
+    const rect = htmlEl.getBoundingClientRect()
+    return rect.width > 0 && rect.height > 0
+  }
 
-      // #369: Apply filters early to maximize useful elements within the 100-cap
-      if (visibleOnly && !visible) continue
-      if (excludeNav) {
-        const lm = findNearestLandmark(el)
-        if (lm && (lm.tag === 'nav' || lm.tag === 'header' || lm.role === 'navigation' || lm.role === 'banner'))
-          continue
+  function isNavLandmark(lm: { tag: string; role?: string }): boolean {
+    return lm.tag === 'nav' || lm.tag === 'header' || lm.role === 'navigation' || lm.role === 'banner'
+  }
+
+  function excludedByNav(el: Element): boolean {
+    if (!excludeNav) return false
+    const lm = findNearestLandmark(el)
+    return !!lm && isNavLandmark(lm)
+  }
+
+  function buildElementLabel(el: Element, htmlEl: HTMLElement, fallback: string, includePlaceholder: boolean): string {
+    const fromAttributes =
+      el.getAttribute('aria-label') ||
+      el.getAttribute('title') ||
+      (includePlaceholder ? el.getAttribute('placeholder') : undefined)
+    return fromAttributes || (htmlEl.textContent || '').trim().slice(0, 60) || fallback
+  }
+
+  function passesLabelFilter(label: string): boolean {
+    return !textContains || label.toLowerCase().includes(textContains)
+  }
+
+  function passesRoleFilter(elementType: string | undefined, ariaRole: string): boolean {
+    if (!roleFilter) return true
+    if (elementType === roleFilter) return true
+    return ariaRole === roleFilter
+  }
+
+  function pushRawEntry(args: {
+    el: Element
+    htmlEl: HTMLElement
+    baseSelector: string
+    tag: string
+    inputTypeFromElement: boolean
+    elementType: string
+    label: string
+    ariaRole: string
+    includePlaceholder: boolean
+    bbox: { x: number; y: number; width: number; height: number }
+    visible: boolean
+    landmark: { tag: string; role?: string } | undefined
+  }): void {
+    rawEntries.push({
+      el: args.el,
+      htmlEl: args.htmlEl,
+      baseSelector: args.baseSelector,
+      finalSelector: args.baseSelector, // will be updated with :nth-match before sort
+      tag: args.tag,
+      inputType: args.inputTypeFromElement && args.el instanceof HTMLInputElement ? args.el.type : undefined,
+      elementType: args.elementType,
+      label: args.label,
+      role: args.ariaRole || undefined,
+      placeholder: args.includePlaceholder ? args.el.getAttribute('placeholder') || undefined : undefined,
+      bbox: args.bbox,
+      visible: args.visible,
+      inOverlay: isInsideOverlay(args.el),
+      landmarkTag: args.landmark?.tag,
+      landmarkRole: args.landmark?.role
+    })
+  }
+
+  function scanInteractiveSelectors(): void {
+    for (const cssSelector of interactiveSelectors) {
+      const matches = querySelectorAllDeep(cssSelector, scopeRoot!)
+      for (const el of matches) {
+        if (seen.has(el)) continue
+        seen.add(el)
+
+        const htmlEl = el as HTMLElement
+        const visible = isElementVisible(htmlEl)
+        if (!intersectsScopeRect(el)) continue
+
+        // #369: Apply filters early to maximize useful elements within the 100-cap
+        if (visibleOnly && !visible) continue
+        if (excludedByNav(el)) continue
+
+        const bbox = extractBoundingBox(el)
+
+        // Use >>> selector for shadow DOM elements, regular selector otherwise
+        const shadowSel = buildShadowSelector(el)
+        const baseSelector = shadowSel || buildUniqueSelector(el, htmlEl, cssSelector)
+
+        const label = buildElementLabel(el, htmlEl, el.tagName.toLowerCase(), true)
+
+        // #369: Apply text and role filters after label/type are computed
+        if (!passesLabelFilter(label)) continue
+        const elementType = classifyElement(el)
+        const ariaRole = el.getAttribute('role') || ''
+        if (!passesRoleFilter(elementType, ariaRole.toLowerCase())) continue
+
+        const landmark = findNearestLandmark(el)
+        pushRawEntry({
+          el,
+          htmlEl,
+          baseSelector,
+          tag: el.tagName.toLowerCase(),
+          inputTypeFromElement: true,
+          elementType,
+          label,
+          ariaRole,
+          includePlaceholder: true,
+          bbox,
+          visible,
+          landmark
+        })
+
+        if (rawEntries.length >= 100) break
       }
-
-      const bbox = extractBoundingBox(el)
-
-      // Use >>> selector for shadow DOM elements, regular selector otherwise
-      const shadowSel = buildShadowSelector(el)
-      const baseSelector = shadowSel || buildUniqueSelector(el, htmlEl, cssSelector)
-
-      // Build human-readable label
-      const label =
-        el.getAttribute('aria-label') ||
-        el.getAttribute('title') ||
-        el.getAttribute('placeholder') ||
-        (htmlEl.textContent || '').trim().slice(0, 60) ||
-        el.tagName.toLowerCase()
-
-      // #369: Apply text and role filters after label/type are computed
-      if (textContains && !label.toLowerCase().includes(textContains)) continue
-      const elementType = classifyElement(el)
-      const ariaRole = el.getAttribute('role') || ''
-      if (roleFilter && elementType !== roleFilter && ariaRole.toLowerCase() !== roleFilter) continue
-
-      const landmark = findNearestLandmark(el)
-      rawEntries.push({
-        el,
-        htmlEl,
-        baseSelector,
-        finalSelector: baseSelector, // will be updated with :nth-match before sort
-        tag: el.tagName.toLowerCase(),
-        inputType: el instanceof HTMLInputElement ? el.type : undefined,
-        elementType,
-        label,
-        role: ariaRole || undefined,
-        placeholder: el.getAttribute('placeholder') || undefined,
-        bbox,
-        visible,
-        inOverlay: isInsideOverlay(el),
-        landmarkTag: landmark?.tag,
-        landmarkRole: landmark?.role
-      })
-
       if (rawEntries.length >= 100) break
     }
-    if (rawEntries.length >= 100) break
   }
 
   // Second pass: find cursor:pointer elements not caught by selector scan.
   // Catches framework-bound click handlers (React onClick, Vue @click, etc.)
   // that render as plain divs/spans with no semantic interactive attributes.
-  if (rawEntries.length < 100) {
+
+  function isPointerCursor(htmlEl: HTMLElement): boolean {
+    if (!htmlEl.offsetParent && htmlEl !== document.body) return false
+    let cursor: string
+    try {
+      cursor = getComputedStyle(htmlEl).cursor
+    } catch {
+      return false
+    }
+    return cursor === 'pointer'
+  }
+
+  function tryPushCursorEntry(el: Element, htmlEl: HTMLElement, tag: string): void {
+    const visible = hasVisibleRect(htmlEl)
+    if (visibleOnly && !visible) return
+    if (!intersectsScopeRect(el)) return
+
+    const bbox = extractBoundingBox(el)
+    const shadowSel = buildShadowSelector(el)
+    const baseSelector = shadowSel || buildUniqueSelector(el, htmlEl, '*')
+
+    const label = buildElementLabel(el, htmlEl, tag, false)
+
+    if (!passesLabelFilter(label)) return
+    const ariaRole = el.getAttribute('role') || ''
+    if (!passesRoleFilter(undefined, ariaRole.toLowerCase())) return
+    if (excludedByNav(el)) return
+
+    const landmark = findNearestLandmark(el)
+    pushRawEntry({
+      el,
+      htmlEl,
+      baseSelector,
+      tag,
+      inputTypeFromElement: false,
+      elementType: 'clickable',
+      label,
+      ariaRole,
+      includePlaceholder: false,
+      bbox,
+      visible,
+      landmark
+    })
+  }
+
+  function scanCursorPointerElements(): void {
     const cursorPointerTags = new Set([
       'div',
       'span',
@@ -493,7 +600,7 @@ export function domPrimitiveListInteractive(
       'section',
       'article'
     ])
-    const candidates = scopeRoot.querySelectorAll('*')
+    const candidates = scopeRoot!.querySelectorAll('*')
     let checked = 0
     const maxCheck = 500 // Budget: don't scan more than 500 elements for cursor style
     for (const el of candidates) {
@@ -505,61 +612,11 @@ export function domPrimitiveListInteractive(
       checked++
 
       const htmlEl = el as HTMLElement
-      if (!htmlEl.offsetParent && htmlEl !== document.body) continue
-
-      let cursor: string
-      try {
-        cursor = getComputedStyle(htmlEl).cursor
-      } catch {
-        continue
-      }
-      if (cursor !== 'pointer') continue
 
       // Confirmed: cursor:pointer on a non-interactive element
+      if (!isPointerCursor(htmlEl)) continue
       seen.add(el)
-      const rect = htmlEl.getBoundingClientRect()
-      const visible = rect.width > 0 && rect.height > 0
-      if (visibleOnly && !visible) continue
-      if (!intersectsScopeRect(el)) continue
-
-      const bbox = extractBoundingBox(el)
-      const shadowSel = buildShadowSelector(el)
-      const baseSelector = shadowSel || buildUniqueSelector(el, htmlEl, '*')
-
-      const label =
-        el.getAttribute('aria-label') ||
-        el.getAttribute('title') ||
-        (htmlEl.textContent || '').trim().slice(0, 60) ||
-        tag
-
-      if (textContains && !label.toLowerCase().includes(textContains)) continue
-      const ariaRole = el.getAttribute('role') || ''
-      if (roleFilter && ariaRole.toLowerCase() !== roleFilter) continue
-
-      if (excludeNav) {
-        const lm = findNearestLandmark(el)
-        if (lm && (lm.tag === 'nav' || lm.tag === 'header' || lm.role === 'navigation' || lm.role === 'banner'))
-          continue
-      }
-
-      const landmark = findNearestLandmark(el)
-      rawEntries.push({
-        el,
-        htmlEl,
-        baseSelector,
-        finalSelector: baseSelector,
-        tag,
-        inputType: undefined,
-        elementType: 'clickable',
-        label,
-        role: ariaRole || undefined,
-        placeholder: undefined,
-        bbox,
-        visible,
-        inOverlay: isInsideOverlay(el),
-        landmarkTag: landmark?.tag,
-        landmarkRole: landmark?.role
-      })
+      tryPushCursorEntry(el, htmlEl, tag)
     }
   }
 
@@ -567,17 +624,19 @@ export function domPrimitiveListInteractive(
   // The resolver (resolveByTextAll, querySelectorAllDeep) returns elements in DOM order,
   // so :nth-match(N) numbering must match DOM order, not spatial order (#360).
   // IMPORTANT: assign :nth-match on the FULL pre-dedup set so indices match the resolver (#366).
-  const selectorCount = new Map<string, number>()
-  for (const entry of rawEntries) {
-    selectorCount.set(entry.baseSelector, (selectorCount.get(entry.baseSelector) || 0) + 1)
-  }
-  const selectorIndex = new Map<string, number>()
-  for (const entry of rawEntries) {
-    const count = selectorCount.get(entry.baseSelector) || 1
-    if (count > 1) {
-      const nth = (selectorIndex.get(entry.baseSelector) || 0) + 1
-      selectorIndex.set(entry.baseSelector, nth)
-      entry.finalSelector = `${entry.baseSelector}:nth-match(${nth})`
+  function disambiguateSelectors(): void {
+    const selectorCount = new Map<string, number>()
+    for (const entry of rawEntries) {
+      selectorCount.set(entry.baseSelector, (selectorCount.get(entry.baseSelector) || 0) + 1)
+    }
+    const selectorIndex = new Map<string, number>()
+    for (const entry of rawEntries) {
+      const count = selectorCount.get(entry.baseSelector) || 1
+      if (count > 1) {
+        const nth = (selectorIndex.get(entry.baseSelector) || 0) + 1
+        selectorIndex.set(entry.baseSelector, nth)
+        entry.finalSelector = `${entry.baseSelector}:nth-match(${nth})`
+      }
     }
   }
 
@@ -585,42 +644,42 @@ export function domPrimitiveListInteractive(
   // element exist (e.g., mobile + desktop nav links), keep only the visible one.
   // Use a coarse semantic key (tag + type + normalized label) so hidden responsive
   // variants with different hrefs still collapse into the visible copy.
-  const normalizeDedupLabel = (label: string): string => label.trim().replace(/\s+/g, ' ').toLowerCase()
-  const dedupKey = (e: (typeof rawEntries)[0]) => {
-    return `${e.tag}|${e.elementType}|${normalizeDedupLabel(e.label)}`
-  }
-  const dedupGroups = new Map<string, typeof rawEntries>()
-  for (const entry of rawEntries) {
-    const key = dedupKey(entry)
-    const group = dedupGroups.get(key)
-    if (group) {
-      group.push(entry)
-    } else {
-      dedupGroups.set(key, [entry])
+  function dedupeEntries(): void {
+    const normalizeDedupLabel = (label: string): string => label.trim().replace(/\s+/g, ' ').toLowerCase()
+    const dedupKey = (e: (typeof rawEntries)[0]) => {
+      return `${e.tag}|${e.elementType}|${normalizeDedupLabel(e.label)}`
     }
-  }
-  const finalEntries: typeof rawEntries = []
-  for (const group of dedupGroups.values()) {
-    if (group.length > 1) {
-      const visible = group.filter((e) => e.visible)
-      const hidden = group.filter((e) => !e.visible)
-      if (visible.length > 0 && hidden.length > 0) {
-        // Keep only visible copies when both visible and hidden exist
-        finalEntries.push(...visible)
+    const dedupGroups = new Map<string, typeof rawEntries>()
+    for (const entry of rawEntries) {
+      const key = dedupKey(entry)
+      const group = dedupGroups.get(key)
+      if (group) {
+        group.push(entry)
       } else {
-        // All same visibility — keep all
-        finalEntries.push(...group)
+        dedupGroups.set(key, [entry])
       }
-    } else {
-      finalEntries.push(group[0]!)
+    }
+    for (const group of dedupGroups.values()) {
+      if (group.length > 1) {
+        const visible = group.filter((e) => e.visible)
+        const hidden = group.filter((e) => !e.visible)
+        if (visible.length > 0 && hidden.length > 0) {
+          // Keep only visible copies when both visible and hidden exist
+          finalEntries.push(...visible)
+        } else {
+          // All same visibility — keep all
+          finalEntries.push(...group)
+        }
+      } else {
+        finalEntries.push(group[0]!)
+      }
     }
   }
 
   // #448: When scope_rect is provided, compute distance from center and sort by proximity.
-  // Otherwise, sort spatially in reading order (top-to-bottom, left-to-right).
-  if (scopeRect) {
-    const centerX = scopeRect.x + scopeRect.width / 2
-    const centerY = scopeRect.y + scopeRect.height / 2
+  function sortByScopeProximity(): void {
+    const centerX = scopeRect!.x + scopeRect!.width / 2
+    const centerY = scopeRect!.y + scopeRect!.height / 2
     for (const entry of finalEntries) {
       const elCenterX = entry.bbox.x + entry.bbox.width / 2
       const elCenterY = entry.bbox.y + entry.bbox.height / 2
@@ -633,8 +692,10 @@ export function domPrimitiveListInteractive(
       if (!a.visible && b.visible) return 1
       return (a.distance_px || 0) - (b.distance_px || 0)
     })
-  } else {
-    // Default: spatial reading order
+  }
+
+  // Default: spatial reading order (top-to-bottom, left-to-right)
+  function sortByReadingOrder(): void {
     const ROW_THRESHOLD = 10
     finalEntries.sort((a, b) => {
       if (a.visible && !b.visible) return -1
@@ -646,35 +707,54 @@ export function domPrimitiveListInteractive(
     })
   }
 
-  for (let i = 0; i < finalEntries.length; i++) {
-    const entry = finalEntries[i]!
-    const distPx = entry.distance_px
-    elements.push({
-      index: i,
-      tag: entry.tag,
-      type: entry.inputType,
-      element_type: entry.elementType,
-      selector: entry.finalSelector,
-      element_id: getOrCreateElementID(entry.el, entry.finalSelector),
-      label: entry.label,
-      role: entry.role,
-      placeholder: entry.placeholder,
-      bbox: entry.bbox,
-      visible: entry.visible,
-      ...(distPx !== undefined ? { distance_px: distPx } : {}),
-      ...(entry.inOverlay ? { in_overlay: true } : {}),
-      ...(entry.landmarkTag ? { landmark_tag: entry.landmarkTag } : {}),
-      ...(entry.landmarkRole ? { landmark_role: entry.landmarkRole } : {})
-    })
+  function buildResponseElements(): void {
+    for (let i = 0; i < finalEntries.length; i++) {
+      const entry = finalEntries[i]!
+      const distPx = entry.distance_px
+      elements.push({
+        index: i,
+        tag: entry.tag,
+        type: entry.inputType,
+        element_type: entry.elementType,
+        selector: entry.finalSelector,
+        element_id: getOrCreateElementID(entry.el, entry.finalSelector),
+        label: entry.label,
+        role: entry.role,
+        placeholder: entry.placeholder,
+        bbox: entry.bbox,
+        visible: entry.visible,
+        ...(distPx !== undefined ? { distance_px: distPx } : {}),
+        ...(entry.inOverlay ? { in_overlay: true } : {}),
+        ...(entry.landmarkTag ? { landmark_tag: entry.landmarkTag } : {}),
+        ...(entry.landmarkRole ? { landmark_role: entry.landmarkRole } : {})
+      })
+    }
   }
 
-  // #369: Build filter metadata for the response
-  const filters: Record<string, unknown> = {}
-  if (textContains) filters.text_contains = options!.text_contains
-  if (roleFilter) filters.role = options!.role
-  if (visibleOnly) filters.visible_only = true
-  if (excludeNav) filters.exclude_nav = true
+  function buildResponseFilters(): Record<string, unknown> {
+    // #369: Build filter metadata for the response
+    const filters: Record<string, unknown> = {}
+    if (textContains) filters.text_contains = options!.text_contains
+    if (roleFilter) filters.role = options!.role
+    if (visibleOnly) filters.visible_only = true
+    if (excludeNav) filters.exclude_nav = true
+    return filters
+  }
 
+  scanInteractiveSelectors()
+  if (rawEntries.length < 100) {
+    scanCursorPointerElements()
+  }
+  disambiguateSelectors()
+  dedupeEntries()
+  if (scopeRect) {
+    sortByScopeProximity()
+  } else {
+    sortByReadingOrder()
+  }
+  buildResponseElements()
+
+  const filters = buildResponseFilters()
   return {
     success: true,
     elements,

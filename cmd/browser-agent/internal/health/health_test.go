@@ -22,9 +22,12 @@ func TestHandleDoctorMCPReportsReadinessExtraChecksAndHint(t *testing.T) {
 	t.Parallel()
 	captureStore := newTestCapture(t)
 	response := HandleDoctorMCP(
-		NewMetrics(), captureStore, nil,
-		func() string { return "inspect local lifecycle logs" },
-		[]DoctorCheck{{Name: "fixture_recovery", Status: "warn", Detail: "recovery pending"}},
+		DoctorMCPDeps{
+			Metrics:        NewMetrics(),
+			Capture:        captureStore,
+			DiagnosticHint: func() string { return "inspect local lifecycle logs" },
+			ExtraChecks:    []DoctorCheck{{Name: "fixture_recovery", Status: "warn", Detail: "recovery pending"}},
+		},
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 42},
 		"test-version",
 	)

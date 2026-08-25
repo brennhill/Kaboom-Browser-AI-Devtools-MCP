@@ -30,119 +30,123 @@ function isTarget(file) {
   return rel.endsWith('.ts') || rel.endsWith('.go')
 }
 
+const DOC_RULES = [
+  { prefixes: ['cmd/browser-agent/bridge'], docs: ['bridge-restart'] },
+  { prefixes: ['cmd/browser-agent/upload'], docs: ['file-upload'] },
+  { prefixes: ['cmd/browser-agent/testgen'], docs: ['test-generation'] },
+  { prefixes: ['cmd/browser-agent/tools_configure'], docs: ['config-profiles'] },
+  {
+    prefixes: ['cmd/browser-agent/recording_', 'cmd/browser-agent/tools_recording_video'],
+    docs: ['playback-engine']
+  },
+  { prefixes: ['cmd/browser-agent/tools_analyze'], docs: ['analyze-tool'] },
+  { prefixes: ['cmd/browser-agent/tools_interact'], docs: ['interact-explore'] },
+  { prefixes: ['cmd/browser-agent/tools_observe'], docs: ['observe'] },
+  { prefixes: ['cmd/browser-agent/tools_generate'], includes: ['/testgen'], docs: ['test-generation'] },
+  { includes: ['reproduction'], docs: ['reproduction-scripts'] },
+  { prefixes: ['internal/bridge/'], docs: ['bridge-restart'] },
+  { prefixes: ['internal/buffers/'], docs: ['ring-buffer'] },
+  { prefixes: ['internal/mcp/'], docs: ['query-service'] },
+  { prefixes: ['internal/queries/'], docs: ['query-service'] },
+  { prefixes: ['internal/recording/'], docs: ['playback-engine'] },
+  { prefixes: ['internal/schema/analyze'], docs: ['analyze-tool'] },
+  { prefixes: ['internal/schema/interact'], docs: ['interact-explore'] },
+  { prefixes: ['internal/schema/observe'], docs: ['observe'] },
+  { prefixes: ['internal/schema/configure'], docs: ['config-profiles'] },
+  { prefixes: ['internal/schema/generate'], docs: ['test-generation'] },
+  {
+    prefixes: ['internal/schema/schema.go'],
+    docs: ['analyze-tool', 'interact-explore', 'observe', 'config-profiles', 'test-generation']
+  },
+  { prefixes: ['internal/tools/analyze/'], docs: ['analyze-tool'] },
+  { prefixes: ['internal/tools/interact/'], docs: ['interact-explore'] },
+  { prefixes: ['internal/tools/observe/'], docs: ['observe'] },
+  { prefixes: ['internal/tools/configure/'], docs: ['config-profiles'] },
+  { prefixes: ['internal/tools/generate/'], docs: ['test-generation'] },
+  { prefixes: ['internal/upload/'], docs: ['file-upload'] },
+  { prefixes: ['internal/testgen/'], docs: ['test-generation'] },
+  { prefixes: ['internal/pagination/'], docs: ['pagination'] },
+  { prefixes: ['internal/export/'], docs: ['har-export', 'sarif-export'] },
+  { prefixes: ['internal/redaction/'], docs: ['redaction-patterns'] },
+  { prefixes: ['internal/performance/'], docs: ['performance-audit'] },
+  { prefixes: ['internal/capture/'], docs: ['backend-log-streaming'] },
+  { prefixes: ['internal/observe/'], docs: ['observe'] },
+  { prefixes: ['internal/session/'], docs: ['observe', 'pagination'] },
+  { prefixes: ['src/lib/analysis/dom-queries'], docs: ['query-dom'] },
+  { prefixes: ['src/lib/analysis/link-health'], docs: ['link-health'] },
+  { prefixes: ['src/lib/analysis/perf', 'src/lib/analysis/performance'], docs: ['performance-audit'] },
+  { prefixes: ['src/lib/net/network', 'src/lib/net/websocket'], docs: ['backend-log-streaming'] },
+  { prefixes: ['src/background/'], docs: ['analyze-tool', 'interact-explore', 'observe'] },
+  { prefixes: ['src/content/'], docs: ['interact-explore', 'query-dom'] },
+  { prefixes: ['src/inject/'], docs: ['interact-explore', 'query-dom'] },
+  {
+    exact: ['src/background.ts', 'src/content.ts', 'src/inject.ts'],
+    docs: ['interact-explore', 'analyze-tool']
+  }
+]
+
+const PURPOSE_RULES = [
+  { prefixes: ['cmd/browser-agent/bridge'], purpose: 'Implements bridge transport lifecycle, forwarding, and reconnect behavior.' },
+  { prefixes: ['cmd/browser-agent/upload'], purpose: 'Implements upload command handling, validation, and OS automation wiring.' },
+  { prefixes: ['cmd/browser-agent/testgen'], purpose: 'Implements test generation, classification, and healing command handlers.' },
+  {
+    prefixes: ['cmd/browser-agent/tools_configure'],
+    purpose: 'Implements configure tool handlers for policy, profiles, and session controls.'
+  },
+  {
+    prefixes: ['cmd/browser-agent/recording_', 'cmd/browser-agent/tools_recording_video'],
+    purpose: 'Implements recording and playback command handlers for captured browser sessions.'
+  },
+  { prefixes: ['cmd/browser-agent/tools_analyze'], purpose: 'Implements analyze tool handlers and response shaping.' },
+  { prefixes: ['cmd/browser-agent/tools_interact'], purpose: 'Implements interact tool handlers and browser action orchestration.' },
+  { prefixes: ['cmd/browser-agent/tools_observe'], purpose: 'Implements observe tool queries against captured runtime buffers.' },
+  { prefixes: ['cmd/browser-agent/tools_generate'], purpose: 'Implements generate tool formats and output assembly.' },
+  { prefixes: ['internal/bridge/'], purpose: 'Implements framed stdio transport, timeouts, and bridge connection lifecycle.' },
+  { prefixes: ['internal/buffers/'], purpose: 'Implements ring buffer storage primitives and cursor-safe access patterns.' },
+  { prefixes: ['internal/export/'], purpose: 'Implements export serializers and format-specific output builders.' },
+  { prefixes: ['internal/mcp/'], purpose: 'Defines MCP protocol types, validation, and structured error response helpers.' },
+  { prefixes: ['internal/pagination/'], purpose: 'Implements cursor pagination over captured telemetry collections.' },
+  { prefixes: ['internal/redaction/'], purpose: 'Implements redaction rules for sensitive data in captured telemetry.' },
+  { prefixes: ['internal/performance/'], purpose: 'Implements performance metric diffing and threshold evaluation.' },
+  { prefixes: ['internal/queries/'], purpose: 'Implements async command/query dispatch and correlation state tracking.' },
+  { prefixes: ['internal/recording/'], purpose: 'Implements recording storage, replay engine execution, and diffing helpers.' },
+  { prefixes: ['internal/schema/'], purpose: 'Defines JSON schema contracts for tool arguments and responses.' },
+  { prefixes: ['internal/session/'], purpose: 'Implements session lifecycle, snapshots, and diff state management.' },
+  { prefixes: ['internal/testgen/'], purpose: 'Implements prompt-driven test generation, healing, and classification helpers.' },
+  { prefixes: ['internal/tools/analyze/'], purpose: 'Provides analyze tool implementation helpers shared by command handlers.' },
+  { prefixes: ['internal/tools/configure/'], purpose: 'Provides configure tool implementation helpers for policy and rewrite flows.' },
+  { prefixes: ['internal/tools/generate/'], purpose: 'Provides generate tool implementation helpers for emitted artifacts.' },
+  { prefixes: ['internal/tools/interact/'], purpose: 'Provides interact tool implementation helpers for selectors and workflows.' },
+  { prefixes: ['internal/tools/observe/'], purpose: 'Provides observe tool implementation helpers for filtering and storage queries.' },
+  { prefixes: ['internal/upload/'], purpose: 'Implements upload validation, security checks, and automation support paths.' },
+  { prefixes: ['src/background/'], purpose: 'Handles extension background coordination and message routing.' },
+  { prefixes: ['src/content/'], purpose: 'Handles content-script message relay between background and inject contexts.' },
+  { prefixes: ['src/inject/'], purpose: 'Executes in-page actions and query handlers within the page context.' },
+  { prefixes: ['src/lib/'], purpose: 'Provides shared runtime utilities used by extension and server workflows.' }
+]
+
+function ruleMatches(rel, rule) {
+  if (rule.exact) return rule.exact.includes(rel)
+  return (
+    (rule.prefixes || []).some((prefix) => rel.startsWith(prefix)) ||
+    (rule.includes || []).some((needle) => rel.includes(needle))
+  )
+}
+
 function inferDocs(rel) {
   const docs = new Set()
-  const add = (slug) => docs.add(`docs/features/feature/${slug}/index.md`)
-
-  if (rel.startsWith('cmd/browser-agent/bridge')) add('bridge-restart')
-  if (rel.startsWith('cmd/browser-agent/upload')) add('file-upload')
-  if (rel.startsWith('cmd/browser-agent/testgen')) add('test-generation')
-  if (rel.startsWith('cmd/browser-agent/tools_configure')) add('config-profiles')
-  if (rel.startsWith('cmd/browser-agent/recording_') || rel.startsWith('cmd/browser-agent/tools_recording_video')) {
-    add('playback-engine')
+  for (const rule of DOC_RULES) {
+    if (ruleMatches(rel, rule)) {
+      for (const slug of rule.docs) docs.add(`docs/features/feature/${slug}/index.md`)
+    }
   }
-
-  if (rel.startsWith('cmd/browser-agent/tools_analyze')) add('analyze-tool')
-  if (rel.startsWith('cmd/browser-agent/tools_interact')) add('interact-explore')
-  if (rel.startsWith('cmd/browser-agent/tools_observe')) add('observe')
-  if (rel.startsWith('cmd/browser-agent/tools_generate') || rel.includes('/testgen')) add('test-generation')
-  if (rel.includes('reproduction')) add('reproduction-scripts')
-  if (rel.startsWith('internal/bridge/')) add('bridge-restart')
-  if (rel.startsWith('internal/buffers/')) add('ring-buffer')
-  if (rel.startsWith('internal/mcp/')) add('query-service')
-  if (rel.startsWith('internal/queries/')) add('query-service')
-  if (rel.startsWith('internal/recording/')) add('playback-engine')
-  if (rel.startsWith('internal/schema/analyze')) add('analyze-tool')
-  if (rel.startsWith('internal/schema/interact')) add('interact-explore')
-  if (rel.startsWith('internal/schema/observe')) add('observe')
-  if (rel.startsWith('internal/schema/configure')) add('config-profiles')
-  if (rel.startsWith('internal/schema/generate')) add('test-generation')
-  if (rel.startsWith('internal/schema/schema.go')) {
-    add('analyze-tool')
-    add('interact-explore')
-    add('observe')
-    add('config-profiles')
-    add('test-generation')
-  }
-  if (rel.startsWith('internal/tools/analyze/')) add('analyze-tool')
-  if (rel.startsWith('internal/tools/interact/')) add('interact-explore')
-  if (rel.startsWith('internal/tools/observe/')) add('observe')
-  if (rel.startsWith('internal/tools/configure/')) add('config-profiles')
-  if (rel.startsWith('internal/tools/generate/')) add('test-generation')
-  if (rel.startsWith('internal/upload/')) add('file-upload')
-  if (rel.startsWith('internal/testgen/')) add('test-generation')
-  if (rel.startsWith('internal/pagination/')) add('pagination')
-  if (rel.startsWith('internal/export/')) {
-    add('har-export')
-    add('sarif-export')
-  }
-  if (rel.startsWith('internal/redaction/')) add('redaction-patterns')
-  if (rel.startsWith('internal/performance/')) add('performance-audit')
-  if (rel.startsWith('internal/capture/')) add('backend-log-streaming')
-  if (rel.startsWith('internal/observe/')) add('observe')
-  if (rel.startsWith('internal/session/')) {
-    add('observe')
-    add('pagination')
-  }
-  if (rel.startsWith('src/lib/analysis/dom-queries')) add('query-dom')
-  if (rel.startsWith('src/lib/analysis/link-health')) add('link-health')
-  if (rel.startsWith('src/lib/analysis/perf') || rel.startsWith('src/lib/analysis/performance')) add('performance-audit')
-  if (rel.startsWith('src/lib/net/network') || rel.startsWith('src/lib/net/websocket')) add('backend-log-streaming')
-  if (rel.startsWith('src/background/')) {
-    add('analyze-tool')
-    add('interact-explore')
-    add('observe')
-  }
-  if (rel.startsWith('src/content/')) {
-    add('interact-explore')
-    add('query-dom')
-  }
-  if (rel.startsWith('src/inject/')) {
-    add('interact-explore')
-    add('query-dom')
-  }
-  if (rel === 'src/background.ts' || rel === 'src/content.ts' || rel === 'src/inject.ts') {
-    add('interact-explore')
-    add('analyze-tool')
-  }
-
   return Array.from(docs)
 }
 
 function inferPurpose(rel) {
-  if (rel.startsWith('cmd/browser-agent/bridge')) return 'Implements bridge transport lifecycle, forwarding, and reconnect behavior.'
-  if (rel.startsWith('cmd/browser-agent/upload')) return 'Implements upload command handling, validation, and OS automation wiring.'
-  if (rel.startsWith('cmd/browser-agent/testgen')) return 'Implements test generation, classification, and healing command handlers.'
-  if (rel.startsWith('cmd/browser-agent/tools_configure')) return 'Implements configure tool handlers for policy, profiles, and session controls.'
-  if (rel.startsWith('cmd/browser-agent/recording_') || rel.startsWith('cmd/browser-agent/tools_recording_video')) {
-    return 'Implements recording and playback command handlers for captured browser sessions.'
+  for (const rule of PURPOSE_RULES) {
+    if (ruleMatches(rel, rule)) return rule.purpose
   }
-  if (rel.startsWith('cmd/browser-agent/tools_analyze')) return 'Implements analyze tool handlers and response shaping.'
-  if (rel.startsWith('cmd/browser-agent/tools_interact')) return 'Implements interact tool handlers and browser action orchestration.'
-  if (rel.startsWith('cmd/browser-agent/tools_observe')) return 'Implements observe tool queries against captured runtime buffers.'
-  if (rel.startsWith('cmd/browser-agent/tools_generate')) return 'Implements generate tool formats and output assembly.'
-  if (rel.startsWith('internal/bridge/')) return 'Implements framed stdio transport, timeouts, and bridge connection lifecycle.'
-  if (rel.startsWith('internal/buffers/')) return 'Implements ring buffer storage primitives and cursor-safe access patterns.'
-  if (rel.startsWith('internal/export/')) return 'Implements export serializers and format-specific output builders.'
-  if (rel.startsWith('internal/mcp/')) return 'Defines MCP protocol types, validation, and structured error response helpers.'
-  if (rel.startsWith('internal/pagination/')) return 'Implements cursor pagination over captured telemetry collections.'
-  if (rel.startsWith('internal/redaction/')) return 'Implements redaction rules for sensitive data in captured telemetry.'
-  if (rel.startsWith('internal/performance/')) return 'Implements performance metric diffing and threshold evaluation.'
-  if (rel.startsWith('internal/queries/')) return 'Implements async command/query dispatch and correlation state tracking.'
-  if (rel.startsWith('internal/recording/')) return 'Implements recording storage, replay engine execution, and diffing helpers.'
-  if (rel.startsWith('internal/schema/')) return 'Defines JSON schema contracts for tool arguments and responses.'
-  if (rel.startsWith('internal/session/')) return 'Implements session lifecycle, snapshots, and diff state management.'
-  if (rel.startsWith('internal/testgen/')) return 'Implements prompt-driven test generation, healing, and classification helpers.'
-  if (rel.startsWith('internal/tools/analyze/')) return 'Provides analyze tool implementation helpers shared by command handlers.'
-  if (rel.startsWith('internal/tools/configure/')) return 'Provides configure tool implementation helpers for policy and rewrite flows.'
-  if (rel.startsWith('internal/tools/generate/')) return 'Provides generate tool implementation helpers for emitted artifacts.'
-  if (rel.startsWith('internal/tools/interact/')) return 'Provides interact tool implementation helpers for selectors and workflows.'
-  if (rel.startsWith('internal/tools/observe/')) return 'Provides observe tool implementation helpers for filtering and storage queries.'
-  if (rel.startsWith('internal/upload/')) return 'Implements upload validation, security checks, and automation support paths.'
-  if (rel.startsWith('src/background/')) return 'Handles extension background coordination and message routing.'
-  if (rel.startsWith('src/content/')) return 'Handles content-script message relay between background and inject contexts.'
-  if (rel.startsWith('src/inject/')) return 'Executes in-page actions and query handlers within the page context.'
-  if (rel.startsWith('src/lib/')) return 'Provides shared runtime utilities used by extension and server workflows.'
   return ''
 }
 

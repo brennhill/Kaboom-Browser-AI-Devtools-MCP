@@ -443,10 +443,10 @@ export async function resolveTargetTab(query, paramsObj) {
         }
         return { error: buildMissingTargetError(query.type, useActiveTab, trackedTabId) };
     }
-    if (explicitTabId) {
-        const explicitTab = await getTabWithRetry(explicitTabId);
+    async function resolveExplicitTabTarget(tabId) {
+        const explicitTab = await getTabWithRetry(tabId);
         if (!explicitTab?.id) {
-            const message = `Requested tab_id ${explicitTabId} is not available`;
+            const message = `Requested tab_id ${tabId} is not available`;
             return {
                 error: {
                     message,
@@ -454,14 +454,14 @@ export async function resolveTargetTab(query, paramsObj) {
                         success: false,
                         error: 'target_tab_not_found',
                         message,
-                        requested_tab_id: explicitTabId
+                        requested_tab_id: tabId
                     }
                 }
             };
         }
         if (!isTrackableTab(explicitTab)) {
-            if (userRequestedTabId === explicitTabId) {
-                const message = `Requested tab_id ${explicitTabId} is not a trackable web page`;
+            if (userRequestedTabId === tabId) {
+                const message = `Requested tab_id ${tabId} is not a trackable web page`;
                 return {
                     error: {
                         message,
@@ -469,31 +469,31 @@ export async function resolveTargetTab(query, paramsObj) {
                             success: false,
                             error: 'target_tab_restricted',
                             message,
-                            requested_tab_id: explicitTabId
+                            requested_tab_id: tabId
                         }
                     }
                 };
             }
             const escape = restrictedEscapeTarget(explicitTab, 'explicit_tab', {
-                requestedTabId: explicitTabId,
+                requestedTabId: tabId,
                 trackedTabId: null,
                 useActiveTab
             });
             if (escape)
                 return escape;
-            diagnosticLog(`[Diagnostic] Daemon-resolved tab ${explicitTabId} became restricted, clearing tracking state`);
+            diagnosticLog(`[Diagnostic] Daemon-resolved tab ${tabId} became restricted, clearing tracking state`);
             await clearTrackedTab();
-            return resolveAutoTrackOrEscapeFallback(explicitTabId, 'Recovering from restricted daemon target on active tab');
+            return resolveAutoTrackOrEscapeFallback(tabId, 'Recovering from restricted daemon target on active tab');
         }
         return {
             target: targetFromTab(explicitTab, 'explicit_tab', {
-                requestedTabId: explicitTabId,
+                requestedTabId: tabId,
                 trackedTabId: null,
                 useActiveTab
             })
         };
     }
-    if (useActiveTab) {
+    async function resolveActiveTabTarget() {
         const activeTab = await getActiveTab();
         if (!activeTab?.id) {
             return {
@@ -521,9 +521,7 @@ export async function resolveTargetTab(query, paramsObj) {
             })
         };
     }
-    const storage = await getTrackedTabInfo();
-    const trackedTabId = storage.trackedTabId ?? null;
-    if (trackedTabId) {
+    async function resolveTrackedTabTarget(trackedTabId) {
         diagnosticLog(`[Diagnostic] Using tracked tab ${trackedTabId} for query ${query.type}`);
         const trackedTab = await getTabWithRetry(trackedTabId, true);
         if (isTrackableTab(trackedTab)) {
@@ -560,6 +558,17 @@ export async function resolveTargetTab(query, paramsObj) {
             // loss; the primary diagnostic already records the actionable failure.
         }
         return resolveAutoTrackOrEscapeFallback(trackedTabId, 'Falling back to active tab');
+    }
+    if (explicitTabId) {
+        return resolveExplicitTabTarget(explicitTabId);
+    }
+    if (useActiveTab) {
+        return resolveActiveTabTarget();
+    }
+    const storage = await getTrackedTabInfo();
+    const trackedTabId = storage.trackedTabId ?? null;
+    if (trackedTabId) {
+        return resolveTrackedTabTarget(trackedTabId);
     }
     return resolveAutoTrackOrEscapeFallback(trackedTabId, 'Using active tab fallback');
 }

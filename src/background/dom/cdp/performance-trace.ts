@@ -215,31 +215,25 @@ export class PerformanceTraceController {
     return this.active
   }
 
-  private onEvent(source: Debuggee, method: string, params?: object): void {
-    const active = this.active
-    if (!active || source.tabId !== active.tabId) return
-    if (method === 'Page.frameNavigated') {
-      const frame = (params as { frame?: { parentId?: unknown; url?: unknown; loaderId?: unknown } } | undefined)?.frame
-      if (frame && frame.parentId === undefined) {
-        if (typeof frame.url === 'string') active.metadata.url = frame.url
-        if (typeof frame.loaderId === 'string' && frame.loaderId.length > 0)
-          active.metadata.navigation_id = frame.loaderId
-        active.navigation?.resolve()
-        active.navigation = undefined
-      }
-      return
+  private handleFrameNavigated(active: ActiveTrace, params?: object): void {
+    const frame = (params as { frame?: { parentId?: unknown; url?: unknown; loaderId?: unknown } } | undefined)?.frame
+    if (frame && frame.parentId === undefined) {
+      if (typeof frame.url === 'string') active.metadata.url = frame.url
+      if (typeof frame.loaderId === 'string' && frame.loaderId.length > 0)
+        active.metadata.navigation_id = frame.loaderId
+      active.navigation?.resolve()
+      active.navigation = undefined
     }
-    if (method === 'Tracing.tracingComplete') {
-      if ((params as { dataLossOccurred?: unknown } | undefined)?.dataLossOccurred === true) {
-        active.failure = new Error('Chrome lost trace data before the CPU flamechart completed')
-      }
-      active.completion?.resolve()
-      return
-    }
-    if (method !== 'Tracing.dataCollected') return
-    const events = (params as { value?: unknown[] } | undefined)?.value
-    if (!Array.isArray(events) || events.length === 0) return
+  }
 
+  private handleTracingComplete(active: ActiveTrace, params?: object): void {
+    if ((params as { dataLossOccurred?: unknown } | undefined)?.dataLossOccurred === true) {
+      active.failure = new Error('Chrome lost trace data before the CPU flamechart completed')
+    }
+    active.completion?.resolve()
+  }
+
+  private uploadTraceEvents(active: ActiveTrace, events: unknown[]): void {
     try {
       for (const batch of boundedEventBatches(events)) {
         const request: WirePerformanceTraceChunkRequest = {
@@ -257,6 +251,24 @@ export class PerformanceTraceController {
     } catch (error) {
       active.failure = new Error(errorMessage(error, 'performance trace event could not be serialized'))
     }
+  }
+
+  private onEvent(source: Debuggee, method: string, params?: object): void {
+    const active = this.active
+    if (!active || source.tabId !== active.tabId) return
+    if (method === 'Page.frameNavigated') {
+      this.handleFrameNavigated(active, params)
+      return
+    }
+    if (method === 'Tracing.tracingComplete') {
+      this.handleTracingComplete(active, params)
+      return
+    }
+    if (method !== 'Tracing.dataCollected') return
+    const events = (params as { value?: unknown[] } | undefined)?.value
+    if (!Array.isArray(events) || events.length === 0) return
+
+    this.uploadTraceEvents(active, events)
   }
 
   private onDetach(source: Debuggee, reason: string): void {

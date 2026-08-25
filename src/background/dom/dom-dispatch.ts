@@ -293,7 +293,237 @@ const INTENT_ACTIONS = new Set(['open_composer', 'submit_active_composer', 'conf
 const POINTER_ACTIONS = new Set(['click', 'hover', 'focus', 'scroll_to'])
 const FORM_ACTIONS = new Set(['type', 'paste', 'select', 'check', 'key_press', 'set_attribute'])
 
-// #lizard forgives
+function sendDOMError(
+  syncClient: SyncClient,
+  query: PendingQuery,
+  message: string,
+  sendAsyncResult: SendAsyncResultFn
+): void {
+  sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, message)
+}
+
+/** Validate wait_for condition exclusivity; returns the rejection message or null. */
+function waitForParamsError(params: DOMActionParams, selector: string): string | null {
+  const hasSelector = !!(selector || params.element_id)
+  const hasText = !!params.text
+  const hasURL = !!params.url_contains
+  const condCount = (hasSelector || params.absent ? 1 : 0) + (hasText ? 1 : 0) + (hasURL ? 1 : 0)
+  if (condCount === 0) return 'wait_for requires selector, text, or url_contains'
+  if (condCount > 1) return 'wait_for conditions are mutually exclusive'
+  if (params.absent && !hasSelector) return 'wait_for with absent requires a selector'
+  return null
+}
+
+/** Returns true when the wait_for params are invalid and the query has been rejected. */
+function rejectInvalidWaitFor(
+  params: DOMActionParams,
+  syncClient: SyncClient,
+  query: PendingQuery,
+  sendAsyncResult: SendAsyncResultFn
+): boolean {
+  const error = waitForParamsError(params, params.selector || '')
+  if (!error) return false
+  sendDOMError(syncClient, query, error, sendAsyncResult)
+  return true
+}
+
+function resolveToastContext(params: DOMActionParams): { label: string; detail: string | undefined } {
+  const label = params.reason || params.action!
+  const detail = params.reason ? undefined : params.selector || 'page'
+  return { label, detail }
+}
+
+async function executeWaitForURLFlow(
+  tabId: number,
+  params: DOMActionParams,
+  syncClient: SyncClient,
+  query: PendingQuery,
+  actionToast: ActionToastFn,
+  sendAsyncResult: SendAsyncResultFn
+): Promise<void> {
+  try {
+    const urlResult = await executeWaitForURL(tabId, params)
+    sendAsyncResult(
+      syncClient,
+      query.id,
+      query.correlation_id!,
+      urlResult.success ? 'complete' : 'error',
+      await enrichWithEffectiveContext(tabId, urlResult),
+      urlResult.success ? undefined : urlResult.error
+    )
+  } catch (err) {
+    actionToast(tabId, 'wait_for', errorMessage(err), 'error')
+    sendDOMError(syncClient, query, errorMessage(err), sendAsyncResult)
+  }
+}
+
+/** Shared context for reporting a DOM action outcome: toast surface plus async result routing. */
+interface DOMOutcomeContext {
+  tabId: number
+  readOnly: boolean
+  toastLabel: string
+  toastDetail: string | undefined
+  syncClient: SyncClient
+  query: PendingQuery
+  actionToast: ActionToastFn
+  sendAsyncResult: SendAsyncResultFn
+}
+
+/** Dispatch a reconciled DOM result to the client, enriched with effective context. */
+async function sendReconciledAsyncResult(
+  ctx: DOMOutcomeContext,
+  status: 'complete' | 'error',
+  reconciledResult: unknown,
+  error: string | undefined
+): Promise<void> {
+  ctx.sendAsyncResult(
+    ctx.syncClient,
+    ctx.query.id,
+    ctx.query.correlation_id!,
+    status,
+    await enrichWithEffectiveContext(ctx.tabId, reconciledResult),
+    error
+  )
+}
+
+async function attemptCDPEscalation(
+  ctx: DOMOutcomeContext,
+  action: string,
+  params: DOMActionParams,
+  selector: string
+): Promise<boolean> {
+  // CDP auto-escalation: try hardware events first for click/type/key_press (main frame only).
+  // Falls back to DOM primitives silently if CDP is unavailable or fails.
+  // `dispatch: "dom"` opts out entirely (React escape hatch, #599).
+  if (!shouldEscalateToCDP(action, params)) return false
+  try {
+    const cdpResult = await tryCDPEscalation(ctx.tabId, action, params)
+    if (!cdpResult) return false
+    const { result: reconciledResult, status, error } = deriveAsyncStatusFromDOMResult(action, selector, cdpResult)
+    const domResult = toDOMResult(reconciledResult)
+    if (domResult) {
+      sendToastForResult(ctx.tabId, false, domResult, ctx.actionToast, ctx.toastLabel, ctx.toastDetail)
+    } else {
+      ctx.actionToast(ctx.tabId, ctx.toastLabel, ctx.toastDetail, 'success')
+    }
+    await sendReconciledAsyncResult(ctx, status, reconciledResult, error)
+    return true
+  } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+    // CDP failed — fall through to DOM primitives
+    return false
+  }
+}
+
+async function routeDOMExecution(
+  action: string,
+  target: DOMExecutionTarget,
+  params: DOMActionParams
+): Promise<chrome.scripting.InjectionResult[] | DOMResult> {
+  if (action === 'list_interactive') return executeListInteractive(target, params)
+  if (action === 'query') return executeQuery(target, params)
+  if (action === 'wait_for') return executeWaitFor(target, params)
+  if (STABILITY_ACTIONS.has(action)) return executeStabilityAction(target, params)
+  if (OVERLAY_ACTIONS.has(action)) return executeOverlayAction(target, params)
+  if (INTENT_ACTIONS.has(action)) return executeIntentAction(target, params)
+  return executeStandardAction(target, params)
+}
+
+function notifyMissingResult(ctx: DOMOutcomeContext): void {
+  if (!ctx.readOnly) ctx.actionToast(ctx.tabId, ctx.toastLabel, 'no result', 'error')
+  sendDOMError(ctx.syncClient, ctx.query, 'no_result', ctx.sendAsyncResult)
+}
+
+async function sendDirectDOMResult(
+  ctx: DOMOutcomeContext,
+  action: string,
+  selector: string,
+  rawResult: DOMResult
+): Promise<void> {
+  const { result: reconciledResult, status, error } = deriveAsyncStatusFromDOMResult(action, selector, rawResult)
+  const domResult = toDOMResult(reconciledResult)
+  if (domResult) {
+    sendToastForResult(ctx.tabId, ctx.readOnly, domResult, ctx.actionToast, ctx.toastLabel, ctx.toastDetail)
+  } else if (!ctx.readOnly && status === 'complete') {
+    ctx.actionToast(ctx.tabId, ctx.toastLabel, ctx.toastDetail, 'success')
+  } else if (!ctx.readOnly && status === 'error') {
+    ctx.actionToast(ctx.tabId, ctx.toastLabel, error || 'failed', 'error')
+  }
+  await sendReconciledAsyncResult(ctx, status, reconciledResult, error)
+}
+
+async function sendListInteractiveResult(
+  tabId: number,
+  rawResult: chrome.scripting.InjectionResult[],
+  syncClient: SyncClient,
+  query: PendingQuery,
+  sendAsyncResult: SendAsyncResultFn
+): Promise<void> {
+  const merged = mergeListInteractive(rawResult)
+  sendAsyncResult(
+    syncClient,
+    query.id,
+    query.correlation_id!,
+    merged.success ? 'complete' : 'error',
+    await enrichWithEffectiveContext(tabId, merged),
+    merged.success ? undefined : merged.error || 'list_interactive_failed'
+  )
+}
+
+function buildFramePayload(picked: { result: unknown; frameId: number }, firstResult: object): Record<string, unknown> {
+  const base: Record<string, unknown> = { ...(firstResult as Record<string, unknown>), frame_id: picked.frameId }
+  const matched = base['matched']
+  if (matched && typeof matched === 'object' && !Array.isArray(matched)) {
+    base['matched'] = { ...(matched as Record<string, unknown>), frame_id: picked.frameId }
+  }
+  return base
+}
+
+async function sendFrameResult(
+  ctx: DOMOutcomeContext,
+  action: string,
+  selector: string,
+  resultPayload: unknown
+): Promise<void> {
+  const { result: reconciledResult, status, error } = deriveAsyncStatusFromDOMResult(action, selector, resultPayload)
+  const domResult = toDOMResult(reconciledResult)
+  if (domResult) {
+    sendToastForResult(ctx.tabId, ctx.readOnly, domResult, ctx.actionToast, ctx.toastLabel, ctx.toastDetail)
+  } else if (!ctx.readOnly && status === 'error') {
+    ctx.actionToast(ctx.tabId, ctx.toastLabel, error || 'failed', 'error')
+  }
+  await sendReconciledAsyncResult(ctx, status, reconciledResult, error)
+}
+
+async function finalizeFrameResults(
+  ctx: DOMOutcomeContext,
+  action: string,
+  selector: string,
+  rawResult: chrome.scripting.InjectionResult[],
+  tryingShownAt: number
+): Promise<void> {
+  // Ensure "trying" toast is visible for at least 500ms
+  const MIN_TOAST_MS = 500
+  const elapsed = Date.now() - tryingShownAt
+  if (!ctx.readOnly && elapsed < MIN_TOAST_MS) await delay(MIN_TOAST_MS - elapsed)
+
+  // list_interactive: merge elements from all frames
+  if (action === 'list_interactive') {
+    await sendListInteractiveResult(ctx.tabId, rawResult, ctx.syncClient, ctx.query, ctx.sendAsyncResult)
+    return
+  }
+
+  const picked = pickFrameResult(rawResult)
+  const firstResult = picked?.result
+  if (firstResult && typeof firstResult === 'object') {
+    const resultPayload = picked ? buildFramePayload(picked, firstResult) : firstResult
+    await sendFrameResult(ctx, action, selector, resultPayload)
+  } else {
+    notifyMissingResult(ctx)
+  }
+}
+
 export async function executeDOMAction(
   query: PendingQuery,
   tabId: number,
@@ -303,76 +533,36 @@ export async function executeDOMAction(
 ): Promise<void> {
   const params = parseDOMParams(query)
   if (!params) {
-    sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, 'invalid_params')
+    sendDOMError(syncClient, query, 'invalid_params', sendAsyncResult)
     return
   }
 
-  const { action, selector, reason } = params
+  const { action, selector } = params
   if (!action) {
-    sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, 'missing_action')
+    sendDOMError(syncClient, query, 'missing_action', sendAsyncResult)
     return
   }
-  if (action === 'wait_for') {
-    const hasSelector = !!(selector || params.element_id)
-    const hasText = !!params.text
-    const hasURL = !!params.url_contains
-    const condCount = (hasSelector || params.absent ? 1 : 0) + (hasText ? 1 : 0) + (hasURL ? 1 : 0)
-    if (condCount === 0) {
-      sendAsyncResult(
-        syncClient,
-        query.id,
-        query.correlation_id!,
-        'error',
-        null,
-        'wait_for requires selector, text, or url_contains'
-      )
-      return
-    }
-    if (condCount > 1) {
-      sendAsyncResult(
-        syncClient,
-        query.id,
-        query.correlation_id!,
-        'error',
-        null,
-        'wait_for conditions are mutually exclusive'
-      )
-      return
-    }
-    if (params.absent && !hasSelector) {
-      sendAsyncResult(
-        syncClient,
-        query.id,
-        query.correlation_id!,
-        'error',
-        null,
-        'wait_for with absent requires a selector'
-      )
-      return
-    }
+  if (action === 'wait_for' && rejectInvalidWaitFor(params, syncClient, query, sendAsyncResult)) {
+    return
   }
 
-  const toastLabel = reason || action
-  const toastDetail = reason ? undefined : selector || 'page'
+  const { label: toastLabel, detail: toastDetail } = resolveToastContext(params)
   const readOnly = isReadOnlyAction(action)
+  const selectorArg = selector || ''
+  const outcome: DOMOutcomeContext = {
+    tabId,
+    readOnly,
+    toastLabel,
+    toastDetail,
+    syncClient,
+    query,
+    actionToast,
+    sendAsyncResult
+  }
 
   // URL-based wait_for: polls chrome.tabs.get from background — no page injection needed.
   if (action === 'wait_for' && params.url_contains) {
-    try {
-      const urlResult = await executeWaitForURL(tabId, params)
-      const status = urlResult.success ? 'complete' : 'error'
-      sendAsyncResult(
-        syncClient,
-        query.id,
-        query.correlation_id!,
-        status,
-        await enrichWithEffectiveContext(tabId, urlResult),
-        urlResult.success ? undefined : urlResult.error
-      )
-    } catch (err) {
-      actionToast(tabId, action, errorMessage(err), 'error')
-      sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, errorMessage(err))
-    }
+    await executeWaitForURLFlow(tabId, params, syncClient, query, actionToast, sendAsyncResult)
     return
   }
 
@@ -381,148 +571,25 @@ export async function executeDOMAction(
     const tryingShownAt = Date.now()
     if (!readOnly) actionToast(tabId, toastLabel, toastDetail, 'trying', 10000)
 
-    // CDP auto-escalation: try hardware events first for click/type/key_press (main frame only).
-    // Falls back to DOM primitives silently if CDP is unavailable or fails.
-    // `dispatch: "dom"` opts out entirely (React escape hatch, #599).
-    if (shouldEscalateToCDP(action, params)) {
-      try {
-        const cdpResult = await tryCDPEscalation(tabId, action, params)
-        if (cdpResult) {
-          const {
-            result: reconciledResult,
-            status,
-            error
-          } = deriveAsyncStatusFromDOMResult(action, selector || '', cdpResult)
-          const domResult = toDOMResult(reconciledResult)
-          if (domResult) {
-            sendToastForResult(tabId, false, domResult, actionToast, toastLabel, toastDetail)
-          } else {
-            actionToast(tabId, toastLabel, toastDetail, 'success')
-          }
-          sendAsyncResult(
-            syncClient,
-            query.id,
-            query.correlation_id!,
-            status,
-            await enrichWithEffectiveContext(tabId, reconciledResult),
-            error
-          )
-          return
-        }
-      } catch {
-        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-        // CDP failed — fall through to DOM primitives
-      }
+    if (await attemptCDPEscalation(outcome, action, params, selectorArg)) {
+      return
     }
 
-    const rawResult =
-      action === 'list_interactive'
-        ? await executeListInteractive(executionTarget, params)
-        : action === 'query'
-          ? await executeQuery(executionTarget, params)
-          : action === 'wait_for'
-            ? await executeWaitFor(executionTarget, params)
-            : STABILITY_ACTIONS.has(action)
-              ? await executeStabilityAction(executionTarget, params)
-              : OVERLAY_ACTIONS.has(action)
-                ? await executeOverlayAction(executionTarget, params)
-                : INTENT_ACTIONS.has(action)
-                  ? await executeIntentAction(executionTarget, params)
-                  : await executeStandardAction(executionTarget, params)
+    const rawResult = await routeDOMExecution(action, executionTarget, params)
 
     // wait_for quick-check can return a DOMResult directly
     if (!Array.isArray(rawResult)) {
-      if (rawResult === null || rawResult === undefined) {
-        if (!readOnly) actionToast(tabId, toastLabel, 'no result', 'error')
-        sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, 'no_result')
+      if (!rawResult) {
+        notifyMissingResult(outcome)
         return
       }
-
-      const {
-        result: reconciledResult,
-        status,
-        error
-      } = deriveAsyncStatusFromDOMResult(action, selector || '', rawResult)
-      const domResult = toDOMResult(reconciledResult)
-      if (domResult) {
-        sendToastForResult(tabId, readOnly, domResult, actionToast, toastLabel, toastDetail)
-      } else if (!readOnly && status === 'complete') {
-        actionToast(tabId, toastLabel, toastDetail, 'success')
-      } else if (!readOnly && status === 'error') {
-        actionToast(tabId, toastLabel, error || 'failed', 'error')
-      }
-
-      sendAsyncResult(
-        syncClient,
-        query.id,
-        query.correlation_id!,
-        status,
-        await enrichWithEffectiveContext(tabId, reconciledResult),
-        error
-      )
+      await sendDirectDOMResult(outcome, action, selectorArg, rawResult)
       return
     }
 
-    // Ensure "trying" toast is visible for at least 500ms
-    const MIN_TOAST_MS = 500
-    const elapsed = Date.now() - tryingShownAt
-    if (!readOnly && elapsed < MIN_TOAST_MS) await delay(MIN_TOAST_MS - elapsed)
-
-    // list_interactive: merge elements from all frames
-    if (action === 'list_interactive') {
-      const merged = mergeListInteractive(rawResult)
-      const status = merged.success ? 'complete' : 'error'
-      sendAsyncResult(
-        syncClient,
-        query.id,
-        query.correlation_id!,
-        status,
-        await enrichWithEffectiveContext(tabId, merged),
-        merged.success ? undefined : merged.error || 'list_interactive_failed'
-      )
-      return
-    }
-
-    const picked = pickFrameResult(rawResult)
-    const firstResult = picked?.result
-    if (firstResult && typeof firstResult === 'object') {
-      let resultPayload: unknown
-      if (picked) {
-        const base: Record<string, unknown> = { ...(firstResult as Record<string, unknown>), frame_id: picked.frameId }
-        const matched = base['matched']
-        if (matched && typeof matched === 'object' && !Array.isArray(matched)) {
-          base['matched'] = { ...(matched as Record<string, unknown>), frame_id: picked.frameId }
-        }
-        resultPayload = base
-      } else {
-        resultPayload = firstResult
-      }
-      const {
-        result: reconciledResult,
-        status,
-        error
-      } = deriveAsyncStatusFromDOMResult(action, selector || '', resultPayload)
-      const domResult = toDOMResult(reconciledResult)
-      if (domResult) {
-        sendToastForResult(tabId, readOnly, domResult, actionToast, toastLabel, toastDetail)
-      } else if (!readOnly && status === 'error') {
-        actionToast(tabId, toastLabel, error || 'failed', 'error')
-      }
-      sendAsyncResult(
-        syncClient,
-        query.id,
-        query.correlation_id!,
-        status,
-        await enrichWithEffectiveContext(tabId, reconciledResult),
-        error
-      )
-    } else {
-      if (!readOnly) actionToast(tabId, toastLabel, 'no result', 'error')
-      sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, 'no_result')
-    }
+    await finalizeFrameResults(outcome, action, selectorArg, rawResult, tryingShownAt)
   } catch (err) {
     actionToast(tabId, action, errorMessage(err), 'error')
-    sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, errorMessage(err))
+    sendDOMError(syncClient, query, errorMessage(err), sendAsyncResult)
   }
 }

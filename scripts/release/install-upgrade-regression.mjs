@@ -385,6 +385,150 @@ async function expectDaemonIdentity(port, expectedVersion, timeoutMs = 20000) {
   }
 }
 
+function assertUserStatePreserved(ctx, message) {
+  if (
+    fs.readFileSync(ctx.identityPath, 'utf8') !== ctx.continuityBefore.identity ||
+    fs.readFileSync(ctx.preferencesPath, 'utf8') !== ctx.continuityBefore.preferences
+  ) {
+    fail(message)
+  }
+}
+
+async function stageFreshInstallUpgrade(ctx) {
+  currentStage = 'fresh_install_upgrade'
+  info('stage 1: go wrapper version-mismatch recycle')
+  fs.mkdirSync(path.dirname(ctx.pidFile), { recursive: true })
+  fs.writeFileSync(ctx.pidFile, 'corrupt-service-registration')
+  ctx.daemon = startDaemon(ctx.oldBinary, ctx.port, ctx.envWithShims)
+  await expectDaemonIdentity(ctx.port, supportedPreviousVersion)
+  if (readPidFile(ctx.pidFile) !== ctx.daemon.pid) fail('daemon did not repair the corrupt service registration')
+  ctx.evidence.scenarios.push({ name: 'corrupt_service_registration_recovery', status: 'passed' })
+  const oldPid = ctx.daemon.pid
+  ensureMcpRoundTrip(ctx.packed.wrapper, ctx.port, ctx.envWithShims)
+  await expectDaemonIdentity(ctx.port, ctx.version)
+  await waitForChildExit(ctx.daemon, 12000)
+  const newPid = readPidFile(ctx.pidFile)
+  if (!newPid || newPid === oldPid) {
+    fail(`expected respawned daemon pid after recycle`, `old=${oldPid} new=${newPid}`)
+  }
+  stopDaemon(ctx.packed.wrapper, ctx.port, ctx.envWithShims)
+  ctx.evidence.scenarios.push({ name: 'fresh_install_upgrade', status: 'passed' })
+}
+
+async function stageLifecycleRecovery(ctx) {
+  currentStage = 'lifecycle_recovery'
+  info('stage 1a: corrupt state, extension suspension, browser restart, and daemon crash recovery')
+  const doctorState = path.join(ctx.stateDir, 'doctor', 'incident-timeline.json')
+  fs.mkdirSync(path.dirname(doctorState), { recursive: true })
+  fs.writeFileSync(doctorState, '{corrupt lifecycle fixture')
+  ctx.daemon = startDaemon(ctx.newBinary, ctx.port, ctx.envWithShims)
+  await expectDaemonIdentity(ctx.port, ctx.version)
+  ctx.evidence.scenarios.push({ name: 'corrupt_state_recovery', status: 'passed' })
+
+  await syncExtension(ctx.port, 'packaged-lifecycle-session')
+  await new Promise((resolve) => setTimeout(resolve, 150))
+  await syncExtension(ctx.port, 'packaged-lifecycle-session')
+  ctx.evidence.scenarios.push({ name: 'extension_suspension_recovery', status: 'passed' })
+
+  stopDaemon(ctx.newBinary, ctx.port, ctx.envWithShims)
+  await waitForChildExit(ctx.daemon, 12000)
+  ctx.daemon = startDaemon(ctx.newBinary, ctx.port, ctx.envWithShims)
+  await expectDaemonIdentity(ctx.port, ctx.version)
+  await syncExtension(ctx.port, 'packaged-lifecycle-session')
+  ctx.evidence.scenarios.push({ name: 'browser_restart_recovery', status: 'passed' })
+
+  await crashDaemon(ctx.daemon)
+  ctx.daemon = startDaemon(ctx.newBinary, ctx.port, ctx.envWithShims)
+  await expectDaemonIdentity(ctx.port, ctx.version)
+  await expectDoctorIncident(ctx.port, 'unclean_daemon_exit', `:${ctx.port}:`)
+  ctx.evidence.scenarios.push({ name: 'daemon_crash_recovery', status: 'passed' })
+  stopDaemon(ctx.newBinary, ctx.port, ctx.envWithShims)
+  await waitForChildExit(ctx.daemon, 12000)
+}
+
+function stageSameVersionReinstall(ctx) {
+  currentStage = 'same_version_reinstall'
+  info('stage 1b: same-version reinstall')
+  run(
+    'npm',
+    ['install', '--prefix', ctx.packed.installRoot, '--ignore-scripts', '--omit=optional', ctx.packed.mainTar],
+    {
+      env: ctx.envWithShims
+    }
+  )
+  validateCandidateVersion(ctx.newBinary, ctx.version, ctx.candidateChecksum, ctx.envWithShims)
+  ctx.evidence.scenarios.push({ name: 'same_version_reinstall', status: 'passed' })
+}
+
+async function stageFailedReadinessRollback(ctx) {
+  currentStage = 'failed_readiness_rollback'
+  info('stage 1c: failed replacement rolls back')
+  const activeBinary = path.join(ctx.tmpRoot, `active-kaboom${exeSuffix}`)
+  const backupBinary = path.join(ctx.tmpRoot, `active-kaboom.backup${exeSuffix}`)
+  fs.copyFileSync(ctx.oldBinary, activeBinary)
+  await exerciseFailedReadinessRollback(
+    activeBinary,
+    backupBinary,
+    ctx.newBinary,
+    ctx.candidateChecksum,
+    ctx.envWithShims
+  )
+  if (binaryVersion(activeBinary, ctx.envWithShims) !== supportedPreviousVersion) {
+    fail('rollback did not restore the prior executable')
+  }
+  ctx.evidence.scenarios.push({ name: 'failed_readiness_rollback', status: 'passed' })
+}
+
+async function stageNpmCleanup(ctx) {
+  currentStage = 'npm_cleanup'
+  info('stage 2: npm cleanup kills old daemon + pid file')
+  ctx.daemon = startDaemon(ctx.oldBinary, ctx.port, ctx.envWithShims)
+  await expectDaemonIdentity(ctx.port, supportedPreviousVersion)
+  run('node', ['npm/kaboom-agentic-browser/lib/daemon/kill-daemon.js'], { env: ctx.envWithShims })
+  await waitForChildExit(ctx.daemon, 12000)
+  if (fs.existsSync(ctx.pidFile)) {
+    fail(`npm cleanup did not remove pid file ${ctx.pidFile}`)
+  }
+}
+
+async function stagePypiCleanup(ctx) {
+  if (!ctx.hasPypiPackage) {
+    info('stage 3 skipped: pypi/kaboom-agentic-browser not present in this checkout')
+    ctx.evidence.scenarios.push({ name: 'pypi_cleanup', status: 'skipped', reason: 'package_tree_absent' })
+    return
+  }
+  info('stage 3: pypi cleanup kills old daemon + pid file')
+  ctx.daemon = startDaemon(ctx.oldBinary, ctx.port, ctx.envWithShims)
+  await expectDaemonIdentity(ctx.port, supportedPreviousVersion)
+  run(
+    ctx.python,
+    [
+      '-c',
+      "import os,sys;sys.path.insert(0,os.environ['KABOOM_PYPI_PATH']);from kaboom_agentic_browser import platform;platform.cleanup_old_processes()"
+    ],
+    {
+      env: {
+        ...ctx.envWithShims,
+        KABOOM_PYPI_PATH: ctx.pypiPackageDir
+      }
+    }
+  )
+  await waitForChildExit(ctx.daemon, 12000)
+  if (fs.existsSync(ctx.pidFile)) {
+    fail(`pypi cleanup did not remove pid file ${ctx.pidFile}`)
+  }
+}
+
+async function stageUninstallCleanup(ctx) {
+  currentStage = 'uninstall_cleanup'
+  info('stage 4: uninstall removes packaged executables but preserves user state')
+  stopDaemon(ctx.packed.wrapper, ctx.port, ctx.envWithShims)
+  fs.rmSync(ctx.packed.installRoot, { recursive: true, force: true })
+  if (fs.existsSync(ctx.packed.wrapper)) fail('uninstall left the packaged executable behind')
+  assertUserStatePreserved(ctx, 'uninstall removed install identity or user preferences')
+  ctx.evidence.scenarios.push({ name: 'uninstall_cleanup', status: 'passed' })
+}
+
 async function main() {
   const version = readVersionFile()
   lifecycleEvidence = {
@@ -471,138 +615,45 @@ async function main() {
   }
   info(`using port ${port}`)
 
-  let daemon = null
+  const ctx = {
+    version,
+    evidence,
+    tmpRoot,
+    stateDir,
+    port,
+    pidFile,
+    oldBinary,
+    newBinary,
+    candidateChecksum,
+    packed,
+    envWithShims,
+    identityPath,
+    preferencesPath,
+    continuityBefore,
+    hasPypiPackage,
+    python,
+    pypiPackageDir,
+    daemon: null
+  }
+
   try {
-    currentStage = 'fresh_install_upgrade'
-    info('stage 1: go wrapper version-mismatch recycle')
-    fs.mkdirSync(path.dirname(pidFile), { recursive: true })
-    fs.writeFileSync(pidFile, 'corrupt-service-registration')
-    daemon = startDaemon(oldBinary, port, envWithShims)
-    await expectDaemonIdentity(port, supportedPreviousVersion)
-    if (readPidFile(pidFile) !== daemon.pid) fail('daemon did not repair the corrupt service registration')
-    evidence.scenarios.push({ name: 'corrupt_service_registration_recovery', status: 'passed' })
-    const oldPid = daemon.pid
-    ensureMcpRoundTrip(packed.wrapper, port, envWithShims)
-    await expectDaemonIdentity(port, version)
-    await waitForChildExit(daemon, 12000)
-    const newPid = readPidFile(pidFile)
-    if (!newPid || newPid === oldPid) {
-      fail(`expected respawned daemon pid after recycle`, `old=${oldPid} new=${newPid}`)
-    }
-    stopDaemon(packed.wrapper, port, envWithShims)
-    evidence.scenarios.push({ name: 'fresh_install_upgrade', status: 'passed' })
-
-    currentStage = 'lifecycle_recovery'
-    info('stage 1a: corrupt state, extension suspension, browser restart, and daemon crash recovery')
-    const doctorState = path.join(stateDir, 'doctor', 'incident-timeline.json')
-    fs.mkdirSync(path.dirname(doctorState), { recursive: true })
-    fs.writeFileSync(doctorState, '{corrupt lifecycle fixture')
-    daemon = startDaemon(newBinary, port, envWithShims)
-    await expectDaemonIdentity(port, version)
-    evidence.scenarios.push({ name: 'corrupt_state_recovery', status: 'passed' })
-
-    await syncExtension(port, 'packaged-lifecycle-session')
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    await syncExtension(port, 'packaged-lifecycle-session')
-    evidence.scenarios.push({ name: 'extension_suspension_recovery', status: 'passed' })
-
-    stopDaemon(newBinary, port, envWithShims)
-    await waitForChildExit(daemon, 12000)
-    daemon = startDaemon(newBinary, port, envWithShims)
-    await expectDaemonIdentity(port, version)
-    await syncExtension(port, 'packaged-lifecycle-session')
-    evidence.scenarios.push({ name: 'browser_restart_recovery', status: 'passed' })
-
-    await crashDaemon(daemon)
-    daemon = startDaemon(newBinary, port, envWithShims)
-    await expectDaemonIdentity(port, version)
-    await expectDoctorIncident(port, 'unclean_daemon_exit', `:${port}:`)
-    evidence.scenarios.push({ name: 'daemon_crash_recovery', status: 'passed' })
-    stopDaemon(newBinary, port, envWithShims)
-    await waitForChildExit(daemon, 12000)
-
-    currentStage = 'same_version_reinstall'
-    info('stage 1b: same-version reinstall')
-    run('npm', ['install', '--prefix', packed.installRoot, '--ignore-scripts', '--omit=optional', packed.mainTar], {
-      env: envWithShims
-    })
-    validateCandidateVersion(newBinary, version, candidateChecksum, envWithShims)
-    evidence.scenarios.push({ name: 'same_version_reinstall', status: 'passed' })
-
-    currentStage = 'failed_readiness_rollback'
-    info('stage 1c: failed replacement rolls back')
-    const activeBinary = path.join(tmpRoot, `active-kaboom${exeSuffix}`)
-    const backupBinary = path.join(tmpRoot, `active-kaboom.backup${exeSuffix}`)
-    fs.copyFileSync(oldBinary, activeBinary)
-    await exerciseFailedReadinessRollback(activeBinary, backupBinary, newBinary, candidateChecksum, envWithShims)
-    if (binaryVersion(activeBinary, envWithShims) !== supportedPreviousVersion) {
-      fail('rollback did not restore the prior executable')
-    }
-    evidence.scenarios.push({ name: 'failed_readiness_rollback', status: 'passed' })
-
-    currentStage = 'npm_cleanup'
-    info('stage 2: npm cleanup kills old daemon + pid file')
-    daemon = startDaemon(oldBinary, port, envWithShims)
-    await expectDaemonIdentity(port, supportedPreviousVersion)
-    run('node', ['npm/kaboom-agentic-browser/lib/daemon/kill-daemon.js'], { env: envWithShims })
-    await waitForChildExit(daemon, 12000)
-    if (fs.existsSync(pidFile)) {
-      fail(`npm cleanup did not remove pid file ${pidFile}`)
-    }
-
-    if (hasPypiPackage) {
-      info('stage 3: pypi cleanup kills old daemon + pid file')
-      daemon = startDaemon(oldBinary, port, envWithShims)
-      await expectDaemonIdentity(port, supportedPreviousVersion)
-      run(
-        python,
-        [
-          '-c',
-          "import os,sys;sys.path.insert(0,os.environ['KABOOM_PYPI_PATH']);from kaboom_agentic_browser import platform;platform.cleanup_old_processes()"
-        ],
-        {
-          env: {
-            ...envWithShims,
-            KABOOM_PYPI_PATH: pypiPackageDir
-          }
-        }
-      )
-      await waitForChildExit(daemon, 12000)
-      if (fs.existsSync(pidFile)) {
-        fail(`pypi cleanup did not remove pid file ${pidFile}`)
-      }
-    } else {
-      info('stage 3 skipped: pypi/kaboom-agentic-browser not present in this checkout')
-      evidence.scenarios.push({ name: 'pypi_cleanup', status: 'skipped', reason: 'package_tree_absent' })
-    }
-
-    if (
-      fs.readFileSync(identityPath, 'utf8') !== continuityBefore.identity ||
-      fs.readFileSync(preferencesPath, 'utf8') !== continuityBefore.preferences
-    ) {
-      fail('install identity or user preferences changed during packaged lifecycle UAT')
-    }
+    await stageFreshInstallUpgrade(ctx)
+    await stageLifecycleRecovery(ctx)
+    stageSameVersionReinstall(ctx)
+    await stageFailedReadinessRollback(ctx)
+    await stageNpmCleanup(ctx)
+    await stagePypiCleanup(ctx)
+    assertUserStatePreserved(ctx, 'install identity or user preferences changed during packaged lifecycle UAT')
     info('all upgrade cleanup regressions passed')
     evidence.scenarios.push({ name: 'identity_continuity', status: 'passed' })
 
-    currentStage = 'uninstall_cleanup'
-    info('stage 4: uninstall removes packaged executables but preserves user state')
-    stopDaemon(packed.wrapper, port, envWithShims)
-    fs.rmSync(packed.installRoot, { recursive: true, force: true })
-    if (fs.existsSync(packed.wrapper)) fail('uninstall left the packaged executable behind')
-    if (
-      fs.readFileSync(identityPath, 'utf8') !== continuityBefore.identity ||
-      fs.readFileSync(preferencesPath, 'utf8') !== continuityBefore.preferences
-    ) {
-      fail('uninstall removed install identity or user preferences')
-    }
-    evidence.scenarios.push({ name: 'uninstall_cleanup', status: 'passed' })
+    await stageUninstallCleanup(ctx)
   } finally {
     stopDaemon(packed.wrapper, port, envWithShims)
     stopDaemon(oldBinary, port, envWithShims)
-    if (daemon && daemon.pid && pidAlive(daemon.pid)) {
+    if (ctx.daemon && ctx.daemon.pid && pidAlive(ctx.daemon.pid)) {
       try {
-        process.kill(daemon.pid)
+        process.kill(ctx.daemon.pid)
       } catch {
         // Best effort cleanup.
       }

@@ -2,9 +2,10 @@
  * Purpose: Keyboard shortcut listeners for draw mode, action-sequence recording, and screen recording.
  * Split from event-listeners.ts to keep files under 800 LOC.
  */
+import { type RecordingStartContext } from '../recording/utils.js';
 export interface RecordingShortcutHandlers {
     isRecording: () => boolean;
-    startRecording: (name: string, fps?: number, queryId?: string, audio?: string, fromPopup?: boolean, targetTabId?: number) => Promise<{
+    startRecording: (name: string, fps?: number, audio?: string, context?: RecordingStartContext) => Promise<{
         status: string;
         error?: string;
     }>;
@@ -26,7 +27,7 @@ export declare function buildActionSequenceRecordingName(now?: Date): string;
 export declare function toggleActionSequenceRecording(handlers: RecordingShortcutHandlers, tab: chrome.tabs.Tab, logFn?: (message: string) => void): Promise<void>;
 export interface ScreenRecordingHandlers {
     isRecording: () => boolean;
-    startRecording: (name: string, fps?: number, queryId?: string, audio?: string, fromPopup?: boolean, targetTabId?: number) => Promise<{
+    startRecording: (name: string, fps?: number, audio?: string, context?: RecordingStartContext) => Promise<{
         status: string;
         name: string;
         startTime?: number;

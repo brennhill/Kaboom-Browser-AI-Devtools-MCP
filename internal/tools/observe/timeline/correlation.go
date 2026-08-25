@@ -33,15 +33,53 @@ type bundleContext struct {
 	windowSeconds    int
 }
 
+type errorBundlesParams struct {
+	Limit         int    `json:"limit"`
+	WindowSeconds int    `json:"window_seconds"`
+	URL           string `json:"url"`
+	Scope         string `json:"scope"`
+	Summary       bool   `json:"summary"`
+}
+
 // GetErrorBundles assembles pre-joined debugging context around each recent error.
 func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		Limit         int    `json:"limit"`
-		WindowSeconds int    `json:"window_seconds"`
-		URL           string `json:"url"`
-		Scope         string `json:"scope"`
-		Summary       bool   `json:"summary"`
+	params, paramHint := normalizeErrorBundlesParams(args)
+
+	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
+	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
+		params.URL = trackedTabURL
 	}
+
+	errors, logs := collectErrorsAndLogs(deps, params.Limit, params.URL, params.Scope, trackedTabID)
+	ctx := bundleContextFromCapture(deps.Capture, params, logs)
+
+	bundles := buildBundles(errors, ctx)
+
+	var newestEntry time.Time
+	if len(errors) > 0 {
+		newestEntry = errors[0].ts
+	}
+
+	if params.Summary {
+		summaryResp := buildErrorBundlesSummary(bundles, newestEntry, core.BuildResponseMetadata(deps.Capture, newestEntry))
+		attachParamHint(summaryResp, paramHint)
+		return mcp.Succeed(req, "Error bundles", summaryResp)
+	}
+
+	response := map[string]any{
+		"bundles":  bundles,
+		"count":    len(bundles),
+		"metadata": core.BuildResponseMetadata(deps.Capture, newestEntry),
+	}
+	attachParamHint(response, paramHint)
+	if len(bundles) == 0 {
+		response["hint"] = hints.ErrorBundles()
+	}
+	return mcp.Succeed(req, "Error bundles", response)
+}
+
+func normalizeErrorBundlesParams(args json.RawMessage) (errorBundlesParams, string) {
+	var params errorBundlesParams
 	mcp.LenientUnmarshal(args, &params)
 	if params.Scope == "" {
 		params.Scope = "current_page"
@@ -63,17 +101,17 @@ func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessag
 	if params.Scope == "" {
 		params.Scope = "current_page"
 	}
+	return params, paramHint
+}
 
-	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
-	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
-		params.URL = trackedTabURL
+func attachParamHint(response map[string]any, paramHint string) {
+	if paramHint != "" {
+		response["param_hint"] = paramHint
 	}
+}
 
-	errors, logs := collectErrorsAndLogs(deps, params.Limit, params.URL, params.Scope, trackedTabID)
-
-	cap := deps.Capture
-	_, trackedTabID, _ = cap.Extension().GetTrackingStatus()
-
+func bundleContextFromCapture(cap *capture.Capture, params errorBundlesParams, logs []timedEntry) bundleContext {
+	_, trackedTabID, _ := cap.Extension().GetTrackingStatus()
 	networkBodies := cap.Telemetry().NetworkBodies().Snapshot().Bodies
 	waterfallEntries := cap.Telemetry().NetworkWaterfall().Entries()
 	actions := cap.Telemetry().Actions().Snapshot().Actions
@@ -86,41 +124,13 @@ func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessag
 		actions = filterActionsByTab(actions, trackedTabID)
 	}
 
-	ctx := bundleContext{
+	return bundleContext{
 		networkBodies:    networkBodies,
 		waterfallEntries: waterfallEntries,
 		actions:          actions,
 		logs:             logs,
 		windowSeconds:    params.WindowSeconds,
 	}
-
-	bundles := buildBundles(errors, ctx)
-
-	var newestEntry time.Time
-	if len(errors) > 0 {
-		newestEntry = errors[0].ts
-	}
-
-	if params.Summary {
-		summaryResp := buildErrorBundlesSummary(bundles, newestEntry, core.BuildResponseMetadata(cap, newestEntry))
-		if paramHint != "" {
-			summaryResp["param_hint"] = paramHint
-		}
-		return mcp.Succeed(req, "Error bundles", summaryResp)
-	}
-
-	response := map[string]any{
-		"bundles":  bundles,
-		"count":    len(bundles),
-		"metadata": core.BuildResponseMetadata(cap, newestEntry),
-	}
-	if paramHint != "" {
-		response["param_hint"] = paramHint
-	}
-	if len(bundles) == 0 {
-		response["hint"] = hints.ErrorBundles()
-	}
-	return mcp.Succeed(req, "Error bundles", response)
 }
 
 // collectErrorsAndLogs extracts errors and logs from the log buffer snapshot.

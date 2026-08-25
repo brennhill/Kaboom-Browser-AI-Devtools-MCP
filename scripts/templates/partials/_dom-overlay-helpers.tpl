@@ -3,6 +3,21 @@
   // Why: Separated from _dom-intent.tpl to keep each partial under 500 LOC.
 
   // --- Helper: Find topmost visible overlay using z-index analysis + role detection (#334) ---
+  function isOverlaySizedHighZIndexElement(el: Element): boolean {
+    if (!(el instanceof HTMLElement)) return false
+    const style = getComputedStyle(el)
+    const zIndex = Number.parseInt(style.zIndex || '', 10)
+    if (Number.isNaN(zIndex) || zIndex < 1000) return false
+    const position = style.position || ''
+    if (position !== 'fixed' && position !== 'absolute') return false
+    const rect = el.getBoundingClientRect()
+    // Must be reasonably sized (not a tiny tooltip)
+    if (rect.width < 100 || rect.height < 100) return false
+    // Must be visible
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false
+    return true
+  }
+
   function findTopmostOverlay(): Element | null {
     // Collect all dialog/modal candidates
     const dialogSelectors = [
@@ -20,18 +35,7 @@
     const allElements = document.querySelectorAll('*')
     for (let i = 0; i < allElements.length; i++) {
       const el = allElements[i]!
-      if (!(el instanceof HTMLElement)) continue
-      const style = getComputedStyle(el)
-      const zIndex = Number.parseInt(style.zIndex || '', 10)
-      if (Number.isNaN(zIndex) || zIndex < 1000) continue
-      const position = style.position || ''
-      if (position !== 'fixed' && position !== 'absolute') continue
-      const rect = el.getBoundingClientRect()
-      // Must be reasonably sized (not a tiny tooltip)
-      if (rect.width < 100 || rect.height < 100) continue
-      // Must be visible
-      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue
-      candidates.push(el)
+      if (isOverlaySizedHighZIndexElement(el)) candidates.push(el)
     }
 
     const unique = uniqueElements(candidates).filter(isActionableVisible)

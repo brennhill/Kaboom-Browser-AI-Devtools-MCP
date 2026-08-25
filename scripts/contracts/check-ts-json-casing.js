@@ -73,6 +73,55 @@ function extractBracedBlock(text, start) {
 }
 
 /**
+ * Skip a string literal starting at `i` (the opening quote). Returns the index
+ * just past the closing quote.
+ */
+function skipStringLiteral(block, i) {
+  const quote = block[i]
+  i++
+  while (i < block.length && block[i] !== quote) {
+    if (block[i] === '\\') i++ // skip escaped char
+    i++
+  }
+  return i + 1 // skip closing quote
+}
+
+/**
+ * Skip a line comment starting at `i`. Returns the index of the newline (or end).
+ */
+function skipLineComment(block, i) {
+  while (i < block.length && block[i] !== '\n') i++
+  return i
+}
+
+/**
+ * Skip a block comment starting at `i`. Returns the index just past the closing marker.
+ */
+function skipBlockComment(block, i) {
+  i += 2
+  while (i < block.length - 1 && !(block[i] === '*' && block[i + 1] === '/')) i++
+  return i + 2
+}
+
+/**
+ * Net brace/bracket depth delta for a single character (0 when not a brace).
+ */
+function bracketDelta(ch) {
+  if (ch === '{' || ch === '[') return 1
+  if (ch === '}' || ch === ']') return -1
+  return 0
+}
+
+/**
+ * Full line containing offset `i`.
+ */
+function lineAtOffset(block, i) {
+  const lineStart = block.lastIndexOf('\n', i) + 1
+  const lineEnd = block.indexOf('\n', i)
+  return block.slice(lineStart, lineEnd === -1 ? block.length : lineEnd)
+}
+
+/**
  * Extract top-level object-literal keys from a block of code.
  * Only considers keys at brace-depth 0 (skips nested objects/arrays).
  */
@@ -82,13 +131,9 @@ function extractTopLevelKeys(block) {
   let i = 0
   while (i < block.length) {
     const ch = block[i]
-    if (ch === '{' || ch === '[') {
-      depth++
-      i++
-      continue
-    }
-    if (ch === '}' || ch === ']') {
-      depth--
+    const delta = bracketDelta(ch)
+    if (delta !== 0) {
+      depth += delta
       i++
       continue
     }
@@ -99,26 +144,19 @@ function extractTopLevelKeys(block) {
 
     // Skip string literals
     if (ch === "'" || ch === '"' || ch === '`') {
-      i++
-      while (i < block.length && block[i] !== ch) {
-        if (block[i] === '\\') i++ // skip escaped char
-        i++
-      }
-      i++ // skip closing quote
+      i = skipStringLiteral(block, i)
       continue
     }
 
     // Skip line comments
     if (ch === '/' && block[i + 1] === '/') {
-      while (i < block.length && block[i] !== '\n') i++
+      i = skipLineComment(block, i)
       continue
     }
 
     // Skip block comments
     if (ch === '/' && block[i + 1] === '*') {
-      i += 2
-      while (i < block.length - 1 && !(block[i] === '*' && block[i + 1] === '/')) i++
-      i += 2
+      i = skipBlockComment(block, i)
       continue
     }
 
@@ -127,11 +165,7 @@ function extractTopLevelKeys(block) {
     const keyMatch = block.slice(i).match(/^(\w+)\s*:(?!:)/)
     if (keyMatch) {
       const key = keyMatch[1]
-      // Get the line for WIRE-OK annotation check
-      const lineStart = block.lastIndexOf('\n', i) + 1
-      const lineEnd = block.indexOf('\n', i)
-      const line = block.slice(lineStart, lineEnd === -1 ? block.length : lineEnd)
-
+      const line = lineAtOffset(block, i)
       keys.push({ key, line: line.trim(), offset: i })
       i += keyMatch[0].length
       continue

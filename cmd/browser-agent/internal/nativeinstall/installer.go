@@ -211,42 +211,12 @@ func runInstaller(forceCleanup func() error, startDaemon func(string), targetArg
 	}
 
 	// 3. File-based configs
-	clientsConfigured := 0
 	if home == "" {
 		// Without a home directory every relative target would resolve to
 		// cwd-relative junk paths, so skip the file-based configs entirely.
 		diag.Printf("  ⚠️  Could not determine home directory (%v); skipping file-based MCP client configs\n", homeErr)
 	} else {
-		// Codex is always configured. Unlike the optional desktop clients below,
-		// its config directory is safe to create before Codex's first launch.
-		codexPath := codexConfigPath(home)
-		if err := mergeCodexConfig(codexPath, exe); err != nil {
-			telemetry.AppError(incident.CodeInstallConfigError)
-			diag.Printf("  ⚠️  Codex: %v\n", err)
-		} else {
-			clientsConfigured++
-		}
-		if !targets.codexOnly {
-			for _, cfg := range fileConfigTargets(home) {
-				path := cfg.path
-				if strings.HasPrefix(path, "~/") {
-					path = filepath.Join(home, path[2:])
-				} else if !filepath.IsAbs(path) {
-					path = filepath.Join(home, path)
-				}
-
-				if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
-					continue // Client directory doesn't exist, skip
-				}
-
-				if err := mergeJSONConfig(path, cfg.key, exe, cfg.isCustom); err != nil {
-					telemetry.AppError(incident.CodeInstallConfigError)
-					diag.Printf("  ⚠️  %s: %v\n", cfg.name, err)
-				} else {
-					clientsConfigured++
-				}
-			}
-		}
+		installFileBasedClients(home, exe, !targets.codexOnly)
 	}
 
 	// 4. Start the Daemon
@@ -274,6 +244,46 @@ func runInstaller(forceCleanup func() error, startDaemon func(string), targetArg
 	diag.Printf("   Your AI tool (Claude, Cursor, etc.) is now configured.\n")
 	diag.Printf("\033[1;36m+----------------------------------------------------------+\033[0m\n")
 	return nil
+}
+
+// installFileBasedClients merges the Kaboom MCP registration into every
+// file-based client config that exists on this machine, returning how many
+// clients were configured. Codex is always configured; the optional desktop
+// clients are skipped when includeOptional is false.
+func installFileBasedClients(home, exe string, includeOptional bool) int {
+	clientsConfigured := 0
+	// Codex is always configured. Unlike the optional desktop clients below,
+	// its config directory is safe to create before Codex's first launch.
+	codexPath := codexConfigPath(home)
+	if err := mergeCodexConfig(codexPath, exe); err != nil {
+		telemetry.AppError(incident.CodeInstallConfigError)
+		diag.Printf("  ⚠️  Codex: %v\n", err)
+	} else {
+		clientsConfigured++
+	}
+	if !includeOptional {
+		return clientsConfigured
+	}
+	for _, cfg := range fileConfigTargets(home) {
+		path := cfg.path
+		if strings.HasPrefix(path, "~/") {
+			path = filepath.Join(home, path[2:])
+		} else if !filepath.IsAbs(path) {
+			path = filepath.Join(home, path)
+		}
+
+		if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
+			continue // Client directory doesn't exist, skip
+		}
+
+		if err := mergeJSONConfig(path, cfg.key, exe, cfg.isCustom); err != nil {
+			telemetry.AppError(incident.CodeInstallConfigError)
+			diag.Printf("  ⚠️  %s: %v\n", cfg.name, err)
+		} else {
+			clientsConfigured++
+		}
+	}
+	return clientsConfigured
 }
 
 func startDaemonSilently(exe string) {

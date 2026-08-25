@@ -11,7 +11,7 @@ import { errorMessage } from '../../lib/error-utils.js'
 import { sendTabToast } from './content-script-bridge.js'
 import { getActiveTab } from './tracked-tab-state.js'
 import { toggleDrawModeForTab } from './draw-mode-toggle.js'
-import { buildScreenRecordingSlug } from '../recording/utils.js'
+import { buildScreenRecordingSlug, type RecordingStartContext } from '../recording/utils.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
 import { toggleTerminalSidePanel } from './terminal-panel.js'
 export interface RecordingShortcutHandlers {
@@ -19,10 +19,8 @@ export interface RecordingShortcutHandlers {
   startRecording: (
     name: string,
     fps?: number,
-    queryId?: string,
     audio?: string,
-    fromPopup?: boolean,
-    targetTabId?: number
+    context?: RecordingStartContext
   ) => Promise<{ status: string; error?: string }>
   stopRecording: (truncated?: boolean) => Promise<{ status: string; error?: string }>
 }
@@ -70,7 +68,7 @@ export async function toggleActionSequenceRecording(
   }
 
   const name = buildActionSequenceRecordingName()
-  const startResult = await handlers.startRecording(name, 15, '', '', true, tab.id)
+  const startResult = await handlers.startRecording(name, 15, '', { fromPopup: true, targetTabId: tab.id })
   if (startResult.status !== 'recording') {
     sendTabToast(
       tab.id,
@@ -92,10 +90,8 @@ export interface ScreenRecordingHandlers {
   startRecording: (
     name: string,
     fps?: number,
-    queryId?: string,
     audio?: string,
-    fromPopup?: boolean,
-    targetTabId?: number
+    context?: RecordingStartContext
   ) => Promise<{ status: string; name: string; startTime?: number; error?: string }>
   stopRecording: (truncated?: boolean) => Promise<{
     status: string
@@ -122,7 +118,7 @@ export async function toggleScreenRecording(
   }
 
   const slug = buildScreenRecordingSlug(tab.url)
-  const result = await handlers.startRecording(slug, 15, '', '', true, tab.id)
+  const result = await handlers.startRecording(slug, 15, '', { fromPopup: true, targetTabId: tab.id })
   if (result.status !== 'recording' && tab.id) {
     sendTabToast(tab.id, 'Recording failed', result.error || 'Could not start screen recording', 'error', 4000)
     if (logFn) logFn(`Screen recording start failed: ${result.error}`)

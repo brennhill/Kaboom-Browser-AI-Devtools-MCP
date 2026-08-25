@@ -5,31 +5,46 @@ function runA11yChecks(el, computed) {
   if (!el || !el.tagName) return flags
   const tag = el.tagName.toLowerCase()
   const getAttribute = (name) => (typeof el.getAttribute === 'function' ? el.getAttribute(name) : null)
-
-  // 1. Image without alt text
-  if (tag === 'img' && !getAttribute('alt')) {
-    flags.push('missing_alt_text')
+  const checks = [
+    checkImageAltText,
+    checkAccessibleName,
+    checkInteractiveWithoutRole,
+    checkContrastRatio,
+    checkFocusIndicator,
+    checkFormLabel,
+    checkTouchTarget
+  ]
+  for (const check of checks) {
+    const flag = check(el, tag, getAttribute, computed)
+    if (flag) flags.push(flag)
   }
+  return flags
+}
 
-  // 2. Interactive element without accessible name
-  const interactiveTags = ['button', 'a', 'input', 'select', 'textarea']
-  if (interactiveTags.includes(tag)) {
-    const hasLabel = getAttribute('aria-label') || getAttribute('aria-labelledby') || getAttribute('title')
-    const hasText = (el.textContent || '').trim()
-    const hasPlaceholder = getAttribute('placeholder')
-    if (!hasLabel && !hasText && !hasPlaceholder) {
-      flags.push('missing_accessible_name')
-    }
-  }
+const A11Y_INTERACTIVE_TAGS = ['button', 'a', 'input', 'select', 'textarea']
 
-  // 3. Div/span with click handler but no role
+function checkImageAltText(el, tag, getAttribute) {
+  if (tag === 'img' && !getAttribute('alt')) return 'missing_alt_text'
+  return null
+}
+
+function checkAccessibleName(el, tag, getAttribute) {
+  if (!A11Y_INTERACTIVE_TAGS.includes(tag)) return null
+  const hasLabel = getAttribute('aria-label') || getAttribute('aria-labelledby') || getAttribute('title')
+  const hasText = (el.textContent || '').trim()
+  const hasPlaceholder = getAttribute('placeholder')
+  if (!hasLabel && !hasText && !hasPlaceholder) return 'missing_accessible_name'
+  return null
+}
+
+function checkInteractiveWithoutRole(el, tag, getAttribute) {
   if ((tag === 'div' || tag === 'span') && !getAttribute('role')) {
-    if (getAttribute('onclick') || getAttribute('tabindex')) {
-      flags.push('interactive_without_role')
-    }
+    if (getAttribute('onclick') || getAttribute('tabindex')) return 'interactive_without_role'
   }
+  return null
+}
 
-  // 4. Contrast ratio check (foreground vs background)
+function checkContrastRatio(el, tag, getAttribute, computed) {
   try {
     if (computed && typeof computed.getPropertyValue === 'function') {
       const fg = parseRGBColor(computed.getPropertyValue('color'))
@@ -40,36 +55,34 @@ function runA11yChecks(el, computed) {
         const isBold = parseInt(computed.getPropertyValue('font-weight'), 10) >= 700
         const isLargeText = fontSize >= 24 || (fontSize >= 18.66 && isBold)
         const minRatio = isLargeText ? 3 : 4.5
-        if (ratio < minRatio) {
-          flags.push(`low_contrast:${ratio.toFixed(1)}:1`)
-        }
+        if (ratio < minRatio) return `low_contrast:${ratio.toFixed(1)}:1`
       }
     }
   } catch {
     // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
     // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-    // Ignore contrast parse errors
   }
+  return null
+}
 
-  // 5. Focus indicator removed
+function checkFocusIndicator(el, tag, getAttribute, computed) {
   try {
-    if (interactiveTags.includes(tag) && computed && typeof computed.getPropertyValue === 'function') {
+    if (A11Y_INTERACTIVE_TAGS.includes(tag) && computed && typeof computed.getPropertyValue === 'function') {
       const outline = computed.getPropertyValue('outline')
       const outlineStyle = computed.getPropertyValue('outline-style')
       if (outlineStyle === 'none' || outline === '0' || outline === 'none') {
         const boxShadow = computed.getPropertyValue('box-shadow')
-        if (!boxShadow || boxShadow === 'none') {
-          flags.push('no_focus_indicator')
-        }
+        if (!boxShadow || boxShadow === 'none') return 'no_focus_indicator'
       }
     }
   } catch {
     // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
     // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-    // Ignore focus indicator check errors
   }
+  return null
+}
 
-  // 6. Missing form label
+function checkFormLabel(el, tag, getAttribute) {
   try {
     if ((tag === 'input' || tag === 'select' || tag === 'textarea') && !getAttribute('aria-label')) {
       const id = el.id
@@ -80,32 +93,29 @@ function runA11yChecks(el, computed) {
         document.querySelector(`label[for="${CSS.escape(id)}"]`)
       if (!hasLabelFor) {
         const parent = typeof el.closest === 'function' ? el.closest('label') : null
-        if (!parent) {
-          flags.push('missing_form_label')
-        }
+        if (!parent) return 'missing_form_label'
       }
     }
   } catch {
     // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
     // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-    // Ignore form label check errors
   }
+  return null
+}
 
-  // 7. Small touch target (< 44x44 CSS pixels per WCAG 2.5.8)
+function checkTouchTarget(el, tag) {
   try {
-    if (interactiveTags.includes(tag) && typeof el.getBoundingClientRect === 'function') {
+    if (A11Y_INTERACTIVE_TAGS.includes(tag) && typeof el.getBoundingClientRect === 'function') {
       const rect = el.getBoundingClientRect()
       if (rect.width > 0 && rect.height > 0 && (rect.width < 44 || rect.height < 44)) {
-        flags.push(`small_touch_target:${Math.round(rect.width)}x${Math.round(rect.height)}`)
+        return `small_touch_target:${Math.round(rect.width)}x${Math.round(rect.height)}`
       }
     }
   } catch {
     // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
     // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-    // Ignore touch target check errors
   }
-
-  return flags
+  return null
 }
 
 /**
@@ -164,72 +174,77 @@ function buildCSSSelector(el) {
 
 const MAX_SELECTOR_CANDIDATES = 8
 
-function collectSelectorCandidates(el) {
+function createSelectorCandidateSink(max) {
   const candidates = []
-  if (!el || !el.tagName) {
-    return candidates
-  }
-
-  const safeAdd = (candidate) => {
+  const add = (candidate) => {
     if (!candidate || typeof candidate !== 'string') return
     const normalized = candidate.trim()
     if (!normalized || candidates.includes(normalized)) return
-    if (candidates.length >= MAX_SELECTOR_CANDIDATES) return
+    if (candidates.length >= max) return
     candidates.push(normalized)
   }
-  const getAttribute = (name) => (typeof el.getAttribute === 'function' ? el.getAttribute(name) : null)
-  const normalizeText = (value, max) =>
-    String(value || '')
-      .replace(/\s+/g, ' ')
-      .replace(/\|/g, '/')
-      .trim()
-      .slice(0, max)
-  const escapeAttr = (value) => {
-    const raw = String(value || '')
-    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(raw)
-    return raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return { candidates, add }
+}
+
+function normalizeSelectorText(value, max) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .replace(/\|/g, '/')
+    .trim()
+    .slice(0, max)
+}
+
+function escapeAttrValue(value) {
+  const raw = String(value || '')
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(raw)
+  return raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
+function firstAttributeValue(getAttribute, names) {
+  for (const name of names) {
+    const value = getAttribute(name)
+    if (value) return value
   }
+  return null
+}
+
+function addAttributeCandidates(getAttribute, add) {
+  const testID = firstAttributeValue(getAttribute, ['data-testid', 'data-test-id', 'data-cy'])
+  if (testID) add(`testid=${normalizeSelectorText(testID, 120)}`)
+  const ariaLabel = getAttribute('aria-label')
+  if (ariaLabel) add(`label=${normalizeSelectorText(ariaLabel, 120)}`)
+  const placeholder = getAttribute('placeholder')
+  if (placeholder) add(`placeholder=${normalizeSelectorText(placeholder, 120)}`)
+}
+
+function addRoleCandidates(el, getAttribute, add, text) {
+  const role = getAttribute('role') || inferImplicitRole(el)
+  if (role && text) add(`role=${normalizeSelectorText(role, 60)}|${text}`)
+  else if (role) add(`role=${normalizeSelectorText(role, 60)}`)
+}
+
+function collectSelectorCandidates(el) {
+  const { candidates, add } = createSelectorCandidateSink(MAX_SELECTOR_CANDIDATES)
+  if (!el || !el.tagName) {
+    return candidates
+  }
+  const getAttribute = (name) => (typeof el.getAttribute === 'function' ? el.getAttribute(name) : null)
   const tag = el.tagName.toLowerCase()
-  const text = normalizeText(el.textContent || '', 80)
+  const text = normalizeSelectorText(el.textContent || '', 80)
 
   if (el.id) {
-    safeAdd(`css=#${escapeAttr(el.id)}`)
+    add(`css=#${escapeAttrValue(el.id)}`)
   }
-
-  const testID = getAttribute('data-testid') || getAttribute('data-test-id') || getAttribute('data-cy')
-  if (testID) {
-    safeAdd(`testid=${normalizeText(testID, 120)}`)
-  }
-
-  const ariaLabel = getAttribute('aria-label')
-  if (ariaLabel) {
-    safeAdd(`label=${normalizeText(ariaLabel, 120)}`)
-  }
-
-  const placeholder = getAttribute('placeholder')
-  if (placeholder) {
-    safeAdd(`placeholder=${normalizeText(placeholder, 120)}`)
-  }
-
-  const explicitRole = getAttribute('role')
-  const implicitRole = inferImplicitRole(el)
-  const role = explicitRole || implicitRole
-  if (role && text) {
-    safeAdd(`role=${normalizeText(role, 60)}|${text}`)
-  } else if (role) {
-    safeAdd(`role=${normalizeText(role, 60)}`)
-  }
-
+  addAttributeCandidates(getAttribute, add)
+  addRoleCandidates(el, getAttribute, add, text)
   if (text) {
-    safeAdd(`text=${text}`)
+    add(`text=${text}`)
   }
-
   const nameAttr = getAttribute('name')
   if (nameAttr) {
-    safeAdd(`css=${tag}[name="${escapeAttr(nameAttr)}"]`)
+    add(`css=${tag}[name="${escapeAttrValue(nameAttr)}"]`)
   }
-
-  safeAdd(`css=${buildCSSSelector(el)}`)
+  add(`css=${buildCSSSelector(el)}`)
   return candidates
 }
 
@@ -241,21 +256,24 @@ function inferImplicitRole(el) {
   if (tag === 'select') return 'combobox'
   if (tag === 'textarea') return 'textbox'
   if (tag === 'input') {
-    const inputType = (typeof el.getAttribute === 'function' ? el.getAttribute('type') : '') || 'text'
-    switch (inputType.toLowerCase()) {
-      case 'button':
-      case 'submit':
-      case 'reset':
-        return 'button'
-      case 'checkbox':
-        return 'checkbox'
-      case 'radio':
-        return 'radio'
-      default:
-        return 'textbox'
-    }
+    return inferInputRole(typeof el.getAttribute === 'function' ? el.getAttribute('type') : '')
   }
   return ''
+}
+
+function inferInputRole(inputType) {
+  switch ((inputType || 'text').toLowerCase()) {
+    case 'button':
+    case 'submit':
+    case 'reset':
+      return 'button'
+    case 'checkbox':
+      return 'checkbox'
+    case 'radio':
+      return 'radio'
+    default:
+      return 'textbox'
+  }
 }
 
 /**
@@ -266,12 +284,31 @@ function inferImplicitRole(el) {
 const MAX_MATCHED_RULES = 20
 const MAX_RULES_EXAMINED = 5000 // Safety cap to prevent excessive work on huge stylesheets
 
+function selectorMatches(el, selectorText) {
+  try {
+    return el.matches(selectorText)
+  } catch {
+    return false // Invalid selector
+  }
+}
+
+function extractRuleProperties(rule) {
+  const properties = {}
+  for (let j = 0; j < rule.style.length; j++) {
+    const prop = rule.style[j]
+    properties[prop] = rule.style.getPropertyValue(prop)
+    const priority = rule.style.getPropertyPriority(prop)
+    if (priority) properties[prop] += ' !' + priority
+  }
+  return properties
+}
+
 function traceMatchedCSSRules(el) {
   const rules = []
-  let totalExamined = 0
+  const examined = { count: 0 }
   try {
     for (const sheet of document.styleSheets) {
-      if (totalExamined >= MAX_RULES_EXAMINED) break
+      if (examined.count >= MAX_RULES_EXAMINED) break
       let cssRules
       try {
         cssRules = sheet.cssRules || sheet.rules
@@ -286,32 +323,7 @@ function traceMatchedCSSRules(el) {
       }
       if (!cssRules) continue
 
-      const sheetHref = sheet.href || '(inline)'
-      for (let i = 0; i < cssRules.length; i++) {
-        if (rules.length >= MAX_MATCHED_RULES) break
-        if (++totalExamined > MAX_RULES_EXAMINED) break
-        const rule = cssRules[i]
-        if (rule.type !== CSSRule.STYLE_RULE) continue
-        try {
-          if (!el.matches(rule.selectorText)) continue
-        } catch {
-          continue // Invalid selector
-        }
-        // Extract only properties that differ from defaults (non-empty)
-        const properties = {}
-        for (let j = 0; j < rule.style.length; j++) {
-          const prop = rule.style[j]
-          properties[prop] = rule.style.getPropertyValue(prop)
-          const priority = rule.style.getPropertyPriority(prop)
-          if (priority) properties[prop] += ' !' + priority
-        }
-        rules.push({
-          selector: rule.selectorText,
-          properties,
-          stylesheet: sheetHref,
-          rule_index: i
-        })
-      }
+      countSheetMatches(el, cssRules, sheet.href || '(inline)', rules, examined)
       if (rules.length >= MAX_MATCHED_RULES) break
     }
   } catch {
@@ -322,14 +334,36 @@ function traceMatchedCSSRules(el) {
   return rules
 }
 
+function countSheetMatches(el, cssRules, sheetHref, rules, examined) {
+  for (let i = 0; i < cssRules.length; i++) {
+    if (rules.length >= MAX_MATCHED_RULES) return
+    if (++examined.count > MAX_RULES_EXAMINED) return
+    const rule = cssRules[i]
+    if (rule.type !== CSSRule.STYLE_RULE) continue
+    if (!selectorMatches(el, rule.selectorText)) continue
+    rules.push({
+      selector: rule.selectorText,
+      properties: extractRuleProperties(rule),
+      stylesheet: sheetHref,
+      rule_index: i
+    })
+  }
+}
+
 /**
  * Detect framework component information for an element.
  * Supports React, Vue, Angular, and common data attributes.
  */
 function detectComponentSource(el) {
   const info = {}
+  detectReactComponent(el, info)
+  if (!info.framework) detectVueComponent(el, info)
+  if (!info.framework) detectAngularComponent(el, info)
+  detectDataAttributes(el, info)
+  return Object.keys(info).length > 0 ? info : null
+}
 
-  // React: __reactFiber$ or __reactInternalInstance$
+function detectReactComponent(el, info) {
   try {
     for (const key of Object.keys(el)) {
       if (key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')) {
@@ -362,46 +396,45 @@ function detectComponentSource(el) {
     // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // React internals may throw
   }
+}
 
-  // Vue 2: __vue__ / Vue 3: __vue_app__ or __vueParentComponent
-  if (!info.framework) {
-    try {
-      const vue = el.__vue__ || el.__vueParentComponent
-      if (vue) {
-        info.framework = 'vue'
-        info.component = vue.$options?.name || vue.type?.name || vue.type?.__name || ''
-        if (vue.$options?.__file) info.source_file = vue.$options.__file
-        if (vue.type?.__file) info.source_file = vue.type.__file
-      }
-    } catch {
-      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-      // Vue internals may throw
+function detectVueComponent(el, info) {
+  try {
+    const vue = el.__vue__ || el.__vueParentComponent
+    if (vue) {
+      info.framework = 'vue'
+      info.component = vue.$options?.name || vue.type?.name || vue.type?.__name || ''
+      if (vue.$options?.__file) info.source_file = vue.$options.__file
+      if (vue.type?.__file) info.source_file = vue.type.__file
     }
+  } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+    // Vue internals may throw
   }
+}
 
-  // Angular: ng-* attributes
-  if (!info.framework) {
-    try {
-      for (const attr of el.attributes) {
-        if (attr.name.startsWith('_ngcontent') || attr.name.startsWith('_nghost')) {
-          info.framework = 'angular'
-          // Try to get component name from ng-reflect-* or constructor
-          const ngComponent = el.__ngContext__
-          if (ngComponent) {
-            info.component = el.constructor?.name || ''
-          }
-          break
+function detectAngularComponent(el, info) {
+  try {
+    for (const attr of el.attributes) {
+      if (attr.name.startsWith('_ngcontent') || attr.name.startsWith('_nghost')) {
+        info.framework = 'angular'
+        // Try to get component name from ng-reflect-* or constructor
+        const ngComponent = el.__ngContext__
+        if (ngComponent) {
+          info.component = el.constructor?.name || ''
         }
+        break
       }
-    } catch {
-      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-      // Angular detection may fail
     }
+  } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+    // Angular detection may fail
   }
+}
 
-  // Common data attributes
+function detectDataAttributes(el, info) {
   try {
     const testId = el.getAttribute('data-testid') || el.getAttribute('data-test-id') || el.getAttribute('data-cy')
     if (testId) info.test_id = testId
@@ -412,8 +445,6 @@ function detectComponentSource(el) {
     // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
     // Attribute access may fail
   }
-
-  return Object.keys(info).length > 0 ? info : null
 }
 
 // ============================================================================

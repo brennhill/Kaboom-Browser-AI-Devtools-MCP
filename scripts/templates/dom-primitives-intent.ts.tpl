@@ -531,6 +531,30 @@ export function domPrimitiveIntent(
 
   // — Execute action —
 
+  function isComposerInputLike(node: HTMLElement): boolean {
+    const tag = node.tagName.toLowerCase()
+    return node.isContentEditable || node.getAttribute('role') === 'textbox' || tag === 'textarea' || tag === 'input'
+  }
+
+  function intentSuccess(
+    node: HTMLElement,
+    resolved: IntentResult,
+    matchedInfo: Record<string, unknown>,
+    fallbackStrategy: string,
+    reason?: string
+  ): ReturnType<typeof domPrimitiveIntent> {
+    return {
+      success: true,
+      action,
+      selector: '',
+      ...(reason ? { reason } : {}),
+      matched: matchedInfo,
+      match_count: resolved.match_count || 1,
+      match_strategy: resolved.match_strategy || fallbackStrategy,
+      viewport: captureViewport()
+    }
+  }
+
   const resolved = resolveIntentTarget()
   if (resolved.error) return resolved.error as ReturnType<typeof domError>
   const node = resolved.element!
@@ -551,36 +575,12 @@ export function domPrimitiveIntent(
   }
 
   // Execute the action
-  if (action === 'open_composer') {
-    const tag = node.tagName.toLowerCase()
-    const isInputLike =
-      node.isContentEditable || node.getAttribute('role') === 'textbox' || tag === 'textarea' || tag === 'input'
-    if (isInputLike) {
-      node.focus()
-      return {
-        success: true,
-        action,
-        selector: '',
-        reason: 'composer_ready',
-        matched: matchedInfo,
-        match_count: resolved.match_count || 1,
-        match_strategy: resolved.match_strategy || 'intent_open_composer',
-        viewport: captureViewport()
-      }
-    }
-    node.click()
-  } else {
-    // submit_active_composer and confirm_top_dialog both click
-    node.click()
+  if (action === 'open_composer' && isComposerInputLike(node)) {
+    node.focus()
+    return intentSuccess(node, resolved, matchedInfo, 'intent_open_composer', 'composer_ready')
   }
+  // open_composer on a trigger, submit_active_composer, and confirm_top_dialog all click
+  node.click()
 
-  return {
-    success: true,
-    action,
-    selector: '',
-    matched: matchedInfo,
-    match_count: resolved.match_count || 1,
-    match_strategy: resolved.match_strategy || 'selector',
-    viewport: captureViewport()
-  }
+  return intentSuccess(node, resolved, matchedInfo, 'selector')
 }

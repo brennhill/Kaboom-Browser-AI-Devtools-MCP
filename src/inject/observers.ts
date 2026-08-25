@@ -58,17 +58,46 @@ interface NetworkErrorLog {
   [key: string]: unknown
 }
 
+function resolveFetchUrl(input: RequestInfo | URL): string {
+  return typeof input === 'string' ? input : (input as Request).url
+}
+
+function resolveFetchMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  return init?.method || (typeof input === 'object' && 'method' in input ? (input as Request).method : 'GET') || 'GET'
+}
+
+function resolveRawHeaders(input: RequestInfo | URL, init?: RequestInit): HeadersInit | null {
+  return init?.headers || (typeof input === 'object' && 'headers' in input ? (input as Request).headers : null)
+}
+
+async function readErrorResponseBody(response: Response): Promise<string> {
+  try {
+    const cloned = response.clone()
+    const body = await cloned.text()
+    if (body.length > MAX_RESPONSE_LENGTH) {
+      return body.slice(0, MAX_RESPONSE_LENGTH) + '... [truncated]'
+    }
+    return body
+  } catch {
+    // EXPECTED_ABSENCE: an error response body is optional context for a
+    // failure we already report; one-shot bodies normally cannot re-read, and
+    // logging it would misleadingly report the already-surfaced error twice.
+    return '[Could not read response]'
+  }
+}
+
+function optionalHeaders(safeHeaders: Record<string, string>): Record<string, Record<string, string>> {
+  return Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {}
+}
+
 /**
  * Wrap fetch to capture network errors
  */
-// #lizard forgives
 export function wrapFetch(originalFetchFn: typeof fetch): typeof fetch {
-  // #lizard forgives
   return async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const startTime = Date.now()
-    const url = typeof input === 'string' ? input : (input as Request).url
-    const method =
-      init?.method || (typeof input === 'object' && 'method' in input ? (input as Request).method : 'GET') || 'GET'
+    const url = resolveFetchUrl(input)
+    const method = resolveFetchMethod(input, init)
 
     try {
       const response = await originalFetchFn(input, init)
@@ -76,21 +105,10 @@ export function wrapFetch(originalFetchFn: typeof fetch): typeof fetch {
 
       // Capture errors (4xx, 5xx)
       if (!response.ok) {
-        let responseBody = ''
-        try {
-          const cloned = response.clone()
-          responseBody = await cloned.text()
-          if (responseBody.length > MAX_RESPONSE_LENGTH) {
-            responseBody = responseBody.slice(0, MAX_RESPONSE_LENGTH) + '... [truncated]'
-          }
-        } catch {
-          responseBody = '[Could not read response]'
-        }
+        const responseBody = await readErrorResponseBody(response)
 
         // Filter sensitive headers (check both init.headers and Request object headers)
-        const rawHeaders =
-          init?.headers || (typeof input === 'object' && 'headers' in input ? (input as Request).headers : null)
-        const safeHeaders = sanitizeHeaders(rawHeaders)
+        const safeHeaders = sanitizeHeaders(resolveRawHeaders(input, init))
 
         const logPayload: NetworkErrorLog = {
           level: 'error',
@@ -101,7 +119,7 @@ export function wrapFetch(originalFetchFn: typeof fetch): typeof fetch {
           statusText: response.statusText,
           duration,
           response: responseBody,
-          ...(Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {})
+          ...optionalHeaders(safeHeaders)
         }
 
         postLog(logPayload)
@@ -112,9 +130,7 @@ export function wrapFetch(originalFetchFn: typeof fetch): typeof fetch {
       const duration = Date.now() - startTime
 
       // Filter sensitive headers for the error path
-      const rawHeaders =
-        init?.headers || (typeof input === 'object' && 'headers' in input ? (input as Request).headers : null)
-      const safeHeaders = sanitizeHeaders(rawHeaders)
+      const safeHeaders = sanitizeHeaders(resolveRawHeaders(input, init))
 
       const logPayload: NetworkErrorLog = {
         level: 'error',
@@ -123,7 +139,7 @@ export function wrapFetch(originalFetchFn: typeof fetch): typeof fetch {
         url,
         error: errorMessage(error),
         duration,
-        ...(Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {})
+        ...optionalHeaders(safeHeaders)
       }
 
       postLog(logPayload)

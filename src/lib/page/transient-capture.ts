@@ -50,6 +50,46 @@ let observer: MutationObserver | null = null
 // Dedup map: key → last seen timestamp
 const dedupMap = new Map<string, DedupEntry>()
 
+function classifyByAria(role: string | null, ariaLive: string | null, text: string): TransientInfo | null {
+  if (role === 'alert' || ariaLive === 'assertive') {
+    return { classification: 'alert', role: role || 'alert', text }
+  }
+  if (role === 'status' || ariaLive === 'polite') {
+    return { classification: 'toast', role: role || 'status', text }
+  }
+  return null
+}
+
+function classifyByClassName(className: unknown, role: string | null, text: string): TransientInfo | null {
+  if (!className || typeof className !== 'string') return null
+  for (const [pattern, classification] of CLASS_FINGERPRINTS) {
+    if (pattern.test(className)) {
+      return { classification, role: role || '', text }
+    }
+  }
+  return null
+}
+
+function classifyByComputedStyle(el: Element, role: string | null, text: string): TransientInfo | null {
+  if (typeof window === 'undefined' || !window.getComputedStyle) return null
+  try {
+    const style = window.getComputedStyle(el)
+    const position = style.position
+    if (position === 'fixed' || position === 'absolute') {
+      const zIndex = parseInt(style.zIndex, 10)
+      const height = el.getBoundingClientRect().height
+      if (zIndex > 1000 && height > 0 && height < 200) {
+        return { classification: 'flash', role: role || '', text }
+      }
+    }
+  } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+    // getComputedStyle can throw in detached elements
+  }
+  return null
+}
+
 /**
  * Classify an element as a transient UI element, or return null if not transient.
  * Priority: ARIA > class fingerprints > computed style heuristic.
@@ -65,43 +105,11 @@ export function classifyTransient(el: Element): TransientInfo | null {
   const role = el.getAttribute('role')
   const ariaLive = el.getAttribute('aria-live')
 
-  if (role === 'alert' || ariaLive === 'assertive') {
-    return { classification: 'alert', role: role || 'alert', text }
-  }
-  if (role === 'status' || ariaLive === 'polite') {
-    return { classification: 'toast', role: role || 'status', text }
-  }
-
-  // Priority 2: Class fingerprints
-  const className = el.className
-  if (className && typeof className === 'string') {
-    for (const [pattern, classification] of CLASS_FINGERPRINTS) {
-      if (pattern.test(className)) {
-        return { classification, role: role || '', text }
-      }
-    }
-  }
-
-  // Priority 3: Computed style heuristic
-  if (typeof window !== 'undefined' && window.getComputedStyle) {
-    try {
-      const style = window.getComputedStyle(el)
-      const position = style.position
-      if (position === 'fixed' || position === 'absolute') {
-        const zIndex = parseInt(style.zIndex, 10)
-        const height = el.getBoundingClientRect().height
-        if (zIndex > 1000 && height > 0 && height < 200) {
-          return { classification: 'flash', role: role || '', text }
-        }
-      }
-    } catch {
-      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-      // getComputedStyle can throw in detached elements
-    }
-  }
-
-  return null
+  return (
+    classifyByAria(role, ariaLive, text) ??
+    classifyByClassName(el.className, role, text) ??
+    classifyByComputedStyle(el, role, text)
+  )
 }
 
 /**

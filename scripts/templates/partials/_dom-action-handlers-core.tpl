@@ -2,6 +2,79 @@
   // Purpose: click, type, select, check, get_text, get_value, get_attribute, set_attribute, focus, scroll_to, wait_for.
   // Why: Separated from main template to keep each partial under 500 LOC.
 
+  function linkForNewTab(clickTarget: HTMLElement): Element | null {
+    const tag = clickTarget.tagName.toLowerCase()
+    if (tag === 'a') return clickTarget as Element
+    if (typeof clickTarget.closest === 'function') {
+      return clickTarget.closest('a[href]')
+    }
+    return null
+  }
+
+  function openInNewTab(clickTarget: HTMLElement, linkNode: Element | null, href: string): void {
+    let opened = false
+    try {
+      if (typeof window !== 'undefined' && typeof window.open === 'function') {
+        window.open(href, '_blank', 'noopener,noreferrer')
+        opened = true
+      }
+    } catch {
+      // EXPECTED_ABSENCE: blocked window.open is normal under page popup
+      // policy; logging it would misleadingly report the valid link-click fallback as failure.
+    }
+
+    if (!opened && linkNode instanceof Element) {
+      const previousTarget = linkNode.getAttribute('target')
+      linkNode.setAttribute('target', '_blank')
+      ;(linkNode as HTMLElement).click()
+      if (previousTarget == null) {
+        linkNode.removeAttribute('target')
+      } else {
+        linkNode.setAttribute('target', previousTarget)
+      }
+    }
+  }
+
+  function structuredTextSections(node: HTMLElement): Array<{header?: string; content: string; expanded?: boolean; tag: string}> {
+    // Structured extraction: preserve hierarchy for accordions, lists, etc.
+    const sections: Array<{header?: string; content: string; expanded?: boolean; tag: string}> = []
+    const children = node.children
+    for (let i = 0; i < children.length && sections.length < 50; i++) {
+      const child = children[i] as HTMLElement
+      if (!child.tagName) continue
+      const tag = child.tagName.toLowerCase()
+      // Detect accordion/collapsible patterns
+      const heading = child.querySelector('h1, h2, h3, h4, h5, h6, [role="heading"], summary, button[aria-expanded]')
+      if (heading) {
+        const headerText = (heading as HTMLElement).innerText?.trim() || ''
+        const ariaExpanded = heading.getAttribute('aria-expanded')
+        const expanded = ariaExpanded !== null ? ariaExpanded === 'true' : undefined
+        // Get content from sibling/next panel or remaining text
+        const contentParts: string[] = []
+        const contentNodes = child.querySelectorAll('p, li, span, div, td, pre, code')
+        contentNodes.forEach((cn) => {
+          if (cn !== heading && !heading.contains(cn)) {
+            const t = (cn as HTMLElement).innerText?.trim()
+            if (t && t.length > 0) contentParts.push(t)
+          }
+        })
+        sections.push({
+          header: headerText,
+          content: contentParts.join('\n') || (child.innerText?.replace(headerText, '').trim() || ''),
+          expanded,
+          tag,
+        })
+      } else {
+        // Non-accordion child: just capture its text
+        const t = child.innerText?.trim()
+        if (t && t.length > 0) {
+          sections.push({ content: t, tag })
+        }
+      }
+    }
+    return sections
+  }
+
   function buildActionHandlers(node: Element): Record<string, ActionHandler> {
     return {
       click: () =>
@@ -16,14 +89,7 @@
           const overlayErr = blockedByOverlayError(node)
           if (overlayErr) return overlayErr
           if (options.new_tab) {
-            const linkNode = (() => {
-              const tag = clickTarget.tagName.toLowerCase()
-              if (tag === 'a') return clickTarget as Element
-              if (typeof clickTarget.closest === 'function') {
-                return clickTarget.closest('a[href]')
-              }
-              return null
-            })()
+            const linkNode = linkForNewTab(clickTarget)
 
             const href = linkNode
               ? (linkNode.getAttribute('href') || (linkNode as HTMLAnchorElement).href || '')
@@ -32,27 +98,7 @@
               return domError('new_tab_requires_link', 'new_tab=true requires a link target with href')
             }
 
-            let opened = false
-            try {
-              if (typeof window !== 'undefined' && typeof window.open === 'function') {
-                window.open(href, '_blank', 'noopener,noreferrer')
-                opened = true
-              }
-            } catch {
-              // EXPECTED_ABSENCE: blocked window.open is normal under page popup
-              // policy; logging it would misleadingly report the valid link-click fallback as failure.
-            }
-
-            if (!opened && linkNode instanceof Element) {
-              const previousTarget = linkNode.getAttribute('target')
-              linkNode.setAttribute('target', '_blank')
-              ;(linkNode as HTMLElement).click()
-              if (previousTarget == null) {
-                linkNode.removeAttribute('target')
-              } else {
-                linkNode.setAttribute('target', previousTarget)
-              }
-            }
+            openInNewTab(clickTarget, linkNode, href)
 
             return mutatingSuccess(clickTarget, { value: href, reason: 'opened_new_tab' })
           }
@@ -157,42 +203,7 @@
 
       get_text: () => {
         if (options.structured && node instanceof HTMLElement) {
-          // Structured extraction: preserve hierarchy for accordions, lists, etc.
-          const sections: Array<{header?: string; content: string; expanded?: boolean; tag: string}> = []
-          const children = node.children
-          for (let i = 0; i < children.length && sections.length < 50; i++) {
-            const child = children[i] as HTMLElement
-            if (!child.tagName) continue
-            const tag = child.tagName.toLowerCase()
-            // Detect accordion/collapsible patterns
-            const heading = child.querySelector('h1, h2, h3, h4, h5, h6, [role="heading"], summary, button[aria-expanded]')
-            if (heading) {
-              const headerText = (heading as HTMLElement).innerText?.trim() || ''
-              const ariaExpanded = heading.getAttribute('aria-expanded')
-              const expanded = ariaExpanded !== null ? ariaExpanded === 'true' : undefined
-              // Get content from sibling/next panel or remaining text
-              const contentParts: string[] = []
-              const contentNodes = child.querySelectorAll('p, li, span, div, td, pre, code')
-              contentNodes.forEach((cn) => {
-                if (cn !== heading && !heading.contains(cn)) {
-                  const t = (cn as HTMLElement).innerText?.trim()
-                  if (t && t.length > 0) contentParts.push(t)
-                }
-              })
-              sections.push({
-                header: headerText,
-                content: contentParts.join('\n') || (child.innerText?.replace(headerText, '').trim() || ''),
-                expanded,
-                tag,
-              })
-            } else {
-              // Non-accordion child: just capture its text
-              const t = child.innerText?.trim()
-              if (t && t.length > 0) {
-                sections.push({ content: t, tag })
-              }
-            }
-          }
+          const sections = structuredTextSections(node)
           return { success: true, action, selector, sections, section_count: sections.length }
         }
         const text = node instanceof HTMLElement ? node.innerText : node.textContent

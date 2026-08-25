@@ -30,6 +30,98 @@ function tableToMarkdown(table) {
     }
     return md;
 }
+const HEADING_MARKS = {
+    h1: '#',
+    h2: '##',
+    h3: '###',
+    h4: '####',
+    h5: '#####',
+    h6: '######'
+};
+const INLINE_WRAPS = {
+    strong: '**',
+    b: '**',
+    em: '*',
+    i: '*',
+    code: '`'
+};
+function collectChildren(el, depth, budget) {
+    let children = '';
+    for (let i = 0; i < el.childNodes.length; i++) {
+        if (budget.remaining <= 0)
+            break;
+        const child = el.childNodes[i];
+        if (child)
+            children += nodeToMarkdown(child, depth + 1, budget);
+    }
+    return children.replace(/\n{3,}/g, '\n\n');
+}
+function resolvePageUrl(value) {
+    try {
+        return new URL(value, window.location.href).href;
+    }
+    catch {
+        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
+        return value;
+    }
+}
+function renderLinkMarkdown(el, children) {
+    const href = el.getAttribute('href') || '';
+    if (href && href !== '#' && !href.startsWith('javascript:')) {
+        return '[' + children.trim() + '](' + resolvePageUrl(href) + ')';
+    }
+    return children;
+}
+function renderImageMarkdown(el) {
+    const src = el.getAttribute('src') || '';
+    const alt = el.getAttribute('alt') || '';
+    if (src) {
+        return '![' + alt + '](' + resolvePageUrl(src) + ')';
+    }
+    return '';
+}
+function renderListItemMarkdown(el, children) {
+    const parent = el.parentElement;
+    if (parent && parent.tagName.toLowerCase() === 'ol') {
+        const idx = Array.from(parent.children).indexOf(el) + 1;
+        return idx + '. ' + children.trim() + '\n';
+    }
+    return '- ' + children.trim() + '\n';
+}
+function renderElementMarkdown(tag, el, children) {
+    const headingMark = HEADING_MARKS[tag];
+    if (headingMark)
+        return '\n' + headingMark + ' ' + children.trim() + '\n\n';
+    const wrap = INLINE_WRAPS[tag];
+    if (wrap)
+        return wrap + children.trim() + wrap;
+    switch (tag) {
+        case 'p':
+            return '\n' + children.trim() + '\n\n';
+        case 'br':
+            return '\n';
+        case 'hr':
+            return '\n---\n\n';
+        case 'pre':
+            return '\n```\n' + (el.innerText || '').trim() + '\n```\n\n';
+        case 'a':
+            return renderLinkMarkdown(el, children);
+        case 'img':
+            return renderImageMarkdown(el);
+        case 'ul':
+        case 'ol':
+            return '\n' + children + '\n';
+        case 'li':
+            return renderListItemMarkdown(el, children);
+        case 'blockquote':
+            return '\n> ' + children.trim().replace(/\n/g, '\n> ') + '\n\n';
+        case 'table':
+            return '\n' + tableToMarkdown(el) + '\n\n';
+        default:
+            return children;
+    }
+}
 function nodeToMarkdown(node, depth, budget) {
     if (!node || budget.remaining <= 0)
         return '';
@@ -51,98 +143,7 @@ function nodeToMarkdown(node, depth, budget) {
         return '';
     if (el.getAttribute('aria-hidden') === 'true')
         return '';
-    let children = '';
-    for (let i = 0; i < el.childNodes.length; i++) {
-        if (budget.remaining <= 0)
-            break;
-        const child = el.childNodes[i];
-        if (child)
-            children += nodeToMarkdown(child, depth + 1, budget);
-    }
-    children = children.replace(/\n{3,}/g, '\n\n');
-    switch (tag) {
-        case 'h1':
-            return '\n# ' + children.trim() + '\n\n';
-        case 'h2':
-            return '\n## ' + children.trim() + '\n\n';
-        case 'h3':
-            return '\n### ' + children.trim() + '\n\n';
-        case 'h4':
-            return '\n#### ' + children.trim() + '\n\n';
-        case 'h5':
-            return '\n##### ' + children.trim() + '\n\n';
-        case 'h6':
-            return '\n###### ' + children.trim() + '\n\n';
-        case 'p':
-            return '\n' + children.trim() + '\n\n';
-        case 'br':
-            return '\n';
-        case 'hr':
-            return '\n---\n\n';
-        case 'strong':
-        case 'b':
-            return '**' + children.trim() + '**';
-        case 'em':
-        case 'i':
-            return '*' + children.trim() + '*';
-        case 'code':
-            return '`' + children.trim() + '`';
-        case 'pre':
-            return '\n```\n' + (el.innerText || '').trim() + '\n```\n\n';
-        case 'a': {
-            let href = el.getAttribute('href') || '';
-            if (href && href !== '#' && !href.startsWith('javascript:')) {
-                try {
-                    href = new URL(href, window.location.href).href;
-                }
-                catch {
-                    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
-                    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
-                    /* keep original */
-                }
-                return '[' + children.trim() + '](' + href + ')';
-            }
-            return children;
-        }
-        case 'img': {
-            let src = el.getAttribute('src') || '';
-            const alt = el.getAttribute('alt') || '';
-            if (src) {
-                try {
-                    src = new URL(src, window.location.href).href;
-                }
-                catch {
-                    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
-                    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
-                    /* keep original */
-                }
-                return '![' + alt + '](' + src + ')';
-            }
-            return '';
-        }
-        case 'ul':
-        case 'ol':
-            return '\n' + children + '\n';
-        case 'li': {
-            const parent = el.parentElement;
-            if (parent && parent.tagName.toLowerCase() === 'ol') {
-                const idx = Array.from(parent.children).indexOf(el) + 1;
-                return idx + '. ' + children.trim() + '\n';
-            }
-            return '- ' + children.trim() + '\n';
-        }
-        case 'blockquote':
-            return '\n> ' + children.trim().replace(/\n/g, '\n> ') + '\n\n';
-        case 'table':
-            return '\n' + tableToMarkdown(el) + '\n\n';
-        case 'div':
-        case 'section':
-        case 'article':
-        case 'main':
-            return children;
-        default:
-            return children;
-    }
+    return renderElementMarkdown(tag, el, collectChildren(el, depth, budget));
 }
 /**
  * Extract page content and convert to Markdown.

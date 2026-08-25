@@ -25,35 +25,50 @@ let deferralEnabled = true;
 let phase2Installed = false;
 let injectionTimestamp = 0;
 let phase2Timestamp = 0;
+function resolveFetchUrl(input) {
+    return typeof input === 'string' ? input : input.url;
+}
+function resolveFetchMethod(input, init) {
+    return init?.method || (typeof input === 'object' && 'method' in input ? input.method : 'GET') || 'GET';
+}
+function resolveRawHeaders(input, init) {
+    return init?.headers || (typeof input === 'object' && 'headers' in input ? input.headers : null);
+}
+async function readErrorResponseBody(response) {
+    try {
+        const cloned = response.clone();
+        const body = await cloned.text();
+        if (body.length > MAX_RESPONSE_LENGTH) {
+            return body.slice(0, MAX_RESPONSE_LENGTH) + '... [truncated]';
+        }
+        return body;
+    }
+    catch {
+        // EXPECTED_ABSENCE: an error response body is optional context for a
+        // failure we already report; one-shot bodies normally cannot re-read, and
+        // logging it would misleadingly report the already-surfaced error twice.
+        return '[Could not read response]';
+    }
+}
+function optionalHeaders(safeHeaders) {
+    return Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {};
+}
 /**
  * Wrap fetch to capture network errors
  */
-// #lizard forgives
 export function wrapFetch(originalFetchFn) {
-    // #lizard forgives
     return async function (input, init) {
         const startTime = Date.now();
-        const url = typeof input === 'string' ? input : input.url;
-        const method = init?.method || (typeof input === 'object' && 'method' in input ? input.method : 'GET') || 'GET';
+        const url = resolveFetchUrl(input);
+        const method = resolveFetchMethod(input, init);
         try {
             const response = await originalFetchFn(input, init);
             const duration = Date.now() - startTime;
             // Capture errors (4xx, 5xx)
             if (!response.ok) {
-                let responseBody = '';
-                try {
-                    const cloned = response.clone();
-                    responseBody = await cloned.text();
-                    if (responseBody.length > MAX_RESPONSE_LENGTH) {
-                        responseBody = responseBody.slice(0, MAX_RESPONSE_LENGTH) + '... [truncated]';
-                    }
-                }
-                catch {
-                    responseBody = '[Could not read response]';
-                }
+                const responseBody = await readErrorResponseBody(response);
                 // Filter sensitive headers (check both init.headers and Request object headers)
-                const rawHeaders = init?.headers || (typeof input === 'object' && 'headers' in input ? input.headers : null);
-                const safeHeaders = sanitizeHeaders(rawHeaders);
+                const safeHeaders = sanitizeHeaders(resolveRawHeaders(input, init));
                 const logPayload = {
                     level: 'error',
                     type: 'network',
@@ -63,7 +78,7 @@ export function wrapFetch(originalFetchFn) {
                     statusText: response.statusText,
                     duration,
                     response: responseBody,
-                    ...(Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {})
+                    ...optionalHeaders(safeHeaders)
                 };
                 postLog(logPayload);
             }
@@ -72,8 +87,7 @@ export function wrapFetch(originalFetchFn) {
         catch (error) {
             const duration = Date.now() - startTime;
             // Filter sensitive headers for the error path
-            const rawHeaders = init?.headers || (typeof input === 'object' && 'headers' in input ? input.headers : null);
-            const safeHeaders = sanitizeHeaders(rawHeaders);
+            const safeHeaders = sanitizeHeaders(resolveRawHeaders(input, init));
             const logPayload = {
                 level: 'error',
                 type: 'network',
@@ -81,7 +95,7 @@ export function wrapFetch(originalFetchFn) {
                 url,
                 error: errorMessage(error),
                 duration,
-                ...(Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {})
+                ...optionalHeaders(safeHeaders)
             };
             postLog(logPayload);
             throw error;

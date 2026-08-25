@@ -33,6 +33,22 @@ function readTheme() {
         diagnostic: optionsDiagnostic('Saved theme was invalid or unreadable; dark theme is active.')
     });
 }
+function isOptionalString(value) {
+    return value === undefined || typeof value === 'string';
+}
+function isOptionalBoolean(value) {
+    return value === undefined || typeof value === 'boolean';
+}
+function isValidOptionsState(candidate) {
+    return (isOptionalString(candidate.serverUrl) &&
+        isOptionalString(candidate.theme) &&
+        isOptionalString(candidate.kaboom_terminal_ai_command) &&
+        isOptionalString(candidate.kaboom_terminal_dev_root) &&
+        isOptionalBoolean(candidate.screenshotOnError) &&
+        isOptionalBoolean(candidate.sourceMapEnabled) &&
+        isOptionalBoolean(candidate.deferralEnabled) &&
+        isOptionalBoolean(candidate.debugMode));
+}
 async function readOptionsState() {
     try {
         const result = await getLocals([
@@ -46,16 +62,7 @@ async function readOptionsState() {
             StorageKey.TERMINAL_DEV_ROOT
         ]);
         const candidate = result;
-        const valid = (candidate.serverUrl === undefined || typeof candidate.serverUrl === 'string') &&
-            (candidate.theme === undefined || typeof candidate.theme === 'string') &&
-            (candidate.kaboom_terminal_ai_command === undefined ||
-                typeof candidate.kaboom_terminal_ai_command === 'string') &&
-            (candidate.kaboom_terminal_dev_root === undefined || typeof candidate.kaboom_terminal_dev_root === 'string') &&
-            (candidate.screenshotOnError === undefined || typeof candidate.screenshotOnError === 'boolean') &&
-            (candidate.sourceMapEnabled === undefined || typeof candidate.sourceMapEnabled === 'boolean') &&
-            (candidate.deferralEnabled === undefined || typeof candidate.deferralEnabled === 'boolean') &&
-            (candidate.debugMode === undefined || typeof candidate.debugMode === 'boolean');
-        if (valid) {
+        if (isValidOptionsState(candidate)) {
             resolveStateRecovery('extension_options_state');
             return candidate;
         }

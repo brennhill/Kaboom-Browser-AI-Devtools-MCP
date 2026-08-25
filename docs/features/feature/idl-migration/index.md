@@ -4,7 +4,7 @@ feature_id: feature-idl-migration
 status: draft
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-05
+last_reviewed: 2026-08-25
 code_paths:
   - scripts/build/generate-wire-types.js
   - scripts/contracts/check-wire-drift.js

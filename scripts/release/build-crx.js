@@ -21,6 +21,141 @@ const BUILD_DIR = './dist'
 const OUTPUT_CRX = path.join(BUILD_DIR, `kaboom-extension-v${VERSION}.crx`)
 const TEMP_ZIP = path.join(BUILD_DIR, `.kaboom-temp-${Date.now()}.zip`)
 
+function extensionIdFromCrxHeader(data) {
+  const headerLen = data.readUInt32LE(8)
+  const headerProto = data.slice(12, 12 + headerLen)
+  let offset = 1
+  let length1 = 0
+  let shift = 0
+  while (offset < headerProto.length) {
+    const byte = headerProto[offset]
+    length1 |= (byte & 0x7f) << shift
+    offset++
+    if ((byte & 0x80) === 0) break
+    shift += 7
+  }
+  const signedHeaderData = headerProto.slice(offset, offset + length1)
+  const hash = crypto.createHash('sha256').update(signedHeaderData).digest()
+  return toBase32(hash).slice(0, 32)
+}
+
+function reportCrxCreated(outputPath) {
+  const data = fs.readFileSync(outputPath)
+  console.log(`\n✨ CRX file created: ${outputPath}`)
+  console.log(`📊 File size: ${(data.length / 1024).toFixed(1)} KB`)
+  console.log(`📦 Extension ID: ${extensionIdFromCrxHeader(data)}`)
+}
+
+async function tryChromeNativePacking(chromeCommand) {
+  console.log('🔧 Using Chrome native packing (most reliable)...')
+  try {
+    await exec(`${chromeCommand} --pack-extension="${path.resolve(EXTENSION_DIR)}" --pack-extension-key="${KEY_FILE}"`)
+    const nativeCrx = path.join(EXTENSION_DIR + '.crx')
+    if (!fs.existsSync(nativeCrx)) return false
+    fs.copyFileSync(nativeCrx, OUTPUT_CRX)
+    fs.unlinkSync(nativeCrx)
+    reportCrxCreated(OUTPUT_CRX)
+    return true
+  } catch (_err) {
+    console.log('⚠️  Chrome native packing failed, trying crx tool...')
+    return false
+  }
+}
+
+async function tryCrxToolPacking() {
+  try {
+    console.log('🔧 Using crx (Rust tool) for packing...')
+    await exec(`crx pack "${path.resolve(EXTENSION_DIR)}" -o "${OUTPUT_CRX}" -k "${KEY_FILE}"`)
+    if (!fs.existsSync(OUTPUT_CRX)) return false
+    reportCrxCreated(OUTPUT_CRX)
+    return true
+  } catch (_err) {
+    console.log('⚠️  crx tool failed, falling back to manual method')
+    return false
+  }
+}
+
+async function buildCrxManually() {
+  console.log('📦 Creating extension zip...')
+
+  // Create zip using system zip command
+  try {
+    await exec(`cd ${EXTENSION_DIR} && zip -q -r "../${TEMP_ZIP}" \
+        .`)
+  } catch (err) {
+    console.error('❌ Failed to create zip:', err.message)
+    // CLI script exits with error status
+    process.exit(1)
+  }
+
+  if (!fs.existsSync(TEMP_ZIP)) {
+    console.error('❌ Failed to create extension zip')
+    process.exit(1)
+  }
+
+  console.log('🔐 Reading private key...')
+
+  const keyContent = fs.readFileSync(KEY_FILE, 'utf-8')
+
+  // Extract public key and compute extension ID
+  console.log('🔑 Computing extension ID...')
+  const publicKeyPem = crypto.createPublicKey({
+    key: keyContent,
+    format: 'pem'
+  })
+
+  const publicKeyDer = publicKeyPem.export({ format: 'der', type: 'spki' })
+  const hash = crypto.createHash('sha256').update(publicKeyDer).digest()
+
+  // Convert hash to Chrome extension ID format (base32)
+  const extensionId = toBase32(hash).slice(0, 32)
+
+  console.log(`✅ Extension ID: ${extensionId}`)
+
+  // Read and sign the header (not the zip!)
+  console.log('✍️  Signing extension...')
+
+  const zipData = fs.readFileSync(TEMP_ZIP)
+
+  // Create the signed header data first
+  const signedHeaderData = createSignedHeader(publicKeyDer)
+
+  // Sign the signed header data (not the zip!)
+  const signer = crypto.createSign('sha256')
+  signer.update(signedHeaderData)
+  const signature = signer.sign(keyContent)
+
+  // Build CRX3 file format
+  // Magic: "Cr24" (0x4372323434)
+  const magic = Buffer.from('Cr24', 'ascii')
+  const version = Buffer.alloc(4)
+  version.writeUInt32LE(3) // CRX3
+
+  // Create protobuf header (simplified)
+  const headerProto = createHeaderProto(publicKeyDer, signature, signedHeaderData)
+  const headerLen = Buffer.alloc(4)
+  headerLen.writeUInt32LE(headerProto.length)
+
+  const crxBuffer = Buffer.concat([magic, version, headerLen, headerProto, zipData])
+
+  // Write CRX file
+
+  fs.writeFileSync(OUTPUT_CRX, crxBuffer)
+
+  // Cleanup
+
+  fs.unlinkSync(TEMP_ZIP)
+
+  console.log(`\n✨ CRX file created: ${OUTPUT_CRX}`)
+  console.log(`📊 File size: ${(crxBuffer.length / 1024).toFixed(1)} KB`)
+  console.log(`\n📋 Installation instructions:`)
+  console.log(`1. Open Chrome and go to chrome://extensions/`)
+  console.log(`2. Enable "Developer mode" (top right)`)
+  console.log(`3. Drag and drop the ${OUTPUT_CRX} file into the page`)
+  console.log(`\n🔗 Distribution URL: https://gokaboom.dev/downloads/kaboom-extension-v${VERSION}.crx`)
+  console.log(`📦 Extension ID: ${extensionId}`)
+}
+
 async function buildCRX() {
   try {
     // Check for key file
@@ -38,156 +173,12 @@ async function buildCRX() {
 
     // Try to use Chrome's native pack-extension FIRST (most reliable - Chrome's own implementation)
     const chromeCommand = getChromeCommand()
-    if (chromeCommand) {
-      console.log('🔧 Using Chrome native packing (most reliable)...')
-      try {
-        await exec(
-          `${chromeCommand} --pack-extension="${path.resolve(EXTENSION_DIR)}" --pack-extension-key="${KEY_FILE}"`
-        )
-        const nativeCrx = path.join(EXTENSION_DIR + '.crx')
-        if (fs.existsSync(nativeCrx)) {
-          fs.copyFileSync(nativeCrx, OUTPUT_CRX)
-          fs.unlinkSync(nativeCrx)
-
-          // Extract and display extension ID
-
-          const data = fs.readFileSync(OUTPUT_CRX)
-          const headerLen = data.readUInt32LE(8)
-          const headerProto = data.slice(12, 12 + headerLen)
-          let offset = 1
-          let length1 = 0
-          let shift = 0
-          while (offset < headerProto.length) {
-            const byte = headerProto[offset]
-            length1 |= (byte & 0x7f) << shift
-            offset++
-            if ((byte & 0x80) === 0) break
-            shift += 7
-          }
-          const signedHeaderData = headerProto.slice(offset, offset + length1)
-          const hash = crypto.createHash('sha256').update(signedHeaderData).digest()
-          const extensionId = toBase32(hash).slice(0, 32)
-
-          console.log(`\n✨ CRX file created: ${OUTPUT_CRX}`)
-          console.log(`📊 File size: ${(data.length / 1024).toFixed(1)} KB`)
-          console.log(`📦 Extension ID: ${extensionId}`)
-          return
-        }
-      } catch (_err) {
-        console.log('⚠️  Chrome native packing failed, trying crx tool...')
-      }
-    }
+    if (chromeCommand && (await tryChromeNativePacking(chromeCommand))) return
 
     // Try to use crx (Rust tool) as fallback
-    try {
-      console.log('🔧 Using crx (Rust tool) for packing...')
-      await exec(`crx pack "${path.resolve(EXTENSION_DIR)}" -o "${OUTPUT_CRX}" -k "${KEY_FILE}"`)
+    if (await tryCrxToolPacking()) return
 
-      if (fs.existsSync(OUTPUT_CRX)) {
-        const data = fs.readFileSync(OUTPUT_CRX)
-        const headerLen = data.readUInt32LE(8)
-        const headerProto = data.slice(12, 12 + headerLen)
-        let offset = 1
-        let length1 = 0
-        let shift = 0
-        while (offset < headerProto.length) {
-          const byte = headerProto[offset]
-          length1 |= (byte & 0x7f) << shift
-          offset++
-          if ((byte & 0x80) === 0) break
-          shift += 7
-        }
-        const signedHeaderData = headerProto.slice(offset, offset + length1)
-        const hash = crypto.createHash('sha256').update(signedHeaderData).digest()
-        const extensionId = toBase32(hash).slice(0, 32)
-
-        console.log(`\n✨ CRX file created: ${OUTPUT_CRX}`)
-        console.log(`📊 File size: ${(data.length / 1024).toFixed(1)} KB`)
-        console.log(`📦 Extension ID: ${extensionId}`)
-        return
-      }
-    } catch (_err) {
-      console.log('⚠️  crx tool failed, falling back to manual method')
-    }
-
-    console.log('📦 Creating extension zip...')
-
-    // Create zip using system zip command
-    try {
-      await exec(`cd ${EXTENSION_DIR} && zip -q -r "../${TEMP_ZIP}" \
-        .`)
-    } catch (err) {
-      console.error('❌ Failed to create zip:', err.message)
-      // CLI script exits with error status
-      process.exit(1)
-    }
-
-    if (!fs.existsSync(TEMP_ZIP)) {
-      console.error('❌ Failed to create extension zip')
-      process.exit(1)
-    }
-
-    console.log('🔐 Reading private key...')
-
-    const keyContent = fs.readFileSync(KEY_FILE, 'utf-8')
-
-    // Extract public key and compute extension ID
-    console.log('🔑 Computing extension ID...')
-    const publicKeyPem = crypto.createPublicKey({
-      key: keyContent,
-      format: 'pem'
-    })
-
-    const publicKeyDer = publicKeyPem.export({ format: 'der', type: 'spki' })
-    const hash = crypto.createHash('sha256').update(publicKeyDer).digest()
-
-    // Convert hash to Chrome extension ID format (base32)
-    const extensionId = toBase32(hash).slice(0, 32)
-
-    console.log(`✅ Extension ID: ${extensionId}`)
-
-    // Read and sign the header (not the zip!)
-    console.log('✍️  Signing extension...')
-
-    const zipData = fs.readFileSync(TEMP_ZIP)
-
-    // Create the signed header data first
-    const signedHeaderData = createSignedHeader(publicKeyDer)
-
-    // Sign the signed header data (not the zip!)
-    const signer = crypto.createSign('sha256')
-    signer.update(signedHeaderData)
-    const signature = signer.sign(keyContent)
-
-    // Build CRX3 file format
-    // Magic: "Cr24" (0x4372323434)
-    const magic = Buffer.from('Cr24', 'ascii')
-    const version = Buffer.alloc(4)
-    version.writeUInt32LE(3) // CRX3
-
-    // Create protobuf header (simplified)
-    const headerProto = createHeaderProto(publicKeyDer, signature, signedHeaderData)
-    const headerLen = Buffer.alloc(4)
-    headerLen.writeUInt32LE(headerProto.length)
-
-    const crxBuffer = Buffer.concat([magic, version, headerLen, headerProto, zipData])
-
-    // Write CRX file
-
-    fs.writeFileSync(OUTPUT_CRX, crxBuffer)
-
-    // Cleanup
-
-    fs.unlinkSync(TEMP_ZIP)
-
-    console.log(`\n✨ CRX file created: ${OUTPUT_CRX}`)
-    console.log(`📊 File size: ${(crxBuffer.length / 1024).toFixed(1)} KB`)
-    console.log(`\n📋 Installation instructions:`)
-    console.log(`1. Open Chrome and go to chrome://extensions/`)
-    console.log(`2. Enable "Developer mode" (top right)`)
-    console.log(`3. Drag and drop the ${OUTPUT_CRX} file into the page`)
-    console.log(`\n🔗 Distribution URL: https://gokaboom.dev/downloads/kaboom-extension-v${VERSION}.crx`)
-    console.log(`📦 Extension ID: ${extensionId}`)
+    await buildCrxManually()
   } catch (err) {
     console.error('❌ Error building CRX:', err.message)
 

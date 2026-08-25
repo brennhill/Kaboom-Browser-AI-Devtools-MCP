@@ -651,31 +651,40 @@ function computeCssPath(element) {
   }
   return parts.join(" > ");
 }
-function computeSelectors(element) {
-  if (!element)
-    return { cssPath: "" };
-  const selectors = {};
-  const el = element;
-  const testId = el.getAttribute && (el.getAttribute("data-testid") || el.getAttribute("data-test-id") || el.getAttribute("data-cy")) || void 0;
-  if (testId)
-    selectors.testId = testId;
-  const ariaLabel = el.getAttribute && el.getAttribute("aria-label");
-  if (ariaLabel)
-    selectors.ariaLabel = ariaLabel;
+function readTestId(el) {
+  return el.getAttribute && (el.getAttribute("data-testid") || el.getAttribute("data-test-id") || el.getAttribute("data-cy")) || void 0;
+}
+function applyRoleSelector(selectors, element, el, ariaLabel) {
   const explicitRole = el.getAttribute && el.getAttribute("role");
   const role = explicitRole || getImplicitRole(element);
   const name = ariaLabel || el.textContent && el.textContent.trim().slice(0, SELECTOR_TEXT_MAX_LENGTH);
   if (role && name) {
     selectors.role = { role, name: ariaLabel || name };
   }
+}
+function applyClickableTextSelector(selectors, element, el) {
+  const isClickable = element.tagName && CLICKABLE_TAGS.has(element.tagName.toUpperCase()) || el.getAttribute && el.getAttribute("role") === "button";
+  if (!isClickable)
+    return;
+  const text = (el.textContent || el.innerText || "").trim();
+  if (text)
+    selectors.text = text.slice(0, SELECTOR_TEXT_MAX_LENGTH);
+}
+function computeSelectors(element) {
+  if (!element)
+    return { cssPath: "" };
+  const selectors = {};
+  const el = element;
+  const testId = readTestId(el);
+  if (testId)
+    selectors.testId = testId;
+  const ariaLabel = el.getAttribute && el.getAttribute("aria-label");
+  if (ariaLabel)
+    selectors.ariaLabel = ariaLabel;
+  applyRoleSelector(selectors, element, el, ariaLabel);
   if (element.id)
     selectors.id = element.id;
-  const isClickable = element.tagName && CLICKABLE_TAGS.has(element.tagName.toUpperCase()) || el.getAttribute && el.getAttribute("role") === "button";
-  if (isClickable) {
-    const text = (el.textContent || el.innerText || "").trim();
-    if (text)
-      selectors.text = text.slice(0, SELECTOR_TEXT_MAX_LENGTH);
-  }
+  applyClickableTextSelector(selectors, element, el);
   selectors.cssPath = computeCssPath(element);
   return selectors;
 }
@@ -765,12 +774,13 @@ function actionToPlaywrightStep(action, baseUrl) {
   const generator = ACTION_STEP_GENERATORS[action.type];
   return generator ? generator(action, locator, baseUrl) : null;
 }
-function generatePlaywrightScript(actions, opts = {}) {
-  const { errorMessage: errorMessage2, baseUrl, lastNActions } = opts;
-  let filteredActions = actions;
+function filterRecentActions(actions, lastNActions) {
   if (lastNActions && lastNActions > 0 && actions.length > lastNActions) {
-    filteredActions = actions.slice(-lastNActions);
+    return actions.slice(-lastNActions);
   }
+  return actions;
+}
+function resolveStartUrl(filteredActions, baseUrl) {
   let startUrl = "";
   if (filteredActions.length > 0) {
     const firstAction = filteredActions[0];
@@ -786,7 +796,9 @@ function generatePlaywrightScript(actions, opts = {}) {
       startUrl = baseUrl;
     }
   }
-  const testName = errorMessage2 ? `reproduction: ${errorMessage2.slice(0, 80)}` : "reproduction: captured user actions";
+  return startUrl;
+}
+function buildPlaywrightSteps(filteredActions, baseUrl) {
   const steps = [];
   let prevTimestamp = null;
   for (const action of filteredActions) {
@@ -799,6 +811,9 @@ function generatePlaywrightScript(actions, opts = {}) {
     if (step)
       steps.push(step);
   }
+  return steps;
+}
+function assemblePlaywrightScript(testName, startUrl, steps, errorMessage2) {
   let script = `import { test, expect } from '@playwright/test';
 
 `;
@@ -819,6 +834,15 @@ function generatePlaywrightScript(actions, opts = {}) {
   }
   script += `});
 `;
+  return script;
+}
+function generatePlaywrightScript(actions, opts = {}) {
+  const { errorMessage: errorMessage2, baseUrl, lastNActions } = opts;
+  const filteredActions = filterRecentActions(actions, lastNActions);
+  const startUrl = resolveStartUrl(filteredActions, baseUrl);
+  const testName = errorMessage2 ? `reproduction: ${errorMessage2.slice(0, 80)}` : "reproduction: captured user actions";
+  const steps = buildPlaywrightSteps(filteredActions, baseUrl);
+  let script = assemblePlaywrightScript(testName, startUrl, steps, errorMessage2);
   if (script.length > SCRIPT_MAX_SIZE) {
     script = script.slice(0, SCRIPT_MAX_SIZE);
   }
@@ -1317,18 +1341,18 @@ async function readCapturedBody(url, cloned, contentType) {
   }
   return readResponseBodyWithTimeout(cloned);
 }
-function postNetworkBody(win, url, method, response, contentType, requestBody, duration, truncResp, truncReq, responseTruncated) {
+function postNetworkBody(win, capture) {
   const message = {
     type: "kaboom_network_body",
     payload: {
-      url,
-      method,
-      status: response.status,
-      content_type: contentType,
-      request_body: truncReq || (typeof requestBody === "string" ? requestBody : void 0),
-      response_body: truncResp,
-      ...responseTruncated ? { response_truncated: true } : {},
-      duration
+      url: capture.url,
+      method: capture.method,
+      status: capture.status,
+      content_type: capture.contentType,
+      request_body: capture.truncReq || (typeof capture.requestBody === "string" ? capture.requestBody : void 0),
+      response_body: capture.truncResp,
+      ...capture.responseTruncated ? { response_truncated: true } : {},
+      duration: capture.duration
     }
   };
   win.postMessage(message, window.location.origin);
@@ -1382,11 +1406,17 @@ function wrapXHRWithBodies() {
           const { body: truncResp, truncated: respTruncated } = truncateResponseBody(responseBody);
           const win = typeof window !== "undefined" ? window : null;
           if (win) {
-            const responseShim = {
+            postNetworkBody(win, {
+              url,
+              method,
               status: this.status,
-              headers: { get: (h) => this.getResponseHeader(h) }
-            };
-            postNetworkBody(win, url, method, responseShim, contentType, requestBody, duration, truncResp || "", truncReq, respTruncated);
+              contentType,
+              requestBody,
+              duration,
+              truncResp: truncResp || "",
+              truncReq,
+              responseTruncated: respTruncated
+            });
           }
         } catch {
         }
@@ -1467,7 +1497,17 @@ function wrapFetchWithBodies(fetchFn) {
         const rawReq = SENSITIVE_URL_PATTERNS.test(url) ? "[REDACTED: auth endpoint]" : typeof requestBody === "string" ? requestBody : null;
         const { body: truncReq } = truncateRequestBody(rawReq);
         if (win && networkBodyCaptureEnabled) {
-          postNetworkBody(win, url, method, response, contentType, requestBody, duration, truncResp || responseBody, truncReq, respTruncated);
+          postNetworkBody(win, {
+            url,
+            method,
+            status: response.status,
+            contentType,
+            requestBody,
+            duration,
+            truncResp: truncResp || responseBody,
+            truncReq,
+            responseTruncated: respTruncated
+          });
         }
       } catch {
       }
@@ -1855,26 +1895,18 @@ function generateAiSummary(data) {
   }
   return parts.join(" ");
 }
-async function buildAiContext(error) {
-  const result = {};
-  const frames = parseStackFrames(error.stack);
-  if (frames.length === 0)
-    return { summary: error.message || "Unknown error" };
+async function attachSourceSnippets(result, frames) {
   const topFrame = frames[0];
-  if (topFrame) {
-    const cached = getSourceMapCache(topFrame.filename);
-    if (cached) {
-      const snippets = await extractSourceSnippets(frames, { [topFrame.filename]: cached });
-      if (snippets.length > 0)
-        result.sourceSnippets = snippets;
-    }
-  }
-  result.componentAncestry = extractComponentAncestry() || void 0;
-  if (aiContextStateSnapshotEnabled) {
-    const snapshot = captureStateSnapshot(error.message || "");
-    if (snapshot)
-      result.stateSnapshot = snapshot;
-  }
+  if (!topFrame)
+    return;
+  const cached = getSourceMapCache(topFrame.filename);
+  if (!cached)
+    return;
+  const snippets = await extractSourceSnippets(frames, { [topFrame.filename]: cached });
+  if (snippets.length > 0)
+    result.sourceSnippets = snippets;
+}
+function buildAiSummaryText(error, result, topFrame) {
   result.summary = generateAiSummary({
     errorType: error.message?.split(":")[0] || "Error",
     message: error.message || "",
@@ -1883,6 +1915,20 @@ async function buildAiContext(error) {
     componentAncestry: result.componentAncestry || null,
     stateSnapshot: result.stateSnapshot || null
   });
+}
+async function buildAiContext(error) {
+  const result = {};
+  const frames = parseStackFrames(error.stack);
+  if (frames.length === 0)
+    return { summary: error.message || "Unknown error" };
+  await attachSourceSnippets(result, frames);
+  result.componentAncestry = extractComponentAncestry() || void 0;
+  if (aiContextStateSnapshotEnabled) {
+    const snapshot = captureStateSnapshot(error.message || "");
+    if (snapshot)
+      result.stateSnapshot = snapshot;
+  }
+  buildAiSummaryText(error, result, frames[0]);
   return result;
 }
 function extractComponentAncestry() {
@@ -2930,6 +2976,74 @@ function getValidationConstraints(el) {
     constraints.step = input.step;
   return constraints;
 }
+function collectFormField(field, mode) {
+  const fieldType = field.getAttribute("type") || field.tagName.toLowerCase();
+  const fieldInfo = {
+    name: field.name || "",
+    type: fieldType,
+    required: field.required,
+    value: field.value || "",
+    label: findLabel(field),
+    selector: buildFieldSelector(field),
+    tag: field.tagName.toLowerCase(),
+    validation_constraints: getValidationConstraints(field)
+  };
+  if (field.tagName === "SELECT") {
+    const select = field;
+    fieldInfo.options = Array.from(select.options).map((opt) => ({
+      value: opt.value,
+      text: opt.text,
+      selected: opt.selected
+    }));
+  }
+  if (mode === "validate") {
+    field.checkValidity();
+    if (field.validationMessage) {
+      fieldInfo.validation_message = field.validationMessage;
+    }
+  }
+  return fieldInfo;
+}
+function collectFormFields(form, mode, maxFields) {
+  const fieldElements = form.querySelectorAll("input, select, textarea");
+  const fields = [];
+  for (let j = 0; j < fieldElements.length && fields.length < maxFields; j++) {
+    const field = fieldElements[j];
+    if ((field.getAttribute("type") || field.tagName.toLowerCase()) === "hidden")
+      continue;
+    fields.push(collectFormField(field, mode));
+  }
+  return fields;
+}
+function findSubmitButton(form) {
+  const submitEl = form.querySelector('button[type="submit"], input[type="submit"]') || form.querySelector('button:not([type]), button[type="button"]');
+  if (!submitEl)
+    return null;
+  return {
+    selector: buildFieldSelector(submitEl),
+    text: (submitEl.textContent || submitEl.value || "").trim().slice(0, 100)
+  };
+}
+function buildFormInfo(form, fields, submitButton) {
+  return {
+    action: form.action || "",
+    method: (form.method || "GET").toUpperCase(),
+    selector: buildFormSelector(form),
+    id: form.id || "",
+    name: form.name || "",
+    fields,
+    submit_button: submitButton
+  };
+}
+function applyFormValidation(form, formInfo, fields) {
+  formInfo.valid = form.checkValidity();
+  if (!formInfo.valid) {
+    formInfo.validation_errors = fields.filter((f) => f.validation_message).map((f) => ({
+      field: f.name || f.selector,
+      message: f.validation_message
+    }));
+  }
+}
 function discoverForms(params) {
   const formSelector = params.selector || "form";
   const forms = document.querySelectorAll(formSelector);
@@ -2940,64 +3054,11 @@ function discoverForms(params) {
     const form = forms[i];
     if (form.tagName !== "FORM")
       continue;
-    const fieldElements = form.querySelectorAll("input, select, textarea");
-    const fields = [];
-    for (let j = 0; j < fieldElements.length && fields.length < MAX_FIELDS; j++) {
-      const field = fieldElements[j];
-      const fieldType = field.getAttribute("type") || field.tagName.toLowerCase();
-      if (fieldType === "hidden")
-        continue;
-      const fieldInfo = {
-        name: field.name || "",
-        type: fieldType,
-        required: field.required,
-        value: field.value || "",
-        label: findLabel(field),
-        selector: buildFieldSelector(field),
-        tag: field.tagName.toLowerCase(),
-        validation_constraints: getValidationConstraints(field)
-      };
-      if (field.tagName === "SELECT") {
-        const select = field;
-        fieldInfo.options = Array.from(select.options).map((opt) => ({
-          value: opt.value,
-          text: opt.text,
-          selected: opt.selected
-        }));
-      }
-      if (params.mode === "validate") {
-        field.checkValidity();
-        if (field.validationMessage) {
-          fieldInfo.validation_message = field.validationMessage;
-        }
-      }
-      fields.push(fieldInfo);
-    }
-    let submitButton = null;
-    const submitEl = form.querySelector('button[type="submit"], input[type="submit"]') || form.querySelector('button:not([type]), button[type="button"]');
-    if (submitEl) {
-      submitButton = {
-        selector: buildFieldSelector(submitEl),
-        text: (submitEl.textContent || submitEl.value || "").trim().slice(0, 100)
-      };
-    }
-    const formInfo = {
-      action: form.action || "",
-      method: (form.method || "GET").toUpperCase(),
-      selector: buildFormSelector(form),
-      id: form.id || "",
-      name: form.name || "",
-      fields,
-      submit_button: submitButton
-    };
+    const fields = collectFormFields(form, params.mode, MAX_FIELDS);
+    const submitButton = findSubmitButton(form);
+    const formInfo = buildFormInfo(form, fields, submitButton);
     if (params.mode === "validate") {
-      formInfo.valid = form.checkValidity();
-      if (!formInfo.valid) {
-        formInfo.validation_errors = fields.filter((f) => f.validation_message).map((f) => ({
-          field: f.name || f.selector,
-          message: f.validation_message
-        }));
-      }
+      applyFormValidation(form, formInfo, fields);
     }
     results.push(formInfo);
   }
@@ -3311,10 +3372,7 @@ function createDeferredPromise() {
 }
 
 // extension/inject/execute-js.js
-function serializeObject2(obj, depth, seen) {
-  if (seen.has(obj))
-    return "[Circular]";
-  seen.add(obj);
+function serializeSpecialValue(obj, depth, seen) {
   if (Array.isArray(obj))
     return obj.slice(0, 100).map((v) => safeSerializeForExecute(v, depth + 1, seen));
   if (obj instanceof Error)
@@ -3327,42 +3385,53 @@ function serializeObject2(obj, depth, seen) {
     const node = obj;
     return `[${node.nodeName}${node.id ? "#" + node.id : ""}]`;
   }
-  if (typeof obj.toJSON === "function") {
-    try {
-      return safeSerializeForExecute(obj.toJSON(), depth + 1, seen);
-    } catch {
-    }
+  return void 0;
+}
+function tryToJSONValue(obj, depth, seen) {
+  if (typeof obj.toJSON !== "function")
+    return null;
+  try {
+    return { value: safeSerializeForExecute(obj.toJSON(), depth + 1, seen) };
+  } catch {
+    return null;
   }
-  const result = {};
-  const keys = Object.keys(obj).slice(0, 50);
-  if (keys.length === 0) {
-    try {
-      const proto = Object.getPrototypeOf(obj);
-      if (proto && proto !== Object.prototype) {
-        const hostResult = {};
-        const propNames = Object.getOwnPropertyNames(proto).slice(0, 120);
-        for (const key of propNames) {
-          if (key === "constructor")
-            continue;
-          try {
-            const hostValue = obj[key];
-            const hostType = typeof hostValue;
-            if (hostValue === void 0 || hostType === "function")
-              continue;
-            if (hostType === "string" || hostType === "number" || hostType === "boolean" || hostValue === null) {
-              hostResult[key] = hostValue;
-            }
-          } catch {
-          }
-          if (Object.keys(hostResult).length >= 50)
-            break;
-        }
-        if (Object.keys(hostResult).length > 0)
-          return hostResult;
+}
+function appendHostProperty(hostResult, obj, key) {
+  try {
+    const hostValue = obj[key];
+    const hostType = typeof hostValue;
+    if (hostValue === void 0 || hostType === "function")
+      return;
+    if (hostType === "string" || hostType === "number" || hostType === "boolean" || hostValue === null) {
+      hostResult[key] = hostValue;
+    }
+  } catch {
+  }
+}
+function serializeHostObject(obj, keys) {
+  if (keys.length > 0)
+    return null;
+  try {
+    const proto = Object.getPrototypeOf(obj);
+    if (proto && proto !== Object.prototype) {
+      const hostResult = {};
+      const propNames = Object.getOwnPropertyNames(proto).slice(0, 120);
+      for (const key of propNames) {
+        if (key === "constructor")
+          continue;
+        appendHostProperty(hostResult, obj, key);
+        if (Object.keys(hostResult).length >= 50)
+          break;
       }
-    } catch {
+      if (Object.keys(hostResult).length > 0)
+        return hostResult;
     }
+  } catch {
   }
+  return null;
+}
+function serializeEnumerableKeys(obj, keys, depth, seen) {
+  const result = {};
   for (const key of keys) {
     try {
       result[key] = safeSerializeForExecute(obj[key], depth + 1, seen);
@@ -3374,6 +3443,22 @@ function serializeObject2(obj, depth, seen) {
     result["..."] = `[${Object.keys(obj).length - 50} more keys]`;
   }
   return result;
+}
+function serializeObject2(obj, depth, seen) {
+  if (seen.has(obj))
+    return "[Circular]";
+  seen.add(obj);
+  const special = serializeSpecialValue(obj, depth, seen);
+  if (special !== void 0)
+    return special;
+  const toJSONValue = tryToJSONValue(obj, depth, seen);
+  if (toJSONValue)
+    return toJSONValue.value;
+  const keys = Object.keys(obj).slice(0, 50);
+  const hostResult = serializeHostObject(obj, keys);
+  if (hostResult)
+    return hostResult;
+  return serializeEnumerableKeys(obj, keys, depth, seen);
 }
 function safeSerializeForExecute(value, depth = 0, seen = /* @__PURE__ */ new WeakSet()) {
   if (depth > 10)
@@ -3543,6 +3628,38 @@ function truncateWsMessage(message) {
   }
   return { data: message, truncated: false };
 }
+function parseSchemaKeys(data) {
+  try {
+    const parsed = JSON.parse(data);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return null;
+    return Object.keys(parsed).sort().join(",");
+  } catch {
+    return null;
+  }
+}
+function recordSchemaSample(tracker, data) {
+  const keyStr = parseSchemaKeys(data);
+  if (keyStr === null)
+    return;
+  tracker._schemaKeys.push(keyStr);
+  tracker._schemaVariants.set(keyStr, (tracker._schemaVariants.get(keyStr) || 0) + 1);
+  if (tracker._schemaKeys.length >= 2) {
+    const first = tracker._schemaKeys[0];
+    tracker._schemaConsistent = tracker._schemaKeys.every((k) => k === first);
+  }
+  if (tracker._schemaKeys.length >= 5) {
+    tracker._schemaDetected = true;
+  }
+}
+function recordSchemaVariant(tracker, data) {
+  const keyStr = parseSchemaKeys(data);
+  if (keyStr === null)
+    return;
+  if (tracker._schemaVariants.has(keyStr) || tracker._schemaVariants.size < 50) {
+    tracker._schemaVariants.set(keyStr, (tracker._schemaVariants.get(keyStr) || 0) + 1);
+  }
+}
 function createConnectionTracker(id, url) {
   const tracker = {
     id,
@@ -3640,37 +3757,13 @@ function createConnectionTracker(id, url) {
      * Enrich a sampled message after the application callback has returned.
      */
     recordSampledMessage(direction, data) {
-      if (direction === "incoming" && data && typeof data === "string" && this._schemaKeys.length < 5) {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            const keys = Object.keys(parsed).sort();
-            const keyStr = keys.join(",");
-            this._schemaKeys.push(keyStr);
-            this._schemaVariants.set(keyStr, (this._schemaVariants.get(keyStr) || 0) + 1);
-            if (this._schemaKeys.length >= 2) {
-              const first = this._schemaKeys[0];
-              this._schemaConsistent = this._schemaKeys.every((k) => k === first);
-            }
-            if (this._schemaKeys.length >= 5) {
-              this._schemaDetected = true;
-            }
-          }
-        } catch {
-        }
+      if (direction !== "incoming" || !data || typeof data !== "string")
+        return;
+      if (this._schemaKeys.length < 5) {
+        recordSchemaSample(this, data);
       }
-      if (direction === "incoming" && data && typeof data === "string" && this._schemaDetected) {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            const keys = Object.keys(parsed).sort();
-            const keyStr = keys.join(",");
-            if (this._schemaVariants.has(keyStr) || this._schemaVariants.size < 50) {
-              this._schemaVariants.set(keyStr, (this._schemaVariants.get(keyStr) || 0) + 1);
-            }
-          }
-        } catch {
-        }
+      if (this._schemaDetected) {
+        recordSchemaVariant(this, data);
       }
     },
     /**
@@ -3944,14 +4037,24 @@ function uninstallWebSocketCapture() {
 }
 
 // extension/lib/page/bridge.js
-function postLog(payload) {
-  const context = getContextAnnotations();
-  const actions = payload.level === "error" ? getActionBuffer() : null;
+function resolveLogMessage(payload) {
+  return payload.message || payload.error || (payload.args?.[0] !== null && payload.args?.[0] !== void 0 ? String(payload.args[0]) : "");
+}
+function resolveLogSource(payload) {
+  return payload.filename ? `${payload.filename}:${payload.lineno || 0}` : "";
+}
+function collectLogEnrichments(context, actions) {
   const enrichments = [];
-  if (context && payload.level === "error")
+  if (context && actions)
     enrichments.push("context");
   if (actions && actions.length > 0)
     enrichments.push("userActions");
+  return enrichments;
+}
+function postLog(payload) {
+  const context = getContextAnnotations();
+  const actions = payload.level === "error" ? getActionBuffer() : null;
+  const enrichments = collectLogEnrichments(context, actions);
   const { level, type, args, error, stack, ...otherFields } = payload;
   postAuthenticatedPageMessage({
     type: "kaboom_log",
@@ -3959,8 +4062,8 @@ function postLog(payload) {
       // Enriched fields (these are the source of truth)
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       url: window.location.href,
-      message: payload.message || payload.error || (payload.args?.[0] !== null && payload.args?.[0] !== void 0 ? String(payload.args[0]) : ""),
-      source: payload.filename ? `${payload.filename}:${payload.lineno || 0}` : "",
+      message: resolveLogMessage(payload),
+      source: resolveLogSource(payload),
       // Core fields from payload
       level,
       ...type ? { type } : {},
@@ -3969,7 +4072,7 @@ function postLog(payload) {
       ...stack ? { stack } : {},
       // Optional enrichments
       ...enrichments.length > 0 ? { _enrichments: enrichments } : {},
-      ...context && payload.level === "error" ? { _context: context } : {},
+      ...context && actions ? { _context: context } : {},
       ...actions && actions.length > 0 ? { _actions: actions } : {},
       // Any other fields from payload (excluding the ones we destructured)
       ...otherFields
@@ -4085,6 +4188,42 @@ var MAX_TEXT_LENGTH = 500;
 var DEDUP_KEY_TEXT_LENGTH = 100;
 var observer = null;
 var dedupMap = /* @__PURE__ */ new Map();
+function classifyByAria(role, ariaLive, text) {
+  if (role === "alert" || ariaLive === "assertive") {
+    return { classification: "alert", role: role || "alert", text };
+  }
+  if (role === "status" || ariaLive === "polite") {
+    return { classification: "toast", role: role || "status", text };
+  }
+  return null;
+}
+function classifyByClassName(className, role, text) {
+  if (!className || typeof className !== "string")
+    return null;
+  for (const [pattern, classification] of CLASS_FINGERPRINTS) {
+    if (pattern.test(className)) {
+      return { classification, role: role || "", text };
+    }
+  }
+  return null;
+}
+function classifyByComputedStyle(el, role, text) {
+  if (typeof window === "undefined" || !window.getComputedStyle)
+    return null;
+  try {
+    const style = window.getComputedStyle(el);
+    const position = style.position;
+    if (position === "fixed" || position === "absolute") {
+      const zIndex = parseInt(style.zIndex, 10);
+      const height = el.getBoundingClientRect().height;
+      if (zIndex > 1e3 && height > 0 && height < 200) {
+        return { classification: "flash", role: role || "", text };
+      }
+    }
+  } catch {
+  }
+  return null;
+}
 function classifyTransient(el) {
   const tag = el.tagName;
   if (!tag || SKIP_TAGS.has(tag))
@@ -4094,35 +4233,7 @@ function classifyTransient(el) {
     return null;
   const role = el.getAttribute("role");
   const ariaLive = el.getAttribute("aria-live");
-  if (role === "alert" || ariaLive === "assertive") {
-    return { classification: "alert", role: role || "alert", text };
-  }
-  if (role === "status" || ariaLive === "polite") {
-    return { classification: "toast", role: role || "status", text };
-  }
-  const className = el.className;
-  if (className && typeof className === "string") {
-    for (const [pattern, classification] of CLASS_FINGERPRINTS) {
-      if (pattern.test(className)) {
-        return { classification, role: role || "", text };
-      }
-    }
-  }
-  if (typeof window !== "undefined" && window.getComputedStyle) {
-    try {
-      const style = window.getComputedStyle(el);
-      const position = style.position;
-      if (position === "fixed" || position === "absolute") {
-        const zIndex = parseInt(style.zIndex, 10);
-        const height = el.getBoundingClientRect().height;
-        if (zIndex > 1e3 && height > 0 && height < 200) {
-          return { classification: "flash", role: role || "", text };
-        }
-      }
-    } catch {
-    }
-  }
-  return null;
+  return classifyByAria(role, ariaLive, text) ?? classifyByClassName(el.className, role, text) ?? classifyByComputedStyle(el, role, text);
 }
 function extractText(el) {
   const raw = (el.textContent || "").trim();
@@ -4216,27 +4327,41 @@ var deferralEnabled = true;
 var phase2Installed = false;
 var injectionTimestamp = 0;
 var phase2Timestamp = 0;
+function resolveFetchUrl(input) {
+  return typeof input === "string" ? input : input.url;
+}
+function resolveFetchMethod(input, init) {
+  return init?.method || (typeof input === "object" && "method" in input ? input.method : "GET") || "GET";
+}
+function resolveRawHeaders(input, init) {
+  return init?.headers || (typeof input === "object" && "headers" in input ? input.headers : null);
+}
+async function readErrorResponseBody(response) {
+  try {
+    const cloned = response.clone();
+    const body = await cloned.text();
+    if (body.length > MAX_RESPONSE_LENGTH) {
+      return body.slice(0, MAX_RESPONSE_LENGTH) + "... [truncated]";
+    }
+    return body;
+  } catch {
+    return "[Could not read response]";
+  }
+}
+function optionalHeaders(safeHeaders) {
+  return Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {};
+}
 function wrapFetch(originalFetchFn) {
   return async function(input, init) {
     const startTime = Date.now();
-    const url = typeof input === "string" ? input : input.url;
-    const method = init?.method || (typeof input === "object" && "method" in input ? input.method : "GET") || "GET";
+    const url = resolveFetchUrl(input);
+    const method = resolveFetchMethod(input, init);
     try {
       const response = await originalFetchFn(input, init);
       const duration = Date.now() - startTime;
       if (!response.ok) {
-        let responseBody = "";
-        try {
-          const cloned = response.clone();
-          responseBody = await cloned.text();
-          if (responseBody.length > MAX_RESPONSE_LENGTH) {
-            responseBody = responseBody.slice(0, MAX_RESPONSE_LENGTH) + "... [truncated]";
-          }
-        } catch {
-          responseBody = "[Could not read response]";
-        }
-        const rawHeaders = init?.headers || (typeof input === "object" && "headers" in input ? input.headers : null);
-        const safeHeaders = sanitizeHeaders(rawHeaders);
+        const responseBody = await readErrorResponseBody(response);
+        const safeHeaders = sanitizeHeaders(resolveRawHeaders(input, init));
         const logPayload = {
           level: "error",
           type: "network",
@@ -4246,15 +4371,14 @@ function wrapFetch(originalFetchFn) {
           statusText: response.statusText,
           duration,
           response: responseBody,
-          ...Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {}
+          ...optionalHeaders(safeHeaders)
         };
         postLog(logPayload);
       }
       return response;
     } catch (error) {
       const duration = Date.now() - startTime;
-      const rawHeaders = init?.headers || (typeof input === "object" && "headers" in input ? input.headers : null);
-      const safeHeaders = sanitizeHeaders(rawHeaders);
+      const safeHeaders = sanitizeHeaders(resolveRawHeaders(input, init));
       const logPayload = {
         level: "error",
         type: "network",
@@ -4262,7 +4386,7 @@ function wrapFetch(originalFetchFn) {
         url,
         error: errorMessage(error),
         duration,
-        ...Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {}
+        ...optionalHeaders(safeHeaders)
       };
       postLog(logPayload);
       throw error;

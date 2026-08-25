@@ -54,42 +54,10 @@ func New(deps Deps) (*Handler, error) {
 		return nil, errors.New("incomplete_qa_fixture_dependencies")
 	}
 	restore := func(ctx context.Context, snapshotID string) error {
-		if snapshotID == "" {
-			return errors.New("invalid_fixture_snapshot_reference")
-		}
-		result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_restore", nil, snapshotID, fixturecontract.DefaultSetupTimeoutMs)
-		if err != nil {
-			return err
-		}
-		var restored struct {
-			Success  bool `json:"success"`
-			Restored bool `json:"restored"`
-		}
-		if json.Unmarshal(result, &restored) != nil || !restored.Success || !restored.Restored {
-			return errors.New("invalid_fixture_restore_result")
-		}
-		return nil
+		return restoreEnvironmentSnapshot(ctx, deps.Execute, snapshotID)
 	}
 	reconcile := func(ctx context.Context, snapshotIDs []string) (int, error) {
-		payload, err := json.Marshal(struct {
-			SnapshotIDs []string `json:"snapshot_ids"`
-		}{SnapshotIDs: snapshotIDs})
-		if err != nil {
-			return 0, errors.New("fixture_reconcile_encoding_failed")
-		}
-		result, err := deps.Execute(ctx, "environment_transaction_reconcile", payload, time.Duration(fixturecontract.DefaultSetupTimeoutMs)*time.Millisecond)
-		if err != nil {
-			return 0, errors.New("fixture_reconcile_failed")
-		}
-		var reconciled struct {
-			Success  bool `json:"success"`
-			Pruned   int  `json:"pruned"`
-			Retained int  `json:"retained"`
-		}
-		if json.Unmarshal(result, &reconciled) != nil || !reconciled.Success || reconciled.Pruned < 0 || reconciled.Retained < 0 || reconciled.Retained > len(snapshotIDs) {
-			return 0, errors.New("invalid_fixture_reconcile_result")
-		}
-		return reconciled.Pruned, nil
+		return reconcileFixtureSnapshots(ctx, deps.Execute, snapshotIDs)
 	}
 	coordinator, err := fixturecontract.NewCoordinator(fixturecontract.TransactionDeps{
 		NewCorrelationID:    deps.NewCorrelationID,
@@ -100,32 +68,10 @@ func New(deps Deps) (*Handler, error) {
 		Persist:             deps.Persist,
 		OnNotice:            deps.OnNotice,
 		Snapshot: func(ctx context.Context, fixture fixturecontract.WireQAFixture) (string, error) {
-			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_snapshot", &fixture, "", fixture.SetupTimeoutMs)
-			if err != nil {
-				return "", err
-			}
-			var snapshot struct {
-				Success    bool   `json:"success"`
-				SnapshotID string `json:"snapshot_id"`
-			}
-			if json.Unmarshal(result, &snapshot) != nil || !snapshot.Success || snapshot.SnapshotID == "" {
-				return "", errors.New("invalid_fixture_snapshot_result")
-			}
-			return snapshot.SnapshotID, nil
+			return snapshotEnvironmentFixture(ctx, deps.Execute, fixture)
 		},
 		Apply: func(ctx context.Context, fixture fixturecontract.WireQAFixture) (fixturecontract.MutationCounts, error) {
-			result, err := executeFixtureCommand(ctx, deps.Execute, "environment_transaction_apply", &fixture, "", fixture.SetupTimeoutMs)
-			if err != nil {
-				return fixturecontract.MutationCounts{}, err
-			}
-			var applied struct {
-				Success   bool                           `json:"success"`
-				Mutations fixturecontract.MutationCounts `json:"mutations"`
-			}
-			if json.Unmarshal(result, &applied) != nil || !applied.Success {
-				return fixturecontract.MutationCounts{}, errors.New("invalid_fixture_apply_result")
-			}
-			return applied.Mutations, nil
+			return applyEnvironmentFixture(ctx, deps.Execute, fixture)
 		},
 		Restore: restore,
 	})
@@ -319,6 +265,76 @@ func parseFixture(req mcp.JSONRPCRequest, raw json.RawMessage) (fixturecontract.
 		message = "Invalid QA fixture: " + message
 	}
 	return fixturecontract.WireQAFixture{}, mcp.Fail(req, mcp.ErrInvalidParam, message, "Correct the fixture contract and validate again", mcp.WithParam("fixture")), true
+}
+
+func restoreEnvironmentSnapshot(ctx context.Context, execute CommandExecutor, snapshotID string) error {
+	if snapshotID == "" {
+		return errors.New("invalid_fixture_snapshot_reference")
+	}
+	result, err := executeFixtureCommand(ctx, execute, "environment_transaction_restore", nil, snapshotID, fixturecontract.DefaultSetupTimeoutMs)
+	if err != nil {
+		return err
+	}
+	var restored struct {
+		Success  bool `json:"success"`
+		Restored bool `json:"restored"`
+	}
+	if json.Unmarshal(result, &restored) != nil || !restored.Success || !restored.Restored {
+		return errors.New("invalid_fixture_restore_result")
+	}
+	return nil
+}
+
+func reconcileFixtureSnapshots(ctx context.Context, execute CommandExecutor, snapshotIDs []string) (int, error) {
+	payload, err := json.Marshal(struct {
+		SnapshotIDs []string `json:"snapshot_ids"`
+	}{SnapshotIDs: snapshotIDs})
+	if err != nil {
+		return 0, errors.New("fixture_reconcile_encoding_failed")
+	}
+	result, err := execute(ctx, "environment_transaction_reconcile", payload, time.Duration(fixturecontract.DefaultSetupTimeoutMs)*time.Millisecond)
+	if err != nil {
+		return 0, errors.New("fixture_reconcile_failed")
+	}
+	var reconciled struct {
+		Success  bool `json:"success"`
+		Pruned   int  `json:"pruned"`
+		Retained int  `json:"retained"`
+	}
+	if json.Unmarshal(result, &reconciled) != nil || !reconciled.Success || reconciled.Pruned < 0 || reconciled.Retained < 0 || reconciled.Retained > len(snapshotIDs) {
+		return 0, errors.New("invalid_fixture_reconcile_result")
+	}
+	return reconciled.Pruned, nil
+}
+
+func snapshotEnvironmentFixture(ctx context.Context, execute CommandExecutor, fixture fixturecontract.WireQAFixture) (string, error) {
+	result, err := executeFixtureCommand(ctx, execute, "environment_transaction_snapshot", &fixture, "", fixture.SetupTimeoutMs)
+	if err != nil {
+		return "", err
+	}
+	var snapshot struct {
+		Success    bool   `json:"success"`
+		SnapshotID string `json:"snapshot_id"`
+	}
+	if json.Unmarshal(result, &snapshot) != nil || !snapshot.Success || snapshot.SnapshotID == "" {
+		return "", errors.New("invalid_fixture_snapshot_result")
+	}
+	return snapshot.SnapshotID, nil
+}
+
+func applyEnvironmentFixture(ctx context.Context, execute CommandExecutor, fixture fixturecontract.WireQAFixture) (fixturecontract.MutationCounts, error) {
+	result, err := executeFixtureCommand(ctx, execute, "environment_transaction_apply", &fixture, "", fixture.SetupTimeoutMs)
+	if err != nil {
+		return fixturecontract.MutationCounts{}, err
+	}
+	var applied struct {
+		Success   bool                           `json:"success"`
+		Mutations fixturecontract.MutationCounts `json:"mutations"`
+	}
+	if json.Unmarshal(result, &applied) != nil || !applied.Success {
+		return fixturecontract.MutationCounts{}, errors.New("invalid_fixture_apply_result")
+	}
+	return applied.Mutations, nil
 }
 
 func executeFixtureCommand(

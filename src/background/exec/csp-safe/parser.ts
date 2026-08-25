@@ -176,6 +176,34 @@ class Parser {
     throw new Error(`Unexpected character: ${ch}`)
   }
 
+  private parseBracketStep(): StructuredStep {
+    this.advance()
+    this.skipWhitespace()
+    const innerCh = this.peek()
+
+    if (innerCh === "'" || innerCh === '"') {
+      // String key
+      const strVal = this.parseString()
+      if (strVal.type !== 'literal' || typeof strVal.value !== 'string') {
+        throw new Error('Expected string key in bracket access')
+      }
+      this.skipWhitespace()
+      this.expect(']')
+      return { op: 'access', key: strVal.value }
+    }
+    if (/\d/.test(innerCh) || innerCh === '-') {
+      // Numeric index
+      const numVal = this.parseNumber()
+      if (numVal.type !== 'literal' || typeof numVal.value !== 'number') {
+        throw new Error('Expected numeric index in bracket access')
+      }
+      this.skipWhitespace()
+      this.expect(']')
+      return { op: 'index', index: numVal.value }
+    }
+    throw new Error('Bracket access only supports string keys and numeric indices')
+  }
+
   parseSuffix(base: StructuredValue): StructuredValue {
     const steps: StructuredStep[] = []
     let current = base
@@ -201,31 +229,7 @@ class Parser {
 
       // [key] or [index]
       if (ch === '[') {
-        this.advance()
-        this.skipWhitespace()
-        const innerCh = this.peek()
-
-        if (innerCh === "'" || innerCh === '"') {
-          // String key
-          const strVal = this.parseString()
-          if (strVal.type !== 'literal' || typeof strVal.value !== 'string') {
-            throw new Error('Expected string key in bracket access')
-          }
-          this.skipWhitespace()
-          this.expect(']')
-          steps.push({ op: 'access', key: strVal.value })
-        } else if (/\d/.test(innerCh) || innerCh === '-') {
-          // Numeric index
-          const numVal = this.parseNumber()
-          if (numVal.type !== 'literal' || typeof numVal.value !== 'number') {
-            throw new Error('Expected numeric index in bracket access')
-          }
-          this.skipWhitespace()
-          this.expect(']')
-          steps.push({ op: 'index', index: numVal.value })
-        } else {
-          throw new Error('Bracket access only supports string keys and numeric indices')
-        }
+        steps.push(this.parseBracketStep())
         continue
       }
 

@@ -37,40 +37,38 @@ function injectToastAnimationStyles() {
     style.textContent = TOAST_ANIMATION_CSS;
     document.head.appendChild(style);
 }
-/**
- * Show a brief visual toast overlay for AI actions.
- * Supports color-coded states and fully readable structured content.
- * For audio-related toasts, adds animated arrow pointing to extension icon.
- */
-// #lizard forgives
-export function showActionToast(text, detail, state = 'trying', durationMs = 3000) {
-    // Remove existing toast
-    const existing = document.getElementById('kaboom-action-toast');
-    if (existing)
-        existing.remove();
-    // Inject animation styles once
-    injectToastAnimationStyles();
-    const theme = TOAST_THEMES[state] ?? TOAST_THEMES.trying;
-    const isAudioPrompt = state === 'audio' || (detail && detail.toLowerCase().includes('audio') && detail.toLowerCase().includes('click'));
-    const arrowChar = '\u2191';
-    const toast = document.createElement('div');
-    toast.id = 'kaboom-action-toast';
-    toast.setAttribute?.('data-kaboom-owned', 'true');
-    if (isAudioPrompt) {
-        toast.className = 'kaboom-toast-pulse';
-    }
-    // Add kaboom icon for audio/extension-click prompts
-    if (isAudioPrompt) {
-        const icon = document.createElement('img');
-        icon.src = chrome.runtime.getURL('icons/icon-48.png');
-        Object.assign(icon.style, {
-            width: '20px',
-            height: '20px',
-            marginRight: '8px',
-            flexShrink: '0'
-        });
-        toast.appendChild(icon);
-    }
+function isAudioPromptToast(state, detail) {
+    if (state === 'audio')
+        return true;
+    if (!detail)
+        return false;
+    const lower = detail.toLowerCase();
+    return lower.includes('audio') && lower.includes('click');
+}
+function appendAudioIcon(toast) {
+    const icon = document.createElement('img');
+    icon.src = chrome.runtime.getURL('icons/icon-48.png');
+    Object.assign(icon.style, {
+        width: '20px',
+        height: '20px',
+        marginRight: '8px',
+        flexShrink: '0'
+    });
+    toast.appendChild(icon);
+}
+function appendAudioArrow(toast) {
+    const arrow = document.createElement('span');
+    arrow.className = 'kaboom-toast-arrow';
+    arrow.textContent = '\u2191';
+    Object.assign(arrow.style, {
+        fontSize: '16px',
+        fontWeight: '700',
+        marginLeft: '12px',
+        display: 'inline-block'
+    });
+    toast.appendChild(arrow);
+}
+function appendToastText(toast, text, detail) {
     // Build content without truncation: status and recovery guidance must remain actionable.
     const label = document.createElement('span');
     label.textContent = text;
@@ -86,20 +84,9 @@ export function showActionToast(text, detail, state = 'trying', durationMs = 300
         Object.assign(det.style, { fontWeight: '400', opacity: '0.9' });
         toast.appendChild(det);
     }
-    // Add animated arrow for audio prompts (pointing to extension toolbar)
-    if (isAudioPrompt) {
-        const arrow = document.createElement('span');
-        arrow.className = 'kaboom-toast-arrow';
-        arrow.textContent = arrowChar;
-        Object.assign(arrow.style, {
-            fontSize: '16px',
-            fontWeight: '700',
-            marginLeft: '12px',
-            display: 'inline-block'
-        });
-        toast.appendChild(arrow);
-    }
-    Object.assign(toast.style, {
+}
+function toastStyleFor(theme, isAudioPrompt) {
+    return {
         position: 'fixed',
         top: '16px',
         right: isAudioPrompt ? '80px' : 'auto',
@@ -127,7 +114,38 @@ export function showActionToast(text, detail, state = 'trying', durationMs = 300
         gap: '0',
         '--toast-shadow': theme.shadow,
         '--toast-shadow-intense': theme.shadow.replace('0.4)', '0.7)')
-    });
+    };
+}
+/**
+ * Show a brief visual toast overlay for AI actions.
+ * Supports color-coded states and fully readable structured content.
+ * For audio-related toasts, adds animated arrow pointing to extension icon.
+ */
+export function showActionToast(text, detail, state = 'trying', durationMs = 3000) {
+    // Remove existing toast
+    const existing = document.getElementById('kaboom-action-toast');
+    if (existing)
+        existing.remove();
+    // Inject animation styles once
+    injectToastAnimationStyles();
+    const theme = TOAST_THEMES[state] ?? TOAST_THEMES.trying;
+    const isAudioPrompt = isAudioPromptToast(state, detail);
+    const toast = document.createElement('div');
+    toast.id = 'kaboom-action-toast';
+    toast.setAttribute?.('data-kaboom-owned', 'true');
+    if (isAudioPrompt) {
+        toast.className = 'kaboom-toast-pulse';
+    }
+    // Add kaboom icon for audio/extension-click prompts
+    if (isAudioPrompt) {
+        appendAudioIcon(toast);
+    }
+    appendToastText(toast, text, detail);
+    // Add animated arrow for audio prompts (pointing to extension toolbar)
+    if (isAudioPrompt) {
+        appendAudioArrow(toast);
+    }
+    Object.assign(toast.style, toastStyleFor(theme, isAudioPrompt));
     const target = document.body || document.documentElement;
     if (!target)
         return;

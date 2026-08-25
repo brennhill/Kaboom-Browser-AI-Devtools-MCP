@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-12
+last_reviewed: 2026-08-25
 code_paths:
   - internal/capture/healthreader/reader.go
   - internal/queries/dispatcher_queries.go

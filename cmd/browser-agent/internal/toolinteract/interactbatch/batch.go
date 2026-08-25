@@ -51,16 +51,8 @@ type batchParams struct {
 
 // Handle executes a sequence of interact steps provided inline.
 func (h *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	if h == nil {
-		return mcp.Fail(req, mcp.ErrNotInitialized, "Batch handler is not initialized", "Restart Kaboom")
-	}
-	for _, guard := range []toolguard.Check{h.deps.RequirePilot, h.deps.RequireExtension} {
-		if guard == nil {
-			return mcp.Fail(req, mcp.ErrNotInitialized, "Batch runtime is incomplete", "Restart Kaboom")
-		}
-		if response, blocked := guard(req); blocked {
-			return response
-		}
+	if response, blocked := h.checkBatchRuntime(req); blocked {
+		return response
 	}
 
 	var params batchParams
@@ -74,18 +66,9 @@ func (h *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 		return mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Steps exceeds maximum of %d", maxSteps), "Split into smaller batches", mcp.WithParam("steps"))
 	}
 
-	actions := make([]string, len(params.Steps))
-	for index, step := range params.Steps {
-		var selector struct {
-			What string `json:"what"`
-		}
-		if err := json.Unmarshal(step, &selector); err != nil {
-			return mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Step[%d] must be valid JSON", index), "Fix the step JSON", mcp.WithParam("steps"))
-		}
-		actions[index] = strings.TrimSpace(selector.What)
-		if actions[index] == "" {
-			return mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Step[%d] missing required 'what' field", index), "Add a 'what' field to each step", mcp.WithParam("steps"))
-		}
+	actions, response, invalid := parseBatchActions(req, params.Steps)
+	if invalid {
+		return response
 	}
 
 	if h.deps.ReplayMu == nil || h.deps.Interact == nil || h.deps.RecordAIAction == nil {
@@ -96,7 +79,6 @@ func (h *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 	}
 	defer h.deps.ReplayMu.Unlock()
 
-	continueOnError := params.ContinueOnErr == nil || *params.ContinueOnErr
 	if params.StepTimeoutMs <= 0 {
 		params.StepTimeoutMs = defaultStepTimeout
 	}
@@ -106,12 +88,78 @@ func (h *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 		now = time.Now
 	}
 	started := now()
+	results, executed, failed, queued := h.executeBatchSteps(req, params, actions, now)
+
+	duration := now().Sub(started).Milliseconds()
+	status, message := summarize(executed, failed, queued, len(params.Steps), duration)
+	return mcp.Succeed(req, "Batch execution", map[string]any{
+		"status": status, "steps_executed": executed, "steps_failed": failed,
+		"steps_queued": queued, "steps_total": len(params.Steps), "duration_ms": duration,
+		"results": results, "message": message,
+	})
+}
+
+func (h *Handler) checkBatchRuntime(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+	if h == nil {
+		return mcp.Fail(req, mcp.ErrNotInitialized, "Batch handler is not initialized", "Restart Kaboom"), true
+	}
+	for _, guard := range []toolguard.Check{h.deps.RequirePilot, h.deps.RequireExtension} {
+		if guard == nil {
+			return mcp.Fail(req, mcp.ErrNotInitialized, "Batch runtime is incomplete", "Restart Kaboom"), true
+		}
+		if response, blocked := guard(req); blocked {
+			return response, true
+		}
+	}
+	return mcp.JSONRPCResponse{}, false
+}
+
+func parseBatchActions(req mcp.JSONRPCRequest, steps []json.RawMessage) ([]string, mcp.JSONRPCResponse, bool) {
+	actions := make([]string, len(steps))
+	for index, step := range steps {
+		var selector struct {
+			What string `json:"what"`
+		}
+		if err := json.Unmarshal(step, &selector); err != nil {
+			return nil, mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Step[%d] must be valid JSON", index), "Fix the step JSON", mcp.WithParam("steps")), true
+		}
+		actions[index] = strings.TrimSpace(selector.What)
+		if actions[index] == "" {
+			return nil, mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Step[%d] missing required 'what' field", index), "Add a 'what' field to each step", mcp.WithParam("steps")), true
+		}
+	}
+	return actions, mcp.JSONRPCResponse{}, false
+}
+
+func classifyBatchCommand(store *capture.Capture, correlationID string, timeoutMs int) (string, string) {
+	if store == nil {
+		return "error", "batch capture runtime unavailable"
+	}
+	command, found := store.Queries().WaitForCommand(correlationID, time.Duration(timeoutMs)*time.Millisecond)
+	if !found {
+		return "queued", ""
+	}
+	switch command.Status {
+	case "pending":
+		return "queued", ""
+	case "complete":
+		return "ok", ""
+	default:
+		if command.Error == "" {
+			return "error", "command failed with status " + command.Status
+		}
+		return "error", command.Error
+	}
+}
+
+func (h *Handler) executeBatchSteps(req mcp.JSONRPCRequest, params batchParams, actions []string, now func() time.Time) ([]replay.StepResult, int, int, int) {
 	results := make([]replay.StepResult, 0, len(params.Steps))
 	executed, failed, queued := 0, 0, 0
 	limit := len(params.Steps)
 	if params.StopAfterStep > 0 && params.StopAfterStep < limit {
 		limit = params.StopAfterStep
 	}
+	continueOnError := params.ContinueOnErr == nil || *params.ContinueOnErr
 
 	for index := 0; index < limit; index++ {
 		stepStarted := now()
@@ -123,34 +171,19 @@ func (h *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 			if h.deps.Capture != nil {
 				store = h.deps.Capture()
 			}
-			if store == nil {
-				step.Status, step.Error = "error", "batch capture runtime unavailable"
-				failed++
-			} else if command, found := store.Queries().WaitForCommand(correlationID, time.Duration(params.StepTimeoutMs)*time.Millisecond); found {
-				switch command.Status {
-				case "pending":
-					step.Status = "queued"
-					queued++
-				case "complete":
-					step.Status = "ok"
-				default:
-					step.Status, step.Error = "error", command.Error
-					if step.Error == "" {
-						step.Error = "command failed with status " + command.Status
-					}
-					failed++
-				}
-			} else {
-				step.Status = "queued"
-				queued++
-			}
+			step.Status, step.Error = classifyBatchCommand(store, correlationID, params.StepTimeoutMs)
 		}
 		if act.IsErrorResponse(response) && step.Status == "" {
 			step.Status, step.Error = "error", replay.ErrorMessage(response)
-			failed++
 		}
 		if step.Status == "" {
 			step.Status = "ok"
+		}
+		if step.Status == "error" {
+			failed++
+		}
+		if step.Status == "queued" {
+			queued++
 		}
 		results = append(results, step)
 		executed++
@@ -158,14 +191,7 @@ func (h *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 			break
 		}
 	}
-
-	duration := now().Sub(started).Milliseconds()
-	status, message := summarize(executed, failed, queued, len(params.Steps), duration)
-	return mcp.Succeed(req, "Batch execution", map[string]any{
-		"status": status, "steps_executed": executed, "steps_failed": failed,
-		"steps_queued": queued, "steps_total": len(params.Steps), "duration_ms": duration,
-		"results": results, "message": message,
-	})
+	return results, executed, failed, queued
 }
 
 func summarize(executed, failed, queued, total int, duration int64) (string, string) {

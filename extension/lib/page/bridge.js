@@ -9,20 +9,31 @@
 import { getContextAnnotations } from './context.js';
 import { getActionBuffer } from './actions.js';
 import { postAuthenticatedPageMessage } from './channel.js';
+function resolveLogMessage(payload) {
+    return (payload.message ||
+        payload.error ||
+        (payload.args?.[0] !== null && payload.args?.[0] !== undefined ? String(payload.args[0]) : ''));
+}
+function resolveLogSource(payload) {
+    return payload.filename ? `${payload.filename}:${payload.lineno || 0}` : '';
+}
+function collectLogEnrichments(context, actions) {
+    const enrichments = [];
+    if (context && actions)
+        enrichments.push('context');
+    if (actions && actions.length > 0)
+        enrichments.push('userActions');
+    return enrichments;
+}
 /**
  * Post a log message to the content script
  */
-// #lizard forgives
 export function postLog(payload) {
     // Include context annotations and action replay for errors
     const context = getContextAnnotations();
     const actions = payload.level === 'error' ? getActionBuffer() : null;
     // Build enrichments list to help AI understand what data is attached
-    const enrichments = [];
-    if (context && payload.level === 'error')
-        enrichments.push('context');
-    if (actions && actions.length > 0)
-        enrichments.push('userActions');
+    const enrichments = collectLogEnrichments(context, actions);
     // Extract fields we want from payload (exclude ts, message, source, url to avoid overwriting enrichments)
     const { level, type, args, error, stack, ...otherFields } = payload;
     postAuthenticatedPageMessage({
@@ -31,10 +42,8 @@ export function postLog(payload) {
             // Enriched fields (these are the source of truth)
             ts: new Date().toISOString(),
             url: window.location.href,
-            message: payload.message ||
-                payload.error ||
-                (payload.args?.[0] !== null && payload.args?.[0] !== undefined ? String(payload.args[0]) : ''),
-            source: payload.filename ? `${payload.filename}:${payload.lineno || 0}` : '',
+            message: resolveLogMessage(payload),
+            source: resolveLogSource(payload),
             // Core fields from payload
             level,
             ...(type ? { type } : {}),
@@ -43,7 +52,7 @@ export function postLog(payload) {
             ...(stack ? { stack } : {}),
             // Optional enrichments
             ...(enrichments.length > 0 ? { _enrichments: enrichments } : {}),
-            ...(context && payload.level === 'error' ? { _context: context } : {}),
+            ...(context && actions ? { _context: context } : {}),
             ...(actions && actions.length > 0 ? { _actions: actions } : {}),
             // Any other fields from payload (excluding the ones we destructured)
             ...otherFields

@@ -83,6 +83,62 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 
 	server.runtime.ReleaseChecker().Start(ctx)
 	server.startScreenshotRateLimiterCleanup(ctx)
+	startBinaryUpgradeWatcher(server, port, ctx)
+	reportUpgradeMarker(server, port)
+
+	policyErr := daemonlife.EnforceStartupPolicy(server.daemonRecovery.LifecycleDeps(), port, opts)
+	if err := handleStartupPolicyResult(server, port, policyErr); err != nil {
+		return err
+	}
+
+	if err := server.daemonRecovery.CleanupStalePIDFile(port); err != nil {
+		return err
+	}
+	httpDeps := daemonHTTPDeps(server)
+	if err := ensurePortAvailable(server, httpDeps, port, "main"); err != nil {
+		return err
+	}
+
+	// Identity and its canonical diagnostics must be ready before lifecycle
+	// assessment can publish an incident or the listener can accept a request.
+	telemetry.Warm(server.incidents)
+
+	// Crash-loop self-defense: if this SAME install (version + epoch) has restarted
+	// too many times too fast, log loudly and back off a bounded amount before binding
+	// so a pathological loop degrades gracefully instead of hammering launchd (which
+	// would throttle/disable the LaunchAgent and take the terminal server on port+1
+	// dark too). Never refuses to start; an upgrade/epoch takeover resets the counter.
+	daemonlife.ApplyStartupRestartThrottle(server.daemonRecovery.LifecycleDeps(), port)
+
+	srv, httpDone, err := daemonhttp.Start(httpDeps, port, apiKey, mux)
+	if err != nil {
+		return err
+	}
+	persistDaemonRuntimeState(server, port)
+
+	termPort, termSrv, _ := startTerminalServerWithRecovery(server, cap, port)
+
+	server.logLifecycle("startup", port, map[string]any{
+		"version":       version,
+		"go_version":    runtime.Version(),
+		"os":            runtime.GOOS,
+		"arch":          runtime.GOARCH,
+		"terminal_port": termPort,
+	})
+	server.logLifecycle("mcp_transport_ready", port, nil)
+
+	// Start periodic usage beacon loop (structured tool stats every 5 minutes).
+	if tracker := mcpHandler.usageTracker; tracker != nil {
+		telemetry.StartUsageBeaconLoop(ctx, tracker)
+	}
+
+	awaitShutdownSignal(server, srv, port, httpDone, termSrv, mcpHandler)
+	return nil
+}
+
+// startBinaryUpgradeWatcher watches for a newer installed binary and, on
+// detection, warns and then self-terminates so the new binary takes over.
+func startBinaryUpgradeWatcher(server *Server, port int, ctx context.Context) {
 	server.runtime.SetUpgrade(binarywatch.Start(ctx, version,
 		func(newVersion string) {
 			server.logLifecycle("binary_upgrade_detected", port, map[string]any{
@@ -103,6 +159,11 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 			_ = process.Signal(syscall.SIGTERM)
 		},
 	))
+}
+
+// reportUpgradeMarker announces a just-completed binary upgrade (if any marker
+// was left by the previous version) and clears the marker.
+func reportUpgradeMarker(server *Server, port int) {
 	if markerPath, err := state.UpgradeMarkerFile(); err == nil {
 		if marker, markerErr := binarywatch.ReadAndClearMarker(markerPath); markerErr == nil && marker != nil {
 			server.warnings.Add(fmt.Sprintf("Upgraded from v%s to v%s", marker.FromVersion, marker.ToVersion))
@@ -111,63 +172,57 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 			})
 		}
 	}
+}
 
-	if err := daemonlife.EnforceStartupPolicy(server.daemonRecovery.LifecycleDeps(), port, opts); err != nil {
-		if errors.Is(err, daemonlife.ErrDeferToHealthyDaemon) {
-			// A healthy, compatible daemon already owns this port. Exit cleanly
-			// (exit 0) and let it keep serving — do NOT start a rival server or
-			// kill the incumbent. Returning nil unwinds to a graceful exit.
-			server.logLifecycle("daemon_deferred_exit", port, nil)
-			// Name the incumbent, not the port we were asked for: the lock is
-			// per state directory, so the daemon we are deferring to may be on
-			// a different port entirely, and saying otherwise sends an operator
-			// looking for a listener that was never there.
-			var deferral *daemonlife.Deferral
-			if errors.As(err, &deferral) {
-				diag.Printf("[Kaboom] Deferring to the daemon already registered for this state directory (pid=%d, port=%d, version=%s); this instance is exiting.\n",
-					deferral.PID, deferral.Port, deferral.Version)
-			} else {
-				diag.Printf("[Kaboom] A healthy daemon is already serving on port %d; this instance is exiting.\n", port)
-			}
-			return nil
+// handleStartupPolicyResult interprets EnforceStartupPolicy's outcome: deferring
+// to a healthy incumbent daemon logs, names the incumbent, and reports success
+// (clean exit); every other error propagates.
+func handleStartupPolicyResult(server *Server, port int, err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, daemonlife.ErrDeferToHealthyDaemon) {
+		// A healthy, compatible daemon already owns this port. Exit cleanly
+		// (exit 0) and let it keep serving — do NOT start a rival server or
+		// kill the incumbent. Returning nil unwinds to a graceful exit.
+		server.logLifecycle("daemon_deferred_exit", port, nil)
+		// Name the incumbent, not the port we were asked for: the lock is
+		// per state directory, so the daemon we are deferring to may be on
+		// a different port entirely, and saying otherwise sends an operator
+		// looking for a listener that was never there.
+		var deferral *daemonlife.Deferral
+		if errors.As(err, &deferral) {
+			diag.Printf("[Kaboom] Deferring to the daemon already registered for this state directory (pid=%d, port=%d, version=%s); this instance is exiting.\n",
+				deferral.PID, deferral.Port, deferral.Version)
+		} else {
+			diag.Printf("[Kaboom] A healthy daemon is already serving on port %d; this instance is exiting.\n", port)
 		}
-		return err
+		return nil
 	}
+	return err
+}
 
-	if err := server.daemonRecovery.CleanupStalePIDFile(port); err != nil {
-		return err
-	}
-	httpDeps := daemonHTTPDeps(server)
-	if err := daemonhttp.Preflight(httpDeps, port); err != nil {
+// ensurePortAvailable verifies the port is bindable; a leftover holder is
+// reclaimed once and the check retried before giving up.
+func ensurePortAvailable(server *Server, deps daemonhttp.Deps, port int, purpose string) error {
+	if err := daemonhttp.Preflight(deps, port); err != nil {
 		// A leftover process holds the main port and the lock-based takeover did
 		// not clear it. Reclaim it (find + log + kill) so we stay single-instance,
 		// then re-check; only abort if it is still stuck.
-		server.logLifecycle("port_reclaim_attempt", port, map[string]any{"purpose": "main", "reason": err.Error()})
-		server.daemonRecovery.ReclaimPort(port, "main")
-		if err := daemonhttp.Preflight(httpDeps, port); err != nil {
+		server.logLifecycle("port_reclaim_attempt", port, map[string]any{"purpose": purpose, "reason": err.Error()})
+		server.daemonRecovery.ReclaimPort(port, purpose)
+		if err := daemonhttp.Preflight(deps, port); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	// Identity and its canonical diagnostics must be ready before lifecycle
-	// assessment can publish an incident or the listener can accept a request.
-	telemetry.Warm(server.incidents)
-
-	// Crash-loop self-defense: if this SAME install (version + epoch) has restarted
-	// too many times too fast, log loudly and back off a bounded amount before binding
-	// so a pathological loop degrades gracefully instead of hammering launchd (which
-	// would throttle/disable the LaunchAgent and take the terminal server on port+1
-	// dark too). Never refuses to start; an upgrade/epoch takeover resets the counter.
-	daemonlife.ApplyStartupRestartThrottle(server.daemonRecovery.LifecycleDeps(), port)
-
-	srv, httpDone, err := daemonhttp.Start(httpDeps, port, apiKey, mux)
-	if err != nil {
-		return err
-	}
-	persistDaemonRuntimeState(server, port)
-
-	// Start dedicated terminal server on port+1.
-	// Non-fatal: if the terminal port is busy, log a warning and continue without terminal.
+// startTerminalServerWithRecovery starts the dedicated terminal server on
+// port+1, reclaiming the port once if a leftover process holds it, and records
+// availability either way. Non-fatal: the daemon continues without terminal
+// features when the port cannot be bound.
+func startTerminalServerWithRecovery(server *Server, cap *capture.Capture, port int) (int, *http.Server, <-chan struct{}) {
 	termPort := port + terminal.PortOffset
 	termMux, termRelays := setupTerminalMux(server, server.ptyManager, cap)
 	server.ptyRelays = termRelays
@@ -182,59 +237,54 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		}
 	}
 	if termErr != nil {
-		// Identify whoever holds the port. "Port busy" is not actionable; "postgres
-		// (pid 4242) is on 7891" is. This is recorded into /health because the stderr
-		// lines below go to /dev/null for a bridge-spawned daemon (spawned with
-		// Stdout/Stderr = nil so it cannot die of SIGPIPE), making the health payload
-		// the only place a user or agent can learn what happened.
-		blockingPID, blockingCmd := server.daemonRecovery.IdentifyPortHolder(termPort)
-		server.terminalStatus.SetUnavailable(termPort, termErr.Error(), blockingPID, blockingCmd)
-
-		diag.Printf("[Kaboom] WARNING: terminal server failed to start on port %d: %v\n", termPort, termErr)
-		if blockingPID > 0 {
-			diag.Printf("[Kaboom] Port %d is held by pid %d (%s).\n", termPort, blockingPID, blockingCmd)
-		}
-		diag.Printf("[Kaboom] Terminal features are unavailable. Free port %d or use a different base port.\n", termPort)
-		server.logLifecycle("terminal_server_bind_failed", termPort, map[string]any{
-			"error":          termErr.Error(),
-			"term_port":      termPort,
-			"blocked_by_pid": blockingPID,
-			"blocked_by_cmd": blockingCmd,
-		})
+		recordTerminalUnavailable(server, termPort, termErr)
 	} else {
-		server.terminalStatus.SetPort(termPort)
-		server.logLifecycle("terminal_server_started", termPort, nil)
-		// Supervise the terminal server — restart it with backoff if it dies
-		// unexpectedly, so a transient terminal-server death does not leave the
-		// terminal permanently dead until a full daemon restart. Never brings
-		// down the main daemon; never restarts during graceful shutdown.
-		sup := terminalsupervisor.New(terminalsupervisor.Dependencies{
-			Start:   startTerminalServer,
-			Reclaim: func(port int) { server.daemonRecovery.ReclaimPort(port, "terminal") },
-			SetPort: server.terminalStatus.SetPort,
-			Log:     func(event string, fields map[string]any) { server.logLifecycle(event, termPort, fields) },
-			Warn:    diag.Printf,
-		}, termPort, termMux, termSrv, termDone)
-		server.terminalSupervisor = sup
-		sup.Start()
+		wireTerminalSupervisor(server, termPort, termMux, termSrv, termDone)
 	}
+	return termPort, termSrv, termDone
+}
 
-	server.logLifecycle("startup", port, map[string]any{
-		"version":       version,
-		"go_version":    runtime.Version(),
-		"os":            runtime.GOOS,
-		"arch":          runtime.GOARCH,
-		"terminal_port": termPort,
+// recordTerminalUnavailable reports a terminal-server bind failure into the
+// health payload and stderr, naming whoever holds the port.
+func recordTerminalUnavailable(server *Server, termPort int, termErr error) {
+	// Identify whoever holds the port. "Port busy" is not actionable; "postgres
+	// (pid 4242) is on 7891" is. This is recorded into /health because the stderr
+	// lines below go to /dev/null for a bridge-spawned daemon (spawned with
+	// Stdout/Stderr = nil so it cannot die of SIGPIPE), making the health payload
+	// the only place a user or agent can learn what happened.
+	blockingPID, blockingCmd := server.daemonRecovery.IdentifyPortHolder(termPort)
+	server.terminalStatus.SetUnavailable(termPort, termErr.Error(), blockingPID, blockingCmd)
+
+	diag.Printf("[Kaboom] WARNING: terminal server failed to start on port %d: %v\n", termPort, termErr)
+	if blockingPID > 0 {
+		diag.Printf("[Kaboom] Port %d is held by pid %d (%s).\n", termPort, blockingPID, blockingCmd)
+	}
+	diag.Printf("[Kaboom] Terminal features are unavailable. Free port %d or use a different base port.\n", termPort)
+	server.logLifecycle("terminal_server_bind_failed", termPort, map[string]any{
+		"error":          termErr.Error(),
+		"term_port":      termPort,
+		"blocked_by_pid": blockingPID,
+		"blocked_by_cmd": blockingCmd,
 	})
-	server.logLifecycle("mcp_transport_ready", port, nil)
+}
 
-	// Start periodic usage beacon loop (structured tool stats every 5 minutes).
-	if tracker := mcpHandler.usageTracker; tracker != nil {
-		telemetry.StartUsageBeaconLoop(ctx, tracker)
-	}
-
-	awaitShutdownSignal(server, srv, port, httpDone, termSrv, mcpHandler)
-	return nil
+// wireTerminalSupervisor marks the terminal port live and supervises the
+// terminal server — restarting it with backoff if it dies unexpectedly, so a
+// transient terminal-server death does not leave the terminal permanently dead
+// until a full daemon restart. Never brings down the main daemon; never
+// restarts during graceful shutdown.
+func wireTerminalSupervisor(server *Server, termPort int, termMux *http.ServeMux, termSrv *http.Server, termDone <-chan struct{}) {
+	server.terminalStatus.SetPort(termPort)
+	server.logLifecycle("terminal_server_started", termPort, nil)
+	sup := terminalsupervisor.New(terminalsupervisor.Dependencies{
+		Start:   startTerminalServer,
+		Reclaim: func(port int) { server.daemonRecovery.ReclaimPort(port, "terminal") },
+		SetPort: server.terminalStatus.SetPort,
+		Log:     func(event string, fields map[string]any) { server.logLifecycle(event, termPort, fields) },
+		Warn:    diag.Printf,
+	}, termPort, termMux, termSrv, termDone)
+	server.terminalSupervisor = sup
+	sup.Start()
 }
 
 // initCapture creates and configures the capture buffers with lifecycle logging.

@@ -48,6 +48,9 @@ export declare class PerformanceTraceController {
     start(tabId: number, options?: PerformanceTraceStartOptions): Promise<PerformanceTraceStarted>;
     stop(tabId: number): Promise<PerformanceTraceFinished>;
     private requireActive;
+    private handleFrameNavigated;
+    private handleTracingComplete;
+    private uploadTraceEvents;
     private onEvent;
     private onDetach;
     private abortActive;

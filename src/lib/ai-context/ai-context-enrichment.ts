@@ -24,7 +24,12 @@ import {
   AI_CONTEXT_PIPELINE_TIMEOUT_MS
 } from '../constants.js'
 
-import { parseStackFrames, extractSourceSnippets, getSourceMapCache } from './ai-context-parsing.js'
+import {
+  parseStackFrames,
+  extractSourceSnippets,
+  getSourceMapCache,
+  type InternalStackFrame
+} from './ai-context-parsing.js'
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -367,27 +372,43 @@ export function generateAiSummary(data: AiSummaryData): string {
 // ERROR ENRICHMENT PIPELINE
 // =============================================================================
 
+async function attachSourceSnippets(result: Partial<InternalAiContext>, frames: InternalStackFrame[]): Promise<void> {
+  const topFrame = frames[0]
+  if (!topFrame) return
+  const cached = getSourceMapCache(topFrame.filename)
+  if (!cached) return
+  const snippets = await extractSourceSnippets(frames, { [topFrame.filename]: cached })
+  if (snippets.length > 0) result.sourceSnippets = snippets
+}
+
+function buildAiSummaryText(
+  error: ErrorEntryForEnrichment,
+  result: Partial<InternalAiContext>,
+  topFrame: InternalStackFrame | undefined
+): void {
+  result.summary = generateAiSummary({
+    errorType: error.message?.split(':')[0] || 'Error',
+    message: error.message || '',
+    file: topFrame?.filename || null,
+    line: topFrame?.lineno || null,
+    componentAncestry: result.componentAncestry || null,
+    stateSnapshot: result.stateSnapshot || null
+  })
+}
+
 /**
  * Full error enrichment pipeline
  * @param error - The error entry to enrich
  * @returns The enriched error entry
  */
-// #lizard forgives
 async function buildAiContext(error: ErrorEntryForEnrichment): Promise<InternalAiContext> {
   const result: Partial<InternalAiContext> = {}
   const frames = parseStackFrames(error.stack)
 
   if (frames.length === 0) return { summary: error.message || 'Unknown error' }
-  const topFrame = frames[0]
 
   // Source snippets (from cache)
-  if (topFrame) {
-    const cached = getSourceMapCache(topFrame.filename)
-    if (cached) {
-      const snippets = await extractSourceSnippets(frames, { [topFrame.filename]: cached })
-      if (snippets.length > 0) result.sourceSnippets = snippets
-    }
-  }
+  await attachSourceSnippets(result, frames)
 
   // Component ancestry from activeElement
   result.componentAncestry = extractComponentAncestry() || undefined
@@ -398,14 +419,7 @@ async function buildAiContext(error: ErrorEntryForEnrichment): Promise<InternalA
     if (snapshot) result.stateSnapshot = snapshot
   }
 
-  result.summary = generateAiSummary({
-    errorType: error.message?.split(':')[0] || 'Error',
-    message: error.message || '',
-    file: topFrame?.filename || null,
-    line: topFrame?.lineno || null,
-    componentAncestry: result.componentAncestry || null,
-    stateSnapshot: result.stateSnapshot || null
-  })
+  buildAiSummaryText(error, result, frames[0])
 
   return result as InternalAiContext
 }

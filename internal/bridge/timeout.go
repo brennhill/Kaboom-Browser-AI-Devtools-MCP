@@ -42,39 +42,52 @@ func ToolCallTimeout(method string, params json.RawMessage) time.Duration {
 	case "analyze", "interact":
 		return SlowTimeout
 	case "configure":
-		var args struct {
-			Action string `json:"action"`
-			What   string `json:"what"`
-		}
-		if json.Unmarshal(p.Arguments, &args) == nil {
-			action := args.Action
-			if action == "" {
-				action = args.What
-			}
-			switch action {
-			case "replay_sequence", "playback":
-				return SlowTimeout
-			}
-		}
-		return FastTimeout
+		return configureTimeout(p.Arguments)
 	case "observe":
-		var args struct {
-			What          string `json:"what"`
-			CorrelationID string `json:"correlation_id"`
-		}
-		if json.Unmarshal(p.Arguments, &args) == nil {
-			if args.What == "command_result" &&
-				len(args.CorrelationID) > 4 && args.CorrelationID[:4] == "ann_" {
-				return BlockingPoll
-			}
-			if args.What == "screenshot" {
-				return SlowTimeout
-			}
-		}
-		return FastTimeout
+		return observeTimeout(p.Arguments)
 	default:
 		return FastTimeout
 	}
+}
+
+func configureTimeout(args json.RawMessage) time.Duration {
+	var a struct {
+		Action string `json:"action"`
+		What   string `json:"what"`
+	}
+	if json.Unmarshal(args, &a) != nil {
+		return FastTimeout
+	}
+	action := a.Action
+	if action == "" {
+		action = a.What
+	}
+	switch action {
+	case "replay_sequence", "playback":
+		return SlowTimeout
+	}
+	return FastTimeout
+}
+
+func observeTimeout(args json.RawMessage) time.Duration {
+	var a struct {
+		What          string `json:"what"`
+		CorrelationID string `json:"correlation_id"`
+	}
+	if json.Unmarshal(args, &a) != nil {
+		return FastTimeout
+	}
+	if a.What == "command_result" && isAnnotationCorrelationID(a.CorrelationID) {
+		return BlockingPoll
+	}
+	if a.What == "screenshot" {
+		return SlowTimeout
+	}
+	return FastTimeout
+}
+
+func isAnnotationCorrelationID(correlationID string) bool {
+	return len(correlationID) > 4 && correlationID[:4] == "ann_"
 }
 
 // ExtractToolAction extracts the tool name and action parameter from a tools/call request.

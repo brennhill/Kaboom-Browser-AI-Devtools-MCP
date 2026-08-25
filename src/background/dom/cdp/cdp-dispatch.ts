@@ -366,6 +366,62 @@ async function cdpDispatchSingleKey(tabId: number, key: string): Promise<void> {
   }
 }
 
+/** Execute the CDP input action for click/type/key_press. Returns false when the action's payload is unusable. */
+async function cdpExecuteAction(
+  tabId: number,
+  action: string,
+  params: DOMActionParams,
+  selector: string,
+  resolved: NonNullable<Awaited<ReturnType<typeof resolveElement>>>
+): Promise<boolean> {
+  if (action === 'click') {
+    await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x: resolved.x,
+      y: resolved.y,
+      button: 'left',
+      clickCount: 1
+    })
+    await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      x: resolved.x,
+      y: resolved.y,
+      button: 'left',
+      clickCount: 1
+    })
+    return true
+  }
+  if (action === 'type') {
+    const text = params.text || ''
+    if (!text) return false
+    if (params.clear) await cdpClearField(tabId)
+    await cdpDispatchKeySequence(tabId, text)
+    // #599: CDP keystrokes leave React's controlled-input value tracker stale,
+    // suppressing onChange. Reconcile through the native setter so onChange fires.
+    // Best-effort: the value is already typed even if reconciliation is skipped.
+    if (selector) {
+      try {
+        await cdpSend(tabId, 'Runtime.evaluate', {
+          expression: buildReactValueReconcileExpression(selector),
+          returnByValue: true
+        })
+      } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+        /* reconciliation failed — value is still typed into the DOM */
+      }
+    }
+    return true
+  }
+  if (action === 'key_press') {
+    const key = params.text || ''
+    if (!key) return false
+    await cdpDispatchSingleKey(tabId, key)
+    return true
+  }
+  return true
+}
+
 /**
  * Attempt CDP-first execution for click/type/key_press.
  * Returns a DOMResult on success, or null to signal fallback to DOM primitives.
@@ -396,46 +452,7 @@ export async function tryCDPEscalation(
 
     try {
       // Step 3: Execute CDP action
-      if (action === 'click') {
-        await cdpSend(tabId, 'Input.dispatchMouseEvent', {
-          type: 'mousePressed',
-          x: resolved.x,
-          y: resolved.y,
-          button: 'left',
-          clickCount: 1
-        })
-        await cdpSend(tabId, 'Input.dispatchMouseEvent', {
-          type: 'mouseReleased',
-          x: resolved.x,
-          y: resolved.y,
-          button: 'left',
-          clickCount: 1
-        })
-      } else if (action === 'type') {
-        const text = params.text || ''
-        if (!text) return null
-        if (params.clear) await cdpClearField(tabId)
-        await cdpDispatchKeySequence(tabId, text)
-        // #599: CDP keystrokes leave React's controlled-input value tracker stale,
-        // suppressing onChange. Reconcile through the native setter so onChange fires.
-        // Best-effort: the value is already typed even if reconciliation is skipped.
-        if (selector) {
-          try {
-            await cdpSend(tabId, 'Runtime.evaluate', {
-              expression: buildReactValueReconcileExpression(selector),
-              returnByValue: true
-            })
-          } catch {
-            // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-            // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-            /* reconciliation failed — value is still typed into the DOM */
-          }
-        }
-      } else if (action === 'key_press') {
-        const key = params.text || ''
-        if (!key) return null
-        await cdpDispatchSingleKey(tabId, key)
-      }
+      if (!(await cdpExecuteAction(tabId, action, params, selector, resolved))) return null
 
       // Step 4: Build DOMResult with matched evidence
       return buildCDPResult(action, selector, resolved, Date.now() - startTime)

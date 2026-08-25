@@ -225,9 +225,24 @@ func hasCargoTestMarkers(lines []string) bool {
 // --- Test runner compressors (complex, bespoke logic) ---
 
 func compressGoTest(lines []string) string {
-	var passed, failed, summaryLines []string
-	failDetails := map[string]string{} // failed test -> first error line
-	var durations []string
+	scan := scanGoTest(lines)
+	if len(scan.passed) == 0 && len(scan.failed) == 0 && len(scan.summaryLines) == 0 {
+		return ""
+	}
+	return renderGoTestSummary(scan)
+}
+
+type goTestScan struct {
+	passed       []string
+	failed       []string
+	summaryLines []string
+	failDetails  map[string]string
+	durations    []string
+}
+
+func scanGoTest(lines []string) goTestScan {
+	var scan goTestScan
+	scan.failDetails = map[string]string{}
 	var currentRun string
 	var pendingErrors []string
 
@@ -241,51 +256,55 @@ func compressGoTest(lines []string) string {
 			}
 			pendingErrors = nil
 		case strings.HasPrefix(s, "--- PASS:"):
-			passed = append(passed, s)
+			scan.passed = append(scan.passed, s)
 			currentRun = ""
 			pendingErrors = nil
 		case strings.HasPrefix(s, "--- FAIL:"):
-			failed = append(failed, s)
+			scan.failed = append(scan.failed, s)
 			if len(pendingErrors) > 0 {
-				failDetails[s] = pendingErrors[0]
+				scan.failDetails[s] = pendingErrors[0]
 			}
 			currentRun = ""
 			pendingErrors = nil
 		case strings.HasPrefix(s, "FAIL") && !strings.HasPrefix(s, "--- FAIL:"):
-			summaryLines = append(summaryLines, s)
+			scan.summaryLines = append(scan.summaryLines, s)
 		case strings.HasPrefix(s, "ok "):
-			summaryLines = append(summaryLines, s)
+			scan.summaryLines = append(scan.summaryLines, s)
 			if m := durationPattern.FindString(s); m != "" {
-				durations = append(durations, m)
+				scan.durations = append(scan.durations, m)
 			}
 		default:
-			if currentRun != "" && s != "" && !strings.HasPrefix(s, "===") {
+			if isPendingErrorLine(s, currentRun) {
 				pendingErrors = append(pendingErrors, s)
 			}
 		}
 	}
 
-	if len(passed) == 0 && len(failed) == 0 && len(summaryLines) == 0 {
-		return ""
-	}
+	return scan
+}
 
+func isPendingErrorLine(s, currentRun string) bool {
+	return currentRun != "" && s != "" && !strings.HasPrefix(s, "===")
+}
+
+func renderGoTestSummary(scan goTestScan) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "go test summary: %d passed, %d failed", len(passed), len(failed))
-	if len(durations) > 0 {
-		fmt.Fprintf(&b, "\nduration: %s", durations[len(durations)-1])
+	fmt.Fprintf(&b, "go test summary: %d passed, %d failed", len(scan.passed), len(scan.failed))
+	if len(scan.durations) > 0 {
+		fmt.Fprintf(&b, "\nduration: %s", scan.durations[len(scan.durations)-1])
 	}
-	if len(failed) > 0 {
+	if len(scan.failed) > 0 {
 		b.WriteString("\n\nFAILED TESTS:")
-		for _, f := range failed {
+		for _, f := range scan.failed {
 			fmt.Fprintf(&b, "\n  %s", f)
-			if detail, ok := failDetails[f]; ok {
+			if detail, ok := scan.failDetails[f]; ok {
 				fmt.Fprintf(&b, "\n    %s", detail)
 			}
 		}
 	}
-	if len(summaryLines) > 0 {
+	if len(scan.summaryLines) > 0 {
 		b.WriteString("\n")
-		for _, s := range summaryLines {
+		for _, s := range scan.summaryLines {
 			fmt.Fprintf(&b, "\n%s", s)
 		}
 	}

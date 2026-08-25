@@ -123,23 +123,7 @@ func Handle(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager,
 	history, sub, subErr := relay.SubscribeWithHistory(subID)
 
 	// Replay scrollback so the reconnecting (or first-connecting) terminal sees prior output.
-	if len(history) > 0 {
-		for off := 0; off < len(history); off += sessionrelay.BufferSize {
-			end := off + sessionrelay.BufferSize
-			if end > len(history) {
-				end = len(history)
-			}
-			if err := writeFrame(0x2, history[off:end]); err != nil {
-				if subErr == nil {
-					relay.Fanout().Unsubscribe(subID)
-				}
-				_ = conn.Close()
-				return
-			}
-		}
-	}
-	replayEnd, _ := json.Marshal(map[string]string{"type": "replay_end"})
-	if err := writeFrame(0x1, replayEnd); err != nil {
+	if err := replayScrollback(history, writeFrame); err != nil {
 		if subErr == nil {
 			relay.Fanout().Unsubscribe(subID)
 		}
@@ -165,9 +149,37 @@ func Handle(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager,
 	}
 
 	deps.logEvent("terminal_ws_connect", map[string]any{"session_id": sess.ID, "sub_id": subID})
-	wsLoop(conn, bufrw, deps, sess, relay, sub, writeFrame)
+	wsLoop(conn, bufrw, deps, wsTerminal{sess: sess, relay: relay, sub: sub, writeFrame: writeFrame})
 	relay.Fanout().Unsubscribe(subID)
 	deps.logEvent("terminal_ws_disconnect", map[string]any{"session_id": sess.ID, "sub_id": subID})
+}
+
+// replayScrollback streams the scrollback snapshot as binary frames in
+// BufferSize chunks, then sends the replay_end marker.
+func replayScrollback(history []byte, writeFrame func(opcode byte, payload []byte) error) error {
+	if len(history) > 0 {
+		for off := 0; off < len(history); off += sessionrelay.BufferSize {
+			end := off + sessionrelay.BufferSize
+			if end > len(history) {
+				end = len(history)
+			}
+			if err := writeFrame(0x2, history[off:end]); err != nil {
+				return err
+			}
+		}
+	}
+	replayEnd, _ := json.Marshal(map[string]string{"type": "replay_end"})
+	return writeFrame(0x1, replayEnd)
+}
+
+// wsTerminal bundles the PTY-side state the WebSocket relay loops share: the
+// session, its relay, the subscriber channel feeding downstream writes, and the
+// shared deadline-bound frame writer.
+type wsTerminal struct {
+	sess       *pty.Session
+	relay      *sessionrelay.Relay
+	sub        <-chan []byte
+	writeFrame func(opcode byte, payload []byte) error
 }
 
 // wsLoop relays data between a WebSocket connection and a PTY session.
@@ -181,12 +193,12 @@ func Handle(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager,
 // closeConn function. Any goroutine that detects a terminal condition calls closeConn(),
 // which closes connDone (unblocking the others) then closes the underlying TCP connection
 // exactly once. This prevents double-close races and goroutine leaks.
-// writeFrame is the shared, deadline-bound frame writer created in
+// term.writeFrame is the shared, deadline-bound frame writer created in
 // HandleTerminalWS right after the handshake and threaded through here, so the
 // pre-loop replay writes and wsLoop's downstream/ping/control writes all serialize
 // on ONE mutex (a second NewFrameWriter would double-serialize on a different
 // mutex and defeat the shared-writer invariant).
-func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, relay *sessionrelay.Relay, sub <-chan []byte, writeFrame func(opcode byte, payload []byte) error) {
+func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, term wsTerminal) {
 	// Coordinated shutdown: connDone signals all goroutines to exit,
 	// closeConn ensures conn.Close() is called exactly once.
 	connDone := make(chan struct{})
@@ -201,73 +213,17 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 	// Fan-out -> WebSocket (downstream): read from subscriber channel and send as binary frames.
 	// Also tracks alt-screen state changes and notifies the frontend.
 	downstreamDone := make(chan struct{})
-	goConnWorker(deps, sess.ID, "downstream", closeConn, func() {
+	goConnWorker(deps, term.sess.ID, "downstream", closeConn, func() {
 		defer close(downstreamDone)
-		prevAltScreen := sess.AltScreenActive()
-		for {
-			select {
-			case data, ok := <-sub:
-				if !ok {
-					if relay.Ended() {
-						// Session genuinely ended — send exit notification so the
-						// browser can display the message and stop reconnecting.
-						exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.ExitCode()})
-						_ = writeFrame(0x1, exitMsg)
-					} else {
-						// This subscriber was dropped for being slow (fanout
-						// backpressure) while the shell is still running. Do NOT
-						// declare it `exited` — just close so the browser reconnects
-						// and replays scrollback instead of showing a dead terminal.
-						deps.logEvent("terminal_ws_subscriber_dropped", map[string]any{"session_id": sess.ID})
-					}
-					_ = writeFrame(0x8, nil)
-					closeConn()
-					return
-				}
-				if err := writeFrame(0x2, data); err != nil {
-					closeConn()
-					return
-				}
-				// Notify frontend of alt-screen state changes.
-				altScreen := sess.AltScreenActive()
-				if altScreen != prevAltScreen {
-					prevAltScreen = altScreen
-					ctrl, _ := json.Marshal(map[string]any{"type": "alt_screen", "active": altScreen})
-					_ = writeFrame(0x1, ctrl)
-				}
-			case <-connDone:
-				return
-			}
-		}
+		pumpDownstream(connDone, deps, term, closeConn)
 	})
 
 	// Server-initiated ping keepalive — detects dead connections (browser crash,
 	// laptop sleep) without ever timing out idle users.
 	pingTicker := time.NewTicker(PingInterval)
-	goConnWorker(deps, sess.ID, "ping", closeConn, func() {
+	goConnWorker(deps, term.sess.ID, "ping", closeConn, func() {
 		defer pingTicker.Stop()
-		for {
-			select {
-			case <-connDone:
-				return
-			case <-pingTicker.C:
-				if err := writeFrame(0x9, nil); err != nil {
-					closeConn()
-					return
-				}
-				// Also send an application-level keepalive the BROWSER can observe.
-				// The ping above is a WebSocket control frame: the browser answers it
-				// automatically but never surfaces it to JS, so page code has no way
-				// to tell a live-but-idle terminal from a half-open socket (suspend,
-				// NAT rebind — no FIN/RST, readyState stays OPEN). Without an
-				// observable signal the client shows a connected dot while keystrokes
-				// vanish. A text frame is visible to onmessage, so the client can run
-				// its own liveness watchdog. Non-fatal: the ping already governs
-				// connection health, so a failed keepalive must not tear down a
-				// connection the ping considers fine.
-				_ = writeFrame(0x1, []byte(`{"type":"keepalive"}`))
-			}
-		}
+		pingKeepalive(connDone, pingTicker, term.writeFrame, closeConn)
 	})
 
 	// WebSocket -> PTY (upstream): read frames and dispatch.
@@ -275,54 +231,128 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 	// NOTE: Do NOT call sess.Close() on WebSocket disconnect — the session
 	// must survive page refreshes so the browser can reconnect with scrollback replay.
 	// Sessions are only killed explicitly via POST /terminal/stop (the Exit button).
-	goConnWorker(deps, sess.ID, "upstream", closeConn, func() {
+	goConnWorker(deps, term.sess.ID, "upstream", closeConn, func() {
 		defer closeConn() // Close conn on exit so downstream detects it and browser auto-reconnects
-		for {
-			// Refresh read deadline on every iteration — any received frame
-			// (data, pong, ping) proves the connection is alive.
-			_ = conn.SetReadDeadline(time.Now().Add(PongTimeout))
-
-			fin, opcode, payload, err := deps.WSReadFrame(rw)
-			if err != nil {
-				// Read deadline expired or connection error — close silently.
-				// PTY stays alive for reconnection.
-				return
-			}
-
-			// Reject fragmented frames (FIN=0). Terminal messages are always
-			// single-frame; accepting fragments would require reassembly state
-			// and risks incomplete data being written to the PTY.
-			if !fin {
-				_ = writeFrame(0x8, nil) // Send close frame per RFC 6455.
-				return
-			}
-
-			switch opcode {
-			case 0x8: // Close
-				_ = writeFrame(0x8, nil)
-				return // WebSocket closed — stop relaying but keep PTY alive
-			case 0x9: // Ping -> Pong
-				_ = writeFrame(0xA, payload)
-			case 0xA: // Pong — no-op, deadline already refreshed above
-			case 0x2: // Binary — raw keystrokes -> PTY stdin via write buffer
-				if _, werr := relay.WriteBuf().Write(payload); werr != nil {
-					// The keystrokes did NOT reach the shell. Dropping them silently
-					// is exactly the "typed input vanished" report we cannot diagnose
-					// afterwards (rule 25), and the two causes need different
-					// responses, so the reason is recorded, not just the drop.
-					deps.logEvent("terminal_input_dropped", map[string]any{
-						"session_id": sess.ID,
-						"bytes":      len(payload),
-						"reason":     writeDropReason(werr),
-					})
-				}
-			case 0x1: // Text — JSON control message
-				HandleControlMessage(payload, sess)
-			}
-		}
+		pumpUpstream(conn, rw, deps, term.sess, term.relay, term.writeFrame)
 	})
 
 	<-downstreamDone
+}
+
+// pumpDownstream relays fan-out data to the WebSocket as binary frames and
+// notifies the frontend of alt-screen state changes.
+func pumpDownstream(connDone <-chan struct{}, deps Deps, term wsTerminal, closeConn func()) {
+	sess, relay, sub, writeFrame := term.sess, term.relay, term.sub, term.writeFrame
+	prevAltScreen := sess.AltScreenActive()
+	for {
+		select {
+		case data, ok := <-sub:
+			if !ok {
+				if relay.Ended() {
+					// Session genuinely ended — send exit notification so the
+					// browser can display the message and stop reconnecting.
+					exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.ExitCode()})
+					_ = writeFrame(0x1, exitMsg)
+				} else {
+					// This subscriber was dropped for being slow (fanout
+					// backpressure) while the shell is still running. Do NOT
+					// declare it `exited` — just close so the browser reconnects
+					// and replays scrollback instead of showing a dead terminal.
+					deps.logEvent("terminal_ws_subscriber_dropped", map[string]any{"session_id": sess.ID})
+				}
+				_ = writeFrame(0x8, nil)
+				closeConn()
+				return
+			}
+			if err := writeFrame(0x2, data); err != nil {
+				closeConn()
+				return
+			}
+			// Notify frontend of alt-screen state changes.
+			altScreen := sess.AltScreenActive()
+			if altScreen != prevAltScreen {
+				prevAltScreen = altScreen
+				ctrl, _ := json.Marshal(map[string]any{"type": "alt_screen", "active": altScreen})
+				_ = writeFrame(0x1, ctrl)
+			}
+		case <-connDone:
+			return
+		}
+	}
+}
+
+// pingKeepalive probes an idle connection on every tick with a WebSocket ping
+// plus an application-level keepalive the BROWSER can observe. The ping is a
+// WebSocket control frame: the browser answers it automatically but never
+// surfaces it to JS, so page code has no way to tell a live-but-idle terminal
+// from a half-open socket (suspend, NAT rebind — no FIN/RST, readyState stays
+// OPEN). Without an observable signal the client shows a connected dot while
+// keystrokes vanish. A text frame is visible to onmessage, so the client can run
+// its own liveness watchdog. The keepalive write is non-fatal: the ping already
+// governs connection health, so a failed keepalive must not tear down a
+// connection the ping considers fine.
+func pingKeepalive(connDone <-chan struct{}, pingTicker *time.Ticker, writeFrame func(opcode byte, payload []byte) error, closeConn func()) {
+	for {
+		select {
+		case <-connDone:
+			return
+		case <-pingTicker.C:
+			if err := writeFrame(0x9, nil); err != nil {
+				closeConn()
+				return
+			}
+			_ = writeFrame(0x1, []byte(`{"type":"keepalive"}`))
+		}
+	}
+}
+
+// pumpUpstream reads WebSocket frames from the browser and dispatches them:
+// binary frames as keystrokes via the relay's write buffer, text frames as JSON
+// control messages. Non-blocking writes with backpressure.
+func pumpUpstream(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, relay *sessionrelay.Relay, writeFrame func(opcode byte, payload []byte) error) {
+	for {
+		// Refresh read deadline on every iteration — any received frame
+		// (data, pong, ping) proves the connection is alive.
+		_ = conn.SetReadDeadline(time.Now().Add(PongTimeout))
+
+		fin, opcode, payload, err := deps.WSReadFrame(rw)
+		if err != nil {
+			// Read deadline expired or connection error — close silently.
+			// PTY stays alive for reconnection.
+			return
+		}
+
+		// Reject fragmented frames (FIN=0). Terminal messages are always
+		// single-frame; accepting fragments would require reassembly state
+		// and risks incomplete data being written to the PTY.
+		if !fin {
+			_ = writeFrame(0x8, nil) // Send close frame per RFC 6455.
+			return
+		}
+
+		switch opcode {
+		case 0x8: // Close
+			_ = writeFrame(0x8, nil)
+			return // WebSocket closed — stop relaying but keep PTY alive
+		case 0x9: // Ping -> Pong
+			_ = writeFrame(0xA, payload)
+		case 0xA: // Pong — no-op, deadline already refreshed above
+		case 0x2: // Binary — raw keystrokes -> PTY stdin via write buffer
+			if _, werr := relay.WriteBuf().Write(payload); werr != nil {
+				// The keystrokes did NOT reach the shell. Dropping them silently
+				// is exactly the "typed input vanished" report we cannot diagnose
+				// afterwards (rule 25), and the two causes need different
+				// responses, so the reason is recorded, not just the drop.
+				deps.logEvent("terminal_input_dropped", map[string]any{
+					"session_id": sess.ID,
+					"bytes":      len(payload),
+					"reason":     writeDropReason(werr),
+				})
+			}
+		case 0x1: // Text — JSON control message
+			HandleControlMessage(payload, sess)
+		}
+	}
 }
 
 // writeDropReason names why a PTY write was refused, so the log distinguishes a

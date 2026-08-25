@@ -28,6 +28,27 @@
     }
   }
 
+  function viewportSize(): { width: number; height: number } {
+    // #384: Prefer in-viewport actionable targets for disambiguation.
+    const height = typeof window !== 'undefined' && typeof window.innerHeight === 'number'
+      ? window.innerHeight
+      : (typeof document !== 'undefined' && document.documentElement ? Number(document.documentElement.clientHeight || 0) : 0)
+    const width = typeof window !== 'undefined' && typeof window.innerWidth === 'number'
+      ? window.innerWidth
+      : (typeof document !== 'undefined' && document.documentElement ? Number(document.documentElement.clientWidth || 0) : 0)
+    return { width, height }
+  }
+
+  function rectIntersectsViewport(rect: DOMRect, viewWidth: number, viewHeight: number): boolean {
+    const left = typeof rect.left === 'number' ? rect.left : (typeof rect.x === 'number' ? rect.x : 0)
+    const top = typeof rect.top === 'number' ? rect.top : (typeof rect.y === 'number' ? rect.y : 0)
+    const right = typeof rect.right === 'number' ? rect.right : left + rect.width
+    const bottom = typeof rect.bottom === 'number' ? rect.bottom : top + rect.height
+    const intersectsX = viewWidth <= 0 || (right > 0 && left < viewWidth)
+    const intersectsY = viewHeight <= 0 || (bottom > 0 && top < viewHeight)
+    return intersectsX && intersectsY
+  }
+
   function isActionableVisible(el: Element): boolean {
     if (!(el instanceof HTMLElement)) return true
     const rect = typeof el.getBoundingClientRect === 'function'
@@ -40,20 +61,8 @@
       if (position !== 'fixed' && position !== 'sticky') return false
     }
 
-    // #384: Prefer in-viewport actionable targets for disambiguation.
-    const viewHeight = typeof window !== 'undefined' && typeof window.innerHeight === 'number'
-      ? window.innerHeight
-      : (typeof document !== 'undefined' && document.documentElement ? Number(document.documentElement.clientHeight || 0) : 0)
-    const viewWidth = typeof window !== 'undefined' && typeof window.innerWidth === 'number'
-      ? window.innerWidth
-      : (typeof document !== 'undefined' && document.documentElement ? Number(document.documentElement.clientWidth || 0) : 0)
-    const left = typeof rect.left === 'number' ? rect.left : (typeof rect.x === 'number' ? rect.x : 0)
-    const top = typeof rect.top === 'number' ? rect.top : (typeof rect.y === 'number' ? rect.y : 0)
-    const right = typeof rect.right === 'number' ? rect.right : left + rect.width
-    const bottom = typeof rect.bottom === 'number' ? rect.bottom : top + rect.height
-    const intersectsX = viewWidth <= 0 || (right > 0 && left < viewWidth)
-    const intersectsY = viewHeight <= 0 || (bottom > 0 && top < viewHeight)
-    return intersectsX && intersectsY
+    const { width: viewWidth, height: viewHeight } = viewportSize()
+    return rectIntersectsViewport(rect, viewWidth, viewHeight)
   }
 
   function extractBoundingBox(el: Element): { x: number; y: number; width: number; height: number } {

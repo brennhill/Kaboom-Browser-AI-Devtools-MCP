@@ -37,24 +37,26 @@ describe('terminal reconnect-recovery contract', () => {
   })
 
   test('parent handles reconnect_exhausted by revalidating and rebuilding', () => {
-    // The parent must have a case for the exact event the iframe emits, and it must
-    // route to redrawTerminal (which validates the token and rebuilds if dead).
+    // The parent must route the exact event the iframe emits to a dedicated
+    // handler, and that handler must call redrawTerminal (which validates the
+    // token and rebuilds if dead).
     assert.match(
       sidepanel,
-      /case\s*['"]reconnect_exhausted['"]\s*:/,
-      'sidepanel.ts must handle the reconnect_exhausted event'
+      /reconnect_exhausted:\s*handleReconnectExhausted/,
+      'sidepanel.ts must route the reconnect_exhausted event to handleReconnectExhausted'
     )
-    const idx = sidepanel.indexOf("case 'reconnect_exhausted'")
-    // Slice the whole case body — from this case label to the next `case '` — instead
-    // of a fixed-width window. The recovery path legitimately grows (e.g. the bounded
-    // exhaustion-recovery ceiling guard for a flapping daemon sits BEFORE the
-    // redrawTerminal() call), and a brittle fixed slice silently breaks when it does.
-    const nextCase = sidepanel.indexOf("case '", idx + 'case '.length)
-    const caseBody = sidepanel.slice(idx, nextCase === -1 ? idx + 2000 : nextCase)
+    const idx = sidepanel.indexOf('function handleReconnectExhausted')
+    // Slice the whole handler body — from its declaration to the next top-level
+    // function — instead of a fixed-width window. The recovery path legitimately
+    // grows (e.g. the bounded exhaustion-recovery ceiling guard for a flapping
+    // daemon sits BEFORE the redrawTerminal() call), and a brittle fixed slice
+    // silently breaks when it does.
+    const nextFn = sidepanel.indexOf('\nfunction ', idx + 1)
+    const handlerBody = sidepanel.slice(idx, nextFn === -1 ? idx + 3000 : nextFn)
     assert.match(
-      caseBody,
+      handlerBody,
       /redrawTerminal\(\)/,
-      'reconnect_exhausted must trigger redrawTerminal (validate-then-rebuild recovery)'
+      'handleReconnectExhausted must trigger redrawTerminal (validate-then-rebuild recovery)'
     )
   })
 

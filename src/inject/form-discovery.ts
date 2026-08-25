@@ -111,6 +111,101 @@ function getValidationConstraints(
   return constraints
 }
 
+function collectFormField(
+  field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+  mode: 'discover' | 'validate' | undefined
+): FormFieldInfo {
+  const fieldType = field.getAttribute('type') || field.tagName.toLowerCase()
+
+  const fieldInfo: FormFieldInfo = {
+    name: field.name || '',
+    type: fieldType,
+    required: field.required,
+    value: field.value || '',
+    label: findLabel(field),
+    selector: buildFieldSelector(field),
+    tag: field.tagName.toLowerCase(),
+    validation_constraints: getValidationConstraints(field)
+  }
+
+  // Add options for select elements
+  if (field.tagName === 'SELECT') {
+    const select = field as HTMLSelectElement
+    fieldInfo.options = Array.from(select.options).map((opt) => ({
+      value: opt.value,
+      text: opt.text,
+      selected: opt.selected
+    }))
+  }
+
+  // Add validation message in validate mode
+  if (mode === 'validate') {
+    field.checkValidity()
+    if (field.validationMessage) {
+      fieldInfo.validation_message = field.validationMessage
+    }
+  }
+
+  return fieldInfo
+}
+
+function collectFormFields(
+  form: HTMLFormElement,
+  mode: 'discover' | 'validate' | undefined,
+  maxFields: number
+): FormFieldInfo[] {
+  const fieldElements = form.querySelectorAll('input, select, textarea')
+  const fields: FormFieldInfo[] = []
+
+  for (let j = 0; j < fieldElements.length && fields.length < maxFields; j++) {
+    const field = fieldElements[j]! as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    // Skip hidden inputs
+    if ((field.getAttribute('type') || field.tagName.toLowerCase()) === 'hidden') continue
+    fields.push(collectFormField(field, mode))
+  }
+
+  return fields
+}
+
+function findSubmitButton(form: HTMLFormElement): { selector: string; text: string } | null {
+  const submitEl =
+    form.querySelector('button[type="submit"], input[type="submit"]') ||
+    form.querySelector('button:not([type]), button[type="button"]')
+  if (!submitEl) return null
+  return {
+    selector: buildFieldSelector(submitEl),
+    text: (submitEl.textContent || (submitEl as HTMLInputElement).value || '').trim().slice(0, 100)
+  }
+}
+
+function buildFormInfo(
+  form: HTMLFormElement,
+  fields: FormFieldInfo[],
+  submitButton: { selector: string; text: string } | null
+): FormInfo {
+  return {
+    action: form.action || '',
+    method: (form.method || 'GET').toUpperCase(),
+    selector: buildFormSelector(form),
+    id: form.id || '',
+    name: form.name || '',
+    fields,
+    submit_button: submitButton
+  }
+}
+
+function applyFormValidation(form: HTMLFormElement, formInfo: FormInfo, fields: FormFieldInfo[]): void {
+  formInfo.valid = form.checkValidity()
+  if (!formInfo.valid) {
+    formInfo.validation_errors = fields
+      .filter((f) => f.validation_message)
+      .map((f) => ({
+        field: f.name || f.selector,
+        message: f.validation_message!
+      }))
+  }
+}
+
 /**
  * Discover forms on the page.
  */
@@ -127,81 +222,13 @@ export function discoverForms(params: FormDiscoveryParams): FormInfo[] {
     // Skip if the element isn't actually a form when using a generic selector
     if (form.tagName !== 'FORM') continue
 
-    const fieldElements = form.querySelectorAll('input, select, textarea')
-    const fields: FormFieldInfo[] = []
-
-    for (let j = 0; j < fieldElements.length && fields.length < MAX_FIELDS; j++) {
-      const field = fieldElements[j]! as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-      const fieldType = field.getAttribute('type') || field.tagName.toLowerCase()
-
-      // Skip hidden inputs
-      if (fieldType === 'hidden') continue
-
-      const fieldInfo: FormFieldInfo = {
-        name: field.name || '',
-        type: fieldType,
-        required: field.required,
-        value: field.value || '',
-        label: findLabel(field),
-        selector: buildFieldSelector(field),
-        tag: field.tagName.toLowerCase(),
-        validation_constraints: getValidationConstraints(field)
-      }
-
-      // Add options for select elements
-      if (field.tagName === 'SELECT') {
-        const select = field as HTMLSelectElement
-        fieldInfo.options = Array.from(select.options).map((opt) => ({
-          value: opt.value,
-          text: opt.text,
-          selected: opt.selected
-        }))
-      }
-
-      // Add validation message in validate mode
-      if (params.mode === 'validate') {
-        field.checkValidity()
-        if (field.validationMessage) {
-          fieldInfo.validation_message = field.validationMessage
-        }
-      }
-
-      fields.push(fieldInfo)
-    }
-
-    // Find submit button
-    let submitButton: { selector: string; text: string } | null = null
-    const submitEl =
-      form.querySelector('button[type="submit"], input[type="submit"]') ||
-      form.querySelector('button:not([type]), button[type="button"]')
-    if (submitEl) {
-      submitButton = {
-        selector: buildFieldSelector(submitEl),
-        text: (submitEl.textContent || (submitEl as HTMLInputElement).value || '').trim().slice(0, 100)
-      }
-    }
-
-    const formInfo: FormInfo = {
-      action: form.action || '',
-      method: (form.method || 'GET').toUpperCase(),
-      selector: buildFormSelector(form),
-      id: form.id || '',
-      name: form.name || '',
-      fields,
-      submit_button: submitButton
-    }
+    const fields = collectFormFields(form, params.mode, MAX_FIELDS)
+    const submitButton = findSubmitButton(form)
+    const formInfo = buildFormInfo(form, fields, submitButton)
 
     // Add validation results in validate mode
     if (params.mode === 'validate') {
-      formInfo.valid = form.checkValidity()
-      if (!formInfo.valid) {
-        formInfo.validation_errors = fields
-          .filter((f) => f.validation_message)
-          .map((f) => ({
-            field: f.name || f.selector,
-            message: f.validation_message!
-          }))
-      }
+      applyFormValidation(form, formInfo, fields)
     }
 
     results.push(formInfo)

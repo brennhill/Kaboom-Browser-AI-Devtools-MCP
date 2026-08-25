@@ -103,9 +103,19 @@ func (h *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 	response := toolrouting.Dispatch(h, req, args, h.registry)
 	failed := act.IsErrorResponse(response)
 
-	if params.Subtitle != nil && what != "subtitle" && !failed && h.deps.QueueSubtitle != nil {
-		h.deps.QueueSubtitle(req, *params.Subtitle)
+	h.queueSubtitleEffect(req, params, what, failed)
+	hasSideEffects := h.queueStabilizingEffects(req, params, what, failed)
+	return h.applyResponseEnrichments(response, req, params, failed, hasSideEffects)
+}
+
+func (h *Handler) queueSubtitleEffect(req mcp.JSONRPCRequest, params composableArgs, what string, failed bool) {
+	if params.Subtitle == nil || what == "subtitle" || failed || h.deps.QueueSubtitle == nil {
+		return
 	}
+	h.deps.QueueSubtitle(req, *params.Subtitle)
+}
+
+func (h *Handler) queueStabilizingEffects(req mcp.JSONRPCRequest, params composableArgs, what string, failed bool) bool {
 	hasSideEffects := false
 	if params.AutoDismiss && what == "navigate" && !failed && h.deps.QueueAutoDismiss != nil {
 		h.deps.QueueAutoDismiss(req)
@@ -119,6 +129,10 @@ func (h *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 		h.deps.QueueActionDiff(req)
 		hasSideEffects = true
 	}
+	return hasSideEffects
+}
+
+func (h *Handler) applyResponseEnrichments(response mcp.JSONRPCResponse, req mcp.JSONRPCRequest, params composableArgs, failed bool, hasSideEffects bool) mcp.JSONRPCResponse {
 	if hasSideEffects && params.IncludeScreenshot {
 		h.deps.Delay(composableSideEffectDelay)
 	}

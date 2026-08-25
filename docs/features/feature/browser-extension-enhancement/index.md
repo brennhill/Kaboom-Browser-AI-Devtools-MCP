@@ -4,7 +4,7 @@ feature_id: feature-browser-extension-enhancement
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-25
 code_paths:
   - src/lib/diagnostics/page-capture.ts
   - src/types/runtime/telemetry-messages.ts

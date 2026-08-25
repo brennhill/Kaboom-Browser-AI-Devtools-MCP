@@ -113,10 +113,7 @@ func parseCount(value any) (int, bool) {
 	case int32:
 		return int(v), true
 	case int64:
-		if v > int64(math.MaxInt) || v < int64(math.MinInt) {
-			return 0, false
-		}
-		return int(v), true
+		return intFromInt64(v)
 	case uint:
 		return intFromUint64(uint64(v))
 	case uint8:
@@ -132,15 +129,26 @@ func parseCount(value any) (int, bool) {
 	case float64:
 		return int(v), true
 	case json.Number:
-		if parsed, err := strconv.Atoi(v.String()); err == nil {
-			return parsed, true
-		}
+		return parseCountString(v.String())
 	case string:
-		if parsed, err := strconv.Atoi(v); err == nil {
-			return parsed, true
-		}
+		return parseCountString(v)
 	}
 	return 0, false
+}
+
+func parseCountString(value string) (int, bool) {
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, false
+	}
+	return parsed, true
+}
+
+func intFromInt64(value int64) (int, bool) {
+	if value > int64(math.MaxInt) || value < int64(math.MinInt) {
+		return 0, false
+	}
+	return int(value), true
 }
 
 func intFromUint64(value uint64) (int, bool) {

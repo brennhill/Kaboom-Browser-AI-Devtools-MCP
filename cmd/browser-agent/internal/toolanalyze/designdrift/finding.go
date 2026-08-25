@@ -96,20 +96,34 @@ type finding struct {
 	Message string `json:"message"`
 }
 
+// findingSpec carries the verdict fields every analyzer reports. newFinding is
+// the only constructor, so severity stays derived from provenance.
+type findingSpec struct {
+	category   string
+	property   string
+	el         elementView
+	observed   string
+	expected   string
+	provenance string
+	confidence string
+	evidence   string
+	message    string
+}
+
 // newFinding builds a finding with severity derived from provenance.
-func newFinding(category, property string, el elementView, observed, expected, provenance, confidence, evidence, message string) finding {
+func newFinding(s findingSpec) finding {
 	return finding{
-		Category:     category,
-		Severity:     severityFor(provenance),
-		Selector:     el.Selector,
-		ElementIndex: el.Index,
-		Property:     property,
-		Observed:     observed,
-		Expected:     expected,
-		ExpectedFrom: provenance,
-		Confidence:   confidence,
-		Evidence:     evidence,
-		Message:      message,
+		Category:     s.category,
+		Severity:     severityFor(s.provenance),
+		Selector:     s.el.Selector,
+		ElementIndex: s.el.Index,
+		Property:     s.property,
+		Observed:     s.observed,
+		Expected:     s.expected,
+		ExpectedFrom: s.provenance,
+		Confidence:   s.confidence,
+		Evidence:     s.evidence,
+		Message:      s.message,
 	}
 }
 

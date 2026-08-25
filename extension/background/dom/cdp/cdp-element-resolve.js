@@ -9,6 +9,53 @@
  * Must be fully self-contained — no closures over outer scope.
  */
 function cdpResolveAndPrepare(selectorStr, actionType, scopeSelectorStr, elementIdStr) {
+    function querySelectorSafe(root, sel) {
+        try {
+            return root.querySelector(sel);
+        }
+        catch {
+            // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+            // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+            /* invalid selector */
+            return null;
+        }
+    }
+    function findByText(searchRoot, value) {
+        const all = searchRoot.querySelectorAll('*');
+        for (let i = 0; i < all.length; i++) {
+            const candidate = all[i];
+            if (!candidate)
+                continue;
+            const textContent = candidate.textContent?.trim() || '';
+            if (textContent === value || textContent.startsWith(value)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+    // Resolve a CSS or semantic (text=, role=, label=, placeholder=) selector
+    function resolveSelector(root, sel) {
+        const eqIdx = sel.indexOf('=');
+        if (eqIdx <= 0)
+            return querySelectorSafe(root, sel);
+        const prefix = sel.substring(0, eqIdx);
+        const value = sel.substring(eqIdx + 1);
+        switch (prefix) {
+            case 'text': {
+                const searchRoot = root === document ? document.body : root;
+                return searchRoot ? findByText(searchRoot, value) : null;
+            }
+            case 'role':
+                return root.querySelector(`[role="${value}"]`);
+            case 'label':
+            case 'aria-label':
+                return root.querySelector(`[aria-label="${value}"]`);
+            case 'placeholder':
+                return root.querySelector(`[placeholder="${value}"]`);
+            default:
+                return querySelectorSafe(root, sel);
+        }
+    }
     let root = document;
     if (scopeSelectorStr) {
         const scope = document.querySelector(scopeSelectorStr);
@@ -22,59 +69,7 @@ function cdpResolveAndPrepare(selectorStr, actionType, scopeSelectorStr, element
     }
     // Resolve selector (CSS or semantic)
     if (!el && selectorStr) {
-        const eqIdx = selectorStr.indexOf('=');
-        if (eqIdx > 0) {
-            const prefix = selectorStr.substring(0, eqIdx);
-            const value = selectorStr.substring(eqIdx + 1);
-            switch (prefix) {
-                case 'text': {
-                    const searchRoot = root === document ? document.body : root;
-                    if (searchRoot) {
-                        const all = searchRoot.querySelectorAll('*');
-                        for (let i = 0; i < all.length; i++) {
-                            const candidate = all[i];
-                            if (!candidate)
-                                continue;
-                            const textContent = candidate.textContent?.trim() || '';
-                            if (textContent === value || textContent.startsWith(value)) {
-                                el = candidate;
-                                break;
-                            }
-                        }
-                    }
-                    break;
-                }
-                case 'role':
-                    el = root.querySelector(`[role="${value}"]`);
-                    break;
-                case 'label':
-                case 'aria-label':
-                    el = root.querySelector(`[aria-label="${value}"]`);
-                    break;
-                case 'placeholder':
-                    el = root.querySelector(`[placeholder="${value}"]`);
-                    break;
-                default:
-                    try {
-                        el = root.querySelector(selectorStr);
-                    }
-                    catch {
-                        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-                        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-                        /* invalid selector */
-                    }
-            }
-        }
-        else {
-            try {
-                el = root.querySelector(selectorStr);
-            }
-            catch {
-                // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-                // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-                /* invalid selector */
-            }
-        }
+        el = resolveSelector(root, selectorStr);
     }
     if (!el)
         return null;

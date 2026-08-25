@@ -39,35 +39,60 @@ function visibleInteractiveCount() {
 function findMainNode() {
     return findMainContentElement(120);
 }
-function classifyPage(forms, interactiveCount, linkCount, paragraphCount, headingCount, previewText) {
-    const hasSearchInput = !!document.querySelector('input[type="search"], input[name*="search" i], input[placeholder*="search" i]');
-    const likelySearchURL = /[?&](q|query|search)=/i.test(window.location.search);
-    const hasArticle = document.querySelectorAll('article').length > 0;
-    const hasTable = document.querySelectorAll('table').length > 0;
+function collectClassSignals(forms, interactiveCount, linkCount, paragraphCount, headingCount, previewText) {
     let totalFormFields = 0;
     for (const form of forms) {
         totalFormFields += form.fields.length;
     }
-    if (hasSearchInput && (likelySearchURL || linkCount > 10))
+    return {
+        hasSearchInput: !!document.querySelector('input[type="search"], input[name*="search" i], input[placeholder*="search" i]'),
+        likelySearchURL: /[?&](q|query|search)=/i.test(window.location.search),
+        hasArticle: document.querySelectorAll('article').length > 0,
+        hasTable: document.querySelectorAll('table').length > 0,
+        formCount: forms.length,
+        totalFormFields,
+        interactiveCount,
+        linkCount,
+        paragraphCount,
+        headingCount,
+        previewText
+    };
+}
+function isSearchResultsPage(s) {
+    return s.hasSearchInput && (s.likelySearchURL || s.linkCount > 10);
+}
+function isFormPage(s) {
+    return s.formCount > 0 && s.totalFormFields >= 3 && s.paragraphCount < 8;
+}
+function isArticlePage(s) {
+    return s.hasArticle || (s.paragraphCount >= 8 && s.linkCount < s.paragraphCount * 2);
+}
+function isDashboardPage(s) {
+    return s.hasTable || (s.interactiveCount > 25 && s.headingCount >= 2);
+}
+function isLinkListPage(s) {
+    return s.linkCount > 30 && s.paragraphCount < 10;
+}
+function isAppPage(s) {
+    return s.previewText.length < 80 && s.interactiveCount > 10;
+}
+function classifyPage(forms, interactiveCount, linkCount, paragraphCount, headingCount, previewText) {
+    const s = collectClassSignals(forms, interactiveCount, linkCount, paragraphCount, headingCount, previewText);
+    if (isSearchResultsPage(s))
         return 'search_results';
-    if (forms.length > 0 && totalFormFields >= 3 && paragraphCount < 8)
+    if (isFormPage(s))
         return 'form';
-    if (hasArticle || (paragraphCount >= 8 && linkCount < paragraphCount * 2))
+    if (isArticlePage(s))
         return 'article';
-    if (hasTable || (interactiveCount > 25 && headingCount >= 2))
+    if (isDashboardPage(s))
         return 'dashboard';
-    if (linkCount > 30 && paragraphCount < 10)
+    if (isLinkListPage(s))
         return 'link_list';
-    if (previewText.length < 80 && interactiveCount > 10)
+    if (isAppPage(s))
         return 'app';
     return 'generic';
 }
-/**
- * Extract a structured page summary from the current page.
- * Returns headings, navigation links, forms, interactive count, content preview, and classification.
- */
-export function extractPageSummary() {
-    // Headings
+function collectHeadings() {
     const headingNodes = document.querySelectorAll('h1, h2, h3');
     const headings = [];
     for (const heading of Array.from(headingNodes)) {
@@ -78,7 +103,9 @@ export function extractPageSummary() {
             continue;
         headings.push(heading.tagName.toLowerCase() + ': ' + text);
     }
-    // Navigation links
+    return headings;
+}
+function collectNavLinks() {
     const navCandidates = document.querySelectorAll('nav a[href], header a[href], [role="navigation"] a[href]');
     const navLinks = [];
     const seenNav = {};
@@ -95,35 +122,50 @@ export function extractPageSummary() {
         seenNav[key] = true;
         navLinks.push({ text: linkText, href });
     }
-    // Forms
+    return navLinks;
+}
+function collectFormFieldNames(form) {
+    const fieldNodes = form.querySelectorAll('input, select, textarea');
+    const fields = [];
+    const seenFields = {};
+    for (const field of Array.from(fieldNodes)) {
+        if (fields.length >= 25)
+            break;
+        const candidate = field.getAttribute('name') ||
+            field.getAttribute('id') ||
+            field.getAttribute('aria-label') ||
+            field.getAttribute('type') ||
+            field.tagName.toLowerCase();
+        const cleaned = cleanText(candidate || '', 60);
+        if (!cleaned || seenFields[cleaned])
+            continue;
+        seenFields[cleaned] = true;
+        fields.push(cleaned);
+    }
+    return fields;
+}
+function collectForms() {
     const forms = [];
     const formNodes = document.querySelectorAll('form');
     for (const form of Array.from(formNodes)) {
         if (forms.length >= 10)
             break;
-        const fieldNodes = form.querySelectorAll('input, select, textarea');
-        const fields = [];
-        const seenFields = {};
-        for (const field of Array.from(fieldNodes)) {
-            if (fields.length >= 25)
-                break;
-            const candidate = field.getAttribute('name') ||
-                field.getAttribute('id') ||
-                field.getAttribute('aria-label') ||
-                field.getAttribute('type') ||
-                field.tagName.toLowerCase();
-            const cleaned = cleanText(candidate || '', 60);
-            if (!cleaned || seenFields[cleaned])
-                continue;
-            seenFields[cleaned] = true;
-            fields.push(cleaned);
-        }
         forms.push({
             action: absoluteHref(form.getAttribute('action') || window.location.href),
             method: (form.getAttribute('method') || 'GET').toUpperCase(),
-            fields
+            fields: collectFormFieldNames(form)
         });
     }
+    return forms;
+}
+/**
+ * Extract a structured page summary from the current page.
+ * Returns headings, navigation links, forms, interactive count, content preview, and classification.
+ */
+export function extractPageSummary() {
+    const headings = collectHeadings();
+    const navLinks = collectNavLinks();
+    const forms = collectForms();
     // Main content preview
     const mainNode = findMainNode();
     const mainText = cleanText(mainNode ? mainNode.innerText || mainNode.textContent || '' : '', 20000);

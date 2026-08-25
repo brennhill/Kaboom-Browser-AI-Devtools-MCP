@@ -416,22 +416,82 @@ func (h *Handler) finalizePendingDisconnect(req mcp.JSONRPCRequest, correlationI
 		mcp.WithFinal(true))
 }
 
+// commandWaitParams carries the sync/async controls accepted by every command.
+type commandWaitParams struct {
+	Sync       *bool `json:"sync"`
+	Wait       *bool `json:"wait"`
+	Background bool  `json:"background"`
+	TimeoutMs  int   `json:"timeout_ms"`
+}
+
+// isSyncCommand reports whether the caller asked for synchronous completion.
+// Requests are sync by default; explicit background/async opts out.
+func isSyncCommand(params commandWaitParams) bool {
+	if params.Background || (params.Sync != nil && !*params.Sync) || (params.Wait != nil && !*params.Wait) {
+		return false
+	}
+	return true
+}
+
+// waitBudget derives the initial and retry wait windows, clamping an explicit
+// timeout_ms budget to [100ms, 120s] and splitting it 3:1.
+func (h *Handler) waitBudget(timeoutMs int) (time.Duration, time.Duration) {
+	initialWait, retryWait := h.Wait.Initial, h.Wait.Retry
+	if timeoutMs > 0 {
+		totalBudget := time.Duration(timeoutMs) * time.Millisecond
+		if totalBudget < 100*time.Millisecond {
+			totalBudget = 100 * time.Millisecond
+		}
+		if totalBudget > 120*time.Second {
+			totalBudget = 120 * time.Second
+		}
+		initialWait = totalBudget * 3 / 4
+		retryWait = totalBudget - initialWait
+	}
+	return initialWait, retryWait
+}
+
+// waitOnce performs one connectivity-aware wait and converts not-found and
+// disconnect into terminal responses. done=true means resp must be returned.
+func (h *Handler) waitOnce(req mcp.JSONRPCRequest, correlationID string, wait time.Duration, notFoundMsg string) (*queries.CommandResult, int64, mcp.JSONRPCResponse, bool) {
+	cmd, found, disconnected, waitedMs := h.waitForCommandWithConnectivity(correlationID, wait)
+	if !found {
+		return nil, waitedMs, mcp.Fail(req, mcp.ErrInternal, notFoundMsg, "Internal error — do not retry"), true
+	}
+	if disconnected {
+		return nil, waitedMs, h.finalizePendingDisconnect(req, correlationID), true
+	}
+	return cmd, waitedMs, mcp.JSONRPCResponse{}, false
+}
+
+// stillProcessingResponse builds the non-final polling response for a command
+// that outlived both wait windows.
+func (h *Handler) stillProcessingResponse(req mcp.JSONRPCRequest, cmd *queries.CommandResult, correlationID string, attempts int, totalWaitMs int64) mcp.JSONRPCResponse {
+	stillProcessing := map[string]any{
+		"status": "still_processing", "lifecycle_status": "running",
+		"correlation_id": correlationID, "trace_id": correlationID,
+		"queued": false, "final": false, "elapsed_ms": cmd.ElapsedMs(),
+		"queue_depth": h.deps.Capture.Queries().QueueDepth(),
+		"retry_context": map[string]any{
+			"attempts": attempts, "total_wait_ms": totalWaitMs,
+			"extension_connected": h.deps.Capture.Extension().IsExtensionConnected(),
+		},
+		"suggested_retry_ms": 2000,
+		"message":            "Action is taking longer than expected. Polling is now required. Use observe({what:'command_result', correlation_id:'" + correlationID + "'}) to check the result.",
+	}
+	if pos := h.deps.Capture.Queries().QueuePosition(correlationID); pos >= 0 {
+		stillProcessing["queue_position"] = pos
+	}
+	return mcp.Succeed(req, "Action still processing", stillProcessing)
+}
+
 // MaybeWaitForCommand implements sync-by-default command completion. Explicit
 // background/async requests return a polling handle immediately.
 func (h *Handler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
-	var params struct {
-		Sync       *bool `json:"sync"`
-		Wait       *bool `json:"wait"`
-		Background bool  `json:"background"`
-		TimeoutMs  int   `json:"timeout_ms"`
-	}
+	var params commandWaitParams
 	mcp.LenientUnmarshal(args, &params)
 
-	isSync := true
-	if params.Background || (params.Sync != nil && !*params.Sync) || (params.Wait != nil && !*params.Wait) {
-		isSync = false
-	}
-	if !isSync {
+	if !isSyncCommand(params) {
 		return mcp.Succeed(req, queuedSummary, map[string]any{
 			"status": "queued", "lifecycle_status": "queued",
 			"correlation_id": correlationID, "trace_id": correlationID,
@@ -443,60 +503,27 @@ func (h *Handler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID stri
 		return mcp.Fail(req, mcp.ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.deps.DiagnosticHint)
 	}
 
-	initialWait, retryWait := h.Wait.Initial, h.Wait.Retry
-	if params.TimeoutMs > 0 {
-		totalBudget := time.Duration(params.TimeoutMs) * time.Millisecond
-		if totalBudget < 100*time.Millisecond {
-			totalBudget = 100 * time.Millisecond
-		}
-		if totalBudget > 120*time.Second {
-			totalBudget = 120 * time.Second
-		}
-		initialWait = totalBudget * 3 / 4
-		retryWait = totalBudget - initialWait
-	}
+	initialWait, retryWait := h.waitBudget(params.TimeoutMs)
 
 	attempts := 1
-	totalWaitMs := int64(0)
-	cmd, found, disconnected, waitedMs := h.waitForCommandWithConnectivity(correlationID, initialWait)
-	totalWaitMs += waitedMs
-	if !found {
-		return mcp.Fail(req, mcp.ErrInternal, "Command not found after queuing", "Internal error — do not retry")
-	}
-	if disconnected {
-		return h.finalizePendingDisconnect(req, correlationID)
+	cmd, waitedMs, resp, done := h.waitOnce(req, correlationID, initialWait, "Command not found after queuing")
+	totalWaitMs := waitedMs
+	if done {
+		return resp
 	}
 	if cmd.Status == "pending" && h.deps.Capture.Extension().IsExtensionConnected() {
 		attempts = 2
-		cmd, found, disconnected, waitedMs = h.waitForCommandWithConnectivity(correlationID, retryWait)
+		cmd, waitedMs, resp, done = h.waitOnce(req, correlationID, retryWait, "Command not found after retry")
 		totalWaitMs += waitedMs
-		if !found {
-			return mcp.Fail(req, mcp.ErrInternal, "Command not found after retry", "Internal error — do not retry")
-		}
-		if disconnected {
-			return h.finalizePendingDisconnect(req, correlationID)
+		if done {
+			return resp
 		}
 	}
 	if cmd.Status == "pending" {
 		if !h.deps.Capture.Extension().IsExtensionConnected() {
 			return h.finalizePendingDisconnect(req, correlationID)
 		}
-		stillProcessing := map[string]any{
-			"status": "still_processing", "lifecycle_status": "running",
-			"correlation_id": correlationID, "trace_id": correlationID,
-			"queued": false, "final": false, "elapsed_ms": cmd.ElapsedMs(),
-			"queue_depth": h.deps.Capture.Queries().QueueDepth(),
-			"retry_context": map[string]any{
-				"attempts": attempts, "total_wait_ms": totalWaitMs,
-				"extension_connected": h.deps.Capture.Extension().IsExtensionConnected(),
-			},
-			"suggested_retry_ms": 2000,
-			"message":            "Action is taking longer than expected. Polling is now required. Use observe({what:'command_result', correlation_id:'" + correlationID + "'}) to check the result.",
-		}
-		if pos := h.deps.Capture.Queries().QueuePosition(correlationID); pos >= 0 {
-			stillProcessing["queue_position"] = pos
-		}
-		return mcp.Succeed(req, "Action still processing", stillProcessing)
+		return h.stillProcessingResponse(req, cmd, correlationID, attempts, totalWaitMs)
 	}
 	return h.FormatCommandResult(req, *cmd, correlationID)
 }

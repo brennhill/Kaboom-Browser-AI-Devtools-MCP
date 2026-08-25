@@ -62,7 +62,7 @@ func TestExecuteFormSubmitClosesWriterAfterEarlyTransportFailure(t *testing.T) {
 	go func() {
 		done <- executeFormSubmitWithClient(context.Background(), client, FormSubmitRequest{
 			Method: "POST", FormAction: "https://upload.example.test", FileInputName: "file", FilePath: file.Name(),
-		}, file, info, multipartWriter, reader, writer, time.Now())
+		}, uploadStream{file: file, info: info, writer: multipartWriter, pr: reader, pw: writer}, time.Now())
 	}()
 
 	select {

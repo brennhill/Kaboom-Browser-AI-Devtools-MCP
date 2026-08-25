@@ -209,7 +209,7 @@ func TestHandleTerminalStart_CreatesSession(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	relays := sessionrelay.NewMap()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, relays)
+	HandleTerminalStart(rec, req, deps, nil, startDeps{mgr: mgr, relays: relays})
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -245,7 +245,7 @@ func TestHandleTerminalStart_DuplicateReturnsConflict(t *testing.T) {
 	// First start.
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, relays)
+	HandleTerminalStart(rec, req, deps, nil, startDeps{mgr: mgr, relays: relays})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("first start: expected 200, got %d", rec.Code)
 	}
@@ -253,7 +253,7 @@ func TestHandleTerminalStart_DuplicateReturnsConflict(t *testing.T) {
 	// Second start with same ID.
 	req = httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
 	rec = httptest.NewRecorder()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, relays)
+	HandleTerminalStart(rec, req, deps, nil, startDeps{mgr: mgr, relays: relays})
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("duplicate start: expected 409, got %d", rec.Code)
 	}
@@ -276,7 +276,7 @@ func TestHandleTerminalStart_BadDirSurfacesDistinctError(t *testing.T) {
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, sessionrelay.NewMap())
+	HandleTerminalStart(rec, req, deps, nil, startDeps{mgr: mgr, relays: sessionrelay.NewMap()})
 
 	if rec.Code == http.StatusConflict {
 		t.Fatalf("bad cwd must NOT return 409 (silent reconnect); body: %s", rec.Body.String())
@@ -305,7 +305,7 @@ func TestHandleTerminalStart_DefaultsToShell(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	relays := sessionrelay.NewMap()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, relays)
+	HandleTerminalStart(rec, req, deps, nil, startDeps{mgr: mgr, relays: relays})
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -325,7 +325,7 @@ func TestHandleTerminalStop_DestroysSession(t *testing.T) {
 	relays := sessionrelay.NewMap()
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(startBody))
 	rec := httptest.NewRecorder()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, relays)
+	HandleTerminalStart(rec, req, deps, nil, startDeps{mgr: mgr, relays: relays})
 
 	// Stop it.
 	stopBody, _ := json.Marshal(map[string]any{"id": "default"})

@@ -17,46 +17,24 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )
 
+type networkBodiesParams struct {
+	Limit     int    `json:"limit"`
+	URL       string `json:"url"`
+	Method    string `json:"method"`
+	StatusMin int    `json:"status_min"`
+	StatusMax int    `json:"status_max"`
+	BodyPath  string `json:"body_path"`
+	Summary   bool   `json:"summary"`
+}
+
 // GetNetworkBodies returns captured HTTP response bodies with optional filtering.
-// #lizard forgives
 func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		Limit     int    `json:"limit"`
-		URL       string `json:"url"`
-		Method    string `json:"method"`
-		StatusMin int    `json:"status_min"`
-		StatusMax int    `json:"status_max"`
-		BodyPath  string `json:"body_path"`
-		Summary   bool   `json:"summary"`
-	}
+	var params networkBodiesParams
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
 	allBodies := deps.Capture.Telemetry().NetworkBodies().Snapshot().Bodies
-	var bodyFilterErr error
-	filtered := buffers.ReverseFilterLimit(allBodies, func(b types.NetworkBody) bool {
-		if bodyFilterErr != nil {
-			return false
-		}
-		if params.URL != "" && !core.ContainsIgnoreCase(b.URL, params.URL) {
-			return false
-		}
-		if params.Method != "" && !core.ContainsIgnoreCase(b.Method, params.Method) {
-			return false
-		}
-		if params.StatusMin > 0 && b.Status < params.StatusMin {
-			return false
-		}
-		if params.StatusMax > 0 && b.Status > params.StatusMax {
-			return false
-		}
-		_, include, err := core.ApplyNetworkBodyFilter(b, params.BodyPath)
-		if err != nil {
-			bodyFilterErr = err
-			return false
-		}
-		return include
-	}, params.Limit)
+	filtered, bodyFilterErr := filterNetworkBodies(allBodies, params)
 
 	if bodyFilterErr != nil {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
@@ -68,12 +46,8 @@ func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	}
 
 	// Re-apply body filter to transform matched entries (extract body_path).
-	if params.BodyPath != "" {
-		for i, b := range filtered {
-			filteredBody, _, _ := core.ApplyNetworkBodyFilter(b, params.BodyPath)
-			filtered[i] = filteredBody
-		}
-	}
+	applyBodyPathTransform(filtered, params.BodyPath)
+
 	var newestTS time.Time
 	if len(allBodies) > 0 {
 		newestTS, _ = time.Parse(time.RFC3339, allBodies[len(allBodies)-1].Timestamp)
@@ -109,37 +83,67 @@ func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	return mcp.Succeed(req, "Network bodies", response)
 }
 
+func filterNetworkBodies(allBodies []types.NetworkBody, params networkBodiesParams) ([]types.NetworkBody, error) {
+	var bodyFilterErr error
+	filtered := buffers.ReverseFilterLimit(allBodies, func(b types.NetworkBody) bool {
+		return networkBodyMatches(b, params, &bodyFilterErr)
+	}, params.Limit)
+	return filtered, bodyFilterErr
+}
+
+func networkBodyMatches(b types.NetworkBody, params networkBodiesParams, bodyFilterErr *error) bool {
+	if *bodyFilterErr != nil {
+		return false
+	}
+	if params.URL != "" && !core.ContainsIgnoreCase(b.URL, params.URL) {
+		return false
+	}
+	if params.Method != "" && !core.ContainsIgnoreCase(b.Method, params.Method) {
+		return false
+	}
+	if params.StatusMin > 0 && b.Status < params.StatusMin {
+		return false
+	}
+	if params.StatusMax > 0 && b.Status > params.StatusMax {
+		return false
+	}
+	_, include, err := core.ApplyNetworkBodyFilter(b, params.BodyPath)
+	if err != nil {
+		*bodyFilterErr = err
+		return false
+	}
+	return include
+}
+
+func applyBodyPathTransform(filtered []types.NetworkBody, bodyPath string) {
+	if bodyPath == "" {
+		return
+	}
+	for i, b := range filtered {
+		filteredBody, _, _ := core.ApplyNetworkBodyFilter(b, bodyPath)
+		filtered[i] = filteredBody
+	}
+}
+
+type wsEventsParams struct {
+	Limit        int    `json:"limit"`
+	URL          string `json:"url"`
+	ConnectionID string `json:"connection_id"`
+	Direction    string `json:"direction"`
+	Summary      bool   `json:"summary"`
+}
+
 // GetWSEvents returns captured WebSocket events with optional filtering.
 func GetWSEvents(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		Limit        int    `json:"limit"`
-		URL          string `json:"url"`
-		ConnectionID string `json:"connection_id"`
-		Direction    string `json:"direction"`
-		Summary      bool   `json:"summary"`
-	}
+	var params wsEventsParams
 	mcp.LenientUnmarshal(args, &params)
-
-	var paramHint string
-	if params.Direction != "" && params.Direction != "incoming" && params.Direction != "outgoing" {
-		paramHint = "Unknown direction " + params.Direction + " ignored (using default=all). Valid values: incoming, outgoing."
-		params.Direction = ""
-	}
+	paramHint := normalizeWSDirection(&params)
 
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
 	allEvents := deps.Capture.Telemetry().WebSockets().Snapshot().Events
 	filtered := buffers.ReverseFilterLimit(allEvents, func(evt types.WebSocketEvent) bool {
-		if params.URL != "" && !core.ContainsIgnoreCase(evt.URL, params.URL) {
-			return false
-		}
-		if params.ConnectionID != "" && evt.ID != params.ConnectionID {
-			return false
-		}
-		if params.Direction != "" && evt.Direction != params.Direction {
-			return false
-		}
-		return true
+		return wsEventMatches(evt, params)
 	}, params.Limit)
 	var newestTS time.Time
 	if len(allEvents) > 0 {
@@ -172,6 +176,28 @@ func GetWSEvents(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	}
 
 	return mcp.Succeed(req, "WebSocket events", response)
+}
+
+func normalizeWSDirection(params *wsEventsParams) string {
+	if params.Direction == "" || params.Direction == "incoming" || params.Direction == "outgoing" {
+		return ""
+	}
+	hint := "Unknown direction " + params.Direction + " ignored (using default=all). Valid values: incoming, outgoing."
+	params.Direction = ""
+	return hint
+}
+
+func wsEventMatches(evt types.WebSocketEvent, params wsEventsParams) bool {
+	if params.URL != "" && !core.ContainsIgnoreCase(evt.URL, params.URL) {
+		return false
+	}
+	if params.ConnectionID != "" && evt.ID != params.ConnectionID {
+		return false
+	}
+	if params.Direction != "" && evt.Direction != params.Direction {
+		return false
+	}
+	return true
 }
 
 const wsStatusSummarySampleLimit = 10

@@ -122,46 +122,10 @@ func URLMatches(urlFilter, pageURL string) bool {
 	// the URL starts with the prefix and (if present) ends with the suffix.
 	// This prevents "http://localhost:*" from matching "http://localhost-evil.com".
 	if strings.Contains(urlFilter, "*") {
-		parts := strings.SplitN(urlFilter, "*", 2)
-		if !strings.HasPrefix(pageURL, parts[0]) {
-			return false
-		}
-		if len(parts) > 1 && parts[1] != "" && !strings.HasSuffix(pageURL, parts[1]) {
-			return false
-		}
-		return true
+		return urlGlobMatches(urlFilter, pageURL)
 	}
-
-	filterURL, filterErr := url.Parse(urlFilter)
-	page, pageErr := url.Parse(pageURL)
-	if filterErr == nil && pageErr == nil &&
-		filterURL.Scheme != "" && filterURL.Host != "" &&
-		page.Scheme != "" && page.Host != "" {
-		if !strings.EqualFold(filterURL.Scheme, page.Scheme) || !strings.EqualFold(filterURL.Host, page.Host) {
-			return false
-		}
-
-		filterPath := strings.TrimSpace(filterURL.Path)
-		switch {
-		case filterPath == "", filterPath == "/":
-			// Base URL filter: match any path on the same origin.
-			return true
-		case strings.HasSuffix(filterPath, "/"):
-			// Path prefix filter.
-			return strings.HasPrefix(page.Path, filterPath)
-		default:
-			// Exact path filter. Query/fragment are optional constraints when provided.
-			if page.Path != filterPath {
-				return false
-			}
-			if filterURL.RawQuery != "" && page.RawQuery != filterURL.RawQuery {
-				return false
-			}
-			if filterURL.Fragment != "" && page.Fragment != filterURL.Fragment {
-				return false
-			}
-			return true
-		}
+	if matched, ok := urlOriginMatches(urlFilter, pageURL); ok {
+		return matched
 	}
 
 	if strings.HasSuffix(urlFilter, "/") {
@@ -169,4 +133,57 @@ func URLMatches(urlFilter, pageURL string) bool {
 	}
 
 	return pageURL == urlFilter
+}
+
+func urlGlobMatches(urlFilter, pageURL string) bool {
+	parts := strings.SplitN(urlFilter, "*", 2)
+	if !strings.HasPrefix(pageURL, parts[0]) {
+		return false
+	}
+	if len(parts) > 1 && parts[1] != "" && !strings.HasSuffix(pageURL, parts[1]) {
+		return false
+	}
+	return true
+}
+
+func urlOriginMatches(urlFilter, pageURL string) (matched, ok bool) {
+	filterURL, filterErr := url.Parse(urlFilter)
+	page, pageErr := url.Parse(pageURL)
+	if filterErr != nil || pageErr != nil ||
+		filterURL.Scheme == "" || filterURL.Host == "" ||
+		page.Scheme == "" || page.Host == "" {
+		return false, false
+	}
+	if !strings.EqualFold(filterURL.Scheme, page.Scheme) || !strings.EqualFold(filterURL.Host, page.Host) {
+		return false, true
+	}
+	return urlPathMatches(filterURL, page), true
+}
+
+func urlPathMatches(filterURL, page *url.URL) bool {
+	filterPath := strings.TrimSpace(filterURL.Path)
+	switch {
+	case filterPath == "", filterPath == "/":
+		// Base URL filter: match any path on the same origin.
+		return true
+	case strings.HasSuffix(filterPath, "/"):
+		// Path prefix filter.
+		return strings.HasPrefix(page.Path, filterPath)
+	default:
+		// Exact path filter. Query/fragment are optional constraints when provided.
+		return urlExactPathMatches(filterURL, filterPath, page)
+	}
+}
+
+func urlExactPathMatches(filterURL *url.URL, filterPath string, page *url.URL) bool {
+	if page.Path != filterPath {
+		return false
+	}
+	if filterURL.RawQuery != "" && page.RawQuery != filterURL.RawQuery {
+		return false
+	}
+	if filterURL.Fragment != "" && page.Fragment != filterURL.Fragment {
+		return false
+	}
+	return true
 }

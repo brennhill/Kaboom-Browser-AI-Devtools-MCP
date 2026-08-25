@@ -213,7 +213,7 @@ func TestBridgeForwardRequest_ToolsCallConnectionErrorReturnsSoftErrorEnvelope(t
 	line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}`)
 
 	go func() {
-		testRunner.bridgeForwardRequest(&http.Client{}, "http://127.0.0.1:1/mcp", req, line, 300*time.Millisecond, nil, signal, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(forwardTarget{client: &http.Client{}, endpoint: "http://127.0.0.1:1/mcp", timeout: 300 * time.Millisecond}, req, line, nil, signal, bridge.StdioFramingLine)
 	}()
 
 	wg.Wait()
@@ -267,7 +267,7 @@ func TestBridgeForwardRequest_ToolsCallNoContentReturnsSoftErrorEnvelope(t *test
 	output := captureBridgeIO(t, "", func() {
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
 		line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}`)
-		testRunner.bridgeForwardRequest(client, "http://unit.test/mcp", req, line, time.Second, nil, func() {}, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(forwardTarget{client: client, endpoint: "http://unit.test/mcp", timeout: time.Second}, req, line, nil, func() {}, bridge.StdioFramingLine)
 	})
 
 	var resp mcp.JSONRPCResponse
@@ -301,7 +301,7 @@ func TestBridgeForwardRequest_ToolsCallEmptyBodyReturnsSoftErrorEnvelope(t *test
 	output := captureBridgeIO(t, "", func() {
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
 		line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}`)
-		testRunner.bridgeForwardRequest(client, "http://unit.test/mcp", req, line, time.Second, nil, func() {}, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(forwardTarget{client: client, endpoint: "http://unit.test/mcp", timeout: time.Second}, req, line, nil, func() {}, bridge.StdioFramingLine)
 	})
 
 	var resp mcp.JSONRPCResponse
@@ -335,7 +335,7 @@ func TestBridgeForwardRequest_ToolsCallInvalidJSONBodyReturnsSoftErrorEnvelope(t
 	output := captureBridgeIO(t, "", func() {
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
 		line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}`)
-		testRunner.bridgeForwardRequest(client, "http://unit.test/mcp", req, line, time.Second, nil, func() {}, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(forwardTarget{client: client, endpoint: "http://unit.test/mcp", timeout: time.Second}, req, line, nil, func() {}, bridge.StdioFramingLine)
 	})
 
 	var resp mcp.JSONRPCResponse
@@ -450,7 +450,7 @@ func TestBridgeForwardRequest_LargeBodyRead(t *testing.T) {
 	line := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"configure","arguments":{"what":"health"}}}`)
 
 	go func() {
-		testRunner.bridgeForwardRequest(&http.Client{}, srv.URL, req, line, 5*time.Second, nil, signal, bridge.StdioFramingLine)
+		testRunner.bridgeForwardRequest(forwardTarget{client: &http.Client{}, endpoint: srv.URL, timeout: 5 * time.Second}, req, line, nil, signal, bridge.StdioFramingLine)
 	}()
 
 	<-headersFlushed

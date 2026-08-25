@@ -110,7 +110,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 
 	// Session lifecycle.
 	mux.HandleFunc("/terminal/start", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		HandleTerminalStart(w, r, deps, server, mgr, cap, relays)
+		HandleTerminalStart(w, r, deps, server, startDeps{mgr: mgr, cap: cap, relays: relays})
 	}))
 	mux.HandleFunc("/terminal/stop", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		HandleTerminalStop(w, r, deps, mgr, relays)
@@ -202,7 +202,16 @@ func classifyStartError(err error, sessionID, token string) (int, map[string]any
 	}
 }
 
-func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Capture, relays *sessionrelay.Map) {
+// startDeps bundles the session collaborators HandleTerminalStart needs beyond
+// the HTTP request and the shared Deps: the PTY manager, capture for CWD
+// auto-detection, and the session relay map.
+type startDeps struct {
+	mgr    *pty.Manager
+	cap    *capture.Capture
+	relays *sessionrelay.Map
+}
+
+func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, server ServerDeps, sd startDeps) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
@@ -239,10 +248,10 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		activeCodebase = server.GetActiveCodebase()
 	}
 	req.Dir = resolveStartDir(req.Dir, activeCodebase, func() string {
-		if cap == nil {
+		if sd.cap == nil {
 			return ""
 		}
-		return AutoDetectCWD(cap)
+		return AutoDetectCWD(sd.cap)
 	})
 
 	startCfg := pty.StartConfig{
@@ -261,7 +270,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	// The sleep hook doubles as the retry log — otherwise a recovered spawn would
 	// leave no trace and this whole path would be invisible in production.
 	result, err := spawnpolicy.StartWithEPERMRetry(
-		func() (*pty.StartResult, error) { return mgr.Start(startCfg) },
+		func() (*pty.StartResult, error) { return sd.mgr.Start(startCfg) },
 		func(d time.Duration) {
 			deps.logEvent("terminal_spawn_eperm_retry", map[string]any{
 				"session_id": req.ID,
@@ -287,13 +296,13 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 			// ReplaceRelay does this under one lock so a concurrent WS GetOrCreate
 			// cannot bind the relay to the dead session in the gap (finding H) —
 			// otherwise the reconnecting browser would attach to a dead fanout.
-			relay = relays.ReplaceRelay(result.SessionID, sess, req.Dir)
+			relay = sd.relays.ReplaceRelay(result.SessionID, sess, req.Dir)
 			deps.logEvent("terminal_session_healed", map[string]any{
 				"session_id": result.SessionID,
 				"pid":        result.Pid,
 			})
 		} else {
-			relay = relays.GetOrCreate(result.SessionID, sess, req.Dir)
+			relay = sd.relays.GetOrCreate(result.SessionID, sess, req.Dir)
 		}
 		deps.logEvent("terminal_session_spawned", map[string]any{
 			"session_id": result.SessionID,
@@ -319,7 +328,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		if sessionID == "" {
 			sessionID = "default"
 		}
-		status, body := classifyStartError(err, sessionID, mgr.GetTokenForSession(sessionID))
+		status, body := classifyStartError(err, sessionID, sd.mgr.GetTokenForSession(sessionID))
 		// Spawning a session is state-mutating: a failure must be logged (rule 25,
 		// fail-loud) so a "terminal won't start" report is diagnosable from
 		// ~/.kaboom/logs/kaboom.jsonl, not just surfaced transiently to the client.

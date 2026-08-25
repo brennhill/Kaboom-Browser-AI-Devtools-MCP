@@ -125,12 +125,7 @@
   }
 
   // === safeSerialize (identical to inject.js) ===
-  function safeSerialize(value, depth, seen) {
-    if (depth === undefined) depth = 0
-    if (seen === undefined) seen = new WeakSet()
-    if (value === null) return null
-    if (value === undefined) return undefined
-    var type = typeof value
+  function serializeAtom(value, type) {
     if (type === 'string') {
       return value.length > MAX_STRING_LENGTH ? value.slice(0, MAX_STRING_LENGTH) + '... [truncated]' : value
     }
@@ -138,37 +133,60 @@
     if (type === 'function') return '[Function: ' + (value.name || 'anonymous') + ']'
     if (type === 'symbol') return value.toString()
     if (type === 'bigint') return value.toString() + 'n'
-    if (depth >= MAX_DEPTH) return '[max depth reached]'
+    return undefined
+  }
+
+  function serializeInstance(value) {
     if (value instanceof Error) {
       return { name: value.name, message: value.message, stack: value.stack }
     }
     if (value instanceof RegExp) return value.toString()
     if (value instanceof Date) return value.toISOString()
-    if (typeof value === 'object') {
-      if (seen.has(value)) return '[Circular]'
-      seen.add(value)
-      if (Array.isArray(value)) {
-        return value.slice(0, 100).map(function (v) {
-          return safeSerialize(v, depth + 1, seen)
-        })
-      }
-      if (
-        (typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) ||
-        (typeof Node !== 'undefined' && value instanceof Node)
-      ) {
-        return '[' + value.constructor.name + ': ' + (value.tagName || value.nodeName) + ']'
-      }
-      var result = {}
-      var keys = Object.keys(value).slice(0, 50)
-      for (var i = 0; i < keys.length; i++) {
-        try {
-          result[keys[i]] = safeSerialize(value[keys[i]], depth + 1, seen)
-        } catch (_e) {
-          result[keys[i]] = '[unserializable]'
-        }
-      }
-      return result
+    return undefined
+  }
+
+  function isDOMNode(value) {
+    return (
+      (typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) ||
+      (typeof Node !== 'undefined' && value instanceof Node)
+    )
+  }
+
+  function serializeObject(value, depth, seen) {
+    if (seen.has(value)) return '[Circular]'
+    seen.add(value)
+    if (Array.isArray(value)) {
+      return value.slice(0, 100).map(function (v) {
+        return safeSerialize(v, depth + 1, seen)
+      })
     }
+    if (isDOMNode(value)) {
+      return '[' + value.constructor.name + ': ' + (value.tagName || value.nodeName) + ']'
+    }
+    var result = {}
+    var keys = Object.keys(value).slice(0, 50)
+    for (var i = 0; i < keys.length; i++) {
+      try {
+        result[keys[i]] = safeSerialize(value[keys[i]], depth + 1, seen)
+      } catch (_e) {
+        result[keys[i]] = '[unserializable]'
+      }
+    }
+    return result
+  }
+
+  function safeSerialize(value, depth, seen) {
+    if (depth === undefined) depth = 0
+    if (seen === undefined) seen = new WeakSet()
+    if (value === null) return null
+    if (value === undefined) return undefined
+    var type = typeof value
+    var atom = serializeAtom(value, type)
+    if (atom !== undefined) return atom
+    if (depth >= MAX_DEPTH) return '[max depth reached]'
+    var instance = serializeInstance(value)
+    if (instance !== undefined) return instance
+    if (type === 'object') return serializeObject(value, depth, seen)
     return String(value)
   }
 

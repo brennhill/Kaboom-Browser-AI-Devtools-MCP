@@ -35,7 +35,7 @@ describe('Successful Recording Lifecycle', () => {
     globalThis.chrome = createRecordingChromeMock()
 
     // START
-    const startPromise = startRecording('lifecycle-test', 15, 'q1', '', true)
+    const startPromise = startRecording('lifecycle-test', 15, '', { queryId: 'q1', fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     const startResult = await startPromise
@@ -81,7 +81,7 @@ describe('Successful Recording Lifecycle', () => {
   test('should persist recording state to storage for popup sync', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('popup-sync-test', 15, '', '', true)
+    const startPromise = startRecording('popup-sync-test', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -103,7 +103,7 @@ describe('Successful Recording Lifecycle', () => {
   test('should start recording badge timer on start', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('watermark-test', 15, '', '', true)
+    const startPromise = startRecording('watermark-test', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -128,7 +128,7 @@ describe('Successful Recording Lifecycle', () => {
   test('should clear recording badge on stop', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('watermark-hide', 15, '', '', true)
+    const startPromise = startRecording('watermark-hide', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -149,7 +149,7 @@ describe('Successful Recording Lifecycle', () => {
   test('should send offscreen start command with correct parameters', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('params-test', 24, 'query-123', 'tab', true)
+    const startPromise = startRecording('params-test', 24, 'tab', { queryId: 'query-123', fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -178,7 +178,7 @@ describe('Successful Recording Lifecycle', () => {
   test('should not register tab update listener when using action-badge status', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('tab-update', 15, '', '', true)
+    const startPromise = startRecording('tab-update', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -197,7 +197,7 @@ describe('Successful Recording Lifecycle', () => {
   test('should not remove tab update listener when none was registered', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('listener-cleanup', 15, '', '', true)
+    const startPromise = startRecording('listener-cleanup', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -221,7 +221,7 @@ describe('stopRecording error path', () => {
   test('returns the recording name when stop throws (name captured before state clear)', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('stop-error-name', 15, '', '', true)
+    const startPromise = startRecording('stop-error-name', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     const startResult = await startPromise
@@ -272,7 +272,7 @@ describe('Auto-track Tab', () => {
   test('should auto-track tab if not already tracked', async () => {
     globalThis.chrome = createRecordingChromeMock({ storageData: {} })
 
-    const startPromise = startRecording('auto-track', 15, '', '', true)
+    const startPromise = startRecording('auto-track', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -308,7 +308,7 @@ describe('Offscreen Document Management', () => {
   test('should check for existing offscreen documents', async () => {
     globalThis.chrome = createRecordingChromeMock({ offscreenContexts: [] })
 
-    const startPromise = startRecording('offscreen-check', 15, '', '', true)
+    const startPromise = startRecording('offscreen-check', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -328,7 +328,7 @@ describe('Offscreen Document Management', () => {
   test('should create offscreen document when none exists', async () => {
     globalThis.chrome = createRecordingChromeMock({ offscreenContexts: [] })
 
-    const startPromise = startRecording('offscreen-create', 15, '', '', true)
+    const startPromise = startRecording('offscreen-create', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -350,7 +350,7 @@ describe('Offscreen Document Management', () => {
       offscreenContexts: [{ contextType: 'OFFSCREEN_DOCUMENT' }]
     })
 
-    const startPromise = startRecording('offscreen-skip', 15, '', '', true)
+    const startPromise = startRecording('offscreen-skip', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -387,7 +387,7 @@ describe('stopRecording with truncated flag', () => {
     globalThis.chrome = createRecordingChromeMock()
 
     // Start recording first
-    const startPromise = startRecording('truncated-test', 15, '', '', true)
+    const startPromise = startRecording('truncated-test', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -419,7 +419,7 @@ describe('stopRecording save toast', () => {
   test('should show save toast when recording is saved', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('toast-test', 15, '', '', true)
+    const startPromise = startRecording('toast-test', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise

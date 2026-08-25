@@ -261,10 +261,38 @@ export function parseSourceMapData(sourceMap: {
   }
 }
 
+interface SourceMapDecodeState {
+  genCol: number
+  sourceIndex: number
+  origLine: number
+  origCol: number
+  nameIndex: number
+}
+
+function decodeSegmentDeltas(segment: readonly number[], state: SourceMapDecodeState): void {
+  if (segment.length >= 1) state.genCol += segment[0] as number
+  if (segment.length >= 2) state.sourceIndex += segment[1] as number
+  if (segment.length >= 3) state.origLine += segment[2] as number
+  if (segment.length >= 4) state.origCol += segment[3] as number
+  if (segment.length >= 5) state.nameIndex += segment[4] as number
+}
+
+function buildOriginalMatch(
+  sourceMap: ParsedSourceMap,
+  state: SourceMapDecodeState,
+  segment: readonly number[]
+): OriginalLocation {
+  return {
+    source: sourceMap.sources[state.sourceIndex] || '',
+    line: state.origLine + 1,
+    column: state.origCol,
+    name: segment.length >= 5 ? sourceMap.names[state.nameIndex] || null : null
+  }
+}
+
 /**
  * Find original location from source map
  */
-// #lizard forgives
 export function findOriginalLocation(
   sourceMap: ParsedSourceMap,
   line: number,
@@ -278,34 +306,21 @@ export function findOriginalLocation(
   const lineSegments = sourceMap.mappings[lineIndex]
   if (!lineSegments || lineSegments.length === 0) return null
 
-  let genCol = 0
-  let sourceIndex = 0
-  let origLine = 0
-  let origCol = 0
-  let nameIndex = 0
+  const state: SourceMapDecodeState = { genCol: 0, sourceIndex: 0, origLine: 0, origCol: 0, nameIndex: 0 }
 
   let bestMatch: OriginalLocation | null = null
 
   for (let li = 0; li <= lineIndex; li++) {
-    genCol = 0
+    state.genCol = 0
 
     const segments = sourceMap.mappings[li]
     if (!segments) continue
 
     for (const segment of segments) {
-      if (segment.length >= 1) genCol += segment[0] as number
-      if (segment.length >= 2) sourceIndex += segment[1] as number
-      if (segment.length >= 3) origLine += segment[2] as number
-      if (segment.length >= 4) origCol += segment[3] as number
-      if (segment.length >= 5) nameIndex += segment[4] as number
+      decodeSegmentDeltas(segment, state)
 
-      if (li === lineIndex && genCol <= column) {
-        bestMatch = {
-          source: sourceMap.sources[sourceIndex] || '',
-          line: origLine + 1,
-          column: origCol,
-          name: segment.length >= 5 ? sourceMap.names[nameIndex] || null : null
-        }
+      if (li === lineIndex && state.genCol <= column) {
+        bestMatch = buildOriginalMatch(sourceMap, state, segment)
       }
     }
   }

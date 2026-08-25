@@ -13,38 +13,76 @@ import { errorMessage } from '../../lib/error-utils.js'
 // EXPLORE_PAGE COMMAND (#338)
 // =============================================================================
 
+async function navigateAndWaitForLoad(tabId: number, targetUrl: string): Promise<void> {
+  // Validate URL scheme — only http/https allowed (security: prevent javascript:/data:/chrome: injection)
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    throw new Error(
+      'Only http/https URLs are supported for explore_page navigation, got: ' + targetUrl.split(':')[0] + ':'
+    )
+  }
+  // Register onUpdated listener BEFORE calling tabs.update to prevent race condition
+  // where the page load completes before the listener is attached (#9.3.2, #9.7.5).
+  await new Promise<void>((resolve) => {
+    const timeout = setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(onUpdated)
+      resolve()
+    }, 15000)
+    const onUpdated = (updatedTabId: number, changeInfo: { status?: string }): void => {
+      if (updatedTabId === tabId && changeInfo.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(onUpdated)
+        clearTimeout(timeout)
+        resolve()
+      }
+    }
+    chrome.tabs.onUpdated.addListener(onUpdated)
+    chrome.tabs.update(tabId, { url: targetUrl }).catch(() => {
+      chrome.tabs.onUpdated.removeListener(onUpdated)
+      clearTimeout(timeout)
+      resolve() // continue with current page state
+    })
+  })
+}
+
+function firstResultObject(results: readonly { result?: unknown }[] | undefined): Record<string, unknown> | null {
+  const first = results?.[0]?.result
+  return first && typeof first === 'object' ? (first as Record<string, unknown>) : null
+}
+
+function componentError(component: string, payload: Record<string, unknown>): { component: string; error: string } {
+  const reason = payload._reason
+  return { component, error: String(reason || payload.error) }
+}
+
+function collectExploreErrors(
+  payload: Record<string, unknown>,
+  interactiveError: string | undefined,
+  interactiveCount: number,
+  readable: Record<string, unknown> | null,
+  navigation: Record<string, unknown> | null
+): void {
+  // Build unified _errors array for partial failures (UX Review R6)
+  const errors: Array<{ component: string; error: string }> = []
+  if (interactiveError && interactiveCount === 0) {
+    payload.interactive_error = interactiveError
+    errors.push({ component: 'interactive', error: interactiveError })
+  }
+  if (readable && typeof readable === 'object' && 'error' in readable) {
+    errors.push(componentError('readable', readable))
+  }
+  if (navigation && typeof navigation === 'object' && 'error' in navigation) {
+    errors.push(componentError('navigation', navigation))
+  }
+  if (errors.length > 0) {
+    payload._errors = errors
+  }
+}
+
 registerCommand('explore_page', async (ctx) => {
   try {
     // If URL is provided, navigate first
     const targetUrl = typeof ctx.params.url === 'string' ? ctx.params.url : undefined
     if (targetUrl) {
-      // Validate URL scheme — only http/https allowed (security: prevent javascript:/data:/chrome: injection)
-      if (!/^https?:\/\//i.test(targetUrl)) {
-        throw new Error(
-          'Only http/https URLs are supported for explore_page navigation, got: ' + targetUrl.split(':')[0] + ':'
-        )
-      }
-      // Register onUpdated listener BEFORE calling tabs.update to prevent race condition
-      // where the page load completes before the listener is attached (#9.3.2, #9.7.5).
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => {
-          chrome.tabs.onUpdated.removeListener(onUpdated)
-          resolve()
-        }, 15000)
-        const onUpdated = (tabId: number, changeInfo: { status?: string }): void => {
-          if (tabId === ctx.tabId && changeInfo.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(onUpdated)
-            clearTimeout(timeout)
-            resolve()
-          }
-        }
-        chrome.tabs.onUpdated.addListener(onUpdated)
-        chrome.tabs.update(ctx.tabId, { url: targetUrl }).catch(() => {
-          chrome.tabs.onUpdated.removeListener(onUpdated)
-          clearTimeout(timeout)
-          resolve() // continue with current page state
-        })
-      })
+      await navigateAndWaitForLoad(ctx.tabId, targetUrl)
     }
 
     // 1. Get tab info (page metadata)
@@ -87,14 +125,9 @@ registerCommand('explore_page', async (ctx) => {
     const { elements: cappedElements, firstError: interactiveError } = collectCommandElements(interactiveResults, 100)
     const finalElements = selectCommandElements(cappedElements, ctx.params)
 
-    // Process readable content
-    const readableFirst = readableResults?.[0]?.result
-    const readable =
-      readableFirst && typeof readableFirst === 'object' ? (readableFirst as Record<string, unknown>) : null
-
-    // Process navigation links
-    const navFirst = navResults?.[0]?.result
-    const navigation = navFirst && typeof navFirst === 'object' ? (navFirst as Record<string, unknown>) : null
+    // Process readable content and navigation links
+    const readable = firstResultObject(readableResults)
+    const navigation = firstResultObject(navResults)
 
     // Build composite payload
     const payload: Record<string, unknown> = {
@@ -111,23 +144,7 @@ registerCommand('explore_page', async (ctx) => {
       navigation: navigation || { error: 'extraction_failed' }
     }
 
-    // Build unified _errors array for partial failures (UX Review R6)
-    const errors: Array<{ component: string; error: string }> = []
-    if (interactiveError && finalElements.length === 0) {
-      payload.interactive_error = interactiveError
-      errors.push({ component: 'interactive', error: interactiveError })
-    }
-    if (readable && typeof readable === 'object' && 'error' in readable) {
-      const reason = (readable as Record<string, unknown>)._reason
-      errors.push({ component: 'readable', error: String(reason || (readable as Record<string, unknown>).error) })
-    }
-    if (navigation && typeof navigation === 'object' && 'error' in navigation) {
-      const reason = (navigation as Record<string, unknown>)._reason
-      errors.push({ component: 'navigation', error: String(reason || (navigation as Record<string, unknown>).error) })
-    }
-    if (errors.length > 0) {
-      payload._errors = errors
-    }
+    collectExploreErrors(payload, interactiveError, finalElements.length, readable, navigation)
 
     ctx.sendResult(payload)
   } catch (err) {

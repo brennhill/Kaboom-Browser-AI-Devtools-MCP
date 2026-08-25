@@ -166,26 +166,30 @@ func truncateAtJSONBoundary(text string) string {
 		return text
 	}
 
-	// Find the last comma, closing bracket, or closing brace.
-	// Truncate just before the last incomplete value.
-	lastSafe := len(text)
-	for i := len(text) - 1; i >= 0; i-- {
-		ch := text[i]
-		if ch == ',' || ch == '}' || ch == ']' {
-			lastSafe = i + 1
-			break
-		}
-	}
-
-	truncated := text[:lastSafe]
-
 	// Strip trailing comma that would produce invalid JSON (e.g., [1,] or {"a":1,}).
 	// The lastSafe search may land on a comma boundary, leaving a dangling comma
 	// before the auto-appended closers (#9.R3.1).
-	truncated = strings.TrimRight(truncated, ",")
+	truncated := strings.TrimRight(text[:lastJSONSafeIndex(text)], ",")
 
-	// Track open structures with a stack so closers are emitted in correct
-	// reverse order (e.g., [{ → }] not ]}). (#9.R2)
+	stack := openJSONStructures(truncated)
+	return truncated + closeJSONStructures(stack)
+}
+
+// Find the last comma, closing bracket, or closing brace.
+// Truncate just before the last incomplete value.
+func lastJSONSafeIndex(text string) int {
+	for i := len(text) - 1; i >= 0; i-- {
+		ch := text[i]
+		if ch == ',' || ch == '}' || ch == ']' {
+			return i + 1
+		}
+	}
+	return len(text)
+}
+
+// Track open structures with a stack so closers are emitted in correct
+// reverse order (e.g., [{ → }] not ]}). (#9.R2)
+func openJSONStructures(truncated string) []byte {
 	var stack []byte
 	inString := false
 	escaped := false
@@ -206,21 +210,32 @@ func truncateAtJSONBoundary(text string) string {
 		if inString {
 			continue
 		}
-		switch ch {
-		case '{', '[':
-			stack = append(stack, ch)
-		case '}':
-			if len(stack) > 0 && stack[len(stack)-1] == '{' {
-				stack = stack[:len(stack)-1]
-			}
-		case ']':
-			if len(stack) > 0 && stack[len(stack)-1] == '[' {
-				stack = stack[:len(stack)-1]
-			}
-		}
+		stack = applyJSONStructure(stack, ch)
 	}
+	return stack
+}
 
-	// Close remaining open structures in reverse order
+func applyJSONStructure(stack []byte, ch byte) []byte {
+	switch ch {
+	case '{', '[':
+		stack = append(stack, ch)
+	case '}':
+		stack = popJSONOpener(stack, '{')
+	case ']':
+		stack = popJSONOpener(stack, '[')
+	}
+	return stack
+}
+
+func popJSONOpener(stack []byte, opener byte) []byte {
+	if len(stack) > 0 && stack[len(stack)-1] == opener {
+		return stack[:len(stack)-1]
+	}
+	return stack
+}
+
+// Close remaining open structures in reverse order
+func closeJSONStructures(stack []byte) string {
 	closers := make([]byte, len(stack))
 	for i, opener := range stack {
 		if opener == '{' {
@@ -229,6 +244,5 @@ func truncateAtJSONBoundary(text string) string {
 			closers[len(stack)-1-i] = ']'
 		}
 	}
-
-	return truncated + string(closers)
+	return string(closers)
 }

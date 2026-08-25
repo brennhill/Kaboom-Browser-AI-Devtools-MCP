@@ -18,6 +18,42 @@ function sourceFiles(directory) {
   })
 }
 
+function advanceLineComment(chars, index) {
+  if (chars[index] === '\n') return { index, state: 'code' }
+  chars[index] = ' '
+  return { index, state: 'line-comment' }
+}
+
+function advanceBlockComment(chars, index) {
+  if (chars[index] === '*' && chars[index + 1] === '/') {
+    chars[index] = chars[index + 1] = ' '
+    return { index: index + 1, state: 'code' }
+  }
+  if (chars[index] !== '\n') chars[index] = ' '
+  return { index, state: 'block-comment' }
+}
+
+function advanceString(chars, index, quote) {
+  const char = chars[index]
+  if (char === '\\') {
+    chars[index] = ' '
+    if (index + 1 < chars.length) chars[index + 1] = ' '
+    return { index: index + 1, state: 'string' }
+  }
+  if (char === quote) {
+    chars[index] = ' '
+    return { index, state: 'code' }
+  }
+  if (char !== '\n') chars[index] = ' '
+  return { index, state: 'string' }
+}
+
+function advanceMasked(chars, index, state, quote) {
+  if (state === 'line-comment') return advanceLineComment(chars, index)
+  if (state === 'block-comment') return advanceBlockComment(chars, index)
+  return advanceString(chars, index, quote)
+}
+
 function maskNonCode(source) {
   const chars = [...source]
   let state = 'code'
@@ -25,27 +61,10 @@ function maskNonCode(source) {
   for (let index = 0; index < chars.length; index += 1) {
     const char = chars[index]
     const next = chars[index + 1]
-    if (state === 'line-comment') {
-      if (char === '\n') state = 'code'
-      else chars[index] = ' '
-      continue
-    }
-    if (state === 'block-comment') {
-      if (char === '*' && next === '/') {
-        chars[index] = chars[index + 1] = ' '
-        index += 1
-        state = 'code'
-      } else if (char !== '\n') chars[index] = ' '
-      continue
-    }
-    if (state === 'string') {
-      if (char === '\\') {
-        chars[index] = ' '
-        if (index + 1 < chars.length) chars[++index] = ' '
-      } else if (char === quote) {
-        chars[index] = ' '
-        state = 'code'
-      } else if (char !== '\n') chars[index] = ' '
+    if (state === 'line-comment' || state === 'block-comment' || state === 'string') {
+      const step = advanceMasked(chars, index, state, quote)
+      index = step.index
+      state = step.state
       continue
     }
     if (char === '/' && next === '/') {

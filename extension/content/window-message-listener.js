@@ -28,41 +28,48 @@ const RESPONSE_HANDLERS = {
     kaboom_a11y_query_response: (id, result) => resolveA11yRequest(id, result),
     kaboom_dom_query_response: (id, result) => resolveDomRequest(id, result)
 };
-export function initWindowMessageListener() {
-    window.addEventListener('message', (event) => {
-        if (event.source !== window || event.origin !== window.location.origin)
-            return;
-        const { type: messageType, requestId, result, payload } = event.data || {};
-        const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : undefined;
-        if (responseHandler) {
-            if (event.data._nonce !== getPageNonce())
-                return;
-            if (requestId !== undefined)
-                responseHandler(requestId, result);
-            return;
-        }
-        // Tab isolation filter: only forward captured data from the tracked tab.
-        // Response messages (highlight, execute JS, a11y) are NOT filtered because
-        // they are responses to explicit commands from the background script.
-        if (!getIsTrackedTab())
-            return;
-        if (event.data._nonce !== getPageNonce())
-            return;
-        if (messageType && messageType in MESSAGE_MAP && payload && typeof payload === 'object') {
-            const mappedType = MESSAGE_MAP[messageType];
-            if (mappedType) {
-                const rejection = validatePageTelemetry(messageType, payload);
-                if (rejection) {
-                    reportTelemetryRejection(rejection);
-                    return;
-                }
-                safeSendMessage({
-                    type: mappedType,
-                    payload,
-                    tabId: getCurrentTabId()
-                });
-            }
-        }
+function handlePageResponse(data, requestId, result, handler) {
+    if (data._nonce !== getPageNonce())
+        return;
+    if (requestId !== undefined)
+        handler(requestId, result);
+}
+function forwardTelemetryMessage(messageType, payload) {
+    if (!messageType || !(messageType in MESSAGE_MAP) || !payload || typeof payload !== 'object')
+        return;
+    const mappedType = MESSAGE_MAP[messageType];
+    if (!mappedType)
+        return;
+    const rejection = validatePageTelemetry(messageType, payload);
+    if (rejection) {
+        reportTelemetryRejection(rejection);
+        return;
+    }
+    safeSendMessage({
+        type: mappedType,
+        payload,
+        tabId: getCurrentTabId()
     });
+}
+function onWindowMessage(event) {
+    if (event.source !== window || event.origin !== window.location.origin)
+        return;
+    const { type: messageType, requestId, result, payload } = event.data || {};
+    const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : undefined;
+    if (responseHandler) {
+        handlePageResponse(event.data, requestId, result, responseHandler);
+        return;
+    }
+    // Tab isolation filter: only forward captured data from the tracked tab.
+    // Response messages (highlight, execute JS, a11y) are NOT filtered because
+    // they are responses to explicit commands from the background script.
+    if (!getIsTrackedTab())
+        return;
+    if (event.data._nonce !== getPageNonce())
+        return;
+    forwardTelemetryMessage(messageType, payload);
+}
+export function initWindowMessageListener() {
+    window.addEventListener('message', onWindowMessage);
 }
 //# sourceMappingURL=window-message-listener.js.map

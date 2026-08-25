@@ -69,6 +69,14 @@ export declare class SyncClient {
     updateCommandProgress(commandId: string, progressPct?: number, status?: 'running' | 'pending'): void;
     private scheduleNextSync;
     private doSync;
+    private buildSyncRequest;
+    private fetchSyncResponse;
+    private rejectStaleSync;
+    private applySyncResponse;
+    private notifyVersionMismatch;
+    private dispatchSyncCommands;
+    private scheduleNextPoll;
+    private handleSyncFailure;
     private onSuccess;
     private onFailure;
     private retryDelayMs;

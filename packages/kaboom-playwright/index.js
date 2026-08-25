@@ -19,6 +19,41 @@ function deriveTestId(testInfo) {
 }
 
 /**
+ * @param {string} label
+ * @param {number | undefined} value
+ * @returns {string}
+ */
+function statLine(label, value) {
+  return `${label}: ${value || 0}`
+}
+
+/**
+ * @param {string[]} lines
+ * @param {object[]} logs
+ */
+function appendErrorLines(lines, logs) {
+  lines.push('', '--- Errors ---')
+  for (const log of logs.filter((l) => l.level === 'error')) {
+    lines.push(`  [${log.source || 'unknown'}] ${log.message || ''}`)
+    if (log.stack) lines.push(`    ${log.stack.split('\n')[0]}`)
+  }
+}
+
+/**
+ * @param {string[]} lines
+ * @param {object[]} networkBodies
+ */
+function appendNetworkFailureLines(lines, networkBodies) {
+  lines.push('', '--- Network Failures ---')
+  for (const body of networkBodies.filter((b) => b.status >= 400)) {
+    lines.push(`  ${body.method} ${body.url} → ${body.status}`)
+    if (body.responseBody) {
+      lines.push(`    ${body.responseBody.slice(0, 200)}`)
+    }
+  }
+}
+
+/**
  * @param {object} snapshot
  * @returns {string}
  */
@@ -34,29 +69,19 @@ function formatFailureSummary(snapshot) {
     `Captured at: ${snapshot.timestamp || 'unknown'}`,
     '',
     '--- Stats ---',
-    `Total logs: ${stats.total_logs || 0}`,
-    `Errors: ${stats.error_count || 0}`,
-    `Warnings: ${stats.warning_count || 0}`,
-    `Network failures: ${stats.network_failures || 0}`,
-    `WebSocket connections: ${stats.ws_connections || 0}`
+    statLine('Total logs', stats.total_logs),
+    statLine('Errors', stats.error_count),
+    statLine('Warnings', stats.warning_count),
+    statLine('Network failures', stats.network_failures),
+    statLine('WebSocket connections', stats.ws_connections)
   ]
 
   if ((stats.error_count || 0) > 0) {
-    lines.push('', '--- Errors ---')
-    for (const log of logs.filter((l) => l.level === 'error')) {
-      lines.push(`  [${log.source || 'unknown'}] ${log.message || ''}`)
-      if (log.stack) lines.push(`    ${log.stack.split('\n')[0]}`)
-    }
+    appendErrorLines(lines, logs)
   }
 
   if ((stats.network_failures || 0) > 0) {
-    lines.push('', '--- Network Failures ---')
-    for (const body of networkBodies.filter((b) => b.status >= 400)) {
-      lines.push(`  ${body.method} ${body.url} → ${body.status}`)
-      if (body.responseBody) {
-        lines.push(`    ${body.responseBody.slice(0, 200)}`)
-      }
-    }
+    appendNetworkFailureLines(lines, networkBodies)
   }
 
   return lines.join('\n')

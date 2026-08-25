@@ -81,6 +81,98 @@ async function refreshDynamicContextMenuTitles(
 }
 
 // =============================================================================
+// CONTEXT MENU ITEM HANDLERS
+// =============================================================================
+
+function openTerminalFromMenu(tabId: number, logFn?: (message: string) => void): void {
+  // Call synchronously — awaiting ANYTHING first (even a storage read) burns
+  // the user gesture and Chrome then refuses sidePanel.open(). This is what
+  // made "Open Kaboom Terminal" do nothing.
+  toggleTerminalSidePanel(tabId)
+    .then((result) => {
+      if (!result.success && logFn) {
+        logFn(`Toggle terminal via context menu failed: ${result.error ?? 'unknown error'}`)
+      }
+    })
+    .catch((err) => {
+      if (logFn) logFn(`Toggle terminal via context menu error: ${errorMessage(err)}`)
+    })
+}
+
+async function handleControlMenuClick(
+  tab: chrome.tabs.Tab,
+  recordingHandlers: ScreenRecordingHandlers,
+  logFn?: (message: string) => void
+): Promise<void> {
+  try {
+    const trackedTabId = (await readTrackedTab()).id
+    if (trackedTabId === tab.id) {
+      // Release: shared core clears state, stops recording, and notifies the
+      // content script. The menu can reach the recording handler directly.
+      await untrackTab(tab.id, async () => {
+        if (recordingHandlers.isRecording()) await recordingHandlers.stopRecording()
+      })
+      if (logFn) logFn(`Released control for tab ${tab.id}`)
+    } else {
+      // Track through the shared core so the same internal-page and
+      // cloaked-domain guards the popup enforces apply here too — controlling
+      // a cloaked tab from the menu was a privacy leak (F2, rule 7).
+      const outcome = await trackTab(tab)
+      if (outcome === 'tracked') {
+        if (logFn) logFn(`Now controlling tab ${tab.id}: ${tab.url}`)
+      } else if (logFn) {
+        logFn(`Not controlling tab ${tab.id}: ${outcome === 'cloaked' ? 'cloaked domain' : 'internal page'}`)
+      }
+    }
+  } catch (err) {
+    if (logFn) logFn(`Control page error: ${errorMessage(err)}`)
+  }
+}
+
+function handleScreenshotMenuClick(tabId: number, logFn?: (message: string) => void): void {
+  try {
+    trackUIFeature('screenshot')
+    chrome.tabs.sendMessage(tabId, { type: 'capture_screenshot' })
+  } catch {
+    if (logFn) logFn('Cannot reach content script for screenshot via context menu')
+  }
+}
+
+async function handleRecordMenuClick(
+  recordingHandlers: ScreenRecordingHandlers,
+  tab: chrome.tabs.Tab,
+  logFn?: (message: string) => void
+): Promise<void> {
+  try {
+    trackUIFeature('video')
+    await toggleScreenRecording(recordingHandlers, tab, logFn)
+  } catch (err) {
+    if (logFn) logFn(`Context menu recording error: ${errorMessage(err)}`)
+  }
+}
+
+async function handleActionRecordMenuClick(
+  actionRecordingHandlers: RecordingShortcutHandlers,
+  tab: chrome.tabs.Tab,
+  logFn?: (message: string) => void
+): Promise<void> {
+  try {
+    await toggleActionSequenceRecording(actionRecordingHandlers, tab, logFn)
+  } catch (err) {
+    if (logFn) logFn(`Context menu action recording error: ${errorMessage(err)}`)
+  }
+}
+
+async function handleAnnotateMenuClick(tabId: number, logFn?: (message: string) => void): Promise<void> {
+  try {
+    trackUIFeature('annotations')
+    await toggleDrawModeForTab(tabId)
+  } catch {
+    if (logFn) logFn('Cannot reach content script for annotation via context menu')
+  }
+}
+
+// =============================================================================
 // CONTEXT MENU INSTALLATION
 // =============================================================================
 
@@ -123,72 +215,20 @@ export function installContextMenus(
     // and contextMenus.onClicked is one of the few entry points Chrome grants a
     // full (unrestricted) gesture. Awaiting anything first would expire it.
     if (info.menuItemId === MENU_ID_TERMINAL) {
-      // Call synchronously — awaiting ANYTHING first (even a storage read) burns
-      // the user gesture and Chrome then refuses sidePanel.open(). This is what
-      // made "Open Kaboom Terminal" do nothing.
-      toggleTerminalSidePanel(tab.id)
-        .then((result) => {
-          if (!result.success && logFn) {
-            logFn(`Toggle terminal via context menu failed: ${result.error ?? 'unknown error'}`)
-          }
-        })
-        .catch((err) => {
-          if (logFn) logFn(`Toggle terminal via context menu error: ${errorMessage(err)}`)
-        })
+      openTerminalFromMenu(tab.id, logFn)
       return
     }
 
     if (info.menuItemId === MENU_ID_CONTROL) {
-      try {
-        const trackedTabId = (await readTrackedTab()).id
-        if (trackedTabId === tab.id) {
-          // Release: shared core clears state, stops recording, and notifies the
-          // content script. The menu can reach the recording handler directly.
-          await untrackTab(tab.id, async () => {
-            if (recordingHandlers.isRecording()) await recordingHandlers.stopRecording()
-          })
-          if (logFn) logFn(`Released control for tab ${tab.id}`)
-        } else {
-          // Track through the shared core so the same internal-page and
-          // cloaked-domain guards the popup enforces apply here too — controlling
-          // a cloaked tab from the menu was a privacy leak (F2, rule 7).
-          const outcome = await trackTab(tab)
-          if (outcome === 'tracked') {
-            if (logFn) logFn(`Now controlling tab ${tab.id}: ${tab.url}`)
-          } else if (logFn) {
-            logFn(`Not controlling tab ${tab.id}: ${outcome === 'cloaked' ? 'cloaked domain' : 'internal page'}`)
-          }
-        }
-      } catch (err) {
-        if (logFn) logFn(`Control page error: ${errorMessage(err)}`)
-      }
+      await handleControlMenuClick(tab, recordingHandlers, logFn)
     } else if (info.menuItemId === MENU_ID_SCREENSHOT) {
-      try {
-        trackUIFeature('screenshot')
-        chrome.tabs.sendMessage(tab.id, { type: 'capture_screenshot' })
-      } catch {
-        if (logFn) logFn('Cannot reach content script for screenshot via context menu')
-      }
+      handleScreenshotMenuClick(tab.id, logFn)
     } else if (info.menuItemId === MENU_ID_RECORD) {
-      try {
-        trackUIFeature('video')
-        await toggleScreenRecording(recordingHandlers, tab, logFn)
-      } catch (err) {
-        if (logFn) logFn(`Context menu recording error: ${errorMessage(err)}`)
-      }
+      await handleRecordMenuClick(recordingHandlers, tab, logFn)
     } else if (info.menuItemId === MENU_ID_ACTION_RECORD) {
-      try {
-        await toggleActionSequenceRecording(actionRecordingHandlers, tab, logFn)
-      } catch (err) {
-        if (logFn) logFn(`Context menu action recording error: ${errorMessage(err)}`)
-      }
+      await handleActionRecordMenuClick(actionRecordingHandlers, tab, logFn)
     } else if (info.menuItemId === MENU_ID_ANNOTATE) {
-      try {
-        trackUIFeature('annotations')
-        await toggleDrawModeForTab(tab.id)
-      } catch {
-        if (logFn) logFn('Cannot reach content script for annotation via context menu')
-      }
+      await handleAnnotateMenuClick(tab.id, logFn)
     }
 
     refreshDynamicContextMenuTitles(tab.id, recordingHandlers, actionRecordingHandlers).catch(() => {

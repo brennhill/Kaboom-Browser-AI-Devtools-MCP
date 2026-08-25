@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
 const (
@@ -42,45 +43,10 @@ func BuildCommandExecutionInfoAt(cap *capture.Capture, now time.Time) CommandExe
 
 	info.QueueDepth = cap.Queries().QueueDepth()
 	info.PendingCount = len(pending)
+	info.OldestPendingAgeMs = oldestPendingAgeMs(pending, now)
 
-	var oldestPendingAge time.Duration
-	for _, cmd := range pending {
-		if cmd == nil || cmd.CreatedAt.IsZero() {
-			continue
-		}
-		age := now.Sub(cmd.CreatedAt)
-		if age < 0 {
-			age = 0
-		}
-		if age > oldestPendingAge {
-			oldestPendingAge = age
-		}
-	}
-	if oldestPendingAge > 0 {
-		info.OldestPendingAgeMs = oldestPendingAge.Milliseconds()
-	}
-
-	var lastSuccess time.Time
-	for _, cmd := range completed {
-		if cmd == nil || cmd.Status != "complete" {
-			continue
-		}
-		eventTime := cmd.CompletedAt
-		if eventTime.IsZero() {
-			eventTime = cmd.CreatedAt
-		}
-		if eventTime.IsZero() {
-			continue
-		}
-		if eventTime.After(lastSuccess) {
-			lastSuccess = eventTime
-		}
-		age := now.Sub(eventTime)
-		if age < 0 || age > commandExecutionWindow {
-			continue
-		}
-		info.RecentSuccessCount++
-	}
+	successCount, lastSuccess := recentSuccessStats(completed, now)
+	info.RecentSuccessCount = successCount
 	if !lastSuccess.IsZero() {
 		info.LastSuccessAt = lastSuccess.UTC().Format(time.RFC3339Nano)
 		lastSuccessAge := now.Sub(lastSuccess)
@@ -90,33 +56,12 @@ func BuildCommandExecutionInfoAt(cap *capture.Capture, now time.Time) CommandExe
 		info.LastSuccessAgeMs = lastSuccessAge.Milliseconds()
 	}
 
-	for _, cmd := range failed {
-		if cmd == nil {
-			continue
-		}
-		eventTime := cmd.CompletedAt
-		if eventTime.IsZero() {
-			eventTime = cmd.CreatedAt
-		}
-		if eventTime.IsZero() {
-			continue
-		}
-		age := now.Sub(eventTime)
-		if age < 0 || age > commandExecutionWindow {
-			continue
-		}
-		info.RecentFailedCount++
-		switch cmd.Status {
-		case "expired":
-			info.RecentExpiredCount++
-		case "timeout":
-			info.RecentTimeoutCount++
-		case "error":
-			info.RecentErrorCount++
-		case "cancelled":
-			info.RecentCancelledCount++
-		}
-	}
+	failures := recentFailureStats(failed, now)
+	info.RecentFailedCount = failures.total
+	info.RecentExpiredCount = failures.expired
+	info.RecentTimeoutCount = failures.timeout
+	info.RecentErrorCount = failures.errored
+	info.RecentCancelledCount = failures.cancelled
 
 	attempts := info.RecentSuccessCount + info.RecentFailedCount
 	if attempts > 0 {
@@ -149,16 +94,7 @@ func BuildCommandExecutionInfoAt(cap *capture.Capture, now time.Time) CommandExe
 		))
 	}
 
-	lastSuccessAge := time.Duration(info.LastSuccessAgeMs) * time.Millisecond
-	lastSuccessStaleWarn := info.LastSuccessAt == "" || lastSuccessAge >= commandPendingStallWarnAge
-	lastSuccessStaleFail := info.LastSuccessAt == "" || lastSuccessAge >= commandPendingStallFailAge
-	pendingStallWarn := info.PendingCount > 0 &&
-		time.Duration(info.OldestPendingAgeMs)*time.Millisecond >= commandPendingStallWarnAge &&
-		lastSuccessStaleWarn
-	pendingStallFail := info.PendingCount > 0 &&
-		time.Duration(info.OldestPendingAgeMs)*time.Millisecond >= commandPendingStallFailAge &&
-		lastSuccessStaleFail
-
+	pendingStallWarn, pendingStallFail := commandPendingStall(info)
 	if pendingStallFail {
 		info.Status = "fail"
 	}
@@ -181,4 +117,100 @@ func BuildCommandExecutionInfoAt(cap *capture.Capture, now time.Time) CommandExe
 	info.Ready = info.Status == "pass"
 	info.Detail = strings.Join(detailParts, "; ")
 	return info
+}
+
+func oldestPendingAgeMs(pending []*queries.CommandResult, now time.Time) int64 {
+	var oldest time.Duration
+	for _, cmd := range pending {
+		if cmd == nil || cmd.CreatedAt.IsZero() {
+			continue
+		}
+		age := now.Sub(cmd.CreatedAt)
+		if age < 0 {
+			age = 0
+		}
+		if age > oldest {
+			oldest = age
+		}
+	}
+	return oldest.Milliseconds()
+}
+
+func recentSuccessStats(completed []*queries.CommandResult, now time.Time) (int, time.Time) {
+	var count int
+	var lastSuccess time.Time
+	for _, cmd := range completed {
+		if cmd == nil || cmd.Status != "complete" {
+			continue
+		}
+		eventTime := cmd.CompletedAt
+		if eventTime.IsZero() {
+			eventTime = cmd.CreatedAt
+		}
+		if eventTime.IsZero() {
+			continue
+		}
+		if eventTime.After(lastSuccess) {
+			lastSuccess = eventTime
+		}
+		age := now.Sub(eventTime)
+		if age < 0 || age > commandExecutionWindow {
+			continue
+		}
+		count++
+	}
+	return count, lastSuccess
+}
+
+type commandFailureStats struct {
+	total     int
+	expired   int
+	timeout   int
+	errored   int
+	cancelled int
+}
+
+func recentFailureStats(failed []*queries.CommandResult, now time.Time) commandFailureStats {
+	var stats commandFailureStats
+	for _, cmd := range failed {
+		if cmd == nil {
+			continue
+		}
+		eventTime := cmd.CompletedAt
+		if eventTime.IsZero() {
+			eventTime = cmd.CreatedAt
+		}
+		if eventTime.IsZero() {
+			continue
+		}
+		age := now.Sub(eventTime)
+		if age < 0 || age > commandExecutionWindow {
+			continue
+		}
+		stats.total++
+		switch cmd.Status {
+		case "expired":
+			stats.expired++
+		case "timeout":
+			stats.timeout++
+		case "error":
+			stats.errored++
+		case "cancelled":
+			stats.cancelled++
+		}
+	}
+	return stats
+}
+
+func commandPendingStall(info CommandExecutionInfo) (warn bool, fail bool) {
+	lastSuccessAge := time.Duration(info.LastSuccessAgeMs) * time.Millisecond
+	lastSuccessStaleWarn := info.LastSuccessAt == "" || lastSuccessAge >= commandPendingStallWarnAge
+	lastSuccessStaleFail := info.LastSuccessAt == "" || lastSuccessAge >= commandPendingStallFailAge
+	warn = info.PendingCount > 0 &&
+		time.Duration(info.OldestPendingAgeMs)*time.Millisecond >= commandPendingStallWarnAge &&
+		lastSuccessStaleWarn
+	fail = info.PendingCount > 0 &&
+		time.Duration(info.OldestPendingAgeMs)*time.Millisecond >= commandPendingStallFailAge &&
+		lastSuccessStaleFail
+	return warn, fail
 }

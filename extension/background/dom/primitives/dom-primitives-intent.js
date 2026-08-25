@@ -446,6 +446,22 @@ export function domPrimitiveIntent(action, options) {
         return { error: domError('unknown_action', `Unknown intent action: ${action}`) };
     }
     // — Execute action —
+    function isComposerInputLike(node) {
+        const tag = node.tagName.toLowerCase();
+        return node.isContentEditable || node.getAttribute('role') === 'textbox' || tag === 'textarea' || tag === 'input';
+    }
+    function intentSuccess(node, resolved, matchedInfo, fallbackStrategy, reason) {
+        return {
+            success: true,
+            action,
+            selector: '',
+            ...(reason ? { reason } : {}),
+            matched: matchedInfo,
+            match_count: resolved.match_count || 1,
+            match_strategy: resolved.match_strategy || fallbackStrategy,
+            viewport: captureViewport()
+        };
+    }
     const resolved = resolveIntentTarget();
     if (resolved.error)
         return resolved.error;
@@ -464,37 +480,13 @@ export function domPrimitiveIntent(action, options) {
         scope_selector_used: resolved.scope_selector_used
     };
     // Execute the action
-    if (action === 'open_composer') {
-        const tag = node.tagName.toLowerCase();
-        const isInputLike = node.isContentEditable || node.getAttribute('role') === 'textbox' || tag === 'textarea' || tag === 'input';
-        if (isInputLike) {
-            node.focus();
-            return {
-                success: true,
-                action,
-                selector: '',
-                reason: 'composer_ready',
-                matched: matchedInfo,
-                match_count: resolved.match_count || 1,
-                match_strategy: resolved.match_strategy || 'intent_open_composer',
-                viewport: captureViewport()
-            };
-        }
-        node.click();
+    if (action === 'open_composer' && isComposerInputLike(node)) {
+        node.focus();
+        return intentSuccess(node, resolved, matchedInfo, 'intent_open_composer', 'composer_ready');
     }
-    else {
-        // submit_active_composer and confirm_top_dialog both click
-        node.click();
-    }
-    return {
-        success: true,
-        action,
-        selector: '',
-        matched: matchedInfo,
-        match_count: resolved.match_count || 1,
-        match_strategy: resolved.match_strategy || 'selector',
-        viewport: captureViewport()
-    };
+    // open_composer on a trigger, submit_active_composer, and confirm_top_dialog all click
+    node.click();
+    return intentSuccess(node, resolved, matchedInfo, 'selector');
 }
 // jscpd:ignore-end
 //# sourceMappingURL=dom-primitives-intent.js.map

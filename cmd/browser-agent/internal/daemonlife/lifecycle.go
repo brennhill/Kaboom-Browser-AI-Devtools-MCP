@@ -178,36 +178,8 @@ func daemonLockAge(rec *daemonLockRecord) (time.Duration, bool) {
 // strictly OLDER than us (a real upgrade). A daemon still inside the startup
 // grace window is always deferred to.
 func classifyExistingDaemon(d Deps, port int, rec *daemonLockRecord) error {
-	// A strict version upgrade always replaces the incumbent — even one still
-	// inside the startup grace window — because running the newer binary is the
-	// whole point of the install. Uses the registered version so we needn't wait
-	// on a /health round-trip for the common upgrade case.
-	if rec.Version != "" && IsNewerVersion(d.Version, rec.Version) {
-		d.Log.LogLifecycle("daemon_takeover_upgrade", port, map[string]any{
-			"existing_pid":     rec.PID,
-			"existing_version": rec.Version,
-			"our_version":      d.Version,
-		})
-		return nil
-	}
-
-	// Same version, but a strictly NEWER install supersedes an older one — the
-	// "latest install always wins" tiebreaker (install_epoch.go). Without it, two
-	// same-version installs (e.g. ~/.kaboom/bin vs an npm-global copy) have no way to
-	// pick a winner and thrash. Uses the registered epoch (no /health round-trip),
-	// and fires before the startup-grace defer so a fresh install takes over at once.
-	// An equal-or-older epoch never reaches the takeover here, so this cannot
-	// ping-pong: the older install always defers to the newer one.
-	if sameNonEmptyVersion(d.Version, rec.Version) {
-		if ourEpoch := daemonInstallEpoch(d.Recovery); ourEpoch > 0 && ourEpoch > rec.InstallEpoch {
-			d.Log.LogLifecycle("daemon_takeover_newer_install", port, map[string]any{
-				"existing_pid":           rec.PID,
-				"existing_install_epoch": rec.InstallEpoch,
-				"our_install_epoch":      ourEpoch,
-				"version":                d.Version,
-			})
-			return nil
-		}
+	if decision, handled := takeoverByRegistration(d, port, rec); handled {
+		return decision
 	}
 
 	// Not a known upgrade. Never kill a daemon that only just registered — it may
@@ -238,20 +210,7 @@ func classifyExistingDaemon(d Deps, port int, rec *daemonLockRecord) error {
 	// peer on a single stray refusal (which would feed the takeover war). A
 	// persistently-wedged live daemon is still reclaimed once the retry budget is
 	// exhausted below.
-	reachable := false
-	liveVersion := ""
-	for attempt := 0; attempt < daemonHealthProbeRetries; attempt++ {
-		var refused bool
-		if reachable, liveVersion, refused = daemonProbeHealth(d, rec.Port); reachable {
-			break
-		}
-		if refused && !d.IsProcessAlive(rec.PID) {
-			break
-		}
-		if attempt < daemonHealthProbeRetries-1 {
-			daemonSleep(daemonHealthProbeBackoff)
-		}
-	}
+	reachable, liveVersion := probeDaemonLiveness(d, rec)
 
 	if !reachable {
 		// Stalled: alive PID, owns the port, but never answered /health. Replace it.
@@ -286,6 +245,63 @@ func classifyExistingDaemon(d Deps, port int, rec *daemonLockRecord) error {
 		"our_version":      d.Version,
 	})
 	return &Deferral{PID: rec.PID, Port: rec.Port, Version: existingVersion}
+}
+
+// takeoverByRegistration applies the lock-record-based takeover checks that need
+// no /health round-trip: a strict version upgrade always replaces the incumbent,
+// and at the same version a strictly newer install epoch supersedes an older one.
+func takeoverByRegistration(d Deps, port int, rec *daemonLockRecord) (error, bool) {
+	// A strict version upgrade always replaces the incumbent — even one still
+	// inside the startup grace window — because running the newer binary is the
+	// whole point of the install. Uses the registered version so we needn't wait
+	// on a /health round-trip for the common upgrade case.
+	if rec.Version != "" && IsNewerVersion(d.Version, rec.Version) {
+		d.Log.LogLifecycle("daemon_takeover_upgrade", port, map[string]any{
+			"existing_pid":     rec.PID,
+			"existing_version": rec.Version,
+			"our_version":      d.Version,
+		})
+		return nil, true
+	}
+
+	// Same version, but a strictly NEWER install supersedes an older one — the
+	// "latest install always wins" tiebreaker (install_epoch.go). Without it, two
+	// same-version installs (e.g. ~/.kaboom/bin vs an npm-global copy) have no way to
+	// pick a winner and thrash. Uses the registered epoch (no /health round-trip),
+	// and fires before the startup-grace defer so a fresh install takes over at once.
+	// An equal-or-older epoch never reaches the takeover here, so this cannot
+	// ping-pong: the older install always defers to the newer one.
+	if sameNonEmptyVersion(d.Version, rec.Version) {
+		if ourEpoch := daemonInstallEpoch(d.Recovery); ourEpoch > 0 && ourEpoch > rec.InstallEpoch {
+			d.Log.LogLifecycle("daemon_takeover_newer_install", port, map[string]any{
+				"existing_pid":           rec.PID,
+				"existing_install_epoch": rec.InstallEpoch,
+				"our_install_epoch":      ourEpoch,
+				"version":                d.Version,
+			})
+			return nil, true
+		}
+	}
+	return nil, false
+}
+
+// probeDaemonLiveness probes the incumbent's /health across the retry budget,
+// breaking early on a reachable answer or a definitive connection-refused while
+// the incumbent PID is dead.
+func probeDaemonLiveness(d Deps, rec *daemonLockRecord) (reachable bool, liveVersion string) {
+	for attempt := 0; attempt < daemonHealthProbeRetries; attempt++ {
+		var refused bool
+		if reachable, liveVersion, refused = daemonProbeHealth(d, rec.Port); reachable {
+			break
+		}
+		if refused && !d.IsProcessAlive(rec.PID) {
+			break
+		}
+		if attempt < daemonHealthProbeRetries-1 {
+			daemonSleep(daemonHealthProbeBackoff)
+		}
+	}
+	return reachable, liveVersion
 }
 
 // EnforceStartupPolicy is the single-instance gate a starting daemon must pass.

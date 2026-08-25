@@ -114,8 +114,27 @@ func (fixture WireQAFixture) validate() error {
 	if fixture.Locale != "" && !localePattern.MatchString(fixture.Locale) {
 		return errors.New("locale must be a valid language tag")
 	}
-	seenPermissions := make(map[string]struct{}, len(fixture.Permissions))
-	for _, permission := range fixture.Permissions {
+	if err := validatePermissions(fixture.Permissions); err != nil {
+		return err
+	}
+	if err := validateFixtureFields(fixture); err != nil {
+		return err
+	}
+	if err := validateCookies(fixture.Cookies); err != nil {
+		return err
+	}
+	if err := validateStateCardinality(fixture); err != nil {
+		return err
+	}
+	if stateSize(fixture) > MaxStateBytes {
+		return fmt.Errorf("state payload exceeds %d bytes", MaxStateBytes)
+	}
+	return nil
+}
+
+func validatePermissions(permissions []string) error {
+	seenPermissions := make(map[string]struct{}, len(permissions))
+	for _, permission := range permissions {
 		if _, ok := supportedPermissions[permission]; !ok {
 			return errors.New("permissions contains an unsupported capability")
 		}
@@ -124,6 +143,10 @@ func (fixture WireQAFixture) validate() error {
 		}
 		seenPermissions[permission] = struct{}{}
 	}
+	return nil
+}
+
+func validateFixtureFields(fixture WireQAFixture) error {
 	if fixture.Network.Profile != "" {
 		if _, ok := supportedNetworkProfiles[fixture.Network.Profile]; !ok {
 			return errors.New("network.profile is unsupported")
@@ -138,24 +161,26 @@ func (fixture WireQAFixture) validate() error {
 	if fixture.SetupTimeoutMs < 100 || fixture.SetupTimeoutMs > MaxSetupTimeoutMs {
 		return fmt.Errorf("setup_timeout_ms must be between 100 and %d", MaxSetupTimeoutMs)
 	}
-	if len(fixture.Cookies) > maxStateEntries {
+	return nil
+}
+
+func validateCookies(cookies []WireQACookie) error {
+	if len(cookies) > maxStateEntries {
 		return errors.New("cookies exceeds 100 entries")
 	}
-	for _, cookie := range fixture.Cookies {
+	for _, cookie := range cookies {
 		if !cookieNamePattern.MatchString(cookie.Name) {
 			return errors.New("cookies contains an invalid cookie name")
 		}
-		if cookie.SameSite != "" && cookie.SameSite != "strict" && cookie.SameSite != "lax" && cookie.SameSite != "none" {
+		if !validSameSite(cookie.SameSite) {
 			return errors.New("cookies contains an unsupported same_site value")
 		}
 	}
-	if err := validateStateCardinality(fixture); err != nil {
-		return err
-	}
-	if stateSize(fixture) > MaxStateBytes {
-		return fmt.Errorf("state payload exceeds %d bytes", MaxStateBytes)
-	}
 	return nil
+}
+
+func validSameSite(value string) bool {
+	return value == "" || value == "strict" || value == "lax" || value == "none"
 }
 
 func validateStateCardinality(fixture WireQAFixture) error {

@@ -22,6 +22,18 @@ describe('comprehensive UAT runner accounting', () => {
         'scripts/tests/framework/uat-artifacts.sh',
         join(testsDir, 'framework', 'uat-artifacts.sh')
       )
+      copyFileSync(
+        'scripts/tests/framework/uat-replay.sh',
+        join(testsDir, 'framework', 'uat-replay.sh')
+      )
+      // The runner sources the census from $PROJECT_ROOT and asserts no process
+      // growth per category; a missing source makes every `if ! assert_*` see
+      // "command not found" (exit 127), which `!` inverts into a reported leak
+      // for every category — the fake project must ship the census too.
+      copyFileSync(
+        'scripts/tests/framework/process-census.sh',
+        join(testsDir, 'framework', 'process-census.sh')
+      )
       const wrapper = join(root, 'kaboom-agentic-browser')
       writeFileSync(wrapper, '#!/bin/sh\nexit 0\n')
       chmodSync(wrapper, 0o755)

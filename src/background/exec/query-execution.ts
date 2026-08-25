@@ -130,81 +130,115 @@ export async function executeViaScriptingAPI(
       }
 
       function serialize(value: unknown, depth = 0, seen = new WeakSet<object>()): unknown {
-        if (depth > 10) return '[max depth]'
-        if (value === null || value === undefined) return value
-        const t = typeof value
-        if (t === 'string' || t === 'number' || t === 'boolean') return value
-        if (t === 'function') return '[Function]'
-        if (t === 'symbol') return String(value)
-        if (t === 'object') {
-          const obj = value as object
-          if (seen.has(obj)) return '[Circular]'
-          seen.add(obj)
-          if (Array.isArray(obj)) return obj.slice(0, 100).map((v) => serialize(v, depth + 1, seen))
-          if (obj instanceof Error) return { error: (obj as Error).message }
-          if (obj instanceof Date) return (obj as Date).toISOString()
-          if (obj instanceof RegExp) return String(obj)
+        // Track cycles and arrays: returns undefined when the value is neither.
+        function serializeCycleOrArray(v: object, d: number, s: WeakSet<object>): unknown {
+          if (s.has(v)) return '[Circular]'
+          s.add(v)
+          if (Array.isArray(v)) return (v as unknown[]).slice(0, 100).map((item) => serialize(item, d + 1, s))
+          return undefined
+        }
+
+        // Recognized non-plain objects. Wrapped so toJSON() returning undefined is preserved.
+        function serializeSpecialValue(v: object, d: number, s: WeakSet<object>): { value: unknown } | null {
+          if (v instanceof Error) return { value: { error: (v as Error).message } }
+          if (v instanceof Date) return { value: (v as Date).toISOString() }
+          if (v instanceof RegExp) return { value: String(v) }
           // DOM node duck-type check (works across worlds)
-          if ('nodeType' in obj && 'nodeName' in obj) {
-            const node = obj as { nodeName: string; id?: string }
-            return `[${node.nodeName}${node.id ? '#' + node.id : ''}]`
+          if ('nodeType' in v && 'nodeName' in v) {
+            const node = v as { nodeName: string; id?: string }
+            return { value: `[${node.nodeName}${node.id ? '#' + node.id : ''}]` }
           }
           // Browser host objects (DOMRect, DOMPoint, DOMMatrix) have prototype getters
           // that Object.keys() misses. Their toJSON() returns a plain object.
-          if (typeof (obj as { toJSON?: unknown }).toJSON === 'function') {
+          if (typeof (v as { toJSON?: unknown }).toJSON === 'function') {
             try {
-              return serialize((obj as { toJSON: () => unknown }).toJSON(), depth + 1, seen)
+              return { value: serialize((v as { toJSON: () => unknown }).toJSON(), d + 1, s) }
             } catch {
               // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
               // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
               // Fall through to Object.keys() enumeration
             }
           }
-          const keys = Object.keys(obj).slice(0, 50)
-          // #389: Some host objects expose data only via prototype getters
-          // (DOMRect/CSSStyleDeclaration-like values). If no enumerable keys exist,
-          // introspect prototype property names and capture primitive getter values.
-          if (keys.length === 0) {
-            try {
-              const proto = Object.getPrototypeOf(obj)
-              if (proto && proto !== Object.prototype) {
-                const hostResult: Record<string, unknown> = {}
-                const propNames = Object.getOwnPropertyNames(proto).slice(0, 120)
-                for (const key of propNames) {
-                  if (key === 'constructor') continue
-                  try {
-                    const value = (obj as Record<string, unknown>)[key]
-                    const valueType = typeof value
-                    if (value === undefined || valueType === 'function') continue
-                    if (valueType === 'string' || valueType === 'number' || valueType === 'boolean' || value === null) {
-                      hostResult[key] = value
-                    }
-                  } catch {
-                    // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
-                    // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
-                    // Ignore getter access errors.
-                  }
-                  if (Object.keys(hostResult).length >= 50) break
-                }
-                if (Object.keys(hostResult).length > 0) return hostResult
-              }
-            } catch {
-              // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
-              // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
-              // Fall through to default object key enumeration.
+          return null
+        }
+
+        function readHostPrimitive(v: object, key: string): { value: string | number | boolean | null } | null {
+          try {
+            const propValue = (v as Record<string, unknown>)[key]
+            const valueType = typeof propValue
+            if (propValue === undefined || valueType === 'function') return null
+            if (valueType === 'string' || valueType === 'number' || valueType === 'boolean' || propValue === null) {
+              return { value: propValue as string | number | boolean | null }
             }
+            return null
+          } catch {
+            // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+            // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
+            // Ignore getter access errors.
+            return null
           }
+        }
+
+        // #389: Some host objects expose data only via prototype getters
+        // (DOMRect/CSSStyleDeclaration-like values). If no enumerable keys exist,
+        // introspect prototype property names and capture primitive getter values.
+        function serializeHostObject(v: object): Record<string, unknown> | undefined {
+          try {
+            const proto = Object.getPrototypeOf(v)
+            if (proto && proto !== Object.prototype) {
+              const hostResult: Record<string, unknown> = {}
+              const propNames = Object.getOwnPropertyNames(proto).slice(0, 120)
+              for (const key of propNames) {
+                if (key === 'constructor') continue
+                const primitive = readHostPrimitive(v, key)
+                if (primitive) hostResult[key] = primitive.value
+                if (Object.keys(hostResult).length >= 50) break
+              }
+              if (Object.keys(hostResult).length > 0) return hostResult
+            }
+          } catch {
+            // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+            // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
+            // Fall through to default object key enumeration.
+          }
+          return undefined
+        }
+
+        function serializePlainObject(
+          v: object,
+          keys: string[],
+          d: number,
+          s: WeakSet<object>
+        ): Record<string, unknown> {
           const result: Record<string, unknown> = {}
           for (const key of keys) {
             try {
-              result[key] = serialize((obj as Record<string, unknown>)[key], depth + 1, seen)
+              result[key] = serialize((v as Record<string, unknown>)[key], d + 1, s)
             } catch {
               result[key] = '[unserializable]'
             }
           }
           return result
         }
-        return String(value)
+
+        if (depth > 10) return '[max depth]'
+        if (value === null || value === undefined) return value
+        const t = typeof value
+        if (t === 'string' || t === 'number' || t === 'boolean') return value
+        if (t === 'function') return '[Function]'
+        if (t === 'symbol') return String(value)
+        if (t !== 'object') return String(value)
+        const obj = value as object
+        const arrayOrCycle = serializeCycleOrArray(obj, depth, seen)
+        if (arrayOrCycle !== undefined) return arrayOrCycle
+        const special = serializeSpecialValue(obj, depth, seen)
+        if (special) return special.value
+        const keys = Object.keys(obj).slice(0, 50)
+        if (keys.length === 0) {
+          const host = serializeHostObject(obj)
+          if (host) return host
+        }
+        return serializePlainObject(obj, keys, depth, seen)
       }
     },
     args: [script]
@@ -289,13 +323,65 @@ async function executeViaStructuredCommand(
   }
 }
 
+/** Auto-fallback routing for a failed content-script result in "auto" world mode. */
+async function routeAutoFallback(
+  tabId: number,
+  result: ExecutionResult,
+  script: string,
+  timeoutMs: number
+): Promise<ExecutionResult> {
+  // CSP errors → structured executor in MAIN world
+  if (result.error === 'csp_blocked') {
+    debugLog(DebugCategory.CONNECTION, 'CSP fallback: structured executor in MAIN world', { tabId })
+    return executeViaStructuredCommand(tabId, script, timeoutMs, 'MAIN')
+  }
+
+  // Inject not loaded/responding → try MAIN world via scripting API
+  if (result.error === 'inject_not_loaded' || result.error === 'inject_not_responding') {
+    debugLog(DebugCategory.CONNECTION, 'Auto-fallback to chrome.scripting API (MAIN)', {
+      error: result.error,
+      tabId
+    })
+    return executeViaScriptingAPI(tabId, script, timeoutMs, 'MAIN')
+  }
+
+  return result
+}
+
+/** Recover when chrome.tabs.sendMessage throws (content script not reachable). */
+async function recoverFromTabSendError(
+  tabId: number,
+  err: unknown,
+  world: string,
+  script: string,
+  timeoutMs: number
+): Promise<ExecutionResult> {
+  let message = errorMessage(err, 'Tab communication failed')
+
+  // Auto-fallback: content script not reachable — try scripting API MAIN, then structured
+  if (world === 'auto' && message.includes('Receiving end does not exist')) {
+    debugLog(DebugCategory.CONNECTION, 'Auto-fallback (content script unreachable)', { tabId })
+    const mainResult = await executeViaScriptingAPI(tabId, script, timeoutMs, 'MAIN')
+    if (mainResult.success) return mainResult
+    if (mainResult.error === 'csp_blocked_all_worlds') {
+      return executeViaStructuredCommand(tabId, script, timeoutMs, 'MAIN')
+    }
+    return mainResult
+  }
+
+  if (message.includes('Receiving end does not exist')) {
+    message =
+      'Content script not loaded. REQUIRED ACTION: Refresh the page first using this command:\n\ninteract({what: "refresh"})\n\nThen retry your command.'
+  }
+  return { success: false, error: 'content_script_not_loaded', message }
+}
+
 /**
  * Execute JS with world-aware routing.
  * - isolated: structured executor in ISOLATED world (skips new Function — always fails in MV3)
  * - main: send to content script (MAIN world via inject)
  * - auto: try content script → scripting API MAIN → structured executor MAIN
  */
-// #lizard forgives
 export async function executeWithWorldRouting(
   tabId: number,
   queryParams: string | Record<string, unknown>,
@@ -324,41 +410,11 @@ export async function executeWithWorldRouting(
 
     // Auto-fallback: split by error type
     if (world === 'auto' && result && !result.success) {
-      // CSP errors → structured executor in MAIN world
-      if (result.error === 'csp_blocked') {
-        debugLog(DebugCategory.CONNECTION, 'CSP fallback: structured executor in MAIN world', { tabId })
-        return executeViaStructuredCommand(tabId, script, timeoutMs, 'MAIN')
-      }
-
-      // Inject not loaded/responding → try MAIN world via scripting API
-      if (result.error === 'inject_not_loaded' || result.error === 'inject_not_responding') {
-        debugLog(DebugCategory.CONNECTION, 'Auto-fallback to chrome.scripting API (MAIN)', {
-          error: result.error,
-          tabId
-        })
-        return executeViaScriptingAPI(tabId, script, timeoutMs, 'MAIN')
-      }
+      return routeAutoFallback(tabId, result, script, timeoutMs)
     }
 
     return result
   } catch (err) {
-    let message = errorMessage(err, 'Tab communication failed')
-
-    // Auto-fallback: content script not reachable — try scripting API MAIN, then structured
-    if (world === 'auto' && message.includes('Receiving end does not exist')) {
-      debugLog(DebugCategory.CONNECTION, 'Auto-fallback (content script unreachable)', { tabId })
-      const mainResult = await executeViaScriptingAPI(tabId, script, timeoutMs, 'MAIN')
-      if (mainResult.success) return mainResult
-      if (mainResult.error === 'csp_blocked_all_worlds') {
-        return executeViaStructuredCommand(tabId, script, timeoutMs, 'MAIN')
-      }
-      return mainResult
-    }
-
-    if (message.includes('Receiving end does not exist')) {
-      message =
-        'Content script not loaded. REQUIRED ACTION: Refresh the page first using this command:\n\ninteract({what: "refresh"})\n\nThen retry your command.'
-    }
-    return { success: false, error: 'content_script_not_loaded', message }
+    return recoverFromTabSendError(tabId, err, world, script, timeoutMs)
   }
 }

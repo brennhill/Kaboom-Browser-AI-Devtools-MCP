@@ -80,65 +80,80 @@ export function domPrimitiveNavDiscovery(): Record<string, unknown> {
     links: NavLink[]
   }
 
-  const regionSelectors = [
-    'nav',
-    '[role="navigation"]',
-    'header',
-    'footer',
-    'aside',
-    '[role="banner"]',
-    '[role="contentinfo"]',
-    '[role="complementary"]'
-  ]
+  function pushUniqueLink(links: NavLink[], seenHrefs: Set<string>, a: Element): void {
+    const rawHref = a.getAttribute('href') || ''
+    if (!rawHref || rawHref === '#' || rawHref.startsWith('javascript:')) return
+    const href = absoluteHref(rawHref)
+    if (seenHrefs.has(href)) return
+    seenHrefs.add(href)
+    links.push({ text: cleanText(a.textContent || '', 100), href, is_internal: isSameOrigin(href) })
+  }
+
+  function collectRegionLinks(el: Element): NavLink[] {
+    const anchors = el.querySelectorAll('a[href]')
+    const links: NavLink[] = []
+    const seenHrefs = new Set<string>()
+    for (const a of Array.from(anchors)) {
+      if (links.length >= MAX_LINKS_PER_REGION) break
+      pushUniqueLink(links, seenHrefs, a)
+    }
+    return links
+  }
+
+  function buildRegion(el: Element): NavRegion | null {
+    const anchors = el.querySelectorAll('a[href]')
+    if (anchors.length === 0) return null
+    const links = collectRegionLinks(el)
+    if (links.length === 0) return null
+    const tag = el.tagName.toLowerCase()
+    const role = el.getAttribute('role') || ''
+    return { tag, role, label: getRegionLabel(el) || tag, position: getPositionLabel(el), links }
+  }
+
+  function collectRegions(seenRegions: Set<Element>): NavRegion[] {
+    const regionSelectors = [
+      'nav',
+      '[role="navigation"]',
+      'header',
+      'footer',
+      'aside',
+      '[role="banner"]',
+      '[role="contentinfo"]',
+      '[role="complementary"]'
+    ]
+
+    const regions: NavRegion[] = []
+    for (const sel of regionSelectors) {
+      const elements = document.querySelectorAll(sel)
+      for (const el of Array.from(elements)) {
+        if (seenRegions.has(el) || regions.length >= MAX_REGIONS) continue
+        seenRegions.add(el)
+        const region = buildRegion(el)
+        if (region) regions.push(region)
+      }
+    }
+    return regions
+  }
+
+  function collectUnregionedLinks(seenRegions: Set<Element>): NavLink[] {
+    const allAnchors = document.querySelectorAll('a[href]')
+    const regionedAnchors = new Set<Element>()
+    for (const region of seenRegions) {
+      for (const a of Array.from(region.querySelectorAll('a[href]'))) regionedAnchors.add(a)
+    }
+    const unregionedLinks: NavLink[] = []
+    const seenUnregioned = new Set<string>()
+    for (const a of Array.from(allAnchors)) {
+      if (unregionedLinks.length >= MAX_LINKS_PER_REGION) break
+      if (regionedAnchors.has(a)) continue
+      pushUniqueLink(unregionedLinks, seenUnregioned, a)
+    }
+    return unregionedLinks
+  }
 
   const seenRegions = new Set<Element>()
-  const regions: NavRegion[] = []
-
-  for (const sel of regionSelectors) {
-    const elements = document.querySelectorAll(sel)
-    for (const el of Array.from(elements)) {
-      if (seenRegions.has(el) || regions.length >= MAX_REGIONS) continue
-      seenRegions.add(el)
-      const anchors = el.querySelectorAll('a[href]')
-      if (anchors.length === 0) continue
-      const links: NavLink[] = []
-      const seenHrefs = new Set<string>()
-      for (const a of Array.from(anchors)) {
-        if (links.length >= MAX_LINKS_PER_REGION) break
-        const rawHref = a.getAttribute('href') || ''
-        if (!rawHref || rawHref === '#' || rawHref.startsWith('javascript:')) continue
-        const href = absoluteHref(rawHref)
-        if (seenHrefs.has(href)) continue
-        seenHrefs.add(href)
-        links.push({ text: cleanText(a.textContent || '', 100), href, is_internal: isSameOrigin(href) })
-      }
-      if (links.length === 0) continue
-      const tag = el.tagName.toLowerCase()
-      const role = el.getAttribute('role') || ''
-      const label = getRegionLabel(el) || tag
-      const position = getPositionLabel(el)
-      regions.push({ tag, role, label, position, links })
-    }
-  }
-
-  // Unregioned links
-  const allAnchors = document.querySelectorAll('a[href]')
-  const regionedAnchors = new Set<Element>()
-  for (const region of seenRegions) {
-    for (const a of Array.from(region.querySelectorAll('a[href]'))) regionedAnchors.add(a)
-  }
-  const unregionedLinks: NavLink[] = []
-  const seenUnregioned = new Set<string>()
-  for (const a of Array.from(allAnchors)) {
-    if (unregionedLinks.length >= MAX_LINKS_PER_REGION) break
-    if (regionedAnchors.has(a)) continue
-    const rawHref = a.getAttribute('href') || ''
-    if (!rawHref || rawHref === '#' || rawHref.startsWith('javascript:')) continue
-    const href = absoluteHref(rawHref)
-    if (seenUnregioned.has(href)) continue
-    seenUnregioned.add(href)
-    unregionedLinks.push({ text: cleanText(a.textContent || '', 100), href, is_internal: isSameOrigin(href) })
-  }
+  const regions = collectRegions(seenRegions)
+  const unregionedLinks = collectUnregionedLinks(seenRegions)
 
   const totalLinks = regions.reduce((sum, r) => sum + r.links.length, 0) + unregionedLinks.length
   const internalLinks =

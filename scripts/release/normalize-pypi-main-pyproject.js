@@ -152,11 +152,41 @@ function parseDependencyEntries(blockText) {
   return entries
 }
 
+function findSections(sections) {
+  return {
+    projectSection: sections.find((s) => s.header === '[project]'),
+    scriptsSection: sections.find((s) => s.header === '[project.scripts]')
+  }
+}
+
+function compareDependencyEntries(dependencyEntries, expectedVersion, errors) {
+  const expected = new Set(getExpectedDependencyEntries(expectedVersion))
+  const actual = new Set(dependencyEntries)
+  for (const dep of expected) {
+    if (!actual.has(dep)) {
+      errors.push(`Missing expected dependency: ${dep}`)
+    }
+  }
+  for (const dep of actual) {
+    if (!expected.has(dep)) {
+      errors.push(`Unexpected dependency: ${dep}`)
+    }
+  }
+}
+
+function collectDependencyEntries(projectDeps, errors) {
+  try {
+    return parseDependencyEntries(projectDeps.text)
+  } catch (error) {
+    errors.push(error.message)
+    return null
+  }
+}
+
 export function validateMainPyprojectContent(content, { expectedVersion } = {}) {
   const errors = []
   const { sections, lines } = splitSections(content)
-  const projectSection = sections.find((s) => s.header === '[project]')
-  const scriptsSection = sections.find((s) => s.header === '[project.scripts]')
+  const { projectSection, scriptsSection } = findSections(sections)
 
   if (!projectSection) {
     errors.push('Missing [project] section')
@@ -187,27 +217,9 @@ export function validateMainPyprojectContent(content, { expectedVersion } = {}) 
   }
 
   if (projectDeps) {
-    let dependencyEntries
-    try {
-      dependencyEntries = parseDependencyEntries(projectDeps.text)
-    } catch (error) {
-      errors.push(error.message)
-    }
-
+    const dependencyEntries = collectDependencyEntries(projectDeps, errors)
     if (expectedVersion && Array.isArray(dependencyEntries)) {
-      const expected = new Set(getExpectedDependencyEntries(expectedVersion))
-      const actual = new Set(dependencyEntries)
-
-      for (const dep of expected) {
-        if (!actual.has(dep)) {
-          errors.push(`Missing expected dependency: ${dep}`)
-        }
-      }
-      for (const dep of actual) {
-        if (!expected.has(dep)) {
-          errors.push(`Unexpected dependency: ${dep}`)
-        }
-      }
+      compareDependencyEntries(dependencyEntries, expectedVersion, errors)
     }
   }
 

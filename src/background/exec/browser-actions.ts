@@ -201,27 +201,212 @@ async function navigateHistory(tabId: number, offset: -1 | 1, correlationId: str
 // BROWSER ACTION DISPATCH
 // =============================================================================
 
+interface BrowserActionParams {
+  action?: string
+  what?: string
+  url?: string
+  reason?: string
+  tab_id?: number
+  tab_index?: number
+  new_tab?: boolean
+}
+
+function resolveActionName(params?: BrowserActionParams): string | undefined {
+  if (typeof params?.action === 'string' && params.action.trim() !== '') return params.action
+  if (typeof params?.what === 'string') return params.what
+  return undefined
+}
+
+async function executeRefreshAction(
+  tabId: number,
+  reason: string | undefined,
+  actionToast: ActionToastFn,
+  correlationId: string
+): Promise<BrowserActionResult> {
+  contentReadiness.begin(tabId, correlationId)
+  actionToast(tabId, reason || 'refresh', reason ? undefined : 'reloading page', 'trying', 10000)
+  await chrome.tabs.reload(tabId)
+  await waitForTabLoad(tabId)
+  actionToast(tabId, reason || 'refresh', undefined, 'success')
+  const refreshedTab = await chrome.tabs.get(tabId)
+  return enrichWithCSP(tabId, {
+    success: true,
+    action: 'refresh',
+    url: refreshedTab.url,
+    title: refreshedTab.title
+  })
+}
+
+async function executeNavigateAction(
+  tabId: number,
+  params: BrowserActionParams | undefined,
+  url: string | undefined,
+  actionToast: ActionToastFn,
+  reason: string | undefined,
+  correlationId: string
+): Promise<BrowserActionResult> {
+  if (!url) return { success: false, error: 'missing_url', message: 'URL required for navigate action' }
+  if (params?.new_tab) {
+    return handleNewTabAction(tabId, url, actionToast, reason || 'navigate')
+  }
+  contentReadiness.begin(tabId, correlationId)
+  return handleNavigateAction(tabId, url, actionToast, reason)
+}
+
+async function executeHistoryAction(
+  tabId: number,
+  action: 'back' | 'forward',
+  reason: string | undefined,
+  actionToast: ActionToastFn,
+  correlationId: string
+): Promise<BrowserActionResult> {
+  const tryingDetail = action === 'back' ? 'going back' : 'going forward'
+  contentReadiness.begin(tabId, correlationId)
+  actionToast(tabId, reason || action, reason ? undefined : tryingDetail, 'trying', 10000)
+  const historyTab = await navigateHistory(tabId, action === 'back' ? -1 : 1, correlationId)
+  actionToast(tabId, reason || action, undefined, 'success')
+  return { success: true, action, url: historyTab.url, title: historyTab.title }
+}
+
+async function executeSwitchTabAction(params: BrowserActionParams | undefined): Promise<BrowserActionResult> {
+  const requestedTabID = coerceNonNegativeInt(params?.tab_id)
+  const requestedTabIndex = coerceNonNegativeInt(params?.tab_index)
+  if (requestedTabID === null && requestedTabIndex === null) {
+    return {
+      success: false,
+      error: 'missing_tab_target',
+      message: "switch_tab requires 'tab_id' or 'tab_index'"
+    }
+  }
+
+  let targetTab: chrome.tabs.Tab | null = null
+  if (requestedTabID !== null) {
+    targetTab = await chrome.tabs.get(requestedTabID)
+  } else {
+    const tabs = await chrome.tabs.query({ currentWindow: true })
+    const sortable = tabs.filter((tab) => typeof tab.id === 'number')
+    sortable.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    targetTab = sortable[requestedTabIndex!] || null
+  }
+
+  if (!targetTab?.id) {
+    return {
+      success: false,
+      error: 'tab_not_found',
+      message: 'No matching tab found for switch_tab request'
+    }
+  }
+
+  const updated = await chrome.tabs.update(targetTab.id, { active: true })
+  const activeTab = updated || targetTab
+
+  // Persist tracked tab so the extension-side state matches the server-side
+  // update (issue #271). This ensures subsequent /sync heartbeats report
+  // the correct tracked tab.
+  await persistTrackedTab(activeTab)
+  broadcastTrackingState().catch(() => {
+    debugLog(DebugCategory.CAPTURE, 'Tracking broadcast failed after tab switch')
+  })
+
+  return {
+    success: true,
+    action: 'switch_tab',
+    tab_id: activeTab.id || targetTab.id,
+    tab_index: typeof activeTab.index === 'number' ? activeTab.index : targetTab.index,
+    url: activeTab.url || targetTab.url,
+    title: activeTab.title || targetTab.title
+  }
+}
+
+async function executeActivateTabAction(
+  tabId: number,
+  reason: string | undefined,
+  actionToast: ActionToastFn
+): Promise<BrowserActionResult> {
+  actionToast(tabId, reason || 'activate_tab', reason ? undefined : 'bringing tab to foreground', 'trying', 5000)
+  // Activate the tab and focus its window (shared helper — one definition of
+  // "bring a tab to the foreground"). Returns the updated tab for the result.
+  const tab = await focusTabAndWindow(tabId)
+  actionToast(tabId, reason || 'activate_tab', undefined, 'success')
+  return {
+    success: true,
+    action: 'activate_tab',
+    tab_id: tabId,
+    url: tab.url,
+    title: tab.title
+  }
+}
+
+async function executeCloseTabAction(
+  tabId: number,
+  params: BrowserActionParams | undefined
+): Promise<BrowserActionResult> {
+  const requestedTabID = coerceNonNegativeInt(params?.tab_id)
+  const targetTabID = requestedTabID !== null ? requestedTabID : tabId
+  if (!targetTabID || targetTabID < 0) {
+    return {
+      success: false,
+      error: 'missing_tab_target',
+      message: "close_tab requires a valid 'tab_id' or resolved tab context"
+    }
+  }
+
+  await chrome.tabs.remove(targetTabID)
+  const activeTab = await getActiveTab()
+  return {
+    success: true,
+    action: 'close_tab',
+    closed_tab_id: targetTabID,
+    tab_id: activeTab?.id,
+    url: activeTab?.url,
+    title: activeTab?.title
+  }
+}
+
+/** Shared execution context for browser actions: target tab, toast surface, and readiness correlation. */
+interface BrowserActionContext {
+  tabId: number
+  actionToast: ActionToastFn
+  correlationId: string
+}
+
+async function dispatchBrowserAction(
+  ctx: BrowserActionContext,
+  action: string | undefined,
+  params: BrowserActionParams | undefined,
+  url: string | undefined,
+  reason: string | undefined
+): Promise<BrowserActionResult> {
+  switch (action) {
+    case 'refresh':
+      return executeRefreshAction(ctx.tabId, reason, ctx.actionToast, ctx.correlationId)
+    case 'navigate':
+      return executeNavigateAction(ctx.tabId, params, url, ctx.actionToast, reason, ctx.correlationId)
+    case 'back':
+      return executeHistoryAction(ctx.tabId, 'back', reason, ctx.actionToast, ctx.correlationId)
+    case 'forward':
+      return executeHistoryAction(ctx.tabId, 'forward', reason, ctx.actionToast, ctx.correlationId)
+    case 'new_tab':
+      return handleNewTabAction(ctx.tabId, url || '', ctx.actionToast, reason)
+    case 'switch_tab':
+      return executeSwitchTabAction(params)
+    case 'activate_tab':
+      return executeActivateTabAction(ctx.tabId, reason, ctx.actionToast)
+    case 'close_tab':
+      return executeCloseTabAction(ctx.tabId, params)
+    default:
+      return { success: false, error: 'unknown_action', message: `Unknown action: ${action}` }
+  }
+}
+
 export async function handleBrowserAction(
   tabId: number,
-  params: {
-    action?: string
-    what?: string
-    url?: string
-    reason?: string
-    tab_id?: number
-    tab_index?: number
-    new_tab?: boolean
-  },
+  params: BrowserActionParams,
   actionToast: ActionToastFn,
   correlationId: string
 ): Promise<BrowserActionResult> {
   const { url, reason } = params || {}
-  const action =
-    typeof params?.action === 'string' && params.action.trim() !== ''
-      ? params.action
-      : typeof params?.what === 'string'
-        ? params.what
-        : undefined
+  const action = resolveActionName(params)
 
   if (!isAiWebPilotEnabled()) {
     return { success: false, error: 'ai_web_pilot_disabled', message: 'AI Web Pilot is not enabled' }
@@ -229,133 +414,7 @@ export async function handleBrowserAction(
 
   const changesDocument = action === 'refresh' || action === 'navigate' || action === 'back' || action === 'forward'
   try {
-    switch (action) {
-      case 'refresh': {
-        contentReadiness.begin(tabId, correlationId)
-        actionToast(tabId, reason || 'refresh', reason ? undefined : 'reloading page', 'trying', 10000)
-        await chrome.tabs.reload(tabId)
-        await waitForTabLoad(tabId)
-        actionToast(tabId, reason || 'refresh', undefined, 'success')
-        const refreshedTab = await chrome.tabs.get(tabId)
-        return enrichWithCSP(tabId, {
-          success: true,
-          action: 'refresh',
-          url: refreshedTab.url,
-          title: refreshedTab.title
-        })
-      }
-      case 'navigate':
-        if (!url) return { success: false, error: 'missing_url', message: 'URL required for navigate action' }
-        if (params?.new_tab) {
-          return handleNewTabAction(tabId, url, actionToast, reason || 'navigate')
-        }
-        contentReadiness.begin(tabId, correlationId)
-        return handleNavigateAction(tabId, url, actionToast, reason)
-      case 'back': {
-        contentReadiness.begin(tabId, correlationId)
-        actionToast(tabId, reason || 'back', reason ? undefined : 'going back', 'trying', 10000)
-        const backTab = await navigateHistory(tabId, -1, correlationId)
-        actionToast(tabId, reason || 'back', undefined, 'success')
-        return { success: true, action: 'back', url: backTab.url, title: backTab.title }
-      }
-      case 'forward': {
-        contentReadiness.begin(tabId, correlationId)
-        actionToast(tabId, reason || 'forward', reason ? undefined : 'going forward', 'trying', 10000)
-        const fwdTab = await navigateHistory(tabId, 1, correlationId)
-        actionToast(tabId, reason || 'forward', undefined, 'success')
-        return { success: true, action: 'forward', url: fwdTab.url, title: fwdTab.title }
-      }
-      case 'new_tab': {
-        return handleNewTabAction(tabId, url || '', actionToast, reason)
-      }
-      case 'switch_tab': {
-        const requestedTabID = coerceNonNegativeInt(params?.tab_id)
-        const requestedTabIndex = coerceNonNegativeInt(params?.tab_index)
-        if (requestedTabID === null && requestedTabIndex === null) {
-          return {
-            success: false,
-            error: 'missing_tab_target',
-            message: "switch_tab requires 'tab_id' or 'tab_index'"
-          }
-        }
-
-        let targetTab: chrome.tabs.Tab | null = null
-        if (requestedTabID !== null) {
-          targetTab = await chrome.tabs.get(requestedTabID)
-        } else {
-          const tabs = await chrome.tabs.query({ currentWindow: true })
-          const sortable = tabs.filter((tab) => typeof tab.id === 'number')
-          sortable.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-          targetTab = sortable[requestedTabIndex!] || null
-        }
-
-        if (!targetTab?.id) {
-          return {
-            success: false,
-            error: 'tab_not_found',
-            message: 'No matching tab found for switch_tab request'
-          }
-        }
-
-        const updated = await chrome.tabs.update(targetTab.id, { active: true })
-        const activeTab = updated || targetTab
-
-        // Persist tracked tab so the extension-side state matches the server-side
-        // update (issue #271). This ensures subsequent /sync heartbeats report
-        // the correct tracked tab.
-        await persistTrackedTab(activeTab)
-        broadcastTrackingState().catch(() => {
-          debugLog(DebugCategory.CAPTURE, 'Tracking broadcast failed after tab switch')
-        })
-
-        return {
-          success: true,
-          action: 'switch_tab',
-          tab_id: activeTab.id || targetTab.id,
-          tab_index: typeof activeTab.index === 'number' ? activeTab.index : targetTab.index,
-          url: activeTab.url || targetTab.url,
-          title: activeTab.title || targetTab.title
-        }
-      }
-      case 'activate_tab': {
-        actionToast(tabId, reason || 'activate_tab', reason ? undefined : 'bringing tab to foreground', 'trying', 5000)
-        // Activate the tab and focus its window (shared helper — one definition of
-        // "bring a tab to the foreground"). Returns the updated tab for the result.
-        const tab = await focusTabAndWindow(tabId)
-        actionToast(tabId, reason || 'activate_tab', undefined, 'success')
-        return {
-          success: true,
-          action: 'activate_tab',
-          tab_id: tabId,
-          url: tab.url,
-          title: tab.title
-        }
-      }
-      case 'close_tab': {
-        const requestedTabID = coerceNonNegativeInt(params?.tab_id)
-        const targetTabID = requestedTabID !== null ? requestedTabID : tabId
-        if (!targetTabID || targetTabID < 0) {
-          return {
-            success: false,
-            error: 'missing_tab_target',
-            message: "close_tab requires a valid 'tab_id' or resolved tab context"
-          }
-        }
-
-        await chrome.tabs.remove(targetTabID)
-        const activeTab = await getActiveTab()
-        return {
-          success: true,
-          action: 'close_tab',
-          closed_tab_id: targetTabID,
-          tab_id: activeTab?.id,
-          url: activeTab?.url,
-          title: activeTab?.title
-        }
-      }
-      default:
-        return { success: false, error: 'unknown_action', message: `Unknown action: ${action}` }
-    }
+    return await dispatchBrowserAction({ tabId, actionToast, correlationId }, action, params, url, reason)
   } catch (err) {
     if (changesDocument) contentReadiness.cancel(tabId, correlationId)
     return { success: false, error: 'browser_action_failed', message: errorMessage(err) }

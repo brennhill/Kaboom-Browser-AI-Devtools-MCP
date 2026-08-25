@@ -186,14 +186,15 @@ function executeDOMQueryInIsolatedWorld(params) {
         }
         return attrs;
     };
+    const isElementVisible = (el, rect) => el.offsetParent !== null ||
+        (typeof rect?.width === 'number' && rect.width > 0) ||
+        (typeof rect?.height === 'number' && rect.height > 0);
     const serializeElement = (el, depth) => {
         const rect = el.getBoundingClientRect?.();
         const out = {
             tag: el.tagName?.toLowerCase() || '',
             text: (el.textContent || '').slice(0, MAX_TEXT),
-            visible: el.offsetParent !== null ||
-                (typeof rect?.width === 'number' && rect.width > 0) ||
-                (typeof rect?.height === 'number' && rect.height > 0)
+            visible: isElementVisible(el, rect)
         };
         const attrs = collectAttributes(el);
         if (attrs)

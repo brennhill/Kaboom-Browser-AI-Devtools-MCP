@@ -320,44 +320,48 @@
 
   // extension/popup/shell/status-display.js
   var DEFAULT_MAX_ENTRIES = 1e3;
-  function updateConnectionStatus(status) {
-    const statusEl = document.getElementById("status");
-    const entriesEl = document.getElementById("entries-count");
-    const errorEl = document.getElementById("error-message");
-    const serverUrlEl = document.getElementById("server-url");
-    const logFileEl = document.getElementById("log-file-path");
-    const errorCountEl = document.getElementById("error-count");
-    const troubleshootingEl = document.getElementById("troubleshooting");
+  function getStatusElements() {
+    return {
+      statusEl: document.getElementById("status"),
+      entriesEl: document.getElementById("entries-count"),
+      errorEl: document.getElementById("error-message"),
+      serverUrlEl: document.getElementById("server-url"),
+      logFileEl: document.getElementById("log-file-path"),
+      errorCountEl: document.getElementById("error-count"),
+      troubleshootingEl: document.getElementById("troubleshooting")
+    };
+  }
+  function setConnectionBadge(statusEl, connected) {
+    if (!statusEl)
+      return;
+    statusEl.textContent = connected ? "Connected" : "Offline";
+    statusEl.classList.remove(connected ? "disconnected" : "connected");
+    statusEl.classList.add(connected ? "connected" : "disconnected");
+  }
+  function renderConnectionPanel(status, els) {
+    setConnectionBadge(els.statusEl, status.connected);
     if (status.connected) {
-      if (statusEl) {
-        statusEl.textContent = "Connected";
-        statusEl.classList.remove("disconnected");
-        statusEl.classList.add("connected");
-      }
       const entries = status.entries || 0;
       const maxEntries = status.maxEntries || DEFAULT_MAX_ENTRIES;
-      if (entriesEl) {
-        entriesEl.textContent = `${entries} / ${maxEntries}`;
+      if (els.entriesEl) {
+        els.entriesEl.textContent = `${entries} / ${maxEntries}`;
       }
-      if (errorEl) {
-        errorEl.textContent = "";
+      if (els.errorEl) {
+        els.errorEl.textContent = "";
       }
-      if (troubleshootingEl) {
-        troubleshootingEl.style.display = "none";
+      if (els.troubleshootingEl) {
+        els.troubleshootingEl.style.display = "none";
       }
     } else {
-      if (statusEl) {
-        statusEl.textContent = "Offline";
-        statusEl.classList.remove("connected");
-        statusEl.classList.add("disconnected");
+      if (els.errorEl && status.error) {
+        els.errorEl.textContent = status.error;
       }
-      if (errorEl && status.error) {
-        errorEl.textContent = status.error;
-      }
-      if (troubleshootingEl) {
-        troubleshootingEl.style.display = "block";
+      if (els.troubleshootingEl) {
+        els.troubleshootingEl.style.display = "block";
       }
     }
+  }
+  function renderVersionWarning(status) {
     const versionWarningEl = document.getElementById("version-mismatch");
     if (versionWarningEl) {
       if (status.versionMismatch && status.serverVersion && status.extensionVersion) {
@@ -370,14 +374,19 @@
         versionWarningEl.style.display = "none";
       }
     }
+  }
+  function securityDetailText(status) {
+    const rewrites = status.insecureRewritesApplied && status.insecureRewritesApplied.length > 0 ? status.insecureRewritesApplied.join(", ") : "csp_headers";
+    return `INSECURE DEBUG MODE active. production_parity=${status.productionParity === false ? "false" : "true"}; rewrites=${rewrites}`;
+  }
+  function renderSecurityWarning(status) {
     const securityWarningEl = document.getElementById("security-mode-warning");
     const securityDetailEl = document.getElementById("security-mode-detail");
     if (securityWarningEl) {
       if (status.securityMode === "insecure_proxy") {
         securityWarningEl.style.display = "block";
         if (securityDetailEl) {
-          const rewrites = status.insecureRewritesApplied && status.insecureRewritesApplied.length > 0 ? status.insecureRewritesApplied.join(", ") : "csp_headers";
-          securityDetailEl.textContent = `INSECURE DEBUG MODE active. production_parity=${status.productionParity === false ? "false" : "true"}; rewrites=${rewrites}`;
+          securityDetailEl.textContent = securityDetailText(status);
         }
       } else {
         securityWarningEl.style.display = "none";
@@ -386,55 +395,75 @@
         }
       }
     }
-    if (serverUrlEl && status.serverUrl) {
-      serverUrlEl.textContent = status.serverUrl;
+  }
+  function renderOptionalText(el, value) {
+    if (el && value) {
+      el.textContent = value;
     }
-    if (logFileEl && status.logFile) {
-      logFileEl.textContent = status.logFile;
-    }
-    if (errorCountEl && status.errorCount !== void 0) {
-      errorCountEl.textContent = String(status.errorCount);
+  }
+  function renderInfoFields(status, els) {
+    renderOptionalText(els.serverUrlEl, status.serverUrl);
+    renderOptionalText(els.logFileEl, status.logFile);
+    if (els.errorCountEl && status.errorCount !== void 0) {
+      els.errorCountEl.textContent = String(status.errorCount);
     }
     const fileSizeEl = document.getElementById("log-file-size");
     if (fileSizeEl && status.logFileSize !== void 0) {
       fileSizeEl.textContent = formatFileSize(status.logFileSize);
     }
+  }
+  function circuitBreakerLevel(state) {
+    if (state === "closed")
+      return "ok";
+    if (state === "open")
+      return "error";
+    if (state === "half-open")
+      return "warn";
+    return "unknown";
+  }
+  function memoryPressureLevel(state) {
+    if (state === "normal")
+      return "ok";
+    if (state === "soft")
+      return "warn";
+    if (state === "hard")
+      return "error";
+    return "unknown";
+  }
+  function renderHealthIndicator(el, connected, level, warnText, errorText) {
+    el.classList.remove("health-error", "health-warning");
+    if (!connected || level === "ok") {
+      el.style.display = "none";
+      el.textContent = "";
+      return;
+    }
+    if (level === "error") {
+      el.style.display = "";
+      el.classList.add("health-error");
+      el.textContent = errorText;
+      return;
+    }
+    if (level === "warn") {
+      el.style.display = "";
+      el.classList.add("health-warning");
+      el.textContent = warnText;
+    }
+  }
+  function renderHealthIndicators(status) {
     const healthSection = document.getElementById("health-indicators");
     const cbEl = document.getElementById("health-circuit-breaker");
     const mpEl = document.getElementById("health-memory-pressure");
     if (healthSection && cbEl && mpEl) {
       const cbState = status.circuitBreakerState || "closed";
       const mpState = status.memoryPressure?.memoryPressureLevel || "normal";
-      cbEl.classList.remove("health-error", "health-warning");
-      if (!status.connected || cbState === "closed") {
-        cbEl.style.display = "none";
-        cbEl.textContent = "";
-      } else if (cbState === "open") {
-        cbEl.style.display = "";
-        cbEl.classList.add("health-error");
-        cbEl.textContent = "Server: paused (recovering from errors)";
-      } else if (cbState === "half-open") {
-        cbEl.style.display = "";
-        cbEl.classList.add("health-warning");
-        cbEl.textContent = "Server: recovering";
-      }
-      mpEl.classList.remove("health-error", "health-warning");
-      if (!status.connected || mpState === "normal") {
-        mpEl.style.display = "none";
-        mpEl.textContent = "";
-      } else if (mpState === "soft") {
-        mpEl.style.display = "";
-        mpEl.classList.add("health-warning");
-        mpEl.textContent = "Memory: elevated (some features limited)";
-      } else if (mpState === "hard") {
-        mpEl.style.display = "";
-        mpEl.classList.add("health-error");
-        mpEl.textContent = "Memory: critical (network capture disabled)";
-      }
+      renderHealthIndicator(cbEl, status.connected, circuitBreakerLevel(cbState), "Server: recovering", "Server: paused (recovering from errors)");
+      renderHealthIndicator(mpEl, status.connected, memoryPressureLevel(mpState), "Memory: elevated (some features limited)", "Memory: critical (network capture disabled)");
       const cbVisible = status.connected && cbState !== "closed";
       const mpVisible = status.connected && mpState !== "normal";
       healthSection.style.display = cbVisible || mpVisible ? "" : "none";
     }
+  }
+  function renderContextWarning(status) {
     const contextWarningEl = document.getElementById("context-warning");
     const contextWarningTextEl = document.getElementById("context-warning-text");
     if (contextWarningEl) {
@@ -450,6 +479,15 @@
         }
       }
     }
+  }
+  function updateConnectionStatus(status) {
+    const els = getStatusElements();
+    renderConnectionPanel(status, els);
+    renderVersionWarning(status);
+    renderSecurityWarning(status);
+    renderInfoFields(status, els);
+    renderHealthIndicators(status);
+    renderContextWarning(status);
   }
 
   // extension/popup/system-doctor.js

@@ -51,7 +51,7 @@ describe('Double Stop Prevention', () => {
     globalThis.chrome = createRecordingChromeMock()
 
     // Start recording
-    const startPromise = startRecording('double-stop', 15, '', '', true)
+    const startPromise = startRecording('double-stop', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -81,7 +81,7 @@ describe('Recording state cleanup on error', () => {
     globalThis.chrome = createRecordingChromeMock()
     globalThis.chrome.tabs.query = mock.fn(() => Promise.reject(new Error('Tabs API crashed')))
 
-    const result = await startRecording('crash-test', 15, '', '', true)
+    const result = await startRecording('crash-test', 15, '', { fromPopup: true })
     assert.strictEqual(result.status, 'error')
     assert.ok(result.error.includes('Tabs API crashed'))
     assert.strictEqual(isRecording(), false, 'active flag should be reset after exception')
@@ -91,7 +91,7 @@ describe('Recording state cleanup on error', () => {
     globalThis.chrome = createRecordingChromeMock()
     globalThis.chrome.tabs.query = mock.fn(() => Promise.reject(new Error('Network failure')))
 
-    const result = await startRecording('error-msg', 15, '', '', true)
+    const result = await startRecording('error-msg', 15, '', { fromPopup: true })
     assert.ok(result.error.includes('RECORD_START'))
     assert.ok(result.error.includes('Network failure'))
   })
@@ -106,7 +106,7 @@ describe('stopRecording with offscreen exception', () => {
     globalThis.chrome = createRecordingChromeMock()
 
     // Start recording
-    const startPromise = startRecording('stop-crash', 15, '', '', true)
+    const startPromise = startRecording('stop-crash', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -145,7 +145,7 @@ describe('Stop command to offscreen', () => {
   test('should send OFFSCREEN_STOP_RECORDING message', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('stop-cmd', 15, '', '', true)
+    const startPromise = startRecording('stop-cmd', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -185,7 +185,7 @@ describe('Stop result passthrough', () => {
   test('should pass through all fields from offscreen stop result', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('passthrough', 15, '', '', true)
+    const startPromise = startRecording('passthrough', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -214,7 +214,7 @@ describe('Stop result passthrough', () => {
   test('should pass through error from offscreen stop result', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('err-passthrough', 15, '', '', true)
+    const startPromise = startRecording('err-passthrough', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise
@@ -241,7 +241,7 @@ describe('Storage cleanup on stop', () => {
   test('should remove recording state from storage on stop', async () => {
     globalThis.chrome = createRecordingChromeMock()
 
-    const startPromise = startRecording('cleanup-test', 15, '', '', true)
+    const startPromise = startRecording('cleanup-test', 15, '', { fromPopup: true })
     await new Promise((r) => setTimeout(r, 50))
     simulateOffscreenStarted(true)
     await startPromise

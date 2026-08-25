@@ -27,8 +27,8 @@ func TestSeverityIsDerivedFromProvenance(t *testing.T) {
 	}
 
 	// newFinding is the only constructor, so the pairing cannot be bypassed.
-	f := newFinding(categorySpacing, "gap-vertical", makeElement(0, "div", nil),
-		"14px", "24px", provenanceInferred, confidenceHigh, "evidence", "message")
+	f := newFinding(findingSpec{category: categorySpacing, property: "gap-vertical", el: makeElement(0, "div", nil),
+		observed: "14px", expected: "24px", provenance: provenanceInferred, confidence: confidenceHigh, evidence: "evidence", message: "message"})
 	if f.Severity != severityWarning || f.ExpectedFrom != provenanceInferred {
 		t.Errorf("newFinding produced a contradictory pair: %+v", f)
 	}

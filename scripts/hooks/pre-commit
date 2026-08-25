@@ -7,6 +7,16 @@ set -e
 echo "[Kaboom] Running pre-commit checks..."
 CMD_PKG="${KABOOM_CMD_PKG:-./cmd/browser-agent}"
 
+# Secret patterns first: nothing else matters if a credential is landing.
+echo "[security] Scanning staged files for credential patterns..."
+bash scripts/security/check-secrets.sh --staged || {
+    echo ""
+    echo "Credential pattern detected in staged files. Remove it (rotate if real),"
+    echo "or add an intentional fixture path to .secrets-allowlist with a reason."
+    exit 1
+}
+echo "[security] No credential patterns in staged files"
+
 # Check for staged Go files
 GO_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
 # Check for staged JS files

@@ -22,7 +22,7 @@ export type BrowserActionResult = {
     csp_level?: string;
     failure_cause?: string;
 };
-export declare function handleBrowserAction(tabId: number, params: {
+interface BrowserActionParams {
     action?: string;
     what?: string;
     url?: string;
@@ -30,7 +30,8 @@ export declare function handleBrowserAction(tabId: number, params: {
     tab_id?: number;
     tab_index?: number;
     new_tab?: boolean;
-}, actionToast: ActionToastFn, correlationId: string): Promise<BrowserActionResult>;
+}
+export declare function handleBrowserAction(tabId: number, params: BrowserActionParams, actionToast: ActionToastFn, correlationId: string): Promise<BrowserActionResult>;
 export declare function handleAsyncExecuteCommand(query: PendingQuery, tabId: number, world: string, syncClient: SyncClient, sendAsyncResult: SendAsyncResultFn, actionToast: ActionToastFn): Promise<void>;
 export declare function handleAsyncBrowserAction(query: PendingQuery, tabId: number, params: {
     action?: string;
@@ -40,4 +41,5 @@ export declare function handleAsyncBrowserAction(query: PendingQuery, tabId: num
     tab_index?: number;
     new_tab?: boolean;
 }, syncClient: SyncClient, sendAsyncResult: SendAsyncResultFn, actionToast: ActionToastFn): Promise<void>;
+export {};
 //# sourceMappingURL=browser-actions.d.ts.map

@@ -234,6 +234,36 @@ func (h *ActionRuntime) AttachRetryContext(correlationID string, responseData ma
 		reason = "success"
 	}
 
+	retryContext := buildRetryContext(state, reason)
+
+	decision, failureStatus := retryTerminalDecisionFor(state, status)
+
+	retryContext["terminal_stop"] = decision.Terminal
+	if decision.Cause != "" {
+		retryContext["terminal_cause"] = decision.Cause
+	}
+	responseData["retry_context"] = retryContext
+
+	if !failureStatus {
+		return decision
+	}
+
+	if decision.Terminal {
+		applyTerminalRetryFields(responseData, correlationID, reason, retryContext)
+		return decision
+	}
+
+	if _, exists := responseData["retryable"]; !exists {
+		responseData["retryable"] = true
+	}
+	if _, exists := responseData["retry"]; !exists {
+		responseData["retry"] = "Retry once with a changed strategy (scope_selector/scope_rect/element_id/index/frame/world). If the second attempt fails, stop and report evidence_summary."
+	}
+
+	return decision
+}
+
+func buildRetryContext(state *commandRetryState, reason string) map[string]any {
 	retryContext := map[string]any{
 		"attempt":          state.Attempt,
 		"max_attempts":     state.MaxAttempts,
@@ -247,9 +277,12 @@ func (h *ActionRuntime) AttachRetryContext(correlationID string, responseData ma
 	if state.PolicyViolation != "" {
 		retryContext["policy_violation"] = state.PolicyViolation
 	}
+	return retryContext
+}
 
-	decision := retryTerminalDecision{}
+func retryTerminalDecisionFor(state *commandRetryState, status string) (retryTerminalDecision, bool) {
 	failureStatus := status == "error" || status == "timeout" || status == "expired" || status == "cancelled"
+	decision := retryTerminalDecision{}
 	if failureStatus {
 		if state.Attempt >= state.MaxAttempts {
 			decision.Terminal = true
@@ -260,35 +293,16 @@ func (h *ActionRuntime) AttachRetryContext(correlationID string, responseData ma
 			decision.Cause = "strategy_not_changed"
 		}
 	}
+	return decision, failureStatus
+}
 
-	retryContext["terminal_stop"] = decision.Terminal
-	if decision.Cause != "" {
-		retryContext["terminal_cause"] = decision.Cause
-	}
-	responseData["retry_context"] = retryContext
-
-	if !failureStatus {
-		return decision
-	}
-
-	if decision.Terminal {
-		responseData["terminal"] = true
-		responseData["retryable"] = false
-		if _, exists := responseData["retry"]; !exists {
-			responseData["retry"] = "Terminal after two attempts. Stop retrying this step and report evidence_summary."
-		}
-		responseData["evidence_summary"] = buildRetryEvidenceSummary(correlationID, reason, retryContext, responseData)
-		return decision
-	}
-
-	if _, exists := responseData["retryable"]; !exists {
-		responseData["retryable"] = true
-	}
+func applyTerminalRetryFields(responseData map[string]any, correlationID, reason string, retryContext map[string]any) {
+	responseData["terminal"] = true
+	responseData["retryable"] = false
 	if _, exists := responseData["retry"]; !exists {
-		responseData["retry"] = "Retry once with a changed strategy (scope_selector/scope_rect/element_id/index/frame/world). If the second attempt fails, stop and report evidence_summary."
+		responseData["retry"] = "Terminal after two attempts. Stop retrying this step and report evidence_summary."
 	}
-
-	return decision
+	responseData["evidence_summary"] = buildRetryEvidenceSummary(correlationID, reason, retryContext, responseData)
 }
 
 func buildRetryEvidenceSummary(correlationID, reason string, retryContext map[string]any, responseData map[string]any) map[string]any {

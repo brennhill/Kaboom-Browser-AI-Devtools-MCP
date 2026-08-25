@@ -4,18 +4,21 @@
  *      the offscreen document is the source of truth for "is a recording still active".
  * Docs: docs/features/feature/tab-recording/index.md
  */
+function isUndefinedOrType(value, expectedType) {
+    return value === undefined || typeof value === expectedType;
+}
 export function isPersistedRecordingState(value) {
     if (typeof value !== 'object' || value === null || Array.isArray(value))
         return false;
     const state = value;
-    return ((state.active === undefined || typeof state.active === 'boolean') &&
-        (state.name === undefined || typeof state.name === 'string') &&
-        (state.startTime === undefined || typeof state.startTime === 'number') &&
-        (state.fps === undefined || typeof state.fps === 'number') &&
-        (state.audioMode === undefined || typeof state.audioMode === 'string') &&
-        (state.tabId === undefined || typeof state.tabId === 'number') &&
-        (state.url === undefined || typeof state.url === 'string') &&
-        (state.queryId === undefined || typeof state.queryId === 'string'));
+    return (isUndefinedOrType(state.active, 'boolean') &&
+        isUndefinedOrType(state.name, 'string') &&
+        isUndefinedOrType(state.startTime, 'number') &&
+        isUndefinedOrType(state.fps, 'number') &&
+        isUndefinedOrType(state.audioMode, 'string') &&
+        isUndefinedOrType(state.tabId, 'number') &&
+        isUndefinedOrType(state.url, 'string') &&
+        isUndefinedOrType(state.queryId, 'string'));
 }
 /**
  * Decide whether an active recording survived a service-worker restart.

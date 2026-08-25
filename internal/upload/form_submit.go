@@ -38,19 +38,29 @@ func HandleFormSubmit(req FormSubmitRequest, sec *uploadsec.Security) StageRespo
 	return HandleFormSubmitCtx(context.Background(), req, sec)
 }
 
-func executeFormSubmitWithClient(ctx context.Context, client *http.Client, req FormSubmitRequest, file *os.File, info os.FileInfo, writer *multipart.Writer, pr *io.PipeReader, pw *io.PipeWriter, start time.Time) StageResponse {
+// uploadStream bundles the open file (with its stat) and the multipart pipe
+// pair one submission streams through.
+type uploadStream struct {
+	file   *os.File
+	info   os.FileInfo
+	writer *multipart.Writer
+	pr     *io.PipeReader
+	pw     *io.PipeWriter
+}
+
+func executeFormSubmitWithClient(ctx context.Context, client *http.Client, req FormSubmitRequest, stream uploadStream, start time.Time) StageResponse {
 	writeErrCh := runFormWriter(func() error {
-		return StreamMultipartForm(pw, writer, req, file)
+		return StreamMultipartForm(stream.pw, stream.writer, req, stream.file)
 	})
 
-	httpReq, err := http.NewRequestWithContext(ctx, req.Method, req.FormAction, pr)
+	httpReq, err := http.NewRequestWithContext(ctx, req.Method, req.FormAction, stream.pr)
 	if err != nil {
-		_ = pr.Close()
+		_ = stream.pr.Close()
 		<-writeErrCh
 		return formSubmitStage3Error("Failed to create HTTP request: " + err.Error())
 	}
 
-	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+	httpReq.Header.Set("Content-Type", stream.writer.FormDataContentType())
 	if req.Cookies != "" {
 		httpReq.Header.Set("Cookie", req.Cookies)
 	}
@@ -58,12 +68,12 @@ func executeFormSubmitWithClient(ctx context.Context, client *http.Client, req F
 	// #nosec G704 -- req.FormAction is pre-validated by uploadsec.ValidateFormActionURL and redirect callback revalidates
 	httpResp, err := client.Do(httpReq)
 	if err != nil {
-		_ = pr.CloseWithError(err)
+		_ = stream.pr.CloseWithError(err)
 		<-writeErrCh
 		return StageResponse{
 			Success: false, Stage: 3,
 			Error: "Form submission failed: " + err.Error(), FileName: filepath.Base(req.FilePath),
-			FileSizeBytes: info.Size(), DurationMs: time.Since(start).Milliseconds(),
+			FileSizeBytes: stream.info.Size(), DurationMs: time.Since(start).Milliseconds(),
 		}
 	}
 	defer httpResp.Body.Close() //nolint:errcheck // deferred close
@@ -76,14 +86,14 @@ func executeFormSubmitWithClient(ctx context.Context, client *http.Client, req F
 	}
 
 	if httpResp.StatusCode >= 400 {
-		return buildHTTPErrorResponse(httpResp, filepath.Base(req.FilePath), info.Size(), time.Since(start).Milliseconds())
+		return buildHTTPErrorResponse(httpResp, filepath.Base(req.FilePath), stream.info.Size(), time.Since(start).Milliseconds())
 	}
 
 	return StageResponse{
 		Success: true, Stage: 3,
 		Status:        fmt.Sprintf("Form interception: %s submitted to platform (HTTP %d)", req.Method, httpResp.StatusCode),
 		FileName:      filepath.Base(req.FilePath),
-		FileSizeBytes: info.Size(), DurationMs: time.Since(start).Milliseconds(),
+		FileSizeBytes: stream.info.Size(), DurationMs: time.Since(start).Milliseconds(),
 	}
 }
 
@@ -117,5 +127,5 @@ func HandleFormSubmitCtx(ctx context.Context, req FormSubmitRequest, sec *upload
 	pr, pw := io.Pipe()
 	writer := multipart.NewWriter(pw)
 
-	return executeFormSubmitWithClient(ctx, uploadHTTPClient, req, file, info, writer, pr, pw, start)
+	return executeFormSubmitWithClient(ctx, uploadHTTPClient, req, uploadStream{file: file, info: info, writer: writer, pr: pr, pw: pw}, start)
 }

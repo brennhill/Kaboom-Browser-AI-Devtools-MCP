@@ -83,7 +83,7 @@ export function installRecordingListeners(deps) {
                     tabUrl: targetTab?.url?.substring(0, 60)
                 });
                 deps
-                    .startRecording(slug, 15, '', audio, true, targetTab?.id)
+                    .startRecording(slug, 15, audio, { fromPopup: true, targetTabId: targetTab?.id })
                     .then((result) => {
                     console.log(LOG, 'Popup screen_recording_start result:', result);
                     sendResponse(result);

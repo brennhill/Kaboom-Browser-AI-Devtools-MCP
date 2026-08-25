@@ -250,15 +250,17 @@ function executeDOMQueryInIsolatedWorld(params: Record<string, unknown>): Record
     return attrs
   }
 
+  const isElementVisible = (el: Element, rect: DOMRect | undefined): boolean =>
+    (el as HTMLElement).offsetParent !== null ||
+    (typeof rect?.width === 'number' && rect.width > 0) ||
+    (typeof rect?.height === 'number' && rect.height > 0)
+
   const serializeElement = (el: Element, depth: number): Record<string, unknown> => {
     const rect = el.getBoundingClientRect?.()
     const out: Record<string, unknown> = {
       tag: el.tagName?.toLowerCase() || '',
       text: (el.textContent || '').slice(0, MAX_TEXT),
-      visible:
-        (el as HTMLElement).offsetParent !== null ||
-        (typeof rect?.width === 'number' && rect.width > 0) ||
-        (typeof rect?.height === 'number' && rect.height > 0)
+      visible: isElementVisible(el, rect)
     }
 
     const attrs = collectAttributes(el)

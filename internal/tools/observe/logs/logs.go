@@ -21,56 +21,110 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
+type browserErrorsParams struct {
+	Limit   int    `json:"limit"`
+	URL     string `json:"url"`
+	Scope   string `json:"scope"`
+	Summary bool   `json:"summary"`
+}
+
 // GetBrowserErrors returns error-level log entries from the capture buffer.
 func GetBrowserErrors(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		Limit   int    `json:"limit"`
-		URL     string `json:"url"`
-		Scope   string `json:"scope"`
-		Summary bool   `json:"summary"`
-	}
+	var params browserErrorsParams
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = core.ClampLimit(params.Limit, 100)
-	if params.Scope == "" {
-		params.Scope = "current_page"
-	}
-	var paramHint string
-	if params.Scope != "current_page" && params.Scope != "all" {
-		paramHint = "Unknown scope " + params.Scope + " ignored (using default=current_page). Valid values: current_page, all."
-		params.Scope = "current_page"
-	}
+	paramHint := normalizeErrorsScope(&params.Scope)
 
 	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
-	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
-		params.URL = trackedTabURL
-	}
+	params.URL = defaultURLFilter(params.URL, params.Scope, trackedTabURL)
 	entries, _ := deps.LogEntries()
 
+	matched, noiseSuppressed := filterErrorEntries(entries, deps, params, trackedTabID)
+	errors := errorEntriesToMaps(matched)
+	newestTS := newestErrorTimestamp(errors)
+
+	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
+	responseMeta.NoiseSuppressed = noiseSuppressed
+
+	if params.Summary {
+		summaryResp := buildErrorsSummary(errors, noiseSuppressed, responseMeta)
+		attachParamHint(summaryResp, paramHint)
+		return mcp.Succeed(req, "Browser errors", summaryResp)
+	}
+
+	response := map[string]any{
+		"errors":   errors,
+		"count":    len(errors),
+		"metadata": responseMeta,
+		"scope":    params.Scope,
+	}
+	attachParamHint(response, paramHint)
+	if len(errors) == 0 {
+		response["hint"] = hints.Errors(params.Scope)
+	}
+	return mcp.Succeed(req, "Browser errors", response)
+}
+
+func normalizeErrorsScope(scope *string) string {
+	if *scope == "" {
+		*scope = "current_page"
+	}
+	if *scope != "current_page" && *scope != "all" {
+		hint := "Unknown scope " + *scope + " ignored (using default=current_page). Valid values: current_page, all."
+		*scope = "current_page"
+		return hint
+	}
+	return ""
+}
+
+// defaultURLFilter defaults the URL filter to the tracked page URL so results
+// are scoped to the current page, not stale entries from previous navigations.
+func defaultURLFilter(url, scope, trackedTabURL string) string {
+	if url == "" && scope == "current_page" && trackedTabURL != "" {
+		return trackedTabURL
+	}
+	return url
+}
+
+func attachParamHint(response map[string]any, paramHint string) {
+	if paramHint != "" {
+		response["param_hint"] = paramHint
+	}
+}
+
+func filterErrorEntries(entries []types.LogEntry, deps core.Deps, params browserErrorsParams, trackedTabID int) ([]types.LogEntry, int) {
 	noiseSuppressed := 0
 	matched := buffers.ReverseFilterLimit(entries, func(entry types.LogEntry) bool {
-		level, _ := entry["level"].(string)
-		if level != "error" {
-			return false
-		}
-		if deps.IsConsoleNoise(entry) {
-			noiseSuppressed++
-			return false
-		}
-		if params.Scope == "current_page" && trackedTabID != 0 {
-			entryTabID, _ := entry["tabId"].(float64)
-			if int(entryTabID) != trackedTabID {
-				return false
-			}
-		}
-		if params.URL != "" {
-			entryURL, _ := entry["url"].(string)
-			if !core.ContainsIgnoreCase(entryURL, params.URL) {
-				return false
-			}
-		}
-		return true
+		return errorEntryMatches(entry, deps, params, trackedTabID, &noiseSuppressed)
 	}, params.Limit)
+	return matched, noiseSuppressed
+}
 
+func errorEntryMatches(entry types.LogEntry, deps core.Deps, params browserErrorsParams, trackedTabID int, noiseSuppressed *int) bool {
+	level, _ := entry["level"].(string)
+	if level != "error" {
+		return false
+	}
+	if deps.IsConsoleNoise(entry) {
+		*noiseSuppressed++
+		return false
+	}
+	if params.Scope == "current_page" && trackedTabID != 0 {
+		entryTabID, _ := entry["tabId"].(float64)
+		if int(entryTabID) != trackedTabID {
+			return false
+		}
+	}
+	if params.URL != "" {
+		entryURL, _ := entry["url"].(string)
+		if !core.ContainsIgnoreCase(entryURL, params.URL) {
+			return false
+		}
+	}
+	return true
+}
+
+func errorEntriesToMaps(matched []types.LogEntry) []map[string]any {
 	errors := make([]map[string]any, len(matched))
 	for i, entry := range matched {
 		errors[i] = map[string]any{
@@ -84,60 +138,98 @@ func GetBrowserErrors(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 			"tab_id":    entry["tabId"],
 		}
 	}
+	return errors
+}
 
+func newestErrorTimestamp(errors []map[string]any) time.Time {
 	var newestTS time.Time
 	if len(errors) > 0 {
 		if ts, ok := errors[0]["timestamp"].(string); ok {
 			newestTS, _ = time.Parse(time.RFC3339, ts)
 		}
 	}
+	return newestTS
+}
 
-	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
-	responseMeta.NoiseSuppressed = noiseSuppressed
-
-	if params.Summary {
-		summaryResp := buildErrorsSummary(errors, noiseSuppressed, responseMeta)
-		if paramHint != "" {
-			summaryResp["param_hint"] = paramHint
-		}
-		return mcp.Succeed(req, "Browser errors", summaryResp)
-	}
-
-	response := map[string]any{
-		"errors":   errors,
-		"count":    len(errors),
-		"metadata": responseMeta,
-		"scope":    params.Scope,
-	}
-	if paramHint != "" {
-		response["param_hint"] = paramHint
-	}
-	if len(errors) == 0 {
-		response["hint"] = hints.Errors(params.Scope)
-	}
-	return mcp.Succeed(req, "Browser errors", response)
+type browserLogsParams struct {
+	Limit             int    `json:"limit"`
+	MinLevel          string `json:"min_level"`
+	Source            string `json:"source"`
+	URL               string `json:"url"`
+	Scope             string `json:"scope"`
+	AfterCursor       string `json:"after_cursor"`
+	BeforeCursor      string `json:"before_cursor"`
+	SinceCursor       string `json:"since_cursor"`
+	RestartOnEviction bool   `json:"restart_on_eviction"`
+	IncludeInternal   bool   `json:"include_internal"`
+	IncludeExtension  bool   `json:"include_extension_logs"`
+	ExtensionLimit    int    `json:"extension_limit"`
+	Summary           bool   `json:"summary"`
 }
 
 // GetBrowserLogs returns console log entries with cursor-based pagination.
-// #lizard forgives
 func GetBrowserLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		Limit             int    `json:"limit"`
-		MinLevel          string `json:"min_level"`
-		Source            string `json:"source"`
-		URL               string `json:"url"`
-		Scope             string `json:"scope"`
-		AfterCursor       string `json:"after_cursor"`
-		BeforeCursor      string `json:"before_cursor"`
-		SinceCursor       string `json:"since_cursor"`
-		RestartOnEviction bool   `json:"restart_on_eviction"`
-		IncludeInternal   bool   `json:"include_internal"`
-		IncludeExtension  bool   `json:"include_extension_logs"`
-		ExtensionLimit    int    `json:"extension_limit"`
-		Summary           bool   `json:"summary"`
-	}
+	var params browserLogsParams
 	mcp.LenientUnmarshal(args, &params)
+	paramHint := normalizeLogsParams(&params)
 
+	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
+	params.Limit = core.ClampLimit(params.Limit, 100)
+	params.URL = defaultURLFilter(params.URL, params.Scope, trackedTabURL)
+
+	rawEntries, _ := deps.LogEntries()
+	totalAdded := deps.LogTotalAdded()
+
+	enriched := pagination.EnrichLogEntries(rawEntries, totalAdded)
+	filtered, noiseSuppressed := filterLogEntries(enriched, deps, params, trackedTabID)
+
+	paginated, pMeta, err := pagination.ApplyLogCursorPagination(
+		filtered,
+		params.AfterCursor, params.BeforeCursor, params.SinceCursor,
+		params.Limit,
+		params.RestartOnEviction,
+	)
+	if err != nil {
+		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+			mcp.ErrInvalidParam, err.Error(), "Check cursor format or use restart_on_eviction:true")}
+	}
+
+	logs := make([]map[string]any, len(paginated))
+	for i, e := range paginated {
+		logs[i] = normalizeBrowserLogEntry(e.Entry)
+	}
+
+	newestTS := newestLogTimestamp(paginated)
+	isFirstPage := params.AfterCursor == "" && params.BeforeCursor == "" && params.SinceCursor == ""
+	meta := core.BuildPaginatedMetadataWithSummary(deps.Capture, newestTS, pMeta, isFirstPage, func() map[string]any {
+		return quickLogsSummary(logs)
+	})
+	meta["scope"] = params.Scope
+	if noiseSuppressed > 0 {
+		meta["noise_suppressed"] = noiseSuppressed
+	}
+
+	if params.Summary {
+		summaryResp := buildLogsSummary(logs, meta)
+		attachParamHint(summaryResp, paramHint)
+		return mcp.Succeed(req, "Browser logs", summaryResp)
+	}
+
+	response := map[string]any{
+		"logs":     logs,
+		"count":    len(logs),
+		"metadata": meta,
+	}
+	attachParamHint(response, paramHint)
+	if len(logs) == 0 {
+		response["hint"] = hints.Logs(params.Scope, params.MinLevel)
+	}
+	attachExtensionLogs(response, deps, params)
+
+	return mcp.Succeed(req, "Browser logs", response)
+}
+
+func normalizeLogsParams(params *browserLogsParams) string {
 	var paramHint string
 	if params.MinLevel != "" && core.LogLevelRank(params.MinLevel) < 0 {
 		paramHint = "Unknown min_level " + params.MinLevel + " ignored (using default=all). Valid values: debug, log, info, warn, error."
@@ -156,21 +248,10 @@ func GetBrowserLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage
 		}
 		params.Scope = "current_page"
 	}
+	return paramHint
+}
 
-	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
-	params.Limit = core.ClampLimit(params.Limit, 100)
-
-	// Default URL filter to the tracked page URL so logs are scoped to
-	// the current page, not stale entries from previous navigations.
-	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
-		params.URL = trackedTabURL
-	}
-
-	rawEntries, _ := deps.LogEntries()
-	totalAdded := deps.LogTotalAdded()
-
-	enriched := pagination.EnrichLogEntries(rawEntries, totalAdded)
-
+func filterLogEntries(enriched []pagination.LogEntryWithSequence, deps core.Deps, params browserLogsParams, trackedTabID int) ([]pagination.LogEntryWithSequence, int) {
 	filtered := make([]pagination.LogEntryWithSequence, 0, len(enriched))
 	noiseSuppressed := 0
 	for _, e := range enriched {
@@ -178,62 +259,60 @@ func GetBrowserLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage
 		if !params.IncludeInternal && isInternalLogType(entryType) {
 			continue
 		}
-
 		if deps.IsConsoleNoise(e.Entry) {
 			noiseSuppressed++
 			continue
 		}
-
-		if params.Scope == "current_page" && trackedTabID != 0 {
-			if !(params.IncludeInternal && isInternalLogType(entryType)) {
-				entryTabID, _ := e.Entry["tabId"].(float64)
-				if int(entryTabID) != trackedTabID {
-					continue
-				}
-			}
-		}
-
-		level, _ := e.Entry["level"].(string)
-		if level == "" && isInternalLogType(entryType) {
-			level = "info"
-		}
-		if params.MinLevel != "" && core.LogLevelRank(level) < core.LogLevelRank(params.MinLevel) {
+		if !logEntryMatchesFilters(e.Entry, entryType, params, trackedTabID) {
 			continue
 		}
-
-		if params.Source != "" {
-			source, _ := e.Entry["source"].(string)
-			if source != params.Source {
-				continue
-			}
-		}
-
-		if params.URL != "" {
-			entryURL, _ := e.Entry["url"].(string)
-			if !core.ContainsIgnoreCase(entryURL, params.URL) {
-				continue
-			}
-		}
-
 		filtered = append(filtered, e)
 	}
+	return filtered, noiseSuppressed
+}
 
-	paginated, pMeta, err := pagination.ApplyLogCursorPagination(
-		filtered,
-		params.AfterCursor, params.BeforeCursor, params.SinceCursor,
-		params.Limit,
-		params.RestartOnEviction,
-	)
-	if err != nil {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
-			mcp.ErrInvalidParam, err.Error(), "Check cursor format or use restart_on_eviction:true")}
+func logEntryTabMatches(entry map[string]any, entryType string, params browserLogsParams, trackedTabID int) bool {
+	if params.Scope != "current_page" || trackedTabID == 0 {
+		return true
+	}
+	if params.IncludeInternal && isInternalLogType(entryType) {
+		return true
+	}
+	entryTabID, _ := entry["tabId"].(float64)
+	return int(entryTabID) == trackedTabID
+}
+
+func logEntryMatchesFilters(entry map[string]any, entryType string, params browserLogsParams, trackedTabID int) bool {
+	if !logEntryTabMatches(entry, entryType, params, trackedTabID) {
+		return false
 	}
 
-	logs := make([]map[string]any, len(paginated))
-	for i, e := range paginated {
-		logs[i] = normalizeBrowserLogEntry(e.Entry)
+	level, _ := entry["level"].(string)
+	if level == "" && isInternalLogType(entryType) {
+		level = "info"
+	}
+	if params.MinLevel != "" && core.LogLevelRank(level) < core.LogLevelRank(params.MinLevel) {
+		return false
 	}
 
+	if params.Source != "" {
+		source, _ := entry["source"].(string)
+		if source != params.Source {
+			return false
+		}
+	}
+
+	if params.URL != "" {
+		entryURL, _ := entry["url"].(string)
+		if !core.ContainsIgnoreCase(entryURL, params.URL) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func newestLogTimestamp(paginated []pagination.LogEntryWithSequence) time.Time {
 	var newestTS time.Time
 	if len(paginated) > 0 {
 		last := paginated[len(paginated)-1]
@@ -241,48 +320,21 @@ func GetBrowserLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage
 			newestTS = util.ParseTimestamp(ts)
 		}
 	}
+	return newestTS
+}
 
-	isFirstPage := params.AfterCursor == "" && params.BeforeCursor == "" && params.SinceCursor == ""
-	meta := core.BuildPaginatedMetadataWithSummary(deps.Capture, newestTS, pMeta, isFirstPage, func() map[string]any {
-		return quickLogsSummary(logs)
-	})
-	meta["scope"] = params.Scope
-	if noiseSuppressed > 0 {
-		meta["noise_suppressed"] = noiseSuppressed
+func attachExtensionLogs(response map[string]any, deps core.Deps, params browserLogsParams) {
+	if !params.IncludeExtension {
+		return
 	}
-
-	if params.Summary {
-		summaryResp := buildLogsSummary(logs, meta)
-		if paramHint != "" {
-			summaryResp["param_hint"] = paramHint
-		}
-		return mcp.Succeed(req, "Browser logs", summaryResp)
+	limit := params.ExtensionLimit
+	if limit <= 0 {
+		limit = params.Limit
 	}
-
-	response := map[string]any{
-		"logs":     logs,
-		"count":    len(logs),
-		"metadata": meta,
-	}
-	if paramHint != "" {
-		response["param_hint"] = paramHint
-	}
-	if len(logs) == 0 {
-		response["hint"] = hints.Logs(params.Scope, params.MinLevel)
-	}
-
-	if params.IncludeExtension {
-		limit := params.ExtensionLimit
-		if limit <= 0 {
-			limit = params.Limit
-		}
-		limit = core.ClampLimit(limit, 100)
-		extLogs := buildExtensionLogEntries(deps.Capture.ExtensionLogs().Entries(), limit, "", params.MinLevel)
-		response["extension_logs"] = extLogs
-		response["extension_logs_count"] = len(extLogs)
-	}
-
-	return mcp.Succeed(req, "Browser logs", response)
+	limit = core.ClampLimit(limit, 100)
+	extLogs := buildExtensionLogEntries(deps.Capture.ExtensionLogs().Entries(), limit, "", params.MinLevel)
+	response["extension_logs"] = extLogs
+	response["extension_logs_count"] = len(extLogs)
 }
 
 func isInternalLogType(entryType string) bool {

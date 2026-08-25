@@ -233,40 +233,45 @@ export function domPrimitiveOverlay(
 
   // — Overlay detection —
 
+  const OVERLAY_DIALOG_SELECTORS = [
+    '[role="dialog"]',
+    '[role="alertdialog"]',
+    '[aria-modal="true"]',
+    'dialog[open]',
+    '.modal.show',
+    '.modal.in',
+    '.modal.is-active',
+    '.modal[style*="display: block"]',
+    '.overlay',
+    '.popup',
+    '.lightbox',
+    '[data-modal]',
+    '[data-overlay]',
+    '[data-dialog]'
+  ]
+
+  function isHighZIndexOverlayCandidate(el: Element): boolean {
+    if (!(el instanceof HTMLElement)) return false
+    const style = getComputedStyle(el)
+    const zIndex = Number.parseInt(style.zIndex || '', 10)
+    if (Number.isNaN(zIndex) || zIndex < 1000) return false
+    const position = style.position || ''
+    if (position !== 'fixed' && position !== 'absolute') return false
+    const rect = el.getBoundingClientRect()
+    if (rect.width < 100 || rect.height < 100) return false
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false
+    return true
+  }
+
   function findTopmostOverlay(): Element | null {
-    const dialogSelectors = [
-      '[role="dialog"]',
-      '[role="alertdialog"]',
-      '[aria-modal="true"]',
-      'dialog[open]',
-      '.modal.show',
-      '.modal.in',
-      '.modal.is-active',
-      '.modal[style*="display: block"]',
-      '.overlay',
-      '.popup',
-      '.lightbox',
-      '[data-modal]',
-      '[data-overlay]',
-      '[data-dialog]'
-    ]
     const candidates: Element[] = []
-    for (const dialogSelector of dialogSelectors) {
+    for (const dialogSelector of OVERLAY_DIALOG_SELECTORS) {
       candidates.push(...querySelectorAllDeep(dialogSelector))
     }
     const allElements = document.querySelectorAll('*')
     for (let i = 0; i < allElements.length; i++) {
       const el = allElements[i]!
-      if (!(el instanceof HTMLElement)) continue
-      const style = getComputedStyle(el)
-      const zIndex = Number.parseInt(style.zIndex || '', 10)
-      if (Number.isNaN(zIndex) || zIndex < 1000) continue
-      const position = style.position || ''
-      if (position !== 'fixed' && position !== 'absolute') continue
-      const rect = el.getBoundingClientRect()
-      if (rect.width < 100 || rect.height < 100) continue
-      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue
-      candidates.push(el)
+      if (isHighZIndexOverlayCandidate(el)) candidates.push(el)
     }
     const unique = uniqueElements(candidates).filter(isActionableVisible)
     if (unique.length === 0) return null
@@ -302,36 +307,45 @@ export function domPrimitiveOverlay(
     return { overlay_type: overlayType, overlay_selector: overlaySelector, overlay_text_preview: textPreview }
   }
 
-  function detectExtensionOverlay(el: Element): boolean {
-    const iframes = el instanceof HTMLElement ? el.querySelectorAll('iframe, img, script, link') : []
-    for (let i = 0; i < iframes.length; i++) {
-      const child = iframes[i]!
-      const src = child.getAttribute('src') || child.getAttribute('href') || ''
-      if (src.startsWith('chrome-extension://') || src.startsWith('moz-extension://')) return true
+  const EXTENSION_TAG_PREFIXES = ['grammarly-', 'lastpass-', 'bitwarden-', '1password-', 'dashlane-', 'honey-', 'loom-']
+  const EXTENSION_ATTR_PATTERNS = ['data-extension-id', 'data-ext-', '__ext']
+
+  function referencesExtensionOrigin(src: string): boolean {
+    return src.startsWith('chrome-extension://') || src.startsWith('moz-extension://')
+  }
+
+  function extensionResourceInChildren(root: Element): boolean {
+    const resources = root.querySelectorAll('iframe, img, script, link')
+    for (let i = 0; i < resources.length; i++) {
+      const res = resources[i]!
+      const src = res.getAttribute('src') || res.getAttribute('href') || ''
+      if (referencesExtensionOrigin(src)) return true
     }
-    const extensionTagPrefixes = ['grammarly-', 'lastpass-', 'bitwarden-', '1password-', 'dashlane-', 'honey-', 'loom-']
-    const extensionAttrPatterns = ['data-extension-id', 'data-ext-', '__ext']
+    return false
+  }
+
+  function shadowHostLooksLikeExtension(host: Element): boolean {
+    const hostTag = host.tagName?.toLowerCase() || ''
+    if (extensionResourceInChildren(host)) return true
+    if (EXTENSION_TAG_PREFIXES.some((prefix) => hostTag.startsWith(prefix))) return true
+    if (!host.hasAttributes()) return false
+    const attrs = host.attributes
+    for (let k = 0; k < attrs.length; k++) {
+      const attrName = attrs[k]!.name.toLowerCase()
+      if (EXTENSION_ATTR_PATTERNS.some((pat) => attrName.startsWith(pat) || attrName.includes(pat))) return true
+    }
+    return false
+  }
+
+  function detectExtensionOverlay(el: Element): boolean {
+    if (el instanceof HTMLElement && extensionResourceInChildren(el)) return true
     let node: Node | null = el
     while (node) {
       const root: Node | null = typeof node.getRootNode === 'function' ? node.getRootNode() : null
       if (root && root !== document && root instanceof ShadowRoot) {
         const host: Element | undefined = (root as ShadowRoot & { host?: Element }).host
         if (host) {
-          const hostTag = host.tagName?.toLowerCase() || ''
-          const hostResources = host.querySelectorAll('iframe, img, script, link')
-          for (let j = 0; j < hostResources.length; j++) {
-            const res = hostResources[j]!
-            const resSrc = res.getAttribute('src') || res.getAttribute('href') || ''
-            if (resSrc.startsWith('chrome-extension://') || resSrc.startsWith('moz-extension://')) return true
-          }
-          if (extensionTagPrefixes.some((prefix) => hostTag.startsWith(prefix))) return true
-          if (host.hasAttributes()) {
-            const attrs = host.attributes
-            for (let k = 0; k < attrs.length; k++) {
-              const attrName = attrs[k]!.name.toLowerCase()
-              if (extensionAttrPatterns.some((pat) => attrName.startsWith(pat) || attrName.includes(pat))) return true
-            }
-          }
+          if (shadowHostLooksLikeExtension(host)) return true
           node = host
           continue
         }
@@ -417,6 +431,88 @@ export function domPrimitiveOverlay(
     error?: ReturnType<typeof domError>
   }
 
+  const dismissTextPatterns =
+    action === 'auto_dismiss_overlays'
+      ? /^(close|dismiss|cancel|not now|no thanks|skip|hide|got it|maybe later|x|\u00d7|\u2715|\u2716|\u2573|accept|allow|agree|ok|okay)$/i
+      : /^(close|dismiss|cancel|not now|no thanks|skip|hide|back|got it|maybe later|x|\u00d7|\u2715|\u2716|\u2573)$/i
+
+  const CLOSE_BUTTON_SELECTORS = [
+    'button.close',
+    '.btn-close',
+    '[aria-label="Close"]',
+    '[aria-label="close"]',
+    '[aria-label="Dismiss"]',
+    '[aria-label="dismiss"]',
+    '[data-dismiss="modal"]',
+    '[data-bs-dismiss="modal"]',
+    '[data-dismiss="dialog"]',
+    '[data-dismiss="alert"]',
+    '[data-bs-dismiss="alert"]',
+    'button.modal-close',
+    '.dialog-close',
+    '.overlay-close',
+    '.popup-close'
+  ]
+
+  // Strategy A: close button selectors
+  function findCloseButtonTarget(overlayElement: Element): Element | null {
+    for (const closeSelector of CLOSE_BUTTON_SELECTORS) {
+      const matches = querySelectorAllDeep(closeSelector, overlayElement as ParentNode)
+      const visible = matches.filter(isActionableVisible)
+      if (visible.length > 0) {
+        return visible[0]
+      }
+    }
+    return null
+  }
+
+  function scoreDismissButton(btn: Element): number {
+    const label = extractElementLabel(btn).trim()
+    let score = 0
+    if (dismissTextPatterns.test(label)) score += 900
+    else if (dismissVerb.test(label)) score += 700
+    if (submitVerb.test(label)) score -= 600
+    const hasSvgIcon = typeof btn.querySelector === 'function' && btn.querySelector('svg') !== null
+    const textLen = (btn.textContent || '').trim().length
+    if (hasSvgIcon && textLen <= 2) score += 500
+    const rect = (btn as HTMLElement).getBoundingClientRect()
+    if (rect.width > 0 && rect.width < 60 && rect.height > 0 && rect.height < 60) score += 100
+    score += elementZIndexScore(btn)
+    return score
+  }
+
+  // Strategy B: dismiss-like text buttons
+  function findDismissTextTarget(overlayElement: Element): Element | null {
+    const allButtons = querySelectorAllDeep(
+      'button, [role="button"], [aria-label], [data-testid], [title]',
+      overlayElement as ParentNode
+    )
+    const dismissButtons: { element: Element; score: number }[] = []
+    for (const btn of uniqueElements(allButtons)) {
+      if (!isActionableVisible(btn)) continue
+      const score = scoreDismissButton(btn)
+      if (score > 0) dismissButtons.push({ element: btn, score })
+    }
+    if (dismissButtons.length === 0) return null
+    dismissButtons.sort((a, b) => b.score - a.score)
+    return dismissButtons[0]!.element
+  }
+
+  // Strategy C: dismiss-related attributes (dismiss_top_overlay only)
+  function findDismissAttrTarget(overlayElement: Element): Element | null {
+    if (action !== 'dismiss_top_overlay') return null
+    const attrCandidates = querySelectorAllDeep('[data-testid], [title]', overlayElement as ParentNode)
+    for (const candidate of uniqueElements(attrCandidates)) {
+      if (!isActionableVisible(candidate)) continue
+      const testId = candidate.getAttribute('data-testid') || ''
+      const title = candidate.getAttribute('title') || ''
+      if (dismissVerb.test(testId) || dismissVerb.test(title)) {
+        return candidate
+      }
+    }
+    return null
+  }
+
   function resolveDismissTarget(): ResolveResult {
     const overlayElement = findTopmostOverlay()
     if (!overlayElement) {
@@ -445,73 +541,21 @@ export function domPrimitiveOverlay(
     }
 
     // Strategy A: close button selectors
-    const closeButtonSelectors = [
-      'button.close',
-      '.btn-close',
-      '[aria-label="Close"]',
-      '[aria-label="close"]',
-      '[aria-label="Dismiss"]',
-      '[aria-label="dismiss"]',
-      '[data-dismiss="modal"]',
-      '[data-bs-dismiss="modal"]',
-      '[data-dismiss="dialog"]',
-      '[data-dismiss="alert"]',
-      '[data-bs-dismiss="alert"]',
-      'button.modal-close',
-      '.dialog-close',
-      '.overlay-close',
-      '.popup-close'
-    ]
-    for (const closeSelector of closeButtonSelectors) {
-      const matches = querySelectorAllDeep(closeSelector, overlayElement as ParentNode)
-      const visible = matches.filter(isActionableVisible)
-      if (visible.length > 0) {
-        return { element: visible[0], match_strategy: 'intent_dismiss_top_overlay' }
-      }
+    const closeButton = findCloseButtonTarget(overlayElement)
+    if (closeButton) {
+      return { element: closeButton, match_strategy: 'intent_dismiss_top_overlay' }
     }
 
     // Strategy B: dismiss-like text buttons
-    const dismissTextPatterns =
-      action === 'auto_dismiss_overlays'
-        ? /^(close|dismiss|cancel|not now|no thanks|skip|hide|got it|maybe later|x|\u00d7|\u2715|\u2716|\u2573|accept|allow|agree|ok|okay)$/i
-        : /^(close|dismiss|cancel|not now|no thanks|skip|hide|back|got it|maybe later|x|\u00d7|\u2715|\u2716|\u2573)$/i
-    const allButtons = querySelectorAllDeep(
-      'button, [role="button"], [aria-label], [data-testid], [title]',
-      overlayElement as ParentNode
-    )
-    type RankedCandidate = { element: Element; score: number }
-    const dismissButtons: RankedCandidate[] = []
-    for (const btn of uniqueElements(allButtons)) {
-      if (!isActionableVisible(btn)) continue
-      const label = extractElementLabel(btn).trim()
-      let score = 0
-      if (dismissTextPatterns.test(label)) score += 900
-      else if (dismissVerb.test(label)) score += 700
-      if (submitVerb.test(label)) score -= 600
-      const hasSvgIcon = typeof btn.querySelector === 'function' && btn.querySelector('svg') !== null
-      const textLen = (btn.textContent || '').trim().length
-      if (hasSvgIcon && textLen <= 2) score += 500
-      const rect = (btn as HTMLElement).getBoundingClientRect()
-      if (rect.width > 0 && rect.width < 60 && rect.height > 0 && rect.height < 60) score += 100
-      score += elementZIndexScore(btn)
-      if (score > 0) dismissButtons.push({ element: btn, score })
-    }
-    if (dismissButtons.length > 0) {
-      dismissButtons.sort((a, b) => b.score - a.score)
-      return { element: dismissButtons[0]!.element, match_strategy: 'intent_dismiss_top_overlay' }
+    const dismissTextButton = findDismissTextTarget(overlayElement)
+    if (dismissTextButton) {
+      return { element: dismissTextButton, match_strategy: 'intent_dismiss_top_overlay' }
     }
 
     // Strategy C: dismiss-related attributes
-    if (action === 'dismiss_top_overlay') {
-      const attrCandidates = querySelectorAllDeep('[data-testid], [title]', overlayElement as ParentNode)
-      for (const candidate of uniqueElements(attrCandidates)) {
-        if (!isActionableVisible(candidate)) continue
-        const testId = candidate.getAttribute('data-testid') || ''
-        const title = candidate.getAttribute('title') || ''
-        if (dismissVerb.test(testId) || dismissVerb.test(title)) {
-          return { element: candidate, match_strategy: 'intent_dismiss_top_overlay' }
-        }
-      }
+    const attrTarget = findDismissAttrTarget(overlayElement)
+    if (attrTarget) {
+      return { element: attrTarget, match_strategy: 'intent_dismiss_top_overlay' }
     }
 
     // Strategy D: Escape key fallback

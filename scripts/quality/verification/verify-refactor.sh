@@ -214,7 +214,7 @@ echo "━━━ LEVEL 6: Quality Standards ━━━"
 echo ""
 
 echo "→ Checking file length limits..."
-if bash scripts/quality/contracts/check-file-length.sh > /tmp/file-length.txt 2>&1; then
+if bash scripts/quality/contracts/file-length/check-file-length.sh > /tmp/file-length.txt 2>&1; then
     echo "✅ All files within 800-line limit"
 else
     VIOLATIONS=$(grep -c "^❌" /tmp/file-length.txt || echo 0)

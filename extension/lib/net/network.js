@@ -366,18 +366,18 @@ async function readCapturedBody(url, cloned, contentType) {
     }
     return readResponseBodyWithTimeout(cloned);
 }
-function postNetworkBody(win, url, method, response, contentType, requestBody, duration, truncResp, truncReq, responseTruncated) {
+function postNetworkBody(win, capture) {
     const message = {
         type: 'kaboom_network_body',
         payload: {
-            url,
-            method,
-            status: response.status,
-            content_type: contentType,
-            request_body: truncReq || (typeof requestBody === 'string' ? requestBody : undefined),
-            response_body: truncResp,
-            ...(responseTruncated ? { response_truncated: true } : {}),
-            duration
+            url: capture.url,
+            method: capture.method,
+            status: capture.status,
+            content_type: capture.contentType,
+            request_body: capture.truncReq || (typeof capture.requestBody === 'string' ? capture.requestBody : undefined),
+            response_body: capture.truncResp,
+            ...(capture.responseTruncated ? { response_truncated: true } : {}),
+            duration: capture.duration
         }
     };
     win.postMessage(message, window.location.origin);
@@ -443,12 +443,17 @@ export function wrapXHRWithBodies() {
                     const { body: truncResp, truncated: respTruncated } = truncateResponseBody(responseBody);
                     const win = typeof window !== 'undefined' ? window : null;
                     if (win) {
-                        // Build a minimal Response-like shim for postNetworkBody
-                        const responseShim = {
+                        postNetworkBody(win, {
+                            url,
+                            method,
                             status: this.status,
-                            headers: { get: (h) => this.getResponseHeader(h) }
-                        };
-                        postNetworkBody(win, url, method, responseShim, contentType, requestBody, duration, truncResp || '', truncReq, respTruncated);
+                            contentType,
+                            requestBody,
+                            duration,
+                            truncResp: truncResp || '',
+                            truncReq,
+                            responseTruncated: respTruncated
+                        });
                     }
                 }
                 catch {
@@ -560,7 +565,17 @@ export function wrapFetchWithBodies(fetchFn) {
                         : null;
                 const { body: truncReq } = truncateRequestBody(rawReq);
                 if (win && networkBodyCaptureEnabled) {
-                    postNetworkBody(win, url, method, response, contentType, requestBody, duration, truncResp || responseBody, truncReq, respTruncated);
+                    postNetworkBody(win, {
+                        url,
+                        method,
+                        status: response.status,
+                        contentType,
+                        requestBody,
+                        duration,
+                        truncResp: truncResp || responseBody,
+                        truncReq,
+                        responseTruncated: respTruncated
+                    });
                 }
             }
             catch {

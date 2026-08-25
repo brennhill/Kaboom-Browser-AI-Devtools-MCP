@@ -331,12 +331,12 @@ async function startOffscreenRecording(streamId, tab, name, fps, audio, connecti
  * Start recording a target tab (or the active tab when no target is provided).
  * @param name — Pre-generated filename from the Go server (e.g., "checkout-bug--2026-02-07-1423")
  * @param fps — Framerate (5–60, default 15)
- * @param queryId — PendingQuery ID for result resolution
  * @param audio — Audio mode: 'tab', 'mic', 'both', or '' (no audio)
- * @param fromPopup — true when initiated from popup (activeTab already granted, skip reload)
+ * @param context — Request context: query resolution, origin, target tab, generation guard
  */
 // #lizard forgives
-export async function startRecording(name, fps = 15, queryId = '', audio = '', fromPopup = false, targetTabId, connectionGeneration) {
+export async function startRecording(name, fps = 15, audio = '', context = {}) {
+    const { queryId = '', fromPopup = false, targetTabId, connectionGeneration } = context;
     console.log(LOG, 'startRecording called', {
         name,
         fps,

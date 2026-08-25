@@ -7,7 +7,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { afterEach, test } from 'node:test'
 
-const SCRIPT = path.resolve('scripts/quality/contracts/check-file-length.sh')
+const SCRIPT = path.resolve('scripts/quality/contracts/file-length/check-file-length.sh')
 const temporaryRoots = []
 
 async function createRoot(files) {

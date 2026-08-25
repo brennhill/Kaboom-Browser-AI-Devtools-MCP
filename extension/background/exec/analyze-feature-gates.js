@@ -41,27 +41,40 @@ export function analyzeFeatureGates() {
         const rect = htmlEl.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
     }
+    // --- Shared scanner: walks visible elements, dedupes by text, applies per-category matching ---
+    function scanGateElements(opts) {
+        const seenTexts = new Set();
+        for (let i = 0; i < allElements.length && opts.count() < 20; i++) {
+            const el = allElements[i];
+            if (!isVisible(el))
+                continue;
+            const text = (el.textContent || '').trim();
+            if (text.length > opts.maxLength || text.length < opts.minLength)
+                continue;
+            if (opts.matches(text, el) && !seenTexts.has(text)) {
+                seenTexts.add(text);
+                opts.onMatch(el, text);
+            }
+        }
+    }
     // --- Plan gate detection ---
     const planPatterns = /\b(upgrade|unlock|premium|pro plan|enterprise|paid|subscribe|pricing|go pro|get started|start free trial)\b/i;
     const planNamePattern = /\b(free|starter|basic|pro|premium|plus|business|enterprise|creator|growth|team|scale)\b/i;
     // Scan for elements with gate-related text
     const allElements = document.body.querySelectorAll('*');
-    const seenTexts = new Set();
-    for (let i = 0; i < allElements.length && planGates.length < 20; i++) {
-        const el = allElements[i];
-        if (!isVisible(el))
-            continue;
-        // Check for gate-related CSS classes
-        const className = String(el.className || '').toLowerCase();
-        const hasGateClass = /\b(locked|gated|premium-only|pro-only|disabled|upgrade)\b/.test(className);
-        // Check for lock icon SVGs or font-awesome icons
-        const hasLockIcon = el.querySelector('svg[data-icon="lock"], .fa-lock, .icon-lock, [class*="lock"]') !== null;
-        // Check text content (only direct text, not deeply nested)
-        const text = (el.textContent || '').trim();
-        if (text.length > 200 || text.length < 3)
-            continue;
-        if ((planPatterns.test(text) || hasGateClass || hasLockIcon) && !seenTexts.has(text)) {
-            seenTexts.add(text);
+    scanGateElements({
+        maxLength: 200,
+        minLength: 3,
+        count: () => planGates.length,
+        matches: (text, el) => {
+            // Check for gate-related CSS classes
+            const className = String(el.className || '').toLowerCase();
+            const hasGateClass = /\b(locked|gated|premium-only|pro-only|disabled|upgrade)\b/.test(className);
+            // Check for lock icon SVGs or font-awesome icons
+            const hasLockIcon = el.querySelector('svg[data-icon="lock"], .fa-lock, .icon-lock, [class*="lock"]') !== null;
+            return planPatterns.test(text) || hasGateClass || hasLockIcon;
+        },
+        onMatch: (el, text) => {
             const planMatch = text.match(planNamePattern);
             planGates.push({
                 feature: nearestFeatureName(el) || text.slice(0, 60),
@@ -70,20 +83,16 @@ export function analyzeFeatureGates() {
                 text: text.slice(0, 120)
             });
         }
-    }
+    });
     // --- Auth gate detection ---
     const authPatterns = /\b(connect your|authenticate with|sign in with|log in with|link your|authorize|oauth|connect .+ account)\b/i;
     const providerPattern = /\b(google|facebook|twitter|linkedin|github|slack|instagram|gumroad|stripe|shopify|zapier|hubspot|salesforce)\b/i;
-    const seenAuthTexts = new Set();
-    for (let i = 0; i < allElements.length && authGates.length < 20; i++) {
-        const el = allElements[i];
-        if (!isVisible(el))
-            continue;
-        const text = (el.textContent || '').trim();
-        if (text.length > 200 || text.length < 5)
-            continue;
-        if (authPatterns.test(text) && !seenAuthTexts.has(text)) {
-            seenAuthTexts.add(text);
+    scanGateElements({
+        maxLength: 200,
+        minLength: 5,
+        count: () => authGates.length,
+        matches: (text) => authPatterns.test(text),
+        onMatch: (el, text) => {
             const providerMatch = text.match(providerPattern);
             authGates.push({
                 feature: nearestFeatureName(el) || text.slice(0, 60),
@@ -92,26 +101,22 @@ export function analyzeFeatureGates() {
                 text: text.slice(0, 120)
             });
         }
-    }
+    });
     // --- Usage limit detection ---
     const usagePatterns = /\b(\d+\s*\/\s*\d+|remaining|left this|quota|limit reached|usage|credits?\s+\d|allowance)\b/i;
-    const seenUsageTexts = new Set();
-    for (let i = 0; i < allElements.length && usageLimits.length < 20; i++) {
-        const el = allElements[i];
-        if (!isVisible(el))
-            continue;
-        const text = (el.textContent || '').trim();
-        if (text.length > 150 || text.length < 3)
-            continue;
-        if (usagePatterns.test(text) && !seenUsageTexts.has(text)) {
-            seenUsageTexts.add(text);
+    scanGateElements({
+        maxLength: 150,
+        minLength: 3,
+        count: () => usageLimits.length,
+        matches: (text) => usagePatterns.test(text),
+        onMatch: (el, text) => {
             usageLimits.push({
                 feature: nearestFeatureName(el) || text.slice(0, 60),
                 text: text.slice(0, 120),
                 selector: buildSelector(el)
             });
         }
-    }
+    });
     return {
         plan_gates: planGates,
         auth_gates: authGates,

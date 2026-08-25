@@ -137,15 +137,14 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			if response, handled := doctorsupport.Handle(req, args, incidentViews, version, runtime.GOOS+"-"+runtime.GOARCH, nil); handled {
 				return response
 			}
-			return health.HandleDoctorMCP(
-				h.healthMetrics,
-				h.capture,
-				h.alertBuffer,
-				h.Guards.DiagnosticHintString,
-				checks,
-				req,
-				version,
-			)
+			doctorDeps := health.DoctorMCPDeps{
+				Metrics:        h.healthMetrics,
+				Capture:        h.capture,
+				Alerts:         h.alertBuffer,
+				DiagnosticHint: h.Guards.DiagnosticHintString,
+				ExtraChecks:    checks,
+			}
+			return health.HandleDoctorMCP(doctorDeps, req, version)
 		},
 		"noise_rule": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			rewrittenArgs, err := cfg.RewriteNoiseRuleArgs(args)

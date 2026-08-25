@@ -165,156 +165,182 @@ export class SyncClient {
             const logs = this.callbacks.getExtensionLogs();
             const resultsSentCount = this.pendingResults.length;
             features = drainUIFeatures();
-            const request = {
-                ext_session_id: this.extSessionId,
-                connection_generation: this.connectionGeneration || undefined,
-                extension_version: this.extensionVersion || undefined,
-                command_contract_id: EXTENSION_COMMAND_CONTRACT_ID,
-                settings,
-                in_progress: this.getInProgressSnapshot(),
-                ...(logs.length > 0 ? { extension_logs: logs } : {}),
-                ...(resultsSentCount > 0 ? { command_results: this.pendingResults.slice(0, resultsSentCount) } : {}),
-                ...(this.state.lastCommandAck ? { last_command_ack: this.state.lastCommandAck } : {}),
-                ...(features ? { features_used: features } : {})
-            };
-            // Make request with timeout to prevent hanging forever (8s: server holds up to 5s + margin)
-            const response = await this.runtime.request(`${this.serverUrl}/sync`, buildDaemonJSONRequestInit(request, {
-                extensionVersion: this.extensionVersion || undefined
-            }), 8000);
-            if (!response.ok) {
-                throw new Error(`Sync request failed: HTTP ${response.status} ${response.statusText} from ${this.serverUrl}/sync`);
-            }
+            const request = this.buildSyncRequest(settings, logs, resultsSentCount, features);
+            const response = await this.fetchSyncResponse(request);
             const data = await response.json();
-            if (lifecycleEpoch !== this.lifecycleEpoch) {
-                this.syncing = false;
-                this.log('Rejected stale connection generation', {
-                    correlation_id: this.extSessionId,
-                    bridge: 'sync_response',
-                    received_epoch: lifecycleEpoch,
-                    current_epoch: this.lifecycleEpoch
-                });
-                if (this.running) {
-                    this.flushRequested = false;
-                    this.scheduleNextSync(0);
-                }
+            if (this.rejectStaleSync(lifecycleEpoch))
                 return;
-            }
-            if (!Number.isSafeInteger(data.connection_generation) || data.connection_generation <= 0) {
-                throw new Error('Sync response omitted a valid connection generation');
-            }
-            this.connectionGeneration = data.connection_generation;
-            setConnectionGeneration(data.connection_generation);
-            // Log sync cycle summary
-            this.log('Sync OK', {
-                commands: data.commands?.length || 0,
-                resultsSent: request.command_results?.length || 0,
-                logsSent: request.extension_logs?.length || 0,
-                nextPollMs: data.next_poll_ms
-            });
-            // Success - update state
-            this.onSuccess();
-            // Store server install ID for use as the single analytics identifier.
-            if (data.install_id && data.install_id !== getServerInstallId()) {
-                updateServerInstallId(data.install_id);
-            }
-            // Check for version mismatch (compare major.minor only, ignore patch)
-            if (data.server_version && this.extensionVersion && this.callbacks.onVersionMismatch) {
-                const serverMajorMinor = data.server_version.split('.').slice(0, 2).join('.');
-                const extensionMajorMinor = this.extensionVersion.split('.').slice(0, 2).join('.');
-                if (serverMajorMinor !== extensionMajorMinor) {
-                    this.callbacks.onVersionMismatch(this.extensionVersion, data.server_version);
-                }
-            }
-            // Clear sent logs and results
-            if (logs.length > 0) {
-                this.callbacks.acknowledgeExtensionLogs(logs.length);
-            }
-            if (resultsSentCount > 0) {
-                this.pendingResults = this.pendingResults.slice(resultsSentCount);
-            }
-            // Dispatch commands without blocking the heartbeat loop.
-            // Command completion is returned asynchronously via queueCommandResult().
-            if (data.commands && data.commands.length > 0) {
-                this.log('Received commands', { count: data.commands.length, ids: data.commands.map((c) => c.id) });
-                for (const command of data.commands) {
-                    if (command.connection_generation !== this.connectionGeneration) {
-                        this.log('Rejected stale connection generation', {
-                            correlation_id: command.correlation_id || command.id,
-                            bridge: 'sync_command',
-                            received_generation: command.connection_generation,
-                            current_generation: this.connectionGeneration
-                        });
-                        continue;
-                    }
-                    const signature = this.getCommandSignature(command);
-                    if (command.id && this.inProgressById.has(command.id)) {
-                        this.log('Skipping command already in flight', {
-                            id: command.id,
-                            correlation_id: command.correlation_id,
-                            type: command.type
-                        });
-                        continue;
-                    }
-                    if (command.id && this.processedCommandSignatures.has(signature)) {
-                        this.log('Skipping already processed command', {
-                            id: command.id,
-                            correlation_id: command.correlation_id,
-                            type: command.type
-                        });
-                        continue;
-                    }
-                    // Dedup on RECEIPT — prevents re-execution if server re-sends before ack
-                    if (command.id) {
-                        this.processedCommandSignatures.add(signature);
-                        // This is a short duplicate-delivery guard, not a command archive.
-                        // Active work is protected separately by inProgressById; retaining a
-                        // large completed set can suppress valid IDs after a daemon restart.
-                        if (this.processedCommandSignatures.size > ACKNOWLEDGED_COMMAND_HISTORY_LIMIT) {
-                            const oldest = this.processedCommandSignatures.values().next().value;
-                            if (oldest !== undefined) {
-                                this.processedCommandSignatures.delete(oldest);
-                            }
-                        }
-                    }
-                    this.log('Dispatching command', {
-                        id: command.id,
-                        type: command.type,
-                        correlation_id: command.correlation_id
-                    });
-                    void this.dispatchCommand(command);
-                }
-            }
-            // Handle capture overrides
-            if (data.capture_overrides && this.callbacks.onCaptureOverrides) {
-                this.callbacks.onCaptureOverrides(data.capture_overrides);
-            }
+            this.applySyncResponse(data, request, logs, resultsSentCount);
             // Schedule next sync — flush immediately if results were queued during this sync
-            this.syncing = false;
-            if (this.flushRequested) {
-                this.flushRequested = false;
-                this.scheduleNextSync(0);
-            }
-            else {
-                const nextPollMs = data.next_poll_ms || BASE_POLL_MS;
-                this.scheduleNextSync(nextPollMs);
-            }
+            this.scheduleNextPoll(data);
         }
         catch (err) {
-            this.syncing = false;
-            this.flushRequested = false;
-            this.onFailure();
-            // Re-merge drained UI features so they aren't lost on failed sync.
-            if (features) {
-                restoreUIFeatures(features);
-            }
-            const retryMs = this.retryDelayMs();
-            this.log('Sync failed, retrying', {
-                correlation_id: this.extSessionId,
-                error: errorMessage(err),
-                retry_ms: retryMs
-            });
-            this.scheduleNextSync(retryMs);
+            this.handleSyncFailure(err, features);
         }
+    }
+    buildSyncRequest(settings, logs, resultsSentCount, features) {
+        return {
+            ext_session_id: this.extSessionId,
+            connection_generation: this.connectionGeneration || undefined,
+            extension_version: this.extensionVersion || undefined,
+            command_contract_id: EXTENSION_COMMAND_CONTRACT_ID,
+            settings,
+            in_progress: this.getInProgressSnapshot(),
+            ...(logs.length > 0 ? { extension_logs: logs } : {}),
+            ...(resultsSentCount > 0 ? { command_results: this.pendingResults.slice(0, resultsSentCount) } : {}),
+            ...(this.state.lastCommandAck ? { last_command_ack: this.state.lastCommandAck } : {}),
+            ...(features ? { features_used: features } : {})
+        };
+    }
+    async fetchSyncResponse(request) {
+        // Make request with timeout to prevent hanging forever (8s: server holds up to 5s + margin)
+        const response = await this.runtime.request(`${this.serverUrl}/sync`, buildDaemonJSONRequestInit(request, {
+            extensionVersion: this.extensionVersion || undefined
+        }), 8000);
+        if (!response.ok) {
+            throw new Error(`Sync request failed: HTTP ${response.status} ${response.statusText} from ${this.serverUrl}/sync`);
+        }
+        return response;
+    }
+    rejectStaleSync(lifecycleEpoch) {
+        if (lifecycleEpoch === this.lifecycleEpoch)
+            return false;
+        this.syncing = false;
+        this.log('Rejected stale connection generation', {
+            correlation_id: this.extSessionId,
+            bridge: 'sync_response',
+            received_epoch: lifecycleEpoch,
+            current_epoch: this.lifecycleEpoch
+        });
+        if (this.running) {
+            this.flushRequested = false;
+            this.scheduleNextSync(0);
+        }
+        return true;
+    }
+    applySyncResponse(data, request, logs, resultsSentCount) {
+        if (!Number.isSafeInteger(data.connection_generation) || data.connection_generation <= 0) {
+            throw new Error('Sync response omitted a valid connection generation');
+        }
+        this.connectionGeneration = data.connection_generation;
+        setConnectionGeneration(data.connection_generation);
+        // Log sync cycle summary
+        this.log('Sync OK', {
+            commands: data.commands?.length || 0,
+            resultsSent: request.command_results?.length || 0,
+            logsSent: request.extension_logs?.length || 0,
+            nextPollMs: data.next_poll_ms
+        });
+        // Success - update state
+        this.onSuccess();
+        // Store server install ID for use as the single analytics identifier.
+        if (data.install_id && data.install_id !== getServerInstallId()) {
+            updateServerInstallId(data.install_id);
+        }
+        this.notifyVersionMismatch(data);
+        // Clear sent logs and results
+        if (logs.length > 0) {
+            this.callbacks.acknowledgeExtensionLogs(logs.length);
+        }
+        if (resultsSentCount > 0) {
+            this.pendingResults = this.pendingResults.slice(resultsSentCount);
+        }
+        this.dispatchSyncCommands(data);
+        // Handle capture overrides
+        if (data.capture_overrides && this.callbacks.onCaptureOverrides) {
+            this.callbacks.onCaptureOverrides(data.capture_overrides);
+        }
+    }
+    notifyVersionMismatch(data) {
+        // Check for version mismatch (compare major.minor only, ignore patch)
+        if (!data.server_version || !this.extensionVersion || !this.callbacks.onVersionMismatch)
+            return;
+        const serverMajorMinor = data.server_version.split('.').slice(0, 2).join('.');
+        const extensionMajorMinor = this.extensionVersion.split('.').slice(0, 2).join('.');
+        if (serverMajorMinor !== extensionMajorMinor) {
+            this.callbacks.onVersionMismatch(this.extensionVersion, data.server_version);
+        }
+    }
+    dispatchSyncCommands(data) {
+        if (!data.commands || data.commands.length === 0)
+            return;
+        this.log('Received commands', { count: data.commands.length, ids: data.commands.map((c) => c.id) });
+        for (const command of data.commands) {
+            if (command.connection_generation !== this.connectionGeneration) {
+                this.log('Rejected stale connection generation', {
+                    correlation_id: command.correlation_id || command.id,
+                    bridge: 'sync_command',
+                    received_generation: command.connection_generation,
+                    current_generation: this.connectionGeneration
+                });
+                continue;
+            }
+            const signature = this.getCommandSignature(command);
+            if (command.id && this.inProgressById.has(command.id)) {
+                this.log('Skipping command already in flight', {
+                    id: command.id,
+                    correlation_id: command.correlation_id,
+                    type: command.type
+                });
+                continue;
+            }
+            if (command.id && this.processedCommandSignatures.has(signature)) {
+                this.log('Skipping already processed command', {
+                    id: command.id,
+                    correlation_id: command.correlation_id,
+                    type: command.type
+                });
+                continue;
+            }
+            // Dedup on RECEIPT — prevents re-execution if server re-sends before ack
+            if (command.id) {
+                this.processedCommandSignatures.add(signature);
+                // This is a short duplicate-delivery guard, not a command archive.
+                // Active work is protected separately by inProgressById; retaining a
+                // large completed set can suppress valid IDs after a daemon restart.
+                if (this.processedCommandSignatures.size > ACKNOWLEDGED_COMMAND_HISTORY_LIMIT) {
+                    const oldest = this.processedCommandSignatures.values().next().value;
+                    if (oldest !== undefined) {
+                        this.processedCommandSignatures.delete(oldest);
+                    }
+                }
+            }
+            this.log('Dispatching command', {
+                id: command.id,
+                type: command.type,
+                correlation_id: command.correlation_id
+            });
+            // Dispatch commands without blocking the heartbeat loop.
+            // Command completion is returned asynchronously via queueCommandResult().
+            void this.dispatchCommand(command);
+        }
+    }
+    scheduleNextPoll(data) {
+        this.syncing = false;
+        if (this.flushRequested) {
+            this.flushRequested = false;
+            this.scheduleNextSync(0);
+        }
+        else {
+            const nextPollMs = data.next_poll_ms || BASE_POLL_MS;
+            this.scheduleNextSync(nextPollMs);
+        }
+    }
+    handleSyncFailure(err, features) {
+        this.syncing = false;
+        this.flushRequested = false;
+        this.onFailure();
+        // Re-merge drained UI features so they aren't lost on failed sync.
+        if (features) {
+            restoreUIFeatures(features);
+        }
+        const retryMs = this.retryDelayMs();
+        this.log('Sync failed, retrying', {
+            correlation_id: this.extSessionId,
+            error: errorMessage(err),
+            retry_ms: retryMs
+        });
+        this.scheduleNextSync(retryMs);
     }
     onSuccess() {
         const wasDisconnected = !this.state.connected;

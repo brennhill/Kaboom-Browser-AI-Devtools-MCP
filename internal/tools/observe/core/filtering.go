@@ -118,18 +118,14 @@ func parseJSONPath(path string) ([]jsonPathToken, error) {
 		return nil, fmt.Errorf("body_path_filter: path argument cannot be empty. Provide a dot-delimited path like 'data.items'")
 	}
 
-	if strings.HasPrefix(trimmed, "$.") {
-		trimmed = trimmed[2:]
-	} else if strings.HasPrefix(trimmed, "$") {
-		trimmed = trimmed[1:]
-	}
-
+	trimmed = trimJSONPathRoot(trimmed)
 	if trimmed == "" {
 		return []jsonPathToken{}, nil
 	}
 
 	tokens := make([]jsonPathToken, 0, 6)
 	for i := 0; i < len(trimmed); {
+		var err error
 		switch trimmed[i] {
 		case '.':
 			i++
@@ -137,45 +133,76 @@ func parseJSONPath(path string) ([]jsonPathToken, error) {
 				return nil, fmt.Errorf("invalid empty segment after '.'")
 			}
 		case '[':
-			endOffset := strings.IndexByte(trimmed[i:], ']')
-			if endOffset < 0 {
-				return nil, fmt.Errorf("missing closing ']' in path")
+			var token jsonPathToken
+			token, i, err = parseIndexSegment(trimmed, i)
+			if err != nil {
+				return nil, err
 			}
-			end := i + endOffset
-			inner := strings.TrimSpace(trimmed[i+1 : end])
-			if inner == "" {
-				return nil, fmt.Errorf("empty [] segment in path")
-			}
-
-			if (inner[0] == '\'' && inner[len(inner)-1] == '\'') || (inner[0] == '"' && inner[len(inner)-1] == '"') {
-				key := inner[1 : len(inner)-1]
-				if key == "" {
-					return nil, fmt.Errorf("empty key segment in path")
-				}
-				tokens = append(tokens, jsonPathToken{key: key})
-			} else {
-				index, err := strconv.Atoi(inner)
-				if err != nil {
-					return nil, fmt.Errorf("invalid array index %q: %w", inner, err)
-				}
-				if index < 0 {
-					return nil, fmt.Errorf("invalid array index %q", inner)
-				}
-				tokens = append(tokens, jsonPathToken{index: index, isIndex: true})
-			}
-			i = end + 1
+			tokens = append(tokens, token)
 		default:
-			start := i
-			for i < len(trimmed) && trimmed[i] != '.' && trimmed[i] != '[' {
-				i++
+			var token jsonPathToken
+			token, i, err = parseKeySegment(trimmed, i)
+			if err != nil {
+				return nil, err
 			}
-			key := strings.TrimSpace(trimmed[start:i])
-			if key == "" {
-				return nil, fmt.Errorf("invalid key segment in path")
-			}
-			tokens = append(tokens, jsonPathToken{key: key})
+			tokens = append(tokens, token)
 		}
 	}
 
 	return tokens, nil
+}
+
+func trimJSONPathRoot(trimmed string) string {
+	if strings.HasPrefix(trimmed, "$.") {
+		return trimmed[2:]
+	}
+	if strings.HasPrefix(trimmed, "$") {
+		return trimmed[1:]
+	}
+	return trimmed
+}
+
+func parseIndexSegment(trimmed string, start int) (jsonPathToken, int, error) {
+	endOffset := strings.IndexByte(trimmed[start:], ']')
+	if endOffset < 0 {
+		return jsonPathToken{}, start, fmt.Errorf("missing closing ']' in path")
+	}
+	end := start + endOffset
+	inner := strings.TrimSpace(trimmed[start+1 : end])
+	if inner == "" {
+		return jsonPathToken{}, end + 1, fmt.Errorf("empty [] segment in path")
+	}
+
+	if isQuotedSegment(inner) {
+		key := inner[1 : len(inner)-1]
+		if key == "" {
+			return jsonPathToken{}, end + 1, fmt.Errorf("empty key segment in path")
+		}
+		return jsonPathToken{key: key}, end + 1, nil
+	}
+
+	index, err := strconv.Atoi(inner)
+	if err != nil {
+		return jsonPathToken{}, end + 1, fmt.Errorf("invalid array index %q: %w", inner, err)
+	}
+	if index < 0 {
+		return jsonPathToken{}, end + 1, fmt.Errorf("invalid array index %q", inner)
+	}
+	return jsonPathToken{index: index, isIndex: true}, end + 1, nil
+}
+
+func isQuotedSegment(inner string) bool {
+	return (inner[0] == '\'' && inner[len(inner)-1] == '\'') || (inner[0] == '"' && inner[len(inner)-1] == '"')
+}
+
+func parseKeySegment(trimmed string, start int) (jsonPathToken, int, error) {
+	i := start
+	for i < len(trimmed) && trimmed[i] != '.' && trimmed[i] != '[' {
+		i++
+	}
+	key := strings.TrimSpace(trimmed[start:i])
+	if key == "" {
+		return jsonPathToken{}, i, fmt.Errorf("invalid key segment in path")
+	}
+	return jsonPathToken{key: key}, i, nil
 }

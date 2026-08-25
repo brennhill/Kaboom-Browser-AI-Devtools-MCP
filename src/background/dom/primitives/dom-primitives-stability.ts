@@ -265,42 +265,38 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
       return tag
     }
 
-    function classifyAndResolve(): void {
-      observer.disconnect()
-      if (perfObserver) {
+    interface OverlayEntry {
+      selector: string
+      text: string
+    }
+    interface ToastEntry {
+      text: string
+      type: string
+    }
+    interface TextChangeEntry {
+      selector: string
+      from: string
+      to: string
+    }
+
+    function collectSelectorMatches(selectors: string[], into: Set<Element>): void {
+      for (const sel of selectors) {
         try {
-          perfObserver.disconnect()
-        } catch {
-          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-          /* ignore */
-        }
-      }
-
-      const urlChanged = location.href !== beforeURL
-      const titleChanged = document.title !== beforeTitle
-
-      // Detect overlays opened/closed
-      interface OverlayEntry {
-        selector: string
-        text: string
-      }
-      const overlaysOpened: OverlayEntry[] = []
-      const overlaysClosed: OverlayEntry[] = []
-
-      const afterOverlays = new Set<Element>()
-      for (const oSel of overlaySelectors) {
-        try {
-          const matches = document.querySelectorAll(oSel)
-          for (let i = 0; i < matches.length; i++) {
-            afterOverlays.add(matches[i]!)
+          const found = document.querySelectorAll(sel)
+          for (let i = 0; i < found.length; i++) {
+            into.add(found[i]!)
           }
         } catch {
           // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
           // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-          /* ignore */
+          /* ignore invalid selectors */
         }
       }
+    }
+
+    function collectAfterOverlays(): Set<Element> {
+      const afterOverlays = new Set<Element>()
+      collectSelectorMatches(overlaySelectors, afterOverlays)
       for (const added of addedNodes) {
         if (isOverlayElement(added)) afterOverlays.add(added)
         try {
@@ -316,7 +312,12 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
           /* ignore */
         }
       }
+      return afterOverlays
+    }
 
+    function diffOverlays(afterOverlays: Set<Element>): { opened: OverlayEntry[]; closed: OverlayEntry[] } {
+      const overlaysOpened: OverlayEntry[] = []
+      const overlaysClosed: OverlayEntry[] = []
       for (const el of afterOverlays) {
         if (!beforeOverlays.has(el)) {
           overlaysOpened.push({
@@ -333,12 +334,33 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
           })
         }
       }
+      return { opened: overlaysOpened, closed: overlaysClosed }
+    }
 
-      // Detect toasts / notifications
-      interface ToastEntry {
-        text: string
-        type: string
+    function collectDescendantTextEntries(
+      added: Element,
+      selectors: string[],
+      entries: { text: string; type: string }[]
+    ): void {
+      try {
+        for (const sel of selectors) {
+          const children = added.querySelectorAll(sel)
+          for (let i = 0; i < children.length; i++) {
+            const child = children[i]!
+            const text = (child.textContent || '').trim().slice(0, 200)
+            if (text) {
+              entries.push({ text, type: classifyToastType(child) })
+            }
+          }
+        }
+      } catch {
+        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+        /* ignore */
       }
+    }
+
+    function collectToasts(): ToastEntry[] {
       const toasts: ToastEntry[] = []
       const toastSelectors = [
         '[role="alert"]',
@@ -360,25 +382,12 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
             toasts.push({ text, type: classifyToastType(added) })
           }
         }
-        try {
-          for (const tSel of toastSelectors) {
-            const children = added.querySelectorAll(tSel)
-            for (let i = 0; i < children.length; i++) {
-              const child = children[i]!
-              const text = (child.textContent || '').trim().slice(0, 200)
-              if (text) {
-                toasts.push({ text, type: classifyToastType(child) })
-              }
-            }
-          }
-        } catch {
-          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-          /* ignore */
-        }
+        collectDescendantTextEntries(added, toastSelectors, toasts)
       }
+      return toasts
+    }
 
-      // Detect form errors
+    function collectFormErrors(): string[] {
       const formErrors: string[] = []
       const errorSelectors = [
         '.error',
@@ -409,8 +418,10 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
           /* ignore */
         }
       }
+      return formErrors
+    }
 
-      // Detect loading indicators
+    function collectLoadingIndicators(): string[] {
       const loadingIndicators: string[] = []
       const loadingSelectors = [
         '.spinner',
@@ -426,13 +437,10 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
           loadingIndicators.push(describeSelector(added))
         }
       }
+      return loadingIndicators
+    }
 
-      // Detect text changes
-      interface TextChangeEntry {
-        selector: string
-        from: string
-        to: string
-      }
+    function collectTextChanges(): TextChangeEntry[] {
       const textChanges: TextChangeEntry[] = []
       for (const [el, oldText] of textSnapshots) {
         if (!document.contains(el)) continue
@@ -445,6 +453,39 @@ export function domPrimitiveActionDiff(options?: { timeout_ms?: number }): Promi
           })
         }
       }
+      return textChanges
+    }
+
+    function classifyAndResolve(): void {
+      observer.disconnect()
+      if (perfObserver) {
+        try {
+          perfObserver.disconnect()
+        } catch {
+          // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+          // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+          /* ignore */
+        }
+      }
+
+      const urlChanged = location.href !== beforeURL
+      const titleChanged = document.title !== beforeTitle
+
+      // Detect overlays opened/closed
+      const afterOverlays = collectAfterOverlays()
+      const { opened: overlaysOpened, closed: overlaysClosed } = diffOverlays(afterOverlays)
+
+      // Detect toasts / notifications
+      const toasts = collectToasts()
+
+      // Detect form errors
+      const formErrors = collectFormErrors()
+
+      // Detect loading indicators
+      const loadingIndicators = collectLoadingIndicators()
+
+      // Detect text changes
+      const textChanges = collectTextChanges()
 
       resolve({
         success: true,

@@ -196,9 +196,10 @@ func declaredFindings(peers []elementView, property, expected string, spec *desi
 		if matchesDeclared(property, normalized, spec) {
 			continue
 		}
-		findings = append(findings, newFinding(categoryStyleConsistency, property, el, normalized, expected,
-			provenanceDeclared, confidenceHigh, "declared design spec",
-			fmt.Sprintf("%s is %s, which the declared design spec does not allow (%s)", property, normalized, expected)))
+		findings = append(findings, newFinding(findingSpec{category: categoryStyleConsistency, property: property, el: el,
+			observed: normalized, expected: expected,
+			provenance: provenanceDeclared, confidence: confidenceHigh, evidence: "declared design spec",
+			message: fmt.Sprintf("%s is %s, which the declared design spec does not allow (%s)", property, normalized, expected)}))
 	}
 	return findings
 }
@@ -230,10 +231,11 @@ func inferredFindings(peers []elementView, property string, counts map[string]in
 		if normalized == majority {
 			continue
 		}
-		findings = append(findings, newFinding(categoryStyleConsistency, property, el, normalized, majority,
-			provenanceInferred, confidence,
-			fmt.Sprintf("%d of %d peers use %s", majorityCount, present, majority),
-			fmt.Sprintf("%s is %s while %d of %d matching elements use %s", property, normalized, majorityCount, present, majority)))
+		findings = append(findings, newFinding(findingSpec{category: categoryStyleConsistency, property: property, el: el,
+			observed: normalized, expected: majority,
+			provenance: provenanceInferred, confidence: confidence,
+			evidence: fmt.Sprintf("%d of %d peers use %s", majorityCount, present, majority),
+			message:  fmt.Sprintf("%s is %s while %d of %d matching elements use %s", property, normalized, majorityCount, present, majority)}))
 	}
 	return findings
 }

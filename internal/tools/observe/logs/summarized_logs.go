@@ -102,50 +102,61 @@ func filterSummarizedLogViews(rawEntries []types.LogEntry, deps core.Deps, param
 			noiseSuppressed++
 			continue
 		}
-		if params.Scope == "current_page" && trackedTabID != 0 {
-			entryTabID, _ := entry["tabId"].(float64)
-			if int(entryTabID) != trackedTabID {
-				continue
-			}
-		}
-		level, _ := entry["level"].(string)
-		if params.Level != "" && level != params.Level {
+		if !summarizedEntryMatches(entry, params, trackedTabID) {
 			continue
 		}
-		if params.MinLevel != "" && core.LogLevelRank(level) < core.LogLevelRank(params.MinLevel) {
-			continue
-		}
-		if params.Source != "" {
-			source, _ := entry["source"].(string)
-			if source != params.Source {
-				continue
-			}
-		}
-		if params.URL != "" {
-			entryURL, _ := entry["url"].(string)
-			if !core.ContainsIgnoreCase(entryURL, params.URL) {
-				continue
-			}
-		}
-
-		message, _ := entry["message"].(string)
-		source, _ := entry["source"].(string)
-		url, _ := entry["url"].(string)
-		ts, _ := entry["ts"].(string)
-		views = append(views, logEntryView{
-			Level:   level,
-			Message: message,
-			Source:  source,
-			URL:     url,
-			Line:    entry["line"],
-			Column:  entry["column"],
-			TS:      ts,
-			TabID:   entry["tabId"],
-		})
+		views = append(views, newLogEntryView(entry))
 		count++
 	}
 
 	return views, noiseSuppressed
+}
+
+func summarizedEntryMatches(entry types.LogEntry, params summarizedLogsParams, trackedTabID int) bool {
+	if params.Scope == "current_page" && trackedTabID != 0 {
+		entryTabID, _ := entry["tabId"].(float64)
+		if int(entryTabID) != trackedTabID {
+			return false
+		}
+	}
+	level, _ := entry["level"].(string)
+	if params.Level != "" && level != params.Level {
+		return false
+	}
+	if params.MinLevel != "" && core.LogLevelRank(level) < core.LogLevelRank(params.MinLevel) {
+		return false
+	}
+	if params.Source != "" {
+		source, _ := entry["source"].(string)
+		if source != params.Source {
+			return false
+		}
+	}
+	if params.URL != "" {
+		entryURL, _ := entry["url"].(string)
+		if !core.ContainsIgnoreCase(entryURL, params.URL) {
+			return false
+		}
+	}
+	return true
+}
+
+func newLogEntryView(entry types.LogEntry) logEntryView {
+	level, _ := entry["level"].(string)
+	message, _ := entry["message"].(string)
+	source, _ := entry["source"].(string)
+	url, _ := entry["url"].(string)
+	ts, _ := entry["ts"].(string)
+	return logEntryView{
+		Level:   level,
+		Message: message,
+		Source:  source,
+		URL:     url,
+		Line:    entry["line"],
+		Column:  entry["column"],
+		TS:      ts,
+		TabID:   entry["tabId"],
+	}
 }
 
 func cleanSummarizedLogGroups(groups []LogGroup) []map[string]any {
@@ -301,15 +312,17 @@ func slugify(s string) string {
 	return s
 }
 
+// pendingSingle holds the first occurrence of a fingerprint until a second
+// occurrence promotes it to a group.
+type pendingSingle struct {
+	entry logEntryView
+}
+
 // groupLogs performs single-pass grouping of log entries by fingerprint.
 // Returns groups (entries with count >= minGroupSize) and anomalies (below threshold).
 func groupLogs(entries []logEntryView, minGroupSize int) ([]LogGroup, []LogAnomaly) {
 	if len(entries) == 0 {
 		return nil, nil
-	}
-
-	type pendingSingle struct {
-		entry logEntryView
 	}
 
 	groups := make(map[string]*LogGroup)
@@ -323,106 +336,123 @@ func groupLogs(entries []logEntryView, minGroupSize int) ([]LogGroup, []LogAnoma
 		}
 
 		if g, ok := groups[fp]; ok {
-			// Existing group — increment
-			g.Count++
-			g.LevelBreakdown[e.Level]++
-			g.SampleMessage = e.Message // most recent
-			if e.TS != "" && (g.FirstSeen == "" || e.TS < g.FirstSeen) {
-				g.FirstSeen = e.TS
-			}
-			if e.TS != "" && e.TS > g.LastSeen {
-				g.LastSeen = e.TS
-			}
-			if e.TS != "" {
-				g.timestamps = append(g.timestamps, e.TS)
-			}
-			if e.Source != "" {
-				g.sourceCounts[e.Source]++
-			}
+			appendToGroup(g, e)
 			continue
 		}
 
 		if p, ok := pending[fp]; ok {
-			// Second occurrence — promote to group
-			g := &LogGroup{
-				Fingerprint:    fp,
-				SampleMessage:  e.Message,
-				Count:          2,
-				LevelBreakdown: map[string]int{p.entry.Level: 1, e.Level: 1},
-				FirstSeen:      minStr(p.entry.TS, e.TS),
-				LastSeen:       maxStr(p.entry.TS, e.TS),
-				sourceCounts:   make(map[string]int),
-			}
-			if p.entry.Level == e.Level {
-				g.LevelBreakdown[e.Level] = 2
-			}
-			if p.entry.TS != "" {
-				g.timestamps = append(g.timestamps, p.entry.TS)
-			}
-			if e.TS != "" {
-				g.timestamps = append(g.timestamps, e.TS)
-			}
-			if p.entry.Source != "" {
-				g.sourceCounts[p.entry.Source]++
-			}
-			if e.Source != "" {
-				g.sourceCounts[e.Source]++
-			}
-			groups[fp] = g
+			groups[fp] = promotePendingToGroup(fp, e, p)
 			groupOrder = append(groupOrder, fp)
 			delete(pending, fp)
 			continue
 		}
 
-		// First occurrence — hold in pending
 		pending[fp] = &pendingSingle{entry: e}
 	}
 
-	// Pending singles → groups (if minGroupSize <= 1) or anomalies
 	var anomalies []LogAnomaly
 	for fp, p := range pending {
-		if minGroupSize <= 1 {
-			g := &LogGroup{
-				Fingerprint:    fp,
-				SampleMessage:  p.entry.Message,
-				Count:          1,
-				LevelBreakdown: map[string]int{p.entry.Level: 1},
-				FirstSeen:      p.entry.TS,
-				LastSeen:       p.entry.TS,
-				Source:         p.entry.Source,
-				sourceCounts:   make(map[string]int),
-			}
-			if p.entry.TS != "" {
-				g.timestamps = append(g.timestamps, p.entry.TS)
-			}
-			if p.entry.Source != "" {
-				g.sourceCounts[p.entry.Source]++
-			}
-			groups[fp] = g
-			groupOrder = append(groupOrder, fp)
-		} else {
-			anomalies = append(anomalies, logEntryToAnomaly(p.entry))
+		if a := settlePending(fp, p, minGroupSize, groups, &groupOrder); a != nil {
+			anomalies = append(anomalies, *a)
 		}
 	}
 
-	// Build result: groups >= minGroupSize go to groups
+	resultGroups := collectResultGroups(groupOrder, groups, minGroupSize)
+	sortAnomalies(anomalies)
+	return resultGroups, anomalies
+}
+
+func appendToGroup(g *LogGroup, e logEntryView) {
+	g.Count++
+	g.LevelBreakdown[e.Level]++
+	g.SampleMessage = e.Message // most recent
+	if e.TS != "" && (g.FirstSeen == "" || e.TS < g.FirstSeen) {
+		g.FirstSeen = e.TS
+	}
+	if e.TS != "" && e.TS > g.LastSeen {
+		g.LastSeen = e.TS
+	}
+	if e.TS != "" {
+		g.timestamps = append(g.timestamps, e.TS)
+	}
+	if e.Source != "" {
+		g.sourceCounts[e.Source]++
+	}
+}
+
+func promotePendingToGroup(fp string, e logEntryView, p *pendingSingle) *LogGroup {
+	g := &LogGroup{
+		Fingerprint:    fp,
+		SampleMessage:  e.Message,
+		Count:          2,
+		LevelBreakdown: map[string]int{p.entry.Level: 1, e.Level: 1},
+		FirstSeen:      minStr(p.entry.TS, e.TS),
+		LastSeen:       maxStr(p.entry.TS, e.TS),
+		sourceCounts:   make(map[string]int),
+	}
+	if p.entry.Level == e.Level {
+		g.LevelBreakdown[e.Level] = 2
+	}
+	if p.entry.TS != "" {
+		g.timestamps = append(g.timestamps, p.entry.TS)
+	}
+	if e.TS != "" {
+		g.timestamps = append(g.timestamps, e.TS)
+	}
+	if p.entry.Source != "" {
+		g.sourceCounts[p.entry.Source]++
+	}
+	if e.Source != "" {
+		g.sourceCounts[e.Source]++
+	}
+	return g
+}
+
+// settlePending promotes a pending single to a group when minGroupSize <= 1,
+// otherwise returns it as an anomaly.
+func settlePending(fp string, p *pendingSingle, minGroupSize int, groups map[string]*LogGroup, groupOrder *[]string) *LogAnomaly {
+	if minGroupSize > 1 {
+		anomaly := logEntryToAnomaly(p.entry)
+		return &anomaly
+	}
+	g := &LogGroup{
+		Fingerprint:    fp,
+		SampleMessage:  p.entry.Message,
+		Count:          1,
+		LevelBreakdown: map[string]int{p.entry.Level: 1},
+		FirstSeen:      p.entry.TS,
+		LastSeen:       p.entry.TS,
+		Source:         p.entry.Source,
+		sourceCounts:   make(map[string]int),
+	}
+	if p.entry.TS != "" {
+		g.timestamps = append(g.timestamps, p.entry.TS)
+	}
+	if p.entry.Source != "" {
+		g.sourceCounts[p.entry.Source]++
+	}
+	groups[fp] = g
+	*groupOrder = append(*groupOrder, fp)
+	return nil
+}
+
+func collectResultGroups(groupOrder []string, groups map[string]*LogGroup, minGroupSize int) []LogGroup {
 	var resultGroups []LogGroup
 	for _, fp := range groupOrder {
 		g := groups[fp]
 		if g.Count < minGroupSize {
 			continue
 		}
-		// Resolve sources
 		g.Source, g.Sources = resolveSources(g.sourceCounts)
 		resultGroups = append(resultGroups, *g)
 	}
-
-	// Sort groups by count desc
 	sort.Slice(resultGroups, func(i, j int) bool {
 		return resultGroups[i].Count > resultGroups[j].Count
 	})
+	return resultGroups
+}
 
-	// Sort anomalies by severity desc, then timestamp desc
+func sortAnomalies(anomalies []LogAnomaly) {
 	sort.Slice(anomalies, func(i, j int) bool {
 		ri := core.LogLevelRank(anomalies[i].Level)
 		rj := core.LogLevelRank(anomalies[j].Level)
@@ -431,8 +461,6 @@ func groupLogs(entries []logEntryView, minGroupSize int) ([]LogGroup, []LogAnoma
 		}
 		return anomalies[i].TS > anomalies[j].TS
 	})
-
-	return resultGroups, anomalies
 }
 
 // detectPeriodicity checks each group for regular intervals.

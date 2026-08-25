@@ -41,68 +41,64 @@ func parseFlagsBySpec(args []string, specs map[string]cliFlagSpec) (map[string]a
 		if !ok {
 			return nil, fmt.Errorf("unknown flag: %s", flag)
 		}
-		switch spec.Kind {
-		case FlagBool:
+		if spec.Kind == FlagBool {
 			out[spec.MCPKey] = true
-		case FlagString:
-			val, next, err := requireFlagValue(args, i)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", flag, err)
-			}
-			out[spec.MCPKey] = val
-			i = next
-		case FlagInt:
-			val, next, err := requireFlagValue(args, i)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", flag, err)
-			}
-			n, err := parseIntValue(val)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", flag, err)
-			}
-			out[spec.MCPKey] = n
-			i = next
-		case FlagStringList:
-			val, next, err := requireFlagValue(args, i)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", flag, err)
-			}
-			out[spec.MCPKey] = parseCSVList(val)
-			i = next
-		case FlagJSON:
-			val, next, err := requireFlagValue(args, i)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", flag, err)
-			}
-			var parsed any
-			if err := json.Unmarshal([]byte(val), &parsed); err != nil {
-				return nil, fmt.Errorf("%s: invalid JSON: %w", flag, err)
-			}
-			out[spec.MCPKey] = parsed
-			i = next
-		case FlagJSONOrString:
-			val, next, err := requireFlagValue(args, i)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", flag, err)
-			}
-			out[spec.MCPKey] = parseJSONOrString(val)
-			i = next
-		case FlagIntOrString:
-			val, next, err := requireFlagValue(args, i)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", flag, err)
-			}
-			if n, err := strconv.Atoi(val); err == nil {
-				out[spec.MCPKey] = n
-			} else {
-				out[spec.MCPKey] = val
-			}
-			i = next
-		default:
+			continue
+		}
+		if !isValueFlagKind(spec.Kind) {
 			return nil, fmt.Errorf("unsupported parser kind for %s", flag)
 		}
+		val, next, err := requireFlagValue(args, i)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", flag, err)
+		}
+		parsed, err := parseTypedFlagValue(spec.Kind, flag, val)
+		if err != nil {
+			return nil, err
+		}
+		out[spec.MCPKey] = parsed
+		i = next
 	}
 	return out, nil
+}
+
+// isValueFlagKind reports whether the kind consumes a value token after the flag.
+func isValueFlagKind(kind cliFlagKind) bool {
+	switch kind {
+	case FlagString, FlagInt, FlagStringList, FlagJSON, FlagJSONOrString, FlagIntOrString:
+		return true
+	}
+	return false
+}
+
+// parseTypedFlagValue converts an already-extracted flag value string into its
+// MCP argument value, mirroring each kind's decoding rule.
+func parseTypedFlagValue(kind cliFlagKind, flag, val string) (any, error) {
+	switch kind {
+	case FlagInt:
+		n, err := parseIntValue(val)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", flag, err)
+		}
+		return n, nil
+	case FlagStringList:
+		return parseCSVList(val), nil
+	case FlagJSON:
+		var parsed any
+		if err := json.Unmarshal([]byte(val), &parsed); err != nil {
+			return nil, fmt.Errorf("%s: invalid JSON: %w", flag, err)
+		}
+		return parsed, nil
+	case FlagJSONOrString:
+		return parseJSONOrString(val), nil
+	case FlagIntOrString:
+		if n, err := strconv.Atoi(val); err == nil {
+			return n, nil
+		}
+		return val, nil
+	default:
+		return val, nil
+	}
 }
 
 // requireFlagValue returns the next arg as the flag's value, erroring if missing or another flag.

@@ -19,6 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 type doctorCommandRuntime struct {
@@ -99,17 +100,27 @@ func buildDoctorReport(checks []DoctorCheck) doctorReport {
 	return report
 }
 
+// DoctorMCPDeps bundles the live-state inputs the configure Doctor response is
+// assembled from, keeping HandleDoctorMCP within the six-parameter budget.
+type DoctorMCPDeps struct {
+	Metrics        *Metrics
+	Capture        *capture.Capture
+	Alerts         *alertbuf.AlertBuffer
+	DiagnosticHint func() string
+	ExtraChecks    []DoctorCheck
+}
+
 // HandleDoctorMCP serves configure Doctor from the same readiness model as HTTP.
-func HandleDoctorMCP(metrics *Metrics, cap *capture.Capture, alerts *alertbuf.AlertBuffer, diagnosticHint func() string, extraChecks []DoctorCheck, req mcp.JSONRPCRequest, version string) mcp.JSONRPCResponse {
-	checks := append(RunDoctorChecks(cap), BuildResourcePressureChecks(cap, alerts)...)
-	checks = append(checks, extraChecks...)
-	if metrics != nil {
-		checks = append(checks, DoctorCheck{Name: "server_uptime", Status: "pass", Detail: fmt.Sprintf("Server running for %s (version %s)", metrics.GetUptime().Round(time.Second), version)})
+func HandleDoctorMCP(deps DoctorMCPDeps, req mcp.JSONRPCRequest, version string) mcp.JSONRPCResponse {
+	checks := append(RunDoctorChecks(deps.Capture), BuildResourcePressureChecks(deps.Capture, deps.Alerts)...)
+	checks = append(checks, deps.ExtraChecks...)
+	if deps.Metrics != nil {
+		checks = append(checks, DoctorCheck{Name: "server_uptime", Status: "pass", Detail: fmt.Sprintf("Server running for %s (version %s)", deps.Metrics.GetUptime().Round(time.Second), version)})
 	}
 	report := buildDoctorReport(checks)
 	hint := ""
-	if diagnosticHint != nil {
-		hint = diagnosticHint()
+	if deps.DiagnosticHint != nil {
+		hint = deps.DiagnosticHint()
 	}
 	return mcp.Succeed(req, "Doctor: "+report.status, map[string]any{
 		"status": report.status, "ready_for_interaction": report.ready,
@@ -122,294 +133,383 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 	return runDoctorChecks(cap, defaultDoctorCommandRuntime())
 }
 
+// runDoctorChecks assembles every live check in fixed order: extension
+// connectivity, command contract, pilot, tracked tab, circuit breaker, command
+// queue, command execution, AI auth, state recovery, and diagnostics lifecycle.
 func runDoctorChecks(cap *capture.Capture, runtime doctorCommandRuntime) []DoctorCheck {
-	checks := make([]DoctorCheck, 0, 12)
 	snap := healthreader.New(cap).Snapshot()
+	checks := make([]DoctorCheck, 0, 12)
+	checks = append(checks, extensionConnectivityCheck(cap, snap))
+	checks = append(checks, commandContractCheck(cap)...)
+	checks = append(checks, pilotEnabledCheck(cap))
+	checks = append(checks, trackedTabCheck(cap))
+	checks = append(checks, circuitBreakerCheck(snap))
+	checks = append(checks, commandQueueCheck(cap))
+	checks = append(checks, commandExecutionDoctorCheck(cap))
+	checks = append(checks, runAIAuthDoctorCheck(runtime, "claude"), runAIAuthDoctorCheck(runtime, "codex"))
+	checks = append(checks, extensionStateRecoveryChecks(cap)...)
+	if diagnosticCheck, ok := extensionDiagnosticLifecycleCheck(cap); ok {
+		checks = append(checks, diagnosticCheck)
+	}
+	return checks
+}
 
-	// 1. Extension connectivity.
+// extensionConnectivityCheck reports whether the extension sync channel is live.
+func extensionConnectivityCheck(cap *capture.Capture, snap healthreader.Snapshot) DoctorCheck {
 	if cap.Extension().IsExtensionConnected() {
 		lastSeen := "unknown"
 		if !snap.LastPollTime.IsZero() {
 			lastSeen = fmt.Sprintf("%.1fs ago", time.Since(snap.LastPollTime).Seconds())
 		}
-		checks = append(checks, DoctorCheck{
+		return DoctorCheck{
 			Name: "extension_connected", Status: "pass",
 			Detail: "Extension connected (last seen: " + lastSeen + ")",
-		})
-	} else {
-		checks = append(checks, DoctorCheck{
-			Name: "extension_connected", Status: "fail",
-			Detail: "Extension is not connected",
-			Fix:    "Open the Kaboom extension popup and verify it shows 'Connected'. If not, click the extension icon or reload the page.",
-		})
+		}
 	}
+	return DoctorCheck{
+		Name: "extension_connected", Status: "fail",
+		Detail: "Extension is not connected",
+		Fix:    "Open the Kaboom extension popup and verify it shows 'Connected'. If not, click the extension icon or reload the page.",
+	}
+}
 
-	// A release version alone cannot distinguish two local builds made between
-	// version bumps. The generated command registry identity prevents those
-	// builds from silently losing or misrouting extension commands.
-	loadedContract := cap.Extension().CommandContractID()
-	if cap.Extension().IsExtensionConnected() && loadedContract == commandcontract.ID {
-		checks = append(checks, DoctorCheck{
+// commandContractCheck compares the extension's loaded command contract with the
+// daemon's. A release version alone cannot distinguish two local builds made
+// between version bumps; the generated command registry identity prevents those
+// builds from silently losing or misrouting extension commands. It emits no
+// check while the extension is disconnected.
+func commandContractCheck(cap *capture.Capture) []DoctorCheck {
+	if !cap.Extension().IsExtensionConnected() {
+		return nil
+	}
+	if cap.Extension().CommandContractID() == commandcontract.ID {
+		return []DoctorCheck{{
 			Name: "command_contract", Status: "pass", Detail: "Daemon and extension command contracts match",
-		})
-	} else if cap.Extension().IsExtensionConnected() {
-		checks = append(checks, DoctorCheck{
-			Name: "command_contract", Status: "fail",
-			Detail: "The loaded extension command contract does not match this daemon build",
-			Fix:    "Reload the Kaboom extension so it loads the files packaged with this daemon, then rerun Doctor.",
-		})
+		}}
 	}
+	return []DoctorCheck{{
+		Name: "command_contract", Status: "fail",
+		Detail: "The loaded extension command contract does not match this daemon build",
+		Fix:    "Reload the Kaboom extension so it loads the files packaged with this daemon, then rerun Doctor.",
+	}}
+}
 
-	// 2. Pilot enabled/assumed/disabled.
+// pilotEnabledCheck reports AI Web Pilot availability from the extension's view.
+func pilotEnabledCheck(cap *capture.Capture) DoctorCheck {
 	pilotState := ""
 	if status, ok := cap.Extension().GetPilotStatus().(map[string]any); ok {
 		pilotState, _ = status["state"].(string)
 	}
 	switch pilotState {
 	case "explicitly_disabled":
-		checks = append(checks, DoctorCheck{
+		return DoctorCheck{
 			Name: "pilot_enabled", Status: "warn",
 			Detail: "AI Web Pilot is explicitly disabled — interact actions will fail",
 			Fix:    "Enable AI Web Pilot in the extension popup",
-		})
+		}
 	case "assumed_enabled":
-		checks = append(checks, DoctorCheck{
+		return DoctorCheck{
 			Name: "pilot_enabled", Status: "warn",
 			Detail: "AI Web Pilot status not yet confirmed; assuming enabled until first sync",
 			Fix:    "Open the extension once to confirm pilot settings, then rerun doctor",
-		})
-	default:
-		if cap.Extension().IsPilotActionAllowed() {
-			checks = append(checks, DoctorCheck{
-				Name: "pilot_enabled", Status: "pass",
-				Detail: "AI Web Pilot is enabled",
-			})
-		} else {
-			checks = append(checks, DoctorCheck{
-				Name: "pilot_enabled", Status: "warn",
-				Detail: "AI Web Pilot is disabled — interact actions will fail",
-				Fix:    "Enable AI Web Pilot in the extension popup",
-			})
 		}
 	}
+	if cap.Extension().IsPilotActionAllowed() {
+		return DoctorCheck{Name: "pilot_enabled", Status: "pass", Detail: "AI Web Pilot is enabled"}
+	}
+	return DoctorCheck{
+		Name: "pilot_enabled", Status: "warn",
+		Detail: "AI Web Pilot is disabled — interact actions will fail",
+		Fix:    "Enable AI Web Pilot in the extension popup",
+	}
+}
 
-	// 3. Tracked tab.
+// trackedTabCheck reports whether a browser tab is actively tracked.
+func trackedTabCheck(cap *capture.Capture) DoctorCheck {
 	tracking, tabID, tabURL := cap.Extension().GetTrackingStatus()
 	if tracking && tabID != 0 {
-		checks = append(checks, DoctorCheck{
+		return DoctorCheck{
 			Name: "tracked_tab", Status: "pass",
 			Detail: fmt.Sprintf("Tracking tab %d: %s", tabID, tabURL),
-		})
-	} else {
-		checks = append(checks, DoctorCheck{
-			Name: "tracked_tab", Status: "warn",
-			Detail: "No tab is being tracked — observe and interact may return empty results",
-			Fix:    "Navigate to a page in Chrome. The extension auto-tracks the active tab.",
-		})
+		}
 	}
+	return DoctorCheck{
+		Name: "tracked_tab", Status: "warn",
+		Detail: "No tab is being tracked — observe and interact may return empty results",
+		Fix:    "Navigate to a page in Chrome. The extension auto-tracks the active tab.",
+	}
+}
 
-	// 4. Circuit breaker.
+// circuitBreakerCheck reports whether the error circuit breaker is open.
+func circuitBreakerCheck(snap healthreader.Snapshot) DoctorCheck {
 	if !snap.CircuitOpen {
-		checks = append(checks, DoctorCheck{
-			Name: "circuit_breaker", Status: "pass",
-			Detail: "Circuit breaker closed (healthy)",
-		})
-	} else {
-		checks = append(checks, DoctorCheck{
-			Name: "circuit_breaker", Status: "fail",
-			Detail: "Circuit breaker OPEN: " + snap.CircuitReason,
-			Fix:    "Extension is sending too many errors. Check observe(errors) for root cause, then use configure(action:'clear',what:'circuit') to reset.",
-		})
+		return DoctorCheck{Name: "circuit_breaker", Status: "pass", Detail: "Circuit breaker closed (healthy)"}
 	}
+	return DoctorCheck{
+		Name: "circuit_breaker", Status: "fail",
+		Detail: "Circuit breaker OPEN: " + snap.CircuitReason,
+		Fix:    "Extension is sending too many errors. Check observe(errors) for root cause, then use configure(action:'clear',what:'circuit') to reset.",
+	}
+}
 
-	// 5. Command queue.
+// commandQueueCheck reports pending command-queue depth.
+func commandQueueCheck(cap *capture.Capture) DoctorCheck {
 	queueDepth := cap.Queries().QueueDepth()
 	if queueDepth < 5 {
 		detail := "Command queue empty"
 		if queueDepth > 0 {
 			detail = fmt.Sprintf("Command queue: %d pending", queueDepth)
 		}
-		checks = append(checks, DoctorCheck{
-			Name: "command_queue", Status: "pass", Detail: detail,
-		})
-	} else {
-		checks = append(checks, DoctorCheck{
-			Name: "command_queue", Status: "warn",
-			Detail: fmt.Sprintf("Command queue has %d pending commands — extension may be falling behind", queueDepth),
-			Fix:    "Wait for commands to complete, or check extension connectivity.",
-		})
+		return DoctorCheck{Name: "command_queue", Status: "pass", Detail: detail}
 	}
+	return DoctorCheck{
+		Name: "command_queue", Status: "warn",
+		Detail: fmt.Sprintf("Command queue has %d pending commands — extension may be falling behind", queueDepth),
+		Fix:    "Wait for commands to complete, or check extension connectivity.",
+	}
+}
 
-	// 6. Command execution reliability.
+// commandExecutionDoctorCheck surfaces command execution reliability as a check.
+func commandExecutionDoctorCheck(cap *capture.Capture) DoctorCheck {
 	cmdExec := BuildCommandExecutionInfo(cap)
-	cmdExecCheck := DoctorCheck{
+	check := DoctorCheck{
 		Name:   "command_execution",
 		Status: cmdExec.Status,
 		Detail: cmdExec.Detail,
 	}
 	if cmdExec.Status != "pass" {
-		cmdExecCheck.Fix = "Inspect observe(what:\"failed_commands\") for recent expiry/timeout/error events and verify extension polling (/sync). If degradation persists, reload the extension or run configure(action:\"restart\")."
+		check.Fix = "Inspect observe(what:\"failed_commands\") for recent expiry/timeout/error events and verify extension polling (/sync). If degradation persists, reload the extension or run configure(action:\"restart\")."
 	}
-	checks = append(checks, cmdExecCheck)
-	checks = append(checks, runAIAuthDoctorCheck(runtime, "claude"), runAIAuthDoctorCheck(runtime, "codex"))
-	checks = append(checks, extensionStateRecoveryChecks(cap)...)
-	if diagnosticCheck, ok := extensionDiagnosticLifecycleCheck(cap); ok {
-		checks = append(checks, diagnosticCheck)
-	}
+	return check
+}
 
-	return checks
+// diagnosticLogData mirrors the extension diagnostic log payload fields the
+// lifecycle check consumes.
+type diagnosticLogData struct {
+	Event             string   `json:"event"`
+	DroppedCount      int      `json:"dropped_count"`
+	LifecycleSequence []string `json:"lifecycle_sequence"`
+}
+
+// extensionDiagnosticState accumulates lifecycle events and dropped-entry
+// counts while scanning extension log entries.
+type extensionDiagnosticState struct {
+	events       []string
+	droppedCount int
+}
+
+func newExtensionDiagnosticState() *extensionDiagnosticState {
+	return &extensionDiagnosticState{events: make([]string, 0, 5)}
 }
 
 func extensionDiagnosticLifecycleCheck(cap *capture.Capture) (DoctorCheck, bool) {
 	if cap == nil {
 		return DoctorCheck{}, false
 	}
-	type diagnosticData struct {
-		Event             string   `json:"event"`
-		DroppedCount      int      `json:"dropped_count"`
-		LifecycleSequence []string `json:"lifecycle_sequence"`
-	}
-	events := make([]string, 0, 5)
-	droppedCount := 0
+	state := newExtensionDiagnosticState()
 	for _, entry := range cap.ExtensionLogs().Entries() {
-		var data diagnosticData
-		if json.Unmarshal(entry.Data, &data) != nil {
-			continue
-		}
-		event := data.Event
-		if event == "" && entry.Category == "connection" {
-			switch entry.Message {
-			case "Sync connected":
-				event = "sync_connected"
-			case "Sync disconnected":
-				event = "sync_disconnected"
-			case "[Sync] Sync failed, retrying":
-				event = "sync_failed"
-			}
-		}
-		if event != "" && (entry.Category == "diagnostic_lifecycle" || entry.Category == "connection") {
-			if len(data.LifecycleSequence) > 0 {
-				start := max(0, len(data.LifecycleSequence)-5)
-				events = append([]string(nil), data.LifecycleSequence[start:]...)
-			} else {
-				events = append(events, event)
-			}
-			if len(events) > 5 {
-				events = append([]string(nil), events[len(events)-5:]...)
-			}
-		}
-		if entry.Category == "diagnostic_queue" && data.DroppedCount > droppedCount {
-			droppedCount = data.DroppedCount
-		}
+		state.observeEntry(entry)
 	}
-	if len(events) == 0 && droppedCount == 0 {
+	return state.doctorCheck()
+}
+
+func (s *extensionDiagnosticState) observeEntry(entry types.ExtensionLog) {
+	var data diagnosticLogData
+	if json.Unmarshal(entry.Data, &data) != nil {
+		return
+	}
+	event := diagnosticEventName(data.Event, entry.Category, entry.Message)
+	if event != "" && (entry.Category == "diagnostic_lifecycle" || entry.Category == "connection") {
+		s.recordLifecycleEvent(event, data.LifecycleSequence)
+	}
+	if entry.Category == "diagnostic_queue" && data.DroppedCount > s.droppedCount {
+		s.droppedCount = data.DroppedCount
+	}
+}
+
+// diagnosticEventName maps legacy connection messages onto lifecycle event
+// names when the payload did not carry an explicit event.
+func diagnosticEventName(event, category, message string) string {
+	if event != "" || category != "connection" {
+		return event
+	}
+	switch message {
+	case "Sync connected":
+		return "sync_connected"
+	case "Sync disconnected":
+		return "sync_disconnected"
+	case "[Sync] Sync failed, retrying":
+		return "sync_failed"
+	}
+	return event
+}
+
+func (s *extensionDiagnosticState) recordLifecycleEvent(event string, sequence []string) {
+	if len(sequence) > 0 {
+		start := max(0, len(sequence)-5)
+		s.events = append([]string(nil), sequence[start:]...)
+	} else {
+		s.events = append(s.events, event)
+	}
+	if len(s.events) > 5 {
+		s.events = append([]string(nil), s.events[len(s.events)-5:]...)
+	}
+}
+
+func (s *extensionDiagnosticState) doctorCheck() (DoctorCheck, bool) {
+	if len(s.events) == 0 && s.droppedCount == 0 {
 		return DoctorCheck{}, false
 	}
-	detail := "Extension lifecycle: " + strings.Join(events, " -> ")
+	detail := "Extension lifecycle: " + strings.Join(s.events, " -> ")
 	status := "pass"
 	fix := ""
-	if droppedCount > 0 {
+	if s.droppedCount > 0 {
 		status = "warn"
-		detail += fmt.Sprintf("; %d dropped diagnostic entries", droppedCount)
+		detail += fmt.Sprintf("; %d dropped diagnostic entries", s.droppedCount)
 		fix = "Export System Doctor diagnostics and report repeated queue saturation; reduce noisy extension logging if it persists."
 	}
 	return DoctorCheck{Name: "extension_diagnostics", Status: status, Detail: detail, Fix: fix}, true
+}
+
+// stateRecoveryLogData mirrors the extension's state_recovery log payload.
+type stateRecoveryLogData struct {
+	Name                   string `json:"name"`
+	Detail                 string `json:"detail"`
+	Fix                    string `json:"fix"`
+	Lifecycle              string `json:"lifecycle"`
+	CorrelationID          string `json:"correlation_id"`
+	ExpectedNextTransition string `json:"expected_next_transition"`
+	Deadline               string `json:"deadline"`
+	RecoveryAttempt        int    `json:"recovery_attempt"`
+	RecoveryOutcome        string `json:"recovery_outcome"`
 }
 
 func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
 	if cap == nil {
 		return nil
 	}
-	type recoveryData struct {
-		Name                   string `json:"name"`
-		Detail                 string `json:"detail"`
-		Fix                    string `json:"fix"`
-		Lifecycle              string `json:"lifecycle"`
-		CorrelationID          string `json:"correlation_id"`
-		ExpectedNextTransition string `json:"expected_next_transition"`
-		Deadline               string `json:"deadline"`
-		RecoveryAttempt        int    `json:"recovery_attempt"`
-		RecoveryOutcome        string `json:"recovery_outcome"`
-	}
 	byName := make(map[string]DoctorCheck)
 	for _, entry := range cap.ExtensionLogs().Entries() {
-		if entry.Category != "state_recovery" {
+		recovery, ok := parseStateRecoveryEntry(entry)
+		if !ok {
 			continue
 		}
-		var recovery recoveryData
-		if json.Unmarshal(entry.Data, &recovery) != nil || recovery.Name == "" {
-			continue
-		}
-		if recovery.Lifecycle == "" {
-			recovery.Lifecycle = string(statediag.LifecycleActive)
-		}
-		if recovery.Lifecycle != string(statediag.LifecycleActive) &&
-			recovery.Lifecycle != string(statediag.LifecycleRecovered) {
-			continue
-		}
-		check := byName[recovery.Name]
-		if recovery.Lifecycle == string(statediag.LifecycleRecovered) && check.Name == "" {
-			continue
-		}
-		check.Name = recovery.Name
-		if recovery.CorrelationID != "" {
-			check.CorrelationID = recovery.CorrelationID
-		}
-		if recovery.Detail != "" {
-			check.Detail = recovery.Detail
-			check.Fix = recovery.Fix
-		}
-		at := ""
-		if !entry.Timestamp.IsZero() {
-			at = entry.Timestamp.UTC().Format(time.RFC3339Nano)
-		}
-		check.Lifecycle = recovery.Lifecycle
-		check.LastSeenAt = at
-		event := "failure_detected"
-		outcome := recovery.RecoveryOutcome
-		if recovery.Lifecycle == string(statediag.LifecycleRecovered) {
-			event = "recovery_completed"
-			outcome = "recovered"
-		} else if check.Occurrences > 0 {
-			event = "failure_recurred"
-		}
-		check.History = append(check.History, DoctorTransition{
-			Lifecycle: recovery.Lifecycle, At: at, Event: event,
-			CorrelationID: check.CorrelationID, Outcome: outcome,
-		})
-		if len(check.History) > 20 {
-			check.History = append([]DoctorTransition(nil), check.History[len(check.History)-20:]...)
-		}
-		if recovery.Lifecycle == string(statediag.LifecycleActive) {
-			check.Status = "warn"
-			check.RecoveredAt = ""
-			check.Occurrences++
-			check.ExpectedNextTransition = recovery.ExpectedNextTransition
-			if check.ExpectedNextTransition == "" {
-				check.ExpectedNextTransition = "state_verified"
-			}
-			check.Deadline = recovery.Deadline
-			check.RecoveryAttempt = recovery.RecoveryAttempt
-			if check.RecoveryAttempt == 0 {
-				check.RecoveryAttempt = check.Occurrences
-			}
-			check.RecoveryOutcome = recovery.RecoveryOutcome
-			if check.RecoveryOutcome == "" {
-				check.RecoveryOutcome = "pending"
-			}
-			if check.FirstSeenAt == "" {
-				check.FirstSeenAt = at
-			}
-		} else {
-			check.Status = "pass"
-			check.RecoveredAt = at
-			check.LastSuccessfulTransition = "state_verified"
-			check.ExpectedNextTransition = ""
-			check.Deadline = ""
-			check.RecoveryOutcome = "recovered"
-		}
-		byName[recovery.Name] = check
+		applyStateRecoveryEntry(byName, recovery, recoveryTimestamp(entry.Timestamp))
 	}
+	return sortedRecoveryChecks(byName)
+}
+
+// recoveryTimestamp renders a log timestamp as RFC3339Nano, or "" when zero.
+func recoveryTimestamp(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.UTC().Format(time.RFC3339Nano)
+}
+
+// parseStateRecoveryEntry decodes one state_recovery log entry, defaulting the
+// lifecycle to active and rejecting entries outside the active/recovered pair.
+func parseStateRecoveryEntry(entry types.ExtensionLog) (stateRecoveryLogData, bool) {
+	if entry.Category != "state_recovery" {
+		return stateRecoveryLogData{}, false
+	}
+	var recovery stateRecoveryLogData
+	if json.Unmarshal(entry.Data, &recovery) != nil || recovery.Name == "" {
+		return stateRecoveryLogData{}, false
+	}
+	if recovery.Lifecycle == "" {
+		recovery.Lifecycle = string(statediag.LifecycleActive)
+	}
+	if recovery.Lifecycle != string(statediag.LifecycleActive) &&
+		recovery.Lifecycle != string(statediag.LifecycleRecovered) {
+		return stateRecoveryLogData{}, false
+	}
+	return recovery, true
+}
+
+// applyStateRecoveryEntry folds one recovery transition into the per-name check
+// state, preserving the timeline (history), occurrences, and recovery metadata.
+func applyStateRecoveryEntry(byName map[string]DoctorCheck, recovery stateRecoveryLogData, at string) {
+	check := byName[recovery.Name]
+	if recovery.Lifecycle == string(statediag.LifecycleRecovered) && check.Name == "" {
+		return
+	}
+	check.Name = recovery.Name
+	if recovery.CorrelationID != "" {
+		check.CorrelationID = recovery.CorrelationID
+	}
+	if recovery.Detail != "" {
+		check.Detail = recovery.Detail
+		check.Fix = recovery.Fix
+	}
+	check.Lifecycle = recovery.Lifecycle
+	check.LastSeenAt = at
+	event, outcome := recoveryTransition(check.Occurrences, recovery)
+	check.History = append(check.History, DoctorTransition{
+		Lifecycle: recovery.Lifecycle, At: at, Event: event,
+		CorrelationID: check.CorrelationID, Outcome: outcome,
+	})
+	if len(check.History) > 20 {
+		check.History = append([]DoctorTransition(nil), check.History[len(check.History)-20:]...)
+	}
+	if recovery.Lifecycle == string(statediag.LifecycleActive) {
+		applyActiveStateRecovery(&check, recovery, at)
+	} else {
+		applyRecoveredStateRecovery(&check, at)
+	}
+	byName[recovery.Name] = check
+}
+
+// recoveryTransition labels one history entry: recovered transitions complete a
+// recovery, while repeat failures on an existing check are recurrences.
+func recoveryTransition(occurrences int, recovery stateRecoveryLogData) (event, outcome string) {
+	if recovery.Lifecycle == string(statediag.LifecycleRecovered) {
+		return "recovery_completed", "recovered"
+	}
+	event = "failure_detected"
+	outcome = recovery.RecoveryOutcome
+	if occurrences > 0 {
+		event = "failure_recurred"
+	}
+	return event, outcome
+}
+
+// applyActiveStateRecovery marks a check as actively degraded, bumping the
+// occurrence counter and defaulting any missing recovery metadata.
+func applyActiveStateRecovery(check *DoctorCheck, recovery stateRecoveryLogData, at string) {
+	check.Status = "warn"
+	check.RecoveredAt = ""
+	check.Occurrences++
+	check.ExpectedNextTransition = recovery.ExpectedNextTransition
+	if check.ExpectedNextTransition == "" {
+		check.ExpectedNextTransition = "state_verified"
+	}
+	check.Deadline = recovery.Deadline
+	check.RecoveryAttempt = recovery.RecoveryAttempt
+	if check.RecoveryAttempt == 0 {
+		check.RecoveryAttempt = check.Occurrences
+	}
+	check.RecoveryOutcome = recovery.RecoveryOutcome
+	if check.RecoveryOutcome == "" {
+		check.RecoveryOutcome = "pending"
+	}
+	if check.FirstSeenAt == "" {
+		check.FirstSeenAt = at
+	}
+}
+
+// applyRecoveredStateRecovery closes out a check whose state was verified again.
+func applyRecoveredStateRecovery(check *DoctorCheck, at string) {
+	check.Status = "pass"
+	check.RecoveredAt = at
+	check.LastSuccessfulTransition = "state_verified"
+	check.ExpectedNextTransition = ""
+	check.Deadline = ""
+	check.RecoveryOutcome = "recovered"
+}
+
+// sortedRecoveryChecks emits the accumulated checks in stable name order.
+func sortedRecoveryChecks(byName map[string]DoctorCheck) []DoctorCheck {
 	names := make([]string, 0, len(byName))
 	for name := range byName {
 		names = append(names, name)

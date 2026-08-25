@@ -11,11 +11,7 @@ import { createDeferredPromise } from '../lib/timeout-utils.js'
 /**
  * Safe serialization for complex objects returned from executeJavaScript.
  */
-// #lizard forgives
-function serializeObject(obj: object, depth: number, seen: WeakSet<object>): unknown {
-  if (seen.has(obj)) return '[Circular]'
-  seen.add(obj)
-
+function serializeSpecialValue(obj: object, depth: number, seen: WeakSet<object>): unknown {
   if (Array.isArray(obj)) return obj.slice(0, 100).map((v) => safeSerializeForExecute(v, depth + 1, seen))
   if (obj instanceof Error) return { error: obj.message, stack: obj.stack }
   if (obj instanceof Date) return obj.toISOString()
@@ -24,53 +20,69 @@ function serializeObject(obj: object, depth: number, seen: WeakSet<object>): unk
     const node = obj as Node & { id?: string }
     return `[${node.nodeName}${node.id ? '#' + node.id : ''}]`
   }
+  return undefined
+}
 
+function tryToJSONValue(obj: object, depth: number, seen: WeakSet<object>): { value: unknown } | null {
   // Browser host objects (DOMRect, DOMPoint, DOMMatrix) have prototype getters
   // that Object.keys() misses. Their toJSON() returns a plain object.
-  if (typeof (obj as { toJSON?: unknown }).toJSON === 'function') {
-    try {
-      return safeSerializeForExecute((obj as { toJSON: () => unknown }).toJSON(), depth + 1, seen)
-    } catch {
-      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-      // Fall through to Object.keys() enumeration
-    }
+  if (typeof (obj as { toJSON?: unknown }).toJSON !== 'function') return null
+  try {
+    return { value: safeSerializeForExecute((obj as { toJSON: () => unknown }).toJSON(), depth + 1, seen) }
+  } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+    // Fall through to Object.keys() enumeration
+    return null
   }
+}
 
-  const result: Record<string, unknown> = {}
-  const keys = Object.keys(obj).slice(0, 50)
+function appendHostProperty(hostResult: Record<string, unknown>, obj: Record<string, unknown>, key: string): void {
+  try {
+    const hostValue = obj[key]
+    const hostType = typeof hostValue
+    if (hostValue === undefined || hostType === 'function') return
+    if (hostType === 'string' || hostType === 'number' || hostType === 'boolean' || hostValue === null) {
+      hostResult[key] = hostValue
+    }
+  } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+    // Ignore getter access errors and continue.
+  }
+}
+
+function serializeHostObject(obj: object, keys: string[]): Record<string, unknown> | null {
   // Host objects like DOMRect/CSSStyleDeclaration expose values via prototype getters,
   // so Object.keys() can be empty even when useful primitive fields exist.
-  if (keys.length === 0) {
-    try {
-      const proto = Object.getPrototypeOf(obj)
-      if (proto && proto !== Object.prototype) {
-        const hostResult: Record<string, unknown> = {}
-        const propNames = Object.getOwnPropertyNames(proto).slice(0, 120)
-        for (const key of propNames) {
-          if (key === 'constructor') continue
-          try {
-            const hostValue = (obj as Record<string, unknown>)[key]
-            const hostType = typeof hostValue
-            if (hostValue === undefined || hostType === 'function') continue
-            if (hostType === 'string' || hostType === 'number' || hostType === 'boolean' || hostValue === null) {
-              hostResult[key] = hostValue
-            }
-          } catch {
-            // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-            // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-            // Ignore getter access errors and continue.
-          }
-          if (Object.keys(hostResult).length >= 50) break
-        }
-        if (Object.keys(hostResult).length > 0) return hostResult
+  if (keys.length > 0) return null
+  try {
+    const proto = Object.getPrototypeOf(obj)
+    if (proto && proto !== Object.prototype) {
+      const hostResult: Record<string, unknown> = {}
+      const propNames = Object.getOwnPropertyNames(proto).slice(0, 120)
+      for (const key of propNames) {
+        if (key === 'constructor') continue
+        appendHostProperty(hostResult, obj as Record<string, unknown>, key)
+        if (Object.keys(hostResult).length >= 50) break
       }
-    } catch {
-      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-      // Fall through to default enumeration.
+      if (Object.keys(hostResult).length > 0) return hostResult
     }
+  } catch {
+    // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
+    // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
+    // Fall through to default enumeration.
   }
+  return null
+}
+
+function serializeEnumerableKeys(
+  obj: object,
+  keys: string[],
+  depth: number,
+  seen: WeakSet<object>
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
   for (const key of keys) {
     try {
       result[key] = safeSerializeForExecute((obj as Record<string, unknown>)[key], depth + 1, seen)
@@ -82,6 +94,22 @@ function serializeObject(obj: object, depth: number, seen: WeakSet<object>): unk
     result['...'] = `[${Object.keys(obj).length - 50} more keys]`
   }
   return result
+}
+
+function serializeObject(obj: object, depth: number, seen: WeakSet<object>): unknown {
+  if (seen.has(obj)) return '[Circular]'
+  seen.add(obj)
+
+  const special = serializeSpecialValue(obj, depth, seen)
+  if (special !== undefined) return special
+
+  const toJSONValue = tryToJSONValue(obj, depth, seen)
+  if (toJSONValue) return toJSONValue.value
+
+  const keys = Object.keys(obj).slice(0, 50)
+  const hostResult = serializeHostObject(obj, keys)
+  if (hostResult) return hostResult
+  return serializeEnumerableKeys(obj, keys, depth, seen)
 }
 
 export function safeSerializeForExecute(

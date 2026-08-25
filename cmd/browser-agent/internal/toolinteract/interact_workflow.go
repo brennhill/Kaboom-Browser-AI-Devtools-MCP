@@ -272,23 +272,23 @@ func (h *WorkflowActions) HandleNavigateAndWaitFor(req mcp.JSONRPCRequest, args 
 	return act.WorkflowResult(req, "navigate_and_wait_for", trace, navResp, workflowStart)
 }
 
-// handleNavigateAndDocument performs click-based navigation, waits for URL/stability,
-// then enriches the response with compact page context (url/title/tab_id).
-func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	workflowStart := h.deps.Now()
-	trace := make([]act.WorkflowStep, 0, 4)
+type navigateAndDocumentParams struct {
+	TimeoutMs        int   `json:"timeout_ms,omitempty"`
+	StabilityMs      int   `json:"stability_ms,omitempty"`
+	TabID            int   `json:"tab_id,omitempty"`
+	WaitForURLChange *bool `json:"wait_for_url_change,omitempty"`
+	WaitForStable    *bool `json:"wait_for_stable,omitempty"`
+}
 
-	var params struct {
-		TimeoutMs        int   `json:"timeout_ms,omitempty"`
-		StabilityMs      int   `json:"stability_ms,omitempty"`
-		TabID            int   `json:"tab_id,omitempty"`
-		WaitForURLChange *bool `json:"wait_for_url_change,omitempty"`
-		WaitForStable    *bool `json:"wait_for_stable,omitempty"`
-	}
+func parseNavigateAndDocumentArgs(req mcp.JSONRPCRequest, args json.RawMessage) (navigateAndDocumentParams, mcp.JSONRPCResponse, bool) {
+	var params navigateAndDocumentParams
 	if err := json.Unmarshal(args, &params); err != nil {
-		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return params, mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again"), true
 	}
+	return params, mcp.JSONRPCResponse{}, false
+}
 
+func resolveNavigateAndDocumentWaits(params navigateAndDocumentParams) (bool, bool) {
 	waitForURLChange := true
 	if params.WaitForURLChange != nil {
 		waitForURLChange = *params.WaitForURLChange
@@ -297,6 +297,20 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 	if params.WaitForStable != nil {
 		waitForStable = *params.WaitForStable
 	}
+	return waitForURLChange, waitForStable
+}
+
+// handleNavigateAndDocument performs click-based navigation, waits for URL/stability,
+// then enriches the response with compact page context (url/title/tab_id).
+func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	workflowStart := h.deps.Now()
+	trace := make([]act.WorkflowStep, 0, 4)
+
+	params, failResp, invalid := parseNavigateAndDocumentArgs(req, args)
+	if invalid {
+		return failResp
+	}
+	waitForURLChange, waitForStable := resolveNavigateAndDocumentWaits(params)
 
 	validateStart := time.Now()
 	if resp, blocked := h.validateNavigateAndDocumentTab(req, params.TabID); blocked {
@@ -343,45 +357,10 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 	}
 
 	if waitForURLChange && beforeURL != "" {
-		waitURLStart := time.Now()
-		timeoutMs := params.TimeoutMs
-		if params.TimeoutMs > 0 {
-			var ok bool
-			timeoutMs, ok = remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs, h.deps.Now())
-			if !ok {
-				timeoutResp := navigateAndDocumentTimeoutBudgetExceeded(req, "wait_for_url_change")
-				trace = append(trace, act.WorkflowStep{
-					Action:   "wait_for_url_change",
-					Status:   "error",
-					TimingMs: time.Since(waitURLStart).Milliseconds(),
-					Detail:   "timeout budget exhausted before URL wait stage",
-				})
-				return h.runtime.AppendWorkflowTraceToResponse(timeoutResp, "navigate_and_document", trace, workflowStart, "failed")
-			}
-		} else if timeoutMs <= 0 {
-			timeoutMs = 5000
+		lastURL, failResp, failed := h.navigateAndDocumentWaitURLChange(req, params, beforeURL, workflowStart, &trace)
+		if failed {
+			return failResp
 		}
-		lastURL, changed := h.deps.WaitForTrackedURLChange(beforeURL, time.Duration(timeoutMs)*time.Millisecond)
-		if !changed {
-			failResp := mcp.Fail(req, mcp.ErrExtTimeout,
-				"URL did not change after click within timeout",
-				"Increase timeout_ms, disable wait_for_url_change, or verify the click target triggers navigation.",
-				mcp.WithParam("wait_for_url_change"),
-			)
-			trace = append(trace, act.WorkflowStep{
-				Action:   "wait_for_url_change",
-				Status:   "error",
-				TimingMs: time.Since(waitURLStart).Milliseconds(),
-				Detail:   "tracked URL did not change from baseline",
-			})
-			return h.runtime.AppendWorkflowTraceToResponse(failResp, "navigate_and_document", trace, workflowStart, "failed")
-		}
-		trace = append(trace, act.WorkflowStep{
-			Action:   "wait_for_url_change",
-			Status:   "success",
-			TimingMs: time.Since(waitURLStart).Milliseconds(),
-			Detail:   lastURL,
-		})
 		if navigationInterruptedClick {
 			clickResp = mcp.Succeed(req, "Navigation completed", map[string]any{
 				"status": "complete",
@@ -397,36 +376,8 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 	}
 
 	if waitForStable {
-		waitStableStart := time.Now()
-		waitArgsMap := map[string]any{
-			"action": "wait_for_stable",
-		}
-		if params.StabilityMs > 0 {
-			waitArgsMap["stability_ms"] = params.StabilityMs
-		}
-		if params.TimeoutMs > 0 {
-			timeoutMs, ok := remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs, h.deps.Now())
-			if !ok {
-				timeoutResp := navigateAndDocumentTimeoutBudgetExceeded(req, "wait_for_stable")
-				trace = append(trace, act.WorkflowStep{
-					Action:   "wait_for_stable",
-					Status:   "error",
-					TimingMs: time.Since(waitStableStart).Milliseconds(),
-					Detail:   "timeout budget exhausted before stability stage",
-				})
-				return h.runtime.AppendWorkflowTraceToResponse(timeoutResp, "navigate_and_document", trace, workflowStart, "failed")
-			}
-			waitArgsMap["timeout_ms"] = timeoutMs
-		}
-		waitArgs, _ := json.Marshal(waitArgsMap)
-		waitResp := h.page.HandleWaitForStable(req, waitArgs)
-		trace = append(trace, act.WorkflowStep{
-			Action:   "wait_for_stable",
-			Status:   act.ResponseStatus(waitResp),
-			TimingMs: time.Since(waitStableStart).Milliseconds(),
-		})
-		if act.IsErrorResponse(waitResp) {
-			return h.runtime.AppendWorkflowTraceToResponse(waitResp, "navigate_and_document", trace, workflowStart, "failed")
+		if failResp, failed := h.navigateAndDocumentWaitStable(req, params, workflowStart, &trace); failed {
+			return failResp
 		}
 	} else {
 		trace = append(trace, act.WorkflowStep{
@@ -438,6 +389,84 @@ func (h *WorkflowActions) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args
 
 	resp := h.page.AppendPageContextToResponse(clickResp, req)
 	return h.runtime.AppendWorkflowTraceToResponse(resp, "navigate_and_document", trace, workflowStart, "success")
+}
+
+func (h *WorkflowActions) navigateAndDocumentWaitURLChange(req mcp.JSONRPCRequest, params navigateAndDocumentParams, beforeURL string, workflowStart time.Time, trace *[]act.WorkflowStep) (string, mcp.JSONRPCResponse, bool) {
+	waitURLStart := time.Now()
+	timeoutMs := params.TimeoutMs
+	if params.TimeoutMs > 0 {
+		var ok bool
+		timeoutMs, ok = remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs, h.deps.Now())
+		if !ok {
+			timeoutResp := navigateAndDocumentTimeoutBudgetExceeded(req, "wait_for_url_change")
+			*trace = append(*trace, act.WorkflowStep{
+				Action:   "wait_for_url_change",
+				Status:   "error",
+				TimingMs: time.Since(waitURLStart).Milliseconds(),
+				Detail:   "timeout budget exhausted before URL wait stage",
+			})
+			return "", h.runtime.AppendWorkflowTraceToResponse(timeoutResp, "navigate_and_document", *trace, workflowStart, "failed"), true
+		}
+	} else if timeoutMs <= 0 {
+		timeoutMs = 5000
+	}
+	lastURL, changed := h.deps.WaitForTrackedURLChange(beforeURL, time.Duration(timeoutMs)*time.Millisecond)
+	if !changed {
+		failResp := mcp.Fail(req, mcp.ErrExtTimeout,
+			"URL did not change after click within timeout",
+			"Increase timeout_ms, disable wait_for_url_change, or verify the click target triggers navigation.",
+			mcp.WithParam("wait_for_url_change"),
+		)
+		*trace = append(*trace, act.WorkflowStep{
+			Action:   "wait_for_url_change",
+			Status:   "error",
+			TimingMs: time.Since(waitURLStart).Milliseconds(),
+			Detail:   "tracked URL did not change from baseline",
+		})
+		return "", h.runtime.AppendWorkflowTraceToResponse(failResp, "navigate_and_document", *trace, workflowStart, "failed"), true
+	}
+	*trace = append(*trace, act.WorkflowStep{
+		Action:   "wait_for_url_change",
+		Status:   "success",
+		TimingMs: time.Since(waitURLStart).Milliseconds(),
+		Detail:   lastURL,
+	})
+	return lastURL, mcp.JSONRPCResponse{}, false
+}
+
+func (h *WorkflowActions) navigateAndDocumentWaitStable(req mcp.JSONRPCRequest, params navigateAndDocumentParams, workflowStart time.Time, trace *[]act.WorkflowStep) (mcp.JSONRPCResponse, bool) {
+	waitStableStart := time.Now()
+	waitArgsMap := map[string]any{
+		"action": "wait_for_stable",
+	}
+	if params.StabilityMs > 0 {
+		waitArgsMap["stability_ms"] = params.StabilityMs
+	}
+	if params.TimeoutMs > 0 {
+		timeoutMs, ok := remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs, h.deps.Now())
+		if !ok {
+			timeoutResp := navigateAndDocumentTimeoutBudgetExceeded(req, "wait_for_stable")
+			*trace = append(*trace, act.WorkflowStep{
+				Action:   "wait_for_stable",
+				Status:   "error",
+				TimingMs: time.Since(waitStableStart).Milliseconds(),
+				Detail:   "timeout budget exhausted before stability stage",
+			})
+			return h.runtime.AppendWorkflowTraceToResponse(timeoutResp, "navigate_and_document", *trace, workflowStart, "failed"), true
+		}
+		waitArgsMap["timeout_ms"] = timeoutMs
+	}
+	waitArgs, _ := json.Marshal(waitArgsMap)
+	waitResp := h.page.HandleWaitForStable(req, waitArgs)
+	*trace = append(*trace, act.WorkflowStep{
+		Action:   "wait_for_stable",
+		Status:   act.ResponseStatus(waitResp),
+		TimingMs: time.Since(waitStableStart).Milliseconds(),
+	})
+	if act.IsErrorResponse(waitResp) {
+		return h.runtime.AppendWorkflowTraceToResponse(waitResp, "navigate_and_document", *trace, workflowStart, "failed"), true
+	}
+	return mcp.JSONRPCResponse{}, false
 }
 
 func clickLostToNavigation(resp mcp.JSONRPCResponse) bool {

@@ -14,54 +14,62 @@ import { formatFileSize } from './ui-utils.js'
 
 const DEFAULT_MAX_ENTRIES = 1000
 
-/**
- * Update the connection status display
- */
-// #lizard forgives
-export function updateConnectionStatus(status: PopupConnectionStatus): void {
-  const statusEl = document.getElementById('status')
-  const entriesEl = document.getElementById('entries-count')
-  const errorEl = document.getElementById('error-message')
-  const serverUrlEl = document.getElementById('server-url')
-  const logFileEl = document.getElementById('log-file-path')
-  const errorCountEl = document.getElementById('error-count')
-  const troubleshootingEl = document.getElementById('troubleshooting')
+interface StatusElements {
+  statusEl: HTMLElement | null
+  entriesEl: HTMLElement | null
+  errorEl: HTMLElement | null
+  serverUrlEl: HTMLElement | null
+  logFileEl: HTMLElement | null
+  errorCountEl: HTMLElement | null
+  troubleshootingEl: HTMLElement | null
+}
+
+function getStatusElements(): StatusElements {
+  return {
+    statusEl: document.getElementById('status'),
+    entriesEl: document.getElementById('entries-count'),
+    errorEl: document.getElementById('error-message'),
+    serverUrlEl: document.getElementById('server-url'),
+    logFileEl: document.getElementById('log-file-path'),
+    errorCountEl: document.getElementById('error-count'),
+    troubleshootingEl: document.getElementById('troubleshooting')
+  }
+}
+
+function setConnectionBadge(statusEl: HTMLElement | null, connected: boolean): void {
+  if (!statusEl) return
+  statusEl.textContent = connected ? 'Connected' : 'Offline'
+  statusEl.classList.remove(connected ? 'disconnected' : 'connected')
+  statusEl.classList.add(connected ? 'connected' : 'disconnected')
+}
+
+function renderConnectionPanel(status: PopupConnectionStatus, els: StatusElements): void {
+  setConnectionBadge(els.statusEl, status.connected)
 
   if (status.connected) {
-    if (statusEl) {
-      statusEl.textContent = 'Connected'
-      statusEl.classList.remove('disconnected')
-      statusEl.classList.add('connected')
-    }
-
     const entries = status.entries || 0
     const maxEntries = status.maxEntries || DEFAULT_MAX_ENTRIES
-    if (entriesEl) {
-      entriesEl.textContent = `${entries} / ${maxEntries}`
+    if (els.entriesEl) {
+      els.entriesEl.textContent = `${entries} / ${maxEntries}`
     }
 
-    if (errorEl) {
-      errorEl.textContent = ''
+    if (els.errorEl) {
+      els.errorEl.textContent = ''
     }
-    if (troubleshootingEl) {
-      troubleshootingEl.style.display = 'none'
+    if (els.troubleshootingEl) {
+      els.troubleshootingEl.style.display = 'none'
     }
   } else {
-    if (statusEl) {
-      statusEl.textContent = 'Offline'
-      statusEl.classList.remove('connected')
-      statusEl.classList.add('disconnected')
+    if (els.errorEl && status.error) {
+      els.errorEl.textContent = status.error
     }
-
-    if (errorEl && status.error) {
-      errorEl.textContent = status.error
-    }
-    if (troubleshootingEl) {
-      troubleshootingEl.style.display = 'block'
+    if (els.troubleshootingEl) {
+      els.troubleshootingEl.style.display = 'block'
     }
   }
+}
 
-  // Version mismatch warning
+function renderVersionWarning(status: PopupConnectionStatus): void {
   const versionWarningEl = document.getElementById('version-mismatch')
   if (versionWarningEl) {
     if (status.versionMismatch && status.serverVersion && status.extensionVersion) {
@@ -74,18 +82,24 @@ export function updateConnectionStatus(status: PopupConnectionStatus): void {
       versionWarningEl.style.display = 'none'
     }
   }
+}
 
+function securityDetailText(status: PopupConnectionStatus): string {
+  const rewrites =
+    status.insecureRewritesApplied && status.insecureRewritesApplied.length > 0
+      ? status.insecureRewritesApplied.join(', ')
+      : 'csp_headers'
+  return `INSECURE DEBUG MODE active. production_parity=${status.productionParity === false ? 'false' : 'true'}; rewrites=${rewrites}`
+}
+
+function renderSecurityWarning(status: PopupConnectionStatus): void {
   const securityWarningEl = document.getElementById('security-mode-warning')
   const securityDetailEl = document.getElementById('security-mode-detail')
   if (securityWarningEl) {
     if (status.securityMode === 'insecure_proxy') {
       securityWarningEl.style.display = 'block'
       if (securityDetailEl) {
-        const rewrites =
-          status.insecureRewritesApplied && status.insecureRewritesApplied.length > 0
-            ? status.insecureRewritesApplied.join(', ')
-            : 'csp_headers'
-        securityDetailEl.textContent = `INSECURE DEBUG MODE active. production_parity=${status.productionParity === false ? 'false' : 'true'}; rewrites=${rewrites}`
+        securityDetailEl.textContent = securityDetailText(status)
       }
     } else {
       securityWarningEl.style.display = 'none'
@@ -94,17 +108,20 @@ export function updateConnectionStatus(status: PopupConnectionStatus): void {
       }
     }
   }
+}
 
-  if (serverUrlEl && status.serverUrl) {
-    serverUrlEl.textContent = status.serverUrl
+function renderOptionalText(el: HTMLElement | null, value: string | undefined): void {
+  if (el && value) {
+    el.textContent = value
   }
+}
 
-  if (logFileEl && status.logFile) {
-    logFileEl.textContent = status.logFile
-  }
+function renderInfoFields(status: PopupConnectionStatus, els: StatusElements): void {
+  renderOptionalText(els.serverUrlEl, status.serverUrl)
+  renderOptionalText(els.logFileEl, status.logFile)
 
-  if (errorCountEl && status.errorCount !== undefined) {
-    errorCountEl.textContent = String(status.errorCount)
+  if (els.errorCountEl && status.errorCount !== undefined) {
+    els.errorCountEl.textContent = String(status.errorCount)
   }
 
   // Log file size
@@ -112,8 +129,51 @@ export function updateConnectionStatus(status: PopupConnectionStatus): void {
   if (fileSizeEl && status.logFileSize !== undefined) {
     fileSizeEl.textContent = formatFileSize(status.logFileSize)
   }
+}
 
-  // Health indicators (circuit breaker + memory pressure)
+type HealthLevel = 'ok' | 'warn' | 'error' | 'unknown'
+
+function circuitBreakerLevel(state: string): HealthLevel {
+  if (state === 'closed') return 'ok'
+  if (state === 'open') return 'error'
+  if (state === 'half-open') return 'warn'
+  return 'unknown'
+}
+
+function memoryPressureLevel(state: string): HealthLevel {
+  if (state === 'normal') return 'ok'
+  if (state === 'soft') return 'warn'
+  if (state === 'hard') return 'error'
+  return 'unknown'
+}
+
+function renderHealthIndicator(
+  el: HTMLElement,
+  connected: boolean,
+  level: HealthLevel,
+  warnText: string,
+  errorText: string
+): void {
+  el.classList.remove('health-error', 'health-warning')
+  if (!connected || level === 'ok') {
+    el.style.display = 'none'
+    el.textContent = ''
+    return
+  }
+  if (level === 'error') {
+    el.style.display = ''
+    el.classList.add('health-error')
+    el.textContent = errorText
+    return
+  }
+  if (level === 'warn') {
+    el.style.display = ''
+    el.classList.add('health-warning')
+    el.textContent = warnText
+  }
+}
+
+function renderHealthIndicators(status: PopupConnectionStatus): void {
   const healthSection = document.getElementById('health-indicators')
   const cbEl = document.getElementById('health-circuit-breaker')
   const mpEl = document.getElementById('health-memory-pressure')
@@ -122,43 +182,30 @@ export function updateConnectionStatus(status: PopupConnectionStatus): void {
     const cbState = status.circuitBreakerState || 'closed'
     const mpState = status.memoryPressure?.memoryPressureLevel || 'normal'
 
-    // Circuit breaker indicator
-    cbEl.classList.remove('health-error', 'health-warning')
-    if (!status.connected || cbState === 'closed') {
-      cbEl.style.display = 'none'
-      cbEl.textContent = ''
-    } else if (cbState === 'open') {
-      cbEl.style.display = ''
-      cbEl.classList.add('health-error')
-      cbEl.textContent = 'Server: paused (recovering from errors)'
-    } else if (cbState === 'half-open') {
-      cbEl.style.display = ''
-      cbEl.classList.add('health-warning')
-      cbEl.textContent = 'Server: recovering'
-    }
+    renderHealthIndicator(
+      cbEl,
+      status.connected,
+      circuitBreakerLevel(cbState),
+      'Server: recovering',
+      'Server: paused (recovering from errors)'
+    )
 
-    // Memory pressure indicator
-    mpEl.classList.remove('health-error', 'health-warning')
-    if (!status.connected || mpState === 'normal') {
-      mpEl.style.display = 'none'
-      mpEl.textContent = ''
-    } else if (mpState === 'soft') {
-      mpEl.style.display = ''
-      mpEl.classList.add('health-warning')
-      mpEl.textContent = 'Memory: elevated (some features limited)'
-    } else if (mpState === 'hard') {
-      mpEl.style.display = ''
-      mpEl.classList.add('health-error')
-      mpEl.textContent = 'Memory: critical (network capture disabled)'
-    }
+    renderHealthIndicator(
+      mpEl,
+      status.connected,
+      memoryPressureLevel(mpState),
+      'Memory: elevated (some features limited)',
+      'Memory: critical (network capture disabled)'
+    )
 
     // Show/hide entire section
     const cbVisible = status.connected && cbState !== 'closed'
     const mpVisible = status.connected && mpState !== 'normal'
     healthSection.style.display = cbVisible || mpVisible ? '' : 'none'
   }
+}
 
-  // Context annotation warning
+function renderContextWarning(status: PopupConnectionStatus): void {
   const contextWarningEl = document.getElementById('context-warning')
   const contextWarningTextEl = document.getElementById('context-warning-text')
   if (contextWarningEl) {
@@ -174,4 +221,18 @@ export function updateConnectionStatus(status: PopupConnectionStatus): void {
       }
     }
   }
+}
+
+/**
+ * Update the connection status display
+ */
+export function updateConnectionStatus(status: PopupConnectionStatus): void {
+  const els = getStatusElements()
+
+  renderConnectionPanel(status, els)
+  renderVersionWarning(status)
+  renderSecurityWarning(status)
+  renderInfoFields(status, els)
+  renderHealthIndicators(status)
+  renderContextWarning(status)
 }

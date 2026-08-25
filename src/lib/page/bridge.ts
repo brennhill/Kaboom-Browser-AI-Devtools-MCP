@@ -22,19 +22,35 @@ export interface BridgePayload {
   [key: string]: unknown
 }
 
+function resolveLogMessage(payload: BridgePayload): string {
+  return (
+    payload.message ||
+    payload.error ||
+    (payload.args?.[0] !== null && payload.args?.[0] !== undefined ? String(payload.args[0]) : '')
+  )
+}
+
+function resolveLogSource(payload: BridgePayload): string {
+  return payload.filename ? `${payload.filename}:${payload.lineno || 0}` : ''
+}
+
+function collectLogEnrichments(context: ReturnType<typeof getContextAnnotations>, actions: unknown[] | null): string[] {
+  const enrichments: string[] = []
+  if (context && actions) enrichments.push('context')
+  if (actions && actions.length > 0) enrichments.push('userActions')
+  return enrichments
+}
+
 /**
  * Post a log message to the content script
  */
-// #lizard forgives
 export function postLog(payload: BridgePayload): void {
   // Include context annotations and action replay for errors
   const context = getContextAnnotations()
   const actions = payload.level === 'error' ? getActionBuffer() : null
 
   // Build enrichments list to help AI understand what data is attached
-  const enrichments: string[] = []
-  if (context && payload.level === 'error') enrichments.push('context')
-  if (actions && actions.length > 0) enrichments.push('userActions')
+  const enrichments = collectLogEnrichments(context, actions)
 
   // Extract fields we want from payload (exclude ts, message, source, url to avoid overwriting enrichments)
   const { level, type, args, error, stack, ...otherFields } = payload
@@ -45,11 +61,8 @@ export function postLog(payload: BridgePayload): void {
       // Enriched fields (these are the source of truth)
       ts: new Date().toISOString(),
       url: window.location.href,
-      message:
-        payload.message ||
-        payload.error ||
-        (payload.args?.[0] !== null && payload.args?.[0] !== undefined ? String(payload.args[0]) : ''),
-      source: payload.filename ? `${payload.filename}:${payload.lineno || 0}` : '',
+      message: resolveLogMessage(payload),
+      source: resolveLogSource(payload),
       // Core fields from payload
       level,
       ...(type ? { type } : {}),
@@ -58,7 +71,7 @@ export function postLog(payload: BridgePayload): void {
       ...(stack ? { stack } : {}),
       // Optional enrichments
       ...(enrichments.length > 0 ? { _enrichments: enrichments } : {}),
-      ...(context && payload.level === 'error' ? { _context: context } : {}),
+      ...(context && actions ? { _context: context } : {}),
       ...(actions && actions.length > 0 ? { _actions: actions } : {}),
       // Any other fields from payload (excluding the ones we destructured)
       ...otherFields

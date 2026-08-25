@@ -188,42 +188,7 @@ func enrichExploreWithMenus(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 		}
 
 		// Parse elements into RawElement for the heuristic
-		rawElements := make([]menus.RawElement, 0, len(elementsRaw))
-		for _, eRaw := range elementsRaw {
-			eMap, ok := eRaw.(map[string]any)
-			if !ok {
-				continue
-			}
-			bbox := menus.BBox{}
-			if bboxMap, ok := eMap["bbox"].(map[string]any); ok {
-				bbox.X, _ = bboxMap["x"].(float64)
-				bbox.Y, _ = bboxMap["y"].(float64)
-				bbox.Width, _ = bboxMap["width"].(float64)
-				bbox.Height, _ = bboxMap["height"].(float64)
-			}
-			idx, _ := eMap["index"].(float64)
-			label, _ := eMap["label"].(string)
-			tag, _ := eMap["tag"].(string)
-			role, _ := eMap["role"].(string)
-			href, _ := eMap["href"].(string)
-			visible := true
-			if v, ok := eMap["visible"].(bool); ok {
-				visible = v
-			}
-			landmarkTag, _ := eMap["landmark_tag"].(string)
-			landmarkRole, _ := eMap["landmark_role"].(string)
-			rawElements = append(rawElements, menus.RawElement{
-				Text:       label,
-				Href:       href,
-				Tag:        tag,
-				Role:       role,
-				BBox:       bbox,
-				ParentTag:  landmarkTag,
-				ParentRole: landmarkRole,
-				Visible:    visible,
-				Index:      int(idx),
-			})
-		}
+		rawElements := parseRawMenuElements(elementsRaw)
 
 		cfg := menus.DefaultConfig()
 		menuResult := menus.Discover(rawElements, cfg)
@@ -232,19 +197,7 @@ func enrichExploreWithMenus(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 
 		// Filter interactive_elements to remove menu items
 		if len(claimedIndices) > 0 {
-			filtered := make([]any, 0, len(elementsRaw))
-			for _, eRaw := range elementsRaw {
-				eMap, ok := eRaw.(map[string]any)
-				if !ok {
-					filtered = append(filtered, eRaw)
-					continue
-				}
-				idx, _ := eMap["index"].(float64)
-				if !claimedIndices[int(idx)] {
-					filtered = append(filtered, eRaw)
-				}
-			}
-			data["interactive_elements"] = filtered
+			data["interactive_elements"] = filterClaimedElements(elementsRaw, claimedIndices)
 			if count, ok := data["interactive_count"].(float64); ok {
 				data["interactive_count"] = count - float64(len(claimedIndices))
 			}
@@ -260,11 +213,67 @@ func enrichExploreWithMenus(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	})
 }
 
+func parseRawMenuElements(elementsRaw []any) []menus.RawElement {
+	rawElements := make([]menus.RawElement, 0, len(elementsRaw))
+	for _, eRaw := range elementsRaw {
+		eMap, ok := eRaw.(map[string]any)
+		if !ok {
+			continue
+		}
+		bbox := menus.BBox{}
+		if bboxMap, ok := eMap["bbox"].(map[string]any); ok {
+			bbox.X, _ = bboxMap["x"].(float64)
+			bbox.Y, _ = bboxMap["y"].(float64)
+			bbox.Width, _ = bboxMap["width"].(float64)
+			bbox.Height, _ = bboxMap["height"].(float64)
+		}
+		idx, _ := eMap["index"].(float64)
+		label, _ := eMap["label"].(string)
+		tag, _ := eMap["tag"].(string)
+		role, _ := eMap["role"].(string)
+		href, _ := eMap["href"].(string)
+		visible := true
+		if v, ok := eMap["visible"].(bool); ok {
+			visible = v
+		}
+		landmarkTag, _ := eMap["landmark_tag"].(string)
+		landmarkRole, _ := eMap["landmark_role"].(string)
+		rawElements = append(rawElements, menus.RawElement{
+			Text:       label,
+			Href:       href,
+			Tag:        tag,
+			Role:       role,
+			BBox:       bbox,
+			ParentTag:  landmarkTag,
+			ParentRole: landmarkRole,
+			Visible:    visible,
+			Index:      int(idx),
+		})
+	}
+	return rawElements
+}
+
+func filterClaimedElements(elementsRaw []any, claimedIndices map[int]bool) []any {
+	filtered := make([]any, 0, len(elementsRaw))
+	for _, eRaw := range elementsRaw {
+		eMap, ok := eRaw.(map[string]any)
+		if !ok {
+			filtered = append(filtered, eRaw)
+			continue
+		}
+		idx, _ := eMap["index"].(float64)
+		if !claimedIndices[int(idx)] {
+			filtered = append(filtered, eRaw)
+		}
+	}
+	return filtered
+}
+
 // HandleClipboardRead reads clipboard text through the bounded page script, which
 // classifies permission, focus, navigation, and context-destruction outcomes itself
 // instead of hanging until the injected executor reports a generic execution_timeout.
 func (h *PageActions) HandleClipboardRead(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	resp := h.storage.queueExecuteScript(req, args, "exec", 0, 0, "main", pagescripts.ClipboardRead, "clipboard_read", "Clipboard read queued")
+	resp := h.storage.queueExecuteScript(req, args, "exec", "clipboard_read", "Clipboard read queued", scriptCommand{script: pagescripts.ClipboardRead, world: "main"})
 
 	// Record AI action only on success (queueExecuteScript handles guards).
 	if !act.IsErrorResponse(resp) {
@@ -298,7 +307,7 @@ func (h *PageActions) HandleClipboardWrite(req mcp.JSONRPCRequest, args json.Raw
   }
 })()`
 
-	resp := h.storage.queueExecuteScript(req, args, "exec", 0, 0, "main", script, "clipboard_write", "Clipboard write queued")
+	resp := h.storage.queueExecuteScript(req, args, "exec", "clipboard_write", "Clipboard write queued", scriptCommand{script: script, world: "main"})
 
 	// Record AI action only on success (queueExecuteScript handles guards).
 	if !act.IsErrorResponse(resp) {
@@ -554,7 +563,7 @@ func (h *StorageActions) HandleSetStorage(req mcp.JSONRPCRequest, args json.RawM
 
 	script := fmt.Sprintf(`(() => { try { %s.setItem(%s, %s); return { ok: true, action: "set_storage", storage_type: %s, key: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
 		storageExpr, jsQuote(params.Key), jsQuote(*params.Value), jsQuote(params.StorageType), jsQuote(params.Key))
-	return h.queueExecuteScript(req, args, "storage_set", params.TabID, params.TimeoutMs, params.World, script, "set_storage", "set_storage queued")
+	return h.queueExecuteScript(req, args, "storage_set", "set_storage", "set_storage queued", scriptCommand{script: script, tabID: params.TabID, timeoutMs: params.TimeoutMs, world: params.World})
 }
 
 func (h *StorageActions) HandleDeleteStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -570,7 +579,7 @@ func (h *StorageActions) HandleDeleteStorage(req mcp.JSONRPCRequest, args json.R
 
 	script := fmt.Sprintf(`(() => { try { %s.removeItem(%s); return { ok: true, action: "delete_storage", storage_type: %s, key: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
 		storageExpr, jsQuote(params.Key), jsQuote(params.StorageType), jsQuote(params.Key))
-	return h.queueExecuteScript(req, args, "storage_del", params.TabID, params.TimeoutMs, params.World, script, "delete_storage", "delete_storage queued")
+	return h.queueExecuteScript(req, args, "storage_del", "delete_storage", "delete_storage queued", scriptCommand{script: script, tabID: params.TabID, timeoutMs: params.TimeoutMs, world: params.World})
 }
 
 func (h *StorageActions) HandleClearStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -586,7 +595,7 @@ func (h *StorageActions) HandleClearStorage(req mcp.JSONRPCRequest, args json.Ra
 
 	script := fmt.Sprintf(`(() => { try { %s.clear(); return { ok: true, action: "clear_storage", storage_type: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
 		storageExpr, jsQuote(params.StorageType))
-	return h.queueExecuteScript(req, args, "storage_clear", params.TabID, params.TimeoutMs, params.World, script, "clear_storage", "clear_storage queued")
+	return h.queueExecuteScript(req, args, "storage_clear", "clear_storage", "clear_storage queued", scriptCommand{script: script, tabID: params.TabID, timeoutMs: params.TimeoutMs, world: params.World})
 }
 
 func (h *StorageActions) HandleSetCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -605,7 +614,7 @@ func (h *StorageActions) HandleSetCookie(req mcp.JSONRPCRequest, args json.RawMe
 
 	script := fmt.Sprintf(`(() => { try { document.cookie = %s; return { ok: true, action: "set_cookie", name: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
 		jsQuote(cookie), jsQuote(params.Name))
-	return h.queueExecuteScript(req, args, "cookie_set", params.TabID, params.TimeoutMs, params.World, script, "set_cookie", "set_cookie queued")
+	return h.queueExecuteScript(req, args, "cookie_set", "set_cookie", "set_cookie queued", scriptCommand{script: script, tabID: params.TabID, timeoutMs: params.TimeoutMs, world: params.World})
 }
 
 func (h *StorageActions) HandleDeleteCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -621,7 +630,7 @@ func (h *StorageActions) HandleDeleteCookie(req mcp.JSONRPCRequest, args json.Ra
 
 	script := fmt.Sprintf(`(() => { try { document.cookie = %s; return { ok: true, action: "delete_cookie", name: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
 		jsQuote(cookie), jsQuote(params.Name))
-	return h.queueExecuteScript(req, args, "cookie_del", params.TabID, params.TimeoutMs, params.World, script, "delete_cookie", "delete_cookie queued")
+	return h.queueExecuteScript(req, args, "cookie_del", "delete_cookie", "delete_cookie queued", scriptCommand{script: script, tabID: params.TabID, timeoutMs: params.TimeoutMs, world: params.World})
 }
 
 func buildCookie(nameValue, path, domain string) string {
@@ -636,21 +645,29 @@ func buildCookie(nameValue, path, domain string) string {
 	return cookie
 }
 
+// scriptCommand carries the execute_js parameters shared by every
+// storage/cookie action built on queueExecuteScript.
+type scriptCommand struct {
+	script    string
+	tabID     int
+	timeoutMs int
+	world     string
+}
+
 func (h *StorageActions) queueExecuteScript(
 	req mcp.JSONRPCRequest,
 	waitArgs json.RawMessage,
-	correlationPrefix string,
-	tabID, timeoutMs int,
-	world, script, reason, queuedMsg string,
+	correlationPrefix, reason, queuedMsg string,
+	cmd scriptCommand,
 ) mcp.JSONRPCResponse {
-	if world == "" {
-		world = "auto"
+	if cmd.world == "" {
+		cmd.world = "auto"
 	}
-	if !act.ValidWorldValues[world] {
-		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid 'world' value: "+world, "Use 'auto' (default), 'main', or 'isolated'", mcp.WithParam("world"))
+	if !act.ValidWorldValues[cmd.world] {
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid 'world' value: "+cmd.world, "Use 'auto' (default), 'main', or 'isolated'", mcp.WithParam("world"))
 	}
-	if timeoutMs <= 0 {
-		timeoutMs = 5000
+	if cmd.timeoutMs <= 0 {
+		cmd.timeoutMs = 5000
 	}
 
 	return h.runtime.newCommand(reason).
@@ -658,14 +675,14 @@ func (h *StorageActions) queueExecuteScript(
 		reason(reason).
 		queryType("execute").
 		buildParams(map[string]any{
-			"script":     script,
-			"timeout_ms": timeoutMs,
-			"world":      world,
+			"script":     cmd.script,
+			"timeout_ms": cmd.timeoutMs,
+			"world":      cmd.world,
 			"reason":     reason,
 		}).
-		tabID(tabID).
+		tabID(cmd.tabID).
 		guards(h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking).
-		cspGuard(world).
+		cspGuard(cmd.world).
 		queuedMessage(queuedMsg).
 		execute(req, waitArgs)
 }

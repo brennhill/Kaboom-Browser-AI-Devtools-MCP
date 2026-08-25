@@ -174,6 +174,84 @@ function showSandboxError(message, instruction, command, kind) {
     panel.pendingSandboxError = { message, instruction, command };
     surfaceTerminalStartFailure(panel.terminalBodyEl, message, instruction, command);
 }
+function flushQueuedWritesIfPending() {
+    if (state.queuedWrites.length > 0 && !state.queuedWriteInFlight) {
+        scheduleQueuedWriteFlush(0);
+    }
+}
+function handleTerminalConnected() {
+    // Trail for diagnosing "can't type": these WS transitions are where the
+    // terminal loses input when the daemon terminal-server (port+1) blinks.
+    console.log('[KaBOOM! terminal] ws connected');
+    updateConnectionIndicator(panel.statusDotEl, 'connected');
+    state.terminalConnected = true;
+    // A real connection clears the flap budget so an unrelated future outage
+    // gets its own full recovery allowance (E-i).
+    resetExhaustionRecovery();
+    flushQueuedWritesIfPending();
+}
+function handleTerminalDisconnected() {
+    console.log('[KaBOOM! terminal] ws disconnected (input paused; writes will queue)');
+    updateConnectionIndicator(panel.statusDotEl, 'disconnected');
+    state.terminalConnected = false;
+    state.terminalFocused = false;
+}
+function handleReconnectExhausted() {
+    // The iframe gave up reconnecting on a token that almost certainly died with
+    // a full daemon restart. Recover instead of sitting on a permanent silent
+    // disconnect: revalidate and rebuild into a fresh session (or the recoverable
+    // no-session state). redrawTerminal owns that validate-then-rebuild logic.
+    updateConnectionIndicator(panel.statusDotEl, 'disconnected');
+    state.terminalConnected = false;
+    state.terminalFocused = false;
+    if (exhaustionRecoveryCeilingReached()) {
+        // A flapping daemon (up for the 2s validate, not for onopen) would thrash
+        // redraw→reconnect→exhaust indefinitely. Stop auto-recovering: detach the
+        // iframe and drop to the recoverable no-session state so the user restarts
+        // on their terms rather than watching a silent, endless reconnect (E-i).
+        console.warn('[KaBOOM! terminal] reconnect recovery ceiling reached — showing no-session state');
+        resetExhaustionRecovery();
+        state.iframeEl = null;
+        showNoSessionState();
+        return;
+    }
+    console.log('[KaBOOM! terminal] reconnect exhausted — revalidating and rebuilding');
+    void redrawTerminal();
+}
+function handleTerminalExited() {
+    console.log('[KaBOOM! terminal] session exited (write-guard reset)');
+    updateConnectionIndicator(panel.statusDotEl, 'exited');
+    state.terminalConnected = false;
+    state.terminalFocused = false;
+    resetWriteGuardState();
+}
+function handleExecutionProviderDetected(event) {
+    const providerData = event.data.data;
+    updateExecutionProviderBadge(panel.providerBadgeEl, providerData?.provider ?? 'unknown', providerData?.tool ?? 'other', showAPIBillingWarning);
+}
+function handleTerminalFocus(event) {
+    state.terminalFocused = Boolean(event.data.data?.focused);
+    if (state.terminalFocused)
+        state.lastTypingAt = Date.now();
+    else
+        flushQueuedWritesIfPending();
+}
+function handleTerminalTyping(event) {
+    const rawAt = event.data.data?.at;
+    const parsedAt = typeof rawAt === 'number' && Number.isFinite(rawAt) ? rawAt : Date.now();
+    state.terminalFocused = true;
+    state.lastTypingAt = parsedAt;
+}
+const TERMINAL_IFRAME_HANDLERS = {
+    connected: () => handleTerminalConnected(),
+    disconnected: handleTerminalDisconnected,
+    reconnect_exhausted: handleReconnectExhausted,
+    exited: handleTerminalExited,
+    api_billing_detected: () => showAPIBillingWarning(),
+    execution_provider_detected: handleExecutionProviderDetected,
+    focus: handleTerminalFocus,
+    typing: handleTerminalTyping
+};
 function handleIframeMessage(event) {
     if (!event.data || event.data.source !== 'kaboom-terminal')
         return;
@@ -186,80 +264,9 @@ function handleIframeMessage(event) {
         // EXPECTED_ABSENCE: an invalid configured origin is an expected rejection; logging would duplicate configuration diagnostics.
         return;
     }
-    switch (event.data.event) {
-        case 'connected':
-            // Trail for diagnosing "can't type": these WS transitions are where the
-            // terminal loses input when the daemon terminal-server (port+1) blinks.
-            console.log('[KaBOOM! terminal] ws connected');
-            updateConnectionIndicator(panel.statusDotEl, 'connected');
-            state.terminalConnected = true;
-            // A real connection clears the flap budget so an unrelated future outage
-            // gets its own full recovery allowance (E-i).
-            resetExhaustionRecovery();
-            if (state.queuedWrites.length > 0 && !state.queuedWriteInFlight) {
-                scheduleQueuedWriteFlush(0);
-            }
-            break;
-        case 'disconnected':
-            console.log('[KaBOOM! terminal] ws disconnected (input paused; writes will queue)');
-            updateConnectionIndicator(panel.statusDotEl, 'disconnected');
-            state.terminalConnected = false;
-            state.terminalFocused = false;
-            break;
-        case 'reconnect_exhausted':
-            // The iframe gave up reconnecting on a token that almost certainly died with
-            // a full daemon restart. Recover instead of sitting on a permanent silent
-            // disconnect: revalidate and rebuild into a fresh session (or the recoverable
-            // no-session state). redrawTerminal owns that validate-then-rebuild logic.
-            updateConnectionIndicator(panel.statusDotEl, 'disconnected');
-            state.terminalConnected = false;
-            state.terminalFocused = false;
-            if (exhaustionRecoveryCeilingReached()) {
-                // A flapping daemon (up for the 2s validate, not for onopen) would thrash
-                // redraw→reconnect→exhaust indefinitely. Stop auto-recovering: detach the
-                // iframe and drop to the recoverable no-session state so the user restarts
-                // on their terms rather than watching a silent, endless reconnect (E-i).
-                console.warn('[KaBOOM! terminal] reconnect recovery ceiling reached — showing no-session state');
-                resetExhaustionRecovery();
-                state.iframeEl = null;
-                showNoSessionState();
-                break;
-            }
-            console.log('[KaBOOM! terminal] reconnect exhausted — revalidating and rebuilding');
-            void redrawTerminal();
-            break;
-        case 'exited':
-            console.log('[KaBOOM! terminal] session exited (write-guard reset)');
-            updateConnectionIndicator(panel.statusDotEl, 'exited');
-            state.terminalConnected = false;
-            state.terminalFocused = false;
-            resetWriteGuardState();
-            break;
-        case 'api_billing_detected':
-            showAPIBillingWarning();
-            break;
-        case 'execution_provider_detected': {
-            const providerData = event.data.data;
-            updateExecutionProviderBadge(panel.providerBadgeEl, providerData?.provider ?? 'unknown', providerData?.tool ?? 'other', showAPIBillingWarning);
-            break;
-        }
-        case 'focus':
-            state.terminalFocused = Boolean(event.data.data?.focused);
-            if (state.terminalFocused) {
-                state.lastTypingAt = Date.now();
-            }
-            else if (state.queuedWrites.length > 0 && !state.queuedWriteInFlight) {
-                scheduleQueuedWriteFlush(0);
-            }
-            break;
-        case 'typing': {
-            const rawAt = event.data.data?.at;
-            const parsedAt = typeof rawAt === 'number' && Number.isFinite(rawAt) ? rawAt : Date.now();
-            state.terminalFocused = true;
-            state.lastTypingAt = parsedAt;
-            break;
-        }
-    }
+    const handler = TERMINAL_IFRAME_HANDLERS[event.data.event];
+    if (handler)
+        handler(event);
 }
 /**
  * Wire the extracted shell builder to this module's panel/state fields.
@@ -270,21 +277,11 @@ function handleIframeMessage(event) {
 function createPanelShell(token) {
     return buildPanelShell(token, {
         serverUrl: state.serverUrl,
-        onExit: () => {
-            void exitTerminalSession();
-        },
-        onAnnotate: () => {
-            void startPageAnnotation();
-        },
-        onRedraw: () => {
-            void redrawTerminal();
-        },
-        onMinimize: () => {
-            void minimizePanel();
-        },
-        onClose: () => {
-            void closePanelKeepingSession();
-        },
+        onExit: () => void exitTerminalSession(),
+        onAnnotate: () => void startPageAnnotation(),
+        onRedraw: () => void redrawTerminal(),
+        onMinimize: () => void minimizePanel(),
+        onClose: () => void closePanelKeepingSession(),
         createRootFolderBar: () => createRootFolderBarElement(),
         setStatusDot: (el) => {
             panel.statusDotEl = el;
@@ -301,12 +298,8 @@ function createPanelShell(token) {
         setTerminalBody: (el) => {
             panel.terminalBodyEl = el;
         },
-        setWidget: (el) => {
-            state.widgetEl = el;
-        },
-        setIframe: (el) => {
-            state.iframeEl = el;
-        }
+        setWidget: (el) => (state.widgetEl = el),
+        setIframe: (el) => (state.iframeEl = el)
     });
 }
 function mountPanel(root) {

@@ -55,6 +55,19 @@ func Network(a, b *types.NamedSnapshot) NetworkDiff {
 	bEndpoints := buildEndpointMap(b.NetworkRequests)
 	aCounts := endpointCounts(a.NetworkRequests)
 	bCounts := endpointCounts(b.NetworkRequests)
+
+	diff.DuplicateRequests = duplicateRequestChanges(aCounts, bCounts, aEndpoints, bEndpoints)
+	diff.NewEndpoints, diff.NewErrors = newEndpointChanges(aEndpoints, bEndpoints)
+	diff.MissingEndpoints = missingEndpointChanges(aEndpoints, bEndpoints)
+	statusChanges, statusNewErrors := statusChangeDiffs(aEndpoints, bEndpoints)
+	diff.StatusChanges = statusChanges
+	diff.NewErrors = append(diff.NewErrors, statusNewErrors...)
+
+	sortNetworkDiff(&diff)
+	return diff
+}
+
+func duplicateRequestChanges(aCounts, bCounts map[endpointKey]int, aEndpoints, bEndpoints map[endpointKey]types.SnapshotNetworkRequest) []DuplicateRequestChange {
 	countKeys := make(map[endpointKey]struct{}, len(aCounts)+len(bCounts))
 	for key := range aCounts {
 		countKeys[key] = struct{}{}
@@ -62,58 +75,72 @@ func Network(a, b *types.NamedSnapshot) NetworkDiff {
 	for key := range bCounts {
 		countKeys[key] = struct{}{}
 	}
+	changes := make([]DuplicateRequestChange, 0)
 	for key := range countKeys {
 		after := bCounts[key]
 		before := aCounts[key]
 		if (after > 1 || before > 1) && after != before {
-			url := aEndpoints[key].URL
-			if request, exists := bEndpoints[key]; exists {
-				url = request.URL
-			}
-			diff.DuplicateRequests = append(diff.DuplicateRequests, DuplicateRequestChange{
-				Method: key.Method, URL: url, Before: before, After: after,
+			changes = append(changes, DuplicateRequestChange{
+				Method: key.Method, URL: duplicateRequestURL(key, aEndpoints, bEndpoints), Before: before, After: after,
 			})
 		}
 	}
+	return changes
+}
 
-	// New endpoints = in B but not in A
+func duplicateRequestURL(key endpointKey, aEndpoints, bEndpoints map[endpointKey]types.SnapshotNetworkRequest) string {
+	url := aEndpoints[key].URL
+	if request, exists := bEndpoints[key]; exists {
+		url = request.URL
+	}
+	return url
+}
+
+func newEndpointChanges(aEndpoints, bEndpoints map[endpointKey]types.SnapshotNetworkRequest) ([]types.SnapshotNetworkRequest, []types.SnapshotNetworkRequest) {
+	newEndpoints := make([]types.SnapshotNetworkRequest, 0)
+	newErrors := make([]types.SnapshotNetworkRequest, 0)
 	for key, req := range bEndpoints {
-		if _, found := aEndpoints[key]; !found {
-			diff.NewEndpoints = append(diff.NewEndpoints, req)
-			if req.Status >= 400 {
-				diff.NewErrors = append(diff.NewErrors, req)
-			}
+		if _, found := aEndpoints[key]; found {
+			continue
+		}
+		newEndpoints = append(newEndpoints, req)
+		if req.Status >= 400 {
+			newErrors = append(newErrors, req)
 		}
 	}
+	return newEndpoints, newErrors
+}
 
-	// Missing endpoints = in A but not in B
+func missingEndpointChanges(aEndpoints, bEndpoints map[endpointKey]types.SnapshotNetworkRequest) []types.SnapshotNetworkRequest {
+	missing := make([]types.SnapshotNetworkRequest, 0)
 	for key, req := range aEndpoints {
 		if _, found := bEndpoints[key]; !found {
-			diff.MissingEndpoints = append(diff.MissingEndpoints, req)
+			missing = append(missing, req)
 		}
 	}
+	return missing
+}
 
-	// Status changes = same endpoint, different status
+func statusChangeDiffs(aEndpoints, bEndpoints map[endpointKey]types.SnapshotNetworkRequest) ([]NetworkChange, []types.SnapshotNetworkRequest) {
+	changes := make([]NetworkChange, 0)
+	newErrors := make([]types.SnapshotNetworkRequest, 0)
 	for key, aReq := range aEndpoints {
 		bReq, found := bEndpoints[key]
 		if !found || aReq.Status == bReq.Status {
 			continue
 		}
-		change := NetworkChange{
+		changes = append(changes, NetworkChange{
 			Method:         key.Method,
 			URL:            aReq.URL,
 			BeforeStatus:   aReq.Status,
 			AfterStatus:    bReq.Status,
 			DurationChange: formatDurationChange(aReq.Duration, bReq.Duration),
-		}
-		diff.StatusChanges = append(diff.StatusChanges, change)
+		})
 		if bReq.Status >= 400 && aReq.Status < 400 {
-			diff.NewErrors = append(diff.NewErrors, bReq)
+			newErrors = append(newErrors, bReq)
 		}
 	}
-
-	sortNetworkDiff(&diff)
-	return diff
+	return changes, newErrors
 }
 
 func endpointCounts(requests []types.SnapshotNetworkRequest) map[endpointKey]int {

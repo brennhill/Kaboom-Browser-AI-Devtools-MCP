@@ -44,7 +44,7 @@ export async function toggleActionSequenceRecording(handlers, tab, logFn) {
         return;
     }
     const name = buildActionSequenceRecordingName();
-    const startResult = await handlers.startRecording(name, 15, '', '', true, tab.id);
+    const startResult = await handlers.startRecording(name, 15, '', { fromPopup: true, targetTabId: tab.id });
     if (startResult.status !== 'recording') {
         sendTabToast(tab.id, 'Start recording failed', startResult.error || 'Open the extension popup and try Record action sequence', 'error', 3500);
         if (logFn)
@@ -60,7 +60,7 @@ export async function toggleScreenRecording(handlers, tab, logFn) {
         return;
     }
     const slug = buildScreenRecordingSlug(tab.url);
-    const result = await handlers.startRecording(slug, 15, '', '', true, tab.id);
+    const result = await handlers.startRecording(slug, 15, '', { fromPopup: true, targetTabId: tab.id });
     if (result.status !== 'recording' && tab.id) {
         sendTabToast(tab.id, 'Recording failed', result.error || 'Could not start screen recording', 'error', 4000);
         if (logFn)

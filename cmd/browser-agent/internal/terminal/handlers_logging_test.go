@@ -49,7 +49,7 @@ func TestHandleTerminalStart_LogsFailure(t *testing.T) {
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, sessionrelay.NewMap())
+	HandleTerminalStart(rec, req, deps, nil, startDeps{mgr: mgr, relays: sessionrelay.NewMap()})
 
 	if rec.Code < 400 {
 		t.Fatalf("expected a failure status, got %d", rec.Code)
@@ -75,7 +75,7 @@ func TestHandleTerminalStart_SuccessDoesNotLogFailure(t *testing.T) {
 	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	HandleTerminalStart(rec, req, deps, nil, mgr, nil, sessionrelay.NewMap())
+	HandleTerminalStart(rec, req, deps, nil, startDeps{mgr: mgr, relays: sessionrelay.NewMap()})
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -100,7 +100,7 @@ func TestHandleTerminalStart_SelfHealsDeadSession(t *testing.T) {
 		req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
-		HandleTerminalStart(rec, req, deps, nil, mgr, nil, relays)
+		HandleTerminalStart(rec, req, deps, nil, startDeps{mgr: mgr, relays: relays})
 		return rec
 	}
 	tokenOf := func(rec *httptest.ResponseRecorder) string {

@@ -26,34 +26,12 @@ func BuildSessionHints(screenshotPath string) map[string]any {
 func BuildDetailHints(cssFramework string, jsFramework string, a11yFlags []string, hasCorrelatedErrors bool) map[string]any {
 	hints := make(map[string]any)
 
-	if cssFramework != "" {
-		switch cssFramework {
-		case "tailwind":
-			hints["design_system"] = "This element uses Tailwind CSS. Prefer utility classes (e.g., bg-blue-500, p-4, text-sm) over custom CSS."
-		case "bootstrap":
-			hints["design_system"] = "This element uses Bootstrap. Use Bootstrap component classes (e.g., btn-primary, form-control) and grid system."
-		case "css-modules":
-			hints["design_system"] = "This element uses CSS Modules. Styles are scoped — modify the corresponding .module.css file."
-		case "styled-components":
-			hints["design_system"] = "This element uses styled-components/Emotion. Modify the component's styled template literal."
-		default:
-			hints["design_system"] = "CSS framework detected: " + cssFramework + ". Use framework-idiomatic patterns."
-		}
+	if hint, ok := cssFrameworkHint(cssFramework); ok {
+		hints["design_system"] = hint
 	}
 
-	if jsFramework != "" {
-		switch jsFramework {
-		case "react":
-			hints["runtime_framework"] = "Runtime framework appears to be React. Prefer component-level fixes over direct DOM mutation."
-		case "vue":
-			hints["runtime_framework"] = "Runtime framework appears to be Vue. Keep template bindings and reactive state in sync with style/layout changes."
-		case "angular":
-			hints["runtime_framework"] = "Runtime framework appears to be Angular. Prefer template/component stylesheet updates instead of manual DOM patches."
-		case "svelte":
-			hints["runtime_framework"] = "Runtime framework appears to be Svelte. Apply fixes in component markup/style so compiled DOM stays consistent."
-		default:
-			hints["runtime_framework"] = "Runtime framework detected: " + jsFramework + ". Prefer framework-native component changes."
-		}
+	if hint, ok := jsFrameworkHint(jsFramework); ok {
+		hints["runtime_framework"] = hint
 	}
 
 	if len(a11yFlags) > 0 {
@@ -68,4 +46,40 @@ func BuildDetailHints(cssFramework string, jsFramework string, a11yFlags []strin
 		return nil
 	}
 	return hints
+}
+
+func cssFrameworkHint(framework string) (string, bool) {
+	if framework == "" {
+		return "", false
+	}
+	switch framework {
+	case "tailwind":
+		return "This element uses Tailwind CSS. Prefer utility classes (e.g., bg-blue-500, p-4, text-sm) over custom CSS.", true
+	case "bootstrap":
+		return "This element uses Bootstrap. Use Bootstrap component classes (e.g., btn-primary, form-control) and grid system.", true
+	case "css-modules":
+		return "This element uses CSS Modules. Styles are scoped — modify the corresponding .module.css file.", true
+	case "styled-components":
+		return "This element uses styled-components/Emotion. Modify the component's styled template literal.", true
+	default:
+		return "CSS framework detected: " + framework + ". Use framework-idiomatic patterns.", true
+	}
+}
+
+func jsFrameworkHint(framework string) (string, bool) {
+	if framework == "" {
+		return "", false
+	}
+	switch framework {
+	case "react":
+		return "Runtime framework appears to be React. Prefer component-level fixes over direct DOM mutation.", true
+	case "vue":
+		return "Runtime framework appears to be Vue. Keep template bindings and reactive state in sync with style/layout changes.", true
+	case "angular":
+		return "Runtime framework appears to be Angular. Prefer template/component stylesheet updates instead of manual DOM patches.", true
+	case "svelte":
+		return "Runtime framework appears to be Svelte. Apply fixes in component markup/style so compiled DOM stays consistent.", true
+	default:
+		return "Runtime framework detected: " + framework + ". Prefer framework-native component changes.", true
+	}
 }

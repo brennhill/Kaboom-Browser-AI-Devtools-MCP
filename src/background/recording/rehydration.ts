@@ -22,18 +22,22 @@ export interface PersistedRecordingState {
   queryId?: string
 }
 
+function isUndefinedOrType(value: unknown, expectedType: 'boolean' | 'number' | 'string'): boolean {
+  return value === undefined || typeof value === expectedType
+}
+
 export function isPersistedRecordingState(value: unknown): value is PersistedRecordingState {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
   const state = value as PersistedRecordingState
   return (
-    (state.active === undefined || typeof state.active === 'boolean') &&
-    (state.name === undefined || typeof state.name === 'string') &&
-    (state.startTime === undefined || typeof state.startTime === 'number') &&
-    (state.fps === undefined || typeof state.fps === 'number') &&
-    (state.audioMode === undefined || typeof state.audioMode === 'string') &&
-    (state.tabId === undefined || typeof state.tabId === 'number') &&
-    (state.url === undefined || typeof state.url === 'string') &&
-    (state.queryId === undefined || typeof state.queryId === 'string')
+    isUndefinedOrType(state.active, 'boolean') &&
+    isUndefinedOrType(state.name, 'string') &&
+    isUndefinedOrType(state.startTime, 'number') &&
+    isUndefinedOrType(state.fps, 'number') &&
+    isUndefinedOrType(state.audioMode, 'string') &&
+    isUndefinedOrType(state.tabId, 'number') &&
+    isUndefinedOrType(state.url, 'string') &&
+    isUndefinedOrType(state.queryId, 'string')
   )
 }
 
