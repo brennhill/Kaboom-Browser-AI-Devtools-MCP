@@ -3,6 +3,7 @@
 package toolanalyze
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
@@ -397,5 +398,27 @@ func TestBuildDetailHints(t *testing.T) {
 				t.Errorf("error_context: present=%v, want=%v", hasError, tt.wantErrorKey)
 			}
 		})
+	}
+}
+
+func TestJSFrameworkHintCoversKnownRuntimesAndUnknowns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		framework string
+		want      string
+		ok        bool
+	}{
+		{framework: "", want: "", ok: false},
+		{framework: "react", want: "React", ok: true},
+		{framework: "vue", want: "Vue", ok: true},
+		{framework: "angular", want: "Angular", ok: true},
+		{framework: "svelte", want: "Svelte", ok: true},
+		{framework: "solidjs", want: "solidjs", ok: true},
+	}
+	for _, tt := range tests {
+		hint, ok := jsFrameworkHint(tt.framework)
+		if ok != tt.ok || !strings.Contains(hint, tt.want) {
+			t.Errorf("jsFrameworkHint(%q) = (%q, %v), want hint containing %q with ok=%v", tt.framework, hint, ok, tt.want, tt.ok)
+		}
 	}
 }

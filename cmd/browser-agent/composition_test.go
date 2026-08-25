@@ -5,9 +5,12 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,14 +18,17 @@ import (
 	"runtime/debug"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/binarywatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/runtimeflags"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -435,4 +441,221 @@ func assertSameStringSet(t *testing.T, label string, got, want []string) {
 	if len(missingInSchema) > 0 || len(missingInRuntime) > 0 {
 		t.Fatalf("%s mismatch\nmissing_in_schema=%v\nmissing_in_runtime=%v", label, missingInSchema, missingInRuntime)
 	}
+}
+
+// --- Daemon startup wiring helpers (main_connection_mcp.go) ---
+
+func TestReportUpgradeMarkerAnnouncesAndClearsMarker(t *testing.T) {
+	stateRoot := t.TempDir()
+	t.Setenv(state.StateDirEnv, stateRoot)
+	server := newTestServerForHandlers(t)
+
+	markerPath, err := state.UpgradeMarkerFile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := binarywatch.WriteMarker("1.2.3", "1.3.0", markerPath); err != nil {
+		t.Fatal(err)
+	}
+
+	reportUpgradeMarker(server, 7890)
+
+	warnings := server.warnings.Drain()
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "Upgraded from v1.2.3 to v1.3.0") {
+		t.Fatalf("warnings = %#v", warnings)
+	}
+	if _, statErr := os.Stat(markerPath); !os.IsNotExist(statErr) {
+		t.Fatalf("marker not cleared: %v", statErr)
+	}
+}
+
+func TestReportUpgradeMarkerSilentWithoutMarker(t *testing.T) {
+	t.Setenv(state.StateDirEnv, t.TempDir())
+	server := newTestServerForHandlers(t)
+
+	reportUpgradeMarker(server, 7890)
+
+	if warnings := server.warnings.Drain(); len(warnings) != 0 {
+		t.Fatalf("expected no warnings, got %#v", warnings)
+	}
+}
+
+func TestEnsurePortAvailableSucceedsOnFreePort(t *testing.T) {
+	server := newTestServerForHandlers(t)
+	port := freeLoopbackPort(t)
+
+	if err := ensurePortAvailable(server, daemonHTTPDeps(server), port, "test"); err != nil {
+		t.Fatalf("free port rejected: %v", err)
+	}
+}
+
+func TestEnsurePortAvailableErrorsWhenPortHeldBySelf(t *testing.T) {
+	server := newTestServerForHandlers(t)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	heldPort := listener.Addr().(*net.TCPAddr).Port
+
+	// The holder is this test process, which ReclaimPort must not kill; the
+	// retry preflight still fails, so the error is returned.
+	err = ensurePortAvailable(server, daemonHTTPDeps(server), heldPort, "test")
+	if err == nil {
+		t.Fatal("self-held port must surface an error, not start a rival server")
+	}
+	if !strings.Contains(err.Error(), "already in use") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestRecordTerminalUnavailableReportsBindFailure(t *testing.T) {
+	server := newTestServerForHandlers(t)
+
+	recordTerminalUnavailable(server, 17891, errors.New("bind: address already in use"))
+
+	snapshot := server.terminalStatus.Snapshot()
+	if snapshot.Available {
+		t.Fatal("terminal must be marked unavailable")
+	}
+	if snapshot.Port != 17891 {
+		t.Fatalf("port = %d, want the wanted port 17891", snapshot.Port)
+	}
+	if !strings.Contains(snapshot.Error, "address already in use") {
+		t.Fatalf("error = %q", snapshot.Error)
+	}
+}
+
+func TestStartBinaryUpgradeWatcherRespectsDisableEnv(t *testing.T) {
+	t.Setenv("KABOOM_NO_AUTO_UPGRADE", "1")
+	server := newTestServerForHandlers(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	startBinaryUpgradeWatcher(server, 7890, ctx)
+
+	// binarywatch.Start returns a nil *State when disabled, which reaches the
+	// runtime interface as a typed nil — assert on the concrete value.
+	if watcher, _ := server.runtime.Upgrade().(*binarywatch.State); watcher != nil {
+		t.Fatal("disabled auto-upgrade must not register a watcher")
+	}
+}
+
+func TestStartBinaryUpgradeWatcherRegistersWatcher(t *testing.T) {
+	t.Setenv("KABOOM_NO_AUTO_UPGRADE", "")
+	server := newTestServerForHandlers(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	startBinaryUpgradeWatcher(server, 7890, ctx)
+
+	watcher, ok := server.runtime.Upgrade().(*binarywatch.State)
+	if !ok || watcher == nil {
+		t.Fatal("watcher was not registered on the runtime")
+	}
+	if pending, newVersion, _ := watcher.UpgradeInfo(); pending || newVersion != "" {
+		t.Fatalf("fresh watcher reports upgrade = (%v, %q)", pending, newVersion)
+	}
+	cancel()
+}
+
+func TestInitNoiseAutoDetectionRunsConfiguredFirstConnectDetector(t *testing.T) {
+	handler, _, captured := makeToolHandler(t)
+	done := make(chan struct{})
+	var once sync.Once
+	handler.noiseFirstConnectFn = func() { once.Do(func() { close(done) }) }
+
+	// NewToolHandler already wired one subscription; wiring again proves the
+	// callback path still routes to the handler's configured detector.
+	initNoiseAutoDetection(handler)
+	captured.Lifecycle().Emit(lifecycle.EventExtensionConnected, nil)
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("first-connect detector never ran")
+	}
+}
+
+func TestInitNoiseAutoDetectionAppliesDetectedNoiseRules(t *testing.T) {
+	handler, server, captured := makeToolHandler(t)
+	repeated := make([]types.LogEntry, 20)
+	for i := range repeated {
+		repeated[i] = types.LogEntry{"level": "error", "message": "third-party poll tick"}
+	}
+	server.logs.AddEntries(repeated)
+
+	initNoiseAutoDetection(handler)
+	captured.Lifecycle().Emit(lifecycle.EventExtensionConnected, nil)
+
+	deadline := time.After(3 * time.Second)
+	for len(handler.noiseConfig.ListRules()) == 0 {
+		select {
+		case <-deadline:
+			t.Fatal("noise auto-detect did not apply the repetitive-message rule")
+		case <-time.After(5 * time.Millisecond):
+		}
+	}
+}
+
+func TestBuildTestGenerationDepsReadsCanonicalBuffers(t *testing.T) {
+	handler, server, captured := makeToolHandler(t)
+	server.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "boom"}})
+	captured.Telemetry().AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test/api"}})
+	captured.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click"}})
+
+	deps := buildTestGenerationDeps(handler)
+	if entries := deps.LogEntries(); len(entries) != 1 {
+		t.Fatalf("log entries = %d, want 1", len(entries))
+	}
+	if bodies := deps.NetworkBodies(); len(bodies) != 1 {
+		t.Fatalf("network bodies = %d, want 1", len(bodies))
+	}
+	if actions := deps.EnhancedActions(); len(actions) != 1 {
+		t.Fatalf("actions = %d, want 1", len(actions))
+	}
+
+	nilCapture := buildTestGenerationDeps(&ToolHandler{server: server})
+	if nilCapture.EnhancedActions() != nil || nilCapture.NetworkBodies() != nil {
+		t.Fatal("nil capture must yield nil action and network buffers")
+	}
+}
+
+func TestVisualAnalyzeDepsExposeScreenshotGuardAndSessionStore(t *testing.T) {
+	handler, server, _ := makeToolHandler(t)
+	request := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: float64(7), ClientID: "client-test"}
+
+	deps := visualAnalyzeDeps{h: handler}
+	if !deps.HasSessionStore() {
+		t.Fatal("handler with a session project path must report a session store")
+	}
+	resp := deps.CaptureScreenshot(request)
+	result := decodeMCPToolResult(t, resp)
+	if !result.IsError {
+		t.Fatal("screenshot without a tracked tab must fail, not hang")
+	}
+
+	bare := visualAnalyzeDeps{h: &ToolHandler{server: server}}
+	if bare.HasSessionStore() {
+		t.Fatal("handler without a session store must report false")
+	}
+}
+
+func decodeMCPToolResult(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {
+	t.Helper()
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("decode tool result: %v", err)
+	}
+	return result
+}
+
+func freeLoopbackPort(t *testing.T) int {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	return listener.Addr().(*net.TCPAddr).Port
 }

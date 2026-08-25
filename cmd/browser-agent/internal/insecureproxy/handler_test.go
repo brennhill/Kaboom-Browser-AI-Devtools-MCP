@@ -183,3 +183,48 @@ func (body *readTrackingBody) Read(p []byte) (int, error) {
 }
 
 func (*readTrackingBody) Close() error { return nil }
+
+func TestBuildUpstreamRequestCopiesOptionalHeaders(t *testing.T) {
+	t.Parallel()
+	target := &url.URL{Scheme: "https", Host: "example.test", Path: "/script.js"}
+
+	bare := httptest.NewRequest(http.MethodGet, "/insecure-proxy", nil)
+	upstream, err := buildUpstreamRequest(bare, target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := upstream.Header.Get("Accept"); got != "" {
+		t.Fatalf("absent Accept must stay unset, got %q", got)
+	}
+	if got := upstream.Header.Get("User-Agent"); got != "" {
+		t.Fatalf("absent User-Agent must stay unset, got %q", got)
+	}
+
+	enriched := httptest.NewRequest(http.MethodGet, "/insecure-proxy", nil)
+	enriched.Header.Set("Accept", "text/css")
+	enriched.Header.Set("User-Agent", "kaboom-test/1.0")
+	upstream, err = buildUpstreamRequest(enriched, target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := upstream.Header.Get("Accept"); got != "text/css" {
+		t.Fatalf("Accept = %q, want forwarded value", got)
+	}
+	if got := upstream.Header.Get("User-Agent"); got != "kaboom-test/1.0" {
+		t.Fatalf("User-Agent = %q, want forwarded value", got)
+	}
+	if upstream.URL.String() != "https://example.test/script.js" {
+		t.Fatalf("upstream URL = %q", upstream.URL.String())
+	}
+}
+
+func TestBuildUpstreamRequestRejectsUnparseableTarget(t *testing.T) {
+	t.Parallel()
+	// A Host containing a space produces "http://a b", which url.Parse rejects;
+	// this mirrors a caller bypassing parseTargetURL with a hand-built URL.
+	invalid := &url.URL{Scheme: "http", Host: "in valid host"}
+	req := httptest.NewRequest(http.MethodGet, "/insecure-proxy", nil)
+	if _, err := buildUpstreamRequest(req, invalid); err == nil {
+		t.Fatal("unparseable target must return an error, not a request")
+	}
+}

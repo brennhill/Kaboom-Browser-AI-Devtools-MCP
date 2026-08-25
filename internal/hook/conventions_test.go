@@ -729,6 +729,49 @@ func TestNoiseFiltering_Comprehensive(t *testing.T) {
 }
 
 // findRepoRoot walks up from the test file to find go.mod.
+func TestPersistConventionsRoundTripAndWriteFailure(t *testing.T) {
+	root := t.TempDir()
+	want := []DiscoveredConvention{{Pattern: "svc.Query(", FileCount: 4}}
+
+	persistConventions(root, ".go", want)
+	got, ok := loadPersistedConventions(root, ".go")
+	if !ok || len(got) != 1 || got[0] != want[0] {
+		t.Fatalf("persisted conventions = (%#v, %v), want the cached round trip", got, ok)
+	}
+
+	// A cache path occupied by a directory makes the write fail; persistence
+	// must report and return rather than panic or block the edit.
+	path, err := conventionCachePath(root, ".ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(path, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	persistConventions(root, ".ts", want)
+	if _, statErr := os.Stat(path); statErr != nil {
+		t.Fatalf("blocked cache path disturbed: %v", statErr)
+	}
+
+	// A FILE named like the cache directory makes MkdirAll fail.
+	blockedRoot := t.TempDir()
+	projectDir, err := state.ProjectDir(blockedRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(projectDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	blockedDir := filepath.Join(projectDir, "hook-conventions")
+	if err := os.WriteFile(blockedDir, []byte("file"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	persistConventions(blockedRoot, ".go", want)
+	if entry, statErr := os.Stat(blockedDir); statErr != nil || entry.IsDir() {
+		t.Fatalf("blocked cache entry disturbed: (%v, %v)", entry, statErr)
+	}
+}
+
 func findRepoRoot(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()

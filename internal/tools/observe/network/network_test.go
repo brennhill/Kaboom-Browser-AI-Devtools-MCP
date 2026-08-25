@@ -450,3 +450,34 @@ func TestBuildWSEventsSummary_UniqueConnections(t *testing.T) {
 		t.Errorf("connection_count = %d, want 2", connCount)
 	}
 }
+
+func TestStatusGroupBucketsEveryStatusRange(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		status int
+		want   string
+	}{
+		{200, "2xx"},
+		{204, "2xx"},
+		{299, "2xx"},
+		{300, "3xx"},
+		{301, "3xx"},
+		{399, "3xx"},
+		{400, "4xx"},
+		{404, "4xx"},
+		{499, "4xx"},
+		{500, "5xx"},
+		{503, "5xx"},
+		{599, "5xx"},
+		{0, "other"},
+		{100, "other"},
+		{199, "other"},
+		{600, "other"},
+		{9999, "other"},
+	}
+	for _, tt := range tests {
+		if got := statusGroup(tt.status); got != tt.want {
+			t.Errorf("statusGroup(%d) = %q, want %q", tt.status, got, tt.want)
+		}
+	}
+}

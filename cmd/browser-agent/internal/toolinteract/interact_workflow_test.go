@@ -197,6 +197,91 @@ func TestHandleNavigateAndDocument_TabIDRequiresTracking(t *testing.T) {
 	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
+func TestNavigateAndDocumentWaitStable_SuccessAppendsTrace(t *testing.T) {
+	h, fs := newFakeWorkflowActions(t)
+	trace := make([]act.WorkflowStep, 0, 1)
+	resp, stop := h.navigateAndDocumentWaitStable(testReq(), navigateAndDocumentParams{StabilityMs: 250}, time.Now(), &trace)
+	if stop {
+		t.Fatalf("expected success, got error: %s", resp.Result)
+	}
+	if len(trace) != 1 || trace[0].Action != "wait_for_stable" || trace[0].Status != "success" {
+		t.Fatalf("trace = %#v", trace)
+	}
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) != 1 || enqueued[0].Type != "dom_action" {
+		t.Fatalf("enqueued = %#v", enqueued)
+	}
+	if !strings.Contains(string(enqueued[0].Params), `"stability_ms":250`) {
+		t.Fatalf("wait params = %s", enqueued[0].Params)
+	}
+}
+
+func TestNavigateAndDocumentWaitStable_NoTimeoutSkipsBudgetCheck(t *testing.T) {
+	h, _ := newFakeWorkflowActions(t)
+	// TimeoutMs == 0 must skip the remaining-budget calculation entirely,
+	// even with a workflowStart far in the past.
+	trace := make([]act.WorkflowStep, 0, 1)
+	resp, stop := h.navigateAndDocumentWaitStable(testReq(), navigateAndDocumentParams{StabilityMs: 100}, time.Now().Add(-time.Hour), &trace)
+	if stop {
+		t.Fatalf("zero timeout must not trip the budget check: %s", resp.Result)
+	}
+	if len(trace) != 1 || trace[0].Status != "success" {
+		t.Fatalf("trace = %#v", trace)
+	}
+}
+
+func TestNavigateAndDocumentWaitStable_TimeoutBudgetExceeded(t *testing.T) {
+	h, _ := newFakeWorkflowActions(t)
+	trace := make([]act.WorkflowStep, 0, 1)
+	resp, stop := h.navigateAndDocumentWaitStable(testReq(),
+		navigateAndDocumentParams{TimeoutMs: 5000, StabilityMs: 250},
+		time.Now().Add(-time.Minute), &trace)
+	if !stop {
+		t.Fatal("exhausted budget must stop the workflow")
+	}
+	assertErr(t, resp, mcp.ErrExtTimeout)
+	if len(trace) != 1 || trace[0].Status != "error" || trace[0].Action != "wait_for_stable" {
+		t.Fatalf("trace = %#v", trace)
+	}
+}
+
+func TestNavigateAndDocumentWaitStable_ErrorResponseStopsWorkflow(t *testing.T) {
+	h, fs := newFakeWorkflowActions(t)
+	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
+		return mcp.Fail(req, mcp.ErrExtTimeout, "stability timed out", "increase stability_ms")
+	}
+	trace := make([]act.WorkflowStep, 0, 1)
+	resp, stop := h.navigateAndDocumentWaitStable(testReq(), navigateAndDocumentParams{StabilityMs: 250}, time.Now(), &trace)
+	if !stop {
+		t.Fatal("wait_for_stable failure must stop the workflow")
+	}
+	assertErr(t, resp, mcp.ErrExtTimeout)
+	if len(trace) != 1 || trace[0].Status != "error" {
+		t.Fatalf("trace = %#v", trace)
+	}
+}
+
+func TestHandleNavigateAndDocument_WaitStableEnabled(t *testing.T) {
+	h, fs := newFakeWorkflowActions(t)
+	args := `{"selector":"#link","wait_for_url_change":false,"wait_for_stable":true}`
+	assertOK(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)))
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) != 2 || enqueued[1].Type != "dom_action" {
+		t.Fatalf("enqueued = %#v, want click then wait_for_stable", enqueued)
+	}
+	if !strings.Contains(string(enqueued[1].Params), `"action":"wait_for_stable"`) {
+		t.Fatalf("wait_for_stable params = %s", enqueued[1].Params)
+	}
+}
+
+func TestNavigateAndDocumentTimeoutBudgetExceededNamesStage(t *testing.T) {
+	resp := navigateAndDocumentTimeoutBudgetExceeded(testReq(), "wait_for_stable")
+	result := parseToolResult(t, resp)
+	if !result.IsError || !contains(firstText(result), "wait_for_stable stage") {
+		t.Fatalf("budget response = %s", firstText(result))
+	}
+}
+
 func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {
 	h, _ := newFakeWorkflowActions(t)
 	assertOK(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{"scope":"page"}`)))

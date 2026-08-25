@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 // merge-go-coverage.mjs — Merge Go coverage profiles without double-counting blocks.
+//
+// Streams input line-by-line: a full-tree -coverpkg=./... package profile
+// exceeds V8's maximum string length (~512MB), so readFile-as-string crashed
+// the coverage gate wholesale. Output is written incrementally for the same
+// reason.
 
-import { readFile, writeFile } from 'node:fs/promises'
+import { createReadStream, createWriteStream } from 'node:fs'
+import { once } from 'node:events'
+import { createInterface } from 'node:readline'
+import { finished } from 'node:stream/promises'
 
 const [outputPath, ...inputPaths] = process.argv.slice(2)
 if (!outputPath || inputPaths.length === 0) {
@@ -14,17 +22,21 @@ const blocks = new Map()
 const canonicalByStart = new Map()
 
 for (const [inputIndex, inputPath] of inputPaths.entries()) {
-  const lines = (await readFile(inputPath, 'utf8')).trim().split('\n')
-  const inputMode = lines.shift()?.replace(/^mode:\s*/, '')
-  if (!inputMode) {
-    throw new Error(`missing coverage mode in ${inputPath}`)
-  }
-  if (mode && inputMode !== mode) {
-    throw new Error(`profile mode mismatch: ${mode} != ${inputMode}`)
-  }
-  mode = inputMode
-
-  for (const line of lines) {
+  const reader = createInterface({ input: createReadStream(inputPath, { encoding: 'utf-8' }), crlfDelay: Infinity })
+  let first = true
+  for await (const line of reader) {
+    if (first) {
+      first = false
+      const inputMode = line.replace(/^mode:\s*/, '')
+      if (!inputMode) {
+        throw new Error(`missing coverage mode in ${inputPath}`)
+      }
+      if (mode && inputMode !== mode) {
+        throw new Error(`profile mode mismatch: ${mode} != ${inputMode}`)
+      }
+      mode = inputMode
+      continue
+    }
     if (!line) continue
     const match = line.match(/^(\S+)\s+(\d+)\s+(\d+)$/)
     if (!match) {
@@ -53,9 +65,18 @@ for (const [inputIndex, inputPath] of inputPaths.entries()) {
       }
     }
   }
+  if (first) {
+    throw new Error(`missing coverage mode in ${inputPath}`)
+  }
 }
 
-const lines = [...blocks.entries()]
-  .sort(([left], [right]) => left.localeCompare(right))
-  .map(([key, count]) => `${key} ${count}`)
-await writeFile(outputPath, `mode: ${mode}\n${lines.join('\n')}\n`)
+const keys = [...blocks.keys()].sort((left, right) => left.localeCompare(right))
+const output = createWriteStream(outputPath, { encoding: 'utf-8' })
+output.write(`mode: ${mode}\n`)
+for (const key of keys) {
+  if (!output.write(`${key} ${blocks.get(key)}\n`)) {
+    await once(output, 'drain')
+  }
+}
+output.end()
+await finished(output)

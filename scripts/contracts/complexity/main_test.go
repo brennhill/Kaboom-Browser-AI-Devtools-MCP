@@ -255,6 +255,154 @@ func itoa(n int) string {
 	return digits
 }
 
+func TestLoadLengthBaselineHandlesMissingCorruptAndWrongVersion(t *testing.T) {
+	root := t.TempDir()
+
+	missing, err := loadLengthBaseline(filepath.Join(root, "absent.json"))
+	if err != nil || len(missing) != 0 {
+		t.Fatalf("missing baseline = (%v, %v), want empty map without error", missing, err)
+	}
+
+	corrupt := filepath.Join(root, "corrupt.json")
+	if err := os.WriteFile(corrupt, []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadLengthBaseline(corrupt); err == nil {
+		t.Fatal("corrupt baseline must fail to load")
+	}
+
+	wrongVersion := filepath.Join(root, "wrong-version.json")
+	if err := os.WriteFile(wrongVersion, []byte(`{"version":2,"functions":{}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadLengthBaseline(wrongVersion); err == nil {
+		t.Fatal("unsupported baseline version must fail to load")
+	}
+}
+
+func TestRunExitsZeroOnCleanRootAndNonZeroOnViolations(t *testing.T) {
+	clean := t.TempDir()
+	writeGoFile(t, clean, "ok.go", "package main\n\nfunc Fine() {}\n")
+	if code := run(clean, map[string]int{}); code != 0 {
+		t.Fatalf("clean run exit = %d, want 0", code)
+	}
+
+	dirty := t.TempDir()
+	writeGoFile(t, dirty, "wide.go", "package main\n\nfunc Wide(a, b, c, d, e, f, g string) {}\n")
+	if code := run(dirty, map[string]int{}); code != 1 {
+		t.Fatalf("violating run exit = %d, want 1", code)
+	}
+	hot := t.TempDir()
+	writeGoFile(t, hot, "hot.go", `package main
+
+func Hot(v int) string {
+	switch v {
+	case 1:
+		return "a"
+	case 2:
+		return "b"
+	case 3:
+		return "c"
+	case 4:
+		return "d"
+	case 5:
+		return "e"
+	case 6:
+		return "f"
+	case 7:
+		return "g"
+	case 8:
+		return "h"
+	case 9:
+		return "i"
+	case 10:
+		return "j"
+	case 11:
+		return "k"
+	case 12:
+		return "l"
+	case 13:
+		return "m"
+	case 14:
+		return "n"
+	case 15:
+		return "o"
+	}
+	return "z"
+}
+`)
+	if code := run(hot, map[string]int{}); code != 1 {
+		t.Fatalf("complexity-violating run exit = %d, want 1", code)
+	}
+	unparseable := t.TempDir()
+	writeGoFile(t, unparseable, "broken.go", "this is not go source")
+	if code := run(unparseable, map[string]int{}); code != 1 {
+		t.Fatalf("scan-error run exit = %d, want 1", code)
+	}
+
+	// A ratcheted function at its frozen allowance passes, and one line past it fails.
+	long := t.TempDir()
+	body := "package main\n\nfunc Long() {\n"
+	for i := 0; i < 100; i++ {
+		body += "\t_ = " + itoa(i) + "\n"
+	}
+	body += "}\n"
+	writeGoFile(t, long, "long.go", body)
+	longKey := "long.go:Long"
+	if code := run(long, map[string]int{longKey: 102}); code != 0 {
+		t.Fatalf("frozen-length run exit = %d, want 0", code)
+	}
+	if code := run(long, map[string]int{longKey: 101}); code != 1 {
+		t.Fatalf("over-allowance run exit = %d, want 1", code)
+	}
+}
+
+func TestUpdateBaselineWritesAndCountsOverlongFunctions(t *testing.T) {
+	root := t.TempDir()
+	body := "package main\n\nfunc Long() {\n"
+	for i := 0; i < 100; i++ {
+		body += "\t_ = " + itoa(i) + "\n"
+	}
+	body += "}\n"
+	writeGoFile(t, root, "long.go", body)
+	writeGoFile(t, root, "short.go", "package main\n\nfunc Short() {}\n")
+
+	baselinePath := filepath.Join(root, ".function-length-baseline-go.json")
+	if err := updateBaseline([]string{root}, baselinePath); err != nil {
+		t.Fatalf("updateBaseline() error = %v", err)
+	}
+
+	baseline, err := loadLengthBaseline(baselinePath)
+	if err != nil {
+		t.Fatalf("load updated baseline: %v", err)
+	}
+	if got, ok := baseline["long.go:Long"]; !ok || got != 102 {
+		t.Fatalf("baseline entry = (%d, %v), want 102 lines for long.go:Long", got, ok)
+	}
+	if _, ok := baseline["short.go:Short"]; ok {
+		t.Fatal("compliant function must not enter the baseline")
+	}
+	if got := countEntries(baselinePath); got != 1 {
+		t.Fatalf("countEntries = %d, want 1", got)
+	}
+	if got := countEntries(filepath.Join(root, "missing.json")); got != 0 {
+		t.Fatalf("countEntries on missing file = %d, want 0", got)
+	}
+	corrupt := filepath.Join(root, "corrupt.json")
+	if err := os.WriteFile(corrupt, []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := countEntries(corrupt); got != 0 {
+		t.Fatalf("countEntries on corrupt file = %d, want 0", got)
+	}
+
+	badRoot := t.TempDir()
+	writeGoFile(t, badRoot, "broken.go", "not go source")
+	if err := updateBaseline([]string{badRoot}, baselinePath); err == nil {
+		t.Fatal("updateBaseline on unparseable root must fail")
+	}
+}
+
 func complexityOf(t *testing.T, source string) int {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "probe.go")

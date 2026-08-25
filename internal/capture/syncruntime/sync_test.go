@@ -636,3 +636,67 @@ func TestHandleSync_ProbeClientDoesNotMakeTheExtensionLookConnected(t *testing.T
 		t.Fatal("a probe must never present itself as a connected extension")
 	}
 }
+
+type recordingExchangeRecorder struct {
+	issued    []string
+	completed []string
+}
+
+func (r *recordingExchangeRecorder) Issued(id, kind string, _ json.RawMessage) {
+	r.issued = append(r.issued, kind+":"+id)
+}
+
+func (r *recordingExchangeRecorder) Completed(id, status string, _ json.RawMessage, _ string) {
+	r.completed = append(r.completed, status+":"+id)
+}
+
+func TestRecordIssuedAndCompletedSkipNilRecorderAndReportBatches(t *testing.T) {
+	t.Parallel()
+	cap := newTestState()
+	defer cap.Close()
+	handler := newTestHandler(cap)
+
+	// Nil recorder (the production default) must be a no-op, not a panic.
+	handler.recordIssued([]SyncCommand{{ID: "q1", Type: "click"}})
+	handler.recordCompleted([]SyncCommandResult{{ID: "q1", Status: "complete"}})
+
+	recorder := &recordingExchangeRecorder{}
+	handler.recorder = recorder
+	handler.recordIssued([]SyncCommand{
+		{ID: "q1", Type: "click", Params: json.RawMessage(`{}`)},
+		{ID: "q2", Type: "dom_action", Params: json.RawMessage(`{}`)},
+	})
+	handler.recordCompleted([]SyncCommandResult{
+		{ID: "q1", Status: "complete", Result: json.RawMessage(`{}`)},
+		{ID: "q2", Status: "timeout", Error: "deadline"},
+	})
+
+	if len(recorder.issued) != 2 || recorder.issued[0] != "click:q1" || recorder.issued[1] != "dom_action:q2" {
+		t.Fatalf("issued = %#v", recorder.issued)
+	}
+	if len(recorder.completed) != 2 || recorder.completed[0] != "complete:q1" || recorder.completed[1] != "timeout:q2" {
+		t.Fatalf("completed = %#v", recorder.completed)
+	}
+}
+
+func TestOptionalBoolEqualTreatsNilAsDistinctValue(t *testing.T) {
+	t.Parallel()
+	tr := true
+	fl := false
+	tests := []struct {
+		left, right *bool
+		want        bool
+	}{
+		{left: nil, right: nil, want: true},
+		{left: nil, right: &tr, want: false},
+		{left: &fl, right: nil, want: false},
+		{left: &tr, right: &tr, want: true},
+		{left: &tr, right: &fl, want: false},
+		{left: &fl, right: &fl, want: true},
+	}
+	for _, tt := range tests {
+		if got := optionalBoolEqual(tt.left, tt.right); got != tt.want {
+			t.Errorf("optionalBoolEqual(%v, %v) = %v, want %v", tt.left, tt.right, got, tt.want)
+		}
+	}
+}

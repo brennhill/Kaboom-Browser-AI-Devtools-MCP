@@ -615,3 +615,16 @@ func TestClampLeavesSmallResponsesUnmarked(t *testing.T) {
 
 // clampFirst drops the report so a test can assert on the payload alone.
 func clampFirst(result json.RawMessage, _ ClampReport) json.RawMessage { return result }
+
+func TestPopJSONOpenerOnlyPopsMatchingOpener(t *testing.T) {
+	t.Parallel()
+	if got := popJSONOpener([]byte{'{', '['}, '['); string(got) != "{" {
+		t.Fatalf("matching pop = %q, want {{", got)
+	}
+	if got := popJSONOpener([]byte{'{', '['}, '{'); string(got) != "{[" {
+		t.Fatalf("mismatched pop = %q, want the stack unchanged", got)
+	}
+	if got := popJSONOpener(nil, '{'); got != nil || len(got) != 0 {
+		t.Fatalf("empty-stack pop = %q, want empty", got)
+	}
+}

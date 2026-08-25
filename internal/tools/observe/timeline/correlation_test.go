@@ -255,6 +255,84 @@ func TestErrorBundlesHandlerAppliesLimitAndCustomContextWindow(t *testing.T) {
 	}
 }
 
+func TestCollectTimelineActionsAndWebSocketCoverSelectorAndDirectionBranches(t *testing.T) {
+	t.Parallel()
+	actionCapture := capture.NewCapture()
+	t.Cleanup(actionCapture.Close)
+	actionCapture.Telemetry().AddEnhancedActions([]types.EnhancedAction{
+		{Timestamp: 1700000000000, Type: "click", Selectors: map[string]any{"css": "#go"}},
+		{Timestamp: 1700000001000, Type: "type", Selectors: map[string]any{"xpath": "//button"}},
+	})
+	entries := collectTimelineActions(capture.NewCapture())
+	if len(entries) != 0 {
+		t.Fatalf("empty actions = %#v", entries)
+	}
+	entries = collectTimelineActions(actionCapture)
+	if len(entries) != 2 {
+		t.Fatalf("action entries = %#v", entries)
+	}
+	if entries[0].Type != "action" || entries[0].Summary != "click on #go" {
+		t.Fatalf("css-selector summary = %#v", entries[0])
+	}
+	if entries[1].Summary != "type on " {
+		t.Fatalf("missing-css summary = %#v", entries[1])
+	}
+	if entries[0].Timestamp != time.UnixMilli(1700000000000).Format(time.RFC3339Nano) {
+		t.Fatalf("action timestamp = %q", entries[0].Timestamp)
+	}
+
+	wsEvents := []types.WebSocketEvent{
+		{Timestamp: "2026-01-02T03:04:05Z", Event: "open"},
+		{Timestamp: "2026-01-02T03:04:06Z", Event: "message", Direction: "incoming"},
+	}
+	wsEntries := collectTimelineWebSocket(wsEvents)
+	if len(wsEntries) != 2 {
+		t.Fatalf("websocket entries = %#v", wsEntries)
+	}
+	if wsEntries[0].Type != "websocket" || wsEntries[0].Summary != "open" {
+		t.Fatalf("directionless summary = %#v", wsEntries[0])
+	}
+	if wsEntries[1].Summary != "message (incoming)" {
+		t.Fatalf("directional summary = %#v", wsEntries[1])
+	}
+}
+
+func TestBundleContextFromCaptureFiltersByTrackedTabAndScope(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	cap.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{{URL: "/tab7", TabID: 7}, {URL: "/tab9", TabID: 9}})
+	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click", TabID: 7}, {Type: "click", TabID: 9}})
+	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{URL: "/w-tab7", PageURL: "https://example.test/page"}}, "https://example.test")
+
+	scoped := bundleContextFromCapture(cap, errorBundlesParams{Scope: "current_page", WindowSeconds: 3}, nil)
+	if len(scoped.networkBodies) != 1 || scoped.networkBodies[0].TabID != 7 {
+		t.Fatalf("scoped network bodies = %#v", scoped.networkBodies)
+	}
+	if len(scoped.actions) != 1 || scoped.actions[0].TabID != 7 {
+		t.Fatalf("scoped actions = %#v", scoped.actions)
+	}
+	if len(scoped.waterfallEntries) != 1 || scoped.waterfallEntries[0].URL != "/w-tab7" {
+		t.Fatalf("scoped waterfall = %#v", scoped.waterfallEntries)
+	}
+	if scoped.windowSeconds != 3 {
+		t.Fatalf("window seconds = %d", scoped.windowSeconds)
+	}
+
+	all := bundleContextFromCapture(cap, errorBundlesParams{Scope: "all", WindowSeconds: 5}, nil)
+	if len(all.networkBodies) != 2 || len(all.actions) != 2 {
+		t.Fatalf("scope=all buffers = %d bodies, %d actions", len(all.networkBodies), len(all.actions))
+	}
+
+	untracked := capture.NewCapture()
+	t.Cleanup(untracked.Close)
+	global := bundleContextFromCapture(untracked, errorBundlesParams{Scope: "current_page"}, nil)
+	if len(global.networkBodies) != 0 {
+		t.Fatalf("untracked capture = %#v", global.networkBodies)
+	}
+}
+
 func resultText(t *testing.T, value any) string {
 	t.Helper()
 	encoded, err := json.Marshal(value)
