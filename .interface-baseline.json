@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "max_methods": 7,
+  "interfaces": {
+    "browser-agent/internal/toolmodule/registry.go:Module": "producer-owned",
+    "issuereport/submit.go:CommandRunner": "producer-owned",
+    "pagination/pagination.go:Sequenced": "producer-owned",
+    "server/log_accessor.go:LogReader": "producer-owned",
+    "session/snapshot-manager.go:CaptureStateReader": "producer-owned"
+  }
+}

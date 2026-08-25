@@ -62,6 +62,8 @@ Tests: cold start, tool calls, concurrent clients, stdout purity, persistence, g
 
 **TS strictness:** No `@ts-nocheck` and no new explicit `any` in authored `src/` TS (`make check-ts-strictness`; ratchet in `.ts-strictness-baseline.json`).
 
+**Go layering (hexagonal contract):** `make check-layering` enforces the dependency matrix — `internal/**` ↛ `cmd/**`, `internal/types` stays a leaf, `internal/mcp` ↛ `internal/tools`/`internal/capture`, `internal/schema` ↔ `internal/tools` stay siblings, and `capture.NewCapture` is constructed only in the composition root (`cmd/browser-agent`). Also: exported interfaces ≤7 methods (hard) and not producer-owned/dead (ratchet via `.interface-baseline.json`, `make interface-baseline-update`).
+
 **Secrets:** Never commit credentials. Pre-commit and `make check-secrets` pattern-scan staged/tracked files; gitleaks (pinned, `make security-check` + CI) scans full git history. Intentional fake-credential fixtures must be listed in `.secrets-allowlist` (and `.gitleaks.toml`) with a reason.
 
 **Coverage & bundles:** Go coverage has an upward-only floor (`.coverage-baseline.json`, `make coverage-baseline-update` to lock in gains). Extension bundle output is capped (250KB/file, 600KB total) by `make check-bundle-size`.
@@ -115,7 +117,7 @@ satisfied. (Flow maps are no longer required — do not create or update them.)
 19. Multi-entry-point actions (keyboard, context menu, popup, MCP) must use one shared toggle/start-stop helper so behavior stays identical.
 20. Cross-context message contracts must be declared in `src/types/runtime-messages.ts` (and corresponding wire/schema files when applicable) before adding new runtime message types.
 21. User-facing recording labels/toasts/badge text must come from shared helpers to keep wording and truncation consistent across entry points.
-22. Duplicate code checks are required for refactors touching `src/background` or `src/popup` (`npx jscpd src/background src/popup --min-lines 8 --min-tokens 60`), and each non-trivial clone must be either extracted or documented as intentional.
+22. Duplicate code checks are required for refactors touching `src/` or `tests/extension` (`make check-duplicates`: jscpd zero-clone gate over `src/background src/popup src/lib src/content src/inject`, ratcheted ≤7% over `tests/extension`), and each non-trivial clone must be either extracted or documented as intentional. Go production duplication is gated by dupl (golangci-lint, threshold 80, tests excluded) via `make lint-duplicates-go`.
 23. Behavior-replacing refactors must update or delete obsolete tests in the same change (for example, replacing watermark behavior with badge behavior).
 24. See `docs/core/reliability/common-patterns.md` for the canonical patterns and review checklist.
 25. **Fail loud on state-mutating paths.** No operation that changes state may fail silently. `catch {}` is banned (ESLint `no-empty` with `allowEmptyCatch: false`) — every catch either handles the error or documents why swallowing is safe. A genuine failure must not be masked as a recoverable/expected state; distinguish expected conflicts from actual failures and surface the latter.

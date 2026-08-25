@@ -14,16 +14,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
-// stageStubs overrides dependencies on one isolated handler instance.
-type stageStubs struct {
-	fileRead     func(upload.FileReadRequest, *uploadsec.Security, bool) upload.FileReadResponse
-	dialogInject func(upload.FileDialogInjectRequest, *uploadsec.Security) upload.StageResponse
-	formSubmit   func(context.Context, upload.FormSubmitRequest, *uploadsec.Security) upload.StageResponse
-	osAutomation func(upload.OSAutomationInjectRequest, *uploadsec.Security) upload.StageResponse
-	dismiss      func() upload.StageResponse
-}
-
-func newStubbedHandlers(t *testing.T, s stageStubs) *Handlers {
+// newStubbedHandlers builds one isolated handler instance with the supplied
+// stage overrides; nil stage fields keep the production defaults.
+func newStubbedHandlers(t *testing.T, s stageFunctions) *Handlers {
 	t.Helper()
 	stages := defaultStageFunctions()
 	if s.fileRead != nil {
@@ -38,8 +31,8 @@ func newStubbedHandlers(t *testing.T, s stageStubs) *Handlers {
 	if s.osAutomation != nil {
 		stages.osAutomation = s.osAutomation
 	}
-	if s.dismiss != nil {
-		stages.dismissDialog = s.dismiss
+	if s.dismissDialog != nil {
+		stages.dismissDialog = s.dismissDialog
 	}
 	return newHandlersWithStages(nil, true, testJSONResponder, stages)
 }
@@ -54,7 +47,7 @@ func postJSON(path, body string) (*httptest.ResponseRecorder, *http.Request) {
 // ---------------------------------------------------------------------------
 
 func TestHandlersHandleFileRead_Success(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
+	handlers := newStubbedHandlers(t, stageFunctions{
 		fileRead: func(_ upload.FileReadRequest, _ *uploadsec.Security, _ bool) upload.FileReadResponse {
 			return upload.FileReadResponse{Success: true, FileName: "a.txt", FileSize: 3}
 		},
@@ -79,7 +72,7 @@ func TestHandlersHandleFileRead_ErrorStatusMapping(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			handlers := newStubbedHandlers(t, stageStubs{
+			handlers := newStubbedHandlers(t, stageFunctions{
 				fileRead: func(_ upload.FileReadRequest, _ *uploadsec.Security, _ bool) upload.FileReadResponse {
 					return upload.FileReadResponse{Success: false, Error: tc.errMsg}
 				},
@@ -98,7 +91,7 @@ func TestHandlersHandleFileRead_ErrorStatusMapping(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestHandlersHandleFileDialogInject_Success(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
+	handlers := newStubbedHandlers(t, stageFunctions{
 		dialogInject: func(_ upload.FileDialogInjectRequest, _ *uploadsec.Security) upload.StageResponse {
 			return upload.StageResponse{Success: true, Stage: 2}
 		},
@@ -111,7 +104,7 @@ func TestHandlersHandleFileDialogInject_Success(t *testing.T) {
 }
 
 func TestHandlersHandleFileDialogInject_Failure(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
+	handlers := newStubbedHandlers(t, stageFunctions{
 		dialogInject: func(_ upload.FileDialogInjectRequest, _ *uploadsec.Security) upload.StageResponse {
 			return upload.StageResponse{Success: false, Error: "bad pid"}
 		},
@@ -124,7 +117,7 @@ func TestHandlersHandleFileDialogInject_Failure(t *testing.T) {
 }
 
 func TestHandlersHandleFileDialogInject_InvalidJSON(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{})
+	handlers := newStubbedHandlers(t, stageFunctions{})
 	w, req := postJSON("/api/file/dialog/inject", `{bad`)
 	handlers.HandleFileDialogInject(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -137,7 +130,7 @@ func TestHandlersHandleFileDialogInject_InvalidJSON(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestHandlersHandleFormSubmit_Success(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
+	handlers := newStubbedHandlers(t, stageFunctions{
 		formSubmit: func(_ context.Context, _ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
 			return upload.StageResponse{Success: true, Stage: 3, Status: "ok"}
 		},
@@ -150,7 +143,7 @@ func TestHandlersHandleFormSubmit_Success(t *testing.T) {
 }
 
 func TestHandlersHandleFormSubmit_Failure(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
+	handlers := newStubbedHandlers(t, stageFunctions{
 		formSubmit: func(_ context.Context, _ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
 			return upload.StageResponse{Success: false, Error: "blocked url"}
 		},
@@ -163,7 +156,7 @@ func TestHandlersHandleFormSubmit_Failure(t *testing.T) {
 }
 
 func TestHandlersHandleFormSubmitPropagatesRequestCancellation(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
+	handlers := newStubbedHandlers(t, stageFunctions{
 		formSubmit: func(ctx context.Context, _ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
 			if !errors.Is(ctx.Err(), context.Canceled) {
 				t.Fatalf("form submission context error = %v, want context canceled", ctx.Err())
@@ -185,7 +178,7 @@ func TestHandlersHandleFormSubmitPropagatesRequestCancellation(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestHandlersHandleOSAutomation_Success(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
+	handlers := newStubbedHandlers(t, stageFunctions{
 		osAutomation: func(_ upload.OSAutomationInjectRequest, _ *uploadsec.Security) upload.StageResponse {
 			return upload.StageResponse{Success: true, Stage: 4}
 		},
@@ -198,7 +191,7 @@ func TestHandlersHandleOSAutomation_Success(t *testing.T) {
 }
 
 func TestHandlersHandleOSAutomation_Failure(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
+	handlers := newStubbedHandlers(t, stageFunctions{
 		osAutomation: func(_ upload.OSAutomationInjectRequest, _ *uploadsec.Security) upload.StageResponse {
 			return upload.StageResponse{Success: false, Stage: 4, Error: "automation failed"}
 		},
@@ -211,7 +204,7 @@ func TestHandlersHandleOSAutomation_Failure(t *testing.T) {
 }
 
 func TestHandlersHandleOSAutomation_InvalidJSON(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{})
+	handlers := newStubbedHandlers(t, stageFunctions{})
 	w, req := postJSON("/api/os-automation/inject", `{bad`)
 	handlers.HandleOSAutomation(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -224,8 +217,8 @@ func TestHandlersHandleOSAutomation_InvalidJSON(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestHandlersHandleOSAutomationDismiss_Success(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
-		dismiss: func() upload.StageResponse {
+	handlers := newStubbedHandlers(t, stageFunctions{
+		dismissDialog: func() upload.StageResponse {
 			return upload.StageResponse{Success: true, Stage: 4, Status: "dismissed"}
 		},
 	})
@@ -238,8 +231,8 @@ func TestHandlersHandleOSAutomationDismiss_Success(t *testing.T) {
 }
 
 func TestHandlersHandleOSAutomationDismiss_Failure(t *testing.T) {
-	handlers := newStubbedHandlers(t, stageStubs{
-		dismiss: func() upload.StageResponse {
+	handlers := newStubbedHandlers(t, stageFunctions{
+		dismissDialog: func() upload.StageResponse {
 			return upload.StageResponse{Success: false, Error: "no dialog"}
 		},
 	})

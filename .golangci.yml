@@ -27,7 +27,7 @@ linters:
       # But DO check json.NewEncoder().Encode() and similar
 
     dupl:
-      threshold: 100  # Flag blocks of 100+ duplicated tokens
+      threshold: 80  # Flag blocks of 80+ duplicated tokens (tests excluded below)
 
     staticcheck:
       checks:
@@ -47,6 +47,11 @@ linters:
 
   exclusions:
     rules:
+      # Test files carry fixtures and fakes; duplication policy for them lives
+      # in jscpd (tests/extension), not dupl.
+      - path: _test\.go
+        linters:
+          - dupl
       # Don't enforce errcheck on test files (too noisy)
       - path: _test\.go
         linters:

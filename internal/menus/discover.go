@@ -256,36 +256,35 @@ func proximityCheck(g MenuGroup, cfg Config) bool {
 		return false
 	}
 
-	items := g.Items
 	if g.Orientation == "horizontal" {
-		// Sort by X position
-		sorted := make([]MenuItem, len(items))
-		copy(sorted, items)
-		sort.Slice(sorted, func(i, j int) bool {
-			return sorted[i].BBox.X < sorted[j].BBox.X
-		})
-		for i := 1; i < len(sorted); i++ {
-			gap := sorted[i].BBox.X - sorted[i-1].BBox.Right()
-			if gap > cfg.ProximityMaxGap {
-				return false
-			}
-		}
-	} else {
-		// Sort by Y position
-		sorted := make([]MenuItem, len(items))
-		copy(sorted, items)
-		sort.Slice(sorted, func(i, j int) bool {
-			return sorted[i].BBox.Y < sorted[j].BBox.Y
-		})
-		for i := 1; i < len(sorted); i++ {
-			gap := sorted[i].BBox.Y - sorted[i-1].BBox.Bottom()
-			if gap > cfg.ProximityMaxGap {
-				return false
-			}
+		// Sort by X position, compare X against previous right edge
+		return adjacentGapsWithin(g.Items, cfg.ProximityMaxGap, itemLeftEdge, itemRightEdge)
+	}
+	// Sort by Y position, compare Y against previous bottom edge
+	return adjacentGapsWithin(g.Items, cfg.ProximityMaxGap, itemTopEdge, itemBottomEdge)
+}
+
+// adjacentGapsWithin sorts items by pos and reports whether every gap between
+// one item's leading edge and the previous item's far edge stays within maxGap.
+func adjacentGapsWithin(items []MenuItem, maxGap float64, pos, farEdge func(MenuItem) float64) bool {
+	sorted := make([]MenuItem, len(items))
+	copy(sorted, items)
+	sort.Slice(sorted, func(i, j int) bool {
+		return pos(sorted[i]) < pos(sorted[j])
+	})
+	for i := 1; i < len(sorted); i++ {
+		gap := pos(sorted[i]) - farEdge(sorted[i-1])
+		if gap > maxGap {
+			return false
 		}
 	}
 	return true
 }
+
+func itemLeftEdge(item MenuItem) float64   { return item.BBox.X }
+func itemRightEdge(item MenuItem) float64  { return item.BBox.Right() }
+func itemTopEdge(item MenuItem) float64    { return item.BBox.Y }
+func itemBottomEdge(item MenuItem) float64 { return item.BBox.Bottom() }
 
 func classifyAndAssign(result *Result, g MenuGroup, cfg Config) {
 	classification := g.Classification

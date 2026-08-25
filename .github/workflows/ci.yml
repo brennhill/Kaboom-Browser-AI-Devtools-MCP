@@ -228,6 +228,15 @@ jobs:
         run: |
           golangci-lint run --enable-only depguard ./cmd/browser-agent/... ./internal/...
 
+      - name: Go duplication gate (dupl, threshold 80, tests excluded)
+        run: |
+          golangci-lint run --enable-only dupl ./cmd/browser-agent/... ./internal/...
+
+      - name: Go layering contract (dependency matrix, interface size, interface ownership)
+        run: |
+          go test ./scripts/contracts/layering
+          go run ./scripts/contracts/layering
+
       - name: Hardening lint
         run: make lint-hardening
 

@@ -286,13 +286,18 @@ func refreshWaterfallIfStale(deps core.Deps) []types.NetworkWaterfallEntry {
 }
 
 func filterWaterfallEntries(allEntries []types.NetworkWaterfallEntry, urlFilter string, limit int) []map[string]any {
+	return mapFilteredWaterfallEntries(allEntries, urlFilter, limit, waterfallEntryToMap)
+}
+
+// mapFilteredWaterfallEntries filters entries by URL and maps each match through convert.
+func mapFilteredWaterfallEntries(allEntries []types.NetworkWaterfallEntry, urlFilter string, limit int, convert func(types.NetworkWaterfallEntry) map[string]any) []map[string]any {
 	matched := buffers.ReverseFilterLimit(allEntries, func(entry types.NetworkWaterfallEntry) bool {
 		return urlFilter == "" || (entry.URL != "" && core.ContainsIgnoreCase(entry.URL, urlFilter))
 	}, limit)
 
 	entries := make([]map[string]any, len(matched))
 	for i, entry := range matched {
-		entries[i] = waterfallEntryToMap(entry)
+		entries[i] = convert(entry)
 	}
 	return entries
 }
@@ -365,15 +370,7 @@ func waterfallSummaryEntry(entry types.NetworkWaterfallEntry) map[string]any {
 }
 
 func filterWaterfallSummaryEntries(allEntries []types.NetworkWaterfallEntry, urlFilter string, limit int) []map[string]any {
-	matched := buffers.ReverseFilterLimit(allEntries, func(entry types.NetworkWaterfallEntry) bool {
-		return urlFilter == "" || (entry.URL != "" && core.ContainsIgnoreCase(entry.URL, urlFilter))
-	}, limit)
-
-	entries := make([]map[string]any, len(matched))
-	for i, entry := range matched {
-		entries[i] = waterfallSummaryEntry(entry)
-	}
-	return entries
+	return mapFilteredWaterfallEntries(allEntries, urlFilter, limit, waterfallSummaryEntry)
 }
 
 // GetWSStatus returns the current WebSocket connection status.

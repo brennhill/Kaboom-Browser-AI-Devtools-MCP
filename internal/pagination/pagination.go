@@ -231,16 +231,10 @@ func BuildCursor(timestamp string, sequence int64) string {
 	return timestamp + ":" + strconv.FormatInt(sequence, 10)
 }
 
-// IsOlder returns true if this entry is older than the cursor (for backward pagination).
-// Compares timestamp first, then sequence as tiebreaker for same-millisecond entries.
-// For sequence-only cursors (no timestamp), compares by sequence number alone.
-func (c Cursor) IsOlder(entryTimestamp string, entrySequence int64) bool {
-	// Sequence-only cursor: compare by sequence number
-	if c.Timestamp == "" {
-		return entrySequence < c.Sequence
-	}
-
-	// Parse timestamps for comparison
+// compareTimestamp parses cursor and entry timestamps (RFC3339Nano with
+// RFC3339 fallback) and returns -1 when the entry precedes the cursor,
+// 1 when it follows, and 0 when they are equal.
+func (c Cursor) compareTimestamp(entryTimestamp string) int {
 	cursorTime, err := time.Parse(time.RFC3339Nano, c.Timestamp)
 	if err != nil {
 		// Fallback to RFC3339 (millisecond precision)
@@ -253,12 +247,27 @@ func (c Cursor) IsOlder(entryTimestamp string, entrySequence int64) bool {
 		entryTime, _ = time.Parse(time.RFC3339, entryTimestamp)
 	}
 
-	// Compare timestamps first
-	if entryTime.Before(cursorTime) {
-		return true // Entry is older by timestamp
+	switch {
+	case entryTime.Before(cursorTime):
+		return -1
+	case entryTime.After(cursorTime):
+		return 1
+	default:
+		return 0
 	}
-	if entryTime.After(cursorTime) {
-		return false // Entry is newer by timestamp
+}
+
+// IsOlder returns true if this entry is older than the cursor (for backward pagination).
+// Compares timestamp first, then sequence as tiebreaker for same-millisecond entries.
+// For sequence-only cursors (no timestamp), compares by sequence number alone.
+func (c Cursor) IsOlder(entryTimestamp string, entrySequence int64) bool {
+	// Sequence-only cursor: compare by sequence number
+	if c.Timestamp == "" {
+		return entrySequence < c.Sequence
+	}
+
+	if cmp := c.compareTimestamp(entryTimestamp); cmp != 0 {
+		return cmp < 0
 	}
 
 	// Timestamps match - use sequence as tiebreaker
@@ -273,22 +282,8 @@ func (c Cursor) IsNewer(entryTimestamp string, entrySequence int64) bool {
 		return entrySequence > c.Sequence
 	}
 
-	cursorTime, err := time.Parse(time.RFC3339Nano, c.Timestamp)
-	if err != nil {
-		cursorTime, _ = time.Parse(time.RFC3339, c.Timestamp)
-	}
-
-	entryTime, err := time.Parse(time.RFC3339Nano, entryTimestamp)
-	if err != nil {
-		entryTime, _ = time.Parse(time.RFC3339, entryTimestamp)
-	}
-
-	// Compare timestamps first
-	if entryTime.After(cursorTime) {
-		return true // Entry is newer by timestamp
-	}
-	if entryTime.Before(cursorTime) {
-		return false // Entry is older by timestamp
+	if cmp := c.compareTimestamp(entryTimestamp); cmp != 0 {
+		return cmp > 0
 	}
 
 	// Timestamps match - use sequence as tiebreaker

@@ -54,6 +54,7 @@ code_paths:
   - cmd/hooks/main.go
   - scripts/quality/contracts/check-folder-size.cjs
   - scripts/contracts/complexity/main.go
+  - scripts/contracts/layering/main.go
   - scripts/quality/contracts/complexity/check-complexity.mjs
   - scripts/quality/contracts/file-length/check-file-length.sh
   - scripts/quality/contracts/ts-strictness/check-ts-strictness.mjs
@@ -94,6 +95,8 @@ test_paths:
   - scripts/quality/contracts/file-length/check-file-length.test.mjs
   - scripts/quality/contracts/check-folder-size.test.mjs
   - scripts/contracts/complexity/main_test.go
+  - scripts/contracts/layering/main_test.go
+  - .interface-baseline.json
   - scripts/quality/contracts/complexity/check-complexity.test.mjs
   - scripts/quality/contracts/ts-strictness/check-ts-strictness.test.mjs
   - scripts/quality/contracts/bundle-size/check-bundle-size.test.mjs
@@ -209,6 +212,25 @@ historical minimum and the upward-only ratchet in `.coverage-baseline.json`;
 `make check-bundle-size` caps every artifact `compile-ts` emits at 250KB per
 file and 600KB total, so extension footprint growth is a reviewable event;
 missing bundle artifacts fail rather than passing as a size win.
+
+`make check-layering` pins the hexagonal shape of the Go tree with a hard
+dependency matrix: `internal/**` never imports `cmd/**`, `internal/types`
+is the innermost leaf, `internal/mcp` (protocol) never imports the tool
+domain or the capture port, `internal/schema` and `internal/tools` remain
+siblings, and `capture.NewCapture` is constructed only by the composition
+root in `cmd/browser-agent`. The same gate enforces interface segregation
+(exported interfaces ≤7 methods, hard) and, via a downward-only
+`.interface-baseline.json`, retires producer-owned interfaces (only
+production implementations live in the declaring package) and dead
+contracts (no implementation anywhere; same-package test fakes keep
+cross-boundary seams alive and are exempt).
+
+DRY is enforced on both languages: `make check-duplicates` holds
+`src/background src/popup src/lib src/content src/inject` to zero jscpd
+clones and ratchets `tests/extension` at 7%, while
+`make lint-duplicates-go` runs the pinned golangci-lint dupl linter
+(threshold 80 tokens, tests excluded) over production Go; the identical
+dupl and layering invocations run in CI beside the depguard gate.
 
 Prettier checks authored source and configuration while excluding the three
 minified action-family DOM primitives whose canonical representation is owned

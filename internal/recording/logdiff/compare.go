@@ -47,17 +47,20 @@ func compareActions(original, replay *recording.Recording) ActionComparison {
 	return stats
 }
 
-func detectRegressions(original, replay *recording.Recording, result *Result) {
-	originalErrors := make(map[string]bool)
-	for _, action := range original.Actions {
+// collectUniqueErrors returns high-severity LogEntries for error actions in
+// candidate whose text never appears as an error in baseline.
+func collectUniqueErrors(baseline, candidate *recording.Recording) []LogEntry {
+	known := make(map[string]bool)
+	for _, action := range baseline.Actions {
 		if action.Type == "error" {
-			originalErrors[action.Text] = true
+			known[action.Text] = true
 		}
 	}
 
-	for _, action := range replay.Actions {
-		if action.Type == "error" && !originalErrors[action.Text] {
-			result.NewErrors = append(result.NewErrors, LogEntry{
+	unique := make([]LogEntry, 0)
+	for _, action := range candidate.Actions {
+		if action.Type == "error" && !known[action.Text] {
+			unique = append(unique, LogEntry{
 				Type:       "error",
 				Severity:   "high",
 				Level:      "error",
@@ -68,29 +71,15 @@ func detectRegressions(original, replay *recording.Recording, result *Result) {
 			})
 		}
 	}
+	return unique
+}
+
+func detectRegressions(original, replay *recording.Recording, result *Result) {
+	result.NewErrors = append(result.NewErrors, collectUniqueErrors(original, replay)...)
 }
 
 func detectFixes(original, replay *recording.Recording, result *Result) {
-	replayErrors := make(map[string]bool)
-	for _, action := range replay.Actions {
-		if action.Type == "error" {
-			replayErrors[action.Text] = true
-		}
-	}
-
-	for _, action := range original.Actions {
-		if action.Type == "error" && !replayErrors[action.Text] {
-			result.MissingEvents = append(result.MissingEvents, LogEntry{
-				Type:       "error",
-				Severity:   "high",
-				Level:      "error",
-				Message:    action.Text,
-				Timestamp:  action.TimestampMs,
-				Selector:   action.Selector,
-				ActionType: action.Type,
-			})
-		}
-	}
+	result.MissingEvents = append(result.MissingEvents, collectUniqueErrors(replay, original)...)
 }
 
 func detectValueChanges(original, replay *recording.Recording, result *Result) {

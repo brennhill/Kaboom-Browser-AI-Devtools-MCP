@@ -38,17 +38,27 @@ type Handlers struct{ deps Dependencies }
 // New binds the HTTP boundary to explicit canonical owners.
 func New(deps Dependencies) *Handlers { return &Handlers{deps: deps} }
 
-func (h *Handlers) HandleNetworkBodies(w http.ResponseWriter, r *http.Request) {
+// decodeIngestJSON enforces the POST method, bounds the body, and decodes the
+// JSON payload, writing the standard error responses. It reports decode success.
+func (h *Handlers) decodeIngestJSON(w http.ResponseWriter, r *http.Request, handlerName string, payload any) bool {
 	if !util.RequireMethod(w, r, http.MethodPost) {
-		return
+		return false
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
+	if err := json.NewDecoder(r.Body).Decode(payload); err != nil {
+		fmt.Fprintf(os.Stderr, "[Kaboom] %s: Invalid JSON - %v\n", handlerName, err)
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return false
+	}
+	return true
+}
+
+//nolint:dupl // decode and error paths are shared via decodeIngestJSON; the residual wrapper differs only in payload field and telemetry sink, which cannot be unified without dynamic JSON tags (a behavior change).
+func (h *Handlers) HandleNetworkBodies(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		Bodies []types.NetworkBody `json:"bodies"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		fmt.Fprintf(os.Stderr, "[Kaboom] HandleNetworkBodies: Invalid JSON - %v\n", err)
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+	if !h.decodeIngestJSON(w, r, "HandleNetworkBodies", &payload) {
 		return
 	}
 	h.deps.Telemetry.AddNetworkBodies(payload.Bodies)
@@ -101,17 +111,12 @@ func (h *Handlers) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
 	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok"})
 }
 
+//nolint:dupl // decode and error paths are shared via decodeIngestJSON; the residual wrapper differs only in payload field and telemetry sink, which cannot be unified without dynamic JSON tags (a behavior change).
 func (h *Handlers) HandleEnhancedActions(w http.ResponseWriter, r *http.Request) {
-	if !util.RequireMethod(w, r, http.MethodPost) {
-		return
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
 	var payload struct {
 		Actions []types.EnhancedAction `json:"actions"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		fmt.Fprintf(os.Stderr, "[Kaboom] HandleEnhancedActions: Invalid JSON - %v\n", err)
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+	if !h.decodeIngestJSON(w, r, "HandleEnhancedActions", &payload) {
 		return
 	}
 	h.deps.Telemetry.AddEnhancedActions(payload.Actions)

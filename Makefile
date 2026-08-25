@@ -28,7 +28,7 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check install-security-tools pre-commit verify-all npm-binaries validate-semver \
-	check-complexity check-complexity-go check-complexity-ts function-length-baseline-update \
+	check-complexity check-complexity-go check-complexity-ts function-length-baseline-update check-layering interface-baseline-update lint-duplicates-go \
 	check-ts-strictness ts-strictness-baseline-update check-bundle-size check-secrets coverage-baseline-update \
 	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture check-wire-decode check-tagged-builds go-architecture-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
@@ -289,13 +289,28 @@ check-workflow-contracts:
 	@node scripts/quality/workflows/check-destructive-git.mjs
 	@bash scripts/tests/framework/json.test.sh
 
-check-structure: check-file-length check-folder-size check-complexity check-ts-strictness check-bundle-size check-secrets check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-tagged-builds check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates
+check-structure: check-file-length check-folder-size check-complexity check-layering check-ts-strictness check-bundle-size check-secrets check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-tagged-builds check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates lint-duplicates-go
 
 validate-architecture:
 	@bash scripts/quality/verification/validate-architecture.sh
 
 check-duplicates:
-	@npx jscpd src/background src/popup --min-lines 8 --min-tokens 60 --threshold 0
+	@npx jscpd src/background src/popup src/lib src/content src/inject --min-lines 8 --min-tokens 60 --threshold 0
+	@npx jscpd tests/extension --min-lines 8 --min-tokens 60 --threshold 7
+
+# Go duplication via the pinned golangci-lint dupl linter (threshold 80, tests excluded).
+lint-duplicates-go:
+	@test -x "$(GO_TOOL_BIN)/golangci-lint" || { echo "golangci-lint is required at $(GO_TOOL_BIN). Run: make install-security-tools or go install .../golangci-lint/v2/cmd/golangci-lint@v2.8.0"; exit 1; }
+	"$(GO_TOOL_BIN)/golangci-lint" run --enable-only dupl ./cmd/browser-agent/... ./internal/...
+
+# Go layering contract: dependency matrix (hard), interface size (hard), interface ownership (ratchet).
+check-layering:
+	@go test ./scripts/contracts/layering
+	@go run ./scripts/contracts/layering
+
+# Re-freeze the interface-ownership baseline after fixing an entry.
+interface-baseline-update:
+	@go run ./scripts/contracts/layering --update
 
 # Validate strict semver (X.Y.Z format, no pre-release)
 validate-semver:
