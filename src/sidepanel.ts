@@ -346,7 +346,7 @@ function handleTerminalTyping(event: MessageEvent): void {
   state.lastTypingAt = parsedAt
 }
 
-const TERMINAL_IFRAME_HANDLERS: Record<string, (event: MessageEvent) => void> = {
+const TERMINAL_IFRAME_HANDLERS: Record<string, (event: MessageEvent) => void> = Object.assign(Object.create(null), {
   connected: () => handleTerminalConnected(),
   disconnected: handleTerminalDisconnected,
   reconnect_exhausted: handleReconnectExhausted,
@@ -355,7 +355,7 @@ const TERMINAL_IFRAME_HANDLERS: Record<string, (event: MessageEvent) => void> = 
   execution_provider_detected: handleExecutionProviderDetected,
   focus: handleTerminalFocus,
   typing: handleTerminalTyping
-}
+})
 
 function handleIframeMessage(event: MessageEvent): void {
   if (!event.data || event.data.source !== 'kaboom-terminal') return
@@ -366,6 +366,7 @@ function handleIframeMessage(event: MessageEvent): void {
     // EXPECTED_ABSENCE: an invalid configured origin is an expected rejection; logging would duplicate configuration diagnostics.
     return
   }
+  // Null-prototype map: 'constructor' et al resolve to undefined like the old switch default.
   const handler = TERMINAL_IFRAME_HANDLERS[event.data.event as string]
   if (handler) handler(event)
 }

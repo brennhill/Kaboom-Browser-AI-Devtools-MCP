@@ -423,42 +423,7 @@ export async function startSession(
       })
     })
     if (!resp.ok) {
-      const body = (await resp.json()) as {
-        error?: string
-        message?: string
-        instruction?: string
-        command?: string
-        detail?: string
-        session_id?: string
-        token?: string
-      }
-      // Session already exists — reconnect using the returned token.
-      if (resp.status === 409 && body.token) {
-        const ss = { sessionId: body.session_id ?? 'default', token: body.token }
-        persistSession(ss)
-        return ss
-      }
-      // Sandbox restriction — the daemon's message is its diagnosis, `detail` is
-      // the underlying error. Show both: the diagnosis can be wrong, the error can't.
-      if (resp.status === 503 && body.error === 'sandbox_restricted') {
-        const message = body.detail
-          ? `${body.message ?? 'Terminal start was refused.'} (${body.detail})`
-          : (body.message ?? 'Terminal start was refused.')
-        reportStartFailure(message, body.instruction ?? '', body.command ?? '', 'sandbox', onSandboxError)
-        return null
-      }
-      // Any other rejection from a reachable daemon. This used to only
-      // console.warn, so the side panel rendered nothing at all and the terminal
-      // looked simply broken. Classified `unavailable` (reachable but not ready)
-      // so the UI shows the recoverable no-session state, not a dead-end error.
-      reportStartFailure(
-        `Terminal start was refused (HTTP ${resp.status}): ${body.error ?? 'unknown error'}.`,
-        '',
-        '',
-        'unavailable',
-        onSandboxError
-      )
-      return null
+      return await handleTerminalStartRejection(resp, onSandboxError)
     }
     const data = (await resp.json()) as { session_id: string; token: string; pid: number }
     const ss = { sessionId: data.session_id, token: data.token }
@@ -476,6 +441,48 @@ export async function startSession(
     )
     return null
   }
+}
+
+async function handleTerminalStartRejection(
+  resp: Response,
+  onSandboxError?: TerminalSandboxErrorHandler
+): Promise<TerminalSessionState | null> {
+  const body = (await resp.json()) as {
+    error?: string
+    message?: string
+    instruction?: string
+    command?: string
+    detail?: string
+    session_id?: string
+    token?: string
+  }
+  // Session already exists — reconnect using the returned token.
+  if (resp.status === 409 && body.token) {
+    const ss = { sessionId: body.session_id ?? 'default', token: body.token }
+    persistSession(ss)
+    return ss
+  }
+  // Sandbox restriction — the daemon's message is its diagnosis, `detail` is
+  // the underlying error. Show both: the diagnosis can be wrong, the error can't.
+  if (resp.status === 503 && body.error === 'sandbox_restricted') {
+    const message = body.detail
+      ? `${body.message ?? 'Terminal start was refused.'} (${body.detail})`
+      : (body.message ?? 'Terminal start was refused.')
+    reportStartFailure(message, body.instruction ?? '', body.command ?? '', 'sandbox', onSandboxError)
+    return null
+  }
+  // Any other rejection from a reachable daemon. This used to only
+  // console.warn, so the side panel rendered nothing at all and the terminal
+  // looked simply broken. Classified `unavailable` (reachable but not ready)
+  // so the UI shows the recoverable no-session state, not a dead-end error.
+  reportStartFailure(
+    `Terminal start was refused (HTTP ${resp.status}): ${body.error ?? 'unknown error'}.`,
+    '',
+    '',
+    'unavailable',
+    onSandboxError
+  )
+  return null
 }
 
 /**

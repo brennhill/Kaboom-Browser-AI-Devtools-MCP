@@ -64,7 +64,13 @@ function handlePageResponse(
 }
 
 function forwardTelemetryMessage(messageType: string | undefined, payload: unknown): void {
-  if (!messageType || !(messageType in MESSAGE_MAP) || !payload || typeof payload !== 'object') return
+  if (
+    !messageType ||
+    !Object.prototype.hasOwnProperty.call(MESSAGE_MAP, messageType) ||
+    !payload ||
+    typeof payload !== 'object'
+  )
+    return
   const mappedType = MESSAGE_MAP[messageType]
   if (!mappedType) return
   const rejection = validatePageTelemetry(messageType, payload)
@@ -84,7 +90,10 @@ function onWindowMessage(event: MessageEvent<PageMessageEventData>): void {
 
   const { type: messageType, requestId, result, payload } = event.data || {}
 
-  const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : undefined
+  const responseHandler =
+    messageType && Object.prototype.hasOwnProperty.call(RESPONSE_HANDLERS, messageType)
+      ? RESPONSE_HANDLERS[messageType]
+      : undefined
   if (responseHandler) {
     handlePageResponse(event.data, requestId, result, responseHandler)
     return

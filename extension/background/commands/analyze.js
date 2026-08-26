@@ -112,6 +112,26 @@ function aggregateDOMFrameResults(results) {
         frames
     };
 }
+function collectA11yFrameRollup(entry) {
+    const payload = entry.result || {};
+    const violations = Array.isArray(payload.violations) ? payload.violations : [];
+    const passes = Array.isArray(payload.passes) ? payload.passes : [];
+    const incomplete = Array.isArray(payload.incomplete) ? payload.incomplete : [];
+    const inapplicable = Array.isArray(payload.inapplicable) ? payload.inapplicable : [];
+    const frameSummary = payload.summary;
+    const frame = {
+        frame_id: entry.frame_id,
+        summary: {
+            violations: toNonNegativeInt(frameSummary?.violations ?? violations.length),
+            passes: toNonNegativeInt(frameSummary?.passes ?? passes.length),
+            incomplete: toNonNegativeInt(frameSummary?.incomplete ?? incomplete.length),
+            inapplicable: toNonNegativeInt(frameSummary?.inapplicable ?? inapplicable.length)
+        },
+        ...(payload.error ? { error: payload.error } : {})
+    };
+    const error = typeof payload.error === 'string' && payload.error.length > 0 ? payload.error : undefined;
+    return { violations, passes, incomplete, inapplicable, frame, error };
+}
 function aggregateA11yFrameResults(results) {
     const violations = [];
     const passes = [];
@@ -125,29 +145,14 @@ function aggregateA11yFrameResults(results) {
             errors.push(entry.error);
             continue;
         }
-        const payload = entry.result || {};
-        const frameViolations = Array.isArray(payload.violations) ? payload.violations : [];
-        const framePasses = Array.isArray(payload.passes) ? payload.passes : [];
-        const frameIncomplete = Array.isArray(payload.incomplete) ? payload.incomplete : [];
-        const frameInapplicable = Array.isArray(payload.inapplicable) ? payload.inapplicable : [];
-        violations.push(...frameViolations);
-        passes.push(...framePasses);
-        incomplete.push(...frameIncomplete);
-        inapplicable.push(...frameInapplicable);
-        const frameSummary = payload.summary;
-        frames.push({
-            frame_id: entry.frame_id,
-            summary: {
-                violations: toNonNegativeInt(frameSummary?.violations ?? frameViolations.length),
-                passes: toNonNegativeInt(frameSummary?.passes ?? framePasses.length),
-                incomplete: toNonNegativeInt(frameSummary?.incomplete ?? frameIncomplete.length),
-                inapplicable: toNonNegativeInt(frameSummary?.inapplicable ?? frameInapplicable.length)
-            },
-            ...(payload.error ? { error: payload.error } : {})
-        });
-        if (typeof payload.error === 'string' && payload.error.length > 0) {
-            errors.push(payload.error);
-        }
+        const rollup = collectA11yFrameRollup(entry);
+        violations.push(...rollup.violations);
+        passes.push(...rollup.passes);
+        incomplete.push(...rollup.incomplete);
+        inapplicable.push(...rollup.inapplicable);
+        frames.push(rollup.frame);
+        if (rollup.error)
+            errors.push(rollup.error);
     }
     return {
         violations,

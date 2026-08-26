@@ -63,9 +63,80 @@ esac
 benign="$(make_fixture "$tmp/src" benign.go 'const Region = "us-east-1" // not a key')"
 expect "benign source clean" "" "$(scan_paths "$benign")"
 
+# openai project/service-account/admin keys are flagged (gitleaks v8.24 defaults miss these)
+KABOOM_SECRETS_ALLOWLIST="$tmp/empty-allowlist"
+oai="$(make_fixture "$tmp/src" openai.txt "key = \"sk-proj-$(printf 'a%.0s' {1..40})\"")"
+case "$(scan_paths "$oai" | head -1)" in
+    *":1:openai-project-key:sk-pro***") expect "openai project key flagged+redacted" ok ok ;;
+    *) expect "openai project key flagged+redacted" "path:1:openai-project-key:sk-pro***" "$(scan_paths "$oai" | head -1)" ;;
+esac
+
+svc="$(make_fixture "$tmp/src" openai-svc.txt "token: sk-svc-acct-$(printf 'b%.0s' {1..30})")"
+case "$(scan_paths "$svc")" in
+    *openai-project-key*) expect "openai svc-acct key flagged" ok ok ;;
+    *) expect "openai svc-acct key flagged" "flagged" "$(scan_paths "$svc")" ;;
+esac
+
+adm="$(make_fixture "$tmp/src" openai-admin.txt "token: sk-admin-$(printf 'c%.0s' {1..30})")"
+case "$(scan_paths "$adm")" in
+    *openai-project-key*) expect "openai admin key flagged" ok ok ;;
+    *) expect "openai admin key flagged" "flagged" "$(scan_paths "$adm")" ;;
+esac
+
+# legacy keys are exactly 20 alnum chars after sk-; longer runs are other formats
+legacy="$(make_fixture "$tmp/src" openai-legacy.txt 'const Key = "sk-abcdefghij1234567890"')"
+case "$(scan_paths "$legacy" | head -1)" in
+    *":1:openai-legacy-key:sk-abc***") expect "openai legacy key flagged+redacted" ok ok ;;
+    *) expect "openai legacy key flagged+redacted" "path:1:openai-legacy-key:sk-abc***" "$(scan_paths "$legacy" | head -1)" ;;
+esac
+
+longrun="$(make_fixture "$tmp/src" openai-long.txt 'const Key = "sk-abcdefghij1234567890plus"')"
+expect "longer alnum run not flagged as legacy key" "" "$(scan_paths "$longrun")"
+
+# sk-ant- stays anthropic-only: never the openai patterns
+ant="$(make_fixture "$tmp/src" anthropic.txt "key = \"sk-ant-$(printf 'd%.0s' {1..30})\"")"
+ant_out="$(scan_paths "$ant")"
+case "$ant_out" in
+    *anthropic-key*) expect "sk-ant still hits anthropic pattern" ok ok ;;
+    *) expect "sk-ant still hits anthropic pattern" "flagged" "$ant_out" ;;
+esac
+case "$ant_out" in
+    *openai*) expect "sk-ant not flagged as openai" "no openai finding" "$ant_out" ;;
+    *) expect "sk-ant not flagged as openai" ok ok ;;
+esac
+
+# a bare * or ** allowlist glob fails closed instead of silencing every finding
+printf '# fixtures\n*\n' > "$tmp/star-allowlist"
+KABOOM_SECRETS_ALLOWLIST="$tmp/star-allowlist"
+star_out="$(check_secrets_main --staged 2>&1)"; star_rc=$?
+expect "bare * allowlist fails closed" 1 "$star_rc"
+case "$star_out" in
+    *"silence"*) expect "bare * error explains the effect" ok ok ;;
+    *) expect "bare * error explains the effect" "explains silencing" "$star_out" ;;
+esac
+case "$star_out" in
+    *"'*'"*) expect "bare * error names the glob" ok ok ;;
+    *) expect "bare * error names the glob" "names '*'" "$star_out" ;;
+esac
+
+printf '**\n' > "$tmp/starstar-allowlist"
+KABOOM_SECRETS_ALLOWLIST="$tmp/starstar-allowlist"
+starstar_rc=0; check_secrets_main --staged >/dev/null 2>&1 || starstar_rc=$?
+expect "bare ** allowlist fails closed" 1 "$starstar_rc"
+
+# staged_paths covers renames and type-changes, not just add/copy/modify
+repo="$tmp/repo"
+git init -q "$repo"
+git -C "$repo" -c user.name=contract -c user.email=contract@test commit -q --allow-empty -m init
+printf 'content\n' > "$repo/a.txt"
+git -C "$repo" add a.txt
+git -C "$repo" -c user.name=contract -c user.email=contract@test commit -q -m add
+git -C "$repo" mv a.txt b.txt
+expect "staged_paths includes rename target" "b.txt" "$(cd "$repo" && staged_paths)"
+
 # the scanner's own pattern catalog stays complete
 count="$(secret_patterns | grep -c .)"
-if [ "$count" -lt 12 ]; then
+if [ "$count" -lt 16 ]; then
     echo "FAIL: pattern catalog shrank to $count entries"
     FAILURES=$((FAILURES + 1))
 fi

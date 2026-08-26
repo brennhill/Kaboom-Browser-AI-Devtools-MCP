@@ -94,6 +94,8 @@ const TELEMETRY_SCHEMA_VALIDATORS = {
     kaboom_capture_diagnostic: (p) => hasString(p, 'category') && hasString(p, 'message') && hasString(p, 'error_type')
 };
 function matchesTelemetrySchema(messageType, payload) {
+    if (!Object.prototype.hasOwnProperty.call(TELEMETRY_SCHEMA_VALIDATORS, messageType))
+        return false;
     const validator = TELEMETRY_SCHEMA_VALIDATORS[messageType];
     return validator ? validator(payload) : false;
 }

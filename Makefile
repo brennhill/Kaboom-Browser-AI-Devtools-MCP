@@ -30,7 +30,7 @@ PLATFORMS := \
 	security-check install-security-tools pre-commit verify-all npm-binaries validate-semver \
 	check-complexity check-complexity-go check-complexity-ts function-length-baseline-update check-layering interface-baseline-update lint-duplicates-go \
 	check-ts-strictness ts-strictness-baseline-update check-bundle-size check-secrets coverage-baseline-update \
-	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture check-wire-decode check-tagged-builds go-architecture-baseline-update \
+	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture check-wire-decode check-tagged-builds go-architecture-baseline-update check-baseline-currency \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-command-contract generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -289,7 +289,15 @@ check-workflow-contracts:
 	@node scripts/quality/workflows/check-destructive-git.mjs
 	@bash scripts/tests/framework/json.test.sh
 
-check-structure: check-file-length check-folder-size check-complexity check-layering check-ts-strictness check-bundle-size check-secrets check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-tagged-builds check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates lint-duplicates-go
+check-structure: check-file-length check-folder-size check-complexity check-layering check-ts-strictness check-bundle-size check-secrets check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-tagged-builds check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates lint-duplicates-go check-baseline-currency
+
+# Baseline currency: every ratchet baseline must equal what the current tree
+# regenerates (deterministic), so a stale or hand-edited baseline fails. The
+# committed file is always restored afterward — the check never dirties the
+# tree. .coverage-baseline.json is excluded (needs a full test run to
+# regenerate); see scripts/quality/contracts/check-baseline-currency.sh.
+check-baseline-currency:
+	@bash scripts/quality/contracts/check-baseline-currency.sh
 
 validate-architecture:
 	@bash scripts/quality/verification/validate-architecture.sh

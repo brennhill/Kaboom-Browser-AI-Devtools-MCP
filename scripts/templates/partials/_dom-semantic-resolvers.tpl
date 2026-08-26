@@ -254,7 +254,8 @@
     if (tag === 'select') return 'select'
     if (tag === 'textarea') return 'textarea'
     const roleClass: Record<string, string> = { link: 'link', tab: 'tab', menuitem: 'menuitem' }
-    const byRole = roleClass[el.getAttribute('role') || '']
+    const role = el.getAttribute('role') || ''
+    const byRole = Object.prototype.hasOwnProperty.call(roleClass, role) ? roleClass[role] : undefined
     if (byRole) return byRole
     if (el.getAttribute('contenteditable') === 'true') return 'textarea'
     return 'interactive'

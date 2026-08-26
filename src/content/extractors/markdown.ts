@@ -60,6 +60,11 @@ const INLINE_WRAPS: Record<string, string> = {
   code: '`'
 }
 
+/** Resolves a tag's own property only, so prototype names hit the default render path. */
+function ownMark(marks: Record<string, string>, tag: string): string | undefined {
+  return Object.prototype.hasOwnProperty.call(marks, tag) ? marks[tag] : undefined
+}
+
 function collectChildren(el: HTMLElement, depth: number, budget: { remaining: number }): string {
   let children = ''
   for (let i = 0; i < el.childNodes.length; i++) {
@@ -107,10 +112,14 @@ function renderListItemMarkdown(el: HTMLElement, children: string): string {
 }
 
 function renderElementMarkdown(tag: string, el: HTMLElement, children: string): string {
-  const headingMark = HEADING_MARKS[tag]
+  const headingMark = ownMark(HEADING_MARKS, tag)
   if (headingMark) return '\n' + headingMark + ' ' + children.trim() + '\n\n'
-  const wrap = INLINE_WRAPS[tag]
+  const wrap = ownMark(INLINE_WRAPS, tag)
   if (wrap) return wrap + children.trim() + wrap
+  return renderBlockMarkdown(tag, el, children)
+}
+
+function renderBlockMarkdown(tag: string, el: HTMLElement, children: string): string {
   switch (tag) {
     case 'p':
       return '\n' + children.trim() + '\n\n'

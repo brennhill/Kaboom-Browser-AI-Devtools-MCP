@@ -170,6 +170,23 @@ describe('Content Window Message Bridge', () => {
     assert.ok(diagnostics.every((message) => !JSON.stringify(message).includes(secret)))
   })
 
+  test('rejects prototype-chain message types instead of dispatching inherited properties', async () => {
+    await initTabTracking()
+    initWindowMessageListener()
+
+    for (const type of ['constructor', 'toString', 'valueOf', '__proto__']) {
+      messageHandler({
+        source: globalThis.window,
+        origin: globalThis.window.location.origin,
+        data: { type, _nonce: getPageNonce(), payload: { ts: '1', level: 'info' } }
+      })
+    }
+
+    const forwarded = runtimeSendMessage.mock.calls.map((call) => call.arguments[0])
+    assert.ok(forwarded.every((message) => typeof message?.type === 'string'), 'no forwarded type may resolve an inherited property')
+    assert.strictEqual(forwarded.filter((message) => message?.type === 'log').length, 0)
+  })
+
   test('drops captured events when tab is not tracked', async () => {
     globalThis.chrome.storage.local.get = mock.fn(() => Promise.resolve({ trackedTabId: 999 }))
 

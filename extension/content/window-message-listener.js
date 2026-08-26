@@ -35,7 +35,10 @@ function handlePageResponse(data, requestId, result, handler) {
         handler(requestId, result);
 }
 function forwardTelemetryMessage(messageType, payload) {
-    if (!messageType || !(messageType in MESSAGE_MAP) || !payload || typeof payload !== 'object')
+    if (!messageType ||
+        !Object.prototype.hasOwnProperty.call(MESSAGE_MAP, messageType) ||
+        !payload ||
+        typeof payload !== 'object')
         return;
     const mappedType = MESSAGE_MAP[messageType];
     if (!mappedType)
@@ -55,7 +58,9 @@ function onWindowMessage(event) {
     if (event.source !== window || event.origin !== window.location.origin)
         return;
     const { type: messageType, requestId, result, payload } = event.data || {};
-    const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : undefined;
+    const responseHandler = messageType && Object.prototype.hasOwnProperty.call(RESPONSE_HANDLERS, messageType)
+        ? RESPONSE_HANDLERS[messageType]
+        : undefined;
     if (responseHandler) {
         handlePageResponse(event.data, requestId, result, responseHandler);
         return;

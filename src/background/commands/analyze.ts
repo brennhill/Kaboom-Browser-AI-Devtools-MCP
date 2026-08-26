@@ -165,6 +165,39 @@ function aggregateDOMFrameResults(results: FrameQueryResult<Record<string, unkno
   }
 }
 
+/** Per-frame a11y rollup: bucketed findings plus the frame summary record. */
+interface A11yFrameRollup {
+  violations: unknown[]
+  passes: unknown[]
+  incomplete: unknown[]
+  inapplicable: unknown[]
+  frame: Record<string, unknown>
+  error?: string
+}
+
+function collectA11yFrameRollup(entry: FrameQueryResult<Record<string, unknown>>): A11yFrameRollup {
+  const payload = entry.result || {}
+  const violations = Array.isArray(payload.violations) ? payload.violations : []
+  const passes = Array.isArray(payload.passes) ? payload.passes : []
+  const incomplete = Array.isArray(payload.incomplete) ? payload.incomplete : []
+  const inapplicable = Array.isArray(payload.inapplicable) ? payload.inapplicable : []
+
+  const frameSummary = payload.summary as Record<string, unknown> | undefined
+  const frame: Record<string, unknown> = {
+    frame_id: entry.frame_id,
+    summary: {
+      violations: toNonNegativeInt(frameSummary?.violations ?? violations.length),
+      passes: toNonNegativeInt(frameSummary?.passes ?? passes.length),
+      incomplete: toNonNegativeInt(frameSummary?.incomplete ?? incomplete.length),
+      inapplicable: toNonNegativeInt(frameSummary?.inapplicable ?? inapplicable.length)
+    },
+    ...(payload.error ? { error: payload.error } : {})
+  }
+
+  const error = typeof payload.error === 'string' && payload.error.length > 0 ? payload.error : undefined
+  return { violations, passes, incomplete, inapplicable, frame, error }
+}
+
 function aggregateA11yFrameResults(results: FrameQueryResult<Record<string, unknown>>[]): Record<string, unknown> {
   const violations: unknown[] = []
   const passes: unknown[] = []
@@ -180,32 +213,13 @@ function aggregateA11yFrameResults(results: FrameQueryResult<Record<string, unkn
       continue
     }
 
-    const payload = entry.result || {}
-    const frameViolations = Array.isArray(payload.violations) ? payload.violations : []
-    const framePasses = Array.isArray(payload.passes) ? payload.passes : []
-    const frameIncomplete = Array.isArray(payload.incomplete) ? payload.incomplete : []
-    const frameInapplicable = Array.isArray(payload.inapplicable) ? payload.inapplicable : []
-
-    violations.push(...frameViolations)
-    passes.push(...framePasses)
-    incomplete.push(...frameIncomplete)
-    inapplicable.push(...frameInapplicable)
-
-    const frameSummary = payload.summary as Record<string, unknown> | undefined
-    frames.push({
-      frame_id: entry.frame_id,
-      summary: {
-        violations: toNonNegativeInt(frameSummary?.violations ?? frameViolations.length),
-        passes: toNonNegativeInt(frameSummary?.passes ?? framePasses.length),
-        incomplete: toNonNegativeInt(frameSummary?.incomplete ?? frameIncomplete.length),
-        inapplicable: toNonNegativeInt(frameSummary?.inapplicable ?? frameInapplicable.length)
-      },
-      ...(payload.error ? { error: payload.error } : {})
-    })
-
-    if (typeof payload.error === 'string' && payload.error.length > 0) {
-      errors.push(payload.error)
-    }
+    const rollup = collectA11yFrameRollup(entry)
+    violations.push(...rollup.violations)
+    passes.push(...rollup.passes)
+    incomplete.push(...rollup.incomplete)
+    inapplicable.push(...rollup.inapplicable)
+    frames.push(rollup.frame)
+    if (rollup.error) errors.push(rollup.error)
   }
 
   return {

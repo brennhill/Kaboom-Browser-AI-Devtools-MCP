@@ -108,6 +108,7 @@ const TELEMETRY_SCHEMA_VALIDATORS: Record<string, (payload: Record<string, unkno
 }
 
 function matchesTelemetrySchema(messageType: string, payload: Record<string, unknown>): boolean {
+  if (!Object.prototype.hasOwnProperty.call(TELEMETRY_SCHEMA_VALIDATORS, messageType)) return false
   const validator = TELEMETRY_SCHEMA_VALIDATORS[messageType]
   return validator ? validator(payload) : false
 }

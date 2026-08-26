@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-25
+last_reviewed: 2026-08-26
 code_paths:
   - scripts/docs/
   - scripts/maintenance/
@@ -61,6 +61,7 @@ code_paths:
   - scripts/quality/contracts/bundle-size/check-bundle-size.cjs
   - scripts/security/check-secrets.sh
   - scripts/build/run-go-coverage.sh
+  - scripts/quality/contracts/check-baseline-currency.sh
   - .secrets-allowlist
   - .gitleaks.toml
   - .function-length-baseline-go.json
@@ -105,6 +106,7 @@ test_paths:
   - scripts/contracts/goarchitecture/main_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - scripts/tests/contracts/go-coverage-profile.test.mjs
+  - scripts/tests/contracts/go-coverage-baseline.test.mjs
   - scripts/build/openapi-tooling.test.mjs
   - internal/testsync/testsync_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
@@ -198,17 +200,35 @@ authored `src/`: zero `@ts-nocheck` directives and a never-growing explicit
 `make ts-strictness-baseline-update`).
 
 `make check-secrets` pattern-scans tracked files for full credential formats
-(AWS/GitHub/Stripe/Slack/Anthropic keys, private key blocks, and similar) in
-under twenty seconds; the pre-commit hook runs the same scan over exactly the
-staged files. `make security-check` adds pinned gitleaks over the full git
-history (`.gitleaks.toml` extends the default rules). Intentional fake-key
+(AWS/GitHub/Stripe/Slack/Anthropic/OpenAI keys, private key blocks, and
+similar) in under twenty seconds; the pre-commit hook runs the same scan over
+exactly the staged files, including renames and type-changes. A bare `*` or
+`**` glob in `.secrets-allowlist` fails the scan closed instead of silently
+silencing every finding. `make security-check` adds pinned gitleaks over the
+full git history (`.gitleaks.toml` extends the default rules with custom
+OpenAI key rules and anchored fixture paths). Intentional fake-key
 fixtures are listed with reasons in `.secrets-allowlist` and mirrored in
 `.gitleaks.toml`; a path on those lists may never contain a real credential.
 
 Go coverage floors are enforced by `run-go-coverage.sh` as the maximum of the
 historical minimum and the upward-only ratchet in `.coverage-baseline.json`;
 `GO_COVERAGE_MINIMUM` can only raise the bar, and
-`make coverage-baseline-update` locks in demonstrated improvements.
+`make coverage-baseline-update` locks in demonstrated improvements. A missing
+baseline (first run) floors to 0, but an unparseable file, a wrong version, or
+a non-numeric `go_total_percent` fails the run instead of silently degrading
+the floor; the update path likewise refuses to lower the recorded baseline
+(the run already cleared the floor above it) and refuses to overwrite a
+corrupt baseline file. `scripts/tests/contracts/go-coverage-baseline.test.mjs`
+pins those shell-embedded node fragments against fixtures.
+
+`make check-baseline-currency` re-freezes every deterministic ratchet baseline
+(`.function-length-baseline-go.json`, `.function-length-baseline-ts.json`,
+`.ts-strictness-baseline.json`, `.interface-baseline.json`) and fails on any
+byte difference, so a stale or hand-edited ratchet cannot survive CI; the
+committed file is always restored afterward, leaving the tree clean. The TS
+length baseline writer emits sorted keys so regeneration is byte-identical
+across platforms. `.coverage-baseline.json` is excluded because it records
+measured coverage that only a full `make test-cover` run can regenerate.
 `make check-bundle-size` caps every artifact `compile-ts` emits at 250KB per
 file and 600KB total, so extension footprint growth is a reviewable event;
 missing bundle artifacts fail rather than passing as a size win.

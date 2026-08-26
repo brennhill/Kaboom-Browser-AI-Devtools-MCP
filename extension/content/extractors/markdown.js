@@ -45,6 +45,10 @@ const INLINE_WRAPS = {
     i: '*',
     code: '`'
 };
+/** Resolves a tag's own property only, so prototype names hit the default render path. */
+function ownMark(marks, tag) {
+    return Object.prototype.hasOwnProperty.call(marks, tag) ? marks[tag] : undefined;
+}
 function collectChildren(el, depth, budget) {
     let children = '';
     for (let i = 0; i < el.childNodes.length; i++) {
@@ -90,12 +94,15 @@ function renderListItemMarkdown(el, children) {
     return '- ' + children.trim() + '\n';
 }
 function renderElementMarkdown(tag, el, children) {
-    const headingMark = HEADING_MARKS[tag];
+    const headingMark = ownMark(HEADING_MARKS, tag);
     if (headingMark)
         return '\n' + headingMark + ' ' + children.trim() + '\n\n';
-    const wrap = INLINE_WRAPS[tag];
+    const wrap = ownMark(INLINE_WRAPS, tag);
     if (wrap)
         return wrap + children.trim() + wrap;
+    return renderBlockMarkdown(tag, el, children);
+}
+function renderBlockMarkdown(tag, el, children) {
     switch (tag) {
         case 'p':
             return '\n' + children.trim() + '\n\n';

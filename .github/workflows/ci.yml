@@ -68,14 +68,33 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      # check-structure runs Go contract checkers (complexity, layering,
+      # determinism, wire-decode, tagged vet) and golangci-lint dupl; the TS
+      # checkers resolve the pinned typescript dev dependency. Without these
+      # prerequisites the job crashed at check-complexity-ts and every gate
+      # ordered after it never ran.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
+        with:
+          go-version: "1.25.12"
+
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: "20"
+
+      - name: Install pinned toolchain
+        run: |
+          npm ci
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
 
       # File length, all first-party folder budgets, and dormant Go/Node test
       # detection share one canonical entrypoint so structure cannot silently miss CI.
       - name: Run structure gates
         run: make check-structure
+
+      # Ratchet baselines must match the tree: regeneration is deterministic,
+      # so any byte diff means the committed ratchet is stale or hand-edited.
+      - name: Baseline currency (ratchets must match tree)
+        run: make check-baseline-currency
 
       # The baseline must reflect reality: if a folder improved, the committed
       # baseline is stale and should be re-frozen so the ratchet keeps tightening.

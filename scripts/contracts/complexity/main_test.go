@@ -145,8 +145,41 @@ func TestIgnoredDirSkipsGeneratedAndVendorTrees(t *testing.T) {
 	}
 }
 
-func TestParamsCountsNamedUnnamedAndExcludesReceiver(t *testing.T) {
-	source := `package pkg
+// TestSameNamedMethodsDoNotShareABudget pins the receiver-disambiguated key:
+// the original file:name key let a later same-named method silently overwrite
+// the earlier one, escaping complexity, params, and length entirely.
+func TestSameNamedMethodsDoNotShareABudget(t *testing.T) {
+	root := t.TempDir()
+	body := "package wide\n\ntype A struct{}\ntype B struct{}\n\n"
+	body += "func (a *A) Run() error {\n"
+	for i := 0; i < 100; i++ {
+		body += "\t_ = " + itoa(i) + "\n"
+	}
+	body += "\treturn nil\n}\n\n"
+	body += "func (b *B) Run(v int) error {\n\tif v > 1 {\n\t\tif v > 2 {\n\t\t\tif v > 3 {\n\t\t\t\tif v > 4 {\n\t\t\t\t\tif v > 5 {\n\t\t\t\t\t\tif v > 6 {\n\t\t\t\t\t\t\tif v > 7 {\n\t\t\t\t\t\t\t\tif v > 8 {\n\t\t\t\t\t\t\t\t\tif v > 9 {\n\t\t\t\t\t\t\t\t\t\tif v > 10 {\n\t\t\t\t\t\t\t\t\t\t\tif v > 11 {\n\t\t\t\t\t\t\t\t\t\t\t\tif v > 12 {\n\t\t\t\t\t\t\t\t\t\t\t\t\tif v > 13 {\n\t\t\t\t\t\t\t\t\t\t\t\t\t\tif v > 14 {\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tif v > 15 {\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tif v > 16 {\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treturn nil\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\treturn nil\n}\n"
+	writeGoFile(t, root, filepath.Join("internal", "wide.go"), body)
+
+	// A.Run: 104 lines > 80 default. B.Run: complexity 17 > 15. Both must fire;
+	// the old key collision reported only whichever was measured last.
+	violations, err := scan(root, 15)
+	if err != nil {
+		t.Fatal(err)
+	}
+	length, complexity := 0, 0
+	for _, v := range violations {
+		switch v.kind {
+		case "length":
+			length++
+		case "complexity":
+			complexity++
+		}
+	}
+	if length != 1 || complexity != 1 {
+		t.Fatalf("violations = %+v\nwant one length (A.Run) and one complexity (B.Run) violation", violations)
+	}
+}
+
+func TestParamsCountsNamedUnnamedAndExcludesReceiver(t *testing.T) {	source := `package pkg
 
 type Receiver struct{}
 

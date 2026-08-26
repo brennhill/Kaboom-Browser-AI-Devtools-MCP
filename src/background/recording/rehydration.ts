@@ -62,6 +62,11 @@ export interface RecordingRehydrationDeps {
   onPersistedReadFailure: () => void
 }
 
+/** Prefer the live offscreen value, then persisted metadata, then the fallback. */
+function coalesceRehydratedField<T extends string | number>(live: T, persisted: T | undefined, fallback: T): T {
+  return live || persisted || fallback
+}
+
 /**
  * Decide whether an active recording survived a service-worker restart.
  * Returns the rehydrated state when the offscreen document reports an active
@@ -85,12 +90,12 @@ export async function resolveRecordingRehydration(
 
   return {
     active: true,
-    name: offscreen.name || persisted?.name || '',
+    name: coalesceRehydratedField(offscreen.name, persisted?.name, ''),
     startTime: offscreen.startTime || persisted?.startTime || Date.now(),
-    fps: offscreen.fps || persisted?.fps || 15,
-    audioMode: offscreen.audioMode || persisted?.audioMode || '',
-    tabId: offscreen.tabId || persisted?.tabId || 0,
-    url: offscreen.url || persisted?.url || '',
+    fps: coalesceRehydratedField(offscreen.fps, persisted?.fps, 15),
+    audioMode: coalesceRehydratedField(offscreen.audioMode, persisted?.audioMode, ''),
+    tabId: coalesceRehydratedField(offscreen.tabId, persisted?.tabId, 0),
+    url: coalesceRehydratedField(offscreen.url, persisted?.url, ''),
     queryId: persisted?.queryId ?? ''
   }
 }

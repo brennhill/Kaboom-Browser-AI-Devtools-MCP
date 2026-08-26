@@ -75,7 +75,7 @@ async function createTerminalWorkspaceGroup(tabId) {
         return null;
     }
 }
-export async function resolveTerminalWorkspaceTarget(requestTabId) {
+async function readStoredWorkspaceTargets() {
     let result;
     try {
         const stored = await getLocals(TERMINAL_WORKSPACE_STORAGE_KEYS);
@@ -92,17 +92,14 @@ export async function resolveTerminalWorkspaceTarget(requestTabId) {
         reportTerminalWorkspaceRecovery('Saved terminal workspace could not be read; the active or tracked tab is used.');
         result = {};
     }
-    const trackedTabId = typeof result.trackedTabId === 'number' ? result.trackedTabId : null;
-    const storedMainTabId = typeof result.kaboom_terminal_workspace_main_tab_id === 'number'
-        ? result.kaboom_terminal_workspace_main_tab_id
-        : null;
-    const requestTab = await safeGetTab(requestTabId);
-    let mainTab = await safeGetTab(trackedTabId ?? storedMainTabId ?? requestTabId ?? null);
-    if (!mainTab && requestTab)
-        mainTab = requestTab;
-    if (!mainTab?.id)
-        return null;
-    const mainTabId = mainTab.id;
+    return {
+        trackedTabId: typeof result.trackedTabId === 'number' ? result.trackedTabId : null,
+        mainTabId: typeof result.kaboom_terminal_workspace_main_tab_id === 'number'
+            ? result.kaboom_terminal_workspace_main_tab_id
+            : null
+    };
+}
+async function resolveWorkspaceGroupId(mainTab, mainTabId) {
     let tabGroupId = isGroupedTab(mainTab.groupId) ? mainTab.groupId : null;
     if (tabGroupId === null) {
         tabGroupId = await createTerminalWorkspaceGroup(mainTabId);
@@ -113,6 +110,22 @@ export async function resolveTerminalWorkspaceTarget(requestTabId) {
             mainTab = (await safeGetTab(mainTabId)) ?? mainTab;
         }
     }
+    return { tabGroupId, mainTab };
+}
+export async function resolveTerminalWorkspaceTarget(requestTabId) {
+    const stored = await readStoredWorkspaceTargets();
+    const trackedTabId = stored.trackedTabId;
+    const storedMainTabId = stored.mainTabId;
+    const requestTab = await safeGetTab(requestTabId);
+    let mainTab = await safeGetTab(trackedTabId ?? storedMainTabId ?? requestTabId ?? null);
+    if (!mainTab && requestTab)
+        mainTab = requestTab;
+    if (!mainTab?.id)
+        return null;
+    const mainTabId = mainTab.id;
+    const workspace = await resolveWorkspaceGroupId(mainTab, mainTabId);
+    mainTab = workspace.mainTab;
+    const tabGroupId = workspace.tabGroupId;
     let hostTabId = mainTabId;
     if (requestTab?.id && requestTab.groupId === tabGroupId) {
         hostTabId = requestTab.id;

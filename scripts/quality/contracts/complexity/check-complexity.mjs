@@ -96,27 +96,35 @@ function functionName(node, sourceFile) {
   return '(anonymous)'
 }
 
+function isBranchNode(node) {
+  return (
+    ts.isIfStatement(node) ||
+    ts.isConditionalExpression(node) ||
+    ts.isForStatement(node) ||
+    ts.isForOfStatement(node) ||
+    ts.isForInStatement(node) ||
+    ts.isWhileStatement(node) ||
+    ts.isDoStatement(node) ||
+    ts.isCaseClause(node) ||
+    ts.isDefaultClause(node) ||
+    ts.isCatchClause(node)
+  )
+}
+
+function isShortCircuitOperator(node) {
+  return (
+    ts.isBinaryExpression(node) &&
+    (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+      node.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+      node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken)
+  )
+}
+
 function functionComplexity(fn) {
   let complexity = 1
   const visit = (node) => {
     if (node !== fn && isFunctionLike(node)) return // nested functions are judged separately
-    if (
-      ts.isIfStatement(node) ||
-      ts.isConditionalExpression(node) ||
-      ts.isForStatement(node) ||
-      ts.isForOfStatement(node) ||
-      ts.isForInStatement(node) ||
-      ts.isWhileStatement(node) ||
-      ts.isDoStatement(node) ||
-      ts.isCaseClause(node) ||
-      ts.isCatchClause(node)
-    ) {
-      complexity++
-    } else if (
-      ts.isBinaryExpression(node) &&
-      (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
-        node.operatorToken.kind === ts.SyntaxKind.BarBarToken)
-    ) {
+    if (isBranchNode(node) || isShortCircuitOperator(node)) {
       complexity++
     }
     ts.forEachChild(node, visit)
@@ -125,10 +133,12 @@ function functionComplexity(fn) {
   return complexity
 }
 
-/** Human key for a function: nested-name for named functions, line-anchored for anonymous. */
+/** Key for a function: name + declaration line. Same-named functions in one
+ * file must never inherit each other's frozen length allowance, and a moved
+ * function must not silently keep a stale one. */
 export function functionKey(sourceFile, node, name) {
   const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
-  return name === '(anonymous)' ? `${name}:${line}` : name
+  return `${name}:${line}`
 }
 
 /** Measure one function node: complexity, params (excluding `this`), and whole-node line count. */
@@ -217,7 +227,11 @@ function loadLengthBaseline(path) {
 }
 
 function writeLengthBaseline(path, functions) {
-  writeFileSync(path, JSON.stringify({ version: 1, max_lines: MAX_LENGTH, functions }, null, 2) + '\n')
+  // Sorted keys keep the file byte-identical across platforms: readdir order
+  // differs between macOS and Linux, and baseline-currency checks compare bytes.
+  const ordered = {}
+  for (const key of Object.keys(functions).sort()) ordered[key] = functions[key]
+  writeFileSync(path, JSON.stringify({ version: 1, max_lines: MAX_LENGTH, functions: ordered }, null, 2) + '\n')
 }
 
 function collectFiles(root, dir, files) {

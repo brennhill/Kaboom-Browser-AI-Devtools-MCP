@@ -46,8 +46,36 @@ func ignoredDir(name string) bool {
 	return strings.HasPrefix(name, ".")
 }
 
-func funcComplexity(fn ast.Node) int {
-	complexity := 1
+// functionKey identifies a declaration for the length baseline. Methods are
+// receiver-disambiguated: two same-named methods in one file must not share a
+// budget (the collision silently dropped the earlier declaration from every
+// budget).
+func functionKey(relative string, fn *ast.FuncDecl) string {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return relative + ":" + fn.Name.Name
+	}
+	if typeName := receiverTypeName(fn.Recv.List[0].Type); typeName != "" {
+		return relative + ":" + typeName + "." + fn.Name.Name
+	}
+	return relative + ":" + fn.Name.Name
+}
+
+// receiverTypeName unwraps pointer and generic receivers.
+func receiverTypeName(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return t.Name
+	case *ast.StarExpr:
+		return receiverTypeName(t.X)
+	case *ast.IndexExpr:
+		return receiverTypeName(t.X)
+	case *ast.IndexListExpr:
+		return receiverTypeName(t.X)
+	}
+	return ""
+}
+
+func funcComplexity(fn ast.Node) int {	complexity := 1
 	ast.Inspect(fn, func(node ast.Node) bool {
 		switch typed := node.(type) {
 		case *ast.IfStmt, *ast.ForStmt, *ast.RangeStmt, *ast.CaseClause, *ast.CommClause:
@@ -139,7 +167,7 @@ func measure(root string, fset *token.FileSet) (map[string]violation, error) {
 			if !ok || fn.Body == nil {
 				continue
 			}
-			key := relative + ":" + fn.Name.Name
+			key := functionKey(relative, fn)
 			measured[key] = violation{
 				file:       relative,
 				line:       fset.Position(fn.Pos()).Line,

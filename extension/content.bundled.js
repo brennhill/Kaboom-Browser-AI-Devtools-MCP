@@ -838,6 +838,8 @@
     kaboom_capture_diagnostic: (p) => hasString(p, "category") && hasString(p, "message") && hasString(p, "error_type")
   };
   function matchesTelemetrySchema(messageType, payload) {
+    if (!Object.prototype.hasOwnProperty.call(TELEMETRY_SCHEMA_VALIDATORS, messageType))
+      return false;
     const validator = TELEMETRY_SCHEMA_VALIDATORS[messageType];
     return validator ? validator(payload) : false;
   }
@@ -878,7 +880,7 @@
       handler(requestId, result);
   }
   function forwardTelemetryMessage(messageType, payload) {
-    if (!messageType || !(messageType in MESSAGE_MAP) || !payload || typeof payload !== "object")
+    if (!messageType || !Object.prototype.hasOwnProperty.call(MESSAGE_MAP, messageType) || !payload || typeof payload !== "object")
       return;
     const mappedType = MESSAGE_MAP[messageType];
     if (!mappedType)
@@ -898,7 +900,7 @@
     if (event.source !== window || event.origin !== window.location.origin)
       return;
     const { type: messageType, requestId, result, payload } = event.data || {};
-    const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : void 0;
+    const responseHandler = messageType && Object.prototype.hasOwnProperty.call(RESPONSE_HANDLERS, messageType) ? RESPONSE_HANDLERS[messageType] : void 0;
     if (responseHandler) {
       handlePageResponse(event.data, requestId, result, responseHandler);
       return;
@@ -1093,6 +1095,9 @@
     i: "*",
     code: "`"
   };
+  function ownMark(marks, tag) {
+    return Object.prototype.hasOwnProperty.call(marks, tag) ? marks[tag] : void 0;
+  }
   function collectChildren(el, depth, budget) {
     let children = "";
     for (let i = 0; i < el.childNodes.length; i++) {
@@ -1135,12 +1140,15 @@
     return "- " + children.trim() + "\n";
   }
   function renderElementMarkdown(tag, el, children) {
-    const headingMark = HEADING_MARKS[tag];
+    const headingMark = ownMark(HEADING_MARKS, tag);
     if (headingMark)
       return "\n" + headingMark + " " + children.trim() + "\n\n";
-    const wrap = INLINE_WRAPS[tag];
+    const wrap = ownMark(INLINE_WRAPS, tag);
     if (wrap)
       return wrap + children.trim() + wrap;
+    return renderBlockMarkdown(tag, el, children);
+  }
+  function renderBlockMarkdown(tag, el, children) {
     switch (tag) {
       case "p":
         return "\n" + children.trim() + "\n\n";

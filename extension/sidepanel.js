@@ -242,7 +242,7 @@ function handleTerminalTyping(event) {
     state.terminalFocused = true;
     state.lastTypingAt = parsedAt;
 }
-const TERMINAL_IFRAME_HANDLERS = {
+const TERMINAL_IFRAME_HANDLERS = Object.assign(Object.create(null), {
     connected: () => handleTerminalConnected(),
     disconnected: handleTerminalDisconnected,
     reconnect_exhausted: handleReconnectExhausted,
@@ -251,7 +251,7 @@ const TERMINAL_IFRAME_HANDLERS = {
     execution_provider_detected: handleExecutionProviderDetected,
     focus: handleTerminalFocus,
     typing: handleTerminalTyping
-};
+});
 function handleIframeMessage(event) {
     if (!event.data || event.data.source !== 'kaboom-terminal')
         return;
@@ -264,6 +264,7 @@ function handleIframeMessage(event) {
         // EXPECTED_ABSENCE: an invalid configured origin is an expected rejection; logging would duplicate configuration diagnostics.
         return;
     }
+    // Null-prototype map: 'constructor' et al resolve to undefined like the old switch default.
     const handler = TERMINAL_IFRAME_HANDLERS[event.data.event];
     if (handler)
         handler(event);

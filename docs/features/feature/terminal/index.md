@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-24
+last_reviewed: 2026-08-26
 code_paths:
   - internal/activecodebase/store.go
   - cmd/browser-agent/internal/terminal/status/status.go

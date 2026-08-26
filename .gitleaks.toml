@@ -8,21 +8,38 @@
 [extend]
 useDefault = true
 
+# OpenAI keys are missing from gitleaks v8.24 defaults (verified); mirrored in
+# scripts/security/check-secrets.sh. This gitleaks build uses the RE2 engine
+# (no lookaheads), so the legacy boundary is the same consuming class + $ as
+# the shell scanner's ERE form: exactly 20 alnum after sk-.
+[[rules]]
+id = "openai-project-key"
+description = "OpenAI project / service-account / admin API key"
+regex = '''sk-(proj|svc-acct|admin)[-_][A-Za-z0-9_-]{20,}'''
+tags = ["key", "openai"]
+
+[[rules]]
+id = "openai-legacy-key"
+description = "OpenAI legacy API key"
+regex = '''sk-[A-Za-z0-9]{20}([^A-Za-z0-9_-]|$)'''
+tags = ["key", "openai"]
+
 [allowlist]
 description = "Intentional credential-shaped fixtures, docs examples, vendored assets, and build output"
 paths = [
-  # AI assistant session state (never shipped, never source)
-  '''^\.claude/''',
-  '''^\.agents/''',
-  '''^\.codex/''',
-  # Redaction / scanner / sanitizer self-test fixtures (fake keys by design)
-  '''internal/redaction/.*_test\.go$''',
-  '''internal/security/scan/.*_test\.go$''',
-  '''internal/issuereport/.*_test\.go$''',
-  '''internal/audit/.*_test\.go$''',
-  '''internal/capture/.*_test\.go$''',
-  '''cmd/browser-agent/internal/httpguard/.*_test\.go$''',
-  '''cmd/browser-agent/internal/terminal/wstransport/.*_test\.go$''',
+  # Beads skill files tracked in git (.claude was only ever a submodule
+  # gitlink and .codex has no tracked files, so neither needs coverage;
+  # untracked session transcripts are invisible to `gitleaks git`).
+  '''^\.agents/skills/beads/''',
+  # Redaction / scanner / sanitizer self-test fixtures (fake keys by design).
+  # Anchored: an unanchored internal/... regex also matches vendor-nested paths.
+  '''^internal/redaction/.*_test\.go$''',
+  '''^internal/security/scan/.*_test\.go$''',
+  '''^internal/issuereport/.*_test\.go$''',
+  '''^internal/audit/.*_test\.go$''',
+  '''^internal/capture/.*_test\.go$''',
+  '''^cmd/browser-agent/internal/httpguard/.*_test\.go$''',
+  '''^cmd/browser-agent/internal/terminal/wstransport/.*_test\.go$''',
   # Test fixtures and harnesses with fake credentials
   '''^tests/extension/network-http/''',
   '''^tests/extension/network-bod(y|ies)[^/]*\.test\.js$''',
@@ -48,7 +65,7 @@ paths = [
   '''^gokaboom\.dev/dist/''',
   '''^gokaboom\.dev/\.astro/''',
   '''^scripts/smoke-tests/framework/framework-fixtures/''',
-  '''cmd/browser-agent/internal/terminal/assets/terminal_assets/''',
+  '''^cmd/browser-agent/internal/terminal/assets/terminal_assets/''',
   '''^dist/''',
   '''^coverage/''',
   '''^node_modules/''',

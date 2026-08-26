@@ -57,7 +57,12 @@ const undeclaredReferences = (source) => {
       ts.isSetAccessorDeclaration(node)
     ) {
       if (node.name && ts.isIdentifier(node.name)) declared.add(node.name.text)
-      for (const param of node.parameters) declarePattern(param.name)
+      for (const param of node.parameters) {
+        declarePattern(param.name)
+        // Default values are evaluated in the injected context: a module-scope
+        // reference here breaks serialization exactly like one in the body.
+        if (param.initializer) visit(param.initializer)
+      }
       if (node.body) visit(node.body)
       return
     }
@@ -71,6 +76,8 @@ const undeclaredReferences = (source) => {
       return
     }
     if (ts.isPropertyAssignment(node)) {
+      // Computed keys evaluate in the injected context too.
+      if (node.name && ts.isComputedPropertyName(node.name)) visit(node.name.expression)
       visit(node.initializer)
       return
     }
@@ -93,6 +100,27 @@ const undeclaredReferences = (source) => {
   }
   return violations.sort()
 }
+
+test('module-scope leaks through parameter initializers and computed keys are detected', () => {
+  // The exact regression class this guard exists for, smuggled through the two
+  // syntax forms the original visitor never visited.
+  const leaky = `function broken(minLen = MODULE_THRESHOLD, scale = pickMainElement(100)) {
+    const cfg = { [SELECTOR_LIMIT]: scale }
+    return cfg[minLen]
+  }`
+  assert.deepStrictEqual(undeclaredReferences(leaky), [
+    'MODULE_THRESHOLD',
+    'SELECTOR_LIMIT',
+    'pickMainElement'
+  ])
+
+  // Self-contained equivalents stay clean.
+  const clean = `function fine(minLen = 100) {
+    const cfg = { limit: minLen }
+    return cfg[minLen]
+  }`
+  assert.deepStrictEqual(undeclaredReferences(clean), [])
+})
 
 test('every fallback script serializes without module-scope references', () => {
   assert.ok(Object.keys(FALLBACK_SCRIPTS).length >= 3, 'fallback registry should expose all three extractors')

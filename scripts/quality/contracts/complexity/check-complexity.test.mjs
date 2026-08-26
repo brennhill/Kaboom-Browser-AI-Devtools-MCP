@@ -20,6 +20,7 @@ function branches(a, b, n) {
   if (a) total++
   if (a && b) total++
   if (a || b) total++
+  total += a ?? 0
   total += a ? 1 : 0
   for (let i = 0; i < n; i++) total++
   for (const x of [1]) total++
@@ -35,8 +36,8 @@ function branches(a, b, n) {
   return total
 }
 `
-  // 1 base + 3 if + 2 logical + 1 ternary + 4 loops + 1 catch + 3 clauses = 15
-  assert.equal(count(source), 15)
+  // 1 base + 3 if + 2 logical + 1 nullish + 1 ternary + 5 loops + 1 catch + 3 clauses = 17
+  assert.equal(count(source), 17)
 })
 
 test('nested functions are judged separately, not added to the parent', () => {
@@ -133,6 +134,20 @@ test('length budget measures the whole node and ratchets via allowance', () => {
   assert.equal(grown.length, 1)
   assert.equal(grown[0].kind, 'length')
   assert.equal(grown[0].lines, 102)
+})
+
+test('named functions are keyed by name and line so same names cannot inherit allowances', () => {
+  const body = Array.from({ length: 100 }, (_, i) => `  _ = ${i}`).join('\n')
+  const source = `function handler() {\n${body}\n}\nconst other = () => {\n${body}\n}\n`
+  const measured = measureSource('probe.ts', source)
+  const first = measured.find((f) => f.function === 'handler')
+  const second = measured.find((f) => f.function === '(anonymous)')
+  assert.equal(first.key, 'handler:1')
+  assert.equal(second.key, '(anonymous):103')
+  // Only the first function's key has a frozen allowance; the second must fail.
+  const violations = evaluateBudgets(measured, 1000, (key) => (key === 'probe.ts:handler:1' ? 102 : MAX_LENGTH))
+  assert.equal(violations.length, 1)
+  assert.equal(violations[0].function, '(anonymous)')
 })
 
 test('anonymous overlength functions are keyed by line for the baseline', () => {

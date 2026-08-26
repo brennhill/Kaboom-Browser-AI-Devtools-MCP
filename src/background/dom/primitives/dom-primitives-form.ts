@@ -85,86 +85,87 @@ const inner=buildUniqueSelector(node,node,node.tagName.toLowerCase());parts.unsh
 node,node,node.tagName.toLowerCase());parts.unshift(hostSelector);return parts.join(" >>> ")}function classifyInput(el2){const inputType=el2.type||"text";if(inputType===
 "submit"||inputType==="button"||inputType==="reset")return"button";if(inputType==="checkbox"||inputType==="radio")return"checkbox";return"input"}function classifyElement(el2){
 const tag=el2.tagName.toLowerCase();if(tag==="a")return"link";if(tag==="button"||el2.getAttribute("role")==="button")return"button";if(tag==="input")return classifyInput(
-el2);if(tag==="select")return"select";if(tag==="textarea")return"textarea";const roleClass={link:"link",tab:"tab",menuitem:"menuitem"};const byRole=roleClass[el2.
-getAttribute("role")||""];if(byRole)return byRole;if(el2.getAttribute("contenteditable")==="true")return"textarea";return"interactive"}function isVisibleElement(el2){
-const htmlEl=el2;if(!htmlEl||typeof htmlEl.getBoundingClientRect!=="function")return true;const rect=htmlEl.getBoundingClientRect();return rect.width>0&&rect.height>
-0&&htmlEl.offsetParent!==null}function extractElementLabel(el2){const htmlEl=el2;return el2.getAttribute("aria-label")||el2.getAttribute("title")||el2.getAttribute(
-"placeholder")||(htmlEl?.textContent||"").trim().slice(0,80)||el2.tagName.toLowerCase()}function chooseBestScopeMatch(matches){if(matches.length===1)return matches[0];
-const submitVerb=/(post|share|publish|send|submit|save|done|continue|next|create|apply)/i;let best=matches[0];let bestScore=-1;for(const candidate of matches){const textboxes=querySelectorAllDeep(
-'[role="textbox"], textarea, [contenteditable="true"]',candidate);const visibleTextboxes=textboxes.filter(isVisibleElement).length;const buttonCandidates=querySelectorAllDeep(
-'button, [role="button"], input[type="submit"]',candidate);let visibleButtons=0;let submitLikeButtons=0;for(const btn of buttonCandidates){if(!isVisibleElement(
-btn))continue;visibleButtons++;if(submitVerb.test(extractElementLabel(btn))){submitLikeButtons++}}const interactiveCandidates=querySelectorAllDeep('a[href], but\
-ton, input, select, textarea, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [contenteditable="true"]',candidate);const visibleInteractive=interactiveCandidates.
-filter(isVisibleElement).length;const hiddenInteractive=Math.max(0,interactiveCandidates.length-visibleInteractive);const rect=candidate.getBoundingClientRect?.();
-const areaScore2=rect&&rect.width>0&&rect.height>0?Math.min(20,Math.round(rect.width*rect.height/5e4)):0;const score=visibleTextboxes*1e3+submitLikeButtons*250+
-visibleButtons*10+visibleInteractive-hiddenInteractive+areaScore2;if(score>bestScore){bestScore=score;best=candidate}}return best}function isOverlaySizedHighZIndexElement(el2){
-if(!(el2 instanceof HTMLElement))return false;const style=getComputedStyle(el2);const zIndex=Number.parseInt(style.zIndex||"",10);if(Number.isNaN(zIndex)||zIndex<
-1e3)return false;const position=style.position||"";if(position!=="fixed"&&position!=="absolute")return false;const rect=el2.getBoundingClientRect();if(rect.width<
-100||rect.height<100)return false;if(style.display==="none"||style.visibility==="hidden"||style.opacity==="0")return false;return true}function findTopmostOverlay(){
-const dialogSelectors=['[role="dialog"]','[role="alertdialog"]','[aria-modal="true"]',"dialog[open]",".modal.show",".modal.in",".modal.is-active",'.modal[style*\
-="display: block"]',".overlay",".popup",".lightbox","[data-modal]","[data-overlay]","[data-dialog]"];const candidates=[];for(const dialogSelector of dialogSelectors){
-candidates.push(...querySelectorAllDeep(dialogSelector))}const allElements=document.querySelectorAll("*");for(let i=0;i<allElements.length;i++){const el2=allElements[i];
-if(isOverlaySizedHighZIndexElement(el2))candidates.push(el2)}const unique=uniqueElements(candidates).filter(isActionableVisible);if(unique.length===0)return null;
-const ranked=unique.map((candidate,index)=>({element:candidate,score:elementZIndexScore(candidate)*1e3+areaScore(candidate,200)+index}));ranked.sort((a,b)=>b.score-
-a.score);return ranked[0]?.element||null}function describeOverlay(el2){const tag=el2.tagName.toLowerCase();const role=el2.getAttribute("role")||"";const ariaModal=el2.
-getAttribute("aria-modal")||"";let overlayType="unknown";if(tag==="dialog")overlayType="dialog";else if(role==="dialog"||role==="alertdialog")overlayType=role;else if(ariaModal===
-"true")overlayType="modal";else overlayType="overlay";const overlaySelector=(()=>{if(el2.id)return`#${el2.id}`;if(role)return`${tag}[role="${role}"]`;const className=el2.
-className;if(typeof className==="string"&&className.trim())return`${tag}.${className.trim().split(/\s+/)[0]}`;return tag})();const textPreview=(el2.textContent||
-"").trim().slice(0,120);return{overlay_type:overlayType,overlay_selector:overlaySelector,overlay_text_preview:textPreview}}function domError(error,message){return{
-success:false,action,selector,error,message}}function matchedTarget(node){const htmlEl=node;const textPreview=(htmlEl.textContent||"").trim().slice(0,80);const classList=typeof htmlEl.
-className==="string"&&htmlEl.className?htmlEl.className.split(/\s+/).filter(Boolean).slice(0,5):void 0;return{tag:node.tagName.toLowerCase(),role:node.getAttribute(
-"role")||void 0,aria_label:node.getAttribute("aria-label")||void 0,text_preview:textPreview||void 0,classes:classList&&classList.length>0?classList:void 0,selector,
-element_id:getOrCreateElementID(node),bbox:extractBoundingBox(node),scope_selector_used:resolvedScopeSelector,...scopeRect?{scope_rect_used:scopeRect}:{}}}function viewportSize(){
-const height=typeof window!=="undefined"&&typeof window.innerHeight==="number"?window.innerHeight:typeof document!=="undefined"&&document.documentElement?Number(
-document.documentElement.clientHeight||0):0;const width=typeof window!=="undefined"&&typeof window.innerWidth==="number"?window.innerWidth:typeof document!=="un\
-defined"&&document.documentElement?Number(document.documentElement.clientWidth||0):0;return{width,height}}function rectIntersectsViewport(rect,viewWidth,viewHeight){
-const left=typeof rect.left==="number"?rect.left:typeof rect.x==="number"?rect.x:0;const top=typeof rect.top==="number"?rect.top:typeof rect.y==="number"?rect.y:
-0;const right=typeof rect.right==="number"?rect.right:left+rect.width;const bottom=typeof rect.bottom==="number"?rect.bottom:top+rect.height;const intersectsX=viewWidth<=
-0||right>0&&left<viewWidth;const intersectsY=viewHeight<=0||bottom>0&&top<viewHeight;return intersectsX&&intersectsY}function isActionableVisible(el2){if(!(el2 instanceof
-HTMLElement))return true;const rect=typeof el2.getBoundingClientRect==="function"?el2.getBoundingClientRect():{width:0,height:0};if(!(rect.width>0&&rect.height>
-0))return false;if(el2.offsetParent===null){const style=typeof getComputedStyle==="function"?getComputedStyle(el2):null;const position=style?.position||"";if(position!==
-"fixed"&&position!=="sticky")return false}const{width:viewWidth,height:viewHeight}=viewportSize();return rectIntersectsViewport(rect,viewWidth,viewHeight)}function extractBoundingBox(el2){
-if(!(el2 instanceof HTMLElement)||typeof el2.getBoundingClientRect!=="function"){return{x:0,y:0,width:0,height:0}}const rect=el2.getBoundingClientRect();const x=typeof rect.
-left==="number"?rect.left:typeof rect.x==="number"?rect.x:0;const y=typeof rect.top==="number"?rect.top:typeof rect.y==="number"?rect.y:0;const width=Number.isFinite(
-rect.width)?rect.width:0;const height=Number.isFinite(rect.height)?rect.height:0;return{x:Math.round(x),y:Math.round(y),width:Math.round(width),height:Math.round(
-height)}}function summarizeCandidates(matches){return matches.slice(0,8).map(candidate=>{const htmlEl=candidate;const fallback=candidate.tagName.toLowerCase();return{
-tag:fallback,role:candidate.getAttribute("role")||void 0,aria_label:candidate.getAttribute("aria-label")||void 0,text_preview:(htmlEl.textContent||"").trim().slice(
-0,80)||void 0,selector:buildUniqueSelector(candidate,htmlEl,fallback),element_id:getOrCreateElementID(candidate),bbox:extractBoundingBox(candidate),visible:isActionableVisible(
-candidate)}})}function uniqueElements(elements){const out=[];const seen=new Set;for(const element of elements){if(seen.has(element))continue;seen.add(element);out.
-push(element)}return out}function elementZIndexScore(el2){if(!(el2 instanceof HTMLElement))return 0;const style=getComputedStyle(el2);const raw=style.zIndex||"";
-const parsed=Number.parseInt(raw,10);if(Number.isNaN(parsed))return 0;return parsed}function areaScore(el2,max){if(!(el2 instanceof HTMLElement)||typeof el2.getBoundingClientRect!==
-"function")return 0;const rect=el2.getBoundingClientRect();if(rect.width<=0||rect.height<=0)return 0;return Math.min(max,Math.round(rect.width*rect.height/1e4))}
-function collectDialogs(){const selectors=['[role="dialog"]','[aria-modal="true"]',"dialog[open]"];const dialogs=[];for(const dialogSelector of selectors){dialogs.
-push(...querySelectorAllDeep(dialogSelector))}return uniqueElements(dialogs).filter(isActionableVisible)}function pickTopDialog(dialogs){if(dialogs.length===0)return null;
-const ranked=dialogs.map((dialog,index)=>({element:dialog,score:elementZIndexScore(dialog)*1e3+areaScore(dialog,200)+index})).sort((a,b)=>b.score-a.score);return ranked[0]?.
-element||null}function selectorRankingLabel(selectorText){if(selectorText.startsWith("text="))return selectorText.slice(5);if(selectorText.startsWith("aria-labe\
-l="))return selectorText.slice(11);if(selectorText.startsWith("label="))return selectorText.slice(6);if(selectorText.startsWith("placeholder="))return selectorText.
-slice(12);return""}function clickActionScore(el2,tag,role){const isButtonLike=tag==="button"||role==="button"||tag==="input"&&(el2.type==="submit"||el2.type==="\
-button");if(isButtonLike)return 100;if(tag==="a"||role==="link")return 40;return 0}function typeActionScore(el2,tag,role){const isFieldLike=tag==="input"||tag===
-"textarea"||tag==="select"||el2.getAttribute("contenteditable")==="true"||role==="textbox";if(isFieldLike)return 100;if(tag==="button"||role==="button")return 10;
-return 0}function elementTypeMatchScore(el2,tag,role,action2){const clickLikeActions=new Set(["click","key_press","focus","scroll_to","set_attribute","paste"]);
-const typeLikeActions=new Set(["type","select","check"]);if(clickLikeActions.has(action2))return clickActionScore(el2,tag,role);if(typeLikeActions.has(action2))
-return typeActionScore(el2,tag,role);return 0}function textMatchScore(el2,selectorLabel){if(!selectorLabel)return 0;const trimmedLabel=extractElementLabel(el2).
-trim();if(trimmedLabel===selectorLabel){return 80}if(trimmedLabel.startsWith(selectorLabel)&&trimmedLabel.length<=selectorLabel.length+5){return 60}return 0}function primaryButtonScore(el2,tag,role){
-if(tag!=="button"&&role!=="button")return 0;const htmlEl=el2;const cls=(typeof htmlEl.className==="string"?htmlEl.className:"").toLowerCase();const type=el2.getAttribute(
-"type")||"";if(type==="submit")return 60;if(/\bprimary\b|\bbtn-primary\b|\bcta\b/.test(cls))return 60;const style=typeof getComputedStyle==="function"?getComputedStyle(
-htmlEl):null;if(!style)return 0;const bg=style.backgroundColor||"";if(bg&&!/transparent|rgba\(0,\s*0,\s*0,\s*0\)|rgb\(255,\s*255,\s*255\)|rgb\(2[45]\d,\s*2[45]\d,\s*2[45]\d\)/.
-test(bg)){return 30}return 0}function rankAmbiguousCandidates(candidates,action2,selectorText){const dialogs=collectDialogs();const topDialog=dialogs.length>0?pickTopDialog(
-dialogs):null;const selectorLabel=selectorRankingLabel(selectorText);const scored=candidates.map(el2=>{const tag=el2.tagName.toLowerCase();const role=el2.getAttribute(
-"role")||"";let score=0;if(topDialog&&typeof topDialog.contains==="function"&&topDialog.contains(el2)){score+=200}score+=elementTypeMatchScore(el2,tag,role,action2);
-score+=textMatchScore(el2,selectorLabel);score+=primaryButtonScore(el2,tag,role);score+=Math.min(50,Math.max(0,elementZIndexScore(el2)));score+=areaScore(el2,30);
-return{element:el2,score}});scored.sort((a,b)=>b.score-a.score);const topScore=scored[0]?.score??0;const secondScore=scored[1]?.score??0;const gap=topScore-secondScore;
-const winner=gap>=50?scored[0]?.element??null:null;return{winner,gap,ranked:scored}}const requestedScope=(options.scope_selector||"").trim();const activeScope=scopeRoot||
-document;const scopeSelectorUsed=requestedScope||void 0;const scopeRectUsed=scopeRect||void 0;function resolveIntentShortcut(){if(action==="wait_for_text"||action===
-"wait_for_absent"){return{element:document.body,match_count:1,match_strategy:action}}if(action==="key_press"&&!selector&&!options.element_id){const target=document.
-activeElement||document.body;if(target){return{element:target,match_count:1,match_strategy:"active_element_fallback"}}}return null}function resolveElementIDTarget(requestedElementID,requestedScope2,scopeSelectorUsed2){
-const resolvedByID=resolveElementByID(requestedElementID);if(!resolvedByID){return{error:domError("stale_element_id",`Element handle is stale or unknown: ${requestedElementID}\
-. Call list_interactive again.`)}}if(activeScope!==document&&typeof activeScope.contains==="function"){const contains=activeScope.contains(resolvedByID);if(!contains){
-return{error:domError("element_id_scope_mismatch",`Element handle does not belong to scope: ${requestedScope2||"<none>"}`)}}}if(scopeRect&&!intersectsScopeRect(
-resolvedByID)){return{error:domError("element_id_scope_mismatch",`Element handle does not intersect scope_rect (${scopeRect.x}, ${scopeRect.y}, ${scopeRect.width}\
-, ${scopeRect.height}).`)}}return{element:resolvedByID,match_count:1,match_strategy:"element_id",scope_selector_used:scopeSelectorUsed2}}function resolveNthTarget(){
-const nthParam=options.nth;if(nthParam===void 0||nthParam===null)return null;const nth=Number(nthParam);if(!Number.isInteger(nth)){return{error:domError("invali\
-d_nth",`nth must be an integer, got: ${nthParam}`)}}const allMatches=resolveElements(selector,activeScope);const uniqueAll=uniqueElements(allMatches);const rectFiltered=filterByScopeRect(
+el2);if(tag==="select")return"select";if(tag==="textarea")return"textarea";const roleClass={link:"link",tab:"tab",menuitem:"menuitem"};const role=el2.getAttribute(
+"role")||"";const byRole=Object.prototype.hasOwnProperty.call(roleClass,role)?roleClass[role]:void 0;if(byRole)return byRole;if(el2.getAttribute("contenteditabl\
+e")==="true")return"textarea";return"interactive"}function isVisibleElement(el2){const htmlEl=el2;if(!htmlEl||typeof htmlEl.getBoundingClientRect!=="function")return true;
+const rect=htmlEl.getBoundingClientRect();return rect.width>0&&rect.height>0&&htmlEl.offsetParent!==null}function extractElementLabel(el2){const htmlEl=el2;return el2.
+getAttribute("aria-label")||el2.getAttribute("title")||el2.getAttribute("placeholder")||(htmlEl?.textContent||"").trim().slice(0,80)||el2.tagName.toLowerCase()}
+function chooseBestScopeMatch(matches){if(matches.length===1)return matches[0];const submitVerb=/(post|share|publish|send|submit|save|done|continue|next|create|apply)/i;
+let best=matches[0];let bestScore=-1;for(const candidate of matches){const textboxes=querySelectorAllDeep('[role="textbox"], textarea, [contenteditable="true"]',
+candidate);const visibleTextboxes=textboxes.filter(isVisibleElement).length;const buttonCandidates=querySelectorAllDeep('button, [role="button"], input[type="su\
+bmit"]',candidate);let visibleButtons=0;let submitLikeButtons=0;for(const btn of buttonCandidates){if(!isVisibleElement(btn))continue;visibleButtons++;if(submitVerb.
+test(extractElementLabel(btn))){submitLikeButtons++}}const interactiveCandidates=querySelectorAllDeep('a[href], button, input, select, textarea, [role="button"]\
+, [role="link"], [role="tab"], [role="menuitem"], [contenteditable="true"]',candidate);const visibleInteractive=interactiveCandidates.filter(isVisibleElement).length;
+const hiddenInteractive=Math.max(0,interactiveCandidates.length-visibleInteractive);const rect=candidate.getBoundingClientRect?.();const areaScore2=rect&&rect.width>
+0&&rect.height>0?Math.min(20,Math.round(rect.width*rect.height/5e4)):0;const score=visibleTextboxes*1e3+submitLikeButtons*250+visibleButtons*10+visibleInteractive-
+hiddenInteractive+areaScore2;if(score>bestScore){bestScore=score;best=candidate}}return best}function isOverlaySizedHighZIndexElement(el2){if(!(el2 instanceof HTMLElement))
+return false;const style=getComputedStyle(el2);const zIndex=Number.parseInt(style.zIndex||"",10);if(Number.isNaN(zIndex)||zIndex<1e3)return false;const position=style.
+position||"";if(position!=="fixed"&&position!=="absolute")return false;const rect=el2.getBoundingClientRect();if(rect.width<100||rect.height<100)return false;if(style.
+display==="none"||style.visibility==="hidden"||style.opacity==="0")return false;return true}function findTopmostOverlay(){const dialogSelectors=['[role="dialog"\
+]','[role="alertdialog"]','[aria-modal="true"]',"dialog[open]",".modal.show",".modal.in",".modal.is-active",'.modal[style*="display: block"]',".overlay",".popup",
+".lightbox","[data-modal]","[data-overlay]","[data-dialog]"];const candidates=[];for(const dialogSelector of dialogSelectors){candidates.push(...querySelectorAllDeep(
+dialogSelector))}const allElements=document.querySelectorAll("*");for(let i=0;i<allElements.length;i++){const el2=allElements[i];if(isOverlaySizedHighZIndexElement(
+el2))candidates.push(el2)}const unique=uniqueElements(candidates).filter(isActionableVisible);if(unique.length===0)return null;const ranked=unique.map((candidate,index)=>({
+element:candidate,score:elementZIndexScore(candidate)*1e3+areaScore(candidate,200)+index}));ranked.sort((a,b)=>b.score-a.score);return ranked[0]?.element||null}
+function describeOverlay(el2){const tag=el2.tagName.toLowerCase();const role=el2.getAttribute("role")||"";const ariaModal=el2.getAttribute("aria-modal")||"";let overlayType="\
+unknown";if(tag==="dialog")overlayType="dialog";else if(role==="dialog"||role==="alertdialog")overlayType=role;else if(ariaModal==="true")overlayType="modal";else
+overlayType="overlay";const overlaySelector=(()=>{if(el2.id)return`#${el2.id}`;if(role)return`${tag}[role="${role}"]`;const className=el2.className;if(typeof className===
+"string"&&className.trim())return`${tag}.${className.trim().split(/\s+/)[0]}`;return tag})();const textPreview=(el2.textContent||"").trim().slice(0,120);return{
+overlay_type:overlayType,overlay_selector:overlaySelector,overlay_text_preview:textPreview}}function domError(error,message){return{success:false,action,selector,
+error,message}}function matchedTarget(node){const htmlEl=node;const textPreview=(htmlEl.textContent||"").trim().slice(0,80);const classList=typeof htmlEl.className===
+"string"&&htmlEl.className?htmlEl.className.split(/\s+/).filter(Boolean).slice(0,5):void 0;return{tag:node.tagName.toLowerCase(),role:node.getAttribute("role")||
+void 0,aria_label:node.getAttribute("aria-label")||void 0,text_preview:textPreview||void 0,classes:classList&&classList.length>0?classList:void 0,selector,element_id:getOrCreateElementID(
+node),bbox:extractBoundingBox(node),scope_selector_used:resolvedScopeSelector,...scopeRect?{scope_rect_used:scopeRect}:{}}}function viewportSize(){const height=typeof window!==
+"undefined"&&typeof window.innerHeight==="number"?window.innerHeight:typeof document!=="undefined"&&document.documentElement?Number(document.documentElement.clientHeight||
+0):0;const width=typeof window!=="undefined"&&typeof window.innerWidth==="number"?window.innerWidth:typeof document!=="undefined"&&document.documentElement?Number(
+document.documentElement.clientWidth||0):0;return{width,height}}function rectIntersectsViewport(rect,viewWidth,viewHeight){const left=typeof rect.left==="number"?
+rect.left:typeof rect.x==="number"?rect.x:0;const top=typeof rect.top==="number"?rect.top:typeof rect.y==="number"?rect.y:0;const right=typeof rect.right==="num\
+ber"?rect.right:left+rect.width;const bottom=typeof rect.bottom==="number"?rect.bottom:top+rect.height;const intersectsX=viewWidth<=0||right>0&&left<viewWidth;const intersectsY=viewHeight<=
+0||bottom>0&&top<viewHeight;return intersectsX&&intersectsY}function isActionableVisible(el2){if(!(el2 instanceof HTMLElement))return true;const rect=typeof el2.
+getBoundingClientRect==="function"?el2.getBoundingClientRect():{width:0,height:0};if(!(rect.width>0&&rect.height>0))return false;if(el2.offsetParent===null){const style=typeof getComputedStyle===
+"function"?getComputedStyle(el2):null;const position=style?.position||"";if(position!=="fixed"&&position!=="sticky")return false}const{width:viewWidth,height:viewHeight}=viewportSize();
+return rectIntersectsViewport(rect,viewWidth,viewHeight)}function extractBoundingBox(el2){if(!(el2 instanceof HTMLElement)||typeof el2.getBoundingClientRect!=="\
+function"){return{x:0,y:0,width:0,height:0}}const rect=el2.getBoundingClientRect();const x=typeof rect.left==="number"?rect.left:typeof rect.x==="number"?rect.x:
+0;const y=typeof rect.top==="number"?rect.top:typeof rect.y==="number"?rect.y:0;const width=Number.isFinite(rect.width)?rect.width:0;const height=Number.isFinite(
+rect.height)?rect.height:0;return{x:Math.round(x),y:Math.round(y),width:Math.round(width),height:Math.round(height)}}function summarizeCandidates(matches){return matches.
+slice(0,8).map(candidate=>{const htmlEl=candidate;const fallback=candidate.tagName.toLowerCase();return{tag:fallback,role:candidate.getAttribute("role")||void 0,
+aria_label:candidate.getAttribute("aria-label")||void 0,text_preview:(htmlEl.textContent||"").trim().slice(0,80)||void 0,selector:buildUniqueSelector(candidate,
+htmlEl,fallback),element_id:getOrCreateElementID(candidate),bbox:extractBoundingBox(candidate),visible:isActionableVisible(candidate)}})}function uniqueElements(elements){
+const out=[];const seen=new Set;for(const element of elements){if(seen.has(element))continue;seen.add(element);out.push(element)}return out}function elementZIndexScore(el2){
+if(!(el2 instanceof HTMLElement))return 0;const style=getComputedStyle(el2);const raw=style.zIndex||"";const parsed=Number.parseInt(raw,10);if(Number.isNaN(parsed))
+return 0;return parsed}function areaScore(el2,max){if(!(el2 instanceof HTMLElement)||typeof el2.getBoundingClientRect!=="function")return 0;const rect=el2.getBoundingClientRect();
+if(rect.width<=0||rect.height<=0)return 0;return Math.min(max,Math.round(rect.width*rect.height/1e4))}function collectDialogs(){const selectors=['[role="dialog"\
+]','[aria-modal="true"]',"dialog[open]"];const dialogs=[];for(const dialogSelector of selectors){dialogs.push(...querySelectorAllDeep(dialogSelector))}return uniqueElements(
+dialogs).filter(isActionableVisible)}function pickTopDialog(dialogs){if(dialogs.length===0)return null;const ranked=dialogs.map((dialog,index)=>({element:dialog,
+score:elementZIndexScore(dialog)*1e3+areaScore(dialog,200)+index})).sort((a,b)=>b.score-a.score);return ranked[0]?.element||null}function selectorRankingLabel(selectorText){
+if(selectorText.startsWith("text="))return selectorText.slice(5);if(selectorText.startsWith("aria-label="))return selectorText.slice(11);if(selectorText.startsWith(
+"label="))return selectorText.slice(6);if(selectorText.startsWith("placeholder="))return selectorText.slice(12);return""}function clickActionScore(el2,tag,role){
+const isButtonLike=tag==="button"||role==="button"||tag==="input"&&(el2.type==="submit"||el2.type==="button");if(isButtonLike)return 100;if(tag==="a"||role==="l\
+ink")return 40;return 0}function typeActionScore(el2,tag,role){const isFieldLike=tag==="input"||tag==="textarea"||tag==="select"||el2.getAttribute("contentedita\
+ble")==="true"||role==="textbox";if(isFieldLike)return 100;if(tag==="button"||role==="button")return 10;return 0}function elementTypeMatchScore(el2,tag,role,action2){
+const clickLikeActions=new Set(["click","key_press","focus","scroll_to","set_attribute","paste"]);const typeLikeActions=new Set(["type","select","check"]);if(clickLikeActions.
+has(action2))return clickActionScore(el2,tag,role);if(typeLikeActions.has(action2))return typeActionScore(el2,tag,role);return 0}function textMatchScore(el2,selectorLabel){
+if(!selectorLabel)return 0;const trimmedLabel=extractElementLabel(el2).trim();if(trimmedLabel===selectorLabel){return 80}if(trimmedLabel.startsWith(selectorLabel)&&
+trimmedLabel.length<=selectorLabel.length+5){return 60}return 0}function primaryButtonScore(el2,tag,role){if(tag!=="button"&&role!=="button")return 0;const htmlEl=el2;
+const cls=(typeof htmlEl.className==="string"?htmlEl.className:"").toLowerCase();const type=el2.getAttribute("type")||"";if(type==="submit")return 60;if(/\bprimary\b|\bbtn-primary\b|\bcta\b/.
+test(cls))return 60;const style=typeof getComputedStyle==="function"?getComputedStyle(htmlEl):null;if(!style)return 0;const bg=style.backgroundColor||"";if(bg&&
+!/transparent|rgba\(0,\s*0,\s*0,\s*0\)|rgb\(255,\s*255,\s*255\)|rgb\(2[45]\d,\s*2[45]\d,\s*2[45]\d\)/.test(bg)){return 30}return 0}function rankAmbiguousCandidates(candidates,action2,selectorText){
+const dialogs=collectDialogs();const topDialog=dialogs.length>0?pickTopDialog(dialogs):null;const selectorLabel=selectorRankingLabel(selectorText);const scored=candidates.
+map(el2=>{const tag=el2.tagName.toLowerCase();const role=el2.getAttribute("role")||"";let score=0;if(topDialog&&typeof topDialog.contains==="function"&&topDialog.
+contains(el2)){score+=200}score+=elementTypeMatchScore(el2,tag,role,action2);score+=textMatchScore(el2,selectorLabel);score+=primaryButtonScore(el2,tag,role);score+=
+Math.min(50,Math.max(0,elementZIndexScore(el2)));score+=areaScore(el2,30);return{element:el2,score}});scored.sort((a,b)=>b.score-a.score);const topScore=scored[0]?.
+score??0;const secondScore=scored[1]?.score??0;const gap=topScore-secondScore;const winner=gap>=50?scored[0]?.element??null:null;return{winner,gap,ranked:scored}}
+const requestedScope=(options.scope_selector||"").trim();const activeScope=scopeRoot||document;const scopeSelectorUsed=requestedScope||void 0;const scopeRectUsed=scopeRect||
+void 0;function resolveIntentShortcut(){if(action==="wait_for_text"||action==="wait_for_absent"){return{element:document.body,match_count:1,match_strategy:action}}
+if(action==="key_press"&&!selector&&!options.element_id){const target=document.activeElement||document.body;if(target){return{element:target,match_count:1,match_strategy:"\
+active_element_fallback"}}}return null}function resolveElementIDTarget(requestedElementID,requestedScope2,scopeSelectorUsed2){const resolvedByID=resolveElementByID(
+requestedElementID);if(!resolvedByID){return{error:domError("stale_element_id",`Element handle is stale or unknown: ${requestedElementID}. Call list_interactive\
+ again.`)}}if(activeScope!==document&&typeof activeScope.contains==="function"){const contains=activeScope.contains(resolvedByID);if(!contains){return{error:domError(
+"element_id_scope_mismatch",`Element handle does not belong to scope: ${requestedScope2||"<none>"}`)}}}if(scopeRect&&!intersectsScopeRect(resolvedByID)){return{
+error:domError("element_id_scope_mismatch",`Element handle does not intersect scope_rect (${scopeRect.x}, ${scopeRect.y}, ${scopeRect.width}, ${scopeRect.height}\
+).`)}}return{element:resolvedByID,match_count:1,match_strategy:"element_id",scope_selector_used:scopeSelectorUsed2}}function resolveNthTarget(){const nthParam=options.
+nth;if(nthParam===void 0||nthParam===null)return null;const nth=Number(nthParam);if(!Number.isInteger(nth)){return{error:domError("invalid_nth",`nth must be an \
+integer, got: ${nthParam}`)}}const allMatches=resolveElements(selector,activeScope);const uniqueAll=uniqueElements(allMatches);const rectFiltered=filterByScopeRect(
 uniqueAll);const visibleFiltered=rectFiltered.filter(isActionableVisible);const candidates=visibleFiltered.length>0?visibleFiltered:rectFiltered;if(candidates.length===
 0){return{error:domError("element_not_found",`No element matches selector: ${selector}`)}}const resolvedIndex=nth<0?candidates.length+nth:nth;if(resolvedIndex<0||
 resolvedIndex>=candidates.length){return{error:domError("nth_out_of_range",`nth=${nth} is out of range \u2014 selector matched ${candidates.length} element(s). \

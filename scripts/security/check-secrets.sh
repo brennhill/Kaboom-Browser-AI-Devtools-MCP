@@ -15,6 +15,10 @@
 
 # Pattern catalog: id<TAB>extended regex. Deliberately low-false-positive —
 # each entry is a full credential format, not a keyword heuristic.
+# openai-legacy-key uses a consuming boundary class instead of the lookahead
+# form used in .gitleaks.toml because POSIX ERE (BSD/GNU grep -E) has no
+# lookaheads; both forms mean "exactly 20 alnum after sk-", which cannot
+# collide with sk-ant- (hyphen breaks the run) or the sk-(proj|...)- family.
 secret_patterns() {
     cat <<'PATTERNS'
 aws-access-key	AKIA[0-9A-Z]{16}
@@ -28,19 +32,24 @@ stripe-webhook-secret	whsec_[A-Za-z0-9]{24}
 private-key-block	-----BEGIN (RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----
 slack-token	xox[baprs]-[A-Za-z0-9-]{10,}
 anthropic-key	sk-ant-[A-Za-z0-9-]{20,}
+openai-project-key	sk-(proj|svc-acct|admin)[-_][A-Za-z0-9_-]{20,}
+openai-legacy-key	sk-[A-Za-z0-9]{20}([^A-Za-z0-9_-]|$)
 google-api-key	AIza[0-9A-Za-z_-]{35}
 npm-access-token	npm_[A-Za-z0-9]{36}
 gitlab-pat	glpat-[A-Za-z0-9_-]{20,}
 PATTERNS
 }
 
-ALLOWLIST_FILE="${KABOOM_SECRETS_ALLOWLIST:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/.secrets-allowlist}"
+# allowlist_path — resolved per call so KABOOM_SECRETS_ALLOWLIST overrides
+# apply when the script is executed or sourced by tests.
+allowlist_path() {
+    echo "${KABOOM_SECRETS_ALLOWLIST:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/.secrets-allowlist}"
+}
 
 # allowlisted <path> — true when the path matches any allowlist glob.
-# Resolved per call so KABOOM_SECRETS_ALLOWLIST overrides apply to sourced tests.
 allowlisted() {
     local path="$1" line glob allowlist
-    allowlist="${KABOOM_SECRETS_ALLOWLIST:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/.secrets-allowlist}"
+    allowlist="$(allowlist_path)"
     [ -f "$allowlist" ] || return 1
     while IFS= read -r line; do
         line="${line%%#*}"
@@ -51,6 +60,27 @@ allowlisted() {
         esac
     done < "$allowlist"
     return 1
+}
+
+# validate_allowlist — reject glob lines that would silence every finding.
+# A bare "*" or "**" matches all paths, so one stray line disables the
+# scanner; fail closed instead of scanning with a blanket ignore.
+validate_allowlist() {
+    local allowlist line glob line_number=0
+    allowlist="$(allowlist_path)"
+    [ -f "$allowlist" ] || return 0
+    while IFS= read -r line; do
+        line_number=$((line_number + 1))
+        line="${line%%#*}"
+        glob="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+        case "$glob" in
+            '*'|'**')
+                echo "INVALID ALLOWLIST: ${allowlist}:${line_number} is '${glob}' — it would silence every finding; use a specific path glob." >&2
+                return 1
+                ;;
+        esac
+    done < "$allowlist"
+    return 0
 }
 
 # redact <matched-text> — keep a recognisable prefix only.
@@ -82,9 +112,10 @@ scan_paths() {
     done < <(secret_patterns)
 }
 
-# staged_paths — files the commit is about to add/modify.
+# staged_paths — files the commit is about to add/copy/modify/rename/type-change.
+# R and T matter: a rename-only or type-change-only stage otherwise escapes scan.
 staged_paths() {
-    git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true
+    git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null || true
 }
 
 # tracked_paths — every file under version control.
@@ -95,6 +126,7 @@ tracked_paths() {
 check_secrets_main() {
     local mode="${1:---tracked}" findings path
     local -a paths=()
+    validate_allowlist || return 1
     # mapfile is bash 4+; macOS still ships bash 3.2, so read portably.
     if [ "$mode" = "--staged" ]; then
         while IFS= read -r path; do [ -n "$path" ] && paths+=("$path"); done < <(staged_paths)

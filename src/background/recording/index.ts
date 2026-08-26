@@ -394,13 +394,107 @@ async function startOffscreenRecording(
 // =============================================================================
 
 /**
+ * Resolve the tab to record (explicit MCP tab_id, else the active tab), reject
+ * superseded connection generations, and auto-track the tab when nothing is
+ * tracked yet.
+ */
+async function resolveRecordingStartTab(
+  targetTabId: number | undefined,
+  connectionGeneration: number | undefined
+): Promise<(chrome.tabs.Tab & { id: number }) | { error: string }> {
+  const tabResult = await resolveRecordingTab(targetTabId)
+  if ('error' in tabResult) {
+    return { error: tabResult.error }
+  }
+
+  if (!recordingGenerationIsCurrent(connectionGeneration, 'recording_start_target')) {
+    return { error: 'RECORD_START: stale_connection_generation' }
+  }
+
+  // Auto-enable tab tracking if not already tracked
+  const trackedTabId = (await readTrackedTab()).id
+  console.log(LOG, 'Tracked tab:', {
+    trackedTabId,
+    willAutoTrack: !trackedTabId
+  })
+  if (!trackedTabId) {
+    await setTrackedTab(tabResult)
+  }
+  return tabResult
+}
+
+/** Mark the start attempt failed and build its error result. */
+function failRecordingStart(error: string): RecordingStartResult {
+  recordingState.active = false // eslint-disable-line require-atomic-updates
+  return { status: 'error', name: '', error }
+}
+
+/** Mark the start attempt failed after the offscreen document rejected it. */
+function failOffscreenStart(error: string | undefined): RecordingStartResult {
+  recordingState.active = false // eslint-disable-line require-atomic-updates
+  console.error(LOG, 'START FAILED: offscreen rejected:', error)
+  return {
+    status: 'error',
+    name: '',
+    error: error ?? 'RECORD_START: Offscreen document failed to start recording.'
+  }
+}
+
+/**
+ * Commit a successful start: swap in the active state, persist it for popup
+ * sync and post-restart rehydration, start the badge timer, toast the tab, and
+ * drop any stale tab-update listener. Returns the recording start time.
+ */
+async function commitRecordingStarted(
+  tab: chrome.tabs.Tab & { id: number },
+  name: string,
+  fps: number,
+  audio: string,
+  queryId: string
+): Promise<number> {
+  /* eslint-disable require-atomic-updates */
+  recordingState = {
+    active: true,
+    name,
+    startTime: Date.now(),
+    fps,
+    audioMode: audio,
+    tabId: tab.id,
+    url: tab.url ?? '',
+    queryId
+  }
+  /* eslint-enable require-atomic-updates */
+
+  // Persist state for popup sync + rehydration after service-worker restart
+  const persisted: PersistedRecordingState = {
+    active: true,
+    name,
+    startTime: recordingState.startTime,
+    fps,
+    audioMode: audio,
+    tabId: tab.id,
+    url: tab.url ?? '',
+    queryId
+  }
+  await setLocals({ [StorageKey.RECORDING]: persisted })
+  startRecordingBadgeTimer(recordingState.startTime)
+
+  // Show "Recording started" toast (fades after 2s)
+  sendTabToast(tab.id, buildRecordingToastLabel(tab.url), '', 'success', scaleTimeout(2000))
+
+  // Watermark removed — badge timer on extension icon replaces it (not captured by tabCapture)
+  if (tabUpdateListener) chrome.tabs.onUpdated.removeListener(tabUpdateListener)
+  tabUpdateListener = null
+  return recordingState.startTime
+}
+
+/**
  * Start recording a target tab (or the active tab when no target is provided).
  * @param name — Pre-generated filename from the Go server (e.g., "checkout-bug--2026-02-07-1423")
  * @param fps — Framerate (5–60, default 15)
  * @param audio — Audio mode: 'tab', 'mic', 'both', or '' (no audio)
  * @param context — Request context: query resolution, origin, target tab, generation guard
  */
-// #lizard forgives
 export async function startRecording(
   name: string,
   fps: number = 15,
@@ -424,7 +518,7 @@ export async function startRecording(
   }
 
   if (!recordingGenerationIsCurrent(connectionGeneration, 'recording_start')) {
-    return { status: 'error', name: '', error: 'RECORD_START: stale_connection_generation' }
+    return failRecordingStart('RECORD_START: stale_connection_generation')
   }
 
   // Mark active immediately to prevent TOCTOU race across awaits
@@ -436,34 +530,16 @@ export async function startRecording(
 
   try {
     // Resolve the target tab (explicit MCP tab_id, else the active tab).
-    const tabResult = await resolveRecordingTab(targetTabId)
-    if ('error' in tabResult) {
-      recordingState.active = false // eslint-disable-line require-atomic-updates
-      return { status: 'error', name: '', error: tabResult.error }
-    }
-    const tab = tabResult
-
-    if (!recordingGenerationIsCurrent(connectionGeneration, 'recording_start_target')) {
-      recordingState.active = false // eslint-disable-line require-atomic-updates
-      return { status: 'error', name: '', error: 'RECORD_START: stale_connection_generation' }
-    }
-
-    // Auto-enable tab tracking if not already tracked
-    const trackedTabId = (await readTrackedTab()).id
-    console.log(LOG, 'Tracked tab:', {
-      trackedTabId,
-      willAutoTrack: !trackedTabId
-    })
-    if (!trackedTabId) {
-      await setTrackedTab(tab)
+    const tab = await resolveRecordingStartTab(targetTabId, connectionGeneration)
+    if ('error' in tab) {
+      return failRecordingStart(tab.error)
     }
 
     // Ensure the content script is responsive (toasts); may reload the tab.
     await ensureContentScriptReady(tab.id, fromPopup)
 
     if (!recordingGenerationIsCurrent(connectionGeneration, 'recording_start_content_ready')) {
-      recordingState.active = false // eslint-disable-line require-atomic-updates
-      return { status: 'error', name: '', error: 'RECORD_START: stale_connection_generation' }
+      return failRecordingStart('RECORD_START: stale_connection_generation')
     }
 
     // Acquire the tabCapture stream id (popup activeTab grant vs MCP gesture).
@@ -475,8 +551,7 @@ export async function startRecording(
     const streamId = streamResult.streamId
 
     if (!recordingGenerationIsCurrent(connectionGeneration, 'recording_start_stream')) {
-      recordingState.active = false // eslint-disable-line require-atomic-updates
-      return { status: 'error', name: '', error: 'RECORD_START: stale_connection_generation' }
+      return failRecordingStart('RECORD_START: stale_connection_generation')
     }
 
     // Start the offscreen recorder and wait (bounded) for its confirmation.
@@ -485,59 +560,17 @@ export async function startRecording(
     console.log(LOG, 'Offscreen START result:', { success: startResult.success, error: startResult.error })
 
     if (!startResult.success) {
-      recordingState.active = false // eslint-disable-line require-atomic-updates
-      console.error(LOG, 'START FAILED: offscreen rejected:', startResult.error)
-      return {
-        status: 'error',
-        name: '',
-        error: startResult.error ?? 'RECORD_START: Offscreen document failed to start recording.'
-      }
+      return failOffscreenStart(startResult.error)
     }
 
-    /* eslint-disable require-atomic-updates */
-    recordingState = {
-      active: true,
-      name,
-      startTime: Date.now(),
-      fps,
-      audioMode: audio,
-      tabId: tab.id,
-      url: tab.url ?? '',
-      queryId
-    }
-    /* eslint-enable require-atomic-updates */
-
-    // Persist state for popup sync + rehydration after service-worker restart
-    const persisted: PersistedRecordingState = {
-      active: true,
-      name,
-      startTime: recordingState.startTime,
-      fps,
-      audioMode: audio,
-      tabId: tab.id,
-      url: tab.url ?? '',
-      queryId
-    }
-    await setLocals({ [StorageKey.RECORDING]: persisted })
-    startRecordingBadgeTimer(recordingState.startTime)
-
-    // Show "Recording started" toast (fades after 2s)
-    sendTabToast(tab.id, buildRecordingToastLabel(tab.url), '', 'success', scaleTimeout(2000))
-
-    // Watermark removed — badge timer on extension icon replaces it (not captured by tabCapture)
-    if (tabUpdateListener) chrome.tabs.onUpdated.removeListener(tabUpdateListener)
-    tabUpdateListener = null
+    const startTime = await commitRecordingStarted(tab, name, fps, audio, queryId)
 
     console.log(LOG, 'Recording STARTED successfully', { name, tabId: tab.id, audioMode: audio, fps })
-    return { status: 'recording', name, startTime: recordingState.startTime }
+    return { status: 'recording', name, startTime }
   } catch (err) {
     recordingState.active = false // eslint-disable-line require-atomic-updates
     console.error(LOG, 'START EXCEPTION:', errorMessage(err), (err as Error).stack)
-    return {
-      status: 'error',
-      name: '',
-      error: `RECORD_START: ${errorMessage(err, 'Failed to start recording.')}`
-    }
+    return { status: 'error', name: '', error: `RECORD_START: ${errorMessage(err, 'Failed to start recording.')}` }
   }
 }
 
