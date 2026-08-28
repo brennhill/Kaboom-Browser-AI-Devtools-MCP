@@ -410,8 +410,14 @@ async function loadSkillCatalog(options = {}) {
   }
 }
 
+// The marker is appended, not prepended. Skill bodies begin with YAML frontmatter,
+// which must start on line 1; a leading HTML comment pushes the opening `---` down
+// and the frontmatter no longer parses, so `name`/`description` never resolve.
 function buildManagedContent(skillId, version, body) {
-  return `${MANAGED_MARKER} id:${skillId} version:${version} -->\n${body}`;
+  const text = String(body == null ? '' : body);
+  const marker = `${MANAGED_MARKER} id:${skillId} version:${version} -->`;
+  const separator = text.length === 0 || text.endsWith('\n') ? '' : '\n';
+  return `${text}${separator}${marker}\n`;
 }
 
 function isManagedSkillContent(content) {
@@ -448,11 +454,46 @@ function safeWriteManagedFile(filePath, content) {
   }
 }
 
+// Agents whose skill loader discovers `<root>/<id>/SKILL.md` rather than a flat
+// `<root>/<id>.md`. Claude Code only scans the directory form, so a flat file is
+// written successfully but never registered as a skill.
+function usesDirectorySkillLayout(agent) {
+  return agent === 'codex' || agent === 'claude';
+}
+
 function skillFilePath(agent, rootDir, skillId) {
-  if (agent === 'codex') {
+  if (usesDirectorySkillLayout(agent)) {
     return path.join(rootDir, skillId, 'SKILL.md');
   }
   return path.join(rootDir, `${skillId}.md`);
+}
+
+// Path used before the directory layout was adopted for an agent. Retained so the
+// cleanup sweep can still find skills installed by an older version, which would
+// otherwise be orphaned in the user's working tree.
+function legacyFlatSkillFilePath(rootDir, skillId) {
+  return path.join(rootDir, `${skillId}.md`);
+}
+
+// Removes a flat `<id>.md` left by a release that predates the directory layout for
+// this agent. Without this the old file survives beside the new `<id>/SKILL.md`,
+// stays untracked in the user's repo, and is never cleaned up by any later run.
+function removeLegacyFlatSkillFile(agent, rootDir, skillId, options = {}) {
+  const { dryRun = false } = options;
+  if (!usesDirectorySkillLayout(agent)) return 0;
+
+  const flatPath = legacyFlatSkillFilePath(rootDir, skillId);
+  if (!fs.existsSync(flatPath)) return 0;
+
+  try {
+    const existing = fs.readFileSync(flatPath, 'utf8');
+    // Only reclaim files this installer wrote — never a user-authored skill.
+    if (!isManagedSkillContent(existing)) return 0;
+    if (!dryRun) fs.unlinkSync(flatPath);
+    return 1;
+  } catch (_) {
+    return 0;
+  }
 }
 
 function removeManagedSkillFile(agent, rootDir, skillId, options = {}) {
@@ -469,7 +510,7 @@ function removeManagedSkillFile(agent, rootDir, skillId, options = {}) {
     }
     if (!dryRun) {
       fs.unlinkSync(managedPath);
-      if (agent === 'codex') {
+      if (path.basename(managedPath) === 'SKILL.md') {
         const managedDir = path.dirname(managedPath);
         try {
           fs.rmdirSync(managedDir);
@@ -518,9 +559,12 @@ function removeLegacySkillVariants(agent, rootDir, skillId, options = {}) {
   return removed;
 }
 
+// Matches the marker at the start of any line, so files written by older releases
+// (marker first) and current ones (marker last) are both recognised. Anchoring to a
+// line start keeps this from matching a marker merely quoted inside prose.
 function isManagedSkillFileStart(content) {
   const text = String(content || '');
-  return MANAGED_MARKERS.some((marker) => text.startsWith(marker));
+  return MANAGED_MARKERS.some((marker) => text.startsWith(marker) || text.includes(`\n${marker}`));
 }
 
 /**
@@ -542,8 +586,13 @@ function removeOrphanedManagedSkills(agent, rootDir, handledPaths, options = {})
 
   for (const entry of entries) {
     let candidate = null;
-    if (agent === 'codex') {
-      if (entry.isDirectory()) candidate = path.join(rootDir, entry.name, 'SKILL.md');
+    if (usesDirectorySkillLayout(agent)) {
+      if (entry.isDirectory()) {
+        candidate = path.join(rootDir, entry.name, 'SKILL.md');
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        // Flat file left by a release that predates the directory layout.
+        candidate = path.join(rootDir, entry.name);
+      }
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       candidate = path.join(rootDir, entry.name);
     }
@@ -554,7 +603,9 @@ function removeOrphanedManagedSkills(agent, rootDir, handledPaths, options = {})
       if (!isManagedSkillFileStart(content)) continue;
       if (!dryRun) {
         fs.unlinkSync(candidate);
-        if (agent === 'codex') {
+        // Only prune the parent for the directory layout; a legacy flat file's
+        // parent is the skills root itself and must never be removed.
+        if (path.basename(candidate) === 'SKILL.md') {
           try {
             fs.rmdirSync(path.dirname(candidate));
           } catch (_) {
@@ -702,6 +753,7 @@ async function installBundledSkills(options = {}) {
           );
         }
         summary.legacy_removed += removeLegacySkillVariants(agent, rootDir, skill.id);
+        summary.legacy_removed += removeLegacyFlatSkillFile(agent, rootDir, skill.id);
       }
     }
   }
