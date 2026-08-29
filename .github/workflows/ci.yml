@@ -53,6 +53,10 @@ jobs:
             echo "verify-llm gate not required for this PR."
           fi
 
+      - name: Install pinned Node toolchain
+        if: steps.scope.outputs.run_gate == 'true'
+        run: npm ci
+
       - name: Run verify-llm gate
         if: steps.scope.outputs.run_gate == 'true'
         run: make verify-llm

@@ -106,11 +106,16 @@ skill_dest_path() {
   local agent="$1"
   local root="$2"
   local skill_id="$3"
-  if [ "$agent" = "codex" ]; then
+  if uses_directory_skill_layout "$agent"; then
     printf "%s\n" "$root/$skill_id/SKILL.md"
   else
     printf "%s\n" "$root/$skill_id.md"
   fi
+}
+
+uses_directory_skill_layout() {
+  local agent="$1"
+  [ "$agent" = "claude" ] || [ "$agent" = "codex" ]
 }
 
 install_skill() {
@@ -131,7 +136,7 @@ install_skill() {
   local tmp_file
   tmp_file="$(mktemp)"
   local managed_marker="$MARKER id:$skill_id version:$version -->"
-  if [ "$agent" = "codex" ] && [ "$(head -n 1 "$src_file")" = "---" ]; then
+  if uses_directory_skill_layout "$agent" && [ "$(head -n 1 "$src_file")" = "---" ]; then
     awk -v marker="$managed_marker" '
       { print }
       NR > 1 && $0 == "---" && !inserted {

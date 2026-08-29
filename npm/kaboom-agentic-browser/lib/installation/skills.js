@@ -14,6 +14,11 @@ const os = require('os');
 const path = require('path');
 
 const MANAGED_MARKER = '<!-- kaboom-managed-skill';
+const STALE_SKILL_ARTIFACTS = Object.freeze({
+  prefixes: Object.freeze(['kaboom-', 'gasoline-', 'strum-']),
+  markers: Object.freeze(['<!-- gasoline-managed-skill', '<!-- strum-managed-skill']),
+});
+const MANAGED_MARKERS = Object.freeze([MANAGED_MARKER, ...STALE_SKILL_ARTIFACTS.markers]);
 const BUNDLED_SKILLS_DIR = path.join(__dirname, '..', '..', 'skills');
 const DEFAULT_AGENTS = ['claude', 'codex', 'gemini'];
 
@@ -409,7 +414,7 @@ async function loadSkillCatalog(options = {}) {
 
 function buildManagedContent(agent, skillId, version, body) {
   const marker = `${MANAGED_MARKER} id:${skillId} version:${version} -->`;
-  if (agent !== 'codex' || !body.startsWith('---\n')) {
+  if (!usesDirectorySkillLayout(agent) || !body.startsWith('---\n')) {
     return `${marker}\n${body}`;
   }
   const frontmatterEnd = body.indexOf('\n---\n', 4);
@@ -421,7 +426,7 @@ function buildManagedContent(agent, skillId, version, body) {
 }
 
 function isManagedSkillContent(content) {
-  return content.includes(MANAGED_MARKER);
+  return isManagedSkillFileStart(content);
 }
 
 function safeWriteManagedFile(filePath, content) {
@@ -454,11 +459,55 @@ function safeWriteManagedFile(filePath, content) {
   }
 }
 
+function usesDirectorySkillLayout(agent) {
+  return agent === 'codex' || agent === 'claude';
+}
+
 function skillFilePath(agent, rootDir, skillId) {
-  if (agent === 'codex') {
+  if (usesDirectorySkillLayout(agent)) {
     return path.join(rootDir, skillId, 'SKILL.md');
   }
   return path.join(rootDir, `${skillId}.md`);
+}
+
+function staleFlatSkillPaths(agent, rootDir, skillId) {
+  if (!usesDirectorySkillLayout(agent)) return [];
+  const names = [`${skillId}.md`];
+  for (const prefix of STALE_SKILL_ARTIFACTS.prefixes) {
+    names.push(`${prefix}${skillId}.md`);
+  }
+  return names.map((name) => path.join(rootDir, name));
+}
+
+function removeStaleFlatSkillFiles(agent, rootDir, skillId, options = {}) {
+  const { dryRun = false } = options;
+  const result = { removed: 0, errors: 0 };
+  for (const stalePath of staleFlatSkillPaths(agent, rootDir, skillId)) {
+    if (!fs.existsSync(stalePath)) continue;
+    try {
+      const existing = fs.readFileSync(stalePath, 'utf8');
+      if (!isManagedSkillContent(existing)) continue;
+      if (!dryRun) fs.unlinkSync(stalePath);
+      result.removed += 1;
+    } catch (err) {
+      result.errors += 1;
+    }
+  }
+  return result;
+}
+
+function removeEmptySkillDirectory(managedPath, result) {
+  if (path.basename(managedPath) !== 'SKILL.md') return;
+  try {
+    fs.rmdirSync(path.dirname(managedPath));
+  } catch (err) {
+    if (err && (err.code === 'ENOENT' || err.code === 'ENOTEMPTY')) {
+      // EXPECTED_ABSENCE: a missing directory is already clean, while a non-empty
+      // directory contains user-owned sidecars that cleanup must preserve.
+      return;
+    }
+    result.errors += 1;
+  }
 }
 
 function removeManagedSkillFile(agent, rootDir, skillId, options = {}) {
@@ -475,14 +524,7 @@ function removeManagedSkillFile(agent, rootDir, skillId, options = {}) {
     }
     if (!dryRun) {
       fs.unlinkSync(managedPath);
-      if (agent === 'codex') {
-        const managedDir = path.dirname(managedPath);
-        try {
-          fs.rmdirSync(managedDir);
-        } catch (err) {
-          // Ignore non-empty or missing directory errors.
-        }
-      }
+      removeEmptySkillDirectory(managedPath, result);
     }
     result.removed += 1;
     return result;
@@ -494,16 +536,13 @@ function removeManagedSkillFile(agent, rootDir, skillId, options = {}) {
 
 function isManagedSkillFileStart(content) {
   const text = String(content || '');
-  if (text.startsWith(MANAGED_MARKER)) return true;
-  if (!text.startsWith('---\n')) return false;
-  const frontmatterEnd = text.indexOf('\n---\n', 4);
-  return frontmatterEnd >= 0 && text.startsWith(MANAGED_MARKER, frontmatterEnd + 5);
+  return MANAGED_MARKERS.some((marker) => text.startsWith(marker) || text.includes(`\n${marker}`));
 }
 
 /**
  * Remove managed skill files that are no longer in the bundled manifest
- * (renamed or dropped skills). Only files whose content STARTS with a managed
- * marker are removed — user-owned files are never touched.
+ * (renamed or dropped skills). Only files with a managed marker at a line
+ * start are removed — user-owned files are never touched.
  * handledPaths lists files already processed by the manifest-based cleanup so
  * dry-run counts are not duplicated.
  */
@@ -513,14 +552,23 @@ function removeOrphanedManagedSkills(agent, rootDir, handledPaths, options = {})
   let entries;
   try {
     entries = fs.readdirSync(rootDir, { withFileTypes: true });
-  } catch (_) {
-    return result; // Root does not exist — nothing to clean.
+  } catch (err) {
+    if (err && err.code === 'ENOENT') {
+      // EXPECTED_ABSENCE: an agent without a skill root has nothing to clean.
+      return result;
+    }
+    result.errors += 1;
+    return result;
   }
 
   for (const entry of entries) {
     let candidate = null;
-    if (agent === 'codex') {
-      if (entry.isDirectory()) candidate = path.join(rootDir, entry.name, 'SKILL.md');
+    if (usesDirectorySkillLayout(agent)) {
+      if (entry.isDirectory()) {
+        candidate = path.join(rootDir, entry.name, 'SKILL.md');
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        candidate = path.join(rootDir, entry.name);
+      }
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       candidate = path.join(rootDir, entry.name);
     }
@@ -531,16 +579,10 @@ function removeOrphanedManagedSkills(agent, rootDir, handledPaths, options = {})
       if (!isManagedSkillFileStart(content)) continue;
       if (!dryRun) {
         fs.unlinkSync(candidate);
-        if (agent === 'codex') {
-          try {
-            fs.rmdirSync(path.dirname(candidate));
-          } catch (_) {
-            // Ignore non-empty or missing directory errors.
-          }
-        }
+        removeEmptySkillDirectory(candidate, result);
       }
       result.removed += 1;
-    } catch (_) {
+    } catch (err) {
       result.errors += 1;
     }
   }
@@ -606,6 +648,7 @@ async function installBundledSkills(options = {}) {
         updated: 0,
         unchanged: 0,
         skipped_user_owned: 0,
+        removed: 0,
         errors: 0,
       },
       results: [],
@@ -626,6 +669,7 @@ async function installBundledSkills(options = {}) {
         updated: 0,
         unchanged: 0,
         skipped_user_owned: 0,
+        removed: 0,
         errors: 0,
       },
       results: [],
@@ -641,6 +685,7 @@ async function installBundledSkills(options = {}) {
     updated: 0,
     unchanged: 0,
     skipped_user_owned: 0,
+    removed: 0,
     errors: 0,
   };
 
@@ -671,6 +716,9 @@ async function installBundledSkills(options = {}) {
             `[kaboom-mcp] skills ${writeResult.status}: ${agent}:${skill.id} -> ${filePath}${suffix}`
           );
         }
+        const stale = removeStaleFlatSkillFiles(agent, rootDir, skill.id);
+        summary.removed += stale.removed;
+        summary.errors += stale.errors;
       }
     }
   }

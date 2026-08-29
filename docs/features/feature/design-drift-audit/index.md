@@ -4,7 +4,7 @@ feature_id: feature-design-drift-audit
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-22
+last_reviewed: 2026-08-29
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/designdrift/handler.go
   - cmd/browser-agent/internal/toolanalyze/designdrift/finding.go
@@ -18,6 +18,7 @@ code_paths:
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - src/inject/computed-styles.ts
   - src/types/wire/wire-style-probe.ts
+  - gokaboom.dev/src/content/docs/reference/analyze.md
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/designdrift/contract_test.go
   - cmd/browser-agent/internal/toolanalyze/designdrift/analyzers_test.go
@@ -26,6 +27,7 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/designdrift/testdata/fixture-probe.json
   - cmd/browser-agent/internal/testpages/pages/design-drift.html
   - scripts/tests/browser/cat-36-design-drift.sh
+  - scripts/docs/reference/check-reference-schema-sync.mjs
 ---
 
 # Design Drift Audit

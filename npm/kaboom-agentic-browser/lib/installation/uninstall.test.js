@@ -349,10 +349,12 @@ test('executeUninstall removes from detected file-type clients', () => {
 test('executeUninstall removes canonical managed skill files', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-uninstall-'));
   const claudeRoot = path.join(tmp, 'claude-skills');
-  fs.mkdirSync(claudeRoot, { recursive: true });
+  const skillPath = path.join(claudeRoot, 'debug', 'SKILL.md');
+  fs.mkdirSync(path.dirname(skillPath), { recursive: true });
   fs.writeFileSync(
-    path.join(claudeRoot, 'debug.md'),
-    '<!-- kaboom-managed-skill id:debug version:2 -->\ncurrent kaboom skill\n',
+    skillPath,
+    '---\nname: debug\n---\ncurrent kaboom skill\n' +
+      '<!-- kaboom-managed-skill id:debug version:2 -->\n',
     'utf8'
   );
 
@@ -369,7 +371,7 @@ test('executeUninstall removes canonical managed skill files', () => {
     assert.equal(result.success, true);
     assert.ok(result.skillCleanup);
     assert.equal(result.skillCleanup.removed, 1);
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'debug.md')), false);
+    assert.equal(fs.existsSync(path.join(claudeRoot, 'debug')), false);
   } finally {
     if (originalClaudeDir === undefined) {
       delete process.env.KABOOM_CLAUDE_SKILLS_DIR;

@@ -15,6 +15,8 @@ const {
 } = require('./install');
 const { installBundledSkills } = require('./skills');
 
+const TEST_BINARY_COMMAND = process.execPath;
+
 test('npm wrapper metadata uses kaboom package and launcher names', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
   assert.equal(packageJson.name, 'kaboom-agentic-browser');
@@ -40,7 +42,7 @@ test('npm wrapper readme and launcher copy use kaboom branding', () => {
 // --- generateDefaultConfig ---
 
 test('generateDefaultConfig returns valid MCP config', () => {
-  const cfg = generateDefaultConfig();
+  const cfg = generateDefaultConfig({ binaryCommand: TEST_BINARY_COMMAND });
   assert.ok(cfg.mcpServers);
   assert.ok(cfg.mcpServers['kaboom-browser-devtools']);
   assert.ok(cfg.mcpServers['kaboom-browser-devtools'].command.length > 0);
@@ -54,14 +56,14 @@ test('generateDefaultConfig honors binaryCommand override', () => {
 // --- buildMcpEntry ---
 
 test('buildMcpEntry returns JSON string for MCP entry', () => {
-  const entry = buildMcpEntry();
+  const entry = buildMcpEntry({}, { binaryCommand: TEST_BINARY_COMMAND });
   const parsed = JSON.parse(entry);
   assert.ok(parsed.command.length > 0);
   assert.deepEqual(parsed.args, []);
 });
 
 test('buildMcpEntry includes env vars when provided', () => {
-  const entry = buildMcpEntry({ DEBUG: '1' });
+  const entry = buildMcpEntry({ DEBUG: '1' }, { binaryCommand: TEST_BINARY_COMMAND });
   const parsed = JSON.parse(entry);
   assert.equal(parsed.env.DEBUG, '1');
 });
@@ -115,7 +117,11 @@ test('installToClient merges into existing file-type config', () => {
     detectDir: { all: tmp },
   };
 
-  const result = installToClient(def, { dryRun: false, envVars: {} });
+  const result = installToClient(def, {
+    dryRun: false,
+    envVars: {},
+    binaryCommand: TEST_BINARY_COMMAND,
+  });
   assert.equal(result.success, true);
   assert.equal(result.isNew, false);
 
@@ -138,7 +144,11 @@ test('installToClient dry-run does not write file', () => {
     detectDir: { all: tmp },
   };
 
-  const result = installToClient(def, { dryRun: true, envVars: {} });
+  const result = installToClient(def, {
+    dryRun: true,
+    envVars: {},
+    binaryCommand: TEST_BINARY_COMMAND,
+  });
   assert.equal(result.success, true);
   assert.equal(fs.existsSync(cfgPath), false, 'should not create file in dry-run');
 
@@ -157,7 +167,11 @@ test('installToClient adds env vars to file-type config', () => {
     detectDir: { all: tmp },
   };
 
-  installToClient(def, { dryRun: false, envVars: { DEBUG: '1' } });
+  installToClient(def, {
+    dryRun: false,
+    envVars: { DEBUG: '1' },
+    binaryCommand: TEST_BINARY_COMMAND,
+  });
   const written = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
   assert.equal(written.mcpServers['kaboom-browser-devtools'].env.DEBUG, '1');
 
@@ -175,7 +189,11 @@ test('installToClient handles CLI type with dry-run', () => {
     installArgs: ['mcp', 'add-json', '--scope', 'user', 'kaboom-browser-devtools'],
   };
 
-  const result = installToClient(def, { dryRun: true, envVars: {} });
+  const result = installToClient(def, {
+    dryRun: true,
+    envVars: {},
+    binaryCommand: TEST_BINARY_COMMAND,
+  });
   assert.equal(result.success, true);
   assert.equal(result.method, 'cli');
   assert.ok(result.message.includes('claude'));
@@ -235,6 +253,7 @@ test('executeInstall installs to detected file-type clients', () => {
   const result = executeInstall({
     dryRun: false,
     envVars: {},
+    binaryCommand: TEST_BINARY_COMMAND,
     _clientOverrides: [
       {
         id: 'test-cursor',
@@ -257,6 +276,7 @@ test('executeInstall reports when no clients detected', () => {
   const result = executeInstall({
     dryRun: false,
     envVars: {},
+    binaryCommand: TEST_BINARY_COMMAND,
     _clientOverrides: [],
   });
 
@@ -276,6 +296,7 @@ test('executeInstall with targetTool installs to specific client', () => {
   const result = executeInstall({
     dryRun: false,
     envVars: {},
+    binaryCommand: TEST_BINARY_COMMAND,
     _clientOverrides: [
       {
         id: 'test-gemini',
@@ -301,6 +322,7 @@ test('executeInstall with invalid targetTool returns error', () => {
   const result = executeInstall({
     dryRun: false,
     envVars: {},
+    binaryCommand: TEST_BINARY_COMMAND,
     targetTool: 'bogus',
   });
 
@@ -451,6 +473,7 @@ test('executeInstall dry-run reports all detected clients without writing', () =
   const result = executeInstall({
     dryRun: true,
     envVars: {},
+    binaryCommand: TEST_BINARY_COMMAND,
     _clientOverrides: [
       {
         id: 'test-cursor',

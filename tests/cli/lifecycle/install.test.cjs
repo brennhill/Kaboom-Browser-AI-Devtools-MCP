@@ -6,6 +6,8 @@ const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..')
+const STALE_SKILL_ARTIFACTS_PATTERN =
+  /const STALE_SKILL_ARTIFACTS = Object\.freeze\(\{[\s\S]*?\n\}\);\n/
 const PLATFORM_PACKAGES = [
   ['darwin-arm64', '@brennhill/kaboom-agentic-browser-darwin-arm64'],
   ['darwin-x64', '@brennhill/kaboom-agentic-browser-darwin-x64'],
@@ -47,7 +49,11 @@ test('npm skill installer targets only canonical kaboom-managed output', () => {
   )
 
   assert.match(skillsSource, /kaboom-managed-skill/)
-  assert.doesNotMatch(skillsSource, /\b(?:gasoline|strum|legacy)\b/i)
+  assert.match(skillsSource, STALE_SKILL_ARTIFACTS_PATTERN)
+  assert.doesNotMatch(
+    skillsSource.replace(STALE_SKILL_ARTIFACTS_PATTERN, ''),
+    /\b(?:gasoline|strum|legacy)\b/i
+  )
   assert.match(postinstallSource, /\[kaboom-mcp\]/)
 })
 
@@ -95,12 +101,12 @@ test('install-bundled-skills.sh uses per-skill manifest versions and manifest it
     })
     assert.equal(res.status, 0, `script failed:\nstdout: ${res.stdout}\nstderr: ${res.stderr}`)
 
-    const alpha = fs.readFileSync(path.join(claudeRoot, 'alpha.md'), 'utf8')
-    const beta = fs.readFileSync(path.join(claudeRoot, 'beta.md'), 'utf8')
+    const alpha = fs.readFileSync(path.join(claudeRoot, 'alpha', 'SKILL.md'), 'utf8')
+    const beta = fs.readFileSync(path.join(claudeRoot, 'beta', 'SKILL.md'), 'utf8')
     assert.match(alpha, /^<!-- kaboom-managed-skill id:alpha version:1 -->/, 'alpha must carry manifest version 1')
     assert.match(beta, /^<!-- kaboom-managed-skill id:beta version:2 -->/, 'beta must carry manifest version 2, not a hardcoded 1')
     assert.equal(
-      fs.existsSync(path.join(claudeRoot, 'not-in-manifest.md')),
+      fs.existsSync(path.join(claudeRoot, 'not-in-manifest', 'SKILL.md')),
       false,
       'must only install manifest-listed skills, not every directory'
     )
@@ -127,13 +133,14 @@ test('install-bundled-skills.sh markers match the real bundled manifest versions
       fs.readFileSync(path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/skills/skills.json'), 'utf8')
     )
     for (const skill of manifest.skills) {
-      const installed = path.join(claudeRoot, `${skill.id}.md`)
+      const installed = path.join(claudeRoot, skill.id, 'SKILL.md')
       assert.ok(fs.existsSync(installed), `manifest skill ${skill.id} must be installed`)
       const content = fs.readFileSync(installed, 'utf8')
       const expectedVersion = skill.version || 1
+      assert.match(content, /^---\n/, `${skill.id} must retain frontmatter on line 1`)
       assert.match(
         content,
-        new RegExp(`^<!-- kaboom-managed-skill id:${skill.id} version:${expectedVersion} -->`),
+        new RegExp(`\n<!-- kaboom-managed-skill id:${skill.id} version:${expectedVersion} -->\n`),
         `${skill.id} marker version must match the manifest (shell/npm installs must not fight)`
       )
     }
@@ -142,21 +149,44 @@ test('install-bundled-skills.sh markers match the real bundled manifest versions
   }
 })
 
-test('install-bundled-skills.sh keeps Codex YAML frontmatter first', () => {
+test('install-bundled-skills.sh keeps Claude and Codex YAML frontmatter first', () => {
   if (process.platform === 'win32') return
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-sh-codex-'))
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-sh-directory-'))
   try {
-    const codexRoot = path.join(tmp, 'codex-skills')
+    for (const [agent, envName] of [
+      ['claude', 'KABOOM_CLAUDE_SKILLS_DIR'],
+      ['codex', 'KABOOM_CODEX_SKILLS_DIR'],
+    ]) {
+      const root = path.join(tmp, `${agent}-skills`)
+      const res = runSkillsScript({
+        [envName]: root,
+        KABOOM_SKILL_TARGETS: agent,
+        KABOOM_SKILL_SCOPE: 'global',
+      })
+      assert.equal(res.status, 0, `script failed:\nstdout: ${res.stdout}\nstderr: ${res.stderr}`)
+
+      const content = fs.readFileSync(path.join(root, 'debug', 'SKILL.md'), 'utf8')
+      assert.match(content, /^---\n/, `${agent} requires YAML frontmatter on the first line`)
+      assert.match(content, /\n<!-- kaboom-managed-skill id:debug version:\d+ -->\n/)
+    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
+test('install-bundled-skills.sh leaves Gemini on its flat layout', () => {
+  if (process.platform === 'win32') return
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-sh-gemini-'))
+  try {
+    const geminiRoot = path.join(tmp, 'gemini-skills')
     const res = runSkillsScript({
-      KABOOM_CODEX_SKILLS_DIR: codexRoot,
-      KABOOM_SKILL_TARGETS: 'codex',
+      KABOOM_GEMINI_SKILLS_DIR: geminiRoot,
+      KABOOM_SKILL_TARGETS: 'gemini',
       KABOOM_SKILL_SCOPE: 'global',
     })
     assert.equal(res.status, 0, `script failed:\nstdout: ${res.stdout}\nstderr: ${res.stderr}`)
-
-    const content = fs.readFileSync(path.join(codexRoot, 'debug', 'SKILL.md'), 'utf8')
-    assert.match(content, /^---\n/, 'Codex requires YAML frontmatter on the first line')
-    assert.match(content, /\n<!-- kaboom-managed-skill id:debug version:\d+ -->\n/)
+    assert.equal(fs.existsSync(path.join(geminiRoot, 'debug.md')), true)
+    assert.equal(fs.existsSync(path.join(geminiRoot, 'debug', 'SKILL.md')), false)
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })
   }

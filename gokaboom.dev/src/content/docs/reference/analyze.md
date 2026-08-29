@@ -1,6 +1,6 @@
 ---
 title: "Analyze — Active Analysis"
-description: "Complete reference for the analyze tool. 28 modes for DOM queries, accessibility audits, security scans, link health, visual annotations, verification contracts, visual regression, form analysis, performance snapshots, and more."
+description: "Complete reference for the analyze tool. 32 modes for DOM queries, accessibility audits, security scans, link health, visual annotations, verification contracts, visual regression, form analysis, performance snapshots, and more."
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
 normalized_tags: ['reference', 'analyze']
@@ -25,6 +25,7 @@ analyze({what: "performance"})                                       // Performa
 analyze({what: "error_clusters"})                                    // Group similar errors
 analyze({what: "page_summary"})                                      // Page structure
 analyze({what: "annotations", annot_session: "review"})             // Draw mode results
+analyze({what: "design_audit", selector: ".card"})                  // Find design drift
 analyze({what: "verification", operation: "define", contract: {...}}) // Define QA contract
 ```
 
@@ -474,6 +475,33 @@ Detect feature flags and feature gates on the page — A/B test variants, featur
 ```js
 analyze({what: "feature_gates"})
 ```
+
+### `design_audit`
+
+Compare a group of rendered elements for inconsistent typography and color,
+near-misses against design tokens, and uneven sibling spacing. Declared rules
+produce errors; values inferred from the peer majority produce warnings.
+
+```js
+analyze({what: "design_audit", selector: ".card"})
+analyze({what: "design_audit", selector: ".card", categories: ["spacing"]})
+analyze({
+  what: "design_audit",
+  selector: ".card",
+  spec: {
+    spacing_scale: [4, 8, 16, 24, 32],
+    font_families: ["Inter"],
+    colors: ["#2a55e1"],
+    font_sizes: [12, 14, 16]
+  }
+})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `selector` | string (required) | CSS selector naming the peer group to compare |
+| `categories` | array | Any of `style_consistency`, `design_tokens`, and `spacing` |
+| `spec` | object | Optional declared `spacing_scale`, `font_families`, `colors`, and `font_sizes` |
 
 ## Verification Contracts
 
