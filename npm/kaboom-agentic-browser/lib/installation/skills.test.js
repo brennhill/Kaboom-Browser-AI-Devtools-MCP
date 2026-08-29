@@ -90,6 +90,26 @@ test('installBundledSkills preserves Codex frontmatter as the first document blo
   }
 });
 
+test('installBundledSkills writes Claude skills as <id>/SKILL.md with frontmatter first', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-claude-frontmatter-'));
+  try {
+    const claudeRoot = path.join(tmp, 'claude-skills');
+    const skillsDir = makeSkillsFixture(tmp);
+    const result = await withEnv({ KABOOM_CLAUDE_SKILLS_DIR: claudeRoot }, () =>
+      installBundledSkills({ agents: ['claude'], scope: 'global', skillsDir })
+    );
+
+    assert.equal(result.summary.created, 1);
+    const skillPath = path.join(claudeRoot, 'demo', 'SKILL.md');
+    const content = fs.readFileSync(skillPath, 'utf8');
+    assert.match(content, /^---\nname: demo\ndescription: Demo skill\.\n---\n/);
+    assert.match(content, /\n<!-- kaboom-managed-skill id:demo version:3 -->\n# Demo/);
+    assert.equal(fs.existsSync(path.join(claudeRoot, 'demo.md')), false);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 // --- isAgentRootInstallable (regression: postinstall fabricated ~/.gemini etc.) ---
 
 test('isAgentRootInstallable requires the agent parent dir to already exist', () => {
@@ -140,7 +160,7 @@ test('installBundledSkills only installs into agent dirs that already exist', as
 
     assert.equal(result.skipped, false);
     assert.equal(
-      fs.existsSync(path.join(projectRoot, '.claude', 'skills', 'demo.md')),
+      fs.existsSync(path.join(projectRoot, '.claude', 'skills', 'demo', 'SKILL.md')),
       true,
       'must install into the existing .claude layout'
     );
@@ -166,7 +186,7 @@ test('installBundledSkills force-creates explicit env-var skill targets', async 
 
     assert.equal(result.skipped, false);
     assert.equal(
-      fs.existsSync(path.join(forcedRoot, 'demo.md')),
+      fs.existsSync(path.join(forcedRoot, 'demo', 'SKILL.md')),
       true,
       'explicit env-var target must be created even when its parent did not exist'
     );
@@ -181,10 +201,16 @@ test('cleanupInstalledSkills removes managed skills no longer in the manifest', 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-orphan-'));
   try {
     const claudeRoot = path.join(tmp, 'claude-skills');
-    fs.mkdirSync(claudeRoot, { recursive: true });
+    fs.mkdirSync(path.join(claudeRoot, 'old-renamed-skill'), { recursive: true });
     fs.writeFileSync(
-      path.join(claudeRoot, 'old-renamed-skill.md'),
-      '<!-- kaboom-managed-skill id:old-renamed-skill version:1 -->\nrenamed away\n',
+      path.join(claudeRoot, 'old-renamed-skill', 'SKILL.md'),
+      '---\nname: old-renamed-skill\n---\nrenamed away\n' +
+        '<!-- kaboom-managed-skill id:old-renamed-skill version:1 -->\n',
+      'utf8'
+    );
+    fs.writeFileSync(
+      path.join(claudeRoot, 'gasoline-ancient.md'),
+      '<!-- gasoline-managed-skill id:ancient version:1 -->\nold era\n',
       'utf8'
     );
     fs.writeFileSync(path.join(claudeRoot, 'user-note.md'), '# my own skill\n', 'utf8');
@@ -198,8 +224,9 @@ test('cleanupInstalledSkills removes managed skills no longer in the manifest', 
       cleanupInstalledSkills({ agents: ['claude'], scope: 'global' })
     );
 
-    assert.ok(result.removed >= 1, `expected orphaned managed skills removed, got ${result.removed}`);
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'old-renamed-skill.md')), false);
+    assert.equal(result.removed, 2, `expected both managed skill layouts removed, got ${result.removed}`);
+    assert.equal(fs.existsSync(path.join(claudeRoot, 'old-renamed-skill')), false);
+    assert.equal(fs.existsSync(path.join(claudeRoot, 'gasoline-ancient.md')), false);
     assert.equal(fs.existsSync(path.join(claudeRoot, 'user-note.md')), true, 'user files must survive');
     assert.equal(
       fs.existsSync(path.join(claudeRoot, 'mentions-marker.md')),
@@ -240,11 +267,11 @@ test('cleanupInstalledSkills dry-run counts orphans without deleting and without
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-orphan-dry-'));
   try {
     const claudeRoot = path.join(tmp, 'claude-skills');
-    fs.mkdirSync(claudeRoot, { recursive: true });
+    fs.mkdirSync(path.join(claudeRoot, 'debug'), { recursive: true });
     // One manifest-known skill + one orphan.
     fs.writeFileSync(
-      path.join(claudeRoot, 'debug.md'),
-      '<!-- kaboom-managed-skill id:debug version:1 -->\ncurrent\n',
+      path.join(claudeRoot, 'debug', 'SKILL.md'),
+      '---\nname: debug\n---\ncurrent\n<!-- kaboom-managed-skill id:debug version:1 -->\n',
       'utf8'
     );
     fs.writeFileSync(
@@ -258,8 +285,105 @@ test('cleanupInstalledSkills dry-run counts orphans without deleting and without
     );
 
     assert.equal(result.removed, 2, 'dry-run must count each managed file exactly once');
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'debug.md')), true);
+    assert.equal(fs.existsSync(path.join(claudeRoot, 'debug', 'SKILL.md')), true);
     assert.equal(fs.existsSync(path.join(claudeRoot, 'orphan.md')), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('installBundledSkills reclaims every managed flat Claude variant', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-flat-migration-'));
+  try {
+    const claudeRoot = path.join(tmp, 'claude-skills');
+    fs.mkdirSync(claudeRoot, { recursive: true });
+    const staleFiles = [
+      ['demo.md', 'kaboom'],
+      ['kaboom-demo.md', 'kaboom'],
+      ['gasoline-demo.md', 'gasoline'],
+      ['strum-demo.md', 'strum'],
+    ];
+    for (const [filename, markerBrand] of staleFiles) {
+      fs.writeFileSync(
+        path.join(claudeRoot, filename),
+        `<!-- ${markerBrand}-managed-skill id:demo version:1 -->\nold\n`,
+        'utf8'
+      );
+    }
+
+    const result = await withEnv({ KABOOM_CLAUDE_SKILLS_DIR: claudeRoot }, () =>
+      installBundledSkills({ agents: ['claude'], scope: 'global', skillsDir: makeSkillsFixture(tmp) })
+    );
+
+    assert.equal(result.summary.removed, staleFiles.length);
+    for (const [filename] of staleFiles) {
+      assert.equal(fs.existsSync(path.join(claudeRoot, filename)), false, `${filename} must be reclaimed`);
+    }
+    assert.equal(fs.existsSync(path.join(claudeRoot, 'demo', 'SKILL.md')), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('installBundledSkills preserves user-authored flat Claude variants', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-flat-user-owned-'));
+  try {
+    const claudeRoot = path.join(tmp, 'claude-skills');
+    fs.mkdirSync(claudeRoot, { recursive: true });
+    const userFiles = [
+      ['demo.md', 'kaboom'],
+      ['kaboom-demo.md', 'kaboom'],
+      ['gasoline-demo.md', 'gasoline'],
+      ['strum-demo.md', 'strum'],
+    ];
+    for (const [filename, markerBrand] of userFiles) {
+      fs.writeFileSync(
+        path.join(claudeRoot, filename),
+        `# User skill: ${filename}\nDocs mention <!-- ${markerBrand}-managed-skill inline.\n`,
+        'utf8'
+      );
+    }
+
+    const result = await withEnv({ KABOOM_CLAUDE_SKILLS_DIR: claudeRoot }, () =>
+      installBundledSkills({ agents: ['claude'], scope: 'global', skillsDir: makeSkillsFixture(tmp) })
+    );
+
+    assert.equal(result.summary.removed, 0);
+    for (const [filename] of userFiles) {
+      assert.equal(fs.existsSync(path.join(claudeRoot, filename)), true, `${filename} is user-owned`);
+    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('installBundledSkills reports stale Claude cleanup failures', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-flat-error-'));
+  try {
+    const claudeRoot = path.join(tmp, 'claude-skills');
+    fs.mkdirSync(path.join(claudeRoot, 'demo.md'), { recursive: true });
+
+    const result = await withEnv({ KABOOM_CLAUDE_SKILLS_DIR: claudeRoot }, () =>
+      installBundledSkills({ agents: ['claude'], scope: 'global', skillsDir: makeSkillsFixture(tmp) })
+    );
+
+    assert.equal(result.summary.errors, 1, 'unexpected stale-file errors must not be discarded');
+    assert.equal(fs.existsSync(path.join(claudeRoot, 'demo', 'SKILL.md')), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('installBundledSkills leaves Gemini on its flat layout', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-gemini-layout-'));
+  try {
+    const geminiRoot = path.join(tmp, 'gemini-skills');
+    await withEnv({ KABOOM_GEMINI_SKILLS_DIR: geminiRoot }, () =>
+      installBundledSkills({ agents: ['gemini'], scope: 'global', skillsDir: makeSkillsFixture(tmp) })
+    );
+
+    assert.equal(fs.existsSync(path.join(geminiRoot, 'demo.md')), true);
+    assert.equal(fs.existsSync(path.join(geminiRoot, 'demo', 'SKILL.md')), false);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

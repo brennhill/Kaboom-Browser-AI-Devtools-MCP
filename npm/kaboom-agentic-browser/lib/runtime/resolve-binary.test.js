@@ -14,8 +14,8 @@ const {
   HOOKS_BINARY,
 } = require('./resolve-binary');
 
-const INSTALLED_ROOT = path.join(path.sep, 'proj', 'node_modules', 'kaboom-agentic-browser');
-const SOURCE_ROOT = path.join(path.sep, 'repo', 'npm', 'kaboom-agentic-browser');
+const INSTALLED_ROOT = path.resolve(path.sep, 'proj', 'node_modules', 'kaboom-agentic-browser');
+const SOURCE_ROOT = path.resolve(path.sep, 'repo', 'npm', 'kaboom-agentic-browser');
 
 function resolve(overrides = {}) {
   return resolveBinary({

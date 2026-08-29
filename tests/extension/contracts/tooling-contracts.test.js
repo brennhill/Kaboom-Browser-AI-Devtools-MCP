@@ -182,6 +182,24 @@ describe('Tooling contracts', () => {
     }
   })
 
+  test('scoped verify-llm CI installs the pinned Node toolchain before running the gate', () => {
+    const ci = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const verifyJob = ci.match(/^ {2}verify-llm:[\s\S]*?(?=^ {2}[a-z][\w-]*:)/m)?.[0] || ''
+
+    assert.match(
+      verifyJob,
+      /name: Install pinned Node toolchain\s*\n\s*if: steps\.scope\.outputs\.run_gate == 'true'\s*\n\s*run: npm ci/
+    )
+    assert.match(verifyJob, /name: Install pinned Node toolchain[\s\S]*name: Run verify-llm gate/)
+  })
+
+  test('bridge stdout invariant uses a search command available on minimal hosted runners', () => {
+    const invariant = readFileSync('scripts/quality/contracts/check-bridge-stdout-invariant.sh', 'utf8')
+
+    assert.doesNotMatch(invariant, /\brg\b/)
+    assert.match(invariant, /grep -En --/)
+  })
+
   test('scheduled and pull-request fuzzing share the canonical bounded campaign owner', () => {
     const makefile = readFileSync('Makefile', 'utf8')
     const ci = readFileSync('.github/workflows/ci.yml', 'utf8')

@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-25
+last_reviewed: 2026-08-29
 code_paths:
   - cmd/browser-agent/internal/runtimeflags/flags.go
   - internal/serverdefaults/defaults.go
@@ -139,6 +139,7 @@ test_paths:
   - scripts/release/npm-wrapper/run-tests.test.mjs
   - scripts/release/version/version-sync.test.mjs
   - tests/extension/contracts/tooling-contracts.test.js
+  - scripts/quality/contracts/check-bridge-stdout-invariant.sh
   - cmd/browser-agent/internal/cli/cli_test.go
   - cmd/browser-agent/internal/cli/cli_coverage_extra_test.go
 last_verified_version: 0.8.1
@@ -210,9 +211,10 @@ ownership boundary without compatibility wrappers.
   are preserved without migration-specific handling.
 - PyPI wrapper config helpers now converge on `merge_kaboom_config(...)`, and packaged `.egg-info` metadata now exposes only Kaboom package names, entry points, and repo URLs.
 - The npm wrapper recognizes, installs, diagnoses, approves, stops, and
-  uninstalls only canonical Kaboom identities and state paths. It does not
-  retain migration branches for historical server names, skill markers,
-  process names, config keys, config paths, or PID files.
+  uninstalls only canonical Kaboom identities and state paths. It exposes no
+  historical aliases or callable compatibility surfaces. Retired skill names
+  remain only as bounded, non-exported ownership data for deleting stale
+  installer-managed files during an upgrade.
 - The npm launcher library is divided by change ownership: `config/` owns
   client configuration and approval, `installation/` owns install/uninstall
   and bundled skills, `daemon/` owns health and process lifecycle, `browser/`
@@ -237,6 +239,10 @@ ownership boundary without compatibility wrappers.
   the launchers no longer probe `command -v`/`where`, and `resolveManagedBinaryPath`
   no longer returns a bare command name that clients resolved through PATH at spawn
   time. A missing platform package is an install fault and reports itself as one.
+- Installer unit tests inject a known executable instead of depending on a
+  source-tree `dist/` artifact, so upgrade guards exercise the same contracts on
+  clean Linux, macOS, and Windows checkouts. Scoped `verify-llm` CI installs the
+  pinned Node toolchain before running its canonical Make target.
 - Skill-install and doctor output report only fields produced by the canonical
   installers; obsolete legacy-removal counters and warning renderers are gone.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
@@ -254,6 +260,12 @@ ownership boundary without compatibility wrappers.
 - Managed Codex skills keep YAML frontmatter as the first document block; the
   Kaboom ownership/version marker is inserted immediately after frontmatter so
   Codex validation and safe managed cleanup both recognize the installed file.
+- Managed Claude skills use the loader-discovered `<root>/<id>/SKILL.md`
+  layout and keep YAML frontmatter first in both npm and source-script installs.
+  The npm installer reclaims only marker-owned flat files from prior layouts—
+  including prefixed variants—and reports both removals and cleanup failures;
+  user-authored flat files survive unchanged. Gemini retains its flat
+  `<root>/<id>.md` layout.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
 - Native `--install` has the same Codex support as the npm entry point.
   `--install codex` selects Codex explicitly; unknown positional targets fail

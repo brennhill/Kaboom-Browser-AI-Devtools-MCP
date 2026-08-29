@@ -28,7 +28,7 @@ for file in "${TARGET_FILES[@]}"; do
     VIOLATIONS=1
     continue
   fi
-  if rg -n "$PATTERN" "$file" >/tmp/kaboom-stdout-invariant.tmp 2>/dev/null; then
+  if grep -En -- "$PATTERN" "$file" >/tmp/kaboom-stdout-invariant.tmp 2>/dev/null; then
     echo "INVARIANT VIOLATION: direct stdout write in $file"
     cat /tmp/kaboom-stdout-invariant.tmp
     VIOLATIONS=1
@@ -36,17 +36,17 @@ for file in "${TARGET_FILES[@]}"; do
 done
 rm -f /tmp/kaboom-stdout-invariant.tmp
 
-if ! rg -n 'bridgeRunner\.EnsureIOIsolation\(config\.logFile\)' cmd/browser-agent/config.go >/dev/null 2>&1; then
+if ! grep -En -- 'server\.runtime\.BridgeRunner\(\)\.EnsureIOIsolation\(config\.LogFile\)' cmd/browser-agent/config.go >/dev/null 2>&1; then
   echo "INVARIANT VIOLATION: bridge mode must initialize IO isolation through its constructed runner in config.go"
   VIOLATIONS=1
 fi
 
-if ! rg -n 'bridge\.SendStartupError\("Bridge stdio isolation failed:' cmd/browser-agent/config.go >/dev/null 2>&1; then
+if ! grep -En -- 'bridge\.SendStartupError\("Bridge stdio isolation failed:' cmd/browser-agent/config.go >/dev/null 2>&1; then
   echo "INVARIANT VIOLATION: bridge isolation failures must be surfaced as JSON-RPC startup errors"
   VIOLATIONS=1
 fi
 
-if ! rg -n 'syscall\.CloseOnExec\(fd\)' cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix.go >/dev/null 2>&1; then
+if ! grep -En -- 'syscall\.CloseOnExec\(fd\)' cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix.go >/dev/null 2>&1; then
   echo "INVARIANT VIOLATION: duplicated MCP transport fd must be marked close-on-exec"
   VIOLATIONS=1
 fi

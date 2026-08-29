@@ -32,7 +32,7 @@ test('resolveManagedBinaryPath honors KABOOM_BINARY_PATH when it exists', () => 
 });
 
 test('resolveManagedBinaryPath finds the installed node_modules platform binary', () => {
-  const root = path.join(path.sep, 'proj', 'node_modules', 'kaboom-agentic-browser');
+  const root = path.resolve(path.sep, 'proj', 'node_modules', 'kaboom-agentic-browser');
   const expected = path.join(root, 'node_modules', '@brennhill/kaboom-agentic-browser-darwin-arm64', 'bin', 'kaboom-agentic-browser');
   const p = resolveManagedBinaryPath({
     env: {}, platform: 'darwin', arch: 'arm64', packageRoot: root,
