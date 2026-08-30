@@ -5,6 +5,7 @@
 package binarywatch
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -16,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -128,7 +128,7 @@ func (s *State) checkForUpgrade(currentVersion string) bool {
 		return false
 	}
 
-	if !daemonlife.IsNewerVersion(newVer, currentVersion) {
+	if !semver.IsNewer(newVer, currentVersion) {
 		return false
 	}
 
@@ -177,7 +177,7 @@ func parseVersionOutput(output string) (string, error) {
 	}
 	output = strings.TrimPrefix(output, "v")
 
-	parts := daemonlife.ParseVersionParts(output)
+	parts := semver.Parts(output)
 	if parts == nil {
 		return "", fmt.Errorf("invalid version output: %q", output)
 	}

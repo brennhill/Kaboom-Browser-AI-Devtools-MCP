@@ -98,28 +98,6 @@ func TestComputeInstallEpochCanonicalFaultsUseDeterministicMtimeFallback(t *test
 	}
 }
 
-// --- sameNonEmptyVersion ------------------------------------------------------
-
-func TestSameNonEmptyVersion(t *testing.T) {
-	cases := []struct {
-		a, b string
-		want bool
-	}{
-		{"0.8.8", "0.8.8", true},
-		{"v0.8.8", "0.8.8", true},
-		{"0.8.8", "0.9.0", false},
-		{"0.9.0", "0.8.8", false},
-		{"", "0.8.8", false},
-		{"0.8.8", "", false},
-		{"", "", false},
-	}
-	for _, c := range cases {
-		if got := sameNonEmptyVersion(c.a, c.b); got != c.want {
-			t.Errorf("sameNonEmptyVersion(%q,%q)=%v want %v", c.a, c.b, got, c.want)
-		}
-	}
-}
-
 // --- classifyExistingDaemon epoch tiebreaker ----------------------------------
 
 func TestClassifyExistingDaemon_InstallEpoch(t *testing.T) {

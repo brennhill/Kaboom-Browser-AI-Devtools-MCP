@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/nativeinstall"
@@ -94,20 +92,12 @@ func waitForPortRelease(port int, timeout time.Duration) bool {
 }
 
 func terminatePIDQuiet(pid int, force bool) {
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return
-	}
-	if force || runtime.GOOS == "windows" {
-		_ = process.Kill()
-		return
-	}
-
-	_ = process.Signal(syscall.SIGTERM)
-	time.Sleep(termGracePeriod)
-	if procctl.IsProcessAlive(pid) {
-		_ = process.Kill()
-	}
+	// Adapts the canonical terminator to daemonlife's no-error seam. The error is
+	// deliberately not returned here because every caller already verifies the
+	// OUTCOME it cares about — WaitForPortRelease — and escalates on its own; a
+	// signal that "succeeded" while the port stayed held would be the misleading
+	// result, not this one.
+	_ = procctl.TerminatePID(pid, force)
 }
 
 func fetchDaemonHealth(ctx context.Context, port int, timeout time.Duration) (reachable bool, version string, refused bool) {

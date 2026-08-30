@@ -7,9 +7,11 @@
 package bridge
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -179,6 +181,21 @@ func checkDaemonStatus(state *daemonState, req mcp.JSONRPCRequest, port int) str
 // #lizard forgives
 func (r *Runner) RunMode(port int, logFile string, maxEntries int) {
 	serverURL := fmt.Sprintf("http://127.0.0.1:%d", port)
+
+	// Join the machine census and stand down if the MCP client that started us
+	// dies. stdin EOF (handled in the read loop) covers a clean client exit; this
+	// covers a client that was killed and never closed the pipe.
+	govCtx, govCancel := context.WithCancel(context.Background())
+	defer govCancel()
+	release := governBridge(govCtx, bridgeGovernance{
+		Version: r.identity.Version, Port: port,
+	}, func(reason string) {
+		// governBridge has already deregistered us by the time this runs.
+		r.transport.Debugf("bridge standing down: %s", reason)
+		govCancel()
+		os.Exit(0)
+	})
+	defer release()
 
 	// Track daemon state with proper failure handling
 	state := &daemonState{runner: r,

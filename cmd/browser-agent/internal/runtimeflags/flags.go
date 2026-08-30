@@ -41,6 +41,9 @@ type Values struct {
 	EnableOSUpload          bool
 	ParallelMode            bool
 	ForceCleanup            bool
+	CensusMode              bool
+	ReapMode                bool
+	ReapDryRun              bool
 	InstallMode             bool
 	UploadDenyPatterns      []string
 	SSRFAllowedHosts        []string
@@ -73,6 +76,9 @@ func Parse(args []string, apiKeyDefault string) (Values, error) {
 	set.BoolVar(&values.EnableOSUpload, "enable-os-upload-automation", false, "Enable OS-level file upload automation (Stage 4: AppleScript/xdotool)")
 	set.StringVar(&values.UploadDir, "upload-dir", "", "Directory from which file uploads are allowed (required for Stages 2-4)")
 	set.BoolVar(&values.ForceCleanup, "force", false, "Force kill all running kaboom daemons")
+	set.BoolVar(&values.CensusMode, "instances", false, "List every Kaboom instance registered on this machine")
+	set.BoolVar(&values.ReapMode, "reap", false, "Reclaim dead, wedged, and over-cap Kaboom instances")
+	set.BoolVar(&values.ReapDryRun, "dry-run", false, "With --reap, report what would be reclaimed without doing it")
 	set.BoolVar(&values.InstallMode, "install", false, "Auto-install Kaboom to all detected MCP clients")
 	set.Var(&uploadDenyPatterns, "upload-deny-pattern", "Additional sensitive path patterns to block (repeatable)")
 	set.Var(&ssrfAllowedHosts, "ssrf-allow-host", "Host:port to allow for form submit SSRF (repeatable, test use)")

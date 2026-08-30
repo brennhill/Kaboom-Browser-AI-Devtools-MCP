@@ -95,6 +95,14 @@ func EvidenceDir() (string, error) {
 	return InRoot("evidence")
 }
 
+// LogsDir returns the directory holding daemon and bridge log files. It is the
+// parent of DefaultLogFile, exposed separately so retention can bound the whole
+// directory: a single exit-diagnostics.log reached 10.5MB on one machine while
+// nothing was watching the directory as a whole.
+func LogsDir() (string, error) {
+	return InRoot("logs")
+}
+
 // PerformanceTracesDir returns the local-only Chrome trace artifact directory.
 func PerformanceTracesDir() (string, error) {
 	return InRoot("performance-traces")

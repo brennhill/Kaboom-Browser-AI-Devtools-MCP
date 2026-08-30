@@ -451,59 +451,6 @@ func healthyAt(ver string) func(context.Context, int, time.Duration) (bool, stri
 	return func(context.Context, int, time.Duration) (bool, string, bool) { return true, ver, false }
 }
 
-func TestParseVersionParts(t *testing.T) {
-	t.Parallel()
-	for _, test := range []struct {
-		input string
-		want  []int
-	}{
-		{"0.7.5", []int{0, 7, 5}}, {"1.2.3", []int{1, 2, 3}},
-		{"v0.7.5", []int{0, 7, 5}}, {"10.20.30", []int{10, 20, 30}},
-		{"0.0.0", []int{0, 0, 0}}, {"1.0", []int{1, 0}}, {"5", []int{5}},
-	} {
-		got := ParseVersionParts(test.input)
-		if len(got) != len(test.want) {
-			t.Errorf("ParseVersionParts(%q) = %v, want %v", test.input, got, test.want)
-			continue
-		}
-		for index := range got {
-			if got[index] != test.want[index] {
-				t.Errorf("ParseVersionParts(%q)[%d] = %d, want %d", test.input, index, got[index], test.want[index])
-			}
-		}
-	}
-}
-
-func TestParseVersionPartsMalformed(t *testing.T) {
-	t.Parallel()
-	for _, input := range []string{"", "abc", "v", "1.2.abc", "..."} {
-		for _, part := range ParseVersionParts(input) {
-			if part < 0 {
-				t.Errorf("ParseVersionParts(%q) returned negative part: %d", input, part)
-			}
-		}
-	}
-}
-
-func TestIsNewerVersion(t *testing.T) {
-	t.Parallel()
-	for _, test := range []struct {
-		candidate string
-		current   string
-		want      bool
-	}{
-		{"0.7.6", "0.7.5", true}, {"0.8.0", "0.7.5", true}, {"1.0.0", "0.7.5", true},
-		{"0.7.5", "0.7.5", false}, {"0.7.4", "0.7.5", false}, {"0.6.9", "0.7.5", false},
-		{"v0.7.6", "v0.7.5", true}, {"v0.7.6", "0.7.5", true}, {"0.7.6", "v0.7.5", true},
-		{"0.8", "0.7.5", true}, {"0.7.5.1", "0.7.5", true},
-		{"", "0.7.5", false}, {"0.7.6", "", false}, {"abc", "0.7.5", false},
-	} {
-		if got := IsNewerVersion(test.candidate, test.current); got != test.want {
-			t.Errorf("IsNewerVersion(%q, %q) = %v, want %v", test.candidate, test.current, got, test.want)
-		}
-	}
-}
-
 // The startup grace window exists so a daemon still binding its ports is not
 // killed by a near-simultaneous launch. That rationale requires a live process.
 // When an instance writes its lock and then exits — a crash, or losing a

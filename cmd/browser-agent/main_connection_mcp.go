@@ -86,6 +86,19 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	startBinaryUpgradeWatcher(server, port, ctx)
 	reportUpgradeMarker(server, port)
 
+	// Machine-wide admission is the OUTER gate and runs first. The per-state-dir
+	// policy below can only see instances that share this state directory, which is
+	// why --parallel, --state-dir, worktrees, and CI each used to get an unbounded
+	// private universe of daemons.
+	admission, deferred, admitErr := admitDaemonOrDefer(server, port, opts)
+	if admitErr != nil {
+		return admitErr
+	}
+	if deferred {
+		return nil
+	}
+	defer func() { _ = admission.Release() }()
+
 	policyErr := daemonlife.EnforceStartupPolicy(server.daemonRecovery.LifecycleDeps(), port, opts)
 	if err := handleStartupPolicyResult(server, port, policyErr); err != nil {
 		return err
@@ -117,6 +130,10 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	persistDaemonRuntimeState(server, port)
 
 	termPort, termSrv, _ := startTerminalServerWithRecovery(server, cap, port)
+	startDaemonGovernance(ctx, daemonGovernance{
+		Server: server, Admission: &admission, Port: port,
+		TerminalPort: termPort, Capture: cap, Options: opts,
+	})
 
 	server.logLifecycle("startup", port, map[string]any{
 		"version":       version,

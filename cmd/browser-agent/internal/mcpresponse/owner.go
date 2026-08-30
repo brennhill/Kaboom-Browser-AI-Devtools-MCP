@@ -3,13 +3,13 @@
 package mcpresponse
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
@@ -162,7 +162,7 @@ func (o *Owner) addUpdateWarning(response mcp.JSONRPCResponse) mcp.JSONRPCRespon
 		}
 	}
 	available := o.config.Runtime.ReleaseChecker().Available()
-	if available == "" || !daemonlife.IsNewerVersion(available, o.config.Runtime.Version()) {
+	if available == "" || !semver.IsNewer(available, o.config.Runtime.Version()) {
 		return response
 	}
 	if !o.config.Runtime.ClaimUpdateWarning(o.config.Now(), updateWarningCooldown) {

@@ -93,6 +93,12 @@ func handleEarlyExitModes(flags *runtimeflags.Values) {
 		procctl.ForceCleanup()
 		os.Exit(0)
 	}
+	if flags.CensusMode {
+		os.Exit(runCensus())
+	}
+	if flags.ReapMode {
+		os.Exit(runReap(flags.ReapDryRun))
+	}
 	if flags.DoctorMode {
 		ok := runSetupCheckWithOptions(flags.Port, setupCheckOptions{
 			minSamples:      flags.FastPathMinSamples,

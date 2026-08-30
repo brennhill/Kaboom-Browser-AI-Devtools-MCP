@@ -8,11 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 )
@@ -34,57 +33,6 @@ func SignalSource(signal os.Signal) string {
 // LaunchOptions describes how this daemon instance was launched.
 type LaunchOptions struct {
 	Parallel bool
-}
-
-// ParseVersionParts splits an optionally v-prefixed semantic version into integers.
-func ParseVersionParts(value string) []int {
-	value = strings.TrimPrefix(value, "v")
-	if value == "" {
-		return nil
-	}
-	segments := strings.Split(value, ".")
-	parts := make([]int, 0, len(segments))
-	for _, segment := range segments {
-		part, err := strconv.Atoi(segment)
-		if err != nil {
-			break
-		}
-		parts = append(parts, part)
-	}
-	if len(parts) == 0 {
-		return nil
-	}
-	return parts
-}
-
-func sameNonEmptyVersion(a, b string) bool {
-	return a != "" && b != "" && !IsNewerVersion(a, b) && !IsNewerVersion(b, a)
-}
-
-// IsNewerVersion reports whether candidate is strictly newer than current.
-func IsNewerVersion(candidate, current string) bool {
-	candidateParts := ParseVersionParts(candidate)
-	currentParts := ParseVersionParts(current)
-	if candidateParts == nil || currentParts == nil {
-		return false
-	}
-	count := len(candidateParts)
-	if len(currentParts) > count {
-		count = len(currentParts)
-	}
-	for index := 0; index < count; index++ {
-		candidatePart, currentPart := 0, 0
-		if index < len(candidateParts) {
-			candidatePart = candidateParts[index]
-		}
-		if index < len(currentParts) {
-			currentPart = currentParts[index]
-		}
-		if candidatePart != currentPart {
-			return candidatePart > currentPart
-		}
-	}
-	return false
 }
 
 type daemonLockRecord struct {
@@ -229,7 +177,7 @@ func classifyExistingDaemon(d Deps, port int, rec *daemonLockRecord) error {
 	// Healthy. If the live version turns out older than us (registered version was
 	// blank/stale), treat it as an upgrade; otherwise a healthy same-or-newer
 	// daemon is never killed — defer and exit cleanly.
-	if existingVersion != "" && IsNewerVersion(d.Version, existingVersion) {
+	if existingVersion != "" && semver.IsNewer(d.Version, existingVersion) {
 		d.Log.LogLifecycle("daemon_takeover_upgrade", port, map[string]any{
 			"existing_pid":     rec.PID,
 			"existing_version": existingVersion,
@@ -255,7 +203,7 @@ func takeoverByRegistration(d Deps, port int, rec *daemonLockRecord) (error, boo
 	// inside the startup grace window — because running the newer binary is the
 	// whole point of the install. Uses the registered version so we needn't wait
 	// on a /health round-trip for the common upgrade case.
-	if rec.Version != "" && IsNewerVersion(d.Version, rec.Version) {
+	if rec.Version != "" && semver.IsNewer(d.Version, rec.Version) {
 		d.Log.LogLifecycle("daemon_takeover_upgrade", port, map[string]any{
 			"existing_pid":     rec.PID,
 			"existing_version": rec.Version,
@@ -271,7 +219,7 @@ func takeoverByRegistration(d Deps, port int, rec *daemonLockRecord) (error, boo
 	// and fires before the startup-grace defer so a fresh install takes over at once.
 	// An equal-or-older epoch never reaches the takeover here, so this cannot
 	// ping-pong: the older install always defers to the newer one.
-	if sameNonEmptyVersion(d.Version, rec.Version) {
+	if semver.Same(d.Version, rec.Version) {
 		if ourEpoch := daemonInstallEpoch(d.Recovery); ourEpoch > 0 && ourEpoch > rec.InstallEpoch {
 			d.Log.LogLifecycle("daemon_takeover_newer_install", port, map[string]any{
 				"existing_pid":           rec.PID,

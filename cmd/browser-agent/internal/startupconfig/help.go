@@ -16,6 +16,8 @@ Options:
   --max-entries <number> Max log entries before rotation (default: 1000)
   --stop                 Stop the running server on the specified port
   --force                Force kill ALL running kaboom daemons (used during install)
+  --instances            List every Kaboom instance registered on this machine
+  --reap                 Reclaim dead, wedged, and over-cap instances (--dry-run to preview)
   --api-key <key>        Require API key auth (optional)
   --connect              Connect to existing server (multi-client mode)
   --client-id <id>       Override client ID (default: derived from CWD)
@@ -34,6 +36,8 @@ Examples:
   kaboom --stop                       # Stop server on default port
   kaboom --stop --port 8080           # Stop server on specific port
   kaboom --force                      # Force kill all daemons (for clean upgrade)
+  kaboom --instances                  # Show every daemon and bridge on this machine
+  kaboom --reap --dry-run             # Preview what would be reclaimed
   kaboom --api-key s3cret             # Start with API key auth
   kaboom --connect --port 7890        # Connect to existing server
   kaboom --doctor                     # Verify setup before running

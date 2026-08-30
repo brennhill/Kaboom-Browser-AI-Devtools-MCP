@@ -4,6 +4,7 @@
 package versioncheck
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -108,7 +108,7 @@ func (c *Checker) Check() {
 	}
 
 	c.mu.Lock()
-	if daemonlife.IsNewerVersion(newVersion, c.currentVersion) {
+	if semver.IsNewer(newVersion, c.currentVersion) {
 		c.availableVersion = newVersion
 	} else {
 		c.availableVersion = ""

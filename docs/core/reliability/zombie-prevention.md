@@ -1,7 +1,7 @@
 ---
 doc_type: legacy_doc
 status: reference
-last_reviewed: 2026-02-16
+last_reviewed: 2026-08-30
 ---
 
 # Zombie Process Prevention
@@ -26,52 +26,35 @@ Multiple kaboom daemon processes can accumulate from:
 }
 ```
 
-### 2. Startup Cleanup (To Implement)
+### 2. Machine-Wide Instance Governance (Implemented)
 
-Before spawning a new daemon, check and clean:
+Superseded the sketches that used to sit here. The `cleanupStaleServer` sketch
+below relied on `processExists(pid)`, which is exactly the defect that let lock
+records written on 8 August claim pids since reassigned to TextInputSwitcher and
+two Adobe Creative Cloud helpers — a pid-only check called all three alive, so
+those state dirs could never be reclaimed and an unrelated user process was one
+branch away from being SIGTERMed.
 
-```go
-func cleanupStaleServer(port int) error {
-    // Read PID file
-    pidFile := getPIDFile(port)
-    if !fileExists(pidFile) {
-        return nil // No PID file, we're good
-    }
+See `docs/features/feature/instance-governance/index.md` for the full design.
+In short:
 
-    // Check if process is alive
-    pid := readPID(pidFile)
-    if !processExists(pid) {
-        // Stale PID file, remove it
-        os.Remove(pidFile)
-        return nil
-    }
+- **`internal/proclock`** — the singleton is a kernel-held `flock`, so there is no
+  stale-lock detection to get wrong and no read-decide-write race to lose.
+- **`internal/procidentity`** — liveness is pid **plus start time plus command**.
+- **`internal/instancereg`** — a machine-wide census whose location ignores
+  `KABOOM_STATE_DIR`, so `--parallel` and `--state-dir` can no longer create
+  private universes with private (and therefore meaningless) singletons.
+- **`internal/idlewatch`** — a daemon serving nobody exits instead of holding two
+  ports indefinitely.
+- **`internal/procwatch`** — a bridge whose MCP client died stands down.
+- **`internal/reaper`** — `kaboom --instances` and `kaboom --reap`.
+- **`internal/retention`** — count/bytes/age budgets per capture directory.
 
-    // Process exists, try graceful stop
-    syscall.Kill(pid, syscall.SIGTERM)
-    time.Sleep(2 * time.Second)
+### 3. Port Conflict Fast-Fail (Implemented)
 
-    // Force kill if still alive
-    if processExists(pid) {
-        syscall.Kill(pid, syscall.SIGKILL)
-    }
-
-    os.Remove(pidFile)
-    return nil
-}
-```
-
-### 3. Port Conflict Fast-Fail (To Implement)
-
-```go
-func checkPortAvailable(port int) error {
-    ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-    if err != nil {
-        return fmt.Errorf("port %d in use by another process", port)
-    }
-    ln.Close()
-    return nil
-}
-```
+Port availability is checked before binding (`ensurePortAvailable`), and the
+machine census records which ports each instance holds so `--instances` can
+report a conflict rather than leaving an operator to guess.
 
 ### 4. The Launcher Must Not Outlive Its Child (Implemented)
 
