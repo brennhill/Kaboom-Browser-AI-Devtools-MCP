@@ -24,11 +24,13 @@ type Info struct {
 	Command string
 }
 
-// Matches reports whether an observed process is the same process a record was
-// written for. An empty identity on either side never matches — a record with no
+// matches reports whether an observed process is the same process a record was
+// written for. Unexported: callers ask IsAlive/AliveIn, which is the question that
+// actually matters; exposing the comparison invites a caller to re-derive liveness
+// and get it subtly different. An empty identity on either side never matches — a record with no
 // recorded identity cannot be proven live, and treating it as live is exactly the
 // recycled-pid hole this package closes.
-func Matches(recorded, observed Info) bool {
+func matches(recorded, observed Info) bool {
 	if recorded.Start == "" || recorded.Command == "" {
 		return false
 	}
@@ -48,9 +50,9 @@ func Snapshot() (map[int]Info, error) {
 	return parseSnapshot(output), nil
 }
 
-// Lookup returns the identity of a single pid. It is a Snapshot filter rather than
+// lookup returns the identity of a single pid. It is a Snapshot filter rather than
 // a per-pid query so both paths share one parser and one platform contract.
-func Lookup(pid int) (Info, bool) {
+func lookup(pid int) (Info, bool) {
 	snap, err := Snapshot()
 	if err != nil {
 		return Info{}, false
@@ -61,7 +63,7 @@ func Lookup(pid int) (Info, bool) {
 
 // Self returns this process's identity, for stamping into a record at registration.
 func Self() (Info, bool) {
-	return Lookup(os.Getpid())
+	return lookup(os.Getpid())
 }
 
 // IsAlive reports whether pid is running AS the process described by recorded.
@@ -70,11 +72,11 @@ func IsAlive(pid int, recorded Info) bool {
 	if pid <= 0 {
 		return false
 	}
-	observed, ok := Lookup(pid)
+	observed, ok := lookup(pid)
 	if !ok {
 		return false
 	}
-	return Matches(recorded, observed)
+	return matches(recorded, observed)
 }
 
 // AliveIn is IsAlive against an already-taken Snapshot, for bulk pruning.
@@ -86,7 +88,7 @@ func AliveIn(snap map[int]Info, pid int, recorded Info) bool {
 	if !ok {
 		return false
 	}
-	return Matches(recorded, observed)
+	return matches(recorded, observed)
 }
 
 func runProcessLister(name string, args ...string) (string, error) {

@@ -28,11 +28,11 @@ type Config struct {
 	CurrentPPID func() int
 }
 
-// ParentGone reports whether the original parent has exited. Any change of parent
+// parentGone reports whether the original parent has exited. Any change of parent
 // means the original is gone: on macOS an orphan is adopted by launchd (pid 1),
 // and on Linux by pid 1 or by the nearest subreaper, so comparing against the
 // ORIGINAL covers both rather than only testing for pid 1.
-func ParentGone(originalPPID, currentPPID int) bool {
+func parentGone(originalPPID, currentPPID int) bool {
 	if originalPPID <= 1 {
 		return false
 	}
@@ -62,7 +62,7 @@ func Watch(ctx context.Context, cfg Config, onGone func(reason string)) {
 			return
 		case <-ticker.C:
 			current := cfg.CurrentPPID()
-			if ParentGone(cfg.OriginalPPID, current) {
+			if parentGone(cfg.OriginalPPID, current) {
 				if onGone != nil {
 					onGone(fmt.Sprintf(
 						"parent process %d exited (reparented to %d); this process has no remaining client",

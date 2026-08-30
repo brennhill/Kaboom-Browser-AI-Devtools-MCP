@@ -126,7 +126,7 @@ func TestPruneRemovesDeadAndRecycledRecords(t *testing.T) {
 
 	write := func(name string, rec instancereg.Record) {
 		t.Helper()
-		if err := instancereg.WriteRecordTo(filepath.Join(dir, name), rec); err != nil {
+		if err := instancereg.WriteRecordForTest(filepath.Join(dir, name), rec); err != nil {
 			t.Fatalf("write %s: %v", name, err)
 		}
 	}
@@ -165,9 +165,10 @@ func TestPruneRemovesDeadAndRecycledRecords(t *testing.T) {
 }
 
 // A live process whose heartbeat has stopped is WEDGED, not garbage: it still
-// holds its ports, so it must be reported for killing rather than silently
-// forgotten (forgetting it would let a replacement start and collide).
-func TestPruneReportsWedgedButKeepsLiveRecord(t *testing.T) {
+// holds its ports, so Prune must leave it alone and let the reaper terminate it.
+// Forgetting the record instead would let a replacement start and collide.
+// Classifying it is instancegov.IsWedged's job, tested there.
+func TestPruneKeepsALiveButWedgedRecord(t *testing.T) {
 	dir := withRegistry(t)
 	self, ok := procidentity.Self()
 	if !ok {
@@ -175,20 +176,13 @@ func TestPruneReportsWedgedButKeepsLiveRecord(t *testing.T) {
 	}
 	now := time.Now()
 	old := now.Add(-10 * time.Minute).UTC().Format(time.RFC3339Nano)
-	if err := instancereg.WriteRecordTo(filepath.Join(dir, "wedged.json"), instancereg.Record{
+	if err := instancereg.WriteRecordForTest(filepath.Join(dir, "wedged.json"), instancereg.Record{
 		PID: os.Getpid(), Role: instancereg.RoleDaemon, Identity: self,
 		StartedAt: old, HeartbeatAt: old, Ports: []int{7890},
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	wedged, err := instancereg.Wedged(now, time.Minute)
-	if err != nil {
-		t.Fatalf("Wedged() error = %v", err)
-	}
-	if len(wedged) != 1 || wedged[0].PID != os.Getpid() {
-		t.Fatalf("Wedged() = %+v, want the stale-heartbeat live record", wedged)
-	}
 	removed, err := instancereg.Prune(now, time.Minute)
 	if err != nil {
 		t.Fatalf("Prune() error = %v", err)

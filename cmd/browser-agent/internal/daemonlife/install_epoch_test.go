@@ -7,8 +7,6 @@
 package daemonlife
 
 import (
-	"context"
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -98,85 +96,6 @@ func TestComputeInstallEpochCanonicalFaultsUseDeterministicMtimeFallback(t *test
 	}
 }
 
-// --- classifyExistingDaemon epoch tiebreaker ----------------------------------
-
-func TestClassifyExistingDaemon_InstallEpoch(t *testing.T) {
-	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	freezeClock(t, base)
-
-	deps, _ := newTestDeps(t)
-	deps.Version = "0.8.8"
-
-	probe := func(d *Deps, fn func() (bool, string, bool)) {
-		d.FetchHealth = func(context.Context, int, time.Duration) (bool, string, bool) { return fn() }
-	}
-
-	// A record written a minute ago (outside grace) at the same version, with a
-	// given install epoch.
-	lock := func(epoch int64) *daemonLockRecord {
-		return &daemonLockRecord{
-			PID: 1, Port: 7890, Version: "0.8.8", InstallEpoch: epoch,
-			UpdatedAt: base.Add(-time.Minute).Format(time.RFC3339),
-		}
-	}
-	// A record written just now (inside the 5s grace window).
-	youngLock := func(epoch int64) *daemonLockRecord {
-		return &daemonLockRecord{
-			PID: 1, Port: 7890, Version: "0.8.8", InstallEpoch: epoch,
-			UpdatedAt: base.Add(-time.Second).Format(time.RFC3339),
-		}
-	}
-
-	t.Run("same version, NEWER install epoch -> take over (latest install wins)", func(t *testing.T) {
-		stubInstallEpoch(t, 2000)
-		d := deps
-		probe(&d, func() (bool, string, bool) { return true, "0.8.8", false }) // incumbent is healthy
-		if err := classifyExistingDaemon(d, 7890, lock(1000)); err != nil {
-			t.Fatalf("newer install should take over a healthy same-version incumbent, got %v", err)
-		}
-	})
-
-	t.Run("same version, OLDER install epoch, healthy -> defer", func(t *testing.T) {
-		stubInstallEpoch(t, 1000)
-		d := deps
-		probe(&d, func() (bool, string, bool) { return true, "0.8.8", false })
-		if err := classifyExistingDaemon(d, 7890, lock(2000)); !errors.Is(err, ErrDeferToHealthyDaemon) {
-			t.Fatalf("older install must defer to a healthy newer install, got %v", err)
-		}
-	})
-
-	t.Run("same version, EQUAL install epoch, healthy -> defer (no thrash)", func(t *testing.T) {
-		stubInstallEpoch(t, 1000)
-		d := deps
-		probe(&d, func() (bool, string, bool) { return true, "0.8.8", false })
-		if err := classifyExistingDaemon(d, 7890, lock(1000)); !errors.Is(err, ErrDeferToHealthyDaemon) {
-			t.Fatalf("equal epoch must defer (never ping-pong same install), got %v", err)
-		}
-	})
-
-	t.Run("newer install epoch fires even inside the startup grace window", func(t *testing.T) {
-		stubInstallEpoch(t, 2000)
-		d := deps
-		// No health probe needed — epoch takeover uses the registered record.
-		probe(&d, func() (bool, string, bool) {
-			t.Fatal("should not probe: epoch decides first")
-			return false, "", false
-		})
-		if err := classifyExistingDaemon(d, 7890, youngLock(1000)); err != nil {
-			t.Fatalf("newer install should supersede even a just-started older one, got %v", err)
-		}
-	})
-
-	t.Run("our epoch 0 (unknown) never takes over on epoch alone", func(t *testing.T) {
-		stubInstallEpoch(t, 0)
-		d := deps
-		probe(&d, func() (bool, string, bool) { return true, "0.8.8", false })
-		if err := classifyExistingDaemon(d, 7890, lock(0)); !errors.Is(err, ErrDeferToHealthyDaemon) {
-			t.Fatalf("unknown epoch must not trigger takeover; got %v", err)
-		}
-	})
-}
-
 // fakeFileInfo is a minimal os.FileInfo for mtime-based tests.
 type fakeFileInfo struct{ mod time.Time }
 
@@ -186,3 +105,17 @@ func (f fakeFileInfo) Mode() os.FileMode  { return 0o755 }
 func (f fakeFileInfo) ModTime() time.Time { return f.mod }
 func (f fakeFileInfo) IsDir() bool        { return false }
 func (f fakeFileInfo) Sys() any           { return nil }
+
+// The install epoch is the admission tiebreaker at equal versions, so it must be
+// stable for a process's whole life: a value that changed between two reads could
+// make a daemon supersede itself. Moved here from lifecycle_policy_test.go when
+// the PID-lock startup policy was deleted.
+func TestResolveInstallEpoch_MemoizedAndStable(t *testing.T) {
+	first := resolveInstallEpoch(nil)
+	if second := resolveInstallEpoch(nil); second != first {
+		t.Fatalf("install epoch must be stable, got %d then %d", first, second)
+	}
+	if first < 0 {
+		t.Fatalf("install epoch must never be negative, got %d", first)
+	}
+}

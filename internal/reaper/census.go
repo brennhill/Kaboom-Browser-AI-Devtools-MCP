@@ -81,9 +81,12 @@ func uptimeLabel(rec instancereg.Record, now time.Time) string {
 func heartbeatLabel(rec instancereg.Record, now time.Time) string {
 	age, ok := rec.HeartbeatAge(now)
 	if !ok {
+		if instancegov.IsWedged(rec, now, instancegov.DefaultHeartbeatTTL) {
+			return "STALE"
+		}
 		return "unknown"
 	}
-	if age > instancegov.DefaultHeartbeatTTL {
+	if instancegov.IsWedged(rec, now, instancegov.DefaultHeartbeatTTL) {
 		return "STALE"
 	}
 	return age.Round(time.Second).String()

@@ -46,16 +46,16 @@ func TestMatchesRejectsRecycledPID(t *testing.T) {
 	self := procidentity.Info{Start: "Thu Aug 27 18:58:54 2026", Command: "kaboom-agentic-browser"}
 	recycled := procidentity.Info{Start: "Fri Aug 28 09:14:02 2026", Command: "TextInputSwitcher"}
 
-	if !procidentity.Matches(self, self) {
+	if !procidentity.MatchesForTest(self, self) {
 		t.Error("Matches() rejected an identical identity")
 	}
-	if procidentity.Matches(self, recycled) {
+	if procidentity.MatchesForTest(self, recycled) {
 		t.Error("Matches() accepted a recycled pid whose start time and command both differ")
 	}
-	if procidentity.Matches(self, procidentity.Info{Start: self.Start, Command: "TextInputSwitcher"}) {
+	if procidentity.MatchesForTest(self, procidentity.Info{Start: self.Start, Command: "TextInputSwitcher"}) {
 		t.Error("Matches() accepted a differing command")
 	}
-	if procidentity.Matches(self, procidentity.Info{Start: "Fri Aug 28 09:14:02 2026", Command: self.Command}) {
+	if procidentity.MatchesForTest(self, procidentity.Info{Start: "Fri Aug 28 09:14:02 2026", Command: self.Command}) {
 		t.Error("Matches() accepted a differing start time")
 	}
 }
@@ -64,16 +64,16 @@ func TestMatchesRejectsRecycledPID(t *testing.T) {
 // It must not be treated as a match, or the recycled-pid hole stays open.
 func TestMatchesRejectsEmptyIdentity(t *testing.T) {
 	live := procidentity.Info{Start: "Thu Aug 27 18:58:54 2026", Command: "kaboom"}
-	if procidentity.Matches(procidentity.Info{}, live) {
+	if procidentity.MatchesForTest(procidentity.Info{}, live) {
 		t.Error("Matches() accepted an empty recorded identity")
 	}
-	if procidentity.Matches(live, procidentity.Info{}) {
+	if procidentity.MatchesForTest(live, procidentity.Info{}) {
 		t.Error("Matches() accepted an empty observed identity")
 	}
 }
 
 func TestLookupReturnsSelf(t *testing.T) {
-	info, ok := procidentity.Lookup(os.Getpid())
+	info, ok := procidentity.LookupForTest(os.Getpid())
 	if !ok {
 		t.Fatal("Lookup() could not find this process")
 	}

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/idlewatch"
@@ -98,18 +99,15 @@ func admitDaemon(server *Server, port, terminalPort int, opts daemonlife.LaunchO
 	if terminalPort > 0 {
 		ports = append(ports, terminalPort)
 	}
-	// Reuse the host's existing process/HTTP primitives rather than introducing a
-	// second set: daemonrecovery already owns shutdown and termination, and two
-	// implementations of "stop that daemon" would eventually disagree.
-	lifecycle := server.daemonRecovery.LifecycleDeps()
 	return instancegov.Admit(instancegov.Config{
 		Role:     instancereg.RoleDaemon,
 		Ports:    ports,
 		StateDir: stateDir,
-		Version:  version,
-		Parallel: opts.Parallel,
+		Version:      version,
+		InstallEpoch: daemonlife.InstallEpoch(server.stateRecovery),
+		Parallel:     opts.Parallel,
 		LockPath: lockPath,
-		Policy:   instancereg.DefaultPolicy(),
+		Policy:   instancegov.DefaultPolicy(),
 		// An upgrade asks the incumbent to stand down over HTTP and waits for the
 		// kernel lock to be released, rather than racing it for the port.
 		RequestShutdown: func(rec instancereg.Record) error {
@@ -117,16 +115,15 @@ func admitDaemon(server *Server, port, terminalPort int, opts daemonlife.LaunchO
 			if len(rec.Ports) > 0 {
 				incumbentPort = rec.Ports[0]
 			}
-			if lifecycle.TryShutdown(incumbentPort) {
+			// daemonrecovery owns the HTTP shutdown primitive; reusing it keeps one
+			// implementation of "stop that daemon" rather than two that can disagree.
+			if server.daemonRecovery.RequestShutdown(incumbentPort) {
 				return nil
 			}
 			return fmt.Errorf("incumbent daemon pid %d on port %d did not accept a shutdown request",
 				rec.PID, incumbentPort)
 		},
-		Terminate: func(pid int, force bool) error {
-			lifecycle.TerminatePID(pid, force)
-			return nil
-		},
+		Terminate: procctl.TerminatePID,
 		Log: func(event string, fields map[string]any) {
 			server.logLifecycle(event, port, fields)
 		},

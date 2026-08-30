@@ -122,9 +122,10 @@ func recordPath(dir string, pid int) string {
 	return filepath.Join(dir, fmt.Sprintf("%d.json", pid))
 }
 
-// WriteRecordTo persists a record at an explicit path. Exported for the reaper
-// and for tests that need to plant specific registry states.
-func WriteRecordTo(path string, rec Record) error {
+// writeRecordTo persists a record at an explicit path. It is unexported: nothing
+// outside this package has a reason to author a registry entry, and the only
+// caller that ever did was a test planting fixtures (see export_test.go).
+func writeRecordTo(path string, rec Record) error {
 	data, err := json.Marshal(rec)
 	if err != nil {
 		return fmt.Errorf("instancereg: encode record: %w", err)
@@ -168,7 +169,7 @@ func Register(rec Record) (*Handle, error) {
 	rec.HeartbeatAt = now
 
 	path := recordPath(dir, rec.PID)
-	if err := WriteRecordTo(path, rec); err != nil {
+	if err := writeRecordTo(path, rec); err != nil {
 		return nil, err
 	}
 	return &Handle{path: path, rec: rec}, nil
@@ -181,7 +182,7 @@ func (h *Handle) Heartbeat() error {
 		return nil
 	}
 	h.rec.HeartbeatAt = time.Now().UTC().Format(time.RFC3339Nano)
-	return WriteRecordTo(h.path, h.rec)
+	return writeRecordTo(h.path, h.rec)
 }
 
 // SetPorts records ports claimed after registration (the terminal port is bound

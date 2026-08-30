@@ -62,7 +62,7 @@ type Config struct {
 	Parallel bool
 	// LockPath is the machine-wide production singleton lock.
 	LockPath string
-	Policy   instancereg.Policy
+	Policy   Policy
 
 	// HandoffTimeout bounds the wait for an incumbent to release the lock after
 	// being asked to stand down.
@@ -168,26 +168,33 @@ func admitSingleton(cfg Config) (Result, error) {
 }
 
 // admitCapped admits an instance governed by a counted cap rather than by mutual
-// exclusion, evicting the oldest peers when the machine is over budget.
+// exclusion, evicting the oldest peers when the machine is over budget. A capped
+// candidate is never refused outright: a test run must always be able to start.
 func admitCapped(cfg Config) (Result, error) {
 	live, err := instancereg.Live()
 	if err != nil {
 		return Result{}, err
 	}
-	decision := instancereg.Decide(live, cfg.candidate(), cfg.Policy, cfg.now())
+	peers := peersOf(live, cfg.candidate())
 
-	switch decision.Outcome {
-	case instancereg.OutcomeDefer:
-		cfg.log("admission_defer", map[string]any{"reason": decision.Reason})
-		return Result{Outcome: OutcomeDefer, DeferTo: decision.DeferTo, Reason: decision.Reason}, nil
-	case instancereg.OutcomeEvict:
-		if err := evict(cfg, decision.Evict); err != nil {
-			return Result{}, err
-		}
-		return finish(cfg, nil, decision.Evict, decision.Reason)
-	default:
-		return finish(cfg, nil, nil, decision.Reason)
+	var members []instancereg.Record
+	var cap int
+	var kind string
+	if cfg.Role == instancereg.RoleBridge {
+		members, cap, kind = Bridges(peers), cfg.Policy.BridgeCap, "bridge"
+	} else {
+		members, cap, kind = Daemons(peers, true), cfg.Policy.ParallelCap, "parallel daemon"
 	}
+
+	// incoming=1: this candidate is joining, so it counts against the cap.
+	victims := Surplus(members, cap, 1)
+	if len(victims) == 0 {
+		return finish(cfg, nil, nil, kind+" is within the machine cap")
+	}
+	if err := evict(cfg, victims); err != nil {
+		return Result{}, err
+	}
+	return finish(cfg, nil, victims, kind+" count would exceed the machine cap")
 }
 
 func evict(cfg Config, victims []instancereg.Record) error {
@@ -277,13 +284,26 @@ func readIncumbentOnce(cfg Config) *instancereg.Record {
 	return nil
 }
 
-// shouldRequestHandoff reports whether this build is a strict upgrade over the
-// incumbent. An equal or older build never asks a serving daemon to stand down.
+// shouldRequestHandoff reports whether this build supersedes the incumbent.
+//
+// Two things supersede: a strictly newer VERSION, and — at the same version — a
+// strictly newer INSTALL. The install tiebreaker exists because two same-version
+// installs (an npm-global copy and ~/.kaboom/bin) otherwise have no way to pick a
+// winner, so a fresh install could never displace the daemon its predecessor left
+// running. Both comparisons are STRICT, which is what stops two daemons taking
+// turns evicting each other: an equal or older build always defers.
 func shouldRequestHandoff(cfg Config, incumbent *instancereg.Record) bool {
-	if cfg.RequestShutdown == nil || incumbent == nil || incumbent.Version == "" {
+	if cfg.RequestShutdown == nil || incumbent == nil {
 		return false
 	}
-	return semver.IsNewer(cfg.Version, incumbent.Version)
+	if incumbent.Version != "" && semver.IsNewer(cfg.Version, incumbent.Version) {
+		return true
+	}
+	if !semver.Same(cfg.Version, incumbent.Version) {
+		return false
+	}
+	// An unknown epoch on either side is not evidence of being newer.
+	return cfg.InstallEpoch > 0 && cfg.InstallEpoch > incumbent.InstallEpoch
 }
 
 // requestHandoff asks the incumbent to stand down, then waits for the kernel lock

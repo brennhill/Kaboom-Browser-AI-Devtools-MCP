@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancegov"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reaper"
 )
@@ -19,8 +20,8 @@ func rec(pid int, role instancereg.Role, startedAgo, beatAgo time.Duration, para
 	}
 }
 
-func policy() instancereg.Policy {
-	return instancereg.Policy{DaemonCap: 1, ParallelCap: 2, BridgeCap: 4}
+func policy() instancegov.Policy {
+	return instancegov.Policy{DaemonCap: 1, ParallelCap: 2, BridgeCap: 4}
 }
 
 // The single most important negative: a healthy production daemon must survive

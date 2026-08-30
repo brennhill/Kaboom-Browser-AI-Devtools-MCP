@@ -46,7 +46,7 @@ func governBridge(ctx context.Context, cfg bridgeGovernance, standDown func(reas
 		Role:    instancereg.RoleBridge,
 		Ports:   []int{cfg.Port},
 		Version: cfg.Version,
-		Policy:  instancereg.DefaultPolicy(),
+		Policy:  instancegov.DefaultPolicy(),
 		// A bridge over the cap is evicted by the reaper, not by its successor:
 		// killing another editor's live session to start your own would be worse
 		// than the leak this bounds.

@@ -57,7 +57,7 @@ func runReap(dryRun bool) int {
 	}
 
 	plan := reaper.Plan(reaper.Input{
-		Live: live, All: all, Policy: instancereg.DefaultPolicy(),
+		Live: live, All: all, Policy: instancegov.DefaultPolicy(),
 		HeartbeatTTL: instancegov.DefaultHeartbeatTTL, Now: now,
 	})
 	for _, action := range plan.Actions {

@@ -64,31 +64,3 @@ func Live() ([]Record, error) {
 	}
 	return live, nil
 }
-
-// Wedged returns live instances whose heartbeat is older than ttl. They are
-// running and holding ports but are no longer updating the registry, which is the
-// signature of a hung process the reaper should terminate.
-func Wedged(now time.Time, ttl time.Duration) ([]Record, error) {
-	live, err := Live()
-	if err != nil {
-		return nil, err
-	}
-	wedged := make([]Record, 0, len(live))
-	for _, rec := range live {
-		age, ok := rec.HeartbeatAge(now)
-		if !ok {
-			// A record with no readable heartbeat cannot be proven healthy, but
-			// neither can it be proven wedged; treat it as wedged only once it is
-			// older than the ttl by its start time.
-			started, startedOK := rec.Started()
-			if startedOK && now.Sub(started) > ttl {
-				wedged = append(wedged, rec)
-			}
-			continue
-		}
-		if age > ttl {
-			wedged = append(wedged, rec)
-		}
-	}
-	return wedged, nil
-}

@@ -26,7 +26,7 @@ func baseConfig(t *testing.T) instancegov.Config {
 		Version:  "0.9.0",
 		StateDir: filepath.Join(dir, "state"),
 		LockPath: filepath.Join(dir, "daemon.singleton.lock"),
-		Policy:   instancereg.Policy{DaemonCap: 1, ParallelCap: 2, BridgeCap: 4},
+		Policy:   instancegov.Policy{DaemonCap: 1, ParallelCap: 2, BridgeCap: 4},
 		Now:      time.Now,
 	}
 }
@@ -307,5 +307,91 @@ func TestDeferralWaitsBrieflyForTheIncumbentToPublish(t *testing.T) {
 	}
 	if result.DeferTo == nil || result.DeferTo.PID != 4242 {
 		t.Fatalf("Admit() deferred to %+v, want the incumbent pid 4242", result.DeferTo)
+	}
+}
+
+// At the SAME version, a strictly newer INSTALL supersedes an older one. Without
+// this, two same-version installs (an npm-global copy and ~/.kaboom/bin) have no
+// way to pick a winner, and a fresh install can never displace the daemon the
+// previous install left running. Migrated from daemonlife's takeover policy when
+// the kernel lock became the single admission authority.
+func TestNewerInstallSupersedesAtTheSameVersion(t *testing.T) {
+	cfg := baseConfig(t)
+	cfg.InstallEpoch = 1000
+	incumbent, err := instancegov.Admit(cfg)
+	if err != nil {
+		t.Fatalf("incumbent Admit() error = %v", err)
+	}
+
+	var asked bool
+	fresh := cfg
+	fresh.InstallEpoch = 2000 // same version, newer install
+	fresh.RequestShutdown = func(instancereg.Record) error {
+		asked = true
+		return incumbent.Release()
+	}
+	result, err := instancegov.Admit(fresh)
+	if err != nil {
+		t.Fatalf("fresh install Admit() error = %v", err)
+	}
+	t.Cleanup(func() { _ = result.Release() })
+
+	if !asked {
+		t.Error("a newer install did not ask the older one to stand down")
+	}
+	if result.Outcome != instancegov.OutcomeProceed {
+		t.Fatalf("fresh install Admit() = %v, want Proceed", result.Outcome)
+	}
+}
+
+// The tiebreaker must not ping-pong: an equal or older install always defers, so
+// two same-version daemons can never take turns evicting each other.
+func TestEqualOrOlderInstallDefersAtTheSameVersion(t *testing.T) {
+	for name, epoch := range map[string]int64{"equal": 1000, "older": 500} {
+		t.Run(name, func(t *testing.T) {
+			cfg := baseConfig(t)
+			cfg.InstallEpoch = 1000
+			incumbent, err := instancegov.Admit(cfg)
+			if err != nil {
+				t.Fatalf("incumbent Admit() error = %v", err)
+			}
+			t.Cleanup(func() { _ = incumbent.Release() })
+
+			other := cfg
+			other.InstallEpoch = epoch
+			other.RequestShutdown = func(instancereg.Record) error {
+				t.Errorf("install epoch %d asked a %s install to stand down", epoch, name)
+				return nil
+			}
+			result, err := instancegov.Admit(other)
+			if err != nil {
+				t.Fatalf("Admit() error = %v", err)
+			}
+			if result.Outcome != instancegov.OutcomeDefer {
+				t.Fatalf("Admit() = %v, want Defer", result.Outcome)
+			}
+		})
+	}
+}
+
+// A missing epoch on either side must never trigger a takeover: an unknown install
+// age is not evidence of being newer.
+func TestUnknownInstallEpochNeverSupersedes(t *testing.T) {
+	cfg := baseConfig(t)
+	cfg.InstallEpoch = 0
+	incumbent, err := instancegov.Admit(cfg)
+	if err != nil {
+		t.Fatalf("incumbent Admit() error = %v", err)
+	}
+	t.Cleanup(func() { _ = incumbent.Release() })
+
+	other := cfg
+	other.InstallEpoch = 0
+	other.RequestShutdown = func(instancereg.Record) error {
+		t.Error("an unknown install epoch triggered a takeover")
+		return nil
+	}
+	if result, _ := instancegov.Admit(other); result.Outcome != instancegov.OutcomeDefer {
+		t.Fatalf("Admit() = %v, want Defer", result.Outcome)
 	}
 }

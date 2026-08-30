@@ -27,7 +27,7 @@ func TestParentGoneDetectsReparenting(t *testing.T) {
 		{"negative original parent cannot be watched", -1, 1, false},
 	}
 	for _, tc := range cases {
-		if got := procwatch.ParentGone(tc.original, tc.current); got != tc.want {
+		if got := procwatch.ParentGoneForTest(tc.original, tc.current); got != tc.want {
 			t.Errorf("%s: ParentGone(%d, %d) = %v, want %v", tc.name, tc.original, tc.current, got, tc.want)
 		}
 	}

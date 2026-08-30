@@ -4,7 +4,6 @@
 package daemonlife
 
 import (
-	"context"
 	"os"
 	"strings"
 	"sync"
@@ -56,25 +55,17 @@ func (l *recordingLogger) find(event string) *loggedEvent {
 	return nil
 }
 
-// newTestDeps returns a Deps with every seam stubbed to an inert default plus the
-// recording logger behind it. Tests override only the seams they care about.
+// newTestDeps returns a Deps with every seam stubbed plus the recording logger
+// behind it. It lost eight process and port stubs when singleton admission moved
+// to internal/instancegov: this package no longer signals, probes, or binds
+// anything, so a fake that still offered those would advertise reach it lacks.
 func newTestDeps(t *testing.T) (Deps, *recordingLogger) {
 	t.Helper()
 	log := &recordingLogger{}
 	return Deps{
-		Log:                log,
-		Version:            "0.0.0",
-		Warnf:              func(string, ...any) {},
-		IsProcessAlive:     func(int) bool { return true },
-		IsServerRunning:    func(int) bool { return false },
-		TryShutdown:        func(int) bool { return false },
-		WaitForPortRelease: func(int, time.Duration) bool { return true },
-		TerminatePID:       func(int, bool) {},
-		FetchHealth: func(context.Context, int, time.Duration) (bool, string, bool) {
-			return false, "", false
-		},
-		ReadPIDFile:   func(int) int { return 0 },
-		RemovePIDFile: func(int) {},
+		Log:     log,
+		Version: "0.0.0",
+		Warnf:   func(string, ...any) {},
 	}, log
 }
 

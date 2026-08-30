@@ -35,6 +35,15 @@ var (
 )
 
 // resolveInstallEpoch returns this binary's install epoch, computing it once.
+// InstallEpoch reports when this binary's install directory was created. At equal
+// versions it is the admission tiebreaker: a strictly newer install supersedes an
+// older one (instancegov.shouldRequestHandoff). Exported because the composition
+// root passes it into the machine-wide admission gate, which lives in internal/
+// and therefore cannot import this package.
+func InstallEpoch(diagnostics statediag.Reporter) int64 {
+	return resolveInstallEpoch(diagnostics)
+}
+
 func resolveInstallEpoch(diagnostics statediag.Reporter) int64 {
 	installEpochOnce.Do(func() {
 		installEpoch = computeInstallEpoch(os.Executable, os.Stat, os.ReadFile, diagnostics)

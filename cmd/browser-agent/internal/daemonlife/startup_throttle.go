@@ -16,12 +16,14 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
 
 const (
@@ -60,6 +62,25 @@ type restartHistory struct {
 
 // daemonThrottleSleep is the injectable sleep used by the startup restart throttle.
 var daemonThrottleSleep = time.Sleep
+
+// lifecycleFilesystem is the restart history's file seam. It moved here from the
+// deleted lock_file.go when the PID-based daemon lock was removed: this is now its
+// only user, and a seam kept in a shared file outlives the reason it existed.
+type lifecycleFilesystem interface {
+	ReadFile(string) ([]byte, error)
+	WriteFile(string, []byte) error
+	Remove(string) error
+}
+
+type localLifecycleFilesystem struct{}
+
+func (localLifecycleFilesystem) ReadFile(path string) ([]byte, error) { return os.ReadFile(path) }
+func (localLifecycleFilesystem) WriteFile(path string, data []byte) error {
+	return statefile.Write(path, data, 0o600)
+}
+func (localLifecycleFilesystem) Remove(path string) error { return os.Remove(path) }
+
+var daemonLifecycleFiles lifecycleFilesystem = localLifecycleFilesystem{}
 
 // recordRestartAndComputeDelay appends `now` to the restart history for
 // (ver, epoch, port) and returns the updated history plus the bounded startup delay

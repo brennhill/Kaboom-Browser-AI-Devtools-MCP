@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -99,11 +98,6 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	}
 	defer func() { _ = admission.Release() }()
 
-	policyErr := daemonlife.EnforceStartupPolicy(server.daemonRecovery.LifecycleDeps(), port, opts)
-	if err := handleStartupPolicyResult(server, port, policyErr); err != nil {
-		return err
-	}
-
 	if err := server.daemonRecovery.CleanupStalePIDFile(port); err != nil {
 		return err
 	}
@@ -189,34 +183,6 @@ func reportUpgradeMarker(server *Server, port int) {
 			})
 		}
 	}
-}
-
-// handleStartupPolicyResult interprets EnforceStartupPolicy's outcome: deferring
-// to a healthy incumbent daemon logs, names the incumbent, and reports success
-// (clean exit); every other error propagates.
-func handleStartupPolicyResult(server *Server, port int, err error) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, daemonlife.ErrDeferToHealthyDaemon) {
-		// A healthy, compatible daemon already owns this port. Exit cleanly
-		// (exit 0) and let it keep serving — do NOT start a rival server or
-		// kill the incumbent. Returning nil unwinds to a graceful exit.
-		server.logLifecycle("daemon_deferred_exit", port, nil)
-		// Name the incumbent, not the port we were asked for: the lock is
-		// per state directory, so the daemon we are deferring to may be on
-		// a different port entirely, and saying otherwise sends an operator
-		// looking for a listener that was never there.
-		var deferral *daemonlife.Deferral
-		if errors.As(err, &deferral) {
-			diag.Printf("[Kaboom] Deferring to the daemon already registered for this state directory (pid=%d, port=%d, version=%s); this instance is exiting.\n",
-				deferral.PID, deferral.Port, deferral.Version)
-		} else {
-			diag.Printf("[Kaboom] A healthy daemon is already serving on port %d; this instance is exiting.\n", port)
-		}
-		return nil
-	}
-	return err
 }
 
 // ensurePortAvailable verifies the port is bindable; a leftover holder is
@@ -364,9 +330,6 @@ func persistDaemonRuntimeState(server *Server, port int) {
 	if err := procctl.WritePIDFile(port); err != nil {
 		server.logLifecycle("pid_file_error", port, map[string]any{"error": err.Error()})
 	}
-	if err := daemonlife.PersistCurrentLock(port, version, server.stateRecovery); err != nil {
-		server.logLifecycle("daemon_lock_write_failed", port, map[string]any{"error": err.Error()})
-	}
 }
 
 const (
@@ -426,9 +389,6 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	persistTokenSavings(server)
 
 	procctl.RemovePIDFile(port)
-	if err := daemonlife.RemoveLockIfOwned(os.Getpid()); err != nil {
-		server.logLifecycle("daemon_lock_cleanup_failed", port, map[string]any{"reason": "state_remove_failed"})
-	}
 }
 
 func shutdownTerminalServer(server *Server, termSrv *http.Server, port int) {

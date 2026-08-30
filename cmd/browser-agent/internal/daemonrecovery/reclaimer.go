@@ -114,16 +114,21 @@ func (r *Reclaimer) CleanupStalePIDFile(port int) error {
 	return nil
 }
 
-// LifecycleDeps returns the complete process seam consumed by daemonlife policy.
+// LifecycleDeps returns the seam consumed by daemonlife's crash-loop throttle.
+// It carries no process or port primitives: singleton admission moved to
+// internal/instancegov, and daemonlife no longer signals anything.
 func (r *Reclaimer) LifecycleDeps() daemonlife.Deps {
 	return daemonlife.Deps{
 		Log: r.lifecycleLog, Version: r.config.Version, Warnf: r.config.Diagnosticf,
 		Recovery: r.config.Recovery, Incidents: r.config.Incidents,
-		IsProcessAlive: r.host.isProcessAlive, IsServerRunning: r.host.isServerRunning,
-		TryShutdown: r.host.tryShutdown, WaitForPortRelease: r.host.waitForPortRelease,
-		TerminatePID: r.host.terminatePID, FetchHealth: fetchDaemonHealth,
-		ReadPIDFile: procctl.ReadPIDFile, RemovePIDFile: procctl.RemovePIDFile,
 	}
+}
+
+// RequestShutdown asks the daemon on port to exit over HTTP, reporting whether it
+// accepted. The machine-wide admission gate uses this to hand off to an upgrade
+// rather than racing an incumbent for its port.
+func (r *Reclaimer) RequestShutdown(port int) bool {
+	return r.host.tryShutdown(port)
 }
 
 // ReclaimPort terminates only positively identified Kaboom daemons holding port.

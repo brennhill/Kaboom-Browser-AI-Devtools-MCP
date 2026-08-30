@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancegov"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
 )
 
@@ -46,7 +47,7 @@ type Action struct {
 type Input struct {
 	Live         []instancereg.Record
 	All          []instancereg.Record
-	Policy       instancereg.Policy
+	Policy       instancegov.Policy
 	HeartbeatTTL time.Duration
 	Now          time.Time
 }
@@ -80,15 +81,16 @@ func Plan(in Input) Report {
 		planned[rec.PID] = true
 	}
 
-	// Wedged: alive, holding ports, no longer heartbeating.
+	// Wedged: alive, holding ports, no longer heartbeating. The predicate is
+	// shared with the census so the two can never disagree about one record.
 	for _, rec := range in.Live {
 		if planned[rec.PID] {
 			continue
 		}
-		age, ok := rec.HeartbeatAge(in.Now)
-		if !ok || age <= in.HeartbeatTTL {
+		if !instancegov.IsWedged(rec, in.Now, in.HeartbeatTTL) {
 			continue
 		}
+		age, _ := rec.HeartbeatAge(in.Now)
 		report.Actions = append(report.Actions, Action{
 			Record: rec, Kind: ActionKill,
 			Reason: fmt.Sprintf("alive but has not heartbeat for %s (limit %s); ports %v are still held",
@@ -113,38 +115,29 @@ func Plan(in Input) Report {
 // daemon kill the incumbent a developer is actively using.
 func overCapActions(in Input, planned map[int]bool) []Action {
 	var actions []Action
+	var unplanned []instancereg.Record
+	for _, rec := range in.Live {
+		if !planned[rec.PID] {
+			unplanned = append(unplanned, rec)
+		}
+	}
 	classes := []struct {
 		name    string
 		cap     int
-		matches func(instancereg.Record) bool
+		members []instancereg.Record
 	}{
-		{"parallel daemon", in.Policy.ParallelCap, func(r instancereg.Record) bool {
-			return r.Role == instancereg.RoleDaemon && r.Parallel
-		}},
-		{"bridge", in.Policy.BridgeCap, func(r instancereg.Record) bool {
-			return r.Role == instancereg.RoleBridge
-		}},
+		{"parallel daemon", in.Policy.ParallelCap, instancegov.Daemons(unplanned, true)},
+		{"bridge", in.Policy.BridgeCap, instancegov.Bridges(unplanned)},
 	}
 	for _, class := range classes {
-		var members []instancereg.Record
-		for _, rec := range in.Live {
-			if !planned[rec.PID] && class.matches(rec) {
-				members = append(members, rec)
-			}
-		}
-		limit := class.cap
-		if limit < 1 {
-			limit = 1
-		}
-		if len(members) <= limit {
-			continue
-		}
-		ordered := instancereg.OldestFirst(members)
-		for _, victim := range ordered[:len(members)-limit] {
+		// incoming=0: nothing is joining here, we are reclaiming what already runs.
+		// That single argument is the whole difference from the admission case,
+		// which is why both now call one function instead of two near-copies.
+		for _, victim := range instancegov.Surplus(class.members, class.cap, 0) {
 			actions = append(actions, Action{
 				Record: victim, Kind: ActionKill,
 				Reason: fmt.Sprintf("%d %ss exceed the machine cap of %d; this is the oldest",
-					len(members), class.name, limit),
+					len(class.members), class.name, class.cap),
 			})
 			planned[victim.PID] = true
 		}
