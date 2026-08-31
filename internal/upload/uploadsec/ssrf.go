@@ -15,6 +15,14 @@ import (
 
 const SSRFLookupTimeout = 5 * time.Second
 
+// lookupIPAddr is the DNS seam. Production resolves through the system resolver;
+// tests swap it so the SSRF rules are exercised against a known answer instead of
+// whatever network the suite happens to run on. Without this seam the fail-closed
+// assertion depended on the machine's resolver actually returning NXDOMAIN, and
+// went red wherever a resolver hijacks nonexistent names — an ISP, a captive
+// portal, a corporate wildcard, some VPNs.
+var lookupIPAddr = net.DefaultResolver.LookupIPAddr
+
 // ssrfMu protects ssrfAllowedHosts and ssrfSkipCheck from concurrent access.
 var (
 	ssrfMu           sync.RWMutex
@@ -118,7 +126,7 @@ func ResolvePublicIP(ctx context.Context, host string) (net.IP, error) {
 		return ip, nil
 	}
 
-	ips, err := net.DefaultResolver.LookupIPAddr(ctx, normalized)
+	ips, err := lookupIPAddr(ctx, normalized)
 	if err != nil {
 		return nil, fmt.Errorf("DNS lookup failed for %q: %w", host, err)
 	}

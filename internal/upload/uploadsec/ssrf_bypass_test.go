@@ -12,30 +12,46 @@ import (
 	"time"
 )
 
-func TestSSRFBypassDecimalIP(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	_, err := ResolvePublicIP(ctx, "2130706433")
-	if err == nil {
-		t.Error("ResolvePublicIP() expected error for decimal IP representation, got nil")
+// Alternate encodings of 127.0.0.1. net.ParseIP rejects all of them, so each one
+// reaches the resolver — and what happens next depends entirely on that resolver.
+// The old versions of these tests only passed because the machine's DNS happened
+// to fail; on a resolver that answers anything (an ISP hijack, or a libc that
+// interprets the decimal form via inet_aton) they went red, having proven nothing.
+//
+// The guarantee that actually matters is the same either way: the host must NOT be
+// permitted. Both resolver outcomes are pinned here rather than left to the LAN.
+func TestSSRFBypassAlternateLoopbackEncodings(t *testing.T) {
+	encodings := []struct{ name, host string }{
+		{"decimal", "2130706433"},
+		{"hex", "0x7f000001"},
+		{"octal-dotted", "0177.0.0.1"},
 	}
-}
+	for _, enc := range encodings {
+		t.Run(enc.name+"/resolver decodes it to loopback", func(t *testing.T) {
+			previous := lookupIPAddr
+			t.Cleanup(func() { lookupIPAddr = previous })
+			lookupIPAddr = func(context.Context, string) ([]net.IPAddr, error) {
+				return []net.IPAddr{{IP: net.ParseIP("127.0.0.1")}}, nil
+			}
+			ip, err := ResolvePublicIP(context.Background(), enc.host)
+			if err == nil {
+				t.Fatalf("ResolvePublicIP(%q) returned %v, want the loopback address blocked", enc.host, ip)
+			}
+			if !strings.Contains(err.Error(), "private") {
+				t.Errorf("error should mention a private address, got: %v", err)
+			}
+		})
 
-func TestSSRFBypassHexIP(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	_, err := ResolvePublicIP(ctx, "0x7f000001")
-	if err == nil {
-		t.Error("ResolvePublicIP() expected error for hex IP representation, got nil")
-	}
-}
-
-func TestSSRFBypassOctalIP(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	ip, err := ResolvePublicIP(ctx, "0177.0.0.1")
-	if err == nil && ip != nil && IsPrivateIP(ip) {
-		t.Errorf("ResolvePublicIP() returned private IP %s without error for octal representation", ip)
+		t.Run(enc.name+"/resolver rejects it", func(t *testing.T) {
+			previous := lookupIPAddr
+			t.Cleanup(func() { lookupIPAddr = previous })
+			lookupIPAddr = func(context.Context, string) ([]net.IPAddr, error) {
+				return nil, &net.DNSError{Err: "no such host", IsNotFound: true}
+			}
+			if _, err := ResolvePublicIP(context.Background(), enc.host); err == nil {
+				t.Fatalf("ResolvePublicIP(%q) was permitted when the lookup failed", enc.host)
+			}
+		})
 	}
 }
 
@@ -64,38 +80,10 @@ func TestSSRFBypassIPv6MappedIPv4(t *testing.T) {
 		})
 	}
 }
-func TestSSRFBypassDNSRebinding(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping DNS-dependent test in short mode")
-	}
-
-	tests := []struct {
-		name string
-		host string
-	}{
-		{"nip.io loopback", "127.0.0.1.nip.io"},
-		{"nip.io private 10.x", "10.0.0.1.nip.io"},
-		{"nip.io private 192.168.x", "192.168.1.1.nip.io"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-			defer cancel()
-			_, err := ResolvePublicIP(ctx, tt.host)
-			if err == nil {
-				t.Errorf("ResolvePublicIP() expected error for DNS rebinding host %q, got nil", tt.host)
-			}
-			if err != nil {
-				errStr := err.Error()
-				if !strings.Contains(errStr, "private") && !strings.Contains(errStr, "no such host") &&
-					!strings.Contains(errStr, "lookup") && !strings.Contains(errStr, "timeout") {
-					t.Logf("ResolvePublicIP() for %q returned: %v", tt.host, err)
-				}
-			}
-		})
-	}
-}
+// DNS rebinding is covered by TestResolvePublicIP_RebindingToPrivateAddressIsBlocked
+// in ssrf_resolver_test.go. The version that stood here resolved 127.0.0.1.nip.io
+// and friends over the real network, so it tested whether nip.io was up as much as
+// it tested the rule.
 
 func TestSSRFBypassIPv4MappedShortForms(t *testing.T) {
 	tests := []struct {
@@ -167,14 +155,21 @@ func TestIsPrivateIPComprehensive(t *testing.T) {
 	}
 }
 
+// A resolver that outlives the caller's deadline must surface as an error, not as
+// a permitted host. Driven through the injected resolver so the deadline is the
+// thing under test rather than the responsiveness of a real nameserver.
 func TestResolvePublicIPTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
-	defer cancel()
-	_, err := ResolvePublicIP(ctx, "this-should-timeout.invalid")
-	if err == nil {
-		t.Error("ResolvePublicIP() expected timeout error, got nil")
+	previous := lookupIPAddr
+	t.Cleanup(func() { lookupIPAddr = previous })
+	lookupIPAddr = func(ctx context.Context, _ string) ([]net.IPAddr, error) {
+		<-ctx.Done()
+		return nil, ctx.Err()
 	}
-	if err != nil && !strings.Contains(err.Error(), "context") && !strings.Contains(err.Error(), "timeout") {
-		t.Logf("ResolvePublicIP() timeout error: %v", err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+
+	if _, err := ResolvePublicIP(ctx, "slow.example"); err == nil {
+		t.Fatal("ResolvePublicIP() = nil error when the lookup exceeded the deadline")
 	}
 }

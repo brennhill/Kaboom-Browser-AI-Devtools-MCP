@@ -4,7 +4,7 @@ feature_id: feature-file-upload
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-08-31
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
@@ -43,6 +43,8 @@ test_paths:
   - internal/upload/form_submit_writer_test.go
   - internal/upload/uploadsec/path_test.go
   - internal/upload/uploadsec/ssrf_test.go
+  - internal/upload/uploadsec/ssrf_resolver_test.go
+  - internal/upload/uploadsec/ssrf_bypass_test.go
   - internal/upload/osauto/osauto_test.go
   - scripts/smoke-tests/upload/test-upload-server.py
   - scripts/smoke-tests/upload/15-file-upload.sh

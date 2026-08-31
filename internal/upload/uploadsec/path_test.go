@@ -236,7 +236,7 @@ func TestSecurity_ValidateUploadDir_Empty(t *testing.T) {
 func TestSecurity_ValidateUploadDir_Relative(t *testing.T) {
 	_, err := ValidateUploadDir("relative/path", nil)
 	if err == nil {
-		t.Error("relative path should fail")
+		t.Fatal("relative path should fail")
 	}
 	if !strings.Contains(err.Error(), "absolute path") {
 		t.Errorf("error should mention absolute path, got: %v", err)
@@ -256,7 +256,7 @@ func TestSecurity_ValidateUploadDir_IsFile(t *testing.T) {
 
 	_, err := ValidateUploadDir(f, nil)
 	if err == nil {
-		t.Error("file (not directory) should fail")
+		t.Fatal("file (not directory) should fail")
 	}
 	if !strings.Contains(err.Error(), "not a directory") {
 		t.Errorf("error should mention not a directory, got: %v", err)
@@ -270,7 +270,7 @@ func TestSecurity_ValidateUploadDir_Symlink(t *testing.T) {
 
 	_, err := ValidateUploadDir(link, nil)
 	if err == nil {
-		t.Error("symlink dir should fail")
+		t.Fatal("symlink dir should fail")
 	}
 	if !strings.Contains(err.Error(), "symlink") {
 		t.Errorf("error should mention symlink, got: %v", err)
@@ -306,7 +306,7 @@ func TestSecurity_ValidateUploadDir_HomeDir(t *testing.T) {
 	}
 	_, err = ValidateUploadDir(home, nil)
 	if err == nil {
-		t.Error("home directory should be rejected")
+		t.Fatal("home directory should be rejected")
 	}
 	if !strings.Contains(err.Error(), "subdirectory") {
 		t.Errorf("error should mention subdirectory, got: %v", err)
@@ -349,7 +349,7 @@ func TestSecurity_ValidateFilePath_RelativePath(t *testing.T) {
 	sec := testSecurity(t)
 	_, err := sec.ValidateFilePath("../etc/passwd", false)
 	if err == nil {
-		t.Error("relative path should fail")
+		t.Fatal("relative path should fail")
 	}
 	if !strings.Contains(err.Error(), "absolute path") {
 		t.Errorf("error should mention absolute path, got: %v", err)
@@ -614,19 +614,11 @@ func TestSecurity_Denylist_CaseInsensitive(t *testing.T) {
 	}
 }
 
-// ============================================
-// 13. DNS fail-closed
-// ============================================
-
-func TestSecurity_SSRF_DNSFailure_Blocked(t *testing.T) {
-	err := ValidateFormActionURL("https://this-domain-definitely-does-not-exist-xyz123.example/upload")
-	if err == nil {
-		t.Error("ValidateFormActionURL should reject URL with unresolvable hostname (fail-closed)")
-	}
-	if !strings.Contains(err.Error(), "DNS") {
-		t.Errorf("error should mention DNS failure, got: %v", err)
-	}
-}
+// DNS fail-closed now lives in ssrf_resolver_test.go, where the resolver is
+// injected. The version that stood here queried the machine's real resolver, so a
+// network that answers NXDOMAIN with an address turned it red — and because it
+// called t.Error and then dereferenced the nil error, it panicked and took every
+// other test in this package down with it.
 
 // ============================================
 // 14. Root credentials in absolute denylist

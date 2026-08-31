@@ -148,7 +148,7 @@ func TestSSRF_ResolvePublicIP_RejectsPrivateIPv4Literals(t *testing.T) {
 		t.Run(ipStr, func(t *testing.T) {
 			_, err := ResolvePublicIP(ctx, ipStr)
 			if err == nil {
-				t.Errorf("ResolvePublicIP(%q) should return error for private IP", ipStr)
+				t.Fatalf("ResolvePublicIP(%q) should return error for private IP", ipStr)
 			}
 			if !strings.Contains(err.Error(), "private IP") {
 				t.Errorf("error should mention 'private IP', got %q", err.Error())
@@ -164,7 +164,7 @@ func TestSSRF_ResolvePublicIP_RejectsPrivateIPv6Literals(t *testing.T) {
 		t.Run(ipStr, func(t *testing.T) {
 			_, err := ResolvePublicIP(ctx, ipStr)
 			if err == nil {
-				t.Errorf("ResolvePublicIP(%q) should return error for private IPv6", ipStr)
+				t.Fatalf("ResolvePublicIP(%q) should return error for private IPv6", ipStr)
 			}
 			if !strings.Contains(err.Error(), "private IP") {
 				t.Errorf("error should mention 'private IP', got %q", err.Error())
@@ -240,6 +240,10 @@ func TestSSRF_ResolvePublicIP_CancelledContext(t *testing.T) {
 	}
 }
 
+// Keeps the real resolver deliberately: the context is already expired, so
+// LookupIPAddr returns without performing a lookup. That makes this deterministic
+// offline AND proves the production resolver honours the caller's deadline, which
+// an injected stub could only assume.
 func TestSSRF_ResolvePublicIP_DNSLookupTimeout(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1*time.Second))
 	defer cancel()
@@ -274,7 +278,7 @@ func TestSSRF_SafeDial_BlocksPrivateIPv4(t *testing.T) {
 		t.Run(addr, func(t *testing.T) {
 			_, err := SSRFSafeDialContext(ctx, "tcp", addr, false)
 			if err == nil {
-				t.Errorf("SSRFSafeDialContext should block private address %s", addr)
+				t.Fatalf("SSRFSafeDialContext should block private address %s", addr)
 			}
 			if !strings.Contains(err.Error(), "ssrf_blocked") {
 				t.Errorf("error should contain 'ssrf_blocked', got %q", err.Error())
@@ -290,7 +294,7 @@ func TestSSRF_SafeDial_BlocksPrivateIPv6(t *testing.T) {
 		t.Run(addr, func(t *testing.T) {
 			_, err := SSRFSafeDialContext(ctx, "tcp", addr, false)
 			if err == nil {
-				t.Errorf("SSRFSafeDialContext should block private IPv6 address %s", addr)
+				t.Fatalf("SSRFSafeDialContext should block private IPv6 address %s", addr)
 			}
 			if !strings.Contains(err.Error(), "ssrf_blocked") {
 				t.Errorf("error should contain 'ssrf_blocked', got %q", err.Error())
@@ -542,7 +546,16 @@ func TestSSRF_SafeDial_MalformedAddresses(t *testing.T) {
 // 9. DNS rebinding — private resolution
 // ============================================
 
+// The resolver is injected rather than queried: .invalid is reserved and must not
+// resolve, but a resolver that hijacks NXDOMAIN answers it anyway, and this
+// assertion then fails for a reason that has nothing to do with the code.
 func TestSSRF_ResolvePublicIP_InvalidHostname(t *testing.T) {
+	previous := lookupIPAddr
+	t.Cleanup(func() { lookupIPAddr = previous })
+	lookupIPAddr = func(context.Context, string) ([]net.IPAddr, error) {
+		return nil, &net.DNSError{Err: "no such host", Name: "this-hostname-does-not-exist.invalid", IsNotFound: true}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_, err := ResolvePublicIP(ctx, "this-hostname-does-not-exist.invalid")
