@@ -141,9 +141,51 @@ export function isDrawModeActive() {
 // OVERLAY CREATION / DESTRUCTION
 // ============================================================================
 
+/** Build the Draw Mode badge. Split out of createOverlay to keep it inside its
+ *  length budget; the badge is a self-contained unit with no other dependencies. */
+function createDrawBadge() {
+  const badge = document.createElement('div')
+  badge.id = 'kaboom-draw-badge'
+  Object.assign(badge.style, {
+  position: 'absolute',
+  top: '12px',
+  right: '12px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '6px 12px',
+  background: 'rgba(0, 0, 0, 0.8)',
+  color: '#ef4444',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  fontSize: '12px',
+  fontWeight: '600',
+  borderRadius: '6px',
+  pointerEvents: 'none',
+  zIndex: String(OVERLAY_Z_INDEX + 1)
+  })
+
+  // Pulsing dot
+  const dot = document.createElement('span')
+  Object.assign(dot.style, {
+  width: '8px',
+  height: '8px',
+  borderRadius: '50%',
+  background: '#ef4444',
+  display: 'inline-block',
+  animation: 'kaboom-draw-pulse 1.5s ease-in-out infinite'
+  })
+  badge.appendChild(dot)
+  badge.appendChild(document.createTextNode('Draw Mode'))
+  return badge
+}
+
 function createOverlay() {
   overlay = document.createElement('div')
   overlay.id = 'kaboom-draw-overlay'
+  // Marks this as a Kaboom overlay so screenshot capture strips it. Every draw child
+  // (badge, instruction, action bar, canvas) is appended to this root, so one marker
+  // covers the whole overlay.
+  overlay.setAttribute('data-kaboom-overlay', 'draw-mode')
   Object.assign(overlay.style, {
     position: 'fixed',
     top: '0',
@@ -171,38 +213,7 @@ function createOverlay() {
   ctx = canvas.getContext('2d')
 
   // Mode badge (top-right) — small indicator, no ESC hint here
-  const badge = document.createElement('div')
-  badge.id = 'kaboom-draw-badge'
-  Object.assign(badge.style, {
-    position: 'absolute',
-    top: '12px',
-    right: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '6px 12px',
-    background: 'rgba(0, 0, 0, 0.8)',
-    color: '#ef4444',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontSize: '12px',
-    fontWeight: '600',
-    borderRadius: '6px',
-    pointerEvents: 'none',
-    zIndex: String(OVERLAY_Z_INDEX + 1)
-  })
-
-  // Pulsing dot
-  const dot = document.createElement('span')
-  Object.assign(dot.style, {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    background: '#ef4444',
-    display: 'inline-block',
-    animation: 'kaboom-draw-pulse 1.5s ease-in-out infinite'
-  })
-  badge.appendChild(dot)
-  badge.appendChild(document.createTextNode('Draw Mode'))
+  const badge = createDrawBadge()
   overlay.appendChild(badge)
 
   createActionBar()

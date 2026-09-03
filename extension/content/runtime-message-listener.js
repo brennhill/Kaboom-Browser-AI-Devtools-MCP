@@ -7,6 +7,7 @@ import { isValidBackgroundSender, handlePing, handleToggleMessage, forwardHighli
 import { showActionToast } from './ui/toast.js';
 import { showSubtitle, toggleRecordingWatermark } from './ui/subtitle.js';
 import { toggleChatWidget } from './ui/chat-widget.js';
+import { AgentIndicator } from './ui/agent-indicator.js';
 // Toggle state caches — updated by forwarded setting messages from background
 let actionToastsEnabled = true;
 let subtitlesEnabled = true;
@@ -40,14 +41,78 @@ function hydrateOverlayToggleState() {
     });
 }
 /**
- * Initialize runtime message listener
- * Listens for messages from background (feature toggles and pilot commands)
+ * One supervision overlay per page.
+ *
+ * Created lazily so a tab nobody drives never builds one. The heartbeat timer is what makes
+ * the overlay survivable: if the service worker is terminated mid-action (MV3 does this
+ * without warning) no further heartbeats arrive and the overlay removes itself, instead of
+ * stranding a permanent "an agent is driving this tab" badge on a tab nothing is driving.
  */
-export function initRuntimeMessageListener() {
-    actionToastsEnabled = true;
-    subtitlesEnabled = true;
-    hydrateOverlayToggleState();
-    const syncHandlers = {
+let agentIndicator = null;
+let agentIndicatorTimer = null;
+/** How often the overlay checks its own liveness. */
+const AGENT_INDICATOR_TICK_MS = 2_000;
+function ensureAgentIndicator() {
+    if (agentIndicator)
+        return agentIndicator;
+    agentIndicator = new AgentIndicator({
+        now: () => Date.now(),
+        onStop: () => {
+            // The user clicked Stop on a trusted event. Tell the background so it aborts the
+            // in-flight action and releases the CDP lease; a page cannot reach this path.
+            chrome.runtime
+                .sendMessage({ type: 'kaboom_agent_stop_requested', at: Date.now() })
+                .catch(() => {
+                // EXPECTED_ABSENCE: a dead background worker is a normal outcome here — it is
+                // itself one of the reasons a user presses Stop — and the overlay has already
+                // torn itself down locally, so logging would report a failure for an abort that
+                // actually succeeded from the user's point of view.
+            });
+        }
+    });
+    return agentIndicator;
+}
+function stopAgentIndicatorTimer() {
+    if (agentIndicatorTimer === null)
+        return;
+    clearInterval(agentIndicatorTimer);
+    agentIndicatorTimer = null;
+}
+function handleAgentIndicatorMessage(msg) {
+    const indicator = ensureAgentIndicator();
+    switch (msg.phase) {
+        case 'driving':
+            indicator.startDriving(msg.action ?? '');
+            if (agentIndicatorTimer === null) {
+                agentIndicatorTimer = setInterval(() => {
+                    if (indicator.tick() !== null)
+                        stopAgentIndicatorTimer();
+                }, AGENT_INDICATOR_TICK_MS);
+            }
+            break;
+        case 'cursor':
+            if (typeof msg.x === 'number' && typeof msg.y === 'number')
+                indicator.moveCursor(msg.x, msg.y);
+            break;
+        case 'heartbeat':
+            indicator.heartbeat();
+            break;
+        case 'idle':
+            indicator.unmount();
+            stopAgentIndicatorTimer();
+            break;
+        default:
+            // EXPECTED_ABSENCE: an unknown phase is the normal, expected symptom of version skew
+            // between background and content immediately after an extension update. Ignoring it
+            // leaves the overlay in its last valid state; logging would flag a routine upgrade
+            // window as an error on every message until the content script reloads.
+            break;
+    }
+}
+/** Sync message handlers — return false (no async response needed). Extracted so
+ *  initRuntimeMessageListener stays inside its length budget. */
+function buildSyncHandlers() {
+    return {
         kaboom_ping: () => {
             /* handled below via sendResponse */
         },
@@ -57,6 +122,10 @@ export function initRuntimeMessageListener() {
             const m = msg;
             if (m.text)
                 showActionToast(m.text, m.detail, m.state || 'trying', m.duration_ms);
+            return false;
+        },
+        kaboom_agent_indicator: (msg) => {
+            handleAgentIndicatorMessage(msg);
             return false;
         },
         kaboom_toggle_chat: (msg) => {
@@ -82,7 +151,10 @@ export function initRuntimeMessageListener() {
             return false;
         }
     };
-    const delegatedHandlers = {
+}
+/** Delegated handlers that own their own sendResponse lifecycle. */
+function buildDelegatedHandlers() {
+    return {
         kaboom_draw_mode_start: (msg, sr) => {
             const m = msg;
             import(/* webpackIgnore: true */ chrome.runtime.getURL('content/draw-mode.js'))
@@ -136,6 +208,13 @@ export function initRuntimeMessageListener() {
         kaboom_get_markdown: (_msg, sr) => handleGetMarkdown(sr),
         kaboom_page_summary: (_msg, sr) => handlePageSummary(sr)
     };
+}
+export function initRuntimeMessageListener() {
+    actionToastsEnabled = true;
+    subtitlesEnabled = true;
+    hydrateOverlayToggleState();
+    const syncHandlers = buildSyncHandlers();
+    const delegatedHandlers = buildDelegatedHandlers();
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (!isValidBackgroundSender(sender)) {
             console.warn(KABOOM_LOG_PREFIX, 'Rejected message from untrusted sender:', sender.id);

@@ -50,6 +50,23 @@ export function createMockElement(tag = 'div') {
       }
     },
     focus: mock.fn(),
+    // Attribute API. Real elements have it and production code uses it — notably the
+    // `data-kaboom-overlay` marker that lets screenshot capture strip our own overlays.
+    // A mock missing these methods makes any legitimate setAttribute call look like a bug.
+    _attrs: {},
+    setAttribute(name, value) {
+      this._attrs[name] = String(value)
+      if (name === 'id') this.id = String(value)
+    },
+    getAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(this._attrs, name) ? this._attrs[name] : null
+    },
+    hasAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(this._attrs, name)
+    },
+    removeAttribute(name) {
+      delete this._attrs[name]
+    },
     getBoundingClientRect() {
       return { x: 10, y: 20, width: 100, height: 50 }
     },

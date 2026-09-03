@@ -25,6 +25,7 @@ import type {
   TrackingContinuityChangedMessage,
   TrackingStateChangedMessage
 } from './runtime/tracking.js'
+import type { AgentIndicatorMessage } from './runtime/agent-indicator.js'
 import type { DomQueryResult } from './capture/dom.js'
 import type { A11yAuditResult } from './capture/accessibility.js'
 import type { RuntimeMessageName } from '../lib/constants.js'
@@ -613,6 +614,7 @@ export type ContentMessage =
   | DataTableQueryMessage
   | ManageStateMessage
   | ActionToastMessage
+  | AgentIndicatorMessage
   | SubtitleMessage
   | RecordingWatermarkMessage
   | ShowTrackedHoverLauncherMessage

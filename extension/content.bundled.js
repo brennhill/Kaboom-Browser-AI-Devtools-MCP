@@ -2270,6 +2270,223 @@
     });
   }
 
+  // extension/content/ui/agent-indicator.js
+  var AGENT_INDICATOR_IDS = {
+    root: "kaboom-agent-indicator",
+    cursor: "kaboom-phantom-cursor",
+    glow: "kaboom-driving-glow",
+    pill: "kaboom-driving-pill",
+    stop: "kaboom-driving-stop"
+  };
+  var HEARTBEAT_TTL_MS = 15e3;
+  var OVERLAY_Z_INDEX = 2147483646;
+  var AgentIndicatorCore = class {
+    now;
+    state = {
+      driving: false,
+      action: null,
+      cursor: null,
+      lastHeartbeatAt: 0
+    };
+    constructor(now) {
+      this.now = now;
+    }
+    snapshot() {
+      return { ...this.state, cursor: this.state.cursor ? { ...this.state.cursor } : null };
+    }
+    get driving() {
+      return this.state.driving;
+    }
+    /** Begin (or relabel) driving. Idempotent: a second call updates the label only. */
+    startDriving(action) {
+      this.state.driving = true;
+      this.state.action = action;
+      this.state.lastHeartbeatAt = this.now();
+    }
+    /** The CDP lease was released, or the action finished. */
+    stopDriving() {
+      this.state.driving = false;
+      this.state.action = null;
+      this.state.cursor = null;
+    }
+    /** Move the phantom cursor. Ignored when not driving: a stray cursor implies activity. */
+    moveCursor(x, y) {
+      if (!this.state.driving)
+        return false;
+      this.state.cursor = { x, y };
+      return true;
+    }
+    heartbeat() {
+      this.state.lastHeartbeatAt = this.now();
+    }
+    /**
+     * Clock check. Returns a teardown reason when the overlay must come down, else null.
+     * Pure with respect to the injected clock, so expiry is testable without waiting.
+     */
+    tick() {
+      if (!this.state.driving)
+        return null;
+      if (this.now() - this.state.lastHeartbeatAt <= HEARTBEAT_TTL_MS)
+        return null;
+      this.stopDriving();
+      return "heartbeat_expired";
+    }
+  };
+  function isHonouredStop(event) {
+    return event?.isTrusted === true;
+  }
+  function drivingLabel(action) {
+    const trimmed = (action ?? "").trim();
+    if (!trimmed)
+      return "Kaboom is driving this tab";
+    const cleaned = trimmed.replace(/_/g, " ");
+    const shown = cleaned.length > 40 ? cleaned.slice(0, 39) + "\u2026" : cleaned;
+    return `Kaboom is driving this tab \u2014 ${shown}`;
+  }
+  var ACCENT = "#f97316";
+  var ROOT_CSS = `
+  :host { all: initial; }
+  .glow {
+    position: fixed; inset: 0; pointer-events: none;
+    box-shadow: inset 0 0 0 3px ${ACCENT}, inset 0 0 22px rgba(249,115,22,0.35);
+    opacity: 0; transition: opacity 160ms ease;
+  }
+  .glow.on { opacity: 1; }
+  .pill {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    display: none; align-items: center; gap: 10px;
+    padding: 8px 10px 8px 14px; border-radius: 999px;
+    background: rgba(17,17,17,0.92); color: #fff;
+    font: 600 13px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+  }
+  .pill.on { display: flex; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: ${ACCENT};
+    animation: kb-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes kb-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .stop {
+    all: unset; cursor: pointer; pointer-events: auto;
+    padding: 4px 12px; border-radius: 999px;
+    background: #fff; color: #111;
+    font: 700 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .stop:hover { background: #f0eee6; }
+  .cursor {
+    position: fixed; width: 22px; height: 22px; margin: -3px 0 0 -3px;
+    display: none; pointer-events: none;
+    transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .cursor.on { display: block; }
+`;
+  var CURSOR_SVG = `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><path d="M1 1 L1 16 L5.5 12 L8.5 19 L11.5 17.5 L8.5 11 L14 11 Z" fill="${ACCENT}" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+  var AgentIndicator = class {
+    deps;
+    rendered = null;
+    core;
+    constructor(deps) {
+      this.deps = deps;
+      this.core = new AgentIndicatorCore(deps.now);
+    }
+    get mounted() {
+      return this.rendered !== null;
+    }
+    get driving() {
+      return this.core.driving;
+    }
+    /** Create the overlay if absent. Idempotent, so any entry point may call it. */
+    mount() {
+      if (this.rendered || typeof document === "undefined" || !document.body)
+        return;
+      const host = document.createElement("div");
+      host.id = AGENT_INDICATOR_IDS.root;
+      host.setAttribute("data-kaboom-overlay", "agent-indicator");
+      host.style.cssText = `position:fixed;inset:0;pointer-events:none;z-index:${OVERLAY_Z_INDEX};`;
+      const shadow = host.attachShadow({ mode: "open" });
+      const style = document.createElement("style");
+      style.textContent = ROOT_CSS;
+      shadow.appendChild(style);
+      const glow = document.createElement("div");
+      glow.className = "glow";
+      glow.id = AGENT_INDICATOR_IDS.glow;
+      const pill = document.createElement("div");
+      pill.className = "pill";
+      pill.id = AGENT_INDICATOR_IDS.pill;
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      const label = document.createElement("span");
+      const stop = document.createElement("button");
+      stop.className = "stop";
+      stop.id = AGENT_INDICATOR_IDS.stop;
+      stop.textContent = "Stop";
+      stop.setAttribute("type", "button");
+      stop.addEventListener("click", (event) => {
+        if (!isHonouredStop(event))
+          return;
+        this.stopDriving();
+        this.deps.onStop();
+      });
+      pill.appendChild(dot);
+      pill.appendChild(label);
+      pill.appendChild(stop);
+      const cursor = document.createElement("div");
+      cursor.className = "cursor";
+      cursor.id = AGENT_INDICATOR_IDS.cursor;
+      cursor.innerHTML = CURSOR_SVG;
+      shadow.appendChild(glow);
+      shadow.appendChild(pill);
+      shadow.appendChild(cursor);
+      document.body.appendChild(host);
+      this.rendered = { host, glow, pill, label, stop, cursor };
+      this.paint();
+    }
+    unmount() {
+      this.core.stopDriving();
+      this.rendered?.host.remove();
+      this.rendered = null;
+    }
+    startDriving(action) {
+      this.core.startDriving(action);
+      this.mount();
+      this.paint();
+    }
+    stopDriving() {
+      this.core.stopDriving();
+      this.paint();
+    }
+    moveCursor(x, y) {
+      if (!this.core.moveCursor(x, y))
+        return;
+      this.paint();
+    }
+    heartbeat() {
+      this.core.heartbeat();
+    }
+    /** Drive from a timer. Removes the overlay when its worker has stopped heartbeating. */
+    tick() {
+      const reason = this.core.tick();
+      if (reason)
+        this.unmount();
+      return reason;
+    }
+    paint() {
+      const r = this.rendered;
+      if (!r)
+        return;
+      const state = this.core.snapshot();
+      r.glow.classList.toggle("on", state.driving);
+      r.pill.classList.toggle("on", state.driving);
+      r.label.textContent = drivingLabel(state.action);
+      if (state.cursor) {
+        r.cursor.classList.add("on");
+        r.cursor.style.transform = `translate(${state.cursor.x}px, ${state.cursor.y}px)`;
+      } else {
+        r.cursor.classList.remove("on");
+      }
+    }
+  };
+
   // extension/content/runtime-message-listener.js
   var actionToastsEnabled = true;
   var subtitlesEnabled = true;
@@ -2299,11 +2516,56 @@
       });
     });
   }
-  function initRuntimeMessageListener() {
-    actionToastsEnabled = true;
-    subtitlesEnabled = true;
-    hydrateOverlayToggleState();
-    const syncHandlers = {
+  var agentIndicator = null;
+  var agentIndicatorTimer = null;
+  var AGENT_INDICATOR_TICK_MS = 2e3;
+  function ensureAgentIndicator() {
+    if (agentIndicator)
+      return agentIndicator;
+    agentIndicator = new AgentIndicator({
+      now: () => Date.now(),
+      onStop: () => {
+        chrome.runtime.sendMessage({ type: "kaboom_agent_stop_requested", at: Date.now() }).catch(() => {
+        });
+      }
+    });
+    return agentIndicator;
+  }
+  function stopAgentIndicatorTimer() {
+    if (agentIndicatorTimer === null)
+      return;
+    clearInterval(agentIndicatorTimer);
+    agentIndicatorTimer = null;
+  }
+  function handleAgentIndicatorMessage(msg) {
+    const indicator = ensureAgentIndicator();
+    switch (msg.phase) {
+      case "driving":
+        indicator.startDriving(msg.action ?? "");
+        if (agentIndicatorTimer === null) {
+          agentIndicatorTimer = setInterval(() => {
+            if (indicator.tick() !== null)
+              stopAgentIndicatorTimer();
+          }, AGENT_INDICATOR_TICK_MS);
+        }
+        break;
+      case "cursor":
+        if (typeof msg.x === "number" && typeof msg.y === "number")
+          indicator.moveCursor(msg.x, msg.y);
+        break;
+      case "heartbeat":
+        indicator.heartbeat();
+        break;
+      case "idle":
+        indicator.unmount();
+        stopAgentIndicatorTimer();
+        break;
+      default:
+        break;
+    }
+  }
+  function buildSyncHandlers() {
+    return {
       kaboom_ping: () => {
       },
       kaboom_action_toast: (msg) => {
@@ -2312,6 +2574,10 @@
         const m = msg;
         if (m.text)
           showActionToast(m.text, m.detail, m.state || "trying", m.duration_ms);
+        return false;
+      },
+      kaboom_agent_indicator: (msg) => {
+        handleAgentIndicatorMessage(msg);
         return false;
       },
       kaboom_toggle_chat: (msg) => {
@@ -2337,7 +2603,9 @@
         return false;
       }
     };
-    const delegatedHandlers = {
+  }
+  function buildDelegatedHandlers() {
+    return {
       kaboom_draw_mode_start: (msg, sr) => {
         const m = msg;
         import(
@@ -2390,6 +2658,13 @@
       kaboom_get_markdown: (_msg, sr) => handleGetMarkdown(sr),
       kaboom_page_summary: (_msg, sr) => handlePageSummary(sr)
     };
+  }
+  function initRuntimeMessageListener() {
+    actionToastsEnabled = true;
+    subtitlesEnabled = true;
+    hydrateOverlayToggleState();
+    const syncHandlers = buildSyncHandlers();
+    const delegatedHandlers = buildDelegatedHandlers();
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!isValidBackgroundSender(sender)) {
         console.warn(KABOOM_LOG_PREFIX, "Rejected message from untrusted sender:", sender.id);
@@ -3341,6 +3616,7 @@
     const root = createLauncherUi();
     const host = document.createElement("div");
     host.id = ROOT_ID;
+    host.setAttribute("data-kaboom-overlay", "tracked-hover-launcher");
     host.setAttribute?.("data-kaboom-owned", "true");
     const shadow = host.attachShadow({ mode: "open" });
     const style = document.createElement("style");

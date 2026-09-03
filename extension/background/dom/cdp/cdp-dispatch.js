@@ -7,6 +7,7 @@
 import { errorMessage } from '../../../lib/error-utils.js';
 import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js';
 import { cdpSessions, CDP_SESSION_ERRORS } from './cdp-session.js';
+import { sendAgentIndicator } from '../../ui/content-script-bridge.js';
 import { resolveElement, buildCDPResult } from './cdp-element-resolve.js';
 async function cdpSend(lease, method, params) {
     await lease.send(method, params);
@@ -393,6 +394,11 @@ export async function tryCDPEscalation(tabId, action, params) {
         // Step 2: Take a reference to the tab's shared CDP session. The session outlives this
         // action, so a click that starts a navigation is no longer racing its own teardown.
         const lease = await sessions.acquire(tabId);
+        // Step 2a: Show the human what is about to happen, BEFORE the input dispatches. The
+        // phantom cursor lands on the coordinate CDP is about to click, so what they see is
+        // intent rather than history.
+        sendAgentIndicator(tabId, 'driving', { action });
+        sendAgentIndicator(tabId, 'cursor', { x: resolved.x, y: resolved.y });
         try {
             // Step 3: Execute CDP action
             if (!(await cdpExecuteAction(lease, action, params, selector, resolved)))
@@ -401,6 +407,8 @@ export async function tryCDPEscalation(tabId, action, params) {
             return buildCDPResult(action, selector, resolved, Date.now() - startTime);
         }
         finally {
+            // The lease is what "driving" means, so the overlay comes down with it.
+            sendAgentIndicator(tabId, 'idle');
             lease.release();
         }
     }

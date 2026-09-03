@@ -9,6 +9,7 @@ import type { LogLevelFilter } from './capture/telemetry.js';
 import type { ConnectionStatus } from './runtime/state.js';
 import type { BrowserStateSnapshot, StateAction } from './runtime/state.js';
 import type { GetTrackingStateMessage, TrackingContentReadyMessage, TrackingReadinessProbeMessage, TrackingContinuityChangedMessage, TrackingStateChangedMessage } from './runtime/tracking.js';
+import type { AgentIndicatorMessage } from './runtime/agent-indicator.js';
 import type { RuntimeMessageName } from '../lib/constants.js';
 /**
  * Message to get current tab ID
@@ -459,7 +460,7 @@ export interface ShowTrackedHoverLauncherMessage {
 /**
  * Union of all content-script-bound messages
  */
-export type ContentMessage = ContentPingMessage | TrackingReadinessProbeMessage | HighlightMessage | ExecuteJsMessage | ExecuteQueryMessage | DomQueryMessage | A11yQueryMessage | GetNetworkWaterfallMessage | LinkHealthMessage | ComputedStylesQueryMessage | FormDiscoveryQueryMessage | FormStateQueryMessage | DataTableQueryMessage | ManageStateMessage | ActionToastMessage | SubtitleMessage | RecordingWatermarkMessage | ShowTrackedHoverLauncherMessage | DrawModeStartMessage | DrawModeStopMessage | GetAnnotationsMessage | TrackingStateChangedMessage | ToggleChatMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | SetServerUrlMessage;
+export type ContentMessage = ContentPingMessage | TrackingReadinessProbeMessage | HighlightMessage | ExecuteJsMessage | ExecuteQueryMessage | DomQueryMessage | A11yQueryMessage | GetNetworkWaterfallMessage | LinkHealthMessage | ComputedStylesQueryMessage | FormDiscoveryQueryMessage | FormStateQueryMessage | DataTableQueryMessage | ManageStateMessage | ActionToastMessage | AgentIndicatorMessage | SubtitleMessage | RecordingWatermarkMessage | ShowTrackedHoverLauncherMessage | DrawModeStartMessage | DrawModeStopMessage | GetAnnotationsMessage | TrackingStateChangedMessage | ToggleChatMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | SetServerUrlMessage;
 /** Page-to-content postMessage types. */
 export type PageMessageType = 'kaboom_log' | 'kaboom_ws' | 'kaboom_network_body' | 'kaboom_enhanced_action' | 'kaboom_performance_snapshot' | 'kaboom_capture_diagnostic' | 'kaboom_inject_bridge_pong' | 'kaboom_highlight_response' | 'kaboom_execute_js_result' | 'kaboom_a11y_query_response' | 'kaboom_dom_query_response' | 'kaboom_state_response' | 'kaboom_waterfall_response' | 'kaboom_link_health_response' | 'kaboom_computed_styles_response' | 'kaboom_form_discovery_response' | 'kaboom_form_state_response' | 'kaboom_data_table_response';
 /** Content-to-page postMessage types. */

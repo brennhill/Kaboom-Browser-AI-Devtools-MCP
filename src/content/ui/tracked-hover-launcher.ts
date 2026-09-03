@@ -713,6 +713,9 @@ function mountLauncher(): void {
   // the boundary, and box-sizing is normalized for the content.
   const host = document.createElement('div')
   host.id = ROOT_ID
+  // Marks this as a Kaboom overlay so screenshot capture strips it (see
+  // setKaboomOverlayVisibility). Never rely on an id list there.
+  host.setAttribute('data-kaboom-overlay', 'tracked-hover-launcher')
   host.setAttribute?.('data-kaboom-owned', 'true')
   const shadow = host.attachShadow({ mode: 'open' })
   const style = document.createElement('style')
