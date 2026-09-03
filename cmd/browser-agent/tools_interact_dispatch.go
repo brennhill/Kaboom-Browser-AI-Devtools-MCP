@@ -25,7 +25,21 @@ func buildInteractDispatcher(h *ToolHandler) *interactdispatch.Handler {
 		QueueActionDiff:    h.pageActions.QueueComposableActionDiff,
 		AppendScreenshot:   h.pageActions.AppendScreenshotToResponse,
 		AppendInteractive:  h.pageActions.AppendInteractiveToResponse,
+		ConsentGate: func(req mcp.JSONRPCRequest, action, targetURL string) (mcp.JSONRPCResponse, bool) {
+			return h.Guards.RequireDrivingConsent(req, action, targetURL)
+		},
+		TrackedURL: h.trackedURLForConsent,
 	})
+}
+
+// trackedURLForConsent reports the URL the tracked tab is on, which is the consent target
+// for every action that does not name a URL of its own.
+func (h *ToolHandler) trackedURLForConsent() string {
+	if h == nil || h.capture == nil {
+		return ""
+	}
+	_, _, trackedURL := h.capture.Extension().GetTrackingStatus()
+	return trackedURL
 }
 
 func buildInteractActions(h *ToolHandler) map[string]interactdispatch.Action {

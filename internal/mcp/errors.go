@@ -26,6 +26,9 @@ const (
 	ErrOsAutomationDisabled = "os_automation_disabled"
 	ErrRateLimited          = "rate_limited"
 	ErrCursorExpired        = "cursor_expired"
+	// ErrOriginNotConsented: the user has not permitted kaboom to DRIVE this origin.
+	// Not retryable — retrying without a grant produces the same refusal.
+	ErrOriginNotConsented = "origin_not_consented"
 
 	// Communication errors — retry with backoff
 	ErrExtTimeout = "extension_timeout"

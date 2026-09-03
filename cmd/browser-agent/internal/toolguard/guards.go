@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browserconsent"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -26,6 +27,7 @@ type Guards struct {
 	capture                   *capture.Capture
 	shutdownCtx               context.Context
 	extensionReadinessTimeout time.Duration
+	consent                   *browserconsent.Policy
 }
 
 // New constructs runtime guards over the canonical capture state.
@@ -34,6 +36,7 @@ func New(captureStore *capture.Capture, shutdownCtx context.Context, extensionRe
 		capture:                   captureStore,
 		shutdownCtx:               shutdownCtx,
 		extensionReadinessTimeout: extensionReadinessTimeout,
+		consent:                   browserconsent.NewPolicy(),
 	}
 }
 
@@ -236,6 +239,49 @@ func (g *Guards) RequireTabTracking(req mcp.JSONRPCRequest, extraOpts ...func(*m
 	}, extraOpts...)
 	return mcp.Fail(req, mcp.ErrNoData, "No tab is being tracked. Navigate to a page first.",
 		"Open a page in the browser, or call interact(what='navigate', url='...').",
+		opts...,
+	), true
+}
+
+// Consent returns the driving-consent policy this guard enforces.
+func (g *Guards) Consent() *browserconsent.Policy { return g.consent }
+
+// RequireDrivingConsent refuses a state-changing action against an origin the user has not
+// permitted kaboom to drive.
+//
+// This is the Go-side enforcement point deliberately: it sits in front of every interact
+// call path, so a second caller in the extension cannot reach the browser around it.
+// Read-only actions are unaffected and keep running under the existing domain filters.
+//
+// targetURL is the origin being ACTED UPON, which is not always the tracked tab: for
+// navigate the destination is what matters, since that is the origin about to be driven.
+func (g *Guards) RequireDrivingConsent(
+	req mcp.JSONRPCRequest,
+	action string,
+	targetURL string,
+	extraOpts ...func(*mcp.StructuredError),
+) (mcp.JSONRPCResponse, bool) {
+	decision := g.consent.Decide(action, targetURL)
+	if decision.Allowed {
+		return mcp.JSONRPCResponse{}, false
+	}
+
+	opts := append([]func(*mcp.StructuredError){
+		g.DiagnosticHint(),
+		// Retrying without a grant produces the same refusal, so retrying is not offered.
+		mcp.WithRetryable(false),
+	}, extraOpts...)
+
+	if decision.Reason == browserconsent.ReasonUnresolvableTarget {
+		return mcp.Fail(req, mcp.ErrOriginNotConsented,
+			fmt.Sprintf("Cannot identify the origin for %q, so the action was refused.", action),
+			"Navigate to an http(s) page first. Browser-internal pages cannot be driven.",
+			opts...,
+		), true
+	}
+	return mcp.Fail(req, mcp.ErrOriginNotConsented,
+		fmt.Sprintf("Kaboom is not permitted to drive %s.", decision.Origin),
+		fmt.Sprintf("Grant it with configure(mode='consent', action='allow', origin='%s'), then call again.", decision.Origin),
 		opts...,
 	), true
 }

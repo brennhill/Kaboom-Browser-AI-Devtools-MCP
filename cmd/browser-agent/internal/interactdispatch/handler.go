@@ -33,6 +33,13 @@ type Deps struct {
 	AppendScreenshot   func(mcp.JSONRPCResponse, mcp.JSONRPCRequest) mcp.JSONRPCResponse
 	AppendInteractive  func(mcp.JSONRPCResponse, mcp.JSONRPCRequest) mcp.JSONRPCResponse
 	Delay              func(time.Duration)
+
+	// ConsentGate refuses a state-changing action against an origin the user has not
+	// permitted kaboom to drive. Nil disables the gate, which only tests should do.
+	ConsentGate func(req mcp.JSONRPCRequest, action, targetURL string) (mcp.JSONRPCResponse, bool)
+	// TrackedURL reports the URL of the tracked tab, used as the consent target for any
+	// action that does not name a URL of its own.
+	TrackedURL func() string
 }
 
 // Handler owns immutable interact dispatch state for one ToolHandler.
@@ -84,9 +91,33 @@ func (h *Handler) ActionNames() []string {
 	return append([]string(nil), h.actions...)
 }
 
+// consentTargetURL picks the origin an action will actually act on.
+//
+// An action carrying an explicit url acts on THAT origin, not on whatever the tracked tab
+// currently shows — navigate is the obvious case, and checking the current page instead
+// would gate the origin being left rather than the one being driven.
+func consentTargetURL(args json.RawMessage, trackedURL func() string) string {
+	var named struct {
+		URL string `json:"url"`
+	}
+	if err := json.Unmarshal(args, &named); err == nil && strings.TrimSpace(named.URL) != "" {
+		return named.URL
+	}
+	if trackedURL != nil {
+		return trackedURL()
+	}
+	return ""
+}
+
 func preDispatch(h *Handler, req mcp.JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *mcp.JSONRPCResponse) {
 	if h.deps.ApplyJitter != nil {
 		h.deps.ApplyJitter(what)
+	}
+	// Consent is checked before anything else runs, so a refused action has no side effects.
+	if h.deps.ConsentGate != nil {
+		if resp, blocked := h.deps.ConsentGate(req, what, consentTargetURL(args, h.deps.TrackedURL)); blocked {
+			return args, &resp
+		}
 	}
 	if _, err := toolinteract.ParseEvidenceMode(args); err != nil {
 		resp := mcp.Fail(req, mcp.ErrInvalidParam, "Invalid 'evidence' value",
