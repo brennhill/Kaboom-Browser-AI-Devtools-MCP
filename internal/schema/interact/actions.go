@@ -76,6 +76,7 @@ var actionSpecs = []ActionSpec{
 	{Name: "batch", Hint: "Execute a sequence of interact actions in one call", Returns: "Per-step results for the whole batch, and how many succeeded, failed or queued.", Optional: []string{"steps", "step_timeout_ms", "continue_on_error", "stop_after_step"}},
 	{Name: "clipboard_read", Hint: "Read current clipboard text content", Returns: "The clipboard text, or a named reason the browser refused."},
 	{Name: "clipboard_write", Hint: "Write text to the clipboard", Returns: "Confirmation the text was copied.", Optional: []string{"text"}},
+	{Name: "find", Hint: "Find elements by natural-language description using the accessibility tree (works where selectors cannot: canvas widgets, ARIA-only semantics)", Returns: "Ranked candidate elements with ref, role, accessible name, confidence and why it matched. Multiple candidates mean the query was ambiguous — disambiguate rather than taking the first.", Required: []string{"query"}},
 }
 
 // actionEnum is the canonical list of values accepted by the 'what' parameter.

@@ -9,6 +9,7 @@ import './commands/analyze.js';
 import './commands/analyze-navigation.js';
 import './commands/analyze-page-structure.js';
 import './commands/analyze-feature-gates.js';
+import './commands/ax-find.js';
 import './commands/interact.js';
 import './commands/interact-content.js';
 import './commands/interact-explore.js';

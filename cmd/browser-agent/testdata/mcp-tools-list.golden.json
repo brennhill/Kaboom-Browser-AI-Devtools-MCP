@@ -1556,6 +1556,10 @@
           "description": "Cookie path (set_cookie/delete_cookie, default /)",
           "type": "string"
         },
+        "query": {
+          "description": "For find: a natural-language description of the element, e.g. 'add to cart button' or 'search bar'. Matched against the accessibility tree (role + accessible name), so it reaches controls no CSS selector can name.",
+          "type": "string"
+        },
         "query_type": {
           "description": "Query operation type for interact(what='query'): exists, count, text, text_all, attributes",
           "enum": [
@@ -1785,7 +1789,8 @@
             "explore_page",
             "batch",
             "clipboard_read",
-            "clipboard_write"
+            "clipboard_write",
+            "find"
           ],
           "type": "string"
         },

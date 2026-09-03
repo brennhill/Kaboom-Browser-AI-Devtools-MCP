@@ -143,3 +143,14 @@ func coreActionProperties() map[string]any {
 		},
 	}
 }
+
+// findProperties are the parameters of the accessibility-tree `find` action. Kept as their
+// own group so the core property map stays inside its length budget.
+func findProperties() map[string]any {
+	return map[string]any{
+		"query": map[string]any{
+			"type":        "string",
+			"description": "For find: a natural-language description of the element, e.g. 'add to cart button' or 'search bar'. Matched against the accessibility tree (role + accessible name), so it reaches controls no CSS selector can name.",
+		},
+	}
+}

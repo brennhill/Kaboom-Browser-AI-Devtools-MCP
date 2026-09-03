@@ -22,14 +22,27 @@ func actionRequiresTarget(action string) bool {
 }
 
 // ParseInteractArgs parses CLI flags for the interact tool into MCP arguments.
-func ParseInteractArgs(action string, args []string) (map[string]any, error) {
-	mcpArgs := map[string]any{"what": action}
-	parsed, err := parseFlagsBySpec(args, map[string]cliFlagSpec{
+// interactFlagSpecs is the interact CLI flag table, lifted out of ParseInteractArgs so the
+// parser stays inside its length budget.
+// interactFlagSpecs is the interact CLI flag table, split in two so each half stays inside
+// the length budget.
+func interactFlagSpecs() map[string]cliFlagSpec {
+	specs := interactTargetingFlagSpecs()
+	for flag, spec := range interactBehaviourFlagSpecs() {
+		specs[flag] = spec
+	}
+	return specs
+}
+
+// interactTargetingFlagSpecs covers cross-cutting and element-targeting flags.
+func interactTargetingFlagSpecs() map[string]cliFlagSpec {
+	return map[string]cliFlagSpec{
 		// Cross-cutting
 		"--telemetry-mode": {MCPKey: "telemetry_mode", Kind: FlagString},
 		"--background":     {MCPKey: "background", Kind: FlagBool},
 		// Element targeting
 		"--selector":         {MCPKey: "selector", Kind: FlagString},
+		"--query":            {MCPKey: "query", Kind: FlagString},
 		"--element-id":       {MCPKey: "element_id", Kind: FlagString},
 		"--index":            {MCPKey: "index", Kind: FlagInt},
 		"--index-generation": {MCPKey: "index_generation", Kind: FlagString},
@@ -69,6 +82,12 @@ func ParseInteractArgs(action string, args []string) (map[string]any, error) {
 		"--new-tab":         {MCPKey: "new_tab", Kind: FlagBool},
 		"--include-content": {MCPKey: "include_content", Kind: FlagBool},
 		"--analyze":         {MCPKey: "analyze", Kind: FlagBool},
+	}
+}
+
+// interactBehaviourFlagSpecs covers the per-action behaviour flags.
+func interactBehaviourFlagSpecs() map[string]cliFlagSpec {
+	return map[string]cliFlagSpec{
 		// Wait / stability
 		"--wait-for":            {MCPKey: "wait_for", Kind: FlagString},
 		"--url-contains":        {MCPKey: "url_contains", Kind: FlagString},
@@ -112,7 +131,12 @@ func ParseInteractArgs(action string, args []string) (map[string]any, error) {
 		"--stop-after-step":   {MCPKey: "stop_after_step", Kind: FlagInt},
 		// Save output
 		"--save-to": {MCPKey: "save_to", Kind: FlagString},
-	})
+	}
+}
+
+func ParseInteractArgs(action string, args []string) (map[string]any, error) {
+	mcpArgs := map[string]any{"what": action}
+	parsed, err := parseFlagsBySpec(args, interactFlagSpecs())
 	if err != nil {
 		return nil, err
 	}

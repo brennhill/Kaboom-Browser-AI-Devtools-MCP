@@ -53,6 +53,7 @@ func buildInteractActions(h *ToolHandler) map[string]interactdispatch.Action {
 		"list_interactive":          h.domActions.HandleListInteractive,
 		"hardware_click":            h.domActions.HandleHardwareClick,
 		"draw_mode_start":           h.pageActions.HandleDrawModeStart,
+		"find":                      h.pageActions.HandleFind,
 		"get_readable":              h.pageActions.HandleGetReadable,
 		"get_markdown":              h.pageActions.HandleGetMarkdown,
 		"explore_page":              h.pageActions.HandleExplorePage,
