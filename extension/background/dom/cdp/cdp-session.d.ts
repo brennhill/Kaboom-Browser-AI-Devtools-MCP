@@ -60,6 +60,18 @@ export declare class CDPSessionManager {
     constructor(deps: CDPSessionDeps);
     /** Acquire a reference to the tab's session, attaching (or adopting) if it is cold. */
     acquire(tabId: number, options?: AcquireOptions): Promise<Lease>;
+    /**
+     * Tear the tab's session down NOW, invalidating every outstanding lease.
+     *
+     * This is what makes the supervision Stop button real: the interrupted action's next
+     * lease.send fails loud with cdp_session_invalidated instead of running to completion
+     * behind an overlay the user has already dismissed. Unlike a release, this does not wait
+     * out the idle grace — the point is to interrupt.
+     *
+     * Inert for a tab with no live session, so a stop that races an action finishing cannot
+     * tear down a session a later action already owns.
+     */
+    abort(tabId: number, reason: string): void;
     /** True when a live attachment exists for the tab. Diagnostics only. */
     isAttached(tabId: number): boolean;
     private sessionFor;

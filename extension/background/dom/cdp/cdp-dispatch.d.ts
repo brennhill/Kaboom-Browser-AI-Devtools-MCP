@@ -8,6 +8,12 @@ import type { PendingQuery } from '../../../types/runtime/queries.js';
 import type { SyncClient } from '../../sync/sync-client.js';
 import type { DOMActionParams, DOMResult } from '../dom-types.js';
 import type { SendAsyncResultFn, ActionToastFn } from '../../commands/helpers.js';
+/**
+ * Terminal state for an action the USER interrupted. Distinct from any CDP fault: it is not
+ * retryable, and the agent must be told a person stopped it rather than that the browser
+ * misbehaved.
+ */
+export declare const STOPPED_BY_USER = "stopped_by_user: the user stopped this action from the browser";
 /** Check whether an action should attempt CDP before DOM primitives. */
 export declare function isCDPEscalatable(action: string): boolean;
 /**

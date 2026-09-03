@@ -7,6 +7,8 @@ owners: []
 last_reviewed: 2026-09-03
 code_paths:
   - src/content/ui/agent-indicator.ts
+  - src/background/ui/driving-session.ts
+  - src/background/init.ts
   - src/content/runtime-message-listener.ts
   - src/types/runtime/agent-indicator.ts
   - src/background/ui/content-script-bridge.ts
@@ -15,6 +17,8 @@ code_paths:
   - src/content/draw-mode/lifecycle-overlay.js
 test_paths:
   - tests/extension/content/agent-indicator.test.js
+  - extension/background/__tests__/driving-session.test.js
+  - extension/background/__tests__/cdp-session.test.js
   - tests/extension/content/overlay-capture-stripping.test.js
   - tests/extension/draw-mode/draw-mode-fixture.js
 ---
@@ -38,7 +42,11 @@ against a kill switch that did not exist.
 | Phantom cursor | Animates to the resolved target **before** input dispatches, so the user sees intent rather than history. Coordinates come from `resolveElement()`. |
 | Driving indicator | Viewport-edge glow plus a pill naming the action, held for the **lifetime of the CDP lease**, not per action. |
 | Stop control | Aborts the action and releases the lease. Gated on `event.isTrusted`. |
-| Heartbeat | The overlay removes *itself* if heartbeats stop. |
+| Heartbeat | Background sends one every 5s; the overlay removes *itself* after 15s without one. |
+
+The background half lives in `src/background/ui/driving-session.ts`. Both CDP input paths
+(`tryCDPEscalation` and `executeCDPAction`) route through it, so `hardware_click` is
+supervised too.
 
 ### Why the stop button is gated on `isTrusted`
 
@@ -52,6 +60,26 @@ MV3 terminates the service worker without warning. If it dies mid-action, no fur
 heartbeats arrive and the overlay tears itself down. Without it the user keeps a permanent
 "an agent is driving this tab" badge on a tab nothing is driving — the same staleness failure
 that left `TERMINAL_UI_STATE='open'` forever (CLAUDE.md rule 18).
+
+## What "Stop" actually does
+
+`requestStop` calls `CDPSessionManager.abort(tabId)`, which tears the tab's session down
+immediately and invalidates every outstanding lease, so the interrupted action's next
+`lease.send` fails rather than running to completion behind a dismissed overlay. The action
+is then reported as `stopped_by_user` — a named terminal state, deliberately **not**
+retryable, because the agent must be told a person stopped it rather than that the browser
+misbehaved.
+
+The tab is taken from the message **sender**, never from the message body: a content script
+can only speak for its own tab, so a page cannot craft a message that stops work in a
+different tab.
+
+### Why a stop must not return `null`
+
+`tryCDPEscalation` returns `null` to mean "CDP did not handle this", and the caller then
+performs the same action with synthetic DOM events. If a user stop produced `null`, pressing
+Stop would **re-execute the very action being stopped** — the action would happen anyway and
+the user would be told they prevented it. A consumed stop therefore returns a result.
 
 ## Design note: no approval gates
 

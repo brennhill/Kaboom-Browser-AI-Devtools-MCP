@@ -39,6 +39,7 @@ import { broadcastTrackingState, createPilotMessageHandler } from './message-rou
 import { createCaptureMessageHandler } from './message-routing/capture-handler.js';
 import { createUtilityMessageHandler } from './message-routing/utility-handler.js';
 import { captureScreenshot } from './sync/screenshot.js';
+import { createSupervisionMessageHandler } from './ui/driving-session.js';
 import { updateBadge } from './sync/server.js';
 import { setLocal } from '../lib/storage/local.js';
 import { readTrackedTab } from '../lib/tabs/tracked-tab-storage.js';
@@ -72,9 +73,78 @@ export function initializeExtension() {
     });
 }
 /**
- * Async initialization sequence
- * Reads settings, installs listeners, sets up connection checking.
+ * Register every background message handler.
+ *
+ * Extracted from initializeExtensionAsync so that adding a handler does not grow a function
+ * that is already far past the length budget.
  */
+function installBackgroundMessageHandlers(ctx) {
+    installMessageListener({
+        debugLog,
+        handlers: [
+            createSupervisionMessageHandler(),
+            createTelemetryMessageHandler({
+                addLog: (entry) => logBatcher.add(entry),
+                addWebSocket: (event) => wsBatcher.add(event),
+                addEnhancedAction: (action) => enhancedActionBatcher.add(action),
+                addNetworkBody: (body) => networkBodyBatcher.add(body),
+                addPerformance: (snapshot) => perfBatcher.add(snapshot),
+                handleLog: handleLogMessage,
+                isNetworkBodyCaptureDisabled,
+                debugLog,
+                addDiagnostic: (payload) => pushExtensionLog({
+                    timestamp: new Date().toISOString(),
+                    level: 'warn',
+                    message: payload.message,
+                    source: 'inject',
+                    category: payload.category,
+                    data: { error_type: payload.error_type }
+                })
+            }),
+            createStatusMessageHandler({
+                getConnectionStatus,
+                getServerUrl,
+                getScreenshotOnError: isScreenshotOnError,
+                getSourceMapEnabled: isSourceMapEnabled,
+                getDebugMode: isDebugMode,
+                getContextWarning,
+                getCircuitBreakerState: () => sharedServerCircuitBreaker.getState(),
+                getMemoryPressureState,
+                clearLogs: handleClearLogs,
+                exportDebugLog,
+                clearDebugLog,
+                debugLog,
+                reportStateRecovery
+            }),
+            createSettingsMessageHandler({
+                getServerUrl,
+                setServerUrl,
+                setLogLevel: setCurrentLogLevel,
+                setScreenshotOnError,
+                setSourceMapEnabled,
+                setDebugMode,
+                clearSourceMapCache,
+                saveSetting,
+                forwardToContentScripts: (message) => forwardToAllContentScripts(message, debugLog),
+                checkConnection: checkConnectionAndUpdate,
+                debugLog
+            }),
+            createPilotMessageHandler({
+                isEnabled: isAiWebPilotEnabled,
+                setEnabled: ctx.setPilotEnabled,
+                getTrackingContinuity: () => trackingContinuity.snapshot(),
+                confirmTracking: (tabId, url) => trackingContinuity.confirm(tabId, url)
+            }),
+            createCaptureMessageHandler({
+                getServerUrl,
+                captureScreenshot: (tabId, relatedErrorId) => captureScreenshot(tabId, getServerUrl(), relatedErrorId, canTakeScreenshot, recordScreenshot, debugLog),
+                addLog: (entry) => logBatcher.add(entry),
+                debugLog
+            }),
+            createUtilityMessageHandler({ getServerUrl })
+        ]
+    });
+}
 async function initializeExtensionAsync() {
     try {
         const diagnosticRecovery = await initializeExtensionLogQueue();
@@ -201,70 +271,7 @@ async function initializeExtensionAsync() {
                     callback();
             });
         };
-        installMessageListener({
-            debugLog,
-            handlers: [
-                createTelemetryMessageHandler({
-                    addLog: (entry) => logBatcher.add(entry),
-                    addWebSocket: (event) => wsBatcher.add(event),
-                    addEnhancedAction: (action) => enhancedActionBatcher.add(action),
-                    addNetworkBody: (body) => networkBodyBatcher.add(body),
-                    addPerformance: (snapshot) => perfBatcher.add(snapshot),
-                    handleLog: handleLogMessage,
-                    isNetworkBodyCaptureDisabled,
-                    debugLog,
-                    addDiagnostic: (payload) => pushExtensionLog({
-                        timestamp: new Date().toISOString(),
-                        level: 'warn',
-                        message: payload.message,
-                        source: 'inject',
-                        category: payload.category,
-                        data: { error_type: payload.error_type }
-                    })
-                }),
-                createStatusMessageHandler({
-                    getConnectionStatus,
-                    getServerUrl,
-                    getScreenshotOnError: isScreenshotOnError,
-                    getSourceMapEnabled: isSourceMapEnabled,
-                    getDebugMode: isDebugMode,
-                    getContextWarning,
-                    getCircuitBreakerState: () => sharedServerCircuitBreaker.getState(),
-                    getMemoryPressureState,
-                    clearLogs: handleClearLogs,
-                    exportDebugLog,
-                    clearDebugLog,
-                    debugLog,
-                    reportStateRecovery
-                }),
-                createSettingsMessageHandler({
-                    getServerUrl,
-                    setServerUrl,
-                    setLogLevel: setCurrentLogLevel,
-                    setScreenshotOnError,
-                    setSourceMapEnabled,
-                    setDebugMode,
-                    clearSourceMapCache,
-                    saveSetting,
-                    forwardToContentScripts: (message) => forwardToAllContentScripts(message, debugLog),
-                    checkConnection: checkConnectionAndUpdate,
-                    debugLog
-                }),
-                createPilotMessageHandler({
-                    isEnabled: isAiWebPilotEnabled,
-                    setEnabled: setPilotEnabled,
-                    getTrackingContinuity: () => trackingContinuity.snapshot(),
-                    confirmTracking: (tabId, url) => trackingContinuity.confirm(tabId, url)
-                }),
-                createCaptureMessageHandler({
-                    getServerUrl,
-                    captureScreenshot: (tabId, relatedErrorId) => captureScreenshot(tabId, getServerUrl(), relatedErrorId, canTakeScreenshot, recordScreenshot, debugLog),
-                    addLog: (entry) => logBatcher.add(entry),
-                    debugLog
-                }),
-                createUtilityMessageHandler({ getServerUrl })
-            ]
-        });
+        installBackgroundMessageHandlers({ setPilotEnabled });
         // ============= STEP 8: Setup Chrome alarms =============
         setupChromeAlarms();
         trackingContinuity.subscribe((snapshot) => {

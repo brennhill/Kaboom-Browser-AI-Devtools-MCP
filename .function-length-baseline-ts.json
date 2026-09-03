@@ -43,7 +43,7 @@
     "src/background/exec/query-execution.ts:executeViaScriptingAPI:76": 186,
     "src/background/exec/query-execution.ts:serialize:132": 111,
     "src/background/exec/upload-handler.ts:escalateToStage4Internal:269": 100,
-    "src/background/init.ts:initializeExtensionAsync:138": 318,
+    "src/background/init.ts:initializeExtensionAsync:223": 253,
     "src/background/recording/index.ts:startOffscreenRecording:309": 82,
     "src/background/recording/index.ts:stopRecording:586": 132,
     "src/background/recording/listeners.ts:installRecordingListeners:57": 190,

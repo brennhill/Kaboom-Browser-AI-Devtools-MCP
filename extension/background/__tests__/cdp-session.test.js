@@ -274,3 +274,45 @@ describe('CDPSessionManager — lifecycle hygiene', () => {
     assert.strictEqual(dbg.calls.detach.length, 2)
   })
 })
+
+describe('CDPSessionManager — user abort', () => {
+  // This is what makes the supervision Stop button real. Without an abort the action keeps
+  // running behind a dismissed overlay: the user is told they stopped the agent and did not.
+  test('abort invalidates every outstanding lease so the in-flight action cannot continue', async () => {
+    const { mgr, dbg } = makeManager()
+    const lease = await mgr.acquire(1)
+    mgr.abort(1, 'stopped_by_user')
+    assert.strictEqual(lease.valid, false, 'the running action must lose its session')
+    await assert.rejects(
+      () => lease.send('Input.dispatchMouseEvent', {}),
+      (err) => err.message.includes(CDP_SESSION_ERRORS.INVALIDATED)
+    )
+    assert.strictEqual(dbg.calls.detach.length, 1, 'abort detaches immediately, not after the idle grace')
+  })
+
+  test('a later action reattaches cleanly after an abort', async () => {
+    const { mgr, dbg } = makeManager()
+    const first = await mgr.acquire(1)
+    mgr.abort(1, 'stopped_by_user')
+    first.release()
+    const second = await mgr.acquire(1)
+    assert.strictEqual(second.valid, true, 'an abort must not poison the tab for later work')
+    assert.strictEqual(dbg.calls.attach.length, 2)
+  })
+
+  test('aborting a tab with no session is inert', async () => {
+    const { mgr, dbg } = makeManager()
+    mgr.abort(99, 'stopped_by_user')
+    assert.strictEqual(dbg.calls.detach.length, 0)
+  })
+
+  test('abort does not touch other tabs', async () => {
+    const { mgr, dbg } = makeManager()
+    const one = await mgr.acquire(1)
+    const two = await mgr.acquire(2)
+    mgr.abort(1, 'stopped_by_user')
+    assert.strictEqual(one.valid, false)
+    assert.strictEqual(two.valid, true, 'a stop on one tab must not interrupt another')
+    assert.deepStrictEqual(dbg.calls.detach.map((c) => c.target.tabId), [1])
+  })
+})

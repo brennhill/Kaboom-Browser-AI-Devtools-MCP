@@ -15,7 +15,7 @@ import type { SendAsyncResultFn, ActionToastFn } from '../../commands/helpers.js
 import { errorMessage } from '../../../lib/error-utils.js'
 import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js'
 import { cdpSessions, CDP_SESSION_ERRORS, type Lease } from './cdp-session.js'
-import { sendAgentIndicator } from '../../ui/content-script-bridge.js'
+import { drivingSessions } from '../../ui/driving-session.js'
 import { resolveElement, buildCDPResult } from './cdp-element-resolve.js'
 
 interface CDPActionParams {
@@ -190,6 +190,13 @@ function parseCDPParams(query: PendingQuery): CDPActionParams | null {
     return null
   }
 }
+
+/**
+ * Terminal state for an action the USER interrupted. Distinct from any CDP fault: it is not
+ * retryable, and the agent must be told a person stopped it rather than that the browser
+ * misbehaved.
+ */
+export const STOPPED_BY_USER = 'stopped_by_user: the user stopped this action from the browser'
 
 function mapCDPError(err: unknown): string {
   const msg = errorMessage(err, 'unknown_error')
@@ -456,9 +463,11 @@ export async function tryCDPEscalation(
 
     // Step 2a: Show the human what is about to happen, BEFORE the input dispatches. The
     // phantom cursor lands on the coordinate CDP is about to click, so what they see is
-    // intent rather than history.
-    sendAgentIndicator(tabId, 'driving', { action })
-    sendAgentIndicator(tabId, 'cursor', { x: resolved.x, y: resolved.y })
+    // intent rather than history. The session also starts the heartbeat that keeps the
+    // overlay from tearing itself down mid-action.
+    const driving = drivingSessions()
+    driving.start(tabId, action)
+    driving.cursor(tabId, resolved.x, resolved.y)
 
     try {
       // Step 3: Execute CDP action
@@ -467,11 +476,22 @@ export async function tryCDPEscalation(
       // Step 4: Build DOMResult with matched evidence
       return buildCDPResult(action, selector, resolved, Date.now() - startTime)
     } finally {
-      // The lease is what "driving" means, so the overlay comes down with it.
-      sendAgentIndicator(tabId, 'idle')
+      driving.stop(tabId)
       lease.release()
     }
   } catch {
+    // A user stop must NOT return null. Null means "CDP did not handle this", and the
+    // caller then performs the same action with synthetic DOM events — so a stop would
+    // re-execute the very action being stopped, and the user would be told they prevented
+    // something that happened anyway. Return a result so the caller reports it instead.
+    if (drivingSessions().consumeStopRequest(tabId)) {
+      return {
+        success: false,
+        action,
+        selector: params.selector || '',
+        error: STOPPED_BY_USER
+      }
+    }
     // EXPECTED_ABSENCE: unavailable optional CDP is normal; logging would mislabel the canonical DOM fallback as failure.
     return null
   }
@@ -511,6 +531,7 @@ export async function executeCDPAction(
     return
   }
 
+  const driving = drivingSessions()
   let lease: Lease
   try {
     lease = await sessions.acquire(tabId)
@@ -519,6 +540,11 @@ export async function executeCDPAction(
     actionToast(tabId, toastLabel, errorMsg, 'error')
     sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, errorMsg)
     return
+  }
+
+  driving.start(tabId, action)
+  if (typeof params.x === 'number' && typeof params.y === 'number') {
+    driving.cursor(tabId, params.x, params.y)
   }
 
   try {
@@ -541,10 +567,13 @@ export async function executeCDPAction(
     actionToast(tabId, toastLabel, undefined, 'success')
     sendAsyncResult(syncClient, query.id, query.correlation_id!, 'complete', result)
   } catch (err) {
-    const errorMsg = mapCDPError(err)
+    // A session invalidated by the user's Stop is not a CDP fault. Reporting it as one
+    // would send the agent into a retry against a tab whose owner just told it to stop.
+    const errorMsg = driving.consumeStopRequest(tabId) ? STOPPED_BY_USER : mapCDPError(err)
     actionToast(tabId, toastLabel, errorMsg, 'error')
     sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, errorMsg)
   } finally {
+    driving.stop(tabId)
     lease.release()
   }
 }
