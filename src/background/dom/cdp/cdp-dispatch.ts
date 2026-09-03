@@ -6,15 +6,15 @@
  */
 
 // cdp-dispatch.ts — CDP executor for hardware-level clicks and keypresses.
-// Manages chrome.debugger attach/detach lifecycle and dispatches CDP Input.* commands.
+// Dispatches CDP Input.* commands over a lease from cdp-session.ts, which owns attach/detach.
 
 import type { PendingQuery } from '../../../types/runtime/queries.js'
 import type { SyncClient } from '../../sync/sync-client.js'
 import type { DOMActionParams, DOMResult } from '../dom-types.js'
 import type { SendAsyncResultFn, ActionToastFn } from '../../commands/helpers.js'
-import { CDP_VERSION } from '../../../lib/constants.js'
 import { errorMessage } from '../../../lib/error-utils.js'
 import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js'
+import { cdpSessions, CDP_SESSION_ERRORS, type Lease } from './cdp-session.js'
 import { resolveElement, buildCDPResult } from './cdp-element-resolve.js'
 
 interface CDPActionParams {
@@ -27,11 +27,11 @@ interface CDPActionParams {
   modifiers?: number
 }
 
-async function cdpSend(tabId: number, method: string, params: Record<string, unknown>): Promise<void> {
-  await chrome.debugger.sendCommand({ tabId }, method, params)
+async function cdpSend(lease: Lease, method: string, params: Record<string, unknown>): Promise<void> {
+  await lease.send(method, params)
 }
 
-async function resolveCoordinates(tabId: number, params: CDPActionParams): Promise<{ x: number; y: number }> {
+async function resolveCoordinates(lease: Lease, params: CDPActionParams): Promise<{ x: number; y: number }> {
   if (typeof params.x === 'number' && typeof params.y === 'number') {
     return { x: params.x, y: params.y }
   }
@@ -48,7 +48,7 @@ async function resolveCoordinates(tabId: number, params: CDPActionParams): Promi
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   })()`
 
-  const evalResult = (await chrome.debugger.sendCommand({ tabId }, 'Runtime.evaluate', {
+  const evalResult = (await lease.send('Runtime.evaluate', {
     expression,
     returnByValue: true
   })) as { result?: { value?: { x: number; y: number } | null } }
@@ -61,17 +61,17 @@ async function resolveCoordinates(tabId: number, params: CDPActionParams): Promi
   return coords
 }
 
-async function cdpClick(tabId: number, params: CDPActionParams): Promise<Record<string, unknown>> {
-  const { x, y } = await resolveCoordinates(tabId, params)
+async function cdpClick(lease: Lease, params: CDPActionParams): Promise<Record<string, unknown>> {
+  const { x, y } = await resolveCoordinates(lease, params)
 
-  await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+  await cdpSend(lease, 'Input.dispatchMouseEvent', {
     type: 'mousePressed',
     x,
     y,
     button: 'left',
     clickCount: 1
   })
-  await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+  await cdpSend(lease, 'Input.dispatchMouseEvent', {
     type: 'mouseReleased',
     x,
     y,
@@ -97,28 +97,28 @@ interface CDPKeyEventPayload {
   modifiers?: number
 }
 
-async function dispatchCDPKeyPair(tabId: number, payload: CDPKeyEventPayload): Promise<void> {
+async function dispatchCDPKeyPair(lease: Lease, payload: CDPKeyEventPayload): Promise<void> {
   const common = {
     key: payload.key,
     code: payload.code,
     windowsVirtualKeyCode: payload.keyCode,
     nativeVirtualKeyCode: payload.keyCode
   }
-  await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+  await cdpSend(lease, 'Input.dispatchKeyEvent', {
     type: 'keyDown',
     ...common,
     ...(payload.text !== undefined ? { text: payload.text } : {}),
     ...(payload.unmodifiedText !== undefined ? { unmodifiedText: payload.unmodifiedText } : {}),
     ...(payload.modifiers !== undefined ? { modifiers: payload.modifiers } : {})
   })
-  await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+  await cdpSend(lease, 'Input.dispatchKeyEvent', {
     type: 'keyUp',
     ...common,
     ...(payload.modifiers !== undefined ? { modifiers: payload.modifiers } : {})
   })
 }
 
-async function cdpType(tabId: number, params: CDPActionParams): Promise<Record<string, unknown>> {
+async function cdpType(lease: Lease, params: CDPActionParams): Promise<Record<string, unknown>> {
   const text = params.text || ''
   if (!text) {
     throw new Error('type requires text parameter')
@@ -126,7 +126,7 @@ async function cdpType(tabId: number, params: CDPActionParams): Promise<Record<s
 
   for (const char of text) {
     const info = charToKeyInfo(char)
-    await dispatchCDPKeyPair(tabId, {
+    await dispatchCDPKeyPair(lease, {
       key: info.key,
       code: info.code,
       keyCode: info.keyCode,
@@ -144,7 +144,7 @@ async function cdpType(tabId: number, params: CDPActionParams): Promise<Record<s
   }
 }
 
-async function cdpKeyPress(tabId: number, params: CDPActionParams): Promise<Record<string, unknown>> {
+async function cdpKeyPress(lease: Lease, params: CDPActionParams): Promise<Record<string, unknown>> {
   const key = params.text || params.key || ''
   if (!key) {
     throw new Error('key_press requires text or key parameter')
@@ -153,7 +153,7 @@ async function cdpKeyPress(tabId: number, params: CDPActionParams): Promise<Reco
   const mapped = KEY_CODES[key]
   if (mapped) {
     // Named key (Enter, Tab, etc.)
-    await dispatchCDPKeyPair(tabId, {
+    await dispatchCDPKeyPair(lease, {
       key,
       code: mapped.code,
       keyCode: mapped.keyCode
@@ -161,7 +161,7 @@ async function cdpKeyPress(tabId: number, params: CDPActionParams): Promise<Reco
   } else {
     // Single character
     const info = charToKeyInfo(key)
-    await dispatchCDPKeyPair(tabId, {
+    await dispatchCDPKeyPair(lease, {
       key: info.key,
       code: info.code,
       keyCode: info.keyCode,
@@ -198,8 +198,11 @@ function mapCDPError(err: unknown): string {
   if (msg.includes('Another debugger is already attached')) {
     return 'cdp_already_attached: Another debugger session is active. Close DevTools or other debugging sessions.'
   }
-  if (msg.includes('Debugger is not attached')) {
+  if (msg.includes('Debugger is not attached') || msg.includes(CDP_SESSION_ERRORS.INVALIDATED)) {
     return 'cdp_not_attached: Debugger was detached during execution.'
+  }
+  if (msg.includes(CDP_SESSION_ERRORS.EXCLUSIVE_HELD)) {
+    return 'cdp_busy: A performance trace holds this tab exclusively. Stop the trace and retry.'
   }
   return `cdp_error: ${msg}`
 }
@@ -270,29 +273,29 @@ export function buildReactValueReconcileExpression(selector: string): string {
   })()`
 }
 
-async function cdpClearField(tabId: number): Promise<void> {
+async function cdpClearField(lease: Lease): Promise<void> {
   // Select all then delete — works cross-platform
-  await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+  await cdpSend(lease, 'Input.dispatchKeyEvent', {
     type: 'keyDown',
     key: 'a',
     code: 'KeyA',
     windowsVirtualKeyCode: 65,
     modifiers: SELECT_ALL_MODIFIER
   })
-  await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+  await cdpSend(lease, 'Input.dispatchKeyEvent', {
     type: 'keyUp',
     key: 'a',
     code: 'KeyA',
     windowsVirtualKeyCode: 65,
     modifiers: SELECT_ALL_MODIFIER
   })
-  await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+  await cdpSend(lease, 'Input.dispatchKeyEvent', {
     type: 'keyDown',
     key: 'Backspace',
     code: 'Backspace',
     windowsVirtualKeyCode: 8
   })
-  await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+  await cdpSend(lease, 'Input.dispatchKeyEvent', {
     type: 'keyUp',
     key: 'Backspace',
     code: 'Backspace',
@@ -300,11 +303,11 @@ async function cdpClearField(tabId: number): Promise<void> {
   })
 }
 
-async function cdpDispatchKeySequence(tabId: number, text: string): Promise<void> {
+async function cdpDispatchKeySequence(lease: Lease, text: string): Promise<void> {
   for (const char of text) {
     const info = charToKeyInfo(char)
     const modifiers = info.shiftKey ? 8 : 0
-    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+    await cdpSend(lease, 'Input.dispatchKeyEvent', {
       type: 'keyDown',
       key: info.key,
       code: info.code,
@@ -314,7 +317,7 @@ async function cdpDispatchKeySequence(tabId: number, text: string): Promise<void
       nativeVirtualKeyCode: info.keyCode,
       modifiers
     })
-    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+    await cdpSend(lease, 'Input.dispatchKeyEvent', {
       type: 'keyUp',
       key: info.key,
       code: info.code,
@@ -325,17 +328,17 @@ async function cdpDispatchKeySequence(tabId: number, text: string): Promise<void
   }
 }
 
-async function cdpDispatchSingleKey(tabId: number, key: string): Promise<void> {
+async function cdpDispatchSingleKey(lease: Lease, key: string): Promise<void> {
   const mapped = KEY_CODES[key]
   if (mapped) {
-    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+    await cdpSend(lease, 'Input.dispatchKeyEvent', {
       type: 'keyDown',
       key,
       code: mapped.code,
       windowsVirtualKeyCode: mapped.keyCode,
       nativeVirtualKeyCode: mapped.keyCode
     })
-    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+    await cdpSend(lease, 'Input.dispatchKeyEvent', {
       type: 'keyUp',
       key,
       code: mapped.code,
@@ -345,7 +348,7 @@ async function cdpDispatchSingleKey(tabId: number, key: string): Promise<void> {
   } else {
     const info = charToKeyInfo(key)
     const modifiers = info.shiftKey ? 8 : 0
-    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+    await cdpSend(lease, 'Input.dispatchKeyEvent', {
       type: 'keyDown',
       key: info.key,
       code: info.code,
@@ -355,7 +358,7 @@ async function cdpDispatchSingleKey(tabId: number, key: string): Promise<void> {
       nativeVirtualKeyCode: info.keyCode,
       modifiers
     })
-    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+    await cdpSend(lease, 'Input.dispatchKeyEvent', {
       type: 'keyUp',
       key: info.key,
       code: info.code,
@@ -368,21 +371,21 @@ async function cdpDispatchSingleKey(tabId: number, key: string): Promise<void> {
 
 /** Execute the CDP input action for click/type/key_press. Returns false when the action's payload is unusable. */
 async function cdpExecuteAction(
-  tabId: number,
+  lease: Lease,
   action: string,
   params: DOMActionParams,
   selector: string,
   resolved: NonNullable<Awaited<ReturnType<typeof resolveElement>>>
 ): Promise<boolean> {
   if (action === 'click') {
-    await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+    await cdpSend(lease, 'Input.dispatchMouseEvent', {
       type: 'mousePressed',
       x: resolved.x,
       y: resolved.y,
       button: 'left',
       clickCount: 1
     })
-    await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+    await cdpSend(lease, 'Input.dispatchMouseEvent', {
       type: 'mouseReleased',
       x: resolved.x,
       y: resolved.y,
@@ -394,14 +397,14 @@ async function cdpExecuteAction(
   if (action === 'type') {
     const text = params.text || ''
     if (!text) return false
-    if (params.clear) await cdpClearField(tabId)
-    await cdpDispatchKeySequence(tabId, text)
+    if (params.clear) await cdpClearField(lease)
+    await cdpDispatchKeySequence(lease, text)
     // #599: CDP keystrokes leave React's controlled-input value tracker stale,
     // suppressing onChange. Reconcile through the native setter so onChange fires.
     // Best-effort: the value is already typed even if reconciliation is skipped.
     if (selector) {
       try {
-        await cdpSend(tabId, 'Runtime.evaluate', {
+        await cdpSend(lease, 'Runtime.evaluate', {
           expression: buildReactValueReconcileExpression(selector),
           returnByValue: true
         })
@@ -416,7 +419,7 @@ async function cdpExecuteAction(
   if (action === 'key_press') {
     const key = params.text || ''
     if (!key) return false
-    await cdpDispatchSingleKey(tabId, key)
+    await cdpDispatchSingleKey(lease, key)
     return true
   }
   return true
@@ -435,9 +438,8 @@ export async function tryCDPEscalation(
   if (!CDP_ESCALATABLE.has(action)) return null
   // If CDP is unavailable in this runtime (tests, constrained extension contexts),
   // skip escalation before any DOM probing so normal DOM primitives remain deterministic.
-  if (!chrome?.debugger?.attach || !chrome?.debugger?.sendCommand || !chrome?.debugger?.detach) {
-    return null
-  }
+  const sessions = cdpSessions()
+  if (!sessions) return null
 
   const selector = params.selector || ''
   const startTime = Date.now()
@@ -447,23 +449,18 @@ export async function tryCDPEscalation(
     const resolved = await resolveElement(tabId, params)
     if (!resolved) return null
 
-    // Step 2: Attach debugger
-    await chrome.debugger.attach({ tabId }, CDP_VERSION)
+    // Step 2: Take a reference to the tab's shared CDP session. The session outlives this
+    // action, so a click that starts a navigation is no longer racing its own teardown.
+    const lease = await sessions.acquire(tabId)
 
     try {
       // Step 3: Execute CDP action
-      if (!(await cdpExecuteAction(tabId, action, params, selector, resolved))) return null
+      if (!(await cdpExecuteAction(lease, action, params, selector, resolved))) return null
 
       // Step 4: Build DOMResult with matched evidence
       return buildCDPResult(action, selector, resolved, Date.now() - startTime)
     } finally {
-      try {
-        await chrome.debugger.detach({ tabId })
-      } catch {
-        // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-        // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-        /* already detached */
-      }
+      lease.release()
     }
   } catch {
     // EXPECTED_ABSENCE: unavailable optional CDP is normal; logging would mislabel the canonical DOM fallback as failure.
@@ -497,8 +494,17 @@ export async function executeCDPAction(
   const toastLabel = action === 'key_press' ? 'Typing...' : `CDP ${action}`
   actionToast(tabId, toastLabel, undefined, 'trying', 10000)
 
+  const sessions = cdpSessions()
+  if (!sessions) {
+    const errorMsg = 'cdp_unavailable: chrome.debugger is not available in this context'
+    actionToast(tabId, toastLabel, errorMsg, 'error')
+    sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, errorMsg)
+    return
+  }
+
+  let lease: Lease
   try {
-    await chrome.debugger.attach({ tabId }, CDP_VERSION)
+    lease = await sessions.acquire(tabId)
   } catch (err) {
     const errorMsg = mapCDPError(err)
     actionToast(tabId, toastLabel, errorMsg, 'error')
@@ -511,13 +517,13 @@ export async function executeCDPAction(
 
     switch (action) {
       case 'click':
-        result = await cdpClick(tabId, params)
+        result = await cdpClick(lease, params)
         break
       case 'type':
-        result = await cdpType(tabId, params)
+        result = await cdpType(lease, params)
         break
       case 'key_press':
-        result = await cdpKeyPress(tabId, params)
+        result = await cdpKeyPress(lease, params)
         break
       default:
         throw new Error(`Unknown CDP action: ${action}`)
@@ -530,12 +536,6 @@ export async function executeCDPAction(
     actionToast(tabId, toastLabel, errorMsg, 'error')
     sendAsyncResult(syncClient, query.id, query.correlation_id!, 'error', null, errorMsg)
   } finally {
-    try {
-      await chrome.debugger.detach({ tabId })
-    } catch {
-      // EXPECTED_ABSENCE: page-owned access can normally throw for detached,
-      // cross-origin, or hostile objects; logging it would misleadingly blame Kaboom for page behavior.
-      // Already detached or tab closed — safe to ignore
-    }
+    lease.release()
   }
 }

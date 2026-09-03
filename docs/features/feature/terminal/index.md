@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-26
+last_reviewed: 2026-09-03
 code_paths:
   - internal/activecodebase/store.go
   - cmd/browser-agent/internal/terminal/status/status.go
@@ -115,7 +115,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/intent/store_test.go
   - cmd/browser-agent/internal/terminal/directorybrowser/browser_test.go
   - cmd/browser-agent/internal/terminal/dimensions/dimensions_test.go
-  - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
+  - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
   - cmd/browser-agent/internal/nativeinstall/connect_refused_test.go
   - tests/extension/terminal-reconnect/terminal-html-reconnect.test.js
   - tests/extension/terminal-reconnect/terminal-reconnect-recovery-contract.test.js

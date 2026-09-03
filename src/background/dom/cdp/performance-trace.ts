@@ -11,8 +11,8 @@ import type {
 import { buildDaemonJSONRequestInit } from '../../../lib/daemon-http.js'
 import { errorMessage } from '../../../lib/error-utils.js'
 import { getServerUrl } from '../../runtime-state/settings-state.js'
+import { cdpSessions, type CDPSessionManager, type Lease } from './cdp-session.js'
 
-const CDP_VERSION = '1.3'
 const MAX_CHUNK_JSON_BYTES = 3 * 1024 * 1024
 const DEFAULT_COMPLETION_TIMEOUT_MS = 15_000
 const TRACE_CATEGORIES = [
@@ -36,8 +36,6 @@ interface Debuggee {
 }
 
 interface DebuggerAPI {
-  attach(target: Debuggee, requiredVersion: string): Promise<void>
-  detach(target: Debuggee): Promise<void>
   sendCommand(target: Debuggee, method: string, commandParams?: object): Promise<object | undefined>
   onEvent: { addListener(listener: (source: Debuggee, method: string, params?: object) => void): void }
   onDetach: { addListener(listener: (source: Debuggee, reason: string) => void): void }
@@ -45,6 +43,11 @@ interface DebuggerAPI {
 
 interface ControllerDeps {
   debuggerApi: DebuggerAPI
+  /**
+   * Owns debugger attachment. A trace takes an EXCLUSIVE lease: concurrent input dispatch
+   * on the same tab would appear in the trace as user activity that never happened.
+   */
+  sessions: Pick<CDPSessionManager, 'acquire'>
   postJSON: (path: string, payload: unknown) => Promise<unknown>
   completionTimeoutMs?: number
 }
@@ -59,7 +62,7 @@ interface ActiveTrace {
   abortRequested?: boolean
   abortPromise?: Promise<unknown>
   debuggerDetached?: boolean
-  detachExpected?: boolean
+  lease?: Lease
   metadata: PerformanceTraceTargetMetadata
   navigation?: { resolve: () => void }
 }
@@ -117,7 +120,9 @@ export class PerformanceTraceController {
     }
     this.active = active
     try {
-      await traceStage('Debugger.attach', () => this.deps.debuggerApi.attach({ tabId }, CDP_VERSION))
+      active.lease = await traceStage('CDPSession.acquire', () =>
+        this.deps.sessions.acquire(tabId, { exclusive: true })
+      )
       await traceStage('Page.enable', () => this.deps.debuggerApi.sendCommand({ tabId }, 'Page.enable'))
       await traceStage('Network.enable', () => this.deps.debuggerApi.sendCommand({ tabId }, 'Network.enable'))
       await traceStage('Network.setCacheDisabled', () =>
@@ -184,9 +189,7 @@ export class PerformanceTraceController {
       if (active.failure) throw active.failure
       active.metadata = await this.readTargetMetadata(tabId)
       await this.deps.debuggerApi.sendCommand({ tabId }, 'Network.setCacheDisabled', { cacheDisabled: false })
-      active.detachExpected = true
-      await this.deps.debuggerApi.detach({ tabId })
-      active.debuggerDetached = true
+      active.lease?.release()
       const result = requireTraceResult(
         await this.deps.postJSON('/performance-trace/finish', {
           trace_id: active.traceId,
@@ -274,13 +277,9 @@ export class PerformanceTraceController {
   private onDetach(source: Debuggee, reason: string): void {
     const active = this.active
     if (!active || source.tabId !== active.tabId) return
-    if (active.detachExpected) {
-      // EXPECTED_ABSENCE: Tracing.stop deliberately detaches after Chrome confirms
-      // all events were delivered. Logging this normal onDetach callback would
-      // falsely report a trace failure.
-      active.debuggerDetached = true
-      return
-    }
+    // The controller no longer detaches deliberately — it releases a lease and the session
+    // manager decides when to detach. So any detach reaching an ACTIVE trace is genuine
+    // loss of the session (DevTools opened, tab closed, user dismissed the banner).
     const failure = new Error(`Chrome debugger detached during performance trace: ${reason}`)
     active.failure = failure
     active.debuggerDetached = true
@@ -313,16 +312,7 @@ export class PerformanceTraceController {
         error: errorMessage(error)
       })
     }
-    if (active.debuggerDetached) return
-    try {
-      await this.deps.debuggerApi.detach({ tabId: active.tabId })
-    } catch (error) {
-      console.error('[Kaboom][performance_trace] Failed to detach Chrome debugger after trace failure', {
-        trace_id: active.traceId,
-        reason,
-        error: errorMessage(error)
-      })
-    }
+    active.lease?.release()
   }
 
   private async readTargetMetadata(tabId: number): Promise<PerformanceTraceTargetMetadata> {
@@ -375,7 +365,9 @@ async function postLocalJSON(path: string, payload: unknown): Promise<unknown> {
 }
 
 export function createDefaultPerformanceTraceController(): PerformanceTraceController {
-  return createPerformanceTraceController({ debuggerApi: chrome.debugger, postJSON: postLocalJSON })
+  const sessions = cdpSessions()
+  if (!sessions) throw new Error('performance trace requires chrome.debugger, which is unavailable')
+  return createPerformanceTraceController({ debuggerApi: chrome.debugger, sessions, postJSON: postLocalJSON })
 }
 
 function boundedEventBatches(events: unknown[]): unknown[][] {

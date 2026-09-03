@@ -9,17 +9,25 @@ import {
   createPerformanceTraceController,
   isTargetNotDebuggableError
 } from '../../../extension/background/dom/cdp/performance-trace.js'
+import { CDPSessionManager } from '../../../extension/background/dom/cdp/cdp-session.js'
 
 function fixture(completionParams = {}, failMethod = '') {
   let eventListener
   let detachListener
   const requests = []
+  let attached = false
   const debuggerApi = {
     attach: mock.fn(async () => {
       if (failMethod === 'Debugger.attach') throw new Error('target rejected')
+      attached = true
     }),
-    detach: mock.fn(async () => undefined),
+    detach: mock.fn(async () => {
+      attached = false
+    }),
     sendCommand: mock.fn(async (_target, method) => {
+      // Chrome rejects any command on an unattached target. The session manager relies on
+      // exactly this to tell "already attached" from "cold" after a service-worker restart.
+      if (!attached) throw new Error('Debugger is not attached to the tab with id: 41')
       if (method === failMethod) throw new Error('target rejected')
       if (method === 'Tracing.end') {
         queueMicrotask(() => eventListener({ tabId: 41 }, 'Tracing.tracingComplete', completionParams))
@@ -62,8 +70,40 @@ function fixture(completionParams = {}, failMethod = '') {
     }
     return { accepted: true }
   })
-  const controller = createPerformanceTraceController({ debuggerApi, postJSON, completionTimeoutMs: 100 })
-  return { controller, debuggerApi, postJSON, requests, emit: (...args) => eventListener(...args), detach: (...args) => detachListener(...args) }
+  // Timers are injected so the session manager's idle grace is driven by the test, not a sleep.
+  const timers = new Map()
+  let nextTimer = 1
+  let clockNow = 0
+  const sessions = new CDPSessionManager({
+    debuggerApi,
+    setTimeout: (fn, ms) => {
+      const id = nextTimer++
+      timers.set(id, { fn, at: clockNow + ms })
+      return id
+    },
+    clearTimeout: (id) => timers.delete(id),
+    idleGraceMs: 30_000
+  })
+  const advance = (ms) => {
+    clockNow += ms
+    for (const [id, t] of [...timers.entries()]) {
+      if (t.at <= clockNow) {
+        timers.delete(id)
+        t.fn()
+      }
+    }
+  }
+  const controller = createPerformanceTraceController({ debuggerApi, sessions, postJSON, completionTimeoutMs: 100 })
+  return {
+    controller,
+    debuggerApi,
+    postJSON,
+    requests,
+    sessions,
+    advance,
+    emit: (...args) => eventListener(...args),
+    detach: (...args) => detachListener(...args)
+  }
 }
 
 describe('Chrome performance trace controller', () => {
@@ -90,7 +130,12 @@ describe('Chrome performance trace controller', () => {
     })
     const finished = await f.controller.stop(41)
 
+    // The manager owns attachment: one attach for the trace's exclusive lease.
     assert.equal(f.debuggerApi.attach.mock.calls.length, 1)
+    // Releasing the lease no longer detaches immediately — the session stays warm so a
+    // following action reuses it instead of re-triggering Chrome's debugging banner.
+    assert.equal(f.debuggerApi.detach.mock.calls.length, 0)
+    f.advance(30_000)
     assert.equal(f.debuggerApi.detach.mock.calls.length, 1)
     assert.equal(finished.artifact_path, '/tmp/cpu-trace.json')
     assert.equal(finished.tab_id, 41)
@@ -139,9 +184,20 @@ describe('Chrome performance trace controller', () => {
   })
 
   test('identifies the exact startup stage when Chrome rejects a debugger command', async () => {
-    for (const stage of ['Debugger.attach', 'Page.enable', 'Network.enable', 'Network.setCacheDisabled', 'Tracing.start', 'Page.getFrameTree', 'Runtime.evaluate']) {
-      const f = fixture({}, stage)
-      await assert.rejects(() => f.controller.start(41), new RegExp(`${stage} failed: target rejected`))
+    // Attaching is now a stage of acquiring the exclusive lease, so a refused attach is
+    // reported as CDPSession.acquire rather than Debugger.attach.
+    const stages = [
+      ['Debugger.attach', 'CDPSession.acquire'],
+      ['Page.enable', 'Page.enable'],
+      ['Network.enable', 'Network.enable'],
+      ['Network.setCacheDisabled', 'Network.setCacheDisabled'],
+      ['Tracing.start', 'Tracing.start'],
+      ['Page.getFrameTree', 'Page.getFrameTree'],
+      ['Runtime.evaluate', 'Runtime.evaluate']
+    ]
+    for (const [trigger, stage] of stages) {
+      const f = fixture({}, trigger)
+      await assert.rejects(() => f.controller.start(41), new RegExp(`${stage} failed: .*target rejected`))
       assert.ok(f.requests.some((request) => request.path === '/performance-trace/abort'))
     }
   })

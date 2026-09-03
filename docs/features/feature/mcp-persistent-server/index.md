@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-25
+last_reviewed: 2026-09-03
 code_paths:
   - internal/listenport/store.go
   - cmd/browser-agent/internal/runtimeflags/flags.go
@@ -51,7 +51,9 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge_transport.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
-  - cmd/browser-agent/internal/daemonlife/lock_file.go
+  - internal/proclock/proclock.go
+  - internal/instancegov/instancegov.go
+  - internal/instancereg/registry.go
   - cmd/browser-agent/internal/daemonlife/install_epoch.go
   - cmd/browser-agent/internal/daemonlife/startup_throttle.go
   - cmd/browser-agent/internal/daemonlife/deps.go
@@ -178,8 +180,9 @@ test_paths:
   - cmd/browser-agent/internal/bridge/healthprobe/probe_test.go
   - cmd/browser-agent/internal/bridge/bridge_test_support_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix_test.go
-  - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
-  - cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go
+  - internal/proclock/proclock_test.go
+  - internal/instancegov/instancegov_test.go
+  - internal/instancegov/policy_test.go
   - cmd/browser-agent/internal/daemonlife/install_epoch_test.go
   - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
   - cmd/browser-agent/internal/daemonlife/helpers_test.go

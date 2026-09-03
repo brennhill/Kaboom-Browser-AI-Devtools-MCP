@@ -12,12 +12,12 @@ import { recordScreenshot } from '../caches/cache-limits.js'
 import { domPrimitiveListInteractive } from '../dom/primitives/dom-primitives-list-interactive.js'
 import { registerCommand } from './registry.js'
 import { collectCommandElements, commandPageMetadata, selectCommandElements } from './results/element-results.js'
-import { CDP_VERSION } from '../../lib/constants.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { postDaemonJSON } from '../../lib/daemon-http.js'
 import { captureVisibleTabSafe } from '../ui/tracked-tab-state.js'
+import { cdpSessions } from '../dom/cdp/cdp-session.js'
 
 // =============================================================================
 // SCREENSHOT
@@ -415,6 +415,79 @@ async function captureElement(
 }
 
 /** Full-page screenshot via CDP with scrollable container expansion (#363). */
+
+/** Options for one full-page CDP capture. Grouped so the helper stays inside the arg budget. */
+interface FullPageCaptureOptions {
+  format: 'png' | 'jpeg'
+  quality: number
+  hintedHeight: number
+}
+
+/**
+ * Resize the viewport to the full content box, capture, and always restore the override.
+ *
+ * Split out of captureFullPage so each function owns one concern: the caller handles
+ * container expansion and the viewport fallback, this handles the CDP capture itself.
+ */
+async function captureFullPageOverCDP(
+  ctx: ScreenshotContext,
+  tab: chrome.tabs.Tab,
+  options: FullPageCaptureOptions,
+  sessions: NonNullable<ReturnType<typeof cdpSessions>>
+): Promise<void> {
+  const { format, quality, hintedHeight } = options
+  const lease = await sessions.acquire(ctx.tabId)
+  try {
+    const metrics = (await lease.send('Page.getLayoutMetrics', {})) as {
+      cssContentSize?: { width: number; height: number }
+      contentSize?: { width: number; height: number }
+    }
+    const contentSize = metrics.cssContentSize ||
+      metrics.contentSize || { width: DEFAULT_CAPTURE_WIDTH, height: DEFAULT_CAPTURE_HEIGHT }
+    const { width: captureWidth, height: captureHeight } = computeFullPageCaptureDimensions(
+      contentSize.width,
+      contentSize.height,
+      hintedHeight
+    )
+
+    await lease.send('Emulation.setDeviceMetricsOverride', {
+      width: captureWidth,
+      height: captureHeight,
+      deviceScaleFactor: 1,
+      mobile: false
+    })
+
+    try {
+      // Brief pause for layout reflow after viewport resize
+      await delay(150)
+      const screenshotResult = (await lease.send('Page.captureScreenshot', {
+        format,
+        quality: format === 'jpeg' ? quality : undefined,
+        captureBeyondViewport: true,
+        clip: { x: 0, y: 0, width: captureWidth, height: captureHeight, scale: 1 }
+      })) as { data: string }
+
+      const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'
+      recordScreenshot(ctx.tabId)
+      const ok = await postScreenshot(`data:${mimeType};base64,${screenshotResult.data}`, tab.url, ctx.query.id)
+      if (!ok) {
+        ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' })
+      }
+    } finally {
+      try {
+        // Clear the override even when capture fails, or the tab keeps the forced viewport.
+        await lease.send('Emulation.clearDeviceMetricsOverride', {})
+      } catch {
+        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
+        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
+        /* best effort */
+      }
+    }
+  } finally {
+    lease.release()
+  }
+}
+
 async function captureFullPage(
   ctx: ScreenshotContext,
   tab: chrome.tabs.Tab,
@@ -438,80 +511,16 @@ async function captureFullPage(
     })
   }
 
+  const sessions = cdpSessions()
+  if (!sessions) {
+    debugLog(DebugCategory.CAPTURE, 'chrome.debugger unavailable; using viewport capture', {})
+    await captureAndPostViewport(ctx, tab, format, quality)
+    return
+  }
+
   try {
-    // Step 2: Attach CDP debugger
-    await chrome.debugger.attach({ tabId: ctx.tabId }, CDP_VERSION)
-
-    try {
-      // Step 3: Get full content dimensions
-      const metrics = (await chrome.debugger.sendCommand({ tabId: ctx.tabId }, 'Page.getLayoutMetrics', {})) as {
-        cssContentSize?: { width: number; height: number }
-        contentSize?: { width: number; height: number }
-      }
-
-      const contentSize = metrics.cssContentSize ||
-        metrics.contentSize || {
-          width: DEFAULT_CAPTURE_WIDTH,
-          height: DEFAULT_CAPTURE_HEIGHT
-        }
-      const { width: captureWidth, height: captureHeight } = computeFullPageCaptureDimensions(
-        contentSize.width,
-        contentSize.height,
-        hintedHeight
-      )
-
-      // Step 4: Override viewport to full content size
-      await chrome.debugger.sendCommand({ tabId: ctx.tabId }, 'Emulation.setDeviceMetricsOverride', {
-        width: captureWidth,
-        height: captureHeight,
-        deviceScaleFactor: 1,
-        mobile: false
-      })
-      let metricsOverrideSet = true
-
-      try {
-        // Brief pause for layout reflow after viewport resize
-        await delay(150)
-
-        // Step 5: Capture full-page screenshot via CDP
-        const screenshotResult = (await chrome.debugger.sendCommand({ tabId: ctx.tabId }, 'Page.captureScreenshot', {
-          format,
-          quality: format === 'jpeg' ? quality : undefined,
-          captureBeyondViewport: true,
-          clip: { x: 0, y: 0, width: captureWidth, height: captureHeight, scale: 1 }
-        })) as { data: string }
-
-        // Step 7: Build data URL and post to server
-        const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'
-        const dataUrl = `data:${mimeType};base64,${screenshotResult.data}`
-        recordScreenshot(ctx.tabId)
-
-        const ok = await postScreenshot(dataUrl, tab.url, ctx.query.id)
-        if (!ok) {
-          ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' })
-        }
-      } finally {
-        if (metricsOverrideSet) {
-          try {
-            // Step 6: Clear device metrics override, even when capture fails.
-            await chrome.debugger.sendCommand({ tabId: ctx.tabId }, 'Emulation.clearDeviceMetricsOverride', {})
-          } catch {
-            // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
-            // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
-            /* best effort */
-          }
-          metricsOverrideSet = false
-        }
-      }
-    } finally {
-      try {
-        await chrome.debugger.detach({ tabId: ctx.tabId })
-      } catch {
-        // EXPECTED_ABSENCE: optional enrichment can normally fail while the primary
-        // operation keeps a valid fallback; logging it would misleadingly report fallback as failure.
-        /* already detached */
-      }
-    }
+    // Step 2: Capture over a lease on the tab's shared CDP session
+    await captureFullPageOverCDP(ctx, tab, { format, quality, hintedHeight }, sessions)
   } catch (err) {
     // CDP unavailable — fall back to regular captureVisibleTab with warning
     debugLog(DebugCategory.CAPTURE, 'Full-page CDP failed, falling back to viewport capture', {

@@ -3,12 +3,11 @@
  * Docs: docs/features/feature/performance-trace/index.md
  */
 import type { WirePerformanceTraceResult } from '../../../types/wire/wire-performance-trace.js';
+import { type CDPSessionManager } from './cdp-session.js';
 interface Debuggee {
     tabId?: number;
 }
 interface DebuggerAPI {
-    attach(target: Debuggee, requiredVersion: string): Promise<void>;
-    detach(target: Debuggee): Promise<void>;
     sendCommand(target: Debuggee, method: string, commandParams?: object): Promise<object | undefined>;
     onEvent: {
         addListener(listener: (source: Debuggee, method: string, params?: object) => void): void;
@@ -19,6 +18,11 @@ interface DebuggerAPI {
 }
 interface ControllerDeps {
     debuggerApi: DebuggerAPI;
+    /**
+     * Owns debugger attachment. A trace takes an EXCLUSIVE lease: concurrent input dispatch
+     * on the same tab would appear in the trace as user activity that never happened.
+     */
+    sessions: Pick<CDPSessionManager, 'acquire'>;
     postJSON: (path: string, payload: unknown) => Promise<unknown>;
     completionTimeoutMs?: number;
 }

@@ -5,7 +5,7 @@
 import { buildDaemonJSONRequestInit } from '../../../lib/daemon-http.js';
 import { errorMessage } from '../../../lib/error-utils.js';
 import { getServerUrl } from '../../runtime-state/settings-state.js';
-const CDP_VERSION = '1.3';
+import { cdpSessions } from './cdp-session.js';
 const MAX_CHUNK_JSON_BYTES = 3 * 1024 * 1024;
 const DEFAULT_COMPLETION_TIMEOUT_MS = 15_000;
 const TRACE_CATEGORIES = [
@@ -49,7 +49,7 @@ export class PerformanceTraceController {
         };
         this.active = active;
         try {
-            await traceStage('Debugger.attach', () => this.deps.debuggerApi.attach({ tabId }, CDP_VERSION));
+            active.lease = await traceStage('CDPSession.acquire', () => this.deps.sessions.acquire(tabId, { exclusive: true }));
             await traceStage('Page.enable', () => this.deps.debuggerApi.sendCommand({ tabId }, 'Page.enable'));
             await traceStage('Network.enable', () => this.deps.debuggerApi.sendCommand({ tabId }, 'Network.enable'));
             await traceStage('Network.setCacheDisabled', () => this.deps.debuggerApi.sendCommand({ tabId }, 'Network.setCacheDisabled', {
@@ -107,9 +107,7 @@ export class PerformanceTraceController {
                 throw active.failure;
             active.metadata = await this.readTargetMetadata(tabId);
             await this.deps.debuggerApi.sendCommand({ tabId }, 'Network.setCacheDisabled', { cacheDisabled: false });
-            active.detachExpected = true;
-            await this.deps.debuggerApi.detach({ tabId });
-            active.debuggerDetached = true;
+            active.lease?.release();
             const result = requireTraceResult(await this.deps.postJSON('/performance-trace/finish', {
                 trace_id: active.traceId,
                 tab_id: tabId,
@@ -197,13 +195,9 @@ export class PerformanceTraceController {
         const active = this.active;
         if (!active || source.tabId !== active.tabId)
             return;
-        if (active.detachExpected) {
-            // EXPECTED_ABSENCE: Tracing.stop deliberately detaches after Chrome confirms
-            // all events were delivered. Logging this normal onDetach callback would
-            // falsely report a trace failure.
-            active.debuggerDetached = true;
-            return;
-        }
+        // The controller no longer detaches deliberately — it releases a lease and the session
+        // manager decides when to detach. So any detach reaching an ACTIVE trace is genuine
+        // loss of the session (DevTools opened, tab closed, user dismissed the banner).
         const failure = new Error(`Chrome debugger detached during performance trace: ${reason}`);
         active.failure = failure;
         active.debuggerDetached = true;
@@ -238,18 +232,7 @@ export class PerformanceTraceController {
                 error: errorMessage(error)
             });
         }
-        if (active.debuggerDetached)
-            return;
-        try {
-            await this.deps.debuggerApi.detach({ tabId: active.tabId });
-        }
-        catch (error) {
-            console.error('[Kaboom][performance_trace] Failed to detach Chrome debugger after trace failure', {
-                trace_id: active.traceId,
-                reason,
-                error: errorMessage(error)
-            });
-        }
+        active.lease?.release();
     }
     async readTargetMetadata(tabId) {
         const frameTree = (await traceStage('Page.getFrameTree', () => this.deps.debuggerApi.sendCommand({ tabId }, 'Page.getFrameTree')));
@@ -292,7 +275,10 @@ async function postLocalJSON(path, payload) {
     return response.json();
 }
 export function createDefaultPerformanceTraceController() {
-    return createPerformanceTraceController({ debuggerApi: chrome.debugger, postJSON: postLocalJSON });
+    const sessions = cdpSessions();
+    if (!sessions)
+        throw new Error('performance trace requires chrome.debugger, which is unavailable');
+    return createPerformanceTraceController({ debuggerApi: chrome.debugger, sessions, postJSON: postLocalJSON });
 }
 function boundedEventBatches(events) {
     const batches = [];

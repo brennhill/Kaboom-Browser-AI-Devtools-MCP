@@ -10,7 +10,9 @@
     "cmd/browser-agent/internal/toolinteract/interactstate",
     "cmd/browser-agent/internal/screenrec",
     "cmd/browser-agent/internal/daemonlife",
-    "cmd/browser-agent/tools_core.go"
+    "cmd/browser-agent/tools_core.go",
+    "internal/proclock",
+    "internal/instancereg"
   ],
   "go_loaders": [
     {
@@ -87,12 +89,6 @@
       "doctor": "install_epoch_state"
     },
     {
-      "path": "cmd/browser-agent/internal/daemonlife/lock_file.go",
-      "owner": "daemon lock record",
-      "fallback": "remove a malformed lock and continue startup",
-      "doctor": "daemon_lock_state"
-    },
-    {
       "path": "cmd/browser-agent/internal/daemonlife/startup_throttle.go",
       "owner": "daemon restart history",
       "fallback": "reset corrupt restart history",
@@ -103,6 +99,18 @@
       "owner": "state-loader composition root",
       "fallback": "delegate to the owning loader with the shared diagnostic collector",
       "doctor": "shared state recovery collector"
+    },
+    {
+      "path": "internal/proclock/proclock.go",
+      "owner": "kernel-held singleton lock",
+      "fallback": "treat an unreadable lock as unheld; the flock itself is authoritative",
+      "doctor": "daemon_lock_state"
+    },
+    {
+      "path": "internal/instancereg/registry.go",
+      "owner": "machine-wide instance registry record",
+      "fallback": "skip an unparseable record and continue the census",
+      "doctor": "instance_registry"
     }
   ]
 }

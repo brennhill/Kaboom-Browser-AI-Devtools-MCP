@@ -24,6 +24,9 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
 import path from 'node:path'
+import ts from 'typescript'
+import { relative } from 'node:path'
+import { listTsFiles, parseSource, SRC_ROOT } from './source-contract-utils.js'
 
 const EXTENSION_DIR = 'extension'
 const MANIFEST_PATH = path.join(EXTENSION_DIR, 'manifest.json')
@@ -331,5 +334,81 @@ describe('session storage reachability', () => {
         'file calls setAccessLevel(TRUSTED_AND_UNTRUSTED_CONTEXTS) — those reads return nothing. ' +
         `First reader: ${contentReaders[0]}`
     )
+  })
+})
+
+/**
+ * Chrome permits exactly ONE chrome.debugger attachment per (extension, tab). A second
+ * attach throws, so two independent owners in the same extension cannot coexist: whichever
+ * attaches second simply fails.
+ *
+ * This bit us as four separate owners — input dispatch, performance tracing, and full-page
+ * capture — each of which worked in isolation and raced in the field. Per-action attach also
+ * detached mid-navigation, so a click that navigated reported success and did nothing
+ * (kaboom-knms: 986s vs 237s on cat-33). cdp-session.ts is now the single owner and every
+ * consumer takes a ref-counted lease.
+ */
+describe('one debugger attachment per tab', () => {
+  const OWNER = 'background/dom/cdp/cdp-session.ts'
+  const LIFECYCLE = new Set(['attach', 'detach'])
+
+  /** Locate `chrome.debugger.attach(...)` / `.detach(...)` calls. */
+  const findChromeDebuggerLifecycle = (sourceFile) => {
+    const hits = []
+    const visit = (node) => {
+      if (
+        ts.isCallExpression(node) &&
+        ts.isPropertyAccessExpression(node.expression) &&
+        LIFECYCLE.has(node.expression.name.text)
+      ) {
+        const target = node.expression.expression
+        if (
+          ts.isPropertyAccessExpression(target) &&
+          target.name.text === 'debugger' &&
+          ts.isIdentifier(target.expression) &&
+          target.expression.text === 'chrome'
+        ) {
+          const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart())
+          hits.push({ method: node.expression.name.text, line: line + 1 })
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(sourceFile)
+    return hits
+  }
+
+  test('only cdp-session.ts calls chrome.debugger.attach or detach', () => {
+    const offenders = []
+    for (const file of listTsFiles(['background'])) {
+      const rel = relative(SRC_ROOT, file)
+      if (rel === OWNER) continue
+      for (const hit of findChromeDebuggerLifecycle(parseSource(file))) {
+        offenders.push(`${rel}:${hit.line} calls chrome.debugger.${hit.method}()`)
+      }
+    }
+    assert.deepStrictEqual(
+      offenders,
+      [],
+      `Chrome allows one debugger attachment per tab. Take a lease from cdpSessions() instead:\n  ${offenders.join('\n  ')}`
+    )
+  })
+
+  test('the owner still performs the attachment', () => {
+    // The owner reaches chrome.debugger through an injected seam (deps.debuggerApi) so tests
+    // need no real browser, and therefore never writes `chrome.debugger.attach` literally.
+    // Without this guard, deleting the owner's lifecycle would leave the test above passing
+    // over an empty set and the contract would silently mean nothing.
+    const owner = parseSource(path.join(SRC_ROOT, OWNER))
+    const methods = new Set()
+    const visit = (node) => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+        if (LIFECYCLE.has(node.expression.name.text)) methods.add(node.expression.name.text)
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(owner)
+    assert.ok(methods.has('attach'), 'cdp-session.ts must still perform the attach')
+    assert.ok(methods.has('detach'), 'cdp-session.ts must still perform the detach')
   })
 })

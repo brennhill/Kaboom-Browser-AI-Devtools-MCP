@@ -70,7 +70,12 @@ function buildChrome() {
         detachCalls.push(target.tabId)
         return Promise.resolve()
       }),
-      sendCommand: mock.fn(() => Promise.resolve({})),
+      // Chrome rejects every command on an unattached target. Attach always fails in this
+      // fixture, so nothing is ever attached — and the session manager's adoption probe must
+      // see that. A fake that resolves here would report the refused tab as already attached.
+      sendCommand: mock.fn(() =>
+        Promise.reject(new Error(`Debugger is not attached to the tab with id: ${TRACKED_TAB_ID}`))
+      ),
       onEvent: { addListener: mock.fn() },
       onDetach: { addListener: mock.fn() }
     },
@@ -154,7 +159,10 @@ describe('performance trace target refusal', () => {
       assert.equal(attachCalls[0], TRACKED_TAB_ID)
       assert.equal(queued.result.error, 'performance_trace_target_not_debuggable')
       assert.equal(queued.result.tab_id, TRACKED_TAB_ID, 'the refusal must name the tab that was refused')
-      assert.match(queued.result.message, /Debugger\.attach/)
+      // Attaching is a stage of acquiring the tab's exclusive CDP lease, so the refusal is
+      // reported against CDPSession.acquire. What matters is unchanged: the message names
+      // the stage, the refused tab, and what the caller can do instead.
+      assert.match(queued.result.message, /CDPSession\.acquire/)
       assert.match(queued.result.message, /chrome-extension/)
       assert.equal(
         queued.result.retryable,
