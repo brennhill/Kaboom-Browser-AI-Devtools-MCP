@@ -110,16 +110,7 @@ func (h *ToolHandler) closeWithFixtureRecovery() {
 
 func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 	fixtureHandler, fixtureErr := buildQAFixtureHandler(h)
-	handlers := configureSessionHandlers(h)
-	for name, handler := range configureRemainingHandlers(h, fixtureHandler, fixtureErr) {
-		handlers[name] = handler
-	}
-	return toolconfigure.NewDispatcher(handlers)
-}
-
-// configureSessionHandlers covers session storage, diffing, and driving consent.
-func configureSessionHandlers(h *ToolHandler) map[string]toolconfigure.Handler {
-	return map[string]toolconfigure.Handler{
+	return toolconfigure.NewDispatcher(map[string]toolconfigure.Handler{
 		"store": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return h.configureSessions.Store(req, args)
 		},
@@ -129,16 +120,6 @@ func configureSessionHandlers(h *ToolHandler) map[string]toolconfigure.Handler {
 		"diff_sessions": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return h.configureSessions.Diff(req, args)
 		},
-		"consent": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return handleConfigureConsent(h.Guards.Consent(), req, args)
-		},
-	}
-}
-
-// configureRemainingHandlers covers every other configure mode.
-// configureRemainingHandlers covers diagnostics, noise, and cleanup modes.
-func configureRemainingHandlers(h *ToolHandler, fixtureHandler *qafixturehandler.Handler, fixtureErr error) map[string]toolconfigure.Handler {
-	handlers := map[string]toolconfigure.Handler{
 		"health": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 			return handleConfigureHealth(h.healthMetrics, h.capture, h.server, h.alertBuffer, h.stateRecovery, req)
 		},
@@ -188,16 +169,6 @@ func configureRemainingHandlers(h *ToolHandler, fixtureHandler *qafixturehandler
 		"audit_log": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return auditlog.Handle(h.auditTrail, h.auditRecorder, req, args)
 		},
-	}
-	for name, handler := range configureRecordingHandlers(h, fixtureHandler, fixtureErr) {
-		handlers[name] = handler
-	}
-	return handlers
-}
-
-// configureRecordingHandlers covers streaming, recording, sequences, and the remaining tools.
-func configureRecordingHandlers(h *ToolHandler, fixtureHandler *qafixturehandler.Handler, fixtureErr error) map[string]toolconfigure.Handler {
-	return map[string]toolconfigure.Handler{
 		"streaming": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return toolconfigure.HandleStreaming(h.alertBuffer, req, args)
 		},
@@ -258,7 +229,7 @@ func configureRecordingHandlers(h *ToolHandler, fixtureHandler *qafixturehandler
 			}
 			return fixtureHandler.Handle(req, args)
 		},
-	}
+	})
 }
 
 func configureLocal(

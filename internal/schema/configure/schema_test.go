@@ -116,10 +116,9 @@ func TestToolProperties_MergePreservesEveryGroupKey(t *testing.T) {
 	core := coreProperties()
 	runtime := runtimeProperties()
 	fixture := fixtureProperties()
-	consent := consentProperties()
 	merged := toolProperties()
 
-	groups := map[string]map[string]any{"core": core, "runtime": runtime, "fixture": fixture, "consent": consent}
+	groups := map[string]map[string]any{"core": core, "runtime": runtime, "fixture": fixture}
 	owners := make(map[string]string)
 	for name, group := range groups {
 		for key := range group {
@@ -150,9 +149,8 @@ func TestToolProperties_MergePreservesEveryGroupKey(t *testing.T) {
 		}
 	}
 
-	want := len(core) + len(runtime) + len(fixture) + len(consent)
-	if len(merged) != want {
-		t.Errorf("merged configure properties = %d, want %d (core %d + runtime %d + fixture %d + consent %d)",
-			len(merged), want, len(core), len(runtime), len(fixture), len(consent))
+	if len(merged) != len(core)+len(runtime)+len(fixture) {
+		t.Errorf("merged configure properties = %d, want %d (core %d + runtime %d + fixture %d)",
+			len(merged), len(core)+len(runtime)+len(fixture), len(core), len(runtime), len(fixture))
 	}
 }

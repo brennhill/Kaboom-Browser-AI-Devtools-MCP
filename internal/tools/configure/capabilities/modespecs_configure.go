@@ -128,11 +128,6 @@ var configureModeSpecs = map[string]modeParamSpec{
 		Returns:  "The active security mode and whether insecure rewrites are applied.",
 		Optional: []string{"mode", "confirm"},
 	},
-	"consent": {
-		Hint:     "Inspect or change which origins Kaboom may DRIVE (click, type, navigate)",
-		Returns:  "The consented origins, or confirmation of the grant or revocation.",
-		Optional: []string{"action", "origin", "scope"},
-	},
 	"network_recording": {
 		Hint:     "Passive network traffic recording with start/stop capture",
 		Returns:  "Whether network recording is currently on.",

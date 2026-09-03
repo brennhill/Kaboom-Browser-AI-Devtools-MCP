@@ -7,7 +7,7 @@ func coreProperties() map[string]any {
 		"what": map[string]any{
 			"type":        "string",
 			"description": "Setting or utility to configure",
-			"enum":        []string{"store", "load", "noise_rule", "clear", "health", "tutorial", "streaming", "test_boundary_start", "test_boundary_end", "event_recording_start", "event_recording_stop", "playback", "log_diff", "telemetry", "describe_capabilities", "diff_sessions", "audit_log", "restart", "save_sequence", "get_sequence", "list_sequences", "delete_sequence", "replay_sequence", "doctor", "security_mode", "consent", "network_recording", "action_jitter", "report_issue", "setup_quality_gates", "qa_fixture"},
+			"enum":        []string{"store", "load", "noise_rule", "clear", "health", "tutorial", "streaming", "test_boundary_start", "test_boundary_end", "event_recording_start", "event_recording_stop", "playback", "log_diff", "telemetry", "describe_capabilities", "diff_sessions", "audit_log", "restart", "save_sequence", "get_sequence", "list_sequences", "delete_sequence", "replay_sequence", "doctor", "security_mode", "network_recording", "action_jitter", "report_issue", "setup_quality_gates", "qa_fixture"},
 		},
 		"action": map[string]any{
 			"type":        "string",
@@ -123,22 +123,6 @@ func coreProperties() map[string]any {
 		"reason": map[string]any{
 			"type":        "string",
 			"description": "Why this is noise",
-		},
-	}
-}
-
-// consentProperties are the configure(mode='consent') parameters. Kept separate so the
-// core property map stays inside its length budget.
-func consentProperties() map[string]any {
-	return map[string]any{
-		"origin": map[string]any{
-			"type":        "string",
-			"description": "For consent: the http(s) origin to grant or revoke, e.g. 'https://example.com'. Path and query are ignored.",
-		},
-		"scope": map[string]any{
-			"type":        "string",
-			"enum":        []string{"persistent", "session"},
-			"description": "For consent: whether a grant survives restart ('persistent', default) or lasts for this session only ('session').",
 		},
 	}
 }

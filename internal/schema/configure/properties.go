@@ -5,7 +5,6 @@ package configure
 func toolProperties() map[string]any {
 	props := make(map[string]any)
 	mergeProps(props, coreProperties())
-	mergeProps(props, consentProperties())
 	mergeProps(props, runtimeProperties())
 	mergeProps(props, fixtureProperties())
 	return props

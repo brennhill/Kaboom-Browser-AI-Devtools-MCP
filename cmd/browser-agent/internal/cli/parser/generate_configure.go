@@ -56,37 +56,12 @@ func ParseGenerateArgs(format string, args []string) (map[string]any, error) {
 // ParseConfigureArgs parses CLI flags for the configure tool into MCP arguments.
 func ParseConfigureArgs(action string, args []string) (map[string]any, error) {
 	mcpArgs := map[string]any{"what": action}
-	parsed, err := parseFlagsBySpec(args, configureFlagSpecs())
-	if err != nil {
-		return nil, err
-	}
-	for key, value := range parsed {
-		mcpArgs[key] = value
-	}
-	return mcpArgs, nil
-}
-
-// configureFlagSpecs is the configure CLI flag table, lifted out of ParseConfigureArgs so
-// the parser stays inside its length budget.
-func configureFlagSpecs() map[string]cliFlagSpec {
-	specs := configureCoreFlagSpecs()
-	for flag, spec := range configureResourceFlagSpecs() {
-		specs[flag] = spec
-	}
-	return specs
-}
-
-// configureCoreFlagSpecs covers cross-cutting flags plus store, consent and noise.
-func configureCoreFlagSpecs() map[string]cliFlagSpec {
-	return map[string]cliFlagSpec{
+	parsed, err := parseFlagsBySpec(args, map[string]cliFlagSpec{
 		// Cross-cutting
 		"--telemetry-mode": {MCPKey: "telemetry_mode", Kind: FlagString},
 		"--mode":           {MCPKey: "mode", Kind: FlagString},
 		"--tool":           {MCPKey: "tool", Kind: FlagString},
 		"--confirm":        {MCPKey: "confirm", Kind: FlagBool},
-		// Browser driving consent
-		"--origin": {MCPKey: "origin", Kind: FlagString},
-		"--scope":  {MCPKey: "scope", Kind: FlagString},
 		// Store / persistence
 		"--store-action": {MCPKey: "store_action", Kind: FlagString},
 		"--namespace":    {MCPKey: "namespace", Kind: FlagString},
@@ -109,12 +84,6 @@ func configureCoreFlagSpecs() map[string]cliFlagSpec {
 		"--status-min":     {MCPKey: "status_min", Kind: FlagInt},
 		"--status-max":     {MCPKey: "status_max", Kind: FlagInt},
 		"--level":          {MCPKey: "level", Kind: FlagString},
-	}
-}
-
-// configureResourceFlagSpecs covers the per-resource configure modes.
-func configureResourceFlagSpecs() map[string]cliFlagSpec {
-	return map[string]cliFlagSpec{
 		// Recording / playback
 		"--buffer":                 {MCPKey: "buffer", Kind: FlagString},
 		"--tab-id":                 {MCPKey: "tab_id", Kind: FlagInt},
@@ -168,5 +137,12 @@ func configureResourceFlagSpecs() map[string]cliFlagSpec {
 		"--transaction-id": {MCPKey: "transaction_id", Kind: FlagString},
 		// Network recording
 		"--network-action": {MCPKey: "network_action", Kind: FlagString},
+	})
+	if err != nil {
+		return nil, err
 	}
+	for k, v := range parsed {
+		mcpArgs[k] = v
+	}
+	return mcpArgs, nil
 }
