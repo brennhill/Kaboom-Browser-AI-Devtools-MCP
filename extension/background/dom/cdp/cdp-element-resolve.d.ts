@@ -28,5 +28,16 @@ declare function cdpResolveAndPrepare(selectorStr: string, actionType: string, s
 export type ResolvedElement = NonNullable<ReturnType<typeof cdpResolveAndPrepare>>;
 export declare function resolveElement(tabId: number, params: DOMActionParams): Promise<ResolvedElement | null>;
 export declare function buildCDPResult(action: string, selector: string, resolved: ResolvedElement, elapsedMs: number, extra?: Record<string, unknown>): DOMResult;
+/**
+ * Evidence for a gesture addressed by coordinate rather than by element.
+ *
+ * hover_at, scroll_at and drag have no selector to echo, so reporting them through
+ * buildCDPResult would either invent a matched element or drop the coordinate that was
+ * actually driven. The coordinate IS the evidence here.
+ */
+export declare function buildCoordinateCDPResult(action: string, point: {
+    x: number;
+    y: number;
+}, elapsedMs: number, extra?: Record<string, unknown>): DOMResult;
 export {};
 //# sourceMappingURL=cdp-element-resolve.d.ts.map

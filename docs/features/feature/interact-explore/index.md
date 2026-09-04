@@ -29,6 +29,11 @@ code_paths:
   - internal/schema/interact/tool.go
   - internal/schema/interact/properties_targeting.go
   - internal/schema/interact/properties_output_batch.go
+  - internal/schema/interact/properties_gestures.go
+  - internal/tools/interact/gestures.go
+  - internal/tools/interact/selector.go
+  - internal/util/media.go
+  - cmd/browser-agent/internal/cli/parser/interact.go
   - internal/tools/configure/capabilities/modespecs_interact.go
   - scripts/docs/reference/check-reference-schema-sync.mjs
   - src/background.ts
@@ -44,6 +49,11 @@ code_paths:
   - src/background/runtime-state/content-readiness.ts
   - src/background/commands/registry.ts
   - src/background/dom/cdp/cdp-dispatch.ts
+  - src/background/dom/cdp/cdp-gestures.ts
+  - src/background/dom/cdp/cdp-key-mappings.ts
+  - src/background/dom/cdp/cdp-element-resolve.ts
+  - src/background/dom/primitives/gestures/dom-primitives-gestures.ts
+  - src/background/exec/action-metadata.ts
   - src/background/dom/dom-dispatch.ts
   - src/background/exec/frame-targeting.ts
   - src/background/exec/content-fallback-scripts.ts
@@ -106,6 +116,8 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
+  - cmd/browser-agent/internal/toolinteract/contracts/gestures_test.go
+  - tests/extension/dom/cdp-gestures.test.js
   - cmd/browser-agent/internal/toolinteract/contracts/rich_action_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/performance_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go

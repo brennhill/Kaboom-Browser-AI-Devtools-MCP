@@ -22,6 +22,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/idbquery"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // GetPageInfo returns information about the currently tracked page.
@@ -572,7 +573,7 @@ func appendImageBlock(resp mcp.JSONRPCResponse, dataURL string) mcp.JSONRPCRespo
 	if dataURL == "" {
 		return resp
 	}
-	base64Data, mimeType := parseDataURL(dataURL)
+	base64Data, mimeType := util.SplitDataURL(dataURL)
 	if base64Data == "" {
 		return resp
 	}
@@ -586,28 +587,6 @@ func queueFullResponse(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
 		"Wait for in-flight commands to complete, then retry.",
 		mcp.WithRecoveryToolCall(map[string]any{"tool": "observe", "arguments": map[string]any{"what": "pending_commands"}}),
 	)
-}
-
-// parseDataURL extracts the base64 data and MIME type from a data URL.
-// Example: "data:image/jpeg;base64,/9j/4AAQ..." -> ("/9j/4AAQ...", "image/jpeg")
-// Returns empty strings if the data URL format is invalid.
-func parseDataURL(dataURL string) (base64Data, mimeType string) {
-	if !strings.HasPrefix(dataURL, "data:") {
-		return "", ""
-	}
-	// Format: data:<mimeType>;base64,<data>
-	rest := dataURL[5:] // strip "data:"
-	semicolonIdx := strings.Index(rest, ";")
-	if semicolonIdx < 0 {
-		return "", ""
-	}
-	mimeType = rest[:semicolonIdx]
-	rest = rest[semicolonIdx+1:]
-	if !strings.HasPrefix(rest, "base64,") {
-		return "", ""
-	}
-	base64Data = rest[7:] // strip "base64,"
-	return base64Data, mimeType
 }
 
 // saveScreenshotToPath saves a screenshot data URL to a user-specified file path (#386).
@@ -626,7 +605,7 @@ func saveScreenshotToPath(saveTo string, dataURL string) error {
 	}
 
 	// Decode the data URL
-	b64Data, _ := parseDataURL(dataURL)
+	b64Data, _ := util.SplitDataURL(dataURL)
 	if b64Data == "" {
 		return fmt.Errorf("screenshot_save: invalid data URL format. Expected 'data:image/...;base64,...'")
 	}

@@ -67,7 +67,7 @@ func (h *DOMActions) HandleDOMPrimitive(req mcp.JSONRPCRequest, args json.RawMes
 
 	// If x/y coordinates provided on a click action, escalate to CDP for hardware-level click
 	if action == "click" && params.X != nil && params.Y != nil {
-		return h.HandleCDPClick(req, args, action, *params.X, *params.Y, params.TabID)
+		return h.HandleCDPClick(req, args, action, cdpClickTarget{X: *params.X, Y: *params.Y, Modifiers: params.Modifiers, TabID: params.TabID})
 	}
 
 	var failed bool
@@ -83,6 +83,10 @@ func (h *DOMActions) HandleDOMPrimitive(req mcp.JSONRPCRequest, args json.RawMes
 
 	if errResp, failed := validateWaitForConditions(req, action, params); failed {
 		return errResp
+	}
+
+	if problem := act.ValidateGesture(action, params.gestureTarget()); problem != nil {
+		return act.GestureParamFailure(req, action, problem)
 	}
 
 	if errResp, failed := ValidateDOMActionParams(req, action, params.Text, params.Value, params.Name); failed {
@@ -129,12 +133,39 @@ type DOMPrimitiveParams struct {
 	URLContains   string   `json:"url_contains,omitempty"`
 	Absent        bool     `json:"absent,omitempty"`
 	Structured    bool     `json:"structured,omitempty"`
+	// Pointer gesture inputs (kaboom-05ue.5). The route is drag_path, not path: interact
+	// already spends `path` on the cookie path string.
+	DragPath  []gesturePoint `json:"drag_path,omitempty"`
+	Modifiers []string       `json:"modifiers,omitempty"`
+	DeltaX    *float64       `json:"delta_x,omitempty"`
+	DeltaY    *float64       `json:"delta_y,omitempty"`
+}
+
+// gesturePoint is one viewport coordinate on a drag route.
+type gesturePoint struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+// gestureTarget reduces the parsed arguments to what the shared gesture rules need.
+func (p DOMPrimitiveParams) gestureTarget() act.GestureTarget {
+	return act.GestureTarget{
+		Selector:   p.Selector,
+		ElementID:  p.ElementID,
+		HasIndex:   p.Index != nil,
+		HasX:       p.X != nil,
+		HasY:       p.Y != nil,
+		PathPoints: len(p.DragPath),
+		HasDeltaX:  p.DeltaX != nil,
+		HasDeltaY:  p.DeltaY != nil,
+	}
 }
 
 type hardwareClickParams struct {
-	X     *float64 `json:"x"`
-	Y     *float64 `json:"y"`
-	TabID int      `json:"tab_id,omitempty"`
+	X         *float64 `json:"x"`
+	Y         *float64 `json:"y"`
+	Modifiers []string `json:"modifiers,omitempty"`
+	TabID     int      `json:"tab_id,omitempty"`
 }
 
 var domSelectorOptionalActions = map[string]struct{}{
@@ -146,6 +177,14 @@ var domSelectorOptionalActions = map[string]struct{}{
 	"wait_for_stable":        {},
 	"key_press":              {},
 	"wait_for":               {},
+	// The pointer gestures address a coordinate as readily as an element, so the blanket
+	// selector rule would reject a correct call. act.ValidateGesture enforces their own rule.
+	"drag":         {},
+	"right_click":  {},
+	"double_click": {},
+	"triple_click": {},
+	"hover_at":     {},
+	"scroll_at":    {},
 }
 
 func ParseDOMPrimitiveParams(args json.RawMessage) (DOMPrimitiveParams, error) {
@@ -309,26 +348,35 @@ func (h *DOMActions) HandleHardwareClick(req mcp.JSONRPCRequest, args json.RawMe
 		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'y' is missing", "Add the 'y' coordinate (pixels from top)", mcp.WithParam("y"))
 	}
 
-	return h.HandleCDPClick(req, args, "hardware_click", *params.X, *params.Y, params.TabID)
+	return h.HandleCDPClick(req, args, "hardware_click", cdpClickTarget{X: *params.X, Y: *params.Y, Modifiers: params.Modifiers, TabID: params.TabID})
+}
+
+// cdpClickTarget is where a coordinate click lands and what is held while it lands.
+type cdpClickTarget struct {
+	X, Y      float64
+	Modifiers []string
+	TabID     int
 }
 
 // handleCDPClick creates a cdp_action query for a hardware-level click at coordinates.
-func (h *DOMActions) HandleCDPClick(req mcp.JSONRPCRequest, args json.RawMessage, action string, x, y float64, tabID int) mcp.JSONRPCResponse {
+// Modifiers travel with it: dropping them would turn a ctrl+click into an ordinary click that
+// navigates in place instead of opening a background tab, and still report success.
+func (h *DOMActions) HandleCDPClick(req mcp.JSONRPCRequest, args json.RawMessage, action string, target cdpClickTarget) mcp.JSONRPCResponse {
+	params := map[string]any{"action": "click", "x": target.X, "y": target.Y}
+	if len(target.Modifiers) > 0 {
+		params["modifiers"] = target.Modifiers
+	}
 	return h.runtime.newCommand("cdp_click").
 		correlationPrefix("cdp_click").
 		reason(action).
 		queryType("cdp_action").
-		buildParams(map[string]any{
-			"action": "click",
-			"x":      x,
-			"y":      y,
-		}).
-		tabID(tabID).
+		buildParams(params).
+		tabID(target.TabID).
 		guardsWithOpts(
 			[]func(*mcp.StructuredError){mcp.WithAction(action)},
 			h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking,
 		).
-		recordAction(action, "", map[string]any{"x": x, "y": y, "method": "cdp"}).
+		recordAction(action, "", map[string]any{"x": target.X, "y": target.Y, "method": "cdp"}).
 		queuedMessage(action+" queued").
 		execute(req, args)
 }

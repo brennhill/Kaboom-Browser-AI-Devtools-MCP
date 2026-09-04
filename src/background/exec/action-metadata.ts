@@ -46,6 +46,8 @@ const ACTION_METADATA: Record<string, ActionMeta> = {
   clipboard_read: { readonly: true, mutating: false },
   list_states: { readonly: true, mutating: false },
   state_list: { readonly: true, mutating: false },
+  // A clipped capture reads pixels and dispatches no input.
+  zoom_region: { readonly: true, mutating: false },
 
   // --- Mutating actions (modify DOM, require match-evidence validation) ---
   click: { readonly: false, mutating: true },
@@ -58,6 +60,18 @@ const ACTION_METADATA: Record<string, ActionMeta> = {
   focus: { readonly: false, mutating: true },
   scroll_to: { readonly: false, mutating: true },
   hover: { readonly: false, mutating: true },
+
+  // --- Pointer gestures (kaboom-05ue.5) ---
+  // Not `mutating`: every one of these can be addressed by coordinate, and a coordinate has no
+  // matched element to prove. Marking them mutating would fail a correct drag or hover_at for
+  // "missing match evidence". A gesture that finds nothing still errors — both the CDP and DOM
+  // paths report element_not_found themselves.
+  drag: { readonly: false, mutating: false },
+  right_click: { readonly: false, mutating: false },
+  double_click: { readonly: false, mutating: false },
+  triple_click: { readonly: false, mutating: false },
+  hover_at: { readonly: false, mutating: false },
+  scroll_at: { readonly: false, mutating: false },
 
   // --- Side-effecting but not DOM-mutating (no match-evidence required) ---
   navigate: { readonly: false, mutating: false },

@@ -859,6 +859,111 @@ interact({what: "batch",
 
 ---
 
+## Pointer Gestures
+
+Hardware-level pointer input dispatched through the Chrome DevTools Protocol, so the events carry
+`isTrusted: true`. When CDP cannot attach (an internal page, a tab held by a performance trace, no
+debugger permission) each gesture falls back to synthetic DOM events; the result's
+`insertion_strategy` says which path ran.
+
+Every gesture accepts `modifiers` — `ctrl`, `shift`, `alt`, `cmd` (meta), combinable — which also
+works on plain `click`.
+
+### drag
+
+Drag along a route with the left button held: reorder a list, move a canvas object, resize a pane,
+or complete a drag-and-drop upload.
+
+```js
+interact({what: "drag",
+          drag_path: [{x: 120, y: 300}, {x: 260, y: 300}, {x: 420, y: 300}]})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `drag_path` | array (required) | Ordered viewport points, at least 2. The route to follow, not just the endpoints — drag libraries begin on the first intermediate move, so add waypoints to trace a curve. Named `drag_path` because `path` is the cookie path. |
+| `modifiers` | array | Modifier keys held for the whole drag |
+
+### right_click
+
+Right-click to open a context menu. Raises a real `contextmenu` event, which `element.click()`
+cannot. The result's `context_menu` field says whether the event reached the page.
+
+```js
+interact({what: "right_click", selector: "text=Report row"})
+```
+
+### double_click
+
+Double-click an element or coordinate. Sent as one burst with `clickCount: 2`, so the page
+receives `dblclick` — two separate clicks never coalesce into one.
+
+```js
+interact({what: "double_click", selector: ".cell[data-col='name']"})
+```
+
+### triple_click
+
+Triple-click to select a whole line or paragraph before replacing it.
+
+```js
+interact({what: "triple_click", selector: "#bio"})
+interact({what: "type", selector: "#bio", text: "Replacement text"})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `selector` / `element_id` / `index` | — | Target element (right_click, double_click, triple_click) |
+| `x`, `y` | number | Viewport coordinates, as an alternative to a selector |
+| `modifiers` | array | Modifier keys held during the click |
+
+### hover_at
+
+Move the pointer to a viewport coordinate to reveal a tooltip or hover state where no element can
+be named — canvas charts, map pins, SVG regions. Use `hover` with a selector for ordinary elements.
+
+```js
+interact({what: "hover_at", x: 640, y: 380})
+```
+
+### scroll_at
+
+Send wheel scrolling at a viewport coordinate. Scrolls the pane under the pointer rather than the
+page, which is what an inner scroll container or a virtualized list needs.
+
+```js
+interact({what: "scroll_at", x: 400, y: 500, delta_y: 600})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `x`, `y` | number (required) | Viewport coordinates to act at |
+| `delta_x` | number | Horizontal wheel delta in pixels; positive scrolls right (scroll_at) |
+| `delta_y` | number | Vertical wheel delta in pixels; positive scrolls down (scroll_at) |
+| `modifiers` | array | Modifier keys held during the gesture |
+
+---
+
+## Region Capture
+
+### zoom_region
+
+Capture one rectangle of the viewport, optionally supersampled, to read detail that a full-page
+screenshot renders illegibly — a chart axis, a licence plate in a photo, small print in a table.
+The image comes back inline and is also written to the screenshots directory.
+
+```js
+interact({what: "zoom_region", x: 320, y: 180, width: 400, height: 220, scale: 2})
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `x`, `y` | number (required) | — | Top-left corner of the region, in viewport pixels |
+| `width`, `height` | number (required) | — | Size of the region in pixels |
+| `scale` | number | 1 | Supersampling factor, 0-4. Use 2 to render the region at twice its on-screen size. |
+
+---
+
 ## Performance Profiling
 
 Add `analyze: true` to any DOM action to get a `perf_diff` in the result — before/after timing comparison with Web Vitals ratings and a verdict.

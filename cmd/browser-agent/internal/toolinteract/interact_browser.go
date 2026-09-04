@@ -1,7 +1,7 @@
-// interact_browser.go — Every interact action that drives the browser chrome rather
-// than the page's DOM: navigate/refresh/back/forward, tab open/switch/activate/close,
-// highlight and execute_js, plus subtitles and the shared
-// queueBrowserAction helper they all funnel through.
+// interact_browser.go — Every interact action that drives the browser chrome or the tab's
+// rendering surface rather than the page's DOM: navigate/refresh/back/forward, tab
+// open/switch/activate/close, highlight, execute_js and the zoom_region capture, plus
+// subtitles and the shared queueBrowserAction helper they all funnel through.
 // Why one file: this was four files by topic, but the call graph makes it one —
 // every handler here funnels through queueBrowserAction, and applySwitchTabTracking
 // (formerly interact_tracking.go) has exactly one caller,
@@ -16,12 +16,15 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // Handle is the sole cross-package browser-action boundary. Action-family
@@ -50,6 +53,8 @@ func (h *BrowserActions) Handle(action string, req mcp.JSONRPCRequest, args json
 		return h.handleHighlight(req, args)
 	case "execute_js":
 		return h.handleExecuteJS(req, args)
+	case "zoom_region":
+		return h.handleZoomRegion(req, args)
 	default:
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Unsupported browser action", "Use a registered interact action", mcp.WithParam("action"))
 	}
@@ -497,4 +502,111 @@ func (h *BrowserActions) applySwitchTabTracking(correlationID string) {
 	tabURL, _ := result["url"].(string)
 	tabTitle, _ := result["title"].(string)
 	h.deps.Capture().Extension().UpdateTrackedTab(tabID, tabURL, tabTitle)
+}
+
+// =============================================================================
+// ZOOM REGION
+// =============================================================================
+
+// zoomRegionTimeout bounds a clipped capture. The renderer work is a single Page.captureScreenshot
+// plus one write to the screenshots directory, so a slower answer than this means the debugger
+// never attached rather than that the image is still rendering.
+const zoomRegionTimeout = 20 * time.Second
+
+type zoomRegionParams struct {
+	X      *float64 `json:"x"`
+	Y      *float64 `json:"y"`
+	Width  float64  `json:"width"`
+	Height float64  `json:"height"`
+	Scale  float64  `json:"scale,omitempty"`
+	TabID  int      `json:"tab_id,omitempty"`
+}
+
+// handleZoomRegion captures one rectangle of the viewport, optionally supersampled.
+//
+// It lives with the browser actions rather than the DOM actions because it never touches an
+// element: it reads pixels out of the tab's rendering surface, the way observe's screenshot does.
+// The capture takes the raw pending-query path instead of the async command builder because the
+// extension answers it with the image itself, which must be lifted into an MCP image block
+// instead of being spent as a megabyte of base64 inside a text result.
+func (h *BrowserActions) handleZoomRegion(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params zoomRegionParams
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+		return resp
+	}
+	if resp, failed := validateZoomRegionParams(req, params); failed {
+		return resp
+	}
+	if resp, blocked := checkGuardsWithOpts(req, []func(*mcp.StructuredError){mcp.WithAction("zoom_region")},
+		h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking); blocked {
+		return resp
+	}
+	return h.captureZoomRegion(req, params)
+}
+
+func validateZoomRegionParams(req mcp.JSONRPCRequest, params zoomRegionParams) (mcp.JSONRPCResponse, bool) {
+	problem := act.ValidateZoomRegion(act.GestureTarget{
+		HasX:   params.X != nil,
+		HasY:   params.Y != nil,
+		Width:  params.Width,
+		Height: params.Height,
+		Scale:  params.Scale,
+	})
+	if problem == nil {
+		return mcp.JSONRPCResponse{}, false
+	}
+	return act.GestureParamFailure(req, "zoom_region", problem), true
+}
+
+func (h *BrowserActions) captureZoomRegion(req mcp.JSONRPCRequest, params zoomRegionParams) mcp.JSONRPCResponse {
+	store := h.deps.Capture()
+	if store == nil {
+		return mcp.Fail(req, mcp.ErrNoData, "Capture is not initialized", "Restart the Kaboom daemon and retry.")
+	}
+	query := queries.PendingQuery{
+		Type:   "cdp_action",
+		Params: marshalQueryParams(zoomRegionQueryFields(params)),
+		TabID:  params.TabID,
+	}
+	queryID, err := store.Queries().CreatePendingQueryWithTimeout(query, zoomRegionTimeout, req.ClientID)
+	if err != nil {
+		return mcp.Fail(req, mcp.ErrExtError, "Command queue full: "+err.Error(), "Wait for in-flight commands to complete, then retry.")
+	}
+	raw, err := store.Queries().WaitForResult(queryID, zoomRegionTimeout)
+	if err != nil {
+		return mcp.Fail(req, mcp.ErrExtTimeout, "zoom_region capture timeout: "+err.Error(),
+			"Confirm the extension is connected and the tab is not held by a performance trace, then retry.")
+	}
+	return zoomRegionResponse(req, raw)
+}
+
+func zoomRegionQueryFields(params zoomRegionParams) map[string]any {
+	fields := map[string]any{
+		"action": "zoom_region",
+		"x":      *params.X,
+		"y":      *params.Y,
+		"width":  params.Width,
+		"height": params.Height,
+	}
+	if params.Scale > 0 {
+		fields["scale"] = params.Scale
+	}
+	return fields
+}
+
+// zoomRegionResponse turns the extension's payload into a text block plus a viewable image.
+func zoomRegionResponse(req mcp.JSONRPCRequest, raw json.RawMessage) mcp.JSONRPCResponse {
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil || payload == nil {
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Could not read the zoom_region result: "+string(raw),
+			"Check the extension logs; the capture may have been interrupted.")
+	}
+	if message, ok := payload["error"].(string); ok && strings.TrimSpace(message) != "" {
+		return mcp.Fail(req, mcp.ErrExtError, "zoom_region capture failed: "+strings.TrimSpace(message),
+			"Confirm the region is inside the viewport and the tab allows debugger attachment.")
+	}
+	dataURL := act.ExtractCapturedDataURL(payload)
+	resp := mcp.Succeed(req, "Region captured", payload)
+	base64Data, mimeType := util.SplitDataURL(dataURL)
+	return mcp.AppendImageToResponse(resp, base64Data, mimeType)
 }

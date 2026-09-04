@@ -44,7 +44,7 @@ export declare function shouldEscalateToCDP(action: string, params: DOMActionPar
  */
 export declare function buildReactValueReconcileExpression(selector: string): string;
 /**
- * Attempt CDP-first execution for click/type/key_press.
+ * Attempt CDP-first execution for click/type/key_press and the pointer gestures.
  * Returns a DOMResult on success, or null to signal fallback to DOM primitives.
  * Any error is caught internally — callers just check for null.
  */

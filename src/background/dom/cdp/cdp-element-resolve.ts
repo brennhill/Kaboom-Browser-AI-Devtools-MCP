@@ -152,3 +152,28 @@ export function buildCDPResult(
     ...extra
   } as DOMResult
 }
+
+/**
+ * Evidence for a gesture addressed by coordinate rather than by element.
+ *
+ * hover_at, scroll_at and drag have no selector to echo, so reporting them through
+ * buildCDPResult would either invent a matched element or drop the coordinate that was
+ * actually driven. The coordinate IS the evidence here.
+ */
+export function buildCoordinateCDPResult(
+  action: string,
+  point: { x: number; y: number },
+  elapsedMs: number,
+  extra?: Record<string, unknown>
+): DOMResult {
+  return {
+    success: true,
+    action,
+    selector: '',
+    x: point.x,
+    y: point.y,
+    timing: { total_ms: elapsedMs },
+    insertion_strategy: 'cdp',
+    ...extra
+  } as DOMResult
+}

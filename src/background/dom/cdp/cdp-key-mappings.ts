@@ -99,3 +99,31 @@ export function charToKeyInfo(char: string): { key: string; code: string; keyCod
   // Fallback for other characters
   return { key: char, code: '', keyCode: 0, shiftKey: false }
 }
+
+/**
+ * CDP `Input.dispatch*Event` modifier bitmask. Chrome defines these bits, not us:
+ * Alt=1, Ctrl=2, Meta/Command=4, Shift=8. A wrong bit silently produces a plain
+ * click — the page never sees the ctrl/shift the agent asked for.
+ */
+export const MODIFIER_BITS: Record<string, number> = {
+  alt: 1,
+  ctrl: 2,
+  control: 2,
+  meta: 4,
+  cmd: 4,
+  command: 4,
+  shift: 8
+}
+
+/**
+ * Fold modifier names into the CDP bitmask. Unknown names are ignored rather than
+ * rejected: an agent asking for a modifier Chrome has no bit for still gets its click.
+ */
+export function modifierBitmask(modifiers?: readonly string[]): number {
+  if (!modifiers || modifiers.length === 0) return 0
+  let mask = 0
+  for (const name of modifiers) {
+    mask |= MODIFIER_BITS[String(name).trim().toLowerCase()] ?? 0
+  }
+  return mask
+}

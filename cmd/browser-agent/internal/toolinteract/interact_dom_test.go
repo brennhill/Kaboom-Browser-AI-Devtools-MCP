@@ -203,7 +203,7 @@ func TestHandleHardwareClick_InvalidJSON(t *testing.T) {
 func TestHandleCDPClick_PilotBlocked(t *testing.T) {
 	h, fs := newFakeDOMActions(t)
 	fs.blockPilot = true
-	assertErr(t, h.HandleCDPClick(testReq(), json.RawMessage(`{}`), "hardware_click", 1, 2, 0), mcp.ErrCodePilotDisabled)
+	assertErr(t, h.HandleCDPClick(testReq(), json.RawMessage(`{}`), "hardware_click", cdpClickTarget{X: 1, Y: 2}), mcp.ErrCodePilotDisabled)
 }
 
 func TestNormalizeDOMActionArgs_SetsAction(t *testing.T) {

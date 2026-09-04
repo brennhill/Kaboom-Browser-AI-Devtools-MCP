@@ -120,6 +120,22 @@ export interface DOMResult {
     tag: string
   }>
   section_count?: number
+  // Pointer gesture evidence (kaboom-05ue.5). These say what was actually dispatched, so a
+  // gesture that reports success can be checked against what the page could have seen.
+  x?: number
+  y?: number
+  button?: string
+  click_count?: number
+  modifiers?: number
+  /** right_click only: whether the contextmenu event reached the page. */
+  context_menu?: boolean
+  /** drag only: caller-supplied path points, and the moves actually dispatched. */
+  path_points?: number
+  move_events?: number
+  /** drag only: false when Chrome refused Input.dispatchDragEvent and only the pointer path ran. */
+  html5_drag?: boolean
+  delta_x?: number
+  delta_y?: number
 }
 
 export interface DOMPrimitiveOptions {
@@ -142,6 +158,20 @@ export interface DOMPrimitiveOptions {
   url_contains?: string
   absent?: boolean
   structured?: boolean
+  // Pointer gesture inputs (kaboom-05ue.5). x/y address a viewport coordinate directly;
+  // `drag_path` is a route, not a pair of endpoints — HTML5 drag-and-drop and canvas apps
+  // both start their drag on the first intermediate move, so a two-point jump drags nothing.
+  x?: number
+  y?: number
+  /** The drag route. Named drag_path because `path` is already the cookie path string. */
+  drag_path?: Array<{ x: number; y: number }>
+  /** ctrl | shift | alt | cmd (meta), combinable. Folded into Chrome's modifier bitmask. */
+  modifiers?: string[]
+  delta_x?: number
+  delta_y?: number
+  width?: number
+  height?: number
+  scale?: number
 }
 
 export interface DOMActionParams extends DOMPrimitiveOptions {
