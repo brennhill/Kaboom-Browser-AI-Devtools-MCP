@@ -316,3 +316,170 @@ describe('CDPSessionManager — user abort', () => {
     assert.deepStrictEqual(dbg.calls.detach.map((c) => c.target.tabId), [1])
   })
 })
+
+describe('CDPSessionManager — focus emulation', () => {
+  // Chrome stops delivering focus to a tab the user is not looking at. Without
+  // Emulation.setFocusEmulationEnabled a background tab reports document.hasFocus() === false,
+  // so `:focus`, focus/blur handlers, autofocus and every widget that gates on focus behave
+  // differently from what the agent believes it is driving — and typing lands nowhere.
+  const FOCUS_EMULATION = 'Emulation.setFocusEmulationEnabled'
+  const focusCalls = (dbg) => dbg.calls.send.filter((c) => c.method === FOCUS_EMULATION)
+
+  test('enables focus emulation when the session attaches', async () => {
+    const { mgr, dbg } = makeManager()
+    const lease = await mgr.acquire(1)
+    assert.deepStrictEqual(
+      focusCalls(dbg).map((c) => c.params.enabled),
+      [true],
+      'the driving session must make the background tab behave as focused'
+    )
+    assert.deepStrictEqual(focusCalls(dbg)[0].target, { tabId: 1 })
+    lease.release()
+  })
+
+  test('enables focus emulation on an adopted attachment too', async () => {
+    // After an MV3 worker restart the attachment survives but our emulation state does not,
+    // so an adopted session that skipped this would type into an unfocused page.
+    const { mgr, dbg } = makeManager({ probeAttached: true })
+    const lease = await mgr.acquire(1)
+    assert.strictEqual(dbg.calls.attach.length, 0, 'the live attachment is adopted, not re-attached')
+    assert.deepStrictEqual(
+      focusCalls(dbg).map((c) => c.params.enabled),
+      [true]
+    )
+    lease.release()
+  })
+
+  test('enables once per session, not once per action', async () => {
+    const { mgr, dbg } = makeManager()
+    for (let i = 0; i < 4; i++) {
+      const lease = await mgr.acquire(1)
+      lease.release()
+    }
+    assert.strictEqual(focusCalls(dbg).length, 1, 'a warm session must not re-send the override')
+  })
+
+  test('clears focus emulation when the session closes, before detaching', async () => {
+    const { mgr, dbg, clock } = makeManager()
+    const lease = await mgr.acquire(1)
+    lease.release()
+    clock.advance(30_000)
+    assert.deepStrictEqual(
+      focusCalls(dbg).map((c) => c.params.enabled),
+      [true, false],
+      'the tab must be handed back to the user without a forced-focus override'
+    )
+    const clearIndex = dbg.calls.send.findIndex((c) => c.method === FOCUS_EMULATION && c.params.enabled === false)
+    assert.ok(clearIndex >= 0, 'the clear must be issued')
+    assert.strictEqual(dbg.calls.detach.length, 1)
+  })
+
+  test('clears focus emulation when the user presses Stop', async () => {
+    const { mgr, dbg } = makeManager()
+    const lease = await mgr.acquire(1)
+    mgr.abort(1, 'stopped_by_user')
+    assert.strictEqual(lease.valid, false)
+    assert.deepStrictEqual(
+      focusCalls(dbg).map((c) => c.params.enabled),
+      [true, false],
+      'a stopped tab must not keep pretending it is focused'
+    )
+  })
+
+  test('re-enables focus emulation on the next session after a close', async () => {
+    const { mgr, dbg, clock } = makeManager()
+    const first = await mgr.acquire(1)
+    first.release()
+    clock.advance(30_000)
+    const second = await mgr.acquire(1)
+    assert.deepStrictEqual(
+      focusCalls(dbg).map((c) => c.params.enabled),
+      [true, false, true],
+      'a fresh session must re-assert focus emulation'
+    )
+    second.release()
+  })
+
+  test('a tab that refuses focus emulation is still drivable', async () => {
+    // Some targets (extension pages, pre-render placeholders) reject the override. Refusing
+    // the whole lease would take away click and type on a tab that works fine otherwise.
+    const logged = []
+    const { mgr } = makeManager(
+      { sendError: { method: FOCUS_EMULATION, message: 'not allowed' } },
+      { log: (event, fields) => logged.push({ event, fields }) }
+    )
+    const lease = await mgr.acquire(1)
+    assert.strictEqual(lease.valid, true)
+    const failure = logged.find((l) => l.event === 'cdp_focus_emulation_failed')
+    assert.ok(failure, 'the refusal must be reported, never silently swallowed (rule 27)')
+    assert.strictEqual(failure.fields.tab_id, 1)
+    lease.release()
+  })
+})
+
+describe('background typing against a focus-gated page', () => {
+  /**
+   * A page that only accepts keystrokes while `document.hasFocus()` is true — the pattern
+   * behind command palettes, rich-text editors and "type-to-search" widgets. Chrome reports
+   * a background tab as unfocused, so before focus emulation these pages swallowed every
+   * keystroke and reported success: the agent believed it had typed and the field was empty.
+   */
+  function makeFocusGatedPage(tabId) {
+    const state = { tabActive: false, focusEmulated: false, typed: [], attached: new Set() }
+    const detachListeners = []
+    const hasFocus = () => state.tabActive || state.focusEmulated
+    return {
+      state,
+      api: {
+        attach: async (target) => {
+          state.attached.add(target.tabId)
+        },
+        detach: async (target) => {
+          state.attached.delete(target.tabId)
+          state.focusEmulated = false
+        },
+        sendCommand: async (target, method, params) => {
+          if (!state.attached.has(target.tabId)) {
+            throw new Error(`Debugger is not attached to the tab with id: ${target.tabId}`)
+          }
+          if (method === 'Emulation.setFocusEmulationEnabled') {
+            state.focusEmulated = params.enabled === true
+            return {}
+          }
+          if (method === 'Input.insertText') {
+            // The page's own gate. An unfocused page drops the text and reports nothing.
+            if (hasFocus()) state.typed.push(params.text)
+            return {}
+          }
+          if (method === 'Runtime.evaluate' && params.expression === 'document.hasFocus()') {
+            return { result: { value: hasFocus() } }
+          }
+          return {}
+        },
+        onDetach: { addListener: (cb) => detachListeners.push(cb) }
+      },
+      tabId
+    }
+  }
+
+  test('the fixture really is focus-gated: no emulation, no text', async () => {
+    const page = makeFocusGatedPage(1)
+    page.state.attached.add(1)
+    await page.api.sendCommand({ tabId: 1 }, 'Input.insertText', { text: 'hello' })
+    assert.deepStrictEqual(page.state.typed, [], 'a background tab must drop text without emulation')
+  })
+
+  test('types into a backgrounded tab because the lease emulates focus', async () => {
+    const page = makeFocusGatedPage(1)
+    const mgr = new CDPSessionManager({ debuggerApi: page.api, idleGraceMs: 30_000 })
+    const lease = await mgr.acquire(1)
+    assert.strictEqual(page.state.tabActive, false, 'the user is looking at a different tab')
+
+    const focused = await lease.send('Runtime.evaluate', { expression: 'document.hasFocus()' })
+    assert.strictEqual(focused.result.value, true, 'the page must believe it is focused')
+
+    await lease.send('Input.insertText', { text: 'hello' })
+    assert.deepStrictEqual(page.state.typed, ['hello'], 'the keystrokes must land while backgrounded')
+    lease.release()
+  })
+})

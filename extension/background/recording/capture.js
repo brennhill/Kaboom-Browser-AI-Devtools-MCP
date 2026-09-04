@@ -112,6 +112,9 @@ function getStreamId(tabId) {
  * Shows a toast prompting the user to open the Kaboom popup and approve.
  */
 export async function requestRecordingGesture(tab, name, fps, audio, mediaType) {
+    // Deliberate foreground: screen recording needs a user gesture, and the toast asking for
+    // it is only visible on the tab in front of the user. Ordinary capture and driving stay in
+    // the background (see captureTabImage) — this is one of the few places that may interrupt.
     chrome.tabs.update(tab.id, { active: true });
     sendTabToast(tab.id, `\u2191 Open KaBOOM!`, `Approve ${mediaType.toLowerCase()} recording request`, 'audio', scaleTimeout(30000));
     await setLocal(StorageKey.PENDING_RECORDING, { name, fps, audio, tabId: tab.id, url: tab.url });

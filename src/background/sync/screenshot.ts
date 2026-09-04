@@ -5,7 +5,7 @@
 
 import type { LogEntry } from '../../types/capture/telemetry.js'
 import { errorMessage } from '../../lib/error-utils.js'
-import { captureVisibleTabSafe } from '../ui/tracked-tab-state.js'
+import { captureTabImage } from '../ui/tracked-tab-state.js'
 import { getRequestHeaders } from './server.js'
 
 interface ScreenshotRateCheck {
@@ -44,7 +44,7 @@ export async function captureScreenshot(
 
   try {
     const tab = await chrome.tabs.get(tabId)
-    const dataUrl = await captureVisibleTabSafe(tabId, tab.windowId, { format: 'jpeg', quality: 80 })
+    const dataUrl = await captureTabImage(tabId, tab.windowId, { format: 'jpeg', quality: 80 })
     recordScreenshot(tabId)
 
     const response = await fetch(`${serverUrl}/screenshots`, {

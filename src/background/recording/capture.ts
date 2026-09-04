@@ -122,6 +122,9 @@ export async function requestRecordingGesture(
   audio: string,
   mediaType: string
 ): Promise<{ status: string; name: string; error?: string }> {
+  // Deliberate foreground: screen recording needs a user gesture, and the toast asking for
+  // it is only visible on the tab in front of the user. Ordinary capture and driving stay in
+  // the background (see captureTabImage) — this is one of the few places that may interrupt.
   chrome.tabs.update(tab.id!, { active: true })
   sendTabToast(
     tab.id!,

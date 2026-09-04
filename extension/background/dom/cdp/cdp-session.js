@@ -22,6 +22,17 @@ export const DEFAULT_IDLE_GRACE_MS = 30_000;
 export const DEFAULT_DRAIN_TIMEOUT_MS = 10_000;
 /** Read-only probe used to decide whether Chrome already has us attached. */
 const ADOPTION_PROBE = 'Page.getLayoutMetrics';
+/**
+ * Makes a tab the user is not looking at behave as if it were focused.
+ *
+ * Chrome delivers focus only to the visible tab, so a background tab reports
+ * `document.hasFocus() === false`: `:focus` never paints, focus/blur handlers never run,
+ * `autofocus` is ignored, and every widget that gates on focus — command palettes,
+ * rich-text editors, type-to-search inputs — silently swallows the keystrokes the agent
+ * dispatches. Without this override, driving a background tab reports success while the
+ * field stays empty. With it, kaboom no longer has to steal the user's foreground to type.
+ */
+const FOCUS_EMULATION = 'Emulation.setFocusEmulationEnabled';
 export class CDPSessionManager {
     deps;
     sessions = new Map();
@@ -136,17 +147,40 @@ export class CDPSessionManager {
         if (await this.probeAdoptable(target)) {
             session.attached = true;
             this.deps.log?.('cdp_session_adopted', { tab_id: session.tabId });
-            return;
         }
+        else {
+            try {
+                await this.deps.debuggerApi.attach(target, this.deps.cdpVersion);
+            }
+            catch (err) {
+                throw new Error(`${CDP_SESSION_ERRORS.ATTACH_FAILED}: ${errorMessage(err, 'unknown_error')}`);
+            }
+            session.attached = true;
+            session.enabledDomains.clear();
+            this.deps.log?.('cdp_session_attached', { tab_id: session.tabId });
+        }
+        // Once per session, including an adopted one: an attachment that outlived the service
+        // worker kept Chrome's side alive but nothing re-asserts the override for us.
+        await this.setFocusEmulation(target, true);
+    }
+    /**
+     * Turn background-tab focus emulation on or off.
+     *
+     * A target that refuses the override (extension pages, pre-render placeholders) is still
+     * perfectly drivable for clicks, reads and captures, so the refusal is reported and the
+     * lease is granted anyway — failing the acquire would take away work that does succeed.
+     */
+    async setFocusEmulation(target, enabled) {
         try {
-            await this.deps.debuggerApi.attach(target, this.deps.cdpVersion);
+            await this.deps.debuggerApi.sendCommand(target, FOCUS_EMULATION, { enabled });
         }
         catch (err) {
-            throw new Error(`${CDP_SESSION_ERRORS.ATTACH_FAILED}: ${errorMessage(err, 'unknown_error')}`);
+            this.deps.log?.('cdp_focus_emulation_failed', {
+                tab_id: target.tabId,
+                enabled,
+                error: errorMessage(err, 'unknown_error')
+            });
         }
-        session.attached = true;
-        session.enabledDomains.clear();
-        this.deps.log?.('cdp_session_attached', { tab_id: session.tabId });
     }
     async probeAdoptable(target) {
         try {
@@ -235,6 +269,12 @@ export class CDPSessionManager {
         session.attached = false;
         session.generation += 1;
         session.enabledDomains.clear();
+        // Hand the tab back without a forced-focus override. Issued but not awaited: Chrome
+        // processes the two chrome.debugger calls in the order they were made, so the clear still
+        // lands before the detach, and not awaiting keeps `detach` in the same turn as the
+        // synchronous lease invalidation above — the Stop path and its tests depend on the
+        // attachment being gone by the time abort() returns.
+        void this.setFocusEmulation({ tabId: session.tabId }, false);
         try {
             await this.deps.debuggerApi.detach({ tabId: session.tabId });
             this.deps.log?.('cdp_session_detached', { tab_id: session.tabId, reason });

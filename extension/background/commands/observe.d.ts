@@ -20,10 +20,11 @@ export declare function computeFullPageCaptureDimensions(contentWidth: number, c
 };
 /**
  * Compute the source crop rectangle (in image/device pixels) for an element's
- * CSS-pixel viewport rect. `captureVisibleTab` returns an image scaled by the
- * device pixel ratio, and the rect is viewport-relative CSS pixels — so the
- * crop is `rect * dpr`, clamped to the image bounds. Returns null when there is
- * nothing to crop (non-positive size, or the element lies outside the image).
+ * CSS-pixel viewport rect. The capture is clipped to the visual viewport and
+ * scaled by the page's device pixel ratio, and the rect is viewport-relative
+ * CSS pixels — so the crop is `rect * dpr`, clamped to the image bounds.
+ * Returns null when there is nothing to crop (non-positive size, or the element
+ * lies outside the image).
  */
 export declare function computeElementCropRect(rect: {
     x: number;

@@ -95,6 +95,9 @@ export function installPushCommandListener(logFn?: (message: string) => void): v
         // Tab unreachable for toast
       }
 
+      // Deliberately the visible-tab API: this is a keyboard shortcut acting on the tab the
+      // user is looking at right now, so there is no foreground to steal and no reason to
+      // attach the debugger. Agent-driven capture uses the background path (captureTabImage).
       const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId ?? chrome.windows.WINDOW_ID_CURRENT, {
         format: 'png'
       })
