@@ -14,6 +14,7 @@ import { errorMessage } from '../../lib/error-utils.js';
 import { focusTabAndWindow } from '../../lib/tabs/tab-focus.js';
 import { contentReadiness } from '../runtime-state/content-readiness.js';
 import { delay } from '../../lib/timeout-utils.js';
+import { adoptTabIntoDrivenGroup, noteDrivenTabClosed } from '../tab-groups/driven-tab-group.js';
 // =============================================================================
 // TIMEOUT CONFIGURATION
 // =============================================================================
@@ -85,6 +86,10 @@ async function handleNewTabAction(tabId, url, actionToast, reason) {
         return { success: false, error: 'missing_url', message: 'URL required for new_tab action' };
     actionToast(tabId, reason || 'new_tab', reason ? undefined : 'opening new tab', 'trying', 5000);
     const newTab = await chrome.tabs.create({ url, active: false });
+    // A tab Kaboom opened joins Kaboom's group. Background driving means the user is
+    // not watching this tab, so the group is how they find it (rule 19: one helper).
+    if (typeof newTab.id === 'number')
+        await adoptTabIntoDrivenGroup(newTab.id, 'new_tab');
     actionToast(tabId, reason || 'new_tab', undefined, 'success');
     return {
         success: true,
@@ -216,6 +221,11 @@ async function executeSwitchTabAction(params) {
     // update (issue #271). This ensures subsequent /sync heartbeats report
     // the correct tracked tab.
     await persistTrackedTab(activeTab);
+    // A tab the user hands over joins the group on adoption — same helper as new_tab,
+    // so switching to a tab and opening one cannot diverge.
+    const adoptedTabID = activeTab.id ?? targetTab.id;
+    if (typeof adoptedTabID === 'number')
+        await adoptTabIntoDrivenGroup(adoptedTabID, 'switch_tab');
     broadcastTrackingState().catch(() => {
         debugLog(DebugCategory.CAPTURE, 'Tracking broadcast failed after tab switch');
     });
@@ -253,6 +263,9 @@ async function executeCloseTabAction(tabId, params) {
         };
     }
     await chrome.tabs.remove(targetTabID);
+    // Chrome dissolves a group with its last tab; forget the id rather than drive at
+    // a group that no longer exists.
+    await noteDrivenTabClosed(targetTabID);
     const activeTab = await getActiveTab();
     return {
         success: true,

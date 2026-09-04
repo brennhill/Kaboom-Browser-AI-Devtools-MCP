@@ -34,7 +34,7 @@
     "src/background/dom/primitives/dom-primitives-stability.ts:domPrimitiveActionDiff:92": 434,
     "src/background/environment-transaction/browser-state-driver.ts:createEnvironmentStateDriver:84": 87,
     "src/background/exec/analyze-feature-gates.ts:analyzeFeatureGates:11": 175,
-    "src/background/exec/browser-actions.ts:handleAsyncExecuteCommand:428": 82,
+    "src/background/exec/browser-actions.ts:handleAsyncExecuteCommand:439": 82,
     "src/background/exec/content-fallback-scripts.ts:pageSummaryFallbackScript:164": 152,
     "src/background/exec/content-fallback-scripts.ts:readableFallbackScript:11": 90,
     "src/background/exec/csp-safe/executor.ts:cspSafeExecutor:51": 234,
