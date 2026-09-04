@@ -145,6 +145,10 @@ export function createTabGroupsWorld(options = {}) {
 
   world.chrome = chromeMock
   world.permissions = permissions
+  // Flip the live grant mid-test, the way the popup toggle does at runtime.
+  world.setGranted = (value) => {
+    world.granted = value
+  }
   world.addTab = addTab
   world.groupOf = (tabId) => world.tabs.get(tabId)?.groupId ?? null
   world.groupTitles = () => [...world.groups.values()].map((group) => group.title)

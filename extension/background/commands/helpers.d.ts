@@ -3,6 +3,7 @@
  */
 import type { PendingQuery } from '../../types/runtime/queries.js';
 import type { SyncClient } from '../sync/sync-client.js';
+import type { DrivenTabGroupEntryPoint } from '../tab-groups/driven-tab-group.js';
 /** Callback signature for sending async command results back through /sync */
 export type SendAsyncResultFn = (syncClient: SyncClient, queryId: string, correlationId: string, status: 'complete' | 'error' | 'timeout' | 'cancelled', result?: unknown, error?: string) => void;
 /** Callback signature for showing visual action toasts */
@@ -34,7 +35,7 @@ export declare function parseQueryParamsObject(params: PendingQuery['params']): 
 export declare function withTargetContext(result: unknown, target: TargetResolution): Record<string, unknown>;
 export declare function requiresTargetTab(queryType: string): boolean;
 export declare function isBrowserEscapeAction(queryType: string, paramsObj: QueryParamsObject): boolean;
-export declare function persistTrackedTab(tab: chrome.tabs.Tab): Promise<void>;
+export declare function persistTrackedTab(tab: chrome.tabs.Tab, entryPoint?: DrivenTabGroupEntryPoint): Promise<void>;
 export declare function resolveTargetTab(query: PendingQuery, paramsObj: QueryParamsObject): Promise<{
     target?: TargetResolution;
     error?: TargetResolutionError;

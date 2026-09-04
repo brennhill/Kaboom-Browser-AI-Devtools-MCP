@@ -12,8 +12,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-const { DrivingSessions, HEARTBEAT_INTERVAL_MS } = await import('../ui/driving-session.js')
-const { HEARTBEAT_TTL_MS } = await import('../../content/ui/agent-indicator.js')
+const { DrivingSessions, HEARTBEAT_INTERVAL_MS } = await import('../supervision/driving-session.js')
+const { HEARTBEAT_TTL_MS } = await import('../../content/ui/supervision/agent-indicator.js')
 
 /** Deterministic interval queue — nothing sleeps (repo rule 9). */
 function makeTimers() {
@@ -186,7 +186,7 @@ describe('a user stop must not be re-run through the DOM fallback', () => {
   // return a result, not null, once a stop has been consumed.
   test('a consumed stop is reported, so the caller has a result and does not fall back', async () => {
     const { tryCDPEscalation, STOPPED_BY_USER } = await import('../dom/cdp/cdp-dispatch.js')
-    const { drivingSessions } = await import('../ui/driving-session.js')
+    const { drivingSessions } = await import('../supervision/driving-session.js')
 
     assert.ok(STOPPED_BY_USER.startsWith('stopped_by_user'), 'the stop must be a named terminal state')
 

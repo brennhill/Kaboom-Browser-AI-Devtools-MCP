@@ -307,11 +307,9 @@ async function executeSwitchTabAction(params: BrowserActionParams | undefined): 
   // Persist tracked tab so the extension-side state matches the server-side
   // update (issue #271). This ensures subsequent /sync heartbeats report
   // the correct tracked tab.
-  await persistTrackedTab(activeTab)
-  // A tab the user hands over joins the group on adoption — same helper as new_tab,
-  // so switching to a tab and opening one cannot diverge.
-  const adoptedTabID = activeTab.id ?? targetTab.id
-  if (typeof adoptedTabID === 'number') await adoptTabIntoDrivenGroup(adoptedTabID, 'switch_tab')
+  // Persisting adopts the tab into the driven group; the label distinguishes a
+  // user hand-over from an auto-track recovery.
+  await persistTrackedTab(activeTab, 'switch_tab')
   broadcastTrackingState().catch(() => {
     debugLog(DebugCategory.CAPTURE, 'Tracking broadcast failed after tab switch')
   })

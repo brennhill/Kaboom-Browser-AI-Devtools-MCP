@@ -10,6 +10,7 @@ import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js';
 import { delay } from '../../lib/timeout-utils.js';
 import { setLocals } from '../../lib/storage/local.js';
 import { isInternalTab } from '../../lib/tabs/internal-url.js';
+import { adoptTabIntoDrivenGroup } from '../tab-groups/driven-tab-group.js';
 export function debugLog(category, message, data = null) {
     const globalLogger = globalThis
         .__KABOOM_DEBUG_LOG__;
@@ -262,7 +263,7 @@ function buildMissingTargetError(queryType, useActiveTab, trackedTabId) {
         }
     };
 }
-export async function persistTrackedTab(tab) {
+export async function persistTrackedTab(tab, entryPoint = 'tracked_tab') {
     if (!tab.id)
         return;
     await setLocals({
@@ -270,6 +271,10 @@ export async function persistTrackedTab(tab) {
         trackedTabUrl: tab.url || '',
         trackedTabTitle: tab.title || ''
     });
+    // Adoption lives in this funnel, not at the call sites. Every path that makes a tab
+    // the tracked one — switch_tab plus the four auto-track recovery paths — must put it
+    // in the driven group, and a path added later cannot forget to (rule 19).
+    await adoptTabIntoDrivenGroup(tab.id, entryPoint);
 }
 function isTrackableTab(tab) {
     return !!tab?.id && typeof tab.url === 'string' && !isInternalTab(tab);

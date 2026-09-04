@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-04
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/interactdispatch/handler.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
@@ -39,8 +39,6 @@ code_paths:
   - src/background/commands/interact-explore.ts
   - src/background/dom/cdp/cdp-session.ts
   - src/background/dom/cdp/cdp-ax-tree.ts
-  - src/background/commands/ax-find.ts
-  - cmd/browser-agent/internal/toolinteract/interact_ax.go
   - src/background/exec/browser-actions.ts
   - src/background/runtime-state/csp-state.ts
   - src/background/runtime-state/content-readiness.ts
@@ -85,7 +83,6 @@ code_paths:
   - cmd/browser-agent/internal/asyncresult/lifecycle.go
   - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/summarypref/cache.go
-  - cmd/browser-agent/tools_core.go
 test_paths:
   - extension/background/__tests__/cdp-session.test.js
   - extension/background/__tests__/cdp-ax-tree.test.js
@@ -103,14 +100,12 @@ test_paths:
   - internal/recording/actionlog/recorder_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
   - tests/cli/runtime/clipboard-read-page-script.test.cjs
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/explore_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
-  - cmd/browser-agent/internal/toolinteract/action_runtime_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/rich_action_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/performance_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go

@@ -16,6 +16,7 @@ const groupModule = await import('../../../extension/background/tab-groups/drive
 const pilotState = await import('../../../extension/background/runtime-state/pilot-state.js')
 const connectionGeneration = await import('../../../extension/background/runtime-state/connection-generation.js')
 const { handleBrowserAction } = await import('../../../extension/background/exec/browser-actions.js')
+const { persistTrackedTab } = await import('../../../extension/background/commands/helpers.js')
 
 const { DRIVEN_TAB_GROUP_TITLE, getDrivenTabGroupId, resetDrivenTabGroupStateForTesting } = groupModule
 
@@ -26,6 +27,35 @@ beforeEach(() => {
   pilotState.resetPilotCacheForTesting(true)
   connectionGeneration.setConnectionGeneration(1)
   noopToast.mock.resetCalls()
+})
+
+describe('the tracked-tab funnel adopts, so no recovery path can forget', () => {
+  test('persistTrackedTab adopts the tab it just made tracked', async () => {
+    // persistTrackedTab is the funnel for the auto-track recovery paths
+    // (auto_tracked_active_tab, auto_tracked_random_tab, auto_tracked_new_tab and the
+    // tryAutoTrackFallback retry). Adoption lives in the funnel rather than at those
+    // call sites so a future recovery path cannot silently skip the group (rule 19).
+    const world = installWorld(createTabGroupsWorld())
+    const tab = world.addTab()
+
+    await persistTrackedTab({ id: tab.id, url: 'https://auto-tracked.example/', title: 'recovered' })
+
+    assert.strictEqual(world.groupOf(tab.id), getDrivenTabGroupId())
+    assert.deepStrictEqual(world.groupTitles(), [DRIVEN_TAB_GROUP_TITLE])
+  })
+
+  test('a tab is adopted exactly once when switch_tab hands it over', async () => {
+    // switch_tab persists AND adopts; if both did their own adoption the tab would be
+    // grouped twice, which is how a second stray group gets created.
+    const world = installWorld(createTabGroupsWorld())
+    const source = world.addTab()
+    const target = world.addTab({ url: 'https://target.example/' })
+
+    await handleBrowserAction(source.id, { action: 'switch_tab', tab_id: target.id }, noopToast, 'c9')
+
+    assert.strictEqual(world.groupOf(target.id), getDrivenTabGroupId())
+    assert.strictEqual(world.groupCount(), 1, 'one group, not one per adoption call')
+  })
 })
 
 describe('browser actions adopt driven tabs into the Kaboom group', () => {

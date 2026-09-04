@@ -32,6 +32,7 @@ import { setupActionRecordingUI } from './popup/recording/action-recording.js'
 import { FEATURE_TOGGLES as TOGGLE_DEFS, applyFeatureToggles } from './popup/feature-toggles.js'
 import { initTrackPageButton } from './popup/tabs/tab-tracking.js'
 import { applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
+import { applyDrivenTabGroupToggle } from './popup/driven-tab-group-permission.js'
 import { initPopupLogoMotion } from './popup/shell/logo-motion.js'
 import { applyWebSocketMode, handleWebSocketModeChange, handleClearLogs, resetClearConfirm } from './popup/settings.js'
 
@@ -152,15 +153,20 @@ function renderPopupStatus(status: PopupConnectionStatus, shouldCache = true): v
  * 3. Results are applied synchronously in a single pass (no await chains).
  * 4. Non-critical init (logo, draw mode) deferred via requestAnimationFrame.
  */
-export function initPopup(): void {
-  // ── Immediate: wire up event listeners & sync UI (no async) ──────────
-
+/**
+ * Wire every control that needs no async read: the sub-UIs, the two buttons, and the
+ * background status listener. Split out of initPopup so the entry point stays inside
+ * its length budget.
+ */
+function wireImmediateControls(): void {
   // Recording rows are visible from HTML with idle defaults — no visibility:hidden.
   setupRecordingUI()
   setupActionRecordingUI()
   initTrackPageButton()
   setupWebSocketUI()
   setupToggleWarnings()
+  // Grant state lives in chrome.permissions, not the batched storage read in initPopup.
+  applyDrivenTabGroupToggle()
 
   const clearBtn = document.getElementById('clear-btn')
   if (clearBtn) clearBtn.addEventListener('click', handleClearLogs)
@@ -174,7 +180,6 @@ export function initPopup(): void {
     })
   }
 
-  // Listen for status updates
   chrome.runtime.onMessage.addListener(
     (message: { type: string; status?: PopupConnectionStatus; enabled?: boolean }) => {
       if (message.type === 'status_update' && message.status) {
@@ -182,7 +187,14 @@ export function initPopup(): void {
       }
     }
   )
+}
 
+/**
+ * Paint the last known status immediately from session storage, then ask the
+ * background for the live one. Both failure paths render an explanatory status rather
+ * than leaving the popup blank.
+ */
+function hydrateStatus(): void {
   // ── Cached status: hydrate from sessionStorage (sync read) ───────────
   void readSessionState<PopupConnectionStatus | null>({
     key: StorageKey.POPUP_LAST_STATUS,
@@ -221,6 +233,13 @@ export function initPopup(): void {
       error: 'Extension error — try reloading the extension'
     })
   }
+}
+
+export function initPopup(): void {
+  // ── Immediate: wire up event listeners & sync UI (no async) ──────────
+  wireImmediateControls()
+
+  hydrateStatus()
 
   // ── Batched storage read: one call for ALL toggle/setting keys ────────
   const toggleKeys = TOGGLE_DEFS.map((t) => t.storageKey)

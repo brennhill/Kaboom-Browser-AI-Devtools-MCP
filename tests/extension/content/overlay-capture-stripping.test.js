@@ -52,7 +52,7 @@ describe('overlay capture stripping', () => {
     const roots = [
       ['content/ui/tracked-hover-launcher.ts', 'tracked hover launcher'],
       ['content/draw-mode/lifecycle-overlay.js', 'draw mode overlay'],
-      ['content/ui/agent-indicator.ts', 'agent supervision indicator']
+      ['content/ui/supervision/agent-indicator.ts', 'agent supervision indicator']
     ]
     for (const [rel, label] of roots) {
       const source = read(rel)

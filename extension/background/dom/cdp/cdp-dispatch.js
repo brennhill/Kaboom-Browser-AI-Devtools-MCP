@@ -7,7 +7,7 @@
 import { errorMessage } from '../../../lib/error-utils.js';
 import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js';
 import { cdpSessions, CDP_SESSION_ERRORS } from './cdp-session.js';
-import { drivingSessions } from '../../ui/driving-session.js';
+import { drivingSessions } from '../../supervision/driving-session.js';
 import { resolveElement, buildCDPResult } from './cdp-element-resolve.js';
 async function cdpSend(lease, method, params) {
     await lease.send(method, params);

@@ -15,7 +15,7 @@
 import type { BackgroundMessage } from '../../types/runtime-messages.js'
 import type { ChromeMessageSender } from '../../types/runtime/chrome.js'
 import type { MessageHandlerOwner, SendResponse } from '../message-routing/types.js'
-import { sendAgentIndicator } from './content-script-bridge.js'
+import { sendAgentIndicator } from '../ui/content-script-bridge.js'
 import { cdpSessions } from '../dom/cdp/cdp-session.js'
 
 /** How often the background reassures the overlay it is still alive. */

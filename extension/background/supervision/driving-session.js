@@ -9,7 +9,7 @@
  *      worse than none.
  * Docs: docs/features/feature/agent-supervision/index.md
  */
-import { sendAgentIndicator } from './content-script-bridge.js';
+import { sendAgentIndicator } from '../ui/content-script-bridge.js';
 import { cdpSessions } from '../dom/cdp/cdp-session.js';
 /** How often the background reassures the overlay it is still alive. */
 export const HEARTBEAT_INTERVAL_MS = 5_000;

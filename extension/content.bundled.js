@@ -2270,7 +2270,7 @@
     });
   }
 
-  // extension/content/ui/agent-indicator.js
+  // extension/content/ui/supervision/agent-indicator.js
   var AGENT_INDICATOR_IDS = {
     root: "kaboom-agent-indicator",
     cursor: "kaboom-phantom-cursor",

@@ -25,6 +25,12 @@ export interface DrivenTabGroupOutcome {
     degraded_reason?: string;
 }
 /**
+ * Whether Kaboom may group tabs at all: the APIs exist and the optional `tabGroups`
+ * permission is held. Exported so the terminal workspace grouping asks this question
+ * in the one place that owns it rather than keeping a second copy that can drift.
+ */
+export declare function canGroupTabs(): Promise<boolean>;
+/**
  * Ungroup every Kaboom driving group that is not the current session's, reading
  * live `chrome.tabGroups` state rather than a storage mirror. Run once per worker
  * lifetime before the first adoption, so a daemon or worker that died without

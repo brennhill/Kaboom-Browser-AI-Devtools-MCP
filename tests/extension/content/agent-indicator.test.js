@@ -16,7 +16,7 @@ const {
   HEARTBEAT_TTL_MS,
   AGENT_INDICATOR_IDS,
   OVERLAY_Z_INDEX
-} = await import('../../../extension/content/ui/agent-indicator.js')
+} = await import('../../../extension/content/ui/supervision/agent-indicator.js')
 
 /** Injected clock so nothing sleeps (repo rule 9). */
 function makeClock(start = 1_000) {

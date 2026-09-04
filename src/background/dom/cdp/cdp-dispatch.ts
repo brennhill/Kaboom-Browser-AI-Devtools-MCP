@@ -15,7 +15,7 @@ import type { SendAsyncResultFn, ActionToastFn } from '../../commands/helpers.js
 import { errorMessage } from '../../../lib/error-utils.js'
 import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js'
 import { cdpSessions, CDP_SESSION_ERRORS, type Lease } from './cdp-session.js'
-import { drivingSessions } from '../../ui/driving-session.js'
+import { drivingSessions } from '../../supervision/driving-session.js'
 import { resolveElement, buildCDPResult } from './cdp-element-resolve.js'
 
 interface CDPActionParams {

@@ -16,6 +16,8 @@ import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { setLocals } from '../../lib/storage/local.js'
 import { isInternalTab } from '../../lib/tabs/internal-url.js'
+import { adoptTabIntoDrivenGroup } from '../tab-groups/driven-tab-group.js'
+import type { DrivenTabGroupEntryPoint } from '../tab-groups/driven-tab-group.js'
 
 // =============================================================================
 // EXPORTED TYPE ALIASES (used by browser-actions.ts, dom-dispatch.ts, etc.)
@@ -364,13 +366,20 @@ function buildMissingTargetError(
   }
 }
 
-export async function persistTrackedTab(tab: chrome.tabs.Tab): Promise<void> {
+export async function persistTrackedTab(
+  tab: chrome.tabs.Tab,
+  entryPoint: DrivenTabGroupEntryPoint = 'tracked_tab'
+): Promise<void> {
   if (!tab.id) return
   await setLocals({
     trackedTabId: tab.id,
     trackedTabUrl: tab.url || '',
     trackedTabTitle: tab.title || ''
   })
+  // Adoption lives in this funnel, not at the call sites. Every path that makes a tab
+  // the tracked one — switch_tab plus the four auto-track recovery paths — must put it
+  // in the driven group, and a path added later cannot forget to (rule 19).
+  await adoptTabIntoDrivenGroup(tab.id, entryPoint)
 }
 
 function isTrackableTab(tab: chrome.tabs.Tab | null | undefined): tab is chrome.tabs.Tab & { id: number; url: string } {

@@ -6,6 +6,7 @@
 import { StorageKey } from '../../lib/constants.js'
 import { getLocals, setLocals } from '../../lib/storage/local.js'
 import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js'
+import { canGroupTabs } from '../tab-groups/driven-tab-group.js'
 
 export interface TerminalWorkspaceTarget {
   hostTabId: number
@@ -56,20 +57,8 @@ async function focusTab(tab: chrome.tabs.Tab): Promise<void> {
   }
 }
 
-async function hasTabGroupsPermission(): Promise<boolean> {
-  if (typeof chrome.permissions?.contains === 'function') {
-    try {
-      return await chrome.permissions.contains({ permissions: ['tabGroups'] })
-    } catch {
-      // EXPECTED_ABSENCE: missing optional tabGroups support is normal; logging would mislabel an ungrouped workspace as failure.
-      return false
-    }
-  }
-  return typeof chrome.tabs?.group === 'function' && typeof chrome.tabGroups?.update === 'function'
-}
-
 async function createTerminalWorkspaceGroup(tabId: number): Promise<number | null> {
-  if (!(await hasTabGroupsPermission()) || !chrome.tabs.group || !chrome.tabGroups?.update) return null
+  if (!(await canGroupTabs()) || !chrome.tabs.group || !chrome.tabGroups?.update) return null
   try {
     const groupId = await chrome.tabs.group({ tabIds: [tabId] })
     const color = chrome.tabGroups.Color?.ORANGE

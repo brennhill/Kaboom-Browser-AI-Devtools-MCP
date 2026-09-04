@@ -39,7 +39,7 @@ import { broadcastTrackingState, createPilotMessageHandler } from './message-rou
 import { createCaptureMessageHandler } from './message-routing/capture-handler.js';
 import { createUtilityMessageHandler } from './message-routing/utility-handler.js';
 import { captureScreenshot } from './sync/screenshot.js';
-import { createSupervisionMessageHandler } from './ui/driving-session.js';
+import { createSupervisionMessageHandler } from './supervision/driving-session.js';
 import { updateBadge } from './sync/server.js';
 import { setLocal } from '../lib/storage/local.js';
 import { readTrackedTab } from '../lib/tabs/tracked-tab-storage.js';

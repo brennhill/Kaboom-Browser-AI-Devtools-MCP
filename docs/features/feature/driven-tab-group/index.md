@@ -4,15 +4,19 @@ feature_id: feature-driven-tab-group
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-04
+last_reviewed: 2026-09-05
 code_paths:
   - src/background/tab-groups/driven-tab-group.ts
+  - src/popup/driven-tab-group-permission.ts
+  - src/background/commands/helpers.ts
+  - src/background/ui/terminal-workspace.ts
   - src/background/exec/browser-actions.ts
   - src/background/runtime-state/connection-state.ts
   - src/background/runtime-state/connection-generation.ts
   - extension/manifest.json
 test_paths:
   - tests/extension/tab-groups/driven-tab-group.test.js
+  - tests/extension/tab-groups/tab-group-permission-toggle.test.js
   - tests/extension/tab-groups/browser-action-group-adoption.test.js
   - tests/extension/tab-groups/tab-groups-fixture.js
 ---
@@ -39,27 +43,39 @@ tabs are gone.
 | --- | --- |
 | Group identity | Title `KaBOOM! agent`, colour purple, never collapsed on creation. Distinct from the terminal workspace group (`KaBOOM!`, orange) so reconciliation never dissolves the terminal's tabs. |
 | One group per session | The group is keyed to the daemon connection generation. A new generation is a new MCP client session: the old group is released and a fresh one opened. |
-| Adoption | `new_tab`, `navigate` with `new_tab`, and `switch_tab` (which carries `set_tracked`) all call `adoptTabIntoDrivenGroup`. |
+| Adoption | `new_tab` and `navigate` with `new_tab` call `adoptTabIntoDrivenGroup` directly. `switch_tab` and the four auto-track recovery paths reach it through `persistTrackedTab`, the funnel that makes a tab the tracked tab. |
 | Release | `close_tab` calls `noteDrivenTabClosed`; a daemon disconnect calls `endDrivenTabGroupSession`. |
 | Reconciliation | The first drive of each service-worker lifetime queries live `chrome.tabGroups` for groups titled `KaBOOM! agent` and ungroups any that is not the live session's. |
 
 ## The permission
 
-`tabGroups` is already declared under `optional_permissions` in `extension/manifest.json`. It is
-requested with `chrome.permissions.request` on the **first drive**, never at install, and at most
-once per service-worker lifetime. Every refusal path degrades to today's ungrouped driving and
-names its reason on the diagnostic queue:
+`tabGroups` stays in `optional_permissions` and is granted from the popup's **Group Driven Tabs**
+toggle (`src/popup/driven-tab-group-permission.ts`). Two Chrome constraints force that shape, and
+between them they rule out every other option:
+
+- **It cannot be required.** `tabGroups` carries the warning *"View and manage your tab groups"*.
+  Chrome disables an extension on auto-update whenever an update adds a permission that raises a
+  new warning, so promoting it would disable Kaboom for every existing user until they re-enabled
+  it — the trade the contract in
+  `tests/extension/contracts/chrome-platform-limits.test.js` was written to prevent.
+- **The service worker cannot request it.** `chrome.permissions.request` must be called "from
+  inside a user gesture, like a button's click handler". An MV3 service worker never has one, so a
+  request from the drive path would reject on every single drive.
+
+The popup toggle is therefore the only surface that can grant it. The background half only ever
+*reads* the grant, and re-reads it live on every drive, so flipping the toggle mid-session starts
+grouping with no restart and no second prompt. The toggle itself reads `chrome.permissions.contains`
+rather than a stored flag, so revoking the permission from `chrome://extensions` is reflected
+immediately (rule 18).
+
+Driving never depends on the grant. Without it, tabs are driven ungrouped exactly as before, and
+the reason is named once on the diagnostic queue:
 
 | Reason | Cause |
 | --- | --- |
-| `tab_groups_api_unavailable` | The browser has no `chrome.tabs.group` / `chrome.tabGroups`. |
-| `permission_request_unavailable` | No `chrome.permissions.request` to call. |
-| `permission_request_failed` | Chrome rejected the request — most often because a service worker carries no user gesture. The browser error is logged alongside. |
-| `permission_denied` | The user refused, or a prior request in this worker already failed. |
+| `tab_groups_permission_not_granted` | The user has not enabled **Group Driven Tabs**. The one reason that is actionable. |
+| `tab_groups_api_unavailable` | The browser has no `chrome.tabs.group` / `chrome.tabGroups` at all — no toggle would fix it. |
 | `group_failed: <browser error>` | Chrome refused the grouping call (for example while a tab is being dragged). |
-
-A denial is logged once per distinct reason rather than once per action, and the grant is re-read
-live on every drive, so a permission granted later starts working without another prompt.
 
 ## Why in-memory state, not storage
 
@@ -84,12 +100,7 @@ written for (`applyRootFolder` omitting an `unmountPanel()` another caller remem
 
 ## Known gaps
 
-- `persistTrackedTab` in `src/background/commands/helpers.ts` auto-tracks a tab during target
-  recovery (`auto_tracked_active_tab`, `auto_tracked_random_tab`, `auto_tracked_new_tab`). Those
-  hand-overs do not yet adopt; adding the call inside `persistTrackedTab` covers all of them at
-  once.
-- `chrome.permissions.request` requires a user gesture, which an MV3 service worker does not
-  carry. Until an extension-page entry point requests it, grouping only engages for users who
-  granted `tabGroups` through another surface, and every other user gets a named degrade.
-- A plain `navigate` in an already-tracked tab does not adopt; only tabs Kaboom opened or was
-  handed join the group.
+- A plain `navigate` in an already-tracked tab does not adopt; only tabs Kaboom opened, was handed,
+  or auto-tracked join the group.
+- The toggle is off until the user finds it. Grouping is opt-in by construction, which is the price
+  of not disabling the extension for every existing install.

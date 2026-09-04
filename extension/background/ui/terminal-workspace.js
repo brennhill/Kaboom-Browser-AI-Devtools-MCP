@@ -5,6 +5,7 @@
 import { StorageKey } from '../../lib/constants.js';
 import { getLocals, setLocals } from '../../lib/storage/local.js';
 import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js';
+import { canGroupTabs } from '../tab-groups/driven-tab-group.js';
 const TERMINAL_WORKSPACE_STORAGE_KEYS = [
     StorageKey.TERMINAL_WORKSPACE_GROUP_ID,
     StorageKey.TERMINAL_WORKSPACE_MAIN_TAB_ID,
@@ -49,20 +50,8 @@ async function focusTab(tab) {
         // Best effort.
     }
 }
-async function hasTabGroupsPermission() {
-    if (typeof chrome.permissions?.contains === 'function') {
-        try {
-            return await chrome.permissions.contains({ permissions: ['tabGroups'] });
-        }
-        catch {
-            // EXPECTED_ABSENCE: missing optional tabGroups support is normal; logging would mislabel an ungrouped workspace as failure.
-            return false;
-        }
-    }
-    return typeof chrome.tabs?.group === 'function' && typeof chrome.tabGroups?.update === 'function';
-}
 async function createTerminalWorkspaceGroup(tabId) {
-    if (!(await hasTabGroupsPermission()) || !chrome.tabs.group || !chrome.tabGroups?.update)
+    if (!(await canGroupTabs()) || !chrome.tabs.group || !chrome.tabGroups?.update)
         return null;
     try {
         const groupId = await chrome.tabs.group({ tabIds: [tabId] });

@@ -93,56 +93,54 @@ describe('driven tab group — adoption entry points', () => {
   })
 })
 
-describe('driven tab group — permission is asked at first drive', () => {
-  test('an ungranted permission is requested once, on the first drive', async () => {
-    const world = installWorld(createTabGroupsWorld({ granted: false, onRequest: 'grant' }))
-    const tab = world.addTab()
-
-    const outcome = await adoptTabIntoDrivenGroup(tab.id, 'new_tab')
-
-    assert.strictEqual(outcome.adopted, true)
-    assert.strictEqual(world.requestCalls, 1)
-    assert.deepStrictEqual(world.permissions.request.mock.calls[0].arguments[0], { permissions: ['tabGroups'] })
-
-    await adoptTabIntoDrivenGroup(world.addTab().id, 'switch_tab')
-    assert.strictEqual(world.requestCalls, 1, 'a granted permission is never re-requested')
-  })
-
-  test('a refused permission degrades to ungrouped driving with a named reason', async () => {
-    const world = installWorld(createTabGroupsWorld({ granted: false, onRequest: 'deny' }))
+describe('driven tab group — the grant is read, never requested, from the worker', () => {
+  test('an ungranted permission degrades to ungrouped driving with a named reason', async () => {
+    const world = installWorld(createTabGroupsWorld({ granted: false }))
     const tab = world.addTab()
 
     const outcome = await adoptTabIntoDrivenGroup(tab.id, 'new_tab')
 
     assert.strictEqual(outcome.adopted, false)
-    assert.strictEqual(outcome.degraded_reason, 'permission_denied')
+    assert.strictEqual(outcome.degraded_reason, 'tab_groups_permission_not_granted')
     assert.strictEqual(world.groupCount(), 0, 'nothing is grouped without the permission')
     assert.strictEqual(world.groupOf(tab.id), TAB_GROUP_ID_NONE, 'the tab is still drivable, just ungrouped')
-    assert.deepStrictEqual(degradeReasons(), ['permission_denied'], 'the reason is logged, never swallowed')
+    assert.deepStrictEqual(
+      degradeReasons(),
+      ['tab_groups_permission_not_granted'],
+      'the reason is logged, never swallowed'
+    )
   })
 
-  test('a refused permission is not re-prompted on every later drive', async () => {
-    const world = installWorld(createTabGroupsWorld({ granted: false, onRequest: 'deny' }))
+  test('the worker never calls permissions.request — it has no user gesture to spend', async () => {
+    // chrome.permissions.request() must run "from inside a user gesture, like a
+    // button's click handler". An MV3 service worker never has one, so a request from
+    // here would reject on every single drive. The grant comes from the popup toggle
+    // in src/popup/driven-tab-group-permission.ts instead.
+    const world = installWorld(createTabGroupsWorld({ granted: false }))
 
     await adoptTabIntoDrivenGroup(world.addTab().id, 'new_tab')
     await adoptTabIntoDrivenGroup(world.addTab().id, 'switch_tab')
     await adoptTabIntoDrivenGroup(world.addTab().id, 'tracked_tab')
 
-    assert.strictEqual(world.requestCalls, 1)
-    assert.deepStrictEqual(degradeReasons(), ['permission_denied'], 'the reason is logged once, not per drive')
+    assert.strictEqual(world.requestCalls, 0, 'the worker must never request the permission')
+    assert.deepStrictEqual(
+      degradeReasons(),
+      ['tab_groups_permission_not_granted'],
+      'the reason is logged once, not per drive'
+    )
   })
 
-  test('a permission request Chrome rejects outside a user gesture degrades, it does not throw', async () => {
-    const world = installWorld(createTabGroupsWorld({ granted: false, onRequest: 'throw' }))
-    const tab = world.addTab()
+  test('a permission granted later starts grouping with no restart', async () => {
+    const world = installWorld(createTabGroupsWorld({ granted: false }))
 
-    const outcome = await adoptTabIntoDrivenGroup(tab.id, 'new_tab')
+    const refused = await adoptTabIntoDrivenGroup(world.addTab().id, 'new_tab')
+    assert.strictEqual(refused.adopted, false)
 
-    assert.strictEqual(outcome.adopted, false)
-    assert.match(outcome.degraded_reason, /^permission_request_failed$/)
-    assert.strictEqual(world.groupOf(tab.id), TAB_GROUP_ID_NONE)
-    const logged = loggedMessages().find((entry) => entry.data?.reason === 'permission_request_failed')
-    assert.match(logged.data.browser_error, /user gesture/)
+    // The user flips the popup toggle mid-session.
+    world.setGranted(true)
+
+    const adopted = await adoptTabIntoDrivenGroup(world.addTab().id, 'new_tab')
+    assert.strictEqual(adopted.adopted, true, 'the live grant is re-read on every drive')
   })
 
   test('a browser without the tab-group APIs degrades with its own reason', async () => {
@@ -156,18 +154,6 @@ describe('driven tab group — permission is asked at first drive', () => {
     assert.strictEqual(outcome.degraded_reason, 'tab_groups_api_unavailable')
   })
 
-  test('a later grant is picked up without another prompt', async () => {
-    const world = installWorld(createTabGroupsWorld({ granted: false, onRequest: 'deny' }))
-    const refused = await adoptTabIntoDrivenGroup(world.addTab().id, 'new_tab')
-    assert.strictEqual(refused.adopted, false)
-
-    world.granted = true
-    const tab = world.addTab()
-    const outcome = await adoptTabIntoDrivenGroup(tab.id, 'new_tab')
-
-    assert.strictEqual(outcome.adopted, true)
-    assert.strictEqual(world.requestCalls, 1, 'the grant is read live, not re-requested')
-  })
 })
 
 describe('driven tab group — session end leaves no orphan', () => {

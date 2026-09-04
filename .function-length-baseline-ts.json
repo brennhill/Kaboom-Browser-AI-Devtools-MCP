@@ -20,10 +20,9 @@
     "scripts/templates/partials/_dom-action-helpers.tpl:withMutationTracking:67": 90,
     "src/background/commands/analyze-page-structure.ts:pageStructureScript:54": 214,
     "src/background/commands/analyze.ts:executeDOMQueryInIsolatedWorld:245": 94,
-    "src/background/commands/helpers.ts:resolveTargetTab:530": 204,
-    "src/background/commands/helpers.ts:tryAutoTrackFallback:423": 106,
+    "src/background/commands/helpers.ts:resolveTargetTab:539": 204,
+    "src/background/commands/helpers.ts:tryAutoTrackFallback:432": 106,
     "src/background/commands/interact.ts:(anonymous):132": 104,
-    "src/background/commands/observe.ts:captureFullPage:418": 117,
     "src/background/commands/registry.ts:createDispatchLifecycle:127": 145,
     "src/background/commands/registry.ts:dispatch:356": 93,
     "src/background/dom/cdp/cdp-element-resolve.ts:cdpResolveAndPrepare:14": 103,
@@ -34,7 +33,7 @@
     "src/background/dom/primitives/dom-primitives-stability.ts:domPrimitiveActionDiff:92": 434,
     "src/background/environment-transaction/browser-state-driver.ts:createEnvironmentStateDriver:84": 87,
     "src/background/exec/analyze-feature-gates.ts:analyzeFeatureGates:11": 175,
-    "src/background/exec/browser-actions.ts:handleAsyncExecuteCommand:439": 82,
+    "src/background/exec/browser-actions.ts:handleAsyncExecuteCommand:437": 82,
     "src/background/exec/content-fallback-scripts.ts:pageSummaryFallbackScript:164": 152,
     "src/background/exec/content-fallback-scripts.ts:readableFallbackScript:11": 90,
     "src/background/exec/csp-safe/executor.ts:cspSafeExecutor:51": 234,
@@ -68,7 +67,6 @@
     "src/offscreen/recording-worker.ts:(anonymous):308": 104,
     "src/offscreen/recording-worker.ts:handleStartRecording:70": 185,
     "src/offscreen/recording-worker.ts:handleStopRecording:260": 155,
-    "src/popup.ts:initPopup:155": 109,
     "src/popup/recording/recording.ts:setupRecordingUI:261": 173
   }
 }

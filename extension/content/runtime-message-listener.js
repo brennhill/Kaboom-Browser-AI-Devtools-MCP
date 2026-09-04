@@ -7,7 +7,7 @@ import { isValidBackgroundSender, handlePing, handleToggleMessage, forwardHighli
 import { showActionToast } from './ui/toast.js';
 import { showSubtitle, toggleRecordingWatermark } from './ui/subtitle.js';
 import { toggleChatWidget } from './ui/chat-widget.js';
-import { AgentIndicator } from './ui/agent-indicator.js';
+import { AgentIndicator } from './ui/supervision/agent-indicator.js';
 // Toggle state caches — updated by forwarded setting messages from background
 let actionToastsEnabled = true;
 let subtitlesEnabled = true;

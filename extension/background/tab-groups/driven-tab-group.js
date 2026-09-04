@@ -27,7 +27,6 @@ export const DRIVEN_TAB_GROUP_COLOR = 'purple';
 // MODULE STATE (in-memory only — never a storage mirror, CLAUDE.md rule 18)
 // =============================================================================
 let session = null;
-let permissionRequested = false;
 let reconciledThisWorker = false;
 let unsubscribeConnection = null;
 let lastDegradeReason = null;
@@ -53,17 +52,28 @@ function clearDegrade() {
     lastDegradeReason = null;
 }
 // =============================================================================
-// PERMISSION (requested at first drive, never at install)
+// PERMISSION (granted from the popup toggle, never from here)
 // =============================================================================
+/** The minimum to put tabs in a titled group — all any caller needs to create one. */
+function canCreateTabGroups() {
+    return typeof chrome?.tabs?.group === 'function' && typeof chrome?.tabGroups?.update === 'function';
+}
+/**
+ * Everything the *driven* group needs: creation plus the ungroup/query pair that
+ * session teardown and startup reconciliation call. The terminal workspace only ever
+ * creates, so it is held to `canCreateTabGroups` instead.
+ */
 function tabGroupApisPresent() {
-    return (typeof chrome?.tabs?.group === 'function' &&
+    return (canCreateTabGroups() &&
         typeof chrome?.tabs?.ungroup === 'function' &&
-        typeof chrome?.tabGroups?.update === 'function' &&
         typeof chrome?.tabGroups?.query === 'function');
 }
+/**
+ * Read the live `tabGroups` grant. Chrome is the authority, never a storage mirror
+ * (rule 18): the user can revoke the permission from chrome://extensions at any time
+ * and grouping must stop on the very next drive.
+ */
 async function holdsTabGroupsPermission() {
-    if (typeof chrome?.permissions?.contains !== 'function')
-        return tabGroupApisPresent();
     try {
         return await chrome.permissions.contains({ permissions: ['tabGroups'] });
     }
@@ -75,35 +85,44 @@ async function holdsTabGroupsPermission() {
     }
 }
 /**
- * Resolve whether Kaboom may group tabs right now. Returns `null` when nothing
- * blocks grouping, or the degraded outcome to hand back to the caller.
+ * Whether Kaboom may group tabs at all: the APIs exist and the optional `tabGroups`
+ * permission is held. Exported so the terminal workspace grouping asks this question
+ * in the one place that owns it rather than keeping a second copy that can drift.
+ */
+export async function canGroupTabs() {
+    if (!canCreateTabGroups())
+        return false;
+    if (typeof chrome?.permissions?.contains !== 'function')
+        return true;
+    return await holdsTabGroupsPermission();
+}
+/**
+ * Resolve whether Kaboom may group tabs right now. Returns `null` when nothing blocks
+ * grouping, or the degraded outcome to hand back to the caller.
  *
- * `tabGroups` is an optional permission: it is asked for on the first drive, at
- * most once per worker lifetime, and a refusal (or a browser that refuses the
- * request outside a user gesture) degrades to today's ungrouped behaviour with a
- * named reason instead of breaking the drive.
+ * This path never *requests* the permission. `chrome.permissions.request` only works
+ * "from inside a user gesture, like a button's click handler", and an MV3 service
+ * worker has no gesture — a request from here would reject on every drive. The grant
+ * comes from the popup's "Group Driven Tabs" toggle
+ * (src/popup/driven-tab-group-permission.ts). Until it is granted, driving continues
+ * ungrouped, which is exactly the behaviour that shipped before this feature.
  */
 async function groupingBlockedBy() {
-    if (!tabGroupApisPresent())
-        return degrade('tab_groups_api_unavailable');
-    if (await holdsTabGroupsPermission()) {
+    // A browser with no permissions API at all cannot report a grant; the only signal
+    // left is whether the APIs exist. Reported as unavailable, not as ungranted, because
+    // no popup toggle would fix it.
+    if (typeof chrome?.permissions?.contains !== 'function') {
+        if (!tabGroupApisPresent())
+            return degrade('tab_groups_api_unavailable');
         clearDegrade();
         return null;
     }
-    if (permissionRequested)
-        return degrade('permission_denied');
-    permissionRequested = true;
-    if (typeof chrome?.permissions?.request !== 'function')
-        return degrade('permission_request_unavailable');
-    let granted = false;
-    try {
-        granted = await chrome.permissions.request({ permissions: ['tabGroups'] });
-    }
-    catch (err) {
-        return degrade('permission_request_failed', { browser_error: errorMessage(err) });
-    }
-    if (!granted)
-        return degrade('permission_denied');
+    // On modern Chrome the namespace is exposed only once `tabGroups` is granted, so the
+    // permission is checked first: it is the reason the user can act on.
+    if (!(await holdsTabGroupsPermission()))
+        return degrade('tab_groups_permission_not_granted');
+    if (!tabGroupApisPresent())
+        return degrade('tab_groups_api_unavailable');
     clearDegrade();
     return null;
 }
@@ -120,7 +139,8 @@ async function liveGroupExists(groupId) {
     }
     catch {
         // EXPECTED_ABSENCE: closing the group is the documented way for the user to take
-        // their tabs back, so a missing group is normal state and not a failure to report.
+        // their tabs back, so a missing group is normal state — logging it would report the
+        // user's own deliberate action as a failure.
         return false;
     }
 }
@@ -344,7 +364,6 @@ export function resetDrivenTabGroupStateForTesting() {
         unsubscribeConnection();
     unsubscribeConnection = null;
     session = null;
-    permissionRequested = false;
     reconciledThisWorker = false;
     lastDegradeReason = null;
 }

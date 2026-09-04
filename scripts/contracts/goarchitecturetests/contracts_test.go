@@ -8,6 +8,7 @@ package goarchitecturetests
 
 import (
 	"bytes"
+	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -683,6 +684,26 @@ func TestFeaturePackagesDoNotMirrorGuardContract(t *testing.T) {
 	}
 }
 
+// isAuthoredGoFile reports whether a walked entry is Go source a human wrote.
+//
+// Dot-prefixed .go files are excluded. Tools write scratch files into the repository
+// root — internal/hook/eval creates ".kaboom-eval-oversized-*.go" there — and under
+// `go test ./...` those packages run concurrently with this walk. Without this filter
+// the walk parses a scratch file that the tool then deletes, and the whole suite fails
+// with "no such file or directory" on a file that was never authored source.
+func isAuthoredGoFile(name string) bool {
+	return strings.HasSuffix(name, ".go") && !strings.HasPrefix(name, ".")
+}
+
+func TestAuthoredGoFileFilterIgnoresToolScratchFiles(t *testing.T) {
+	if isAuthoredGoFile(".kaboom-eval-oversized-238948641.go") {
+		t.Error("tool scratch files must not be walked; a concurrent package deletes them mid-walk")
+	}
+	if !isAuthoredGoFile("contracts_test.go") {
+		t.Error("authored Go source must still be walked")
+	}
+}
+
 func TestAuthoredGoDoesNotDeclareTypeAliases(t *testing.T) {
 	err := filepath.WalkDir(projectRoot(), func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -694,12 +715,16 @@ func TestAuthoredGoDoesNotDeclareTypeAliases(t *testing.T) {
 			}
 			return nil
 		}
-		if filepath.Ext(path) != ".go" {
+		if !isAuthoredGoFile(entry.Name()) {
 			return nil
 		}
 		fileSet := token.NewFileSet()
 		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
 		if parseErr != nil {
+			// A file deleted between the walk and the read is not a contract violation.
+			if errors.Is(parseErr, os.ErrNotExist) {
+				return nil
+			}
 			return parseErr
 		}
 		ast.Inspect(parsed, func(node ast.Node) bool {

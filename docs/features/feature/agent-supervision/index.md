@@ -6,8 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-03
 code_paths:
-  - src/content/ui/agent-indicator.ts
-  - src/background/ui/driving-session.ts
+  - src/content/ui/supervision/agent-indicator.ts
+  - src/background/supervision/driving-session.ts
   - src/background/init.ts
   - src/content/runtime-message-listener.ts
   - src/types/runtime/agent-indicator.ts
@@ -44,7 +44,7 @@ against a kill switch that did not exist.
 | Stop control | Aborts the action and releases the lease. Gated on `event.isTrusted`. |
 | Heartbeat | Background sends one every 5s; the overlay removes *itself* after 15s without one. |
 
-The background half lives in `src/background/ui/driving-session.ts`. Both CDP input paths
+The background half lives in `src/background/supervision/driving-session.ts`. Both CDP input paths
 (`tryCDPEscalation` and `executeCDPAction`) route through it, so `hardware_click` is
 supervised too.
 
