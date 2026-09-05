@@ -20,6 +20,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 func completeNextPageStateQuery(t *testing.T, cap *capture.Capture, result json.RawMessage) {
@@ -554,12 +555,12 @@ func TestRunA11yAudit_AlreadyRunningReturnsPartialResults(t *testing.T) {
 }
 
 // ============================================
-// parseDataURL Tests
+// util.SplitDataURL Tests
 // ============================================
 
 func TestParseDataURL_ValidJPEG(t *testing.T) {
 	t.Parallel()
-	data, mime := parseDataURL("data:image/jpeg;base64,/9j/4AAQSkZJRg==")
+	data, mime := util.SplitDataURL("data:image/jpeg;base64,/9j/4AAQSkZJRg==")
 	if data != "/9j/4AAQSkZJRg==" {
 		t.Errorf("base64Data = %q, want %q", data, "/9j/4AAQSkZJRg==")
 	}
@@ -570,7 +571,7 @@ func TestParseDataURL_ValidJPEG(t *testing.T) {
 
 func TestParseDataURL_ValidPNG(t *testing.T) {
 	t.Parallel()
-	data, mime := parseDataURL("data:image/png;base64,iVBORw0KGgo=")
+	data, mime := util.SplitDataURL("data:image/png;base64,iVBORw0KGgo=")
 	if data != "iVBORw0KGgo=" {
 		t.Errorf("base64Data = %q, want %q", data, "iVBORw0KGgo=")
 	}
@@ -581,7 +582,7 @@ func TestParseDataURL_ValidPNG(t *testing.T) {
 
 func TestParseDataURL_MalformedNoDataPrefix(t *testing.T) {
 	t.Parallel()
-	data, mime := parseDataURL("image/jpeg;base64,/9j/4AAQ")
+	data, mime := util.SplitDataURL("image/jpeg;base64,/9j/4AAQ")
 	if data != "" || mime != "" {
 		t.Errorf("expected empty strings for missing data: prefix, got data=%q mime=%q", data, mime)
 	}
@@ -589,7 +590,7 @@ func TestParseDataURL_MalformedNoDataPrefix(t *testing.T) {
 
 func TestParseDataURL_MalformedNoBase64Marker(t *testing.T) {
 	t.Parallel()
-	data, mime := parseDataURL("data:image/jpeg;charset=utf-8,sometext")
+	data, mime := util.SplitDataURL("data:image/jpeg;charset=utf-8,sometext")
 	if data != "" || mime != "" {
 		t.Errorf("expected empty strings for missing base64 marker, got data=%q mime=%q", data, mime)
 	}
@@ -597,7 +598,7 @@ func TestParseDataURL_MalformedNoBase64Marker(t *testing.T) {
 
 func TestParseDataURL_EmptyString(t *testing.T) {
 	t.Parallel()
-	data, mime := parseDataURL("")
+	data, mime := util.SplitDataURL("")
 	if data != "" || mime != "" {
 		t.Errorf("expected empty strings for empty input, got data=%q mime=%q", data, mime)
 	}

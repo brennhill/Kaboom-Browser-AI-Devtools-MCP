@@ -9,9 +9,10 @@ Layout:
   - tool.go: the tool definition (name, description, input schema)
   - actions.go: the canonical action registry backing the what enum
     and describe_capabilities mode specs
-  - properties.go: merges the five property groups into the full property set
+  - properties.go: merges the property groups into the full property set
   - properties_dispatch.go / properties_targeting.go / properties_core.go /
-    properties_form_wait.go / properties_output_batch.go: the property groups
+    properties_gestures.go / properties_form_wait.go / properties_output_batch.go:
+    the property groups
 
 ActionSpecs is the single source of truth for interact's action surface; it is
 read both by this package's enum and by internal/tools/configure.

@@ -366,6 +366,8 @@ var ReadOnlyInteractActions = map[string]bool{
 	"highlight":                 true,
 	"subtitle":                  true,
 	"clipboard_read":            true,
+	// A clipped capture reads pixels. Jittering it only delays the screenshot.
+	"zoom_region": true,
 }
 
 // ApplyJitter sleeps for a random duration up to maxMs if jitter is configured.

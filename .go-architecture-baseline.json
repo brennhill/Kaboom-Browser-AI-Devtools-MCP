@@ -1853,6 +1853,10 @@
       "mutable_globals": 0,
       "exports": 4
     },
+    "internal/tools/interact/gestures.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
     "internal/tools/interact/selector.go": {
       "mutable_globals": 4,
       "exports": 8
@@ -2019,7 +2023,7 @@
     },
     "internal/util/media.go": {
       "mutable_globals": 0,
-      "exports": 7
+      "exports": 8
     },
     "internal/util/proc_unix.go": {
       "mutable_globals": 0,

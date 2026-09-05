@@ -14,7 +14,9 @@ func actionRequiresTarget(action string) bool {
 	switch action {
 	case "click", "type", "get_text", "get_value", "get_attribute",
 		"set_attribute", "wait_for", "scroll_to", "focus", "check",
-		"paste", "highlight":
+		"paste", "highlight",
+		// The click gestures take an element or a coordinate, same as click.
+		"right_click", "double_click", "triple_click":
 		return true
 	default:
 		return false
@@ -52,6 +54,15 @@ func interactTargetingFlagSpecs() map[string]cliFlagSpec {
 		"--frame":            {MCPKey: "frame", Kind: FlagIntOrString},
 		"--x":                {MCPKey: "x", Kind: FlagInt},
 		"--y":                {MCPKey: "y", Kind: FlagInt},
+		// Pointer gestures and clipped capture. --drag-path is JSON because a route is a list
+		// of points, and it is not --path because --path is already the cookie path.
+		"--drag-path": {MCPKey: "drag_path", Kind: FlagJSON},
+		"--modifiers": {MCPKey: "modifiers", Kind: FlagStringList},
+		"--delta-x":   {MCPKey: "delta_x", Kind: FlagInt},
+		"--delta-y":   {MCPKey: "delta_y", Kind: FlagInt},
+		"--width":     {MCPKey: "width", Kind: FlagInt},
+		"--height":    {MCPKey: "height", Kind: FlagInt},
+		"--scale":     {MCPKey: "scale", Kind: FlagInt},
 		// List/query filters
 		"--visible-only":    {MCPKey: "visible_only", Kind: FlagBool},
 		"--verbose":         {MCPKey: "verbose", Kind: FlagBool},
@@ -175,6 +186,25 @@ func validateInteractArgs(action string, mcpArgs map[string]any) error {
 	}
 	if action == "execute_js" && mcpArgs["script"] == nil {
 		return fmt.Errorf("interact execute_js: --script is required")
+	}
+	return validateInteractGestureArgs(action, mcpArgs)
+}
+
+// validateInteractGestureArgs rejects a gesture the CLI could otherwise send with nothing to act
+// on, so the failure names the missing flag instead of arriving as a page error.
+func validateInteractGestureArgs(action string, mcpArgs map[string]any) error {
+	if action == "drag" && mcpArgs["drag_path"] == nil {
+		return fmt.Errorf(`interact drag: --drag-path is required, e.g. --drag-path '[{"x":10,"y":10},{"x":200,"y":10}]'`)
+	}
+	if (action == "hover_at" || action == "scroll_at" || action == "zoom_region") &&
+		(mcpArgs["x"] == nil || mcpArgs["y"] == nil) {
+		return fmt.Errorf("interact %s: --x and --y are required", action)
+	}
+	if action == "scroll_at" && mcpArgs["delta_x"] == nil && mcpArgs["delta_y"] == nil {
+		return fmt.Errorf("interact scroll_at: --delta-x or --delta-y is required")
+	}
+	if action == "zoom_region" && (mcpArgs["width"] == nil || mcpArgs["height"] == nil) {
+		return fmt.Errorf("interact zoom_region: --width and --height are required")
 	}
 	return nil
 }

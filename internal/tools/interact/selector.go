@@ -56,6 +56,11 @@ var DOMPrimitiveActions = map[string]bool{
 	"confirm_top_dialog": true, "dismiss_top_overlay": true,
 	"hover": true,
 	"query": true,
+	// Pointer gestures (kaboom-05ue.5). They route through the DOM primitive handler like any
+	// other element action; the extension escalates each to CDP before falling back to the
+	// synthetic-event primitive, so the daemon does not choose a dispatch path here.
+	"drag": true, "right_click": true, "double_click": true,
+	"triple_click": true, "hover_at": true, "scroll_at": true,
 }
 
 // DOMActionToReproType maps interact DOM action names to reproduction-compatible types.

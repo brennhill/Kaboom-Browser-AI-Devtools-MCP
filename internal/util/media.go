@@ -23,6 +23,27 @@ func SanitizeForFilename(s string) string {
 	return s
 }
 
+// SplitDataURL separates a data URL into its base64 payload and MIME type without decoding it.
+// Example: "data:image/png;base64,iVBORw0..." -> ("iVBORw0...", "image/png").
+// Returns empty strings when the data URL is malformed, so callers can skip the image rather
+// than emit a content block Claude will reject.
+func SplitDataURL(dataURL string) (base64Data, mimeType string) {
+	if !strings.HasPrefix(dataURL, "data:") {
+		return "", ""
+	}
+	rest := dataURL[len("data:"):]
+	semicolonIdx := strings.Index(rest, ";")
+	if semicolonIdx < 0 {
+		return "", ""
+	}
+	mimeType = rest[:semicolonIdx]
+	rest = rest[semicolonIdx+1:]
+	if !strings.HasPrefix(rest, "base64,") {
+		return "", ""
+	}
+	return rest[len("base64,"):], mimeType
+}
+
 // DecodeDataURL extracts and base64-decodes the payload from a data URL.
 func DecodeDataURL(dataURL string) ([]byte, error) {
 	if dataURL == "" {

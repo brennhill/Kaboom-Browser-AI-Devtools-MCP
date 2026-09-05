@@ -8,9 +8,22 @@ import { errorMessage } from '../../../lib/error-utils.js';
 import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js';
 import { cdpSessions, CDP_SESSION_ERRORS } from './cdp-session.js';
 import { drivingSessions } from '../../supervision/driving-session.js';
-import { resolveElement, buildCDPResult } from './cdp-element-resolve.js';
+import { resolveElement, buildCDPResult, buildCoordinateCDPResult } from './cdp-element-resolve.js';
+import { CDP_GESTURE_ACTIONS, isCDPGesture, explicitGesturePoint, executeCDPGesture, dispatchSingleClick, deliverZoomRegion } from './cdp-gestures.js';
 async function cdpSend(lease, method, params) {
     await lease.send(method, params);
+}
+/**
+ * The gesture surface a held lease exposes: send commands, and move the phantom cursor the
+ * user watches. Built here so every CDP input path — direct action, escalation, gesture —
+ * drives the same supervision cursor instead of some of them silently skipping it.
+ */
+function leaseGestureContext(lease, tabId) {
+    const driving = drivingSessions();
+    return {
+        send: (method, params) => lease.send(method, params),
+        cursor: (x, y) => driving.cursor(tabId, x, y)
+    };
 }
 async function resolveCoordinates(lease, params) {
     if (typeof params.x === 'number' && typeof params.y === 'number') {
@@ -36,27 +49,17 @@ async function resolveCoordinates(lease, params) {
     }
     return coords;
 }
-async function cdpClick(lease, params) {
+async function cdpClick(lease, tabId, params) {
     const { x, y } = await resolveCoordinates(lease, params);
-    await cdpSend(lease, 'Input.dispatchMouseEvent', {
-        type: 'mousePressed',
-        x,
-        y,
-        button: 'left',
-        clickCount: 1
-    });
-    await cdpSend(lease, 'Input.dispatchMouseEvent', {
-        type: 'mouseReleased',
-        x,
-        y,
-        button: 'left',
-        clickCount: 1
-    });
+    // A modifier the agent asked for and Chrome never saw is a silently different click:
+    // ctrl+click opens a tab, plain click navigates in place. Carry the bitmask through.
+    const modifiers = await dispatchSingleClick(leaseGestureContext(lease, tabId), { x, y }, params.modifiers);
     return {
         success: true,
         action: 'hardware_click',
         x,
         y,
+        modifiers,
         method: 'cdp'
     };
 }
@@ -179,8 +182,13 @@ function mapCDPError(err) {
 // this module throw ReferenceError there — taking down every test that touches
 // it. The service worker always has navigator, so behavior is unchanged.
 const SELECT_ALL_MODIFIER = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '') ? 4 : 2;
-/** Actions that auto-escalate to CDP. */
-const CDP_ESCALATABLE = new Set(['click', 'type', 'key_press']);
+/**
+ * Actions that auto-escalate to CDP.
+ *
+ * The pointer gestures joined this set in kaboom-05ue.5. Before that, 3 of 58 interact actions
+ * reached CDP and every other gesture was a synthetic DOM event with isTrusted:false.
+ */
+const CDP_ESCALATABLE = new Set(['click', 'type', 'key_press', ...CDP_GESTURE_ACTIONS]);
 /** Check whether an action should attempt CDP before DOM primitives. */
 export function isCDPEscalatable(action) {
     return CDP_ESCALATABLE.has(action);
@@ -325,22 +333,11 @@ async function cdpDispatchSingleKey(lease, key) {
     }
 }
 /** Execute the CDP input action for click/type/key_press. Returns false when the action's payload is unusable. */
-async function cdpExecuteAction(lease, action, params, selector, resolved) {
+async function cdpExecuteAction(ctx, lease, action, params, selector, resolved) {
     if (action === 'click') {
-        await cdpSend(lease, 'Input.dispatchMouseEvent', {
-            type: 'mousePressed',
-            x: resolved.x,
-            y: resolved.y,
-            button: 'left',
-            clickCount: 1
-        });
-        await cdpSend(lease, 'Input.dispatchMouseEvent', {
-            type: 'mouseReleased',
-            x: resolved.x,
-            y: resolved.y,
-            button: 'left',
-            clickCount: 1
-        });
+        // Same click as every other CDP path, modifiers included. This branch used to build its
+        // own press/release pair and drop params.modifiers on the floor.
+        await dispatchSingleClick(ctx, { x: resolved.x, y: resolved.y }, params.modifiers);
         return true;
     }
     if (action === 'type') {
@@ -378,7 +375,35 @@ async function cdpExecuteAction(lease, action, params, selector, resolved) {
     return true;
 }
 /**
- * Attempt CDP-first execution for click/type/key_press.
+ * Resolve the coordinate an action drives.
+ *
+ * Explicit coordinates win outright: hover_at, scroll_at and drag address a pixel, and running
+ * selector resolution for them would fail on pages where nothing matches an empty selector and
+ * silently downgrade the gesture to a synthetic DOM event.
+ */
+async function resolveGestureTarget(tabId, params) {
+    const explicit = explicitGesturePoint(params);
+    if (explicit)
+        return { point: explicit, resolved: null };
+    const resolved = await resolveElement(tabId, params);
+    if (!resolved)
+        return null;
+    return { point: { x: resolved.x, y: resolved.y }, resolved };
+}
+/** Run one pointer gesture over the lease and turn its evidence into a DOMResult. */
+async function runCDPGesture(lease, tabId, action, params, target, startTime) {
+    // The phantom cursor follows a drag point by point, so the user watches the route the
+    // agent is taking rather than seeing the pointer teleport after the fact.
+    const ctx = leaseGestureContext(lease, tabId);
+    const evidence = await executeCDPGesture(ctx, action, params, target.point);
+    const elapsed = Date.now() - startTime;
+    const withPoint = { x: target.point.x, y: target.point.y, ...evidence };
+    return target.resolved
+        ? buildCDPResult(action, params.selector || '', target.resolved, elapsed, withPoint)
+        : buildCoordinateCDPResult(action, target.point, elapsed, evidence);
+}
+/**
+ * Attempt CDP-first execution for click/type/key_press and the pointer gestures.
  * Returns a DOMResult on success, or null to signal fallback to DOM primitives.
  * Any error is caught internally — callers just check for null.
  */
@@ -393,9 +418,13 @@ export async function tryCDPEscalation(tabId, action, params) {
     const selector = params.selector || '';
     const startTime = Date.now();
     try {
-        // Step 1: Resolve element via page script (also focuses for type/key_press)
-        const resolved = await resolveElement(tabId, params);
-        if (!resolved)
+        // Step 1: Resolve the target coordinate (also focuses the element for type/key_press)
+        const target = await resolveGestureTarget(tabId, params);
+        if (!target)
+            return null;
+        // Selector-addressed actions need the matched element for their evidence; without one
+        // there is nothing to report a match against, so the DOM path takes over.
+        if (!target.resolved && !isCDPGesture(action))
             return null;
         // Step 2: Take a reference to the tab's shared CDP session. The session outlives this
         // action, so a click that starts a navigation is no longer racing its own teardown.
@@ -406,13 +435,17 @@ export async function tryCDPEscalation(tabId, action, params) {
         // overlay from tearing itself down mid-action.
         const driving = drivingSessions();
         driving.start(tabId, action);
-        driving.cursor(tabId, resolved.x, resolved.y);
+        driving.cursor(tabId, target.point.x, target.point.y);
         try {
             // Step 3: Execute CDP action
-            if (!(await cdpExecuteAction(lease, action, params, selector, resolved)))
+            if (isCDPGesture(action)) {
+                return await runCDPGesture(lease, tabId, action, params, target, startTime);
+            }
+            const ctx = leaseGestureContext(lease, tabId);
+            if (!(await cdpExecuteAction(ctx, lease, action, params, selector, target.resolved)))
                 return null;
             // Step 4: Build DOMResult with matched evidence
-            return buildCDPResult(action, selector, resolved, Date.now() - startTime);
+            return buildCDPResult(action, selector, target.resolved, Date.now() - startTime);
         }
         finally {
             driving.stop(tabId);
@@ -439,6 +472,27 @@ export async function tryCDPEscalation(tabId, action, params) {
 // =============================================================================
 // DIRECT CDP QUERIES (hardware_click via Go-side cdp_action)
 // =============================================================================
+/** Direct CDP actions that only read pixels. They dispatch no input and drive nothing. */
+const CDP_CAPTURE_ACTIONS = new Set(['zoom_region']);
+function isCDPCapture(action) {
+    return CDP_CAPTURE_ACTIONS.has(action);
+}
+/** Run one directly-addressed CDP action and return the terminal payload to send back. */
+async function dispatchDirectCDPAction(lease, target, action, params) {
+    switch (action) {
+        case 'click':
+            return cdpClick(lease, target.tabId, params);
+        case 'type':
+            return cdpType(lease, params);
+        case 'key_press':
+            return cdpKeyPress(lease, params);
+        case 'zoom_region':
+            await lease.ensureDomain('Page');
+            return deliverZoomRegion((method, sendParams) => lease.send(method, sendParams), params, target);
+        default:
+            throw new Error(`Unknown CDP action: ${action}`);
+    }
+}
 export async function executeCDPAction(query, tabId, syncClient, sendAsyncResult, actionToast) {
     const params = parseCDPParams(query);
     if (!params) {
@@ -470,25 +524,18 @@ export async function executeCDPAction(query, tabId, syncClient, sendAsyncResult
         sendAsyncResult(syncClient, query.id, query.correlation_id, 'error', null, errorMsg);
         return;
     }
-    driving.start(tabId, action);
-    if (typeof params.x === 'number' && typeof params.y === 'number') {
-        driving.cursor(tabId, params.x, params.y);
+    // A capture is not input. Starting a driving session paints the supervision indicator and
+    // phantom cursor into the page milliseconds before Page.captureScreenshot reads the pixels,
+    // so the region the agent asked to read back would sometimes contain Kaboom's own overlay.
+    const drivesInput = !isCDPCapture(action);
+    if (drivesInput) {
+        driving.start(tabId, action);
+        if (typeof params.x === 'number' && typeof params.y === 'number') {
+            driving.cursor(tabId, params.x, params.y);
+        }
     }
     try {
-        let result;
-        switch (action) {
-            case 'click':
-                result = await cdpClick(lease, params);
-                break;
-            case 'type':
-                result = await cdpType(lease, params);
-                break;
-            case 'key_press':
-                result = await cdpKeyPress(lease, params);
-                break;
-            default:
-                throw new Error(`Unknown CDP action: ${action}`);
-        }
+        const result = await dispatchDirectCDPAction(lease, { tabId, queryId: query.id }, action, params);
         actionToast(tabId, toastLabel, undefined, 'success');
         sendAsyncResult(syncClient, query.id, query.correlation_id, 'complete', result);
     }
@@ -500,7 +547,8 @@ export async function executeCDPAction(query, tabId, syncClient, sendAsyncResult
         sendAsyncResult(syncClient, query.id, query.correlation_id, 'error', null, errorMsg);
     }
     finally {
-        driving.stop(tabId);
+        if (drivesInput)
+            driving.stop(tabId);
         lease.release();
     }
 }

@@ -1429,6 +1429,14 @@
           "description": "Link to error/investigation",
           "type": "string"
         },
+        "delta_x": {
+          "description": "Horizontal wheel delta in pixels (scroll_at). Positive scrolls right.",
+          "type": "number"
+        },
+        "delta_y": {
+          "description": "Vertical wheel delta in pixels (scroll_at). Positive scrolls down.",
+          "type": "number"
+        },
         "direction": {
           "description": "Scroll direction for scroll_to: top, bottom, up, or down.",
           "enum": [
@@ -1442,6 +1450,25 @@
         "domain": {
           "description": "Cookie domain (set_cookie/delete_cookie)",
           "type": "string"
+        },
+        "drag_path": {
+          "description": "Drag route as viewport points, in order (drag). At least 2. This is the path to follow, not just the endpoints — HTML5 drag-and-drop and canvas apps both begin their drag on the first intermediate move, so add waypoints to trace a curve. Named drag_path because 'path' is the cookie path.",
+          "items": {
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "duration_ms": {
           "description": "Highlight duration ms (default 5000)",
@@ -1504,6 +1531,10 @@
           "description": "Target iframe: CSS selector, 0-based index, or \"all\"",
           "type": "string"
         },
+        "height": {
+          "description": "Height in pixels of the region to capture (zoom_region)",
+          "type": "number"
+        },
         "include_content": {
           "description": "Return page content with navigate response (url, title, text_content, vitals)",
           "type": "boolean"
@@ -1535,6 +1566,22 @@
         "limit": {
           "description": "Max elements to return (list_interactive, default all)",
           "type": "number"
+        },
+        "modifiers": {
+          "description": "Modifier keys held during the action: ctrl, shift, alt, cmd (meta). Combinable. Applies to click and the pointer gestures — ctrl+click opens a link in a background tab, shift+click extends a selection.",
+          "items": {
+            "enum": [
+              "ctrl",
+              "control",
+              "shift",
+              "alt",
+              "cmd",
+              "meta",
+              "command"
+            ],
+            "type": "string"
+          },
+          "type": "array"
         },
         "name": {
           "description": "Attribute, recording, or cookie name",
@@ -1582,6 +1629,10 @@
         "save_to": {
           "description": "File path to save output (run_a11y_and_export_sarif)",
           "type": "string"
+        },
+        "scale": {
+          "description": "Supersampling factor for the captured region, 0-4 (zoom_region, default 1). Use 2 to read small text that is illegible in a full-page screenshot.",
+          "type": "number"
         },
         "scope_rect": {
           "description": "Optional viewport rectangle to constrain DOM actions by geometry (x/y/width/height)",
@@ -1790,9 +1841,20 @@
             "batch",
             "clipboard_read",
             "clipboard_write",
-            "find"
+            "find",
+            "drag",
+            "right_click",
+            "double_click",
+            "triple_click",
+            "hover_at",
+            "scroll_at",
+            "zoom_region"
           ],
           "type": "string"
+        },
+        "width": {
+          "description": "Width in pixels of the region to capture (zoom_region)",
+          "type": "number"
         },
         "world": {
           "description": "JS world: auto (default), main (page globals), isolated (bypass CSP).",

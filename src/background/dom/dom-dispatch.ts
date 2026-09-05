@@ -21,6 +21,14 @@ import { domPrimitiveQuery } from './primitives/dom-primitives-query.js'
 import { domPrimitiveWaitForStable, domPrimitiveActionDiff } from './primitives/dom-primitives-stability.js'
 import { domPrimitiveOverlay } from './primitives/dom-primitives-overlay.js'
 import { domPrimitiveIntent } from './primitives/dom-primitives-intent.js'
+import {
+  gesturePrimitiveFor,
+  gestureModifierMask,
+  buildGestureDOMResult,
+  needsGestureDispatch
+} from './primitives/gestures/dom-primitives-gestures.js'
+import { resolveElement, type ResolvedElement } from './cdp/cdp-element-resolve.js'
+import { explicitGesturePoint } from './cdp/cdp-gestures.js'
 import { shouldEscalateToCDP, tryCDPEscalation } from './cdp/cdp-dispatch.js'
 import { isReadOnlyAction } from '../exec/action-metadata.js'
 import { errorMessage } from '../../lib/error-utils.js'
@@ -287,6 +295,40 @@ async function executeIntentAction(
   })
 }
 
+// #599 escape hatch and no-CDP fallback for the pointer gestures. A gesture that reaches here
+// still drives the page — it loses isTrusted:true, not the interaction.
+//
+// The target is resolved here rather than inside the injected primitive: resolveElement already
+// owns the selector engine, and a second copy in page scope would be one more place for
+// "which element did we hit" to diverge from what the CDP path reports.
+async function executeGestureAction(target: DOMExecutionTarget, params: DOMActionParams): Promise<DOMResult> {
+  const action = params.action!
+  const selector = params.selector || ''
+  const explicit = explicitGesturePoint(params)
+  let resolved: ResolvedElement | null = null
+  if (!explicit) {
+    resolved = await resolveElement(target.tabId, params)
+    if (!resolved) {
+      return {
+        success: false,
+        action,
+        selector,
+        error: 'element_not_found',
+        message: `No element resolved for ${action} (selector=${selector || '<none>'})`
+      }
+    }
+  }
+  const point = explicit ?? { x: resolved!.x, y: resolved!.y }
+  const modifiers = gestureModifierMask(params.modifiers)
+  const results = await chrome.scripting.executeScript({
+    target,
+    world: 'MAIN',
+    func: gesturePrimitiveFor(action),
+    args: [action, point, { modifiers, drag_path: params.drag_path, delta_x: params.delta_x, delta_y: params.delta_y }]
+  })
+  return buildGestureDOMResult(action, selector, point, resolved, results?.[0]?.result ?? undefined, modifiers)
+}
+
 const STABILITY_ACTIONS = new Set(['wait_for_stable', 'action_diff'])
 const OVERLAY_ACTIONS = new Set(['dismiss_top_overlay', 'auto_dismiss_overlays'])
 const INTENT_ACTIONS = new Set(['open_composer', 'submit_active_composer', 'confirm_top_dialog'])
@@ -424,6 +466,7 @@ async function routeDOMExecution(
   if (action === 'list_interactive') return executeListInteractive(target, params)
   if (action === 'query') return executeQuery(target, params)
   if (action === 'wait_for') return executeWaitFor(target, params)
+  if (needsGestureDispatch(action, params.modifiers)) return executeGestureAction(target, params)
   if (STABILITY_ACTIONS.has(action)) return executeStabilityAction(target, params)
   if (OVERLAY_ACTIONS.has(action)) return executeOverlayAction(target, params)
   if (INTENT_ACTIONS.has(action)) return executeIntentAction(target, params)

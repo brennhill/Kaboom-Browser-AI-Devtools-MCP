@@ -118,6 +118,20 @@ export interface DOMResult {
         tag: string;
     }>;
     section_count?: number;
+    x?: number;
+    y?: number;
+    button?: string;
+    click_count?: number;
+    modifiers?: number;
+    /** right_click only: whether the contextmenu event reached the page. */
+    context_menu?: boolean;
+    /** drag only: caller-supplied path points, and the moves actually dispatched. */
+    path_points?: number;
+    move_events?: number;
+    /** drag only: false when Chrome refused Input.dispatchDragEvent and only the pointer path ran. */
+    html5_drag?: boolean;
+    delta_x?: number;
+    delta_y?: number;
 }
 export interface DOMPrimitiveOptions {
     text?: string;
@@ -139,6 +153,20 @@ export interface DOMPrimitiveOptions {
     url_contains?: string;
     absent?: boolean;
     structured?: boolean;
+    x?: number;
+    y?: number;
+    /** The drag route. Named drag_path because `path` is already the cookie path string. */
+    drag_path?: Array<{
+        x: number;
+        y: number;
+    }>;
+    /** ctrl | shift | alt | cmd (meta), combinable. Folded into Chrome's modifier bitmask. */
+    modifiers?: string[];
+    delta_x?: number;
+    delta_y?: number;
+    width?: number;
+    height?: number;
+    scale?: number;
 }
 export interface DOMActionParams extends DOMPrimitiveOptions {
     action?: string;
