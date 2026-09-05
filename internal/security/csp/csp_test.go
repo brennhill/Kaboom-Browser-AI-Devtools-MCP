@@ -509,23 +509,50 @@ func TestCSPFilteredOriginsListedInResponse(t *testing.T) {
 	}
 }
 
+// hasFilteredOrigin reports whether the generated response filtered the origin.
+func hasFilteredOrigin(resp Response, origin string) bool {
+	for _, f := range resp.FilteredOrigins {
+		if f.Origin == origin {
+			return true
+		}
+	}
+	return false
+}
+
 func TestCSPFirstPartyLocalhostNotFiltered(t *testing.T) {
 	t.Parallel()
-	gen := NewGenerator()
 
-	// If the page IS on localhost:3000, same-port localhost should not be filtered
-	gen.RecordOrigin("http://localhost:3000", "script", "http://localhost:3000/")
-	gen.RecordOrigin("http://localhost:3000", "script", "http://localhost:3000/dashboard")
-	gen.RecordOrigin("http://localhost:3000", "script", "http://localhost:3000/settings")
+	const localhostOrigin = "http://localhost:3000"
+
+	// Discriminating control: the same localhost origin observed from pages served
+	// elsewhere is dev pollution and MUST be filtered. This proves the filter
+	// really examines localhost origins, so its silence in the first-party arm
+	// below is a decision rather than an empty response.
+	thirdParty := NewGenerator()
+	thirdParty.RecordOrigin(localhostOrigin, "script", "https://myapp.com/")
+	thirdParty.RecordOrigin(localhostOrigin, "script", "https://myapp.com/dashboard")
+	thirdParty.RecordOrigin(localhostOrigin, "script", "https://myapp.com/settings")
+	if !hasFilteredOrigin(thirdParty.Generate(Params{Mode: "moderate"}), localhostOrigin) {
+		t.Fatalf("control: third-party %s should be filtered as dev pollution", localhostOrigin)
+	}
+
+	// Subject: if the page IS on localhost:3000, same-port localhost is the app itself.
+	gen := NewGenerator()
+	gen.RecordOrigin(localhostOrigin, "script", localhostOrigin+"/")
+	gen.RecordOrigin(localhostOrigin, "script", localhostOrigin+"/dashboard")
+	gen.RecordOrigin(localhostOrigin, "script", localhostOrigin+"/settings")
 
 	resp := gen.Generate(Params{Mode: "moderate"})
 
-	// First-party localhost is the app itself, should become 'self' or be included
-	// It should NOT appear in filtered_origins
-	for _, f := range resp.FilteredOrigins {
-		if f.Origin == "http://localhost:3000" {
-			t.Error("first-party localhost:3000 should not be filtered")
-		}
+	if resp.Observations.UniqueOrigins != 1 {
+		t.Fatalf("generator observed %d unique origins, want 1 — nothing was analysed",
+			resp.Observations.UniqueOrigins)
+	}
+
+	// First-party localhost is the app itself, should become 'self' or be included.
+	// It should NOT appear in filtered_origins.
+	if hasFilteredOrigin(resp, localhostOrigin) {
+		t.Errorf("first-party localhost:3000 should not be filtered")
 	}
 }
 

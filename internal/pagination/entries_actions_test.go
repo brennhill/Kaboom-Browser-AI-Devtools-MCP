@@ -431,20 +431,55 @@ func TestSerializeActionEntryWithSequence_AllOptionalFields(t *testing.T) {
 
 func TestSerializeActionEntryWithSequence_NoOptionalFields(t *testing.T) {
 	t.Parallel()
-	action := ActionEntryWithSequence{
+
+	// Keys the serializer emits only when the corresponding field is set.
+	optional := []string{"url", "value", "input_type", "key", "from_url", "to_url",
+		"selected_value", "selected_text", "scroll_y", "tab_id", "selectors"}
+
+	// Discriminating control: a fully populated entry must emit every one of
+	// those keys. This proves each name is really produced by the serializer,
+	// so their absence below is meaningful — a nil/empty map (or a misspelled
+	// key in this list) would otherwise satisfy the absence checks trivially.
+	populated := SerializeActionEntryWithSequence(ActionEntryWithSequence{
+		Entry: types.EnhancedAction{
+			Type:          "click",
+			Timestamp:     1738238123456,
+			URL:           "https://example.com",
+			Selectors:     map[string]any{"css": "button"},
+			Value:         "submit",
+			InputType:     "button",
+			Key:           "Enter",
+			FromURL:       "https://example.com/page1",
+			ToURL:         "https://example.com/page2",
+			SelectedValue: "option1",
+			SelectedText:  "Option 1",
+			ScrollY:       500,
+			TabID:         42,
+		},
+		Sequence:  2,
+		Timestamp: "2026-01-30T10:15:23Z",
+	})
+	for _, key := range optional {
+		if _, exists := populated[key]; !exists {
+			t.Fatalf("control: key %q missing for a fully populated entry; the absence assertions would be meaningless", key)
+		}
+	}
+
+	// Subject: nothing optional is set, so none of those keys may appear.
+	result := SerializeActionEntryWithSequence(ActionEntryWithSequence{
 		Entry: types.EnhancedAction{
 			Type:      "navigate",
 			Timestamp: 1738238123456,
 		},
 		Sequence:  1,
 		Timestamp: "2026-01-30T10:15:23Z",
+	})
+	for _, key := range []string{"type", "timestamp", "sequence"} {
+		if _, exists := result[key]; !exists {
+			t.Fatalf("required key %q missing — the serializer produced nothing to assert against", key)
+		}
 	}
-	result := SerializeActionEntryWithSequence(action)
-
-	// These keys should NOT be present when empty/zero
-	absent := []string{"url", "value", "input_type", "key", "from_url", "to_url",
-		"selected_value", "selected_text", "scroll_y", "tab_id", "selectors"}
-	for _, key := range absent {
+	for _, key := range optional {
 		if _, exists := result[key]; exists {
 			t.Errorf("key %q should not be present when empty/zero, got %v", key, result[key])
 		}

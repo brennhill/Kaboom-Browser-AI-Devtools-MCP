@@ -44,25 +44,43 @@ func TestCheckCookies_FlagsMissingSessionCookieSecurityAttributes(t *testing.T) 
 	}
 }
 
+// hasHSTSFinding reports whether the scan asked for Strict-Transport-Security.
+func hasHSTSFinding(findings []Finding) bool {
+	for _, f := range findings {
+		if strings.Contains(f.Title, "Strict-Transport-Security") {
+			return true
+		}
+	}
+	return false
+}
+
 func TestCheckSecurityHeaders_SkipsHSTSOnLocalhost(t *testing.T) {
 	t.Parallel()
 	scanner := NewScanner()
 
+	headers := map[string]string{"Content-Type": "text/html; charset=utf-8"}
+
+	// Discriminating control: the same header-less response served from a public
+	// HTTPS origin MUST be asked for HSTS. Without it, a checkSecurityHeaders that
+	// returned nothing at all — for any reason — would satisfy the assertion below.
+	control := scanner.checkSecurityHeaders([]types.NetworkBody{
+		{URL: "https://app.example.com/", ContentType: "text/html; charset=utf-8", ResponseHeaders: headers},
+	})
+	if !hasHSTSFinding(control) {
+		t.Fatalf("control: a public HTTPS response with no HSTS header must be flagged, got: %+v", control)
+	}
+
 	bodies := []types.NetworkBody{
 		{
-			URL:         "https://localhost:3000/",
-			ContentType: "text/html; charset=utf-8",
-			ResponseHeaders: map[string]string{
-				"Content-Type": "text/html; charset=utf-8",
-			},
+			URL:             "https://localhost:3000/",
+			ContentType:     "text/html; charset=utf-8",
+			ResponseHeaders: headers,
 		},
 	}
 
 	findings := scanner.checkSecurityHeaders(bodies)
-	for _, f := range findings {
-		if strings.Contains(f.Title, "Strict-Transport-Security") {
-			t.Fatalf("localhost response should not require HSTS, got finding: %+v", f)
-		}
+	if hasHSTSFinding(findings) {
+		t.Fatalf("localhost response should not require HSTS, got findings: %+v", findings)
 	}
 }
 

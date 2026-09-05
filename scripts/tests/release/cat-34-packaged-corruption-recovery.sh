@@ -165,11 +165,17 @@ done
 begin_test "34.5" "Corrupt values stay redacted" \
     "Search daemon logs and Doctor output for the unique raw fixture marker" \
     "Recovery evidence must identify state families without leaking persisted content"
-if grep -q "$RAW_FIXTURE_SECRET" "$DAEMON_LOG" ||
+# The daemon-log half of this scan only means something if the log exists and
+# captured output: `grep -q` over a missing or empty file returns non-zero for
+# reasons that have nothing to do with redaction, which would silently retire
+# half of the assertion. (The Doctor half is guarded by 34.4.)
+if [ ! -s "$DAEMON_LOG" ]; then
+    fail "daemon log $DAEMON_LOG is missing or empty; the log half of the redaction scan could not run"
+elif grep -q "$RAW_FIXTURE_SECRET" "$DAEMON_LOG" ||
     printf '%s\n%s' "$doctor_active" "$doctor_recovered" | grep -q "$RAW_FIXTURE_SECRET"; then
     fail "Raw persisted fixture content leaked into diagnostics"
 else
-    pass "Logs and Doctor diagnostics contain no raw persisted fixture values"
+    pass "Logs ($(wc -c < "$DAEMON_LOG" | tr -d ' ') bytes scanned) and Doctor diagnostics contain no raw persisted fixture values"
 fi
 
 finish_category

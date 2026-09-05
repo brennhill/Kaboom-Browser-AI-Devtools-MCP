@@ -114,12 +114,18 @@ func TestNewAddEnhancedActions_TestIDTagging(t *testing.T) {
 	c.Extension().SetTestBoundaryStart("test-alpha")
 	c.Extension().SetTestBoundaryStart("test-beta")
 
-	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
+	added := []types.EnhancedAction{
 		{Type: "click"},
 		{Type: "type", Value: "text"},
-	})
+	}
+	c.Telemetry().AddEnhancedActions(added)
 
 	actions := c.Telemetry().Actions().Snapshot().Actions
+	// Observed-input signal: without this the per-action assertions below would
+	// all hold vacuously if the store had ingested nothing.
+	if len(actions) != len(added) {
+		t.Fatalf("stored %d actions, want %d — nothing was ingested to tag", len(actions), len(added))
+	}
 	for i, action := range actions {
 		if len(action.TestIDs) != 2 {
 			t.Fatalf("action[%d].TestIDs len = %d, want 2", i, len(action.TestIDs))

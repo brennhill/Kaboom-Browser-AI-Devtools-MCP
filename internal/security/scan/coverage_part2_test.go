@@ -208,10 +208,24 @@ func TestGetEntryString_AllBranches(t *testing.T) {
 func TestScanURLForGenericSecrets_SkipsWhenAPIKeyMatches(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	url := "https://api.example.com/data?api_key=abcdefghijklmnop"
+	const url = "https://api.example.com/data?api_key=abcdefghijklmnop"
+
+	// Discriminating control: the generic scanner fires on a URL differing only in
+	// the parameter name, so its silence below is the precedence rule and not a
+	// scanner that never parsed the URL.
+	if generic := s.scanURLForGenericSecrets("https://api.example.com/data?mysecret=abcdefghijklmnop"); len(generic) == 0 {
+		t.Fatal("control: generic scanner reported nothing for a secret-named parameter")
+	}
+
+	// Precedence must dedupe, not drop: the same secret is still reported, by the
+	// apiKey scanner. A rule that silenced both would ship a live key unreported.
+	if apiKeys := s.scanURLForAPIKeys(url); len(apiKeys) != 1 {
+		t.Fatalf("control: apiKey scanner must claim this URL, got %d findings: %+v", len(apiKeys), apiKeys)
+	}
+
 	findings := s.scanURLForGenericSecrets(url)
 	if len(findings) != 0 {
-		t.Errorf("expected 0 findings (apiKey pattern takes precedence), got %d", len(findings))
+		t.Errorf("expected 0 findings (apiKey pattern takes precedence), got %d: %+v", len(findings), findings)
 	}
 }
 

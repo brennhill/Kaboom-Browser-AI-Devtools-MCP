@@ -407,6 +407,21 @@ func TestSecurityDiffSnapshotOverwrite(t *testing.T) {
 	}
 }
 
+// requireSnapshotEntry returns the named entry from ListSnapshots, failing the
+// test when it is absent. Callers rely on it so an empty listing can never be
+// mistaken for a satisfied expectation.
+func requireSnapshotEntry(t *testing.T, mgr *Manager, name string) SnapshotListEntry {
+	t.Helper()
+	list := mgr.ListSnapshots()
+	for _, entry := range list {
+		if entry.Name == name {
+			return entry
+		}
+	}
+	t.Fatalf("snapshot %q missing from ListSnapshots (%d entries returned)", name, len(list))
+	return SnapshotListEntry{}
+}
+
 func TestSecurityDiffExpiredSnapshot(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
@@ -419,12 +434,17 @@ func TestSecurityDiffExpiredSnapshot(t *testing.T) {
 	}
 
 	mustTakeSnapshot(t, mgr, "old", bodies)
+
+	// Discriminating control: before the TTL elapses the same entry must report
+	// Expired=false. This proves ListSnapshots derives expiry from the clock
+	// rather than reporting a constant — or nothing at all.
+	if fresh := requireSnapshotEntry(t, mgr, "old"); fresh.Expired {
+		t.Fatalf("control: snapshot %q must not be expired before its %v TTL elapses", "old", mgr.ttl)
+	}
+
 	clock.Advance(5 * time.Millisecond)
 
-	list := mgr.ListSnapshots()
-	for _, s := range list {
-		if s.Name == "old" && !s.Expired {
-			t.Error("expected expired=true for old snapshot")
-		}
+	if aged := requireSnapshotEntry(t, mgr, "old"); !aged.Expired {
+		t.Error("expected expired=true for old snapshot")
 	}
 }

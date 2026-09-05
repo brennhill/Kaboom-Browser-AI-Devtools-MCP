@@ -605,37 +605,55 @@ func TestAPIContractValidator_NoViolationWithConsistentResponses(t *testing.T) {
 
 func TestAPIContractValidator_NoViolationBeforeMinCalls(t *testing.T) {
 	t.Parallel()
-	v := NewAPIContractValidator()
 
-	// Only 2 observations - not enough to establish shape
-	v.Learn(types.NetworkBody{
-		Method:       "GET",
-		URL:          "http://localhost:3000/api/users/1",
-		Status:       200,
-		ResponseBody: `{"id":1,"name":"Alice","email":"alice@example.com"}`,
-		ContentType:  "application/json",
-	})
-	v.Learn(types.NetworkBody{
-		Method:       "GET",
-		URL:          "http://localhost:3000/api/users/2",
-		Status:       200,
-		ResponseBody: `{"id":2,"name":"Bob","email":"bob@example.com"}`,
-		ContentType:  "application/json",
-	})
-
-	// Missing field should not be a violation yet (still learning)
-	violations := v.Validate(types.NetworkBody{
+	learned := []types.NetworkBody{
+		{Method: "GET", URL: "http://localhost:3000/api/users/1", Status: 200,
+			ResponseBody: `{"id":1,"name":"Alice","email":"alice@example.com"}`, ContentType: "application/json"},
+		{Method: "GET", URL: "http://localhost:3000/api/users/2", Status: 200,
+			ResponseBody: `{"id":2,"name":"Bob","email":"bob@example.com"}`, ContentType: "application/json"},
+		{Method: "GET", URL: "http://localhost:3000/api/users/4", Status: 200,
+			ResponseBody: `{"id":4,"name":"Dave","email":"dave@example.com"}`, ContentType: "application/json"},
+	}
+	// The same probe drives both arms: "email" is absent from the learned shape.
+	probe := types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/3",
 		Status:       200,
 		ResponseBody: `{"id":3,"name":"Carol"}`,
 		ContentType:  "application/json",
-	})
+	}
 
-	// During learning phase, should not flag violations
-	for _, v := range violations {
-		if v.ViolationType == "shape_change" {
-			t.Error("Should not report shape_change violation before shape is established (min 3 calls)")
+	// Discriminating control: once the shape IS established the very same probe
+	// must be flagged. Without this arm the assertion below would hold equally
+	// well if Validate never inspected the body at all.
+	established := NewAPIContractValidator()
+	for _, body := range learned {
+		established.Learn(body)
+	}
+	controlViolations := established.Validate(probe)
+	controlFlagged := false
+	for _, violation := range controlViolations {
+		if violation.ViolationType == "shape_change" && containsField(violation.MissingFields, "email") {
+			controlFlagged = true
+			break
+		}
+	}
+	if !controlFlagged {
+		t.Fatalf("control: expected shape_change for missing 'email' after %d observations, got %+v",
+			minCallsToEstablishShape, controlViolations)
+	}
+
+	// Subject: only minCallsToEstablishShape-1 observations, so the shape is
+	// still being learned and the identical probe must NOT be flagged.
+	v := NewAPIContractValidator()
+	for _, body := range learned[:minCallsToEstablishShape-1] {
+		v.Learn(body)
+	}
+	violations := v.Validate(probe)
+	for _, violation := range violations {
+		if violation.ViolationType == "shape_change" {
+			t.Errorf("Should not report shape_change violation before shape is established (min %d calls), got %+v",
+				minCallsToEstablishShape, violation)
 		}
 	}
 }

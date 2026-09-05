@@ -102,12 +102,23 @@ func TestWebSocketEvent_OpenCloseNoFormat(t *testing.T) {
 	t.Parallel()
 	c := cap.NewCapture()
 
-	// Add open/close events which shouldn't have binary format detection
+	// Open/close events shouldn't get binary format detection. The protobuf
+	// message in the same batch is the discriminating control: detection MUST
+	// tag it, which proves detection actually ran over this batch.
+	protobufData := string([]byte{0x08, 0x96, 0x01})
 	events := []types.WebSocketEvent{
 		{
 			Event: "open",
 			ID:    "ws-1",
 			URL:   "wss://api.example.com/ws",
+		},
+		{
+			Event:     "message",
+			ID:        "ws-1",
+			URL:       "wss://api.example.com/ws",
+			Direction: "incoming",
+			Data:      protobufData,
+			Size:      len(protobufData),
 		},
 		{
 			Event:       "close",
@@ -118,12 +129,28 @@ func TestWebSocketEvent_OpenCloseNoFormat(t *testing.T) {
 	}
 	c.Telemetry().AddWebSocketEvents(events)
 
-	// Verify no binary format for non-message events
 	result := c.Telemetry().WebSockets().Events(types.WebSocketEventFilter{Limit: 10})
+	if len(result) != len(events) {
+		t.Fatalf("expected %d events back, got %d", len(events), len(result))
+	}
+
+	taggedMessages := 0
 	for _, ev := range result {
+		if ev.Event == "message" {
+			// Control arm.
+			if ev.BinaryFormat == "" {
+				t.Errorf("control: expected binary_format for protobuf message, got empty")
+				continue
+			}
+			taggedMessages++
+			continue
+		}
 		if ev.BinaryFormat != "" {
 			t.Errorf("expected empty binary_format for %s event, got %q", ev.Event, ev.BinaryFormat)
 		}
+	}
+	if taggedMessages != 1 {
+		t.Fatalf("control never ran: %d format-tagged messages observed, want 1", taggedMessages)
 	}
 }
 
