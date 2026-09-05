@@ -144,6 +144,22 @@ func coreActionProperties() map[string]any {
 	}
 }
 
+// effectVerificationProperties are the controls over the effect window opened
+// around every mutating action. Kept as their own group so the core property map
+// stays inside its length budget.
+func effectVerificationProperties() map[string]any {
+	return map[string]any{
+		"effects": map[string]any{
+			"type":        "boolean",
+			"description": "Effect verification. Default true for mutating actions: the response carries an effects block naming what the action was observed to do (dispatched_and_observed_effect / dispatched_and_no_observable_effect / dispatched_then_error). Set false to skip the settle window and return as soon as the action dispatches.",
+		},
+		"effect_window_ms": map[string]any{
+			"type":        "integer",
+			"description": "How long to watch for effects after a mutating action, in ms (default 300, max 5000). The window closes as soon as an effect is seen, so only an action that did nothing spends the full budget.",
+		},
+	}
+}
+
 // findProperties are the parameters of the accessibility-tree `find` action. Kept as their
 // own group so the core property map stays inside its length budget.
 func findProperties() map[string]any {

@@ -7,6 +7,9 @@ owners: []
 last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/interactdispatch/handler.go
+  - cmd/browser-agent/internal/interactdispatch/effects.go
+  - cmd/browser-agent/internal/actioneffects/effects.go
+  - cmd/browser-agent/internal/actioneffects/classify.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
@@ -96,6 +99,9 @@ code_paths:
   - src/background/ui/tracked-tab-state.ts
   - src/lib/tabs/tab-focus.ts
 test_paths:
+  - cmd/browser-agent/internal/interactdispatch/effects_test.go
+  - cmd/browser-agent/internal/actioneffects/effects_test.go
+  - cmd/browser-agent/internal/actioneffects/classify_test.go
   - extension/background/__tests__/cdp-session.test.js
   - extension/background/__tests__/cdp-ax-tree.test.js
   - tests/extension/contracts/chrome-platform-limits.test.js

@@ -7,9 +7,6 @@
 package toolresp
 
 import (
-	"encoding/json"
-	"strings"
-
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -94,23 +91,8 @@ func ProjectElementsInResponse(resp mcp.JSONRPCResponse, verbose bool) mcp.JSONR
 	if verbose {
 		return resp
 	}
-	return mcp.MutateToolResult(resp, func(r *mcp.MCPToolResult) {
-		if len(r.Content) == 0 || r.Content[0].Type != "text" {
-			return
-		}
-		text := r.Content[0].Text
-		jsonStart := strings.Index(text, "{")
-		if jsonStart < 0 {
-			return
-		}
-		var data map[string]any
-		if err := json.Unmarshal([]byte(text[jsonStart:]), &data); err != nil {
-			return
-		}
-		projected, err := json.Marshal(projectElementCollections(data, false))
-		if err != nil {
-			return
-		}
-		r.Content[0].Text = text[:jsonStart] + string(projected)
+	return mcp.MutateResultPayload(resp, func(data map[string]any) bool {
+		projectElementCollections(data, false)
+		return true
 	})
 }

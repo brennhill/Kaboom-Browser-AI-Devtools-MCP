@@ -1,6 +1,14 @@
 {
   "version": 1,
   "files": {
+    "cmd/browser-agent/internal/actioneffects/classify.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "cmd/browser-agent/internal/actioneffects/effects.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
     "cmd/browser-agent/internal/appruntime/runtime.go": {
       "mutable_globals": 0,
       "exports": 15
@@ -123,7 +131,7 @@
     },
     "cmd/browser-agent/internal/cli/parser/flags.go": {
       "mutable_globals": 0,
-      "exports": 7
+      "exports": 8
     },
     "cmd/browser-agent/internal/cli/parser/generate_configure.go": {
       "mutable_globals": 0,
@@ -751,7 +759,7 @@
     },
     "cmd/browser-agent/internal/toolinteract/action_owners.go": {
       "mutable_globals": 0,
-      "exports": 21
+      "exports": 22
     },
     "cmd/browser-agent/internal/toolinteract/action_runtime.go": {
       "mutable_globals": 1,
@@ -1243,7 +1251,7 @@
     },
     "internal/mcp/response_content.go": {
       "mutable_globals": 0,
-      "exports": 6
+      "exports": 8
     },
     "internal/mcp/types.go": {
       "mutable_globals": 0,

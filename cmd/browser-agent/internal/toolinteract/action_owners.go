@@ -228,7 +228,11 @@ func canonicalActionFromInteractArgs(args json.RawMessage) string {
 	return strings.ToLower(action)
 }
 
-func isMutationAction(action string) bool {
+// IsMutationAction reports whether an interact action can change the page or the
+// browser. Evidence capture uses it to decide whether to take a before-shot, and
+// the dispatcher uses it to decide whether an effect window is worth opening —
+// a read-only action has no effect to verify.
+func IsMutationAction(action string) bool {
 	switch strings.ToLower(strings.TrimSpace(action)) {
 	case
 		"highlight",
@@ -478,7 +482,7 @@ func (h *ActionRuntime) ArmEvidenceForCommand(correlationID, action string, args
 	case evidenceModeAlways:
 		state.shouldCapture = true
 	case evidenceModeOnMutation:
-		state.shouldCapture = isMutationAction(state.action)
+		state.shouldCapture = IsMutationAction(state.action)
 		if !state.shouldCapture {
 			state.skipped = "non_mutating_action"
 		}

@@ -13,7 +13,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 	"net/url"
-	"strings"
 	"time"
 )
 
@@ -166,25 +165,10 @@ func (h *PageActions) HandleExplorePage(req mcp.JSONRPCRequest, args json.RawMes
 // site_menus section. Elements claimed by menus are removed from the
 // interactive_elements list so there is no overlap.
 func enrichExploreWithMenus(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	return mcp.MutateToolResult(resp, func(r *mcp.MCPToolResult) {
-		if len(r.Content) == 0 || r.Content[0].Type != "text" {
-			return
-		}
-
-		text := r.Content[0].Text
-		jsonStart := strings.Index(text, "{")
-		if jsonStart < 0 {
-			return
-		}
-
-		var data map[string]any
-		if err := json.Unmarshal([]byte(text[jsonStart:]), &data); err != nil {
-			return
-		}
-
+	return mcp.MutateResultPayload(resp, func(data map[string]any) bool {
 		elementsRaw, ok := data["interactive_elements"].([]any)
 		if !ok || len(elementsRaw) == 0 {
-			return
+			return false
 		}
 
 		// Parse elements into RawElement for the heuristic
@@ -204,12 +188,7 @@ func enrichExploreWithMenus(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 		}
 
 		data["site_menus"] = menuResult
-
-		dataJSON, err := json.Marshal(data)
-		if err != nil {
-			return
-		}
-		r.Content[0].Text = text[:jsonStart] + string(dataJSON)
+		return true
 	})
 }
 

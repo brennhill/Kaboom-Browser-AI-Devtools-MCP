@@ -20,6 +20,9 @@ const (
 	FlagString cliFlagKind = iota
 	FlagInt
 	FlagBool
+	// FlagBoolOff is a flag that sets its key to false. Needed for options that
+	// default to on, where a presence-only flag can never express the opt-out.
+	FlagBoolOff
 	FlagStringList
 	FlagJSON
 	FlagJSONOrString
@@ -41,8 +44,8 @@ func parseFlagsBySpec(args []string, specs map[string]cliFlagSpec) (map[string]a
 		if !ok {
 			return nil, fmt.Errorf("unknown flag: %s", flag)
 		}
-		if spec.Kind == FlagBool {
-			out[spec.MCPKey] = true
+		if spec.Kind == FlagBool || spec.Kind == FlagBoolOff {
+			out[spec.MCPKey] = spec.Kind == FlagBool
 			continue
 		}
 		if !isValueFlagKind(spec.Kind) {

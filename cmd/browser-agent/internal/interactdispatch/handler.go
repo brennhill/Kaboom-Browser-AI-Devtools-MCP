@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/actioneffects"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -33,6 +34,11 @@ type Deps struct {
 	AppendScreenshot   func(mcp.JSONRPCResponse, mcp.JSONRPCRequest) mcp.JSONRPCResponse
 	AppendInteractive  func(mcp.JSONRPCResponse, mcp.JSONRPCRequest) mcp.JSONRPCResponse
 	Delay              func(time.Duration)
+	// Effects supplies the capture readers the effect window measures against.
+	// Nil leaves every response exactly as its action owner built it.
+	Effects func() actioneffects.Deps
+	// EffectBudget bounds the window. Zero values take the package defaults.
+	EffectBudget actioneffects.Budget
 }
 
 // Handler owns immutable interact dispatch state for one ToolHandler.
@@ -97,11 +103,27 @@ func preDispatch(h *Handler, req mcp.JSONRPCRequest, args json.RawMessage, what 
 }
 
 // Handle dispatches one action and applies compatible composable effects.
+//
+// The effect window opens before dispatch and closes after it, so the response
+// can report what the action did rather than only that it ran.
 func (h *Handler) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	params := parseComposableArgs(args)
+	effectParams := parseEffectArgs(args)
 	what := resolveWhat(args)
+
+	var effectDeps actioneffects.Deps
+	var mark actioneffects.Mark
+	if h.wantsEffectWindow(effectParams, what, false) {
+		effectDeps = h.deps.Effects()
+		mark = actioneffects.Open(effectDeps)
+	}
+
 	response := toolrouting.Dispatch(h, req, args, h.registry)
 	failed := act.IsErrorResponse(response)
+
+	if h.wantsEffectWindow(effectParams, what, failed) {
+		response = h.attachEffects(response, effectDeps, mark, h.effectBudget(effectParams))
+	}
 
 	h.queueSubtitleEffect(req, params, what, failed)
 	hasSideEffects := h.queueStabilizingEffects(req, params, what, failed)

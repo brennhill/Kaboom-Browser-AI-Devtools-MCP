@@ -5,10 +5,13 @@ package main
 
 import (
 	"encoding/json"
+	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/actioneffects"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interactdispatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func (h *ToolHandler) toolInteract(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -25,7 +28,30 @@ func buildInteractDispatcher(h *ToolHandler) *interactdispatch.Handler {
 		QueueActionDiff:    h.pageActions.QueueComposableActionDiff,
 		AppendScreenshot:   h.pageActions.AppendScreenshotToResponse,
 		AppendInteractive:  h.pageActions.AppendInteractiveToResponse,
+		Effects:            func() actioneffects.Deps { return buildEffectDeps(h) },
 	})
+}
+
+// buildEffectDeps names the capture readers the effect window measures against.
+// They are the same buffers observe reads, queried over the span of one action.
+func buildEffectDeps(h *ToolHandler) actioneffects.Deps {
+	return actioneffects.Deps{
+		Now:        time.Now,
+		LogEntries: h.server.logs.EntriesWithAddedAt,
+		NetworkRequests: func() ([]types.NetworkBody, []time.Time) {
+			snapshot := h.capture.Telemetry().NetworkBodies().Snapshot()
+			return snapshot.Bodies, snapshot.Timestamps
+		},
+		Actions: func() ([]types.EnhancedAction, []time.Time) {
+			snapshot := h.capture.Telemetry().Actions().Snapshot()
+			return snapshot.Actions, snapshot.Timestamps
+		},
+		TrackedURL: func() string {
+			_, _, url := h.capture.Extension().GetTrackingStatus()
+			return url
+		},
+		Wait: time.Sleep,
+	}
 }
 
 func buildInteractActions(h *ToolHandler) map[string]interactdispatch.Action {

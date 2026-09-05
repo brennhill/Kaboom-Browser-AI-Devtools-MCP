@@ -598,7 +598,7 @@ func TestEvidenceArgumentAndEnvironmentParsing(t *testing.T) {
 	if got := canonicalActionFromInteractArgs(json.RawMessage(`{"action":" CLICK "}`)); got != "click" {
 		t.Fatalf("canonical action = %q", got)
 	}
-	if !isMutationAction(" Navigate ") || isMutationAction("get_text") {
+	if !IsMutationAction(" Navigate ") || IsMutationAction("get_text") {
 		t.Fatal("mutation classification mismatch")
 	}
 }

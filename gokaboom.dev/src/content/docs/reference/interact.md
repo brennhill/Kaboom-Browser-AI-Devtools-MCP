@@ -415,6 +415,34 @@ Returns an array of elements, each with:
 
 This is the best way to discover what's clickable on an unfamiliar page. The AI can read the list and choose the right selector.
 
+### find
+
+Finds elements by natural-language description using the accessibility tree, so it reaches controls
+no CSS selector can name — canvas widgets, ARIA-only semantics, and components whose class names
+change on every build.
+
+```js
+interact({what: "find", query: "add to cart button"})
+interact({what: "find", query: "search bar"})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `query` | string | **Required.** A natural-language description of the element, matched against role + accessible name |
+
+Returns ranked candidates, each with:
+
+| Field | Description |
+|-------|-------------|
+| `ref` | Accessibility reference, usable as a target in a following action |
+| `role` | ARIA role of the candidate |
+| `name` | Accessible name |
+| `confidence` | How well the candidate matched the query |
+| `why` | What matched — role, name, or both |
+
+More than one candidate means the query was ambiguous. Disambiguate it rather than taking the
+first result: `find` ranks, it does not decide.
+
 ---
 
 ## JavaScript Execution

@@ -325,3 +325,24 @@ func TestParseGenerateArgs_UnknownFlag(t *testing.T) {
 		t.Fatal("expected unknown flag error")
 	}
 }
+
+func TestParseInteractArgs_EffectWindowControls(t *testing.T) {
+	t.Parallel()
+
+	// Effect verification defaults to on for mutating actions, so the only flag
+	// worth having is the opt-out — a presence-only boolean cannot express it.
+	result, err := ParseInteractArgs("click", []string{
+		"--selector", "#go",
+		"--no-effects",
+		"--effect-window-ms", "800",
+	})
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if result["effects"] != false {
+		t.Fatalf("effects = %#v, want false", result["effects"])
+	}
+	if result["effect_window_ms"] != 800 {
+		t.Fatalf("effect_window_ms = %#v, want 800", result["effect_window_ms"])
+	}
+}

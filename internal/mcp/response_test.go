@@ -628,3 +628,119 @@ func TestPopJSONOpenerOnlyPopsMatchingOpener(t *testing.T) {
 		t.Fatalf("empty-stack pop = %q, want empty", got)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Result-payload accessors
+//
+// Four call sites had each open-coded "scan to the first '{', unmarshal, mutate,
+// re-marshal behind the summary prefix". These pin the shared spelling, including
+// the pass-through cases where a response that cannot be read must not be corrupted.
+// ---------------------------------------------------------------------------
+
+func TestReadResultPayloadDecodesTheJSONAfterTheSummaryLine(t *testing.T) {
+	resp := Succeed(JSONRPCRequest{ID: float64(1)}, "Clicked #submit", map[string]any{
+		"action":  "click",
+		"success": true,
+	})
+
+	data, ok := ReadResultPayload(resp)
+	if !ok {
+		t.Fatal("payload not readable")
+	}
+	if data["action"] != "click" || data["success"] != true {
+		t.Fatalf("payload = %#v", data)
+	}
+}
+
+func TestReadResultPayloadRefusesUnreadableResponses(t *testing.T) {
+	tests := []struct {
+		name string
+		resp JSONRPCResponse
+	}{
+		{"no result", JSONRPCResponse{}},
+		{"text only, no JSON", SucceedText(JSONRPCRequest{ID: float64(1)}, "plain text")},
+		{"malformed payload", JSONRPCResponse{Result: json.RawMessage(`{"content":[{"type":"text","text":"x {not json"}]}`)}},
+		{"image block first", JSONRPCResponse{Result: json.RawMessage(`{"content":[{"type":"image","data":"AA"}]}`)}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, ok := ReadResultPayload(tc.resp); ok {
+				t.Fatal("unreadable response reported as readable")
+			}
+		})
+	}
+}
+
+func TestMutateResultPayloadRewritesOnlyTheJSONAndKeepsTheSummary(t *testing.T) {
+	resp := Succeed(JSONRPCRequest{ID: float64(1)}, "Clicked #submit", map[string]any{"action": "click"})
+
+	resp = MutateResultPayload(resp, func(data map[string]any) bool {
+		data["effects"] = map[string]any{"outcome": "dispatched_and_observed_effect"}
+		return true
+	})
+
+	var result MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+	text := result.Content[0].Text
+	if !strings.HasPrefix(text, "Clicked #submit") {
+		t.Fatalf("summary line lost: %q", text)
+	}
+	data, ok := ReadResultPayload(resp)
+	if !ok {
+		t.Fatal("payload not readable after mutation")
+	}
+	effects, ok := data["effects"].(map[string]any)
+	if !ok || effects["outcome"] != "dispatched_and_observed_effect" {
+		t.Fatalf("effects = %#v", data["effects"])
+	}
+	if data["action"] != "click" {
+		t.Fatal("mutation dropped an existing field")
+	}
+}
+
+func TestMutateResultPayloadLeavesTheResponseAloneWhenNothingChanged(t *testing.T) {
+	original := Succeed(JSONRPCRequest{ID: float64(1)}, "Clicked", map[string]any{"action": "click"})
+
+	got := MutateResultPayload(original, func(map[string]any) bool { return false })
+
+	if string(got.Result) != string(original.Result) {
+		t.Fatalf("no-op mutation rewrote the result:\n got %s\nwant %s", got.Result, original.Result)
+	}
+}
+
+func TestMutateResultPayloadPassesUnreadableResponsesThroughUntouched(t *testing.T) {
+	// A response this cannot parse is one it must not corrupt: an enrichment that
+	// silently blanked a tool result would lose the answer the caller asked for.
+	for _, original := range []JSONRPCResponse{
+		SucceedText(JSONRPCRequest{ID: float64(1)}, "plain text"),
+		{Result: json.RawMessage(`not json at all`)},
+	} {
+		got := MutateResultPayload(original, func(data map[string]any) bool {
+			data["effects"] = "should never land"
+			return true
+		})
+		if string(got.Result) != string(original.Result) {
+			t.Fatalf("unreadable response was rewritten:\n got %s\nwant %s", got.Result, original.Result)
+		}
+	}
+}
+
+func TestMutateResultPayloadKeepsBlocksAfterTheFirst(t *testing.T) {
+	resp := Succeed(JSONRPCRequest{ID: float64(1)}, "Clicked", map[string]any{"action": "click"})
+	resp = AppendImageToResponse(resp, "QUJD", "image/png")
+
+	resp = MutateResultPayload(resp, func(data map[string]any) bool {
+		data["effects"] = map[string]any{"outcome": "none"}
+		return true
+	})
+
+	var result MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+	if len(result.Content) != 2 || result.Content[1].Type != "image" || result.Content[1].Data != "QUJD" {
+		t.Fatalf("content blocks = %#v", result.Content)
+	}
+}

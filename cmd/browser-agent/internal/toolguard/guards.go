@@ -5,7 +5,6 @@ package toolguard
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -55,25 +54,10 @@ func (g *Guards) InjectCSPBlockedActions(resp mcp.JSONRPCResponse) mcp.JSONRPCRe
 	if actions == nil {
 		return resp
 	}
-	return mcp.MutateToolResult(resp, func(result *mcp.MCPToolResult) {
-		if len(result.Content) == 0 {
-			return
-		}
-		text := result.Content[0].Text
-		jsonStart := strings.IndexByte(text, '{')
-		if jsonStart < 0 {
-			return
-		}
-		var data map[string]any
-		if json.Unmarshal([]byte(text[jsonStart:]), &data) != nil {
-			return
-		}
+	return mcp.MutateResultPayload(resp, func(data map[string]any) bool {
 		data["blocked_actions"] = actions
 		data["blocked_reason"] = reason
-		dataJSON, err := json.Marshal(data)
-		if err == nil {
-			result.Content[0].Text = text[:jsonStart] + string(dataJSON)
-		}
+		return true
 	})
 }
 

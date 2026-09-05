@@ -95,3 +95,59 @@ func AppendWarningsToToolResult(result *MCPToolResult, warnings []string) bool {
 	})
 	return true
 }
+
+// firstTextPayload locates the JSON object that follows a tool result's summary
+// line. Returns the whole first text block and the index the JSON starts at.
+func firstTextPayload(result *MCPToolResult) (string, int) {
+	if len(result.Content) == 0 || result.Content[0].Type != "text" {
+		return "", -1
+	}
+	text := result.Content[0].Text
+	return text, strings.IndexByte(text, '{')
+}
+
+// ReadResultPayload decodes the JSON object carried after the summary line of a
+// tool result. Reports false for any response whose payload cannot be read —
+// a text-only result, a non-text first block, or malformed JSON.
+func ReadResultPayload(resp JSONRPCResponse) (map[string]any, bool) {
+	var result MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		return nil, false
+	}
+	text, jsonStart := firstTextPayload(&result)
+	if jsonStart < 0 {
+		return nil, false
+	}
+	var data map[string]any
+	if err := json.Unmarshal([]byte(text[jsonStart:]), &data); err != nil {
+		return nil, false
+	}
+	return data, true
+}
+
+// MutateResultPayload decodes the JSON payload behind a tool result's summary
+// line, hands it to mutate, and re-encodes it in place when mutate reports a
+// change. The summary prefix and every content block after the first are kept.
+//
+// A response this cannot read passes through untouched: an enrichment that
+// blanked an unparseable result would lose the answer the caller asked for.
+func MutateResultPayload(resp JSONRPCResponse, mutate func(map[string]any) bool) JSONRPCResponse {
+	return MutateToolResult(resp, func(result *MCPToolResult) {
+		text, jsonStart := firstTextPayload(result)
+		if jsonStart < 0 {
+			return
+		}
+		var data map[string]any
+		if err := json.Unmarshal([]byte(text[jsonStart:]), &data); err != nil {
+			return
+		}
+		if !mutate(data) {
+			return
+		}
+		encoded, err := json.Marshal(data)
+		if err != nil {
+			return
+		}
+		result.Content[0].Text = text[:jsonStart] + string(encoded)
+	})
+}

@@ -71,26 +71,12 @@ func IsNonFinalResponse(resp mcp.JSONRPCResponse) bool {
 	if err := json.Unmarshal(resp.Result, &result); err != nil || result.IsError {
 		return false
 	}
-	if len(result.Content) == 0 {
+	data, ok := mcp.ReadResultPayload(resp)
+	if !ok {
 		return false
 	}
-	text := result.Content[0].Text
-	// Look for the JSON payload after the summary line.
-	idx := 0
-	for idx < len(text) && text[idx] != '{' {
-		idx++
-	}
-	if idx >= len(text) {
-		return false
-	}
-	var data map[string]any
-	if json.Unmarshal([]byte(text[idx:]), &data) != nil {
-		return false
-	}
-	if final, ok := data["final"].(bool); ok && !final {
-		return true
-	}
-	return false
+	final, ok := data["final"].(bool)
+	return ok && !final
 }
 
 // ResponseStatus returns "success" or "error" based on the response.
