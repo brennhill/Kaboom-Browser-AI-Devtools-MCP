@@ -18,7 +18,7 @@ func TestResolve_EmptyRegistry(t *testing.T) {
 func TestResolve_NilReceiverIsSafe(t *testing.T) {
 	t.Parallel()
 	var r *Registry
-	if gen := r.Store("client-a", 0, "gen", map[int]string{1: "#a"}); gen != "" {
+	if gen := r.Store("client-a", 0, "gen", map[int]Target{1: {Selector: "#a"}}); gen != "" {
 		t.Errorf("Store on nil Registry = %q, want empty", gen)
 	}
 	if _, ok, _, _ := r.Resolve("client-a", 0, 1, ""); ok {
@@ -29,33 +29,33 @@ func TestResolve_NilReceiverIsSafe(t *testing.T) {
 func TestStore_GeneratesGenerationWhenEmpty(t *testing.T) {
 	t.Parallel()
 	r := New()
-	gen := r.Store("client-a", 0, "", map[int]string{1: "#a"})
+	gen := r.Store("client-a", 0, "", map[int]Target{1: {Selector: "#a"}})
 	if !strings.HasPrefix(gen, "idx_") {
 		t.Fatalf("Store(generation=\"\") = %q, want a generated idx_ stamp", gen)
 	}
 	// The generated stamp must be usable as a Resolve comparand.
-	if sel, ok, stale, _ := r.Resolve("client-a", 0, 1, gen); !ok || stale || sel != "#a" {
-		t.Fatalf("Resolve with generated stamp = (%q,%v,%v), want (#a,true,false)", sel, ok, stale)
+	if target, ok, stale, _ := r.Resolve("client-a", 0, 1, gen); !ok || stale || target.Selector != "#a" {
+		t.Fatalf("Resolve with generated stamp = (%q,%v,%v), want (#a,true,false)", target.Selector, ok, stale)
 	}
 }
 
 func TestStore_ClonesCallerMap(t *testing.T) {
 	t.Parallel()
 	r := New()
-	selectors := map[int]string{1: "#a"}
-	r.Store("client-a", 0, "gen_1", selectors)
-	selectors[1] = "#mutated-after-store"
-	if sel, _, _, _ := r.Resolve("client-a", 0, 1, "gen_1"); sel != "#a" {
-		t.Fatalf("Resolve = %q, want #a — Store must not alias the caller's map", sel)
+	targets := map[int]Target{1: {Selector: "#a"}}
+	r.Store("client-a", 0, "gen_1", targets)
+	targets[1] = Target{Selector: "#mutated-after-store"}
+	if target, _, _, _ := r.Resolve("client-a", 0, 1, "gen_1"); target.Selector != "#a" {
+		t.Fatalf("Resolve = %q, want #a — Store must not alias the caller's map", target.Selector)
 	}
 }
 
 func TestResolve_ScopedByClientAndTab(t *testing.T) {
 	t.Parallel()
 	r := New()
-	r.Store("client-a", 0, "gen_a", map[int]string{1: "#a"})
-	r.Store("client-b", 0, "gen_b", map[int]string{1: "#b"})
-	r.Store("client-a", 9, "gen_a9", map[int]string{1: "#a9"})
+	r.Store("client-a", 0, "gen_a", map[int]Target{1: {Selector: "#a"}})
+	r.Store("client-b", 0, "gen_b", map[int]Target{1: {Selector: "#b"}})
+	r.Store("client-a", 9, "gen_a9", map[int]Target{1: {Selector: "#a9"}})
 
 	for _, tc := range []struct {
 		clientID string
@@ -66,8 +66,8 @@ func TestResolve_ScopedByClientAndTab(t *testing.T) {
 		{"client-b", 0, "#b"},
 		{"client-a", 9, "#a9"},
 	} {
-		if sel, ok, _, _ := r.Resolve(tc.clientID, tc.tabID, 1, ""); !ok || sel != tc.want {
-			t.Errorf("Resolve(%q, %d) = %q ok=%v, want %q", tc.clientID, tc.tabID, sel, ok, tc.want)
+		if target, ok, _, _ := r.Resolve(tc.clientID, tc.tabID, 1, ""); !ok || target.Selector != tc.want {
+			t.Errorf("Resolve(%q, %d) = %q ok=%v, want %q", tc.clientID, tc.tabID, target.Selector, ok, tc.want)
 		}
 	}
 }
@@ -75,9 +75,9 @@ func TestResolve_ScopedByClientAndTab(t *testing.T) {
 func TestResolve_BlankClientIDNormalizesToSameScope(t *testing.T) {
 	t.Parallel()
 	r := New()
-	r.Store("  ", 0, "gen_1", map[int]string{1: "#a"})
-	if sel, ok, _, _ := r.Resolve("", 0, 1, ""); !ok || sel != "#a" {
-		t.Fatalf("Resolve(\"\") = %q ok=%v, want #a — blank ids must share one scope", sel, ok)
+	r.Store("  ", 0, "gen_1", map[int]Target{1: {Selector: "#a"}})
+	if target, ok, _, _ := r.Resolve("", 0, 1, ""); !ok || target.Selector != "#a" {
+		t.Fatalf("Resolve(\"\") = %q ok=%v, want #a — blank ids must share one scope", target.Selector, ok)
 	}
 }
 
@@ -86,12 +86,12 @@ func TestResolve_BlankClientIDNormalizesToSameScope(t *testing.T) {
 func TestResolve_StaleGenerationIsRefused(t *testing.T) {
 	t.Parallel()
 	r := New()
-	r.Store("client-a", 0, "gen_old", map[int]string{1: "#old"})
-	r.Store("client-a", 0, "gen_new", map[int]string{1: "#new"})
+	r.Store("client-a", 0, "gen_old", map[int]Target{1: {Selector: "#old"}})
+	r.Store("client-a", 0, "gen_new", map[int]Target{1: {Selector: "#new"}})
 
-	sel, ok, stale, latest := r.Resolve("client-a", 0, 1, "gen_old")
-	if ok || sel != "" {
-		t.Fatalf("Resolve with stale generation = %q ok=%v, want refused", sel, ok)
+	target, ok, stale, latest := r.Resolve("client-a", 0, 1, "gen_old")
+	if ok || target.Selector != "" {
+		t.Fatalf("Resolve with stale generation = %q ok=%v, want refused", target.Selector, ok)
 	}
 	if !stale {
 		t.Fatal("Resolve did not report the generation as stale")
@@ -104,10 +104,10 @@ func TestResolve_StaleGenerationIsRefused(t *testing.T) {
 func TestResolve_EmptyGenerationSkipsStalenessCheck(t *testing.T) {
 	t.Parallel()
 	r := New()
-	r.Store("client-a", 0, "gen_new", map[int]string{1: "#new"})
-	sel, ok, stale, _ := r.Resolve("client-a", 0, 1, "")
-	if !ok || stale || sel != "#new" {
-		t.Fatalf("Resolve(generation=\"\") = (%q,%v,%v), want (#new,true,false)", sel, ok, stale)
+	r.Store("client-a", 0, "gen_new", map[int]Target{1: {Selector: "#new"}})
+	target, ok, stale, _ := r.Resolve("client-a", 0, 1, "")
+	if !ok || stale || target.Selector != "#new" {
+		t.Fatalf("Resolve(generation=\"\") = (%q,%v,%v), want (#new,true,false)", target.Selector, ok, stale)
 	}
 }
 

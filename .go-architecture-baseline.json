@@ -767,7 +767,15 @@
     },
     "cmd/browser-agent/internal/toolinteract/elemindex/registry.go": {
       "mutable_globals": 0,
-      "exports": 5
+      "exports": 6
+    },
+    "cmd/browser-agent/internal/toolinteract/elemindex/snapshot.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolinteract/elemindex/target.go": {
+      "mutable_globals": 0,
+      "exports": 1
     },
     "cmd/browser-agent/internal/toolinteract/interact_browser.go": {
       "mutable_globals": 0,
@@ -852,6 +860,10 @@
     "cmd/browser-agent/internal/toolresp/rate_limiter.go": {
       "mutable_globals": 0,
       "exports": 3
+    },
+    "cmd/browser-agent/internal/toolresp/result_block.go": {
+      "mutable_globals": 0,
+      "exports": 4
     },
     "cmd/browser-agent/internal/toolresp/toolresp.go": {
       "mutable_globals": 0,

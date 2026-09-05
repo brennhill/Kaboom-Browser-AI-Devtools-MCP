@@ -1619,7 +1619,7 @@
           "type": "number"
         },
         "index_generation": {
-          "description": "Generation token from list_interactive to ensure index resolves against the same element snapshot",
+          "description": "Generation token from list_interactive or find, so index/ref resolve against the same element snapshot they came from",
           "type": "string"
         },
         "key": {
@@ -1683,6 +1683,10 @@
         },
         "reason": {
           "description": "Action reason (shown as toast)",
+          "type": "string"
+        },
+        "ref": {
+          "description": "Accessibility ref from find results (e.g. 'ax_412'). Resolves to the element find ranked, so it reaches controls no CSS selector names. Quote index_generation with it: a ref from an earlier snapshot is refused rather than resolved against a re-rendered page.",
           "type": "string"
         },
         "role": {

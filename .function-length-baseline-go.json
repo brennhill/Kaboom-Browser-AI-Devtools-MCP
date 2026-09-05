@@ -26,7 +26,6 @@
     "schema/configure/properties_runtime.go:runtimeProperties": 160,
     "schema/generate.go:generateToolSchema": 168,
     "schema/interact/properties_core.go:coreActionProperties": 141,
-    "schema/interact/properties_targeting.go:targetingProperties": 84,
     "schema/observe.go:observeToolSchema": 189,
     "tools/observe/idbquery/scripts.go:buildEntriesScript": 104,
     "upload/handlers.go:handleFileReadWithLimit": 88,

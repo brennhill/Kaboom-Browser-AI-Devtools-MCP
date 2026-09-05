@@ -24,6 +24,9 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/pagescripts/clipboard-read.js
   - cmd/browser-agent/internal/toolinteract/interact_workflow.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
+  - cmd/browser-agent/internal/toolinteract/elemindex/target.go
+  - cmd/browser-agent/internal/toolinteract/elemindex/snapshot.go
+  - cmd/browser-agent/internal/toolresp/result_block.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -126,6 +129,9 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/explore_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
+  - cmd/browser-agent/internal/toolinteract/elemindex/target_test.go
+  - cmd/browser-agent/internal/toolinteract/elemindex/snapshot_test.go
+  - cmd/browser-agent/internal/toolresp/result_block_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gestures_test.go
