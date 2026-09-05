@@ -199,13 +199,20 @@ func TestEvidenceIsCapturedAroundTheCallAndFailuresAreWritten(t *testing.T) {
 	}
 	// A probe that could not run must leave a file saying so. An empty evidence
 	// directory reads as "capture was off", which is the opposite conclusion.
-	failure := filepath.Join(session.evidenceDir, "observe__page", "before", "network.error")
+	failure := filepath.Join(session.evidenceDir, "observe__page__before", "network.error")
 	content, err := os.ReadFile(failure)
 	if err != nil {
 		t.Fatalf("the failed probe left nothing behind: %v", err)
 	}
 	if !strings.Contains(string(content), "extension not connected") {
 		t.Errorf("the .error file does not say why: %q", content)
+	}
+
+	// The manifest is what makes the bundle standalone: without it a reader has
+	// a directory of JSON and no idea which case or build produced it.
+	manifest := filepath.Join(session.evidenceDir, "observe__page__before", "bundle.json")
+	if _, err := os.Stat(manifest); err != nil {
+		t.Errorf("no bundle.json was written: %v", err)
 	}
 }
 

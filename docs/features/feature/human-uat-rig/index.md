@@ -12,6 +12,7 @@ code_paths:
   - scripts/uat/human/runner/session.go
   - scripts/uat/human/runner/prompt.go
   - scripts/uat/human/runlog/runlog.go
+  - scripts/uat/human/evidence/evidence.go
   - scripts/uat/human/gate/main.go
   - scripts/uat/human/gate/judge.go
   - scripts/uat/human/runner/mcpclient.go
@@ -21,6 +22,7 @@ test_paths:
   - scripts/uat/human/runner/session_test.go
   - scripts/uat/human/runner/prompt_test.go
   - scripts/uat/human/runlog/runlog_test.go
+  - scripts/uat/human/evidence/evidence_test.go
   - scripts/uat/human/gate/judge_test.go
   - scripts/uat/human/gate/main_test.go
   - scripts/uat/human/runner/mcpclient_test.go
@@ -143,10 +145,31 @@ pass — holding return through a run leaves every case unanswered rather than
 green. FAIL and BLOCKED require a note, because a red case without one cannot be
 turned into a regression test. SKIP is recorded but never counts as coverage.
 
-Evidence (screenshot, console, network) is captured before and after every call
-and beside every surface case. A probe that cannot run writes a `.error` file
-saying why: an empty evidence directory is ambiguous between "capture failed"
-and "capture was off", and those lead to opposite conclusions about a FAIL.
+## Evidence bundles
+
+Screenshot, console and network are captured before and after every call and
+beside every surface case, into `uat-runs/evidence/<run>/<case>__<phase>/`.
+
+Each bundle carries a `bundle.json` naming the case, the question asked, the
+build SHA, the fixture SHA, the exact request sent and response received, and
+every artifact with its SHA-256. That is what makes a FAIL actionable by someone
+who was not in the room: they can reopen the case without going back to the
+person who ran it, and two runs of the same case are told apart by comparing
+digests rather than by opening files.
+
+The screenshot is decoded to a `.png` beside its JSON. The JSON alone is not
+evidence a person will act on — `data_url` is a megabyte of base64, and nobody
+opening a FAIL a week later is going to paste it into a decoder. When the
+response carries no image, no `.png` is written: a zero-byte one would look like
+a screenshot of a blank page.
+
+A probe that cannot run writes a `.error` file saying why. An empty evidence
+directory is ambiguous between "capture failed" and "capture was off", and those
+lead to opposite conclusions about a FAIL.
+
+The release gate refuses a FAIL whose bundle is absent, has no `bundle.json`, or
+names artifacts that are no longer on disk — checked at release time rather than
+at capture time, because evidence can be captured and then deleted.
 
 ## The release gate
 

@@ -3,11 +3,13 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/evidence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/inventory"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/runlog"
 )
@@ -181,5 +183,56 @@ func TestTheReportNamesTheBuildAndTheCounts(t *testing.T) {
 		if !strings.Contains(report, want) {
 			t.Errorf("the report does not mention %q:\n%s", want, report)
 		}
+	}
+}
+
+func TestAFailWithNoEvidenceIsNamedAsUnreproducible(t *testing.T) {
+	t.Parallel()
+	// A red case nobody can reopen has to be fixed from the tester's memory,
+	// which is the difference between a defect and an anecdote.
+	failed := answeredOn("observe/logs", runlog.VerdictFail, thisBuild)
+	log := runWith(t, answeredOn("observe/page", runlog.VerdictPass, thisBuild), failed)
+
+	verdict := judge(twoCases(), log, map[string]waiver{}, thisBuild)
+	if len(verdict.UnreproducibleFailures) != 1 {
+		t.Fatalf("unreproducible = %v, want the FAIL that captured nothing", verdict.UnreproducibleFailures)
+	}
+	if !strings.Contains(verdict.report(), "FAILURES NOBODY ELSE CAN REPRODUCE") {
+		t.Errorf("the report does not surface it:\n%s", verdict.report())
+	}
+}
+
+func TestAFailWithABundleIsNotFlaggedAsUnreproducible(t *testing.T) {
+	t.Parallel()
+	// Control: with evidence and a manifest on disk the FAIL is actionable, and
+	// flagging it anyway would make the signal meaningless.
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "console.json"), []byte(`{}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, evidence.ManifestName), []byte(`{"case_id":"observe/logs"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	withBundle := answeredOn("observe/logs", runlog.VerdictFail, thisBuild)
+	withBundle.Evidence = []string{filepath.Join(dir, "console.json")}
+	log := runWith(t, answeredOn("observe/page", runlog.VerdictPass, thisBuild), withBundle)
+
+	if flagged := judge(twoCases(), log, map[string]waiver{}, thisBuild).UnreproducibleFailures; len(flagged) != 0 {
+		t.Errorf("a FAIL with a complete bundle was flagged: %v", flagged)
+	}
+}
+
+func TestAFailWhoseEvidenceWasDeletedIsFlagged(t *testing.T) {
+	t.Parallel()
+	// The bundle is checked at release time rather than at capture time because
+	// evidence can be captured and then deleted, and the release is the moment
+	// that matters.
+	gone := answeredOn("observe/logs", runlog.VerdictFail, thisBuild)
+	gone.Evidence = []string{filepath.Join(t.TempDir(), "console.json")}
+	log := runWith(t, answeredOn("observe/page", runlog.VerdictPass, thisBuild), gone)
+
+	flagged := judge(twoCases(), log, map[string]waiver{}, thisBuild).UnreproducibleFailures
+	if len(flagged) != 1 || !strings.Contains(flagged[0], "gone") {
+		t.Errorf("unreproducible = %v, want the FAIL whose evidence is missing", flagged)
 	}
 }

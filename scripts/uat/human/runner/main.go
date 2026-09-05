@@ -102,6 +102,7 @@ func run(opts options) error {
 		prompt:      newPrompter(os.Stdin, os.Stdout),
 		runID:       runID,
 		buildSHA:    buildSHA(),
+		fixtureSHA:  fixtureSHA(),
 		evidenceDir: evidenceDir(opts, runID),
 	}
 	if err := session.presentAll(selected, opts.redo); err != nil {
@@ -171,6 +172,23 @@ func buildSHA() string {
 		return "unknown"
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// fixtureSHA pins the pages the tester was looking at.
+//
+// The same build against a changed fixture is a different experiment: a FAIL on
+// "observe/errors reports the three errors on the page" means nothing to a
+// reader who cannot tell which version of the page had three errors.
+func fixtureSHA() string {
+	out, err := exec.Command("git", "log", "-1", "--format=%h", "--",
+		"cmd/browser-agent/internal/testpages").Output()
+	if err != nil {
+		return "unknown"
+	}
+	if sha := strings.TrimSpace(string(out)); sha != "" {
+		return sha
+	}
+	return "unknown"
 }
 
 // marshalRequest renders the call for the record and for the person to read.

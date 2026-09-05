@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/evidence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/inventory"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/runlog"
 )
@@ -77,6 +79,10 @@ type gateVerdict struct {
 	Blocked []string
 	// Waived cases are accepted risks, listed so a reader sees what shipped.
 	Waived []string
+	// UnreproducibleFailures are FAILs whose evidence is not on disk. A red case
+	// nobody can reopen has to be fixed from the tester's memory, which is the
+	// difference between a defect and an anecdote.
+	UnreproducibleFailures []string
 	// UnusableWaivers name a case but accept nothing.
 	UnusableWaivers []string
 	// StaleWaivers cover a case that passed, so they are accepting nothing.
@@ -98,6 +104,10 @@ func judge(cases []inventory.Case, log *runlog.Log, waivers map[string]waiver, b
 			verdict.StaleBuild = append(verdict.StaleBuild, fmt.Sprintf("%s (judged on %s)", c.ID, record.BuildSHA))
 		case answered && record.Verdict == runlog.VerdictFail:
 			verdict.Failed = append(verdict.Failed, fmt.Sprintf("%s — %s", c.ID, record.Note))
+			if reason, ok := bundleMissing(record); ok {
+				verdict.UnreproducibleFailures = append(verdict.UnreproducibleFailures,
+					fmt.Sprintf("%s — %s", c.ID, reason))
+			}
 			covered[c.ID] = true
 		case answered && record.Verdict == runlog.VerdictBlocked:
 			if waived && waiver.usable() {
@@ -127,6 +137,32 @@ func judge(cases []inventory.Case, log *runlog.Log, waivers map[string]waiver, b
 	return verdict
 }
 
+// bundleMissing reports why a FAIL cannot be reopened, if it cannot.
+//
+// A verdict is only useful if someone else can act on it. Checked here rather
+// than at capture time because a bundle can be captured and then deleted, and
+// the release is the moment that matters.
+func bundleMissing(record runlog.Result) (string, bool) {
+	if len(record.Evidence) == 0 {
+		return "no evidence was captured, so this failure cannot be reopened without the person who found it", true
+	}
+	var manifests int
+	for _, path := range record.Evidence {
+		dir := filepath.Dir(path)
+		if _, err := os.Stat(filepath.Join(dir, evidence.ManifestName)); err == nil {
+			manifests++
+			continue
+		}
+		if _, err := os.Stat(path); err != nil {
+			return fmt.Sprintf("the evidence it names is gone (%s)", path), true
+		}
+	}
+	if manifests == 0 {
+		return "its evidence has no " + evidence.ManifestName + ", so nothing says which build or question produced it", true
+	}
+	return "", false
+}
+
 // staleWaivers are waivers for cases that passed on this build.
 //
 // Left in place they accumulate, and a waiver file nobody prunes is one that
@@ -147,7 +183,8 @@ func waiverLine(w waiver) string {
 }
 
 func sortAll(v *gateVerdict) {
-	for _, list := range [][]string{v.Failed, v.Unanswered, v.StaleBuild, v.Blocked, v.Waived, v.UnusableWaivers, v.StaleWaivers} {
+	for _, list := range [][]string{v.Failed, v.Unanswered, v.StaleBuild, v.Blocked, v.Waived,
+		v.UnusableWaivers, v.StaleWaivers, v.UnreproducibleFailures} {
 		sort.Strings(list)
 	}
 }
@@ -157,6 +194,7 @@ func (v gateVerdict) report() string {
 	var out strings.Builder
 	fmt.Fprintf(&out, "Human UAT gate for build %s\n%s\n", v.Build, runlog.DescribeTally(v.Tally, v.Total))
 	section(&out, "FAILED", v.Failed)
+	section(&out, "FAILURES NOBODY ELSE CAN REPRODUCE", v.UnreproducibleFailures)
 	section(&out, "BLOCKED and not waived", v.Blocked)
 	section(&out, "ANSWERED ON A DIFFERENT BUILD", v.StaleBuild)
 	section(&out, "NEVER ANSWERED", v.Unanswered)

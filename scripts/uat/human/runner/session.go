@@ -6,10 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/evidence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/inventory"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/runlog"
 )
@@ -42,6 +41,13 @@ type session struct {
 	// evidenceDir is where captures are written. Empty means evidence is off,
 	// which is what --no-evidence and every test that is not about evidence use.
 	evidenceDir string
+	// fixtureSHA pins the fixture pages the tester was looking at. Without it a
+	// FAIL cannot be reproduced: the same build against a changed fixture is a
+	// different experiment.
+	fixtureSHA string
+	// bundles are this case's open evidence directories, closed with a manifest
+	// once the answer is in.
+	bundles []*evidence.Bundle
 	// now is swappable so a test can assert the timestamps a record carries.
 	now func() time.Time
 }
@@ -72,6 +78,7 @@ func (s *session) presentAll(cases []inventory.Case, redo bool) error {
 		if answer.Quit {
 			return nil
 		}
+		s.closeBundles(c, outcome)
 		if err := s.record(c, outcome, answer, startedAt); err != nil {
 			return err
 		}
@@ -125,75 +132,64 @@ func (s *session) record(c inventory.Case, outcome callOutcome, answer humanAnsw
 
 // ── Evidence ────────────────────────────────────────────────────────────────
 //
-// Every case is judged from what a person sees, and a runlog.Verdict recorded without
-// evidence cannot be re-examined a week later. The captures below are attempted
-// around each call and their failures are recorded, never swallowed: "no
-// screenshot" and "screenshot showed the wrong page" must not look alike in the
-// run log.
-
-// evidenceProbe is one thing captured beside a case.
-type evidenceProbe struct {
-	name string
-	tool string
-	args map[string]any
-}
-
-// evidenceProbes are captured before and after the call under test.
-//
-// Console and network come from the same daemon the tool call went to, so they
-// describe the same browser the tester is looking at.
-func evidenceProbes() []evidenceProbe {
-	return []evidenceProbe{
-		{name: "screenshot", tool: "observe", args: map[string]any{"what": "screenshot"}},
-		{name: "console", tool: "observe", args: map[string]any{"what": "logs"}},
-		{name: "network", tool: "observe", args: map[string]any{"what": "network_waterfall"}},
-	}
-}
+// Every case is judged from what a person sees, and a verdict recorded without
+// evidence cannot be re-examined a week later. The bundle is written around each
+// call and its probe failures are recorded, never swallowed: "no screenshot" and
+// "the screenshot showed the wrong page" must not look alike in the run log.
 
 // captureEvidence writes one phase's probes and returns the paths written.
-//
-// A probe that fails writes a .error file rather than nothing: an empty evidence
-// directory is ambiguous between "capture failed" and "capture was off", and the
-// two lead to opposite conclusions about a FAIL.
 func (s *session) captureEvidence(c inventory.Case, phase string) []string {
 	if s.evidenceDir == "" {
 		return nil
 	}
-	dir := filepath.Join(s.evidenceDir, safeName(c.ID), phase)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return []string{fmt.Sprintf("%s: could not create evidence directory: %v", dir, err)}
-	}
-	var written []string
-	for _, probe := range evidenceProbes() {
-		written = append(written, s.captureProbe(dir, probe))
-	}
-	return written
-}
-
-func (s *session) captureProbe(dir string, probe evidenceProbe) string {
-	response, err := s.mcpSession.call(probe.tool, probe.args)
+	bundle, err := evidence.Open(s.evidenceDir, c.ID+"/"+phase)
 	if err != nil {
-		path := filepath.Join(dir, probe.name+".error")
-		writeEvidenceFile(path, []byte(err.Error()))
-		return path
+		// Fail loud: the tester is about to judge a case whose evidence will not
+		// exist, and only they can decide whether that is acceptable.
+		fmt.Fprintf(os.Stderr, "human-uat: %v\n", err)
+		return nil
 	}
-	path := filepath.Join(dir, probe.name+".json")
-	writeEvidenceFile(path, response)
-	return path
+	for _, probe := range evidence.Probes() {
+		s.captureProbe(bundle, probe)
+	}
+	s.bundles = append(s.bundles, bundle)
+	return bundle.Paths()
 }
 
-// writeEvidenceFile records a write failure in the file's place.
+// captureProbe stores one probe's answer, or the reason it had none.
+func (s *session) captureProbe(bundle *evidence.Bundle, probe evidence.Probe) {
+	response, err := s.mcpSession.call(probe.Tool, probe.Args)
+	if err != nil {
+		bundle.WriteFailure(probe.Name, err.Error())
+		return
+	}
+	if probe.Name == "screenshot" {
+		bundle.WriteScreenshot(probe.Name, response)
+		return
+	}
+	bundle.Write(probe.Name+".json", response)
+}
+
+// closeBundles writes the manifest for every bundle this case produced.
 //
-// Evidence is a side product; losing one file must not end a sitting. What it
-// must not do is disappear quietly, so the failure is printed where the tester
-// is already looking.
-func writeEvidenceFile(path string, content []byte) {
-	if err := os.WriteFile(path, content, 0o644); err != nil {
-		fmt.Fprintf(os.Stderr, "human-uat: could not write %s: %v\n", path, err)
+// Written after the answer so the manifest carries the call under test and its
+// response, which is what lets a reader reopen the case without the person who
+// ran it.
+func (s *session) closeBundles(c inventory.Case, outcome callOutcome) {
+	for _, bundle := range s.bundles {
+		if err := bundle.WriteManifest(evidence.Manifest{
+			CaseID:     c.ID,
+			Question:   c.Question,
+			BuildSHA:   s.buildSHA,
+			FixtureSHA: s.fixtureSHA,
+			RunID:      s.runID,
+			Request:    outcome.Request,
+			Response:   outcome.Response,
+			CallError:  outcome.Err,
+			CapturedAt: runlog.Timestamp(s.clock()),
+		}); err != nil {
+			fmt.Fprintf(os.Stderr, "human-uat: could not write %s for %s: %v\n", evidence.ManifestName, c.ID, err)
+		}
 	}
-}
-
-// safeName makes a case id usable as a directory name.
-func safeName(id string) string {
-	return strings.ReplaceAll(id, "/", "__")
+	s.bundles = nil
 }
