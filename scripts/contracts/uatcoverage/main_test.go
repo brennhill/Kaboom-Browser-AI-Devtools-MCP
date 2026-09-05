@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	expectationsFile = "scripts/tests/browser/cat-33-expectations.sh"
+	expectationsFile = "scripts/tests/browser/mode-content-expectations.sh"
 	schemaGolden     = "cmd/browser-agent/testdata/mcp-tools-list.golden.json"
 )
 

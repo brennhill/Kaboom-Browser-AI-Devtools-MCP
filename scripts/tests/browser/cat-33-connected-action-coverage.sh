@@ -7,8 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/../framework/framework.sh"
-# shellcheck source=cat-33-expectations.sh
-source "$SCRIPT_DIR/cat-33-expectations.sh"
+# shellcheck source=mode-content-expectations.sh
+source "$SCRIPT_DIR/mode-content-expectations.sh"
 
 PORT="${1:-7890}"
 OUTPUT_FILE="${2:-/dev/null}"
@@ -567,7 +567,7 @@ fi
 # back. That mechanism is how 95 of 163 modes accumulated.
 if [ -z "$ACTION_FILTER" ]; then
     if [ "$reachability_only_count" -gt "$UAT_REACHABILITY_BASELINE" ]; then
-        fail "Reachability-only modes rose to $reachability_only_count, above the baseline of $UAT_REACHABILITY_BASELINE. Give the new mode a content expectation in cat-33-expectations.sh."
+        fail "Reachability-only modes rose to $reachability_only_count, above the baseline of $UAT_REACHABILITY_BASELINE. Give the new mode a content expectation in mode-content-expectations.sh."
     else
         pass "Reachability-only modes: $reachability_only_count of $classified_count (baseline $UAT_REACHABILITY_BASELINE); $asserted_content_count assert their documented payload"
     fi

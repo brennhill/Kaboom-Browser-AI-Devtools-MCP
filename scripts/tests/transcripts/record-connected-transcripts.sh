@@ -42,10 +42,8 @@ fi
 
 mkdir -p "$OUTPUT_DIR"
 
-category_script() {
-    local id="$1"
-    find "$TESTS_ROOT" -name "cat-${id}-*.sh" -type f | head -n 1
-}
+# shellcheck source=scripts/uat/orchestration/uat-category-script.sh
+source "$REPO_ROOT/scripts/uat/orchestration/uat-category-script.sh"
 
 RECORD_PORT="${KABOOM_UAT_RECORD_PORT:-7893}"
 WRAPPER="${KABOOM_UAT_WRAPPER:-$REPO_ROOT/dist/kaboom-agentic-browser}"
@@ -57,11 +55,11 @@ fi
 
 recorded=0
 skipped=""
+failed=""
 
 for id in $CONNECTED_CATEGORIES; do
-    script="$(category_script "$id")"
-    if [ -z "$script" ]; then
-        skipped="$skipped $id(no-script)"
+    if ! script="$(uat_resolve_category_script "$TESTS_ROOT" "$id")"; then
+        skipped="$skipped $id(unresolved)"
         continue
     fi
     transcript="$OUTPUT_DIR/cat-${id}.jsonl"
@@ -91,6 +89,18 @@ for id in $CONNECTED_CATEGORIES; do
         continue
     fi
 
+    if [ "$status" -ne 0 ]; then
+        # A recording is a claim about what a working browser answers. Keeping the
+        # exchanges from a category that FAILED turns the replay job green against
+        # a browser that refused the commands: on 2026-09-05 every connected
+        # category exited 1 with command_contract_mismatch, and the run still
+        # reported "Recorded 10 transcript(s)" because each file was non-empty.
+        rm -f "$transcript"
+        failed="$failed $id(exit $status)"
+        echo "  category $id FAILED (exit $status); its transcript is discarded, not committed" >&2
+        continue
+    fi
+
     lines="$(wc -l < "$transcript" | tr -d ' ')"
     echo "  category $id: $lines exchange(s) -> $transcript (category exit $status)"
     recorded=$((recorded + 1))
@@ -99,6 +109,19 @@ done
 echo ""
 echo "Recorded $recorded transcript(s) into $OUTPUT_DIR"
 [ -n "$skipped" ] && echo "Skipped:$skipped"
+
+if [ -n "$failed" ]; then
+    # Exit non-zero so a recording run that produced nothing usable cannot be
+    # mistaken for one that did, by a person or by a job.
+    echo "FAILED:$failed" >&2
+    echo "" >&2
+    echo "No transcript was kept for those categories. Fix the failures against the live" >&2
+    echo "browser first — a transcript recorded from a red category records the red." >&2
+    echo "A command_contract_mismatch means the extension loaded in Chrome is older than" >&2
+    echo "this tree: reload it from $REPO_ROOT/extension and re-run." >&2
+    exit 1
+fi
+
 echo ""
 echo "Verify the replay before committing:"
 echo "  KABOOM_UAT_REPLAY=$OUTPUT_DIR scripts/uat/runners/test-all-tools-comprehensive.sh --suite connected"

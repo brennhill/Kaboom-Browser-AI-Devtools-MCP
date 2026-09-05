@@ -7,7 +7,8 @@ owners: []
 last_reviewed: 2026-09-05
 code_paths:
   - .github/workflows/ci.yml
-  - scripts/tests/browser/cat-33-expectations.sh
+  - scripts/tests/browser/mode-content-expectations.sh
+  - scripts/uat/orchestration/uat-category-script.sh
   - scripts/quality/affected/affected-tests.mjs
   - scripts/quality/affected/run-affected.sh
   - scripts/quality/affected/always-run.json
@@ -149,8 +150,9 @@ test_paths:
   - internal/capturefixture/sync_test.go
   - internal/extclient/extclient_test.go
   - internal/capture/syncruntime/sync_test.go
-  - scripts/tests/browser/cat-33-expectations.sh
+  - scripts/tests/browser/mode-content-expectations.sh
   - scripts/tests/framework/uat-fixture-state.sh
+  - scripts/contracts/uatcoverage/category_resolution_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -412,7 +414,7 @@ noticing.
 
 `scripts/contracts/uatcoverage` moves the check onto every commit. It reads the
 same two checked-in files the sweep reads — the shipped tool schema and
-`cat-33-expectations.sh` — so it needs no browser, and it holds three things:
+`mode-content-expectations.sh` — so it needs no browser, and it holds three things:
 
 - The baseline equals the real count **exactly**. Slack is a mode's worth of
   free coverage: with the baseline above the count, the next mode added with no

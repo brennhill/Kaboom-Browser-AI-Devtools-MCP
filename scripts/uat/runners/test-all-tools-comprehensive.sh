@@ -168,6 +168,8 @@ source "$TESTS_DIR/framework/uat-replay.sh"
 source "$TESTS_DIR/framework/process-census.sh"
 # shellcheck source=uat-result-lib.sh
 source "$SCRIPT_DIR/../orchestration/uat-result-lib.sh"
+# shellcheck source=scripts/uat/orchestration/uat-category-script.sh
+source "$SCRIPT_DIR/../orchestration/uat-category-script.sh"
 
 # Categories that leak processes must cost a red run. Each category registers
 # framework_cleanup on EXIT, so the census returns to baseline after every one;
@@ -281,9 +283,10 @@ run_category() {
     local uat_port="$2"
     local category_script
     local timeout_seconds
-    category_script="$(find "$TESTS_DIR" -type f -name "cat-${cat_id}-*.sh" -print | head -n 1)"
-    if [ -z "$category_script" ]; then
-        echo "Missing category script: cat-${cat_id}-*.sh" > "$RESULTS_DIR/output-${cat_id}.txt"
+    # Resolution failures land in the category's own output file so the summary
+    # reports them against the category rather than losing them to stderr, and
+    # the missing result file makes the aggregator count the category as failed.
+    if ! category_script="$(uat_resolve_category_script "$TESTS_DIR" "$cat_id" 2>"$RESULTS_DIR/output-${cat_id}.txt")"; then
         return
     fi
     timeout_seconds="$(category_timeout "$cat_id")"

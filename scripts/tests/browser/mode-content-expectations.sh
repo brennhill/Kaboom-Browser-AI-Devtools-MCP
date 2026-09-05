@@ -1,5 +1,11 @@
 #!/bin/bash
-# cat-33-expectations.sh — What each mode's response must actually contain.
+# mode-content-expectations.sh — What each mode's response must actually contain.
+#
+# NOT named cat-33-*: the UAT runner and the transcript recorder both resolve a
+# category by globbing cat-<id>-*.sh, and while this table lived in that namespace
+# the glob matched two files. `find | head -1` returned this one, so category 33 —
+# the category that invokes every live MCP mode — ran a sourced library that
+# defines variables and exits 0, instead of running.
 #
 # cat-33 invokes every mode in the live schema, but for most of them the only
 # thing it could check was "the response was not an MCP error". A mode that
