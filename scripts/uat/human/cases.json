@@ -1,0 +1,1517 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "analyze/accessibility",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "accessibility",
+      "setup": "Run it on /tests/a11y.html.",
+      "question": "Does it name the three grey-on-grey contrast failures and the blank \u2715 / \ud83d\uddd1 / \u2699 controls you can see, and does it leave the six labelled nav links in the header unflagged?"
+    },
+    {
+      "id": "analyze/annotation_detail",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "annotation_detail",
+      "setup": "Take the correlation_id of the \u2715-button annotation you just drew.",
+      "question": "Do the computed styles it returns match what the DevTools Computed pane shows for that button \u2014 40px by 40px, 1px border \u2014 and does it name that button rather than the section around it?"
+    },
+    {
+      "id": "analyze/annotations",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "annotations",
+      "setup": "Start draw mode on /tests/a11y.html, draw one box over the \u2715 button, type \"no accessible name\", press ESC.",
+      "question": "Does it return exactly that one note with that text, tied to the \u2715 button and not the \ud83d\uddd1 beside it?"
+    },
+    {
+      "id": "analyze/api_validation",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "api_validation",
+      "setup": "On /tests/telemetry.html click \"Fetch 404\" and \"Fetch slow\", run operation analyze, then report, then clear and report again.",
+      "question": "Does the report list one schema per endpoint with the field names DevTools shows in each response body \u2014 error/endpoint/test, and delayed/delay_ms/test \u2014 and is the report empty after the clear?"
+    },
+    {
+      "id": "analyze/audit",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "audit",
+      "setup": "Run it on /tests/a11y.html with categories accessibility and performance.",
+      "question": "Does the accessibility category score low against the violations you can see on the page, and is there no security section, since you did not ask for one?"
+    },
+    {
+      "id": "analyze/computed_styles",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "computed_styles",
+      "setup": "On /tests/design-drift.html, target .token-card--drift.",
+      "question": "Does it report padding 15px and background #2b56e2 \u2014 the values in the DevTools Computed pane \u2014 rather than the 16px and #2a55e1 of the card beside it?"
+    },
+    {
+      "id": "analyze/data_table",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "data_table",
+      "setup": "Run it on /tests/a11y.html targeting the two-by-two table in the Broken Structure section.",
+      "question": "Do the four cells come back as two rows of two reading \"Row 1, Col A\" through \"Row 2, Col B\", with no header row claimed, since that table has no <th>?"
+    },
+    {
+      "id": "analyze/design_audit",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "design_audit",
+      "setup": "Run it on /tests/design-drift.html with selector .step-card__header, then again with selector .state-item.",
+      "question": "Does the first flag only the middle header, the one rendering Roboto 11px against its two neighbours' Inter 12px, and does the second report nothing, since those four items are meant to differ?"
+    },
+    {
+      "id": "analyze/dom",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "dom",
+      "setup": "Open /tests/interact.html and query the selector \"#smoke-form-dom input\".",
+      "question": "Does it return the three inputs in that first block \u2014 name, email, agree \u2014 and leave out the four identical-looking fields in the Full Form Lifecycle form below?"
+    },
+    {
+      "id": "analyze/draw_history",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "draw_history",
+      "setup": "Run two draw sessions: \"a11y-review\" on a11y.html and \"perf-review\" on performance.html.",
+      "question": "Does the list show both session files with the times you drew them, and no third entry?"
+    },
+    {
+      "id": "analyze/draw_session",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "draw_session",
+      "setup": "Load the a11y-review file that draw_history named.",
+      "question": "Does it return only the notes you typed in that session, with none of the perf-review ones mixed in?"
+    },
+    {
+      "id": "analyze/error_clusters",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "error_clusters",
+      "setup": "Load /tests/telemetry.html, which auto-fires 30 errors whose text each ends in a different timestamp, then click \"Throw TypeError\" twice.",
+      "question": "Do the 30 differently-worded SMOKE_ERROR lines collapse into one cluster of 30, with the TypeError as a separate cluster of 2?"
+    },
+    {
+      "id": "analyze/feature_gates",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "feature_gates",
+      "setup": "On /tests/interact.html add three elements by hand: a button reading \"Upgrade to Pro\", a link reading \"Sign in with GitHub\", and a badge reading \"3 / 5 credits remaining\".",
+      "question": "Do those land as one plan gate, one auth gate and one usage limit respectively, with the page's ordinary Submit button in none of the three lists?"
+    },
+    {
+      "id": "analyze/form_state",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "form_state",
+      "setup": "Type \"Ada\" into Username on #smoke-form, pick Admin for Role, leave Password empty.",
+      "question": "Do the returned values read Ada, admin and empty, matching the screen, and are only those two fields marked as touched?"
+    },
+    {
+      "id": "analyze/form_validation",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "form_validation",
+      "setup": "Run it on /tests/interact.html, which has a placeholder-only block (#smoke-form-dom) above a properly labelled form (#smoke-form).",
+      "question": "Does it flag the placeholder-only fields as having no label and report the label-for fields below them as fine?"
+    },
+    {
+      "id": "analyze/forms",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "forms",
+      "setup": "Run it on /tests/interact.html scoped to #smoke-form.",
+      "question": "Does it list the four fields you can see with the right types \u2014 text, email, password, select \u2014 and the visible labels Username, Email, Password, Role?"
+    },
+    {
+      "id": "analyze/link_health",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "link_health",
+      "setup": "Run it on the /tests/ index page, which links to /tests/404 and /tests/500 alongside six working page links.",
+      "question": "Does it mark exactly those two broken, with 404 and 500, and all six page links reachable?"
+    },
+    {
+      "id": "analyze/link_validation",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "link_validation",
+      "setup": "Quit Chrome so the extension is disconnected, then pass it /tests/404, /tests/telemetry.html and http://127.0.0.1:1/nothing.",
+      "question": "Does it still answer with the browser gone, giving 404, reachable, and connection-refused in that order?"
+    },
+    {
+      "id": "analyze/navigation",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "navigation",
+      "setup": "Run it on /tests/a11y.html, whose only links are the six in the header bar.",
+      "question": "Are those six listed under the header region, and does it avoid inventing a footer or sidebar group the page does not have?"
+    },
+    {
+      "id": "analyze/navigation_patterns",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "navigation_patterns",
+      "setup": "From /tests/, walk telemetry \u2192 index \u2192 telemetry \u2192 index \u2192 a11y.",
+      "question": "Does it name the telemetry-index round trip as a repeated loop and count it twice, rather than just replaying the five URLs in order?"
+    },
+    {
+      "id": "analyze/page_issues",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "page_issues",
+      "setup": "On /tests/telemetry.html let the page auto-fire its errors, click \"Fetch 500\", run with all four categories, then run again with only network_failures.",
+      "question": "Does the first response carry both the console errors and the 500 in separate severity-ranked sections, and does the second drop the console errors entirely?"
+    },
+    {
+      "id": "analyze/page_structure",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "page_structure",
+      "setup": "Run it on /tests/frameworks/react.html, then on /tests/telemetry.html.",
+      "question": "Does the first name React and the #react-root mount point, and does the second say no framework rather than guessing one?"
+    },
+    {
+      "id": "analyze/page_summary",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "page_summary",
+      "setup": "Run it on /tests/performance.html.",
+      "question": "Reading the summary alone, could you tell it is the performance harness with CLS, long-task and user-timing controls, rather than any of the other five fixture pages?"
+    },
+    {
+      "id": "analyze/performance",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "performance",
+      "setup": "Load /tests/performance.html, click \"Long task 800ms\" three times and \"Trigger CLS\", then press Refresh on the page's own Live Metrics panel.",
+      "question": "Do the CLS and long-task numbers it reports match the ones the page's Live Metrics panel is showing?"
+    },
+    {
+      "id": "analyze/performance_trace",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "performance_trace",
+      "setup": "Start a trace on /tests/performance.html with cache cold and reload, click \"Long task 800ms\" three times, then stop.",
+      "question": "Does the saved trace file open in Chrome DevTools' Performance tab, and does its flamechart show three ~800ms scripting blocks rather than an idle timeline?"
+    },
+    {
+      "id": "analyze/react_profile",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "react_profile",
+      "setup": "Start a profile on /tests/frameworks/react.html, click through the app, stop; then do the same on /tests/telemetry.html.",
+      "question": "Does the first run name React components with commit counts that rose as you clicked, and does the second say the React profiling hooks are absent instead of returning an empty profile as success?"
+    },
+    {
+      "id": "analyze/security_audit",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "security_audit",
+      "setup": "Type a password into the Password field of #smoke-form on /tests/interact.html and submit it over plain http.",
+      "question": "Does it report the credential-over-http finding for that submission, and is the password you typed absent from the response rather than echoed back?"
+    },
+    {
+      "id": "analyze/third_party_audit",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "third_party_audit",
+      "setup": "Open /tests/recording.html, which embeds a YouTube player.",
+      "question": "Does it list the YouTube origins as third party and localhost as first party, rather than lumping them together?"
+    },
+    {
+      "id": "analyze/verification",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "verification",
+      "setup": "Define a contract whose two assertions share the same assertion_id; then define a valid one and evaluate it with no evidence attached.",
+      "question": "Does the first call refuse and name the duplicated id, and does the evaluation come back UNVERIFIED rather than PASS?"
+    },
+    {
+      "id": "analyze/visual_baseline",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "visual_baseline",
+      "setup": "On a freshly loaded /tests/performance.html, save a baseline named perf-clean.",
+      "question": "Does a PNG appear at the path it returns, and does opening that file show the page exactly as it looks on screen?"
+    },
+    {
+      "id": "analyze/visual_baselines",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "visual_baselines",
+      "setup": "Save baselines named perf-clean and a11y-clean.",
+      "question": "Does the list show exactly those two names, matching the PNG files in the baselines directory on disk?"
+    },
+    {
+      "id": "analyze/visual_diff",
+      "kind": "mcp_mode",
+      "tool": "analyze",
+      "mode": "visual_diff",
+      "setup": "Diff against perf-clean without touching the page, then click \"Trigger CLS\" and diff again.",
+      "question": "Does the first diff report no change and the second report changed pixels in the CLS box you just watched jump?"
+    },
+    {
+      "id": "configure/action_jitter",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "action_jitter",
+      "setup": "Set action_jitter_ms to 0 and replay a five-step sequence against a stopwatch, then set it to 2000 and replay the same sequence.",
+      "question": "Is the second run roughly ten seconds longer, with pauses you can see between steps in the browser?"
+    },
+    {
+      "id": "configure/audit_log",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "audit_log",
+      "setup": "Make exactly three observe calls and one analyze call, then read the log filtered by tool_name observe.",
+      "question": "Are there three entries and no analyze one, in the order you made the calls?"
+    },
+    {
+      "id": "configure/clear",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "clear",
+      "setup": "Fire console errors and click \"Fetch 500\" on /tests/telemetry.html, then clear buffer logs.",
+      "question": "Is the log list empty afterwards while the failed 500 is still in the network waterfall?"
+    },
+    {
+      "id": "configure/delete_sequence",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "delete_sequence",
+      "setup": "Delete login-flow.",
+      "question": "Is its file gone from disk and its name gone from list_sequences, and does replaying it now fail with a message that says why?"
+    },
+    {
+      "id": "configure/describe_capabilities",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "describe_capabilities",
+      "setup": "Call it with tool analyze and mode design_audit.",
+      "question": "Does it list selector as required and categories and spec as optional, and does it leave out parameters belonging to other analyze modes, such as baseline?"
+    },
+    {
+      "id": "configure/diff_sessions",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "diff_sessions",
+      "setup": "Capture a snapshot called before on a clean /tests/performance.html, click \"Long task 800ms\" five times and \"Trigger CLS\", capture after, then compare.",
+      "question": "Does the comparison show CLS and long-task time rising in the direction you just pushed them, and does comparing before with itself report nothing changed?"
+    },
+    {
+      "id": "configure/doctor",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "doctor",
+      "setup": "Quit Chrome, run doctor, reconnect the extension, run it again.",
+      "question": "Does the first run fail the extension check and print a fix you could actually follow, and does the second pass that same check?"
+    },
+    {
+      "id": "configure/event_recording_start",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "event_recording_start",
+      "setup": "Start a recording named checkout-run on /tests/recording.html.",
+      "question": "Does the browser show a recording indicator, and does the response hand back an id you can pass to stop?"
+    },
+    {
+      "id": "configure/event_recording_stop",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "event_recording_stop",
+      "setup": "Click the four buttons rec-btn-a through rec-btn-d, then stop the recording with its id.",
+      "question": "Does it report four captured actions, matching the four you clicked, and does the recording indicator disappear from the browser?"
+    },
+    {
+      "id": "configure/get_sequence",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "get_sequence",
+      "setup": "Fetch login-flow, then fetch no-such-flow.",
+      "question": "Do the three steps come back exactly as you wrote them and in order, and does the second call say the sequence does not exist rather than returning an empty one?"
+    },
+    {
+      "id": "configure/health",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "health",
+      "setup": "Call it with Chrome open, then quit Chrome and call it again.",
+      "question": "Does it report the extension connected first and disconnected after, matching the status dot in the extension popup?"
+    },
+    {
+      "id": "configure/list_sequences",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "list_sequences",
+      "setup": "Save login-flow and checkout-flow.",
+      "question": "Does the list show those two names and nothing else, matching the sequence files on disk?"
+    },
+    {
+      "id": "configure/load",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "load",
+      "setup": "Save a visual baseline named perf-clean and add one noise rule, then restart the daemon and call load.",
+      "question": "Does the returned context still list perf-clean among the baselines and that noise rule, with session_count one higher than before the restart?"
+    },
+    {
+      "id": "configure/log_diff",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "log_diff",
+      "setup": "Record a run that clicks \"Throw TypeError\", replay it and diff the two ids; then record a second run that also clicks \"Throw ReferenceError\" and diff again.",
+      "question": "Does the first diff report no new errors and the second name the ReferenceError as new?"
+    },
+    {
+      "id": "configure/network_recording",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "network_recording",
+      "setup": "Click \"Fetch 404\" on /tests/telemetry.html, then start recording for localhost, click \"Fetch slow\", check status, stop, check status again.",
+      "question": "Does status read on and then off, and does the recorded traffic hold the slow request but not the 404 you fired before it started?"
+    },
+    {
+      "id": "configure/noise_rule",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "noise_rule",
+      "setup": "Load /tests/telemetry.html, add a rule matching SMOKE_ERROR_ in the console category, then click \"Throw TypeError\".",
+      "question": "Are the 30 SMOKE_ERROR lines gone from observe errors while the TypeError is still listed, and do they come back when you remove the rule?"
+    },
+    {
+      "id": "configure/playback",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "playback",
+      "setup": "Reload /tests/recording.html clean, then play back checkout-run.",
+      "question": "Do you watch the same four buttons get clicked in the same order, leaving the page's result line reading what it read at the end of your original run?"
+    },
+    {
+      "id": "configure/qa_fixture",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "qa_fixture",
+      "setup": "Apply a fixture setting viewport 800x600, locale fr-FR and localStorage theme=dark on /tests/interact.html, then restore with the transaction_id it returns.",
+      "question": "Does the window visibly resize and the page read theme=dark while applied, is everything back as it was after the restore, and is the value dark never printed in any response?"
+    },
+    {
+      "id": "configure/replay_sequence",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "replay_sequence",
+      "setup": "Replay login-flow on /tests/interact.html with stop_after_step 2.",
+      "question": "Do you watch the first two steps happen in the browser and the third not happen, with the page left in the state those two steps produce?"
+    },
+    {
+      "id": "configure/report_issue",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "report_issue",
+      "setup": "Call preview with template bug and user_context \"extension disconnects after 20 actions\".",
+      "question": "Does the previewed body carry that sentence plus the Kaboom version and platform you are actually running, and does it carry no page URLs and no captured page content?"
+    },
+    {
+      "id": "configure/restart",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "restart",
+      "setup": "Note the process id and uptime from configure health, call restart, then call health again.",
+      "question": "Is the process id different and the uptime near zero, with the extension reconnected without you touching Chrome?"
+    },
+    {
+      "id": "configure/save_sequence",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "save_sequence",
+      "setup": "Save a three-step sequence named login-flow: navigate, type, click.",
+      "question": "Does the response report three steps, and does a file for that sequence appear in the state directory on disk?"
+    },
+    {
+      "id": "configure/security_mode",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "security_mode",
+      "setup": "Read the mode, set insecure_proxy without confirm, set it again with confirm true, then read once more.",
+      "question": "Does the middle call refuse and say confirmation is required, and does the final read still show insecure_proxy active?"
+    },
+    {
+      "id": "configure/setup_quality_gates",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "setup_quality_gates",
+      "setup": "Run it in a project with no .kaboom.json, then edit file_size_limit in that file to 500 and run it again.",
+      "question": "Do .kaboom.json and kaboom-code-standards.md appear after the first run, and does your 500 survive the second run untouched?"
+    },
+    {
+      "id": "configure/store",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "store",
+      "setup": "Save {lcp: 1200} under namespace baselines, key homepage-vitals, then list with and without the namespace.",
+      "question": "Does the key appear only under baselines, and is there a JSON file holding that number in the project's .kaboom directory on disk?"
+    },
+    {
+      "id": "configure/streaming",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "streaming",
+      "setup": "Enable streaming for errors with severity_min error, then fire a console warning and then a TypeError on /tests/telemetry.html.",
+      "question": "Does a push notification arrive for the TypeError and none for the warning, and does status then list errors as the enabled category?"
+    },
+    {
+      "id": "configure/telemetry",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "telemetry",
+      "setup": "Set telemetry_mode full, make one observe call, set it off, make another.",
+      "question": "Does the first response carry a telemetry metadata block and the second none?"
+    },
+    {
+      "id": "configure/test_boundary_end",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "test_boundary_end",
+      "setup": "End the checkout boundary, then call end on it a second time.",
+      "question": "Does the first close it and report the two errors that fell inside, and does the second say there is no open boundary rather than reporting success again?"
+    },
+    {
+      "id": "configure/test_boundary_start",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "test_boundary_start",
+      "setup": "Fire five console errors on /tests/telemetry.html, start a boundary called checkout, then fire two more.",
+      "question": "Is the boundary's start time later than the fifth error and earlier than the sixth, so the two inside can be told apart from the five outside?"
+    },
+    {
+      "id": "configure/tutorial",
+      "kind": "mcp_mode",
+      "tool": "configure",
+      "mode": "tutorial",
+      "setup": "Untrack every tab in the extension and call it, then track a tab and call it again.",
+      "question": "Does the first call raise the no-tracked-tab warning and the second drop it, with the suggested next steps changing accordingly?"
+    },
+    {
+      "id": "generate/annotation_issues",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "annotation_issues",
+      "setup": "Generate from the same perf-review session.",
+      "question": "Does this come back as two separate issues with their own titles and target elements, where annotation_report gave you one document?"
+    },
+    {
+      "id": "generate/annotation_report",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "annotation_report",
+      "setup": "Generate from the perf-review session holding those two notes.",
+      "question": "Does the markdown read as prose containing both of your notes and where each one sat on the page, with nothing in it you did not type?"
+    },
+    {
+      "id": "generate/csp",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "csp",
+      "setup": "Open /tests/recording.html, which loads a YouTube embed, and generate with mode strict.",
+      "question": "Does the policy name the YouTube origins the page actually loads and localhost as self, and does pasting it in as a meta CSP leave the page working rather than blocking its own scripts?"
+    },
+    {
+      "id": "generate/har",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "har",
+      "setup": "Click \"Fetch 404\", \"Fetch 500\" and \"Fetch slow\" on /tests/telemetry.html, then generate with status_min 400 into a file.",
+      "question": "Does that file import into Chrome DevTools' Network tab showing exactly the 404 and the 500, with the 200 from /tests/slow absent?"
+    },
+    {
+      "id": "generate/pr_summary",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "pr_summary",
+      "setup": "Snapshot performance on a clean /tests/performance.html, click \"Long task 800ms\" five times and \"Trigger CLS\", snapshot again, then generate.",
+      "question": "Does the summary call CLS and long-task time regressions, in the direction you just pushed them, with numbers you can match against the page's Live Metrics panel?"
+    },
+    {
+      "id": "generate/reproduction",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "reproduction",
+      "setup": "On /tests/telemetry.html click three Console Factory buttons then \"Throw TypeError\", and generate with last_n 4.",
+      "question": "Does the script hold those four steps in the order you clicked them and none of the earlier ones, and does running it under Playwright throw the same TypeError?"
+    },
+    {
+      "id": "generate/sarif",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "sarif",
+      "setup": "On /tests/a11y.html, generate with save_to a .sarif file.",
+      "question": "Does the file open in a SARIF viewer with results landing on the contrast and unlabelled-control violations you can see, and no results on the labelled nav links at the top?"
+    },
+    {
+      "id": "generate/sri",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "sri",
+      "setup": "Open /tests/frameworks/react.html, which loads react.bundle.js.",
+      "question": "Does the hash it gives for that bundle match what \"openssl dgst -sha384 -binary react.bundle.js | openssl base64\" prints for the file on disk?"
+    },
+    {
+      "id": "generate/test",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "test",
+      "setup": "Fill and submit #smoke-form on /tests/interact.html with a real password, then generate with assert_no_errors and assert_network.",
+      "question": "Does the test target fields by the labels you can see \u2014 Username, Email \u2014 rather than CSS paths, and is the password written as [user-provided] instead of what you typed?"
+    },
+    {
+      "id": "generate/test_classify",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "test_classify",
+      "setup": "Batch-classify two failures: one with error \"Timeout 30000ms exceeded\" and duration_ms 30500, one with \"Element not found: #submit\".",
+      "question": "Do the two come back with different root causes \u2014 a timeout and a missing selector \u2014 rather than the same label twice?"
+    },
+    {
+      "id": "generate/test_from_context",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "test_from_context",
+      "setup": "Throw a TypeError on /tests/telemetry.html, generate with context error, then generate again with context interaction.",
+      "question": "Does the first test click the \"Throw TypeError\" button and assert that error, and is the second a visibly different test built from your clicks instead?"
+    },
+    {
+      "id": "generate/test_heal",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "test_heal",
+      "setup": "Write a Playwright file with two selectors, #sf-btn which exists on /tests/interact.html and #sf-button-old which does not, and run action analyze with that page open.",
+      "question": "Does it name only #sf-button-old as broken and propose a replacement that actually matches the Submit button on screen, leaving #sf-btn alone?"
+    },
+    {
+      "id": "generate/visual_test",
+      "kind": "mcp_mode",
+      "tool": "generate",
+      "mode": "visual_test",
+      "setup": "Draw two annotation boxes in session perf-review on /tests/performance.html, one on the CLS box and one on the metrics panel, then generate.",
+      "question": "Does the test hold two assertions clipped to those two regions rather than one whole-page screenshot?"
+    },
+    {
+      "id": "interact/activate_tab",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "activate_tab",
+      "setup": "Activate a background tab.",
+      "question": "Does that tab come to the front in the browser window?"
+    },
+    {
+      "id": "interact/auto_dismiss_overlays",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "auto_dismiss_overlays",
+      "setup": "Load a page with a cookie banner and a newsletter modal.",
+      "question": "Are both gone, and does the response name which ones it dismissed rather than just claiming success?"
+    },
+    {
+      "id": "interact/back",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "back",
+      "setup": "Navigate twice, then go back.",
+      "question": "Is the previous page on screen and the address bar showing its URL?"
+    },
+    {
+      "id": "interact/batch",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "batch",
+      "setup": "Run a batch of three actions.",
+      "question": "Did all three take effect on the page, in order, and does the result say so per step?"
+    },
+    {
+      "id": "interact/check",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "check",
+      "setup": "Check the terms checkbox.",
+      "question": "Is the box visibly checked, and does the submit button enable if it was disabled?"
+    },
+    {
+      "id": "interact/clear_storage",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "clear_storage",
+      "setup": "Clear storage on a page holding several keys.",
+      "question": "Is every key gone, and does the page behave as a first visit?"
+    },
+    {
+      "id": "interact/click",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "click",
+      "setup": "Click the fixture's submit button.",
+      "question": "Does the page do what a real click does \u2014 form submits, dialog opens \u2014 and does the response's effects block say an effect was observed?"
+    },
+    {
+      "id": "interact/clipboard_read",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "clipboard_read",
+      "setup": "Copy text in the page, then read the clipboard.",
+      "question": "Does the returned text match what was copied?"
+    },
+    {
+      "id": "interact/clipboard_write",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "clipboard_write",
+      "setup": "Write text, then paste it into a field.",
+      "question": "Does the pasted text match what was written?"
+    },
+    {
+      "id": "interact/close_tab",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "close_tab",
+      "setup": "Close the tab that was opened.",
+      "question": "Is the tab gone from the browser, and does the group close with the last tab rather than being left empty?"
+    },
+    {
+      "id": "interact/confirm_top_dialog",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "confirm_top_dialog",
+      "setup": "Trigger a confirm() dialog and confirm it.",
+      "question": "Does the page proceed as if the person clicked OK?"
+    },
+    {
+      "id": "interact/delete_cookie",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "delete_cookie",
+      "setup": "Delete that cookie.",
+      "question": "Does the page render the signed-out variant on reload?"
+    },
+    {
+      "id": "interact/delete_state",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "delete_state",
+      "setup": "Delete \"signed-in\".",
+      "question": "Is it gone from list_states, and does load_state on it now fail with a clear message rather than silently doing nothing?"
+    },
+    {
+      "id": "interact/delete_storage",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "delete_storage",
+      "setup": "Delete \"theme\".",
+      "question": "Is the key gone from the page's storage, and does the page fall back to its default theme?"
+    },
+    {
+      "id": "interact/dismiss_top_overlay",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "dismiss_top_overlay",
+      "setup": "Open a cookie banner and dismiss it.",
+      "question": "Is the banner gone and the page underneath clickable?"
+    },
+    {
+      "id": "interact/double_click",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "double_click",
+      "setup": "Double-click a word.",
+      "question": "Is the word selected, as double-click selects?"
+    },
+    {
+      "id": "interact/drag",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "drag",
+      "setup": "Drag a card from one column to another.",
+      "question": "Is the card in the new column, as it would be after a real drag?"
+    },
+    {
+      "id": "interact/draw_mode_start",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "draw_mode_start",
+      "setup": "Start draw mode and draw a box around a bug.",
+      "question": "Does the drawing appear on the page and survive into the captured image?"
+    },
+    {
+      "id": "interact/execute_js",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "execute_js",
+      "setup": "Run a snippet that returns the page title.",
+      "question": "Does the returned value match the title shown in the browser tab?"
+    },
+    {
+      "id": "interact/explore_page",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "explore_page",
+      "setup": "Explore an unfamiliar page.",
+      "question": "Does the summary describe what a person sees, including the main action?"
+    },
+    {
+      "id": "interact/fill_form",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "fill_form",
+      "setup": "Fill the signup form without submitting.",
+      "question": "Are all fields filled and the page still on the form?"
+    },
+    {
+      "id": "interact/fill_form_and_submit",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "fill_form_and_submit",
+      "setup": "Fill the signup form and submit it.",
+      "question": "Is every field filled as intended on screen, and did the form submit?"
+    },
+    {
+      "id": "interact/find",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "find",
+      "setup": "Find \"the Continue button\" by description.",
+      "question": "Does the returned element highlight the Continue button and not something else?"
+    },
+    {
+      "id": "interact/focus",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "focus",
+      "setup": "Focus a field further down the form.",
+      "question": "Is the caret in that field, and does typing go there?"
+    },
+    {
+      "id": "interact/forward",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "forward",
+      "setup": "Go back, then forward.",
+      "question": "Is the later page on screen again?"
+    },
+    {
+      "id": "interact/get_attribute",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "get_attribute",
+      "setup": "Read the href of a link.",
+      "question": "Does it match what the link navigates to when clicked?"
+    },
+    {
+      "id": "interact/get_markdown",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "get_markdown",
+      "setup": "Get markdown for the same article.",
+      "question": "Do the headings, lists and links survive as markdown?"
+    },
+    {
+      "id": "interact/get_readable",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "get_readable",
+      "setup": "Get readable text from an article page.",
+      "question": "Does it read like the article and exclude the nav, ads and footer?"
+    },
+    {
+      "id": "interact/get_text",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "get_text",
+      "setup": "Read the text of the error banner.",
+      "question": "Does the returned text match what is on screen, word for word?"
+    },
+    {
+      "id": "interact/get_value",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "get_value",
+      "setup": "Read the value of a field you just typed into.",
+      "question": "Does the returned value match what is displayed?"
+    },
+    {
+      "id": "interact/hardware_click",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "hardware_click",
+      "setup": "Click at a coordinate on a canvas element.",
+      "question": "Does the canvas react the way it does to a real mouse click?"
+    },
+    {
+      "id": "interact/highlight",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "highlight",
+      "setup": "Open the fixture page and highlight a paragraph.",
+      "question": "Is the paragraph visibly outlined on screen, and does the outline disappear from a screenshot taken afterwards?"
+    },
+    {
+      "id": "interact/hover",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "hover",
+      "setup": "Hover the element that has a tooltip.",
+      "question": "Is the tooltip visible on screen?"
+    },
+    {
+      "id": "interact/hover_at",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "hover_at",
+      "setup": "Hover a coordinate over a chart point.",
+      "question": "Does the chart's tooltip appear at that point?"
+    },
+    {
+      "id": "interact/key_press",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "key_press",
+      "setup": "Press Enter in a search box.",
+      "question": "Does the search run, as it would for a person pressing Enter?"
+    },
+    {
+      "id": "interact/list_interactive",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "list_interactive",
+      "setup": "List interactive elements on the fixture.",
+      "question": "Is every clickable thing on screen in the list, and is nothing listed that is not there?"
+    },
+    {
+      "id": "interact/list_states",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "list_states",
+      "setup": "Save two states with different names.",
+      "question": "Does the list show both names, and only those?"
+    },
+    {
+      "id": "interact/load_state",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "load_state",
+      "setup": "Sign out, then load \"signed-in\".",
+      "question": "Is the page signed in again after the load, without retyping credentials?"
+    },
+    {
+      "id": "interact/navigate",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "navigate",
+      "setup": "Navigate to a second page.",
+      "question": "Does the browser actually show the new page, and does the response report the URL that is in the address bar?"
+    },
+    {
+      "id": "interact/navigate_and_document",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "navigate_and_document",
+      "setup": "Click through to the destination and document it.",
+      "question": "Does the returned description match the page now in the browser?"
+    },
+    {
+      "id": "interact/navigate_and_wait_for",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "navigate_and_wait_for",
+      "setup": "Click a link and wait for the destination's heading.",
+      "question": "Does it return when the heading is actually on screen?"
+    },
+    {
+      "id": "interact/new_tab",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "new_tab",
+      "setup": "Open a new tab at a URL.",
+      "question": "Does a new tab appear in the Kaboom tab group with that page loaded?"
+    },
+    {
+      "id": "interact/open_composer",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "open_composer",
+      "setup": "Open the composer on a chat-style page.",
+      "question": "Is the input focused and ready to type into?"
+    },
+    {
+      "id": "interact/paste",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "paste",
+      "setup": "Paste text into a field.",
+      "question": "Does the text appear, and does the page's paste handler run (not just a value assignment)?"
+    },
+    {
+      "id": "interact/pin_environment",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "pin_environment",
+      "setup": "Pin the clock and timezone, then reload.",
+      "question": "Does the page show the pinned time rather than the real one?"
+    },
+    {
+      "id": "interact/query",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "query",
+      "setup": "Ask whether \".error\" exists on a clean page and on a failing one.",
+      "question": "Does it answer no on the clean page and yes on the failing one?"
+    },
+    {
+      "id": "interact/refresh",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "refresh",
+      "setup": "Type into a field, then refresh.",
+      "question": "Is the typed text gone and the page visibly reloaded?"
+    },
+    {
+      "id": "interact/right_click",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "right_click",
+      "setup": "Right-click an element with a context menu.",
+      "question": "Does the page's own context menu open?"
+    },
+    {
+      "id": "interact/run_a11y_and_export_sarif",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "run_a11y_and_export_sarif",
+      "setup": "Run it on the seeded a11y fixture.",
+      "question": "Does the SARIF file exist, and do its findings match the violations seeded in that page?"
+    },
+    {
+      "id": "interact/save_state",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "save_state",
+      "setup": "Log in on the fixture, then save the state as \"signed-in\".",
+      "question": "Does the response name the state, and does list_states then show it?"
+    },
+    {
+      "id": "interact/screen_recording_start",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "screen_recording_start",
+      "setup": "Start a screen recording.",
+      "question": "Does the browser show a recording indicator?"
+    },
+    {
+      "id": "interact/screen_recording_stop",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "screen_recording_stop",
+      "setup": "Stop it and open the file.",
+      "question": "Does the video play and show what happened on the page?"
+    },
+    {
+      "id": "interact/scroll_at",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "scroll_at",
+      "setup": "Scroll inside a nested scrollable panel.",
+      "question": "Does the panel scroll and the page behind it stay still?"
+    },
+    {
+      "id": "interact/scroll_to",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "scroll_to",
+      "setup": "Scroll to a footer link.",
+      "question": "Is the footer on screen afterwards?"
+    },
+    {
+      "id": "interact/select",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "select",
+      "setup": "Choose \"Canada\" in the country dropdown.",
+      "question": "Does the dropdown display Canada, and does any dependent field update?"
+    },
+    {
+      "id": "interact/set_attribute",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "set_attribute",
+      "setup": "Set a button's disabled attribute.",
+      "question": "Does the button become visibly disabled and stop responding to clicks?"
+    },
+    {
+      "id": "interact/set_cookie",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "set_cookie",
+      "setup": "Set a session cookie the fixture reads.",
+      "question": "Does the page render the signed-in variant on reload?"
+    },
+    {
+      "id": "interact/set_storage",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "set_storage",
+      "setup": "Set localStorage key \"theme\" to \"dark\".",
+      "question": "Does the page's own UI react (or does DevTools Application show the key), rather than the call merely returning success?"
+    },
+    {
+      "id": "interact/submit_active_composer",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "submit_active_composer",
+      "setup": "Type a message and submit the composer.",
+      "question": "Does the message appear in the transcript?"
+    },
+    {
+      "id": "interact/subtitle",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "subtitle",
+      "setup": "Show a subtitle reading \"step 1 of 3\".",
+      "question": "Does that exact text appear over the page, and is it gone once cleared?"
+    },
+    {
+      "id": "interact/switch_tab",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "switch_tab",
+      "setup": "Open two tabs, then switch to the first.",
+      "question": "Does the agent's later action land on the first tab, and is that tab in the Kaboom group?"
+    },
+    {
+      "id": "interact/triple_click",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "triple_click",
+      "setup": "Triple-click a paragraph.",
+      "question": "Is the whole paragraph selected?"
+    },
+    {
+      "id": "interact/type",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "type",
+      "setup": "Type an email into the email field.",
+      "question": "Do the characters appear in the field, and does the page's own validation react as it would to typing?"
+    },
+    {
+      "id": "interact/unpin_environment",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "unpin_environment",
+      "setup": "Unpin, then reload.",
+      "question": "Does the page show the real time again?"
+    },
+    {
+      "id": "interact/upload",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "upload",
+      "setup": "Upload a file to the fixture's file input.",
+      "question": "Does the page show the file name it received?"
+    },
+    {
+      "id": "interact/wait_for",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "wait_for",
+      "setup": "Wait for a spinner to be replaced by results.",
+      "question": "Does it return when the results are actually visible, not before?"
+    },
+    {
+      "id": "interact/wait_for_stable",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "wait_for_stable",
+      "setup": "Call it on a page still animating in.",
+      "question": "Does it return only once the page has stopped moving?"
+    },
+    {
+      "id": "interact/zoom_region",
+      "kind": "mcp_mode",
+      "tool": "interact",
+      "mode": "zoom_region",
+      "setup": "Zoom a region of a chart at scale 2, on a page scrolled halfway down.",
+      "question": "Is the returned image the region you pointed at \u2014 not one offset by the scroll \u2014 and is the small text legible?"
+    },
+    {
+      "id": "observe/actions",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "actions",
+      "setup": "Click, type and navigate by hand in the browser, then observe actions.",
+      "question": "Are your three actions listed, in order, with the elements you touched?"
+    },
+    {
+      "id": "observe/command_result",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "command_result",
+      "setup": "Start a long action, then fetch its result by id.",
+      "question": "Does the result match what actually happened on the page?"
+    },
+    {
+      "id": "observe/error_bundles",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "error_bundles",
+      "setup": "Fire the same error three times and a different one once.",
+      "question": "Are they bundled into two groups with counts of 3 and 1?"
+    },
+    {
+      "id": "observe/errors",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "errors",
+      "setup": "Load the telemetry fixture and fire a TypeError, then observe errors.",
+      "question": "Is the error you just caused in the list, with a stack that points at the line that threw?"
+    },
+    {
+      "id": "observe/extension_logs",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "extension_logs",
+      "setup": "Provoke an extension-side failure (block the metrics probe).",
+      "question": "Does a log entry name that failure, rather than the list being empty?"
+    },
+    {
+      "id": "observe/failed_commands",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "failed_commands",
+      "setup": "Cause an action to fail (click a selector that is not there).",
+      "question": "Is the failure listed with a reason a person could act on?"
+    },
+    {
+      "id": "observe/history",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "history",
+      "setup": "Navigate through three pages, then observe history.",
+      "question": "Are the three URLs listed in the order you visited them?"
+    },
+    {
+      "id": "observe/inbox",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "inbox",
+      "setup": "Cause a push event (an error screenshot).",
+      "question": "Does the event arrive in the inbox without being asked for?"
+    },
+    {
+      "id": "observe/indexeddb",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "indexeddb",
+      "setup": "Seed an IndexedDB store on the fixture.",
+      "question": "Are the store and its records listed as the page wrote them?"
+    },
+    {
+      "id": "observe/log_diff_report",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "log_diff_report",
+      "setup": "Capture logs before and after a change.",
+      "question": "Does the diff show only what actually changed between the two runs?"
+    },
+    {
+      "id": "observe/logs",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "logs",
+      "setup": "Fire a mix of console.log, warn and error on the fixture.",
+      "question": "Are all three present, in the order the page printed them, with their own levels?"
+    },
+    {
+      "id": "observe/network_bodies",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "network_bodies",
+      "setup": "Submit a form, then read network bodies.",
+      "question": "Is the request body the JSON the page sent, and is any password field redacted?"
+    },
+    {
+      "id": "observe/network_waterfall",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "network_waterfall",
+      "setup": "Load a page that makes three requests, one slow.",
+      "question": "Are all three listed, with the slow one visibly the longest?"
+    },
+    {
+      "id": "observe/page",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "page",
+      "setup": "Observe the page on any site.",
+      "question": "Do the title, URL and description match the browser's tab and address bar?"
+    },
+    {
+      "id": "observe/page_inventory",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "page_inventory",
+      "setup": "Run it on a page with a form, a table and a nav.",
+      "question": "Does the inventory name those regions the way a person would describe the page?"
+    },
+    {
+      "id": "observe/pending_commands",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "pending_commands",
+      "setup": "Start a slow action and observe while it runs.",
+      "question": "Is that command listed as pending, and gone once it finishes?"
+    },
+    {
+      "id": "observe/pilot",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "pilot",
+      "setup": "With browser control on, and again with it off.",
+      "question": "Does it say enabled first and disabled after, matching the popup toggle?"
+    },
+    {
+      "id": "observe/playback_results",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "playback_results",
+      "setup": "Replay a recorded session.",
+      "question": "Does the result say which steps passed, and does that match what you watched happen?"
+    },
+    {
+      "id": "observe/recording_actions",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "recording_actions",
+      "setup": "Record yourself clicking three things.",
+      "question": "Are your three clicks listed with the elements you clicked?"
+    },
+    {
+      "id": "observe/recordings",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "recordings",
+      "setup": "Record a short session.",
+      "question": "Is the recording listed with a duration that matches how long you recorded?"
+    },
+    {
+      "id": "observe/saved_videos",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "saved_videos",
+      "setup": "Record and stop a screen recording.",
+      "question": "Is the video listed, and does the file at that path play?"
+    },
+    {
+      "id": "observe/screenshot",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "screenshot",
+      "setup": "Take a screenshot of a page scrolled halfway down.",
+      "question": "Does the image show what is on screen right now, and does its coordinate_frame let you click a button you can see in the image?"
+    },
+    {
+      "id": "observe/site_menus",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "site_menus",
+      "setup": "Run it on a site with a hamburger menu and a dropdown nav.",
+      "question": "Are the menu items listed, including the ones only visible after opening the menu?"
+    },
+    {
+      "id": "observe/storage",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "storage",
+      "setup": "Set two localStorage keys by hand, then observe storage.",
+      "question": "Are both keys and values listed, matching DevTools Application?"
+    },
+    {
+      "id": "observe/summarized_logs",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "summarized_logs",
+      "setup": "Fire 200 log lines with a few distinct errors.",
+      "question": "Does the summary surface the distinct errors rather than the noise?"
+    },
+    {
+      "id": "observe/tabs",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "tabs",
+      "setup": "Open three tabs, one in the Kaboom group.",
+      "question": "Are all three listed, and is it clear which one the agent is driving?"
+    },
+    {
+      "id": "observe/timeline",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "timeline",
+      "setup": "Cause a click that triggers a request that logs an error.",
+      "question": "Are the three events correlated on one timeline in that causal order?"
+    },
+    {
+      "id": "observe/transients",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "transients",
+      "setup": "Trigger a toast that disappears after two seconds.",
+      "question": "Is the toast captured with its text, even though it is gone by the time you look?"
+    },
+    {
+      "id": "observe/vitals",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "vitals",
+      "setup": "Trigger a layout shift on the performance fixture.",
+      "question": "Does CLS rise and get a rating you would agree with by looking at the page jump?"
+    },
+    {
+      "id": "observe/websocket_events",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "websocket_events",
+      "setup": "Open a websocket on the fixture and send two messages.",
+      "question": "Are the open and both messages listed, with direction?"
+    },
+    {
+      "id": "observe/websocket_status",
+      "kind": "mcp_mode",
+      "tool": "observe",
+      "mode": "websocket_status",
+      "setup": "With the socket open, then after an abnormal close.",
+      "question": "Does it say connected first and closed after, with the close reason?"
+    },
+    {
+      "id": "context_menu/track_tab",
+      "kind": "surface",
+      "setup": "Right-click the page and use the Kaboom context menu entry.",
+      "question": "Does it do the same thing as the popup button?"
+    },
+    {
+      "id": "doctor/diagnostics",
+      "kind": "surface",
+      "setup": "Run Doctor with the extension disconnected.",
+      "question": "Does it name the actual cause and a next step, rather than a generic failure?"
+    },
+    {
+      "id": "draw_mode/annotate",
+      "kind": "surface",
+      "setup": "Start draw mode and draw an arrow and a box.",
+      "question": "Do both appear where you drew them, and are they in the exported image?"
+    },
+    {
+      "id": "draw_mode/exit",
+      "kind": "surface",
+      "setup": "Exit draw mode.",
+      "question": "Is the page interactive again, with no leftover canvas swallowing clicks?"
+    },
+    {
+      "id": "install/first_run",
+      "kind": "surface",
+      "setup": "Install from npm on a machine with no prior state.",
+      "question": "Does the first MCP call work without any manual setup step?"
+    },
+    {
+      "id": "keyboard/recording_shortcut",
+      "kind": "surface",
+      "setup": "Press the recording shortcut twice.",
+      "question": "Does it start and then stop, behaving exactly as the popup buttons do?"
+    },
+    {
+      "id": "popup/connection_status",
+      "kind": "surface",
+      "setup": "Stop the daemon while the popup is open.",
+      "question": "Does the popup show disconnected within a few seconds, rather than staying green?"
+    },
+    {
+      "id": "popup/pilot_toggle",
+      "kind": "surface",
+      "setup": "Toggle browser control off in the popup, then ask the agent to click something.",
+      "question": "Is the click refused with a message naming the toggle, and does turning it back on let the click through?"
+    },
+    {
+      "id": "popup/recording_controls",
+      "kind": "surface",
+      "setup": "Start and stop a recording from the popup.",
+      "question": "Does the badge show recording while it runs, and does the recording appear in observe recordings?"
+    },
+    {
+      "id": "popup/track_this_tab",
+      "kind": "surface",
+      "setup": "Open the popup on an untracked tab and click Track This Tab.",
+      "question": "Does the tab become tracked \u2014 badge changes, and observe pilot agrees \u2014 without reloading the page?"
+    },
+    {
+      "id": "screenshots/error_capture",
+      "kind": "surface",
+      "setup": "Cause a page error with screenshot-on-error enabled.",
+      "question": "Does a screenshot of the moment of failure arrive, showing the page as it looked then?"
+    },
+    {
+      "id": "side_panel/open",
+      "kind": "surface",
+      "setup": "Open the Chrome side panel.",
+      "question": "Does it show current state, and does closing it with Chrome's own X leave the extension usable?"
+    },
+    {
+      "id": "supervision/overlay",
+      "kind": "surface",
+      "setup": "Have the agent drive a page.",
+      "question": "Is it visible on the page that an agent is acting \u2014 without covering the content the agent is working on?"
+    },
+    {
+      "id": "supervision/phantom_cursor",
+      "kind": "surface",
+      "setup": "Watch a click and a drag.",
+      "question": "Does the cursor show where the agent is acting, and is it absent from screenshots?"
+    },
+    {
+      "id": "supervision/stop_button",
+      "kind": "surface",
+      "setup": "Press Stop mid-way through a multi-step agent action.",
+      "question": "Does the action stop within a second, and does the agent report that it was stopped rather than that it succeeded?"
+    },
+    {
+      "id": "tab_group/adoption",
+      "kind": "surface",
+      "setup": "Let the agent open a tab, then hand it one of yours.",
+      "question": "Are both in a single group named for Kaboom, so you can see at a glance which tabs the agent holds?"
+    },
+    {
+      "id": "tab_group/session_end",
+      "kind": "surface",
+      "setup": "Close the MCP client.",
+      "question": "Is the group gone and your tabs left ungrouped, rather than an orphan group being left behind?"
+    },
+    {
+      "id": "terminal_panel/folder_picker",
+      "kind": "surface",
+      "setup": "Pick a different root folder.",
+      "question": "Does the terminal restart in that folder?"
+    },
+    {
+      "id": "terminal_panel/open",
+      "kind": "surface",
+      "setup": "Open the terminal panel.",
+      "question": "Does a working shell appear, in the project folder you chose?"
+    },
+    {
+      "id": "terminal_panel/reconnect",
+      "kind": "surface",
+      "setup": "Kill the daemon while the terminal is open, then restart it.",
+      "question": "Does the terminal reconnect to the same session with its scrollback, rather than starting empty?"
+    }
+  ]
+}
