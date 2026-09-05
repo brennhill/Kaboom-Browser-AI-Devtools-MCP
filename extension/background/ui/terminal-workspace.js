@@ -51,7 +51,7 @@ async function focusTab(tab) {
     }
 }
 async function createTerminalWorkspaceGroup(tabId) {
-    if (!(await canGroupTabs()) || !chrome.tabs.group || !chrome.tabGroups?.update)
+    if (!canGroupTabs() || !chrome.tabs.group || !chrome.tabGroups?.update)
         return null;
     try {
         const groupId = await chrome.tabs.group({ tabIds: [tabId] });

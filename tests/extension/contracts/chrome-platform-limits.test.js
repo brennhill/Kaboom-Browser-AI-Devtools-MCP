@@ -293,20 +293,32 @@ describe('permissions match the APIs we call', () => {
     assert.deepStrictEqual(unused, [], `declared but never used: ${unused.join(', ')}`)
   })
 
-  test('tabGroups is optional, not required — a cosmetic feature must not force re-approval', () => {
-    // The terminal workspace grouping (an orange "KaBOOM!" tab group) is purely
-    // cosmetic and fully guarded with a clean fallback. Shipping tabGroups as a
-    // REQUIRED permission would make Chrome disable the extension on update until
-    // every existing user re-approves — an unacceptable trade for a label. It must
-    // live in optional_permissions and be requested/gated at runtime instead.
+  test('tabGroups is a required permission, so grouping needs no user action', () => {
+    // tabGroups DOES carry a Chrome permission warning ("View and manage your tab
+    // groups"), and Chrome disables an extension on auto-update when an update adds a
+    // warning-bearing permission. That cost only lands on users who auto-update from
+    // the Chrome Web Store. Kaboom is installed unpacked (README: "Load unpacked") and
+    // the Web Store upload is a manual step that is not automated and not in CI, so
+    // there is no auto-updating install base to disable.
+    //
+    // Requiring it is what makes the driven tab group work at all. The alternative —
+    // optional, requested at runtime — cannot work from the background: Chrome requires
+    // permissions.request() to be called "from inside a user gesture, like a button's
+    // click handler", and an MV3 service worker never has one. Optional therefore means
+    // a popup toggle the user must find, and a feature whose whole purpose is telling
+    // them which tabs the agent holds is worthless while switched off.
+    //
+    // If Kaboom is ever published to the Web Store with a real install base, revisit
+    // this: the choice is a one-time re-approval prompt, or moving back to an
+    // opt-in toggle.
     const manifest = loadManifest()
     assert.ok(
-      !(manifest.permissions ?? []).includes('tabGroups'),
-      'tabGroups must not be a required permission — move it to optional_permissions'
+      (manifest.permissions ?? []).includes('tabGroups'),
+      'tabGroups must be a required permission so grouping works with no user action'
     )
     assert.ok(
-      (manifest.optional_permissions ?? []).includes('tabGroups'),
-      'tabGroups must be declared in optional_permissions so the grouping feature can request it'
+      !(manifest.optional_permissions ?? []).includes('tabGroups'),
+      'tabGroups must not also be optional — one declaration, not two'
     )
   })
 })

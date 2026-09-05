@@ -69,58 +69,27 @@ function tabGroupApisPresent() {
         typeof chrome?.tabGroups?.query === 'function');
 }
 /**
- * Read the live `tabGroups` grant. Chrome is the authority, never a storage mirror
- * (rule 18): the user can revoke the permission from chrome://extensions at any time
- * and grouping must stop on the very next drive.
+ * Whether Kaboom may group tabs at all. `tabGroups` is a required manifest permission,
+ * so this is purely a capability question: an old browser without the API. Exported so
+ * the terminal workspace grouping asks it in the one place that owns it rather than
+ * keeping a second copy that can drift.
  */
-async function holdsTabGroupsPermission() {
-    try {
-        return await chrome.permissions.contains({ permissions: ['tabGroups'] });
-    }
-    catch (err) {
-        debugLog(DebugCategory.LIFECYCLE, 'Kaboom could not read the tabGroups permission state', {
-            browser_error: errorMessage(err)
-        });
-        return false;
-    }
-}
-/**
- * Whether Kaboom may group tabs at all: the APIs exist and the optional `tabGroups`
- * permission is held. Exported so the terminal workspace grouping asks this question
- * in the one place that owns it rather than keeping a second copy that can drift.
- */
-export async function canGroupTabs() {
-    if (!canCreateTabGroups())
-        return false;
-    if (typeof chrome?.permissions?.contains !== 'function')
-        return true;
-    return await holdsTabGroupsPermission();
+export function canGroupTabs() {
+    return canCreateTabGroups();
 }
 /**
  * Resolve whether Kaboom may group tabs right now. Returns `null` when nothing blocks
  * grouping, or the degraded outcome to hand back to the caller.
  *
- * This path never *requests* the permission. `chrome.permissions.request` only works
+ * There is no permission check and no permission request here. `tabGroups` is declared
+ * in `permissions`, not `optional_permissions`, so it is granted at install and
+ * grouping needs no user action — which is the point, since a feature that exists to
+ * show which tabs the agent holds is worthless while switched off. Requesting it at
+ * runtime was never an option either: Chrome requires `permissions.request` to run
  * "from inside a user gesture, like a button's click handler", and an MV3 service
- * worker has no gesture — a request from here would reject on every drive. The grant
- * comes from the popup's "Group Driven Tabs" toggle
- * (src/popup/driven-tab-group-permission.ts). Until it is granted, driving continues
- * ungrouped, which is exactly the behaviour that shipped before this feature.
+ * worker never has one.
  */
-async function groupingBlockedBy() {
-    // A browser with no permissions API at all cannot report a grant; the only signal
-    // left is whether the APIs exist. Reported as unavailable, not as ungranted, because
-    // no popup toggle would fix it.
-    if (typeof chrome?.permissions?.contains !== 'function') {
-        if (!tabGroupApisPresent())
-            return degrade('tab_groups_api_unavailable');
-        clearDegrade();
-        return null;
-    }
-    // On modern Chrome the namespace is exposed only once `tabGroups` is granted, so the
-    // permission is checked first: it is the reason the user can act on.
-    if (!(await holdsTabGroupsPermission()))
-        return degrade('tab_groups_permission_not_granted');
+function groupingBlockedBy() {
     if (!tabGroupApisPresent())
         return degrade('tab_groups_api_unavailable');
     clearDegrade();
@@ -328,7 +297,7 @@ async function joinSessionGroup(tabId, entryPoint) {
 export async function adoptTabIntoDrivenGroup(tabId, entryPoint) {
     if (!Number.isInteger(tabId) || tabId < 0)
         return { adopted: false, degraded_reason: 'invalid_tab_id' };
-    const blocked = await groupingBlockedBy();
+    const blocked = groupingBlockedBy();
     if (blocked !== null)
         return blocked;
     installSessionHooks();

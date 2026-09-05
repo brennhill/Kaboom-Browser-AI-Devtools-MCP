@@ -93,54 +93,30 @@ describe('driven tab group — adoption entry points', () => {
   })
 })
 
-describe('driven tab group — the grant is read, never requested, from the worker', () => {
-  test('an ungranted permission degrades to ungrouped driving with a named reason', async () => {
-    const world = installWorld(createTabGroupsWorld({ granted: false }))
+describe('driven tab group — no permission gate stands between a drive and its group', () => {
+  test('grouping engages on the first drive with no user action', async () => {
+    // tabGroups is a required manifest permission, so there is nothing to grant and
+    // nothing to prompt for. This is the whole point: a feature that exists to show
+    // which tabs the agent holds is worthless while switched off.
+    const world = installWorld(createTabGroupsWorld())
     const tab = world.addTab()
 
     const outcome = await adoptTabIntoDrivenGroup(tab.id, 'new_tab')
 
-    assert.strictEqual(outcome.adopted, false)
-    assert.strictEqual(outcome.degraded_reason, 'tab_groups_permission_not_granted')
-    assert.strictEqual(world.groupCount(), 0, 'nothing is grouped without the permission')
-    assert.strictEqual(world.groupOf(tab.id), TAB_GROUP_ID_NONE, 'the tab is still drivable, just ungrouped')
-    assert.deepStrictEqual(
-      degradeReasons(),
-      ['tab_groups_permission_not_granted'],
-      'the reason is logged, never swallowed'
-    )
+    assert.strictEqual(outcome.adopted, true)
+    assert.strictEqual(world.groupOf(tab.id), getDrivenTabGroupId())
   })
 
   test('the worker never calls permissions.request — it has no user gesture to spend', async () => {
-    // chrome.permissions.request() must run "from inside a user gesture, like a
+    // Chrome requires permissions.request() to run "from inside a user gesture, like a
     // button's click handler". An MV3 service worker never has one, so a request from
-    // here would reject on every single drive. The grant comes from the popup toggle
-    // in src/popup/driven-tab-group-permission.ts instead.
-    const world = installWorld(createTabGroupsWorld({ granted: false }))
+    // here would reject on every drive. Guards against reintroducing that path.
+    const world = installWorld(createTabGroupsWorld())
 
     await adoptTabIntoDrivenGroup(world.addTab().id, 'new_tab')
     await adoptTabIntoDrivenGroup(world.addTab().id, 'switch_tab')
-    await adoptTabIntoDrivenGroup(world.addTab().id, 'tracked_tab')
 
-    assert.strictEqual(world.requestCalls, 0, 'the worker must never request the permission')
-    assert.deepStrictEqual(
-      degradeReasons(),
-      ['tab_groups_permission_not_granted'],
-      'the reason is logged once, not per drive'
-    )
-  })
-
-  test('a permission granted later starts grouping with no restart', async () => {
-    const world = installWorld(createTabGroupsWorld({ granted: false }))
-
-    const refused = await adoptTabIntoDrivenGroup(world.addTab().id, 'new_tab')
-    assert.strictEqual(refused.adopted, false)
-
-    // The user flips the popup toggle mid-session.
-    world.setGranted(true)
-
-    const adopted = await adoptTabIntoDrivenGroup(world.addTab().id, 'new_tab')
-    assert.strictEqual(adopted.adopted, true, 'the live grant is re-read on every drive')
+    assert.strictEqual(world.requestCalls, 0, 'the worker must never request a permission')
   })
 
   test('a browser without the tab-group APIs degrades with its own reason', async () => {
@@ -152,6 +128,12 @@ describe('driven tab group — the grant is read, never requested, from the work
 
     assert.strictEqual(outcome.adopted, false)
     assert.strictEqual(outcome.degraded_reason, 'tab_groups_api_unavailable')
+    assert.strictEqual(world.groupOf(tab.id), TAB_GROUP_ID_NONE, 'the tab is still drivable, just ungrouped')
+    assert.deepStrictEqual(
+      degradeReasons(),
+      ['tab_groups_api_unavailable'],
+      'the reason is logged, never swallowed'
+    )
   })
 
 })

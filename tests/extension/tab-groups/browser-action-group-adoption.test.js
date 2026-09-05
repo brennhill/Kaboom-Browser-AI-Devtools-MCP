@@ -136,8 +136,11 @@ describe('browser actions adopt driven tabs into the Kaboom group', () => {
     assert.strictEqual(getDrivenTabGroupId(), null)
   })
 
-  test('a refused tabGroups permission never breaks the drive', async () => {
-    const world = installWorld(createTabGroupsWorld({ granted: false, onRequest: 'deny' }))
+  test('a browser that cannot group tabs never breaks the drive', async () => {
+    // Grouping is presentation, not permission. On a browser with no tabGroups API the
+    // tab still opens and is still driven — it just is not collected into the group.
+    const world = installWorld(createTabGroupsWorld())
+    delete world.chrome.tabGroups
     const source = world.addTab()
 
     const result = await handleBrowserAction(
@@ -147,7 +150,7 @@ describe('browser actions adopt driven tabs into the Kaboom group', () => {
       'c8'
     )
 
-    assert.strictEqual(result.success, true, 'the tab still opens without the permission')
+    assert.strictEqual(result.success, true, 'the tab still opens without grouping')
     assert.strictEqual(result.url, 'https://opened.example/')
     assert.strictEqual(world.groupOf(result.tab_id), TAB_GROUP_ID_NONE)
     assert.strictEqual(world.groupCount(), 0)

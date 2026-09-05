@@ -63,9 +63,7 @@
     "debugger",
     "cookies",
     "contextMenus",
-    "sidePanel"
-  ],
-  "optional_permissions": [
+    "sidePanel",
     "tabGroups"
   ],
   "host_permissions": [

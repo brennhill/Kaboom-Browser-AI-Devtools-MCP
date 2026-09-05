@@ -7,7 +7,6 @@ owners: []
 last_reviewed: 2026-09-05
 code_paths:
   - src/background/tab-groups/driven-tab-group.ts
-  - src/popup/driven-tab-group-permission.ts
   - src/background/commands/helpers.ts
   - src/background/ui/terminal-workspace.ts
   - src/background/exec/browser-actions.ts
@@ -16,7 +15,6 @@ code_paths:
   - extension/manifest.json
 test_paths:
   - tests/extension/tab-groups/driven-tab-group.test.js
-  - tests/extension/tab-groups/tab-group-permission-toggle.test.js
   - tests/extension/tab-groups/browser-action-group-adoption.test.js
   - tests/extension/tab-groups/tab-groups-fixture.js
 ---
@@ -49,32 +47,34 @@ tabs are gone.
 
 ## The permission
 
-`tabGroups` stays in `optional_permissions` and is granted from the popup's **Group Driven Tabs**
-toggle (`src/popup/driven-tab-group-permission.ts`). Two Chrome constraints force that shape, and
-between them they rule out every other option:
+`tabGroups` is a **required** permission in `extension/manifest.json`, so grouping works
+from the first drive with no user action, no toggle and no prompt.
 
-- **It cannot be required.** `tabGroups` carries the warning *"View and manage your tab groups"*.
-  Chrome disables an extension on auto-update whenever an update adds a permission that raises a
-  new warning, so promoting it would disable Kaboom for every existing user until they re-enabled
-  it — the trade the contract in
-  `tests/extension/contracts/chrome-platform-limits.test.js` was written to prevent.
-- **The service worker cannot request it.** `chrome.permissions.request` must be called "from
-  inside a user gesture, like a button's click handler". An MV3 service worker never has one, so a
-  request from the drive path would reject on every single drive.
+That permission does carry the Chrome warning *"View and manage your tab groups"*, and
+Chrome disables an extension on auto-update when an update adds a warning-bearing
+permission. That cost lands only on installs that auto-update from the Chrome Web Store.
+Kaboom is installed unpacked (README: *Load unpacked*) and the Web Store upload is a
+manual step that is neither automated nor in CI, so there is no auto-updating install
+base to disable.
 
-The popup toggle is therefore the only surface that can grant it. The background half only ever
-*reads* the grant, and re-reads it live on every drive, so flipping the toggle mid-session starts
-grouping with no restart and no second prompt. The toggle itself reads `chrome.permissions.contains`
-rather than a stored flag, so revoking the permission from `chrome://extensions` is reflected
-immediately (rule 18).
+The alternative was rejected on evidence, not preference. Declaring it optional and
+requesting it at runtime cannot work from the background: Chrome requires
+`permissions.request` to be called *"from inside a user gesture, like a button's click
+handler"*, and an MV3 service worker never has one. Optional therefore means a popup
+toggle the user has to find first — and a feature whose entire purpose is showing which
+tabs the agent holds is worth nothing while switched off.
 
-Driving never depends on the grant. Without it, tabs are driven ungrouped exactly as before, and
-the reason is named once on the diagnostic queue:
+**If Kaboom is ever published to the Web Store with a real install base, revisit this.**
+The choice then is a one-time re-approval prompt on the update that ships it, or moving
+back to an opt-in toggle. The contract in
+`tests/extension/contracts/chrome-platform-limits.test.js` records the reasoning.
+
+Grouping is still never load-bearing. On a browser with no tab-group API the drive
+proceeds ungrouped and the reason is named once on the diagnostic queue:
 
 | Reason | Cause |
 | --- | --- |
-| `tab_groups_permission_not_granted` | The user has not enabled **Group Driven Tabs**. The one reason that is actionable. |
-| `tab_groups_api_unavailable` | The browser has no `chrome.tabs.group` / `chrome.tabGroups` at all — no toggle would fix it. |
+| `tab_groups_api_unavailable` | The browser has no `chrome.tabs.group` / `chrome.tabGroups`. |
 | `group_failed: <browser error>` | Chrome refused the grouping call (for example while a tab is being dragged). |
 
 ## Why in-memory state, not storage
@@ -100,7 +100,5 @@ written for (`applyRootFolder` omitting an `unmountPanel()` another caller remem
 
 ## Known gaps
 
-- A plain `navigate` in an already-tracked tab does not adopt; only tabs Kaboom opened, was handed,
-  or auto-tracked join the group.
-- The toggle is off until the user finds it. Grouping is opt-in by construction, which is the price
-  of not disabling the extension for every existing install.
+- A plain `navigate` in an already-tracked tab does not adopt; only tabs Kaboom opened, was
+  handed, or auto-tracked join the group.

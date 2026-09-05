@@ -19,7 +19,6 @@ import { setupActionRecordingUI } from './popup/recording/action-recording.js';
 import { FEATURE_TOGGLES as TOGGLE_DEFS, applyFeatureToggles } from './popup/feature-toggles.js';
 import { initTrackPageButton } from './popup/tabs/tab-tracking.js';
 import { applyAiWebPilotToggle } from './popup/ai-web-pilot.js';
-import { applyDrivenTabGroupToggle } from './popup/driven-tab-group-permission.js';
 import { initPopupLogoMotion } from './popup/shell/logo-motion.js';
 import { applyWebSocketMode, handleWebSocketModeChange, handleClearLogs } from './popup/settings.js';
 // Apply theme early to prevent flash of unstyled content (moved from inline script for CSP compliance).
@@ -140,8 +139,6 @@ function wireImmediateControls() {
     initTrackPageButton();
     setupWebSocketUI();
     setupToggleWarnings();
-    // Grant state lives in chrome.permissions, not the batched storage read in initPopup.
-    applyDrivenTabGroupToggle();
     const clearBtn = document.getElementById('clear-btn');
     if (clearBtn)
         clearBtn.addEventListener('click', handleClearLogs);

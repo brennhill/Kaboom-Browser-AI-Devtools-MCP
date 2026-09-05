@@ -16,15 +16,12 @@ export const TAB_GROUP_ID_NONE = -1
 
 /**
  * @param {Object} options
- * @param {boolean} [options.granted] - whether tabGroups is already granted
- * @param {'grant'|'deny'|'throw'} [options.onRequest] - how permissions.request resolves
  * @param {boolean} [options.withPermissionsApi] - expose chrome.permissions at all
  */
 export function createTabGroupsWorld(options = {}) {
-  const { granted = true, onRequest = 'grant', withPermissionsApi = true } = options
+  const { withPermissionsApi = true } = options
 
   const world = {
-    granted,
     requestCalls: 0,
     tabs: new Map(),
     groups: new Map(),
@@ -125,14 +122,13 @@ export function createTabGroupsWorld(options = {}) {
     })
   }
 
+  // tabGroups is a REQUIRED manifest permission, so nothing grants it at runtime. The
+  // request spy exists only so a test can prove the service worker never calls it:
+  // Chrome rejects permissions.request outside a user gesture, which a worker lacks.
   const permissions = {
-    contains: mock.fn(async () => world.granted),
     request: mock.fn(async () => {
       world.requestCalls += 1
-      if (onRequest === 'throw') throw new Error('This function must be called during a user gesture.')
-      if (onRequest === 'deny') return false
-      world.granted = true
-      return true
+      throw new Error('This function must be called during a user gesture.')
     })
   }
 
@@ -145,10 +141,6 @@ export function createTabGroupsWorld(options = {}) {
 
   world.chrome = chromeMock
   world.permissions = permissions
-  // Flip the live grant mid-test, the way the popup toggle does at runtime.
-  world.setGranted = (value) => {
-    world.granted = value
-  }
   world.addTab = addTab
   world.groupOf = (tabId) => world.tabs.get(tabId)?.groupId ?? null
   world.groupTitles = () => [...world.groups.values()].map((group) => group.title)

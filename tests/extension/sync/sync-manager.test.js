@@ -35,7 +35,11 @@ mock.module('../../../extension/background/debug.js', {
     DebugCategory: {
       CONNECTION: 'connection', CAPTURE: 'capture', ERROR: 'error',
       LIFECYCLE: 'lifecycle', SETTINGS: 'settings', SOURCEMAP: 'sourcemap', QUERY: 'query'
-    }
+    },
+    // The real module exports debugLog too. Omitting it made every module in this
+    // graph that logs fail to instantiate with "does not provide an export named
+    // debugLog" — a mock that does not match the module it replaces.
+    debugLog: () => {}
   }
 })
 

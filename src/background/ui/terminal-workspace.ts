@@ -58,7 +58,7 @@ async function focusTab(tab: chrome.tabs.Tab): Promise<void> {
 }
 
 async function createTerminalWorkspaceGroup(tabId: number): Promise<number | null> {
-  if (!(await canGroupTabs()) || !chrome.tabs.group || !chrome.tabGroups?.update) return null
+  if (!canGroupTabs() || !chrome.tabs.group || !chrome.tabGroups?.update) return null
   try {
     const groupId = await chrome.tabs.group({ tabIds: [tabId] })
     const color = chrome.tabGroups.Color?.ORANGE

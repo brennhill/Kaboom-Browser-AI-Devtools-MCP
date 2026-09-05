@@ -364,7 +364,7 @@ describe('message routing', () => {
     }
   })
 
-  test('open_terminal_panel skips workspace grouping when the optional tabGroups permission is not granted', async () => {
+  test('open_terminal_panel skips workspace grouping on a browser with no tabGroups API', async () => {
     chrome.storage.local.get = mock.fn((keys, callback) => {
       const keyList = Array.isArray(keys) ? keys : [keys]
       const result = {}
@@ -388,13 +388,10 @@ describe('message routing', () => {
     chrome.tabs.group = mock.fn(() => Promise.resolve(77))
     chrome.tabs.update = mock.fn(() => Promise.resolve())
     chrome.windows = { update: mock.fn(() => Promise.resolve()) }
-    chrome.tabGroups = {
-      TAB_GROUP_ID_NONE: -1,
-      Color: { ORANGE: 'orange' },
-      update: mock.fn(() => Promise.resolve())
-    }
-    // Permission withheld: grouping must be skipped, never prompted.
-    chrome.permissions = { contains: mock.fn(() => Promise.resolve(false)) }
+    // tabGroups is a required permission now, so the only way grouping is unavailable
+    // is a browser that has no such API. The panel must still open, ungrouped.
+    delete chrome.tabGroups
+    chrome.permissions = { contains: mock.fn(() => Promise.resolve(true)) }
 
     const open = mock.fn(() => Promise.resolve())
     const setOptions = mock.fn(() => Promise.resolve())
@@ -406,10 +403,10 @@ describe('message routing', () => {
     assert.strictEqual(result, true)
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    assert.strictEqual(chrome.tabs.group.mock.calls.length, 0, 'no tab group may be created without the tabGroups grant')
-    assert.strictEqual(chrome.tabGroups.update.mock.calls.length, 0, 'the workspace group must not be styled when grouping is skipped')
+    assert.strictEqual(chrome.tabs.group.mock.calls.length, 0, 'no tab group may be created without the tabGroups API')
+    assert.strictEqual(chrome.tabGroups, undefined, 'the API really is absent for this case')
     // The panel itself still opens — grouping is cosmetic and independent.
-    assert.strictEqual(open.mock.calls.length, 1, 'the terminal panel must still open without the grouping permission')
+    assert.strictEqual(open.mock.calls.length, 1, 'the terminal panel must still open without grouping')
   })
 
   test('open_terminal_panel keeps the current tab when it already belongs to the Kaboom workspace group', async () => {
