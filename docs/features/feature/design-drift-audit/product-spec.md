@@ -52,8 +52,11 @@ observed values and makes no decisions; the analyzers are pure functions.
 
 | Provenance | Severity | Meaning |
 | --- | --- | --- |
-| `declared` | `error` | A stated rule was broken — the caller's `spec`, or the page's own `:root` tokens |
-| `inferred` | `warning` | A majority vote among peers; a statistical outlier can be intentional |
+| `declared` | `error` | A stated rule was broken — the caller's `spec`, or the page's own `:root` disagreeing with it |
+| `inferred` | `warning` | The analyzer supplied the expectation: a majority vote among peers, or proximity to a page token |
+
+A page token on its own does not make an element's value `declared`: the page
+declared `--spacing-md: 16px`, not that this element's padding must use it.
 
 Severity is derived from provenance, never chosen by an analyzer. This is the
 triage axis users act on: **fix all errors** is safe to batch because every error

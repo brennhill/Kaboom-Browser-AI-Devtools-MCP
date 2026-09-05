@@ -30,11 +30,17 @@ func allCategories() []string {
 // Provenance records where the expected value came from. It is the reason an
 // agent can act on a finding without re-deriving how confident to be.
 const (
-	// provenanceDeclared means the caller stated the rule, or the page declared
-	// the token. Breaking it is unambiguous.
+	// provenanceDeclared means a rule that was actually stated is broken: the
+	// caller's spec, or the page's own :root disagreeing with that spec.
+	// Breaking it is unambiguous.
+	//
+	// A page token on its own does NOT make an element's value declared. The
+	// page declared --spacing-md:16px; it never declared that this element's
+	// padding must use it, and that last step is the analyzer's inference.
 	provenanceDeclared = "declared"
-	// provenanceInferred means the expectation is a majority vote over the
-	// element's own peers. A statistical outlier can be intentional.
+	// provenanceInferred means the analyzer supplied the expectation: a majority
+	// vote over the element's own peers, or proximity to a page token. Either
+	// can be intentional, so both need a human look.
 	provenanceInferred = "inferred"
 )
 

@@ -87,6 +87,17 @@ every control produces nothing.
       differently (relative, not absolute).
 - [ ] `#2b56e2` vs `#2a55e1` is inside the perceptual threshold; the OKLab
       calibration in `tokens_test.go` is the guard against an RGB regression.
+- [ ] `rgba(42, 85, 225, 0.1)` is NOT an exact match of `#2a55e1`; a tint token
+      does not shadow the opaque token it derives from.
+- [ ] A near-miss of a page token is `inferred`/`warning`, not
+      `declared`/`error`; only a caller-supplied `spec` violation is an error.
+- [ ] `--font-size-lg: 18px` does not make 17px padding a near-miss, and
+      `--font-size-sm: 14px` does not excuse a 14px padding that near-misses
+      `--spacing-md: 16px`.
+- [ ] An unclassifiable token name (`--sidebar-width`) governs nothing.
+- [ ] Under a `spec`, `margin: 0 auto` resolving to 137.5px and a -1px
+      border-collapse pull produce nothing; an element rendering the page's own
+      token produces nothing (the `:root` conflict carries that disagreement).
 
 ### Spacing
 
@@ -94,6 +105,15 @@ every control produces nothing.
       times.
 - [ ] Gaps derive from rendered rects — a collapsed-margin case does not report
       `margin-bottom + margin-top`.
+- [ ] An evenly-spaced 3x2 card grid and a wrapped chip row produce **no**
+      findings — no phantom `overlap-horizontal`.
+- [ ] The same grid with one squeezed column gap still reports exactly one
+      `gap-horizontal` finding on the right element.
+- [ ] A 120px section break between two 24px-rhythm sections is not drift; a
+      48px doubled margin still is.
+- [ ] An escalating 12/20/32/48 scale and an even 24/24/30/30 split produce
+      nothing; 24/24/24/30/30 reports the two 30px gaps.
+- [ ] Declared-scale evidence names the spec, never a modal gap.
 
 ### Spec conflict
 
