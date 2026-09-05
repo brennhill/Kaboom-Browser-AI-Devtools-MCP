@@ -9,7 +9,7 @@
 
 ## Quality Gate (6/13)
 
-Source: `internal/hook/hook_policy.go` (195 LOC), `internal/hook/conventions.go` (251 LOC)
+Source: `internal/hook/hook_policy.go` (195 LOC), `internal/hook/conventions/conventions.go` (251 LOC)
 
 The quality gate fires on every Edit/Write. It finds `.kaboom.json` in the parent chain, loads the project's code standards, checks file size, and detects convention drift.
 

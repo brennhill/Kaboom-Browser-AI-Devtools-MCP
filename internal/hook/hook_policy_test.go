@@ -6,10 +6,13 @@ package hook
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 func TestPackageFileBoundary(t *testing.T) {
@@ -572,4 +575,71 @@ func setupDecisionProject(t *testing.T) string {
 	]`)
 
 	return root
+}
+
+// TestMain gives the package its own state root. Session tracking and blast-radius
+// caching persist under the Kaboom state directory, and without this every test run
+// would deposit files in the developer's real ~/.kaboom and read back results a
+// previous run had written.
+func TestMain(m *testing.M) {
+	root, err := os.MkdirTemp("", "kaboom-hook-state-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cannot create test state root: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.Setenv(state.StateDirEnv, root); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot set test state root: %v\n", err)
+		os.Exit(1)
+	}
+	code := m.Run()
+	if err := os.RemoveAll(root); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot remove test state root: %v\n", err)
+	}
+	os.Exit(code)
+}
+
+// TestRunQualityGate_InjectsProjectConventions is the seam between the gate and the
+// convention engine. The engine has its own tests; what this one holds is that the
+// gate actually calls it and puts the answer in the context the agent reads — the
+// two have lived in separate packages since the engine moved, and a dropped call
+// would leave every review with no conventions and no error.
+func TestRunQualityGate_InjectsProjectConventions(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Two existing files using http.Client{ — enough for the engine to call it an
+	// established pattern rather than a one-off.
+	for i, name := range []string{"client.go", "probe.go"} {
+		writeFile(t, dir, name, fmt.Sprintf(
+			"package main\n\nimport \"net/http\"\n\nvar c%d = &http.Client{Timeout: 1e9}\n", i))
+	}
+	writeFile(t, dir, ".kaboom.json", `{"code_standards":"standards.md","file_size_limit":800}`)
+	writeFile(t, dir, "standards.md", "# Standards\n")
+
+	editedFile := filepath.Join(dir, "new_service.go")
+	writeFile(t, dir, "new_service.go", "package main\n")
+
+	input := Input{
+		ToolName: "Edit",
+		ToolInput: mustMarshal(map[string]string{
+			"file_path":  editedFile,
+			"new_string": `client := &http.Client{Timeout: 1e9}`,
+		}),
+	}
+
+	result := RunQualityGate(input)
+	if result == nil {
+		t.Fatal("the quality gate returned nothing for an edit inside a configured project")
+	}
+	if !strings.Contains(result.Context, "CODEBASE CONVENTIONS") {
+		t.Fatalf("the gate injected no conventions; a reviewer sees no existing pattern to match:\n%s", result.Context)
+	}
+	if !strings.Contains(result.Context, "http.Client{") {
+		t.Errorf("the established pattern is missing from the injected context:\n%s", result.Context)
+	}
+}
+
+func mustMarshal(v any) json.RawMessage {
+	data, _ := json.Marshal(v)
+	return data
 }

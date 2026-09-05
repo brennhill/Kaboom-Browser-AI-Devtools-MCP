@@ -2,7 +2,7 @@
 // Why: Keeps convention inference, caching, scanning, and presentation under one owner.
 // Docs: docs/features/feature/convention-engine/index.md
 
-package hook
+package conventions
 
 import (
 	"encoding/json"
@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/hook/hookdiag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/hook/projectscan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
@@ -23,13 +25,12 @@ const (
 	maxFilesToScan         = 500
 	maxExamplesPerProbe    = 5
 	maxConventionsToReport = 3
-	maxFileSizeForScan     = 100 * 1024 // 100KB — skip generated/bundled files
-	helperThreshold        = 2          // suggest extracting a helper at this many instances
-	maxSummaryConventions  = 10         // top conventions to inject as context
+	helperThreshold        = 2  // suggest extracting a helper at this many instances
+	maxSummaryConventions  = 10 // top conventions to inject as context
 )
 
-// ConventionMatch holds examples of an existing codebase pattern.
-type ConventionMatch struct {
+// Match holds examples of an existing codebase pattern.
+type Match struct {
 	Pattern  string
 	Examples []string // "relative/path.go:42: matched line content"
 }
@@ -51,16 +52,10 @@ var staticProbes = []string{
 // typePattern detects struct declarations that should be checked for duplicates.
 var typePattern = regexp.MustCompile(`type\s+(\w+)\s+struct`)
 
-var skipDirs = map[string]bool{
-	".git": true, "vendor": true, "node_modules": true,
-	"dist": true, "build": true, ".next": true,
-	"__pycache__": true, ".cache": true, ".claude": true,
-}
-
-// DetectConventions finds patterns in newContent and searches the project for existing usage.
+// Detect finds patterns in newContent and searches the project for existing usage.
 // Uses discovered probes (from automatic codebase analysis) plus static probes for
 // non-call-site patterns. Returns nil if no conventions found or if newContent is empty.
-func DetectConventions(filePath, projectRoot, newContent string) []ConventionMatch {
+func Detect(filePath, projectRoot, newContent string) []Match {
 	if newContent == "" || projectRoot == "" {
 		return nil
 	}
@@ -69,7 +64,7 @@ func DetectConventions(filePath, projectRoot, newContent string) []ConventionMat
 	exts := extensionFamily(ext)
 
 	// Merge discovered probes with static probes.
-	discovered := DiscoveredProbes(projectRoot, ext)
+	discovered := Probes(projectRoot, ext)
 	allProbes := append(discovered, staticProbes...)
 
 	// Collect probes that match the edit content.
@@ -96,13 +91,13 @@ func DetectConventions(filePath, projectRoot, newContent string) []ConventionMat
 	// of this hook on a cold page cache.
 	found := searchProject(projectRoot, probes, filePath, exts)
 
-	var results []ConventionMatch
+	var results []Match
 	for _, probe := range probes {
 		examples := found[probe]
 		if len(examples) == 0 {
 			continue
 		}
-		results = append(results, ConventionMatch{
+		results = append(results, Match{
 			Pattern:  probe,
 			Examples: examples,
 		})
@@ -114,19 +109,16 @@ func DetectConventions(filePath, projectRoot, newContent string) []ConventionMat
 	return results
 }
 
-// ConventionSummary returns a compact summary of the top discovered conventions
+// Summary returns a compact summary of the top discovered conventions
 // for the given file's language. Injected on every edit so the LLM can judge
 // convention drift even when the edit doesn't contain a matching pattern.
-func ConventionSummary(projectRoot, ext string) string {
-	conventions := DiscoverConventions(projectRoot, ext)
+func Summary(projectRoot, ext string) string {
+	conventions := Discover(projectRoot, ext)
 	if len(conventions) == 0 {
 		return ""
 	}
 
-	limit := maxSummaryConventions
-	if len(conventions) < limit {
-		limit = len(conventions)
-	}
+	limit := summaryCut(conventions)
 
 	var b strings.Builder
 	b.WriteString("=== PROJECT CONVENTIONS (auto-discovered) ===")
@@ -136,6 +128,32 @@ func ConventionSummary(projectRoot, ext string) string {
 	}
 	b.WriteString("\n=== END PROJECT CONVENTIONS ===")
 	return b.String()
+}
+
+// summaryCut is how many conventions the summary reports.
+//
+// maxSummaryConventions is the target, but the cut is never allowed to fall in
+// the MIDDLE of a group of patterns that appear in the same number of files.
+// Those patterns are tied — nothing distinguishes them but the alphabetical
+// tiebreak in rankConventions — so cutting through the group means a single file
+// added anywhere in the repository silently swaps which of them the reviewer is
+// told the project uses. That is the summary flickering, not the project
+// changing: `os.WriteFile(` and `context.Background(` sat tied at 32 files on
+// either side of rank 10, and the standards injected into every code review
+// alternated between them run to run.
+//
+// The whole tie group is therefore kept, bounded by discoveryMaxProbes so a
+// pathological tie cannot grow the summary without limit.
+func summaryCut(conventions []Discovered) int {
+	if len(conventions) <= maxSummaryConventions {
+		return len(conventions)
+	}
+	cut := maxSummaryConventions
+	tied := conventions[cut-1].FileCount
+	for cut < len(conventions) && cut < discoveryMaxProbes && conventions[cut].FileCount == tied {
+		cut++
+	}
+	return cut
 }
 
 // searchProject walks the project tree once and, for each term, collects up to
@@ -165,7 +183,7 @@ func searchProject(root string, terms []string, excludeFile string, exts []strin
 			return nil
 		}
 
-		if decision, handled := projectDirectoryDecision(d); handled {
+		if decision, handled := projectscan.DirectoryDecision(d); handled {
 			return decision
 		}
 
@@ -226,27 +244,13 @@ func firstMatchingLine(root, path string, lines []string, term string) (string, 
 	return "", false
 }
 
-// projectDirectoryDecision centralizes repository-walk pruning shared by hook
-// scanners. The boolean distinguishes files from directories that should
-// continue normally.
-func projectDirectoryDecision(d os.DirEntry) (error, bool) {
-	if !d.IsDir() {
-		return nil, false
-	}
-	if skipDirs[d.Name()] || (strings.HasPrefix(d.Name(), ".") && d.Name() != ".") {
-		return filepath.SkipDir, true
-	}
-	return nil, true
-}
-
 // readConventionSource applies the single canonical filter for source consumed
 // by convention detection and discovery.
 func readConventionSource(path string, d os.DirEntry, exts []string) ([]byte, bool) {
 	if !matchesExtension(path, exts) || isGenerated(d.Name()) {
 		return nil, false
 	}
-	info, err := d.Info()
-	if err != nil || info.Size() > maxFileSizeForScan {
+	if projectscan.TooLarge(d) {
 		return nil, false
 	}
 	data, err := os.ReadFile(path)
@@ -286,9 +290,9 @@ func extensionFamily(ext string) []string {
 	}
 }
 
-// FormatConventions formats convention matches for additionalContext output.
+// Format formats convention matches for additionalContext output.
 // If 2+ instances of a pattern exist, suggests extracting a shared helper.
-func FormatConventions(matches []ConventionMatch) string {
+func Format(matches []Match) string {
 	if len(matches) == 0 {
 		return ""
 	}
@@ -324,8 +328,8 @@ const (
 	discoveryCacheTTL  = 5 * time.Minute
 )
 
-// DiscoveredConvention is a call-site pattern found in multiple files.
-type DiscoveredConvention struct {
+// Discovered is a call-site pattern found in multiple files.
+type Discovered struct {
 	Pattern   string `json:"pattern"`
 	FileCount int    `json:"file_count"`
 }
@@ -339,7 +343,7 @@ var discoveryCache = struct {
 }
 
 type discoveryCacheEntry struct {
-	conventions []DiscoveredConvention
+	conventions []Discovered
 	timestamp   time.Time
 }
 
@@ -414,10 +418,10 @@ var tsNoise = map[string]bool{
 	"tagName.toLowerCase(": true,
 }
 
-// DiscoverConventions walks the project and returns call-site patterns
+// Discover walks the project and returns call-site patterns
 // that repeat across discoveryMinFiles+ files, ranked by frequency.
 // Results are cached per project root + file extension.
-func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
+func Discover(projectRoot, ext string) []Discovered {
 	if projectRoot == "" {
 		return nil
 	}
@@ -439,7 +443,7 @@ func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
 	return conventions
 }
 
-func cachedConventions(key, projectRoot, ext string) ([]DiscoveredConvention, bool) {
+func cachedConventions(key, projectRoot, ext string) ([]Discovered, bool) {
 	discoveryCache.mu.RLock()
 	if entry, ok := discoveryCache.entries[key]; ok && time.Since(entry.timestamp) < discoveryCacheTTL {
 		discoveryCache.mu.RUnlock()
@@ -466,7 +470,7 @@ func discoverPatternFiles(projectRoot string, exts []string, noise map[string]bo
 		if err != nil {
 			return nil
 		}
-		if decision, handled := projectDirectoryDecision(d); handled {
+		if decision, handled := projectscan.DirectoryDecision(d); handled {
 			return decision
 		}
 
@@ -503,12 +507,12 @@ func recordFilePatterns(patternFiles map[string]map[string]bool, content, relPat
 	}
 }
 
-func rankConventions(patternFiles map[string]map[string]bool) []DiscoveredConvention {
+func rankConventions(patternFiles map[string]map[string]bool) []Discovered {
 	// Filter: keep patterns in 3+ files, sort by frequency descending.
-	var conventions []DiscoveredConvention
+	var conventions []Discovered
 	for pattern, files := range patternFiles {
 		if len(files) >= discoveryMinFiles {
-			conventions = append(conventions, DiscoveredConvention{
+			conventions = append(conventions, Discovered{
 				Pattern:   pattern,
 				FileCount: len(files),
 			})
@@ -529,7 +533,7 @@ func rankConventions(patternFiles map[string]map[string]bool) []DiscoveredConven
 	return conventions
 }
 
-func rememberConventions(key string, conventions []DiscoveredConvention) {
+func rememberConventions(key string, conventions []Discovered) {
 	discoveryCache.mu.Lock()
 	discoveryCache.entries[key] = &discoveryCacheEntry{
 		conventions: conventions,
@@ -550,8 +554,8 @@ const conventionCacheDirName = "hook-conventions"
 
 // persistedConventions is the on-disk form of one discovery result.
 type persistedConventions struct {
-	Conventions []DiscoveredConvention `json:"conventions"`
-	BuiltAt     time.Time              `json:"built_at"`
+	Conventions []Discovered `json:"conventions"`
+	BuiltAt     time.Time    `json:"built_at"`
 }
 
 // conventionCachePath locates the cache file for one project and language.
@@ -581,10 +585,10 @@ func extensionSlug(ext string) string {
 
 // loadPersistedConventions returns a cached discovery result that is still
 // within the TTL. A miss is always safe: the caller re-walks the project.
-func loadPersistedConventions(projectRoot, ext string) ([]DiscoveredConvention, bool) {
+func loadPersistedConventions(projectRoot, ext string) ([]Discovered, bool) {
 	path, err := conventionCachePath(projectRoot, ext)
 	if err != nil {
-		logHookDiagnostic("convention_cache_path_failed")
+		hookdiag.Emit("convention_cache_path_failed")
 		return nil, false
 	}
 	data, err := os.ReadFile(path) // #nosec G304 -- path is derived from the state root, not from user input.
@@ -595,7 +599,7 @@ func loadPersistedConventions(projectRoot, ext string) ([]DiscoveredConvention, 
 	}
 	var cached persistedConventions
 	if json.Unmarshal(data, &cached) != nil {
-		logHookDiagnostic("convention_cache_corrupt")
+		hookdiag.Emit("convention_cache_corrupt")
 		return nil, false
 	}
 	if cached.BuiltAt.IsZero() || time.Since(cached.BuiltAt) > discoveryCacheTTL {
@@ -608,30 +612,30 @@ func loadPersistedConventions(projectRoot, ext string) ([]DiscoveredConvention, 
 // Failure costs only a slower next edit, so it never blocks the current one,
 // but it is reported rather than swallowed: a cache that silently never writes
 // is exactly the defect this replaced.
-func persistConventions(projectRoot, ext string, conventions []DiscoveredConvention) {
+func persistConventions(projectRoot, ext string, conventions []Discovered) {
 	path, err := conventionCachePath(projectRoot, ext)
 	if err != nil {
-		logHookDiagnostic("convention_cache_path_failed")
+		hookdiag.Emit("convention_cache_path_failed")
 		return
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		logHookDiagnostic("convention_cache_dir_failed")
+		hookdiag.Emit("convention_cache_dir_failed")
 		return
 	}
 	data, err := json.Marshal(persistedConventions{Conventions: conventions, BuiltAt: time.Now()})
 	if err != nil {
-		logHookDiagnostic("convention_cache_encode_failed")
+		hookdiag.Emit("convention_cache_encode_failed")
 		return
 	}
 	if err := statefile.Write(path, data, 0o600); err != nil {
-		logHookDiagnostic("convention_cache_write_failed")
+		hookdiag.Emit("convention_cache_write_failed")
 	}
 }
 
-// DiscoveredProbes returns just the pattern strings from discovery, suitable
+// Probes returns just the pattern strings from discovery, suitable
 // for passing to the existing convention detection + search flow.
-func DiscoveredProbes(projectRoot, ext string) []string {
-	conventions := DiscoverConventions(projectRoot, ext)
+func Probes(projectRoot, ext string) []string {
+	conventions := Discover(projectRoot, ext)
 	probes := make([]string, len(conventions))
 	for i, c := range conventions {
 		probes[i] = c.Pattern

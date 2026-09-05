@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/hook/conventions"
 )
 
 // Agent identifies which AI coding agent is calling the hook.
@@ -208,15 +210,15 @@ func RunQualityGate(input Input) *QualityGateResult {
 	// 3. Convention summary — always inject top discovered conventions so the
 	//    LLM can judge drift even when the edit doesn't contain a matching pattern.
 	ext := filepath.Ext(filePath)
-	if summary := ConventionSummary(projectRoot, ext); summary != "" {
+	if summary := conventions.Summary(projectRoot, ext); summary != "" {
 		parts = append(parts, summary)
 	}
 
 	// 4. Convention detection — reuse already-parsed fields to avoid double-unmarshal.
 	//    If the edit contains a known pattern, show specific examples from the codebase.
 	newContent := extractNewContent(input, fields)
-	if conventions := DetectConventions(filePath, projectRoot, newContent); len(conventions) > 0 {
-		parts = append(parts, FormatConventions(conventions))
+	if matches := conventions.Detect(filePath, projectRoot, newContent); len(matches) > 0 {
+		parts = append(parts, conventions.Format(matches))
 	}
 
 	// 5. Review instruction.

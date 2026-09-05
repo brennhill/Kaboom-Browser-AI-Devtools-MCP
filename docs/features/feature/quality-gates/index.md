@@ -48,7 +48,7 @@ code_paths:
   - internal/schema/configure/properties_runtime.go
   - internal/hook/hook_policy.go
   - internal/hook/compress_output.go
-  - internal/hook/conventions.go
+  - internal/hook/conventions/conventions.go
   - internal/tracking/token_tracker.go
   - internal/tracking/stats_endpoint.go
   - cmd/hooks/main.go
@@ -90,7 +90,7 @@ test_paths:
   - cmd/hooks/main_test.go
   - internal/hook/hook_policy_test.go
   - internal/hook/compress_output_test.go
-  - internal/hook/conventions_test.go
+  - internal/hook/conventions/conventions_test.go
   - internal/tracking/token_tracker_test.go
   - internal/tracking/stats_endpoint_test.go
   - scripts/quality/contracts/file-length/check-file-length.test.mjs

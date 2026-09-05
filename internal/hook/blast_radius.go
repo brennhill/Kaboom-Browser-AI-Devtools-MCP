@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/hook/projectscan"
 )
 
 const (
@@ -314,7 +316,7 @@ func buildImportGraphWith(resolver *importResolver) *ImportGraph {
 		if err != nil {
 			return nil
 		}
-		if decision, handled := projectDirectoryDecision(d); handled {
+		if decision, handled := projectscan.DirectoryDecision(d); handled {
 			return decision
 		}
 
@@ -323,8 +325,7 @@ func buildImportGraphWith(resolver *importResolver) *ImportGraph {
 			return nil
 		}
 
-		info, err := d.Info()
-		if err != nil || info.Size() > maxFileSizeForScan {
+		if projectscan.TooLarge(d) {
 			return nil
 		}
 

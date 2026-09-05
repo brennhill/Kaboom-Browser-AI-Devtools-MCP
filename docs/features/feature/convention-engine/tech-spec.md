@@ -8,10 +8,10 @@ links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/conventions.go
+  - internal/hook/conventions/conventions.go
   - internal/hook/hook_policy.go
 test_paths:
-  - internal/hook/conventions_test.go
+  - internal/hook/conventions/conventions_test.go
   - internal/hook/hook_policy_test.go
   - internal/hook/eval/testdata/quality-gate/
   - internal/hook/eval/testdata/u01-errors-not-ignored/

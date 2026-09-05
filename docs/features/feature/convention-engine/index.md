@@ -4,13 +4,18 @@ feature_id: feature-convention-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-12
+last_reviewed: 2026-09-05
 code_paths:
-  - internal/hook/conventions.go
+  - internal/hook/conventions/conventions.go
+  - internal/hook/projectscan/projectscan.go
+  - internal/hook/hookdiag/hookdiag.go
   - internal/state/paths.go
   - internal/hook/hook_policy.go
 test_paths:
-  - internal/hook/conventions_test.go
+  - internal/hook/conventions/conventions_test.go
+  - internal/hook/conventions/discovery_test.go
+  - internal/hook/projectscan/projectscan_test.go
+  - internal/hook/hookdiag/hookdiag_test.go
   - internal/hook/hook_policy_test.go
   - internal/hook/eval/testdata/quality-gate/
 ---
@@ -36,7 +41,14 @@ Three plugin tiers: universal (10 principles, always active, free), language bas
 ## Current State (Phase 1)
 
 - Call-site discovery engine and edited-file detection share the canonical
-  `conventions.go` owner.
+  `internal/hook/conventions` package (`Detect`, `Discover`, `Summary`,
+  `Format`, `Probes`). Repository-walk pruning lives in
+  `internal/hook/projectscan` so the convention scanner and the blast-radius
+  scanner cannot disagree about which files the project contains.
+- The injected summary never splits a tie: when the 10th and 11th patterns
+  appear in the same number of files the cut extends over the whole tie group,
+  so adding one file anywhere in the repository can no longer swap which
+  convention a reviewer is told the project uses.
 - Convention summary injected on every Edit/Write
 - Discovered probes integrated into existing convention detection
 - 5-minute cache per project root + language

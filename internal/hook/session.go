@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/hook/hookdiag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
 )
 
@@ -95,7 +96,7 @@ func SessionID() string {
 	ppid := os.Getppid()
 	cwd, cwdErr := os.Getwd()
 	if cwdErr != nil {
-		logHookDiagnostic("session_identity_working_directory_failed")
+		hookdiag.Emit("session_identity_working_directory_failed")
 		cwd = "working-directory-unavailable"
 	}
 	return hashSessionID(fmt.Sprintf("%d:%s", ppid, cwd))
@@ -375,7 +376,7 @@ func truncSummary(s string) string {
 func CleanStaleSessions() {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		logHookDiagnostic("session_cleanup_home_directory_failed")
+		hookdiag.Emit("session_cleanup_home_directory_failed")
 		return
 	}
 	base := filepath.Join(home, sessionBaseDir)
@@ -385,12 +386,12 @@ func CleanStaleSessions() {
 			// EXPECTED_ABSENCE: no session directory exists before the first hook session.
 			return
 		}
-		logHookDiagnostic("session_cleanup_list_failed")
+		hookdiag.Emit("session_cleanup_list_failed")
 		return
 	}
 	if len(entries) > maxCleanupScan {
 		entries = entries[:maxCleanupScan]
-		logHookDiagnostic("session_cleanup_scan_truncated")
+		hookdiag.Emit("session_cleanup_scan_truncated")
 	}
 	now := time.Now()
 	for _, entry := range entries {
@@ -400,26 +401,20 @@ func CleanStaleSessions() {
 		metaPath := filepath.Join(base, entry.Name(), metaFile)
 		data, err := os.ReadFile(metaPath)
 		if err != nil {
-			logHookDiagnostic("session_cleanup_metadata_read_failed")
+			hookdiag.Emit("session_cleanup_metadata_read_failed")
 			continue
 		}
 		var meta sessionMeta
 		if json.Unmarshal(data, &meta) != nil {
-			logHookDiagnostic("session_cleanup_metadata_corrupt")
+			hookdiag.Emit("session_cleanup_metadata_corrupt")
 			continue
 		}
 		if now.Sub(meta.StartTime) > staleSessionAge {
 			if err := os.RemoveAll(filepath.Join(base, entry.Name())); err != nil {
-				logHookDiagnostic("session_cleanup_remove_failed")
+				hookdiag.Emit("session_cleanup_remove_failed")
 			}
 		}
 	}
-}
-
-func logHookDiagnostic(code string) {
-	// TERMINAL_LOG_SINK: if the local stderr sink itself is unavailable, there
-	// is no second local channel that can report that failure without recursion.
-	_, _ = fmt.Fprintf(os.Stderr, "{\"kaboom_hook_diagnostic\":%q}\n", code)
 }
 
 type SessionTrackResult struct {
