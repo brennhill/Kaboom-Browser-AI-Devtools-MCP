@@ -16,7 +16,7 @@ import { errorMessage } from '../../lib/error-utils.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { postDaemonJSON } from '../../lib/daemon-http.js'
-import { captureVisibleTabSafe } from '../ui/tracked-tab-state.js'
+import { captureTabImage } from '../ui/tracked-tab-state.js'
 import { cdpSessions } from '../dom/cdp/cdp-session.js'
 
 // =============================================================================
@@ -160,13 +160,18 @@ interface ScreenshotContext {
   sendResult: (result: unknown) => void
 }
 
+/**
+ * Capture the viewport and post it. Runs entirely in the background: `captureTabImage`
+ * takes a CDP lease rather than activating the tab, so an observe(screenshot) while the
+ * user is reading a different tab no longer yanks their window away.
+ */
 async function captureAndPostViewport(
   ctx: ScreenshotContext,
   tab: chrome.tabs.Tab,
   format: 'png' | 'jpeg',
   quality: number
 ): Promise<void> {
-  const dataUrl = await captureVisibleTabSafe(ctx.tabId, tab.windowId, { format, quality })
+  const dataUrl = await captureTabImage(ctx.tabId, tab.windowId, { format, quality })
   recordScreenshot(ctx.tabId)
   if (!(await postScreenshot(dataUrl, tab.url, ctx.query.id))) {
     ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' })
@@ -242,10 +247,11 @@ function screenshotResolveElementRect(selector: string): ScreenshotElementRect {
 
 /**
  * Compute the source crop rectangle (in image/device pixels) for an element's
- * CSS-pixel viewport rect. `captureVisibleTab` returns an image scaled by the
- * device pixel ratio, and the rect is viewport-relative CSS pixels — so the
- * crop is `rect * dpr`, clamped to the image bounds. Returns null when there is
- * nothing to crop (non-positive size, or the element lies outside the image).
+ * CSS-pixel viewport rect. The capture is clipped to the visual viewport and
+ * scaled by the page's device pixel ratio, and the rect is viewport-relative
+ * CSS pixels — so the crop is `rect * dpr`, clamped to the image bounds.
+ * Returns null when there is nothing to crop (non-positive size, or the element
+ * lies outside the image).
  */
 export function computeElementCropRect(
   rect: { x: number; y: number; width: number; height: number },
@@ -379,7 +385,7 @@ async function captureElement(
 
   // Let the (instant) scroll repaint before the compositor raster.
   await delay(120)
-  const dataUrl = await captureVisibleTabSafe(ctx.tabId, tab.windowId, { format, quality })
+  const dataUrl = await captureTabImage(ctx.tabId, tab.windowId, { format, quality })
   recordScreenshot(ctx.tabId)
 
   let outUrl = dataUrl
@@ -522,7 +528,7 @@ async function captureFullPage(
     // Step 2: Capture over a lease on the tab's shared CDP session
     await captureFullPageOverCDP(ctx, tab, { format, quality, hintedHeight }, sessions)
   } catch (err) {
-    // CDP unavailable — fall back to regular captureVisibleTab with warning
+    // Full-page CDP failed — fall back to a viewport capture, which is itself CDP-first
     debugLog(DebugCategory.CAPTURE, 'Full-page CDP failed, falling back to viewport capture', {
       error: errorMessage(err)
     })

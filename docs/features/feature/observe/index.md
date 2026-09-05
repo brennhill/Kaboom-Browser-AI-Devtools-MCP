@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-25
+last_reviewed: 2026-09-05
 code_paths:
   - internal/capture/healthreader/reader.go
   - internal/queries/dispatcher_queries.go
@@ -56,6 +56,12 @@ code_paths:
   - src/lib/net/network.ts
   - src/lib/net/websocket.ts
   - src/lib/net/websocket-tracking.ts
+  - src/background/ui/tracked-tab-state.ts
+  - src/background/dom/cdp/cdp-session.ts
+  - src/background/sync/screenshot.ts
+  - src/background/message-routing/capture-handler.ts
+  - src/background/push-handler.ts
+  - src/lib/tabs/tab-focus.ts
 test_paths:
   - cmd/browser-agent/internal/telemetryapi/handler_test.go
   - internal/tools/observe/core/filtering_test.go
@@ -91,6 +97,11 @@ test_paths:
   - internal/tools/observe/page/page_state_storage_test.go
   - internal/tools/observe/page/page_state_screenshot_test.go
   - internal/capture/waterfallstore/store_test.go
+  - tests/extension/capture/observe-screenshot.test.js
+  - tests/extension/capture/background/background-tab-capture.test.js
+  - tests/extension/capture/background/visible-tab-capture-fallback.test.js
+  - extension/background/__tests__/cdp-session.test.js
+  - tests/extension/content/overlay-capture-stripping.test.js
 
   - internal/tools/observe/hints/hints_test.go
   - tests/extension/injection/inject-console-network-exceptions.test.js
@@ -250,3 +261,35 @@ If the extension reloads while an old content script is still attached to the pa
 Context-annotation warnings and background-sender rejection logs now use the shared Kaboom runtime prefix instead of hardcoded Kaboom labels.
 Enhanced action capture now crosses the page/content boundary through the Kaboom-branded `kaboom_enhanced_action` postMessage contract before being normalized to background `enhanced_action` events.
 The early-patch adoption globals used before the inject bundle loads are now Kaboom-scoped (`__KABOOM_ORIGINAL_*`, `__KABOOM_EARLY_*`) across the fetch/XHR/WebSocket bridge.
+
+## Background capture
+
+`observe({what:"screenshot"})` captures a tab the user is not looking at. The image comes from
+`Page.captureScreenshot` over the tab's persistent CDP lease, clipped to the visual viewport
+(`Page.getLayoutMetrics.cssVisualViewport`) and scaled by the page's device pixel ratio so the
+result matches what `chrome.tabs.captureVisibleTab` used to produce. No tab is activated, so a
+screenshot no longer pulls the browser window away from the person using it and no longer drops
+the focus out of whatever they were typing.
+
+`chrome.tabs.captureVisibleTab` remains as the fallback. That API can only photograph the
+visible tab, so it still activates the target and hands the foreground straight back. Every
+fallback is reported, and the report separates the recoverable cases from the defect:
+
+| Reason | Meaning | Signal |
+| --- | --- | --- |
+| `no_debugger_api` | this context has no `chrome.debugger` at all | `debugLog` |
+| `session_unavailable` | a performance trace holds the tab exclusively, the drain timed out, the attach was refused (restricted page, user cancelled the debugging banner), or the session was invalidated | `debugLog` |
+| `cdp_capture_failed` | we hold the lease and `Page.captureScreenshot` still failed | `console.warn` + `debugLog` |
+
+The third row is the one that matters: it is a real failure that just took the user's
+foreground, so it is loud in the service-worker console even with extension debug logging off.
+Reporting it the same way as the first two is how a broken lease hides behind tabs that merely
+flicker.
+
+Kaboom's own overlays are stripped by the `data-kaboom-overlay` marker attribute across both
+paths, so a screenshot never contains the supervision badge or phantom cursor Kaboom drew.
+
+Taking the foreground is now an explicit request rather than a side effect of capturing:
+`activate_tab`, a popup click, and a screen recording that needs a user gesture. Draw mode and
+the `push_screenshot` shortcut keep using the visible-tab API because both act on the tab
+already in front of the user.

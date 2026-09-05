@@ -25,6 +25,12 @@ function captureActiveTab(sendResponse, deps) {
         }
     });
 }
+/**
+ * Draw mode's backdrop. Deliberately stays on `captureVisibleTab`: the request arrives from a
+ * content script the user is drawing on, so the tab is already in front of them, and the
+ * annotation must be laid over exactly the pixels they are looking at. Background capture
+ * (`captureTabImage`) is for tabs nobody is watching; this one has a watcher by definition.
+ */
 async function captureDrawOverlay(tabId, sendResponse) {
     if (!tabId) {
         sendResponse({ dataUrl: '' });

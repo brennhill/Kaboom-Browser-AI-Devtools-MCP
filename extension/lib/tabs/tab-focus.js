@@ -6,6 +6,10 @@
  * gesture. Centralising it keeps the window-focus step from being forgotten in
  * one place and present in another. Callers layer their own toasts / logging /
  * tracking on top; this helper owns only the two Chrome calls.
+ * Policy: taking the foreground is now an EXPLICIT request, never a side effect. Driving and
+ * capture run in the background (`captureTabImage` + the CDP lease's focus emulation), so a
+ * call to this helper means someone asked to see the tab — `activate_tab`, a popup click, or
+ * a recording that needs a user gesture.
  */
 /**
  * Activate `tabId` and focus its window. Returns the resolved tab (from the

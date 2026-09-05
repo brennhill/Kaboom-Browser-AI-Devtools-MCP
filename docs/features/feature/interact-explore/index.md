@@ -93,6 +93,8 @@ code_paths:
   - cmd/browser-agent/internal/asyncresult/lifecycle.go
   - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/summarypref/cache.go
+  - src/background/ui/tracked-tab-state.ts
+  - src/lib/tabs/tab-focus.ts
 test_paths:
   - extension/background/__tests__/cdp-session.test.js
   - extension/background/__tests__/cdp-ax-tree.test.js
@@ -145,6 +147,8 @@ test_paths:
   - tests/extension/content/content-message-correlation.test.js
   - tests/extension/tab-state/content-readiness.test.js
   - tests/architecture/async-failure-evidence.test.cjs
+  - tests/extension/capture/background/background-tab-capture.test.js
+  - tests/extension/capture/background/visible-tab-capture-fallback.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -427,3 +431,16 @@ structured DOM query identity/forwarding live with their DOM and page owners.
 Ambiguous-target candidate promotion, visible-candidate selection, and direct
 retry guidance live with the async-result enrichment owner instead of an
 end-to-end interact fixture.
+
+## Driving a background tab
+
+The CDP session manager enables `Emulation.setFocusEmulationEnabled` once per session — after a
+fresh attach and after adopting an attachment that outlived the service worker — and clears it
+when the session tears down, including a user Stop. Chrome only delivers focus to the visible
+tab, so without the override a background tab reports `document.hasFocus() === false`: `:focus`
+never paints, focus/blur handlers never run, `autofocus` is ignored, and any widget gated on
+focus swallows dispatched keystrokes while the action reports success. A target that refuses the
+override is still granted its lease; the refusal is logged as `cdp_focus_emulation_failed`.
+
+Capture takes the same lease, so the page a screenshot shows is the page the agent is driving.
+`activate_tab` stays the deliberate way to put a tab in front of the user.

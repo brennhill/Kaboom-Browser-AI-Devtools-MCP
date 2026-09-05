@@ -4,7 +4,7 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-08
+last_reviewed: 2026-09-05
 code_paths:
   - docs/architecture/diagrams/ui/flame-flicker-visual.md
   - src/lib/brand.ts
@@ -50,6 +50,12 @@ code_paths:
   - src/background/ui/keyboard-shortcuts.ts
   - src/background/ui/context-menus.ts
   - src/background/recording/listeners.ts
+  - src/background/dom/cdp/cdp-session.ts
+  - src/lib/tabs/tab-focus.ts
+  - src/background/message-routing/capture-handler.ts
+  - src/background/push-handler.ts
+  - src/background/recording/capture.ts
+  - src/background/commands/observe.ts
 test_paths:
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/tab-state/tab-state.test.js
@@ -90,6 +96,9 @@ test_paths:
   - tests/extension/state-recovery/validated-storage.test.js
   - tests/extension/state-recovery/storage-fault-fixture.js
   - tests/extension/state-recovery/storage-owner-faults.test.js
+  - tests/extension/capture/background/background-tab-capture.test.js
+  - tests/extension/capture/background/visible-tab-capture-fallback.test.js
+  - tests/extension/capture/observe-screenshot.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-03
 ---
@@ -169,3 +178,15 @@ last_verified_date: 2026-04-03
 ## Code and Tests
 
 Concrete implementation and test paths are listed in frontmatter `code_paths` and `test_paths`.
+
+## Foreground is an explicit request
+
+Capture no longer activates the tab it photographs. `captureTabImage` in
+`src/background/ui/tracked-tab-state.ts` takes a CDP lease and calls `Page.captureScreenshot`;
+`chrome.tabs.captureVisibleTab` — the API that forced the activate/capture/restore dance — is
+reached only when `chrome.debugger` is unavailable or the CDP capture fails.
+
+The remaining foreground grabs are deliberate and each says why at the call site: `activate_tab`
+and the popup URL click (`src/lib/tabs/tab-focus.ts`), a screen recording waiting on a user
+gesture (`src/background/recording/capture.ts`), draw mode's backdrop capture, and the
+`push_screenshot` keyboard shortcut — the last two act on the tab already in front of the user.

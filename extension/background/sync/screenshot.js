@@ -3,7 +3,7 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 import { errorMessage } from '../../lib/error-utils.js';
-import { captureVisibleTabSafe } from '../ui/tracked-tab-state.js';
+import { captureTabImage } from '../ui/tracked-tab-state.js';
 import { getRequestHeaders } from './server.js';
 export async function captureScreenshot(tabId, serverUrl, relatedErrorId, canTakeScreenshot, recordScreenshot, debugLog) {
     const rateCheck = canTakeScreenshot(tabId);
@@ -20,7 +20,7 @@ export async function captureScreenshot(tabId, serverUrl, relatedErrorId, canTak
     }
     try {
         const tab = await chrome.tabs.get(tabId);
-        const dataUrl = await captureVisibleTabSafe(tabId, tab.windowId, { format: 'jpeg', quality: 80 });
+        const dataUrl = await captureTabImage(tabId, tab.windowId, { format: 'jpeg', quality: 80 });
         recordScreenshot(tabId);
         const response = await fetch(`${serverUrl}/screenshots`, {
             method: 'POST',

@@ -87,6 +87,14 @@ export declare class CDPSessionManager {
      * attached without saying whose it is (rule 18: reconcile against the live signal).
      */
     private ensureAttached;
+    /**
+     * Turn background-tab focus emulation on or off.
+     *
+     * A target that refuses the override (extension pages, pre-render placeholders) is still
+     * perfectly drivable for clicks, reads and captures, so the refusal is reported and the
+     * lease is granted anyway — failing the acquire would take away work that does succeed.
+     */
+    private setFocusEmulation;
     private probeAdoptable;
     private makeLease;
     private releaseRef;
