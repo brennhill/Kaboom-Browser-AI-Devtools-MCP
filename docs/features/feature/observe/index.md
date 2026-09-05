@@ -271,9 +271,19 @@ result matches what `chrome.tabs.captureVisibleTab` used to produce. No tab is a
 screenshot no longer pulls the browser window away from the person using it and no longer drops
 the focus out of whatever they were typing.
 
-`chrome.tabs.captureVisibleTab` remains as the fallback. That API can only photograph the
-visible tab, so it still activates the target and hands the foreground straight back. Every
-fallback is reported, and the report separates the recoverable cases from the defect:
+**CDP is only used for tabs the user is not looking at.** If the target is already the active
+tab in its window, the capture goes straight through `chrome.tabs.captureVisibleTab` and no
+debugger is attached — those are the same pixels, and attaching would raise Chrome's *"Kaboom is
+debugging this browser"* infobar over the user's own browsing for the lease's idle grace. That
+matters because `screenshot_on_error` fires on any page error, so the banner would otherwise
+appear unprompted while someone is simply using their browser. A `captureVisibleTab` that fails
+on an active tab is reported and then falls through to CDP rather than being treated as "this
+tab is backgrounded" — those are different facts and only the second is expected.
+
+`chrome.tabs.captureVisibleTab` is also the fallback when CDP is unreachable. That API can only
+photograph the visible tab, so in that case it still activates the target and hands the
+foreground straight back. Every fallback is reported, and the report separates the recoverable
+cases from the defect:
 
 | Reason | Meaning | Signal |
 | --- | --- | --- |

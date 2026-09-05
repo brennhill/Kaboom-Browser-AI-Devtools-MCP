@@ -109,6 +109,26 @@ describe('captureTabImage — background capture over CDP', () => {
     )
   })
 
+  test('a tab the user is already looking at is captured without attaching the debugger', async () => {
+    // Tab 99 is the active tab in window 11. captureVisibleTab already has exactly these
+    // pixels, so taking a CDP lease buys nothing and costs a lot: Chrome raises the
+    // "Kaboom is debugging this browser" infobar over the user's own browsing for the
+    // lease's idle grace. screenshot_on_error fires on any page error, so that banner
+    // would appear unprompted, repeatedly, while someone is just using their browser.
+    const before = attachCount
+
+    const dataUrl = await captureTabImage(99, 11, { format: 'jpeg', quality: 80 })
+
+    assert.strictEqual(dataUrl, 'data:image/jpeg;base64,VklTSUJMRQ==')
+    assert.strictEqual(attachCount, before, 'no debugger attach for a tab that is already visible')
+    assert.strictEqual(
+      globalThis.chrome.tabs.update.mock.calls.length,
+      0,
+      'and no activation either — it is already the active tab'
+    )
+    assert.strictEqual(captureCalls().length, 0, 'Page.captureScreenshot must not be reached')
+  })
+
   test('returns the CDP image as a data URL in the requested format', async () => {
     const png = await captureTabImage(7, 11, { format: 'png' })
     assert.strictEqual(png, `data:image/png;base64,${IMAGE_B64}`)

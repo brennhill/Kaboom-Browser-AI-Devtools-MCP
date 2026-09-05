@@ -93,6 +93,15 @@ export async function captureTabImage(
 ): Promise<string> {
   await setKaboomOverlayVisibility(tabId, false)
   try {
+    // A tab that is already the active one in its window is reachable through
+    // captureVisibleTab with no debugger at all, and those are the same pixels CDP would
+    // return. Attaching anyway raises Chrome's "Kaboom is debugging this browser" infobar
+    // over the user's own browsing for the lease's idle grace — and screenshot_on_error
+    // fires on any page error, so that banner would appear unprompted while someone is
+    // simply using their browser. CDP is for tabs the user is NOT looking at.
+    const alreadyVisible = await captureIfActive(tabId, windowId, options)
+    if (alreadyVisible !== null) return alreadyVisible
+
     const sessions = cdpSessions()
     if (!sessions) {
       reportForegroundFallback(tabId, 'no_debugger_api', 'chrome.debugger is not available in this context')
@@ -106,6 +115,32 @@ export async function captureTabImage(
     return await captureVisibleTabActivating(tabId, windowId, options)
   } finally {
     await setKaboomOverlayVisibility(tabId, true)
+  }
+}
+
+/**
+ * Capture a tab that is already the active one in its window, or return null when it is
+ * not — leaving the caller to reach it over CDP.
+ *
+ * A capture failure here is NOT swallowed into the null: it is reported and returns null
+ * so CDP still gets its turn, because "this tab is backgrounded" and "captureVisibleTab
+ * refused" are different facts and only the second is a defect (rule 25).
+ */
+async function captureIfActive(
+  tabId: number,
+  windowId: number,
+  options: TabCaptureOptions
+): Promise<string | null> {
+  const [activeTab] = await chrome.tabs.query({ active: true, windowId })
+  if (activeTab?.id !== tabId) return null
+  try {
+    return await chrome.tabs.captureVisibleTab(windowId, options)
+  } catch (err) {
+    debugLog(DebugCategory.CAPTURE, 'Visible-tab capture failed on the active tab; falling back to CDP', {
+      tab_id: tabId,
+      browser_error: errorMessage(err)
+    })
+    return null
   }
 }
 
