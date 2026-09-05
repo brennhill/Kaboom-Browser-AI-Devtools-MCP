@@ -10,7 +10,7 @@ code_paths:
   - cmd/browser-agent/internal/actioneffects/classify.go
   - cmd/browser-agent/internal/interactdispatch/effects.go
   - cmd/browser-agent/internal/interactdispatch/handler.go
-  - cmd/browser-agent/tools_interact_dispatch.go
+  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/cli/parser/interact.go
   - cmd/browser-agent/internal/cli/parser/flags.go

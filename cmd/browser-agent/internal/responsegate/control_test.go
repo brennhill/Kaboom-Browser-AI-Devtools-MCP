@@ -22,24 +22,11 @@ const controlMode = "observe/errors"
 // frozen for it in the checked-in contract.
 func shippedAndDeclared(t *testing.T) (mcp.JSONRPCResponse, responsecontract.Shape) {
 	t.Helper()
-	fixture := newHarness()
-	t.Cleanup(fixture.close)
-
-	var live mcp.JSONRPCResponse
-	cases, _ := fixture.cases()
-	for _, testCase := range cases {
-		if testCase.mode == controlMode {
-			live = testCase.response
-		}
-	}
+	live := sweep(t).cases[controlMode].response
 	if live.Result == nil {
-		t.Fatalf("the harness produced no %s response, so this control proves nothing", controlMode)
+		t.Fatalf("the sweep produced no %s response, so this control proves nothing", controlMode)
 	}
-	contract, err := responsecontract.Load(repoRoot(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	declared, present := contract.Modes[controlMode]
+	declared, present := loadContract(t).Modes[controlMode]
 	if !present {
 		t.Fatalf("%s is not declared, so this control proves nothing", controlMode)
 	}

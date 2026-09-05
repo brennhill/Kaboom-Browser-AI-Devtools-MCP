@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-29
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/runtimeflags/flags.go
   - internal/serverdefaults/defaults.go
@@ -22,9 +22,9 @@ code_paths:
   - cmd/browser-agent/internal/cli/parser/interact.go
   - cmd/browser-agent/internal/cli/parser/observe_analyze.go
   - cmd/browser-agent/internal/health/doctor.go
-  - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
   - cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go
   - internal/diag/output.go

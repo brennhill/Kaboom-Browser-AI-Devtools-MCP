@@ -36,22 +36,27 @@ func repoRoot(t *testing.T) string {
 	return root
 }
 
+// loadContract reads the checked-in contract, failing the test if it cannot.
+func loadContract(t *testing.T) *responsecontract.Contract {
+	t.Helper()
+	contract, err := responsecontract.Load(repoRoot(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return contract
+}
+
 // TestDeclaredResponseShapesStillShip is the drift gate.
 func TestDeclaredResponseShapesStillShip(t *testing.T) {
 	root := repoRoot(t)
-	fixture := newHarness()
-	defer fixture.close()
-
-	shapes, refused := fixture.declarableShapes()
+	swept := sweep(t)
+	shapes, refused := swept.shapes, swept.refusals
 	if os.Getenv("UPDATE_GOLDEN") == "1" {
 		refreeze(t, root, shapes)
 		return
 	}
 
-	contract, err := responsecontract.Load(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	contract := loadContract(t)
 
 	var failures []string
 	for mode, declared := range contract.Modes {
@@ -86,9 +91,9 @@ func envelopeDrift(contract *responsecontract.Contract, shapes map[string]respon
 	return responsecontract.Details(responsecontract.Diff(responsecontract.EnvelopeQueued, declared, shipped))
 }
 
-func refusalOf(refused map[string]string, mode string) string {
-	if reason, present := refused[mode]; present {
-		return reason
+func refusalOf(refused map[string]refusalRecord, mode string) string {
+	if record, present := refused[mode]; present {
+		return record.kind + ": " + firstLine(record.detail)
 	}
 	return "the harness produced no case for it at all"
 }
@@ -135,10 +140,8 @@ func refreeze(t *testing.T, root string, shapes map[string]responsecontract.Shap
 // the harness produced nothing, every comparison in the drift gate would be
 // vacuous and a real drift would pass unnoticed.
 func TestTheHarnessAnswersWithoutABrowser(t *testing.T) {
-	fixture := newHarness()
-	defer fixture.close()
-
-	shapes, refused := fixture.declarableShapes()
+	swept := sweep(t)
+	shapes, refused := swept.shapes, swept.refusals
 	if len(shapes) == 0 {
 		t.Fatalf("the harness derived no shapes at all, so the drift gate proves nothing; %d mode(s) were refused: %v", len(refused), refused)
 	}

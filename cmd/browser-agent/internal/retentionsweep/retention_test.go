@@ -1,14 +1,14 @@
-// retention_policy_test.go — Pins the disk budgets. These numbers are the whole
+// retention_test.go — Pins the disk budgets. These numbers are the whole
 // defence against the 1.0GB state directory this feature was written for.
 
-package main
+package retentionsweep
 
 import "testing"
 
 func TestCaptureBudgetsAreAllBounded(t *testing.T) {
-	budgets := captureBudgets()
+	budgets := Budgets()
 	if len(budgets) == 0 {
-		t.Fatal("captureBudgets() is empty; nothing would ever be reclaimed")
+		t.Fatal("Budgets() is empty; nothing would ever be reclaimed")
 	}
 	for _, budget := range budgets {
 		if budget.Name == "" {
@@ -32,7 +32,7 @@ func TestCaptureBudgetsAreAllBounded(t *testing.T) {
 // Every budgeted directory must resolve, or a typo would silently disable a sweep.
 func TestCaptureBudgetsResolveTheirDirectories(t *testing.T) {
 	t.Setenv("KABOOM_STATE_DIR", t.TempDir())
-	for _, budget := range captureBudgets() {
+	for _, budget := range Budgets() {
 		dir, err := budget.Dir()
 		if err != nil {
 			t.Errorf("%s directory did not resolve: %v", budget.Name, err)

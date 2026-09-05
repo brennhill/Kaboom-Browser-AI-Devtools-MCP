@@ -276,9 +276,9 @@ func TestActionRecordingDoesNotReturnToToolHandler(t *testing.T) {
 		"func (h *ToolHandler) recordDOMPrimitiveAction(",
 	} {
 		for _, relativePath := range []string{
-			"cmd/browser-agent/tools_core.go",
-			"cmd/browser-agent/tools_interact_dispatch.go",
-			"cmd/browser-agent/tools_configure.go",
+			"cmd/browser-agent/internal/toolruntime/tools_core.go",
+			"cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go",
+			"cmd/browser-agent/internal/toolruntime/tools_configure.go",
 		} {
 			source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
 			if err != nil {
@@ -293,7 +293,7 @@ func TestActionRecordingDoesNotReturnToToolHandler(t *testing.T) {
 
 func TestNavigateEnrichmentBelongsToInteractOwner(t *testing.T) {
 	checks := map[string]string{
-		"cmd/browser-agent/tools_interact_dispatch.go":                   "func (h *ToolHandler) enrichNavigateResponse(",
+		"cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go":                   "func (h *ToolHandler) enrichNavigateResponse(",
 		"cmd/browser-agent/internal/toolinteract/action_owners.go":       "EnrichNavigateResponse func(",
 		"cmd/browser-agent/internal/toolinteract/action_runtime_test.go": "EnrichNavigateResponse:",
 	}
@@ -490,7 +490,7 @@ func TestTelemetryHTTPDoesNotReturnToRootServer(t *testing.T) {
 }
 
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolruntime", "tools_core.go"))
 	if err != nil {
 		t.Fatalf("read tools_core.go: %v", err)
 	}
@@ -500,7 +500,7 @@ func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 }
 
 func TestConfigureLifecycleDoesNotReturnToToolHandler(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_configure.go"))
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolruntime", "tools_configure.go"))
 	if err != nil {
 		t.Fatalf("read tools_configure.go: %v", err)
 	}
@@ -519,7 +519,7 @@ func TestConfigureLifecycleDoesNotReturnToToolHandler(t *testing.T) {
 }
 
 func TestToolCatalogDoesNotReturnToCompositionRoot(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolruntime", "tools_core.go"))
 	if err != nil {
 		t.Fatalf("read tools_core.go: %v", err)
 	}

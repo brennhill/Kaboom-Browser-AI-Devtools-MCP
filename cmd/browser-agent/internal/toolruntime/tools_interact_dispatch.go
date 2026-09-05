@@ -1,7 +1,7 @@
 // tools_interact_dispatch.go — Wires canonical interact action owners into the dispatcher.
 // Docs: docs/features/feature/interact-explore/index.md
 
-package main
+package toolruntime
 
 import (
 	"encoding/json"
@@ -37,7 +37,7 @@ func buildInteractDispatcher(h *ToolHandler) *interactdispatch.Handler {
 func buildEffectDeps(h *ToolHandler) actioneffects.Deps {
 	return actioneffects.Deps{
 		Now:        time.Now,
-		LogEntries: h.server.logs.EntriesWithAddedAt,
+		LogEntries: h.state.Logs.EntriesWithAddedAt,
 		NetworkRequests: func() ([]types.NetworkBody, []time.Time) {
 			snapshot := h.capture.Telemetry().NetworkBodies().Snapshot()
 			return snapshot.Bodies, snapshot.Timestamps

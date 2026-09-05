@@ -41,7 +41,14 @@ code_paths:
   - docs/architecture/diagrams/quality/5-layer-protection.md
   - kaboom-code-standards.md
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
-  - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - cmd/browser-agent/internal/toolruntime/server_state.go
+  - cmd/browser-agent/internal/toolruntime/modes.go
+  - cmd/browser-agent/internal/censuscmd/census.go
+  - cmd/browser-agent/internal/retentionsweep/retention.go
+  - .folder-size-baseline.json
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - internal/tools/configure/capabilities/modespecs_configure.go
   - internal/schema/configure/properties_core.go
@@ -77,6 +84,7 @@ code_paths:
   - scripts/contracts/responsecontract/contract.go
   - scripts/contracts/responsecontract/diff.go
   - scripts/contracts/responsecontract/shape.go
+  - scripts/tests/browser/mode-content-expectations.sh
   - .go-architecture-baseline.json
   - scripts/uat/runners/test-js-sharded.sh
   - scripts/build/run-go-coverage.sh
@@ -111,6 +119,9 @@ test_paths:
   - cmd/browser-agent/internal/responsegate/control_test.go
   - cmd/browser-agent/internal/responsegate/drift_test.go
   - cmd/browser-agent/internal/responsegate/harness_test.go
+  - cmd/browser-agent/internal/responsegate/refusal_test.go
+  - cmd/browser-agent/internal/toolruntime/composition_test.go
+  - cmd/browser-agent/internal/retentionsweep/retention_test.go
   - scripts/contracts/responsecontract/cat33_test.go
   - scripts/contracts/responsecontract/ratchet_test.go
   - scripts/contracts/responsecontract/diff_test.go
@@ -204,6 +215,30 @@ bytes, so a hand-edited field list or a hand-lowered baseline fails. Where a
 mode has both a declared shape and a cat-33 content expectation, the two must
 agree, so the sweep's regexes can no longer outlive the fields they assert.
 Re-freeze an intended change with `make response-contract-update`.
+
+The sweep drives all five dispatchers, not just `observe`. It reached only
+`observe` while the composition root lived in package `main`, which no test
+outside `cmd/browser-agent` could import; the runtime now lives in
+`cmd/browser-agent/internal/toolruntime` behind a plain `ServerState` dependency
+struct, so the same `HandleToolCall` an MCP client reaches is reachable from a
+test. 66 of 173 shipped modes have a declared shape and `undeclared_baseline` is
+107.
+
+Every mode the sweep could not derive a shape from is CLASSIFIED, because a
+mode this fixture forgot to seed looks exactly like a mode that genuinely needs
+a browser. `refusal_test.go` reads the response the handler produced and names
+one of three reasons — the product's own disconnected-extension hint, a
+structured `missing_param`/`invalid_param` rejection, or an entry in the
+`notDriveable` table (`configure/restart` signals SIGTERM to its own process) —
+and fails by name on any refusal that fits none of them. Modes refused for
+needing a browser are separately proven to carry no frozen shape.
+
+Each mode is swept over its own fixture. Under one shared fixture the shapes
+changed between freezes: commands accumulated across modes and
+`observe/pending_commands` reported whichever map entry came first, so
+`pending[].query_id` appeared and disappeared. Per-mode isolation plus a seeded
+completed/pending/failed command lifecycle makes the freeze byte-identical
+across runs, which `check-baseline-currency` requires.
 
 The folder boundary inventories every authored file under first-party source,
 test, package, script, site, specification, workflow, and documentation roots.

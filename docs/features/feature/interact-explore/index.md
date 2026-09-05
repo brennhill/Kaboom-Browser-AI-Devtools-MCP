@@ -27,10 +27,10 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/elemindex/target.go
   - cmd/browser-agent/internal/toolinteract/elemindex/snapshot.go
   - cmd/browser-agent/internal/toolresp/result_block.go
-  - cmd/browser-agent/tools_core.go
-  - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/tools_interact_dispatch.go
+  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
   - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go
   - internal/schema/interact/actions.go

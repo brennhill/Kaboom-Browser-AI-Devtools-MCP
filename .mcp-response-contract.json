@@ -1,7 +1,7 @@
 {
   "_comment": "Declared MCP tool response shapes: field paths and JSON types, never values. GENERATED from real in-process responses — do not hand-edit. Regenerate with `make response-contract-update`. undeclared_baseline is a ratchet: it must equal the real count of shipped modes with no declared shape EXACTLY, so a new undeclared mode fails and an improvement must be locked in.",
   "version": 1,
-  "undeclared_baseline": 151,
+  "undeclared_baseline": 107,
   "envelopes": {
     "async_queued": {
       "kind": "envelope",
@@ -38,6 +38,3005 @@
     }
   },
   "modes": {
+    "analyze/annotations": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "annotations",
+          "type": "array"
+        },
+        {
+          "path": "correlation_id",
+          "type": "string"
+        },
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "filter_applied",
+          "type": "string"
+        },
+        {
+          "path": "message",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "analyze/api_validation": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "action",
+          "type": "string"
+        },
+        {
+          "path": "analyzed_at",
+          "type": "string"
+        },
+        {
+          "path": "consistency_levels",
+          "type": "object"
+        },
+        {
+          "path": "consistency_levels.0.7-0.89",
+          "type": "string"
+        },
+        {
+          "path": "consistency_levels.0.9-0.99",
+          "type": "string"
+        },
+        {
+          "path": "consistency_levels.1.0",
+          "type": "string"
+        },
+        {
+          "path": "consistency_levels.below 0.7",
+          "type": "string"
+        },
+        {
+          "path": "endpoints",
+          "type": "array"
+        },
+        {
+          "path": "endpoints[]",
+          "type": "object"
+        },
+        {
+          "path": "endpoints[].call_count",
+          "type": "number"
+        },
+        {
+          "path": "endpoints[].consistency",
+          "type": "string"
+        },
+        {
+          "path": "endpoints[].consistency_score",
+          "type": "number"
+        },
+        {
+          "path": "endpoints[].endpoint",
+          "type": "string"
+        },
+        {
+          "path": "endpoints[].first_called_at",
+          "type": "string"
+        },
+        {
+          "path": "endpoints[].last_called_at",
+          "type": "string"
+        },
+        {
+          "path": "endpoints[].method",
+          "type": "string"
+        },
+        {
+          "path": "endpoints[].status_codes",
+          "type": "object"
+        },
+        {
+          "path": "endpoints[].status_codes.200",
+          "type": "number"
+        },
+        {
+          "path": "operation",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "analyze/audit": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "categories",
+          "type": "object"
+        },
+        {
+          "path": "categories.accessibility",
+          "type": "object"
+        },
+        {
+          "path": "categories.accessibility.error",
+          "type": "string"
+        },
+        {
+          "path": "categories.accessibility.findings",
+          "type": "array"
+        },
+        {
+          "path": "categories.accessibility.score",
+          "type": "number"
+        },
+        {
+          "path": "categories.accessibility.summary",
+          "type": "string"
+        },
+        {
+          "path": "categories.best_practices",
+          "type": "object"
+        },
+        {
+          "path": "categories.best_practices.findings",
+          "type": "array"
+        },
+        {
+          "path": "categories.best_practices.findings[]",
+          "type": "object"
+        },
+        {
+          "path": "categories.best_practices.score",
+          "type": "number"
+        },
+        {
+          "path": "categories.best_practices.summary",
+          "type": "string"
+        },
+        {
+          "path": "categories.performance",
+          "type": "object"
+        },
+        {
+          "path": "categories.performance.findings",
+          "type": "array"
+        },
+        {
+          "path": "categories.performance.score",
+          "type": "number"
+        },
+        {
+          "path": "categories.performance.summary",
+          "type": "string"
+        },
+        {
+          "path": "categories.security",
+          "type": "object"
+        },
+        {
+          "path": "categories.security.findings",
+          "type": "array"
+        },
+        {
+          "path": "categories.security.score",
+          "type": "number"
+        },
+        {
+          "path": "categories.security.summary",
+          "type": "string"
+        },
+        {
+          "path": "overall_score",
+          "type": "number"
+        },
+        {
+          "path": "recommendations",
+          "type": "array"
+        },
+        {
+          "path": "recommendations[]",
+          "type": "object"
+        },
+        {
+          "path": "recommendations[].category",
+          "type": "string"
+        },
+        {
+          "path": "recommendations[].description",
+          "type": "string"
+        },
+        {
+          "path": "recommendations[].id",
+          "type": "string"
+        },
+        {
+          "path": "recommendations[].reference",
+          "type": "string"
+        },
+        {
+          "path": "recommendations[].severity",
+          "type": "string"
+        },
+        {
+          "path": "recommendations[].title",
+          "type": "string"
+        },
+        {
+          "path": "timestamp",
+          "type": "string"
+        },
+        {
+          "path": "url",
+          "type": "string"
+        }
+      ]
+    },
+    "analyze/draw_history": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "sessions",
+          "type": "array"
+        },
+        {
+          "path": "sessions[]",
+          "type": "object"
+        },
+        {
+          "path": "sessions[].file",
+          "type": "string"
+        },
+        {
+          "path": "sessions[].mod_time",
+          "type": "number"
+        },
+        {
+          "path": "sessions[].path",
+          "type": "string"
+        },
+        {
+          "path": "sessions[].size_bytes",
+          "type": "number"
+        },
+        {
+          "path": "storage_dir",
+          "type": "string"
+        },
+        {
+          "path": "total",
+          "type": "number"
+        }
+      ]
+    },
+    "analyze/error_clusters": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "clusters",
+          "type": "array"
+        },
+        {
+          "path": "clusters[]",
+          "type": "object"
+        },
+        {
+          "path": "clusters[].count",
+          "type": "number"
+        },
+        {
+          "path": "clusters[].first_seen",
+          "type": "string"
+        },
+        {
+          "path": "clusters[].last_seen",
+          "type": "string"
+        },
+        {
+          "path": "clusters[].message",
+          "type": "string"
+        },
+        {
+          "path": "clusters[].stack_trace",
+          "type": "string"
+        },
+        {
+          "path": "clusters[].urls",
+          "type": "array"
+        },
+        {
+          "path": "clusters[].urls[]",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        },
+        {
+          "path": "total_count",
+          "type": "number"
+        }
+      ]
+    },
+    "analyze/navigation_patterns": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "entries",
+          "type": "array"
+        },
+        {
+          "path": "entries[]",
+          "type": "object"
+        },
+        {
+          "path": "entries[].timestamp",
+          "type": "string"
+        },
+        {
+          "path": "entries[].to_url",
+          "type": "string"
+        },
+        {
+          "path": "entries[].type",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "analyze/performance": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "backend_trace",
+          "type": "object"
+        },
+        {
+          "path": "backend_trace.status",
+          "type": "string"
+        },
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "critical_path",
+          "type": "object"
+        },
+        {
+          "path": "critical_path.dominant_ms",
+          "type": "number"
+        },
+        {
+          "path": "critical_path.dominant_segment",
+          "type": "string"
+        },
+        {
+          "path": "critical_path.gaps",
+          "type": "array"
+        },
+        {
+          "path": "critical_path.gaps[]",
+          "type": "object"
+        },
+        {
+          "path": "critical_path.gaps[].after",
+          "type": "string"
+        },
+        {
+          "path": "critical_path.gaps[].before",
+          "type": "string"
+        },
+        {
+          "path": "critical_path.gaps[].status",
+          "type": "string"
+        },
+        {
+          "path": "critical_path.phases",
+          "type": "array"
+        },
+        {
+          "path": "critical_path.phases[]",
+          "type": "object"
+        },
+        {
+          "path": "critical_path.phases[].evidence",
+          "type": "string"
+        },
+        {
+          "path": "critical_path.phases[].name",
+          "type": "string"
+        },
+        {
+          "path": "critical_path.phases[].status",
+          "type": "string"
+        },
+        {
+          "path": "critical_path.status",
+          "type": "string"
+        },
+        {
+          "path": "snapshots",
+          "type": "array"
+        }
+      ]
+    },
+    "analyze/security_audit": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "findings",
+          "type": "null"
+        },
+        {
+          "path": "scanned_at",
+          "type": "string"
+        },
+        {
+          "path": "summary",
+          "type": "object"
+        },
+        {
+          "path": "summary.by_check",
+          "type": "object"
+        },
+        {
+          "path": "summary.by_severity",
+          "type": "object"
+        },
+        {
+          "path": "summary.total_findings",
+          "type": "number"
+        },
+        {
+          "path": "summary.urls_scanned",
+          "type": "number"
+        }
+      ]
+    },
+    "analyze/third_party_audit": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "first_party_origin",
+          "type": "string"
+        },
+        {
+          "path": "recommendations",
+          "type": "null"
+        },
+        {
+          "path": "summary",
+          "type": "object"
+        },
+        {
+          "path": "summary.critical_risk",
+          "type": "number"
+        },
+        {
+          "path": "summary.high_risk",
+          "type": "number"
+        },
+        {
+          "path": "summary.low_risk",
+          "type": "number"
+        },
+        {
+          "path": "summary.medium_risk",
+          "type": "number"
+        },
+        {
+          "path": "summary.origins_receiving_data",
+          "type": "number"
+        },
+        {
+          "path": "summary.origins_setting_cookies",
+          "type": "number"
+        },
+        {
+          "path": "summary.scripts_from_third_parties",
+          "type": "number"
+        },
+        {
+          "path": "summary.suspicious_origins",
+          "type": "number"
+        },
+        {
+          "path": "summary.total_third_parties",
+          "type": "number"
+        },
+        {
+          "path": "third_parties",
+          "type": "array"
+        },
+        {
+          "path": "third_parties[]",
+          "type": "object"
+        },
+        {
+          "path": "third_parties[].data_outbound",
+          "type": "boolean"
+        },
+        {
+          "path": "third_parties[].origin",
+          "type": "string"
+        },
+        {
+          "path": "third_parties[].reputation",
+          "type": "object"
+        },
+        {
+          "path": "third_parties[].reputation.classification",
+          "type": "string"
+        },
+        {
+          "path": "third_parties[].request_count",
+          "type": "number"
+        },
+        {
+          "path": "third_parties[].resources",
+          "type": "object"
+        },
+        {
+          "path": "third_parties[].resources.fonts",
+          "type": "number"
+        },
+        {
+          "path": "third_parties[].resources.images",
+          "type": "number"
+        },
+        {
+          "path": "third_parties[].resources.other",
+          "type": "number"
+        },
+        {
+          "path": "third_parties[].resources.scripts",
+          "type": "number"
+        },
+        {
+          "path": "third_parties[].resources.styles",
+          "type": "number"
+        },
+        {
+          "path": "third_parties[].risk_level",
+          "type": "string"
+        },
+        {
+          "path": "third_parties[].risk_reason",
+          "type": "string"
+        },
+        {
+          "path": "third_parties[].sets_cookies",
+          "type": "boolean"
+        },
+        {
+          "path": "third_parties[].total_transfer_bytes",
+          "type": "number"
+        },
+        {
+          "path": "third_parties[].urls",
+          "type": "array"
+        },
+        {
+          "path": "third_parties[].urls[]",
+          "type": "string"
+        }
+      ]
+    },
+    "analyze/visual_baselines": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "keys",
+          "type": "array"
+        },
+        {
+          "path": "namespace",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/action_jitter": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "action_jitter_ms",
+          "type": "number"
+        }
+      ]
+    },
+    "configure/audit_log": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "entries",
+          "type": "null"
+        },
+        {
+          "path": "operation",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/clear": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "buffer",
+          "type": "string"
+        },
+        {
+          "path": "cleared",
+          "type": "object"
+        },
+        {
+          "path": "cleared.annotations_cleared",
+          "type": "object"
+        },
+        {
+          "path": "cleared.annotations_cleared.details",
+          "type": "number"
+        },
+        {
+          "path": "cleared.annotations_cleared.named_sessions",
+          "type": "number"
+        },
+        {
+          "path": "cleared.annotations_cleared.sessions",
+          "type": "number"
+        },
+        {
+          "path": "cleared.annotations_cleared.waiters",
+          "type": "number"
+        },
+        {
+          "path": "cleared.buffers",
+          "type": "string"
+        },
+        {
+          "path": "cleared.extension_logs_cleared",
+          "type": "number"
+        },
+        {
+          "path": "cleared.push_events_drained",
+          "type": "number"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/describe_capabilities": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "mode",
+          "type": "string"
+        },
+        {
+          "path": "optional",
+          "type": "array"
+        },
+        {
+          "path": "optional[]",
+          "type": "string"
+        },
+        {
+          "path": "params",
+          "type": "object"
+        },
+        {
+          "path": "params.analyze",
+          "type": "object"
+        },
+        {
+          "path": "params.analyze.description",
+          "type": "string"
+        },
+        {
+          "path": "params.analyze.type",
+          "type": "string"
+        },
+        {
+          "path": "params.correlation_id",
+          "type": "object"
+        },
+        {
+          "path": "params.correlation_id.description",
+          "type": "string"
+        },
+        {
+          "path": "params.correlation_id.type",
+          "type": "string"
+        },
+        {
+          "path": "params.element_id",
+          "type": "object"
+        },
+        {
+          "path": "params.element_id.description",
+          "type": "string"
+        },
+        {
+          "path": "params.element_id.type",
+          "type": "string"
+        },
+        {
+          "path": "params.frame",
+          "type": "object"
+        },
+        {
+          "path": "params.frame.description",
+          "type": "string"
+        },
+        {
+          "path": "params.frame.type",
+          "type": "string"
+        },
+        {
+          "path": "params.index",
+          "type": "object"
+        },
+        {
+          "path": "params.index.description",
+          "type": "string"
+        },
+        {
+          "path": "params.index.type",
+          "type": "string"
+        },
+        {
+          "path": "params.modifiers",
+          "type": "object"
+        },
+        {
+          "path": "params.modifiers.description",
+          "type": "string"
+        },
+        {
+          "path": "params.modifiers.item_type",
+          "type": "string"
+        },
+        {
+          "path": "params.modifiers.type",
+          "type": "string"
+        },
+        {
+          "path": "params.nth",
+          "type": "object"
+        },
+        {
+          "path": "params.nth.description",
+          "type": "string"
+        },
+        {
+          "path": "params.nth.type",
+          "type": "string"
+        },
+        {
+          "path": "params.reason",
+          "type": "object"
+        },
+        {
+          "path": "params.reason.description",
+          "type": "string"
+        },
+        {
+          "path": "params.reason.type",
+          "type": "string"
+        },
+        {
+          "path": "params.ref",
+          "type": "object"
+        },
+        {
+          "path": "params.ref.description",
+          "type": "string"
+        },
+        {
+          "path": "params.ref.type",
+          "type": "string"
+        },
+        {
+          "path": "params.scope_selector",
+          "type": "object"
+        },
+        {
+          "path": "params.scope_selector.description",
+          "type": "string"
+        },
+        {
+          "path": "params.scope_selector.type",
+          "type": "string"
+        },
+        {
+          "path": "params.selector",
+          "type": "object"
+        },
+        {
+          "path": "params.selector.description",
+          "type": "string"
+        },
+        {
+          "path": "params.selector.type",
+          "type": "string"
+        },
+        {
+          "path": "params.stability_ms",
+          "type": "object"
+        },
+        {
+          "path": "params.stability_ms.default",
+          "type": "string"
+        },
+        {
+          "path": "params.stability_ms.description",
+          "type": "string"
+        },
+        {
+          "path": "params.stability_ms.type",
+          "type": "string"
+        },
+        {
+          "path": "params.timeout_ms",
+          "type": "object"
+        },
+        {
+          "path": "params.timeout_ms.default",
+          "type": "string"
+        },
+        {
+          "path": "params.timeout_ms.description",
+          "type": "string"
+        },
+        {
+          "path": "params.timeout_ms.type",
+          "type": "string"
+        },
+        {
+          "path": "params.wait_for_stable",
+          "type": "object"
+        },
+        {
+          "path": "params.wait_for_stable.description",
+          "type": "string"
+        },
+        {
+          "path": "params.wait_for_stable.type",
+          "type": "string"
+        },
+        {
+          "path": "params.what",
+          "type": "object"
+        },
+        {
+          "path": "params.what.description",
+          "type": "string"
+        },
+        {
+          "path": "params.what.enum",
+          "type": "array"
+        },
+        {
+          "path": "params.what.enum[]",
+          "type": "string"
+        },
+        {
+          "path": "params.what.type",
+          "type": "string"
+        },
+        {
+          "path": "params.x",
+          "type": "object"
+        },
+        {
+          "path": "params.x.description",
+          "type": "string"
+        },
+        {
+          "path": "params.x.type",
+          "type": "string"
+        },
+        {
+          "path": "params.y",
+          "type": "object"
+        },
+        {
+          "path": "params.y.description",
+          "type": "string"
+        },
+        {
+          "path": "params.y.type",
+          "type": "string"
+        },
+        {
+          "path": "required",
+          "type": "array"
+        },
+        {
+          "path": "required[]",
+          "type": "string"
+        },
+        {
+          "path": "returns",
+          "type": "string"
+        },
+        {
+          "path": "tool",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/diff_sessions": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "action",
+          "type": "string"
+        },
+        {
+          "path": "snapshots",
+          "type": "array"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/doctor": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "checks",
+          "type": "array"
+        },
+        {
+          "path": "checks[]",
+          "type": "object"
+        },
+        {
+          "path": "checks[].detail",
+          "type": "string"
+        },
+        {
+          "path": "checks[].fix",
+          "type": "string"
+        },
+        {
+          "path": "checks[].name",
+          "type": "string"
+        },
+        {
+          "path": "checks[].status",
+          "type": "string"
+        },
+        {
+          "path": "hint",
+          "type": "string"
+        },
+        {
+          "path": "ready_for_interaction",
+          "type": "boolean"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/event_recording_start": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "message",
+          "type": "string"
+        },
+        {
+          "path": "name",
+          "type": "string"
+        },
+        {
+          "path": "recording_id",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        },
+        {
+          "path": "url",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/event_recording_stop": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "action_count",
+          "type": "number"
+        },
+        {
+          "path": "duration_ms",
+          "type": "number"
+        },
+        {
+          "path": "message",
+          "type": "string"
+        },
+        {
+          "path": "recording_id",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/health": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "audit",
+          "type": "object"
+        },
+        {
+          "path": "audit.calls_per_tool",
+          "type": "object"
+        },
+        {
+          "path": "audit.error_rate_pct",
+          "type": "number"
+        },
+        {
+          "path": "audit.total_calls",
+          "type": "number"
+        },
+        {
+          "path": "audit.total_errors",
+          "type": "number"
+        },
+        {
+          "path": "buffers",
+          "type": "object"
+        },
+        {
+          "path": "buffers.actions",
+          "type": "object"
+        },
+        {
+          "path": "buffers.actions.capacity",
+          "type": "number"
+        },
+        {
+          "path": "buffers.actions.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "buffers.actions.entries",
+          "type": "number"
+        },
+        {
+          "path": "buffers.actions.utilization_pct",
+          "type": "number"
+        },
+        {
+          "path": "buffers.console",
+          "type": "object"
+        },
+        {
+          "path": "buffers.console.capacity",
+          "type": "number"
+        },
+        {
+          "path": "buffers.console.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "buffers.console.entries",
+          "type": "number"
+        },
+        {
+          "path": "buffers.console.utilization_pct",
+          "type": "number"
+        },
+        {
+          "path": "buffers.network",
+          "type": "object"
+        },
+        {
+          "path": "buffers.network.capacity",
+          "type": "number"
+        },
+        {
+          "path": "buffers.network.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "buffers.network.entries",
+          "type": "number"
+        },
+        {
+          "path": "buffers.network.utilization_pct",
+          "type": "number"
+        },
+        {
+          "path": "buffers.websocket",
+          "type": "object"
+        },
+        {
+          "path": "buffers.websocket.capacity",
+          "type": "number"
+        },
+        {
+          "path": "buffers.websocket.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "buffers.websocket.entries",
+          "type": "number"
+        },
+        {
+          "path": "buffers.websocket.utilization_pct",
+          "type": "number"
+        },
+        {
+          "path": "command_execution",
+          "type": "object"
+        },
+        {
+          "path": "command_execution.detail",
+          "type": "string"
+        },
+        {
+          "path": "command_execution.last_success_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.last_success_at",
+          "type": "string"
+        },
+        {
+          "path": "command_execution.oldest_pending_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.pending_count",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.queue_depth",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.ready",
+          "type": "boolean"
+        },
+        {
+          "path": "command_execution.recent_cancelled_count",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.recent_error_count",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.recent_expired_count",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.recent_failed_count",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.recent_failure_rate_pct",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.recent_success_count",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.recent_timeout_count",
+          "type": "number"
+        },
+        {
+          "path": "command_execution.status",
+          "type": "string"
+        },
+        {
+          "path": "command_execution.window_seconds",
+          "type": "number"
+        },
+        {
+          "path": "memory",
+          "type": "object"
+        },
+        {
+          "path": "memory.alloc_mb",
+          "type": "number"
+        },
+        {
+          "path": "memory.buffer_breakdown",
+          "type": "object"
+        },
+        {
+          "path": "memory.buffer_breakdown.actions_bytes",
+          "type": "number"
+        },
+        {
+          "path": "memory.buffer_breakdown.network_bytes",
+          "type": "number"
+        },
+        {
+          "path": "memory.buffer_breakdown.websocket_bytes",
+          "type": "number"
+        },
+        {
+          "path": "memory.current_mb",
+          "type": "number"
+        },
+        {
+          "path": "memory.sys_mb",
+          "type": "number"
+        },
+        {
+          "path": "pilot",
+          "type": "object"
+        },
+        {
+          "path": "pilot.enabled",
+          "type": "boolean"
+        },
+        {
+          "path": "pilot.extension_connected",
+          "type": "boolean"
+        },
+        {
+          "path": "pilot.source",
+          "type": "string"
+        },
+        {
+          "path": "rate_limiting",
+          "type": "object"
+        },
+        {
+          "path": "rate_limiting.circuit_open",
+          "type": "boolean"
+        },
+        {
+          "path": "rate_limiting.current_rate",
+          "type": "number"
+        },
+        {
+          "path": "rate_limiting.threshold",
+          "type": "number"
+        },
+        {
+          "path": "rate_limiting.total_429s",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.actions",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.actions.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.actions.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.actions.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.actions.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.actions.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.actions.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.actions.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.actions.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.alerts",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.alerts.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.alerts.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.alerts.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.alerts.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.alerts.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.alerts.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.alerts.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.alerts.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.console",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.console.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.console.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.console.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.console.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.console.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.console.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.console.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.console.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.doctor_timeline",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.doctor_timeline.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.doctor_timeline.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.doctor_timeline.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.doctor_timeline.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.doctor_timeline.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.doctor_timeline.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.doctor_timeline.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.doctor_timeline.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.extension_diagnostics",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.extension_diagnostics.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.extension_diagnostics.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.extension_diagnostics.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.extension_diagnostics.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.extension_diagnostics.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.extension_diagnostics.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.extension_diagnostics.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.extension_diagnostics.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.network.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network_waterfall",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.network_waterfall.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network_waterfall.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network_waterfall.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network_waterfall.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network_waterfall.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network_waterfall.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network_waterfall.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.network_waterfall.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.notification_queue",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.notification_queue.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.notification_queue.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.notification_queue.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.notification_queue.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.notification_queue.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.notification_queue.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.notification_queue.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.notification_queue.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.pending_commands",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.pending_commands.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.pending_commands.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.pending_commands.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.pending_commands.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.pending_commands.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.pending_commands.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.pending_commands.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.pending_commands.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_baselines",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.performance_baselines.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_baselines.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_baselines.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_baselines.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_baselines.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_baselines.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_baselines.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_baselines.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_samples",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.performance_samples.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_samples.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_samples.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_samples.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_samples.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_samples.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_samples.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_samples.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_snapshots",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.performance_snapshots.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_snapshots.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_snapshots.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_snapshots.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_snapshots.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_snapshots.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_snapshots.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.performance_snapshots.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.recordings",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.recordings.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.recordings.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.recordings.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.recordings.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.recordings.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.recordings.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.recordings.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.recordings.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.websocket",
+          "type": "object"
+        },
+        {
+          "path": "resource_pressure.websocket.active_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.websocket.byte_capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.websocket.capacity",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.websocket.dropped_count",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.websocket.entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.websocket.oldest_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.websocket.recoverable_entries",
+          "type": "number"
+        },
+        {
+          "path": "resource_pressure.websocket.retained_bytes",
+          "type": "number"
+        },
+        {
+          "path": "server",
+          "type": "object"
+        },
+        {
+          "path": "server.go_version",
+          "type": "string"
+        },
+        {
+          "path": "server.launch_mode",
+          "type": "string"
+        },
+        {
+          "path": "server.launch_mode_reason",
+          "type": "string"
+        },
+        {
+          "path": "server.pid",
+          "type": "number"
+        },
+        {
+          "path": "server.platform",
+          "type": "string"
+        },
+        {
+          "path": "server.uptime_seconds",
+          "type": "number"
+        },
+        {
+          "path": "server.version",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/list_sequences": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "sequences",
+          "type": "array"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/load": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "baselines",
+          "type": "array"
+        },
+        {
+          "path": "error_history",
+          "type": "array"
+        },
+        {
+          "path": "project_id",
+          "type": "string"
+        },
+        {
+          "path": "session_count",
+          "type": "number"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/network_recording": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "active",
+          "type": "boolean"
+        }
+      ]
+    },
+    "configure/noise_rule": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "rules",
+          "type": "array"
+        },
+        {
+          "path": "rules[]",
+          "type": "object"
+        },
+        {
+          "path": "rules[].category",
+          "type": "string"
+        },
+        {
+          "path": "rules[].classification",
+          "type": "string"
+        },
+        {
+          "path": "rules[].created_at",
+          "type": "string"
+        },
+        {
+          "path": "rules[].id",
+          "type": "string"
+        },
+        {
+          "path": "rules[].match_spec",
+          "type": "object"
+        },
+        {
+          "path": "rules[].match_spec.source_regex",
+          "type": "string"
+        },
+        {
+          "path": "statistics",
+          "type": "object"
+        },
+        {
+          "path": "statistics.last_noise_at",
+          "type": "string"
+        },
+        {
+          "path": "statistics.last_signal_at",
+          "type": "string"
+        },
+        {
+          "path": "statistics.per_rule",
+          "type": "object"
+        },
+        {
+          "path": "statistics.total_filtered",
+          "type": "number"
+        }
+      ]
+    },
+    "configure/qa_fixture": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "fixture_version",
+          "type": "number"
+        },
+        {
+          "path": "setup_timeout_ms",
+          "type": "number"
+        },
+        {
+          "path": "valid",
+          "type": "boolean"
+        }
+      ]
+    },
+    "configure/report_issue": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "formatted_body",
+          "type": "string"
+        },
+        {
+          "path": "hint",
+          "type": "string"
+        },
+        {
+          "path": "operation",
+          "type": "string"
+        },
+        {
+          "path": "report",
+          "type": "object"
+        },
+        {
+          "path": "report.diagnostics",
+          "type": "object"
+        },
+        {
+          "path": "report.diagnostics.buffers",
+          "type": "object"
+        },
+        {
+          "path": "report.diagnostics.buffers.action_entries",
+          "type": "number"
+        },
+        {
+          "path": "report.diagnostics.buffers.console_entries",
+          "type": "number"
+        },
+        {
+          "path": "report.diagnostics.buffers.network_entries",
+          "type": "number"
+        },
+        {
+          "path": "report.diagnostics.extension",
+          "type": "object"
+        },
+        {
+          "path": "report.diagnostics.extension.connected",
+          "type": "boolean"
+        },
+        {
+          "path": "report.diagnostics.platform",
+          "type": "object"
+        },
+        {
+          "path": "report.diagnostics.platform.arch",
+          "type": "string"
+        },
+        {
+          "path": "report.diagnostics.platform.go_version",
+          "type": "string"
+        },
+        {
+          "path": "report.diagnostics.platform.os",
+          "type": "string"
+        },
+        {
+          "path": "report.diagnostics.server",
+          "type": "object"
+        },
+        {
+          "path": "report.diagnostics.server.error_rate_pct",
+          "type": "number"
+        },
+        {
+          "path": "report.diagnostics.server.total_calls",
+          "type": "number"
+        },
+        {
+          "path": "report.diagnostics.server.total_errors",
+          "type": "number"
+        },
+        {
+          "path": "report.diagnostics.server.uptime_seconds",
+          "type": "number"
+        },
+        {
+          "path": "report.diagnostics.server.version",
+          "type": "string"
+        },
+        {
+          "path": "report.template",
+          "type": "string"
+        },
+        {
+          "path": "report.title",
+          "type": "string"
+        },
+        {
+          "path": "template",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/save_sequence": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "message",
+          "type": "string"
+        },
+        {
+          "path": "name",
+          "type": "string"
+        },
+        {
+          "path": "saved_at",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        },
+        {
+          "path": "step_count",
+          "type": "number"
+        }
+      ]
+    },
+    "configure/security_mode": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "insecure_rewrites_applied",
+          "type": "null"
+        },
+        {
+          "path": "production_parity",
+          "type": "boolean"
+        },
+        {
+          "path": "requires_confirmation_for_insecure_mode",
+          "type": "boolean"
+        },
+        {
+          "path": "security_mode",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/store": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "keys",
+          "type": "array"
+        },
+        {
+          "path": "namespace",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/streaming": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "config",
+          "type": "object"
+        },
+        {
+          "path": "config.enabled",
+          "type": "boolean"
+        },
+        {
+          "path": "config.events",
+          "type": "array"
+        },
+        {
+          "path": "config.events[]",
+          "type": "string"
+        },
+        {
+          "path": "config.severity_min",
+          "type": "string"
+        },
+        {
+          "path": "config.throttle_seconds",
+          "type": "number"
+        },
+        {
+          "path": "config.url",
+          "type": "string"
+        },
+        {
+          "path": "notify_count",
+          "type": "number"
+        },
+        {
+          "path": "pending",
+          "type": "number"
+        }
+      ]
+    },
+    "configure/telemetry": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "status",
+          "type": "string"
+        },
+        {
+          "path": "telemetry_mode",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/test_boundary_start": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "label",
+          "type": "string"
+        },
+        {
+          "path": "message",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        },
+        {
+          "path": "test_id",
+          "type": "string"
+        }
+      ]
+    },
+    "configure/tutorial": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "best_practices",
+          "type": "array"
+        },
+        {
+          "path": "best_practices[]",
+          "type": "string"
+        },
+        {
+          "path": "context",
+          "type": "object"
+        },
+        {
+          "path": "context.extension_connected",
+          "type": "boolean"
+        },
+        {
+          "path": "context.pilot_authoritative",
+          "type": "boolean"
+        },
+        {
+          "path": "context.pilot_enabled",
+          "type": "boolean"
+        },
+        {
+          "path": "context.pilot_state",
+          "type": "string"
+        },
+        {
+          "path": "context.tracked_tab_id",
+          "type": "number"
+        },
+        {
+          "path": "context.tracked_tab_url",
+          "type": "string"
+        },
+        {
+          "path": "context.tracking_enabled",
+          "type": "boolean"
+        },
+        {
+          "path": "csp_fallback_playbook",
+          "type": "object"
+        },
+        {
+          "path": "csp_fallback_playbook.command_examples",
+          "type": "array"
+        },
+        {
+          "path": "csp_fallback_playbook.command_examples[]",
+          "type": "object"
+        },
+        {
+          "path": "csp_fallback_playbook.command_examples[].expected",
+          "type": "string"
+        },
+        {
+          "path": "csp_fallback_playbook.command_examples[].goal",
+          "type": "string"
+        },
+        {
+          "path": "csp_fallback_playbook.command_examples[].snippet",
+          "type": "string"
+        },
+        {
+          "path": "csp_fallback_playbook.detect_signals",
+          "type": "array"
+        },
+        {
+          "path": "csp_fallback_playbook.detect_signals[]",
+          "type": "string"
+        },
+        {
+          "path": "csp_fallback_playbook.exact_retry_guidance",
+          "type": "string"
+        },
+        {
+          "path": "csp_fallback_playbook.fallback_sequence",
+          "type": "array"
+        },
+        {
+          "path": "csp_fallback_playbook.fallback_sequence[]",
+          "type": "object"
+        },
+        {
+          "path": "csp_fallback_playbook.fallback_sequence[].instruction",
+          "type": "string"
+        },
+        {
+          "path": "csp_fallback_playbook.fallback_sequence[].step",
+          "type": "number"
+        },
+        {
+          "path": "csp_fallback_playbook.fallback_status_pattern",
+          "type": "string"
+        },
+        {
+          "path": "csp_fallback_playbook.title",
+          "type": "string"
+        },
+        {
+          "path": "csp_fallback_playbook.what_is_not_possible",
+          "type": "array"
+        },
+        {
+          "path": "csp_fallback_playbook.what_is_not_possible[]",
+          "type": "string"
+        },
+        {
+          "path": "csp_fallback_playbook.what_is_possible",
+          "type": "array"
+        },
+        {
+          "path": "csp_fallback_playbook.what_is_possible[]",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks",
+          "type": "object"
+        },
+        {
+          "path": "failure_recovery_playbooks.ambiguous_target",
+          "type": "object"
+        },
+        {
+          "path": "failure_recovery_playbooks.ambiguous_target.detection_signal",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.ambiguous_target.ordered_recovery_steps",
+          "type": "array"
+        },
+        {
+          "path": "failure_recovery_playbooks.ambiguous_target.ordered_recovery_steps[]",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.ambiguous_target.retry_guidance",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.ambiguous_target.stop_and_report_condition",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.blocked_by_overlay",
+          "type": "object"
+        },
+        {
+          "path": "failure_recovery_playbooks.blocked_by_overlay.detection_signal",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.blocked_by_overlay.ordered_recovery_steps",
+          "type": "array"
+        },
+        {
+          "path": "failure_recovery_playbooks.blocked_by_overlay.ordered_recovery_steps[]",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.blocked_by_overlay.retry_guidance",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.blocked_by_overlay.stop_and_report_condition",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.element_not_found",
+          "type": "object"
+        },
+        {
+          "path": "failure_recovery_playbooks.element_not_found.detection_signal",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.element_not_found.ordered_recovery_steps",
+          "type": "array"
+        },
+        {
+          "path": "failure_recovery_playbooks.element_not_found.ordered_recovery_steps[]",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.element_not_found.retry_guidance",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.element_not_found.stop_and_report_condition",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.scope_not_found",
+          "type": "object"
+        },
+        {
+          "path": "failure_recovery_playbooks.scope_not_found.detection_signal",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.scope_not_found.ordered_recovery_steps",
+          "type": "array"
+        },
+        {
+          "path": "failure_recovery_playbooks.scope_not_found.ordered_recovery_steps[]",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.scope_not_found.retry_guidance",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.scope_not_found.stop_and_report_condition",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.stale_element_id",
+          "type": "object"
+        },
+        {
+          "path": "failure_recovery_playbooks.stale_element_id.detection_signal",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.stale_element_id.ordered_recovery_steps",
+          "type": "array"
+        },
+        {
+          "path": "failure_recovery_playbooks.stale_element_id.ordered_recovery_steps[]",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.stale_element_id.retry_guidance",
+          "type": "string"
+        },
+        {
+          "path": "failure_recovery_playbooks.stale_element_id.stop_and_report_condition",
+          "type": "string"
+        },
+        {
+          "path": "issues",
+          "type": "array"
+        },
+        {
+          "path": "issues[]",
+          "type": "object"
+        },
+        {
+          "path": "issues[].code",
+          "type": "string"
+        },
+        {
+          "path": "issues[].example",
+          "type": "string"
+        },
+        {
+          "path": "issues[].fix",
+          "type": "string"
+        },
+        {
+          "path": "issues[].message",
+          "type": "string"
+        },
+        {
+          "path": "issues[].severity",
+          "type": "string"
+        },
+        {
+          "path": "message",
+          "type": "string"
+        },
+        {
+          "path": "mode",
+          "type": "string"
+        },
+        {
+          "path": "next_steps",
+          "type": "array"
+        },
+        {
+          "path": "next_steps[]",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop",
+          "type": "object"
+        },
+        {
+          "path": "safe_automation_loop.bad_vs_good",
+          "type": "array"
+        },
+        {
+          "path": "safe_automation_loop.bad_vs_good[]",
+          "type": "object"
+        },
+        {
+          "path": "safe_automation_loop.bad_vs_good[].action",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.bad_vs_good[].bad",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.bad_vs_good[].good",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.bad_vs_good[].reason",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.scenarios",
+          "type": "array"
+        },
+        {
+          "path": "safe_automation_loop.scenarios[]",
+          "type": "object"
+        },
+        {
+          "path": "safe_automation_loop.scenarios[].description",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.scenarios[].id",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.scenarios[].name",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.scenarios[].snippet",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.steps",
+          "type": "array"
+        },
+        {
+          "path": "safe_automation_loop.steps[]",
+          "type": "object"
+        },
+        {
+          "path": "safe_automation_loop.steps[].instruction",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.steps[].name",
+          "type": "string"
+        },
+        {
+          "path": "safe_automation_loop.steps[].step",
+          "type": "number"
+        },
+        {
+          "path": "safe_automation_loop.title",
+          "type": "string"
+        },
+        {
+          "path": "snippets",
+          "type": "array"
+        },
+        {
+          "path": "snippets[]",
+          "type": "object"
+        },
+        {
+          "path": "snippets[].arguments",
+          "type": "object"
+        },
+        {
+          "path": "snippets[].arguments.limit",
+          "type": "number"
+        },
+        {
+          "path": "snippets[].arguments.what",
+          "type": "string"
+        },
+        {
+          "path": "snippets[].goal",
+          "type": "string"
+        },
+        {
+          "path": "snippets[].snippet",
+          "type": "string"
+        },
+        {
+          "path": "snippets[].tool",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "generate/annotation_issues": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "message",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "generate/annotation_report": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "message",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "generate/csp": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "directives",
+          "type": "object"
+        },
+        {
+          "path": "directives.connect-src",
+          "type": "array"
+        },
+        {
+          "path": "directives.connect-src[]",
+          "type": "string"
+        },
+        {
+          "path": "directives.default-src",
+          "type": "array"
+        },
+        {
+          "path": "directives.default-src[]",
+          "type": "string"
+        },
+        {
+          "path": "mode",
+          "type": "string"
+        },
+        {
+          "path": "origins_observed",
+          "type": "number"
+        },
+        {
+          "path": "policy",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "generate/har": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "log",
+          "type": "object"
+        },
+        {
+          "path": "log.creator",
+          "type": "object"
+        },
+        {
+          "path": "log.creator.name",
+          "type": "string"
+        },
+        {
+          "path": "log.creator.version",
+          "type": "string"
+        },
+        {
+          "path": "log.entries",
+          "type": "array"
+        },
+        {
+          "path": "log.entries[]",
+          "type": "object"
+        },
+        {
+          "path": "log.entries[].request",
+          "type": "object"
+        },
+        {
+          "path": "log.entries[].response",
+          "type": "object"
+        },
+        {
+          "path": "log.entries[].startedDateTime",
+          "type": "string"
+        },
+        {
+          "path": "log.entries[].time",
+          "type": "number"
+        },
+        {
+          "path": "log.entries[].timings",
+          "type": "object"
+        },
+        {
+          "path": "log.version",
+          "type": "string"
+        }
+      ]
+    },
+    "generate/pr_summary": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "stats",
+          "type": "object"
+        },
+        {
+          "path": "stats.actions",
+          "type": "number"
+        },
+        {
+          "path": "stats.commands_completed",
+          "type": "number"
+        },
+        {
+          "path": "stats.commands_failed",
+          "type": "number"
+        },
+        {
+          "path": "stats.console_errors",
+          "type": "number"
+        },
+        {
+          "path": "stats.network_captured",
+          "type": "number"
+        },
+        {
+          "path": "stats.network_errors",
+          "type": "number"
+        },
+        {
+          "path": "summary",
+          "type": "string"
+        }
+      ]
+    },
+    "generate/reproduction": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "action_count",
+          "type": "number"
+        },
+        {
+          "path": "duration_ms",
+          "type": "number"
+        },
+        {
+          "path": "format",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.actions_available",
+          "type": "number"
+        },
+        {
+          "path": "metadata.actions_included",
+          "type": "number"
+        },
+        {
+          "path": "metadata.environment_pinned",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.fallback_order",
+          "type": "array"
+        },
+        {
+          "path": "metadata.fallback_order[]",
+          "type": "string"
+        },
+        {
+          "path": "metadata.generated_at",
+          "type": "string"
+        },
+        {
+          "path": "metadata.locator_coverage",
+          "type": "object"
+        },
+        {
+          "path": "metadata.selectors_used",
+          "type": "array"
+        },
+        {
+          "path": "metadata.selectors_used[]",
+          "type": "string"
+        },
+        {
+          "path": "script",
+          "type": "string"
+        },
+        {
+          "path": "start_url",
+          "type": "string"
+        }
+      ]
+    },
+    "generate/sarif": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "$schema",
+          "type": "string"
+        },
+        {
+          "path": "runs",
+          "type": "array"
+        },
+        {
+          "path": "runs[]",
+          "type": "object"
+        },
+        {
+          "path": "runs[].results",
+          "type": "array"
+        },
+        {
+          "path": "runs[].tool",
+          "type": "object"
+        },
+        {
+          "path": "runs[].tool.driver",
+          "type": "object"
+        },
+        {
+          "path": "version",
+          "type": "string"
+        }
+      ]
+    },
+    "generate/sri": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "resources",
+          "type": "array"
+        },
+        {
+          "path": "summary",
+          "type": "object"
+        },
+        {
+          "path": "summary.already_protected",
+          "type": "number"
+        },
+        {
+          "path": "summary.hashes_generated",
+          "type": "number"
+        },
+        {
+          "path": "summary.scripts_without_sri",
+          "type": "number"
+        },
+        {
+          "path": "summary.styles_without_sri",
+          "type": "number"
+        },
+        {
+          "path": "summary.total_third_party_resources",
+          "type": "number"
+        }
+      ]
+    },
+    "generate/test": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "action_count",
+          "type": "number"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.actions_available",
+          "type": "number"
+        },
+        {
+          "path": "metadata.actions_included",
+          "type": "number"
+        },
+        {
+          "path": "metadata.assert_network",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.assert_no_errors",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.generated_at",
+          "type": "string"
+        },
+        {
+          "path": "script",
+          "type": "string"
+        },
+        {
+          "path": "test_name",
+          "type": "string"
+        }
+      ]
+    },
+    "generate/visual_test": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "message",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        }
+      ]
+    },
+    "interact/list_states": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "states",
+          "type": "array"
+        }
+      ]
+    },
     "observe/actions": {
       "kind": "direct",
       "fields": [
@@ -395,6 +3394,58 @@
           "type": "array"
         },
         {
+          "path": "commands[]",
+          "type": "object"
+        },
+        {
+          "path": "commands[].completed_at",
+          "type": "string"
+        },
+        {
+          "path": "commands[].correlation_id",
+          "type": "string"
+        },
+        {
+          "path": "commands[].created_at",
+          "type": "string"
+        },
+        {
+          "path": "commands[].error",
+          "type": "string"
+        },
+        {
+          "path": "commands[].expires_at",
+          "type": "string"
+        },
+        {
+          "path": "commands[].query_id",
+          "type": "string"
+        },
+        {
+          "path": "commands[].status",
+          "type": "string"
+        },
+        {
+          "path": "commands[].trace_events",
+          "type": "array"
+        },
+        {
+          "path": "commands[].trace_events[]",
+          "type": "object"
+        },
+        {
+          "path": "commands[].trace_id",
+          "type": "string"
+        },
+        {
+          "path": "commands[].trace_timeline",
+          "type": "string"
+        },
+        {
+          "path": "commands[].updated_at",
+          "type": "string"
+        },
+        {
           "path": "count",
           "type": "number"
         }
@@ -652,7 +3703,47 @@
           "type": "array"
         },
         {
-          "path": "hint",
+          "path": "entries[]",
+          "type": "object"
+        },
+        {
+          "path": "entries[].decoded_body_size",
+          "type": "number"
+        },
+        {
+          "path": "entries[].duration_ms",
+          "type": "number"
+        },
+        {
+          "path": "entries[].encoded_body_size",
+          "type": "number"
+        },
+        {
+          "path": "entries[].initiator_type",
+          "type": "string"
+        },
+        {
+          "path": "entries[].page_url",
+          "type": "string"
+        },
+        {
+          "path": "entries[].start_time",
+          "type": "number"
+        },
+        {
+          "path": "entries[].status",
+          "type": "number"
+        },
+        {
+          "path": "entries[].timestamp",
+          "type": "string"
+        },
+        {
+          "path": "entries[].transfer_size",
+          "type": "number"
+        },
+        {
+          "path": "entries[].url",
           "type": "string"
         },
         {
@@ -814,12 +3905,112 @@
           "type": "array"
         },
         {
+          "path": "failed[]",
+          "type": "object"
+        },
+        {
+          "path": "failed[].completed_at",
+          "type": "string"
+        },
+        {
+          "path": "failed[].correlation_id",
+          "type": "string"
+        },
+        {
+          "path": "failed[].created_at",
+          "type": "string"
+        },
+        {
+          "path": "failed[].error",
+          "type": "string"
+        },
+        {
+          "path": "failed[].expires_at",
+          "type": "string"
+        },
+        {
+          "path": "failed[].query_id",
+          "type": "string"
+        },
+        {
+          "path": "failed[].status",
+          "type": "string"
+        },
+        {
+          "path": "failed[].trace_events",
+          "type": "array"
+        },
+        {
+          "path": "failed[].trace_events[]",
+          "type": "object"
+        },
+        {
+          "path": "failed[].trace_id",
+          "type": "string"
+        },
+        {
+          "path": "failed[].trace_timeline",
+          "type": "string"
+        },
+        {
+          "path": "failed[].updated_at",
+          "type": "string"
+        },
+        {
           "path": "failed_total",
           "type": "number"
         },
         {
           "path": "pending",
           "type": "array"
+        },
+        {
+          "path": "pending[]",
+          "type": "object"
+        },
+        {
+          "path": "pending[].completed_at",
+          "type": "string"
+        },
+        {
+          "path": "pending[].correlation_id",
+          "type": "string"
+        },
+        {
+          "path": "pending[].created_at",
+          "type": "string"
+        },
+        {
+          "path": "pending[].expires_at",
+          "type": "string"
+        },
+        {
+          "path": "pending[].query_id",
+          "type": "string"
+        },
+        {
+          "path": "pending[].status",
+          "type": "string"
+        },
+        {
+          "path": "pending[].trace_events",
+          "type": "array"
+        },
+        {
+          "path": "pending[].trace_events[]",
+          "type": "object"
+        },
+        {
+          "path": "pending[].trace_id",
+          "type": "string"
+        },
+        {
+          "path": "pending[].trace_timeline",
+          "type": "string"
+        },
+        {
+          "path": "pending[].updated_at",
+          "type": "string"
         },
         {
           "path": "pending_total",
@@ -889,6 +4080,75 @@
         {
           "path": "state",
           "type": "string"
+        }
+      ]
+    },
+    "observe/recordings": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "active_recording_id",
+          "type": "string"
+        },
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "limit",
+          "type": "number"
+        },
+        {
+          "path": "recordings",
+          "type": "array"
+        },
+        {
+          "path": "recordings[]",
+          "type": "object"
+        },
+        {
+          "path": "recordings[].action_count",
+          "type": "number"
+        },
+        {
+          "path": "recordings[].created_at",
+          "type": "string"
+        },
+        {
+          "path": "recordings[].duration_ms",
+          "type": "number"
+        },
+        {
+          "path": "recordings[].id",
+          "type": "string"
+        },
+        {
+          "path": "recordings[].name",
+          "type": "string"
+        },
+        {
+          "path": "recordings[].sensitive_data_enabled",
+          "type": "boolean"
+        },
+        {
+          "path": "recordings[].start_url",
+          "type": "string"
+        },
+        {
+          "path": "recordings[].viewport",
+          "type": "object"
+        },
+        {
+          "path": "recordings[].viewport.height",
+          "type": "number"
+        },
+        {
+          "path": "recordings[].viewport.width",
+          "type": "number"
+        },
+        {
+          "path": "total",
+          "type": "number"
         }
       ]
     },

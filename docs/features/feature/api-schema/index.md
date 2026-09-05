@@ -4,14 +4,14 @@ feature_id: feature-api-schema
 status: superseded
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-12
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/capabilities.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
-  - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolcatalog/catalog.go
-  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
   - cmd/browser-agent/server.go
   - internal/analysis/apicontract/contract.go
   - internal/analysis/apicontract/runtime/handler.go

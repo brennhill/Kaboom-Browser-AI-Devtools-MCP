@@ -4,7 +4,7 @@ feature_id: feature-environment-manipulation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-25
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/cli/parser/generate_configure.go
   - cmd/browser-agent/internal/playbooks/resources/guides.go
@@ -15,8 +15,8 @@ code_paths:
   - cmd/browser-agent/internal/health/doctor_live_checks.go
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolinteract/interact_page.go
-  - cmd/browser-agent/tools_configure.go
-  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
   - internal/qafixture/wire_fixture.go
   - internal/qafixture/transaction.go
   - internal/qafixture/registry.go

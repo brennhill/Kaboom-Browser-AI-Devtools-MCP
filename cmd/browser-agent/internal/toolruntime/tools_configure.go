@@ -2,7 +2,7 @@
 // Why: Acts as the top-level router for all session/runtime configuration actions under the configure tool.
 // Docs: docs/features/feature/config-profiles/index.md
 
-package main
+package toolruntime
 
 import (
 	"context"
@@ -54,7 +54,7 @@ func buildQAFixtureHandler(h *ToolHandler) (*qafixturehandler.Handler, error) {
 	if h.capture == nil {
 		return nil, errors.New("fixture_capture_unavailable")
 	}
-	registryPath, err := fixtureRegistryPath(h.server.logs.LogFile())
+	registryPath, err := fixtureRegistryPath(h.state.Logs.LogFile())
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return h.configureSessions.Diff(req, args)
 		},
 		"health": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-			return handleConfigureHealth(h.healthMetrics, h.capture, h.server, h.alertBuffer, h.stateRecovery, req)
+			return handleConfigureHealth(h.healthMetrics, h.capture, h.state, h.alertBuffer, h.stateRecovery, req)
 		},
 		"restart": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 			return handleConfigureRestart(req)
@@ -129,12 +129,12 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 		"doctor": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			var incidents *incident.Store
 			var incidentViews []incident.DoctorView
-			if h.server != nil {
-				incidents = h.server.incidents
-				incidentViews = h.server.incidents.DoctorSnapshot()
+			if h.state.Incidents != nil {
+				incidents = h.state.Incidents
+				incidentViews = h.state.Incidents.DoctorSnapshot()
 			}
 			checks := doctorsupport.Checks(h.stateRecovery, incidents)
-			if response, handled := doctorsupport.Handle(req, args, incidentViews, version, runtime.GOOS+"-"+runtime.GOARCH, nil); handled {
+			if response, handled := doctorsupport.Handle(req, args, incidentViews, h.state.Version, runtime.GOOS+"-"+runtime.GOARCH, nil); handled {
 				return response
 			}
 			doctorDeps := health.DoctorMCPDeps{
@@ -144,7 +144,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 				DiagnosticHint: h.Guards.DiagnosticHintString,
 				ExtraChecks:    checks,
 			}
-			return health.HandleDoctorMCP(doctorDeps, req, version)
+			return health.HandleDoctorMCP(doctorDeps, req, h.state.Version)
 		},
 		"noise_rule": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			rewrittenArgs, err := cfg.RewriteNoiseRuleArgs(args)
@@ -156,13 +156,13 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 		"clear": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return toolconfigure.HandleClear(toolconfigure.ClearTargets{
 				Capture:  h.capture,
-				Resetter: newRuntimeResetter(h.capture),
+				Resetter: NewRuntimeResetter(h.capture),
 				ClearLogs: func() int {
-					count := h.server.logs.EntryCount()
-					h.server.logs.ClearEntries()
+					count := h.state.Logs.EntryCount()
+					h.state.Logs.ClearEntries()
 					return count
 				},
-				Inbox:       h.server.pushInbox,
+				Inbox:       h.state.PushInbox,
 				Annotations: h.annotationStore,
 			}, req, args)
 		},
@@ -192,7 +192,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 		},
 		"telemetry": configureLocal(h.configureLocalDeps, toolconfigure.HandleTelemetry),
 		"describe_capabilities": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return toolconfigure.HandleDescribeCapabilities(h.configureLocalDeps, req, args, version)
+			return toolconfigure.HandleDescribeCapabilities(h.configureLocalDeps, req, args, h.state.Version)
 		},
 		"tutorial": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return tutorial.HandleTutorial(h.tutorialDeps, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
@@ -221,7 +221,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return issuereport.Handle(h.issueReportDeps, req, args)
 		},
 		"setup_quality_gates": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return qualitygates.Handle(h.server.activeCodebase, req, args)
+			return qualitygates.Handle(h.state.ActiveCodebase, req, args)
 		},
 		"qa_fixture": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			if fixtureErr != nil {
@@ -244,7 +244,7 @@ func configureLocal(
 func handleConfigureHealth(
 	metrics *health.Metrics,
 	captureStore *capture.Capture,
-	server *Server,
+	state ServerState,
 	alerts *alertbuf.AlertBuffer,
 	recovery recoveryDiagnostics,
 	req mcp.JSONRPCRequest,
@@ -252,24 +252,24 @@ func handleConfigureHealth(
 	if metrics == nil {
 		return mcp.Fail(req, mcp.ErrInternal, "Health metrics not initialized", "Internal server error — do not retry")
 	}
-	response := getHealthResponse(metrics, captureStore, server, alerts, recovery, version)
+	response := getHealthResponse(metrics, captureStore, state, alerts, recovery, state.Version)
 	return mcp.Succeed(req, "Server health", response)
 }
 
-type serverDepsAdapter struct{ s *Server }
+type serverDepsAdapter struct{ state ServerState }
 
 func (a *serverDepsAdapter) GetTerminalPort() int {
-	if a.s == nil {
+	if a.state.TerminalStatus == nil {
 		return 0
 	}
-	return a.s.terminalStatus.Port()
+	return a.state.TerminalStatus.Port()
 }
 
 func (a *serverDepsAdapter) GetConsoleStats() (int, int, int64) {
-	if a.s == nil || a.s.logs == nil {
+	if a.state.Logs == nil {
 		return 0, serverdefaults.MaxLogEntries, 0
 	}
-	return a.s.logs.EntryCount(), a.s.logs.MaxEntries(), a.s.logs.DropCount()
+	return a.state.Logs.EntryCount(), a.state.Logs.MaxEntries(), a.state.Logs.DropCount()
 }
 
 type recoveryDiagnostics interface {
@@ -277,14 +277,11 @@ type recoveryDiagnostics interface {
 	Stats() statediag.CollectorStats
 }
 
-func getHealthResponse(hm *health.Metrics, cap *capture.Capture, server *Server, alerts *alertbuf.AlertBuffer, recovery recoveryDiagnostics, ver string) health.MCPHealthResponse {
-	var serverDeps health.ServerDeps
-	if server != nil {
-		serverDeps = &serverDepsAdapter{s: server}
-	}
+func getHealthResponse(hm *health.Metrics, cap *capture.Capture, state ServerState, alerts *alertbuf.AlertBuffer, recovery recoveryDiagnostics, ver string) health.MCPHealthResponse {
+	var serverDeps health.ServerDeps = &serverDepsAdapter{state: state}
 	var upgrade health.UpgradeProvider
-	if server != nil && server.runtime != nil && server.runtime.Upgrade() != nil {
-		upgrade = server.runtime.Upgrade()
+	if state.Runtime != nil && state.Runtime.Upgrade() != nil {
+		upgrade = state.Runtime.Upgrade()
 	}
 	response := hm.GetHealth(cap, serverDeps, upgrade, getLaunchModeInfo, alerts, ver)
 	if recovery != nil {
@@ -315,7 +312,7 @@ func buildConfigureLocalDeps(h *ToolHandler) toolconfigure.Deps {
 	return toolconfigure.Deps{
 		NoiseConfig: func() *noise.NoiseConfig { return h.noiseConfig },
 		ConsoleEntries: func() []types.LogEntry {
-			snapshot := h.server.logs.Entries()
+			snapshot := h.state.Logs.Entries()
 			entries := make([]types.LogEntry, len(snapshot))
 			for index, entry := range snapshot {
 				entries[index] = types.LogEntry(entry)
@@ -336,8 +333,8 @@ func buildConfigureLocalDeps(h *ToolHandler) toolconfigure.Deps {
 		SetSecurityMode: func(mode string, rewrites []string) {
 			h.capture.Extension().SetSecurityMode(mode, rewrites)
 		},
-		GetTelemetryMode:        func() string { return h.server.logs.TelemetryMode() },
-		SetTelemetryMode:        h.server.logs.SetTelemetryMode,
+		GetTelemetryMode:        func() string { return h.state.Logs.TelemetryMode() },
+		SetTelemetryMode:        h.state.Logs.SetTelemetryMode,
 		InteractActionSetJitter: h.interactRuntime.SetJitter,
 		InteractActionGetJitter: h.interactRuntime.GetJitter,
 	}
@@ -367,7 +364,7 @@ func buildIssueReportDeps(h *ToolHandler) issuereport.HandlerDeps {
 	return issuereport.HandlerDeps{
 		Collect: func(template, title, userContext string) issuereport.IssueReport {
 			report := issuereport.IssueReport{Template: template, Title: title, UserContext: userContext}
-			report.Diagnostics.Server.Version = version
+			report.Diagnostics.Server.Version = h.state.Version
 			report.Diagnostics.Platform.OS = runtime.GOOS
 			report.Diagnostics.Platform.Arch = runtime.GOARCH
 			report.Diagnostics.Platform.GoVersion = runtime.Version()
@@ -385,8 +382,8 @@ func buildIssueReportDeps(h *ToolHandler) issuereport.HandlerDeps {
 				report.Diagnostics.Buffers.NetworkEntries = health.NetworkBodyCount
 				report.Diagnostics.Buffers.ActionEntries = health.ActionCount
 			}
-			if h.server != nil {
-				report.Diagnostics.Buffers.ConsoleEntries = h.server.logs.EntryCount()
+			if h.state.Logs != nil {
+				report.Diagnostics.Buffers.ConsoleEntries = h.state.Logs.EntryCount()
 			}
 			return report
 		},
