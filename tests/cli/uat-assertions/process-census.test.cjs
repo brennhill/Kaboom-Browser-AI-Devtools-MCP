@@ -18,6 +18,27 @@ const REPO = resolve(__dirname, '..', '..', '..')
 const CENSUS = join(REPO, 'scripts', 'tests', 'framework', 'process-census.sh')
 const UAT_RUNNER = join(REPO, 'scripts', 'uat', 'runners', 'test-all-tools-comprehensive.sh')
 const SMOKE_RUNNER = join(REPO, 'scripts', 'uat', 'runners', 'smoke-test.sh')
+const RESULT_LIB = join(REPO, 'scripts', 'uat', 'orchestration', 'uat-result-lib.sh')
+
+/** Ask the runner's own exit rule whether a suite with these counters passed. */
+function suitePassed(pass, fail, aggregationErrors, leaks) {
+  return (
+    spawnSync(
+      '/bin/bash',
+      [
+        '-c',
+        'source "$1"; uat_suite_passed "$2" "$3" "$4" "$5" ""',
+        'test',
+        RESULT_LIB,
+        pass,
+        fail,
+        aggregationErrors,
+        leaks,
+      ],
+      { encoding: 'utf8' }
+    ).status === 0
+  )
+}
 
 /** Run a bash snippet with the census sourced. Returns {status, stdout, stderr}. */
 function withCensus(snippet, { timeout = 60000 } = {}) {
@@ -177,11 +198,19 @@ describe('the runners actually enforce it', () => {
     for (const fn of ['assert_no_process_growth', 'assert_no_duplicate_daemons', 'assert_no_launcher_processes']) {
       assert.match(src, new RegExp(`${fn} "category `), `${fn} not called per category`)
     }
+    // The exit rule moved out of the runner into uat_suite_passed so the printed
+    // verdict and the exit status could stop disagreeing. Matching the old inline
+    // `[ -n "$PROCESS_LEAK_CATEGORIES" ] ... exit 1` would now prove nothing, and
+    // matching the new call site would only prove a literal exists — so run the
+    // rule and check what it answers.
     assert.match(
       src,
-      /\[ -n "\$PROCESS_LEAK_CATEGORIES" \]\s*\)?;?\s*then\s*\n\s*exit 1/,
-      'a process leak does not fail the run'
+      /uat_suite_passed "\$TOTAL_PASS" "\$TOTAL_FAIL" "\$AGGREGATION_ERRORS" \\\n\s*"\$PROCESS_LEAK_CATEGORIES" "\$TIMED_OUT_CATEGORIES"/,
+      'the runner no longer hands its leak list to the exit rule'
     )
+    assert.match(src, /^exit "\$SUITE_EXIT"$/m, 'the runner does not exit with the rule’s verdict')
+    assert.equal(suitePassed('1', '0', '0', ' 21'), false, 'a process leak does not fail the run')
+    assert.equal(suitePassed('1', '0', '0', ''), true, 'control: a clean run cannot pass either')
   })
 
   test('the smoke runner asserts after every module and gates its exit code', () => {

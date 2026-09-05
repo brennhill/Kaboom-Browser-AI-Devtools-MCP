@@ -18,7 +18,12 @@ HOME_ROOT="$PACKAGE_ROOT/home"
 PROJECT_FIXTURE="$PACKAGE_ROOT/project"
 PACK_ROOT="$PACKAGE_ROOT/packs"
 INSTALL_ROOT="$PACKAGE_ROOT/install"
-DAEMON_LOG="$PACKAGE_ROOT/daemon.log"
+DAEMON_STDIO="$PACKAGE_ROOT/daemon-stdio.log"
+# The daemon's structured log. Recovery incidents reach an operator through
+# Doctor and through this file; they are never written to the process's stdout or
+# stderr, so $DAEMON_STDIO is empty on every platform by design. 34.5 scanned
+# only that empty capture, which is why its log half never read a byte.
+DAEMON_LOG="$STATE_ROOT/logs/kaboom.jsonl"
 mkdir -p "$STATE_ROOT" "$HOME_ROOT/.kaboom" "$PROJECT_FIXTURE" "$PACK_ROOT" "$INSTALL_ROOT"
 
 case "$(go env GOOS)-$(go env GOARCH)" in
@@ -89,7 +94,7 @@ begin_test "34.2" "Startup survives corrupt persisted state" \
     cd "$PROJECT_FIXTURE" || exit 1
     HOME="$HOME_ROOT" KABOOM_STATE_DIR="$STATE_ROOT" KABOOM_TELEMETRY=off \
         "$PACKAGED_WRAPPER" --daemon --parallel --port "$PORT" --state-dir "$STATE_ROOT"
-) >"$DAEMON_LOG" 2>&1 &
+) >"$DAEMON_STDIO" 2>&1 &
 DAEMON_PID="$!"
 if wait_for_health 80; then
     pass "Packed daemon reached health after corrupt-state recovery"
@@ -172,6 +177,7 @@ begin_test "34.5" "Corrupt values stay redacted" \
 if [ ! -s "$DAEMON_LOG" ]; then
     fail "daemon log $DAEMON_LOG is missing or empty; the log half of the redaction scan could not run"
 elif grep -q "$RAW_FIXTURE_SECRET" "$DAEMON_LOG" ||
+    { [ -s "$DAEMON_STDIO" ] && grep -q "$RAW_FIXTURE_SECRET" "$DAEMON_STDIO"; } ||
     printf '%s\n%s' "$doctor_active" "$doctor_recovered" | grep -q "$RAW_FIXTURE_SECRET"; then
     fail "Raw persisted fixture content leaked into diagnostics"
 else
