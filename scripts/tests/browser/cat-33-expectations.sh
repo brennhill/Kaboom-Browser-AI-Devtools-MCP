@@ -68,6 +68,51 @@ action_content_expectation() {
         observe/storage) echo '"items"|"keys"|"storage_type"' ;;
         analyze/accessibility) echo '"violations"' ;;
 
+        # ── daemon-owned state: captured from a live daemon on 2026-09-05 by
+        #    replaying cat-33's own arguments against a daemon with no
+        #    extension attached, so each pattern is a field only the daemon can
+        #    produce and none of them depends on a browser being present.
+        #
+        #    These are SHAPE assertions: they prove the handler emitted its
+        #    documented collection rather than an error or a bare success
+        #    envelope. They do not prove the collection has the right contents —
+        #    that is what the human rig asks a person (scripts/uat/human).
+        analyze/annotations) echo '"annotations"' ;;
+        analyze/draw_history) echo '"sessions"' ;;
+        analyze/error_clusters) echo '"clusters"' ;;
+        analyze/navigation_patterns) echo '"entries"' ;;
+        analyze/security_audit) echo '"findings"' ;;
+        analyze/third_party_audit) echo '"third_parties"' ;;
+        analyze/verification) echo '"contract"' ;;
+        analyze/visual_baselines) echo '"keys"|"namespace"' ;;
+        configure/diff_sessions) echo '"snapshots"' ;;
+        configure/event_recording_start) echo '"recording_id"' ;;
+        configure/network_recording) echo '"active"' ;;
+        configure/qa_fixture) echo '"valid"' ;;
+        configure/report_issue) echo '"formatted_body"' ;;
+        configure/streaming) echo '"config"' ;;
+        configure/test_boundary_start) echo '"test_id"' ;;
+        generate/csp) echo '"policy"' ;;
+        generate/har) echo '"log"' ;;
+        generate/pr_summary) echo '"stats"' ;;
+        generate/reproduction) echo '"script"' ;;
+        generate/test) echo '"action_count"|"script"' ;;
+        interact/list_states) echo '"states"' ;;
+        observe/actions) echo '"entries"' ;;
+        observe/error_bundles) echo '"bundles"' ;;
+        observe/failed_commands) echo '"commands"' ;;
+        observe/history) echo '"entries"' ;;
+        observe/network_bodies) echo '"entries"' ;;
+        observe/pending_commands) echo '"completed"' ;;
+        observe/pilot) echo '"extension_connected"' ;;
+        observe/saved_videos) echo '"recordings"' ;;
+        observe/summarized_logs) echo '"groups"' ;;
+        observe/timeline) echo '"entries"' ;;
+        observe/transients) echo '"entries"' ;;
+        observe/vitals) echo '"metrics"' ;;
+        observe/websocket_events) echo '"entries"' ;;
+        observe/websocket_status) echo '"connections"' ;;
+
         *) echo "reachability_only" ;;
     esac
 }
@@ -77,4 +122,4 @@ action_content_expectation() {
 # This is a ratchet, not a target. cat-33 fails if the count exceeds it, so a
 # newly added mode cannot quietly join the untested majority, and every mode
 # that gains a real expectation must be paid for by lowering this number.
-UAT_REACHABILITY_BASELINE="${UAT_REACHABILITY_BASELINE:-131}"
+UAT_REACHABILITY_BASELINE="${UAT_REACHABILITY_BASELINE:-107}"

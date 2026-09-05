@@ -4,9 +4,10 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-22
+last_reviewed: 2026-09-05
 code_paths:
   - .github/workflows/ci.yml
+  - scripts/tests/browser/cat-33-expectations.sh
   - scripts/uat/runners/smoke-test.sh
   - scripts/smoke-tests/harness/framework-smoke.sh
   - scripts/smoke-tests/interact/14-browser-push.sh
@@ -68,6 +69,7 @@ code_paths:
   - .wire-decode-exemptions.json
   - scripts/contracts/goarchitecture/main.go
 test_paths:
+  - scripts/contracts/uatcoverage/main_test.go
   - tests/cli/uat-assertions/process-census.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/uat/orchestration/uat-result-lib.test.mjs
@@ -396,3 +398,27 @@ unsafe mutation methods that previously compiled into `internal/capture`.
 - WebSocket harness: `cmd/browser-agent/internal/testpages/websocket.go`
 - RFC 6455 frame codec (shared with the terminal relay): `cmd/browser-agent/internal/wsframe/frame.go`
 - Behavior tests: `cmd/browser-agent/internal/testpages/testpages_test.go`, `cmd/browser-agent/internal/wsframe/frame_test.go`
+
+## The reachability ratchet runs without a browser
+
+`cat-33` refuses to let the count of reachability-only modes grow, but cat-33
+needs a connected extension and only 1 of 34 UAT categories runs in CI, so that
+ratchet gated nothing: 11 modes shipped past a baseline of 131 without anyone
+noticing.
+
+`scripts/contracts/uatcoverage` moves the check onto every commit. It reads the
+same two checked-in files the sweep reads — the shipped tool schema and
+`cat-33-expectations.sh` — so it needs no browser, and it holds three things:
+
+- The baseline equals the real count **exactly**. Slack is a mode's worth of
+  free coverage: with the baseline above the count, the next mode added with no
+  expectation passes both gates. Lowering it is how an improvement is locked in.
+- Every expectation names a mode that still ships. A stale entry is worse than a
+  missing one — it is counted as coverage for a mode that no longer exists.
+- Every reachability-only mode has a human UAT case, so a mode with no automated
+  content assertion is at least judged by a person.
+
+Content expectations are shape assertions: they prove the handler emitted its
+documented collection rather than an error or a bare success envelope. They do
+not prove the collection holds the right things. That is what the human rig
+asks (`docs/features/feature/human-uat-rig/`).
