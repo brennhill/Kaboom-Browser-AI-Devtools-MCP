@@ -21,7 +21,7 @@
     "noise/noise_builtin.go:builtinAnalyticsRuleSpecs": 100,
     "noise/noise_builtin.go:builtinBrowserRuleSpecs": 96,
     "noise/noise_builtin.go:builtinDevToolingRuleSpecs": 84,
-    "schema/analyze.go:analyzeToolSchema": 203,
+    "schema/analyze.go:analyzeToolSchema": 186,
     "schema/configure/properties_core.go:coreProperties": 124,
     "schema/configure/properties_runtime.go:runtimeProperties": 160,
     "schema/generate.go:generateToolSchema": 168,

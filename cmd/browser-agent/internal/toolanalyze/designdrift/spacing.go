@@ -89,7 +89,16 @@ func analyzeSpacing(elements []elementView, spec *designSpec) ([]finding, *skipp
 	if len(flow) == 0 && len(elements) > 0 {
 		return nil, &skipped{Category: categorySpacing, Reason: reasonNoInFlowElements}
 	}
-	if len(flow) < minimumGapsForRhythm+1 {
+
+	// A declared scale needs no peer group. It states which gaps are legal, so
+	// the single gap between two elements is judgeable on its own, and refusing
+	// to look made a rule the caller explicitly supplied unenforceable on every
+	// pair — the one case where inference has nothing to offer either.
+	minimumFlow, minimumGaps := minimumGapsForRhythm+1, minimumGapsForRhythm
+	if spec.declaresSpacing() {
+		minimumFlow, minimumGaps = 2, 1
+	}
+	if len(flow) < minimumFlow {
 		return nil, &skipped{
 			Category: categorySpacing,
 			Reason:   reasonInsufficientPeers,
@@ -97,7 +106,7 @@ func analyzeSpacing(elements []elementView, spec *designSpec) ([]finding, *skipp
 	}
 
 	byAxis, total := gapsByAxis(flow)
-	if total < minimumGapsForRhythm {
+	if total < minimumGaps {
 		return nil, &skipped{Category: categorySpacing, Reason: reasonInsufficientPeers}
 	}
 
@@ -133,13 +142,13 @@ func axisFindings(gaps []siblingGap, axis stackAxis, spec *designSpec) []finding
 	findings := overlapFindings(gaps, axis)
 
 	positive := positiveGaps(gaps)
-	if len(positive) < minimumGapsForRhythm {
+	provenance := spec.provenanceForSpacing()
+	declared := provenance == provenanceDeclared
+	if len(positive) == 0 || (!declared && len(positive) < minimumGapsForRhythm) {
 		return findings
 	}
 
 	rhythm, rhythmCount := modalGap(positive)
-	provenance := spec.provenanceForSpacing()
-	declared := provenance == provenanceDeclared
 	if !declared && !isRhythm(rhythmCount, len(positive)) {
 		// No gap size holds a strict majority, so there is no norm to deviate
 		// from. This is the same refusal inferredFindings makes for computed
@@ -186,17 +195,22 @@ type gapRhythm struct {
 // spacingFinding builds one gap finding, attributing the cause to whichever
 // rule actually owns the spacing.
 func spacingFinding(gap siblingGap, axis stackAxis, expected, provenance string, rhythm gapRhythm) finding {
-	confidence := confidenceLow
-	if float64(rhythm.count)/float64(rhythm.total) >= strongMajorityRatio {
-		confidence = confidenceHigh
-	}
+	declared := provenance == provenanceDeclared
 
 	// On the declared path the verdict comes from the spec, so the evidence
-	// names the spec. Quoting the modal gap there would offer a rhythm as the
-	// justification for a call the rhythm played no part in — and on a page with
-	// no mode at all, would invent one ("1 of 4 gaps measure 12px").
-	evidence := "declared spec spacing scale"
-	if provenance != provenanceDeclared {
+	// names the spec and the confidence is the caller's own certainty. Grading
+	// a stated rule by how many gaps happen to share a modal value reports the
+	// page's uniformity as doubt about the rule — and on a page with no mode at
+	// all it graded a declared violation "low" for having no majority, which is
+	// a triage signal that means nothing on this path.
+	confidence, evidence := confidenceHigh, "declared spec spacing scale"
+	if !declared {
+		// Quoting the modal gap on the declared path would offer a rhythm as
+		// the justification for a call the rhythm played no part in.
+		confidence = confidenceLow
+		if float64(rhythm.count)/float64(rhythm.total) >= strongMajorityRatio {
+			confidence = confidenceHigh
+		}
 		evidence = fmt.Sprintf("%d of %d %s gaps measure %s", rhythm.count, rhythm.total, axis, formatPx(rhythm.modal))
 	}
 
@@ -208,11 +222,19 @@ func spacingFinding(gap siblingGap, axis stackAxis, expected, provenance string,
 		owner = fmt.Sprintf("the parent's %s gap property", gap.after.ParentDisplay)
 	}
 
+	// The declared wording says where the verdict came from. "where the rhythm
+	// is 8px, 16px, 32px" named a rhythm no part of the page has and credited
+	// the caller's scale to an inference that never ran.
+	message := fmt.Sprintf("the %s gap before this element is %s where the rhythm is %s; the spacing is controlled by %s",
+		axis, formatPx(gap.size), expected, owner)
+	if declared {
+		message = fmt.Sprintf("the %s gap before this element is %s, which is not on the declared spacing scale (%s); the spacing is controlled by %s",
+			axis, formatPx(gap.size), expected, owner)
+	}
+
 	return newFinding(findingSpec{category: categorySpacing, property: "gap-" + axis.String(), el: gap.after,
 		observed: formatPx(gap.size), expected: expected, provenance: provenance,
-		confidence: confidence, evidence: evidence,
-		message: fmt.Sprintf("the %s gap before this element is %s where the rhythm is %s; the spacing is controlled by %s",
-			axis, formatPx(gap.size), expected, owner)})
+		confidence: confidence, evidence: evidence, message: message})
 }
 
 // overlapFindings reports negative gaps separately. An overlap is a different

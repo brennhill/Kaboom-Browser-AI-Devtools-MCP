@@ -1,12 +1,14 @@
-// contract_test.go — The finding contract, spec precedence, and the mode surface.
+// contract_test.go — The finding contract, spec precedence, the bounded
+// response envelope, and the mode surface.
+//
+// The shipped fixture's agreement with the expected-findings table lives in
+// analyzers_test.go; the two together exceed the 800-line file limit.
 
 package designdrift
 
 import (
 	"encoding/json"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -89,7 +91,8 @@ func TestMixedSpecProducesBothSeveritiesInOneResponse(t *testing.T) {
 	byCategory[categorySpacing] = spacingFindings
 	byCategory[categoryStyleConsistency] = consistencyFindings
 
-	result := buildAuditResult(".card", elements, len(elements), false, byCategory, nil)
+	result := buildAuditResult(auditInputs{selector: ".card", elements: elements, matchCount: len(elements),
+		byCategory: byCategory, window: normalizeWindow(0, 0)})
 	// Exact counts, not "at least one of each": >0 would be satisfied by almost
 	// any wrong behaviour, and the point of the case is that the two provenances
 	// coexist in known quantity.
@@ -107,9 +110,10 @@ func TestMixedSpecProducesBothSeveritiesInOneResponse(t *testing.T) {
 // TestBuildAuditResult_SkippedIsNotTheSameAsClean.
 func TestBuildAuditResult_SkippedIsNotTheSameAsClean(t *testing.T) {
 	t.Parallel()
-	result := buildAuditResult(".card", nil, 0, false,
-		map[string][]finding{categorySpacing: nil},
-		[]skipped{{Category: categoryDesignTokens, Reason: reasonNoTokens}})
+	result := buildAuditResult(auditInputs{selector: ".card",
+		byCategory: map[string][]finding{categorySpacing: nil},
+		skips:      []skipped{{Category: categoryDesignTokens, Reason: reasonNoTokens}},
+		window:     normalizeWindow(0, 0)})
 
 	if len(result.ChecksCompleted) != 1 || result.ChecksCompleted[0] != categorySpacing {
 		t.Errorf("checks_completed = %v, want just spacing", result.ChecksCompleted)
@@ -253,326 +257,6 @@ func TestHandle_TruncationSurvivesIntoTheEnvelope(t *testing.T) {
 	}
 }
 
-// --- The expected-findings table ---
-
-type expectedTable struct {
-	Fixture string `json:"fixture"`
-	Cases   []struct {
-		Name           string   `json:"name"`
-		Kind           string   `json:"kind"`
-		Selector       string   `json:"selector"`
-		ExpectElements int      `json:"expect_elements"`
-		Categories     []string `json:"categories"`
-		ExpectFindings []struct {
-			Category     string `json:"category"`
-			Property     string `json:"property"`
-			ElementIndex int    `json:"element_index"`
-			Severity     string `json:"severity"`
-			ExpectedFrom string `json:"expected_from"`
-			Confidence   string `json:"confidence"`
-		} `json:"expect_findings"`
-		ExpectSkipped []struct {
-			Category string `json:"category"`
-			Reason   string `json:"reason"`
-		} `json:"expect_skipped"`
-	} `json:"cases"`
-}
-
-func loadExpectedTable(t *testing.T) expectedTable {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join("testdata", "expected-findings.json"))
-	if err != nil {
-		t.Fatalf("read expected-findings table: %v", err)
-	}
-	var table expectedTable
-	if err := json.Unmarshal(data, &table); err != nil {
-		t.Fatalf("parse expected-findings table: %v", err)
-	}
-	return table
-}
-
-// TestExpectedFindingsTableIsConsistentWithTheCode keeps the shared table
-// honest.
-//
-// The table is the single source the UAT asserts against, and the UAT runs in a
-// browser where a typo in a category or severity name would simply never match
-// and quietly report zero findings. Validating it here means a rename in the Go
-// code breaks the build rather than silently disarming the UAT.
-func TestExpectedFindingsTableIsConsistentWithTheCode(t *testing.T) {
-	t.Parallel()
-	table := loadExpectedTable(t)
-	if len(table.Cases) == 0 {
-		t.Fatal("the expected-findings table is empty")
-	}
-
-	knownReasons := map[string]bool{reasonNoTokens: true, reasonInsufficientPeers: true, reasonNoElements: true, reasonNoInFlowElements: true, reasonAllPeersExcluded: true}
-	knownSeverity := map[string]bool{severityError: true, severityWarning: true}
-	knownProvenance := map[string]bool{provenanceDeclared: true, provenanceInferred: true}
-	knownConfidence := map[string]bool{confidenceHigh: true, confidenceLow: true}
-
-	positives, controls := 0, 0
-	for _, tc := range table.Cases {
-		if tc.Name == "" || tc.Selector == "" {
-			t.Errorf("case %+v is missing a name or selector", tc)
-		}
-		switch tc.Kind {
-		case "positive":
-			positives++
-		case "control":
-			controls++
-		default:
-			t.Errorf("case %q has kind %q, want positive or control", tc.Name, tc.Kind)
-		}
-		for _, category := range tc.Categories {
-			if !isKnownCategory(category) {
-				t.Errorf("case %q names unknown category %q", tc.Name, category)
-			}
-		}
-		for _, f := range tc.ExpectFindings {
-			if !isKnownCategory(f.Category) {
-				t.Errorf("case %q expects unknown category %q", tc.Name, f.Category)
-			}
-			if !knownSeverity[f.Severity] {
-				t.Errorf("case %q expects unknown severity %q", tc.Name, f.Severity)
-			}
-			if !knownProvenance[f.ExpectedFrom] {
-				t.Errorf("case %q expects unknown provenance %q", tc.Name, f.ExpectedFrom)
-			}
-			if !knownConfidence[f.Confidence] {
-				t.Errorf("case %q expects unknown confidence %q", tc.Name, f.Confidence)
-			}
-			if want := severityFor(f.ExpectedFrom); f.ExpectedFrom != "" && f.Severity != want {
-				t.Errorf("case %q pairs provenance %q with severity %q; the code derives %q",
-					tc.Name, f.ExpectedFrom, f.Severity, want)
-			}
-			if !isProducibleProperty(f.Category, f.Property) {
-				t.Errorf("case %q expects property %q, which the %s analyzer never emits",
-					tc.Name, f.Property, f.Category)
-			}
-		}
-		for _, s := range tc.ExpectSkipped {
-			if !knownReasons[s.Reason] {
-				t.Errorf("case %q expects unknown skip reason %q", tc.Name, s.Reason)
-			}
-		}
-	}
-
-	// The controls are the half that constrains precision. A table that drifts
-	// into positives-only would pass an analyzer that flags everything.
-	if positives == 0 || controls == 0 {
-		t.Fatalf("table has %d positives and %d controls; both are required", positives, controls)
-	}
-}
-
-// TestFixtureProducesExactlyTheExpectedFindings runs the real page's captured
-// computed styles through the analyzers and asserts the expected-findings table
-// in both directions.
-//
-// This is the check that the analyzers and the fixture actually agree. The unit
-// tests above use synthetic inputs, which prove the hazards are handled but not
-// that the fixture plants what the table claims; the UAT proves the live
-// extension path but only runs with a browser attached. This closes the gap in
-// CI: every planted positive must be found, and every negative control must
-// produce nothing.
-func TestFixtureProducesExactlyTheExpectedFindings(t *testing.T) {
-	t.Parallel()
-	table := loadExpectedTable(t)
-
-	raw, err := os.ReadFile(filepath.Join("testdata", "fixture-probe.json"))
-	if err != nil {
-		t.Fatalf("read captured fixture payload: %v", err)
-	}
-	var payloads map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &payloads); err != nil {
-		t.Fatalf("parse captured fixture payload: %v", err)
-	}
-
-	for _, tc := range table.Cases {
-		tc := tc
-		t.Run(tc.Name, func(t *testing.T) {
-			t.Parallel()
-			payload, ok := payloads[tc.Selector]
-			if !ok {
-				t.Fatalf("no captured payload for selector %q; re-capture the fixture", tc.Selector)
-			}
-
-			categories, invalid := resolveCategories(tc.Categories)
-			if invalid != "" {
-				t.Fatalf("case names invalid category %q", invalid)
-			}
-
-			params := auditParams{Selector: tc.Selector, Categories: tc.Categories}
-			if spec := specFor(t, table, tc.Name); spec != nil {
-				params.Spec = spec
-			}
-
-			deps := Deps{
-				ProbeStyles:    func(string, int, bool) (json.RawMessage, error) { return payload, nil },
-				TrackingStatus: func() (bool, string) { return true, "http://127.0.0.1/tests/design-drift.html" },
-			}
-			probe, err := captureProbe(deps, tc.Selector)
-			if err != nil {
-				t.Fatalf("decode payload: %v", err)
-			}
-			result := runAudit(params, probe, categories)
-
-			// Positive assertions first. A case whose only checks are "these
-			// findings are present" and "nothing extra" is satisfied by an empty
-			// result — which is how three of the four UAT controls used to pass
-			// on a blank response.
-			if tc.ExpectElements == 0 {
-				t.Fatalf("case %q declares no expect_elements; every case must assert something positive", tc.Name)
-			}
-			if result.ElementsAudited != tc.ExpectElements {
-				t.Errorf("audited %d element(s), table expects %d — fixture and table disagree",
-					result.ElementsAudited, tc.ExpectElements)
-			}
-			if accounted := len(result.ChecksCompleted) + len(result.ChecksSkipped); accounted != len(categories) {
-				t.Errorf("%d of %d requested categories accounted for; each must be completed or skipped",
-					accounted, len(categories))
-			}
-
-			assertFindingsMatch(t, tc.Name, tc.ExpectFindings, collectFindings(result))
-			assertSkipsMatch(t, tc.ExpectSkipped, result.ChecksSkipped)
-		})
-	}
-}
-
-// specFor re-reads the raw spec for a case, since the typed table above omits it.
-func specFor(t *testing.T, _ expectedTable, caseName string) *designSpec {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join("testdata", "expected-findings.json"))
-	if err != nil {
-		t.Fatalf("read table: %v", err)
-	}
-	var raw struct {
-		Cases []struct {
-			Name string      `json:"name"`
-			Spec *designSpec `json:"spec"`
-		} `json:"cases"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		t.Fatalf("parse table: %v", err)
-	}
-	for _, c := range raw.Cases {
-		if c.Name == caseName {
-			return c.Spec
-		}
-	}
-	return nil
-}
-
-type findingKey struct {
-	category string
-	property string
-	index    int
-}
-
-func collectFindings(result auditResult) map[findingKey]finding {
-	out := make(map[findingKey]finding)
-	for _, section := range result.Sections {
-		bucket, ok := section.(map[string]any)
-		if !ok {
-			continue
-		}
-		findings, ok := bucket["findings"].([]finding)
-		if !ok {
-			continue
-		}
-		for _, f := range findings {
-			out[findingKey{f.Category, f.Property, f.ElementIndex}] = f
-		}
-	}
-	return out
-}
-
-func assertFindingsMatch(t *testing.T, caseName string, want []struct {
-	Category     string `json:"category"`
-	Property     string `json:"property"`
-	ElementIndex int    `json:"element_index"`
-	Severity     string `json:"severity"`
-	ExpectedFrom string `json:"expected_from"`
-	Confidence   string `json:"confidence"`
-}, got map[findingKey]finding) {
-	t.Helper()
-
-	for _, expected := range want {
-		key := findingKey{expected.Category, expected.Property, expected.ElementIndex}
-		actual, found := got[key]
-		if !found {
-			t.Errorf("planted drift was not detected: %s element %d %s",
-				expected.Category, expected.ElementIndex, expected.Property)
-			continue
-		}
-		if actual.Severity != expected.Severity {
-			t.Errorf("%s element %d %s: severity %q, want %q",
-				expected.Category, expected.ElementIndex, expected.Property, actual.Severity, expected.Severity)
-		}
-		if expected.ExpectedFrom != "" && actual.ExpectedFrom != expected.ExpectedFrom {
-			t.Errorf("%s element %d %s: provenance %q, want %q",
-				expected.Category, expected.ElementIndex, expected.Property, actual.ExpectedFrom, expected.ExpectedFrom)
-		}
-		if actual.Confidence != expected.Confidence {
-			t.Errorf("%s element %d %s: confidence %q, want %q",
-				expected.Category, expected.ElementIndex, expected.Property, actual.Confidence, expected.Confidence)
-		}
-		delete(got, key)
-	}
-
-	// Anything left over is a false positive. For a control case this is the
-	// entire point of the case; for a positive it means the analyzer found more
-	// than was planted, which is just as wrong as finding less.
-	for key, extra := range got {
-		t.Errorf("case %q produced an unexpected finding — %s element %d %s (%s): %s",
-			caseName, key.category, key.index, key.property, extra.Severity, extra.Message)
-	}
-}
-
-func assertSkipsMatch(t *testing.T, want []struct {
-	Category string `json:"category"`
-	Reason   string `json:"reason"`
-}, got []skipped) {
-	t.Helper()
-	remaining := make(map[skipped]bool, len(got))
-	for _, s := range got {
-		remaining[s] = true
-	}
-	for _, expected := range want {
-		key := skipped{Category: expected.Category, Reason: expected.Reason}
-		if !remaining[key] {
-			t.Errorf("expected %s to be skipped as %s, got skips %+v", expected.Category, expected.Reason, got)
-			continue
-		}
-		delete(remaining, key)
-	}
-	for extra := range remaining {
-		t.Errorf("unexpected skip: %s was skipped as %s", extra.Category, extra.Reason)
-	}
-}
-
-// isProducibleProperty reports whether an analyzer can emit a finding for this
-// property, so the table cannot reference something that will never appear.
-func isProducibleProperty(category, property string) bool {
-	switch category {
-	case categoryStyleConsistency:
-		for _, candidate := range auditedProperties() {
-			if candidate == property {
-				return true
-			}
-		}
-	case categoryDesignTokens:
-		for _, candidate := range append(append([]string{}, spacingProperties()...), colorProperties()...) {
-			if candidate == property {
-				return true
-			}
-		}
-		return strings.HasPrefix(property, "--")
-	case categorySpacing:
-		return strings.HasPrefix(property, "gap-") || strings.HasPrefix(property, "overlap-")
-	}
-	return false
-}
-
 // TestViewsFrom_CarriesEveryWireFieldIntoTheAnalyzers covers the wire→analyzer
 // translation, which had no test at all. Every analyzer test builds elementView
 // directly and every element in the captured fixture is in flow, so viewsFrom
@@ -642,7 +326,8 @@ func TestBuildAuditResult_CountsAndOrdersFindings(t *testing.T) {
 			{Category: categoryDesignTokens, Severity: severityError, ElementIndex: 1, Property: "padding-top"},
 		},
 	}
-	result := buildAuditResult(".card", make([]elementView, 6), 6, false, byCategory, nil)
+	result := buildAuditResult(auditInputs{selector: ".card", elements: make([]elementView, 6), matchCount: 6,
+		byCategory: byCategory, window: normalizeWindow(0, 0)})
 
 	if result.TotalFindings != 3 {
 		t.Errorf("total_findings = %d, want 3", result.TotalFindings)
@@ -749,45 +434,228 @@ func TestHandle_InBandExtensionErrorIsNotACleanAudit(t *testing.T) {
 	}
 }
 
-// TestEnvelopeReportsWhatWasActuallyJudged covers kaboom-zxa0.
+// --- The bounded response (kaboom-4h7j) ---
+
+// driftingCardsProbe builds a probe payload of identically-broken cards: one
+// wrong padding, one wrong margin and three wrong colours each, against a page
+// that declares the tokens they near-miss. It is the shape that made the
+// response unbounded — forty such cards is one CSS edit and used to be 200
+// findings.
+func driftingCardsProbe(count int) json.RawMessage {
+	elements := make([]map[string]any, 0, count)
+	for i := 0; i < count; i++ {
+		elements = append(elements, map[string]any{
+			"selector": "div.card", "tag": "div", "index": i, "in_flow": true,
+			"computed_styles": map[string]string{
+				"padding-top": "15px", "padding-right": "15px", "padding-bottom": "15px", "padding-left": "15px",
+				"margin-top": "15px", "margin-right": "15px", "margin-bottom": "15px", "margin-left": "15px",
+				"color": "#2b56e2", "background-color": "#2b56e2", "border-color": "#2b56e2",
+			},
+			// A uniform 40px gap: the spacing analyzer finds a clean rhythm, so
+			// every finding below belongs to design_tokens and the section cap
+			// is measured on one section rather than spread across three.
+			"box_model": map[string]any{
+				"top": float64(i * 100), "bottom": float64(i*100 + 60),
+				"left": 0, "right": 400, "width": 400, "height": 60,
+			},
+		})
+	}
+	payload, err := json.Marshal(map[string]any{
+		"elements": elements, "count": count, "match_count": count, "truncated": false,
+		"root_tokens": map[string]string{"--spacing-md": "16px", "--color-primary-main": "#2a55e1"},
+	})
+	if err != nil {
+		panic(err)
+	}
+	return payload
+}
+
+// TestEnvelopeBoundsEverySectionAndPagesToEveryFinding covers kaboom-4h7j.
 //
-// elements_audited counts PROBED elements, not judged ones, and there is no
-// field for exclusions. A group where the state-variant filter removed three of
-// seven reports "across 7 element(s)" while the evidence says "3 of 4 peers" —
-// and when everything is excluded it reports insufficient_peers, sending the
-// reader to look for elements that are present.
-func TestEnvelopeReportsWhatWasActuallyJudged(t *testing.T) {
+// At the mode's own element cap the envelope measured 588KB, of which
+// mcp.ClampResponseSize kept 46KB — it cuts the JSON mid-string, so the rest
+// was neither readable nor recoverable, and the clamp note told the caller to
+// page with parameters design_audit did not accept. Both halves are asserted
+// here: the response fits, AND every finding the audit made is reachable.
+func TestEnvelopeBoundsEverySectionAndPagesToEveryFinding(t *testing.T) {
 	t.Parallel()
-	mk := func(i int, sel, family string) elementView {
-		return makeElement(i, sel, map[string]string{"font-family": family, "font-size": "14px"})
+	const cards = 40
+	payload := driftingCardsProbe(cards)
+	deps := Deps{
+		ProbeStyles:    func(string, int, bool) (json.RawMessage, error) { return payload, nil },
+		TrackingStatus: func() (bool, string) { return true, "https://app.example.test" },
 	}
-	els := []elementView{
-		mk(0, "div.card", "Inter, sans-serif"), mk(1, "div.card", "Inter, sans-serif"),
-		mk(2, "div.card", "Inter, sans-serif"), mk(3, "div.card", "Roboto, sans-serif"),
-		mk(4, "div.interactive-card", "Inter, sans-serif"),
-		mk(5, "div.opening-hours", "Inter, sans-serif"),
+
+	resp := Handle(deps, request(), json.RawMessage(`{"what":"design_audit","selector":".card"}`))
+	if _, report := mcp.ClampResponseSize(resp.Result); report.Truncated {
+		t.Fatalf("the default response was clamped at %d bytes; the findings past the cut are unrecoverable", len(resp.Result))
 	}
-	if excluded := len(els) - len(eligiblePeers(els)); excluded != 0 {
-		t.Errorf("%d ordinary component(s) were excluded as state variants: substring matching is too broad", excluded)
+
+	probe, err := captureProbe(deps, ".card")
+	if err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	categories, _ := resolveCategories(nil)
+	first := runAudit(auditParams{Selector: ".card"}, probe, categories)
+
+	// Control: the subject must produce more findings than one page holds, or
+	// every bound below would pass vacuously on a small audit.
+	if first.TotalFindings <= maxFindingsPerSection {
+		t.Fatalf("total_findings = %d; this case needs more findings than one page holds", first.TotalFindings)
+	}
+	if first.ReturnedFindings >= first.TotalFindings {
+		t.Fatalf("returned_findings = %d of %d; nothing was bounded", first.ReturnedFindings, first.TotalFindings)
+	}
+	if first.NextOffset == 0 {
+		t.Fatal("next_offset is absent on a bounded response, so the caller cannot reach the rest")
+	}
+	for category, section := range first.Sections {
+		bucket := section.(map[string]any)
+		if returned := bucket["returned"].(int); returned > maxFindingsPerSection {
+			t.Errorf("section %s returned %d findings, above the %d cap", category, returned, maxFindingsPerSection)
+		}
+	}
+
+	// Walk the pages the response points at and prove they cover the census.
+	seen := make(map[findingKey]bool, first.TotalFindings)
+	for offset, pages := 0, 0; ; pages++ {
+		if pages > cards {
+			t.Fatal("paging did not terminate")
+		}
+		page := runAudit(auditParams{Selector: ".card", Offset: offset}, probe, categories)
+		for key := range collectFindings(page) {
+			seen[key] = true
+		}
+		if page.NextOffset == 0 {
+			break
+		}
+		offset = page.NextOffset
+	}
+	if len(seen) != first.TotalFindings {
+		t.Errorf("paging reached %d distinct findings, but the audit made %d — the rest are unreachable",
+			len(seen), first.TotalFindings)
 	}
 }
 
-// TestAllPeersExcludedIsItsOwnReason: when the state filter removes every peer,
-// "insufficient_peers" sends the reader hunting for elements that are present
-// and visible. The two situations have different fixes and must be
-// distinguishable.
-func TestAllPeersExcludedIsItsOwnReason(t *testing.T) {
+// TestNormalizeWindow_CannotBeWidenedPastTheCap: a caller asking for everything
+// in one call is the request that puts the silent truncation back within reach.
+func TestNormalizeWindow_CannotBeWidenedPastTheCap(t *testing.T) {
 	t.Parallel()
-	variant := func(i int) elementView {
-		return makeElement(i, "div.tab.tab--active", map[string]string{
-			"font-family": "Inter, sans-serif", "font-size": "14px",
-		})
+	for _, limit := range []int{0, -5, maxFindingsPerSection + 1, 100000} {
+		if got := normalizeWindow(limit, 0).limit; got > maxFindingsPerSection {
+			t.Errorf("limit %d normalized to %d, above the %d cap", limit, got, maxFindingsPerSection)
+		}
 	}
-	findings, skip := analyzeConsistency([]elementView{variant(0), variant(1), variant(2), variant(3)}, nil)
-	if len(findings) != 0 {
-		t.Fatalf("expected no findings, got %+v", findings)
+	// Control: a limit inside the cap is honoured rather than silently reset.
+	if got := normalizeWindow(5, 0).limit; got != 5 {
+		t.Errorf("limit 5 normalized to %d; a smaller page must be respected", got)
 	}
-	if skip == nil || skip.Reason != reasonAllPeersExcluded {
-		t.Fatalf("skip = %+v, want reason %q", skip, reasonAllPeersExcluded)
+	if got := normalizeWindow(5, -1).offset; got != 0 {
+		t.Errorf("a negative offset normalized to %d, want 0", got)
+	}
+}
+
+// --- Shorthand collapse (kaboom-4h7j) ---
+
+func longhandFinding(property, observed string) finding {
+	return newFinding(findingSpec{category: categoryDesignTokens, property: property,
+		el: makeElement(0, "div.card", nil), observed: observed, expected: "--spacing-md (16px)",
+		provenance: provenanceInferred, confidence: confidenceHigh, evidence: "page token --spacing-md = 16px",
+		message: property + " is " + observed + ", a near-miss of the page token --spacing-md (16px)"})
+}
+
+// TestCollapseShorthandDuplicates_OnlyTheUniformGroupCollapses covers the third
+// missing bound of kaboom-4h7j: `padding: 15px` produced four byte-identical
+// findings differing only in longhand name, for one edit.
+func TestCollapseShorthandDuplicates_OnlyTheUniformGroupCollapses(t *testing.T) {
+	t.Parallel()
+	uniform := collapseShorthandDuplicates([]finding{
+		longhandFinding("padding-top", "15px"), longhandFinding("padding-right", "15px"),
+		longhandFinding("padding-bottom", "15px"), longhandFinding("padding-left", "15px"),
+	})
+	if len(uniform) != 1 {
+		t.Fatalf("one `padding: 15px` produced %d findings, want 1: %+v", len(uniform), uniform)
+	}
+	if uniform[0].Property != "padding" {
+		t.Errorf("collapsed property = %q, want padding", uniform[0].Property)
+	}
+	if !strings.HasPrefix(uniform[0].Message, "padding is 15px") {
+		t.Errorf("collapsed message still names a longhand: %q", uniform[0].Message)
+	}
+
+	// Control: a partial group must NOT collapse. `padding: 15px 16px` drifts on
+	// two sides only, and "padding is 15px" would be false about the other two.
+	partial := collapseShorthandDuplicates([]finding{
+		longhandFinding("padding-top", "15px"), longhandFinding("padding-bottom", "15px"),
+		longhandFinding("padding-left", "17px"),
+	})
+	if len(partial) != 3 {
+		t.Fatalf("a partial group collapsed: %d finding(s), want 3: %+v", len(partial), partial)
+	}
+	for _, f := range partial {
+		if f.Property == "padding" {
+			t.Errorf("a partial group was reported as the whole shorthand: %+v", f)
+		}
+	}
+}
+
+// --- Cross-category reconciliation (kaboom-w1et) ---
+
+func measuredGapFinding(index int, observed, expected string) finding {
+	return newFinding(findingSpec{category: categorySpacing, property: "gap-vertical",
+		el: makeElement(index, "div.rhythm-card", nil), observed: observed, expected: expected,
+		provenance: provenanceInferred, confidence: confidenceLow,
+		evidence: "3 of 4 vertical gaps measure " + expected, message: "gap"})
+}
+
+func proximityGuessFinding(index int, property, observed string) finding {
+	return newFinding(findingSpec{category: categoryDesignTokens, property: property,
+		el: makeElement(index, "div.rhythm-card", nil), observed: observed, expected: "--spacing-md (16px)",
+		provenance: provenanceInferred, confidence: confidenceHigh,
+		evidence: "page token --spacing-md = 16px", message: property + " near-miss"})
+}
+
+// TestReconcileAcrossCategories_ProximityLosesToTheMeasuredGap covers kaboom-w1et.
+//
+// On the shipped fixture the DEFAULT call reported the same 14px twice with
+// contradictory targets, and the wrong one (16px, from proximity) carried
+// confidence:high while the right one (24px, from the measured rhythm) carried
+// confidence:low — so an agent triaging by confidence applied the target that
+// makes the page worse.
+func TestReconcileAcrossCategories_ProximityLosesToTheMeasuredGap(t *testing.T) {
+	t.Parallel()
+	result := buildAuditResult(auditInputs{selector: ".rhythm-card", elements: make([]elementView, 5), matchCount: 5,
+		byCategory: map[string][]finding{
+			categorySpacing:      {measuredGapFinding(3, "14px", "24px")},
+			categoryDesignTokens: {proximityGuessFinding(3, "margin-top", "14px")},
+		}, window: normalizeWindow(0, 0)})
+
+	tokens := result.Sections[categoryDesignTokens].(map[string]any)
+	if got := tokens["total"].(int); got != 0 {
+		t.Errorf("the contradicted proximity guess survived: %d design_tokens finding(s)", got)
+	}
+	survivors := result.Sections[categorySpacing].(map[string]any)["findings"].([]finding)
+	if len(survivors) != 1 || survivors[0].Expected != "24px" {
+		t.Fatalf("the measured verdict did not survive intact: %+v", survivors)
+	}
+	// Nothing is discarded silently: the rejected expectation stays visible.
+	if !strings.Contains(survivors[0].Evidence, "--spacing-md (16px)") {
+		t.Errorf("the superseded expectation vanished from the evidence: %q", survivors[0].Evidence)
+	}
+
+	// Control 1: a token finding about a DIFFERENT element is not about this
+	// gap and must survive. Control 2: so must one about a property that
+	// produces no gap. Without both, "reconciliation" would just be a filter
+	// that deletes the design_tokens section whenever spacing reports anything.
+	kept := buildAuditResult(auditInputs{selector: ".rhythm-card", elements: make([]elementView, 5), matchCount: 5,
+		byCategory: map[string][]finding{
+			categorySpacing: {measuredGapFinding(3, "14px", "24px")},
+			categoryDesignTokens: {
+				proximityGuessFinding(2, "margin-top", "14px"),
+				proximityGuessFinding(3, "padding-top", "14px"),
+			},
+		}, window: normalizeWindow(0, 0)})
+	if got := kept.Sections[categoryDesignTokens].(map[string]any)["total"].(int); got != 2 {
+		t.Errorf("reconciliation deleted findings it does not answer: %d design_tokens finding(s), want 2", got)
 	}
 }

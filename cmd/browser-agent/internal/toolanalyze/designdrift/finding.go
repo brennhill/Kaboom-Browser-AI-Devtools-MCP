@@ -9,7 +9,11 @@
 
 package designdrift
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
 
 // Categories, one per originating GitHub issue.
 const (
@@ -167,7 +171,15 @@ const (
 // analogue and reusing its shape keeps the two aggregatable by any caller that
 // already understands one of them.
 type auditResult struct {
-	TotalFindings   int            `json:"total_findings"`
+	// TotalFindings is every finding the analyzers produced, not just the ones
+	// this page carries. A census that shrank with the page size would make
+	// "how much drift does this page have?" unanswerable in one call.
+	TotalFindings int `json:"total_findings"`
+	// ReturnedFindings is how many findings this payload actually contains.
+	ReturnedFindings int `json:"returned_findings"`
+	// NextOffset is the offset that reaches the findings this page left behind.
+	// Absent when the response is complete.
+	NextOffset      int            `json:"next_offset,omitempty"`
 	BySeverity      map[string]int `json:"by_severity"`
 	Sections        map[string]any `json:"sections"`
 	ChecksCompleted []string       `json:"checks_completed"`
@@ -179,27 +191,97 @@ type auditResult struct {
 	PageURL         string         `json:"page_url,omitempty"`
 }
 
+// findingWindow is the slice of each section's findings one response carries.
+//
+// The mode asks the page for up to maxProbeElements elements, and a page whose
+// cards each break one rule produces several findings per element, so an
+// unbounded envelope crossed mcp.MaxResponseBytes at around 50 elements: 200
+// elements measured 588KB, of which ClampResponseSize kept 46KB — it truncates
+// the JSON mid-string, so the other 92% was neither readable nor recoverable,
+// and the clamp note told the caller to page with parameters this mode did not
+// accept. Bounding the sections here is what makes every finding reachable:
+// total_findings still reports the census, and next_offset names the call that
+// returns the rest.
+type findingWindow struct {
+	limit  int
+	offset int
+}
+
+const (
+	// defaultFindingsPerSection mirrors pageissues.pageIssuesPerSectionCap. The
+	// envelope was copied from that mode's shape; this is the bound that shape
+	// came with.
+	defaultFindingsPerSection = 50
+	// maxFindingsPerSection is the ceiling a caller may ask for. Three sections
+	// of 50 findings measure roughly 63KB, which clears the 100KB clamp with
+	// room for the envelope; letting a caller ask for more would put the
+	// silent-truncation failure back within reach of a single call.
+	maxFindingsPerSection = 50
+)
+
+// normalizeWindow turns caller input into a window that cannot exceed the cap.
+func normalizeWindow(limit, offset int) findingWindow {
+	if limit <= 0 || limit > maxFindingsPerSection {
+		limit = defaultFindingsPerSection
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return findingWindow{limit: limit, offset: offset}
+}
+
+// page returns the findings this window exposes and whether any remain behind it.
+func (w findingWindow) page(findings []finding) ([]finding, bool) {
+	if w.offset >= len(findings) {
+		return []finding{}, false
+	}
+	end := w.offset + w.limit
+	if end >= len(findings) {
+		return findings[w.offset:], false
+	}
+	return findings[w.offset:end], true
+}
+
+// auditInputs is everything the envelope is assembled from: what was probed,
+// what each category found, and how much of it this response carries.
+type auditInputs struct {
+	selector   string
+	elements   []elementView
+	matchCount int
+	truncated  bool
+	byCategory map[string][]finding
+	skips      []skipped
+	window     findingWindow
+}
+
 // buildAuditResult assembles the envelope from per-category findings.
-func buildAuditResult(selector string, elements []elementView, matchCount int, truncated bool,
-	byCategory map[string][]finding, skips []skipped) auditResult {
+func buildAuditResult(in auditInputs) auditResult {
+	byCategory := reconcileAcrossCategories(in.byCategory)
+	window, skips := in.window, in.skips
 
 	sections := make(map[string]any, len(byCategory))
 	completed := make([]string, 0, len(byCategory))
 	bySeverity := make(map[string]int)
-	total := 0
+	total, returned, nextOffset := 0, 0, 0
 
 	for _, category := range allCategories() {
-		findings, ran := byCategory[category]
+		raw, ran := byCategory[category]
 		if !ran {
 			continue
 		}
-		if findings == nil {
-			findings = []finding{}
-		}
+		findings := collapseShorthandDuplicates(raw)
 		sortFindings(findings)
-		sections[category] = map[string]any{"findings": findings, "total": len(findings)}
+		shown, more := window.page(findings)
+		sections[category] = map[string]any{
+			"findings": shown, "total": len(findings),
+			"returned": len(shown), "offset": window.offset, "has_more": more,
+		}
 		completed = append(completed, category)
 		total += len(findings)
+		returned += len(shown)
+		if more {
+			nextOffset = window.offset + window.limit
+		}
 		for _, f := range findings {
 			bySeverity[f.Severity]++
 		}
@@ -209,16 +291,196 @@ func buildAuditResult(selector string, elements []elementView, matchCount int, t
 	}
 
 	return auditResult{
-		TotalFindings:   total,
-		BySeverity:      bySeverity,
-		Sections:        sections,
-		ChecksCompleted: completed,
-		ChecksSkipped:   skips,
-		Selector:        selector,
-		ElementsAudited: len(elements),
-		Truncated:       truncated,
-		MatchCount:      matchCount,
+		TotalFindings:    total,
+		ReturnedFindings: returned,
+		NextOffset:       nextOffset,
+		BySeverity:       bySeverity,
+		Sections:         sections,
+		ChecksCompleted:  completed,
+		ChecksSkipped:    skips,
+		Selector:         in.selector,
+		ElementsAudited:  len(in.elements),
+		Truncated:        in.truncated,
+		MatchCount:       in.matchCount,
 	}
+}
+
+// --- Reconciliation across categories ---
+
+// gapProducingMargin names the margin longhand on the same element that
+// produces a measured gap, which is what makes two findings from two categories
+// findings about the same bytes rather than a coincidence of equal numbers.
+func gapProducingMargin(property string) (string, bool) {
+	switch property {
+	case "gap-vertical":
+		return "margin-top", true
+	case "gap-horizontal":
+		return "margin-left", true
+	}
+	return "", false
+}
+
+// reconcileAcrossCategories drops a token near-miss that a measured gap about
+// the same value already answers.
+//
+// The two analyzers could describe the same 14px and disagree about the fix. On
+// the shipped fixture the DEFAULT call returned both `[design_tokens]
+// margin-top idx=3 observed=14px expected=--spacing-md (16px) confidence=high`
+// and `[spacing] gap-vertical idx=3 observed=14px expected=24px
+// confidence=low`. 24px is the right answer — nearestLengthToken picked 16px
+// only because 14 sits inside the 15% band of 16 and outside the band of 24 —
+// so an agent triaging by confidence applied the target that makes the page
+// worse.
+//
+// Proximity loses. A rhythm is measured from what the page renders across the
+// element's own peers; a near-miss is the analyzer guessing that the author
+// reached for a token and mistyped. Both analyzers read the same probe, so a
+// declared spec makes both verdicts declared at once and the precedence never
+// inverts. The rejected expectation is folded into the survivor's evidence
+// rather than dropped, so a reviewer can still see what was considered.
+func reconcileAcrossCategories(byCategory map[string][]finding) map[string][]finding {
+	spacing, hasSpacing := byCategory[categorySpacing]
+	tokens, hasTokens := byCategory[categoryDesignTokens]
+	if !hasSpacing || !hasTokens || len(spacing) == 0 || len(tokens) == 0 {
+		return byCategory
+	}
+
+	measured := make([]finding, len(spacing))
+	copy(measured, spacing)
+	superseded := make(map[int]bool, len(tokens))
+
+	for i := range measured {
+		margin, addressable := gapProducingMargin(measured[i].Property)
+		if !addressable {
+			continue
+		}
+		for j, guess := range tokens {
+			if superseded[j] || guess.Property != margin ||
+				guess.ElementIndex != measured[i].ElementIndex || guess.Observed != measured[i].Observed {
+				continue
+			}
+			superseded[j] = true
+			measured[i].Evidence = fmt.Sprintf("%s; supersedes a %s near-miss on %s that expected %s",
+				measured[i].Evidence, categoryDesignTokens, guess.Property, guess.Expected)
+		}
+	}
+
+	kept := make([]finding, 0, len(tokens))
+	for j, guess := range tokens {
+		if !superseded[j] {
+			kept = append(kept, guess)
+		}
+	}
+
+	out := make(map[string][]finding, len(byCategory))
+	for category, findings := range byCategory {
+		out[category] = findings
+	}
+	out[categorySpacing] = measured
+	out[categoryDesignTokens] = kept
+	return out
+}
+
+// --- Shorthand collapse ---
+
+// boxShorthand is a CSS box shorthand and the longhands it writes, in CSS order.
+type boxShorthand struct {
+	name      string
+	longhands []string
+}
+
+// boxShorthands() are the shorthands whose longhands the token analyzer judges
+// one at a time. A function rather than a package var so the table cannot be
+// mutated at runtime.
+func boxShorthands() []boxShorthand {
+	return []boxShorthand{
+		{"padding", []string{"padding-top", "padding-right", "padding-bottom", "padding-left"}},
+		{"margin", []string{"margin-top", "margin-right", "margin-bottom", "margin-left"}},
+	}
+}
+
+// collapseShorthandDuplicates folds the four byte-identical findings a single
+// `padding: 15px` produces into the one edit that fixes them.
+//
+// The probe reports longhands because `padding: 15px 16px` really is two
+// values, so each side has to be judged on its own. But when all four sides
+// carry the same verdict the author wrote one declaration, and reporting it four
+// times multiplies every such element by four: forty identical cards with one
+// broken rule produced 200 findings for one edit, which is most of what pushed
+// the response past the response clamp.
+//
+// Only the complete, uniform group collapses. A partial group — `padding: 15px
+// 16px` drifting on two sides — keeps its longhands, because "padding is 15px"
+// would be false about the other two.
+func collapseShorthandDuplicates(findings []finding) []finding {
+	if len(findings) == 0 {
+		return []finding{}
+	}
+	collapseTo := make(map[int]string, len(findings))
+	drop := make(map[int]bool, len(findings))
+	for _, shorthand := range boxShorthands() {
+		for _, group := range uniformShorthandGroups(findings, shorthand) {
+			collapseTo[group[0]] = shorthand.name
+			for _, index := range group[1:] {
+				drop[index] = true
+			}
+		}
+	}
+
+	out := make([]finding, 0, len(findings))
+	for i, f := range findings {
+		if drop[i] {
+			continue
+		}
+		if name, collapsed := collapseTo[i]; collapsed {
+			f.Message = strings.Replace(f.Message, f.Property, name, 1)
+			f.Property = name
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// uniformShorthandGroups returns the index sets that cover every side of one
+// shorthand on one element with one identical verdict.
+func uniformShorthandGroups(findings []finding, shorthand boxShorthand) [][]int {
+	type verdictKey struct {
+		element  int
+		category string
+		verdict  string
+	}
+	members := make(map[verdictKey][]int)
+	order := make([]verdictKey, 0, len(findings))
+	for i, f := range findings {
+		if !namesOneOf(shorthand.longhands, f.Property) {
+			continue
+		}
+		key := verdictKey{f.ElementIndex, f.Category, strings.Join(
+			[]string{f.Observed, f.Expected, f.Severity, f.ExpectedFrom, f.Confidence, f.Evidence}, "\x00")}
+		if _, seen := members[key]; !seen {
+			order = append(order, key)
+		}
+		members[key] = append(members[key], i)
+	}
+
+	var groups [][]int
+	for _, key := range order {
+		// One element emits each longhand at most once per category, so a group
+		// the size of the shorthand covers every side of it.
+		if len(members[key]) == len(shorthand.longhands) {
+			groups = append(groups, members[key])
+		}
+	}
+	return groups
+}
+
+func namesOneOf(candidates []string, property string) bool {
+	for _, candidate := range candidates {
+		if candidate == property {
+			return true
+		}
+	}
+	return false
 }
 
 // sortFindings gives the response a stable order: errors before warnings, then

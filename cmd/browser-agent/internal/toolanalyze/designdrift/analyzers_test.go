@@ -1,14 +1,23 @@
-// analyzers_test.go — Style-consistency (#693) hazards.
+// analyzers_test.go — Style-consistency (#693) hazards, and the shipped
+// fixture's agreement with the expected-findings table.
 //
-// Every test here is a false-positive hazard first and a detection check
+// Every hazard test here is a false-positive hazard first and a detection check
 // second. An analyzer that flags everything detects all three issues perfectly
 // and is useless, so the controls are the part that constrains the design.
-// The spacing analyzer's hazards live in spacing_test.go, which grew past the
-// 800-line file limit while sharing this file.
+//
+// The fixture-agreement half is the cross-analyzer half: it drives the real
+// page's captured computed styles through every category and asserts the shared
+// table in both directions. It lives here rather than in contract_test.go
+// because that file holds the finding contract, the response envelope and the
+// mode surface, and the two together exceed the 800-line file limit — the same
+// split that moved the spacing hazards into spacing_test.go.
 
 package designdrift
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -277,5 +286,418 @@ func TestEligiblePeers_KeepsComponentsWhoseNamesContainStateWords(t *testing.T) 
 		if f.ElementIndex != 2 {
 			t.Errorf("blamed element %d, want 2", f.ElementIndex)
 		}
+	}
+}
+
+// TestEnvelopeReportsWhatWasActuallyJudged covers kaboom-zxa0.
+//
+// elements_audited counts PROBED elements, not judged ones, and there is no
+// field for exclusions. A group where the state-variant filter removed three of
+// seven reports "across 7 element(s)" while the evidence says "3 of 4 peers" —
+// and when everything is excluded it reports insufficient_peers, sending the
+// reader to look for elements that are present.
+func TestEnvelopeReportsWhatWasActuallyJudged(t *testing.T) {
+	t.Parallel()
+	mk := func(i int, sel, family string) elementView {
+		return makeElement(i, sel, map[string]string{"font-family": family, "font-size": "14px"})
+	}
+	els := []elementView{
+		mk(0, "div.card", "Inter, sans-serif"), mk(1, "div.card", "Inter, sans-serif"),
+		mk(2, "div.card", "Inter, sans-serif"), mk(3, "div.card", "Roboto, sans-serif"),
+		mk(4, "div.interactive-card", "Inter, sans-serif"),
+		mk(5, "div.opening-hours", "Inter, sans-serif"),
+	}
+	if excluded := len(els) - len(eligiblePeers(els)); excluded != 0 {
+		t.Errorf("%d ordinary component(s) were excluded as state variants: substring matching is too broad", excluded)
+	}
+}
+
+// TestAllPeersExcludedIsItsOwnReason: when the state filter removes every peer,
+// "insufficient_peers" sends the reader hunting for elements that are present
+// and visible. The two situations have different fixes and must be
+// distinguishable.
+func TestAllPeersExcludedIsItsOwnReason(t *testing.T) {
+	t.Parallel()
+	variant := func(i int) elementView {
+		return makeElement(i, "div.tab.tab--active", map[string]string{
+			"font-family": "Inter, sans-serif", "font-size": "14px",
+		})
+	}
+	findings, skip := analyzeConsistency([]elementView{variant(0), variant(1), variant(2), variant(3)}, nil)
+	if len(findings) != 0 {
+		t.Fatalf("expected no findings, got %+v", findings)
+	}
+	if skip == nil || skip.Reason != reasonAllPeersExcluded {
+		t.Fatalf("skip = %+v, want reason %q", skip, reasonAllPeersExcluded)
+	}
+}
+
+// --- The expected-findings table ---
+
+type expectedTable struct {
+	Fixture string `json:"fixture"`
+	Cases   []struct {
+		Name           string   `json:"name"`
+		Kind           string   `json:"kind"`
+		Selector       string   `json:"selector"`
+		ExpectElements int      `json:"expect_elements"`
+		Categories     []string `json:"categories"`
+		ExpectFindings []struct {
+			Category     string `json:"category"`
+			Property     string `json:"property"`
+			ElementIndex int    `json:"element_index"`
+			Severity     string `json:"severity"`
+			ExpectedFrom string `json:"expected_from"`
+			Confidence   string `json:"confidence"`
+		} `json:"expect_findings"`
+		ExpectSkipped []struct {
+			Category string `json:"category"`
+			Reason   string `json:"reason"`
+		} `json:"expect_skipped"`
+	} `json:"cases"`
+}
+
+func loadExpectedTable(t *testing.T) expectedTable {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "expected-findings.json"))
+	if err != nil {
+		t.Fatalf("read expected-findings table: %v", err)
+	}
+	var table expectedTable
+	if err := json.Unmarshal(data, &table); err != nil {
+		t.Fatalf("parse expected-findings table: %v", err)
+	}
+	return table
+}
+
+// TestExpectedFindingsTableIsConsistentWithTheCode keeps the shared table
+// honest.
+//
+// The table is the single source the UAT asserts against, and the UAT runs in a
+// browser where a typo in a category or severity name would simply never match
+// and quietly report zero findings. Validating it here means a rename in the Go
+// code breaks the build rather than silently disarming the UAT.
+func TestExpectedFindingsTableIsConsistentWithTheCode(t *testing.T) {
+	t.Parallel()
+	table := loadExpectedTable(t)
+	if len(table.Cases) == 0 {
+		t.Fatal("the expected-findings table is empty")
+	}
+
+	knownReasons := map[string]bool{reasonNoTokens: true, reasonInsufficientPeers: true, reasonNoElements: true, reasonNoInFlowElements: true, reasonAllPeersExcluded: true}
+	knownSeverity := map[string]bool{severityError: true, severityWarning: true}
+	knownProvenance := map[string]bool{provenanceDeclared: true, provenanceInferred: true}
+	knownConfidence := map[string]bool{confidenceHigh: true, confidenceLow: true}
+
+	positives, controls := 0, 0
+	for _, tc := range table.Cases {
+		if tc.Name == "" || tc.Selector == "" {
+			t.Errorf("case %+v is missing a name or selector", tc)
+		}
+		switch tc.Kind {
+		case "positive":
+			positives++
+		case "control":
+			controls++
+		default:
+			t.Errorf("case %q has kind %q, want positive or control", tc.Name, tc.Kind)
+		}
+		for _, category := range tc.Categories {
+			if !isKnownCategory(category) {
+				t.Errorf("case %q names unknown category %q", tc.Name, category)
+			}
+		}
+		for _, f := range tc.ExpectFindings {
+			if !isKnownCategory(f.Category) {
+				t.Errorf("case %q expects unknown category %q", tc.Name, f.Category)
+			}
+			if !knownSeverity[f.Severity] {
+				t.Errorf("case %q expects unknown severity %q", tc.Name, f.Severity)
+			}
+			if !knownProvenance[f.ExpectedFrom] {
+				t.Errorf("case %q expects unknown provenance %q", tc.Name, f.ExpectedFrom)
+			}
+			if !knownConfidence[f.Confidence] {
+				t.Errorf("case %q expects unknown confidence %q", tc.Name, f.Confidence)
+			}
+			if want := severityFor(f.ExpectedFrom); f.ExpectedFrom != "" && f.Severity != want {
+				t.Errorf("case %q pairs provenance %q with severity %q; the code derives %q",
+					tc.Name, f.ExpectedFrom, f.Severity, want)
+			}
+			if !isProducibleProperty(f.Category, f.Property) {
+				t.Errorf("case %q expects property %q, which the %s analyzer never emits",
+					tc.Name, f.Property, f.Category)
+			}
+		}
+		for _, s := range tc.ExpectSkipped {
+			if !knownReasons[s.Reason] {
+				t.Errorf("case %q expects unknown skip reason %q", tc.Name, s.Reason)
+			}
+		}
+	}
+
+	// The controls are the half that constrains precision. A table that drifts
+	// into positives-only would pass an analyzer that flags everything.
+	if positives == 0 || controls == 0 {
+		t.Fatalf("table has %d positives and %d controls; both are required", positives, controls)
+	}
+}
+
+// TestFixtureProducesExactlyTheExpectedFindings runs the real page's captured
+// computed styles through the analyzers and asserts the expected-findings table
+// in both directions.
+//
+// This is the check that the analyzers and the fixture actually agree. The unit
+// tests above use synthetic inputs, which prove the hazards are handled but not
+// that the fixture plants what the table claims; the UAT proves the live
+// extension path but only runs with a browser attached. This closes the gap in
+// CI: every planted positive must be found, and every negative control must
+// produce nothing.
+func TestFixtureProducesExactlyTheExpectedFindings(t *testing.T) {
+	t.Parallel()
+	table := loadExpectedTable(t)
+
+	raw, err := os.ReadFile(filepath.Join("testdata", "fixture-probe.json"))
+	if err != nil {
+		t.Fatalf("read captured fixture payload: %v", err)
+	}
+	var payloads map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &payloads); err != nil {
+		t.Fatalf("parse captured fixture payload: %v", err)
+	}
+
+	for _, tc := range table.Cases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+			payload, ok := payloads[tc.Selector]
+			if !ok {
+				t.Fatalf("no captured payload for selector %q; re-capture the fixture", tc.Selector)
+			}
+
+			categories, invalid := resolveCategories(tc.Categories)
+			if invalid != "" {
+				t.Fatalf("case names invalid category %q", invalid)
+			}
+
+			params := auditParams{Selector: tc.Selector, Categories: tc.Categories}
+			if spec := specFor(t, table, tc.Name); spec != nil {
+				params.Spec = spec
+			}
+
+			deps := Deps{
+				ProbeStyles:    func(string, int, bool) (json.RawMessage, error) { return payload, nil },
+				TrackingStatus: func() (bool, string) { return true, "http://127.0.0.1/tests/design-drift.html" },
+			}
+			probe, err := captureProbe(deps, tc.Selector)
+			if err != nil {
+				t.Fatalf("decode payload: %v", err)
+			}
+			result := runAudit(params, probe, categories)
+
+			// Positive assertions first. A case whose only checks are "these
+			// findings are present" and "nothing extra" is satisfied by an empty
+			// result — which is how three of the four UAT controls used to pass
+			// on a blank response.
+			if tc.ExpectElements == 0 {
+				t.Fatalf("case %q declares no expect_elements; every case must assert something positive", tc.Name)
+			}
+			if result.ElementsAudited != tc.ExpectElements {
+				t.Errorf("audited %d element(s), table expects %d — fixture and table disagree",
+					result.ElementsAudited, tc.ExpectElements)
+			}
+			if accounted := len(result.ChecksCompleted) + len(result.ChecksSkipped); accounted != len(categories) {
+				t.Errorf("%d of %d requested categories accounted for; each must be completed or skipped",
+					accounted, len(categories))
+			}
+
+			assertFindingsMatch(t, tc.Name, tc.ExpectFindings, collectFindings(result))
+			assertSkipsMatch(t, tc.ExpectSkipped, result.ChecksSkipped)
+		})
+	}
+}
+
+// specFor re-reads the raw spec for a case, since the typed table above omits it.
+func specFor(t *testing.T, _ expectedTable, caseName string) *designSpec {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "expected-findings.json"))
+	if err != nil {
+		t.Fatalf("read table: %v", err)
+	}
+	var raw struct {
+		Cases []struct {
+			Name string      `json:"name"`
+			Spec *designSpec `json:"spec"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("parse table: %v", err)
+	}
+	for _, c := range raw.Cases {
+		if c.Name == caseName {
+			return c.Spec
+		}
+	}
+	return nil
+}
+
+type findingKey struct {
+	category string
+	property string
+	index    int
+}
+
+func collectFindings(result auditResult) map[findingKey]finding {
+	out := make(map[findingKey]finding)
+	for _, section := range result.Sections {
+		bucket, ok := section.(map[string]any)
+		if !ok {
+			continue
+		}
+		findings, ok := bucket["findings"].([]finding)
+		if !ok {
+			continue
+		}
+		for _, f := range findings {
+			out[findingKey{f.Category, f.Property, f.ElementIndex}] = f
+		}
+	}
+	return out
+}
+
+func assertFindingsMatch(t *testing.T, caseName string, want []struct {
+	Category     string `json:"category"`
+	Property     string `json:"property"`
+	ElementIndex int    `json:"element_index"`
+	Severity     string `json:"severity"`
+	ExpectedFrom string `json:"expected_from"`
+	Confidence   string `json:"confidence"`
+}, got map[findingKey]finding) {
+	t.Helper()
+
+	for _, expected := range want {
+		key := findingKey{expected.Category, expected.Property, expected.ElementIndex}
+		actual, found := got[key]
+		if !found {
+			t.Errorf("planted drift was not detected: %s element %d %s",
+				expected.Category, expected.ElementIndex, expected.Property)
+			continue
+		}
+		if actual.Severity != expected.Severity {
+			t.Errorf("%s element %d %s: severity %q, want %q",
+				expected.Category, expected.ElementIndex, expected.Property, actual.Severity, expected.Severity)
+		}
+		if expected.ExpectedFrom != "" && actual.ExpectedFrom != expected.ExpectedFrom {
+			t.Errorf("%s element %d %s: provenance %q, want %q",
+				expected.Category, expected.ElementIndex, expected.Property, actual.ExpectedFrom, expected.ExpectedFrom)
+		}
+		if actual.Confidence != expected.Confidence {
+			t.Errorf("%s element %d %s: confidence %q, want %q",
+				expected.Category, expected.ElementIndex, expected.Property, actual.Confidence, expected.Confidence)
+		}
+		delete(got, key)
+	}
+
+	// Anything left over is a false positive. For a control case this is the
+	// entire point of the case; for a positive it means the analyzer found more
+	// than was planted, which is just as wrong as finding less.
+	for key, extra := range got {
+		t.Errorf("case %q produced an unexpected finding — %s element %d %s (%s): %s",
+			caseName, key.category, key.index, key.property, extra.Severity, extra.Message)
+	}
+}
+
+func assertSkipsMatch(t *testing.T, want []struct {
+	Category string `json:"category"`
+	Reason   string `json:"reason"`
+}, got []skipped) {
+	t.Helper()
+	remaining := make(map[skipped]bool, len(got))
+	for _, s := range got {
+		remaining[s] = true
+	}
+	for _, expected := range want {
+		key := skipped{Category: expected.Category, Reason: expected.Reason}
+		if !remaining[key] {
+			t.Errorf("expected %s to be skipped as %s, got skips %+v", expected.Category, expected.Reason, got)
+			continue
+		}
+		delete(remaining, key)
+	}
+	for extra := range remaining {
+		t.Errorf("unexpected skip: %s was skipped as %s", extra.Category, extra.Reason)
+	}
+}
+
+// isProducibleProperty reports whether an analyzer can emit a finding for this
+// property, so the table cannot reference something that will never appear.
+func isProducibleProperty(category, property string) bool {
+	switch category {
+	case categoryStyleConsistency:
+		for _, candidate := range auditedProperties() {
+			if candidate == property {
+				return true
+			}
+		}
+	case categoryDesignTokens:
+		producible := append(append([]string{}, spacingProperties()...), colorProperties()...)
+		for _, shorthand := range boxShorthands() {
+			// A uniform four-side group collapses onto the shorthand, so the
+			// shorthand is an emittable property too.
+			producible = append(producible, shorthand.name)
+		}
+		if namesOneOf(producible, property) {
+			return true
+		}
+		return strings.HasPrefix(property, "--")
+	case categorySpacing:
+		return strings.HasPrefix(property, "gap-") || strings.HasPrefix(property, "overlap-")
+	}
+	return false
+}
+
+// TestAnalyzeConsistency_DeclaredSpecIsEnforceableOnAPair covers kaboom-d7f9
+// sub-defect 2.
+//
+// analyzeConsistency returned insufficient_peers before any spec was consulted,
+// so two elements both rendering Comic Sans against a spec naming Inter
+// answered "Design audit ran no checks". A declared rule needs no peer group —
+// declaredFindings already argues exactly that for the majority case, where a
+// uniformly wrong page has a wrong majority.
+func TestAnalyzeConsistency_DeclaredSpecIsEnforceableOnAPair(t *testing.T) {
+	t.Parallel()
+	pair := []elementView{
+		makeElement(0, "p.pair-item", map[string]string{"font-family": "Inter, sans-serif", "font-size": "12px"}),
+		makeElement(1, "p.pair-item", map[string]string{"font-family": "Roboto, sans-serif", "font-size": "12px"}),
+	}
+	spec := &designSpec{FontFamilies: []string{"Inter"}}
+
+	declared, skip := analyzeConsistency(pair, spec)
+	if skip != nil {
+		t.Fatalf("a stated rule needs no majority, but the category was skipped: %+v", skip)
+	}
+	if len(declared) != 1 {
+		t.Fatalf("expected the one element the spec forbids, got %d: %+v", len(declared), declared)
+	}
+	if declared[0].ElementIndex != 1 {
+		t.Errorf("the finding blames element %d; element 1 is the Roboto one", declared[0].ElementIndex)
+	}
+	if declared[0].Severity != severityError || declared[0].ExpectedFrom != provenanceDeclared {
+		t.Errorf("a declared violation reported %s/%s", declared[0].Severity, declared[0].ExpectedFrom)
+	}
+
+	// Control 1: without the spec the same pair still refuses to guess, so the
+	// case above is the spec working rather than the peer minimum being gone.
+	if inferred, skip := analyzeConsistency(pair, nil); len(inferred) != 0 || skip == nil || skip.Reason != reasonInsufficientPeers {
+		t.Errorf("with no spec a pair must stay insufficient_peers; got %d finding(s) and skip %+v", len(inferred), skip)
+	}
+	// Control 2: a pair that both obey the spec produces nothing, so the path
+	// is judging values rather than reporting every element it now reaches.
+	compliant := []elementView{
+		makeElement(0, "p.pair-item", map[string]string{"font-family": "Inter, sans-serif"}),
+		makeElement(1, "p.pair-item", map[string]string{"font-family": "Inter, sans-serif"}),
+	}
+	if clean, skip := analyzeConsistency(compliant, spec); len(clean) != 0 || skip != nil {
+		t.Errorf("a compliant pair is clean; got %d finding(s) and skip %+v", len(clean), skip)
 	}
 }

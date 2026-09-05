@@ -3,7 +3,7 @@ doc_type: product-spec
 feature_id: feature-design-drift-audit
 status: shipped
 owners: []
-last_reviewed: 2026-08-22
+last_reviewed: 2026-09-05
 links:
   index: ./index.md
   tech: ./tech-spec.md
@@ -20,7 +20,7 @@ links:
 - User value: one call over a rendered page returns the specific elements that
   drifted, each with the value observed, the value expected, and where that
   expectation came from.
-- Surface: `analyze({ what: "design_audit", selector, categories?, spec? })`.
+- Surface: `analyze({ what: "design_audit", selector, categories?, spec?, limit?, offset? })`.
 
 ## Problem
 
@@ -71,6 +71,20 @@ in the same response stay warnings.
 Inference alone cannot flag a page that is uniformly wrong — there the majority
 *is* the wrong value — which is why a caller can declare the design system.
 
+### One defect is one finding, and the response says how many there are
+
+Two categories can describe the same pixels: the gap before a card *is* that
+card's `margin-top`. When they disagree the measured rhythm wins and the token
+near-miss is dropped into the survivor's evidence, because a rhythm is measured
+from what the page renders while a near-miss is a guess that the author reached
+for a token. Four longhand findings from one `padding: 15px` collapse to one, so
+the count a caller sees is the number of edits, not the number of properties.
+
+Sections are capped (`limit`, default and maximum 50) and pageable (`offset`).
+`total_findings` always reports the whole census and `next_offset` names the
+call that returns the rest, so a caller can never mistake a bounded response for
+a complete one — or, as before, for a clean page.
+
 ## User stories
 
 - As an agent finishing a UI change, I audit the component I touched and get the
@@ -97,8 +111,21 @@ Inference alone cannot flag a page that is uniformly wrong — there the majorit
    token match is the success state and produces nothing.
 6. A category that could not run reports `checks_skipped` with a reason. Zero
    findings because nothing ran must not be reported as a clean page.
-7. Groups under three peers report `insufficient_peers` rather than a verdict.
-8. Confidence scales with majority strength.
+7. Groups under three peers report `insufficient_peers` rather than a verdict
+   **when the analyzer is inferring**. A caller-supplied `spec` is enforceable on
+   any group size, including a pair; the peer minimum guards the majority vote,
+   not the stated rule.
+8. Confidence scales with majority strength on the inferred path. A declared
+   violation is always `high`: the caller stated the rule, so grading it by the
+   page's uniformity reports doubt the caller does not have.
+9. No finding is silently discarded. Sections are capped at `limit` findings
+   (default and maximum 50) and paged with `offset`; `total_findings` reports the
+   full census and `next_offset` names the call that returns the rest.
+10. Two categories may not report the same element and value with contradictory
+    targets. The measured verdict supersedes the proximity guess, and the
+    rejected expectation is carried in the survivor's evidence.
+11. Findings for all four longhands of one box shorthand carrying one identical
+    verdict collapse onto the shorthand. A partial group keeps its longhands.
 
 ## Non-goals
 
@@ -127,3 +154,8 @@ skew the majority everything else is judged against.
   exact token match, parent-owned flex gap, two-element group.
 - A uniformly-wrong page produces errors when a `spec` is supplied.
 - Both directions are asserted in CI without a browser.
+- The DEFAULT call — no `categories` — is one of the asserted cases. Every other
+  case narrows, and that gap is why two categories shipped contradicting each
+  other about the same 14px.
+- Forty identically-broken cards fit in one response, and paging by `offset`
+  reaches every finding the audit made.

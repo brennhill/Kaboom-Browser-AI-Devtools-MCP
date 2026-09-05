@@ -36,7 +36,7 @@
       "name": "token_cards_near_miss",
       "issue": 694,
       "kind": "positive",
-      "why": "padding:15px near-misses --spacing-md:16px on all four longhands, and #2b56e2 near-misses --color-primary-main:#2a55e1. The page declared those tokens; it never declared that THIS element's padding must use them, so the last step is the analyzer's proximity inference and the finding is inferred/warning. Only a caller-supplied spec states a rule the element can break. Element 1 is the exact-match control and must contribute nothing.",
+      "why": "padding:15px near-misses --spacing-md:16px on all four longhands, and #2b56e2 near-misses --color-primary-main:#2a55e1. The page declared those tokens; it never declared that THIS element's padding must use them, so the last step is the analyzer's proximity inference and the finding is inferred/warning. Only a caller-supplied spec states a rule the element can break. The four longhands carry one identical verdict and the author wrote one declaration, so they collapse to a single `padding` finding — reporting the same edit four times is what multiplied 40 identical cards into 200 findings and pushed the response past the 100KB clamp. Element 1 is the exact-match control and must contribute nothing.",
       "selector": ".token-card",
       "expect_elements": 2,
       "categories": [
@@ -45,31 +45,7 @@
       "expect_findings": [
         {
           "category": "design_tokens",
-          "property": "padding-top",
-          "element_index": 0,
-          "severity": "warning",
-          "expected_from": "inferred",
-          "confidence": "high"
-        },
-        {
-          "category": "design_tokens",
-          "property": "padding-right",
-          "element_index": 0,
-          "severity": "warning",
-          "expected_from": "inferred",
-          "confidence": "high"
-        },
-        {
-          "category": "design_tokens",
-          "property": "padding-bottom",
-          "element_index": 0,
-          "severity": "warning",
-          "expected_from": "inferred",
-          "confidence": "high"
-        },
-        {
-          "category": "design_tokens",
-          "property": "padding-left",
+          "property": "padding",
           "element_index": 0,
           "severity": "warning",
           "expected_from": "inferred",
@@ -112,7 +88,7 @@
       "name": "spec_overrides_inference",
       "issue": 695,
       "kind": "positive",
-      "why": "With a declared spacing scale that omits 24 and 14, every gap violates a stated rule. This is the case inference alone cannot catch: the page is uniformly wrong, so the majority IS the wrong value. Severity flips to error because a declared rule was broken.",
+      "why": "With a declared spacing scale that omits 24 and 14, every gap violates a stated rule. This is the case inference alone cannot catch: the page is uniformly wrong, so the majority IS the wrong value. Severity flips to error because a declared rule was broken, and confidence is high on every one: the caller stated the scale, so grading the verdict by how many gaps share a modal value would report the page's uniformity as doubt about the caller's own rule.",
       "selector": ".rhythm-card",
       "expect_elements": 5,
       "categories": [
@@ -132,7 +108,7 @@
           "element_index": 1,
           "severity": "error",
           "expected_from": "declared",
-          "confidence": "low"
+          "confidence": "high"
         },
         {
           "category": "spacing",
@@ -140,7 +116,7 @@
           "element_index": 2,
           "severity": "error",
           "expected_from": "declared",
-          "confidence": "low"
+          "confidence": "high"
         },
         {
           "category": "spacing",
@@ -148,7 +124,7 @@
           "element_index": 3,
           "severity": "error",
           "expected_from": "declared",
-          "confidence": "low"
+          "confidence": "high"
         },
         {
           "category": "spacing",
@@ -156,7 +132,82 @@
           "element_index": 4,
           "severity": "error",
           "expected_from": "declared",
+          "confidence": "high"
+        }
+      ],
+      "expect_skipped": []
+    },
+    {
+      "name": "default_all_categories_reconciles_contradictions",
+      "issue": 695,
+      "kind": "positive",
+      "why": "The DEFAULT call — no `categories`, all three analyzers — on the stack whose gaps run 24/24/14/24. Every other case narrows categories, which is why this shipped: design_tokens saw margin-top:14px as a near-miss of --spacing-md (16px) at confidence:high while spacing measured the same 14px against the 24px rhythm at confidence:low, so an agent triaging by confidence applied 16px and made the page worse. Only the measured gap survives; the rejected proximity guess is folded into its evidence rather than dropped. design_tokens and style_consistency complete with nothing, which is the point — a category that ran and found nothing is not a skip.",
+      "selector": ".rhythm-card",
+      "expect_elements": 5,
+      "expect_findings": [
+        {
+          "category": "spacing",
+          "property": "gap-vertical",
+          "element_index": 3,
+          "severity": "warning",
+          "expected_from": "inferred",
           "confidence": "low"
+        }
+      ],
+      "expect_skipped": []
+    },
+    {
+      "name": "declared_font_spec_on_a_pair",
+      "issue": 693,
+      "kind": "positive",
+      "why": "The same two-element group as two_element_group_control, but with the font stated. A declared rule needs no majority: element 1 renders Roboto against a spec naming Inter, which is a violation, not a coin flip. Checking peer count before consulting the spec made a rule the caller explicitly supplied unenforceable on every group of two — the one case where inference has nothing to offer either.",
+      "selector": ".pair-item",
+      "expect_elements": 2,
+      "categories": [
+        "style_consistency"
+      ],
+      "spec": {
+        "font_families": [
+          "Inter"
+        ]
+      },
+      "expect_findings": [
+        {
+          "category": "style_consistency",
+          "property": "font-family",
+          "element_index": 1,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "high"
+        }
+      ],
+      "expect_skipped": []
+    },
+    {
+      "name": "declared_scale_on_a_pair",
+      "issue": 695,
+      "kind": "positive",
+      "why": "One gap is its own norm under inference, but a declared scale states which gaps are legal, so the single 12px gap between the two pair items is judgeable on its own. Without this, a stated spacing rule was unenforceable on any pair.",
+      "selector": ".pair-item",
+      "expect_elements": 2,
+      "categories": [
+        "spacing"
+      ],
+      "spec": {
+        "spacing_scale": [
+          8,
+          16,
+          32
+        ]
+      },
+      "expect_findings": [
+        {
+          "category": "spacing",
+          "property": "gap-vertical",
+          "element_index": 1,
+          "severity": "error",
+          "expected_from": "declared",
+          "confidence": "high"
         }
       ],
       "expect_skipped": []

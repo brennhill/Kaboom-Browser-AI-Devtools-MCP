@@ -38,6 +38,16 @@ type auditParams struct {
 	Selector   string      `json:"selector"`
 	Categories []string    `json:"categories"`
 	Spec       *designSpec `json:"spec,omitempty"`
+	// Limit is the maximum findings returned per category, capped at
+	// maxFindingsPerSection. Offset skips that many findings in every category.
+	//
+	// These exist because the response is clamped at mcp.MaxResponseBytes and a
+	// clamp is not a page: it cuts the JSON mid-string and the rest is gone.
+	// Declaring them here is also what makes them reach the mode at all —
+	// ParseArgs drops any key the struct does not name, so `limit` was accepted
+	// by the schema and silently discarded.
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
 }
 
 // elementView is the analyzer-facing view of one probed element. The analyzers
@@ -107,6 +117,7 @@ func Handle(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCRes
 func runAudit(params auditParams, probe styleprobe.WireStyleProbeResult, categories map[string]bool) auditResult {
 	elements := viewsFrom(probe)
 	tokens := buildTokenTable(probe.RootTokens)
+	window := normalizeWindow(params.Limit, params.Offset)
 
 	byCategory := make(map[string][]finding, len(categories))
 	skips := make([]skipped, 0)
@@ -117,7 +128,9 @@ func runAudit(params auditParams, probe styleprobe.WireStyleProbeResult, categor
 				skips = append(skips, skipped{Category: category, Reason: reasonNoElements})
 			}
 		}
-		return buildAuditResult(params.Selector, elements, probe.MatchCount, probe.Truncated, byCategory, skips)
+		return buildAuditResult(auditInputs{selector: params.Selector, elements: elements,
+			matchCount: probe.MatchCount, truncated: probe.Truncated,
+			byCategory: byCategory, skips: skips, window: window})
 	}
 
 	for _, category := range allCategories() {
@@ -132,7 +145,9 @@ func runAudit(params auditParams, probe styleprobe.WireStyleProbeResult, categor
 		byCategory[category] = findings
 	}
 
-	return buildAuditResult(params.Selector, elements, probe.MatchCount, probe.Truncated, byCategory, skips)
+	return buildAuditResult(auditInputs{selector: params.Selector, elements: elements,
+		matchCount: probe.MatchCount, truncated: probe.Truncated,
+		byCategory: byCategory, skips: skips, window: window})
 }
 
 func runCategory(category string, elements []elementView, tokens tokenTable, spec *designSpec) ([]finding, *skipped) {
@@ -222,6 +237,15 @@ func summarize(result auditResult) string {
 		}
 		return fmt.Sprintf("Design audit found no drift across %d element(s)", result.ElementsAudited)
 	}
-	return fmt.Sprintf("Design audit found %d finding(s) across %d element(s): %d error(s), %d warning(s)",
+	headline := fmt.Sprintf("Design audit found %d finding(s) across %d element(s): %d error(s), %d warning(s)",
 		result.TotalFindings, result.ElementsAudited, result.BySeverity[severityError], result.BySeverity[severityWarning])
+	if result.ReturnedFindings < result.TotalFindings {
+		// Naming the exact next call is the difference between a bounded
+		// response and a truncated one. Without it the caller cannot tell that
+		// findings are missing, which is the state the response clamp used to
+		// leave them in.
+		headline += fmt.Sprintf("; showing %d — call again with offset:%d for the rest",
+			result.ReturnedFindings, result.NextOffset)
+	}
+	return headline
 }
