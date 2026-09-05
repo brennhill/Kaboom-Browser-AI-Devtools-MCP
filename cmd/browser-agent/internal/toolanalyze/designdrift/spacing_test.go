@@ -338,6 +338,120 @@ func TestAnalyzeSpacing_GapToleranceIsLoadBearing(t *testing.T) {
 	}
 }
 
+// TestRoundToTolerance_SnapsToTheNearestPixel pins the direction of the
+// sub-pixel snap, which every gap verdict is measured after.
+//
+// Truncating instead of rounding moves each gap up to a pixel toward zero, and
+// that pixel is spent out of gapDeviationTolerance: a 26.6px gap against a 24px
+// rhythm becomes 26 and disappears inside the 2px band instead of being
+// reported as the 27px it renders at. The existing sub-pixel case cannot see
+// this — its inputs all land within half a pixel of 24, where rounding and
+// truncation agree.
+func TestRoundToTolerance_SnapsToTheNearestPixel(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		value float64
+		want  float64
+	}{{23.6, 24}, {24.4, 24}, {26.6, 27}, {-0.4, 0}, {-23.6, -24}} {
+		if got := roundToTolerance(tc.value); got != tc.want {
+			t.Errorf("roundToTolerance(%v) = %v, want %v", tc.value, got, tc.want)
+		}
+	}
+
+	// The consequence at the analyzer: 26.6 is 2.6px off the rhythm and must be
+	// reported at the size the page renders.
+	findings, skip := analyzeSpacing(verticalStack(24, 24, 26.6), nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 1 || findings[0].Observed != "27px" {
+		t.Fatalf("a 26.6px gap should be reported as 27px; got %+v", findings)
+	}
+	// Control: 24.4px is the same rhythm, and snapping must not manufacture a
+	// finding out of a fractional pixel.
+	if clean, _ := analyzeSpacing(verticalStack(24, 24, 24.4), nil); len(clean) != 0 {
+		t.Errorf("a 0.4px fractional gap was reported as drift: %+v", clean)
+	}
+}
+
+// TestAnalyzeSpacing_AFlushRunHasARhythmOfZero: a list of flush rows is a
+// rhythm of 0px, and the row that picked up a stray margin is the outlier.
+//
+// Dropping the zero gaps from the measured set leaves one gap, which is below
+// the rhythm minimum, so the analyzer reports nothing at all — the one element
+// that is actually wrong becomes the only one it looks at and then declines to
+// judge.
+func TestAnalyzeSpacing_AFlushRunHasARhythmOfZero(t *testing.T) {
+	t.Parallel()
+	findings, skip := analyzeSpacing(verticalStack(0, 0, 0, 14), nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("expected the one gap that breaks a flush run, got %d: %+v", len(findings), findings)
+	}
+	if findings[0].Observed != "14px" || findings[0].Expected != "0px" {
+		t.Errorf("observed/expected = %s/%s, want 14px/0px", findings[0].Observed, findings[0].Expected)
+	}
+	// Control: a wholly flush run is clean, so zero gaps are being measured
+	// rather than simply always reported.
+	if clean, skip := analyzeSpacing(verticalStack(0, 0, 0, 0), nil); len(clean) != 0 || skip != nil {
+		t.Errorf("a uniformly flush run produced %d finding(s) and skip %+v", len(clean), skip)
+	}
+}
+
+// TestSharesLine_RequiresMutualCentreContainment covers the hazard the one-sided
+// test cannot see: a short element inside a tall one's span.
+//
+// A 20px label whose centre falls inside a 200px card's vertical extent is not
+// beside that card — it is inside or on top of it. Folding the two into one row
+// measures their spacing along the horizontal axis, so a stacked pair that
+// overlaps reads as a clean row and the layout break is never reported.
+func TestSharesLine_RequiresMutualCentreContainment(t *testing.T) {
+	t.Parallel()
+	tall := boxedElement(0, "div.card", 0, 0, 300, 200)
+	short := boxedElement(1, "span.label", 0, 0, 300, 20)
+	if sharesLine(tall, short, axisHorizontal) {
+		t.Error("a 20px label and a 200px card were folded into one row; their gap would be measured sideways")
+	}
+	if sharesLine(short, tall, axisHorizontal) {
+		t.Error("the same pair shares a line when the short element is the anchor; the test is order-dependent")
+	}
+	// Control: a genuine row of equal-height cards must still share a line, or
+	// the rule collapses into "nothing is ever a row" and every horizontal
+	// rhythm goes unmeasured.
+	if !sharesLine(boxedElement(0, "div.card", 0, 0, 300, 200), boxedElement(1, "div.card", 324, 4, 300, 200), axisHorizontal) {
+		t.Error("two same-height cards 4px out of alignment are one row and must share a line")
+	}
+}
+
+// TestIsGapOwningParent_NeedsAPositiveGapOnAFlexOrGridParent decides who the
+// message tells the reader to edit. A flex parent with `gap: 0` owns nothing,
+// and naming it sends an agent editing a rule that is already zero while the
+// child margin that actually produces the spacing goes untouched.
+func TestIsGapOwningParent_NeedsAPositiveGapOnAFlexOrGridParent(t *testing.T) {
+	t.Parallel()
+	el := func(display, gap string) elementView {
+		return elementView{ParentDisplay: display, ParentGap: gap}
+	}
+	for _, tc := range []struct {
+		display, gap string
+		want         bool
+	}{
+		{"flex", "24px", true},
+		{"grid", "24px", true},
+		{"inline-flex", "16px", true},
+		{"flex", "0px", false},
+		{"flex", "normal", false},
+		{"block", "24px", false},
+		{"", "24px", false},
+	} {
+		if got := isGapOwningParent(el(tc.display, tc.gap)); got != tc.want {
+			t.Errorf("isGapOwningParent(display=%q gap=%q) = %v, want %v", tc.display, tc.gap, got, tc.want)
+		}
+	}
+}
+
 // TestAnalyzeSpacing_OrdersByLayoutNotDOMOrder covers the documented flex
 // `order` hazard: DOM order stops being layout order the moment order, RTL or
 // absolute placement is involved, and measuring in DOM order then invents

@@ -39,6 +39,31 @@ func header(index, size int, family string) elementView {
 
 func itoaPx(v int) string { return formatPx(float64(v)) }
 
+func propertiesOf(findings []finding) []string {
+	out := make([]string, 0, len(findings))
+	for _, f := range findings {
+		out = append(out, f.Property)
+	}
+	return out
+}
+
+func equalStringSets(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	seen := make(map[string]int, len(got))
+	for _, v := range got {
+		seen[v]++
+	}
+	for _, v := range want {
+		seen[v]--
+		if seen[v] < 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // TestAnalyzeConsistency_DetectsTheIssueExample is GitHub #693 verbatim.
 func TestAnalyzeConsistency_DetectsTheIssueExample(t *testing.T) {
 	t.Parallel()
@@ -211,6 +236,65 @@ func TestAnalyzeConsistency_AuditsColour(t *testing.T) {
 	}
 	if findings[0].ElementIndex != 2 {
 		t.Errorf("blamed element %d, want 2", findings[0].ElementIndex)
+	}
+}
+
+// TestAnalyzeConsistency_AuditsLineHeight keeps line-height in the audited set.
+//
+// A 20px line-height among 24s shifts every baseline below it and is invisible
+// to any test that checks text is present. It had no dedicated case, so dropping
+// it from auditedProperties() changed nothing that any test observed.
+func TestAnalyzeConsistency_AuditsLineHeight(t *testing.T) {
+	t.Parallel()
+	peer := func(i int, lineHeight string) elementView {
+		return makeElement(i, "p.row", map[string]string{
+			"font-family": "Inter, sans-serif", "font-size": "13px",
+			"font-weight": "400", "line-height": lineHeight, "color": "rgb(17, 24, 39)",
+		})
+	}
+	findings, skip := analyzeConsistency([]elementView{
+		peer(0, "24px"), peer(1, "24px"), peer(2, "20px"), peer(3, "24px"),
+	}, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 1 || findings[0].Property != "line-height" || findings[0].ElementIndex != 2 {
+		t.Fatalf("expected one line-height finding on element 2, got %+v", findings)
+	}
+}
+
+// TestNormalizeFontFamily_IgnoresCaseAndQuoting: two elements resolving to the
+// same face through differently-written stacks are not drifting.
+//
+// getComputedStyle quotes a family whose name needs it and leaves the author's
+// capitalisation alone, so `"Inter", sans-serif` and `Inter, sans-serif` are one
+// font on the page. Comparing them raw splits a uniform group into two
+// "variants", and whichever spelling is rarer gets reported as drift on every
+// element that uses it.
+func TestNormalizeFontFamily_IgnoresCaseAndQuoting(t *testing.T) {
+	t.Parallel()
+	for _, stack := range []string{"Inter, sans-serif", `"Inter", sans-serif`, "inter, Helvetica", "'INTER'"} {
+		if got := normalizeFontFamily(stack); got != "inter" {
+			t.Errorf("normalizeFontFamily(%q) = %q, want inter", stack, got)
+		}
+	}
+	// Control: a genuinely different face still normalises differently, so the
+	// rule is not collapsing every stack onto one value.
+	if got := normalizeFontFamily("Roboto, sans-serif"); got == "inter" {
+		t.Error("Roboto normalised onto Inter; every font would then look uniform")
+	}
+
+	peer := func(i int, family string) elementView {
+		return makeElement(i, "p.row", map[string]string{"font-family": family, "font-size": "13px"})
+	}
+	findings, skip := analyzeConsistency([]elementView{
+		peer(0, "Inter, sans-serif"), peer(1, `"Inter", sans-serif`), peer(2, "INTER, Helvetica"),
+	}, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 0 {
+		t.Errorf("one face written three ways was reported as drift: %+v", findings)
 	}
 }
 

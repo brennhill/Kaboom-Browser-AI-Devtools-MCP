@@ -40,22 +40,22 @@
     },
     {
       "id": "ring_overwrites_at_capacity",
-      "file": "internal/capture/events.go",
-      "package": "./internal/capture",
-      "from": "r.size < len(r.storage)",
-      "to": "r.size <= len(r.storage)"
+      "file": "internal/capture/ringstore/store.go",
+      "package": "./internal/capture/ringstore",
+      "from": "s.size < len(s.storage)",
+      "to": "s.size <= len(s.storage)"
     },
     {
       "id": "ring_drop_is_bounded_by_size",
-      "file": "internal/capture/events.go",
-      "package": "./internal/capture",
-      "from": "count > r.size",
-      "to": "count < r.size"
+      "file": "internal/capture/ringstore/store.go",
+      "package": "./internal/capture/ringstore",
+      "from": "count > s.size",
+      "to": "count < s.size"
     },
     {
       "id": "sync_detects_reconnect_after_disconnect",
       "file": "internal/capture/syncruntime/handler.go",
-      "package": "./internal/capture",
+      "package": "./internal/capture/syncruntime",
       "from": "state.isReconnect = state.wasDisconnected",
       "to": "state.isReconnect = false"
     },
@@ -79,6 +79,174 @@
       "package": "./internal/session/clientreg",
       "from": "len(r.clients) >= maxClients",
       "to": "len(r.clients) > maxClients"
+    },
+    {
+      "id": "design_audit_views_from_hardcodes_in_flow",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "InFlow:        el.InFlow,",
+      "to": "InFlow:        true,"
+    },
+    {
+      "id": "design_audit_probe_cap_reduced",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "const maxProbeElements = 200",
+      "to": "const maxProbeElements = 20"
+    },
+    {
+      "id": "design_audit_probe_omits_custom_properties",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "raw, err := d.ProbeStyles(selector, maxProbeElements, true)",
+      "to": "raw, err := d.ProbeStyles(selector, maxProbeElements, false)"
+    },
+    {
+      "id": "design_audit_capture_probe_swallows_decode_error",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\t\treturn styleprobe.WireStyleProbeResult{}, fmt.Errorf(\"the page could not be probed: %w\", err)",
+      "to": "\t\treturn probe, nil"
+    },
+    {
+      "id": "design_audit_summarize_always_reports_clean",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\tif result.TotalFindings == 0 {",
+      "to": "\tif result.TotalFindings >= 0 {"
+    },
+    {
+      "id": "design_audit_default_categories_drop_spacing",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\t\tfor _, category := range allCategories() {\n\t\t\tall[category] = true\n\t\t}",
+      "to": "\t\tfor _, category := range allCategories() {\n\t\t\tif category == categorySpacing {\n\t\t\t\tcontinue\n\t\t\t}\n\t\t\tall[category] = true\n\t\t}"
+    },
+    {
+      "id": "design_audit_total_findings_reports_one_page",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/finding.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\t\ttotal += len(findings)",
+      "to": "\t\ttotal += len(shown)"
+    },
+    {
+      "id": "design_audit_by_severity_reports_one_page",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/finding.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\t\tfor _, f := range findings {\n\t\t\tbySeverity[f.Severity]++\n\t\t}",
+      "to": "\t\tfor _, f := range shown {\n\t\t\tbySeverity[f.Severity]++\n\t\t}"
+    },
+    {
+      "id": "design_audit_elements_audited_is_match_count",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/finding.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\t\tElementsAudited:  len(in.elements),",
+      "to": "\t\tElementsAudited:  in.matchCount,"
+    },
+    {
+      "id": "design_audit_checks_skipped_serialises_as_null",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/finding.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\tif skips == nil {\n\t\tskips = []skipped{}\n\t}",
+      "to": "\tif false {\n\t\tskips = []skipped{}\n\t}"
+    },
+    {
+      "id": "design_audit_sort_findings_is_a_noop",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/finding.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "func sortFindings(findings []finding) {\n\tsort.SliceStable(",
+      "to": "func sortFindings(findings []finding) {\n\tif len(findings) >= 0 {\n\t\treturn\n\t}\n\tsort.SliceStable("
+    },
+    {
+      "id": "design_audit_color_near_miss_band_widened",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/tokens.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "colorNearMissThreshold = 0.02",
+      "to": "colorNearMissThreshold = 0.08"
+    },
+    {
+      "id": "design_audit_srgb_linearisation_cutoff_slips",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/tokens.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "channel <= 0.04045",
+      "to": "channel <= 0.4045"
+    },
+    {
+      "id": "design_audit_srgb_transfer_exponent_changed",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/tokens.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "math.Pow((channel+0.055)/1.055, 2.4)",
+      "to": "math.Pow((channel+0.055)/1.055, 2.2)"
+    },
+    {
+      "id": "design_audit_formats_lengths_as_whole_pixels",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/tokens.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "strconv.FormatFloat(value, 'f', -1, 64)",
+      "to": "strconv.FormatFloat(value, 'f', 0, 64)"
+    },
+    {
+      "id": "design_audit_border_color_unjudged",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/tokens.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "func colorProperties() []string { return []string{\"color\", \"background-color\", \"border-color\"} }",
+      "to": "func colorProperties() []string { return []string{\"color\", \"background-color\"} }"
+    },
+    {
+      "id": "design_audit_gap_tolerance_zeroed",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/spacing.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "gapDeviationTolerance = 2.0",
+      "to": "gapDeviationTolerance = 0.0"
+    },
+    {
+      "id": "design_audit_gap_rounding_truncates",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/spacing.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\treturn math.Round(value)",
+      "to": "\treturn math.Floor(value)"
+    },
+    {
+      "id": "design_audit_zero_gaps_leave_the_rhythm",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/spacing.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\t\tif gap.size >= -subPixelTolerance {\n\t\t\tpositive = append(positive, gap)\n\t\t}",
+      "to": "\t\tif gap.size > 0 {\n\t\t\tpositive = append(positive, gap)\n\t\t}"
+    },
+    {
+      "id": "design_audit_shares_line_is_one_sided",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/spacing.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\treturn elCenter >= anchorStart && elCenter <= anchorEnd &&\n\t\tanchorCenter >= elStart && anchorCenter <= elEnd",
+      "to": "\treturn (elCenter >= anchorStart && elCenter <= anchorEnd) ||\n\t\t(anchorCenter >= elStart && anchorCenter <= elEnd)"
+    },
+    {
+      "id": "design_audit_flex_parent_owns_a_zero_gap",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/spacing.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\t\treturn ok && gap > 0",
+      "to": "\t\treturn ok || gap > 0"
+    },
+    {
+      "id": "design_audit_font_family_comparison_is_case_sensitive",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/consistency.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\treturn strings.ToLower(first)",
+      "to": "\treturn first"
+    },
+    {
+      "id": "design_audit_line_height_unaudited",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/consistency.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\t\t\"line-height\",\n\t\t\"letter-spacing\",",
+      "to": "\t\t\"letter-spacing\","
+    },
+    {
+      "id": "design_audit_radius_tokens_conflict_with_a_spacing_scale",
+      "file": "cmd/browser-agent/internal/toolanalyze/designdrift/spec.go",
+      "package": "./cmd/browser-agent/internal/toolanalyze/designdrift",
+      "from": "\treturn lengthTokenFamily(name) == familySpacing",
+      "to": "\treturn lengthTokenFamily(name) != \"\""
     }
   ]
 }

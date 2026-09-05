@@ -28,7 +28,9 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/designdrift/testdata/expected-findings.json
   - cmd/browser-agent/internal/toolanalyze/designdrift/testdata/fixture-probe.json
   - cmd/browser-agent/internal/testpages/pages/design-drift.html
+  - cmd/browser-agent/internal/testpages/designfixture_test.go
   - scripts/tests/browser/cat-36-design-drift.sh
+  - scripts/ci/mutation-cases.json
   - scripts/docs/reference/check-reference-schema-sync.mjs
 ---
 
@@ -280,9 +282,17 @@ identically is how a tool starts claiming success it did not earn.
 ## Verification
 
 The fixture at `cmd/browser-agent/internal/testpages/pages/design-drift.html`
-plants every example from the three issues plus five negative controls
+plants every example from the three issues plus six negative controls
 (first-child margin, state variant, exact token match, parent-owned flex gap,
-two-element group).
+two-element group, out-of-flow sibling).
+
+The out-of-flow control is the only group carrying an `in_flow: false` element.
+Every unit test builds its own element views and sets `InFlow` itself, so
+without it `viewsFrom` could read the wire field as `true` and the whole suite
+stayed green while out-of-flow siblings rejoined the rhythm in production. The
+absolutely-positioned card sits 42px down the stack rather than below it: parked
+below, the analyzer's own container-break rule would split it away and the
+control would pass whether or not `in_flow` was honoured.
 
 `testdata/expected-findings.json` is the **single source of truth** for expected
 verdicts, consumed by both the Go tests and UAT category 36 — three
@@ -298,6 +308,27 @@ One case in that table takes the DEFAULT call — no `categories` at all. Every
 other case narrows, and that gap is why the contradictory-target defect shipped:
 the two findings that disagreed could never appear in the same asserted
 response.
+
+**The capture is bound to the page it was taken from.** Nothing connected them,
+so editing the markup or the stylesheet left `fixture-probe.json` describing a
+page that no longer existed, with the whole Go suite green and UAT category 36 —
+which runs the same expectations against the live page — the only thing that
+could notice. `TestDesignDriftFixtureMatchesItsPage` in
+`cmd/browser-agent/internal/testpages` closes that: it recomputes the SHA-256 of
+the page's `<style>` and `<body>` against the digests recorded in the capture's
+`_source` block, and separately derives each group's element count, generated
+selector and `:root` token table from the markup. The digests fail on any change
+and say "re-capture"; the structural checks say which group diverged. Editing
+the page therefore means re-running the probe, updating both testdata files, and
+re-recording the digests.
+
+**Every constant in this mode is covered by a registered mutant.**
+`scripts/ci/mutation-cases.json` carries 24 `design_audit_*` cases run by
+`make mutation-test` at a 100% kill gate. They exist because 90% statement
+coverage said nothing about whether the thresholds were load-bearing:
+`colorNearMissThreshold` could be quadrupled, `srgbToLinear`'s 0.04045 cutoff
+moved by a factor of ten, `gapDeviationTolerance` set to zero and
+`total_findings` made to report one page, and every test still passed.
 
 ## Related
 

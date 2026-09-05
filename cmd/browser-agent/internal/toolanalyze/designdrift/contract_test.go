@@ -386,6 +386,134 @@ func TestResolveCategories_DefaultsToEveryCategory(t *testing.T) {
 			t.Errorf("default set is missing %q", category)
 		}
 	}
+
+	// A padded name is a valid name: rejecting `"spacing "` answers with an
+	// invalid_param that reads as "spacing is not a category", which is unfixable.
+	padded, invalid := resolveCategories([]string{" spacing ", "design_tokens"})
+	if invalid != "" || !padded[categorySpacing] || !padded[categoryDesignTokens] {
+		t.Errorf("a padded category name was rejected: invalid=%q selected=%v", invalid, padded)
+	}
+	// Control: a name that is wrong after trimming is still wrong.
+	if _, invalid := resolveCategories([]string{" typography "}); invalid == "" {
+		t.Error("an unknown category was accepted once padded")
+	}
+}
+
+// TestHandle_ProbesTheWholeGroupWithItsCustomProperties pins the two arguments
+// the mode gives the probe and the URL it puts on the answer.
+//
+// Nothing observed either. A smaller cap truncates the peer group, so the
+// majority and the rhythm are computed from partial evidence with no sign that
+// they were; dropping include_custom_properties empties root_tokens, and
+// design_tokens then reports no_tokens_declared on a page whose :root is full
+// of them. page_url ties a stored envelope back to the page it describes.
+func TestHandle_ProbesTheWholeGroupWithItsCustomProperties(t *testing.T) {
+	t.Parallel()
+	var gotMax int
+	var gotCustom bool
+	deps := Deps{
+		ProbeStyles: func(_ string, maxElements int, includeCustomProperties bool) (json.RawMessage, error) {
+			gotMax, gotCustom = maxElements, includeCustomProperties
+			return json.RawMessage(`{"elements":[],"count":0,"match_count":0,"truncated":false}`), nil
+		},
+		TrackingStatus: func() (bool, string) { return true, "https://app.example.test/pricing" },
+	}
+
+	resp := Handle(deps, request(), json.RawMessage(`{"what":"design_audit","selector":".card"}`))
+	// The literal, not the constant: comparing against maxProbeElements passes
+	// whatever that constant becomes. 200 is four times the probe's own
+	// DEFAULT_MAX_ELEMENTS of 50, the cap this mode raised it past so a majority
+	// is not computed from the first fifty matches on a page of hundreds.
+	if gotMax != 200 {
+		t.Errorf("asked the page for %d elements, want 200 — a smaller cap silently judges a truncated group", gotMax)
+	}
+	if !gotCustom {
+		t.Error("asked the page for no custom properties; the token table would be empty on every page")
+	}
+	if !strings.Contains(string(resp.Result), "https://app.example.test/pricing") {
+		t.Errorf("the tracked page's URL is missing from the envelope: %s", resp.Result)
+	}
+}
+
+// TestEnvelopeArithmeticIsACensusNotAPage covers the counters a bounded response
+// makes ambiguous.
+//
+// total_findings and by_severity answer "how much drift does this page have?".
+// Computed from the findings one page carries, the answer shrinks with the
+// window, so a caller paging through the audit can never learn the real number.
+// elements_audited counts what was JUDGED: reporting match_count there hides
+// that the verdict rests on a truncated set.
+func TestEnvelopeArithmeticIsACensusNotAPage(t *testing.T) {
+	t.Parallel()
+	findings := make([]finding, 0, 120)
+	for i := 0; i < 120; i++ {
+		severity := severityWarning
+		if i%3 == 0 {
+			severity = severityError
+		}
+		findings = append(findings, finding{Category: categorySpacing, Severity: severity, ElementIndex: i, Property: "gap-vertical"})
+	}
+	result := buildAuditResult(auditInputs{selector: ".card", elements: make([]elementView, 40),
+		matchCount: 260, truncated: true,
+		byCategory: map[string][]finding{categorySpacing: findings}, window: normalizeWindow(0, 0)})
+
+	if result.TotalFindings != 120 {
+		t.Errorf("total_findings = %d, want the whole census of 120", result.TotalFindings)
+	}
+	if result.ReturnedFindings != maxFindingsPerSection {
+		t.Errorf("returned_findings = %d, want one full page of %d", result.ReturnedFindings, maxFindingsPerSection)
+	}
+	if got := result.BySeverity[severityError] + result.BySeverity[severityWarning]; got != 120 {
+		t.Errorf("by_severity totals %d, want the census of 120 — a triage count that shrinks with the page is unusable", got)
+	}
+	if result.ElementsAudited != 40 {
+		t.Errorf("elements_audited = %d, want the 40 judged rather than the 260 matched", result.ElementsAudited)
+	}
+	if result.MatchCount != 260 || !result.Truncated {
+		t.Errorf("match_count/truncated = %d/%v, want 260/true", result.MatchCount, result.Truncated)
+	}
+
+	// The default window is the widest page the mode will ever return, so a
+	// caller who asks for nothing is never paged for an audit that fits. Both
+	// literals, because comparing the two constants passes if both move.
+	if defaultFindingsPerSection != 50 || maxFindingsPerSection != 50 {
+		t.Errorf("default/max findings per section = %d/%d, want 50/50",
+			defaultFindingsPerSection, maxFindingsPerSection)
+	}
+	// The headline has to name the call that reaches the rest, or a bounded
+	// response reads exactly like a complete one.
+	headline := summarize(result)
+	if !strings.Contains(headline, "offset:50") {
+		t.Errorf("summary %q does not name the next offset", headline)
+	}
+
+	// checks_skipped must serialise as a list even when nothing was skipped: a
+	// caller reading its length cannot do that to null.
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal envelope: %v", err)
+	}
+	if !strings.Contains(string(encoded), `"checks_skipped":[]`) {
+		t.Errorf("checks_skipped did not serialise as an empty list: %s", encoded)
+	}
+}
+
+// TestFindingWindow_AnOffsetPastTheEndIsAnEmptyPage: offset:1000 on a
+// three-finding audit is an ordinary caller request, and slicing from beyond the
+// end panics — taking the whole tool call down instead of returning nothing.
+func TestFindingWindow_AnOffsetPastTheEndIsAnEmptyPage(t *testing.T) {
+	t.Parallel()
+	findings := []finding{{Property: "a"}, {Property: "b"}, {Property: "c"}}
+	for _, offset := range []int{3, 4, 1000} {
+		page, more := normalizeWindow(0, offset).page(findings)
+		if len(page) != 0 || more {
+			t.Errorf("offset %d returned %d finding(s), has_more=%v; want an empty final page", offset, len(page), more)
+		}
+	}
+	// Control: an offset inside the set still returns the rest.
+	if page, more := normalizeWindow(0, 2).page(findings); len(page) != 1 || more {
+		t.Errorf("offset 2 returned %d finding(s), has_more=%v; want the last one", len(page), more)
+	}
 }
 
 // --- TDD red: defects confirmed by the code review ---
@@ -601,8 +729,8 @@ func TestCollapseShorthandDuplicates_OnlyTheUniformGroupCollapses(t *testing.T) 
 
 // --- Cross-category reconciliation (kaboom-w1et) ---
 
-func measuredGapFinding(index int, observed, expected string) finding {
-	return newFinding(findingSpec{category: categorySpacing, property: "gap-vertical",
+func measuredGapFinding(index int, property, observed, expected string) finding {
+	return newFinding(findingSpec{category: categorySpacing, property: property,
 		el: makeElement(index, "div.rhythm-card", nil), observed: observed, expected: expected,
 		provenance: provenanceInferred, confidence: confidenceLow,
 		evidence: "3 of 4 vertical gaps measure " + expected, message: "gap"})
@@ -626,7 +754,7 @@ func TestReconcileAcrossCategories_ProximityLosesToTheMeasuredGap(t *testing.T) 
 	t.Parallel()
 	result := buildAuditResult(auditInputs{selector: ".rhythm-card", elements: make([]elementView, 5), matchCount: 5,
 		byCategory: map[string][]finding{
-			categorySpacing:      {measuredGapFinding(3, "14px", "24px")},
+			categorySpacing:      {measuredGapFinding(3, "gap-vertical", "14px", "24px")},
 			categoryDesignTokens: {proximityGuessFinding(3, "margin-top", "14px")},
 		}, window: normalizeWindow(0, 0)})
 
@@ -649,7 +777,7 @@ func TestReconcileAcrossCategories_ProximityLosesToTheMeasuredGap(t *testing.T) 
 	// that deletes the design_tokens section whenever spacing reports anything.
 	kept := buildAuditResult(auditInputs{selector: ".rhythm-card", elements: make([]elementView, 5), matchCount: 5,
 		byCategory: map[string][]finding{
-			categorySpacing: {measuredGapFinding(3, "14px", "24px")},
+			categorySpacing: {measuredGapFinding(3, "gap-vertical", "14px", "24px")},
 			categoryDesignTokens: {
 				proximityGuessFinding(2, "margin-top", "14px"),
 				proximityGuessFinding(3, "padding-top", "14px"),
@@ -657,5 +785,16 @@ func TestReconcileAcrossCategories_ProximityLosesToTheMeasuredGap(t *testing.T) 
 		}, window: normalizeWindow(0, 0)})
 	if got := kept.Sections[categoryDesignTokens].(map[string]any)["total"].(int); got != 2 {
 		t.Errorf("reconciliation deleted findings it does not answer: %d design_tokens finding(s), want 2", got)
+	}
+
+	// A horizontal gap is the same contradiction with margin-left as its longhand:
+	// a vertical-only rule left every row's near-miss standing beside its answer.
+	row := buildAuditResult(auditInputs{selector: ".row-card", elements: make([]elementView, 5), matchCount: 5,
+		byCategory: map[string][]finding{
+			categorySpacing:      {measuredGapFinding(3, "gap-horizontal", "14px", "24px")},
+			categoryDesignTokens: {proximityGuessFinding(3, "margin-left", "14px")},
+		}, window: normalizeWindow(0, 0)})
+	if got := row.Sections[categoryDesignTokens].(map[string]any)["total"].(int); got != 0 {
+		t.Errorf("a horizontal gap did not supersede its margin-left near-miss: %d finding(s) left", got)
 	}
 }

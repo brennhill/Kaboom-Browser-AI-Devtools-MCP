@@ -186,17 +186,86 @@ func TestAnalyzeTokens_NoTokensIsSkippedNotClean(t *testing.T) {
 	}
 }
 
-func TestAnalyzeTokens_ZeroLengthsAreNotTokenMisses(t *testing.T) {
+// TestAnalyzeTokens_ZeroAndNegativeLengthsAreNotTokenMisses covers both
+// non-positive cases on the PAGE-TOKEN path.
+//
+// Zero is the CSS default for margin and padding and carries no design intent.
+// A negative used length is an offset idiom — the -1px border-collapse pull, a
+// hanging indent — and no table of positive tokens can ever contain one, so
+// every negative margin would be a permanent, unfixable warning. Only the
+// declared-spec path had a negative case, so dropping the `value <= 0` guard
+// left the inferred path reporting them.
+func TestAnalyzeTokens_ZeroAndNegativeLengthsAreNotTokenMisses(t *testing.T) {
 	t.Parallel()
 	tokens := buildTokenTable(map[string]string{"--spacing-xs": "4px"})
-	el := makeElement(0, "div.card", map[string]string{"margin-top": "0px", "padding-left": "0px"})
+	el := makeElement(0, "div.card", map[string]string{
+		"margin-top": "0px", "padding-left": "0px", "margin-left": "-4px", "margin-bottom": "-1px",
+	})
 
 	findings, skip := analyzeTokens([]elementView{el}, tokens, nil)
 	if skip != nil {
 		t.Fatalf("unexpected skip: %+v", skip)
 	}
 	if len(findings) != 0 {
-		t.Errorf("zero is the CSS default and carries no design intent, but produced %d finding(s): %+v", len(findings), findings)
+		t.Errorf("non-positive lengths carry no design intent, but produced %d finding(s): %+v", len(findings), findings)
+	}
+	// Control: the same token still judges a positive near-miss, so the guard
+	// is about the sign rather than a blanket refusal to look at margins.
+	drift := makeElement(1, "div.card", map[string]string{"margin-left": "4.6px"})
+	if got, _ := analyzeTokens([]elementView{drift}, tokens, nil); len(got) != 1 {
+		t.Errorf("4.6px near-misses the 4px token; got %d finding(s): %+v", len(got), got)
+	}
+}
+
+// TestAnalyzeTokens_JudgesEveryProbedSpacingAndColourSurface pins the property
+// lists. Dropping a longhand or a colour surface deletes findings silently:
+// margin-right and border-color each appeared in no case at all, so removing
+// either from the list changed nothing any test observed.
+func TestAnalyzeTokens_JudgesEveryProbedSpacingAndColourSurface(t *testing.T) {
+	t.Parallel()
+	tokens := buildTokenTable(map[string]string{
+		"--spacing-md": "16px", "--color-primary-main": "#2a55e1",
+	})
+	// Literal lists, not spacingProperties()/colorProperties(): driving both the
+	// input and the expectation off the same slice shrinks them together, so a
+	// dropped property is invisible.
+	want := []string{
+		"margin-top", "margin-right", "margin-bottom", "margin-left",
+		"padding-top", "padding-right", "padding-bottom", "padding-left",
+		"color", "background-color", "border-color",
+	}
+	styles := map[string]string{}
+	for _, property := range want {
+		if strings.HasSuffix(property, "color") {
+			styles[property] = "#2b56e2"
+			continue
+		}
+		styles[property] = "15px"
+	}
+
+	findings, skip := analyzeTokens([]elementView{makeElement(0, "div.card", styles)}, tokens, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if got := propertiesOf(findings); !equalStringSets(got, want) {
+		t.Errorf("flagged %v, want every probed surface %v — a property the analyzer stops reading is drift it stops finding", got, want)
+	}
+}
+
+// TestFormatPx_KeepsTheFractionThePageReported: observed values are quoted back
+// to the reader so they can search for them. Rounding 15.5px to "16px" reports
+// the token's own value as the drift, which reads as a finding about nothing.
+func TestFormatPx_KeepsTheFractionThePageReported(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		value float64
+		want  string
+	}{
+		{16, "16px"}, {15.5, "15.5px"}, {23.98, "23.98px"}, {-1, "-1px"}, {137.5, "137.5px"},
+	} {
+		if got := formatPx(tc.value); got != tc.want {
+			t.Errorf("formatPx(%v) = %q, want %q", tc.value, got, tc.want)
+		}
 	}
 }
 
@@ -208,6 +277,13 @@ func TestDetectSpecConflicts_ReportsDisagreementRatherThanPickingAWinner(t *test
 	tokens := buildTokenTable(map[string]string{
 		"--color-primary-main": "#2a55e1",
 		"--spacing-md":         "15px",
+		// Neither of these is a spacing step, so a spacing scale has nothing to
+		// say about them. Reporting them makes the caller's spec look broken in
+		// two extra places it never claimed to govern — and a design system that
+		// declares a type scale and a radius scale would produce one such false
+		// conflict per rung.
+		"--radius-lg":    "20px",
+		"--font-size-sm": "14px",
 	})
 	spec := &designSpec{
 		Colors:       []string{"#c81e1e"},
@@ -217,6 +293,11 @@ func TestDetectSpecConflicts_ReportsDisagreementRatherThanPickingAWinner(t *test
 	findings := detectSpecConflicts(spec, tokens)
 	if len(findings) != 2 {
 		t.Fatalf("expected a conflict for the colour token and the spacing token, got %d: %+v", len(findings), findings)
+	}
+	for _, f := range findings {
+		if f.Property == "--radius-lg" || f.Property == "--font-size-sm" {
+			t.Errorf("a %s token was judged against the spacing scale: %+v", f.Property, f)
+		}
 	}
 	for _, f := range findings {
 		if f.Selector != ":root" {
@@ -260,31 +341,6 @@ func TestParseLength_OnlyAcceptsResolvedPixels(t *testing.T) {
 	}
 }
 
-func propertiesOf(findings []finding) []string {
-	out := make([]string, 0, len(findings))
-	for _, f := range findings {
-		out = append(out, f.Property)
-	}
-	return out
-}
-
-func equalStringSets(got, want []string) bool {
-	if len(got) != len(want) {
-		return false
-	}
-	seen := make(map[string]int, len(got))
-	for _, v := range got {
-		seen[v]++
-	}
-	for _, v := range want {
-		seen[v]--
-		if seen[v] < 0 {
-			return false
-		}
-	}
-	return true
-}
-
 // TestOKLab_MatchesPublishedReferenceValues pins the colour transform against
 // an EXTERNAL reference (Björn Ottosson's published sRGB→OKLab values) rather
 // than against itself.
@@ -292,6 +348,14 @@ func equalStringSets(got, want []string) bool {
 // Without this the transform is only ever checked through distance
 // comparisons, so any coefficient or the sRGB linearisation cutoff can be
 // changed and every relative judgement still looks plausible.
+//
+// The five primaries pin the matrices and nothing else: every channel in them
+// is 0 or 255, and srgbToLinear maps both to themselves under any cutoff,
+// divisor or exponent. The three greys are what make the transfer function
+// load-bearing — #404040 sits between the real 0.04045 cutoff and a slipped
+// 0.4045 one, #808080 exercises the 2.4 exponent, and #0a0a0a is the control
+// that stays on the linear segment under both cutoffs, so a test failure names
+// the constant that moved rather than "some colour changed".
 func TestOKLab_MatchesPublishedReferenceValues(t *testing.T) {
 	t.Parallel()
 	const tolerance = 0.0005
@@ -304,6 +368,9 @@ func TestOKLab_MatchesPublishedReferenceValues(t *testing.T) {
 		{"#ff0000", 0.6280, 0.2249, 0.1258},
 		{"#00ff00", 0.8664, -0.2339, 0.1795},
 		{"#0000ff", 0.4520, -0.0324, -0.3115},
+		{"#808080", 0.5999, 0.0000, 0.0000},
+		{"#404040", 0.3715, 0.0000, 0.0000},
+		{"#0a0a0a", 0.1448, 0.0000, 0.0000},
 	}
 	for _, tc := range cases {
 		c, ok := parseColor(tc.hex)
