@@ -12,6 +12,10 @@
 
 import type { Lease } from './cdp-session.js'
 import { errorMessage } from '../../../lib/error-utils.js'
+import { frameProvenance, frameRegion, unavailableProvenance } from '../../../lib/provenance/classify.js'
+import { toOrigin } from '../../../lib/provenance/origins.js'
+import type { ContentProvenance, ProvenanceRegion } from '../../../lib/provenance/provenance-types.js'
+import { DebugCategory, debugLog } from '../../debug.js'
 
 /** One actionable node from the accessibility tree. */
 export interface AXNode {
@@ -30,6 +34,8 @@ export interface AXNode {
   width?: number
   height?: number
   backend_node_id?: number
+  /** Chrome's id for the frame this node lives in, when the tree named one. */
+  frame_id?: string
 }
 
 export interface AXCandidate {
@@ -180,6 +186,41 @@ interface RawAXNode {
   value?: AXValue
   backendDOMNodeId?: number
   properties?: Array<{ name?: string; value?: AXValue }>
+  childIds?: string[]
+  frameId?: string
+}
+
+/**
+ * Which frame each node belongs to.
+ *
+ * getFullAXTree returns one flat list spanning every frame, and only a frame's root node carries a
+ * frameId, so a node's frame is its nearest framed ancestor. Without this walk an ad iframe's
+ * button and the page's own checkout button are the same kind of answer.
+ */
+function frameIdsByNode(raw: readonly RawAXNode[]): Map<string, string> {
+  const parents = new Map<string, string>()
+  const owners = new Map<string, string>()
+  for (const node of raw) {
+    if (!node.nodeId) continue
+    if (node.frameId) owners.set(node.nodeId, node.frameId)
+    for (const child of node.childIds ?? []) parents.set(child, node.nodeId)
+  }
+  const resolved = new Map<string, string>()
+  for (const node of raw) {
+    if (!node.nodeId) continue
+    const seen = new Set<string>()
+    let cursor: string | undefined = node.nodeId
+    while (cursor && !seen.has(cursor)) {
+      seen.add(cursor)
+      const frameId = owners.get(cursor)
+      if (frameId) {
+        resolved.set(node.nodeId, frameId)
+        break
+      }
+      cursor = parents.get(cursor)
+    }
+  }
+  return resolved
 }
 
 function axString(value: AXValue | undefined): string {
@@ -216,6 +257,7 @@ export async function fetchAXNodes(lease: Lease): Promise<AXNode[]> {
   const reply = (await lease.send('Accessibility.getFullAXTree', {})) as { nodes?: RawAXNode[] } | undefined
   const raw = Array.isArray(reply?.nodes) ? reply.nodes : []
 
+  const frames = frameIdsByNode(raw)
   const nodes: AXNode[] = []
   for (const item of raw) {
     // Chrome marks nodes it excludes from the accessibility tree. They are unreachable by
@@ -231,7 +273,8 @@ export async function fetchAXNodes(lease: Lease): Promise<AXNode[]> {
       name: axString(item.name),
       value: axString(item.value) || undefined,
       states: statesFrom(item.properties),
-      backend_node_id: item.backendDOMNodeId
+      backend_node_id: item.backendDOMNodeId,
+      ...(item.nodeId && frames.has(item.nodeId) ? { frame_id: frames.get(item.nodeId) } : {})
     })
   }
   return nodes
@@ -279,4 +322,81 @@ export async function resolveAXGeometry(lease: Lease, nodes: readonly AXNode[]):
     }
   }
   return resolved
+}
+
+// =============================================================================
+// FRAME PROVENANCE
+// =============================================================================
+
+/** Chrome's frame tree, reduced to the origins provenance is allowed to record. */
+export interface AXFrameOrigins {
+  top_frame_id: string | null
+  origins: Map<string, string>
+}
+
+interface RawFrameTreeNode {
+  frame?: { id?: string; url?: string }
+  childFrames?: RawFrameTreeNode[]
+}
+
+/** Walk the frame tree, keeping origins only — never the URLs, which carry session state (rule 13). */
+function collectFrameOrigins(node: RawFrameTreeNode, into: Map<string, string>): void {
+  const id = node.frame?.id
+  if (id) {
+    const origin = toOrigin(node.frame?.url)
+    if (origin) into.set(id, origin)
+  }
+  for (const child of node.childFrames ?? []) collectFrameOrigins(child, into)
+}
+
+/**
+ * Read the tab's frame tree so AX candidates can be attributed to an origin.
+ *
+ * `null` on failure: a candidate reported at a guessed origin would be worse than one reported
+ * with no origin at all, because the guess reads as evidence.
+ */
+export async function fetchFrameOrigins(lease: Lease): Promise<AXFrameOrigins | null> {
+  try {
+    await lease.ensureDomain('Page')
+    const reply = (await lease.send('Page.getFrameTree', {})) as { frameTree?: RawFrameTreeNode } | undefined
+    const root = reply?.frameTree
+    if (!root?.frame?.id) return null
+    const origins = new Map<string, string>()
+    collectFrameOrigins(root, origins)
+    return { top_frame_id: root.frame.id, origins }
+  } catch (err) {
+    debugLog(DebugCategory.QUERY, 'Frame tree unavailable; AX candidate provenance is unavailable', {
+      error: errorMessage(err, 'frame_tree_unavailable')
+    })
+    return null
+  }
+}
+
+/** Classify the frames a set of AX candidates actually came from. */
+export function axProvenance(
+  nodes: readonly Pick<AXNode, 'frame_id'>[],
+  frames: AXFrameOrigins | null
+): ContentProvenance {
+  if (!frames) {
+    return unavailableProvenance('frame_tree_unavailable', [
+      'Accessibility candidates span every frame in the tab; without the frame tree they cannot be attributed.'
+    ])
+  }
+  const documentOrigin = frames.top_frame_id ? (frames.origins.get(frames.top_frame_id) ?? '') : ''
+  const regions: ProvenanceRegion[] = []
+  const seen = new Set<string>()
+  for (const node of nodes) {
+    const frameId = node.frame_id
+    if (!frameId || seen.has(frameId)) continue
+    const origin = frames.origins.get(frameId)
+    if (!origin) continue
+    seen.add(frameId)
+    regions.push(frameRegion(`frame_${frameId}`, origin, documentOrigin, frameId === frames.top_frame_id))
+  }
+  if (regions.length === 0) {
+    return unavailableProvenance('no_frame_attribution', [
+      'No candidate carried a frame id, so the accessibility tree could not be attributed to an origin.'
+    ])
+  }
+  return frameProvenance(documentOrigin, regions)
 }

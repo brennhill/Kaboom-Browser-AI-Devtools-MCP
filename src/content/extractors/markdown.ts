@@ -3,6 +3,8 @@
 // Issue #257: Replaces the IIFE string that was embedded in the Go handler.
 
 import { findMainContentElement } from './shared.js'
+import { provenanceForExtraction } from '../provenance/index.js'
+import type { ContentProvenance } from '../../lib/provenance/provenance-types.js'
 
 /** Maximum output size in characters to prevent memory pressure on large pages. */
 const MAX_OUTPUT_CHARS = 200_000
@@ -16,6 +18,8 @@ export interface MarkdownResult {
   word_count: number
   url: string
   truncated?: boolean
+  /** Where these bytes came from: frame, origin, and whether they were in the initial document. */
+  provenance: ContentProvenance
 }
 
 /** Tags to skip entirely during markdown conversion. */
@@ -190,6 +194,7 @@ export function extractMarkdown(): MarkdownResult {
     markdown,
     word_count: words.length,
     url: window.location.href,
+    provenance: provenanceForExtraction(main),
     ...(truncated ? { truncated: true } : {})
   }
 }

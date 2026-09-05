@@ -1,3 +1,4 @@
+import type { ContentProvenance } from '../../lib/provenance/provenance-types.js';
 /**
  * Result shape returned by extractReadable.
  */
@@ -8,6 +9,8 @@ export interface ReadableResult {
     byline: string;
     word_count: number;
     url: string;
+    /** Where these bytes came from: frame, origin, and whether they were in the initial document. */
+    provenance: ContentProvenance;
 }
 /**
  * Extract readable content from the current page.

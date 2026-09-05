@@ -2,7 +2,7 @@
  * Purpose: Dispatches DOM actions (click, type, wait_for, list_interactive, query) to injected page scripts with frame targeting and CDP escalation.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import { domFrameProbe } from './primitives/dom-frame-probe.js';
+import { domFrameProbe, domFrameOriginProbe } from './primitives/dom-frame-probe.js';
 import { domPrimitivePointer } from './primitives/dom-primitives-pointer.js';
 import { domPrimitiveForm } from './primitives/dom-primitives-form.js';
 import { domPrimitiveRead } from './primitives/dom-primitives-read.js';
@@ -19,6 +19,7 @@ import { isReadOnlyAction } from '../exec/action-metadata.js';
 import { errorMessage } from '../../lib/error-utils.js';
 import { delay } from '../../lib/timeout-utils.js';
 import { normalizeFrameArg, resolveMatchedFrameIds } from '../exec/frame-targeting.js';
+import { DebugCategory, debugLog } from '../debug.js';
 import { toDOMResult, pickFrameResult, mergeListInteractive, deriveAsyncStatusFromDOMResult, enrichWithEffectiveContext, sendToastForResult } from './dom-result-reconcile.js';
 function parseDOMParams(query) {
     try {
@@ -388,8 +389,37 @@ async function sendDirectDOMResult(ctx, action, selector, rawResult) {
     }
     await sendReconciledAsyncResult(ctx, status, reconciledResult, error);
 }
+/**
+ * Ask every frame which origin it is.
+ *
+ * One extra injected call per list_interactive, run against the same frames the elements came
+ * from. On failure the merge reports attribution as unavailable rather than guessing an origin:
+ * a wrong origin would misattribute a control an agent is about to click.
+ */
+async function probeFrameOrigins(tabId) {
+    try {
+        const probed = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: true },
+            world: 'MAIN',
+            func: domFrameOriginProbe
+        });
+        const origins = new Map();
+        for (const entry of probed) {
+            const value = entry.result;
+            if (value && typeof value.origin === 'string')
+                origins.set(entry.frameId, value);
+        }
+        return origins.size > 0 ? origins : undefined;
+    }
+    catch (err) {
+        debugLog(DebugCategory.QUERY, 'Frame origin probe failed; element provenance is unavailable', {
+            error: errorMessage(err, 'frame_origin_probe_failed')
+        });
+        return undefined;
+    }
+}
 async function sendListInteractiveResult(tabId, rawResult, syncClient, query, sendAsyncResult) {
-    const merged = mergeListInteractive(rawResult);
+    const merged = mergeListInteractive(rawResult, await probeFrameOrigins(tabId));
     sendAsyncResult(syncClient, query.id, query.correlation_id, merged.success ? 'complete' : 'error', await enrichWithEffectiveContext(tabId, merged), merged.success ? undefined : merged.error || 'list_interactive_failed');
 }
 function buildFramePayload(picked, firstResult) {

@@ -2,6 +2,7 @@
 // Runs in the content script's ISOLATED world (CSP-safe, no eval).
 // Issue #257: Replaces the IIFE string that was embedded in the Go handler.
 import { findMainContentElement } from './shared.js';
+import { provenanceForExtraction } from '../provenance/index.js';
 /** Tags and selectors to strip from content before extracting text. */
 const REMOVE_SELECTORS = [
     'nav',
@@ -70,7 +71,8 @@ export function extractReadable() {
         excerpt,
         byline: getByline(),
         word_count: words.length,
-        url: window.location.href
+        url: window.location.href,
+        provenance: provenanceForExtraction(main)
     };
 }
 //# sourceMappingURL=readable.js.map

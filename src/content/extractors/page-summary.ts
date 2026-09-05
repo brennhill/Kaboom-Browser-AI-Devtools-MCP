@@ -3,6 +3,8 @@
 // Issue #257: Replaces the IIFE string that was embedded in the Go handler.
 
 import { findMainContentElement } from './shared.js'
+import { provenanceForExtraction } from '../provenance/index.js'
+import type { ContentProvenance } from '../../lib/provenance/provenance-types.js'
 
 /**
  * Result shape returned by extractPageSummary.
@@ -17,6 +19,8 @@ export interface PageSummaryResult {
   interactive_element_count: number
   main_content_preview: string
   word_count: number
+  /** Where these bytes came from: frame, origin, and whether they were in the initial document. */
+  provenance: ContentProvenance
 }
 
 function cleanText(value: string, maxLen: number): string {
@@ -236,6 +240,7 @@ export function extractPageSummary(): PageSummaryResult {
     forms,
     interactive_element_count: interactiveCount,
     main_content_preview: preview,
-    word_count: wordCount
+    word_count: wordCount,
+    provenance: provenanceForExtraction(mainNode)
   }
 }

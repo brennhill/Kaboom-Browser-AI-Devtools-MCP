@@ -54,6 +54,7 @@ Features with active code implementations referencing their feature docs.
 | ci-infrastructure | `feature/ci-infrastructure/` | product-spec.md, qa-plan.md, tech-spec.md, business-pitch.md | CI/CD pipeline infrastructure and automation |
 | code-navigation-modification | `feature/code-navigation-modification/` | product-spec.md, qa-plan.md, tech-spec.md | Code navigation and modification helpers |
 | cold-start-queuing | `feature/cold-start-queuing/` | index.md | Queue MCP requests during daemon cold start |
+| content-provenance | `feature/content-provenance/` | index.md | Attributes extracted page content to the frame, origin, and delivery that produced it |
 | config-profiles | `feature/config-profiles/` | product-spec.md, qa-plan.md, tech-spec.md | Named configuration profiles for different environments |
 | deployment-watchdog | `feature/deployment-watchdog/` | product-spec.md, qa-plan.md, tech-spec.md | Monitor deployments for regressions |
 | enhanced-cli-config | `feature/enhanced-cli-config/` | product-spec.md, qa-plan.md, tech-spec.md, implementation-plan.md | Enhanced CLI configuration management |
