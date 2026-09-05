@@ -4,6 +4,52 @@
  * Docs: docs/features/feature/interact-explore/index.md
  */
 import { isDomMutatingAction } from '../exec/action-metadata.js';
+import { frameProvenance, frameRegion, unavailableProvenance } from '../../lib/provenance/classify.js';
+/** Origin of the top-level document, or `''` when no frame identified itself as the top one. */
+function topLevelOrigin(frames) {
+    for (const info of frames?.values() ?? []) {
+        if (info.is_top_level_document)
+            return info.origin;
+    }
+    return '';
+}
+/**
+ * Provenance for a flattened multi-frame element list.
+ *
+ * The extraction responses remain the surface that can distinguish initial-document content from a
+ * post-load injection; here only frame identity is observable, and that is all that is claimed.
+ */
+function listInteractiveProvenance(results, frames) {
+    const documentOrigin = topLevelOrigin(frames);
+    const regions = [];
+    const seen = new Set();
+    for (const entry of results) {
+        const frameId = entry.frameId;
+        const info = typeof frameId === 'number' ? frames?.get(frameId) : undefined;
+        if (!info || seen.has(frameId))
+            continue;
+        seen.add(frameId);
+        regions.push(frameRegion(`frame_${frameId}`, info.origin, documentOrigin, info.is_top_level_document));
+    }
+    if (regions.length === 0) {
+        return unavailableProvenance('frame_origins_unavailable', [
+            'Elements from every frame are merged into one list; without frame origins they cannot be attributed.'
+        ]);
+    }
+    return frameProvenance(documentOrigin, regions);
+}
+/** Stamp each element with the frame it came from, so a merged list stays attributable. */
+function stampFrame(elements, frameId, info) {
+    return elements.map((element) => {
+        if (!element || typeof element !== 'object')
+            return element;
+        return {
+            ...element,
+            frame_id: frameId,
+            ...(info ? { frame_origin: info.origin } : {})
+        };
+    });
+}
 export function toDOMResult(value) {
     if (!value || typeof value !== 'object')
         return null;
@@ -40,8 +86,15 @@ export function pickFrameResult(results) {
         return { result: mainFrame.result, frameId: 0 };
     return results[0] ? { result: results[0].result, frameId: results[0].frameId } : null;
 }
-/** Merge list_interactive results from all frames (up to 100 elements). */
-export function mergeListInteractive(results) {
+/**
+ * Merge list_interactive results from all frames (up to 100 elements).
+ *
+ * Every element carries the frame it came from and, when the origin probe succeeded, that frame's
+ * origin: a merged list that hides which frame drew a control makes an ad iframe's button
+ * indistinguishable from the site's own.
+ */
+export function mergeListInteractive(results, frames) {
+    const provenance = listInteractiveProvenance(results, frames);
     const elements = [];
     let firstError = null;
     let firstScopeRectUsed;
@@ -56,18 +109,19 @@ export function mergeListInteractive(results) {
             firstScopeRectUsed = res.scope_rect_used;
         }
         if (res?.elements)
-            elements.push(...res.elements);
+            elements.push(...stampFrame(res.elements, r.frameId, frames?.get(r.frameId)));
         if (elements.length >= 100)
             break;
     }
     if (elements.length === 0 && firstError?.error) {
-        return { success: false, elements: [], error: firstError.error, message: firstError.message };
+        return { success: false, elements: [], provenance, error: firstError.error, message: firstError.message };
     }
     const cappedElements = elements.slice(0, 100);
     const merged = {
         success: true,
         elements: cappedElements,
-        candidate_count: cappedElements.length
+        candidate_count: cappedElements.length,
+        provenance
     };
     if (firstScopeRectUsed !== undefined) {
         merged.scope_rect_used = firstScopeRectUsed;

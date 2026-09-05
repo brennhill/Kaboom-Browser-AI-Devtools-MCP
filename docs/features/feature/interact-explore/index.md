@@ -6,6 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
+  - src/content/provenance/collect.ts
+  - src/lib/provenance/classify.ts
   - cmd/browser-agent/internal/interactdispatch/handler.go
   - cmd/browser-agent/internal/interactdispatch/effects.go
   - cmd/browser-agent/internal/actioneffects/effects.go
@@ -102,6 +104,8 @@ test_paths:
   - cmd/browser-agent/internal/interactdispatch/effects_test.go
   - cmd/browser-agent/internal/actioneffects/effects_test.go
   - cmd/browser-agent/internal/actioneffects/classify_test.go
+  - tests/extension/provenance/content-provenance.test.js
+  - tests/extension/provenance/frame-provenance.test.js
   - extension/background/__tests__/cdp-session.test.js
   - extension/background/__tests__/cdp-ax-tree.test.js
   - tests/extension/contracts/chrome-platform-limits.test.js
@@ -450,3 +454,12 @@ override is still granted its lease; the refusal is logged as `cdp_focus_emulati
 
 Capture takes the same lease, so the page a screenshot shows is the page the agent is driving.
 `activate_tab` stays the deliberate way to put a tab in front of the user.
+
+## Content provenance on these responses
+
+`get_readable`, `get_markdown`, `page_summary`, `list_interactive` and `find` all carry a
+`provenance` block naming which frame and origin their content came from, and — for the content
+extractors — whether it was in the initial document or injected after load. Elements from
+`list_interactive` additionally carry `frame_id` and `frame_origin`, and `find` candidates carry
+`frame_origin`. See `docs/features/feature/content-provenance/index.md`. It reports only: nothing
+there filters, blocks, or rewrites content.

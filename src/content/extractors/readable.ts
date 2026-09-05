@@ -3,6 +3,8 @@
 // Issue #257: Replaces the IIFE string that was embedded in the Go handler.
 
 import { findMainContentElement } from './shared.js'
+import { provenanceForExtraction } from '../provenance/index.js'
+import type { ContentProvenance } from '../../lib/provenance/provenance-types.js'
 
 /**
  * Result shape returned by extractReadable.
@@ -14,6 +16,8 @@ export interface ReadableResult {
   byline: string
   word_count: number
   url: string
+  /** Where these bytes came from: frame, origin, and whether they were in the initial document. */
+  provenance: ContentProvenance
 }
 
 /** Tags and selectors to strip from content before extracting text. */
@@ -85,6 +89,7 @@ export function extractReadable(): ReadableResult {
     excerpt,
     byline: getByline(),
     word_count: words.length,
-    url: window.location.href
+    url: window.location.href,
+    provenance: provenanceForExtraction(main)
   }
 }

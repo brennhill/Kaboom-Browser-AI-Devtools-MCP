@@ -8,6 +8,9 @@
  * Docs: docs/features/feature/interact-explore/index.md
  */
 import { errorMessage } from '../../../lib/error-utils.js';
+import { frameProvenance, frameRegion, unavailableProvenance } from '../../../lib/provenance/classify.js';
+import { toOrigin } from '../../../lib/provenance/origins.js';
+import { DebugCategory, debugLog } from '../../debug.js';
 /** Below this a match is noise, and reporting it would invite a blind click. */
 export const AX_MIN_CONFIDENCE = 0.3;
 /** States that make an element unactionable regardless of how well its name matches. */
@@ -124,6 +127,42 @@ export function rankAXCandidates(nodes, query) {
     }
     return candidates.sort((a, b) => b.confidence - a.confidence);
 }
+/**
+ * Which frame each node belongs to.
+ *
+ * getFullAXTree returns one flat list spanning every frame, and only a frame's root node carries a
+ * frameId, so a node's frame is its nearest framed ancestor. Without this walk an ad iframe's
+ * button and the page's own checkout button are the same kind of answer.
+ */
+function frameIdsByNode(raw) {
+    const parents = new Map();
+    const owners = new Map();
+    for (const node of raw) {
+        if (!node.nodeId)
+            continue;
+        if (node.frameId)
+            owners.set(node.nodeId, node.frameId);
+        for (const child of node.childIds ?? [])
+            parents.set(child, node.nodeId);
+    }
+    const resolved = new Map();
+    for (const node of raw) {
+        if (!node.nodeId)
+            continue;
+        const seen = new Set();
+        let cursor = node.nodeId;
+        while (cursor && !seen.has(cursor)) {
+            seen.add(cursor);
+            const frameId = owners.get(cursor);
+            if (frameId) {
+                resolved.set(node.nodeId, frameId);
+                break;
+            }
+            cursor = parents.get(cursor);
+        }
+    }
+    return resolved;
+}
 function axString(value) {
     return typeof value?.value === 'string' ? value.value : '';
 }
@@ -157,6 +196,7 @@ export async function fetchAXNodes(lease) {
     await lease.ensureDomain('Accessibility');
     const reply = (await lease.send('Accessibility.getFullAXTree', {}));
     const raw = Array.isArray(reply?.nodes) ? reply.nodes : [];
+    const frames = frameIdsByNode(raw);
     const nodes = [];
     for (const item of raw) {
         // Chrome marks nodes it excludes from the accessibility tree. They are unreachable by
@@ -173,7 +213,8 @@ export async function fetchAXNodes(lease) {
             name: axString(item.name),
             value: axString(item.value) || undefined,
             states: statesFrom(item.properties),
-            backend_node_id: item.backendDOMNodeId
+            backend_node_id: item.backendDOMNodeId,
+            ...(item.nodeId && frames.has(item.nodeId) ? { frame_id: frames.get(item.nodeId) } : {})
         });
     }
     return nodes;
@@ -222,5 +263,67 @@ export async function resolveAXGeometry(lease, nodes) {
         }
     }
     return resolved;
+}
+/** Walk the frame tree, keeping origins only — never the URLs, which carry session state (rule 13). */
+function collectFrameOrigins(node, into) {
+    const id = node.frame?.id;
+    if (id) {
+        const origin = toOrigin(node.frame?.url);
+        if (origin)
+            into.set(id, origin);
+    }
+    for (const child of node.childFrames ?? [])
+        collectFrameOrigins(child, into);
+}
+/**
+ * Read the tab's frame tree so AX candidates can be attributed to an origin.
+ *
+ * `null` on failure: a candidate reported at a guessed origin would be worse than one reported
+ * with no origin at all, because the guess reads as evidence.
+ */
+export async function fetchFrameOrigins(lease) {
+    try {
+        await lease.ensureDomain('Page');
+        const reply = (await lease.send('Page.getFrameTree', {}));
+        const root = reply?.frameTree;
+        if (!root?.frame?.id)
+            return null;
+        const origins = new Map();
+        collectFrameOrigins(root, origins);
+        return { top_frame_id: root.frame.id, origins };
+    }
+    catch (err) {
+        debugLog(DebugCategory.QUERY, 'Frame tree unavailable; AX candidate provenance is unavailable', {
+            error: errorMessage(err, 'frame_tree_unavailable')
+        });
+        return null;
+    }
+}
+/** Classify the frames a set of AX candidates actually came from. */
+export function axProvenance(nodes, frames) {
+    if (!frames) {
+        return unavailableProvenance('frame_tree_unavailable', [
+            'Accessibility candidates span every frame in the tab; without the frame tree they cannot be attributed.'
+        ]);
+    }
+    const documentOrigin = frames.top_frame_id ? (frames.origins.get(frames.top_frame_id) ?? '') : '';
+    const regions = [];
+    const seen = new Set();
+    for (const node of nodes) {
+        const frameId = node.frame_id;
+        if (!frameId || seen.has(frameId))
+            continue;
+        const origin = frames.origins.get(frameId);
+        if (!origin)
+            continue;
+        seen.add(frameId);
+        regions.push(frameRegion(`frame_${frameId}`, origin, documentOrigin, frameId === frames.top_frame_id));
+    }
+    if (regions.length === 0) {
+        return unavailableProvenance('no_frame_attribution', [
+            'No candidate carried a frame id, so the accessibility tree could not be attributed to an origin.'
+        ]);
+    }
+    return frameProvenance(documentOrigin, regions);
 }
 //# sourceMappingURL=cdp-ax-tree.js.map

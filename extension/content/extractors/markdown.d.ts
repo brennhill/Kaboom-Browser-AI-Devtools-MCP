@@ -1,3 +1,4 @@
+import type { ContentProvenance } from '../../lib/provenance/provenance-types.js';
 /**
  * Result shape returned by extractMarkdown.
  */
@@ -7,6 +8,8 @@ export interface MarkdownResult {
     word_count: number;
     url: string;
     truncated?: boolean;
+    /** Where these bytes came from: frame, origin, and whether they were in the initial document. */
+    provenance: ContentProvenance;
 }
 /**
  * Extract page content and convert to Markdown.

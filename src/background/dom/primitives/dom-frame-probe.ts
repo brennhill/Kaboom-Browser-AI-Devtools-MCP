@@ -5,6 +5,19 @@
  */
 
 /**
+ * Report which origin a frame is, so element results merged across frames stay attributable.
+ *
+ * `list_interactive` flattens every frame's elements into one array. Without this an agent cannot
+ * tell the site's own checkout button from a button drawn by an ad iframe: both arrive in the same
+ * list. `location.origin` already excludes the path and query string (rule 13).
+ *
+ * Must stay self-contained for chrome.scripting.executeScript({ func }).
+ */
+export function domFrameOriginProbe(): { origin: string; is_top_level_document: boolean } {
+  return { origin: window.location.origin, is_top_level_document: window === window.top }
+}
+
+/**
  * Must stay self-contained for chrome.scripting.executeScript({ func }).
  */
 export function domFrameProbe(frameTarget: string | number): { matches: boolean } {

@@ -2,6 +2,7 @@
 // Runs in the content script's ISOLATED world (CSP-safe, no eval).
 // Issue #257: Replaces the IIFE string that was embedded in the Go handler.
 import { findMainContentElement } from './shared.js';
+import { provenanceForExtraction } from '../provenance/index.js';
 function cleanText(value, maxLen) {
     let text = (value || '')
         .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
@@ -185,7 +186,8 @@ export function extractPageSummary() {
         forms,
         interactive_element_count: interactiveCount,
         main_content_preview: preview,
-        word_count: wordCount
+        word_count: wordCount,
+        provenance: provenanceForExtraction(mainNode)
     };
 }
 //# sourceMappingURL=page-summary.js.map

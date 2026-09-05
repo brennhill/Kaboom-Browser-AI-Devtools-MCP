@@ -4,7 +4,7 @@ feature_id: feature-agent-supervision
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-03
+last_reviewed: 2026-09-05
 code_paths:
   - src/content/ui/supervision/agent-indicator.ts
   - src/background/supervision/driving-session.ts
@@ -107,3 +107,6 @@ overlay that was not a flex container.
 
 - `kaboom-05ue.1` — the persistent CDP session whose lease defines "driving"
 - `kaboom-fs9k.4` — kill-switch UAT, whose missing half this provides
+- `docs/features/feature/content-provenance/index.md` — what the agent is told about the content
+  it reads. Supervision shows the person what the agent is doing; provenance shows the agent where
+  the bytes it is reading came from. Neither blocks anything.

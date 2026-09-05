@@ -24,6 +24,7 @@ import { initRequestTracking, getPendingRequestStats, clearPendingRequests, clea
 import { initWindowMessageListener } from './content/window-message-listener.js';
 import { initRuntimeMessageListener } from './content/runtime-message-listener.js';
 import { initFaviconReplacer } from './content/favicon-replacer.js';
+import { initContentProvenance } from './content/provenance/index.js';
 import { setTrackedHoverLauncherEnabled } from './content/ui/tracked-hover-launcher.js';
 // Export for testing
 export { getPendingRequestStats, clearPendingRequests, cleanupRequestTracking };
@@ -35,6 +36,9 @@ export { getPendingRequestStats, clearPendingRequests, cleanupRequestTracking };
 isDomainCloaked().then((cloaked) => {
     if (cloaked)
         return;
+    // Watch for post-load DOM insertions before anything can be extracted. Delivery timing is the
+    // one provenance fact that cannot be recovered after the fact, so this starts first.
+    initContentProvenance();
     // Track whether scripts have been injected
     let scriptsInjected = false;
     // Initialize tab tracking first, with callback for injection

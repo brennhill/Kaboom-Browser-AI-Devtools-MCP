@@ -46,7 +46,7 @@ Each entry shows:
 | feature | `feature/feature/` | README.md | (See folder for details) |
 | a11y-tree-snapshots | `feature/a11y-tree-snapshots/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | advanced-filtering | `feature/advanced-filtering/` | feature-proposal.md,index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
-| agent-supervision | `feature/agent-supervision/` | index.md | (See folder for details) |
+| agent-supervision | `feature/agent-supervision/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | agentic-cicd | `feature/agentic-cicd/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | agentic-e2e-repair | `feature/agentic-e2e-repair/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | ai-capture-control | `feature/ai-capture-control/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
@@ -79,6 +79,7 @@ Each entry shows:
 | cold-start-queuing | `feature/cold-start-queuing/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | compressed-diffs | `feature/compressed-diffs/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | config-profiles | `feature/config-profiles/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
+| content-provenance | `feature/content-provenance/` | index.md | (See folder for details) |
 | context-streaming | `feature/context-streaming/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | convention-engine | `feature/convention-engine/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | cpu-network-emulation | `feature/cpu-network-emulation/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
@@ -115,7 +116,7 @@ Each entry shows:
 | hook-eval-rig | `feature/hook-eval-rig/` | eval-fixtures.md,index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | idl-migration | `feature/idl-migration/` | design-spec.md,index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | in-browser-agent-panel | `feature/in-browser-agent-panel/` | index.md,product-spec.md,qa-plan.md,runtime-spec-go-orchestrator.md,tech-spec.md | (See folder for details) |
-| instance-governance | `feature/instance-governance/` | index.md | (See folder for details) |
+| instance-governance | `feature/instance-governance/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | interact-explore | `feature/interact-explore/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | interception-deferral | `feature/interception-deferral/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | issue-reporting | `feature/issue-reporting/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |

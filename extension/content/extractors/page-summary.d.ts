@@ -1,3 +1,4 @@
+import type { ContentProvenance } from '../../lib/provenance/provenance-types.js';
 /**
  * Result shape returned by extractPageSummary.
  */
@@ -18,6 +19,8 @@ export interface PageSummaryResult {
     interactive_element_count: number;
     main_content_preview: string;
     word_count: number;
+    /** Where these bytes came from: frame, origin, and whether they were in the initial document. */
+    provenance: ContentProvenance;
 }
 /**
  * Extract a structured page summary from the current page.

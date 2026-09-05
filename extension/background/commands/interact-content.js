@@ -6,6 +6,7 @@ import { registerCommand } from './registry.js';
 import { isContentScriptUnreachableError } from './helpers.js';
 import { errorMessage } from '../../lib/error-utils.js';
 import { FALLBACK_SCRIPTS } from '../exec/content-fallback-scripts.js';
+import { unavailableProvenance } from '../../lib/provenance/classify.js';
 /**
  * Factory for content extraction command handlers.
  * All three extractors share identical structure — they differ only in message type and error code.
@@ -32,8 +33,14 @@ function contentExtractorCommand(messageType, errorCode) {
                             func: fallbackFn
                         });
                         const firstResult = results?.[0]?.result;
-                        if (firstResult) {
-                            ctx.sendResult(firstResult);
+                        if (firstResult && typeof firstResult === 'object') {
+                            // The fallback is a self-contained injected function with no provenance observer
+                            // behind it. It says so, because an absent provenance block would read as a clean
+                            // first-party page rather than as a gap in the evidence.
+                            ctx.sendResult({
+                                ...firstResult,
+                                provenance: unavailableProvenance('content_script_not_loaded')
+                            });
                             return;
                         }
                     }

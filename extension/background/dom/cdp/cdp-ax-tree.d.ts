@@ -8,6 +8,7 @@
  * Docs: docs/features/feature/interact-explore/index.md
  */
 import type { Lease } from './cdp-session.js';
+import type { ContentProvenance } from '../../../lib/provenance/provenance-types.js';
 /** One actionable node from the accessibility tree. */
 export interface AXNode {
     ref: string;
@@ -25,6 +26,8 @@ export interface AXNode {
     width?: number;
     height?: number;
     backend_node_id?: number;
+    /** Chrome's id for the frame this node lives in, when the tree named one. */
+    frame_id?: string;
 }
 export interface AXCandidate {
     node: AXNode;
@@ -61,4 +64,18 @@ export declare function fetchAXNodes(lease: Lease): Promise<AXNode[]>;
  * would send a click to the top-left corner of the page.
  */
 export declare function resolveAXGeometry(lease: Lease, nodes: readonly AXNode[]): Promise<AXNode[]>;
+/** Chrome's frame tree, reduced to the origins provenance is allowed to record. */
+export interface AXFrameOrigins {
+    top_frame_id: string | null;
+    origins: Map<string, string>;
+}
+/**
+ * Read the tab's frame tree so AX candidates can be attributed to an origin.
+ *
+ * `null` on failure: a candidate reported at a guessed origin would be worse than one reported
+ * with no origin at all, because the guess reads as evidence.
+ */
+export declare function fetchFrameOrigins(lease: Lease): Promise<AXFrameOrigins | null>;
+/** Classify the frames a set of AX candidates actually came from. */
+export declare function axProvenance(nodes: readonly Pick<AXNode, 'frame_id'>[], frames: AXFrameOrigins | null): ContentProvenance;
 //# sourceMappingURL=cdp-ax-tree.d.ts.map

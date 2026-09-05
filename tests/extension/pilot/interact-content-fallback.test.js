@@ -55,11 +55,15 @@ describe('interact content extraction fallback', () => {
     assert.strictEqual(globalThis.chrome.tabs.sendMessage.mock.calls.length, 1)
     assert.strictEqual(globalThis.chrome.scripting.executeScript.mock.calls.length, 1)
     assert.strictEqual(sendResult.mock.calls.length, 1)
-    assert.deepStrictEqual(sendResult.mock.calls[0].arguments[0], {
-      title: 'Example',
-      content: 'Readable body',
-      fallback: true
-    })
+    const payload = sendResult.mock.calls[0].arguments[0]
+    assert.strictEqual(payload.title, 'Example')
+    assert.strictEqual(payload.content, 'Readable body')
+    assert.strictEqual(payload.fallback, true)
+    // The fallback is a self-contained injected function with no provenance observer behind it.
+    // An absent provenance block would read as a clean first-party page (kaboom-x0li.3).
+    assert.strictEqual(payload.provenance.attribution_available, false)
+    assert.deepStrictEqual(payload.provenance.regions, [])
+    assert.ok(payload.provenance.notes.some((note) => note.includes('content_script_not_loaded')))
   })
 
   test('get_readable returns structured guidance when fallback injection also fails', async () => {

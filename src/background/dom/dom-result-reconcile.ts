@@ -7,6 +7,64 @@
 import type { DOMResult } from './dom-types.js'
 import type { ActionToastFn } from '../commands/helpers.js'
 import { isDomMutatingAction } from '../exec/action-metadata.js'
+import { frameProvenance, frameRegion, unavailableProvenance } from '../../lib/provenance/classify.js'
+import type { ContentProvenance, ProvenanceRegion } from '../../lib/provenance/provenance-types.js'
+
+/** What a frame reported about itself, from the self-contained origin probe. */
+export interface FrameOriginInfo {
+  origin: string
+  is_top_level_document: boolean
+}
+
+export type FrameOriginMap = ReadonlyMap<number, FrameOriginInfo>
+
+/** Origin of the top-level document, or `''` when no frame identified itself as the top one. */
+function topLevelOrigin(frames: FrameOriginMap | undefined): string {
+  for (const info of frames?.values() ?? []) {
+    if (info.is_top_level_document) return info.origin
+  }
+  return ''
+}
+
+/**
+ * Provenance for a flattened multi-frame element list.
+ *
+ * The extraction responses remain the surface that can distinguish initial-document content from a
+ * post-load injection; here only frame identity is observable, and that is all that is claimed.
+ */
+function listInteractiveProvenance(
+  results: readonly chrome.scripting.InjectionResult[],
+  frames: FrameOriginMap | undefined
+): ContentProvenance {
+  const documentOrigin = topLevelOrigin(frames)
+  const regions: ProvenanceRegion[] = []
+  const seen = new Set<number>()
+  for (const entry of results) {
+    const frameId = entry.frameId
+    const info = typeof frameId === 'number' ? frames?.get(frameId) : undefined
+    if (!info || seen.has(frameId)) continue
+    seen.add(frameId)
+    regions.push(frameRegion(`frame_${frameId}`, info.origin, documentOrigin, info.is_top_level_document))
+  }
+  if (regions.length === 0) {
+    return unavailableProvenance('frame_origins_unavailable', [
+      'Elements from every frame are merged into one list; without frame origins they cannot be attributed.'
+    ])
+  }
+  return frameProvenance(documentOrigin, regions)
+}
+
+/** Stamp each element with the frame it came from, so a merged list stays attributable. */
+function stampFrame(elements: readonly unknown[], frameId: number, info: FrameOriginInfo | undefined): unknown[] {
+  return elements.map((element) => {
+    if (!element || typeof element !== 'object') return element
+    return {
+      ...(element as Record<string, unknown>),
+      frame_id: frameId,
+      ...(info ? { frame_origin: info.origin } : {})
+    }
+  })
+}
 
 export function toDOMResult(value: unknown): DOMResult | null {
   if (!value || typeof value !== 'object') return null
@@ -46,15 +104,26 @@ export function pickFrameResult(
   return results[0] ? { result: results[0].result, frameId: results[0].frameId } : null
 }
 
-/** Merge list_interactive results from all frames (up to 100 elements). */
-export function mergeListInteractive(results: chrome.scripting.InjectionResult[]): {
+/**
+ * Merge list_interactive results from all frames (up to 100 elements).
+ *
+ * Every element carries the frame it came from and, when the origin probe succeeded, that frame's
+ * origin: a merged list that hides which frame drew a control makes an ad iframe's button
+ * indistinguishable from the site's own.
+ */
+export function mergeListInteractive(
+  results: chrome.scripting.InjectionResult[],
+  frames?: FrameOriginMap
+): {
   success: boolean
   elements: unknown[]
   candidate_count?: number
   scope_rect_used?: unknown
+  provenance: ContentProvenance
   error?: string
   message?: string
 } {
+  const provenance = listInteractiveProvenance(results, frames)
   const elements: unknown[] = []
   let firstError: { error?: string; message?: string } | null = null
   let firstScopeRectUsed: unknown
@@ -73,11 +142,11 @@ export function mergeListInteractive(results: chrome.scripting.InjectionResult[]
     if (firstScopeRectUsed === undefined && res?.scope_rect_used !== undefined) {
       firstScopeRectUsed = res.scope_rect_used
     }
-    if (res?.elements) elements.push(...res.elements)
+    if (res?.elements) elements.push(...stampFrame(res.elements, r.frameId, frames?.get(r.frameId)))
     if (elements.length >= 100) break
   }
   if (elements.length === 0 && firstError?.error) {
-    return { success: false, elements: [], error: firstError.error, message: firstError.message }
+    return { success: false, elements: [], provenance, error: firstError.error, message: firstError.message }
   }
   const cappedElements = elements.slice(0, 100)
   const merged: {
@@ -85,10 +154,12 @@ export function mergeListInteractive(results: chrome.scripting.InjectionResult[]
     elements: unknown[]
     candidate_count?: number
     scope_rect_used?: unknown
+    provenance: ContentProvenance
   } = {
     success: true,
     elements: cappedElements,
-    candidate_count: cappedElements.length
+    candidate_count: cappedElements.length,
+    provenance
   }
   if (firstScopeRectUsed !== undefined) {
     merged.scope_rect_used = firstScopeRectUsed

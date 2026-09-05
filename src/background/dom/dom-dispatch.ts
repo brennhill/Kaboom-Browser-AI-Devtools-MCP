@@ -12,7 +12,7 @@ import type { PendingQuery } from '../../types/runtime/queries.js'
 import type { SyncClient } from '../sync/sync-client.js'
 import type { DOMActionParams, DOMResult } from './dom-types.js'
 import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js'
-import { domFrameProbe } from './primitives/dom-frame-probe.js'
+import { domFrameProbe, domFrameOriginProbe } from './primitives/dom-frame-probe.js'
 import { domPrimitivePointer } from './primitives/dom-primitives-pointer.js'
 import { domPrimitiveForm } from './primitives/dom-primitives-form.js'
 import { domPrimitiveRead } from './primitives/dom-primitives-read.js'
@@ -34,6 +34,8 @@ import { isReadOnlyAction } from '../exec/action-metadata.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { normalizeFrameArg, resolveMatchedFrameIds } from '../exec/frame-targeting.js'
+import { DebugCategory, debugLog } from '../debug.js'
+import type { FrameOriginInfo, FrameOriginMap } from './dom-result-reconcile.js'
 import {
   toDOMResult,
   pickFrameResult,
@@ -496,6 +498,34 @@ async function sendDirectDOMResult(
   await sendReconciledAsyncResult(ctx, status, reconciledResult, error)
 }
 
+/**
+ * Ask every frame which origin it is.
+ *
+ * One extra injected call per list_interactive, run against the same frames the elements came
+ * from. On failure the merge reports attribution as unavailable rather than guessing an origin:
+ * a wrong origin would misattribute a control an agent is about to click.
+ */
+async function probeFrameOrigins(tabId: number): Promise<FrameOriginMap | undefined> {
+  try {
+    const probed = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      world: 'MAIN',
+      func: domFrameOriginProbe
+    })
+    const origins = new Map<number, FrameOriginInfo>()
+    for (const entry of probed) {
+      const value = entry.result as FrameOriginInfo | undefined
+      if (value && typeof value.origin === 'string') origins.set(entry.frameId, value)
+    }
+    return origins.size > 0 ? origins : undefined
+  } catch (err) {
+    debugLog(DebugCategory.QUERY, 'Frame origin probe failed; element provenance is unavailable', {
+      error: errorMessage(err, 'frame_origin_probe_failed')
+    })
+    return undefined
+  }
+}
+
 async function sendListInteractiveResult(
   tabId: number,
   rawResult: chrome.scripting.InjectionResult[],
@@ -503,7 +533,7 @@ async function sendListInteractiveResult(
   query: PendingQuery,
   sendAsyncResult: SendAsyncResultFn
 ): Promise<void> {
-  const merged = mergeListInteractive(rawResult)
+  const merged = mergeListInteractive(rawResult, await probeFrameOrigins(tabId))
   sendAsyncResult(
     syncClient,
     query.id,

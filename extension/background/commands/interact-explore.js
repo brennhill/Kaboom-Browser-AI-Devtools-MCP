@@ -6,7 +6,7 @@ import { domPrimitiveNavDiscovery } from '../dom/primitives/dom-primitives-nav-d
 import { readableFallbackScript } from '../exec/content-fallback-scripts.js';
 import { registerCommand } from './registry.js';
 import { cdpSessions } from '../dom/cdp/cdp-session.js';
-import { fetchAXNodes, rankAXCandidates, resolveAXGeometry } from '../dom/cdp/cdp-ax-tree.js';
+import { axProvenance, fetchAXNodes, fetchFrameOrigins, rankAXCandidates, resolveAXGeometry } from '../dom/cdp/cdp-ax-tree.js';
 import { collectCommandElements, commandPageMetadata, selectCommandElements } from './results/element-results.js';
 import { errorMessage } from '../../lib/error-utils.js';
 // =============================================================================
@@ -146,6 +146,36 @@ registerCommand('explore_page', async (ctx) => {
  * against a large page. Ambiguity still reaches the caller — it is just bounded.
  */
 const MAX_RESOLVED_CANDIDATES = 10;
+/**
+ * Shape the ranked candidates for the response, dropping any whose box could not be read.
+ *
+ * A ref nothing can act on is worse than one fewer answer, and a candidate without its frame's
+ * origin leaves an agent unable to tell the page's own control from one an embedded frame drew.
+ */
+function buildAXCandidates(ranked, withGeometry, frames) {
+    const byRef = new Map(withGeometry.map((node) => [node.ref, node]));
+    return ranked
+        .filter((candidate) => byRef.has(candidate.node.ref))
+        .map((candidate) => {
+        const node = byRef.get(candidate.node.ref);
+        const frameId = candidate.node.frame_id;
+        const frameOrigin = frameId ? frames?.origins.get(frameId) : undefined;
+        return {
+            ref: candidate.node.ref,
+            role: candidate.node.role,
+            name: candidate.node.name,
+            value: candidate.node.value,
+            states: candidate.node.states,
+            confidence: candidate.confidence,
+            why: candidate.why,
+            x: node?.x,
+            y: node?.y,
+            width: node?.width,
+            height: node?.height,
+            ...(frameOrigin ? { frame_origin: frameOrigin } : {})
+        };
+    });
+}
 registerCommand('ax_find', async (ctx) => {
     const query = typeof ctx.params.query === 'string' ? ctx.params.query : '';
     if (!query.trim()) {
@@ -177,27 +207,8 @@ registerCommand('ax_find', async (ctx) => {
         // node's box would be one CDP round trip per element on the page.
         const ranked = rankAXCandidates(nodes, query).slice(0, MAX_RESOLVED_CANDIDATES);
         const withGeometry = await resolveAXGeometry(lease, ranked.map((candidate) => candidate.node));
-        const byRef = new Map(withGeometry.map((node) => [node.ref, node]));
-        // A candidate whose box could not be read is dropped rather than returned without
-        // coordinates: a ref nothing can act on is worse than one fewer answer.
-        const candidates = ranked
-            .filter((candidate) => byRef.has(candidate.node.ref))
-            .map((candidate) => {
-            const node = byRef.get(candidate.node.ref);
-            return {
-                ref: candidate.node.ref,
-                role: candidate.node.role,
-                name: candidate.node.name,
-                value: candidate.node.value,
-                states: candidate.node.states,
-                confidence: candidate.confidence,
-                why: candidate.why,
-                x: node?.x,
-                y: node?.y,
-                width: node?.width,
-                height: node?.height
-            };
-        });
+        const frames = await fetchFrameOrigins(lease);
+        const candidates = buildAXCandidates(ranked, withGeometry, frames);
         ctx.sendResult({
             success: true,
             action: 'find',
@@ -207,6 +218,9 @@ registerCommand('ax_find', async (ctx) => {
             // accessibility tree", which are different problems with different fixes.
             ax_node_count: nodes.length,
             candidates,
+            // Which frames these candidates came from, in the same payload as the candidates:
+            // provenance the caller has to fetch separately is provenance it will not fetch.
+            provenance: axProvenance(ranked.map((candidate) => candidate.node), frames),
             ambiguous: candidates.length > 1
         });
     }

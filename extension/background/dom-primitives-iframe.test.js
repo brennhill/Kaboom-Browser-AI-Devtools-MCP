@@ -69,6 +69,16 @@ globalThis.document = {
 
 // Track executeScript calls
 let executeScriptCalls = []
+
+/** The injected DOM primitive: the call that carries arguments. */
+function primitiveCall() {
+  return executeScriptCalls.find((call) => Array.isArray(call.args) && call.args.length > 0)
+}
+
+/** The frame-origin probe added for content provenance: injected with no arguments. */
+function frameOriginProbeCall() {
+  return executeScriptCalls.find((call) => !call.args || call.args.length === 0)
+}
 let executeScriptReturn = []
 
 globalThis.chrome = {
@@ -516,12 +526,16 @@ describe('iframe support: mergeListInteractive', () => {
       noopToast
     )
 
-    assert.strictEqual(executeScriptCalls.length, 1)
+    // Two injections now: the primitive, then the frame-origin probe that stamps
+    // each element with the frame it came from (content provenance). The probe
+    // carries no args, so the primitive is the call that does.
+    assert.strictEqual(executeScriptCalls.length, 2)
     assert.deepStrictEqual(
-      executeScriptCalls[0].args,
+      primitiveCall().args,
       ['[role="dialog"]'],
       'list_interactive should pass selector as scope argument to injected primitive'
     )
+    assert.strictEqual(frameOriginProbeCall().target.allFrames, true, 'the origin probe must reach every frame')
   })
 
   test('forwards scope_rect argument for list_interactive execution', async () => {
@@ -540,9 +554,9 @@ describe('iframe support: mergeListInteractive', () => {
       noopToast
     )
 
-    assert.strictEqual(executeScriptCalls.length, 1)
+    assert.strictEqual(executeScriptCalls.length, 2)
     assert.deepStrictEqual(
-      executeScriptCalls[0].args,
+      primitiveCall().args,
       ['[role="dialog"]', { scope_rect: { x: 300, y: 200, width: 400, height: 280 } }],
       'list_interactive should pass selector + scope_rect to injected primitive'
     )
