@@ -27,6 +27,10 @@ function getInstalledHandler(depsOverrides = {}) {
     debugLog: mock.fn(),
     addToWsBatcher: mock.fn(),
     addToEnhancedActionBatcher: mock.fn(),
+    // A recorded action is stamped with whatever the extension pinned over CDP for its tab
+    // (kaboom-x0li.2). The mock must offer the dependency the handler requires, or the whole
+    // enhanced-action route dies before it reaches the batcher.
+    environmentPinFor: mock.fn(() => undefined),
     addToNetworkBodyBatcher: mock.fn(),
     addToPerfBatcher: mock.fn(),
     addToLogBatcher: mock.fn(),

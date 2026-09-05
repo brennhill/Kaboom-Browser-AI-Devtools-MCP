@@ -502,6 +502,53 @@ interact({what: "subtitle", text: ""})  // Clear
 
 ---
 
+## Environment Pinning
+
+Deterministic replay needs the environment held still. Pinning is **opt-in per session** and
+everything pinned is reported in the generated reproduction artifact — a test that silently
+depends on a pinned clock passes only on the machine that recorded it.
+
+### pin_environment
+
+```js
+interact({what: "pin_environment", environment: {
+  clock_epoch_ms: 1767225600000,
+  timezone_id: "UTC",
+  random_seed: "run-42"
+}})
+```
+
+| `environment` key | Type | Description |
+|-------------------|------|-------------|
+| `clock_epoch_ms` | number | Fix the clock's origin to this epoch, in milliseconds |
+| `timezone_id` | string | IANA timezone, e.g. `UTC` or `America/New_York` |
+| `virtual_time_policy` | string | `advance` (default) fixes the clock's origin and lets it run. `pause` stops time outright, which freezes the page you are recording — use it for replay only. `pauseIfNetworkFetchesPending` is the third option. |
+| `latitude`, `longitude`, `accuracy_m` | number | Geolocation override; accuracy defaults to 1 metre |
+| `viewport_width`, `viewport_height` | number | Device metrics in CSS pixels |
+| `device_scale_factor` | number | Device pixel ratio (default 1) |
+| `mobile` | boolean | Emulate a mobile device |
+| `random_seed` | string | Seed `Math.random` and `crypto.getRandomValues` so a replay draws the same values |
+
+Returns what was actually pinned, and any knob the browser refused. **The refused ones are what a
+replay will diverge on**, so they are named rather than dropped. A seed is only reported as pinned
+once the page confirms the patch installed — `early-patch` does not run on cloaked domains or where
+CSP blocked injection, and declaring determinism a run never had is worse than declaring none.
+
+### unpin_environment
+
+```js
+interact({what: "unpin_environment"})
+```
+
+Releases every override `pin_environment` installed. Returns whether the tab was pinned, and any
+override the browser refused to release.
+
+Note that a navigation clears CDP overrides on its own, so the pin is stamped per recorded action
+rather than once per session: a single session-level record would claim a pin over steps taken
+after it lapsed.
+
+---
+
 ## State Management
 
 ### save_state

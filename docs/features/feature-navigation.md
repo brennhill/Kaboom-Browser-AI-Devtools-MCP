@@ -79,7 +79,7 @@ Each entry shows:
 | cold-start-queuing | `feature/cold-start-queuing/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | compressed-diffs | `feature/compressed-diffs/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | config-profiles | `feature/config-profiles/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
-| content-provenance | `feature/content-provenance/` | index.md | (See folder for details) |
+| content-provenance | `feature/content-provenance/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | context-streaming | `feature/context-streaming/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | convention-engine | `feature/convention-engine/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | cpu-network-emulation | `feature/cpu-network-emulation/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
@@ -167,6 +167,7 @@ Each entry shows:
 | self-healing-tests | `feature/self-healing-tests/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | self-testing | `feature/self-testing/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | seo-audit | `feature/seo-audit/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
+| session-to-test | `feature/session-to-test/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | session-tracking | `feature/session-tracking/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | spa-route-measurement | `feature/spa-route-measurement/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |
 | state-time-travel | `feature/state-time-travel/` | index.md,product-spec.md,qa-plan.md,tech-spec.md | (See folder for details) |

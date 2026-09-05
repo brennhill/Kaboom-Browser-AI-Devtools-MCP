@@ -1,0 +1,1 @@
+{"version":3,"file":"env-pin.d.ts","sourceRoot":"","sources":["../../../src/background/environment-transaction/env-pin.ts"],"names":[],"mappings":"AAAA;;;;;;;GAOG;AAIH,OAAO,EAML,KAAK,kBAAkB,EACxB,MAAM,2BAA2B,CAAA;AAelC;;;;;;GAMG;AACH,wBAAgB,uBAAuB,CAAC,MAAM,EAAE,QAAQ,CAAC,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAAC,GAAG,kBAAkB,CAiBrG;AAOD,wBAAgB,8BAA8B,IAAI,IAAI,CA4ErD"}

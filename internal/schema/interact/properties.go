@@ -10,6 +10,7 @@ func toolProperties() map[string]any {
 	mergeProps(props, gestureProperties())
 	mergeProps(props, findProperties())
 	mergeProps(props, effectVerificationProperties())
+	mergeProps(props, environmentPinProperties())
 	mergeProps(props, formAndWaitProperties())
 	mergeProps(props, outputAndBatchProperties())
 	return props

@@ -33,8 +33,10 @@ func writeKaboomHeader(b *strings.Builder, actions []types.EnhancedAction, opts 
 		desc = ChopString(opts.ErrorMessage, 80)
 	}
 	fmt.Fprintf(b, "# Reproduction: %s\n", desc)
-	fmt.Fprintf(b, "# Captured: %s | %d actions | %s\n\n",
+	fmt.Fprintf(b, "# Captured: %s | %d actions | %s\n",
 		time.Now().Format(time.RFC3339), len(actions), startURL)
+	writeEnvironmentPin(b, actions, "# ")
+	b.WriteString("\n")
 }
 
 func writeKaboomSteps(b *strings.Builder, actions []types.EnhancedAction, opts Params) {
@@ -54,6 +56,9 @@ func writeKaboomSteps(b *strings.Builder, actions []types.EnhancedAction, opts P
 			prefix = "(AI) "
 		}
 		fmt.Fprintf(b, "%d. %s%s\n", stepNum, prefix, line)
+		// The step names one locator. The other two are listed under it so a replay that
+		// cannot resolve the first has somewhere to go instead of failing the step.
+		writeFallbackLocators(b, buildLocators(action), "   ", "", renderLocatorHuman)
 	}
 }
 

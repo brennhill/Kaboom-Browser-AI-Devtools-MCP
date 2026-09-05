@@ -18,6 +18,7 @@ import {
 } from '../constants.js'
 import { isSensitiveInput } from './serialize.js'
 import { postAuthenticatedPageMessage } from './channel.js'
+import type { WireAXLocator, WireViewportLocator } from '../../types/wire/wire-enhanced-action.js'
 
 // Action types
 type EnhancedActionType = 'click' | 'input' | 'keypress' | 'navigate' | 'select' | 'scroll' | 'transient'
@@ -44,6 +45,15 @@ interface EnhancedActionRecord {
   timestamp: number
   url: string
   selectors?: SelectorStrategies
+  /**
+   * Locators two and three, recorded alongside the selector rather than instead of it.
+   *
+   * A selector describes where an element sits in the markup, so any re-render can break
+   * it. `ax` describes what the control MEANS, and `viewport` where it was on screen.
+   * Emitting all three is what lets a generated test survive a change that breaks one.
+   */
+  ax?: WireAXLocator
+  viewport?: WireViewportLocator
   input_type?: string
   value?: string
   key?: string
@@ -176,17 +186,69 @@ function readTestId(el: ElementWithProperties): string | undefined {
   )
 }
 
-function applyRoleSelector(
-  selectors: Partial<SelectorStrategies>,
-  element: Element,
-  el: ElementWithProperties,
-  ariaLabel: string | false | null
-): void {
-  const explicitRole = el.getAttribute && el.getAttribute('role')
-  const role = explicitRole || getImplicitRole(element)
-  const name = ariaLabel || (el.textContent && el.textContent.trim().slice(0, SELECTOR_TEXT_MAX_LENGTH))
+/**
+ * Resolve the accessibility semantics of an element: its role and its accessible name.
+ *
+ * One resolver, two consumers — the `role` selector strategy and the `ax` locator — so the
+ * two can never disagree about what the same element is called.
+ */
+export function resolveAccessibleRoleAndName(element: Element | null): { role: string; name: string } {
+  if (!element) return { role: '', name: '' }
+  const el = element as ElementWithProperties
+  const explicitRole = (el.getAttribute && el.getAttribute('role')) || ''
+  const role = explicitRole || getImplicitRole(element) || ''
+  const ariaLabel = (el.getAttribute && el.getAttribute('aria-label')) || ''
+  const text = (el.textContent && el.textContent.trim().slice(0, SELECTOR_TEXT_MAX_LENGTH)) || ''
+  return { role, name: ariaLabel || text }
+}
+
+function applyRoleSelector(selectors: Partial<SelectorStrategies>, element: Element): void {
+  const { role, name } = resolveAccessibleRoleAndName(element)
   if (role && name) {
-    selectors.role = { role, name: ariaLabel || name }
+    selectors.role = { role, name }
+  }
+}
+
+/**
+ * The second locator: what the control means, not where it sits.
+ *
+ * `ref` is deliberately absent. A CDP AX ref is a backend node id valid only inside the
+ * snapshot that produced it, so recording one here would be stale by replay time. Role plus
+ * accessible name is what `interact(what:'find')` resolves against, and it survives the DOM
+ * restructuring that breaks a selector.
+ */
+export function computeAXLocator(element: Element | null): WireAXLocator | undefined {
+  const { role, name } = resolveAccessibleRoleAndName(element)
+  if (!role && !name) return undefined
+  return { role, name }
+}
+
+/**
+ * The third locator: the point the target occupied, with the frame and viewport it was
+ * measured in.
+ *
+ * A bare x/y is unreplayable — at a different window size or device scale it lands
+ * somewhere else, and in the wrong frame it lands on the wrong document — so the
+ * measurement context travels with the point. A zero-area or non-finite box is dropped
+ * rather than recorded: a point nothing occupies would send a replayed click into empty
+ * space and report success.
+ */
+export function computeViewportLocator(element: Element | null): WireViewportLocator | undefined {
+  if (!element || typeof element.getBoundingClientRect !== 'function') return undefined
+  const rect = element.getBoundingClientRect()
+  if (!rect) return undefined
+  const values = [rect.left, rect.top, rect.width, rect.height]
+  if (!values.every((value) => typeof value === 'number' && Number.isFinite(value))) return undefined
+  if (rect.width <= 0 || rect.height <= 0) return undefined
+  return {
+    x: Math.round(rect.left + rect.width / 2),
+    y: Math.round(rect.top + rect.height / 2),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+    frame_url: typeof window !== 'undefined' && window.location ? window.location.href : '',
+    viewport_width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    viewport_height: typeof window !== 'undefined' ? window.innerHeight : 0,
+    device_pixel_ratio: typeof window !== 'undefined' ? window.devicePixelRatio : 1
   }
 }
 
@@ -276,7 +338,7 @@ export function computeSelectors(element: Element | null): SelectorStrategies {
   if (ariaLabel) selectors.ariaLabel = ariaLabel
 
   // Priority 3: Role + accessible name
-  applyRoleSelector(selectors, element, el, ariaLabel)
+  applyRoleSelector(selectors, element)
 
   // Priority 4: ID
   if (element.id) selectors.id = element.id
@@ -357,6 +419,10 @@ export function recordEnhancedAction(
 
   if (element) {
     action.selectors = computeSelectors(element)
+    // All three locators or none: a step recorded with only a selector is exactly the step
+    // that becomes unrepairable when the page re-renders.
+    action.ax = computeAXLocator(element)
+    action.viewport = computeViewportLocator(element)
   }
 
   const enricher = ACTION_DATA_ENRICHERS[type]

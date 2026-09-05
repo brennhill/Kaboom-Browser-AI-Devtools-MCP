@@ -4,7 +4,7 @@ feature_id: feature-test-generation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/testgenhandler/handler.go
   - cmd/browser-agent/internal/testgenhandler/provider_adapter.go
@@ -16,6 +16,7 @@ code_paths:
   - cmd/browser-agent/internal/toolgenerate/artifacts_test_impl.go
   - internal/mcp/response.go
   - internal/testgen/generate.go
+  - internal/reproduction/reproduction_locators.go
   - internal/capture/bodystore/store.go
   - internal/capture/actionstore/store.go
   - internal/types/wire_log.go
@@ -95,3 +96,9 @@ last_verified_date: 2026-03-05
   `context_test.go`: they consume the same generated-test contract and fixtures,
   and the package has an executable ten-file ownership boundary.
 - Schema invariants: `internal/schema/invariants_test.go`
+
+## Three-locator emission
+
+`generate({type:'test_from_context'})` emits through `internal/reproduction`, so every generated step
+now carries the accessibility and coordinate locators alongside its selector, and states the
+environment the recording session pinned. See [Session to test](../session-to-test/index.md).

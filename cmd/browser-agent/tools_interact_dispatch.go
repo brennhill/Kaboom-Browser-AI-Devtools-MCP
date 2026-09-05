@@ -68,6 +68,8 @@ func buildInteractActions(h *ToolHandler) map[string]interactdispatch.Action {
 		"subtitle":                  browserAction(h, "subtitle"),
 		"activate_tab":              browserAction(h, "activate_tab"),
 		"zoom_region":               browserAction(h, "zoom_region"),
+		"pin_environment":           browserAction(h, "pin_environment"),
+		"unpin_environment":         browserAction(h, "unpin_environment"),
 		"save_state":                h.stateInteractHandler.HandleStateSave,
 		"load_state":                h.stateInteractHandler.HandleStateLoad,
 		"list_states":               h.stateInteractHandler.HandleStateList,

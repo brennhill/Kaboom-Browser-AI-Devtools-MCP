@@ -54,3 +54,40 @@ func TestStoreTracksNavigationEvictionStatsAndClear(t *testing.T) {
 		t.Fatalf("cleared Stats() = %+v, want empty/reset total/preserved drops", cleared)
 	}
 }
+
+func TestStoreDetachesLocatorAndEnvironmentPointers(t *testing.T) {
+	store := New(4)
+	action := types.EnhancedAction{
+		Type:     "click",
+		AX:       &types.WireAXLocator{Ref: "ax_1", Role: "button", Name: "Save"},
+		Viewport: &types.WireViewportLocator{X: 10, Y: 20},
+		Environment: &types.WireEnvironmentPin{
+			Clock:      &types.WireClockPin{EpochMs: 1000, TimezoneID: "UTC"},
+			Viewport:   &types.WireViewportPin{Width: 800, Height: 600},
+			Unpinned:   []string{"network"},
+			RandomSeed: "seed",
+		},
+	}
+	store.Add([]types.EnhancedAction{action}, time.Now())
+
+	// Sharing these pointers would let a later ingest rewrite evidence a caller already
+	// holds, so a generated test would describe a locator or a pin that never applied.
+	action.AX.Name = "mutated"
+	action.Viewport.X = 999
+	action.Environment.Clock.TimezoneID = "mutated"
+	action.Environment.Unpinned[0] = "mutated"
+
+	retained := store.Snapshot().Actions[0]
+	if retained.AX.Name != "Save" {
+		t.Errorf("retained AX name = %q, want %q", retained.AX.Name, "Save")
+	}
+	if retained.Viewport.X != 10 {
+		t.Errorf("retained viewport x = %d, want 10", retained.Viewport.X)
+	}
+	if retained.Environment.Clock.TimezoneID != "UTC" {
+		t.Errorf("retained timezone = %q, want UTC", retained.Environment.Clock.TimezoneID)
+	}
+	if retained.Environment.Unpinned[0] != "network" {
+		t.Errorf("retained unpinned[0] = %q, want network", retained.Environment.Unpinned[0])
+	}
+}

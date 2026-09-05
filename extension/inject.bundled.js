@@ -654,13 +654,49 @@ function computeCssPath(element) {
 function readTestId(el) {
   return el.getAttribute && (el.getAttribute("data-testid") || el.getAttribute("data-test-id") || el.getAttribute("data-cy")) || void 0;
 }
-function applyRoleSelector(selectors, element, el, ariaLabel) {
-  const explicitRole = el.getAttribute && el.getAttribute("role");
-  const role = explicitRole || getImplicitRole(element);
-  const name = ariaLabel || el.textContent && el.textContent.trim().slice(0, SELECTOR_TEXT_MAX_LENGTH);
+function resolveAccessibleRoleAndName(element) {
+  if (!element)
+    return { role: "", name: "" };
+  const el = element;
+  const explicitRole = el.getAttribute && el.getAttribute("role") || "";
+  const role = explicitRole || getImplicitRole(element) || "";
+  const ariaLabel = el.getAttribute && el.getAttribute("aria-label") || "";
+  const text = el.textContent && el.textContent.trim().slice(0, SELECTOR_TEXT_MAX_LENGTH) || "";
+  return { role, name: ariaLabel || text };
+}
+function applyRoleSelector(selectors, element) {
+  const { role, name } = resolveAccessibleRoleAndName(element);
   if (role && name) {
-    selectors.role = { role, name: ariaLabel || name };
+    selectors.role = { role, name };
   }
+}
+function computeAXLocator(element) {
+  const { role, name } = resolveAccessibleRoleAndName(element);
+  if (!role && !name)
+    return void 0;
+  return { role, name };
+}
+function computeViewportLocator(element) {
+  if (!element || typeof element.getBoundingClientRect !== "function")
+    return void 0;
+  const rect = element.getBoundingClientRect();
+  if (!rect)
+    return void 0;
+  const values = [rect.left, rect.top, rect.width, rect.height];
+  if (!values.every((value) => typeof value === "number" && Number.isFinite(value)))
+    return void 0;
+  if (rect.width <= 0 || rect.height <= 0)
+    return void 0;
+  return {
+    x: Math.round(rect.left + rect.width / 2),
+    y: Math.round(rect.top + rect.height / 2),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+    frame_url: typeof window !== "undefined" && window.location ? window.location.href : "",
+    viewport_width: typeof window !== "undefined" ? window.innerWidth : 0,
+    viewport_height: typeof window !== "undefined" ? window.innerHeight : 0,
+    device_pixel_ratio: typeof window !== "undefined" ? window.devicePixelRatio : 1
+  };
 }
 function applyClickableTextSelector(selectors, element, el) {
   const isClickable = element.tagName && CLICKABLE_TAGS.has(element.tagName.toUpperCase()) || el.getAttribute && el.getAttribute("role") === "button";
@@ -681,7 +717,7 @@ function computeSelectors(element) {
   const ariaLabel = el.getAttribute && el.getAttribute("aria-label");
   if (ariaLabel)
     selectors.ariaLabel = ariaLabel;
-  applyRoleSelector(selectors, element, el, ariaLabel);
+  applyRoleSelector(selectors, element);
   if (element.id)
     selectors.id = element.id;
   applyClickableTextSelector(selectors, element, el);
@@ -727,6 +763,8 @@ function recordEnhancedAction(type, element, opts = {}) {
   };
   if (element) {
     action.selectors = computeSelectors(element);
+    action.ax = computeAXLocator(element);
+    action.viewport = computeViewportLocator(element);
   }
   const enricher = ACTION_DATA_ENRICHERS[type];
   if (enricher)

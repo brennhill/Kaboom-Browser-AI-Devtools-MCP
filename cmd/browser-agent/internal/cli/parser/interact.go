@@ -57,12 +57,15 @@ func interactTargetingFlagSpecs() map[string]cliFlagSpec {
 		// Pointer gestures and clipped capture. --drag-path is JSON because a route is a list
 		// of points, and it is not --path because --path is already the cookie path.
 		"--drag-path": {MCPKey: "drag_path", Kind: FlagJSON},
-		"--modifiers": {MCPKey: "modifiers", Kind: FlagStringList},
-		"--delta-x":   {MCPKey: "delta_x", Kind: FlagInt},
-		"--delta-y":   {MCPKey: "delta_y", Kind: FlagInt},
-		"--width":     {MCPKey: "width", Kind: FlagInt},
-		"--height":    {MCPKey: "height", Kind: FlagInt},
-		"--scale":     {MCPKey: "scale", Kind: FlagInt},
+		// Environment pinning takes one JSON object rather than nine flat flags: the knobs are
+		// a single unit, and flat names would collide with --width/--height above.
+		"--environment": {MCPKey: "environment", Kind: FlagJSON},
+		"--modifiers":   {MCPKey: "modifiers", Kind: FlagStringList},
+		"--delta-x":     {MCPKey: "delta_x", Kind: FlagInt},
+		"--delta-y":     {MCPKey: "delta_y", Kind: FlagInt},
+		"--width":       {MCPKey: "width", Kind: FlagInt},
+		"--height":      {MCPKey: "height", Kind: FlagInt},
+		"--scale":       {MCPKey: "scale", Kind: FlagInt},
 		// List/query filters
 		"--visible-only":    {MCPKey: "visible_only", Kind: FlagBool},
 		"--verbose":         {MCPKey: "verbose", Kind: FlagBool},

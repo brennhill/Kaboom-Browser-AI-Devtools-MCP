@@ -47,6 +47,7 @@ import { markStateVersion, setSessionAccessLevel, wasServiceWorkerRestarted } fr
 import { loadServerInstallId } from './sync/install-identity.js';
 import { getExtensionLogQueueMetrics, initializeExtensionLogQueue, recordExtensionDiagnosticLifecycle, pushExtensionLog } from './runtime-state/log-queue.js';
 import { initializeEnvironmentTransactionRuntime } from './environment-transaction/runtime.js';
+import { environmentPinFor } from './dom/cdp/cdp-env-pin.js';
 /**
  * Initialize the extension on startup
  * Handles state recovery after service worker restart, loads settings, installs listeners.
@@ -87,6 +88,7 @@ function installBackgroundMessageHandlers(ctx) {
                 addLog: (entry) => logBatcher.add(entry),
                 addWebSocket: (event) => wsBatcher.add(event),
                 addEnhancedAction: (action) => enhancedActionBatcher.add(action),
+                environmentPinFor,
                 addNetworkBody: (body) => networkBodyBatcher.add(body),
                 addPerformance: (snapshot) => perfBatcher.add(snapshot),
                 handleLog: handleLogMessage,

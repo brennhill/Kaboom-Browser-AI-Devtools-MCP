@@ -17,6 +17,9 @@ export function composeBackgroundHandlers(deps) {
       addPerformance: deps.addToPerfBatcher, handleLog: deps.handleLogMessage,
       isNetworkBodyCaptureDisabled: deps.isNetworkBodyCaptureDisabled, debugLog: deps.debugLog
       ,addDiagnostic: deps.addDiagnostic
+      // Mirrors init.ts. A dependency missing here dies inside the handler's switch, so the
+      // route it belongs to silently stops delivering.
+      ,environmentPinFor: deps.environmentPinFor ?? (() => undefined)
     }),
     createStatusMessageHandler({
       getConnectionStatus: deps.getConnectionStatus, getServerUrl: deps.getServerUrl,

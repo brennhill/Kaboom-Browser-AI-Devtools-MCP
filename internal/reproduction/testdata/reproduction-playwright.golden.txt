@@ -1,9 +1,21 @@
 import { test, expect } from '@playwright/test';
 
+// Environment pinned by the recording session. This test depends on it:
+// clock: epoch_ms 1705312800000, timezone UTC, virtual time policy pause
+// viewport: 1280x720 @2x
+// random seed: kaboom-golden (Math.random and crypto.getRandomValues)
+// NOT pinned: network responses
+// Locator fallback order: selector -> ax -> coordinate
+
 test('reproduction: Login button not responding', async ({ page }) => {
   await page.goto('https://app.example.com/login');
-  // click - no selector available
-  // input - no selector available
+  await page.getByTestId('email-input').click();
+  // locator fallbacks (selector -> ax -> coordinate):
+  // fallback ax: getByRole('textbox', { name: 'Email' })  [role=textbox name="Email" (ref ax_88)]
+  // fallback coordinate: page.mouse.click(400, 220)  [(400, 220) in 1280x720 @2x frame https://app.example.com/login]
+  await page.getByTestId('email-input').fill('user@test.com');
+  // locator fallbacks (selector -> ax -> coordinate):
+  // fallback ax: getByRole('textbox', { name: 'Email' })  [role=textbox name="Email" (ref ax_88)]
   await page.keyboard.press('Enter');
   // Error: Login button not responding
 });

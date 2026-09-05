@@ -10,9 +10,13 @@ export function createTelemetryMessageHandler(deps) {
                 case 'ws_event':
                     deps.addWebSocket(message.payload);
                     return false;
-                case 'enhanced_action':
-                    deps.addEnhancedAction(message.payload);
+                case 'enhanced_action': {
+                    // The page cannot know what the extension pinned over CDP, so the stamp happens
+                    // here — in the context that applied it — rather than being inferred later.
+                    const environment = deps.environmentPinFor(message.payload.tab_id ?? message.tabId);
+                    deps.addEnhancedAction(environment ? { ...message.payload, environment } : message.payload);
                     return false;
+                }
                 case 'performance_snapshot':
                     deps.addPerformance(message.payload);
                     return false;
