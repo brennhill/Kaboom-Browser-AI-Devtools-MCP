@@ -38,9 +38,9 @@ to:
 ### Step 1. Record the real flow
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // perform the real user path
-configure({what: "recording_stop", recording_id: "rec-checkout"})
+configure({what: "event_recording_stop", recording_id: "rec-checkout"})
 ```
 
 ### Step 2. Generate a test artifact

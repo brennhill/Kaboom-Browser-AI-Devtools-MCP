@@ -157,7 +157,10 @@ async function executeStandardAction(target, params) {
                 scope_rect: params.scope_rect,
                 nth: params.nth,
                 new_tab: params.new_tab,
-                structured: params.structured
+                structured: params.structured,
+                // A modifier stripped here never reaches the page: the injected keystroke would carry
+                // no ctrl/alt/cmd and the shortcut the agent asked for would silently not happen.
+                modifiers: params.modifiers
             }
         ]
     });

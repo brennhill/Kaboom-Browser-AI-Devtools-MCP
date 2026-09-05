@@ -232,47 +232,61 @@ return null}function insertViaRichEditor(_editorType,target,text,clear){const li
 function keyCodeForChar(char){if(char==="\n")return{key:"Enter",code:"Enter",keyCode:13};if(char==="	")return{key:"Tab",code:"Tab",keyCode:9};if(char===" ")return{
 key:" ",code:"Space",keyCode:32};const upper=char.toUpperCase();const isLetter=upper>="A"&&upper<="Z";const isDigit=char>="0"&&char<="9";let code;let keyCode;if(isLetter){
 code="Key"+upper;keyCode=upper.charCodeAt(0)}else if(isDigit){code="Digit"+char;keyCode=char.charCodeAt(0)}else{code="";keyCode=char.charCodeAt(0)}return{key:char,
-code,keyCode}}function dispatchKeySequence(target,char,isContentEditable){const{key,code,keyCode}=keyCodeForChar(char);const shiftKey=char!==char.toLowerCase()&&
-char===char.toUpperCase()&&char.toLowerCase()!==char.toUpperCase();const kbOpts={key,code,keyCode,bubbles:true,cancelable:true,shiftKey};target.dispatchEvent(new KeyboardEvent(
-"keydown",kbOpts));target.dispatchEvent(new KeyboardEvent("keypress",kbOpts));if(isContentEditable){target.dispatchEvent(new InputEvent("beforeinput",{bubbles:true,
-cancelable:true,inputType:"insertText",data:char}));const sel=document.getSelection();if(sel&&sel.rangeCount>0){const range=sel.getRangeAt(0);range.deleteContents();
-if(char==="\n"){range.insertNode(document.createElement("br"))}else{range.insertNode(document.createTextNode(char))}range.collapse(false);sel.removeAllRanges();
-sel.addRange(range)}target.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertText",data:char}))}target.dispatchEvent(new KeyboardEvent("keyup",
-kbOpts))}function insertViaKeyboardSim(node,text){for(const char of text){dispatchKeySequence(node,char,true)}return{success:true}}function isElementOutsideViewport(el2){
-if(!(el2 instanceof HTMLElement)||typeof el2.getBoundingClientRect!=="function")return false;const rect=el2.getBoundingClientRect();const{width:viewWidth,height:viewHeight}=viewportSize();
-if(viewHeight===0&&viewWidth===0)return false;return rect.bottom<0||rect.top>viewHeight||rect.right<0||rect.left>viewWidth}function autoScrollIfNeeded(el2){if(isElementOutsideViewport(
-el2)){el2.scrollIntoView({behavior:"instant",block:"center"});return true}return false}function findInteractiveAncestor(el2){const tag=el2.tagName.toLowerCase();
-const role=el2.getAttribute("role")||"";const interactiveTags=new Set(["a","button","input","select","textarea"]);const interactiveRoles=new Set(["button","link",
-"menuitem","tab","option","switch"]);if(interactiveTags.has(tag)||interactiveRoles.has(role))return null;if(typeof el2.closest==="function"){const ancestor=el2.
-closest('a, button, [role="button"], [role="link"], [role="menuitem"], [role="tab"], input, select, textarea');if(ancestor&&ancestor!==el2)return ancestor}return null}
-function detectBlockingOverlay(el2){const dialogs=collectDialogs();if(dialogs.length===0)return null;const topDialog=pickTopDialog(dialogs);if(!topDialog)return null;
-if(typeof topDialog.contains==="function"&&topDialog.contains(el2))return null;return topDialog}function describeBlockingOverlay(overlay){const overlayTag=overlay.
-tagName.toLowerCase();const overlayRole=overlay.getAttribute("role")||"";const overlayLabel=overlay.getAttribute("aria-label")||"";if(overlayLabel)return`${overlayTag}\
-[aria-label="${overlayLabel}"]`;if(overlayRole)return`${overlayTag}[role="${overlayRole}"]`;return overlayTag}function blockedByOverlayError(target){const blockingOverlay=detectBlockingOverlay(
-target);if(!blockingOverlay)return null;const overlayDesc=describeBlockingOverlay(blockingOverlay);return domError("blocked_by_overlay",`Element is behind a mod\
-al overlay (${overlayDesc}). Use interact({what:"dismiss_top_overlay"}) to close it first.`)}function linkForNewTab(clickTarget){const tag=clickTarget.tagName.toLowerCase();
-if(tag==="a")return clickTarget;if(typeof clickTarget.closest==="function"){return clickTarget.closest("a[href]")}return null}function openInNewTab(clickTarget,linkNode,href){
-let opened=false;try{if(typeof window!=="undefined"&&typeof window.open==="function"){window.open(href,"_blank","noopener,noreferrer");opened=true}}catch{}if(!opened&&
-linkNode instanceof Element){const previousTarget=linkNode.getAttribute("target");linkNode.setAttribute("target","_blank");linkNode.click();if(previousTarget==null){
-linkNode.removeAttribute("target")}else{linkNode.setAttribute("target",previousTarget)}}}function structuredTextSections(node){const sections=[];const children=node.
-children;for(let i=0;i<children.length&&sections.length<50;i++){const child=children[i];if(!child.tagName)continue;const tag=child.tagName.toLowerCase();const heading=child.
-querySelector('h1, h2, h3, h4, h5, h6, [role="heading"], summary, button[aria-expanded]');if(heading){const headerText=heading.innerText?.trim()||"";const ariaExpanded=heading.
-getAttribute("aria-expanded");const expanded=ariaExpanded!==null?ariaExpanded==="true":void 0;const contentParts=[];const contentNodes=child.querySelectorAll("p\
-, li, span, div, td, pre, code");contentNodes.forEach(cn=>{if(cn!==heading&&!heading.contains(cn)){const t=cn.innerText?.trim();if(t&&t.length>0)contentParts.push(
-t)}});sections.push({header:headerText,content:contentParts.join("\n")||(child.innerText?.replace(headerText,"").trim()||""),expanded,tag})}else{const t=child.innerText?.
-trim();if(t&&t.length>0){sections.push({content:t,tag})}}}return sections}function buildActionHandlers(node){return{click:()=>withMutationTracking(()=>{if(!(node instanceof
-HTMLElement))return domError("not_interactive",`Element is not an HTMLElement: ${node.tagName}`);const interactiveAncestor=findInteractiveAncestor(node);const clickTarget=interactiveAncestor instanceof
-HTMLElement?interactiveAncestor:node;const overlayErr=blockedByOverlayError(node);if(overlayErr)return overlayErr;if(options.new_tab){const linkNode=linkForNewTab(
-clickTarget);const href=linkNode?linkNode.getAttribute("href")||linkNode.href||"":"";if(!href){return domError("new_tab_requires_link","new_tab=true requires a \
-link target with href")}openInNewTab(clickTarget,linkNode,href);return mutatingSuccess(clickTarget,{value:href,reason:"opened_new_tab"})}const didScroll=autoScrollIfNeeded(
-clickTarget);clickTarget.click();return mutatingSuccess(clickTarget,didScroll?{auto_scrolled:true}:void 0)}),focus:()=>{const overlayErr=blockedByOverlayError(node);
-if(overlayErr)return overlayErr;if(!(node instanceof HTMLElement))return domError("not_focusable",`Element is not an HTMLElement: ${node.tagName}`);node.focus();
-return mutatingSuccess(node)},scroll_to:()=>{function findScrollableContainer(el2){let current=el2;while(current&&current!==document.documentElement){if(current instanceof
-HTMLElement&&current.scrollHeight>current.clientHeight+10){const style=typeof getComputedStyle==="function"?getComputedStyle(current):null;if(style){const ov=style.
-overflow||"";const ovY=style.overflowY||"";if(ov==="auto"||ov==="scroll"||ovY==="auto"||ovY==="scroll"){return current}}}current=current.parentElement}return null}
-function scrollToY(container,top){if(typeof container.scrollTo==="function"){container.scrollTo({top,behavior:"smooth"});return};container.scrollTop=top}function scrollByY(container,deltaY){
-if(typeof container.scrollBy==="function"){container.scrollBy({top:deltaY,behavior:"smooth"});return}const currentTop=typeof container.scrollTop==="number"?Number(
-container.scrollTop):0;container.scrollTop=currentTop+deltaY}const direction=(options.direction||"").toLowerCase();const tag=node.tagName.toLowerCase();const isContainer=node instanceof
+code,keyCode}}function heldKeyModifiers(){const bits={alt:1,ctrl:2,control:2,meta:4,cmd:4,command:4,shift:8};let mask=0;for(const name of options.modifiers||[]){
+mask|=bits[String(name).trim().toLowerCase()]??0}return{ctrlKey:(mask&2)!==0,altKey:(mask&1)!==0,metaKey:(mask&4)!==0,shiftKey:(mask&8)!==0,shortcut:(mask&~8)!==
+0}}function dispatchKeySequence(target,char,isContentEditable){const{key,code,keyCode}=keyCodeForChar(char);const held=heldKeyModifiers();const shiftKey=held.shiftKey||
+char!==char.toLowerCase()&&char===char.toUpperCase()&&char.toLowerCase()!==char.toUpperCase();const kbOpts={key,code,keyCode,bubbles:true,cancelable:true,shiftKey,
+ctrlKey:held.ctrlKey,altKey:held.altKey,metaKey:held.metaKey};target.dispatchEvent(new KeyboardEvent("keydown",kbOpts));target.dispatchEvent(new KeyboardEvent("\
+keypress",kbOpts));if(isContentEditable&&!held.shortcut){target.dispatchEvent(new InputEvent("beforeinput",{bubbles:true,cancelable:true,inputType:"insertText",
+data:char}));const sel=document.getSelection();if(sel&&sel.rangeCount>0){const range=sel.getRangeAt(0);range.deleteContents();if(char==="\n"){range.insertNode(document.
+createElement("br"))}else{range.insertNode(document.createTextNode(char))}range.collapse(false);sel.removeAllRanges();sel.addRange(range)}target.dispatchEvent(new InputEvent(
+"input",{bubbles:true,inputType:"insertText",data:char}))}target.dispatchEvent(new KeyboardEvent("keyup",kbOpts))}function insertViaKeyboardSim(node,text){for(const char of text){
+dispatchKeySequence(node,char,true)}return{success:true}}function typeIntoContentEditable(node,text,shortcut){node.focus();if(options.clear){const selection=document.
+getSelection();if(selection){selection.selectAllChildren(node);selection.deleteFromDocument()}}const editor=shortcut?null:detectRichEditor(node);if(editor){insertViaRichEditor(
+editor.type,editor.target,text,!!options.clear);return mutatingSuccess(node,{value:node.innerText,insertion_strategy:editor.type+"_native"})}insertViaKeyboardSim(
+node,text);return mutatingSuccess(node,{value:node.innerText,insertion_strategy:shortcut?"modified_keystroke":"keyboard_simulation"})}function typeIntoNode(node){
+const overlayErr=blockedByOverlayError(node);if(overlayErr)return overlayErr;const text=(options.text||"").replace(/\\n/g,"\n");const shortcut=heldKeyModifiers().
+shortcut;if(node instanceof HTMLElement&&node.isContentEditable){return typeIntoContentEditable(node,text,shortcut)}if(!(node instanceof HTMLInputElement)&&!(node instanceof
+HTMLTextAreaElement)){return domError("not_typeable",`Element is not an input, textarea, or contenteditable: ${node.tagName}`)}node.focus();for(const char of text){
+dispatchKeySequence(node,char,false)}if(shortcut){return mutatingSuccess(node,{value:node.value,insertion_strategy:"modified_keystroke"})}const proto=node instanceof
+HTMLTextAreaElement?HTMLTextAreaElement:HTMLInputElement;const nativeSetter=Object.getOwnPropertyDescriptor(proto.prototype,"value")?.set;const newValue=options.
+clear?text:node.value+text;if(nativeSetter){nativeSetter.call(node,newValue)}else{node.value=newValue}node.dispatchEvent(new InputEvent("input",{bubbles:true,data:text,
+inputType:"insertText"}));node.dispatchEvent(new Event("change",{bubbles:true}));return mutatingSuccess(node,{value:node.value,insertion_strategy:"native_setter"})}
+function isElementOutsideViewport(el2){if(!(el2 instanceof HTMLElement)||typeof el2.getBoundingClientRect!=="function")return false;const rect=el2.getBoundingClientRect();
+const{width:viewWidth,height:viewHeight}=viewportSize();if(viewHeight===0&&viewWidth===0)return false;return rect.bottom<0||rect.top>viewHeight||rect.right<0||rect.
+left>viewWidth}function autoScrollIfNeeded(el2){if(isElementOutsideViewport(el2)){el2.scrollIntoView({behavior:"instant",block:"center"});return true}return false}
+function findInteractiveAncestor(el2){const tag=el2.tagName.toLowerCase();const role=el2.getAttribute("role")||"";const interactiveTags=new Set(["a","button","i\
+nput","select","textarea"]);const interactiveRoles=new Set(["button","link","menuitem","tab","option","switch"]);if(interactiveTags.has(tag)||interactiveRoles.has(
+role))return null;if(typeof el2.closest==="function"){const ancestor=el2.closest('a, button, [role="button"], [role="link"], [role="menuitem"], [role="tab"], in\
+put, select, textarea');if(ancestor&&ancestor!==el2)return ancestor}return null}function detectBlockingOverlay(el2){const dialogs=collectDialogs();if(dialogs.length===
+0)return null;const topDialog=pickTopDialog(dialogs);if(!topDialog)return null;if(typeof topDialog.contains==="function"&&topDialog.contains(el2))return null;return topDialog}
+function describeBlockingOverlay(overlay){const overlayTag=overlay.tagName.toLowerCase();const overlayRole=overlay.getAttribute("role")||"";const overlayLabel=overlay.
+getAttribute("aria-label")||"";if(overlayLabel)return`${overlayTag}[aria-label="${overlayLabel}"]`;if(overlayRole)return`${overlayTag}[role="${overlayRole}"]`;return overlayTag}
+function blockedByOverlayError(target){const blockingOverlay=detectBlockingOverlay(target);if(!blockingOverlay)return null;const overlayDesc=describeBlockingOverlay(
+blockingOverlay);return domError("blocked_by_overlay",`Element is behind a modal overlay (${overlayDesc}). Use interact({what:"dismiss_top_overlay"}) to close i\
+t first.`)}function linkForNewTab(clickTarget){const tag=clickTarget.tagName.toLowerCase();if(tag==="a")return clickTarget;if(typeof clickTarget.closest==="func\
+tion"){return clickTarget.closest("a[href]")}return null}function openInNewTab(clickTarget,linkNode,href){let opened=false;try{if(typeof window!=="undefined"&&typeof window.
+open==="function"){window.open(href,"_blank","noopener,noreferrer");opened=true}}catch{}if(!opened&&linkNode instanceof Element){const previousTarget=linkNode.getAttribute(
+"target");linkNode.setAttribute("target","_blank");linkNode.click();if(previousTarget==null){linkNode.removeAttribute("target")}else{linkNode.setAttribute("targ\
+et",previousTarget)}}}function structuredTextSections(node){const sections=[];const children=node.children;for(let i=0;i<children.length&&sections.length<50;i++){
+const child=children[i];if(!child.tagName)continue;const tag=child.tagName.toLowerCase();const heading=child.querySelector('h1, h2, h3, h4, h5, h6, [role="headi\
+ng"], summary, button[aria-expanded]');if(heading){const headerText=heading.innerText?.trim()||"";const ariaExpanded=heading.getAttribute("aria-expanded");const expanded=ariaExpanded!==
+null?ariaExpanded==="true":void 0;const contentParts=[];const contentNodes=child.querySelectorAll("p, li, span, div, td, pre, code");contentNodes.forEach(cn=>{if(cn!==
+heading&&!heading.contains(cn)){const t=cn.innerText?.trim();if(t&&t.length>0)contentParts.push(t)}});sections.push({header:headerText,content:contentParts.join(
+"\n")||(child.innerText?.replace(headerText,"").trim()||""),expanded,tag})}else{const t=child.innerText?.trim();if(t&&t.length>0){sections.push({content:t,tag})}}}
+return sections}function buildActionHandlers(node){return{click:()=>withMutationTracking(()=>{if(!(node instanceof HTMLElement))return domError("not_interactive",
+`Element is not an HTMLElement: ${node.tagName}`);const interactiveAncestor=findInteractiveAncestor(node);const clickTarget=interactiveAncestor instanceof HTMLElement?
+interactiveAncestor:node;const overlayErr=blockedByOverlayError(node);if(overlayErr)return overlayErr;if(options.new_tab){const linkNode=linkForNewTab(clickTarget);
+const href=linkNode?linkNode.getAttribute("href")||linkNode.href||"":"";if(!href){return domError("new_tab_requires_link","new_tab=true requires a link target w\
+ith href")}openInNewTab(clickTarget,linkNode,href);return mutatingSuccess(clickTarget,{value:href,reason:"opened_new_tab"})}const didScroll=autoScrollIfNeeded(clickTarget);
+clickTarget.click();return mutatingSuccess(clickTarget,didScroll?{auto_scrolled:true}:void 0)}),focus:()=>{const overlayErr=blockedByOverlayError(node);if(overlayErr)
+return overlayErr;if(!(node instanceof HTMLElement))return domError("not_focusable",`Element is not an HTMLElement: ${node.tagName}`);node.focus();return mutatingSuccess(
+node)},scroll_to:()=>{function findScrollableContainer(el2){let current=el2;while(current&&current!==document.documentElement){if(current instanceof HTMLElement&&
+current.scrollHeight>current.clientHeight+10){const style=typeof getComputedStyle==="function"?getComputedStyle(current):null;if(style){const ov=style.overflow||
+"";const ovY=style.overflowY||"";if(ov==="auto"||ov==="scroll"||ovY==="auto"||ovY==="scroll"){return current}}}current=current.parentElement}return null}function scrollToY(container,top){
+if(typeof container.scrollTo==="function"){container.scrollTo({top,behavior:"smooth"});return};container.scrollTop=top}function scrollByY(container,deltaY){if(typeof container.
+scrollBy==="function"){container.scrollBy({top:deltaY,behavior:"smooth"});return}const currentTop=typeof container.scrollTop==="number"?Number(container.scrollTop):
+0;container.scrollTop=currentTop+deltaY}const direction=(options.direction||"").toLowerCase();const tag=node.tagName.toLowerCase();const isContainer=node instanceof
 HTMLElement&&node.scrollHeight>node.clientHeight+10&&(()=>{const s=typeof getComputedStyle==="function"?getComputedStyle(node):null;if(!s)return false;const ov=s.
 overflow||"";const ovY=s.overflowY||"";return ov==="auto"||ov==="scroll"||ovY==="auto"||ovY==="scroll"})();const directionalContainer=(()=>{if(isContainer)return node;
 const ancestor=findScrollableContainer(node);if(ancestor)return ancestor;if(typeof document!=="undefined"&&document.scrollingElement instanceof HTMLElement){return document.

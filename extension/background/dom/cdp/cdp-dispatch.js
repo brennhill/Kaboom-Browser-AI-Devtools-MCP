@@ -5,7 +5,7 @@
  * Docs: docs/features/feature/interact-explore/index.md
  */
 import { errorMessage } from '../../../lib/error-utils.js';
-import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js';
+import { KEY_CODES, charToKeyInfo, isModifierShortcut, keyEventsForText, modifierBitmask, SHIFT_BIT } from './cdp-key-mappings.js';
 import { cdpSessions, CDP_SESSION_ERRORS } from './cdp-session.js';
 import { drivingSessions } from '../../supervision/driving-session.js';
 import { resolveElement, buildCDPResult, buildCoordinateCDPResult } from './cdp-element-resolve.js';
@@ -89,21 +89,15 @@ async function cdpType(lease, params) {
     if (!text) {
         throw new Error('type requires text parameter');
     }
-    for (const char of text) {
-        const info = charToKeyInfo(char);
-        await dispatchCDPKeyPair(lease, {
-            key: info.key,
-            code: info.code,
-            keyCode: info.keyCode,
-            text: char,
-            unmodifiedText: info.shiftKey ? char.toLowerCase() : char,
-            modifiers: info.shiftKey ? 8 : 0
-        });
-    }
+    // A modifier the agent asked for and Chrome never saw is a silently different keystroke:
+    // ctrl+a selects the field, a plain "a" appends a character. Carry the mask through.
+    const modifiers = modifierBitmask(params.modifiers);
+    await cdpDispatchKeySequence(lease, text, params.modifiers);
     return {
         success: true,
         action: 'hardware_type',
         char_count: text.length,
+        modifiers,
         method: 'cdp'
     };
 }
@@ -130,7 +124,7 @@ async function cdpKeyPress(lease, params) {
             keyCode: info.keyCode,
             text: key,
             unmodifiedText: info.shiftKey ? key.toLowerCase() : key,
-            modifiers: info.shiftKey ? 8 : 0
+            modifiers: info.shiftKey ? SHIFT_BIT : 0
         });
     }
     return {
@@ -268,28 +262,16 @@ async function cdpClearField(lease) {
         windowsVirtualKeyCode: 8
     });
 }
-async function cdpDispatchKeySequence(lease, text) {
-    for (const char of text) {
-        const info = charToKeyInfo(char);
-        const modifiers = info.shiftKey ? 8 : 0;
-        await cdpSend(lease, 'Input.dispatchKeyEvent', {
-            type: 'keyDown',
-            key: info.key,
-            code: info.code,
-            text: char,
-            unmodifiedText: info.shiftKey ? char.toLowerCase() : char,
-            windowsVirtualKeyCode: info.keyCode,
-            nativeVirtualKeyCode: info.keyCode,
-            modifiers
-        });
-        await cdpSend(lease, 'Input.dispatchKeyEvent', {
-            type: 'keyUp',
-            key: info.key,
-            code: info.code,
-            windowsVirtualKeyCode: info.keyCode,
-            nativeVirtualKeyCode: info.keyCode,
-            modifiers
-        });
+/**
+ * Type `text` over the lease, holding `held` for every keystroke.
+ *
+ * Exported so the modifier contract can be checked against the commands actually dispatched:
+ * a mask that never reaches Input.dispatchKeyEvent produces an ordinary keystroke and still
+ * reports success (kaboom-wpyt).
+ */
+export async function cdpDispatchKeySequence(lease, text, held) {
+    for (const event of keyEventsForText(text, held)) {
+        await cdpSend(lease, 'Input.dispatchKeyEvent', event);
     }
 }
 async function cdpDispatchSingleKey(lease, key) {
@@ -312,7 +294,7 @@ async function cdpDispatchSingleKey(lease, key) {
     }
     else {
         const info = charToKeyInfo(key);
-        const modifiers = info.shiftKey ? 8 : 0;
+        const modifiers = info.shiftKey ? SHIFT_BIT : 0;
         await cdpSend(lease, 'Input.dispatchKeyEvent', {
             type: 'keyDown',
             key: info.key,
@@ -347,11 +329,13 @@ async function cdpExecuteAction(ctx, lease, action, params, selector, resolved) 
             return false;
         if (params.clear)
             await cdpClearField(lease);
-        await cdpDispatchKeySequence(lease, text);
+        await cdpDispatchKeySequence(lease, text, params.modifiers);
         // #599: CDP keystrokes leave React's controlled-input value tracker stale,
         // suppressing onChange. Reconcile through the native setter so onChange fires.
         // Best-effort: the value is already typed even if reconciliation is skipped.
-        if (selector) {
+        // Skipped for a shortcut (ctrl/alt/cmd held): nothing was typed, so reconciling would
+        // fire a spurious input/change on a React field the keystroke never edited.
+        if (selector && !isModifierShortcut(modifierBitmask(params.modifiers))) {
             try {
                 await cdpSend(lease, 'Runtime.evaluate', {
                     expression: buildReactValueReconcileExpression(selector),

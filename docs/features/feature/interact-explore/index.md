@@ -93,6 +93,8 @@ code_paths:
   - src/background/dom/primitives/dom-primitives-stability.ts
   - scripts/templates/partials/_dom-intent.tpl
   - scripts/templates/partials/_dom-selectors.tpl
+  - scripts/templates/partials/_dom-action-helpers.tpl
+  - scripts/templates/partials/_dom-action-handlers-core.tpl
   - scripts/templates/dom-primitives.ts.tpl
   - scripts/templates/dom-primitives-intent.ts.tpl
   - scripts/templates/dom-primitives-overlay.ts.tpl
@@ -140,7 +142,8 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gestures_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/targeting_test.go
-  - tests/extension/dom/cdp-gestures.test.js
+  - tests/extension/dom/cdp/cdp-gestures.test.js
+  - tests/extension/dom/cdp/cdp-type-modifiers.test.js
   - cmd/browser-agent/internal/toolinteract/contracts/rich_action_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/performance_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go

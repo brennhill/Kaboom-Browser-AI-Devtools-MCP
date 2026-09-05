@@ -8,6 +8,7 @@ import type { PendingQuery } from '../../../types/runtime/queries.js';
 import type { SyncClient } from '../../sync/sync-client.js';
 import type { DOMActionParams, DOMResult } from '../dom-types.js';
 import type { SendAsyncResultFn, ActionToastFn } from '../../commands/helpers.js';
+import { type Lease } from './cdp-session.js';
 /**
  * Terminal state for an action the USER interrupted. Distinct from any CDP fault: it is not
  * retryable, and the agent must be told a person stopped it rather than that the browser
@@ -43,6 +44,14 @@ export declare function shouldEscalateToCDP(action: string, params: DOMActionPar
  * inputs whose onChange already fired (the tracker is current → no second fire).
  */
 export declare function buildReactValueReconcileExpression(selector: string): string;
+/**
+ * Type `text` over the lease, holding `held` for every keystroke.
+ *
+ * Exported so the modifier contract can be checked against the commands actually dispatched:
+ * a mask that never reaches Input.dispatchKeyEvent produces an ordinary keystroke and still
+ * reports success (kaboom-wpyt).
+ */
+export declare function cdpDispatchKeySequence(lease: Lease, text: string, held?: readonly string[]): Promise<void>;
 /**
  * Attempt CDP-first execution for click/type/key_press and the pointer gestures.
  * Returns a DOMResult on success, or null to signal fallback to DOM primitives.

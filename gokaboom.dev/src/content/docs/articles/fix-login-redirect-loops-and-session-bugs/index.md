@@ -62,8 +62,8 @@ Confirm response status and expected fields.
 ### Step 4. Replay and compare before/after fixes
 
 ```js
-configure({what: "recording_start"})
-configure({what: "recording_stop", recording_id: "rec-login"})
+configure({what: "event_recording_start"})
+configure({what: "event_recording_stop", recording_id: "rec-login"})
 configure({what: "playback", recording_id: "rec-login"})
 configure({what: "log_diff", original_id: "rec-before", replay_id: "rec-after"})
 ```

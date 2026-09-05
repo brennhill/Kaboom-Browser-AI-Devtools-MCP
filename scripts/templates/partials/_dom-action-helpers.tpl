@@ -236,16 +236,39 @@
     return { key: char, code, keyCode }
   }
 
+  // — Modifier keys held for the whole keystroke (kaboom-wpyt) —
+  // Chrome's own bits: Alt=1, Ctrl=2, Meta=4, Shift=8. Anything but shift makes the keystroke a
+  // shortcut rather than text — a real ctrl+a selects the field and inserts nothing — so
+  // `shortcut` gates every insertion path below.
+  function heldKeyModifiers(): { ctrlKey: boolean; altKey: boolean; metaKey: boolean; shiftKey: boolean; shortcut: boolean } {
+    const bits: Record<string, number> = { alt: 1, ctrl: 2, control: 2, meta: 4, cmd: 4, command: 4, shift: 8 }
+    let mask = 0
+    for (const name of options.modifiers || []) {
+      mask |= bits[String(name).trim().toLowerCase()] ?? 0
+    }
+    return {
+      ctrlKey: (mask & 2) !== 0,
+      altKey: (mask & 1) !== 0,
+      metaKey: (mask & 4) !== 0,
+      shiftKey: (mask & 8) !== 0,
+      shortcut: (mask & ~8) !== 0,
+    }
+  }
+
   function dispatchKeySequence(target: EventTarget, char: string, isContentEditable: boolean): void {
     const { key, code, keyCode } = keyCodeForChar(char)
-    const shiftKey = char !== char.toLowerCase() && char === char.toUpperCase() && char.toLowerCase() !== char.toUpperCase()
+    const held = heldKeyModifiers()
+    const shiftKey = held.shiftKey || (char !== char.toLowerCase() && char === char.toUpperCase() && char.toLowerCase() !== char.toUpperCase())
 
-    const kbOpts: KeyboardEventInit & { keyCode?: number } = { key, code, keyCode, bubbles: true, cancelable: true, shiftKey }
+    const kbOpts: KeyboardEventInit & { keyCode?: number } = {
+      key, code, keyCode, bubbles: true, cancelable: true, shiftKey,
+      ctrlKey: held.ctrlKey, altKey: held.altKey, metaKey: held.metaKey,
+    }
 
     target.dispatchEvent(new KeyboardEvent('keydown', kbOpts))
     target.dispatchEvent(new KeyboardEvent('keypress', kbOpts))
 
-    if (isContentEditable) {
+    if (isContentEditable && !held.shortcut) {
       // Browsers fire beforeinput/input as InputEvents on contenteditable
       target.dispatchEvent(new InputEvent('beforeinput', {
         bubbles: true, cancelable: true, inputType: 'insertText', data: char,
@@ -278,6 +301,81 @@
       dispatchKeySequence(node, char, true)
     }
     return { success: true }
+  }
+
+  /** The contenteditable half of `type`: rich editor when there is one, keystrokes otherwise. */
+  function typeIntoContentEditable(node: HTMLElement, text: string, shortcut: boolean): DOMResult {
+    node.focus()
+    if (options.clear) {
+      const selection = document.getSelection()
+      if (selection) {
+        selection.selectAllChildren(node)
+        selection.deleteFromDocument()
+      }
+    }
+
+    // A shortcut inserts nothing, so the rich-editor path — which writes HTML directly — is
+    // wrong for it: ctrl+a would select the field AND paste an "a" into it.
+    const editor = shortcut ? null : detectRichEditor(node)
+    if (editor) {
+      // Native DOM insertion — bypasses CSP, works with Quill/ProseMirror/etc
+      insertViaRichEditor(editor.type, editor.target, text, !!options.clear)
+      return mutatingSuccess(node, { value: node.innerText, insertion_strategy: editor.type + '_native' })
+    }
+    // Per-character keyboard event simulation for all generic contenteditable
+    insertViaKeyboardSim(node, text)
+    return mutatingSuccess(node, {
+      value: node.innerText,
+      insertion_strategy: shortcut ? 'modified_keystroke' : 'keyboard_simulation',
+    })
+  }
+
+  /**
+   * The `type` action's whole body. Lives here rather than inline in buildActionHandlers so the
+   * handler map stays within its length and complexity budgets.
+   */
+  function typeIntoNode(node: Element): DOMResult {
+    const overlayErr = blockedByOverlayError(node)
+    if (overlayErr) return overlayErr
+
+    // Normalize literal \n sequences to actual newlines (MCP parameter encoding)
+    const text = (options.text || '').replace(/\\n/g, '\n')
+    // ctrl/alt/cmd held makes each keystroke a command, not a character. Every insertion path
+    // is skipped for one: typing the letter as well would put an "a" in the field the caller
+    // asked ctrl+a to select (kaboom-wpyt).
+    const shortcut = heldKeyModifiers().shortcut
+
+    // Contenteditable elements (Gmail compose body, rich text editors)
+    if (node instanceof HTMLElement && node.isContentEditable) {
+      return typeIntoContentEditable(node, text, shortcut)
+    }
+
+    if (!(node instanceof HTMLInputElement) && !(node instanceof HTMLTextAreaElement)) {
+      return domError('not_typeable', `Element is not an input, textarea, or contenteditable: ${node.tagName}`)
+    }
+
+    // Dispatch per-character keyboard events so React/Vue onChange handlers fire
+    node.focus()
+    for (const char of text) {
+      dispatchKeySequence(node, char, false)
+    }
+
+    if (shortcut) {
+      return mutatingSuccess(node, { value: node.value, insertion_strategy: 'modified_keystroke' })
+    }
+
+    // Set the value via native setter (needed to bypass React's synthetic event system)
+    const proto = node instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement
+    const nativeSetter = Object.getOwnPropertyDescriptor(proto.prototype, 'value')?.set
+    const newValue = options.clear ? text : node.value + text
+    if (nativeSetter) {
+      nativeSetter.call(node, newValue)
+    } else {
+      node.value = newValue
+    }
+    node.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }))
+    node.dispatchEvent(new Event('change', { bubbles: true }))
+    return mutatingSuccess(node, { value: node.value, insertion_strategy: 'native_setter' })
   }
 
   // --- #336: Check if element is outside the viewport and auto-scroll into view ---

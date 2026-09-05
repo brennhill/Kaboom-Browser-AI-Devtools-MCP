@@ -17,8 +17,8 @@ configure({what:"noise_rule", noise_action: "auto_detect"})       // Auto-filter
 configure({what:"store", store_action: "save", key: "baseline", data: {...}})  // Save data
 configure({what:"clear", buffer: "all"})                          // Clear all buffers
 configure({what:"health"})                                        // Server health
-configure({what:"recording_start"})                               // Start recording
-configure({what:"recording_stop", recording_id: "rec-123"})      // Stop recording
+configure({what:"event_recording_start"})                         // Start recording
+configure({what:"event_recording_stop", recording_id: "rec-123"}) // Stop recording
 configure({what:"playback", recording_id: "rec-123"})            // Replay recording
 configure({what:"log_diff", original_id: "rec-1", replay_id: "rec-2"})  // Compare error states
 configure({what:"diff_sessions", verif_session_action: "capture", name: "v1"})  // Session snapshot

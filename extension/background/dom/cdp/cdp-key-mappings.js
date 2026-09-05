@@ -117,4 +117,48 @@ export function modifierBitmask(modifiers) {
     }
     return mask;
 }
+/** Chrome's shift bit. Shift is the one modifier that still produces text: shift+a IS "A". */
+export const SHIFT_BIT = 8;
+/**
+ * Whether a held mask makes the keystroke a shortcut rather than text.
+ *
+ * ctrl/alt/cmd held means the key is a command — ctrl+a selects all and inserts nothing.
+ */
+export function isModifierShortcut(mask) {
+    return (mask & ~SHIFT_BIT) !== 0;
+}
+/**
+ * The CDP key events one string produces, with whatever modifier the caller is holding.
+ *
+ * Two things go wrong if this is skipped. Dropping the mask leaves the page seeing an
+ * unmodified keystroke, so the shortcut the agent asked for never fires while the call reports
+ * success. Keeping `text` alongside a ctrl/alt/cmd bit is worse: Chrome inserts whatever `text`
+ * says regardless of the modifiers, so ctrl+a types an "a" into the field instead of selecting
+ * it. A real modified keystroke carries no text, so neither does this one.
+ */
+export function keyEventsForText(text, held) {
+    const heldMask = modifierBitmask(held);
+    const shortcut = isModifierShortcut(heldMask);
+    const events = [];
+    for (const char of text) {
+        const info = charToKeyInfo(char);
+        const common = {
+            key: info.key,
+            code: info.code,
+            windowsVirtualKeyCode: info.keyCode,
+            nativeVirtualKeyCode: info.keyCode,
+            modifiers: heldMask | (info.shiftKey ? SHIFT_BIT : 0)
+        };
+        events.push(shortcut
+            ? { type: 'keyDown', ...common }
+            : {
+                type: 'keyDown',
+                ...common,
+                text: char,
+                unmodifiedText: info.shiftKey ? char.toLowerCase() : char
+            });
+        events.push({ type: 'keyUp', ...common });
+    }
+    return events;
+}
 //# sourceMappingURL=cdp-key-mappings.js.map

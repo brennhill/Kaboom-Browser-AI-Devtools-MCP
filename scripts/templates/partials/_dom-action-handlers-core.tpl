@@ -110,65 +110,7 @@
           return mutatingSuccess(clickTarget, didScroll ? { auto_scrolled: true } : undefined)
         }),
 
-      type: () =>
-        withMutationTracking(() => {
-          const overlayErr = blockedByOverlayError(node)
-          if (overlayErr) return overlayErr
-
-          // Normalize literal \n sequences to actual newlines (MCP parameter encoding)
-          const text = (options.text || '').replace(/\\n/g, '\n')
-
-          // Contenteditable elements (Gmail compose body, rich text editors)
-          if (node instanceof HTMLElement && node.isContentEditable) {
-            node.focus()
-            if (options.clear) {
-              const selection = document.getSelection()
-              if (selection) {
-                selection.selectAllChildren(node)
-                selection.deleteFromDocument()
-              }
-            }
-
-            // Detect rich editor framework
-            const editor = detectRichEditor(node)
-            let strategy: string
-
-            if (editor) {
-              // Native DOM insertion — bypasses CSP, works with Quill/ProseMirror/etc
-              insertViaRichEditor(editor.type, editor.target, text, !!options.clear)
-              strategy = editor.type + '_native'
-            } else {
-              // Per-character keyboard event simulation for all generic contenteditable
-              insertViaKeyboardSim(node, text)
-              strategy = 'keyboard_simulation'
-            }
-
-            return mutatingSuccess(node, { value: node.innerText, insertion_strategy: strategy })
-          }
-
-          if (!(node instanceof HTMLInputElement) && !(node instanceof HTMLTextAreaElement)) {
-            return domError('not_typeable', `Element is not an input, textarea, or contenteditable: ${node.tagName}`)
-          }
-
-          // Dispatch per-character keyboard events so React/Vue onChange handlers fire
-          node.focus()
-          for (const char of text) {
-            dispatchKeySequence(node, char, false)
-          }
-
-          // Set the value via native setter (needed to bypass React's synthetic event system)
-          const proto = node instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement
-          const nativeSetter = Object.getOwnPropertyDescriptor(proto.prototype, 'value')?.set
-          if (nativeSetter) {
-            const newValue = options.clear ? text : node.value + text
-            nativeSetter.call(node, newValue)
-          } else {
-            node.value = options.clear ? text : node.value + text
-          }
-          node.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }))
-          node.dispatchEvent(new Event('change', { bubbles: true }))
-          return mutatingSuccess(node, { value: node.value, insertion_strategy: 'native_setter' })
-        }),
+      type: () => withMutationTracking(() => typeIntoNode(node)),
 
       select: () =>
         withMutationTracking(() => {

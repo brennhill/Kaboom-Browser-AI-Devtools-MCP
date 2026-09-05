@@ -20,7 +20,7 @@ func gestureProperties() map[string]any {
 		},
 		"modifiers": map[string]any{
 			"type":        "array",
-			"description": "Modifier keys held during the action: ctrl, shift, alt, cmd (meta). Combinable. Applies to click and the pointer gestures — ctrl+click opens a link in a background tab, shift+click extends a selection.",
+			"description": "Modifier keys held during the action: ctrl, shift, alt, cmd (meta). Combinable. Applies to click, type and the pointer gestures — ctrl+click opens a link in a background tab, shift+click extends a selection, and type with ctrl held sends the shortcut instead of the character (ctrl+a selects the field rather than typing an 'a').",
 			"items": map[string]any{
 				"type": "string",
 				"enum": []string{"ctrl", "control", "shift", "alt", "cmd", "meta", "command"},

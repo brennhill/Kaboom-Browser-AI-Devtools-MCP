@@ -50,9 +50,9 @@ analyze({what: "security_audit", summary: true})
 ## 4) Apply and verify fix
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // run fixed flow
-configure({what: "recording_stop", recording_id: "rec-fixed"})
+configure({what: "event_recording_stop", recording_id: "rec-fixed"})
 ```
 
 ## 5) Prevent recurrence

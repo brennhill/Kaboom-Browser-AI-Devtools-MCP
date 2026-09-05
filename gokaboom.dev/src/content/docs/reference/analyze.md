@@ -142,14 +142,6 @@ analyze({what: "error_clusters"})
 
 ## Navigation
 
-### `history`
-
-Recent navigation history for the current tab.
-
-```js
-analyze({what: "history"})
-```
-
 ### `navigation_patterns`
 
 Analyze user navigation flow patterns from captured activity (common entry routes, transitions, and repeated paths).

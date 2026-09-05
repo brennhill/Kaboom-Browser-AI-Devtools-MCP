@@ -253,6 +253,7 @@ reports success.
 ```js
 interact({what: "type", selector: "label=Email", text: "user@example.com"})
 interact({what: "type", selector: "placeholder=Search", text: "wireless headphones", clear: true})
+interact({what: "type", selector: "#editor", text: "a", modifiers: ["ctrl"]})  // ctrl+A select all
 ```
 
 | Parameter | Type | Description |
@@ -260,6 +261,11 @@ interact({what: "type", selector: "placeholder=Search", text: "wireless headphon
 | `selector` | string | CSS or semantic selector |
 | `text` | string | Text to type |
 | `clear` | boolean | Clear existing value before typing |
+| `modifiers` | string[] | `ctrl`, `shift`, `alt`, `cmd` — held for every keystroke |
+
+Holding `ctrl`, `alt` or `cmd` sends a **shortcut, not text**: the keystroke carries the modifier
+and inserts no character, so `text: "a"` with `modifiers: ["ctrl"]` selects the field instead of
+typing an `a`. `shift` alone is still typing — capital letters already send it.
 
 ### select
 

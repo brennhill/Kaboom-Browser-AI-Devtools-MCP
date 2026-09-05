@@ -39,17 +39,17 @@ You need hard evidence.
 ### Step 1. Capture baseline run (before)
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // run key flow
-configure({what: "recording_stop", recording_id: "rec-before"})
+configure({what: "event_recording_stop", recording_id: "rec-before"})
 ```
 
 ### Step 2. Capture candidate run (after)
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // run same flow on new release
-configure({what: "recording_stop", recording_id: "rec-after"})
+configure({what: "event_recording_stop", recording_id: "rec-after"})
 ```
 
 ### Step 3. Compare error states directly

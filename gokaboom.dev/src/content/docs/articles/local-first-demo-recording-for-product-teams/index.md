@@ -36,7 +36,7 @@ You want demos that are:
 ### Step 1. Start recording
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 ```
 
 ### Step 2. Run your planned demo flow
@@ -46,7 +46,7 @@ Use clear, intentional interactions.
 ### Step 3. Stop and save recording
 
 ```js
-configure({what: "recording_stop", recording_id: "rec-demo-v1"})
+configure({what: "event_recording_stop", recording_id: "rec-demo-v1"})
 ```
 
 ### Step 4. Replay and compare quality

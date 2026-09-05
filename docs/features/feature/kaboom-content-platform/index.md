@@ -5,7 +5,7 @@ status: in_progress
 feature_type: feature
 owners:
   - Brenn
-last_reviewed: 2026-08-06
+last_reviewed: 2026-09-05
 code_paths:
   - docs/assets/images/brand/
   - docs/assets/images/campaigns/
@@ -92,6 +92,7 @@ test_paths:
   - scripts/docs/features/sync-verification-metadata.mjs
   - scripts/docs/site/run-vale-on-changed.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs
+  - scripts/docs/reference/check-reference-schema-sync.test.mjs
   - tests/site/changed-doc-files.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

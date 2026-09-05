@@ -146,8 +146,8 @@ describe('the walk follows importers transitively', () => {
     // Tests here do `const CDP = '../../../extension/...'` then `await
     // import(CDP)`. Matching only literal import statements would miss every
     // one of them, which is most of the DOM suite.
-    const graph = buildGraph(['tests/extension/dom/cdp-gestures.test.js'])
-    const reached = graph.get('tests/extension/dom/cdp-gestures.test.js') ?? []
+    const graph = buildGraph(['tests/extension/dom/cdp/cdp-gestures.test.js'])
+    const reached = graph.get('tests/extension/dom/cdp/cdp-gestures.test.js') ?? []
     assert.ok(
       reached.some((file) => file.includes('cdp')),
       `the variable import was not followed: ${JSON.stringify(reached)}`
