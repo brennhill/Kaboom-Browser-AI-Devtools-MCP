@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/proclock"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 func TestAcquireGrantsLockOnFreePath(t *testing.T) {
@@ -97,16 +98,10 @@ func TestKernelReleasesLockWhenHolderIsKilled(t *testing.T) {
 	// Wait on a readiness FILE, never by probing the lock: an Acquire attempt
 	// that succeeds would itself take the lock and make this test hold what it
 	// is trying to observe.
-	deadline := time.Now().Add(10 * time.Second)
-	for {
-		if _, err := os.Stat(ready); err == nil {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("helper never signalled that it holds the lock")
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+	testsync.Eventually(t, 10*time.Second, "the helper to signal that it holds the lock", func() bool {
+		_, err := os.Stat(ready)
+		return err == nil
+	})
 
 	// Confirm the helper's lock actually excludes us before we kill it.
 	if _, err := proclock.Acquire(path); !errors.Is(err, proclock.ErrLocked) {
@@ -119,17 +114,19 @@ func TestKernelReleasesLockWhenHolderIsKilled(t *testing.T) {
 	}
 	_, _ = helper.Process.Wait()
 
-	deadline = time.Now().Add(10 * time.Second)
-	for {
+	// The kernel releases a SIGKILLed process's lock asynchronously, so this polls
+	// rather than assuming it has already happened.
+	var lastErr error
+	if !testsync.EventuallyNoFail(10*time.Second, func() bool {
 		lock, err := proclock.Acquire(path)
+		lastErr = err
 		if err == nil {
 			_ = lock.Release()
-			return
+			return true
 		}
-		if time.Now().After(deadline) {
-			t.Fatalf("lock still held after holder was SIGKILLed: %v", err)
-		}
-		time.Sleep(20 * time.Millisecond)
+		return false
+	}) {
+		t.Fatalf("lock still held after holder was SIGKILLed: %v", lastErr)
 	}
 }
 
@@ -145,6 +142,9 @@ func TestHelperHoldsLock(t *testing.T) {
 		os.Exit(3)
 	}
 	_ = lock
-	time.Sleep(60 * time.Second)
+	// Hold the lock until the parent test kills us. The bound only stops an abandoned
+	// helper outliving the run; it is not a wait for anything, so there is nothing to
+	// poll for here.
+	<-time.After(60 * time.Second)
 	os.Exit(0)
 }

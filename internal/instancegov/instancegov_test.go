@@ -290,13 +290,16 @@ func TestDeferralWaitsBrieflyForTheIncumbentToPublish(t *testing.T) {
 	t.Cleanup(func() { _ = held.Release() })
 
 	// The winner publishes shortly after acquiring.
-	go func() {
-		time.Sleep(120 * time.Millisecond)
+	// The delay is the scenario under test — a winner that takes the lock and publishes
+	// a moment later — not a wait for readiness. AfterFunc expresses "do this after d"
+	// without a goroutine parked in a sleep.
+	publish := time.AfterFunc(120*time.Millisecond, func() {
 		payload, _ := json.Marshal(instancereg.Record{
 			PID: 4242, Role: instancereg.RoleDaemon, Ports: []int{7890, 7891}, Version: "0.9.0",
 		})
 		_ = held.Write(payload)
-	}()
+	})
+	t.Cleanup(func() { publish.Stop() })
 
 	result, err := instancegov.Admit(cfg)
 	if err != nil {

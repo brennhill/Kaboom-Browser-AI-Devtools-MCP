@@ -155,19 +155,15 @@
     },
     "cmd/browser-agent/internal/daemonlife/install_epoch.go": {
       "mutable_globals": 2,
-      "exports": 0
+      "exports": 1
     },
     "cmd/browser-agent/internal/daemonlife/lifecycle.go": {
       "mutable_globals": 3,
-      "exports": 9
-    },
-    "cmd/browser-agent/internal/daemonlife/lock_file.go": {
-      "mutable_globals": 1,
-      "exports": 5
+      "exports": 2
     },
     "cmd/browser-agent/internal/daemonlife/startup_throttle.go": {
-      "mutable_globals": 1,
-      "exports": 2
+      "mutable_globals": 2,
+      "exports": 5
     },
     "cmd/browser-agent/internal/daemonrecovery/primitives.go": {
       "mutable_globals": 0,
@@ -175,7 +171,7 @@
     },
     "cmd/browser-agent/internal/daemonrecovery/reclaimer.go": {
       "mutable_globals": 0,
-      "exports": 8
+      "exports": 9
     },
     "cmd/browser-agent/internal/dashboard/handler.go": {
       "mutable_globals": 5,
@@ -372,6 +368,10 @@
     "cmd/browser-agent/internal/procctl/stop.go": {
       "mutable_globals": 1,
       "exports": 4
+    },
+    "cmd/browser-agent/internal/procctl/terminate.go": {
+      "mutable_globals": 0,
+      "exports": 2
     },
     "cmd/browser-agent/internal/pushapi/handler.go": {
       "mutable_globals": 0,
@@ -771,7 +771,7 @@
     },
     "cmd/browser-agent/internal/toolinteract/interact_page.go": {
       "mutable_globals": 1,
-      "exports": 18
+      "exports": 19
     },
     "cmd/browser-agent/internal/toolinteract/interact_workflow.go": {
       "mutable_globals": 0,
@@ -1153,6 +1153,10 @@
       "mutable_globals": 0,
       "exports": 1
     },
+    "internal/idlewatch/idlewatch.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
     "internal/incident/projections.go": {
       "mutable_globals": 0,
       "exports": 3
@@ -1168,6 +1172,30 @@
     "internal/incident/support.go": {
       "mutable_globals": 0,
       "exports": 5
+    },
+    "internal/instancegov/cpu.go": {
+      "mutable_globals": 1,
+      "exports": 0
+    },
+    "internal/instancegov/instancegov.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "internal/instancegov/policy.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/instancegov/runtime.go": {
+      "mutable_globals": 0,
+      "exports": 4
+    },
+    "internal/instancereg/prune.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "internal/instancereg/registry.go": {
+      "mutable_globals": 0,
+      "exports": 18
     },
     "internal/issuereport/handler.go": {
       "mutable_globals": 0,
@@ -1317,6 +1345,22 @@
       "mutable_globals": 0,
       "exports": 6
     },
+    "internal/procidentity/procidentity.go": {
+      "mutable_globals": 0,
+      "exports": 5
+    },
+    "internal/proclock/proclock.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "internal/proclock/proclock_windows.go": {
+      "mutable_globals": 3,
+      "exports": 0
+    },
+    "internal/procwatch/procwatch.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
     "internal/pty/diagnostics/diagnostics.go": {
       "mutable_globals": 1,
       "exports": 6
@@ -1401,6 +1445,18 @@
       "mutable_globals": 0,
       "exports": 7
     },
+    "internal/reaper/census.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/reaper/reaper.go": {
+      "mutable_globals": 0,
+      "exports": 11
+    },
+    "internal/reaper/staledirs.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
     "internal/recording/actionlog/recorder.go": {
       "mutable_globals": 0,
       "exports": 5
@@ -1480,6 +1536,10 @@
     "internal/reproduction/reproduction_utils.go": {
       "mutable_globals": 0,
       "exports": 2
+    },
+    "internal/retention/retention.go": {
+      "mutable_globals": 0,
+      "exports": 4
     },
     "internal/schema/configure/tool.go": {
       "mutable_globals": 0,
@@ -1581,6 +1641,10 @@
       "mutable_globals": 0,
       "exports": 6
     },
+    "internal/semver/semver.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
     "internal/server/log_accessor.go": {
       "mutable_globals": 1,
       "exports": 9
@@ -1635,7 +1699,7 @@
     },
     "internal/state/paths.go": {
       "mutable_globals": 0,
-      "exports": 14
+      "exports": 15
     },
     "internal/statediag/collector.go": {
       "mutable_globals": 0,
@@ -2014,7 +2078,7 @@
       "exports": 10
     },
     "internal/upload/uploadsec/ssrf.go": {
-      "mutable_globals": 4,
+      "mutable_globals": 5,
       "exports": 10
     },
     "internal/util/binary.go": {

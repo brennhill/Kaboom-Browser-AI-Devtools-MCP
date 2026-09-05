@@ -19,6 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/procidentity"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 // launchDaemons starts count daemons AT THE SAME TIME, each with its own state
@@ -76,20 +77,16 @@ func TestOnlyOneProductionDaemonSurvivesAConcurrentLaunch(t *testing.T) {
 	})
 
 	// Let the losers defer and exit; the winner binds.
-	deadline := time.Now().Add(integrationtest.StartTimeout() + 10*time.Second)
 	var daemons []instancereg.Record
-	for time.Now().Before(deadline) {
-		time.Sleep(250 * time.Millisecond)
-		records := readRegistry(t, registryDir)
-		daemons = onlyDaemons(records)
-		if len(daemons) == 1 {
-			break
-		}
-		if len(daemons) > 1 {
-			t.Fatalf("%d production daemons registered at once; the machine cap is 1:\n%+v",
-				len(daemons), daemons)
-		}
-	}
+	testsync.Eventually(t, integrationtest.StartTimeout()+10*time.Second,
+		"exactly one production daemon to hold the machine cap", func() bool {
+			daemons = onlyDaemons(readRegistry(t, registryDir))
+			if len(daemons) > 1 {
+				t.Fatalf("%d production daemons registered at once; the machine cap is 1:\n%+v",
+					len(daemons), daemons)
+			}
+			return len(daemons) == 1
+		})
 	if len(daemons) != 1 {
 		t.Fatalf("after launching %d daemons, %d are registered; want exactly 1", launched, len(daemons))
 	}
@@ -148,13 +145,44 @@ func TestDeferringDaemonsLeaveNoRegistryEntries(t *testing.T) {
 		}
 	})
 
-	time.Sleep(integrationtest.StartTimeout() + 3*time.Second)
+	// Synchronise on the losers actually exiting rather than guessing how long that
+	// takes. Their exit is the event that must leave the registry clean, so waiting for
+	// it is both faster and the thing the test is actually about.
+	awaitDeferrals(t, commands, len(commands)-1, integrationtest.StartTimeout()+10*time.Second)
+
 	records := readRegistry(t, registryDir)
 	for _, record := range onlyDaemons(records) {
 		if !processAlive(record.PID, record.Identity) {
 			t.Errorf("registry lists pid %d, which is not running", record.PID)
 		}
 	}
+}
+
+// awaitDeferrals blocks until at least `want` of the launched daemons have exited, or
+// the timeout elapses. Returns how many exited, so a caller can assert on the count.
+func awaitDeferrals(t *testing.T, commands []*exec.Cmd, want int, timeout time.Duration) int {
+	t.Helper()
+	exits := make(chan struct{}, len(commands))
+	for _, command := range commands {
+		if command.Process == nil {
+			continue
+		}
+		go func(c *exec.Cmd) {
+			_, _ = c.Process.Wait()
+			exits <- struct{}{}
+		}(command)
+	}
+	deadline := time.After(timeout)
+	exited := 0
+	for exited < want {
+		select {
+		case <-exits:
+			exited++
+		case <-deadline:
+			return exited
+		}
+	}
+	return exited
 }
 
 func readRegistry(t *testing.T, dir string) []instancereg.Record {

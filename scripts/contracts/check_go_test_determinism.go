@@ -76,7 +76,10 @@ func scanSleepCounts(root string) (map[string]int, error) {
 
 func ignoredDirectory(name string) bool {
 	switch name {
-	case ".git", ".beads", "node_modules", "dist", "coverage", "vendor":
+	// ".claude" holds agent git worktrees — full checkouts of this repo. Walking them
+	// counts every offender once per worktree, which inflates the report and can leave a
+	// stale copy failing the gate long after the real file was fixed.
+	case ".git", ".beads", ".claude", "node_modules", "dist", "coverage", "vendor":
 		return true
 	default:
 		return false

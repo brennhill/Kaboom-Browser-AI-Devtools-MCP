@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/procidentity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 func withRegistry(t *testing.T) string {
@@ -101,15 +102,18 @@ func TestHeartbeatAdvancesOnlyHeartbeatAt(t *testing.T) {
 	t.Cleanup(func() { _ = handle.Close() })
 
 	before, _ := instancereg.List()
-	time.Sleep(10 * time.Millisecond)
-	if err := handle.Heartbeat(); err != nil {
-		t.Fatalf("Heartbeat() error = %v", err)
-	}
-	after, _ := instancereg.List()
 
-	if after[0].HeartbeatAt == before[0].HeartbeatAt {
-		t.Error("Heartbeat() did not advance HeartbeatAt")
-	}
+	// HeartbeatAt is RFC3339Nano, so on a fine-grained clock one Heartbeat advances it
+	// immediately. On a coarse clock (Windows ticks at ~15ms) two calls can land in the
+	// same tick, so this retries until the value moves instead of sleeping a guess.
+	var after []instancereg.Record
+	testsync.Eventually(t, 5*time.Second, "Heartbeat() to advance HeartbeatAt", func() bool {
+		if err := handle.Heartbeat(); err != nil {
+			t.Fatalf("Heartbeat() error = %v", err)
+		}
+		after, _ = instancereg.List()
+		return after[0].HeartbeatAt != before[0].HeartbeatAt
+	})
 	if after[0].StartedAt != before[0].StartedAt {
 		t.Error("Heartbeat() moved StartedAt; it must record the original start")
 	}
