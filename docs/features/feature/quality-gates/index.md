@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-26
+last_reviewed: 2026-09-05
 code_paths:
   - scripts/docs/
   - scripts/maintenance/
@@ -73,6 +73,10 @@ code_paths:
   - scripts/quality/contracts/check-dormant-tests.sh
   - scripts/contracts/check_go_test_determinism.go
   - scripts/contracts/goarchitecture/main.go
+  - .mcp-response-contract.json
+  - scripts/contracts/responsecontract/contract.go
+  - scripts/contracts/responsecontract/diff.go
+  - scripts/contracts/responsecontract/shape.go
   - .go-architecture-baseline.json
   - scripts/uat/runners/test-js-sharded.sh
   - scripts/build/run-go-coverage.sh
@@ -104,6 +108,13 @@ test_paths:
   - scripts/security/check-secrets.test.sh
   - scripts/contracts/check_go_test_determinism_test.go
   - scripts/contracts/goarchitecture/main_test.go
+  - cmd/browser-agent/internal/responsegate/control_test.go
+  - cmd/browser-agent/internal/responsegate/drift_test.go
+  - cmd/browser-agent/internal/responsegate/harness_test.go
+  - scripts/contracts/responsecontract/cat33_test.go
+  - scripts/contracts/responsecontract/ratchet_test.go
+  - scripts/contracts/responsecontract/diff_test.go
+  - scripts/contracts/responsecontract/shape_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - scripts/tests/contracts/go-coverage-profile.test.mjs
   - scripts/tests/contracts/go-coverage-baseline.test.mjs
@@ -169,6 +180,30 @@ with zero allowance and package totals can only ratchet downward. This lets
 atomic file consolidation proceed without disguising genuine API or shared-
 state growth, turning instance ownership and minimal public interfaces into
 deterministic merge gates instead of review-only preferences.
+
+`make check-response-contract` gates the MCP tool response body, a boundary that
+had no declared contract at all: `internal/mcp` declares an input schema and
+nothing for output, so a handler could drop, rename or retype a field and every
+layer stayed green. `.mcp-response-contract.json` declares, per mode, the
+response's field paths and JSON types — never its values — plus the async
+lifecycle envelope (`correlation_id` / `lifecycle_status` / `status` / `final`)
+that browser-mediated modes answer with, which was previously folklore. The
+declaration is GENERATED, not written: `cmd/browser-agent/internal/responsegate`
+invokes the shipped dispatcher over a seeded in-memory fixture, with no daemon
+and no browser, and derives each shape from the response that comes back. A mode
+that cannot answer without a live extension is refused rather than recorded, so
+a degraded "extension not connected" reply can never become the contract.
+
+Two ratchets hold it. The drift gate names the mode and the field that moved
+(`observe/errors: declared field "scope" (string) is GONE from the response`),
+and `undeclared_baseline` must equal the count of shipped modes with no declared
+shape EXACTLY — above it a new mode joined the undeclared majority, below it an
+improvement was not locked in and the next undeclared mode would have been paid
+for by the slack. `check-baseline-currency` regenerates the file and compares
+bytes, so a hand-edited field list or a hand-lowered baseline fails. Where a
+mode has both a declared shape and a cat-33 content expectation, the two must
+agree, so the sweep's regexes can no longer outlive the fields they assert.
+Re-freeze an intended change with `make response-contract-update`.
 
 The folder boundary inventories every authored file under first-party source,
 test, package, script, site, specification, workflow, and documentation roots.

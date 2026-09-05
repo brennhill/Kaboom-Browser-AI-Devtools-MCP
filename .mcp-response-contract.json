@@ -1,0 +1,1252 @@
+{
+  "_comment": "Declared MCP tool response shapes: field paths and JSON types, never values. GENERATED from real in-process responses — do not hand-edit. Regenerate with `make response-contract-update`. undeclared_baseline is a ratchet: it must equal the real count of shipped modes with no declared shape EXACTLY, so a new undeclared mode fails and an improvement must be locked in.",
+  "version": 1,
+  "undeclared_baseline": 151,
+  "envelopes": {
+    "async_queued": {
+      "kind": "envelope",
+      "fields": [
+        {
+          "path": "correlation_id",
+          "type": "string"
+        },
+        {
+          "path": "final",
+          "type": "boolean"
+        },
+        {
+          "path": "hint",
+          "type": "string"
+        },
+        {
+          "path": "lifecycle_status",
+          "type": "string"
+        },
+        {
+          "path": "queued",
+          "type": "boolean"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        },
+        {
+          "path": "trace_id",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "modes": {
+    "observe/actions": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "entries",
+          "type": "array"
+        },
+        {
+          "path": "entries[]",
+          "type": "object"
+        },
+        {
+          "path": "entries[].classification",
+          "type": "string"
+        },
+        {
+          "path": "entries[].role",
+          "type": "string"
+        },
+        {
+          "path": "entries[].selectors",
+          "type": "object"
+        },
+        {
+          "path": "entries[].selectors.css",
+          "type": "string"
+        },
+        {
+          "path": "entries[].source",
+          "type": "string"
+        },
+        {
+          "path": "entries[].timestamp",
+          "type": "number"
+        },
+        {
+          "path": "entries[].type",
+          "type": "string"
+        },
+        {
+          "path": "entries[].url",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/command_result": {
+      "kind": "envelope",
+      "fields": [
+        {
+          "path": "completed_at",
+          "type": "string"
+        },
+        {
+          "path": "correlation_id",
+          "type": "string"
+        },
+        {
+          "path": "elapsed_ms",
+          "type": "number"
+        },
+        {
+          "path": "final",
+          "type": "boolean"
+        },
+        {
+          "path": "lifecycle_status",
+          "type": "string"
+        },
+        {
+          "path": "queued",
+          "type": "boolean"
+        },
+        {
+          "path": "result",
+          "type": "object"
+        },
+        {
+          "path": "result.count",
+          "type": "number"
+        },
+        {
+          "path": "result.elements",
+          "type": "array"
+        },
+        {
+          "path": "result.elements[]",
+          "type": "object"
+        },
+        {
+          "path": "result.elements[].tag",
+          "type": "string"
+        },
+        {
+          "path": "status",
+          "type": "string"
+        },
+        {
+          "path": "timing_ms",
+          "type": "number"
+        },
+        {
+          "path": "trace",
+          "type": "object"
+        },
+        {
+          "path": "trace.last_stage",
+          "type": "string"
+        },
+        {
+          "path": "trace.query_id",
+          "type": "string"
+        },
+        {
+          "path": "trace.timeline",
+          "type": "string"
+        },
+        {
+          "path": "trace.trace_id",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/error_bundles": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "bundles",
+          "type": "array"
+        },
+        {
+          "path": "bundles[]",
+          "type": "object"
+        },
+        {
+          "path": "bundles[].actions",
+          "type": "array"
+        },
+        {
+          "path": "bundles[].actions[]",
+          "type": "object"
+        },
+        {
+          "path": "bundles[].context_window_seconds",
+          "type": "number"
+        },
+        {
+          "path": "bundles[].error",
+          "type": "object"
+        },
+        {
+          "path": "bundles[].error.column",
+          "type": "number"
+        },
+        {
+          "path": "bundles[].error.line",
+          "type": "number"
+        },
+        {
+          "path": "bundles[].error.message",
+          "type": "string"
+        },
+        {
+          "path": "bundles[].error.source",
+          "type": "string"
+        },
+        {
+          "path": "bundles[].error.stack",
+          "type": "string"
+        },
+        {
+          "path": "bundles[].error.timestamp",
+          "type": "string"
+        },
+        {
+          "path": "bundles[].error.url",
+          "type": "string"
+        },
+        {
+          "path": "bundles[].logs",
+          "type": "array"
+        },
+        {
+          "path": "bundles[].logs[]",
+          "type": "object"
+        },
+        {
+          "path": "bundles[].network",
+          "type": "array"
+        },
+        {
+          "path": "bundles[].waterfall",
+          "type": "array"
+        },
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/errors": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "errors",
+          "type": "array"
+        },
+        {
+          "path": "errors[]",
+          "type": "object"
+        },
+        {
+          "path": "errors[].column",
+          "type": "number"
+        },
+        {
+          "path": "errors[].line",
+          "type": "number"
+        },
+        {
+          "path": "errors[].message",
+          "type": "string"
+        },
+        {
+          "path": "errors[].source",
+          "type": "string"
+        },
+        {
+          "path": "errors[].stack",
+          "type": "string"
+        },
+        {
+          "path": "errors[].tab_id",
+          "type": "number"
+        },
+        {
+          "path": "errors[].timestamp",
+          "type": "string"
+        },
+        {
+          "path": "errors[].url",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        },
+        {
+          "path": "scope",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/extension_logs": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "logs",
+          "type": "array"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/failed_commands": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "commands",
+          "type": "array"
+        },
+        {
+          "path": "count",
+          "type": "number"
+        }
+      ]
+    },
+    "observe/history": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "entries",
+          "type": "array"
+        },
+        {
+          "path": "entries[]",
+          "type": "object"
+        },
+        {
+          "path": "entries[].timestamp",
+          "type": "string"
+        },
+        {
+          "path": "entries[].to_url",
+          "type": "string"
+        },
+        {
+          "path": "entries[].type",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/inbox": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "events",
+          "type": "array"
+        }
+      ]
+    },
+    "observe/logs": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "logs",
+          "type": "array"
+        },
+        {
+          "path": "logs[]",
+          "type": "object"
+        },
+        {
+          "path": "logs[].column",
+          "type": "number"
+        },
+        {
+          "path": "logs[].data",
+          "type": "object"
+        },
+        {
+          "path": "logs[].data.sequence",
+          "type": "number"
+        },
+        {
+          "path": "logs[].data.stack",
+          "type": "string"
+        },
+        {
+          "path": "logs[].level",
+          "type": "string"
+        },
+        {
+          "path": "logs[].line",
+          "type": "number"
+        },
+        {
+          "path": "logs[].message",
+          "type": "string"
+        },
+        {
+          "path": "logs[].source",
+          "type": "string"
+        },
+        {
+          "path": "logs[].tab_id",
+          "type": "number"
+        },
+        {
+          "path": "logs[].timestamp",
+          "type": "string"
+        },
+        {
+          "path": "logs[].url",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.cursor",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.has_more",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.newest_timestamp",
+          "type": "string"
+        },
+        {
+          "path": "metadata.oldest_timestamp",
+          "type": "string"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        },
+        {
+          "path": "metadata.scope",
+          "type": "string"
+        },
+        {
+          "path": "metadata.summary",
+          "type": "object"
+        },
+        {
+          "path": "metadata.summary.by_level",
+          "type": "object"
+        },
+        {
+          "path": "metadata.summary.by_level.error",
+          "type": "number"
+        },
+        {
+          "path": "metadata.summary.by_level.log",
+          "type": "number"
+        },
+        {
+          "path": "metadata.summary.by_level.warn",
+          "type": "number"
+        },
+        {
+          "path": "metadata.summary.total",
+          "type": "number"
+        },
+        {
+          "path": "metadata.total",
+          "type": "number"
+        }
+      ]
+    },
+    "observe/network_bodies": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "entries",
+          "type": "array"
+        },
+        {
+          "path": "entries[]",
+          "type": "object"
+        },
+        {
+          "path": "entries[].method",
+          "type": "string"
+        },
+        {
+          "path": "entries[].status",
+          "type": "number"
+        },
+        {
+          "path": "entries[].url",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/network_waterfall": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "entries",
+          "type": "array"
+        },
+        {
+          "path": "hint",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/page": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "csp_level",
+          "type": "string"
+        },
+        {
+          "path": "csp_restricted",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        },
+        {
+          "path": "page_ready_for_commands",
+          "type": "boolean"
+        },
+        {
+          "path": "tab_status",
+          "type": "string"
+        },
+        {
+          "path": "title",
+          "type": "string"
+        },
+        {
+          "path": "tracked",
+          "type": "boolean"
+        },
+        {
+          "path": "url",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/pending_commands": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "completed",
+          "type": "array"
+        },
+        {
+          "path": "completed[]",
+          "type": "object"
+        },
+        {
+          "path": "completed[].completed_at",
+          "type": "string"
+        },
+        {
+          "path": "completed[].correlation_id",
+          "type": "string"
+        },
+        {
+          "path": "completed[].created_at",
+          "type": "string"
+        },
+        {
+          "path": "completed[].expires_at",
+          "type": "string"
+        },
+        {
+          "path": "completed[].query_id",
+          "type": "string"
+        },
+        {
+          "path": "completed[].result",
+          "type": "object"
+        },
+        {
+          "path": "completed[].result.count",
+          "type": "number"
+        },
+        {
+          "path": "completed[].result.elements",
+          "type": "array"
+        },
+        {
+          "path": "completed[].status",
+          "type": "string"
+        },
+        {
+          "path": "completed[].trace_events",
+          "type": "array"
+        },
+        {
+          "path": "completed[].trace_events[]",
+          "type": "object"
+        },
+        {
+          "path": "completed[].trace_id",
+          "type": "string"
+        },
+        {
+          "path": "completed[].trace_timeline",
+          "type": "string"
+        },
+        {
+          "path": "completed[].updated_at",
+          "type": "string"
+        },
+        {
+          "path": "completed_total",
+          "type": "number"
+        },
+        {
+          "path": "extension_in_progress",
+          "type": "array"
+        },
+        {
+          "path": "extension_in_progress_count",
+          "type": "number"
+        },
+        {
+          "path": "failed",
+          "type": "array"
+        },
+        {
+          "path": "failed_total",
+          "type": "number"
+        },
+        {
+          "path": "pending",
+          "type": "array"
+        },
+        {
+          "path": "pending_total",
+          "type": "number"
+        }
+      ]
+    },
+    "observe/pilot": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "authoritative",
+          "type": "boolean"
+        },
+        {
+          "path": "configured_enabled",
+          "type": "boolean"
+        },
+        {
+          "path": "enabled",
+          "type": "boolean"
+        },
+        {
+          "path": "extension_connected",
+          "type": "boolean"
+        },
+        {
+          "path": "extension_last_seen",
+          "type": "string"
+        },
+        {
+          "path": "in_progress",
+          "type": "array"
+        },
+        {
+          "path": "in_progress_count",
+          "type": "number"
+        },
+        {
+          "path": "in_progress_updated",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        },
+        {
+          "path": "source",
+          "type": "string"
+        },
+        {
+          "path": "state",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/saved_videos": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "recordings",
+          "type": "array"
+        },
+        {
+          "path": "storage_used_bytes",
+          "type": "number"
+        },
+        {
+          "path": "total",
+          "type": "number"
+        }
+      ]
+    },
+    "observe/summarized_logs": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "anomalies",
+          "type": "array"
+        },
+        {
+          "path": "anomalies[]",
+          "type": "object"
+        },
+        {
+          "path": "anomalies[].column",
+          "type": "number"
+        },
+        {
+          "path": "anomalies[].level",
+          "type": "string"
+        },
+        {
+          "path": "anomalies[].line",
+          "type": "number"
+        },
+        {
+          "path": "anomalies[].message",
+          "type": "string"
+        },
+        {
+          "path": "anomalies[].source",
+          "type": "string"
+        },
+        {
+          "path": "anomalies[].tab_id",
+          "type": "number"
+        },
+        {
+          "path": "anomalies[].timestamp",
+          "type": "string"
+        },
+        {
+          "path": "anomalies[].url",
+          "type": "string"
+        },
+        {
+          "path": "groups",
+          "type": "array"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        },
+        {
+          "path": "summary",
+          "type": "object"
+        },
+        {
+          "path": "summary.anomalies",
+          "type": "number"
+        },
+        {
+          "path": "summary.compression_ratio",
+          "type": "number"
+        },
+        {
+          "path": "summary.groups",
+          "type": "number"
+        },
+        {
+          "path": "summary.noise_suppressed",
+          "type": "number"
+        },
+        {
+          "path": "summary.time_range",
+          "type": "object"
+        },
+        {
+          "path": "summary.time_range.end",
+          "type": "string"
+        },
+        {
+          "path": "summary.time_range.start",
+          "type": "string"
+        },
+        {
+          "path": "summary.total_entries",
+          "type": "number"
+        }
+      ]
+    },
+    "observe/tabs": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        },
+        {
+          "path": "tabs",
+          "type": "array"
+        },
+        {
+          "path": "tracking_active",
+          "type": "boolean"
+        }
+      ]
+    },
+    "observe/timeline": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "entries",
+          "type": "array"
+        },
+        {
+          "path": "entries[]",
+          "type": "object"
+        },
+        {
+          "path": "entries[].summary",
+          "type": "string"
+        },
+        {
+          "path": "entries[].timestamp",
+          "type": "string"
+        },
+        {
+          "path": "entries[].type",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/transients": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "entries",
+          "type": "array"
+        },
+        {
+          "path": "hint",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/vitals": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        },
+        {
+          "path": "metrics",
+          "type": "object"
+        },
+        {
+          "path": "metrics.has_data",
+          "type": "boolean"
+        }
+      ]
+    },
+    "observe/websocket_events": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "count",
+          "type": "number"
+        },
+        {
+          "path": "entries",
+          "type": "array"
+        },
+        {
+          "path": "hint",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    },
+    "observe/websocket_status": {
+      "kind": "direct",
+      "fields": [
+        {
+          "path": "active_count",
+          "type": "number"
+        },
+        {
+          "path": "closed",
+          "type": "array"
+        },
+        {
+          "path": "closed_count",
+          "type": "number"
+        },
+        {
+          "path": "connections",
+          "type": "array"
+        },
+        {
+          "path": "hint",
+          "type": "string"
+        },
+        {
+          "path": "metadata",
+          "type": "object"
+        },
+        {
+          "path": "metadata.data_age",
+          "type": "string"
+        },
+        {
+          "path": "metadata.data_age_ms",
+          "type": "number"
+        },
+        {
+          "path": "metadata.is_stale",
+          "type": "boolean"
+        },
+        {
+          "path": "metadata.retrieved_at",
+          "type": "string"
+        }
+      ]
+    }
+  }
+}

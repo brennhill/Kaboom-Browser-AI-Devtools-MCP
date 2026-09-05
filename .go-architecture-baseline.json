@@ -2161,6 +2161,18 @@
       "mutable_globals": 0,
       "exports": 13
     },
+    "scripts/contracts/responsecontract/contract.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "scripts/contracts/responsecontract/diff.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
+    "scripts/contracts/responsecontract/shape.go": {
+      "mutable_globals": 0,
+      "exports": 3
+    },
     "scripts/uat/human/evidence/evidence.go": {
       "mutable_globals": 0,
       "exports": 15

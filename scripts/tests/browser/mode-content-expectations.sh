@@ -21,6 +21,13 @@
 # read off a struct — several handlers return a different shape than their Go
 # type suggests, because the response is assembled downstream.
 #
+# These patterns are no longer the only written statement of what a response
+# contains: .mcp-response-contract.json declares the full field shape of every
+# mode the response harness can answer. Where a mode has both, they must agree —
+# TestSweepExpectationsNameFieldsTheContractDeclares in
+# scripts/contracts/responsecontract fails if an expectation names a field the
+# declared shape does not carry.
+#
 # Modes with no entry fall through to `reachability_only`, are counted, and are
 # held under a baseline that may only shrink (see UAT_REACHABILITY_BASELINE).
 #
@@ -45,8 +52,10 @@ action_content_expectation() {
         # KNOWN-WEAK. Browser-mediated modes return an async lifecycle envelope
         # (queued/status/result/correlation_id) with the real payload nested
         # under .result, so matching "result" proves the query was queued and
-        # nothing about what came back. Replace once the payload shape is
-        # declared — see kaboom-jp5i.
+        # nothing about what came back. The envelope itself is now declared
+        # (envelopes.async_queued in .mcp-response-contract.json); what is still
+        # missing is the per-mode payload nested under .result, which needs a
+        # live extension to capture — see kaboom-jp5i.
         analyze/feature_gates) echo '"result"' ;;
 
         # ── DOM: asserted against interact.html ────────────
