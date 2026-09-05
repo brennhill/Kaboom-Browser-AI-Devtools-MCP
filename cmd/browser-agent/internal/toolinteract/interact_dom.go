@@ -64,6 +64,13 @@ func (h *DOMActions) HandleDOMPrimitive(req mcp.JSONRPCRequest, args json.RawMes
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 
+	// Which target the call named is settled BEFORE anything resolves one, so a call carrying
+	// two of them is refused rather than resolved in whatever order the code below happens to
+	// run. Resolution overwrites x/y from a ref, which would make the conflict invisible here.
+	if problem := act.ValidateTargeting(action, params.gestureTarget()); problem != nil {
+		return act.GestureParamFailure(req, action, problem)
+	}
+
 	var failed bool
 	var errResp mcp.JSONRPCResponse
 	// Refs resolve before the coordinate escalation below: an accessibility candidate has no
@@ -73,7 +80,16 @@ func (h *DOMActions) HandleDOMPrimitive(req mcp.JSONRPCRequest, args json.RawMes
 		return errResp
 	}
 
-	// If x/y coordinates provided on a click action, escalate to CDP for hardware-level click
+	// A ref resolves INTO a point, so the point rule runs again over what resolution produced.
+	// Without this a find candidate whose centre is off screen would be dispatched and clamped.
+	if params.X != nil && params.Y != nil {
+		if problem := act.ValidateViewportPoint(action, *params.X, *params.Y); problem != nil {
+			return act.GestureParamFailure(req, action, problem)
+		}
+	}
+
+	// A coordinate click is dispatched over CDP so the page sees isTrusted input. This is the
+	// whole of the coordinate surface: there is no separate action named after the mechanism.
 	if action == "click" && params.X != nil && params.Y != nil {
 		return h.HandleCDPClick(req, args, action, cdpClickTarget{X: *params.X, Y: *params.Y, Modifiers: params.Modifiers, TabID: params.TabID})
 	}
@@ -154,25 +170,30 @@ type gesturePoint struct {
 	Y float64 `json:"y"`
 }
 
-// gestureTarget reduces the parsed arguments to what the shared gesture rules need.
+// gestureTarget reduces the parsed arguments to what the shared gesture and targeting rules need.
 func (p DOMPrimitiveParams) gestureTarget() act.GestureTarget {
 	return act.GestureTarget{
 		Selector:   p.Selector,
 		ElementID:  p.ElementID,
+		Ref:        p.Ref,
 		HasIndex:   p.Index != nil,
 		HasX:       p.X != nil,
 		HasY:       p.Y != nil,
+		X:          derefFloat(p.X),
+		Y:          derefFloat(p.Y),
 		PathPoints: len(p.DragPath),
 		HasDeltaX:  p.DeltaX != nil,
 		HasDeltaY:  p.DeltaY != nil,
 	}
 }
 
-type hardwareClickParams struct {
-	X         *float64 `json:"x"`
-	Y         *float64 `json:"y"`
-	Modifiers []string `json:"modifiers,omitempty"`
-	TabID     int      `json:"tab_id,omitempty"`
+// derefFloat reads an optional coordinate. Absence is carried by the matching Has flag, so the
+// zero returned here is only ever read alongside a false.
+func derefFloat(v *float64) float64 {
+	if v == nil {
+		return 0
+	}
+	return *v
 }
 
 var domSelectorOptionalActions = map[string]struct{}{
@@ -198,14 +219,6 @@ func ParseDOMPrimitiveParams(args json.RawMessage) (DOMPrimitiveParams, error) {
 	var params DOMPrimitiveParams
 	if err := json.Unmarshal(args, &params); err != nil {
 		return DOMPrimitiveParams{}, err
-	}
-	return params, nil
-}
-
-func parseHardwareClickParams(args json.RawMessage) (hardwareClickParams, error) {
-	var params hardwareClickParams
-	if err := json.Unmarshal(args, &params); err != nil {
-		return hardwareClickParams{}, err
 	}
 	return params, nil
 }
@@ -383,24 +396,6 @@ func ValidateDOMActionParams(req mcp.JSONRPCRequest, action, text, value, name s
 		return mcp.Fail(req, mcp.ErrMissingParam, rule.Message, rule.Retry, mcp.WithParam(rule.Field)), true
 	}
 	return mcp.JSONRPCResponse{}, false
-}
-
-// handleHardwareClick dispatches a coordinate-based click via CDP Input.dispatchMouseEvent.
-// This gives LLMs an explicit "I see coordinates in a screenshot, click there" path.
-func (h *DOMActions) HandleHardwareClick(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	params, err := parseHardwareClickParams(args)
-	if err != nil {
-		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
-	}
-
-	if params.X == nil {
-		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'x' is missing", "Add the 'x' coordinate (pixels from left)", mcp.WithParam("x"))
-	}
-	if params.Y == nil {
-		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'y' is missing", "Add the 'y' coordinate (pixels from top)", mcp.WithParam("y"))
-	}
-
-	return h.HandleCDPClick(req, args, "hardware_click", cdpClickTarget{X: *params.X, Y: *params.Y, Modifiers: params.Modifiers, TabID: params.TabID})
 }
 
 // cdpClickTarget is where a coordinate click lands and what is held while it lands.

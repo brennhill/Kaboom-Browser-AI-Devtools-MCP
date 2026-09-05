@@ -73,7 +73,6 @@ const ACTION_METADATA = {
     fill_form_and_submit: { readonly: false, mutating: false },
     upload: { readonly: false, mutating: false, requiresPilot: true },
     draw_mode_start: { readonly: false, mutating: false },
-    hardware_click: { readonly: false, mutating: false },
     activate_tab: { readonly: false, mutating: false },
     save_state: { readonly: false, mutating: false },
     state_save: { readonly: false, mutating: false },

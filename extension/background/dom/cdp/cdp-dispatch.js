@@ -9,6 +9,7 @@ import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js';
 import { cdpSessions, CDP_SESSION_ERRORS } from './cdp-session.js';
 import { drivingSessions } from '../../supervision/driving-session.js';
 import { resolveElement, buildCDPResult, buildCoordinateCDPResult } from './cdp-element-resolve.js';
+import { coordinateOutOfViewport } from '../viewport-bounds.js';
 import { CDP_GESTURE_ACTIONS, isCDPGesture, explicitGesturePoint, executeCDPGesture, dispatchSingleClick, deliverZoomRegion } from './cdp-gestures.js';
 async function cdpSend(lease, method, params) {
     await lease.send(method, params);
@@ -56,7 +57,7 @@ async function cdpClick(lease, tabId, params) {
     const modifiers = await dispatchSingleClick(leaseGestureContext(lease, tabId), { x, y }, params.modifiers);
     return {
         success: true,
-        action: 'hardware_click',
+        action: 'click',
         x,
         y,
         modifiers,
@@ -470,7 +471,7 @@ export async function tryCDPEscalation(tabId, action, params) {
     }
 }
 // =============================================================================
-// DIRECT CDP QUERIES (hardware_click via Go-side cdp_action)
+// DIRECT CDP QUERIES (a coordinate-addressed click via Go-side cdp_action)
 // =============================================================================
 /** Direct CDP actions that only read pixels. They dispatch no input and drive nothing. */
 const CDP_CAPTURE_ACTIONS = new Set(['zoom_region']);
@@ -506,6 +507,17 @@ export async function executeCDPAction(query, tabId, syncClient, sendAsyncResult
     }
     const toastLabel = action === 'key_press' ? 'Typing...' : `CDP ${action}`;
     actionToast(tabId, toastLabel, undefined, 'trying', 10000);
+    // A capture may legitimately name a rectangle outside the visible area; input may not. Chrome
+    // clamps an out-of-range Input.dispatchMouseEvent onto the nearest edge and reports success, so
+    // the point is checked against the page's own viewport before the debugger is even attached.
+    if (!isCDPCapture(action)) {
+        const offScreen = await coordinateOutOfViewport(tabId, action, params);
+        if (offScreen) {
+            actionToast(tabId, toastLabel, offScreen, 'error');
+            sendAsyncResult(syncClient, query.id, query.correlation_id, 'error', null, offScreen);
+            return;
+        }
+    }
     const sessions = cdpSessions();
     if (!sessions) {
         const errorMsg = 'cdp_unavailable: chrome.debugger is not available in this context';

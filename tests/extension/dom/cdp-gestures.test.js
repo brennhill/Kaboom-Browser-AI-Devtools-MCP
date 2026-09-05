@@ -660,3 +660,71 @@ describe('needsGestureDispatch (DOM fallback routing)', () => {
     assert.equal(needsGestureDispatch('select', undefined), false)
   })
 })
+
+describe('viewport bounds (kaboom-05ue.8)', () => {
+  let addressedPoints, outOfViewportMessage
+
+  const BOUNDS = '../../../extension/background/dom/viewport-bounds.js'
+
+  before(async () => {
+    ;({ addressedPoints, outOfViewportMessage } = await import(BOUNDS))
+  })
+
+  test('only a call that names a whole point pays for a viewport probe', () => {
+    assert.deepEqual(addressedPoints({ selector: '#buy' }), [])
+    assert.deepEqual(addressedPoints({ x: 40 }), [])
+    assert.deepEqual(addressedPoints({ y: 50 }), [])
+    assert.deepEqual(addressedPoints({ x: 40, y: 50 }), [{ x: 40, y: 50 }])
+    assert.deepEqual(addressedPoints({ drag_path: [{ x: 1, y: 2 }, { x: 3, y: 4 }] }), [
+      { x: 1, y: 2 },
+      { x: 3, y: 4 }
+    ])
+  })
+
+  test('a point on the screen is dispatched, including the far edge', () => {
+    const extent = { width: 1280, height: 800 }
+    assert.equal(outOfViewportMessage('click', [{ x: 0, y: 0 }], extent), null)
+    assert.equal(outOfViewportMessage('click', [{ x: 1280, y: 800 }], extent), null)
+    assert.equal(outOfViewportMessage('click', [{ x: 640, y: 360 }], extent), null)
+  })
+
+  test('a point past the edge is refused by name, not clamped onto the edge', () => {
+    const extent = { width: 1280, height: 800 }
+    const message = outOfViewportMessage('click', [{ x: 1900, y: 400 }], extent)
+    assert.ok(message, 'Input.dispatchMouseEvent clamps an out-of-range point and reports success')
+    assert.match(message, /outside the viewport/)
+    assert.match(message, /1900/)
+    assert.match(message, /1280/)
+    assert.match(message, /800/)
+    assert.match(message, /click/)
+  })
+
+  test('every edge is checked, not only the right one', () => {
+    const extent = { width: 1280, height: 800 }
+    assert.ok(outOfViewportMessage('hover_at', [{ x: -1, y: 10 }], extent))
+    assert.ok(outOfViewportMessage('hover_at', [{ x: 10, y: -1 }], extent))
+    assert.ok(outOfViewportMessage('hover_at', [{ x: 10, y: 801 }], extent))
+  })
+
+  test('one bad waypoint condemns the whole drag route', () => {
+    const extent = { width: 1280, height: 800 }
+    const route = [
+      { x: 10, y: 10 },
+      { x: 5000, y: 10 }
+    ]
+    const message = outOfViewportMessage('drag', route, extent)
+    assert.ok(message, 'a drag that leaves the screen mid-route drops the payload at the clamped edge')
+    assert.match(message, /5000/)
+  })
+
+  test('an unmeasurable viewport is not a bound — the point is not refused on a guess', () => {
+    assert.equal(outOfViewportMessage('click', [{ x: 1900, y: 400 }], { width: 0, height: 800 }), null)
+    assert.equal(outOfViewportMessage('click', [{ x: 1900, y: 400 }], null), null)
+  })
+
+  test('a non-finite coordinate is refused before it reaches Chrome', () => {
+    const extent = { width: 1280, height: 800 }
+    assert.ok(outOfViewportMessage('click', [{ x: Number.NaN, y: 10 }], extent))
+    assert.ok(outOfViewportMessage('click', [{ x: Number.POSITIVE_INFINITY, y: 10 }], extent))
+  })
+})

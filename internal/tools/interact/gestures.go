@@ -29,12 +29,19 @@ func isCoordinateOnlyGesture(action string) bool {
 }
 
 // GestureTarget is everything a gesture call said about where and how to act.
+//
+// HasX/HasY and X/Y are both carried: a point at (0, 0) is a legal target, so "supplied" and
+// "zero" have to stay distinguishable, and the targeting rules need the values themselves to say
+// which coordinate was out of bounds.
 type GestureTarget struct {
 	Selector   string
 	ElementID  string
+	Ref        string
 	HasIndex   bool
 	HasX       bool
 	HasY       bool
+	X          float64
+	Y          float64
 	PathPoints int
 	HasDeltaX  bool
 	HasDeltaY  bool

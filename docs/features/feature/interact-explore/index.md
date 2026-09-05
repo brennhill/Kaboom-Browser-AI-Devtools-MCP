@@ -39,6 +39,7 @@ code_paths:
   - internal/schema/interact/properties_output_batch.go
   - internal/schema/interact/properties_gestures.go
   - internal/tools/interact/gestures.go
+  - internal/tools/interact/targeting.go
   - internal/tools/interact/selector.go
   - internal/util/media.go
   - cmd/browser-agent/internal/cli/parser/interact.go
@@ -65,6 +66,7 @@ code_paths:
   - src/background/dom/primitives/gestures/dom-primitives-gestures.ts
   - src/background/exec/action-metadata.ts
   - src/background/dom/dom-dispatch.ts
+  - src/background/dom/viewport-bounds.ts
   - src/background/exec/frame-targeting.ts
   - src/background/exec/content-fallback-scripts.ts
   - src/background/exec/upload-handler.ts
@@ -137,6 +139,7 @@ test_paths:
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gestures_test.go
+  - cmd/browser-agent/internal/toolinteract/contracts/targeting_test.go
   - tests/extension/dom/cdp-gestures.test.js
   - cmd/browser-agent/internal/toolinteract/contracts/rich_action_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/performance_test.go
@@ -191,6 +194,22 @@ reject missing or mismatched response envelopes instead of waiting for the
 command timeout.
 Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
 `interact` screenshot compatibility action has been removed.
+One action family covers all three ways of naming a target. `click`,
+`right_click`, `double_click`, `triple_click`, `hover_at` and `scroll_at` each
+accept a selector, a `ref` from `find`, or `x`/`y` in viewport CSS pixels — the
+same space `observe({what:"screenshot"})` publishes in `coordinate_frame`, so a
+pixel read off an image reaches a gesture through
+`image_to_viewport` and nothing else. The mechanism-named `hardware_click`
+action is deleted, not aliased: a coordinate click is `click` with `x`/`y`, and
+it is dispatched over CDP so the page sees `isTrusted` input.
+A call that names more than one target is refused with a message naming both
+(`internal/tools/interact/targeting.go`) rather than resolved in whatever order
+the handlers happen to run, which used to drop the loser in silence. A point
+outside the current viewport is refused too, by the extension
+(`src/background/dom/viewport-bounds.ts`), which measures the viewport with the
+same `readPageViewportMetrics` probe that builds `coordinate_frame`: Chrome does
+not reject an out-of-range `Input.dispatchMouseEvent`, it clamps the point onto
+the nearest edge and reports success.
 Pilot navigation lifecycle tests model tab readiness explicitly and use
 controlled completion signals, so consecutive operations prove exactly-once
 settlement without wall-clock sleeps or load-sensitive timeout behavior.

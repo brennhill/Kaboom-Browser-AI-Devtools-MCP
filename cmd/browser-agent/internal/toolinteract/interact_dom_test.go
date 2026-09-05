@@ -170,40 +170,42 @@ func TestHandleDOMPrimitive_IndexNotFound(t *testing.T) {
 	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
-func TestHandleHardwareClick_Success(t *testing.T) {
+// A coordinate click is `click` with x/y. There is no second action named after the mechanism
+// that delivers it, so these cover the only coordinate entry point there is.
+func TestHandleDOMPrimitive_CoordinateClickGoesOverCDP(t *testing.T) {
 	h, fs := newFakeDOMActions(t)
-	response := h.HandleHardwareClick(testReq(), json.RawMessage(`{"x":5,"y":6}`))
+	response := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"x":5,"y":6}`), "click")
 	assertOK(t, response)
 	if !strings.Contains(string(response.Result), "cdp_click_") {
-		t.Fatalf("hardware click response missing correlation prefix: %s", response.Result)
+		t.Fatalf("coordinate click response missing correlation prefix: %s", response.Result)
 	}
 	fs.mu.Lock()
 	queryType := fs.enqueued[0].Type
 	fs.mu.Unlock()
 	if queryType != "cdp_action" {
-		t.Fatalf("hardware click query type = %q, want cdp_action", queryType)
+		t.Fatalf("coordinate click query type = %q, want cdp_action", queryType)
 	}
 }
 
-func TestHandleHardwareClick_MissingX(t *testing.T) {
+func TestHandleDOMPrimitive_CoordinateClickMissingY(t *testing.T) {
 	h, _ := newFakeDOMActions(t)
-	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"y":6}`)), mcp.ErrMissingParam)
+	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"x":6}`), "click"), mcp.ErrMissingParam)
 }
 
-func TestHandleHardwareClick_MissingY(t *testing.T) {
+func TestHandleDOMPrimitive_CoordinateClickMissingX(t *testing.T) {
 	h, _ := newFakeDOMActions(t)
-	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"x":6}`)), mcp.ErrMissingParam)
+	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"y":6}`), "click"), mcp.ErrMissingParam)
 }
 
-func TestHandleHardwareClick_InvalidJSON(t *testing.T) {
+func TestHandleDOMPrimitive_CoordinateClickInvalidJSON(t *testing.T) {
 	h, _ := newFakeDOMActions(t)
-	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
+	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`bad`), "click"), mcp.ErrInvalidJSON)
 }
 
 func TestHandleCDPClick_PilotBlocked(t *testing.T) {
 	h, fs := newFakeDOMActions(t)
 	fs.blockPilot = true
-	assertErr(t, h.HandleCDPClick(testReq(), json.RawMessage(`{}`), "hardware_click", cdpClickTarget{X: 1, Y: 2}), mcp.ErrCodePilotDisabled)
+	assertErr(t, h.HandleCDPClick(testReq(), json.RawMessage(`{}`), "click", cdpClickTarget{X: 1, Y: 2}), mcp.ErrCodePilotDisabled)
 }
 
 func TestNormalizeDOMActionArgs_SetsAction(t *testing.T) {

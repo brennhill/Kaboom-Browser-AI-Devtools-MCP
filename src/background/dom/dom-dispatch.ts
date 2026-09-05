@@ -30,6 +30,7 @@ import {
 import { resolveElement, type ResolvedElement } from './cdp/cdp-element-resolve.js'
 import { explicitGesturePoint } from './cdp/cdp-gestures.js'
 import { shouldEscalateToCDP, tryCDPEscalation } from './cdp/cdp-dispatch.js'
+import { coordinateOutOfViewport } from './viewport-bounds.js'
 import { isReadOnlyAction } from '../exec/action-metadata.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
@@ -616,6 +617,17 @@ export async function executeDOMAction(
     return
   }
   if (action === 'wait_for' && rejectInvalidWaitFor(params, syncClient, query, sendAsyncResult)) {
+    return
+  }
+
+  // A point off the screen is refused BEFORE either dispatch path. Neither would refuse it
+  // itself: CDP clamps an out-of-range Input.dispatchMouseEvent to the nearest edge and reports
+  // success, and the DOM fallback's elementFromPoint returns null, which reads as "nothing is
+  // there" rather than "you pointed off the screen".
+  const offScreen = await coordinateOutOfViewport(tabId, action, params)
+  if (offScreen) {
+    actionToast(tabId, action, offScreen, 'error')
+    sendDOMError(syncClient, query, offScreen, sendAsyncResult)
     return
   }
 

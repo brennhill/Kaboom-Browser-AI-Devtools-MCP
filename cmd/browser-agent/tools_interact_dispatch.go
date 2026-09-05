@@ -80,7 +80,6 @@ func buildInteractActions(h *ToolHandler) map[string]interactdispatch.Action {
 		"set_cookie":                h.storageActions.HandleSetCookie,
 		"delete_cookie":             h.storageActions.HandleDeleteCookie,
 		"list_interactive":          h.domActions.HandleListInteractive,
-		"hardware_click":            h.domActions.HandleHardwareClick,
 		"draw_mode_start":           h.pageActions.HandleDrawModeStart,
 		"find":                      h.pageActions.HandleFind,
 		"get_readable":              h.pageActions.HandleGetReadable,

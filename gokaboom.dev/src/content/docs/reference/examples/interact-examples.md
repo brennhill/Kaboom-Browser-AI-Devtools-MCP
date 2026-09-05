@@ -2279,50 +2279,6 @@ Fix: Use `selector` as a CSS or semantic selector string.
 
 Fix: Use a valid interact action value, e.g. `draw_mode_start`.
 
-### `hardware_click`
-
-#### Minimal call
-
-```json
-{
-  "tool": "interact",
-  "arguments": {
-    "what": "hardware_click",
-    "x": 640,
-    "y": 360
-  }
-}
-```
-
-#### Expected response shape
-
-```json
-{
-  "action": "hardware_click",
-  "ok": true,
-  "url": "https://example.com",
-  "result": {
-    "summary": "Action completed",
-    "mode": "hardware_click"
-  }
-}
-```
-
-#### Failure example and fix
-
-```json
-{
-  "tool": "interact",
-  "arguments": {
-    "what": "not_a_real_mode",
-    "x": 640,
-    "y": 360
-  }
-}
-```
-
-Fix: Use a valid interact action value, e.g. `hardware_click`.
-
 ### `activate_tab`
 
 #### Minimal call
