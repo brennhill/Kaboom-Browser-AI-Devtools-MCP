@@ -1478,6 +1478,61 @@
           "description": "Stable element handle from list_interactive (preferred for deterministic follow-up actions)",
           "type": "string"
         },
+        "environment": {
+          "description": "For pin_environment: the environment knobs to hold still. Everything named here is reported in the generated reproduction artifact, because a test that silently depends on a pinned clock passes only on the machine that recorded it.",
+          "properties": {
+            "accuracy_m": {
+              "description": "Geolocation accuracy in metres (default 1)",
+              "type": "number"
+            },
+            "clock_epoch_ms": {
+              "description": "Fix the clock's origin to this epoch (ms)",
+              "type": "number"
+            },
+            "device_scale_factor": {
+              "description": "Device pixel ratio (default 1)",
+              "type": "number"
+            },
+            "latitude": {
+              "description": "Geolocation latitude",
+              "type": "number"
+            },
+            "longitude": {
+              "description": "Geolocation longitude",
+              "type": "number"
+            },
+            "mobile": {
+              "description": "Emulate a mobile device",
+              "type": "boolean"
+            },
+            "random_seed": {
+              "description": "Seed Math.random and crypto.getRandomValues so a replay draws the same values",
+              "type": "string"
+            },
+            "timezone_id": {
+              "description": "IANA timezone, e.g. 'UTC' or 'America/New_York'",
+              "type": "string"
+            },
+            "viewport_height": {
+              "description": "Device metrics height in CSS pixels",
+              "type": "number"
+            },
+            "viewport_width": {
+              "description": "Device metrics width in CSS pixels",
+              "type": "number"
+            },
+            "virtual_time_policy": {
+              "description": "Default 'advance' — fixes the clock's origin and lets it run. 'pause' stops time outright, which freezes the page you are recording; use it for replay only.",
+              "enum": [
+                "advance",
+                "pause",
+                "pauseIfNetworkFetchesPending"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
         "escalation_timeout_ms": {
           "description": "Upload escalation timeout in ms",
           "type": "number"
@@ -1842,6 +1897,8 @@
             "clipboard_read",
             "clipboard_write",
             "find",
+            "pin_environment",
+            "unpin_environment",
             "drag",
             "right_click",
             "double_click",

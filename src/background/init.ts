@@ -102,6 +102,7 @@ import {
   pushExtensionLog
 } from './runtime-state/log-queue.js'
 import { initializeEnvironmentTransactionRuntime } from './environment-transaction/runtime.js'
+import { environmentPinFor } from './dom/cdp/cdp-env-pin.js'
 
 /**
  * Initialize the extension on startup
@@ -159,6 +160,7 @@ function installBackgroundMessageHandlers(ctx: MessageHandlerContext): void {
         addLog: (entry) => logBatcher.add(entry),
         addWebSocket: (event) => wsBatcher.add(event),
         addEnhancedAction: (action) => enhancedActionBatcher.add(action),
+        environmentPinFor,
         addNetworkBody: (body) => networkBodyBatcher.add(body),
         addPerformance: (snapshot) => perfBatcher.add(snapshot),
         handleLog: handleLogMessage,

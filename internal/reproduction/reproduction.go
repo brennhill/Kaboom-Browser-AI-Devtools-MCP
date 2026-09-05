@@ -36,6 +36,13 @@ type Meta struct {
 	SelectorsUsed    []string `json:"selectors_used"`
 	ActionsAvailable int      `json:"actions_available"`
 	ActionsIncluded  int      `json:"actions_included"`
+	// FallbackOrder and LocatorCoverage let a caller tell a session recorded with all
+	// three locators from one that only ever had selectors, without reading the script.
+	FallbackOrder   []string       `json:"fallback_order"`
+	LocatorCoverage map[string]int `json:"locator_coverage"`
+	// EnvironmentPinned says whether the artifact depends on a pinned environment.
+	EnvironmentPinned     bool `json:"environment_pinned"`
+	EnvironmentPinChanged bool `json:"environment_pin_changed,omitempty"`
 }
 
 const maxReproOutputBytes = 200 * 1024 // 200KB cap
@@ -85,6 +92,7 @@ func BuildResult(script string, params Params, actions, allActions []types.Enhan
 	if len(actions) > 1 {
 		durationMs = actions[len(actions)-1].Timestamp - actions[0].Timestamp
 	}
+	pin, pinChanged := sessionPin(actions)
 	return Result{
 		Script:      script,
 		Format:      params.OutputFormat,
@@ -92,10 +100,14 @@ func BuildResult(script string, params Params, actions, allActions []types.Enhan
 		DurationMs:  durationMs,
 		StartURL:    startURL,
 		Metadata: Meta{
-			GeneratedAt:      time.Now().Format(time.RFC3339),
-			SelectorsUsed:    collectSelectorTypes(actions),
-			ActionsAvailable: len(allActions),
-			ActionsIncluded:  len(actions),
+			GeneratedAt:           time.Now().Format(time.RFC3339),
+			SelectorsUsed:         collectSelectorTypes(actions),
+			ActionsAvailable:      len(allActions),
+			ActionsIncluded:       len(actions),
+			FallbackOrder:         fallbackOrder(),
+			LocatorCoverage:       locatorCoverage(actions),
+			EnvironmentPinned:     pin != nil,
+			EnvironmentPinChanged: pinChanged,
 		},
 	}
 }

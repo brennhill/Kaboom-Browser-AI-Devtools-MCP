@@ -154,3 +154,32 @@ func findProperties() map[string]any {
 		},
 	}
 }
+
+// environmentPinProperties are the parameters of the `pin_environment` action. One object
+// property rather than nine flat ones: the interact schema shares a single property map
+// across every action, so nine loose names would collide with targeting and geometry params.
+func environmentPinProperties() map[string]any {
+	return map[string]any{
+		"environment": map[string]any{
+			"type":        "object",
+			"description": "For pin_environment: the environment knobs to hold still. Everything named here is reported in the generated reproduction artifact, because a test that silently depends on a pinned clock passes only on the machine that recorded it.",
+			"properties": map[string]any{
+				"clock_epoch_ms": map[string]any{"type": "number", "description": "Fix the clock's origin to this epoch (ms)"},
+				"timezone_id":    map[string]any{"type": "string", "description": "IANA timezone, e.g. 'UTC' or 'America/New_York'"},
+				"virtual_time_policy": map[string]any{
+					"type":        "string",
+					"enum":        []string{"advance", "pause", "pauseIfNetworkFetchesPending"},
+					"description": "Default 'advance' — fixes the clock's origin and lets it run. 'pause' stops time outright, which freezes the page you are recording; use it for replay only.",
+				},
+				"latitude":            map[string]any{"type": "number", "description": "Geolocation latitude"},
+				"longitude":           map[string]any{"type": "number", "description": "Geolocation longitude"},
+				"accuracy_m":          map[string]any{"type": "number", "description": "Geolocation accuracy in metres (default 1)"},
+				"viewport_width":      map[string]any{"type": "number", "description": "Device metrics width in CSS pixels"},
+				"viewport_height":     map[string]any{"type": "number", "description": "Device metrics height in CSS pixels"},
+				"device_scale_factor": map[string]any{"type": "number", "description": "Device pixel ratio (default 1)"},
+				"mobile":              map[string]any{"type": "boolean", "description": "Emulate a mobile device"},
+				"random_seed":         map[string]any{"type": "string", "description": "Seed Math.random and crypto.getRandomValues so a replay draws the same values"},
+			},
+		},
+	}
+}

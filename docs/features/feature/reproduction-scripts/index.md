@@ -4,7 +4,7 @@ feature_id: feature-reproduction-scripts
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-09
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
@@ -12,6 +12,7 @@ code_paths:
   - internal/reproduction/reproduction_kaboom.go
   - internal/reproduction/reproduction_playwright.go
   - internal/reproduction/reproduction_selectors.go
+  - internal/reproduction/reproduction_locators.go
   - internal/reproduction/reproduction_utils.go
   - src/lib/page/reproduction.ts
   - internal/capture/actionstore/store.go
@@ -20,6 +21,7 @@ test_paths:
   - scripts/tests/workflows/cat-29-reproduction.sh
   - internal/tools/interact/reproduction_test.go
   - internal/reproduction/reproduction_test.go
+  - internal/reproduction/reproduction_locators_test.go
   - internal/reproduction/golden_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/reproduction/reproduction-script-fixture.js
@@ -65,3 +67,14 @@ last_verified_date: 2026-03-05
 - Go behavior coverage: `internal/tools/interact/reproduction_test.go`
 - Reproduction evidence reads a detached snapshot from the canonical enhanced-
   action store; the capture root does not provide an action forwarding API.
+
+## Three locators per step, and the environment they ran in
+
+Both backends here now emit, per targeted step, the two locators that survive a re-render the CSS
+selector does not — accessibility role plus accessible name, and the viewport coordinate with its
+frame — and a header stating what the recording session pinned. The fallback order
+(`selector -> ax -> coordinate`) and the pin report live in
+`internal/reproduction/reproduction_locators.go`.
+
+See [Session to test](../session-to-test/index.md) for the full contract, the reasoning behind the
+order, and the extension-side capture and pinning.

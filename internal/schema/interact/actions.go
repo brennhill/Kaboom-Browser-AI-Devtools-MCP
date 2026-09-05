@@ -77,6 +77,10 @@ var actionSpecs = []ActionSpec{
 	{Name: "clipboard_read", Hint: "Read current clipboard text content", Returns: "The clipboard text, or a named reason the browser refused."},
 	{Name: "clipboard_write", Hint: "Write text to the clipboard", Returns: "Confirmation the text was copied.", Optional: []string{"text"}},
 	{Name: "find", Hint: "Find elements by natural-language description using the accessibility tree (works where selectors cannot: canvas widgets, ARIA-only semantics)", Returns: "Ranked candidate elements with ref, role, accessible name, confidence and why it matched. Multiple candidates mean the query was ambiguous — disambiguate rather than taking the first.", Required: []string{"query"}},
+	// Environment pinning (kaboom-x0li.2). Opt-in per session: an unpinned tab records nothing
+	// about its environment, so a generated test says outright that it inherits the machine's.
+	{Name: "pin_environment", Hint: "Hold the tab's environment still for deterministic replay: clock, timezone, geolocation, viewport and a seeded Math.random/crypto", Returns: "What was actually pinned, and any knob the browser refused — the refused ones are what a replay will diverge on.", Required: []string{"environment"}},
+	{Name: "unpin_environment", Hint: "Release every override pin_environment installed", Returns: "Whether the tab was pinned, and any override the browser refused to release."},
 	// Pointer gestures (kaboom-05ue.5). Each dispatches hardware-level input through CDP when the
 	// tab allows it and falls back to synthetic DOM events when it does not, so the evidence field
 	// insertion_strategy says which one the page actually saw.

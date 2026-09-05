@@ -237,6 +237,13 @@ type EnhancedAction struct {
 	Classification string         `json:"classification,omitempty"` // Transient classification: toast, alert, snackbar, notification, tooltip, banner, flash
 	DurationMs     int            `json:"duration_ms,omitempty"`    // Transient visibility duration (ms). MVP: always 0 (removal tracking not yet implemented)
 	Role           string         `json:"role,omitempty"`           // ARIA role of the transient element (e.g., "alert", "status")
+	// Locators two and three. Selectors above is the first. Emitting all three per step is
+	// what lets a generated test survive a re-render that breaks any single one.
+	AX       *WireAXLocator       `json:"ax,omitempty"`
+	Viewport *WireViewportLocator `json:"viewport,omitempty"`
+	// Environment is what the recording session held still, reported per action because a
+	// navigation clears CDP overrides: a session-level record would claim a pin that lapsed.
+	Environment *WireEnvironmentPin `json:"environment,omitempty"`
 }
 
 // EnhancedActionFilter defines filtering criteria for enhanced actions

@@ -16,7 +16,7 @@ func GeneratePlaywrightScript(actions []types.EnhancedAction, opts Params) strin
 	actions = FilterLastN(actions, opts.LastN)
 
 	var b strings.Builder
-	writePlaywrightHeader(&b, opts)
+	writePlaywrightHeader(&b, actions, opts)
 	writePlaywrightSteps(&b, actions, opts)
 	writePlaywrightFooter(&b, opts)
 
@@ -27,8 +27,10 @@ func GeneratePlaywrightScript(actions []types.EnhancedAction, opts Params) strin
 	return script
 }
 
-func writePlaywrightHeader(b *strings.Builder, opts Params) {
+func writePlaywrightHeader(b *strings.Builder, actions []types.EnhancedAction, opts Params) {
 	b.WriteString("import { test, expect } from '@playwright/test';\n\n")
+	writeEnvironmentPin(b, actions, "// ")
+	b.WriteString("\n")
 	testName := "reproduction: captured user actions"
 	if opts.ErrorMessage != "" {
 		testName = "reproduction: " + ChopString(opts.ErrorMessage, 80)
@@ -42,9 +44,14 @@ func writePlaywrightSteps(b *strings.Builder, actions []types.EnhancedAction, op
 		WritePauseComment(b, prevTs, action.Timestamp, "  // [%ds pause]\n")
 		prevTs = action.Timestamp
 		line := PlaywrightStep(action, opts)
-		if line != "" {
-			b.WriteString("  " + line + "\n")
+		if line == "" {
+			continue
 		}
+		b.WriteString("  " + line + "\n")
+		// The executable step uses one locator. The other two are emitted beside it so a
+		// re-render that breaks it leaves a repair path in the artifact itself.
+		writeFallbackLocators(b, buildLocators(action), "  // ",
+			"locator fallbacks ("+fallbackOrderLabel+"):", renderLocatorCode)
 	}
 }
 

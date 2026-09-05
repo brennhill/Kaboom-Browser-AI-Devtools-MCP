@@ -126,7 +126,49 @@ func cloneAction(action types.EnhancedAction) types.EnhancedAction {
 		action.Selectors = selectors
 	}
 	action.TestIDs = append([]string(nil), action.TestIDs...)
+	action.AX = cloneAX(action.AX)
+	action.Viewport = cloneViewport(action.Viewport)
+	action.Environment = cloneEnvironment(action.Environment)
 	return action
+}
+
+// cloneAX detaches the AX locator. Sharing the pointer would let a later ingest mutate
+// evidence a caller already holds, so the snapshot would disagree with itself.
+func cloneAX(locator *types.WireAXLocator) *types.WireAXLocator {
+	if locator == nil {
+		return nil
+	}
+	copied := *locator
+	return &copied
+}
+
+func cloneViewport(locator *types.WireViewportLocator) *types.WireViewportLocator {
+	if locator == nil {
+		return nil
+	}
+	copied := *locator
+	return &copied
+}
+
+func cloneEnvironment(pin *types.WireEnvironmentPin) *types.WireEnvironmentPin {
+	if pin == nil {
+		return nil
+	}
+	copied := *pin
+	if pin.Clock != nil {
+		clock := *pin.Clock
+		copied.Clock = &clock
+	}
+	if pin.Geolocation != nil {
+		geo := *pin.Geolocation
+		copied.Geolocation = &geo
+	}
+	if pin.Viewport != nil {
+		viewport := *pin.Viewport
+		copied.Viewport = &viewport
+	}
+	copied.Unpinned = append([]string(nil), pin.Unpinned...)
+	return &copied
 }
 
 func cloneSelector(value any) any {

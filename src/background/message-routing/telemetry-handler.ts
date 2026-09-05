@@ -2,7 +2,7 @@
  * Purpose: Own routing for telemetry events emitted by content scripts.
  */
 import type { ChromeMessageSender } from '../../types/runtime/chrome.js'
-import type { WireEnhancedAction as EnhancedAction } from '../../types/wire/wire-enhanced-action.js'
+import type { WireEnhancedAction as EnhancedAction, WireEnvironmentPin } from '../../types/wire/wire-enhanced-action.js'
 import type { LogEntry } from '../../types/capture/telemetry.js'
 import type { WireNetworkBody as NetworkBodyPayload } from '../../types/wire/wire-network.js'
 import type { WirePerformanceSnapshot as PerformanceSnapshot } from '../../types/wire/wire-performance-snapshot.js'
@@ -15,6 +15,12 @@ export interface TelemetryHandlerDependencies {
   addLog: (entry: LogEntry) => void
   addWebSocket: (event: WebSocketEvent) => void
   addEnhancedAction: (action: EnhancedAction) => void
+  /**
+   * The environment pin in force for the tab that produced an action, or undefined when the
+   * tab is not pinned. Read per action rather than per session because a navigation clears
+   * CDP overrides: a session-level stamp would claim a pin that lapsed halfway through.
+   */
+  environmentPinFor: (tabId: number | undefined) => WireEnvironmentPin | undefined
   addNetworkBody: (body: NetworkBodyPayload) => void
   addPerformance: (snapshot: PerformanceSnapshot) => void
   handleLog: (payload: LogEntry, sender: ChromeMessageSender, tabId?: number) => Promise<void>
@@ -34,9 +40,13 @@ export function createTelemetryMessageHandler(deps: TelemetryHandlerDependencies
         case 'ws_event':
           deps.addWebSocket(message.payload)
           return false
-        case 'enhanced_action':
-          deps.addEnhancedAction(message.payload)
+        case 'enhanced_action': {
+          // The page cannot know what the extension pinned over CDP, so the stamp happens
+          // here — in the context that applied it — rather than being inferred later.
+          const environment = deps.environmentPinFor(message.payload.tab_id ?? message.tabId)
+          deps.addEnhancedAction(environment ? { ...message.payload, environment } : message.payload)
           return false
+        }
         case 'performance_snapshot':
           deps.addPerformance(message.payload)
           return false

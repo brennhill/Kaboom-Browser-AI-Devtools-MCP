@@ -197,6 +197,15 @@ declare global {
 
     /** Early-patch: buffered network bodies captured before inject script loaded */
     __KABOOM_EARLY_BODIES__?: EarlyNetworkBody[]
+
+    /** Early-patch: installs a seeded Math.random / crypto.getRandomValues for the given seed */
+    __KABOOM_SEED_RANDOM__?: (seed: string) => boolean
+
+    /** Environment pinning: the seed a session pinned. Set by whichever of the two runs first. */
+    __KABOOM_RANDOM_SEED__?: string
+
+    /** Environment pinning: true only when the seeded generator actually replaced the originals */
+    __KABOOM_RANDOM_SEED_ACTIVE__?: boolean
   }
 }
 

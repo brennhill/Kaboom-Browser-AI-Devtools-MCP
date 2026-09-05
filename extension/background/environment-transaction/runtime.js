@@ -6,6 +6,7 @@
 import { debugLog, DebugCategory } from '../debug.js';
 import { createChromeEnvironmentStateDriver } from './chrome-state-adapter.js';
 import { registerEnvironmentTransactionCommands } from './commands.js';
+import { registerEnvironmentPinCommands } from './env-pin.js';
 import { createPersistentEnvironmentSnapshotStore } from './snapshot-store.js';
 import { reportStateRecovery } from '../runtime-state/state-recovery.js';
 export function initializeEnvironmentTransactionRuntime() {
@@ -25,5 +26,6 @@ export function initializeEnvironmentTransactionRuntime() {
         }
     });
     registerEnvironmentTransactionCommands(driver, snapshots);
+    registerEnvironmentPinCommands();
 }
 //# sourceMappingURL=runtime.js.map

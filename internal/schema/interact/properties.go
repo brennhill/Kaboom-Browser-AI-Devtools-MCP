@@ -9,6 +9,7 @@ func toolProperties() map[string]any {
 	mergeProps(props, coreActionProperties())
 	mergeProps(props, gestureProperties())
 	mergeProps(props, findProperties())
+	mergeProps(props, environmentPinProperties())
 	mergeProps(props, formAndWaitProperties())
 	mergeProps(props, outputAndBatchProperties())
 	return props

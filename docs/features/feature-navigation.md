@@ -87,6 +87,7 @@ Features with active code implementations referencing their feature docs.
 | sarif-export | `feature/sarif-export/` | product-spec.md, qa-plan.md, tech-spec.md | SARIF format export for accessibility reports |
 | security-hardening | `feature/security-hardening/` | product-spec.md, qa-plan.md, tech-spec.md | Security hardening for daemon and extension |
 | self-testing | `feature/self-testing/` | product-spec.md, qa-plan.md, tech-spec.md | Self-testing and health check infrastructure |
+| session-to-test | `feature/session-to-test/` | index.md, product-spec.md, qa-plan.md, tech-spec.md | Agent session to runnable regression test: three locators per step, pinned environment |
 | tab-recording | `feature/tab-recording/` | product-spec.md, qa-plan.md, tech-spec.md | Tab video/audio recording capture |
 | tab-tracking-ux | `feature/tab-tracking-ux/` | product-spec.md, qa-plan.md, tech-spec.md | Tab tracking UX and multi-tab management |
 | terminal | `feature/terminal/` | index.md | In-browser terminal widget with dedicated server on port+1 |

@@ -27,37 +27,42 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
+// browserActionHandler is a browser-action entry point bound to its receiver at call time.
+type browserActionHandler func(*BrowserActions, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+
+// browserActionHandlers is the browser-action table.
+//
+// A table rather than a switch: the switch's cyclomatic complexity rose with every action
+// added, so the two environment-pinning actions would have meant raising a complexity budget
+// instead of paying it. A function rather than a package-level map, because a package-level
+// map is mutable state any importer could rewrite.
+func browserActionHandlers() map[string]browserActionHandler {
+	return map[string]browserActionHandler{
+		"subtitle":          (*BrowserActions).handleSubtitle,
+		"navigate":          (*BrowserActions).handleNavigate,
+		"refresh":           (*BrowserActions).handleRefresh,
+		"back":              (*BrowserActions).handleBack,
+		"forward":           (*BrowserActions).handleForward,
+		"new_tab":           (*BrowserActions).handleNewTab,
+		"switch_tab":        (*BrowserActions).handleSwitchTab,
+		"activate_tab":      (*BrowserActions).handleActivateTab,
+		"close_tab":         (*BrowserActions).handleCloseTab,
+		"highlight":         (*BrowserActions).handleHighlight,
+		"execute_js":        (*BrowserActions).handleExecuteJS,
+		"zoom_region":       (*BrowserActions).handleZoomRegion,
+		"pin_environment":   (*BrowserActions).handlePinEnvironment,
+		"unpin_environment": (*BrowserActions).handleUnpinEnvironment,
+	}
+}
+
 // Handle is the sole cross-package browser-action boundary. Action-family
 // implementations remain private so callers cannot couple to orchestration details.
 func (h *BrowserActions) Handle(action string, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	switch action {
-	case "subtitle":
-		return h.handleSubtitle(req, args)
-	case "navigate":
-		return h.handleNavigate(req, args)
-	case "refresh":
-		return h.handleRefresh(req, args)
-	case "back":
-		return h.handleBack(req, args)
-	case "forward":
-		return h.handleForward(req, args)
-	case "new_tab":
-		return h.handleNewTab(req, args)
-	case "switch_tab":
-		return h.handleSwitchTab(req, args)
-	case "activate_tab":
-		return h.handleActivateTab(req, args)
-	case "close_tab":
-		return h.handleCloseTab(req, args)
-	case "highlight":
-		return h.handleHighlight(req, args)
-	case "execute_js":
-		return h.handleExecuteJS(req, args)
-	case "zoom_region":
-		return h.handleZoomRegion(req, args)
-	default:
+	handler, known := browserActionHandlers()[action]
+	if !known {
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Unsupported browser action", "Use a registered interact action", mcp.WithParam("action"))
 	}
+	return handler(h, req, args)
 }
 
 // stashPerfSnapshot saves the current performance snapshot as a "before" baseline
@@ -609,4 +614,61 @@ func zoomRegionResponse(req mcp.JSONRPCRequest, raw json.RawMessage) mcp.JSONRPC
 	resp := mcp.Succeed(req, "Region captured", payload)
 	base64Data, mimeType := util.SplitDataURL(dataURL)
 	return mcp.AppendImageToResponse(resp, base64Data, mimeType)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Environment pinning.
+//
+// A recorded session replays deterministically only if the environment it ran in is held
+// still: the clock, the timezone, the reported location, the viewport and the randomness
+// source. Pinning is opt-in per session — an unpinned tab stamps nothing on its actions, and
+// the generated artifact then states plainly that it inherits the machine's environment.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// environmentPinParams is the caller's request. Every knob is optional; the extension
+// reports back exactly which of them the browser actually accepted.
+type environmentPinParams struct {
+	Environment map[string]any `json:"environment"`
+	TabID       int            `json:"tab_id,omitempty"`
+}
+
+// handlePinEnvironment holds the tab's environment still for the rest of the session.
+func (h *BrowserActions) handlePinEnvironment(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params environmentPinParams
+	mcp.LenientUnmarshal(args, &params)
+
+	if len(params.Environment) == 0 {
+		// Refused rather than treated as a no-op: a caller that believes it pinned the clock
+		// and did not will read the resulting test as deterministic when it is not.
+		return mcp.Fail(req, mcp.ErrMissingParam,
+			"pin_environment requires an 'environment' object naming at least one knob",
+			`Pass environment={"timezone_id":"UTC","clock_epoch_ms":1700000000000,"random_seed":"run-1"}.`,
+			mcp.WithParam("environment"))
+	}
+
+	return h.runtime.newCommand("env_pin").
+		correlationPrefix("env_pin").
+		reason("pin_environment").
+		queryType("env_pin").
+		buildParams(map[string]any{"environment": params.Environment}).
+		tabID(params.TabID).
+		guards(h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking).
+		queuedMessage("pin_environment queued").
+		execute(req, args)
+}
+
+// handleUnpinEnvironment releases every override pin_environment installed.
+func (h *BrowserActions) handleUnpinEnvironment(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params environmentPinParams
+	mcp.LenientUnmarshal(args, &params)
+
+	return h.runtime.newCommand("env_unpin").
+		correlationPrefix("env_unpin").
+		reason("unpin_environment").
+		queryType("env_unpin").
+		buildParams(map[string]any{}).
+		tabID(params.TabID).
+		guards(h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking).
+		queuedMessage("unpin_environment queued").
+		execute(req, args)
 }
