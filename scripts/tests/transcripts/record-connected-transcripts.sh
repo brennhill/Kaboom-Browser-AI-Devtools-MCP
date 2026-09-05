@@ -75,8 +75,12 @@ if [ "${KABOOM_UAT_LAUNCH_BROWSER:-0}" = "1" ]; then
         sleep 1
     done
 
-    echo "Launching a browser with $REPO_ROOT/extension loaded..."
-    uat_launch_extension_browser "$REPO_ROOT/extension" "$BROWSER_PROFILE" "$RECORD_PORT" 60 >/dev/null
+    # Stage a copy pointed at RECORD_PORT so the developer's own browser, which
+    # polls 7890, cannot win the daemon's single extension slot mid-run.
+    STAGED_EXTENSION="$BROWSER_PROFILE/extension"
+    uat_stage_extension "$REPO_ROOT/extension" "$STAGED_EXTENSION" "$RECORD_PORT"
+    echo "Launching a browser with this tree's extension, pointed at port $RECORD_PORT..."
+    uat_launch_extension_browser "$STAGED_EXTENSION" "$BROWSER_PROFILE/profile" "$RECORD_PORT" 240 >/dev/null
     echo "  Browser attached; its extension is the one this tree just compiled."
 fi
 

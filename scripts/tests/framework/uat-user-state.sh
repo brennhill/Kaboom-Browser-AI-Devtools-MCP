@@ -18,7 +18,14 @@ UAT_USER_WRAPPER=""
 UAT_CONNECTED_READINESS_REASON=""
 # The extension reconnect backoff is capped at 30s with up to 25% jitter.
 # Forty-five seconds covers that bounded production delay plus daemon startup.
-UAT_CONNECTED_READY_ATTEMPTS="${UAT_CONNECTED_READY_ATTEMPTS:-450}"
+# Each category restarts the daemon, and the extension only notices on its
+# reconnect alarm. Chrome clamps that alarm far above the 5 seconds the
+# extension asks for, so a browser that has gone idle can take ~30s to reattach
+# and report its tracked tab — and a browser launched cold takes ~80s to its
+# first check-in at all. At 0.1s per attempt, 450 gave under a minute, which is
+# why category 15 failed on "no tracked browser tab" and passed 4/4 once the
+# budget covered the reattach.
+UAT_CONNECTED_READY_ATTEMPTS="${UAT_CONNECTED_READY_ATTEMPTS:-1800}"
 UAT_DISPOSABLE_TAB_ID=""
 UAT_DISPOSABLE_TAB_URL=""
 UAT_DISPOSABLE_TAB_CLOSED=0
