@@ -76,3 +76,18 @@ browser checked in last owns `extension_connected` and `command_contract_id`. If
 another Chrome with the extension is polling the same port, the launcher refuses
 to start rather than racing it. Close it, or point it at a different server URL
 in the extension's options, and re-run.
+
+### What the launched browser costs
+
+A cold profile takes about 80 seconds to its first `/sync` check-in — the
+service worker starts on an event and Chrome clamps the reconnect alarm well
+above the 5 seconds the extension asks for. `uat_launch_extension_browser`
+therefore waits 180 seconds by default, and a category that starts issuing
+commands the instant readiness returns can still outrun a worker that has gone
+idle between polls.
+
+The browser is given its own port, and the extension it loads is a copy of
+`extension/` with the compiled `DEFAULT_SERVER_URL` repointed at it. That is
+what keeps the developer's own Chrome — which polls 7890 — out of the run.
+Measured end to end: the staged copy checks in on 7899 carrying this tree's
+command contract, and an `interact new_tab` through it returns a real tab id.

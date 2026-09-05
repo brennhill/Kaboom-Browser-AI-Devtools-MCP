@@ -68,6 +68,44 @@ uat_find_chrome() {
     return 1
 }
 
+# uat_stage_extension <source_extension_dir> <staged_dir> <port>
+#
+# Copy the compiled extension and point the copy at <port>.
+#
+# The daemon keeps ONE extension slot: whichever browser checked in last owns
+# extension_connected and command_contract_id. A developer's own Chrome polls
+# 7890, so a UAT browser sharing that port is indistinguishable from it. Giving
+# the UAT browser a private port removes the ambiguity — a fresh profile has no
+# stored serverUrl, so the compiled default is what it dials. Measured: a staged
+# copy pointed at 7899 checks in on 7899 carrying the tree's own contract id.
+uat_stage_extension() {
+    local source_dir="$1" staged_dir="$2" port="$3"
+
+    [ -f "$source_dir/manifest.json" ] ||
+        { echo "No manifest.json under $source_dir; run 'make compile-ts' first" >&2; return 1; }
+
+    rm -rf "$staged_dir"
+    mkdir -p "$staged_dir"
+    # -a would carry macOS extended attributes that Chrome then refuses to load.
+    cp -R "$source_dir/." "$staged_dir/"
+
+    # Only ":7890" is rewritten, never a bare 7890, so nothing that merely
+    # contains those digits is touched.
+    find "$staged_dir" -type f \( -name '*.js' -o -name '*.html' \) -print0 |
+        xargs -0 sed -i '' -e "s/:7890/:${port}/g" 2>/dev/null ||
+        find "$staged_dir" -type f \( -name '*.js' -o -name '*.html' \) -print0 |
+            xargs -0 sed -i -e "s/:7890/:${port}/g"
+
+    # Verify the rewrite landed rather than trusting the substitution: a silent
+    # miss launches a browser that dials the developer's daemon instead, and the
+    # run would look like a flake rather than a misconfiguration.
+    if ! grep -q "DEFAULT_SERVER_URL = 'http://localhost:${port}'" "$staged_dir/lib/constants.js"; then
+        echo "Staging did not repoint the extension at port ${port}:" >&2
+        grep -n "DEFAULT_SERVER_URL" "$staged_dir/lib/constants.js" >&2 || true
+        return 1
+    fi
+}
+
 # uat_assert_sole_extension <port>
 #
 # Refuse to launch while another browser already owns the daemon's extension slot.
@@ -96,7 +134,7 @@ uat_assert_sole_extension() {
 # Starts Chrome, waits for the extension to report in to the daemon on <port>,
 # and prints the browser's PID. Exports UAT_BROWSER_PID for the caller's trap.
 uat_launch_extension_browser() {
-    local extension_dir="$1" profile_dir="$2" port="$3" timeout_seconds="${4:-45}"
+    local extension_dir="$1" profile_dir="$2" port="$3" timeout_seconds="${4:-180}"
     local chrome headless=()
 
     [ -f "$extension_dir/manifest.json" ] ||
