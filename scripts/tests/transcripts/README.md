@@ -45,3 +45,23 @@ It runs when something that can change the exchange changes — the extension, t
 daemon's command dispatch, the wire contracts, these fixtures, or the record and
 replay machinery — not on a schedule. A transcript goes stale because code
 changed, so a clock-driven run on an unchanged tree proves nothing.
+
+## Recording against a browser this repo controls
+
+Recording needs an extension whose command contract matches the daemon. Relying
+on whichever extension a machine happens to have loaded makes that a coin flip:
+on 2026-09-05 every connected category failed with `command_contract_mismatch`
+because the browser held an older build than the tree.
+
+    KABOOM_UAT_LAUNCH_BROWSER=1 scripts/tests/transcripts/record-connected-transcripts.sh
+
+starts Chrome with `extension/` loaded from this tree and a throwaway profile, so
+the extension under test is by construction the one just compiled. Set
+`KABOOM_UAT_CHROME` to name the binary and `KABOOM_UAT_CHROME_HEADLESS=1` on a
+runner with no display.
+
+**One browser at a time.** The daemon has a single extension slot — whichever
+browser checked in last owns `extension_connected` and `command_contract_id`. If
+another Chrome with the extension is polling the same port, the launcher refuses
+to start rather than racing it. Close it, or point it at a different server URL
+in the extension's options, and re-run.

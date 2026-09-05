@@ -9,6 +9,7 @@ code_paths:
   - .github/workflows/ci.yml
   - scripts/tests/browser/mode-content-expectations.sh
   - scripts/uat/orchestration/uat-category-script.sh
+  - scripts/uat/orchestration/uat-browser-launch.sh
   - scripts/quality/affected/affected-tests.mjs
   - scripts/quality/affected/run-affected.sh
   - scripts/quality/affected/always-run.json
@@ -153,6 +154,7 @@ test_paths:
   - scripts/tests/browser/mode-content-expectations.sh
   - scripts/tests/framework/uat-fixture-state.sh
   - scripts/contracts/uatcoverage/category_resolution_test.go
+  - scripts/contracts/uatcoverage/browser_launch_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

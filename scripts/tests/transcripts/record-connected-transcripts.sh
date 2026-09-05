@@ -44,6 +44,8 @@ mkdir -p "$OUTPUT_DIR"
 
 # shellcheck source=scripts/uat/orchestration/uat-category-script.sh
 source "$REPO_ROOT/scripts/uat/orchestration/uat-category-script.sh"
+# shellcheck source=scripts/uat/orchestration/uat-browser-launch.sh
+source "$REPO_ROOT/scripts/uat/orchestration/uat-browser-launch.sh"
 
 RECORD_PORT="${KABOOM_UAT_RECORD_PORT:-7893}"
 WRAPPER="${KABOOM_UAT_WRAPPER:-$REPO_ROOT/dist/kaboom-agentic-browser}"
@@ -51,6 +53,31 @@ WRAPPER="${KABOOM_UAT_WRAPPER:-$REPO_ROOT/dist/kaboom-agentic-browser}"
 if [ ! -x "$WRAPPER" ]; then
     echo "Building the daemon for recording..." >&2
     (cd "$REPO_ROOT" && go build -o "$WRAPPER" ./cmd/browser-agent)
+fi
+
+# KABOOM_UAT_LAUNCH_BROWSER=1 records against a Chrome this script starts with
+# THIS tree's extension loaded, instead of whatever the machine happens to have.
+# Opt-in rather than default: a browser window appearing unasked is worse than a
+# clear failure telling you to ask for one.
+if [ "${KABOOM_UAT_LAUNCH_BROWSER:-0}" = "1" ]; then
+    BROWSER_PROFILE="$(mktemp -d)"
+    BOOTSTRAP_PID=""
+    # shellcheck disable=SC2064  # expand the profile path now, at trap time it may be unset
+    trap "uat_stop_extension_browser; [ -n \"\$BOOTSTRAP_PID\" ] && kill \$BOOTSTRAP_PID 2>/dev/null; rm -rf $BROWSER_PROFILE" EXIT
+
+    # The extension needs something to check in to, and each category starts and
+    # kills its own daemon on this port. This one exists only long enough to prove
+    # the browser attached; the extension reconnects to each category's daemon.
+    "$WRAPPER" --daemon --parallel --port "$RECORD_PORT" >/dev/null 2>&1 &
+    BOOTSTRAP_PID=$!
+    for _ in $(seq 1 30); do
+        curl -s --connect-timeout 1 "http://127.0.0.1:${RECORD_PORT}/health" >/dev/null 2>&1 && break
+        sleep 1
+    done
+
+    echo "Launching a browser with $REPO_ROOT/extension loaded..."
+    uat_launch_extension_browser "$REPO_ROOT/extension" "$BROWSER_PROFILE" "$RECORD_PORT" 60 >/dev/null
+    echo "  Browser attached; its extension is the one this tree just compiled."
 fi
 
 recorded=0
