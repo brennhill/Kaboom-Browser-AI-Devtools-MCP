@@ -4,7 +4,7 @@ feature_id: feature-design-drift-audit
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-29
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/designdrift/handler.go
   - cmd/browser-agent/internal/toolanalyze/designdrift/finding.go
@@ -22,6 +22,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/designdrift/contract_test.go
   - cmd/browser-agent/internal/toolanalyze/designdrift/analyzers_test.go
+  - cmd/browser-agent/internal/toolanalyze/designdrift/spacing_test.go
   - cmd/browser-agent/internal/toolanalyze/designdrift/tokens_test.go
   - cmd/browser-agent/internal/toolanalyze/designdrift/testdata/expected-findings.json
   - cmd/browser-agent/internal/toolanalyze/designdrift/testdata/fixture-probe.json
@@ -120,6 +121,23 @@ calculation back to margin arithmetic.
 
 **The rhythm is the modal gap, not the mean.** One 14px among 24s drags a mean
 to 21.5px, which flags every correct gap and understates the real outlier.
+
+**A gap is only measured between two elements that touch.** A selector match is
+a flat list, not a line: it can span two rows of a grid, several wrapped chip
+lines, or two sections of a page. Rows and columns are derived from the geometry
+(mutual centre containment on the cross axis), each line is measured on its own
+axis, and a line is split wherever a gap reaches `containerBreakRatio` (3x) its
+own rhythm. Measuring the flat list as one run is what reported
+`overlap-horizontal observed=-300px` at `confidence:high` on an evenly-spaced
+3x2 card grid, and what blamed a section's 120px padding on the margin of the
+first card after it. A doubled margin is 2x the rhythm and is still reported.
+
+**A mode of one is not a rhythm.** The modal gap only becomes the norm when it
+holds a strict majority of that axis's gaps — the same refusal
+`inferredFindings` makes for computed styles. Without it, an escalating 12 / 20 /
+32 / 48 scale reported three findings citing "1 of 4 vertical gaps measure 12px",
+a rhythm no part of the page has. On the declared-scale path the evidence names
+the spec, because the verdict came from the spec and not from any rhythm.
 
 **Colour distance is perceptual (OKLab), not RGB.** RGB weights the channels
 equally when the eye does not, so it calls distinct colours close and identical
