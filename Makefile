@@ -22,7 +22,7 @@ PLATFORMS := \
 	windows-amd64
 
 .PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-performance test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly mutation-test \
-	uat uat-human uat-human-list uat-human-gate uat-human-verdict dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
+	affected test-affected uat uat-human uat-human-list uat-human-gate uat-human-verdict dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
 	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-command-contract check-ts-json-casing check-openapi-types check-invariants check-schema ci \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
@@ -51,6 +51,14 @@ endif
 GOSEC_BIN := $(GO_TOOL_BIN)/gosec
 GOVULNCHECK_BIN := $(GO_TOOL_BIN)/govulncheck
 GITLEAKS_BIN := $(GO_TOOL_BIN)/gitleaks
+
+# Which tests does this branch's change actually reach? BASE defaults to UNSTABLE.
+affected:
+	@node scripts/quality/affected/affected-tests.mjs --base "$(or $(BASE),UNSTABLE)"
+
+# Run them. Falls back to the whole suite when a change cannot be bounded.
+test-affected:
+	@./scripts/quality/affected/run-affected.sh "$(or $(BASE),UNSTABLE)"
 
 uat:
 	./scripts/uat/runners/test-all-tools-comprehensive.sh --suite all

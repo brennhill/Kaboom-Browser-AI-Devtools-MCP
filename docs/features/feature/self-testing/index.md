@@ -8,6 +8,9 @@ last_reviewed: 2026-09-05
 code_paths:
   - .github/workflows/ci.yml
   - scripts/tests/browser/cat-33-expectations.sh
+  - scripts/quality/affected/affected-tests.mjs
+  - scripts/quality/affected/run-affected.sh
+  - scripts/quality/affected/always-run.json
   - scripts/uat/runners/smoke-test.sh
   - scripts/smoke-tests/harness/framework-smoke.sh
   - scripts/smoke-tests/interact/14-browser-push.sh
@@ -70,6 +73,7 @@ code_paths:
   - scripts/contracts/goarchitecture/main.go
 test_paths:
   - scripts/contracts/uatcoverage/main_test.go
+  - scripts/quality/affected/affected-tests.test.mjs
   - tests/cli/uat-assertions/process-census.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/uat/orchestration/uat-result-lib.test.mjs
@@ -422,3 +426,36 @@ Content expectations are shape assertions: they prove the handler emitted its
 documented collection rather than an error or a bare success envelope. They do
 not prove the collection holds the right things. That is what the human rig
 asks (`docs/features/feature/human-uat-rig/`).
+
+## Which tests does this change reach?
+
+Two branches reported green gates and broke four tests on merge, all in files
+their hand-written globs did not cover. The instruction not to run the whole JS
+suite concurrently is what forced the scoping, so the fix is not "run more":
+
+```bash
+make affected                  # list the tests this branch's change reaches
+make test-affected             # run exactly those
+make affected BASE=some-ref    # against a different base
+```
+
+`scripts/quality/affected` answers "which suites import this module?" by walking
+every path-shaped string literal in the tree. That is deliberately an
+over-approximation: tests here import through variables (`await import(CDP)`) as
+often as through literals, and a selector that missed one would reintroduce the
+failure it exists to prevent. `src/**.ts` maps to `extension/**.js`, because
+nothing under `tests/` mentions `src/` — without that mapping a TypeScript edit
+would select nothing at all and every branch would be green.
+
+Two escape hatches keep it honest:
+
+- **Untraceable changes run everything.** A Makefile, a config, a golden or a
+  baseline can change behaviour everywhere while importing nothing, so their
+  presence forces the full suite with the file named. A selector that silently
+  returns nothing is worse than no selector.
+- **`always-run.json`** lists tests an import graph cannot see — the ones that
+  mirror production wiring by hand. A dependency added in `init.ts` changes what
+  a route delivers without changing anything the mirror imports; that is exactly
+  how the `enhanced_action` route was silently killed in two files. Each entry
+  states why it cannot be traced, and a contract test fails if an entry names a
+  file that does not exist or carries no reason.

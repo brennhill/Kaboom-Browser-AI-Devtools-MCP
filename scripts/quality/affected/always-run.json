@@ -1,0 +1,17 @@
+{
+  "_comment": "Tests that must run whatever changed, because an import graph cannot see them. Each entry states why it is untraceable. Keep this list short: an entry here costs every branch the time to run it.",
+  "always_run": [
+    {
+      "file": "tests/extension/content/message-handlers.test.js",
+      "reason": "reaches the handlers through tests/extension/shared/background-message-router.js, which mirrors init.ts wiring by hand; a dependency added in init.ts changes what the route delivers without changing anything this file imports, which is how the enhanced_action route was silently killed in two files"
+    },
+    {
+      "file": "tests/extension/misc/background-errors-comms.test.js",
+      "reason": "same hand-mirrored router; a dependency present in init.ts and absent from the mirror dies inside the handler switch, and no import edge exists from init.ts to here"
+    },
+    {
+      "file": "tests/extension/contracts/entry-point-parity.test.js",
+      "reason": "compares entry points against each other by reading source text rather than importing them, so a new entry point or a diverging one is invisible to the graph"
+    }
+  ]
+}
