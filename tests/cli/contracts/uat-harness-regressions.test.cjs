@@ -372,10 +372,18 @@ describe('comprehensive UAT harness regressions', () => {
 
   test('category discovery follows feature-family directories', () => {
     const runner = readFileSync('scripts/uat/runners/test-all-tools-comprehensive.sh', 'utf8')
+    const resolver = readFileSync('scripts/uat/orchestration/uat-category-script.sh', 'utf8')
     const framework = readFileSync('scripts/tests/framework/framework.sh', 'utf8')
 
-    assert.match(runner, /find "\$TESTS_DIR" -type f -name "cat-\$\{cat_id\}-\*\.sh"/)
-    assert.doesNotMatch(runner, /"\$TESTS_DIR\/cat-\$\{cat_id\}-"\*\.sh/)
+    // The recursive search moved into the shared resolver, which the recorder
+    // uses too. A flat glob would miss every category outside scripts/tests
+    // itself — all of them.
+    assert.match(resolver, /find "\$tests_root" -type f -name "cat-\$\{cat_id\}-\*\.sh"/)
+    assert.doesNotMatch(resolver, /"\$tests_root\/cat-\$\{cat_id\}-"\*\.sh/)
+    assert.match(runner, /uat_resolve_category_script "\$TESTS_DIR" "\$cat_id"/)
+    // head -n 1 is what made category 33 run a sourced library for as long as
+    // it did: two files matched and the filesystem chose.
+    assert.doesNotMatch(runner, /cat-\$\{cat_id\}-\*\.sh[^\n]*head -n 1/)
     assert.match(framework, /local project_root="\$script_dir\/\.\.\/\.\.\/\.\."/)
     assert.match(framework, /TEST_DAEMON_CLEANER="\$FRAMEWORK_DIR\/\.\.\/\.\.\/cleanup-test-daemons\.sh"/)
   })
