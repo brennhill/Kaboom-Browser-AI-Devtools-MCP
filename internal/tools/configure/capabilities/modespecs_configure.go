@@ -139,9 +139,9 @@ var configureModeSpecs = map[string]modeParamSpec{
 		Optional: []string{"action_jitter_ms"},
 	},
 	"report_issue": {
-		Hint:     "Report an issue to the Kaboom team via GitHub",
-		Returns:  "A formatted issue body ready to file. Text only — nothing is submitted for you.",
-		Optional: []string{"operation", "template", "title", "user_context"},
+		Hint:     "Draft a diagnostics bug report locally, and — only with confirm=true — publish it as a public GitHub issue",
+		Returns:  "For list_templates and preview, the templates or the formatted issue body, produced locally. For operation=submit with confirm=true, the URL of the PUBLIC issue the local gh CLI just filed on brennhill/Kaboom-Browser-AI-Devtools-MCP under the signed-in GitHub account; submit without confirm=true is refused.",
+		Optional: []string{"operation", "template", "title", "user_context", "confirm"},
 	},
 	"setup_quality_gates": {
 		Hint:     "Scaffold .kaboom.json and code standards file for automated quality gate enforcement",

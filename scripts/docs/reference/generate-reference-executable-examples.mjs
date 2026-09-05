@@ -81,7 +81,9 @@ const modeDefaults = {
     security_mode: { mode: 'normal' },
     network_recording: { operation: 'start', domain: 'example.com' },
     action_jitter: { action_jitter_ms: 120 },
-    report_issue: { operation: 'draft', title: 'Intermittent checkout timeout' }
+    // preview only: operation=submit publishes a public GitHub issue and needs
+    // confirm=true, so it must never be the copy/paste starter in the docs.
+    report_issue: { operation: 'preview', title: 'Intermittent checkout timeout' }
   },
   generate: {
     reproduction: { mode: 'playwright', include_screenshots: true },

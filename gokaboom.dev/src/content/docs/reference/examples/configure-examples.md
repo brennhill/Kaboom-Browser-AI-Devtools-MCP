@@ -1181,7 +1181,7 @@ Fix: Use a valid configure mode value, e.g. `action_jitter`.
   "tool": "configure",
   "arguments": {
     "what": "report_issue",
-    "operation": "draft",
+    "operation": "preview",
     "title": "Intermittent checkout timeout"
   }
 }
@@ -1207,7 +1207,7 @@ Fix: Use a valid configure mode value, e.g. `action_jitter`.
   "tool": "configure",
   "arguments": {
     "what": "not_a_real_mode",
-    "operation": "draft",
+    "operation": "preview",
     "title": "Intermittent checkout timeout"
   }
 }

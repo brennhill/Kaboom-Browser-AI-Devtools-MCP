@@ -5,6 +5,7 @@ package issuereport
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -168,6 +169,64 @@ func TestFormatIssueBody_NoDescriptionWhenEmpty(t *testing.T) {
 	body := FormatIssueBody(report)
 	if strings.Contains(body, "## Description") {
 		t.Fatal("body should not contain Description when user_context is empty")
+	}
+}
+
+// The outbound payload is pinned field by field. Everything below leaves the
+// user's machine for a PUBLIC repository, so a new diagnostic added to
+// FormatIssueBody, or a new gh flag, has to be added here deliberately rather
+// than shipping unnoticed.
+func TestSubmitViaGHSendsExactlyTheDocumentedPayload(t *testing.T) {
+	t.Parallel()
+	runner := &fakeRunner{stdout: "https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/issues/7\n"}
+	report := IssueReport{
+		Template:    "bug",
+		Title:       "Click fails on modal",
+		UserContext: "Happens after the popup opens",
+		Diagnostics: DiagnosticData{
+			Server:    ServerDiag{Version: "0.9.1", UptimeSeconds: 90, TotalCalls: 12, TotalErrors: 1, ErrorRatePct: 8.3},
+			Extension: ExtensionDiag{Connected: true, Source: "sess_abc"},
+			Platform:  PlatformDiag{OS: "darwin", Arch: "arm64", GoVersion: "go1.25.0"},
+			Buffers:   BufferStats{ConsoleEntries: 3, NetworkEntries: 2, ActionEntries: 1},
+		},
+	}
+
+	wantBody := "## Description\n\n" +
+		"Happens after the popup opens\n\n" +
+		"## Diagnostics\n\n" +
+		"### Server\n\n" +
+		"- **Version:** 0.9.1\n" +
+		"- **Uptime:** 90s\n" +
+		"- **Total calls:** 12\n" +
+		"- **Total errors:** 1\n" +
+		"- **Error rate:** 8.3%\n" +
+		"\n### Extension\n\n" +
+		"- **Connected:** true\n" +
+		"- **Source:** sess_abc\n" +
+		"\n### Platform\n\n" +
+		"- **OS:** darwin/arm64\n" +
+		"- **Go:** go1.25.0\n" +
+		"\n### Buffers\n\n" +
+		"- **Console:** 3 entries\n" +
+		"- **Network:** 2 entries\n" +
+		"- **Actions:** 1 entries\n" +
+		"\n---\n*Filed via `configure(what=\"report_issue\")` | template: bug*\n"
+
+	if body := FormatIssueBody(report); body != wantBody {
+		t.Fatalf("outbound issue body changed.\n got:\n%s\nwant:\n%s", body, wantBody)
+	}
+
+	SubmitViaGH(context.Background(), report, runner)
+
+	want := []string{
+		"gh", "issue", "create",
+		"--repo", TargetRepo,
+		"--title", "Click fails on modal",
+		"--body", wantBody,
+		"--label", "bug,user-reported",
+	}
+	if !reflect.DeepEqual(runner.lastArgs, want) {
+		t.Fatalf("outbound command changed.\n got: %#v\nwant: %#v", runner.lastArgs, want)
 	}
 }
 

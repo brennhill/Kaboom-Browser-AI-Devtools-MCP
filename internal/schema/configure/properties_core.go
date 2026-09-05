@@ -23,7 +23,7 @@ func coreProperties() map[string]any {
 		},
 		"confirm": map[string]any{
 			"type":        "boolean",
-			"description": "Required true when enabling insecure_proxy mode.",
+			"description": "Required true for outward-facing actions: enabling insecure_proxy mode, and report_issue operation=submit, which publishes a public GitHub issue.",
 		},
 		"doctor_action": map[string]any{
 			"type": "string", "enum": []string{"preview_support_bundle", "export_support_bundle"},

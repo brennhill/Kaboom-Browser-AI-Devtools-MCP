@@ -56,7 +56,7 @@ func runtimeProperties() map[string]any {
 		},
 		"operation": map[string]any{
 			"type":        "string",
-			"description": "Sub-operation: audit_log (analyze/report/clear), network_recording (start/stop/status), report_issue (list_templates/preview/submit)",
+			"description": "Sub-operation: audit_log (analyze/report/clear), network_recording (start/stop/status), report_issue (list_templates/preview/submit — submit publishes a PUBLIC GitHub issue and requires confirm=true)",
 			"enum":        []string{"analyze", "report", "clear", "start", "stop", "status", "list_templates", "preview", "submit"},
 		},
 		"template": map[string]any{
@@ -69,7 +69,7 @@ func runtimeProperties() map[string]any {
 		},
 		"user_context": map[string]any{
 			"type":        "string",
-			"description": "User description of the issue (report_issue)",
+			"description": "User description of the issue (report_issue). Redacted, then published verbatim in the issue body when operation=submit is confirmed.",
 		},
 		"audit_session_id": map[string]any{
 			"type":        "string",

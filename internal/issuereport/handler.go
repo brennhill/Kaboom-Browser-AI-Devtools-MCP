@@ -21,6 +21,7 @@ func Handle(d HandlerDeps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 		Template    string `json:"template"`
 		Title       string `json:"title"`
 		UserContext string `json:"user_context"`
+		Confirm     bool   `json:"confirm"`
 	}
 	if len(args) > 0 {
 		if response, stop := mcp.ParseArgs(req, args, &params); stop {
@@ -31,7 +32,7 @@ func Handle(d HandlerDeps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 	case "list_templates":
 		return listTemplates(req)
 	case "submit":
-		return submit(d, req, params.Template, params.Title, params.UserContext)
+		return submit(d, req, params.Template, params.Title, params.UserContext, params.Confirm)
 	case "preview", "":
 		return preview(d, req, params.Template, params.UserContext)
 	default:
@@ -71,7 +72,19 @@ func preview(d HandlerDeps, req mcp.JSONRPCRequest, template, userContext string
 	})
 }
 
-func submit(d HandlerDeps, req mcp.JSONRPCRequest, template, title, userContext string) mcp.JSONRPCResponse {
+// submit is the one path in Kaboom that sends session-derived text off the
+// machine, and it sends it to a PUBLIC repository under whatever GitHub
+// identity the local gh CLI is signed in as. It is therefore gated on an
+// explicit per-call confirm: an agent enumerating configure modes must not be
+// able to file a real issue on a user's behalf by trying the mode out.
+func submit(d HandlerDeps, req mcp.JSONRPCRequest, template, title, userContext string, confirm bool) mcp.JSONRPCResponse {
+	if !confirm {
+		return mcp.Fail(req, mcp.ErrMissingParam,
+			"submit publishes the report as a public GitHub issue on "+TargetRepo+
+				" using the local gh CLI credentials, so it requires confirm=true",
+			"Run operation=\"preview\" to see the exact body first, then resend with confirm=true once the user has approved sending it",
+			mcp.WithParam("confirm"))
+	}
 	if title == "" {
 		return mcp.Fail(req, mcp.ErrMissingParam, "title is required for submit",
 			"Provide a title describing the issue", mcp.WithParam("title"))
