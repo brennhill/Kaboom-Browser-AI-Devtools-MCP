@@ -160,6 +160,9 @@ test_paths:
   - scripts/tests/framework/uat-fixture-state.sh
   - scripts/contracts/uatcoverage/category_resolution_test.go
   - scripts/contracts/uatcoverage/browser_launch_test.go
+  - scripts/contracts/uatcoverage/offline_ci_test.go
+  - scripts/tests/capture/cat-25-annotations.sh
+  - scripts/tests/workflows/cat-28-terminal.sh
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -411,6 +414,62 @@ unsafe mutation methods that previously compiled into `internal/capture`.
 - WebSocket harness: `cmd/browser-agent/internal/testpages/websocket.go`
 - RFC 6455 frame codec (shared with the terminal relay): `cmd/browser-agent/internal/wsframe/frame.go`
 - Behavior tests: `cmd/browser-agent/internal/testpages/testpages_test.go`, `cmd/browser-agent/internal/wsframe/frame_test.go`
+
+## The offline categories gate every build
+
+The UAT suite splits by what it needs. 23 of the 34 categories need neither a
+browser nor an extension: they drive a daemon the runner starts itself on port
+17890. 11 need a live browser and run against recorded transcripts. Until the
+`offline-uat` job in `ci.yml`, exactly one category (34, through
+`upgrade-guards`) ran in CI, so the layer that exercises a real daemon end to end
+was verified whenever a developer last chose to run it.
+
+`offline-uat` runs `test-all-tools-comprehensive.sh --suite offline` on
+ubuntu-latest against a daemon built in the same job, with no skip path and no
+`|| true`. The first gated run measured 206 assertions across the 23 categories
+in 584 seconds.
+
+Turning the suite on found two ways it could be green while verifying less than
+it claimed:
+
+- **A suite that ran nothing exited 0.** The printed verdict required at least
+  one passing assertion; the exit code checked only failures, aggregation errors
+  and process leaks. With every counter at zero the runner printed
+  `FAILURES: 0 failed, 0 skipped of 0 tests` and exited 0 — so emptying
+  `OFFLINE_CAT_IDS` would have produced a green required job. Both the verdict
+  and the exit status now come from one rule, `uat_suite_passed`.
+- **A category killed at its deadline counted as a pass.** `timeout(1)`'s exit
+  status was discarded by `|| true`, and the category's EXIT trap still wrote a
+  result file recording the assertions it reached and no failures. Category 5
+  finished its last assertion at the 120s mark and was terminated during
+  cleanup; one slower machine and it would have reported a shrunken green run.
+  Exit 124/137 is now recorded against the category and fails the suite.
+
+Making a timeout fatal means the budgets have to be hang budgets rather than
+performance assertions, or the new job becomes the one that cries wolf. Across
+three runs category 12 took 7s, 12s and then 72s on an idle machine, so the
+default budget went from 120s to 300s; categories 19 and 33 keep their longer
+ones. Category 5 is the slow one by construction: each pilot-gated `interact`
+call waits out the no-extension path at roughly 5 seconds, and test 5.9 alone
+spends 69 seconds walking every DOM primitive.
+
+`scripts/contracts/uatcoverage/offline_ci_test.go` guards the arrangement,
+because the cheapest way to make a red suite green is to stop scheduling the
+category. It holds that every `cat-*.sh` on disk is scheduled by one of the two
+id lists (category 27 excepted — it blocks on `read -r` for a person to look at
+overlays), that the offline list does not shrink, and that `ci.yml` still runs
+the offline suite in a job that can fail the build.
+
+### 34.5 had never scanned a byte
+
+`cat-34`'s redaction scan grepped the daemon's captured stdout and stderr for the
+raw fixture marker. The daemon writes nothing there in `--daemon` mode: recovery
+incidents reach an operator through Doctor and through the structured log at
+`<state>/logs/kaboom.jsonl`. The scan therefore ran over a zero-byte file on
+every platform, and the non-empty guard added on 2026-09-05 turned that into the
+red `Upgrade Guards (ubuntu-latest)` step rather than creating it. The scan now
+reads `kaboom.jsonl` — 10,897 bytes on the run that fixed it — and still checks
+the stdio capture when it holds anything.
 
 ## The reachability ratchet runs without a browser
 

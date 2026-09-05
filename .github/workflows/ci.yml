@@ -228,6 +228,78 @@ jobs:
           KABOOM_UAT_REQUIRE_CONNECTED=1 \
             ./scripts/uat/runners/test-all-tools-comprehensive.sh --suite connected
 
+  # The other 23 UAT categories need neither a browser nor an extension: they
+  # drive a daemon this job starts itself on port 17890. Nothing was stopping
+  # them from running here, and nothing was running them — which is why they are
+  # the layer that could rot without a red build anywhere.
+  offline-uat:
+    name: Offline UAT Suite
+    needs: versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6
+        with:
+          go-version: "1.25.12"
+
+      # The runner's own dependency check refuses to start without these.
+      - name: Install jq and lsof
+        run: sudo apt-get update && sudo apt-get install -y jq lsof
+
+      - name: Build daemon
+        run: go build -o dist/kaboom-agentic-browser ./cmd/browser-agent
+
+      # No skip path and no `|| true`: every category here can run on a bare
+      # Linux runner, so anything short of a green suite is a defect, and the
+      # runner exits non-zero on a failed category, a malformed result file, a
+      # leaked process, or a suite that asserted nothing.
+      - name: Offline categories
+        shell: bash
+        run: |
+          set -euo pipefail
+          KABOOM_UAT_WRAPPER="$PWD/dist/kaboom-agentic-browser" \
+            ./scripts/uat/runners/test-all-tools-comprehensive.sh --suite offline
+
+      # A category can also go quiet by skipping everything it used to assert,
+      # which costs nothing in the exit code. Naming the skips in the job summary
+      # is what keeps a green run honest about what it did not check.
+      - name: Report skipped assertions
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          results="artifacts/uat/uat-results.json"
+          if [ ! -f "$results" ]; then
+            echo "::warning title=Offline UAT produced no report::$results is missing, so the per-category outcome could not be summarised."
+            exit 0
+          fi
+          {
+            echo "### Offline UAT"
+            echo ""
+            jq -r '"Categories: \(.categories | length) · pass \(.totals.pass) · fail \(.totals.fail) · skip \(.totals.skip)"' "$results"
+            echo ""
+            echo "| Category | Pass | Fail | Skip |"
+            echo "| --- | --- | --- | --- |"
+            jq -r '.categories[] | "| \(.id) \(.name) | \(.pass) | \(.fail) | \(.skip) |"' "$results"
+            skipped="$(jq -r '[.categories[] | select(.skip > 0) | "\(.id) \(.name): " + (.skip_reasons | join("; "))] | .[]' "$results")"
+            if [ -n "$skipped" ]; then
+              echo ""
+              echo "Skipped assertions — these were not verified by this build:"
+              echo ""
+              printf '%s\n' "$skipped" | sed 's/^/- /'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Retain offline UAT evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: offline-uat-results
+          path: artifacts/uat/
+          if-no-files-found: error
+          retention-days: 14
+
   go:
     name: Go Checks
     runs-on: ubuntu-latest

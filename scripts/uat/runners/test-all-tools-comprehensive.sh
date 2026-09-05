@@ -175,6 +175,9 @@ source "$SCRIPT_DIR/../orchestration/uat-category-script.sh"
 # framework_cleanup on EXIT, so the census returns to baseline after every one;
 # anything still standing outlived the work that started it.
 PROCESS_LEAK_CATEGORIES=""
+# Categories killed at their deadline. Their result files under-report, so they
+# are tracked separately rather than trusted.
+TIMED_OUT_CATEGORIES=""
 if [ "$SUITE" = "connected" ] || [ "$SUITE" = "all" ]; then
     uat_snapshot_user_state "$CONNECTED_UAT_PORT" "$WRAPPER"
 fi
@@ -269,12 +272,24 @@ trap 'uat_exit_for_signal TERM' TERM
 trap 'uat_exit_for_signal HUP' HUP
 
 # ── Run Categories ────────────────────────────────────────
+# These are hang budgets, not performance assertions. Exceeding one now fails the
+# suite, so a budget set near a category's measured time turns ordinary variance
+# into a red build — and a gate that cries wolf is the one people switch off.
+#
+# Three offline runs on an M-series Mac, 2026-09-05: category 5 at 120/120/116s
+# against the old 120s budget (it was killed during cleanup on the first),
+# category 26 at 116s, category 21 at 76-84s, and category 12 at 7s, 12s and then
+# 72s — a sixfold swing on an idle machine. A shared CI runner is slower and
+# noisier than that, so the default is 300s: still short enough that a genuine
+# hang is caught rather than run to the job's own limit.
+#
+# Category 5 is the slow one by construction: each pilot-gated call waits out the
+# no-extension path at roughly 5s, and test 5.9 alone spends 69s of that.
 category_timeout() {
     case "$1" in
         19) echo 600 ;;
         33) echo 900 ;;
-        26|34) echo 180 ;;
-        *) echo 120 ;;
+        *) echo 300 ;;
     esac
 }
 
@@ -290,12 +305,25 @@ run_category() {
         return
     fi
     timeout_seconds="$(category_timeout "$cat_id")"
+    local category_status=0
     (
         cd "$PROJECT_ROOT" || exit
         "$TIMEOUT_CMD" "$timeout_seconds" bash "$category_script" \
             "$uat_port" "$RESULTS_DIR/results-${cat_id}.txt" \
             > "$RESULTS_DIR/output-${cat_id}.txt" 2>&1
-    ) || true
+    ) || category_status="$?"
+
+    # timeout(1) reports 124 when it kills the command at the deadline, 137 when
+    # the kernel had to SIGKILL it. Either way the category's EXIT trap still
+    # writes a result file, so it reports the assertions it happened to reach and
+    # FAIL_COUNT=0 — a truncated run that the aggregator reads as green. Category
+    # 5 was one slow machine away from that: it finished its 19th assertion at
+    # the 120s mark and was terminated during cleanup. Record the kill instead.
+    if [ "$category_status" -eq 124 ] || [ "$category_status" -eq 137 ]; then
+        TIMED_OUT_CATEGORIES="$TIMED_OUT_CATEGORIES ${cat_id}(${timeout_seconds}s)"
+        printf '\n  FAIL: category %s exceeded its %ss budget and was killed. Every assertion after that point never ran, and the result file it left behind reports no failures.\n' \
+            "$cat_id" "$timeout_seconds" >> "$RESULTS_DIR/output-${cat_id}.txt"
+    fi
 
     # Counted before any sweep, so the census reports what the category actually
     # left behind rather than what cleanup managed to hide.
@@ -495,9 +523,24 @@ if [ -n "$PROCESS_LEAK_CATEGORIES" ]; then
     echo "A category left kaboom processes running. Nothing would have reaped them."
 fi
 
-if [ "$TOTAL_FAIL" -eq 0 ] && [ "$TOTAL_PASS" -gt 0 ] && [ "$AGGREGATION_ERRORS" -eq 0 ] && [ -z "$PROCESS_LEAK_CATEGORIES" ]; then
+if [ -n "$TIMED_OUT_CATEGORIES" ]; then
+    echo "TIMED OUT:$TIMED_OUT_CATEGORIES"
+    echo "A killed category reports only the assertions it reached, with no failures. Its counters above under-report."
+fi
+
+# One rule, consulted once, for both the printed verdict and the exit status.
+# They used to be written separately and drifted: the verdict demanded a passing
+# assertion, the exit code did not.
+if uat_suite_passed "$TOTAL_PASS" "$TOTAL_FAIL" "$AGGREGATION_ERRORS" \
+    "$PROCESS_LEAK_CATEGORIES" "$TIMED_OUT_CATEGORIES"; then
+    SUITE_EXIT=0
     echo "ALL $TOTAL_PASS TESTS PASSED ($TOTAL_SKIP skipped)"
 else
+    SUITE_EXIT=1
+    if [ "$TOTAL_ALL" -eq 0 ]; then
+        echo "NO TESTS RAN: the $SUITE suite scheduled $(echo "$CAT_IDS" | wc -w | tr -d ' ') categories and collected no assertions."
+        echo "A suite that runs nothing cannot pass. Check the category id lists in $(basename "$SCRIPT_PATH")."
+    fi
     echo "FAILURES: $TOTAL_FAIL failed, $TOTAL_SKIP skipped of $TOTAL_ALL tests ($AGGREGATION_ERRORS aggregation errors)"
 fi
 
@@ -518,8 +561,4 @@ else
     rm -rf "$RESULTS_DIR"
 fi
 
-# Exit code
-if [ "$TOTAL_FAIL" -gt 0 ] || [ "$AGGREGATION_ERRORS" -gt 0 ] || [ -n "$PROCESS_LEAK_CATEGORIES" ]; then
-    exit 1
-fi
-exit 0
+exit "$SUITE_EXIT"
