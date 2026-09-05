@@ -122,4 +122,4 @@ action_content_expectation() {
 # This is a ratchet, not a target. cat-33 fails if the count exceeds it, so a
 # newly added mode cannot quietly join the untested majority, and every mode
 # that gains a real expectation must be paid for by lowering this number.
-UAT_REACHABILITY_BASELINE="${UAT_REACHABILITY_BASELINE:-107}"
+UAT_REACHABILITY_BASELINE="${UAT_REACHABILITY_BASELINE:-106}"
