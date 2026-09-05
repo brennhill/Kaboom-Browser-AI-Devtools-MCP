@@ -55,10 +55,21 @@ because the browser held an older build than the tree.
 
     KABOOM_UAT_LAUNCH_BROWSER=1 scripts/tests/transcripts/record-connected-transcripts.sh
 
-starts Chrome with `extension/` loaded from this tree and a throwaway profile, so
-the extension under test is by construction the one just compiled. Set
+starts a browser with `extension/` loaded from this tree and a throwaway profile,
+so the extension under test is by construction the one just compiled. Set
 `KABOOM_UAT_CHROME` to name the binary and `KABOOM_UAT_CHROME_HEADLESS=1` on a
 runner with no display.
+
+**It needs Chrome for Testing, not stable Chrome.** Chrome 137 removed
+`--load-extension` from stable builds, and a stable Chrome given that switch
+starts normally while loading nothing at all — measured on 152.0.7977.76: zero
+requests to the daemon port in 120 seconds, no service worker target, no
+extension recorded in the profile, with a real page open and with
+`--disable-features=DisableLoadExtensionCommandLineSwitch`. That is
+indistinguishable from a browser that attached and went quiet, so discovery
+refuses stable Chrome by name rather than handing back a browser that will time
+out for an invisible reason. Install one with
+`npx @puppeteer/browsers install chrome@stable`.
 
 **One browser at a time.** The daemon has a single extension slot — whichever
 browser checked in last owns `extension_connected` and `command_contract_id`. If

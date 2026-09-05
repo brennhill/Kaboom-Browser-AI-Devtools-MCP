@@ -18,7 +18,21 @@
 # preinstalled on GitHub's hosted runners, so a job that sources this can run the
 # connected categories without a self-hosted machine.
 
-# uat_find_chrome — print the Chrome binary to use, or fail.
+# uat_find_chrome — print a Chrome that can actually load an unpacked extension.
+#
+# Chrome 137 removed --load-extension from stable builds. A stable Chrome given
+# that switch starts normally and silently loads nothing: measured on Chrome
+# 152.0.7977.76, a launched browser sent ZERO requests to the daemon port in 120
+# seconds, exposed no service worker target, and recorded no extension in its
+# profile — with a real page open, with extensions.ui.developer_mode seeded, and
+# with --disable-features=DisableLoadExtensionCommandLineSwitch. Accepting one
+# here would hand back a browser that never attaches and let the caller wait out
+# its timeout for a reason it cannot see.
+#
+# Chrome for Testing still honours the switch and is what a CI runner installs,
+# so that is what this looks for. KABOOM_UAT_CHROME overrides, deliberately
+# unchecked for build channel: if someone has a build that works, they know
+# better than this list does.
 uat_find_chrome() {
     if [ -n "${KABOOM_UAT_CHROME:-}" ]; then
         if [ ! -x "$KABOOM_UAT_CHROME" ]; then
@@ -31,19 +45,26 @@ uat_find_chrome() {
 
     local candidate
     for candidate in \
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-        "/Applications/Chromium.app/Contents/MacOS/Chromium" \
-        "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+        "/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
+        "$HOME/chrome-for-testing/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
+        "/Applications/Chromium.app/Contents/MacOS/Chromium"; do
         [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
     done
-    for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
+    for candidate in chrome-headless-shell chrome-for-testing chromium chromium-browser; do
         if command -v "$candidate" >/dev/null 2>&1; then
             command -v "$candidate"
             return 0
         fi
     done
 
-    echo "No Chrome or Chromium found. Set KABOOM_UAT_CHROME to the binary." >&2
+    {
+        echo "No browser that can load an unpacked extension was found."
+        echo "Stable Google Chrome is deliberately not used: since Chrome 137 it ignores"
+        echo "--load-extension and starts with no extension at all, which looks identical"
+        echo "to a browser that attached and then went quiet."
+        echo "Install Chrome for Testing (npx @puppeteer/browsers install chrome@stable),"
+        echo "or set KABOOM_UAT_CHROME to a build you know honours the switch."
+    } >&2
     return 1
 }
 
@@ -120,8 +141,12 @@ uat_wait_for_extension_checkin() {
         sleep 1
         waited=$((waited + 1))
     done
-    echo "The launched browser never reported in on port ${port} within ${timeout_seconds}s." >&2
-    echo "An MV3 service worker that cannot start leaves no error in the page; check the daemon log." >&2
+    {
+        echo "The launched browser never reported in on port ${port} within ${timeout_seconds}s."
+        echo "An extension that failed to load looks exactly like one that loaded and stayed"
+        echo "quiet: no error appears in the page or the daemon log. Check that the browser"
+        echo "honours --load-extension — stable Chrome has ignored it since 137."
+    } >&2
     return 1
 }
 

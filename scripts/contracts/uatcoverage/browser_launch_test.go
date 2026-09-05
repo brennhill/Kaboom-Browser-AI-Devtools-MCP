@@ -92,6 +92,22 @@ func TestTheLauncherProceedsWhenNoDaemonIsListening(t *testing.T) {
 	}
 }
 
+func TestChromeDiscoveryRefusesStableChrome(t *testing.T) {
+	t.Parallel()
+	// Stable Chrome has ignored --load-extension since 137. Measured on 152: a
+	// browser launched with it sends no request to the daemon port in 120s,
+	// exposes no service worker, and records no extension in its profile. If
+	// discovery returned one, the caller would wait out its whole timeout with
+	// nothing to look at, which is how this was first mistaken for a flake.
+	out, code := runLauncherFunc(t, []string{"KABOOM_UAT_CHROME="}, "uat_find_chrome")
+	if code == 0 && strings.Contains(out, "/Applications/Google Chrome.app/") {
+		t.Errorf("discovery returned stable Chrome (%q); it loads no extension and the launch would time out with no visible cause", strings.TrimSpace(out))
+	}
+	if code != 0 && !strings.Contains(out, "--load-extension") {
+		t.Errorf("the refusal does not say why the browser is unusable: %q", out)
+	}
+}
+
 func TestChromeDiscoveryHonoursTheOverrideAndRefusesAMissingBinary(t *testing.T) {
 	t.Parallel()
 	fake := filepath.Join(t.TempDir(), "chrome")
