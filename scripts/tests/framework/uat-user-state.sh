@@ -21,11 +21,15 @@ UAT_CONNECTED_READINESS_REASON=""
 # Each category restarts the daemon, and the extension only notices on its
 # reconnect alarm. Chrome clamps that alarm far above the 5 seconds the
 # extension asks for, so a browser that has gone idle can take ~30s to reattach
-# and report its tracked tab — and a browser launched cold takes ~80s to its
-# first check-in at all. At 0.1s per attempt, 450 gave under a minute, which is
-# why category 15 failed on "no tracked browser tab" and passed 4/4 once the
+# and report its tracked tab. At 0.1s per attempt, 450 gave under a minute, which
+# is why category 15 failed on "no tracked browser tab" and passed 4/4 once the
 # budget covered the reattach.
-UAT_CONNECTED_READY_ATTEMPTS="${UAT_CONNECTED_READY_ATTEMPTS:-1800}"
+#
+# 900 is ~90s, chosen against the measured ~30s reattach rather than by taste.
+# It is not larger because every wait here is paid per category and the count
+# multiplies: at 1800 a recording run sat in one category for nine minutes with
+# no output, which reads as a hang and is indistinguishable from one.
+UAT_CONNECTED_READY_ATTEMPTS="${UAT_CONNECTED_READY_ATTEMPTS:-900}"
 UAT_DISPOSABLE_TAB_ID=""
 UAT_DISPOSABLE_TAB_URL=""
 UAT_DISPOSABLE_TAB_CLOSED=0
