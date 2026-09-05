@@ -135,7 +135,8 @@ uat_assert_sole_extension() {
 # and prints the browser's PID. Exports UAT_BROWSER_PID for the caller's trap.
 uat_launch_extension_browser() {
     local extension_dir="$1" profile_dir="$2" port="$3" timeout_seconds="${4:-180}"
-    local chrome headless=()
+    local chrome
+    local -a headless
 
     [ -f "$extension_dir/manifest.json" ] ||
         { echo "No manifest.json under $extension_dir; run 'make compile-ts' first" >&2; return 1; }
@@ -146,6 +147,12 @@ uat_launch_extension_browser() {
     # Headless is opt-in rather than inferred: a CI job knows it has no display,
     # and silently going headless on a developer's machine hides the window they
     # were about to watch the run in.
+    #
+    # The default is a one-element no-op rather than an empty array. Callers run
+    # under `set -u`, and bash 3.2 — which is what macOS ships and what this repo
+    # targets — treats "${empty[@]}" as an unbound variable, so an empty default
+    # aborted the recorder before it launched anything.
+    headless=(--no-default-browser-check)
     [ "${KABOOM_UAT_CHROME_HEADLESS:-0}" = "1" ] && headless=(--headless=new)
 
     "$chrome" \

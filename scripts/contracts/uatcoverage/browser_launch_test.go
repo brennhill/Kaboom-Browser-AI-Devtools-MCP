@@ -129,3 +129,25 @@ func TestChromeDiscoveryHonoursTheOverrideAndRefusesAMissingBinary(t *testing.T)
 		t.Errorf("the refusal does not name the problem: %q", out)
 	}
 }
+
+func TestTheLauncherSurvivesSetU(t *testing.T) {
+	t.Parallel()
+	// The recorder runs under `set -euo pipefail`, and bash 3.2 — what macOS
+	// ships — treats "${empty[@]}" as an unbound variable. An empty headless
+	// array therefore aborted the recorder before it launched anything, with a
+	// message about an array rather than about the browser.
+	script := "set -euo pipefail\n. " + filepath.Join(repoRoot(t), launcherFile) +
+		"\nuat_launch_extension_browser \"$1\" \"$2\" 65535 2"
+	cmd := exec.Command("bash", "-c", script, "bash",
+		filepath.Join(repoRoot(t), "extension"), t.TempDir())
+	cmd.Env = append(os.Environ(), "KABOOM_UAT_CHROME=/bin/echo")
+	out, _ := cmd.CombinedOutput()
+
+	if strings.Contains(string(out), "unbound variable") {
+		t.Errorf("the launcher aborted on an unbound variable under set -u: %q", out)
+	}
+	// It must get far enough to report the real problem rather than a shell one.
+	if !strings.Contains(string(out), "never reported in") {
+		t.Errorf("the launcher did not reach its own timeout report: %q", out)
+	}
+}
