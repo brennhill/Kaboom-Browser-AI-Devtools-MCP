@@ -1,4 +1,4 @@
-// main.go — Runs the human UAT rig: one case, one call, one person's verdict.
+// main.go — Runs the human UAT rig: one case, one call, one person's runlog.Verdict.
 //
 // Usage:
 //   go run ./scripts/uat/human/runner [flags]
@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/inventory"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/runlog"
 )
 
 type options struct {
@@ -75,11 +76,11 @@ func run(opts options) error {
 	if err := os.MkdirAll(filepath.Dir(opts.logPath), 0o755); err != nil {
 		return err
 	}
-	log, err := openLog(opts.logPath)
+	log, err := runlog.OpenLog(opts.logPath)
 	if err != nil {
 		return err
 	}
-	defer log.shutdown()
+	defer log.Close()
 
 	if opts.dryRun {
 		return listCases(selected, log, opts.redo)
@@ -136,10 +137,10 @@ func selectCases(cases []inventory.Case, filter string) []inventory.Case {
 	return selected
 }
 
-func listCases(cases []inventory.Case, log *runLog, redo bool) error {
+func listCases(cases []inventory.Case, log *runlog.Log, redo bool) error {
 	shown := 0
 	for _, c := range cases {
-		if _, answered := log.answered(c.ID); answered && !redo {
+		if _, answered := log.Answered(c.ID); answered && !redo {
 			continue
 		}
 		fmt.Printf("%-40s %s\n", c.ID, c.Question)
@@ -149,12 +150,12 @@ func listCases(cases []inventory.Case, log *runLog, redo bool) error {
 	return nil
 }
 
-func reportTally(cases []inventory.Case, log *runLog, logPath string) {
-	tally := summarize(cases, log)
+func reportTally(cases []inventory.Case, log *runlog.Log, logPath string) {
+	tally := runlog.Summarize(cases, log)
 	fmt.Printf("\n────────────────────────────────────────────────────────\n")
 	fmt.Printf("PASS %d   FAIL %d   BLOCKED %d   SKIPPED %d   UNANSWERED %d   (of %d)\n",
 		tally.Pass, tally.Fail, tally.Blocked, tally.Skipped, tally.Unanswered, len(cases))
-	if failed := failedCases(log); len(failed) > 0 {
+	if failed := runlog.FailedCases(log); len(failed) > 0 {
 		fmt.Printf("\nFAILED:\n  %s\n", strings.Join(failed, "\n  "))
 	}
 	fmt.Printf("\nRun log: %s\n", logPath)
@@ -162,7 +163,7 @@ func reportTally(cases []inventory.Case, log *runLog, logPath string) {
 
 // buildSHA records which build was judged.
 //
-// A verdict without it cannot be compared across runs: "screenshot failed" means
+// A runlog.Verdict without it cannot be compared across runs: "screenshot failed" means
 // nothing if nobody can tell whether it was judged before or after a fix.
 func buildSHA() string {
 	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()

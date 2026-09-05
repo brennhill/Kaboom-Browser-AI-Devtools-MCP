@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/inventory"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/runlog"
 )
 
 func sampleCase() inventory.Case {
@@ -38,7 +39,7 @@ func TestBlankAnswersNeverBecomeAPass(t *testing.T) {
 	// Holding return through the run is the cheapest way to fake a green UAT.
 	// Empty input must end the sitting with the case unanswered, not pass it.
 	answer, _ := present(t, "\n\n\n")
-	if answer.Verdict == verdictPass {
+	if answer.Verdict == runlog.VerdictPass {
 		t.Fatal("an empty line passed a case nobody judged")
 	}
 	if !answer.Quit {
@@ -48,12 +49,12 @@ func TestBlankAnswersNeverBecomeAPass(t *testing.T) {
 
 func TestEachAnswerIsTakenLiterally(t *testing.T) {
 	t.Parallel()
-	for typed, want := range map[string]verdict{
-		"p\n":             verdictPass,
-		"pass\n":          verdictPass,
-		"F\nbroke\n":      verdictFail,
-		"b\nno browser\n": verdictBlocked,
-		"s\n":             verdictSkipped,
+	for typed, want := range map[string]runlog.Verdict{
+		"p\n":             runlog.VerdictPass,
+		"pass\n":          runlog.VerdictPass,
+		"F\nbroke\n":      runlog.VerdictFail,
+		"b\nno browser\n": runlog.VerdictBlocked,
+		"s\n":             runlog.VerdictSkipped,
 	} {
 		answer, _ := present(t, typed)
 		if answer.Verdict != want {
@@ -61,8 +62,8 @@ func TestEachAnswerIsTakenLiterally(t *testing.T) {
 		}
 	}
 	// Control: an answer outside the vocabulary is not silently mapped to one.
-	if verdict, ok := parseVerdict("probably fine"); ok {
-		t.Errorf("%q was accepted as %q", "probably fine", verdict)
+	if chosen, ok := parseVerdict("probably fine"); ok {
+		t.Errorf("%q was accepted as %q", "probably fine", chosen)
 	}
 }
 
@@ -71,7 +72,7 @@ func TestAFailWithoutANoteIsRefused(t *testing.T) {
 	// The note is what a regression test gets written from. Accepting a bare FAIL
 	// leaves a red case nobody can act on.
 	answer, transcript := present(t, "f\n\n\nit captured the wrong tab\n")
-	if answer.Verdict != verdictFail {
+	if answer.Verdict != runlog.VerdictFail {
 		t.Fatalf("verdict = %q", answer.Verdict)
 	}
 	if answer.Note != "it captured the wrong tab" {
@@ -85,7 +86,7 @@ func TestAFailWithoutANoteIsRefused(t *testing.T) {
 func TestAPassMayCarryNoNote(t *testing.T) {
 	t.Parallel()
 	answer, _ := present(t, "p\n\n")
-	if answer.Verdict != verdictPass || answer.Note != "" {
+	if answer.Verdict != runlog.VerdictPass || answer.Note != "" {
 		t.Errorf("answer = %+v, want a pass with no note", answer)
 	}
 }
@@ -136,7 +137,7 @@ func TestACallErrorIsShownAndStillJudged(t *testing.T) {
 	}
 	// The runner does not decide: some cases are about what happens when the
 	// tool cannot do the thing.
-	if answer.Verdict != verdictFail {
+	if answer.Verdict != runlog.VerdictFail {
 		t.Errorf("verdict = %q, want the tester's own answer", answer.Verdict)
 	}
 }

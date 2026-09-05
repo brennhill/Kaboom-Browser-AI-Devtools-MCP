@@ -11,14 +11,18 @@ code_paths:
   - scripts/uat/human/runner/main.go
   - scripts/uat/human/runner/session.go
   - scripts/uat/human/runner/prompt.go
-  - scripts/uat/human/runner/record.go
+  - scripts/uat/human/runlog/runlog.go
+  - scripts/uat/human/gate/main.go
+  - scripts/uat/human/gate/judge.go
   - scripts/uat/human/runner/mcpclient.go
 test_paths:
   - scripts/contracts/humanuat/main_test.go
   - scripts/uat/human/inventory/inventory_test.go
   - scripts/uat/human/runner/session_test.go
   - scripts/uat/human/runner/prompt_test.go
-  - scripts/uat/human/runner/record_test.go
+  - scripts/uat/human/runlog/runlog_test.go
+  - scripts/uat/human/gate/judge_test.go
+  - scripts/uat/human/gate/main_test.go
   - scripts/uat/human/runner/mcpclient_test.go
 ---
 
@@ -143,3 +147,28 @@ Evidence (screenshot, console, network) is captured before and after every call
 and beside every surface case. A probe that cannot run writes a `.error` file
 saying why: an empty evidence directory is ambiguous between "capture failed"
 and "capture was off", and those lead to opposite conclusions about a FAIL.
+
+## The release gate
+
+`make release-gate` now runs `uat-human-verdict`, which reads the newest log
+under `uat-runs/` and refuses a build nobody judged. A tag on STABLE therefore
+requires a complete run **against that build**.
+
+Against that build is the point. A verdict carrying a different `build_sha` is
+reported as "answered on a different build" and does not count: "we ran it last
+week" is how a release ships a regression somebody had already seen.
+
+The gate refuses, and names what is missing, when any of these hold:
+
+- a case was answered FAIL
+- a case was answered BLOCKED and not waived
+- a case has no verdict for this build at all
+- a case was answered against a different build
+- a waiver names a case but accepts nothing — a waiver needs an owner and at
+  least 20 characters saying what risk is being taken
+- a waiver covers a case that passed, so it is accepting nothing and would
+  silently cover that case when it later starts failing
+
+Waivers live in `scripts/uat/human/waivers.json` and are listed in the gate's
+output under "SHIPPING WITH AN ACCEPTED RISK", so what went out with a known gap
+is visible in the release record rather than buried in a file.

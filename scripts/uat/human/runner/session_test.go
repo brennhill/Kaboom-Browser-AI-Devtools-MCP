@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/inventory"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/runlog"
 )
 
 // scriptedCaller answers calls from a table and records what it was asked.
@@ -61,47 +62,47 @@ func modeCase(id, tool, mode string) inventory.Case {
 	}
 }
 
-func newSession(t *testing.T, mcpSession caller, prompt presenter) (*session, *runLog) {
+func newSession(t *testing.T, mcpSession caller, prompt presenter) (*session, *runlog.Log) {
 	t.Helper()
-	log, err := openLog(filepath.Join(t.TempDir(), "run.jsonl"))
+	log, err := runlog.OpenLog(filepath.Join(t.TempDir(), "run.jsonl"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = log.shutdown() })
+	t.Cleanup(func() { _ = log.Close() })
 	return &session{log: log, mcpSession: mcpSession, prompt: prompt, runID: "run-1", buildSHA: "abc1234"}, log
 }
 
 func TestTheRecordHoldsTheCallThatWasActuallyMade(t *testing.T) {
 	t.Parallel()
 	mcpSession := &scriptedCaller{responses: map[string]string{"observe/screenshot": `{"data_url":"data:image/png;base64,AA"}`}}
-	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: verdictPass}}}
+	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: runlog.VerdictPass}}}
 	session, log := newSession(t, mcpSession, prompt)
 
 	if err := session.presentAll([]inventory.Case{modeCase("observe/screenshot", "observe", "screenshot")}, false); err != nil {
 		t.Fatal(err)
 	}
 
-	caseRecord, answered := log.answered("observe/screenshot")
+	record, answered := log.Answered("observe/screenshot")
 	if !answered {
 		t.Fatal("nothing was recorded")
 	}
-	// Without the request, a verdict cannot be reproduced: nobody can tell which
+	// Without the request, a runlog.Verdict cannot be reproduced: nobody can tell which
 	// arguments were judged.
-	if !strings.Contains(string(caseRecord.Request), `"what":"screenshot"`) {
-		t.Errorf("request = %s, want the call under test", caseRecord.Request)
+	if !strings.Contains(string(record.Request), `"what":"screenshot"`) {
+		t.Errorf("request = %s, want the call under test", record.Request)
 	}
-	if !strings.Contains(string(caseRecord.Response), "data:image/png") {
-		t.Errorf("response = %s, want what the server returned", caseRecord.Response)
+	if !strings.Contains(string(record.Response), "data:image/png") {
+		t.Errorf("response = %s, want what the server returned", record.Response)
 	}
-	if caseRecord.BuildSHA != "abc1234" || caseRecord.RunID != "run-1" {
-		t.Errorf("record does not say which build was judged: %+v", caseRecord)
+	if record.BuildSHA != "abc1234" || record.RunID != "run-1" {
+		t.Errorf("record does not say which build was judged: %+v", record)
 	}
 }
 
 func TestAFailingCallIsRecordedAndTheRunContinues(t *testing.T) {
 	t.Parallel()
 	mcpSession := &scriptedCaller{failWith: map[string]error{"interact/click": errors.New("no tracked tab")}}
-	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: verdictFail, Note: "no tab"}, {Verdict: verdictPass}}}
+	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: runlog.VerdictFail, Note: "no tab"}, {Verdict: runlog.VerdictPass}}}
 	session, log := newSession(t, mcpSession, prompt)
 
 	cases := []inventory.Case{modeCase("interact/click", "interact", "click"), modeCase("observe/page", "observe", "page")}
@@ -109,12 +110,12 @@ func TestAFailingCallIsRecordedAndTheRunContinues(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	failed, _ := log.answered("interact/click")
+	failed, _ := log.Answered("interact/click")
 	if !strings.Contains(failed.CallError, "no tracked tab") {
 		t.Errorf("call_error = %q, want the server's reason", failed.CallError)
 	}
 	// One tool erroring must not cost the 193 cases behind it.
-	if _, answered := log.answered("observe/page"); !answered {
+	if _, answered := log.Answered("observe/page"); !answered {
 		t.Error("the run stopped at the first failing call")
 	}
 }
@@ -122,7 +123,7 @@ func TestAFailingCallIsRecordedAndTheRunContinues(t *testing.T) {
 func TestQuittingLeavesTheCurrentCaseUnanswered(t *testing.T) {
 	t.Parallel()
 	mcpSession := &scriptedCaller{}
-	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: verdictPass}, {Quit: true}}}
+	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: runlog.VerdictPass}, {Quit: true}}}
 	session, log := newSession(t, mcpSession, prompt)
 
 	cases := []inventory.Case{modeCase("a/one", "observe", "page"), modeCase("a/two", "observe", "logs"), modeCase("a/three", "observe", "errors")}
@@ -130,11 +131,11 @@ func TestQuittingLeavesTheCurrentCaseUnanswered(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, answered := log.answered("a/one"); !answered {
+	if _, answered := log.Answered("a/one"); !answered {
 		t.Error("the answered case was lost when the tester quit")
 	}
 	for _, id := range []string{"a/two", "a/three"} {
-		if _, answered := log.answered(id); answered {
+		if _, answered := log.Answered(id); answered {
 			t.Errorf("%s was recorded although the tester quit before answering it", id)
 		}
 	}
@@ -143,7 +144,7 @@ func TestQuittingLeavesTheCurrentCaseUnanswered(t *testing.T) {
 func TestAnsweredCasesAreNotPresentedAgainUnlessAsked(t *testing.T) {
 	t.Parallel()
 	mcpSession := &scriptedCaller{}
-	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: verdictPass}}}
+	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: runlog.VerdictPass}}}
 	session, log := newSession(t, mcpSession, prompt)
 	cases := []inventory.Case{modeCase("a/one", "observe", "page")}
 
@@ -160,14 +161,14 @@ func TestAnsweredCasesAreNotPresentedAgainUnlessAsked(t *testing.T) {
 
 	// Control: --redo must still be able to re-present it, or a fixed case could
 	// never be re-judged.
-	prompt.answers = []humanAnswer{{Verdict: verdictPass}}
+	prompt.answers = []humanAnswer{{Verdict: runlog.VerdictPass}}
 	if err := session.presentAll(cases, true); err != nil {
 		t.Fatal(err)
 	}
 	if len(prompt.seen) == presentedFirst {
 		t.Error("--redo did not re-present the case")
 	}
-	if _, answered := log.answered("a/one"); !answered {
+	if _, answered := log.Answered("a/one"); !answered {
 		t.Error("the case lost its humanAnswer")
 	}
 }
@@ -179,7 +180,7 @@ func TestEvidenceIsCapturedAroundTheCallAndFailuresAreWritten(t *testing.T) {
 		responses: map[string]string{"observe/logs": `{"logs":[]}`},
 		failWith:  map[string]error{"observe/network_waterfall": errors.New("extension not connected")},
 	}
-	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: verdictPass}}}
+	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: runlog.VerdictPass}}}
 	session, log := newSession(t, mcpSession, prompt)
 	session.evidenceDir = filepath.Join(dir, "evidence")
 
@@ -187,11 +188,11 @@ func TestEvidenceIsCapturedAroundTheCallAndFailuresAreWritten(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	caseRecord, _ := log.answered("observe/page")
-	if len(caseRecord.Evidence) != 6 {
-		t.Fatalf("evidence = %v, want three probes before and three after", caseRecord.Evidence)
+	record, _ := log.Answered("observe/page")
+	if len(record.Evidence) != 6 {
+		t.Fatalf("evidence = %v, want three probes before and three after", record.Evidence)
 	}
-	for _, path := range caseRecord.Evidence {
+	for _, path := range record.Evidence {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("the record names %s but nothing is there: %v", path, err)
 		}
@@ -211,7 +212,7 @@ func TestEvidenceIsCapturedAroundTheCallAndFailuresAreWritten(t *testing.T) {
 func TestASurfaceCaseMakesNoToolCallButStillCapturesTheScreen(t *testing.T) {
 	t.Parallel()
 	mcpSession := &scriptedCaller{}
-	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: verdictPass}}}
+	prompt := &scriptedPrompter{answers: []humanAnswer{{Verdict: runlog.VerdictPass}}}
 	session, log := newSession(t, mcpSession, prompt)
 	session.evidenceDir = filepath.Join(t.TempDir(), "evidence")
 
@@ -223,12 +224,12 @@ func TestASurfaceCaseMakesNoToolCallButStillCapturesTheScreen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	caseRecord, _ := log.answered("popup/pilot_toggle")
-	if len(caseRecord.Request) != 0 {
-		t.Errorf("a surface case invented a tool call: %s", caseRecord.Request)
+	record, _ := log.Answered("popup/pilot_toggle")
+	if len(record.Request) != 0 {
+		t.Errorf("a surface case invented a tool call: %s", record.Request)
 	}
-	if len(caseRecord.Evidence) != 3 {
-		t.Errorf("evidence = %v, want the three probes; a surface verdict is unreviewable without a screenshot", caseRecord.Evidence)
+	if len(record.Evidence) != 3 {
+		t.Errorf("evidence = %v, want the three probes; a surface verdict is unreviewable without a screenshot", record.Evidence)
 	}
 	for _, call := range mcpSession.calls {
 		if strings.HasPrefix(call, "popup") {

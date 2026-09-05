@@ -13,31 +13,32 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/inventory"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/runlog"
 )
 
 // humanAnswer is what the person said.
 type humanAnswer struct {
-	Verdict verdict
+	Verdict runlog.Verdict
 	Note    string
 	// Quit ends the run. Everything already answered is on disk.
 	Quit bool
 }
 
-// parseVerdict maps what the person typed to a verdict.
+// parseVerdict maps what the person typed to a runlog.Verdict.
 //
 // Only the four listed answers and their initials are accepted. A blank line is
 // NOT a pass: defaulting to PASS on an empty return is how a tester holding the
 // enter key would sign off on 194 cases without looking at one.
-func parseVerdict(typed string) (verdict, bool) {
+func parseVerdict(typed string) (runlog.Verdict, bool) {
 	switch strings.ToLower(strings.TrimSpace(typed)) {
 	case "p", "pass":
-		return verdictPass, true
+		return runlog.VerdictPass, true
 	case "f", "fail":
-		return verdictFail, true
+		return runlog.VerdictFail, true
 	case "b", "blocked":
-		return verdictBlocked, true
+		return runlog.VerdictBlocked, true
 	case "s", "skip", "skipped":
-		return verdictSkipped, true
+		return runlog.VerdictSkipped, true
 	}
 	return "", false
 }
@@ -106,16 +107,16 @@ func (p *prompter) ask(c inventory.Case) (humanAnswer, error) {
 		if isQuit(typed) {
 			return humanAnswer{Quit: true}, nil
 		}
-		verdict, ok := parseVerdict(typed)
+		chosen, ok := parseVerdict(typed)
 		if !ok {
 			fmt.Fprintf(p.out, "  Answer one of: pass, fail, blocked, skip, quit.\n")
 			continue
 		}
-		note, err := p.readNote(verdict)
+		note, err := p.readNote(chosen)
 		if err != nil {
 			return humanAnswer{}, err
 		}
-		return humanAnswer{Verdict: verdict, Note: note}, nil
+		return humanAnswer{Verdict: chosen, Note: note}, nil
 	}
 }
 
@@ -123,8 +124,8 @@ func (p *prompter) ask(c inventory.Case) (humanAnswer, error) {
 //
 // A FAIL with no note cannot be turned into a regression test later, and a
 // BLOCKED with no note cannot be unblocked by anyone but the person who hit it.
-func (p *prompter) readNote(verdict verdict) (string, error) {
-	required := verdict == verdictFail || verdict == verdictBlocked
+func (p *prompter) readNote(chosen runlog.Verdict) (string, error) {
+	required := chosen == runlog.VerdictFail || chosen == runlog.VerdictBlocked
 	for {
 		if required {
 			fmt.Fprintf(p.out, "  What did you see? (required): ")
@@ -140,7 +141,7 @@ func (p *prompter) readNote(verdict verdict) (string, error) {
 			return "", nil
 		}
 		if err != nil {
-			return "", fmt.Errorf("a %s needs a note and input ended", verdict)
+			return "", fmt.Errorf("a %s needs a note and input ended", chosen)
 		}
 	}
 }

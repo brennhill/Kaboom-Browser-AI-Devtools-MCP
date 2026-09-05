@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/inventory"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/runlog"
 )
 
 // callOutcome is everything the tool produced for one case.
@@ -33,7 +34,7 @@ type presenter interface {
 }
 
 type session struct {
-	log        *runLog
+	log        *runlog.Log
 	mcpSession caller
 	prompt     presenter
 	runID      string
@@ -59,7 +60,7 @@ func (s *session) clock() time.Time {
 func (s *session) presentAll(cases []inventory.Case, redo bool) error {
 	total := len(cases)
 	for i, c := range cases {
-		if _, answered := s.log.answered(c.ID); answered && !redo {
+		if _, answered := s.log.Answered(c.ID); answered && !redo {
 			continue
 		}
 		startedAt := s.clock()
@@ -103,7 +104,7 @@ func (s *session) runCase(c inventory.Case) callOutcome {
 
 // record writes one result.
 func (s *session) record(c inventory.Case, outcome callOutcome, answer humanAnswer, startedAt time.Time) error {
-	return s.log.appendResult(caseRecord{
+	return s.log.Append(runlog.Result{
 		CaseID:     c.ID,
 		Kind:       c.Kind,
 		Tool:       c.Tool,
@@ -115,22 +116,16 @@ func (s *session) record(c inventory.Case, outcome callOutcome, answer humanAnsw
 		Response:   outcome.Response,
 		CallError:  outcome.Err,
 		Evidence:   outcome.Evidence,
-		StartedAt:  timestamp(startedAt),
-		AnsweredAt: timestamp(s.clock()),
+		StartedAt:  runlog.Timestamp(startedAt),
+		AnsweredAt: runlog.Timestamp(s.clock()),
 		BuildSHA:   s.buildSHA,
 		RunID:      s.runID,
 	})
 }
 
-// describeTally renders a tally the way the release gate reports it.
-func describeTally(tally tally, total int) string {
-	return fmt.Sprintf("PASS %d, FAIL %d, BLOCKED %d, SKIPPED %d, UNANSWERED %d of %d",
-		tally.Pass, tally.Fail, tally.Blocked, tally.Skipped, tally.Unanswered, total)
-}
-
 // ── Evidence ────────────────────────────────────────────────────────────────
 //
-// Every case is judged from what a person sees, and a verdict recorded without
+// Every case is judged from what a person sees, and a runlog.Verdict recorded without
 // evidence cannot be re-examined a week later. The captures below are attempted
 // around each call and their failures are recorded, never swallowed: "no
 // screenshot" and "screenshot showed the wrong page" must not look alike in the

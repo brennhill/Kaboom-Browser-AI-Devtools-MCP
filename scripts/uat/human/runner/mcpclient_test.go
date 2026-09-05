@@ -32,12 +32,12 @@ func TestARepliesToItsOwnIDNotTheNextLine(t *testing.T) {
 	var sent bytes.Buffer
 	mcpSession := newClient(server, &sent, nil)
 
-	caseRecord, err := mcpSession.call("observe", map[string]any{"what": "page"})
+	result, err := mcpSession.call("observe", map[string]any{"what": "page"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(caseRecord), "the answer") {
-		t.Errorf("result = %s, want the reply matching the request id", caseRecord)
+	if !strings.Contains(string(result), "the answer") {
+		t.Errorf("result = %s, want the reply matching the request id", result)
 	}
 	if !strings.Contains(sent.String(), `"method":"tools/call"`) {
 		t.Errorf("the request was not sent as a tools/call: %s", sent.String())
@@ -49,9 +49,9 @@ func TestAServerErrorIsReportedNotReturnedAsAResult(t *testing.T) {
 	server := strings.NewReader(`{"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"unknown mode"}}` + "\n")
 	mcpSession := newClient(server, &bytes.Buffer{}, nil)
 
-	caseRecord, err := mcpSession.call("observe", map[string]any{"what": "nonsense"})
+	result, err := mcpSession.call("observe", map[string]any{"what": "nonsense"})
 	if err == nil {
-		t.Fatalf("an error envelope came back as a result: %s", caseRecord)
+		t.Fatalf("an error envelope came back as a result: %s", result)
 	}
 	if !strings.Contains(err.Error(), "unknown mode") {
 		t.Errorf("error = %v, want the server's own message", err)
@@ -64,8 +64,8 @@ func TestAClosedServerIsAnErrorNotAnEmptyResult(t *testing.T) {
 	// exists to end: the tester would be asked to judge nothing at all.
 	mcpSession := newClient(strings.NewReader(""), &bytes.Buffer{}, nil)
 
-	if caseRecord, err := mcpSession.call("observe", map[string]any{"what": "page"}); err == nil {
-		t.Fatalf("a dead server produced a result: %s", caseRecord)
+	if result, err := mcpSession.call("observe", map[string]any{"what": "page"}); err == nil {
+		t.Fatalf("a dead server produced a result: %s", result)
 	}
 }
 

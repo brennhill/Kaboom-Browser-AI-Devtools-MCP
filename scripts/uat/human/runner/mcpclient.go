@@ -28,7 +28,7 @@ type mcpSession struct {
 	deadline time.Duration
 	// desynced records that a reply was abandoned. The next reply on the stream
 	// belongs to the abandoned call, so every later answer would be attributed to
-	// the wrong case — a verdict recorded against a response the tester never saw.
+	// the wrong case — a runlog.Verdict recorded against a response the tester never saw.
 	desynced bool
 }
 

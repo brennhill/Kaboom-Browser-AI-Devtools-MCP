@@ -22,7 +22,7 @@ PLATFORMS := \
 	windows-amd64
 
 .PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-performance test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly mutation-test \
-	uat uat-human uat-human-list dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
+	uat uat-human uat-human-list uat-human-gate uat-human-verdict dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
 	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-command-contract check-ts-json-casing check-openapi-types check-invariants check-schema ci \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
@@ -63,6 +63,10 @@ uat-human:
 
 uat-human-list:
 	@go run ./scripts/uat/human/runner --dry-run --filter "$(FILTER)"
+
+# The release gate: refuses a build nobody judged. LOG names the run to check.
+uat-human-gate:
+	@go run ./scripts/uat/human/gate $(if $(LOG),--log "$(LOG)") $(UAT_GATE_FLAGS)
 
 all: validate-semver clean build
 
@@ -649,8 +653,14 @@ test-upgrade-guards:
 	node scripts/release/install-upgrade-regression.mjs
 
 # Release gate for daemon cleanup/version safety.
-release-gate: quality-gate test-upgrade-guards
+# uat-human-verdict is the human run gate. It takes no LOG: it reads the newest
+# run under uat-runs/ and refuses a build nobody judged, which is the whole
+# point — a release cannot inherit last week's verdicts.
+release-gate: quality-gate test-upgrade-guards uat-human-verdict
 	@echo "✅ release-gate passed"
+
+uat-human-verdict:
+	@go run ./scripts/uat/human/gate $(UAT_GATE_FLAGS)
 
 # Set VERSION and every canonical release target in one validated transaction.
 bump-version:
