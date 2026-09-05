@@ -2,9 +2,46 @@ package interact
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
+
+// TestTypeAcceptsModifiers pins the modifier promise to the actions that honor it.
+//
+// kaboom-wpyt: modifiers shipped for click and the pointer gestures only, so
+// interact({what:"type", text:"a", modifiers:["ctrl"]}) typed a plain "a" and reported success —
+// the ctrl+a select-all the caller asked for never happened. Schema and dispatcher must name
+// the same set.
+func TestTypeAcceptsModifiers(t *testing.T) {
+	t.Parallel()
+
+	for _, spec := range actionSpecs {
+		if spec.Name != "type" {
+			continue
+		}
+		if !slices.Contains(spec.Optional, "modifiers") {
+			t.Fatalf("type optional params = %v, want modifiers — a held ctrl/alt must be callable on type", spec.Optional)
+		}
+		return
+	}
+	t.Fatal("no actionSpec named type")
+}
+
+func TestModifiersDescriptionNamesEveryActionThatHonorsThem(t *testing.T) {
+	t.Parallel()
+
+	property, ok := gestureProperties()["modifiers"].(map[string]any)
+	if !ok {
+		t.Fatal("modifiers property missing from the gesture group")
+	}
+	description, _ := property["description"].(string)
+	for _, action := range []string{"click", "type"} {
+		if !strings.Contains(description, action) {
+			t.Fatalf("modifiers description omits %q, so a caller cannot tell it applies there: %q", action, description)
+		}
+	}
+}
 
 func TestInteractToolSchema_DescribesAutomaticPerformanceDiff(t *testing.T) {
 	t.Parallel()

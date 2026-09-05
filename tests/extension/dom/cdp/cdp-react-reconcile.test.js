@@ -20,7 +20,7 @@ describe('buildReactValueReconcileExpression (#599 type)', () => {
   let buildReactValueReconcileExpression
 
   beforeEach(async () => {
-    ;({ buildReactValueReconcileExpression } = await import('../../../extension/background/dom/cdp/cdp-dispatch.js'))
+    ;({ buildReactValueReconcileExpression } = await import('../../../../extension/background/dom/cdp/cdp-dispatch.js'))
   })
 
   test('JSON-encodes the selector to survive quotes/injection', () => {
@@ -61,7 +61,7 @@ describe('shouldEscalateToCDP (#599 dispatch escape hatch)', () => {
   let shouldEscalateToCDP
 
   beforeEach(async () => {
-    ;({ shouldEscalateToCDP } = await import('../../../extension/background/dom/cdp/cdp-dispatch.js'))
+    ;({ shouldEscalateToCDP } = await import('../../../../extension/background/dom/cdp/cdp-dispatch.js'))
   })
 
   test('escalates click/type/key_press by default', () => {

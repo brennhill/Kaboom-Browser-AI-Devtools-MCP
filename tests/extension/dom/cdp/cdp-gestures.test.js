@@ -12,9 +12,9 @@
 import { test, describe, before } from 'node:test'
 import assert from 'node:assert'
 
-const CDP = '../../../extension/background/dom/cdp/cdp-gestures.js'
-const KEYS = '../../../extension/background/dom/cdp/cdp-key-mappings.js'
-const DOM = '../../../extension/background/dom/primitives/gestures/dom-primitives-gestures.js'
+const CDP = '../../../../extension/background/dom/cdp/cdp-gestures.js'
+const KEYS = '../../../../extension/background/dom/cdp/cdp-key-mappings.js'
+const DOM = '../../../../extension/background/dom/primitives/gestures/dom-primitives-gestures.js'
 
 /** Records every CDP command a gesture dispatches, plus the cursor trail it drew. */
 function recordingContext(overrides = {}) {
@@ -664,7 +664,7 @@ describe('needsGestureDispatch (DOM fallback routing)', () => {
 describe('viewport bounds (kaboom-05ue.8)', () => {
   let addressedPoints, outOfViewportMessage
 
-  const BOUNDS = '../../../extension/background/dom/viewport-bounds.js'
+  const BOUNDS = '../../../../extension/background/dom/viewport-bounds.js'
 
   before(async () => {
     ;({ addressedPoints, outOfViewportMessage } = await import(BOUNDS))

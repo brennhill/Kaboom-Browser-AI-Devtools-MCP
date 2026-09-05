@@ -34,9 +34,9 @@ You want one deterministic answer:
 ### Step 1. Capture the failing flow
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // run the scenario
-configure({what: "recording_stop", recording_id: "rec-ci-fail"})
+configure({what: "event_recording_stop", recording_id: "rec-ci-fail"})
 ```
 
 ### Step 2. Export a reproduction script

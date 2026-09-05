@@ -52,9 +52,9 @@ observe({what: "network_waterfall", limit: 100})
 ### Step 4. Compare before and after fix
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // run key interaction flow
-configure({what: "recording_stop", recording_id: "rec-perf-after"})
+configure({what: "event_recording_stop", recording_id: "rec-perf-after"})
 configure({what: "log_diff", original_id: "rec-perf-before", replay_id: "rec-perf-after"})
 ```
 

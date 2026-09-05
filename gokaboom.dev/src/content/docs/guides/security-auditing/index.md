@@ -182,17 +182,17 @@ Use recordings to capture before/after security state and compare error logs:
 ### Record a Baseline
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // Browse the application to capture security-relevant traffic
-configure({what: "recording_stop", recording_id: "rec-baseline"})
+configure({what: "event_recording_stop", recording_id: "rec-baseline"})
 ```
 
 ### After Changes, Record and Compare
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // Browse the same flows after the refactor/deploy
-configure({what: "recording_stop", recording_id: "rec-after"})
+configure({what: "event_recording_stop", recording_id: "rec-after"})
 configure({what: "log_diff", original_id: "rec-baseline", replay_id: "rec-after"})
 ```
 
@@ -294,9 +294,9 @@ generate({what: "sri"})
 ```
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // Browse the application
-configure({what: "recording_stop", recording_id: "rec-secured"})
+configure({what: "event_recording_stop", recording_id: "rec-secured"})
 ```
 
 ### 6. After Future Changes, Compare
@@ -306,9 +306,9 @@ configure({what: "recording_stop", recording_id: "rec-secured"})
 ```
 
 ```js
-configure({what: "recording_start"})
+configure({what: "event_recording_start"})
 // Browse the same flows
-configure({what: "recording_stop", recording_id: "rec-post-change"})
+configure({what: "event_recording_stop", recording_id: "rec-post-change"})
 configure({what: "log_diff", original_id: "rec-secured", replay_id: "rec-post-change"})
 ```
 
