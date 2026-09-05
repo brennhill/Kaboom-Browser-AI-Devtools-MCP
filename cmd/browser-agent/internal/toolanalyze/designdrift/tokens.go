@@ -90,14 +90,7 @@ func spacingProperties() []string {
 
 func colorProperties() []string { return []string{"color", "background-color", "border-color"} }
 
-func isSpacingProperty(property string) bool {
-	for _, candidate := range spacingProperties() {
-		if candidate == property {
-			return true
-		}
-	}
-	return false
-}
+func isSpacingProperty(property string) bool { return namesOneOf(spacingProperties(), property) }
 
 // --- Token families ---
 

@@ -599,3 +599,87 @@ func TestAnalyzeSpacing_DeclaredScaleDoesNotQuoteAPhantomRhythm(t *testing.T) {
 		}
 	}
 }
+
+// TestAnalyzeSpacing_DeclaredViolationIsHighConfidenceAndNamesTheSpec covers
+// kaboom-d7f9 sub-defect 4.
+//
+// A declared violation carried confidence:low and a message reading "where the
+// rhythm is 8px, 16px, 32px". Both are the inferred path's vocabulary: the
+// verdict came from the caller's spec, no rhythm was consulted, and grading a
+// stated rule by how many gaps share a modal value reports the page's
+// uniformity as doubt about the caller's own rule. An agent filtering to
+// high-confidence errors saw none of them.
+func TestAnalyzeSpacing_DeclaredViolationIsHighConfidenceAndNamesTheSpec(t *testing.T) {
+	t.Parallel()
+	spec := &designSpec{SpacingScale: []float64{8, 16, 32}}
+
+	declared, skip := analyzeSpacing(verticalStack(12, 20, 32, 48), spec)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(declared) != 3 {
+		t.Fatalf("expected the three off-scale gaps, got %d: %+v", len(declared), declared)
+	}
+	for _, f := range declared {
+		if f.Confidence != confidenceHigh {
+			t.Errorf("a declared-scale violation has confidence %q; a stated rule is not a majority vote", f.Confidence)
+		}
+		if !strings.Contains(f.Message, "not on the declared spacing scale") {
+			t.Errorf("the message does not say where the verdict came from: %q", f.Message)
+		}
+		if strings.Contains(f.Message, "where the rhythm is") {
+			t.Errorf("the message credits the caller's scale to a rhythm that never ran: %q", f.Message)
+		}
+	}
+
+	// Control: the inferred path keeps both. Without it, "no rhythm wording"
+	// and "always high confidence" would pass on an analyzer that had simply
+	// deleted the rhythm vocabulary and the confidence band altogether.
+	inferred, skip := analyzeSpacing(verticalStack(24, 24, 14, 24), nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip on the inferred path: %+v", skip)
+	}
+	if len(inferred) != 1 {
+		t.Fatalf("expected the one 14px outlier, got %d: %+v", len(inferred), inferred)
+	}
+	if inferred[0].Confidence != confidenceLow {
+		t.Errorf("3 of 4 is a weak majority; confidence = %q, want low", inferred[0].Confidence)
+	}
+	if !strings.Contains(inferred[0].Message, "where the rhythm is 24px") {
+		t.Errorf("the inferred message must still quote the rhythm it judged against: %q", inferred[0].Message)
+	}
+}
+
+// TestAnalyzeSpacing_DeclaredScaleIsEnforceableOnAPair covers kaboom-d7f9
+// sub-defect 2 for the spacing analyzer.
+//
+// One gap is its own norm under inference, so a pair reported
+// insufficient_peers before any spec was consulted — which made a scale the
+// caller explicitly supplied unenforceable on every pair, the one case where
+// inference has nothing to offer either.
+func TestAnalyzeSpacing_DeclaredScaleIsEnforceableOnAPair(t *testing.T) {
+	t.Parallel()
+	pair := verticalStack(12)
+	spec := &designSpec{SpacingScale: []float64{8, 16, 32}}
+
+	declared, skip := analyzeSpacing(pair, spec)
+	if skip != nil {
+		t.Fatalf("a stated scale needs no peer group, but the category was skipped: %+v", skip)
+	}
+	if len(declared) != 1 {
+		t.Fatalf("the 12px gap breaks the declared scale; got %d finding(s): %+v", len(declared), declared)
+	}
+	if declared[0].Severity != severityError || declared[0].ExpectedFrom != provenanceDeclared {
+		t.Errorf("a declared violation reported %s/%s", declared[0].Severity, declared[0].ExpectedFrom)
+	}
+
+	// Control 1: without the spec the same pair still refuses to guess.
+	if inferred, skip := analyzeSpacing(pair, nil); len(inferred) != 0 || skip == nil || skip.Reason != reasonInsufficientPeers {
+		t.Errorf("with no spec a pair must stay insufficient_peers; got %d finding(s) and skip %+v", len(inferred), skip)
+	}
+	// Control 2: a pair whose gap IS on the scale reports nothing, so the case
+	// above is a verdict about the value and not about the group size.
+	if onScale, skip := analyzeSpacing(verticalStack(16), spec); len(onScale) != 0 || skip != nil {
+		t.Errorf("a pair spaced on the declared scale is clean; got %d finding(s) and skip %+v", len(onScale), skip)
+	}
+}

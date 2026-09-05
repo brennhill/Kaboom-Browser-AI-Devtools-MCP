@@ -35,6 +35,13 @@ func (s *designSpec) declaresFonts() bool   { return s != nil && len(s.FontFamil
 func (s *designSpec) declaresColors() bool  { return s != nil && len(s.Colors) > 0 }
 func (s *designSpec) declaresSizes() bool   { return s != nil && len(s.FontSizes) > 0 }
 
+// declaresAnyAuditedProperty reports whether the spec states a rule for any
+// property style_consistency judges. It is what lets that analyzer run on a
+// group too small for a majority: a stated rule is enforceable on one element.
+func (s *designSpec) declaresAnyAuditedProperty() bool {
+	return s.declaresFonts() || s.declaresSizes() || s.declaresColors()
+}
+
 // empty reports a spec that constrains nothing, which is treated as no spec.
 func (s *designSpec) empty() bool {
 	return !s.declaresSpacing() && !s.declaresFonts() && !s.declaresColors() && !s.declaresSizes()

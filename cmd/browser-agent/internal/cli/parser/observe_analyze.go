@@ -75,6 +75,7 @@ func ParseAnalyzeArgs(what string, args []string) (map[string]any, error) {
 		"--background":     {MCPKey: "background", Kind: FlagBool},
 		"--summary":        {MCPKey: "summary", Kind: FlagBool},
 		"--limit":          {MCPKey: "limit", Kind: FlagInt},
+		"--offset":         {MCPKey: "offset", Kind: FlagInt},
 		// Element targeting
 		"--selector": {MCPKey: "selector", Kind: FlagString},
 		"--frame":    {MCPKey: "frame", Kind: FlagIntOrString},

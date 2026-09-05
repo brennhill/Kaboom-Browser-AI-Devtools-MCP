@@ -12,7 +12,7 @@ func analyzeToolSchema() mcp.MCPTool {
 		Description: "Trigger active analysis. Creates async queries the extension executes.\n\nSynchronous Mode (Default): Tools block until the extension returns a result (up to 15s). Set background:true to return immediately with a correlation_id, then poll with observe(what='command_result', correlation_id=...).\n\nDraw Mode: Use annotations to get all annotations from the last draw mode session. Use annotation_detail with correlation_id to get full computed styles and DOM detail for a specific annotation.\n\nUse summary:true on supported modes for compact token-efficient responses.",
 		InputSchema: map[string]any{
 			"type": "object",
-			"properties": map[string]any{
+			"properties": mergeProperties(map[string]any{
 				"what": map[string]any{
 					"type":        "string",
 					"description": "Analysis mode to run against the page",
@@ -187,25 +187,50 @@ func analyzeToolSchema() mcp.MCPTool {
 					"type":        "number",
 					"description": "Pixel diff threshold 0-255 (visual_diff, default 30)",
 				},
-				"summary": map[string]any{
-					"type":        "boolean",
-					"description": "Return compact summary instead of full details (accessibility, security_audit, third_party_audit, form_validation, audit, page_issues)",
-				},
-				"categories": map[string]any{
-					"type":        "array",
-					"description": "Categories to include (audit: performance, accessibility, security, best_practices; page_issues: console_errors, network_failures, accessibility, security; design_audit: style_consistency, design_tokens, spacing)",
-					"items":       map[string]any{"type": "string"},
-				},
-				"limit": map[string]any{
-					"type":        "number",
-					"description": "Max issues per section (page_issues, default 50)",
-				},
-				"spec": map[string]any{
-					"type":        "object",
-					"description": "Declared design system (design_audit): spacing_scale, font_families, colors, font_sizes. Overrides inference per property — a partial spec leaves the families it does not name to inference. Breaking a declared rule is reported as an error; deviating from an inferred majority is a warning.",
-				},
-			},
+			}, analyzeResultShapeProperties()),
 			"required": []string{"what"},
 		},
 	}
+}
+
+// analyzeResultShapeProperties are the parameters that shape the RESPONSE
+// rather than the analysis: what is summarized, which categories run, and how
+// much of the result one call carries.
+//
+// Split out of analyzeToolSchema because that function is at its length budget
+// and because these five now travel together: design_audit's envelope is capped
+// per section, so limit and offset are what make a bounded response complete
+// rather than truncated.
+func analyzeResultShapeProperties() map[string]any {
+	return map[string]any{
+		"summary": map[string]any{
+			"type":        "boolean",
+			"description": "Return compact summary instead of full details (accessibility, security_audit, third_party_audit, form_validation, audit, page_issues)",
+		},
+		"categories": map[string]any{
+			"type":        "array",
+			"description": "Categories to include (audit: performance, accessibility, security, best_practices; page_issues: console_errors, network_failures, accessibility, security; design_audit: style_consistency, design_tokens, spacing)",
+			"items":       map[string]any{"type": "string"},
+		},
+		"limit": map[string]any{
+			"type":        "number",
+			"description": "Max issues/findings per section (page_issues, design_audit; default 50, and design_audit caps it at 50 so the response cannot exceed the size limit)",
+		},
+		"offset": map[string]any{
+			"type":        "number",
+			"description": "Findings to skip in every section, for paging past a bounded response (design_audit). The response reports next_offset while findings remain.",
+		},
+		"spec": map[string]any{
+			"type":        "object",
+			"description": "Declared design system (design_audit): spacing_scale, font_families, colors, font_sizes. Overrides inference per property — a partial spec leaves the families it does not name to inference. Breaking a declared rule is reported as an error; deviating from an inferred majority is a warning.",
+		},
+	}
+}
+
+// mergeProperties folds a property group into a schema's property map.
+func mergeProperties(base, group map[string]any) map[string]any {
+	for name, spec := range group {
+		base[name] = spec
+	}
+	return base
 }

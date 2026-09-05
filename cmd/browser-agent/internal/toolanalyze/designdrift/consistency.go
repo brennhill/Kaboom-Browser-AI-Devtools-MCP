@@ -66,7 +66,13 @@ func analyzeConsistency(elements []elementView, spec *designSpec) ([]finding, *s
 	if len(peers) == 0 && len(elements) > 0 {
 		return nil, &skipped{Category: categoryStyleConsistency, Reason: reasonAllPeersExcluded}
 	}
-	if len(peers) < minimumPeersForMajority {
+	// The peer minimum guards the INFERRED path only. A declared spec states the
+	// rule outright, so it needs no majority to judge against: two elements both
+	// rendering Comic Sans against a spec naming Inter are two violations, not a
+	// coin flip. Checking peer count before consulting the spec made a rule the
+	// caller explicitly supplied unenforceable on every group of two — the case
+	// declaredFindings already argues for below, where inference cannot help.
+	if len(peers) < minimumPeersForMajority && !spec.declaresAnyAuditedProperty() {
 		return nil, &skipped{
 			Category: categoryStyleConsistency,
 			Reason:   reasonInsufficientPeers,
@@ -158,6 +164,13 @@ func isStateWord(candidate string) bool {
 }
 
 func consistencyFindingsForProperty(peers []elementView, property string, spec *designSpec) []finding {
+	// Precedence first, then the peer count. The minimum belongs to the
+	// majority vote; applying it before the spec is consulted disabled the
+	// declared rule on small groups.
+	if provenance, expected := consistencyExpectation(property, "", spec); provenance == provenanceDeclared {
+		return declaredFindings(peers, property, expected, spec)
+	}
+
 	counts := make(map[string]int)
 	present := 0
 	for _, el := range peers {
@@ -170,10 +183,6 @@ func consistencyFindingsForProperty(peers []elementView, property string, spec *
 	}
 	if present < minimumPeersForMajority {
 		return nil
-	}
-
-	if provenance, expected := consistencyExpectation(property, "", spec); provenance == provenanceDeclared {
-		return declaredFindings(peers, property, expected, spec)
 	}
 	return inferredFindings(peers, property, counts, present)
 }

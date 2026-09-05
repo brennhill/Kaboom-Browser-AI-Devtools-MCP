@@ -153,10 +153,10 @@ var analyzeModeSpecs = map[string]modeParamSpec{
 		Optional: []string{"categories", "limit", "summary"},
 	},
 	"design_audit": {
-		Hint:     "Detect design drift across a group of matching elements: computed-style outliers, near-misses of declared CSS tokens, and uneven sibling spacing. Pass spec to declare your design system; deviations from a declared rule are errors, deviations from an inferred majority are warnings",
+		Hint:     "Detect design drift across a group of matching elements: computed-style outliers, near-misses of declared CSS tokens, and uneven sibling spacing. Pass spec to declare your design system; deviations from a declared rule are errors, deviations from an inferred majority are warnings. Sections are capped at limit findings (default 50); page the rest with offset, following next_offset",
 		Returns:  "A list of design-drift findings grouped by category, each naming the element, the property, what it renders and what it should be.",
 		Required: []string{"selector"},
-		Optional: []string{"categories", "spec"},
+		Optional: []string{"categories", "spec", "limit", "offset"},
 	},
 	"verification": {
 		Hint:     "Define or evaluate a versioned QA contract; missing required evidence produces UNVERIFIED",

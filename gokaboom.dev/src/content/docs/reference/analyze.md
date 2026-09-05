@@ -495,6 +495,9 @@ analyze({
     font_sizes: [12, 14, 16]
   }
 })
+
+// Page past a bounded response: follow next_offset until it is absent.
+analyze({what: "design_audit", selector: ".card", offset: 50})
 ```
 
 | Parameter | Type | Description |
@@ -502,6 +505,14 @@ analyze({
 | `selector` | string (required) | CSS selector naming the peer group to compare |
 | `categories` | array | Any of `style_consistency`, `design_tokens`, and `spacing` |
 | `spec` | object | Optional declared `spacing_scale`, `font_families`, `colors`, and `font_sizes` |
+| `limit` | number | Max findings returned per section (default 50, capped at 50) |
+| `offset` | number | Findings to skip in every section when paging (default 0) |
+
+Each section is capped so the response cannot exceed the size limit and get
+truncated mid-JSON. `total_findings` always reports every finding the audit
+made, `returned_findings` reports how many this response carries, and
+`next_offset` names the call that returns the rest — it is absent once the
+response is complete.
 
 ## Verification Contracts
 

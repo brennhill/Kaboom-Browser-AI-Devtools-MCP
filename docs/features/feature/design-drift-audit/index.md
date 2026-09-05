@@ -13,6 +13,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/designdrift/tokens.go
   - cmd/browser-agent/internal/toolanalyze/designdrift/spacing.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
+  - cmd/browser-agent/internal/cli/parser/observe_analyze.go
   - internal/styleprobe/wire_style_probe.go
   - internal/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
@@ -77,6 +78,9 @@ analyze({ what: "design_audit", selector: ".step-card__header" })
 // One category only.
 analyze({ what: "design_audit", selector: ".card", categories: ["spacing"] })
 
+// Page past a bounded response. Follow next_offset until it is absent.
+analyze({ what: "design_audit", selector: ".card", offset: 50 })
+
 // Declare the design system. Inference cannot flag a page that is uniformly
 // wrong, because there the majority IS the wrong value.
 analyze({
@@ -120,6 +124,65 @@ in the same response stay warnings.
 When the caller's spec disagrees with the page's own tokens, that is reported as
 a finding rather than silently resolved — one of the two is stale, and picking a
 winner quietly hides which.
+
+## The response is bounded, and the bound is complete
+
+Each section carries at most `limit` findings (default and maximum 50), starting
+at `offset`. The envelope reports all three numbers so a truncation cannot be
+mistaken for a clean page:
+
+| Field | Meaning |
+| ----- | -------- |
+| `total_findings` | every finding the audit made, whatever this response carries |
+| `returned_findings` | how many are in this payload |
+| `next_offset` | the offset that returns the rest; absent when the response is complete |
+| per section | `total`, `returned`, `offset`, `has_more` |
+
+This exists because the mode probes up to 200 elements and a page whose cards
+each break one rule produces several findings per element. Unbounded, 200
+elements measured 588KB, of which `mcp.ClampResponseSize` kept 46KB — the clamp
+cuts the JSON mid-string, so the rest was neither readable nor recoverable, and
+its note told the caller to page with `limit`/`offset` that `design_audit` did
+not accept. `limit` is capped rather than free so a single call cannot put that
+failure back within reach; page with `offset` instead.
+
+**One `padding: 15px` is one finding.** The probe reports longhands because
+`padding: 15px 16px` really is two values, but when all four sides carry the same
+verdict the author wrote one declaration, and reporting it four times multiplied
+40 identical cards into 200 findings for one edit. Only the complete, uniform
+group collapses onto the shorthand — a group drifting on two sides keeps its
+longhands, because "padding is 15px" would be false about the other two.
+
+## Two categories cannot answer the same question differently
+
+A measured gap and a token near-miss can describe the same pixels. The gap before
+`.rhythm-card[3]` *is* that element's `margin-top`, and the DEFAULT call used to
+report both — `[design_tokens] margin-top 14px → --spacing-md (16px)` at
+`confidence:high`, and `[spacing] gap-vertical 14px → 24px` at `confidence:low`.
+24px is right; 16px was picked only because 14 sits inside the 15% band of 16 and
+outside the band of 24. An agent triaging by confidence applied the wrong one.
+
+**Proximity loses.** A rhythm is measured from what the page renders across the
+element's own peers; a near-miss is the analyzer guessing that the author reached
+for a token and mistyped. The token finding is dropped and its expectation is
+folded into the surviving finding's evidence, so nothing disappears silently.
+Both analyzers read the same probe, so a declared `spec` makes both verdicts
+`declared` at once and the precedence never inverts.
+
+## A declared rule needs no peer group
+
+The peer minimums guard **inference**, not the spec. `style_consistency` and
+`spacing` used to answer `insufficient_peers` before the spec was consulted, so
+two elements both rendering Comic Sans against `spec{font_families:["Inter"]}`
+answered "Design audit ran no checks" — a rule the caller explicitly supplied was
+unenforceable on every group of two, which is the one case where inference has
+nothing to offer either. A stated rule is now judged per element and per gap
+whatever the group size; only the majority vote still needs three peers.
+
+A declared violation is `confidence: high` and says so in its message ("which is
+not on the declared spacing scale"). Grading a stated rule by how many gaps share
+a modal value reported the page's uniformity as doubt about the caller's own
+rule, and left an agent filtering to high-confidence errors seeing none of them.
 
 ## Design decisions worth knowing
 
@@ -204,9 +267,11 @@ dump, so `style_consistency` is deliberately narrow:
 - Excludes state variants (`.active`, `.selected`, `.disabled`, …) from the peer
   group entirely rather than reporting them at low confidence — leaving them in
   would also skew the majority the other elements are judged against.
-- Reports `insufficient_peers` for groups under three, because two elements have
-  no majority and a verdict would be a coin flip.
-- Scales confidence with majority strength: 9 of 10 is `high`, 3 of 4 is `low`.
+- Reports `insufficient_peers` for groups under three **when it is inferring**,
+  because two elements have no majority and a verdict would be a coin flip. A
+  declared `spec` is judged on any group size.
+- Scales confidence with majority strength on the inferred path: 9 of 10 is
+  `high`, 3 of 4 is `low`. A declared violation is always `high`.
 
 A category that could not run reports `checks_skipped` with a reason. Producing
 no findings because nothing ran is not a clean page, and reporting the two
@@ -228,6 +293,11 @@ page in Chrome, so `TestFixtureProducesExactlyTheExpectedFindings` proves the
 analyzers and the fixture agree without needing a browser in CI. Both directions
 are asserted: every planted positive is found, and every control produces
 nothing.
+
+One case in that table takes the DEFAULT call — no `categories` at all. Every
+other case narrows, and that gap is why the contradictory-target defect shipped:
+the two findings that disagreed could never appear in the same asserted
+response.
 
 ## Related
 
