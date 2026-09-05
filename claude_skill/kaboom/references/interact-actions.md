@@ -89,11 +89,14 @@ bash scripts/kaboom-call.sh interact '{"what":"navigate_and_document","selector"
 # DOM Interaction
 
 ## click
-Click an element on the page.
-**Params:** `selector` (string), `element_id` (string), `index` (number), `nth` (number), `scope_selector` (string), `frame` (string), `reason` (string), `correlation_id` (string), `timeout_ms` (number), `x` (number), `y` (number), `analyze` (bool), `wait_for_stable` (bool), `stability_ms` (number)
+Click an element named by `selector`, `ref` or `element_id`, or a viewport coordinate given as `x`/`y`. Name exactly one target: a call carrying two is refused rather than resolved in some fixed order. A coordinate click is dispatched over CDP, so the page sees `isTrusted` input.
+**Params:** `selector` (string), `element_id` (string), `ref` (string), `index` (number), `nth` (number), `scope_selector` (string), `frame` (string), `reason` (string), `correlation_id` (string), `timeout_ms` (number), `x` (number), `y` (number), `modifiers` (array), `analyze` (bool), `wait_for_stable` (bool), `stability_ms` (number)
+
+`x` and `y` are viewport CSS pixels from the top-left of the visible area — the space a screenshot's `coordinate_frame` maps image pixels into. A point outside the viewport is refused, not clamped onto the nearest edge.
 **Example:**
 ```bash
 bash scripts/kaboom-call.sh interact '{"what":"click","selector":"button.submit"}'
+bash scripts/kaboom-call.sh interact '{"what":"click","x":640,"y":360}'
 ```
 
 ## type
@@ -158,14 +161,6 @@ Paste text via the clipboard into an element.
 **Example:**
 ```bash
 bash scripts/kaboom-call.sh interact '{"what":"paste","text":"pasted content","selector":"#editor"}'
-```
-
-## hardware_click
-CDP-level click at exact viewport coordinates.
-**Params:** `x` (number), `y` (number)
-**Example:**
-```bash
-bash scripts/kaboom-call.sh interact '{"what":"hardware_click","x":150,"y":300}'
 ```
 
 ## highlight

@@ -543,12 +543,12 @@ describe('comprehensive UAT harness regressions', () => {
     )
     assert.match(
       actionCoverage,
-      /interact\/hardware_click\)[\s\S]*ensure_fixture_page/,
+      /interact\/hover_at\)[\s\S]*ensure_fixture_page/,
     )
     assert.match(actionCoverage, /interact\/close_tab\)[\s\S]*HEALTH_EXTRA_TAB_ID/)
     assert.match(
       actionCoverage,
-      /interact\/hardware_click\).*"tab_id":'"\$\(tracked_tab_id\)"'/,
+      /interact\/hover_at\).*"tab_id":'"\$\(tracked_tab_id\)"'/,
     )
     assert.match(
       actionCoverage,

@@ -75,7 +75,7 @@ action_expectation() {
         interact/hover|interact/auto_dismiss_overlays|interact/wait_for_stable|interact/list_interactive|\
         interact/get_readable|interact/get_markdown|interact/navigate_and_wait_for|\
         interact/navigate_and_document|interact/fill_form_and_submit|interact/fill_form|\
-        interact/run_a11y_and_export_sarif|interact/upload|interact/draw_mode_start|interact/hardware_click|\
+        interact/run_a11y_and_export_sarif|interact/upload|interact/draw_mode_start|interact/hover_at|\
         interact/activate_tab|interact/explore_page|interact/batch|\
         interact/clipboard_write|\
         analyze/dom|analyze/performance|analyze/accessibility|analyze/error_clusters|\
@@ -166,7 +166,7 @@ action_args() {
         interact/fill_form_and_submit) echo '{"what":"fill_form_and_submit","fields":[{"selector":"#sf-user","value":"kaboom"},{"selector":"#sf-email2","value":"uat@example.com"}],"submit_selector":"#sf-submit"}' ;;
         interact/upload) echo '{"what":"upload","selector":"#file-input","file_path":"/tmp/kaboom-connected-action-coverage.txt"}' ;;
         interact/draw_mode_start) echo '{"what":"draw_mode_start","annot_session":"connected-action-coverage"}' ;;
-        interact/hardware_click) echo '{"what":"hardware_click","x":10,"y":10,"tab_id":'"$(tracked_tab_id)"'}' ;;
+        interact/hover_at) echo '{"what":"hover_at","x":10,"y":10,"tab_id":'"$(tracked_tab_id)"'}' ;;
         interact/batch) echo '{"what":"batch","steps":[{"what":"get_text","selector":"body"}]}' ;;
         interact/clipboard_write) echo '{"what":"clipboard_write","text":"Kaboom connected coverage"}' ;;
         analyze/dom|analyze/computed_styles) echo '{"what":"'"$mode"'","selector":"#sf-btn"}' ;;
@@ -318,7 +318,7 @@ prepare_action() {
             ensure_fixture_page || return 1
             script='document.getElementById("sf-link").href="/tests/interact.html?documented=1"; "ready"'
             ;;
-        interact/hardware_click)
+        interact/hover_at)
             ensure_fixture_page || return 1
             ;;
         interact/back)

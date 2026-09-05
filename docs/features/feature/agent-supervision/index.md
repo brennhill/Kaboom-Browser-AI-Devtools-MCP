@@ -45,8 +45,8 @@ against a kill switch that did not exist.
 | Heartbeat | Background sends one every 5s; the overlay removes *itself* after 15s without one. |
 
 The background half lives in `src/background/supervision/driving-session.ts`. Both CDP input paths
-(`tryCDPEscalation` and `executeCDPAction`) route through it, so `hardware_click` is
-supervised too.
+(`tryCDPEscalation` and `executeCDPAction`) route through it, so a coordinate-addressed
+`click` — which goes over `executeCDPAction` rather than the DOM path — is supervised too.
 
 ### Why the stop button is gated on `isTrusted`
 

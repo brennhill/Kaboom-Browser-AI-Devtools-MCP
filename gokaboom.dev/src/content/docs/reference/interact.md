@@ -213,14 +213,40 @@ interact({what: "activate_tab", tab_id: 123})
 
 ### click
 
+Click an element, or a bare viewport coordinate when no element can be named — a canvas, a map tile, a PDF pane.
+
 ```js
 interact({what: "click", selector: "text=Submit"})
 interact({what: "click", selector: "#confirm-btn", reason: "Confirm the order"})
+interact({what: "click", ref: "e12"})
+interact({what: "click", x: 640, y: 360})
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `selector` | string | CSS or semantic selector |
+| `ref` | string | Accessibility ref from `find` |
+| `element_id` | string | Element handle from `list_interactive` |
+| `x` | number | Viewport X in CSS pixels (send with `y`) |
+| `y` | number | Viewport Y in CSS pixels (send with `x`) |
+| `modifiers` | string[] | `ctrl`, `shift`, `alt`, `cmd` — combinable |
+
+`x` and `y` are **viewport CSS pixels from the top-left of the visible area**. That is exactly the space a
+screenshot's `coordinate_frame` maps image pixels into, so a target read off an image reaches this call as:
+
+```js
+// from observe({what: "screenshot"}).coordinate_frame
+const {scale_x, scale_y, offset_x, offset_y} = frame.image_to_viewport
+interact({what: "click", x: imageX * scale_x + offset_x, y: imageY * scale_y + offset_y})
+```
+
+`hover_at` and `scroll_at` take the same point in the same space.
+
+**Name exactly one target.** A call carrying two — a selector and a coordinate, or a ref and a
+selector — is refused with a message naming both, rather than resolved in a fixed order that would
+act somewhere you did not point at. A coordinate outside the current viewport is refused too:
+Chrome does not reject an out-of-range hardware click, it clamps it onto the nearest edge and
+reports success.
 
 ### type
 
@@ -283,18 +309,6 @@ Hover over an element.
 ```js
 interact({what: "hover", selector: "text=Products"})
 interact({what: "hover", selector: ".dropdown-trigger"})
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `selector` | string | CSS or semantic selector |
-
-### hardware_click
-
-Click using OS-level hardware simulation instead of DOM events. Useful for elements that don't respond to synthetic clicks (e.g., custom canvas, embedded iframes with strict event handling).
-
-```js
-interact({what: "hardware_click", selector: "#canvas-element"})
 ```
 
 | Parameter | Type | Description |

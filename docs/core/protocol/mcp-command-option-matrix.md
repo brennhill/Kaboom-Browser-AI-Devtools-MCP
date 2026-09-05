@@ -157,7 +157,7 @@ selector parameters and shorthand mode names are rejected.
 | `new_tab` | `handleBrowserActionNewTabImpl` | Open a new browser tab |
 | `switch_tab` | `handleBrowserActionSwitchTabImpl` | Switch to a different browser tab |
 | `close_tab` | `handleBrowserActionCloseTabImpl` | Close a browser tab |
-| `click` | `handleDOMPrimitive` (dom_action) | Click an element by selector, element_id, or coordinates |
+| `click` | `handleDOMPrimitive` (dom_action, or cdp_action when given x/y) | Click an element named by selector, ref or element_id, or a viewport coordinate (x/y in CSS pixels) |
 | `type` | `handleDOMPrimitive` (dom_action) | Type text into an input or textarea |
 | `select` | `handleDOMPrimitive` (dom_action) | Choose an option in a select dropdown |
 | `check` | `handleDOMPrimitive` (dom_action) | Toggle a checkbox or radio button |
@@ -190,7 +190,6 @@ selector parameters and shorthand mode names are rejected.
 | `screen_recording_stop` | `recordingInteractHandler.handleRecordStop` | Stop recording and save the session |
 | `upload` | `uploadInteractHandler.handleUpload` | Upload a file to a file input or API endpoint |
 | `draw_mode_start` | `handleDrawModeStart` | Activate annotation overlay for drawing rectangles |
-| `hardware_click` | `handleHardwareClick` | CDP-level click at x/y coordinates for isTrusted events |
 | `activate_tab` | `handleActivateTabImpl` | Bring the tracked tab to the foreground |
 | `explore_page` | `handleExplorePage` | Composite page exploration: screenshot, elements, text, links in one call |
 | `batch` | `handleBatch` | Execute a sequence of interact actions in one call |

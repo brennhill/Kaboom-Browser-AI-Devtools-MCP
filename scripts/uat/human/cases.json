@@ -654,8 +654,8 @@
       "kind": "mcp_mode",
       "tool": "interact",
       "mode": "click",
-      "setup": "Click the fixture's submit button.",
-      "question": "Does the page do what a real click does \u2014 form submits, dialog opens \u2014 and does the response's effects block say an effect was observed?"
+      "setup": "Click the fixture's submit button by selector. Then take a screenshot, read the button's pixel off the image, map it through the response's coordinate_frame, and click that x/y with no selector.",
+      "question": "Do both calls act on the same button \u2014 the form submitting each time, with the response's effects block reporting an effect \u2014 and does the coordinate call land on the button rather than beside it?"
     },
     {
       "id": "interact/clipboard_read",
@@ -840,14 +840,6 @@
       "mode": "get_value",
       "setup": "Read the value of a field you just typed into.",
       "question": "Does the returned value match what is displayed?"
-    },
-    {
-      "id": "interact/hardware_click",
-      "kind": "mcp_mode",
-      "tool": "interact",
-      "mode": "hardware_click",
-      "setup": "Click at a coordinate on a canvas element.",
-      "question": "Does the canvas react the way it does to a real mouse click?"
     },
     {
       "id": "interact/highlight",

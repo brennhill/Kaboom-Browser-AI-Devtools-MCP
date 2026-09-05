@@ -7,7 +7,8 @@
 //   2. The Stop button sent kaboom_agent_stop_requested and NOTHING in the background
 //      listened, so pressing Stop removed the overlay while the agent kept driving. A
 //      safety control that appears to work and does not is worse than none.
-//   3. hardware_click drove the page with no indicator at all.
+//   3. The direct-CDP path — the one a coordinate-addressed click takes — drove the page
+//      with no indicator at all.
 
 import { describe, test } from 'node:test'
 import assert from 'node:assert'

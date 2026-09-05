@@ -1961,6 +1961,10 @@
       "mutable_globals": 1,
       "exports": 15
     },
+    "internal/tools/interact/targeting.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
     "internal/tools/interact/workflow.go": {
       "mutable_globals": 0,
       "exports": 9

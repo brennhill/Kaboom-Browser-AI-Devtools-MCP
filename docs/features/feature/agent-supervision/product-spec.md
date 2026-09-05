@@ -23,7 +23,7 @@ Since `kaboom-05ue.1`, Kaboom drives pages with trusted CDP (Chrome DevTools Pro
 - There was no stop control anywhere in the product. A `grep` for a kill switch across the codebase returned nothing outside a comment in the sidepanel.
 - Open bead `kaboom-fs9k.4` asked for kill-switch UAT against a kill switch that did not exist.
 
-An earlier version of this surface (reviewed at commit `43f2dfb16`) rendered correctly but did not work: the Stop button's message had no listener, so pressing it removed the overlay while the agent kept driving, and nothing ever sent a heartbeat, so the overlay's self-teardown timer — meant to catch a dead background worker — was the only thing that could ever remove a *live* overlay. Commit `21e713277` fixed both defects and added heartbeats to the `hardware_click` path, which previously drove the page with no indicator at all.
+An earlier version of this surface (reviewed at commit `43f2dfb16`) rendered correctly but did not work: the Stop button's message had no listener, so pressing it removed the overlay while the agent kept driving, and nothing ever sent a heartbeat, so the overlay's self-teardown timer — meant to catch a dead background worker — was the only thing that could ever remove a *live* overlay. Commit `21e713277` fixed both defects and added heartbeats to the direct-CDP path — the one a coordinate-addressed `click` takes — which previously drove the page with no indicator at all.
 
 ## Requirements this satisfies
 
@@ -36,7 +36,7 @@ An earlier version of this surface (reviewed at commit `43f2dfb16`) rendered cor
 
 - **No approval gates.** The surface is reactive: it shows what is happening and offers an escape hatch. It never blocks an action waiting for the user to approve it first. An earlier per-origin approval gate was built and reverted (`d27ebacfd`) because prompts are friction rather than protection. This surface must not gain a blocking prompt on the driving path.
 - **No retry after a user stop.** A stop is reported to the agent as the terminal state `stopped_by_user`, which is deliberately not retryable — the agent needs to know a person intervened, not that the browser glitched.
-- **Not a permission system.** It supervises input dispatched over CDP (`tryCDPEscalation` and `executeCDPAction` / `hardware_click`); it does not gate or audit every browser action Kaboom takes.
+- **Not a permission system.** It supervises input dispatched over CDP (`tryCDPEscalation` and `executeCDPAction`, the latter carrying coordinate-addressed clicks); it does not gate or audit every browser action Kaboom takes.
 
 ## What it replaced
 

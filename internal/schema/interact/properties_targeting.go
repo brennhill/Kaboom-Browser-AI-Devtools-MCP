@@ -56,11 +56,11 @@ func elementAddressProperties() map[string]any {
 		},
 		"x": map[string]any{
 			"type":        "number",
-			"description": "X coordinate in pixels from left edge (click, hardware_click)",
+			"description": "X in viewport CSS pixels from the left edge of the visible area — the space a screenshot's coordinate_frame maps image pixels into. An alternative to selector/ref for click, right_click, double_click, triple_click, hover_at and scroll_at; also the region origin for zoom_region. Send it with y, and with no other target.",
 		},
 		"y": map[string]any{
 			"type":        "number",
-			"description": "Y coordinate in pixels from top edge (click, hardware_click)",
+			"description": "Y in viewport CSS pixels from the top edge of the visible area — the space a screenshot's coordinate_frame maps image pixels into. An alternative to selector/ref for click, right_click, double_click, triple_click, hover_at and scroll_at; also the region origin for zoom_region. Send it with x, and with no other target.",
 		},
 	}
 }

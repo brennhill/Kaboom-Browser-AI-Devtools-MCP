@@ -21,7 +21,7 @@ last_reviewed: 2026-09-05
 | `DrivingSessions` | `src/background/supervision/driving-session.ts` | Per-tab driving state in the background: starts/relabels a session, runs the 5 s heartbeat, and owns `requestStop`/`consumeStopRequest`. |
 | `createSupervisionMessageHandler` | `src/background/supervision/driving-session.ts` | Background message handler for `kaboom_agent_stop_requested`, registered in `src/background/init.ts` via `installBackgroundMessageHandlers`. |
 | `sendAgentIndicator` / `setKaboomOverlayVisibility` | `src/background/ui/content-script-bridge.ts` | Fire-and-forget phase delivery to the tab, and marker-based overlay hide/show before a screenshot. |
-| CDP integration | `src/background/dom/cdp/cdp-dispatch.ts` | `tryCDPEscalation` (selector/gesture actions) and `executeCDPAction` (`hardware_click` / direct CDP actions) both call into `drivingSessions()`. |
+| CDP integration | `src/background/dom/cdp/cdp-dispatch.ts` | `tryCDPEscalation` (selector/gesture actions) and `executeCDPAction` (a coordinate-addressed `click` and the other direct CDP actions) both call into `drivingSessions()`. |
 | Draw-mode overlay | `src/content/draw-mode/lifecycle-overlay.js` | A second overlay root (`kaboom-draw-overlay`) that also carries `data-kaboom-overlay`, proving the marker is not agent-indicator-specific. |
 | `tracked-hover-launcher` | `src/content/ui/tracked-hover-launcher.ts` | A third overlay root (`kaboom-tracked-hover-launcher`) carrying the same marker. |
 

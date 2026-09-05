@@ -138,7 +138,6 @@ const modeDefaults = {
     run_a11y_and_export_sarif: { save_to: '.kaboom/reports/a11y.sarif' },
     upload: { file_path: '/tmp/example.png', selector: 'input[type="file"]' },
     draw_mode_start: { annot_session: 'checkout-review' },
-    hardware_click: { x: 640, y: 360 },
     activate_tab: { tab_id: 123 },
     switch_tab: { tab_id: 123 },
     close_tab: { tab_id: 123 },
