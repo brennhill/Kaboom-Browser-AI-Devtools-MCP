@@ -36,7 +36,7 @@
       "name": "token_cards_near_miss",
       "issue": 694,
       "kind": "positive",
-      "why": "padding:15px near-misses --spacing-md:16px on all four longhands, and #2b56e2 near-misses --color-primary-main:#2a55e1. The page declared those tokens; it never declared that THIS element's padding must use them, so the last step is the analyzer's proximity inference and the finding is inferred/warning. Only a caller-supplied spec states a rule the element can break. The four longhands carry one identical verdict and the author wrote one declaration, so they collapse to a single `padding` finding — reporting the same edit four times is what multiplied 40 identical cards into 200 findings and pushed the response past the 100KB clamp. Element 1 is the exact-match control and must contribute nothing.",
+      "why": "padding:15px near-misses --spacing-md:16px on all four longhands, and #2b56e2 near-misses --color-primary-main:#2a55e1. The page declared those tokens; it never declared that THIS element's padding must use them, so the last step is the analyzer's proximity inference and the finding is inferred/warning. Only a caller-supplied spec states a rule the element can break. The four longhands carry one identical verdict and the author wrote one declaration, so they collapse to a single `padding` finding \u2014 reporting the same edit four times is what multiplied 40 identical cards into 200 findings and pushed the response past the 100KB clamp. Element 1 is the exact-match control and must contribute nothing.",
       "selector": ".token-card",
       "expect_elements": 2,
       "categories": [
@@ -141,7 +141,7 @@
       "name": "default_all_categories_reconciles_contradictions",
       "issue": 695,
       "kind": "positive",
-      "why": "The DEFAULT call — no `categories`, all three analyzers — on the stack whose gaps run 24/24/14/24. Every other case narrows categories, which is why this shipped: design_tokens saw margin-top:14px as a near-miss of --spacing-md (16px) at confidence:high while spacing measured the same 14px against the 24px rhythm at confidence:low, so an agent triaging by confidence applied 16px and made the page worse. Only the measured gap survives; the rejected proximity guess is folded into its evidence rather than dropped. design_tokens and style_consistency complete with nothing, which is the point — a category that ran and found nothing is not a skip.",
+      "why": "The DEFAULT call \u2014 no `categories`, all three analyzers \u2014 on the stack whose gaps run 24/24/14/24. Every other case narrows categories, which is why this shipped: design_tokens saw margin-top:14px as a near-miss of --spacing-md (16px) at confidence:high while spacing measured the same 14px against the 24px rhythm at confidence:low, so an agent triaging by confidence applied 16px and made the page worse. Only the measured gap survives; the rejected proximity guess is folded into its evidence rather than dropped. design_tokens and style_consistency complete with nothing, which is the point \u2014 a category that ran and found nothing is not a skip.",
       "selector": ".rhythm-card",
       "expect_elements": 5,
       "expect_findings": [
@@ -160,7 +160,7 @@
       "name": "declared_font_spec_on_a_pair",
       "issue": 693,
       "kind": "positive",
-      "why": "The same two-element group as two_element_group_control, but with the font stated. A declared rule needs no majority: element 1 renders Roboto against a spec naming Inter, which is a violation, not a coin flip. Checking peer count before consulting the spec made a rule the caller explicitly supplied unenforceable on every group of two — the one case where inference has nothing to offer either.",
+      "why": "The same two-element group as two_element_group_control, but with the font stated. A declared rule needs no majority: element 1 renders Roboto against a spec naming Inter, which is a violation, not a coin flip. Checking peer count before consulting the spec made a rule the caller explicitly supplied unenforceable on every group of two \u2014 the one case where inference has nothing to offer either.",
       "selector": ".pair-item",
       "expect_elements": 2,
       "categories": [
@@ -264,6 +264,18 @@
           "reason": "insufficient_peers"
         }
       ]
+    },
+    {
+      "name": "out_of_flow_control",
+      "kind": "control",
+      "why": "The third card is position:absolute, so it takes no part in the rhythm. Counted, the run reads 10px, an 18px overlap, 24px and 24px, and the group reports a layout break nobody can see. This is the only fixture group carrying an in_flow:false element, so it is what proves the wire field survives translation into the analyzers instead of being read as true.",
+      "selector": ".of-item",
+      "expect_elements": 5,
+      "categories": [
+        "spacing"
+      ],
+      "expect_findings": [],
+      "expect_skipped": []
     }
   ]
 }

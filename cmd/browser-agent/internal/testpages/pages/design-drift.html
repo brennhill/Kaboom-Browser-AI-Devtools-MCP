@@ -150,6 +150,35 @@
         background: #f3f4f6;
       }
 
+      /* ── control: an out-of-flow sibling is not part of the rhythm ──── */
+      .of-stack {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+      .of-item {
+        height: 32px;
+        background: #eef2ff;
+        margin-top: 24px;
+      }
+      .of-item:first-child {
+        margin-top: 0;
+      }
+      /* Deliberately placed where counting it would break the rhythm: 42px
+         from the stack's top edge, so it sits 10px after the first card and
+         18px INSIDE the second. Park it below the stack instead and the
+         analyzer's own container-break rule would split it away, and the
+         control would pass whether or not in_flow was honoured. left/right:0
+         keeps it in the same column band as the cards, which is what makes it
+         a candidate for the same rhythm at all. */
+      .of-item--floating {
+        position: absolute;
+        top: 42px;
+        left: 0;
+        right: 0;
+        margin-top: 0;
+      }
+
       /* ── control: a two-element group has no majority ───────────────── */
       .pair-item {
         font-size: 12px;
@@ -230,6 +259,22 @@
       <h2>Two-element group (control)</h2>
       <p class="pair-item is-one">One</p>
       <p class="pair-item is-other">Two</p>
+    </section>
+
+    <!-- CONTROL: the absolutely-positioned card takes no part in the rhythm.
+         Count it and the run reads 10px, -18px (an overlap), 24px, 24px, so
+         the group reports drift and a layout break that nobody can see. This
+         is the only group in the fixture with an in_flow:false element, which
+         is what exercises that field across the wire into the analyzers. -->
+    <section id="out-of-flow">
+      <h2>Out-of-flow sibling (control)</h2>
+      <div class="of-stack">
+        <div class="of-item"></div>
+        <div class="of-item"></div>
+        <div class="of-item of-item--floating"></div>
+        <div class="of-item"></div>
+        <div class="of-item"></div>
+      </div>
     </section>
   </body>
 </html>

@@ -61,7 +61,6 @@ type elementView struct {
 	InFlow        bool
 	ParentDisplay string
 	ParentGap     string
-	Tokens        map[string]string
 }
 
 // Handle runs the design audit.
@@ -180,8 +179,14 @@ func captureProbe(d Deps, selector string) (styleprobe.WireStyleProbeResult, err
 	return probe, nil
 }
 
-// viewsFrom translates wire elements into the analyzer view, merging each
-// element's in-scope custom properties over the document table.
+// viewsFrom translates wire elements into the analyzer view.
+//
+// The element's own in-scope custom properties are deliberately NOT carried
+// across. They were, into a field no analyzer ever read, and the comment here
+// claimed a merge over the document table that never happened — so a reader
+// checking whether element-scoped tokens were honoured found a field saying yes
+// and behaviour saying no. The token table is built once from probe.RootTokens;
+// per-element overrides are a feature this mode does not have.
 func viewsFrom(probe styleprobe.WireStyleProbeResult) []elementView {
 	views := make([]elementView, 0, len(probe.Elements))
 	for _, el := range probe.Elements {
@@ -193,7 +198,6 @@ func viewsFrom(probe styleprobe.WireStyleProbeResult) []elementView {
 			InFlow:        el.InFlow,
 			ParentDisplay: el.ParentDisplay,
 			ParentGap:     el.ParentGap,
-			Tokens:        el.CustomProperties,
 		})
 	}
 	return views

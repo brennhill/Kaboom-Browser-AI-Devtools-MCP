@@ -1,5 +1,5 @@
 {
-  "_comment": "Real computed-style payloads captured from cmd/browser-agent/internal/testpages/pages/design-drift.html in Chrome. Keyed by selector. This is what the page actually renders, so the analyzers can be tested against the fixture without a browser; UAT category 36 covers the live extension path. Regenerate by loading the fixture and re-running the probe if the page changes.",
+ "_comment": "Real computed-style payloads captured from cmd/browser-agent/internal/testpages/pages/design-drift.html in Chrome. Keyed by selector. This is what the page actually renders, so the analyzers can be tested against the fixture without a browser; UAT category 36 covers the live extension path. _source records the digests of that page's <style> and <body>: TestDesignDriftFixtureMatchesItsPage fails the moment either changes, because an edited page leaves this capture stale while every Go test stays green. Regenerate by loading the fixture, re-running the probe with include_custom_properties, keeping only the properties recorded here, and re-recording both digests.",
  ".step-card__header": {
   "elements": [
    {
@@ -882,5 +882,203 @@
    "--spacing-md": "16px",
    "--color-text": "#111827"
   }
+ },
+ ".of-item": {
+  "elements": [
+   {
+    "selector": "div.of-item",
+    "tag": "div",
+    "computed_styles": {
+     "font-family": "Inter, sans-serif",
+     "font-size": "16px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "letter-spacing": "normal",
+     "color": "rgb(17, 24, 39)",
+     "background-color": "rgb(238, 242, 255)",
+     "border-color": "rgb(17, 24, 39)",
+     "margin-top": "0px",
+     "margin-right": "0px",
+     "margin-bottom": "0px",
+     "margin-left": "0px",
+     "padding-top": "0px",
+     "padding-right": "0px",
+     "padding-bottom": "0px",
+     "padding-left": "0px"
+    },
+    "box_model": {
+     "x": 24,
+     "y": 1476,
+     "width": 1464,
+     "height": 32,
+     "top": 1476,
+     "right": 1488,
+     "bottom": 1508,
+     "left": 24
+    },
+    "index": 0,
+    "in_flow": true,
+    "parent_display": "flex",
+    "parent_gap": "normal"
+   },
+   {
+    "selector": "div.of-item",
+    "tag": "div",
+    "computed_styles": {
+     "font-family": "Inter, sans-serif",
+     "font-size": "16px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "letter-spacing": "normal",
+     "color": "rgb(17, 24, 39)",
+     "background-color": "rgb(238, 242, 255)",
+     "border-color": "rgb(17, 24, 39)",
+     "margin-top": "24px",
+     "margin-right": "0px",
+     "margin-bottom": "0px",
+     "margin-left": "0px",
+     "padding-top": "0px",
+     "padding-right": "0px",
+     "padding-bottom": "0px",
+     "padding-left": "0px"
+    },
+    "box_model": {
+     "x": 24,
+     "y": 1532,
+     "width": 1464,
+     "height": 32,
+     "top": 1532,
+     "right": 1488,
+     "bottom": 1564,
+     "left": 24
+    },
+    "index": 1,
+    "in_flow": true,
+    "parent_display": "flex",
+    "parent_gap": "normal"
+   },
+   {
+    "selector": "div.of-item.of-item--floating",
+    "tag": "div",
+    "computed_styles": {
+     "font-family": "Inter, sans-serif",
+     "font-size": "16px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "letter-spacing": "normal",
+     "color": "rgb(17, 24, 39)",
+     "background-color": "rgb(238, 242, 255)",
+     "border-color": "rgb(17, 24, 39)",
+     "margin-top": "0px",
+     "margin-right": "0px",
+     "margin-bottom": "0px",
+     "margin-left": "0px",
+     "padding-top": "0px",
+     "padding-right": "0px",
+     "padding-bottom": "0px",
+     "padding-left": "0px"
+    },
+    "box_model": {
+     "x": 24,
+     "y": 1518,
+     "width": 1464,
+     "height": 32,
+     "top": 1518,
+     "right": 1488,
+     "bottom": 1550,
+     "left": 24
+    },
+    "index": 2,
+    "in_flow": false,
+    "parent_display": "flex",
+    "parent_gap": "normal"
+   },
+   {
+    "selector": "div.of-item",
+    "tag": "div",
+    "computed_styles": {
+     "font-family": "Inter, sans-serif",
+     "font-size": "16px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "letter-spacing": "normal",
+     "color": "rgb(17, 24, 39)",
+     "background-color": "rgb(238, 242, 255)",
+     "border-color": "rgb(17, 24, 39)",
+     "margin-top": "24px",
+     "margin-right": "0px",
+     "margin-bottom": "0px",
+     "margin-left": "0px",
+     "padding-top": "0px",
+     "padding-right": "0px",
+     "padding-bottom": "0px",
+     "padding-left": "0px"
+    },
+    "box_model": {
+     "x": 24,
+     "y": 1588,
+     "width": 1464,
+     "height": 32,
+     "top": 1588,
+     "right": 1488,
+     "bottom": 1620,
+     "left": 24
+    },
+    "index": 3,
+    "in_flow": true,
+    "parent_display": "flex",
+    "parent_gap": "normal"
+   },
+   {
+    "selector": "div.of-item",
+    "tag": "div",
+    "computed_styles": {
+     "font-family": "Inter, sans-serif",
+     "font-size": "16px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "letter-spacing": "normal",
+     "color": "rgb(17, 24, 39)",
+     "background-color": "rgb(238, 242, 255)",
+     "border-color": "rgb(17, 24, 39)",
+     "margin-top": "24px",
+     "margin-right": "0px",
+     "margin-bottom": "0px",
+     "margin-left": "0px",
+     "padding-top": "0px",
+     "padding-right": "0px",
+     "padding-bottom": "0px",
+     "padding-left": "0px"
+    },
+    "box_model": {
+     "x": 24,
+     "y": 1644,
+     "width": 1464,
+     "height": 32,
+     "top": 1644,
+     "right": 1488,
+     "bottom": 1676,
+     "left": 24
+    },
+    "index": 4,
+    "in_flow": true,
+    "parent_display": "flex",
+    "parent_gap": "normal"
+   }
+  ],
+  "count": 5,
+  "match_count": 5,
+  "truncated": false,
+  "root_tokens": {
+   "--spacing-lg": "24px",
+   "--color-primary-main": "#2a55e1",
+   "--spacing-md": "16px",
+   "--color-text": "#111827"
+  }
+ },
+ "_source": {
+  "page": "cmd/browser-agent/internal/testpages/pages/design-drift.html",
+  "style_sha256": "e018e01297c3b17140abfb4279d0da3ce03eec6dd0b4cf8d2b1d3f15a96eb597",
+  "body_sha256": "830c6d2c98020375bcb4b77cee0a4ea0a6c56512fde62574c7fae52661697658"
  }
 }
