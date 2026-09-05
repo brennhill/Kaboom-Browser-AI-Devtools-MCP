@@ -42,7 +42,8 @@ These parameters can be added to **any** action:
 | `tab_id` | number | Target a specific tab (omit for active tab) |
 | `element_id` | string | Stable element handle from `list_interactive` (preferred for deterministic follow-up actions) |
 | `index` | number | Element index from `list_interactive` results (legacy alternative to selector/element_id) |
-| `index_generation` | string | Generation token from `list_interactive` to ensure index resolves against the same element snapshot |
+| `ref` | string | Accessibility ref from `find` results (e.g. `ax_412`) — reaches controls no CSS selector names |
+| `index_generation` | string | Generation token from `list_interactive` or `find`, so `index`/`ref` resolve against the same element snapshot they came from |
 | `scope_selector` | string | Container CSS selector to constrain DOM actions to a specific region |
 | `include_screenshot` | boolean | Capture a screenshot after the action completes and return it inline |
 | `evidence` | string | Visual evidence capture mode: `off` (default), `on_mutation`, `always` |
@@ -435,10 +436,31 @@ Returns ranked candidates, each with:
 | Field | Description |
 |-------|-------------|
 | `ref` | Accessibility reference, usable as a target in a following action |
+| `index` | Rank position, usable as a target in place of `ref` |
 | `role` | ARIA role of the candidate |
 | `name` | Accessible name |
 | `confidence` | How well the candidate matched the query |
 | `why` | What matched — role, name, or both |
+
+The response also carries `index_generation`, the stamp for the snapshot these candidates came
+from. Pass it back with the `ref`:
+
+```js
+const found = interact({what: "find", query: "add to cart button"})
+interact({what: "click", ref: "ax_412", index_generation: found.index_generation})
+```
+
+A `ref` and an `index` share one handle space with `list_interactive`, so both obey the same
+staleness rule: quote a generation the page has moved past and the action is **refused** with a
+generation mismatch rather than resolved. That refusal is the point. Chrome reuses a backend node
+id once the node it named is destroyed, so a ref carried across a re-render can name an entirely
+different control — without the check, the click lands on it and reports success.
+
+Each `find` or `list_interactive` call publishes a new snapshot for that tab, superseding the
+previous generation. Take handles from the most recent call.
+
+`ref` works with `click`, `right_click`, `double_click` and `triple_click`. An accessibility
+candidate has no selector, so it is addressed by the viewport point `find` resolved for it.
 
 More than one candidate means the query was ambiguous. Disambiguate it rather than taking the
 first result: `find` ranks, it does not decide.

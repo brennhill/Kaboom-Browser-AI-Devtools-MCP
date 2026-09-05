@@ -1,8 +1,20 @@
-// Purpose: Defines element targeting properties for the interact tool (selector, scope, index, nth).
+// Purpose: Defines element targeting properties for the interact tool (selector, scope, index, ref, nth).
 // Why: Separates targeting properties from action-specific and output properties.
 package interact
 
+// targetingProperties is the union of the two groups below. It is split because a single
+// map literal covering both had outgrown the function-length budget, and because "how do I
+// name one element" and "which elements should the listing return" are different questions.
 func targetingProperties() map[string]any {
+	properties := elementAddressProperties()
+	for name, schema := range listingFilterProperties() {
+		properties[name] = schema
+	}
+	return properties
+}
+
+// elementAddressProperties name a single element to act on.
+func elementAddressProperties() map[string]any {
 	return map[string]any{
 		"selector": map[string]any{
 			"type":        "string",
@@ -30,9 +42,13 @@ func targetingProperties() map[string]any {
 			"type":        "number",
 			"description": "Element index from list_interactive results (legacy alternative to selector/element_id)",
 		},
+		"ref": map[string]any{
+			"type":        "string",
+			"description": "Accessibility ref from find results (e.g. 'ax_412'). Resolves to the element find ranked, so it reaches controls no CSS selector names. Quote index_generation with it: a ref from an earlier snapshot is refused rather than resolved against a re-rendered page.",
+		},
 		"index_generation": map[string]any{
 			"type":        "string",
-			"description": "Generation token from list_interactive to ensure index resolves against the same element snapshot",
+			"description": "Generation token from list_interactive or find, so index/ref resolve against the same element snapshot they came from",
 		},
 		"nth": map[string]any{
 			"type":        "integer",
@@ -46,6 +62,12 @@ func targetingProperties() map[string]any {
 			"type":        "number",
 			"description": "Y coordinate in pixels from top edge (click, hardware_click)",
 		},
+	}
+}
+
+// listingFilterProperties shape what list_interactive, explore_page and query return.
+func listingFilterProperties() map[string]any {
+	return map[string]any{
 		"visible_only": map[string]any{
 			"type":        "boolean",
 			"description": "Only return visible elements (list_interactive)",

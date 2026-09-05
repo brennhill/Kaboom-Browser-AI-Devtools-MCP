@@ -12,7 +12,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
-	"strings"
 	"time"
 )
 
@@ -65,13 +64,20 @@ func (h *DOMActions) HandleDOMPrimitive(req mcp.JSONRPCRequest, args json.RawMes
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 
+	var failed bool
+	var errResp mcp.JSONRPCResponse
+	// Refs resolve before the coordinate escalation below: an accessibility candidate has no
+	// selector, so it becomes the viewport point that escalation then clicks.
+	args, errResp, failed = h.resolveDOMTargetFromRef(req, args, &params)
+	if failed {
+		return errResp
+	}
+
 	// If x/y coordinates provided on a click action, escalate to CDP for hardware-level click
 	if action == "click" && params.X != nil && params.Y != nil {
 		return h.HandleCDPClick(req, args, action, cdpClickTarget{X: *params.X, Y: *params.Y, Modifiers: params.Modifiers, TabID: params.TabID})
 	}
 
-	var failed bool
-	var errResp mcp.JSONRPCResponse
 	args, errResp, failed = h.resolveDOMSelectorFromIndex(req, args, &params)
 	if failed {
 		return errResp
@@ -116,6 +122,7 @@ type DOMPrimitiveParams struct {
 	Selector      string   `json:"selector"`
 	ScopeSelector string   `json:"scope_selector,omitempty"`
 	ElementID     string   `json:"element_id,omitempty"`
+	Ref           string   `json:"ref,omitempty"`
 	Index         *int     `json:"index,omitempty"`
 	Nth           *int     `json:"nth,omitempty"`
 	IndexGen      string   `json:"index_generation,omitempty"`
@@ -203,16 +210,19 @@ func parseHardwareClickParams(args json.RawMessage) (hardwareClickParams, error)
 	return params, nil
 }
 
-func updateArgsSelector(args json.RawMessage, selector string) json.RawMessage {
+// updateArgsFields overwrites named fields in the raw arguments, leaving the rest untouched.
+func updateArgsFields(args json.RawMessage, fields map[string]any) json.RawMessage {
 	var rawArgs map[string]json.RawMessage
 	if json.Unmarshal(args, &rawArgs) != nil {
 		return args
 	}
-	selectorJSON, err := json.Marshal(selector)
-	if err != nil {
-		return args
+	for name, value := range fields {
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			return args
+		}
+		rawArgs[name] = encoded
 	}
-	rawArgs["selector"] = selectorJSON
 	updated, err := json.Marshal(rawArgs)
 	if err != nil {
 		return args
@@ -226,7 +236,7 @@ func (h *DOMActions) resolveDOMSelectorFromIndex(req mcp.JSONRPCRequest, args js
 		return args, mcp.JSONRPCResponse{}, false
 	}
 
-	sel, ok, stale, latestGeneration := h.resolveIndexToSelector(req.ClientID, params.TabID, *params.Index, params.IndexGen)
+	target, ok, stale, latestGeneration := h.resolveIndexToTarget(req.ClientID, params.TabID, *params.Index, params.IndexGen)
 	if stale {
 		return args, mcp.Fail(req, mcp.ErrInvalidParam,
 			elemindex.FormatGenerationConflict(params.IndexGen, latestGeneration),
@@ -242,8 +252,50 @@ func (h *DOMActions) resolveDOMSelectorFromIndex(req mcp.JSONRPCRequest, args js
 		), true
 	}
 
-	params.Selector = sel
-	return updateArgsSelector(args, sel), mcp.JSONRPCResponse{}, false
+	params.Selector = target.Selector
+	return updateArgsFields(args, map[string]any{"selector": target.Selector}), mcp.JSONRPCResponse{}, false
+}
+
+// resolveDOMTargetFromRef resolves an accessibility ref from `find` to something the action
+// can address, under the generation rule that guards numeric indices.
+//
+// A ref is refused after a re-render rather than resolved: Chrome reuses a backendNodeId
+// once the node it named is destroyed, so the alternative is clicking an unrelated control
+// and reporting success.
+func (h *DOMActions) resolveDOMTargetFromRef(req mcp.JSONRPCRequest, args json.RawMessage, params *DOMPrimitiveParams) (json.RawMessage, mcp.JSONRPCResponse, bool) {
+	if params.Ref == "" || params.Selector != "" || params.ElementID != "" || params.Index != nil {
+		return args, mcp.JSONRPCResponse{}, false
+	}
+
+	target, ok, stale, latestGeneration := h.elementIndexRegistry.ResolveRef(req.ClientID, params.TabID, params.Ref, params.IndexGen)
+	if stale {
+		return args, mcp.Fail(req, mcp.ErrInvalidParam,
+			elemindex.FormatGenerationConflict(params.IndexGen, latestGeneration),
+			"Re-run interact with what='find' for the current page, then retry with a ref and index_generation from the new results.",
+			mcp.WithParam("index_generation"), mcp.WithParam("ref"),
+		), true
+	}
+	if !ok {
+		return args, mcp.Fail(req, mcp.ErrInvalidParam,
+			fmt.Sprintf("Element ref %q is not in the current element index for tab_id=%d. Call find first to refresh the element index for this tab/client scope.", params.Ref, params.TabID),
+			"Call interact with what='find' first (same tab/client scope), then use a ref from those results.",
+			mcp.WithParam("ref"), mcp.WithParam("tab_id"),
+		), true
+	}
+	// An accessibility candidate carries no selector — that is the point of the accessibility
+	// tree — so it is addressed by the viewport point find resolved for it. A target without
+	// one is refused rather than passed on: dispatching an action with no target silently
+	// drops it, or lands it at the top-left corner of the page.
+	if !target.HasCenter {
+		return args, mcp.Fail(req, mcp.ErrInvalidParam,
+			fmt.Sprintf("Element ref %q resolved to %s %q, but find could not read its position, so there is no point to act on.", params.Ref, target.Role, target.Name),
+			"Scroll the element into view, then call interact with what='find' again and use a candidate that reports x and y.",
+			mcp.WithParam("ref"),
+		), true
+	}
+	centerX, centerY := target.CenterX, target.CenterY
+	params.X, params.Y = &centerX, &centerY
+	return updateArgsFields(args, map[string]any{"x": centerX, "y": centerY}), mcp.JSONRPCResponse{}, false
 }
 
 func validateDOMSelectorRequirement(req mcp.JSONRPCRequest, action string, params DOMPrimitiveParams) (mcp.JSONRPCResponse, bool) {
@@ -253,8 +305,8 @@ func validateDOMSelectorRequirement(req mcp.JSONRPCRequest, action string, param
 	}
 
 	return mcp.Fail(req, mcp.ErrMissingParam,
-		"Required parameter 'selector', 'element_id', or 'index' is missing",
-		"Add 'selector' (CSS or semantic selector), or use 'element_id'/'index' from list_interactive results.",
+		"Required parameter 'selector', 'element_id', 'index', or 'ref' is missing",
+		"Add 'selector' (CSS or semantic selector), use 'element_id'/'index' from list_interactive results, or 'ref' from find results.",
 		mcp.WithParam("selector"),
 	), true
 }
@@ -416,123 +468,62 @@ func (h *DOMActions) HandleListInteractive(req mcp.JSONRPCRequest, args json.Raw
 }
 
 func (h *DOMActions) buildElementIndexFromResponse(clientID string, tabID int, generation string, resp mcp.JSONRPCResponse) string {
-	block, ok := decodeFirstToolResultJSONBlock(resp)
+	block, ok := toolresp.DecodeFirstJSONBlock(resp)
 	if !ok {
 		return ""
 	}
-	elements := act.ExtractElementList(block.data)
+	elements := act.ExtractElementList(block.Data)
 	if elements == nil {
 		return ""
 	}
 
-	indexMap := make(map[int]string, len(elements))
-	for _, elem := range elements {
-		elemMap, ok := elem.(map[string]any)
-		if !ok {
-			continue
-		}
-		indexVal, _ := elemMap["index"].(float64)
-		selector, _ := elemMap["selector"].(string)
-		if selector != "" {
-			indexMap[int(indexVal)] = selector
-		}
-	}
+	return h.storeElementIndex(clientID, tabID, generation, elemindex.TargetsFromElements(elements))
+}
+
+// storeElementIndex publishes a snapshot under one generation for (clientID, tabID).
+//
+// Both discovery actions land here — list_interactive from the DOM scan and find from the
+// accessibility tree — because they describe the same page. Two registries would mean two
+// generations, and a handle from one could survive a re-render the other saw.
+func (h *DOMActions) storeElementIndex(clientID string, tabID int, generation string, targets map[int]elemindex.Target) string {
 	if h.elementIndexRegistry == nil {
 		h.elementIndexRegistry = elemindex.New()
 	}
-	return h.elementIndexRegistry.Store(clientID, tabID, generation, indexMap)
-}
-
-type toolResultJSONBlock struct {
-	result       mcp.MCPToolResult
-	contentIndex int
-	prefix       string
-	data         map[string]any
-}
-
-func decodeFirstToolResultJSONBlock(resp mcp.JSONRPCResponse) (toolResultJSONBlock, bool) {
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil || result.IsError {
-		return toolResultJSONBlock{}, false
-	}
-	for i, content := range result.Content {
-		jsonStart := strings.Index(content.Text, "{")
-		if jsonStart < 0 {
-			continue
-		}
-		var data map[string]any
-		if json.Unmarshal([]byte(content.Text[jsonStart:]), &data) == nil {
-			return toolResultJSONBlock{
-				result:       result,
-				contentIndex: i,
-				prefix:       content.Text[:jsonStart],
-				data:         data,
-			}, true
-		}
-	}
-	return toolResultJSONBlock{}, false
-}
-
-func (b toolResultJSONBlock) replace(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	data, err := json.Marshal(b.data)
-	if err != nil {
-		return resp
-	}
-	b.result.Content[b.contentIndex].Text = b.prefix + string(data)
-	resp.Result = mcp.SafeMarshal(b.result, string(resp.Result))
-	return resp
+	return h.elementIndexRegistry.Store(clientID, tabID, generation, targets)
 }
 
 func annotateListInteractiveIndexMetadata(resp mcp.JSONRPCResponse, tabID int, generation string) mcp.JSONRPCResponse {
 	if generation == "" {
 		return resp
 	}
-	block, ok := decodeFirstToolResultJSONBlock(resp)
+	block, ok := toolresp.DecodeFirstJSONBlock(resp)
 	if !ok {
 		return resp
 	}
-	block.data["index_generation"] = generation
-	block.data["index_scope_tab_id"] = tabID
-	return block.replace(resp)
+	block.Data["index_generation"] = generation
+	block.Data["index_scope_tab_id"] = tabID
+	return block.Replace(resp)
 }
 
 func truncateListInteractiveResponse(resp mcp.JSONRPCResponse, limit int) mcp.JSONRPCResponse {
-	block, ok := decodeFirstToolResultJSONBlock(resp)
+	block, ok := toolresp.DecodeFirstJSONBlock(resp)
 	if !ok {
 		return resp
 	}
-	elements := act.ExtractElementList(block.data)
+	elements := act.ExtractElementList(block.Data)
 	if elements == nil || len(elements) <= limit {
 		return resp
 	}
 
-	setNestedElements(block.data, elements[:limit])
-	block.data["total"] = len(elements)
-	block.data["truncated"] = true
-	return block.replace(resp)
+	toolresp.SetNestedElements(block.Data, elements[:limit])
+	block.Data["total"] = len(elements)
+	block.Data["truncated"] = true
+	return block.Replace(resp)
 }
 
-func setNestedElements(data map[string]any, elements []any) {
-	if _, ok := data["elements"]; ok {
-		data["elements"] = elements
-		return
-	}
-	if result, ok := data["result"].(map[string]any); ok {
-		if _, ok := result["elements"]; ok {
-			result["elements"] = elements
-			return
-		}
-		if nested, ok := result["result"].(map[string]any); ok {
-			if _, ok := nested["elements"]; ok {
-				nested["elements"] = elements
-			}
-		}
-	}
-}
-
-func (h *DOMActions) resolveIndexToSelector(clientID string, tabID int, index int, generation string) (string, bool, bool, string) {
+func (h *DOMActions) resolveIndexToTarget(clientID string, tabID int, index int, generation string) (elemindex.Target, bool, bool, string) {
 	if h.elementIndexRegistry == nil {
-		return "", false, false, ""
+		return elemindex.Target{}, false, false, ""
 	}
 	return h.elementIndexRegistry.Resolve(clientID, tabID, index, generation)
 }

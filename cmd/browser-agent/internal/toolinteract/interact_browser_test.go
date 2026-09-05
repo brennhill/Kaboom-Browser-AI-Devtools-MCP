@@ -487,9 +487,9 @@ func TestHandleListInteractive_Success(t *testing.T) {
 		t.Fatalf("expected index_generation annotation, got: %s", firstText(result))
 	}
 	// The element index should now resolve.
-	sel, ok, _, _ := h.dom.resolveIndexToSelector("client-test", 42, 1, "")
-	if !ok || sel != "#b" {
-		t.Fatalf("expected #b resolved, got %q ok=%v", sel, ok)
+	target, ok, _, _ := h.dom.resolveIndexToTarget("client-test", 42, 1, "")
+	if !ok || target.Selector != "#b" {
+		t.Fatalf("expected #b resolved, got %q ok=%v", target.Selector, ok)
 	}
 	enqueued := fs.enqueuedSnapshot()
 	if len(enqueued) != 1 || enqueued[0].Type != "dom_action" || enqueued[0].TabID != 42 {
@@ -520,23 +520,6 @@ func TestHandleListInteractive_Truncation(t *testing.T) {
 	result := assertOK(t, resp)
 	if !contains(firstText(result), "\"truncated\":true") {
 		t.Fatalf("expected truncated marker, got: %s", firstText(result))
-	}
-}
-
-func TestSetNestedElements_TopLevel(t *testing.T) {
-	data := map[string]any{"elements": []any{1, 2, 3}}
-	setNestedElements(data, []any{9})
-	if len(data["elements"].([]any)) != 1 {
-		t.Fatal("expected top-level elements replaced")
-	}
-}
-
-func TestSetNestedElements_Nested(t *testing.T) {
-	data := map[string]any{"result": map[string]any{"elements": []any{1, 2}}}
-	setNestedElements(data, []any{9})
-	inner := data["result"].(map[string]any)["elements"].([]any)
-	if len(inner) != 1 {
-		t.Fatal("expected nested elements replaced")
 	}
 }
 

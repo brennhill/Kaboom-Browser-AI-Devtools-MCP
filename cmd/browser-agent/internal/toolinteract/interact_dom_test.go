@@ -5,9 +5,9 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/pagescripts"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 	"strings"
 	"testing"
 )
@@ -159,7 +159,7 @@ func TestHandleDOMPrimitive_ClickWithCoordsRoutesCDP(t *testing.T) {
 
 func TestHandleDOMPrimitive_IndexResolvesToSelector(t *testing.T) {
 	h, _ := newFakeDOMActions(t)
-	h.elementIndexRegistry.Store("client-test", 0, "gen_1", map[int]string{2: "#resolved"})
+	h.elementIndexRegistry.Store("client-test", 0, "gen_1", map[int]elemindex.Target{2: {Selector: "#resolved"}})
 	resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"index":2,"action":"click"}`), "click")
 	assertOK(t, resp)
 }
@@ -323,15 +323,21 @@ func TestValidateDOMActionParams(t *testing.T) {
 	}
 }
 
-func TestUpdateArgsSelector(t *testing.T) {
-	out := updateArgsSelector(json.RawMessage(`{"a":1}`), "#new")
+func TestUpdateArgsFields(t *testing.T) {
+	out := updateArgsFields(json.RawMessage(`{"a":1}`), map[string]any{"selector": "#new"})
 	var m map[string]any
 	_ = json.Unmarshal(out, &m)
-	if m["selector"] != "#new" {
-		t.Fatalf("expected selector injected, got %v", m["selector"])
+	if m["selector"] != "#new" || m["a"] != float64(1) {
+		t.Fatalf("expected selector injected beside existing args, got %v", m)
+	}
+	// A ref resolves to a point rather than a selector, so both fields must survive one call.
+	out = updateArgsFields(json.RawMessage(`{"a":1}`), map[string]any{"x": 12.5, "y": 30.0})
+	_ = json.Unmarshal(out, &m)
+	if m["x"] != 12.5 || m["y"] != float64(30) {
+		t.Fatalf("expected x and y injected, got %v", m)
 	}
 	// Invalid JSON returns args unchanged.
-	same := updateArgsSelector(json.RawMessage(`bad`), "#x")
+	same := updateArgsFields(json.RawMessage(`bad`), map[string]any{"selector": "#x"})
 	if string(same) != "bad" {
 		t.Fatalf("expected unchanged on invalid json, got %s", same)
 	}
@@ -359,7 +365,7 @@ func TestWaitForConditions_URLContains(t *testing.T) {
 func TestResolveIndexToSelector_Empty(t *testing.T) {
 	t.Parallel()
 	h := newTestHandler()
-	_, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 0, "")
+	_, ok, _, _ := h.resolveIndexToTarget("client-a", 0, 0, "")
 	if ok {
 		t.Error("expected not found on empty store")
 	}
@@ -370,18 +376,18 @@ func TestResolveIndexToSelector_AfterBuild(t *testing.T) {
 	h := newTestHandler()
 
 	// Manually populate the store
-	h.elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]string{
-		0: "#email",
-		1: "#password",
-		2: "button[type=submit]",
+	h.elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]elemindex.Target{
+		0: {Selector: "#email"},
+		1: {Selector: "#password"},
+		2: {Selector: "button[type=submit]"},
 	})
 
-	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 1, "")
-	if !ok || sel != "#password" {
-		t.Errorf("expected #password, got %q (ok=%v)", sel, ok)
+	target, ok, _, _ := h.resolveIndexToTarget("client-a", 0, 1, "")
+	if !ok || target.Selector != "#password" {
+		t.Errorf("expected #password, got %q (ok=%v)", target.Selector, ok)
 	}
 
-	_, ok, _, _ = h.resolveIndexToSelector("client-a", 0, 99, "")
+	_, ok, _, _ = h.resolveIndexToTarget("client-a", 0, 99, "")
 	if ok {
 		t.Error("expected not found for missing index")
 	}
@@ -391,21 +397,21 @@ func TestResolveIndexToSelector_ScopedByClientAndTab(t *testing.T) {
 	t.Parallel()
 	h := newTestHandler()
 
-	h.elementIndexRegistry.Store("client-a", 0, "gen_a", map[int]string{1: "#a"})
-	h.elementIndexRegistry.Store("client-b", 0, "gen_b", map[int]string{1: "#b"})
-	h.elementIndexRegistry.Store("client-a", 9, "gen_a9", map[int]string{1: "#a9"})
+	h.elementIndexRegistry.Store("client-a", 0, "gen_a", map[int]elemindex.Target{1: {Selector: "#a"}})
+	h.elementIndexRegistry.Store("client-b", 0, "gen_b", map[int]elemindex.Target{1: {Selector: "#b"}})
+	h.elementIndexRegistry.Store("client-a", 9, "gen_a9", map[int]elemindex.Target{1: {Selector: "#a9"}})
 
-	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 1, "")
-	if !ok || sel != "#a" {
-		t.Fatalf("client-a/tab0 selector=%q ok=%v, want #a/true", sel, ok)
+	target, ok, _, _ := h.resolveIndexToTarget("client-a", 0, 1, "")
+	if !ok || target.Selector != "#a" {
+		t.Fatalf("client-a/tab0 selector=%q ok=%v, want #a/true", target.Selector, ok)
 	}
-	sel, ok, _, _ = h.resolveIndexToSelector("client-b", 0, 1, "")
-	if !ok || sel != "#b" {
-		t.Fatalf("client-b/tab0 selector=%q ok=%v, want #b/true", sel, ok)
+	target, ok, _, _ = h.resolveIndexToTarget("client-b", 0, 1, "")
+	if !ok || target.Selector != "#b" {
+		t.Fatalf("client-b/tab0 selector=%q ok=%v, want #b/true", target.Selector, ok)
 	}
-	sel, ok, _, _ = h.resolveIndexToSelector("client-a", 9, 1, "")
-	if !ok || sel != "#a9" {
-		t.Fatalf("client-a/tab9 selector=%q ok=%v, want #a9/true", sel, ok)
+	target, ok, _, _ = h.resolveIndexToTarget("client-a", 9, 1, "")
+	if !ok || target.Selector != "#a9" {
+		t.Fatalf("client-a/tab9 selector=%q ok=%v, want #a9/true", target.Selector, ok)
 	}
 }
 
@@ -413,9 +419,9 @@ func TestResolveIndexToSelector_GenerationMismatch(t *testing.T) {
 	t.Parallel()
 	h := newTestHandler()
 
-	h.elementIndexRegistry.Store("client-a", 0, "gen_new", map[int]string{1: "#a"})
+	h.elementIndexRegistry.Store("client-a", 0, "gen_new", map[int]elemindex.Target{1: {Selector: "#a"}})
 
-	_, ok, stale, latest := h.resolveIndexToSelector("client-a", 0, 1, "gen_old")
+	_, ok, stale, latest := h.resolveIndexToTarget("client-a", 0, 1, "gen_old")
 	if ok {
 		t.Fatal("expected no selector on generation mismatch")
 	}
@@ -430,7 +436,7 @@ func TestResolveIndexToSelector_GenerationMismatch(t *testing.T) {
 func TestHandleDOMPrimitive_IndexGenerationMismatch(t *testing.T) {
 	t.Parallel()
 	h := newTestHandler()
-	h.elementIndexRegistry.Store("client-a", 7, "gen_new", map[int]string{1: "#submit"})
+	h.elementIndexRegistry.Store("client-a", 7, "gen_new", map[int]elemindex.Target{1: {Selector: "#submit"}})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1), ClientID: "client-a"}
 	resp := h.HandleDOMPrimitive(req, json.RawMessage(`{"index":1,"tab_id":7,"index_generation":"gen_old"}`), "click")
@@ -449,67 +455,25 @@ func TestBuildElementIndexFromResponse_ValidElements(t *testing.T) {
 	h := newTestHandler()
 
 	// Simulate a list_interactive response with elements in the JSON
-	elemData := map[string]any{
-		"elements": []any{
-			map[string]any{"index": float64(0), "selector": "#name", "tag": "input"},
-			map[string]any{"index": float64(1), "selector": ".btn-submit", "tag": "button"},
-			map[string]any{"index": float64(2), "selector": "", "tag": "div"}, // empty selector, should be skipped
-		},
-	}
-	elemJSON, _ := json.Marshal(elemData)
-
-	result := mcp.MCPToolResult{
+	elemJSON, _ := json.Marshal(map[string]any{"elements": []any{
+		map[string]any{"index": float64(0), "selector": "#name", "tag": "input"},
+		map[string]any{"index": float64(1), "selector": ".btn-submit", "tag": "button"},
+	}})
+	resultJSON, _ := json.Marshal(mcp.MCPToolResult{
 		Content: []mcp.MCPContentBlock{{Type: "text", Text: "list_interactive results\n" + string(elemJSON)}},
-	}
-	resultJSON, _ := json.Marshal(result)
+	})
 	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	h.buildElementIndexFromResponse("client-a", 0, "gen_1", resp)
 
-	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 0, "")
-	if !ok || sel != "#name" {
-		t.Errorf("index 0: expected #name, got %q (ok=%v)", sel, ok)
+	target, ok, _, _ := h.resolveIndexToTarget("client-a", 0, 0, "")
+	if !ok || target.Selector != "#name" {
+		t.Errorf("index 0: expected #name, got %q (ok=%v)", target.Selector, ok)
 	}
 
-	sel, ok, _, _ = h.resolveIndexToSelector("client-a", 0, 1, "")
-	if !ok || sel != ".btn-submit" {
-		t.Errorf("index 1: expected .btn-submit, got %q (ok=%v)", sel, ok)
-	}
-
-	// Index 2 had empty selector, should not be stored
-	_, ok, _, _ = h.resolveIndexToSelector("client-a", 0, 2, "")
-	if ok {
-		t.Error("index 2 with empty selector should not be stored")
-	}
-}
-
-func TestBuildElementIndexFromResponse_NestedResult(t *testing.T) {
-	t.Parallel()
-	h := newTestHandler()
-
-	// Elements nested under result.result.elements
-	nestedData := map[string]any{
-		"result": map[string]any{
-			"result": map[string]any{
-				"elements": []any{
-					map[string]any{"index": float64(0), "selector": "a.link"},
-				},
-			},
-		},
-	}
-	nestedJSON, _ := json.Marshal(nestedData)
-
-	result := mcp.MCPToolResult{
-		Content: []mcp.MCPContentBlock{{Type: "text", Text: string(nestedJSON)}},
-	}
-	resultJSON, _ := json.Marshal(result)
-	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
-
-	h.buildElementIndexFromResponse("client-a", 0, "gen_1", resp)
-
-	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 0, "")
-	if !ok || sel != "a.link" {
-		t.Errorf("expected a.link from nested result, got %q (ok=%v)", sel, ok)
+	target, ok, _, _ = h.resolveIndexToTarget("client-a", 0, 1, "")
+	if !ok || target.Selector != ".btn-submit" {
+		t.Errorf("index 1: expected .btn-submit, got %q (ok=%v)", target.Selector, ok)
 	}
 }
 
@@ -518,7 +482,7 @@ func TestBuildElementIndexFromResponse_ErrorResponse(t *testing.T) {
 	h := newTestHandler()
 
 	// Pre-populate store
-	h.elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]string{0: "old"})
+	h.elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]elemindex.Target{0: {Selector: "old"}})
 
 	// Error response should not clear the store
 	result := mcp.MCPToolResult{
@@ -530,46 +494,9 @@ func TestBuildElementIndexFromResponse_ErrorResponse(t *testing.T) {
 
 	h.buildElementIndexFromResponse("client-a", 0, "gen_2", resp)
 
-	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 0, "")
-	if !ok || sel != "old" {
-		t.Errorf("error response should not clear store, got %q (ok=%v)", sel, ok)
-	}
-}
-
-func TestExtractElementList_Direct(t *testing.T) {
-	t.Parallel()
-	data := map[string]any{
-		"elements": []any{
-			map[string]any{"index": float64(0), "selector": "#a"},
-		},
-	}
-	elems := act.ExtractElementList(data)
-	if len(elems) != 1 {
-		t.Fatalf("expected 1 element, got %d", len(elems))
-	}
-}
-
-func TestExtractElementList_Nested(t *testing.T) {
-	t.Parallel()
-	data := map[string]any{
-		"result": map[string]any{
-			"elements": []any{
-				map[string]any{"index": float64(0), "selector": "#b"},
-			},
-		},
-	}
-	elems := act.ExtractElementList(data)
-	if len(elems) != 1 {
-		t.Fatalf("expected 1 element from nested, got %d", len(elems))
-	}
-}
-
-func TestExtractElementList_NoElements(t *testing.T) {
-	t.Parallel()
-	data := map[string]any{"foo": "bar"}
-	elems := act.ExtractElementList(data)
-	if elems != nil {
-		t.Error("expected nil for data without elements")
+	target, ok, _, _ := h.resolveIndexToTarget("client-a", 0, 0, "")
+	if !ok || target.Selector != "old" {
+		t.Errorf("error response should not clear store, got %q (ok=%v)", target.Selector, ok)
 	}
 }
 
@@ -761,5 +688,111 @@ func TestClipboardReadNeverEnqueuesWhenGuardsBlock(t *testing.T) {
 	}
 	if state.recordedCount() != 0 {
 		t.Fatalf("blocked clipboard read recorded %d AI actions", state.recordedCount())
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Accessibility refs share the element index's generation rule (kaboom-05ue.10).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// A ref taken before a re-render must be refused after one, not resolved against the new
+// snapshot. Both snapshots hold backend id 412 at different coordinates — Chrome reusing a
+// backendNodeId — so without the generation check the stale ref would click 900,900.
+func TestHandleDOMPrimitive_StaleRefIsRefusedFreshRefClicks(t *testing.T) {
+	h, fs := newFakeDOMActions(t)
+	h.elementIndexRegistry.Store("client-test", 0, "gen_old", map[int]elemindex.Target{
+		0: {AXBackendID: 412, Role: "button", Name: "Add to cart", CenterX: 100, CenterY: 200, HasCenter: true},
+	})
+
+	// Control: quoting the generation the ref was issued under DOES click, at the candidate's
+	// own coordinates and through the coordinate click path.
+	assertOK(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"ref":"ax_412","index_generation":"gen_old"}`), "click"))
+	queued := fs.enqueuedSnapshot()
+	if len(queued) != 1 || queued[0].Type != "cdp_action" {
+		t.Fatalf("fresh ref enqueue = %#v, want one cdp_action", queued)
+	}
+	var params map[string]any
+	if json.Unmarshal(queued[0].Params, &params) != nil || params["x"] != float64(100) || params["y"] != float64(200) {
+		t.Fatalf("fresh ref click params = %s, want a click at (100,200)", queued[0].Params)
+	}
+
+	// The page re-renders. backendNodeId 412 now names a different control.
+	h.elementIndexRegistry.Store("client-test", 0, "gen_new", map[int]elemindex.Target{
+		0: {AXBackendID: 412, Role: "button", Name: "Delete account", CenterX: 900, CenterY: 900, HasCenter: true},
+	})
+
+	resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"ref":"ax_412","index_generation":"gen_old"}`), "click")
+	assertErr(t, resp, mcp.ErrInvalidParam)
+	text := firstText(parseToolResult(t, resp))
+	if !strings.Contains(text, "generation mismatch") || !strings.Contains(text, "gen_new") {
+		t.Fatalf("stale ref refusal = %s, want a generation conflict naming gen_new", text)
+	}
+	if fs.enqueuedCount() != 1 {
+		t.Fatalf("stale ref enqueued %d commands; a refused ref must dispatch nothing", fs.enqueuedCount())
+	}
+}
+
+func TestHandleDOMPrimitive_RefWithNoActionablePointIsRefused(t *testing.T) {
+	h, fs := newFakeDOMActions(t)
+	h.elementIndexRegistry.Store("client-test", 0, "gen_1", map[int]elemindex.Target{
+		0: {AXBackendID: 412, CenterX: 10, CenterY: 20, HasCenter: true},
+		// find could not read this candidate's box, so it has no point to click.
+		1: {AXBackendID: 413, Role: "button", Name: "Collapsed"},
+	})
+
+	// Control: ax_412 IS in this snapshot, has a point, and clicks.
+	assertOK(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"ref":"ax_412"}`), "click"))
+
+	for _, ref := range []string{"ax_999", "ax_413"} {
+		resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"ref":"`+ref+`"}`), "click")
+		assertErr(t, resp, mcp.ErrInvalidParam)
+		if !strings.Contains(firstText(parseToolResult(t, resp)), ref) {
+			t.Fatalf("refusal for %s = %s, want the ref named", ref, firstText(parseToolResult(t, resp)))
+		}
+	}
+	if fs.enqueuedCount() != 1 {
+		t.Fatalf("enqueued %d commands, want only the control click", fs.enqueuedCount())
+	}
+}
+
+// find must publish its candidates into the same generation-stamped index, or its refs stay
+// a second handle space with nothing to catch a stale one.
+func TestHandleFind_StampsCandidatesIntoTheElementIndex(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	fs.waitFn = func(req mcp.JSONRPCRequest, _ string, _ json.RawMessage, _ string) mcp.JSONRPCResponse {
+		return mcp.Succeed(req, "find results", map[string]any{
+			"success": true, "action": "find", "match_count": 1,
+			"candidates": []any{map[string]any{
+				"ref": "ax_412", "role": "button", "name": "Add to cart",
+				"x": float64(300), "y": float64(400), "width": float64(0), "height": float64(0),
+			}},
+		})
+	}
+
+	text := firstText(assertOK(t, h.HandleFind(testReq(), json.RawMessage(`{"query":"add to cart"}`))))
+	payloadStart := strings.Index(text, "{")
+	var data map[string]any
+	if payloadStart < 0 || json.Unmarshal([]byte(text[payloadStart:]), &data) != nil {
+		t.Fatalf("find response carries no JSON payload: %s", text)
+	}
+	generation, _ := data["index_generation"].(string)
+	candidates, _ := data["candidates"].([]any)
+	if generation == "" || len(candidates) != 1 {
+		t.Fatalf("find payload = %#v, want one candidate and an index_generation", data)
+	}
+	if first, _ := candidates[0].(map[string]any); first["index"] != float64(0) {
+		t.Fatalf("candidate 0 = %#v, want index 0 so the caller can quote it", first)
+	}
+
+	target, ok, stale, _ := h.dom.elementIndexRegistry.ResolveRef("client-test", 0, "ax_412", generation)
+	if !ok || stale {
+		t.Fatalf("ResolveRef after find = ok=%v stale=%v, want the candidate resolved", ok, stale)
+	}
+	if target.CenterX != 300 || target.CenterY != 400 || target.Name != "Add to cart" {
+		t.Fatalf("stamped target = %+v, want the candidate find returned", target)
+	}
+	// Control for the refusal: the SAME ref against a generation find never issued is refused.
+	if _, ok, stale, _ := h.dom.elementIndexRegistry.ResolveRef("client-test", 0, "ax_412", "gen_never"); ok || !stale {
+		t.Fatalf("ref under a foreign generation = ok=%v stale=%v, want refused as stale", ok, stale)
 	}
 }

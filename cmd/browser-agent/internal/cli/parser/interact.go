@@ -46,6 +46,7 @@ func interactTargetingFlagSpecs() map[string]cliFlagSpec {
 		"--selector":         {MCPKey: "selector", Kind: FlagString},
 		"--query":            {MCPKey: "query", Kind: FlagString},
 		"--element-id":       {MCPKey: "element_id", Kind: FlagString},
+		"--ref":              {MCPKey: "ref", Kind: FlagString},
 		"--index":            {MCPKey: "index", Kind: FlagInt},
 		"--index-generation": {MCPKey: "index_generation", Kind: FlagString},
 		"--nth":              {MCPKey: "nth", Kind: FlagInt},

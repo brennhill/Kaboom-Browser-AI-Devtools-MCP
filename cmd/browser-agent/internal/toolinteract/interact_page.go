@@ -6,6 +6,7 @@ package toolinteract
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/pagescripts"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -717,7 +718,7 @@ func (h *PageActions) HandleFind(req mcp.JSONRPCRequest, args json.RawMessage) m
 		params.TimeoutMs = axFindTimeoutMaxMs
 	}
 
-	return h.runtime.newCommand("ax_find").
+	resp, correlationID := h.runtime.newCommand("ax_find").
 		correlationPrefix("ax_find").
 		reason("find").
 		queryType("ax_find").
@@ -728,5 +729,61 @@ func (h *PageActions) HandleFind(req mcp.JSONRPCRequest, args json.RawMessage) m
 		tabID(params.TabID).
 		guards(h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking).
 		queuedMessage("find queued").
-		execute(req, args)
+		executeWithCorrelation(req, args)
+
+	generation := h.stampFindCandidates(req.ClientID, params.TabID, correlationID, resp)
+	if generation == "" {
+		return resp
+	}
+	return annotateFindIndexMetadata(resp, params.TabID, generation)
+}
+
+// stampFindCandidates files the candidates under a generation in the shared element index.
+//
+// Until this existed, a ref was a bare ax_<backendNodeId> with no snapshot behind it, so
+// nothing could tell a ref issued for the page as it is now from one issued two renders
+// ago — and Chrome reuses a backendNodeId after destroying the node it named.
+func (h *PageActions) stampFindCandidates(clientID string, tabID int, generation string, resp mcp.JSONRPCResponse) string {
+	block, ok := toolresp.DecodeFirstJSONBlock(resp)
+	if !ok {
+		return ""
+	}
+	candidates := extractFindCandidates(block.Data)
+	if candidates == nil {
+		return ""
+	}
+	return h.dom.storeElementIndex(clientID, tabID, generation, elemindex.TargetsFromCandidates(candidates))
+}
+
+// extractFindCandidates reads the candidate list wherever the command result nested it.
+func extractFindCandidates(data map[string]any) []any {
+	if candidates, ok := data["candidates"].([]any); ok {
+		return candidates
+	}
+	if result, ok := data["result"].(map[string]any); ok {
+		if candidates, ok := result["candidates"].([]any); ok {
+			return candidates
+		}
+	}
+	return nil
+}
+
+// annotateFindIndexMetadata stamps the generation on the response and numbers the candidates.
+//
+// The generation travels with the candidates rather than in a separate lookup, because a
+// token the caller has to fetch separately is a token the caller will not quote.
+func annotateFindIndexMetadata(resp mcp.JSONRPCResponse, tabID int, generation string) mcp.JSONRPCResponse {
+	block, ok := toolresp.DecodeFirstJSONBlock(resp)
+	if !ok {
+		return resp
+	}
+	candidates := extractFindCandidates(block.Data)
+	for position, candidate := range candidates {
+		if fields, ok := candidate.(map[string]any); ok {
+			fields["index"] = position
+		}
+	}
+	block.Data["index_generation"] = generation
+	block.Data["index_scope_tab_id"] = tabID
+	return block.Replace(resp)
 }
