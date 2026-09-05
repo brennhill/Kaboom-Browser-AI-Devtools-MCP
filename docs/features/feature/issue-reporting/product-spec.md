@@ -3,7 +3,7 @@ doc_type: product-spec
 feature_id: feature-issue-reporting
 status: shipped
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-09-05
 links:
   product: ./product-spec.md
   tech: ./tech-spec.md
@@ -17,13 +17,17 @@ last_verified_date: 2026-03-05
 
 ## Purpose
 
-Enable LLMs and users to file sanitized bug reports to GitHub Issues directly from a Kaboom session. Explicit, opt-in exception to Rule 7 ("all data stays local") — the user must approve every submission.
+Enable LLMs and users to file sanitized bug reports to GitHub Issues directly from a Kaboom session. Explicit, opt-in exception to Rule 7 ("all data stays local") — the user must approve every submission, and the approval is carried by `confirm: true` on the submitting call itself.
 
 ## Operations (`operation`)
 
-- `list_templates` — returns available issue categories
-- `preview` (default) — collects diagnostics, sanitizes, shows payload — nothing leaves the machine
-- `submit` — sanitizes and sends via `gh issue create`; falls back to manual if gh unavailable
+- `list_templates` — returns available issue categories; nothing leaves the machine
+- `preview` (default) — collects diagnostics, sanitizes, shows payload; nothing leaves the machine
+- `submit` — requires `confirm: true`. Sanitizes and publishes a **public** issue on `brennhill/Kaboom-Browser-AI-Devtools-MCP` via `gh issue create`, under whichever GitHub account the local `gh` CLI is signed in as; falls back to returning the formatted body if `gh` is unavailable. Without `confirm: true` the call is refused and nothing is sent.
+
+## What `submit` Publishes
+
+Exactly these fields, and nothing else: `title` and `user_context` (both redaction-engine output), Kaboom version, OS/arch/Go version, uptime seconds, total call count, total error count, error rate, extension-connected flag, extension session id, and console/network/action buffer **counts**. No URLs, page content, log lines, or captured request/response bodies. `internal/issuereport.FormatIssueBody` is the single place that builds the outbound body, and its output is pinned character-for-character by `TestSubmitViaGHSendsExactlyTheDocumentedPayload`.
 
 ## Templates
 
@@ -48,6 +52,8 @@ Enable LLMs and users to file sanitized bug reports to GitHub Issues directly fr
 - `IR_PROD_003`: `submit` requires a `title` parameter.
 - `IR_PROD_004`: If `gh` CLI is unavailable, return the formatted body for manual filing.
 - `IR_PROD_005`: Template validation rejects unknown template names.
+- `IR_PROD_006`: `submit` requires `confirm: true` on the same call. Without it the handler refuses before reaching `gh`, and no other operation can reach it. An agent enumerating configure modes must not be able to publish an issue on a user's behalf.
+- `IR_PROD_007`: The `describe_capabilities` text for this mode states that a confirmed `submit` publishes publicly, and names the destination repository. It may not describe the mode as text-only.
 
 ## Non-Goals
 

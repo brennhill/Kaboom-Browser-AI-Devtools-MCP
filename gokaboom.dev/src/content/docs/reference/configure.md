@@ -494,22 +494,28 @@ configure({what: "action_jitter", action_jitter_ms: 0})  // Disable
 
 ---
 
-## report_issue — Submit a GitHub Issue
+## report_issue — Draft, and Optionally Publish, a GitHub Issue
 
 Create or preview a structured issue report directly from the running session. This bundles environment context, recent diagnostics, and your notes.
+
+`list_templates` and `preview` are local: they produce text and send nothing. `submit` is the one Kaboom operation that sends session-derived text off your machine — it runs your local `gh` CLI to file a **public** issue on `brennhill/Kaboom-Browser-AI-Devtools-MCP` under whichever GitHub account `gh` is signed in as. Because of that it requires `confirm: true` on the same call, so an agent exploring configure modes cannot file an issue on your behalf.
 
 ```js
 configure({what: "report_issue", operation: "list_templates"})
 configure({what: "report_issue", operation: "preview", template: "bug", user_context: "Daemon disconnected while replaying"})
-configure({what: "report_issue", operation: "submit", template: "bug", title: "Replay disconnects intermittently", user_context: "Happens after ~20 actions"})
+// Publishes publicly — preview first, and only send this once you have read the body.
+configure({what: "report_issue", operation: "submit", confirm: true, template: "bug", title: "Replay disconnects intermittently", user_context: "Happens after ~20 actions"})
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `operation` | string | `list_templates`, `preview`, or `submit` |
+| `operation` | string | `list_templates`, `preview` (default), or `submit` |
 | `template` | string | Issue template name |
 | `title` | string | Issue title (required for `submit`) |
 | `user_context` | string | Your repro notes/context attached to the report |
+| `confirm` | boolean | Required `true` for `submit`. Without it the call is refused and nothing is sent. |
+
+What `submit` publishes: your `title` and `user_context` (both passed through the redaction engine first), the Kaboom version, OS/arch/Go version, uptime, total call and error counts, the error rate, whether the extension is connected plus its session id, and console/network/action buffer **counts**. No URLs, page content, log lines, or captured request bodies are included — `preview` renders the exact body first.
 
 ## setup_quality_gates — Code Quality Gate Scaffolding
 

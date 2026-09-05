@@ -229,8 +229,12 @@ bash scripts/kaboom-call.sh configure '{"what":"action_jitter","action_jitter_ms
 ```
 
 ## report_issue
-Create and submit issue reports.
-**Params:** operation (list_templates|preview|submit), template (string), title (string), user_context (string)
+Draft a diagnostics issue report locally; `submit` publishes it as a **public** GitHub issue.
+`list_templates` and `preview` send nothing. `operation=submit` runs the local `gh` CLI to file a
+public issue on `brennhill/Kaboom-Browser-AI-Devtools-MCP` under the signed-in GitHub account, so it
+requires `confirm=true` on the same call — never send it while exploring modes, and never without the
+user having read the previewed body.
+**Params:** operation (list_templates|preview|submit), template (string), title (string), user_context (string), confirm (boolean, required true for submit)
 **Example:**
 ```bash
 bash scripts/kaboom-call.sh configure '{"what":"report_issue","operation":"preview","template":"bug","title":"Click fails on modal","user_context":"Happens after popup opens"}'

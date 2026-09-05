@@ -128,7 +128,7 @@ selector parameters and shorthand mode names are rejected.
 | `security_mode` | `toolConfigureSecurityMode` | Get or set security mode (normal / insecure_proxy) |
 | `network_recording` | `toolConfigureNetworkRecording` | Configure network request recording filters |
 | `action_jitter` | `toolConfigureActionJitter` | Set random delay before interact actions |
-| `report_issue` | `issuereport.Handle` | Submit a bug report or issue template |
+| `report_issue` | `issuereport.Handle` | Draft a diagnostics bug report locally; `operation=submit` with `confirm=true` publishes it as a public GitHub issue |
 | `setup_quality_gates` | `qualitygates.Handle` | Install the managed quality-gate configuration |
 | `qa_fixture` | `qafixture.Handler.Handle` | Validate, atomically apply, inspect, or idempotently restore a strict versioned QA environment fixture |
 
@@ -278,7 +278,7 @@ selector parameters and shorthand mode names are rejected.
 - `event_recording_stop`: `recording_id`
 - `playback`: `recording_id`
 - `log_diff`: `original_id`, `replay_id`
-- `report_issue`: `operation`, `template`, `title`, `user_context`
+- `report_issue`: `operation`, `template`, `title`, `user_context`, `confirm` (required `true` for `operation=submit`)
 - `security_mode`: `mode`, `confirm`
 - `describe_capabilities`: `tool`
 - `save_sequence`: `name`, `steps`, `description`, `tags`
