@@ -23,34 +23,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
-)
 
-// Case is one thing a person is asked to judge.
-type Case struct {
-	ID   string `json:"id"`
-	Kind string `json:"kind"`
-	// Tool and Mode are set for kind "mcp_mode" and are what the schema is
-	// checked against.
-	Tool string `json:"tool,omitempty"`
-	Mode string `json:"mode,omitempty"`
-	// Setup is what the person does first. Its job is to create something for the
-	// mode to find: a mode run against a page with nothing to report returns an
-	// empty result, and an empty result is not an error, which is exactly how 95
-	// modes currently pass while asserting nothing.
-	Setup string `json:"setup"`
-	// Question is what they then look at. It must be answerable NO.
-	Question string `json:"question"`
-}
-
-// Inventory is the whole file.
-type Inventory struct {
-	Version int    `json:"version"`
-	Cases   []Case `json:"cases"`
-}
-
-const (
-	kindMCPMode = "mcp_mode"
-	kindSurface = "surface"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/uat/human/inventory"
 )
 
 // repoRoot walks up from the test's directory to the module root.
@@ -70,20 +44,13 @@ func repoRoot(t *testing.T) string {
 	return ""
 }
 
-func loadInventory(t *testing.T) Inventory {
+func loadInventory(t *testing.T) inventory.Inventory {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(repoRoot(t), "scripts", "uat", "human", "cases.json"))
+	loaded, err := inventory.Load(filepath.Join(repoRoot(t), inventory.RelativePath))
 	if err != nil {
-		t.Fatalf("the case inventory is missing; every gate that counts coverage counts against it: %v", err)
+		t.Fatalf("every gate that counts coverage counts against this file: %v", err)
 	}
-	var inventory Inventory
-	if err := json.Unmarshal(raw, &inventory); err != nil {
-		t.Fatalf("the case inventory is not valid JSON: %v", err)
-	}
-	if len(inventory.Cases) == 0 {
-		t.Fatal("the case inventory is empty, so every coverage number computed from it would be a division by zero")
-	}
-	return inventory
+	return loaded
 }
 
 // schemaModes reads the shipped tool list and returns every tool/mode it exposes.
@@ -125,15 +92,15 @@ func schemaModes(t *testing.T) map[string]bool {
 
 func TestEverySchemaModeHasExactlyOneCase(t *testing.T) {
 	t.Parallel()
-	inventory := loadInventory(t)
+	loaded := loadInventory(t)
 	modes := schemaModes(t)
 
 	seen := map[string]int{}
-	for _, c := range inventory.Cases {
-		if c.Kind != kindMCPMode {
+	for _, c := range loaded.Cases {
+		if c.Kind != inventory.KindMCPMode {
 			continue
 		}
-		seen[c.Tool+"/"+c.Mode]++
+		seen[c.SchemaMode()]++
 	}
 
 	var missing, duplicated []string
@@ -160,15 +127,15 @@ func TestEverySchemaModeHasExactlyOneCase(t *testing.T) {
 
 func TestNoCaseNamesAModeThatNoLongerShips(t *testing.T) {
 	t.Parallel()
-	inventory := loadInventory(t)
+	loaded := loadInventory(t)
 	modes := schemaModes(t)
 
 	var stale []string
-	for _, c := range inventory.Cases {
-		if c.Kind != kindMCPMode {
+	for _, c := range loaded.Cases {
+		if c.Kind != inventory.KindMCPMode {
 			continue
 		}
-		if !modes[c.Tool+"/"+c.Mode] {
+		if !modes[c.SchemaMode()] {
 			stale = append(stale, c.ID)
 		}
 	}
@@ -179,48 +146,18 @@ func TestNoCaseNamesAModeThatNoLongerShips(t *testing.T) {
 	}
 }
 
-// requiredSurfaces are the user-facing surfaces with no MCP mode at all.
-//
-// A function rather than a package var so the list cannot be mutated at runtime.
-// These are hand-maintained because nothing in the schema knows about them — which
-// is precisely why they are the parts most likely to ship untested.
-func requiredSurfaces() []string {
-	return []string{
-		"popup/track_this_tab",
-		"popup/pilot_toggle",
-		"popup/connection_status",
-		"popup/recording_controls",
-		"supervision/overlay",
-		"supervision/stop_button",
-		"supervision/phantom_cursor",
-		"tab_group/adoption",
-		"tab_group/session_end",
-		"terminal_panel/open",
-		"terminal_panel/reconnect",
-		"terminal_panel/folder_picker",
-		"side_panel/open",
-		"draw_mode/annotate",
-		"draw_mode/exit",
-		"keyboard/recording_shortcut",
-		"context_menu/track_tab",
-		"screenshots/error_capture",
-		"doctor/diagnostics",
-		"install/first_run",
-	}
-}
-
 func TestEveryNonMCPSurfaceHasACase(t *testing.T) {
 	t.Parallel()
-	inventory := loadInventory(t)
+	loaded := loadInventory(t)
 
 	present := map[string]bool{}
-	for _, c := range inventory.Cases {
-		if c.Kind == kindSurface {
+	for _, c := range loaded.Cases {
+		if c.Kind == inventory.KindSurface {
 			present[c.ID] = true
 		}
 	}
 	var missing []string
-	for _, surface := range requiredSurfaces() {
+	for _, surface := range inventory.RequiredSurfaces() {
 		if !present[surface] {
 			missing = append(missing, surface)
 		}
@@ -231,39 +168,14 @@ func TestEveryNonMCPSurfaceHasACase(t *testing.T) {
 	}
 }
 
-// unfalsifiableWording is the vocabulary of questions that cannot come out NO.
-//
-// "Does it work?" is answered yes by a mode that returned an empty result, which is
-// the exact failure this rig exists to end: 151 of 174 modes currently pass on
-// "the response is not an MCP error".
-func unfalsifiableWording() []string {
-	return []string{
-		"does it work",
-		"work correctly",
-		"work as expected",
-		"as expected",
-		"verify that",
-		"validate that",
-		"successfully",
-		"without errors",
-		"without error",
-		"no errors occur",
-		"behaves correctly",
-		"is correct",
-	}
-}
-
 func TestNoQuestionIsUnfalsifiable(t *testing.T) {
 	t.Parallel()
-	inventory := loadInventory(t)
+	loaded := loadInventory(t)
 
 	var problems []string
-	for _, c := range inventory.Cases {
-		lower := strings.ToLower(c.Question)
-		for _, phrase := range unfalsifiableWording() {
-			if strings.Contains(lower, phrase) {
-				problems = append(problems, fmt.Sprintf("%s: %q contains %q", c.ID, c.Question, phrase))
-			}
+	for _, c := range loaded.Cases {
+		if phrase, banned := inventory.UnfalsifiablePhrase(c.Question); banned {
+			problems = append(problems, fmt.Sprintf("%s: %q contains %q", c.ID, c.Question, phrase))
 		}
 	}
 	sort.Strings(problems)
@@ -274,10 +186,10 @@ func TestNoQuestionIsUnfalsifiable(t *testing.T) {
 
 func TestNoTwoCasesAskTheSameQuestion(t *testing.T) {
 	t.Parallel()
-	inventory := loadInventory(t)
+	loaded := loadInventory(t)
 
 	byQuestion := map[string][]string{}
-	for _, c := range inventory.Cases {
+	for _, c := range loaded.Cases {
 		key := strings.ToLower(strings.TrimSpace(c.Question))
 		byQuestion[key] = append(byQuestion[key], c.ID)
 	}
@@ -299,11 +211,11 @@ func TestNoTwoCasesAskTheSameQuestion(t *testing.T) {
 
 func TestEveryCaseIsAnswerableAsWritten(t *testing.T) {
 	t.Parallel()
-	inventory := loadInventory(t)
+	loaded := loadInventory(t)
 
 	var problems []string
 	seenID := map[string]bool{}
-	for _, c := range inventory.Cases {
+	for _, c := range loaded.Cases {
 		if c.ID == "" {
 			problems = append(problems, "a case has no id")
 			continue
@@ -312,7 +224,7 @@ func TestEveryCaseIsAnswerableAsWritten(t *testing.T) {
 			problems = append(problems, c.ID+": duplicate id")
 		}
 		seenID[c.ID] = true
-		if c.Kind != kindMCPMode && c.Kind != kindSurface {
+		if c.Kind != inventory.KindMCPMode && c.Kind != inventory.KindSurface {
 			problems = append(problems, fmt.Sprintf("%s: unknown kind %q", c.ID, c.Kind))
 		}
 		// The setup is what creates something to find. Without it the mode runs
@@ -339,10 +251,10 @@ func TestTheContractItselfDiscriminates(t *testing.T) {
 	// to load would make each of them pass vacuously. loadInventory fails the test
 	// rather than returning empty, and this asserts the inventory it returns is the
 	// real one — enough cases to cover the schema, not a stub.
-	inventory := loadInventory(t)
+	loaded := loadInventory(t)
 	modes := schemaModes(t)
-	if len(inventory.Cases) < len(modes) {
+	if len(loaded.Cases) < len(modes) {
 		t.Fatalf("the inventory holds %d cases for %d shipped modes plus %d non-MCP surfaces; it cannot be covering them",
-			len(inventory.Cases), len(modes), len(requiredSurfaces()))
+			len(loaded.Cases), len(modes), len(inventory.RequiredSurfaces()))
 	}
 }

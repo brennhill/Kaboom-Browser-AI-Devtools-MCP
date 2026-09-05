@@ -104,3 +104,4 @@ scripts/smoke-tests/framework/framework-fixtures/next-app/out/
 .beads/proxieddb/
 # bd rewrites this session-interaction log constantly; keep it local, not tracked.
 .beads/interactions.jsonl
+uat-runs/

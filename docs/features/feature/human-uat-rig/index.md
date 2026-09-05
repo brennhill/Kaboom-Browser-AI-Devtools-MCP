@@ -7,8 +7,19 @@ owners: []
 last_reviewed: 2026-09-05
 code_paths:
   - scripts/uat/human/cases.json
+  - scripts/uat/human/inventory/inventory.go
+  - scripts/uat/human/runner/main.go
+  - scripts/uat/human/runner/session.go
+  - scripts/uat/human/runner/prompt.go
+  - scripts/uat/human/runner/record.go
+  - scripts/uat/human/runner/mcpclient.go
 test_paths:
   - scripts/contracts/humanuat/main_test.go
+  - scripts/uat/human/inventory/inventory_test.go
+  - scripts/uat/human/runner/session_test.go
+  - scripts/uat/human/runner/prompt_test.go
+  - scripts/uat/human/runner/record_test.go
+  - scripts/uat/human/runner/mcpclient_test.go
 ---
 
 # Human UAT Rig
@@ -104,3 +115,31 @@ discrepancies surfaced that no gate catches:
 - `kaboom-hikz` — the reachability-only sweep this supersedes; every mode listed there
   as sweep-only gets a real behavioral question here
 - `kaboom-xcfs` — 1 of 34 UAT categories runs in CI
+
+## Running it
+
+```bash
+make uat-human                 # every unanswered case, resumable
+make uat-human FILTER=observe/ # one slice
+make uat-human-list            # what is still unanswered
+```
+
+The runner drives `kaboom-mcp` from PATH — the binary a user's agent drives, not
+the Go functions behind it — and appends one JSON record per case to
+`uat-runs/<date>.jsonl`. Rerunning the same command skips what is already
+answered, so a 194-case pass can be done over several sittings.
+
+Each record carries the request sent, the response received, the person's
+verdict and note, the evidence paths, and the build SHA that was judged. Two
+runs of the same inventory diff line by line, so a regression appears as a
+verdict flipping rather than as a reordered file.
+
+Four answers, and no default: PASS, FAIL, BLOCKED, SKIP. An empty line is not a
+pass — holding return through a run leaves every case unanswered rather than
+green. FAIL and BLOCKED require a note, because a red case without one cannot be
+turned into a regression test. SKIP is recorded but never counts as coverage.
+
+Evidence (screenshot, console, network) is captured before and after every call
+and beside every surface case. A probe that cannot run writes a `.error` file
+saying why: an empty evidence directory is ambiguous between "capture failed"
+and "capture was off", and those lead to opposite conclusions about a FAIL.

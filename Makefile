@@ -22,7 +22,7 @@ PLATFORMS := \
 	windows-amd64
 
 .PHONY: all clean build test test-js test-fast test-all test-go-quick test-go-long test-go-sharded test-performance test-race test-cover test-integration test-cover-integration test-cover-all test-bench fuzz-smoke fuzz-nightly mutation-test \
-	dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
+	uat uat-human uat-human-list dev run checksums verify-zero-deps verify-imports verify-size check-file-length \
 	lint lint-go lint-js lint-dead lint-dead-go lint-dead-ts format format-fix typecheck check check-wire-drift check-command-contract check-ts-json-casing check-openapi-types check-invariants check-schema ci \
 	ci-local ci-go ci-js ci-security ci-e2e ci-bench \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
@@ -54,6 +54,15 @@ GITLEAKS_BIN := $(GO_TOOL_BIN)/gitleaks
 
 uat:
 	./scripts/uat/runners/test-all-tools-comprehensive.sh --suite all
+
+# Human UAT: a person answers one pass/fail question per mode and surface.
+# Resumable — rerun the same command to pick up where you stopped.
+# FILTER=observe/ runs one slice; make uat-human-list shows what is left.
+uat-human:
+	@go run ./scripts/uat/human/runner --filter "$(FILTER)" $(UAT_HUMAN_FLAGS)
+
+uat-human-list:
+	@go run ./scripts/uat/human/runner --dry-run --filter "$(FILTER)"
 
 all: validate-semver clean build
 

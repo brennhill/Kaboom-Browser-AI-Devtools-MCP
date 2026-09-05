@@ -2156,6 +2156,10 @@
     "internal/workflowverify/runner.go": {
       "mutable_globals": 0,
       "exports": 13
+    },
+    "scripts/uat/human/inventory/inventory.go": {
+      "mutable_globals": 0,
+      "exports": 11
     }
   }
 }
