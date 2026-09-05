@@ -66,7 +66,7 @@ describe('dataUrlToBlob (#597 crop decode)', () => {
   let dataUrlToBlob
 
   beforeEach(async () => {
-    ;({ dataUrlToBlob } = await import('../../../extension/background/commands/observe.js'))
+    ;({ dataUrlToBlob } = await import('../../../extension/lib/screenshot/image-size.js'))
   })
 
   test('decodes a base64 data URL into a Blob with the right type and bytes', async () => {

@@ -16,6 +16,7 @@ import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { DebugCategory, debugLog } from '../debug.js'
 import { cdpSessions, CDP_SESSION_ERRORS, type Lease } from '../dom/cdp/cdp-session.js'
 import { setKaboomOverlayVisibility } from './content-script-bridge.js'
+import type { CoveredCssRegion } from '../../lib/screenshot/coordinate-frame.js'
 
 export interface TrackedTabInfo {
   trackedTabId: number | null
@@ -90,7 +91,7 @@ export async function captureTabImage(
   tabId: number,
   windowId: number,
   options: TabCaptureOptions
-): Promise<string> {
+): Promise<TabCapture> {
   await setKaboomOverlayVisibility(tabId, false)
   try {
     // A tab that is already the active one in its window is reachable through
@@ -100,19 +101,19 @@ export async function captureTabImage(
     // fires on any page error, so that banner would appear unprompted while someone is
     // simply using their browser. CDP is for tabs the user is NOT looking at.
     const alreadyVisible = await captureIfActive(tabId, windowId, options)
-    if (alreadyVisible !== null) return alreadyVisible
+    if (alreadyVisible !== null) return visibleTabCapture(alreadyVisible)
 
     const sessions = cdpSessions()
     if (!sessions) {
       reportForegroundFallback(tabId, 'no_debugger_api', 'chrome.debugger is not available in this context')
-      return await captureVisibleTabActivating(tabId, windowId, options)
+      return visibleTabCapture(await captureVisibleTabActivating(tabId, windowId, options))
     }
     try {
       return await captureOverCDP(await sessions.acquire(tabId), options)
     } catch (err) {
       reportForegroundFallback(tabId, classifyCaptureFailure(err), errorMessage(err))
     }
-    return await captureVisibleTabActivating(tabId, windowId, options)
+    return visibleTabCapture(await captureVisibleTabActivating(tabId, windowId, options))
   } finally {
     await setKaboomOverlayVisibility(tabId, true)
   }
@@ -180,6 +181,24 @@ function reportForegroundFallback(tabId: number, reason: ForegroundFallbackReaso
   )
 }
 
+/**
+ * One capture, plus the CSS region it actually photographed.
+ *
+ * The region travels with the image because only the path that took it knows what
+ * it covers: the CDP path clips to `cssVisualViewport`, which excludes scrollbars,
+ * while `captureVisibleTab` photographs the whole visible viewport. Those differ by
+ * the scrollbar width, and a coordinate frame built from the wrong one misplaces
+ * every click near the right or bottom edge of the image by that much.
+ *
+ * `covered_css_region` is null when the path cannot report one, which means "the
+ * visible viewport as the page reports it" — see coveredRegionFor.
+ */
+export interface TabCapture {
+  readonly data_url: string
+  readonly covered_css_region: CoveredCssRegion | null
+  readonly source: 'cdp' | 'visible_tab'
+}
+
 /** Clip rectangle in CSS pixels plus the scale that turns it into device pixels. */
 interface ViewportClip {
   x: number
@@ -197,7 +216,7 @@ interface ViewportClip {
  * `observe(screenshot, selector)` crops by that same ratio, and a 1x image would place the
  * crop at half the intended coordinates.
  */
-async function captureOverCDP(lease: Lease, options: TabCaptureOptions): Promise<string> {
+async function captureOverCDP(lease: Lease, options: TabCaptureOptions): Promise<TabCapture> {
   try {
     const clip = await resolveViewportClip(lease)
     const shot = (await lease.send('Page.captureScreenshot', {
@@ -208,10 +227,26 @@ async function captureOverCDP(lease: Lease, options: TabCaptureOptions): Promise
     if (typeof shot?.data !== 'string' || shot.data.length === 0) {
       throw new Error('cdp_capture_empty: Page.captureScreenshot returned no image data')
     }
-    return `data:image/${options.format === 'png' ? 'png' : 'jpeg'};base64,${shot.data}`
+    return {
+      data_url: `data:image/${options.format === 'png' ? 'png' : 'jpeg'};base64,${shot.data}`,
+      // The clip's x/y are PAGE coordinates (the scroll offset); the image's top-left
+      // is still the viewport's top-left, so the region in viewport coordinates
+      // starts at the origin. Its size is cssVisualViewport's client box, which is
+      // the viewport minus any classic scrollbars.
+      covered_css_region: clip ? { x: 0, y: 0, width: clip.width, height: clip.height } : null,
+      source: 'cdp'
+    }
   } finally {
     lease.release()
   }
+}
+
+/**
+ * Wrap a captureVisibleTab image. It photographs the visible viewport and reports
+ * no bounds of its own, so the frame falls back to what the page reports.
+ */
+function visibleTabCapture(dataUrl: string): TabCapture {
+  return { data_url: dataUrl, covered_css_region: null, source: 'visible_tab' }
 }
 
 async function resolveViewportClip(lease: Lease): Promise<ViewportClip | null> {

@@ -39,8 +39,9 @@ describe('captureTabImage — no-debugger fallback', () => {
   })
 
   test('captures the visible tab and restores the tab the user had', async () => {
-    const dataUrl = await captureTabImage(7, 11, { format: 'jpeg', quality: 80 })
-    assert.strictEqual(dataUrl, 'data:image/jpeg;base64,VklTSUJMRQ==')
+    const capture = await captureTabImage(7, 11, { format: 'jpeg', quality: 80 })
+    assert.strictEqual(capture.data_url, 'data:image/jpeg;base64,VklTSUJMRQ==')
+    assert.strictEqual(capture.source, 'visible_tab')
     assert.deepStrictEqual(globalThis.chrome.tabs.captureVisibleTab.mock.calls[0].arguments, [
       11,
       { format: 'jpeg', quality: 80 }

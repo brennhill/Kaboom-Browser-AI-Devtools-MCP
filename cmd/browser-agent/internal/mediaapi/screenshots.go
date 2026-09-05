@@ -15,6 +15,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/screenshotframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -96,6 +97,11 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 		URL           string `json:"url"`
 		CorrelationID string `json:"correlation_id"`
 		QueryID       string `json:"query_id"`
+		// CoordinateFrame ties the image's pixels to the coordinates click,
+		// hover_at and scroll_at accept. Absent when the extension could not
+		// measure one, in which case CoordinateFrameError says why.
+		CoordinateFrame      *screenshotframe.WireCoordinateFrame `json:"coordinate_frame"`
+		CoordinateFrameError string                               `json:"coordinate_frame_error"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
@@ -127,12 +133,13 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 	if body.QueryID != "" && h.capture != nil {
 		// Include data_url in query result so observe(what="screenshot") can return inline image.
 		// The HTTP response intentionally omits it to keep the /screenshots response lean.
-		queryResult := map[string]string{
+		queryResult := map[string]any{
 			"filename":       filename,
 			"path":           savePath,
 			"correlation_id": body.CorrelationID,
 			"data_url":       body.DataURL,
 		}
+		addCoordinateFrame(queryResult, body.CoordinateFrame, body.CoordinateFrameError)
 		// Error impossible: map contains only primitive types from input
 		resultJSON, _ := json.Marshal(queryResult)
 		h.capture.Queries().SetQueryResult(body.QueryID, resultJSON)
@@ -156,4 +163,26 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	util.JSONResponse(w, http.StatusOK, result)
+}
+
+// addCoordinateFrame attaches the frame that makes a screenshot addressable, or the
+// reason it is absent.
+//
+// A frame that fails validation is DROPPED and reported rather than forwarded. It
+// would otherwise look exactly like a good one to the caller — a scale of zero is
+// still a number — and every coordinate read off the image would land on the same
+// point with nothing to say why. Absent-and-explained is a state a caller can
+// handle; present-and-wrong is a misclick.
+func addCoordinateFrame(result map[string]any, frame *screenshotframe.WireCoordinateFrame, reason string) {
+	if frame == nil {
+		if reason != "" {
+			result["coordinate_frame_error"] = reason
+		}
+		return
+	}
+	if err := frame.Validate(); err != nil {
+		result["coordinate_frame_error"] = "unusable frame from the extension: " + err.Error()
+		return
+	}
+	result["coordinate_frame"] = frame.WithNote()
 }

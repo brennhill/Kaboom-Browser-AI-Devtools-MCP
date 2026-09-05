@@ -22,9 +22,11 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/screenshotframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/wirecodec"
 )
 
 // browserActionHandler is a browser-action entry point bound to its receiver at call time.
@@ -610,10 +612,47 @@ func zoomRegionResponse(req mcp.JSONRPCRequest, raw json.RawMessage) mcp.JSONRPC
 		return mcp.Fail(req, mcp.ErrExtError, "zoom_region capture failed: "+strings.TrimSpace(message),
 			"Confirm the region is inside the viewport and the tab allows debugger attachment.")
 	}
+	attachZoomCoordinateFrame(payload)
 	dataURL := act.ExtractCapturedDataURL(payload)
 	resp := mcp.Succeed(req, "Region captured", payload)
 	base64Data, mimeType := util.SplitDataURL(dataURL)
 	return mcp.AppendImageToResponse(resp, base64Data, mimeType)
+}
+
+// attachZoomCoordinateFrame validates the frame the extension measured and stamps
+// the note that states its arithmetic, or replaces it with the reason it cannot be
+// used.
+//
+// The same refusal /screenshots makes: a frame with a zero scale looks exactly like
+// a good one to the caller and sends every coordinate read off the zoomed image to
+// the same point. Absent-and-explained is recoverable; present-and-wrong is a
+// misclick with a number attached.
+func attachZoomCoordinateFrame(payload map[string]any) {
+	raw, present := payload["coordinate_frame"]
+	if !present {
+		return
+	}
+	encoded, err := json.Marshal(raw)
+	if err != nil {
+		delete(payload, "coordinate_frame")
+		payload["coordinate_frame_error"] = "frame from the extension could not be re-encoded: " + err.Error()
+		return
+	}
+	// Through wirecodec, not encoding/json: a body sharing no keys with the frame
+	// decodes silently into a zero value, and a zero frame is a scale of zero — a
+	// mapping that sends every coordinate on the image to the same point.
+	frame, err := wirecodec.Decode[screenshotframe.WireCoordinateFrame](encoded)
+	if err != nil {
+		delete(payload, "coordinate_frame")
+		payload["coordinate_frame_error"] = "frame from the extension could not be read: " + err.Error()
+		return
+	}
+	if err := frame.Validate(); err != nil {
+		delete(payload, "coordinate_frame")
+		payload["coordinate_frame_error"] = "unusable frame from the extension: " + err.Error()
+		return
+	}
+	payload["coordinate_frame"] = frame.WithNote()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

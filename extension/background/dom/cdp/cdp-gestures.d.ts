@@ -8,6 +8,7 @@
  *      coalesce.
  * Docs: docs/features/feature/interact-explore/index.md
  */
+import { readPageViewportMetrics } from '../../../lib/screenshot/coordinate-frame.js';
 export interface GesturePoint {
     x: number;
     y: number;
@@ -129,4 +130,19 @@ export declare function deliverZoomRegion(send: CDPSend, params: GestureParams &
     tabId: number;
     queryId: string;
 }): Promise<Record<string, unknown>>;
+/**
+ * Translate the caller's VIEWPORT rectangle into the PAGE rectangle CDP clips by.
+ *
+ * `Page.captureScreenshot`'s clip is in document coordinates — this file's own
+ * viewport capture proves it, passing `cssVisualViewport.pageX/pageY` as the clip
+ * origin to photograph the visible area. zoom_region documents its x and y as
+ * viewport pixels, which is the only sensible contract for a region read off a
+ * screenshot, so the scroll offset has to be added here. Without it, zooming
+ * (320,180) on a page scrolled 900px down captures a rectangle 900px above the one
+ * the caller pointed at, and every zoom on a scrolled page inspects the wrong
+ * content while looking entirely successful.
+ */
+export declare function pageClipFor(clip: ZoomRegionClip, metrics: ZoomViewportMetrics | null): ZoomRegionClip;
+/** The page measurements a zoom needs: where it is scrolled to, and how big it is. */
+export type ZoomViewportMetrics = ReturnType<typeof readPageViewportMetrics>;
 //# sourceMappingURL=cdp-gestures.d.ts.map

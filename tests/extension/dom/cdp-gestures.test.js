@@ -410,9 +410,34 @@ describe('deliverZoomRegion', () => {
     ;({ deliverZoomRegion } = await import(CDP))
   })
 
-  function stubBrowser(response) {
-    globalThis.chrome = { tabs: { get: async () => ({ url: 'https://example.test/a' }) } }
+  /**
+   * @param response what the daemon returns for the capture upload
+   * @param metrics what the injected viewport probe reports, or null to make it fail
+   */
+  function stubBrowser(response, metrics = null) {
+    globalThis.chrome = {
+      tabs: { get: async () => ({ url: 'https://example.test/a' }) },
+      scripting: {
+        executeScript: async () => {
+          if (!metrics) throw new Error('probe blocked')
+          return [{ result: metrics }]
+        }
+      }
+    }
     globalThis.fetch = async () => response
+  }
+
+  /** A page scrolled 900px down in a 1280x720 viewport. */
+  function scrolledMetrics() {
+    return {
+      viewport_width: 1280,
+      viewport_height: 720,
+      scroll_x: 0,
+      scroll_y: 900,
+      document_width: 1280,
+      document_height: 4000,
+      device_pixel_ratio: 2
+    }
   }
 
   function restoreBrowser() {
@@ -439,6 +464,75 @@ describe('deliverZoomRegion', () => {
       assert.equal(result.path, '/tmp/shot.png')
       assert.equal(result.data_url, 'data:image/png;base64,QUJD')
       assert.deepEqual(result.clip, { x: 10, y: 20, width: 100, height: 50, scale: 2 })
+    } finally {
+      restoreBrowser()
+    }
+  })
+
+  test('a zoom on a scrolled page clips the region the caller pointed at', async () => {
+    // zoom_region documents x and y as VIEWPORT pixels; Page.captureScreenshot clips
+    // in DOCUMENT coordinates (this file's own viewport capture passes
+    // cssVisualViewport.pageX/pageY as the clip origin to photograph the visible
+    // area). Without the translation, zooming (320,180) on a page scrolled 900px
+    // down captures a rectangle 900px above the one the caller pointed at and
+    // reports success, so the agent inspects the wrong content and acts on it.
+    let sentClip = null
+    stubBrowser(
+      { ok: true, status: 200, json: async () => ({ filename: 's.png', path: '/tmp/s.png' }) },
+      scrolledMetrics()
+    )
+    try {
+      const result = await deliverZoomRegion(
+        async (_method, params) => {
+          sentClip = params.clip
+          return { data: 'QUJD' }
+        },
+        { x: 320, y: 180, width: 400, height: 220 },
+        { tabId: 7, queryId: 'q-scroll' }
+      )
+      assert.deepEqual(sentClip, { x: 320, y: 1080, width: 400, height: 220, scale: 1 })
+      // The caller's own coordinates come back unchanged, so the result still
+      // describes the region that was asked for.
+      assert.deepEqual(result.clip, { x: 320, y: 180, width: 400, height: 220, scale: 1 })
+      assert.deepEqual(result.page_clip, sentClip)
+    } finally {
+      restoreBrowser()
+    }
+  })
+
+  test('an unscrolled page sends the caller coordinates unchanged', async () => {
+    // Discriminating control: the translation must be the scroll offset and not a
+    // constant. Without this arm the assertion above would hold for any offset.
+    let sentClip = null
+    stubBrowser({ ok: true, status: 200, json: async () => ({ filename: 's.png', path: '/tmp/s.png' }) }, {
+      ...scrolledMetrics(),
+      scroll_y: 0
+    })
+    try {
+      await deliverZoomRegion(
+        async (_method, params) => {
+          sentClip = params.clip
+          return { data: 'QUJD' }
+        },
+        { x: 320, y: 180, width: 400, height: 220 },
+        { tabId: 7, queryId: 'q-top' }
+      )
+      assert.deepEqual(sentClip, { x: 320, y: 180, width: 400, height: 220, scale: 1 })
+    } finally {
+      restoreBrowser()
+    }
+  })
+
+  test('a blocked viewport probe reports no frame rather than a wrong one', async () => {
+    stubBrowser({ ok: true, status: 200, json: async () => ({ filename: 's.png', path: '/tmp/s.png' }) }, null)
+    try {
+      const result = await deliverZoomRegion(
+        async () => ({ data: 'QUJD' }),
+        { x: 0, y: 0, width: 10, height: 10 },
+        { tabId: 7, queryId: 'q-noprobe' }
+      )
+      assert.equal(result.coordinate_frame, undefined)
+      assert.equal(result.coordinate_frame_error, 'viewport_metrics_unavailable')
     } finally {
       restoreBrowser()
     }

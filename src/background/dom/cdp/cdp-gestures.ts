@@ -17,6 +17,8 @@ import { errorMessage } from '../../../lib/error-utils.js'
 import { postDaemonJSON } from '../../../lib/daemon-http.js'
 import { getServerUrl } from '../../runtime-state/settings-state.js'
 import { modifierBitmask } from './cdp-key-mappings.js'
+import { buildCoordinateFrame, readPageViewportMetrics } from '../../../lib/screenshot/coordinate-frame.js'
+import { measureImageSize } from '../../../lib/screenshot/image-size.js'
 
 export interface GesturePoint {
   x: number
@@ -389,7 +391,9 @@ export async function deliverZoomRegion(
   params: GestureParams & { x?: number; y?: number },
   target: { tabId: number; queryId: string }
 ): Promise<Record<string, unknown>> {
-  const clip = normalizeZoomClip(params)
+  const requested = normalizeZoomClip(params)
+  const metrics = await readZoomViewportMetrics(target.tabId)
+  const clip = pageClipFor(requested, metrics)
   const dataUrl = await captureZoomRegion(send, clip)
   const tab = await chrome.tabs.get(target.tabId)
   const response = await postDaemonJSON(`${getServerUrl()}/screenshots`, {
@@ -405,9 +409,73 @@ export async function deliverZoomRegion(
     success: true,
     action: 'zoom_region',
     method: 'cdp',
-    clip,
+    clip: requested,
+    page_clip: clip,
     filename: saved?.filename,
     path: saved?.path,
-    data_url: dataUrl
+    data_url: dataUrl,
+    ...(await zoomRegionFrame(dataUrl, requested, metrics))
   }
+}
+
+/**
+ * Translate the caller's VIEWPORT rectangle into the PAGE rectangle CDP clips by.
+ *
+ * `Page.captureScreenshot`'s clip is in document coordinates — this file's own
+ * viewport capture proves it, passing `cssVisualViewport.pageX/pageY` as the clip
+ * origin to photograph the visible area. zoom_region documents its x and y as
+ * viewport pixels, which is the only sensible contract for a region read off a
+ * screenshot, so the scroll offset has to be added here. Without it, zooming
+ * (320,180) on a page scrolled 900px down captures a rectangle 900px above the one
+ * the caller pointed at, and every zoom on a scrolled page inspects the wrong
+ * content while looking entirely successful.
+ */
+export function pageClipFor(clip: ZoomRegionClip, metrics: ZoomViewportMetrics | null): ZoomRegionClip {
+  if (!metrics) return clip
+  return { ...clip, x: clip.x + metrics.scroll_x, y: clip.y + metrics.scroll_y }
+}
+
+/** The page measurements a zoom needs: where it is scrolled to, and how big it is. */
+export type ZoomViewportMetrics = ReturnType<typeof readPageViewportMetrics>
+
+/**
+ * Read the page's metrics, or null when the probe cannot run.
+ *
+ * Null is load-bearing twice over: the clip falls back to the caller's coordinates
+ * untranslated (the un-scrolled case, where the two spaces coincide) and the result
+ * carries no coordinate frame. Both are reported rather than guessed.
+ */
+async function readZoomViewportMetrics(tabId: number): Promise<ZoomViewportMetrics | null> {
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: 'MAIN',
+      func: readPageViewportMetrics
+    })
+    return (res[0]?.result as ZoomViewportMetrics | undefined) ?? null
+  } catch (err) {
+    console.warn(`${KABOOM_LOG_PREFIX} zoom_region: viewport probe failed, capturing untranslated —`, errorMessage(err))
+    return null
+  }
+}
+
+/**
+ * The coordinate frame for a zoomed region, so a detail read off the enlarged image
+ * can be clicked without the caller undoing the supersampling by hand.
+ */
+async function zoomRegionFrame(
+  dataUrl: string,
+  requested: ZoomRegionClip,
+  metrics: ZoomViewportMetrics | null
+): Promise<Record<string, unknown>> {
+  if (!metrics) return { coordinate_frame_error: 'viewport_metrics_unavailable' }
+  const measured = await measureImageSize(dataUrl)
+  if ('reason' in measured) return { coordinate_frame_error: measured.reason }
+  const frame = buildCoordinateFrame('region', metrics, measured.size, {
+    x: requested.x,
+    y: requested.y,
+    width: requested.width,
+    height: requested.height
+  })
+  return frame ? { coordinate_frame: frame } : { coordinate_frame_error: 'unmeasurable_region' }
 }

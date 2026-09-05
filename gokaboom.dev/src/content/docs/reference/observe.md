@@ -212,6 +212,63 @@ observe({what: "screenshot", full_page: true})
 
 <!-- Screenshot: Example of observe screenshot output showing a web page capture -->
 
+#### Clicking what you can see: `coordinate_frame`
+
+Every screenshot comes back with a `coordinate_frame` that turns a pixel in the
+image into a coordinate `interact` will accept. Without it the image is in device
+pixels while `click`, `hover_at` and `scroll_at` take CSS pixels relative to the
+viewport — on a retina display those differ by 2x, which arrives as random
+misclicks rather than as an error.
+
+```json
+{
+  "capture": "viewport",
+  "image_width": 2560, "image_height": 1440,
+  "viewport_width": 1280, "viewport_height": 720,
+  "scroll_x": 0, "scroll_y": 900,
+  "document_width": 1280, "document_height": 4000,
+  "device_pixel_ratio": 2,
+  "clipped": true,
+  "image_to_viewport": { "scale_x": 0.5, "scale_y": 0.5, "offset_x": 0, "offset_y": 0 },
+  "viewport_bounds_in_image": { "x": 0, "y": 0, "width": 2560, "height": 1440 },
+  "note": "Read a target's pixel (image_x, image_y) off the image, then act at …"
+}
+```
+
+Read a target's pixel off the image, then act at:
+
+```
+x = image_x * image_to_viewport.scale_x + image_to_viewport.offset_x
+y = image_y * image_to_viewport.scale_y + image_to_viewport.offset_y
+```
+
+```js
+// A button at image pixel (800, 600) of a 2x capture:
+interact({what: "click", x: 400, y: 300})
+```
+
+Points worth knowing:
+
+- **The scale is measured, not assumed.** It is the CSS extent the image covers
+  divided by the image's real pixel size, so it stays correct under browser zoom and
+  across every capture path. `device_pixel_ratio` is reported as context; it is not
+  the mapping.
+- **Both axes are reported.** A `full_page` capture of a very long page is clamped
+  to Chrome's 16384px texture limit and is squashed on one axis only.
+- **`full_page` images are in document coordinates.** Their `offset_y` is the
+  negative scroll offset, so a point above the current scroll position maps to a
+  negative `y`: scroll to it before acting. `viewport_bounds_in_image` is the part of
+  the image that is on screen right now.
+- **`clipped: true` means the image left part of the document out**, so a target you
+  cannot find may be below the fold rather than absent.
+- **An absent frame is honest.** When the page's metrics cannot be read or the image
+  cannot be decoded, the response carries `coordinate_frame_error` and no frame,
+  rather than numbers that would misplace every click. The image is still returned.
+
+To inspect a region closely before committing to a click, use
+[`interact zoom_region`](/reference/interact/#zoom_region), which returns its own
+`coordinate_frame` in the same viewport coordinate space.
+
 ### `pilot`
 
 Current state of AI Web Pilot — whether browser control is enabled or disabled.

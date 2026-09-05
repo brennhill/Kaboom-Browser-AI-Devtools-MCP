@@ -37,9 +37,4 @@ export declare function computeElementCropRect(rect: {
     sw: number;
     sh: number;
 } | null;
-/**
- * Decode a base64 `data:` URL into a Blob without fetch(). Service workers do not
- * reliably allow `fetch('data:...')`, so this keeps the crop path self-contained.
- */
-export declare function dataUrlToBlob(dataUrl: string): Blob;
 //# sourceMappingURL=observe.d.ts.map

@@ -2,9 +2,6 @@
  * Purpose: Command handlers for the observe MCP tool (screenshot capture, network waterfall, page info, tab listing).
  * Docs: docs/features/feature/observe/index.md
  */
-// observe.ts — Command handlers for the observe MCP tool.
-// Handles: screenshot, waterfall, page_info, tabs.
-import { getServerUrl } from '../runtime-state/settings-state.js';
 import { DebugCategory, debugLog } from '../debug.js';
 import { recordScreenshot } from '../caches/cache-limits.js';
 import { domPrimitiveListInteractive } from '../dom/primitives/dom-primitives-list-interactive.js';
@@ -13,9 +10,10 @@ import { collectCommandElements, commandPageMetadata, selectCommandElements } fr
 import { errorMessage } from '../../lib/error-utils.js';
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
 import { delay } from '../../lib/timeout-utils.js';
-import { postDaemonJSON } from '../../lib/daemon-http.js';
 import { captureTabImage } from '../ui/tracked-tab-state.js';
 import { cdpSessions } from '../dom/cdp/cdp-session.js';
+import { dataUrlToBlob } from '../../lib/screenshot/image-size.js';
+import { describeCapture, describeCaptureWith, postScreenshot, readViewportMetrics } from './results/screenshot-delivery.js';
 // =============================================================================
 // SCREENSHOT
 // =============================================================================
@@ -117,30 +115,16 @@ export function computeFullPageCaptureDimensions(contentWidth, contentHeight, hi
         height: Math.max(1, Math.min(Math.max(safeHeight, safeHint), MAX_CAPTURE_HEIGHT))
     };
 }
-/** Post screenshot data to server for saving and query resolution. */
-async function postScreenshot(dataUrl, pageUrl, queryId) {
-    try {
-        const response = await postDaemonJSON(`${getServerUrl()}/screenshots`, {
-            data_url: dataUrl,
-            url: pageUrl,
-            query_id: queryId
-        });
-        return response.ok;
-    }
-    catch {
-        // EXPECTED_ABSENCE: daemon disconnect during optional delivery is normal; logging would duplicate the caller's failure result.
-        return false;
-    }
-}
 /**
  * Capture the viewport and post it. Runs entirely in the background: `captureTabImage`
  * takes a CDP lease rather than activating the tab, so an observe(screenshot) while the
  * user is reading a different tab no longer yanks their window away.
  */
 async function captureAndPostViewport(ctx, tab, format, quality) {
-    const dataUrl = await captureTabImage(ctx.tabId, tab.windowId, { format, quality });
+    const capture = await captureTabImage(ctx.tabId, tab.windowId, { format, quality });
     recordScreenshot(ctx.tabId);
-    if (!(await postScreenshot(dataUrl, tab.url, ctx.query.id))) {
+    const delivery = await describeCapture(ctx.tabId, capture.data_url, 'viewport', capture.covered_css_region);
+    if (!(await postScreenshot(capture.data_url, tab.url, ctx.query.id, delivery))) {
         ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' });
     }
 }
@@ -213,26 +197,6 @@ export function computeElementCropRect(rect, dpr, imageWidth, imageHeight) {
     if (sw <= 0 || sh <= 0)
         return null;
     return { sx, sy, sw, sh };
-}
-/**
- * Decode a base64 `data:` URL into a Blob without fetch(). Service workers do not
- * reliably allow `fetch('data:...')`, so this keeps the crop path self-contained.
- */
-export function dataUrlToBlob(dataUrl) {
-    const comma = dataUrl.indexOf(',');
-    if (!dataUrl.startsWith('data:') || comma === -1) {
-        throw new Error('not a data URL');
-    }
-    const header = dataUrl.slice(5, comma);
-    if (!header.includes(';base64')) {
-        throw new Error('data URL is not base64-encoded');
-    }
-    const mime = header.split(';')[0] || 'application/octet-stream';
-    const binary = atob(dataUrl.slice(comma + 1));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++)
-        bytes[i] = binary.charCodeAt(i);
-    return new Blob([bytes], { type: mime });
 }
 async function blobToDataUrl(blob) {
     const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -318,8 +282,9 @@ async function captureElement(ctx, tab, selector, format, quality) {
     }
     // Let the (instant) scroll repaint before the compositor raster.
     await delay(120);
-    const dataUrl = await captureTabImage(ctx.tabId, tab.windowId, { format, quality });
+    const capture = await captureTabImage(ctx.tabId, tab.windowId, { format, quality });
     recordScreenshot(ctx.tabId);
+    const dataUrl = capture.data_url;
     let outUrl = dataUrl;
     let cropFallbackReason = null;
     try {
@@ -344,18 +309,18 @@ async function captureElement(ctx, tab, selector, format, quality) {
             reason: cropFallbackReason
         });
     }
-    const ok = await postScreenshot(outUrl, tab.url, ctx.query.id);
+    // The crop covers the element's own CSS rect; the uncropped fallback covers
+    // whatever the capture path photographed. Reporting the element rect for an image
+    // that is actually the whole viewport would scale every coordinate by the ratio
+    // between them, so the kind follows what was really produced.
+    const cropped = outUrl !== dataUrl;
+    const delivery = await describeCapture(ctx.tabId, outUrl, cropped ? 'element' : 'viewport', cropped ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : capture.covered_css_region);
+    const ok = await postScreenshot(outUrl, tab.url, ctx.query.id, delivery);
     if (!ok) {
         ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' });
     }
 }
-/**
- * Resize the viewport to the full content box, capture, and always restore the override.
- *
- * Split out of captureFullPage so each function owns one concern: the caller handles
- * container expansion and the viewport fallback, this handles the CDP capture itself.
- */
-async function captureFullPageOverCDP(ctx, tab, options, sessions) {
+async function captureFullPageOverCDP(ctx, options, sessions) {
     const { format, quality, hintedHeight } = options;
     const lease = await sessions.acquire(ctx.tabId);
     try {
@@ -380,10 +345,11 @@ async function captureFullPageOverCDP(ctx, tab, options, sessions) {
             }));
             const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
             recordScreenshot(ctx.tabId);
-            const ok = await postScreenshot(`data:${mimeType};base64,${screenshotResult.data}`, tab.url, ctx.query.id);
-            if (!ok) {
-                ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' });
-            }
+            return {
+                dataUrl: `data:${mimeType};base64,${screenshotResult.data}`,
+                captureWidth,
+                captureHeight
+            };
         }
         finally {
             try {
@@ -399,6 +365,29 @@ async function captureFullPageOverCDP(ctx, tab, options, sessions) {
     }
     finally {
         lease.release();
+    }
+}
+/**
+ * Post a full-page image with the frame that makes it addressable.
+ *
+ * The metrics are read AFTER the containers are restored and the device-metrics
+ * override is cleared, because a document-origin image maps to viewport coordinates
+ * through the scroll offset the caller will actually act at — not the one that was
+ * in force while the page was temporarily resized to its own full height.
+ */
+async function postFullPage(ctx, tab, image) {
+    const metrics = await readViewportMetrics(ctx.tabId);
+    const covered = metrics
+        ? {
+            x: -metrics.scroll_x,
+            y: -metrics.scroll_y,
+            width: image.captureWidth,
+            height: image.captureHeight
+        }
+        : null;
+    const delivery = await describeCaptureWith(metrics, image.dataUrl, 'full_page', covered);
+    if (!(await postScreenshot(image.dataUrl, tab.url, ctx.query.id, delivery))) {
+        ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' });
     }
 }
 async function captureFullPage(ctx, tab, format, quality) {
@@ -425,16 +414,16 @@ async function captureFullPage(ctx, tab, format, quality) {
         await captureAndPostViewport(ctx, tab, format, quality);
         return;
     }
+    let image = null;
     try {
         // Step 2: Capture over a lease on the tab's shared CDP session
-        await captureFullPageOverCDP(ctx, tab, { format, quality, hintedHeight }, sessions);
+        image = await captureFullPageOverCDP(ctx, { format, quality, hintedHeight }, sessions);
     }
     catch (err) {
         // Full-page CDP failed — fall back to a viewport capture, which is itself CDP-first
         debugLog(DebugCategory.CAPTURE, 'Full-page CDP failed, falling back to viewport capture', {
             error: errorMessage(err)
         });
-        await captureAndPostViewport(ctx, tab, format, quality);
     }
     finally {
         // Step 8: Always restore containers
@@ -449,6 +438,13 @@ async function captureFullPage(ctx, tab, format, quality) {
             // logging restoration failure would misleadingly mark the completed capture failed.
         });
     }
+    // Delivery happens after restoration so the frame describes the page the caller
+    // will act on rather than the temporarily-expanded one it was photographed from.
+    if (!image) {
+        await captureAndPostViewport(ctx, tab, format, quality);
+        return;
+    }
+    await postFullPage(ctx, tab, image);
 }
 // =============================================================================
 // WATERFALL

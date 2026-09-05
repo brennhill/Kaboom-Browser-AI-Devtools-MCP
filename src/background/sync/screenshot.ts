@@ -44,14 +44,14 @@ export async function captureScreenshot(
 
   try {
     const tab = await chrome.tabs.get(tabId)
-    const dataUrl = await captureTabImage(tabId, tab.windowId, { format: 'jpeg', quality: 80 })
+    const capture = await captureTabImage(tabId, tab.windowId, { format: 'jpeg', quality: 80 })
     recordScreenshot(tabId)
 
     const response = await fetch(`${serverUrl}/screenshots`, {
       method: 'POST',
       headers: getRequestHeaders(),
       body: JSON.stringify({
-        data_url: dataUrl,
+        data_url: capture.data_url,
         url: tab.url,
         correlation_id: relatedErrorId || ''
       })

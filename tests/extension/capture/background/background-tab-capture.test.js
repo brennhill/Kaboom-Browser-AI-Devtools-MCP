@@ -117,9 +117,15 @@ describe('captureTabImage — background capture over CDP', () => {
     // would appear unprompted, repeatedly, while someone is just using their browser.
     const before = attachCount
 
-    const dataUrl = await captureTabImage(99, 11, { format: 'jpeg', quality: 80 })
+    const capture = await captureTabImage(99, 11, { format: 'jpeg', quality: 80 })
 
-    assert.strictEqual(dataUrl, 'data:image/jpeg;base64,VklTSUJMRQ==')
+    assert.strictEqual(capture.data_url, 'data:image/jpeg;base64,VklTSUJMRQ==')
+    assert.strictEqual(capture.source, 'visible_tab')
+    assert.strictEqual(
+      capture.covered_css_region,
+      null,
+      'captureVisibleTab reports no bounds of its own; the frame falls back to the page'
+    )
     assert.strictEqual(attachCount, before, 'no debugger attach for a tab that is already visible')
     assert.strictEqual(
       globalThis.chrome.tabs.update.mock.calls.length,
@@ -131,9 +137,26 @@ describe('captureTabImage — background capture over CDP', () => {
 
   test('returns the CDP image as a data URL in the requested format', async () => {
     const png = await captureTabImage(7, 11, { format: 'png' })
-    assert.strictEqual(png, `data:image/png;base64,${IMAGE_B64}`)
+    assert.strictEqual(png.data_url, `data:image/png;base64,${IMAGE_B64}`)
     const jpeg = await captureTabImage(7, 11, { format: 'jpeg', quality: 80 })
-    assert.strictEqual(jpeg, `data:image/jpeg;base64,${IMAGE_B64}`)
+    assert.strictEqual(jpeg.data_url, `data:image/jpeg;base64,${IMAGE_B64}`)
+    assert.strictEqual(jpeg.source, 'cdp')
+  })
+
+  test('the CDP capture reports the clip it photographed, not the page\'s idea of its viewport', async () => {
+    // The coordinate frame's scale is the CSS extent divided by the image size, so the
+    // extent has to be the one that was actually captured. cssVisualViewport excludes a
+    // classic scrollbar; reporting innerWidth instead would misplace a click at the right
+    // edge of the image by the scrollbar width.
+    const capture = await captureTabImage(7, 11, { format: 'jpeg', quality: 80 })
+    const clip = captureCalls()[0]?.params?.clip
+    assert.ok(clip, 'the capture must send a clip, or there is no region to report')
+    assert.deepStrictEqual(capture.covered_css_region, {
+      x: 0,
+      y: 0,
+      width: clip.width,
+      height: clip.height
+    })
   })
 
   test('clips to the visual viewport at the page device pixel ratio', async () => {
@@ -167,8 +190,9 @@ describe('captureTabImage — background capture over CDP', () => {
 
   test('falls back to the visible-tab path when the CDP capture fails', async () => {
     captureShouldFail = true
-    const dataUrl = await captureTabImage(7, 11, { format: 'jpeg', quality: 80 })
-    assert.strictEqual(dataUrl, 'data:image/jpeg;base64,VklTSUJMRQ==')
+    const capture = await captureTabImage(7, 11, { format: 'jpeg', quality: 80 })
+    assert.strictEqual(capture.data_url, 'data:image/jpeg;base64,VklTSUJMRQ==')
+    assert.strictEqual(capture.source, 'visible_tab', 'the fallback must not claim the CDP clip it never took')
     assert.strictEqual(globalThis.chrome.tabs.captureVisibleTab.mock.calls.length, 1)
     // The fallback API can only photograph the visible tab, so it has no choice but to
     // borrow the foreground — and it must hand it straight back.

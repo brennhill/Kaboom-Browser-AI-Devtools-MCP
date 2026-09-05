@@ -82,11 +82,11 @@ export async function captureTabImage(tabId, windowId, options) {
         // simply using their browser. CDP is for tabs the user is NOT looking at.
         const alreadyVisible = await captureIfActive(tabId, windowId, options);
         if (alreadyVisible !== null)
-            return alreadyVisible;
+            return visibleTabCapture(alreadyVisible);
         const sessions = cdpSessions();
         if (!sessions) {
             reportForegroundFallback(tabId, 'no_debugger_api', 'chrome.debugger is not available in this context');
-            return await captureVisibleTabActivating(tabId, windowId, options);
+            return visibleTabCapture(await captureVisibleTabActivating(tabId, windowId, options));
         }
         try {
             return await captureOverCDP(await sessions.acquire(tabId), options);
@@ -94,7 +94,7 @@ export async function captureTabImage(tabId, windowId, options) {
         catch (err) {
             reportForegroundFallback(tabId, classifyCaptureFailure(err), errorMessage(err));
         }
-        return await captureVisibleTabActivating(tabId, windowId, options);
+        return visibleTabCapture(await captureVisibleTabActivating(tabId, windowId, options));
     }
     finally {
         await setKaboomOverlayVisibility(tabId, true);
@@ -165,11 +165,26 @@ async function captureOverCDP(lease, options) {
         if (typeof shot?.data !== 'string' || shot.data.length === 0) {
             throw new Error('cdp_capture_empty: Page.captureScreenshot returned no image data');
         }
-        return `data:image/${options.format === 'png' ? 'png' : 'jpeg'};base64,${shot.data}`;
+        return {
+            data_url: `data:image/${options.format === 'png' ? 'png' : 'jpeg'};base64,${shot.data}`,
+            // The clip's x/y are PAGE coordinates (the scroll offset); the image's top-left
+            // is still the viewport's top-left, so the region in viewport coordinates
+            // starts at the origin. Its size is cssVisualViewport's client box, which is
+            // the viewport minus any classic scrollbars.
+            covered_css_region: clip ? { x: 0, y: 0, width: clip.width, height: clip.height } : null,
+            source: 'cdp'
+        };
     }
     finally {
         lease.release();
     }
+}
+/**
+ * Wrap a captureVisibleTab image. It photographs the visible viewport and reports
+ * no bounds of its own, so the frame falls back to what the page reports.
+ */
+function visibleTabCapture(dataUrl) {
+    return { data_url: dataUrl, covered_css_region: null, source: 'visible_tab' };
 }
 async function resolveViewportClip(lease) {
     const metrics = (await lease.send('Page.getLayoutMetrics', {}));

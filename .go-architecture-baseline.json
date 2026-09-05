@@ -1565,6 +1565,10 @@
       "mutable_globals": 0,
       "exports": 1
     },
+    "internal/screenshotframe/wire_screenshot.go": {
+      "mutable_globals": 0,
+      "exports": 10
+    },
     "internal/security/csp/generate.go": {
       "mutable_globals": 0,
       "exports": 1

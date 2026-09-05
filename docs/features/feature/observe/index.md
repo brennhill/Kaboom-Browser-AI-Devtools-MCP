@@ -6,6 +6,13 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
+  - internal/screenshotframe/wire_screenshot.go
+  - src/lib/screenshot/coordinate-frame.ts
+  - src/lib/screenshot/image-size.ts
+  - src/background/commands/results/screenshot-delivery.ts
+  - src/background/commands/observe.ts
+  - src/background/ui/tracked-tab-state.ts
+  - cmd/browser-agent/internal/mediaapi/screenshots.go
   - internal/capture/healthreader/reader.go
   - internal/queries/dispatcher_queries.go
   - internal/capture/syncruntime/handler.go
@@ -63,6 +70,11 @@ code_paths:
   - src/background/push-handler.ts
   - src/lib/tabs/tab-focus.ts
 test_paths:
+  - internal/screenshotframe/wire_screenshot_test.go
+  - cmd/browser-agent/internal/mediaapi/screenshot_frame_test.go
+  - tests/extension/capture/screenshot-coordinate-frame.test.js
+  - tests/extension/capture/background/background-tab-capture.test.js
+  - tests/extension/capture/background/visible-tab-capture-fallback.test.js
   - cmd/browser-agent/internal/telemetryapi/handler_test.go
   - internal/tools/observe/core/filtering_test.go
   - internal/tools/observe/network/network_test.go

@@ -1037,6 +1037,30 @@ interact({what: "zoom_region", x: 320, y: 180, width: 400, height: 220, scale: 2
 | `width`, `height` | number (required) | — | Size of the region in pixels |
 | `scale` | number | 1 | Supersampling factor, 0-4. Use 2 to render the region at twice its on-screen size. |
 
+`x` and `y` are **viewport** pixels — the same coordinates `click`, `hover_at` and
+`scroll_at` take, and the same ones an `observe screenshot` coordinate frame
+produces. They are translated to the document coordinates Chrome clips by, so a
+region is captured where you pointed regardless of how far the page is scrolled.
+The result reports both: `clip` is what you asked for, `page_clip` is what Chrome
+was given.
+
+The result also carries a `coordinate_frame` in the same shape
+[`observe screenshot`](/reference/observe/#clicking-what-you-can-see-coordinate_frame)
+returns, so a detail read off the enlarged image can be clicked directly without
+undoing the supersampling by hand:
+
+```js
+// Zoom a chart legend at 2x, then click an entry read off the zoomed image.
+const zoom = interact({what: "zoom_region", x: 320, y: 180, width: 400, height: 220, scale: 2})
+// zoom.coordinate_frame.image_to_viewport = {scale_x: 0.5, scale_y: 0.5, offset_x: 320, offset_y: 180}
+// An entry at image pixel (160, 60) is at viewport (400, 210):
+interact({what: "click", x: 400, y: 210})
+```
+
+When the page's metrics cannot be read the capture still succeeds and the result
+carries `coordinate_frame_error` instead of a frame — an unusable frame is never
+returned in place of a good one.
+
 ---
 
 ## Performance Profiling

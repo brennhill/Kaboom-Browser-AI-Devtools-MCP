@@ -55,6 +55,8 @@ code_paths:
   - src/background/commands/registry.ts
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/dom/cdp/cdp-gestures.ts
+  - src/lib/screenshot/coordinate-frame.ts
+  - internal/screenshotframe/wire_screenshot.go
   - src/background/dom/cdp/cdp-key-mappings.ts
   - src/background/dom/cdp/cdp-element-resolve.ts
   - src/background/dom/primitives/gestures/dom-primitives-gestures.ts

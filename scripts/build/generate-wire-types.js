@@ -39,7 +39,8 @@ const WIRE_PAIRS = [
   { go: 'internal/perftrace/wire_trace.go', ts: 'src/types/wire/wire-performance-trace.ts' },
   { go: 'internal/types/wire_log.go', ts: 'src/types/wire/wire-extension-log.ts', types: ['ExtensionLog'] },
   { go: 'internal/styleprobe/wire_style_probe.go', ts: 'src/types/wire/wire-style-probe.ts' },
-  { go: 'internal/capture/syncruntime/wire_sync.go', ts: 'src/types/wire/wire-sync.ts' }
+  { go: 'internal/capture/syncruntime/wire_sync.go', ts: 'src/types/wire/wire-sync.ts' },
+  { go: 'internal/screenshotframe/wire_screenshot.go', ts: 'src/types/wire/wire-screenshot.ts' }
 ]
 
 /**
@@ -116,6 +117,10 @@ const FILE_DESCRIPTIONS = {
   'wire_sync.go': {
     overview: 'Wire types for extension-daemon synchronization',
     description: 'Canonical TypeScript definitions for the complete /sync request and response graph.'
+  },
+  'wire_screenshot.go': {
+    overview: 'Wire types for the screenshot coordinate frame',
+    description: 'Canonical TypeScript definitions for the frame that maps a screenshot pixel to a clickable coordinate.'
   }
 }
 
@@ -124,6 +129,14 @@ const FILE_DESCRIPTIONS = {
  * When present, overrides the Go comment entirely.
  */
 const STRUCT_COMMENT_OVERRIDES = {
+  WireCoordinateFrame:
+    'WireCoordinateFrame is everything needed to read a coordinate off a screenshot and act on it.\n' +
+    ' * `note` is filled in by the daemon, not by the page.',
+  WireImageToViewport:
+    'WireImageToViewport maps an image pixel to the CSS-pixel coordinate an action accepts:\n' +
+    ' * viewport_x = image_x*scale_x + offset_x, viewport_y = image_y*scale_y + offset_y.\n' +
+    ' * Both axes are reported because a clamped capture is squashed on one axis only.',
+  WireImageRect: 'WireImageRect is a rectangle in image pixels.',
   WireEnhancedAction:
     'WireEnhancedAction is the JSON shape sent over HTTP between extension and Go daemon.\n * All fields use snake_case to match the Go json tags.',
   WireNetworkBody: 'WireNetworkBody is the JSON shape for captured network request/response bodies.',
