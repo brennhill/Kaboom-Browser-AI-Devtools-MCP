@@ -76,6 +76,16 @@ judge_baseline \
   interface-baseline-update \
   go run ./scripts/contracts/layering --update || failures=$((failures + 1))
 
+# The declared MCP response contract. Regeneration derives every shape by
+# invoking the shipped handlers in-process, so a hand-edited field list, a
+# hand-edited undeclared_baseline, or a response change nobody re-froze all
+# show up here as a byte difference.
+judge_baseline \
+  .mcp-response-contract.json \
+  response-contract-update \
+  env UPDATE_GOLDEN=1 go test ./cmd/browser-agent/internal/responsegate \
+  -run TestDeclaredResponseShapesStillShip -count=1 || failures=$((failures + 1))
+
 if [[ "$failures" -ne 0 ]]; then
   echo "FAIL: $failures ratchet baseline(s) do not match the tree." >&2
   exit 1

@@ -30,7 +30,7 @@ PLATFORMS := \
 	security-check install-security-tools pre-commit verify-all npm-binaries validate-semver \
 	check-complexity check-complexity-go check-complexity-ts function-length-baseline-update check-layering interface-baseline-update lint-duplicates-go \
 	check-ts-strictness ts-strictness-baseline-update check-bundle-size check-secrets coverage-baseline-update \
-	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture check-wire-decode check-tagged-builds go-architecture-baseline-update check-baseline-currency \
+	verify-llm check-folder-size check-structure check-workflow-contracts check-dormant-tests check-duplicates validate-architecture folder-baseline-update check-test-determinism check-go-architecture check-wire-decode check-response-contract response-contract-update check-tagged-builds go-architecture-baseline-update check-baseline-currency \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-command-contract generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -279,6 +279,17 @@ check-go-architecture:
 	@go test ./scripts/contracts/goarchitecture
 	@go run ./scripts/contracts/goarchitecture
 
+# MCP tool responses must match their declared shape, and the count of modes
+# with no declared shape may only go DOWN. The declaration is derived from real
+# in-process responses; neither half needs a browser or a daemon.
+check-response-contract:
+	@go test ./scripts/contracts/responsecontract
+	@go test ./cmd/browser-agent/internal/responsegate
+
+# Re-freeze the MCP response contract after an intended response change.
+response-contract-update:
+	@UPDATE_GOLDEN=1 go test ./cmd/browser-agent/internal/responsegate -run TestDeclaredResponseShapesStillShip
+
 # Every decode into a Wire* type must go through internal/wirecodec, so a peer's
 # error envelope cannot decode into a zero value and read as an empty result.
 check-wire-decode:
@@ -310,7 +321,7 @@ check-workflow-contracts:
 	@node scripts/quality/workflows/check-destructive-git.mjs
 	@bash scripts/tests/framework/json.test.sh
 
-check-structure: check-file-length check-folder-size check-complexity check-layering check-ts-strictness check-bundle-size check-secrets check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-tagged-builds check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates lint-duplicates-go check-baseline-currency
+check-structure: check-file-length check-folder-size check-complexity check-layering check-ts-strictness check-bundle-size check-secrets check-dormant-tests check-test-determinism check-go-architecture check-wire-decode check-response-contract check-tagged-builds check-workflow-contracts lint-boundaries lint-silent-catches lint-circular check-duplicates lint-duplicates-go check-baseline-currency
 
 # Baseline currency: every ratchet baseline must equal what the current tree
 # regenerates (deterministic), so a stale or hand-edited baseline fails. The

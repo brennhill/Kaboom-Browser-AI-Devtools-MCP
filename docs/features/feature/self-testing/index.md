@@ -8,6 +8,8 @@ last_reviewed: 2026-09-05
 code_paths:
   - .github/workflows/ci.yml
   - scripts/tests/browser/cat-33-expectations.sh
+  - scripts/contracts/responsecontract/contract.go
+  - .mcp-response-contract.json
   - scripts/quality/affected/affected-tests.mjs
   - scripts/quality/affected/run-affected.sh
   - scripts/quality/affected/always-run.json
@@ -73,6 +75,9 @@ code_paths:
   - scripts/contracts/goarchitecture/main.go
 test_paths:
   - scripts/contracts/uatcoverage/main_test.go
+  - cmd/browser-agent/internal/responsegate/drift_test.go
+  - scripts/contracts/responsecontract/cat33_test.go
+  - scripts/contracts/responsecontract/ratchet_test.go
   - scripts/quality/affected/affected-tests.test.mjs
   - tests/cli/uat-assertions/process-census.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
