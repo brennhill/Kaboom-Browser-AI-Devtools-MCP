@@ -63,6 +63,11 @@ finding that claims an inferred expectation at error severity. Precedence is
 resolved **per property** in `consistencyExpectation`, so a spec declaring only
 `spacing_scale` leaves font and colour findings inferred in the same response.
 
+Only a caller-supplied `spec` (and the `:root` conflict it produces) is
+`declared`. A near-miss of a *page* token is `inferred`: the page declared the
+token, not that this element must use it, so the last step is proximity —
+`pageTokenLengthFinding` and `pageTokenColorFinding` in `tokens.go`.
+
 Confidence (`confidenceHigh` and its bands) scales with majority strength — 9 of
 10 is not 3 of 4 — and is reported separately from severity.
 

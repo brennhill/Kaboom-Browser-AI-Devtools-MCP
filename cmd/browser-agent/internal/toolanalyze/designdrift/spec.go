@@ -165,17 +165,16 @@ func conflictingSpacingTokens(spec *designSpec, tokens tokenTable) []finding {
 	return findings
 }
 
-// isSpacingTokenName guesses whether a length token is a spacing token rather
-// than a radius, width or font size. Conservative on purpose: mistaking a
-// radius for spacing produces a confusing conflict report.
+// isSpacingTokenName reports whether a length token is a spacing step rather
+// than a radius, a type-scale rung or something unclassifiable. Conservative on
+// purpose: mistaking a radius for spacing produces a confusing conflict report.
+//
+// The family model in tokens.go is the single classifier for this question. A
+// second list of name hints here would drift from the one that decides which
+// tokens may judge which properties, and the two answers disagreeing is exactly
+// how a --letter-spacing token ends up governing padding.
 func isSpacingTokenName(name string) bool {
-	lower := strings.ToLower(name)
-	for _, hint := range []string{"spacing", "space", "gap", "gutter", "inset"} {
-		if strings.Contains(lower, hint) {
-			return true
-		}
-	}
-	return false
+	return lengthTokenFamily(name) == familySpacing
 }
 
 // scaleContains reports whether a value sits on the declared scale, within the
@@ -183,6 +182,30 @@ func isSpacingTokenName(name string) bool {
 func scaleContains(scale []float64, value float64) bool {
 	for _, step := range scale {
 		if absFloat(step-value) <= subPixelTolerance {
+			return true
+		}
+	}
+	return false
+}
+
+// nearAnyScaleStep reports whether a used length is close enough to some step
+// that it reads as a missed step rather than an unrelated magnitude.
+//
+// Deliberately the same relative band nearestLengthToken applies to page
+// tokens: a caller-supplied spec changes WHO stated the norm — and therefore
+// the severity — not what counts as drift. Without it, `margin: 0 auto`
+// resolving to 137.5px is an "off-scale" error on every centred element, and
+// the analyzer is back to flagging every literal value.
+//
+// This is not applied to :root token declarations (see
+// conflictingSpacingTokens). A page token is unambiguously authored, so a
+// declared scale that omits it is a genuine disagreement at any distance.
+func nearAnyScaleStep(scale []float64, value float64) bool {
+	for _, step := range scale {
+		if step <= 0 {
+			continue
+		}
+		if absFloat(step-value)/step <= lengthNearMissRatio {
 			return true
 		}
 	}

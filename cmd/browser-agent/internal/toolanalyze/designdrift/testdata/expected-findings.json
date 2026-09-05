@@ -36,7 +36,7 @@
       "name": "token_cards_near_miss",
       "issue": 694,
       "kind": "positive",
-      "why": "padding:15px near-misses --spacing-md:16px on all four longhands, and #2b56e2 near-misses --color-primary-main:#2a55e1. A page token is a declaration, so breaking it is an error, not a warning. Element 1 is the exact-match control and must contribute nothing.",
+      "why": "padding:15px near-misses --spacing-md:16px on all four longhands, and #2b56e2 near-misses --color-primary-main:#2a55e1. The page declared those tokens; it never declared that THIS element's padding must use them, so the last step is the analyzer's proximity inference and the finding is inferred/warning. Only a caller-supplied spec states a rule the element can break. Element 1 is the exact-match control and must contribute nothing.",
       "selector": ".token-card",
       "expect_elements": 2,
       "categories": [
@@ -47,40 +47,40 @@
           "category": "design_tokens",
           "property": "padding-top",
           "element_index": 0,
-          "severity": "error",
-          "expected_from": "declared",
+          "severity": "warning",
+          "expected_from": "inferred",
           "confidence": "high"
         },
         {
           "category": "design_tokens",
           "property": "padding-right",
           "element_index": 0,
-          "severity": "error",
-          "expected_from": "declared",
+          "severity": "warning",
+          "expected_from": "inferred",
           "confidence": "high"
         },
         {
           "category": "design_tokens",
           "property": "padding-bottom",
           "element_index": 0,
-          "severity": "error",
-          "expected_from": "declared",
+          "severity": "warning",
+          "expected_from": "inferred",
           "confidence": "high"
         },
         {
           "category": "design_tokens",
           "property": "padding-left",
           "element_index": 0,
-          "severity": "error",
-          "expected_from": "declared",
+          "severity": "warning",
+          "expected_from": "inferred",
           "confidence": "high"
         },
         {
           "category": "design_tokens",
           "property": "background-color",
           "element_index": 0,
-          "severity": "error",
-          "expected_from": "declared",
+          "severity": "warning",
+          "expected_from": "inferred",
           "confidence": "high"
         }
       ],

@@ -109,7 +109,7 @@ func TestLengthNearMiss_IsRelativeNotAbsolute(t *testing.T) {
 		{name: "exact match resolves to its own token", value: 16, wantToken: "--spacing-md", wantFound: true},
 	}
 	for _, tc := range cases {
-		name, _, found := nearestLengthToken(tokens, tc.value)
+		name, _, found := nearestLengthToken(tokens, "padding-top", tc.value)
 		if found != tc.wantFound {
 			t.Errorf("%s: nearestLengthToken(%v) found = %v, want %v", tc.name, tc.value, found, tc.wantFound)
 			continue
@@ -146,11 +146,14 @@ func TestAnalyzeTokens_FlagsNearMissAndIgnoresExactMatch(t *testing.T) {
 		if f.ElementIndex == 1 {
 			t.Errorf("the exact-match element produced a finding, so the success state is not silent: %+v", f)
 		}
-		if f.Severity != severityError {
-			t.Errorf("a broken page token should be an error, got %q", f.Severity)
+		// The page declared the token; it did not declare that this element must
+		// use it. That last step is the analyzer's inference, so the finding is a
+		// warning — see TestAnalyzeTokens_PageTokenNearMissIsInferredNotDeclared.
+		if f.Severity != severityWarning {
+			t.Errorf("an inferred near-miss should be a warning, got %q", f.Severity)
 		}
-		if f.ExpectedFrom != provenanceDeclared {
-			t.Errorf("a page token is a declaration, got provenance %q", f.ExpectedFrom)
+		if f.ExpectedFrom != provenanceInferred {
+			t.Errorf("a proximity guess is an inference, got provenance %q", f.ExpectedFrom)
 		}
 	}
 
@@ -358,10 +361,10 @@ func TestScaleContains_ToleranceBoundary(t *testing.T) {
 func TestLengthNearMissRatio_IsBracketed(t *testing.T) {
 	t.Parallel()
 	tokens := buildTokenTable(map[string]string{"--spacing-md": "16px"})
-	if _, _, found := nearestLengthToken(tokens, 14); !found {
+	if _, _, found := nearestLengthToken(tokens, "padding-top", 14); !found {
 		t.Errorf("14px is %.0f%% off a 16px token and should be a near-miss", 100*2.0/16)
 	}
-	if _, _, found := nearestLengthToken(tokens, 13); found {
+	if _, _, found := nearestLengthToken(tokens, "padding-top", 13); found {
 		t.Errorf("13px is %.0f%% off a 16px token and is a different value, not a typo", 100*3.0/16)
 	}
 }
@@ -410,6 +413,300 @@ func TestAnalyzeTokens_DeclaredSpecFlagsOffScaleAndOffPalette(t *testing.T) {
 		if f.Severity != severityError || f.ExpectedFrom != provenanceDeclared {
 			t.Errorf("a declared-rule violation must be a declared error, got %s/%s", f.Severity, f.ExpectedFrom)
 		}
+	}
+}
+
+// --- Defect 1 (kaboom-63ip): a length token governs one property family ---
+
+// TestAnalyzeTokens_AFontSizeTokenDoesNotGovernPadding is the false positive.
+//
+// Comparing padding against EVERY length token means the type scale and the
+// radius scale get a vote on spacing. A design system that declares both
+// --font-size-lg:18px and --radius-lg:16px turns any 17px padding into a
+// "near-miss of --font-size-lg", which is advice the reader cannot act on: no
+// font-size token has ever governed a padding.
+func TestAnalyzeTokens_AFontSizeTokenDoesNotGovernPadding(t *testing.T) {
+	t.Parallel()
+	tokens := buildTokenTable(map[string]string{
+		"--font-size-lg": "18px",
+		"--radius-lg":    "16px",
+	})
+	el := makeElement(0, "div.card", map[string]string{"padding-top": "17px"})
+
+	findings, skip := analyzeTokens([]elementView{el}, tokens, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 0 {
+		t.Errorf("a type-scale/radius token was allowed to govern padding, producing %d finding(s): %+v",
+			len(findings), findings)
+	}
+}
+
+// TestAnalyzeTokens_AFontSizeTokenDoesNotExcuseASpacingNearMiss is the false
+// negative, and the more dangerous half.
+//
+// --font-size-sm:14px is in nearly every design system. Letting it answer the
+// question "is 14px a token?" silently excuses every 14px padding that is
+// really a near-miss of --spacing-md:16px — the exact drift this analyzer
+// exists to catch.
+func TestAnalyzeTokens_AFontSizeTokenDoesNotExcuseASpacingNearMiss(t *testing.T) {
+	t.Parallel()
+	tokens := buildTokenTable(map[string]string{
+		"--spacing-md":   "16px",
+		"--font-size-sm": "14px",
+	})
+	el := makeElement(0, "div.card", map[string]string{"padding-top": "14px"})
+
+	findings, skip := analyzeTokens([]elementView{el}, tokens, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("14px padding near-misses --spacing-md:16px but produced %d finding(s): %+v",
+			len(findings), findings)
+	}
+	if !strings.Contains(findings[0].Expected, "--spacing-md") {
+		t.Errorf("finding names %q; the spacing token is the one that governs padding", findings[0].Expected)
+	}
+}
+
+// TestAnalyzeTokens_AnUnclassifiableTokenGovernsNothing pins the conservative
+// half of the family model. CSS gives a custom property no type, so a name we
+// cannot classify (--sidebar-width, --breakpoint-md, --z-index-modal) has to
+// govern nothing rather than everything.
+func TestAnalyzeTokens_AnUnclassifiableTokenGovernsNothing(t *testing.T) {
+	t.Parallel()
+	tokens := buildTokenTable(map[string]string{"--sidebar-width": "240px"})
+	el := makeElement(0, "div.card", map[string]string{"padding-left": "250px"})
+
+	findings, skip := analyzeTokens([]elementView{el}, tokens, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 0 {
+		t.Errorf("a token of unknown family was allowed to govern padding: %+v", findings)
+	}
+}
+
+// TestLengthTokenFamily_PrecedenceKeepsOverlappingNamesInTheRightFamily pins the
+// ORDER of tokenFamilyRules, which the hints make load-bearing: --letter-spacing
+// contains "spacing" and --font-size contains neither, so a table that matched
+// spacing first would hand --letter-spacing to the spacing family and let a
+// type-scale token govern padding — the exact defect the family model exists to
+// stop. Reordering the table is invisible to every other case here.
+func TestLengthTokenFamily_PrecedenceKeepsOverlappingNamesInTheRightFamily(t *testing.T) {
+	t.Parallel()
+	for name, want := range map[string]string{
+		"--letter-spacing-wide": familyTypography,
+		"--text-gap":            familyTypography,
+		"--spacing-md":          familySpacing,
+		"--grid-gutter":         familySpacing,
+		"--radius-lg":           familyRadius,
+		"--sidebar-width":       familyUnclassified,
+	} {
+		if got := lengthTokenFamily(name); got != want {
+			t.Errorf("lengthTokenFamily(%q) = %q, want %q", name, got, want)
+		}
+	}
+	if familyGoverns(familyTypography, "padding-top") {
+		t.Error("a typography token governs padding-top; --letter-spacing would then set the padding norm")
+	}
+}
+
+// --- Defect 2 (kaboom-w1et): a near-miss of a page token is an inference ---
+
+// TestAnalyzeTokens_PageTokenNearMissIsInferredNotDeclared separates what the
+// page stated from what the analyzer guessed.
+//
+// The page declared --spacing-md:16px. It never declared that THIS element's
+// padding must use it — that is the analyzer's inference from proximity. Since
+// error means "a stated rule was broken" and is the batch a caller may fix
+// without review, a proximity guess must be a warning; a caller-supplied spec
+// is the only thing that makes it an error.
+func TestAnalyzeTokens_PageTokenNearMissIsInferredNotDeclared(t *testing.T) {
+	t.Parallel()
+	tokens := buildTokenTable(map[string]string{
+		"--spacing-md":         "16px",
+		"--color-primary-main": "#2a55e1",
+	})
+	el := makeElement(0, "div.card", map[string]string{
+		"padding-top":      "15px",
+		"background-color": "#2b56e2",
+	})
+
+	findings, skip := analyzeTokens([]elementView{el}, tokens, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 2 {
+		t.Fatalf("expected the padding and the background, got %d: %+v", len(findings), findings)
+	}
+	for _, f := range findings {
+		if f.ExpectedFrom != provenanceInferred {
+			t.Errorf("%s: provenance %q — the page declared the token, not that this element must use it",
+				f.Property, f.ExpectedFrom)
+		}
+		if f.Severity != severityWarning {
+			t.Errorf("%s: severity %q — error means a stated rule was broken and is safe to batch-fix",
+				f.Property, f.Severity)
+		}
+	}
+
+	// The bracket: a caller-supplied spec IS a stated rule, so it stays an error.
+	spec := &designSpec{SpacingScale: []float64{8, 16, 32}, Colors: []string{"#2a55e1"}}
+	declared, _ := analyzeTokens([]elementView{el}, buildTokenTable(nil), spec)
+	if len(declared) == 0 {
+		t.Fatal("a declared spec produced no findings")
+	}
+	for _, f := range declared {
+		if f.ExpectedFrom != provenanceDeclared || f.Severity != severityError {
+			t.Errorf("%s: a caller-supplied spec violation must stay declared/error, got %s/%s",
+				f.Property, f.ExpectedFrom, f.Severity)
+		}
+	}
+}
+
+// --- Defect 3 (kaboom-d7f9): a spec judges choices, not layout output ---
+
+// TestAnalyzeTokens_DeclaredScaleIgnoresValuesTheScaleNeverDescribed keeps the
+// file's contract ("only near-misses, never every literal value") true on the
+// declared-spec branch too.
+//
+// margin-left/right:137.5px is what `margin: 0 auto` resolves to; margin-top:
+// -1px is the border-collapse pull. Neither is a spacing choice, and no
+// positive scale can ever contain them, so reporting them makes a permanent
+// unfixable error out of correct CSS and buries the 15px that is real drift.
+func TestAnalyzeTokens_DeclaredScaleIgnoresValuesTheScaleNeverDescribed(t *testing.T) {
+	t.Parallel()
+	spec := &designSpec{SpacingScale: []float64{8, 16, 32}}
+	el := makeElement(0, "div.centred", map[string]string{
+		"margin-left":   "137.5px",
+		"margin-right":  "137.5px",
+		"margin-top":    "-1px",
+		"margin-bottom": "0px",
+		"padding-top":   "15px",
+	})
+
+	findings, skip := analyzeTokens([]elementView{el}, buildTokenTable(nil), spec)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if got := propertiesOf(findings); !equalStringSets(got, []string{"padding-top"}) {
+		t.Errorf("flagged %v; only padding-top is reaching for a scale step and missing it", got)
+	}
+}
+
+// TestAnalyzeTokens_DeclaredSpecDoesNotBlameTheElementForThePagesOwnToken is
+// the exact-match control under a spec.
+//
+// When the caller's spec and the page's :root disagree, detectSpecConflicts
+// reports it once against :root. Re-reporting it on every element that renders
+// the page token multiplies one disagreement by the element count and blames
+// the element for obeying its own design system — including the element that
+// is the analyzer's exact-token-match success state.
+func TestAnalyzeTokens_DeclaredSpecDoesNotBlameTheElementForThePagesOwnToken(t *testing.T) {
+	t.Parallel()
+	tokens := buildTokenTable(map[string]string{
+		"--spacing-md":         "16px",
+		"--spacing-lg":         "24px",
+		"--color-primary-main": "#2a55e1",
+		"--color-text":         "#111827",
+	})
+	spec := &designSpec{SpacingScale: []float64{8, 16, 32}, Colors: []string{"#111827"}}
+
+	card := func(index int, pad, background string) elementView {
+		return makeElement(index, "div.token-card", map[string]string{
+			"margin-top": "0px", "margin-right": "0px", "margin-bottom": "0px", "margin-left": "0px",
+			"padding-top": pad, "padding-right": pad, "padding-bottom": pad, "padding-left": pad,
+			"color": "rgb(17, 24, 39)", "border-color": "rgb(17, 24, 39)",
+			"background-color": background,
+		})
+	}
+	drift := card(0, "15px", "rgb(43, 86, 226)") // #2b56e2 — nobody's token
+	exact := card(1, "16px", "rgb(42, 85, 225)") // #2a55e1 — exactly --color-primary-main
+
+	findings, skip := analyzeTokens([]elementView{drift, exact}, tokens, spec)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+
+	var onExact, onDrift []finding
+	rootConflicts := 0
+	for _, f := range findings {
+		switch {
+		case f.Selector == ":root":
+			rootConflicts++
+		case f.ElementIndex == 1:
+			onExact = append(onExact, f)
+		default:
+			onDrift = append(onDrift, f)
+		}
+	}
+	if len(onExact) != 0 {
+		t.Errorf("the exact-token-match control produced %d finding(s) under a spec: %+v", len(onExact), onExact)
+	}
+	if got := propertiesOf(onDrift); !equalStringSets(got,
+		[]string{"padding-top", "padding-right", "padding-bottom", "padding-left", "background-color"}) {
+		t.Errorf("drift element flagged %v, want the four paddings and the background", got)
+	}
+	// The spec/page disagreement is still reported — once, where it belongs.
+	if rootConflicts != 2 {
+		t.Errorf("expected :root conflicts for --spacing-lg and --color-primary-main, got %d", rootConflicts)
+	}
+}
+
+// --- Defect 4: alpha is part of a colour ---
+
+// TestColorDistance_CountsAlpha closes the hole where oklab() never reads c.A,
+// so every translucent tint measured as an exact match of the opaque colour it
+// derives from.
+func TestColorDistance_CountsAlpha(t *testing.T) {
+	t.Parallel()
+	tint, ok := parseColor("rgba(42, 85, 225, 0.1)")
+	if !ok {
+		t.Fatal("parseColor(rgba) failed")
+	}
+	opaque, ok := parseColor("#2a55e1")
+	if !ok {
+		t.Fatal("parseColor(hex) failed")
+	}
+
+	d := colorDistance(tint, opaque)
+	if d == 0 {
+		t.Fatal("a 10% tint measures as an exact match of the opaque colour; alpha is ignored")
+	}
+	if d <= colorNearMissThreshold {
+		t.Errorf("a 10%% tint is %.5f from the opaque colour, inside the %.3f near-miss band; a deliberate tint is not a typo",
+			d, colorNearMissThreshold)
+	}
+	if same := colorDistance(tint, tint); same != 0 {
+		t.Errorf("a colour differs from itself by %.5f", same)
+	}
+}
+
+// TestAnalyzeTokens_AnAlphaTokenDoesNotShadowTheOpaqueTokenItDerivesFrom is the
+// consequence: --color-brand-alpha sorts first and, with alpha ignored, ties
+// the opaque token on distance, so the near-miss the issue is named for gets
+// attributed to a token the element could not possibly have meant.
+func TestAnalyzeTokens_AnAlphaTokenDoesNotShadowTheOpaqueTokenItDerivesFrom(t *testing.T) {
+	t.Parallel()
+	tokens := buildTokenTable(map[string]string{
+		"--color-brand-alpha":  "rgba(42, 85, 225, 0.1)",
+		"--color-primary-main": "#2a55e1",
+	})
+	el := makeElement(0, "div.card", map[string]string{"background-color": "#2b56e2"})
+
+	findings, skip := analyzeTokens([]elementView{el}, tokens, nil)
+	if skip != nil {
+		t.Fatalf("unexpected skip: %+v", skip)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("expected one background-color finding, got %d: %+v", len(findings), findings)
+	}
+	if !strings.Contains(findings[0].Expected, "--color-primary-main") {
+		t.Errorf("near-miss attributed to %q; #2b56e2 is a typo of the opaque token, not of a 10%% tint",
+			findings[0].Expected)
 	}
 }
 

@@ -95,8 +95,17 @@ analyze({
 
 | Provenance | Severity  | Meaning                                                        |
 | ---------- | --------- | -------------------------------------------------------------- |
-| `declared` | `error`   | A stated rule was broken — the caller's spec, or the page's own `:root` token |
-| `inferred` | `warning` | A majority vote among peers; a statistical outlier can be intentional |
+| `declared` | `error`   | A stated rule was broken — the caller's `spec`, or the page's own `:root` disagreeing with it |
+| `inferred` | `warning` | The analyzer supplied the expectation: a majority vote among peers, or proximity to a page token |
+
+A page token on its own does not make an element's value `declared`. The page
+declared `--spacing-md: 16px`; it never declared that *this* element's padding
+must use it, and that last step is proximity — a guess. Page-token near-misses
+are therefore `inferred`/`warning`, and a caller-supplied `spec` is the only
+thing here that makes a token finding an error. Before this rule, a 14px
+`margin-top` was reported as a high-confidence *error* against `--spacing-md`
+(16px) while the correct target, `--spacing-lg` (24px), came back as a
+low-confidence spacing warning — so "fix all errors" made the page worse.
 
 This is the triage axis. **Fix all errors** is a safe batch operation because
 every error contradicts something explicitly declared. **Fix all warnings** is a
@@ -150,7 +159,36 @@ different value; 2px off a 64px token is a slip.
 **Only near-misses are reported, never "every literal value".** A page's
 computed styles contain hundreds of legitimate non-token lengths, and flagging
 them all would bury the one value that is wrong. An exact token match is the
-success state and produces nothing.
+success state and produces nothing. This holds on the declared-`spec` branch
+too: a used length near no step of the scale is not a missed step. The 137.5px
+that `margin: 0 auto` resolves to and the -1px of the border-collapse idiom are
+layout output, not spacing choices, and no scale of positive magnitudes can ever
+contain them — reporting them would make permanent unfixable errors out of
+correct CSS.
+
+**A length token governs one property family and no other.** Families are read
+off the token *name* (typography before spacing, so `--letter-spacing` is
+typography and cannot govern padding), because CSS gives a custom property no
+type: `--spacing-md` and `--radius-md` are both just "16px" by the time
+`getComputedStyle` reports them. A name the classifier cannot place governs
+**nothing** rather than everything — a wrong guess must cost a missed finding,
+never an invented one. Without this, `--font-size-lg: 18px` turned every 17px
+padding into a near-miss of the type scale, and the near-universal
+`--font-size-sm: 14px` silently excused every 14px padding that was really a
+near-miss of `--spacing-md: 16px`.
+
+**A spec judges spacing choices, not the page's own declarations.** When the
+caller's `spec` and the page's `:root` disagree, `detectSpecConflicts` reports it
+once against `:root`. An element that renders the page's own token is obeying its
+design system, so it is not re-reported — otherwise one disagreement is
+multiplied by the element count, including against the fixture's own
+exact-token-match control.
+
+**Colour distance counts opacity.** OKLab has no alpha axis, so alpha is carried
+as a fourth, independently weighted term. Dropping it made
+`rgba(42, 85, 225, 0.1)` an *exact* match of `#2a55e1`, so every tint token
+shadowed the opaque token it was derived from and near-misses were attributed to
+a colour the element could not have meant.
 
 **The page measures; Go judges.** `src/inject/computed-styles.ts` reports raw
 observed values and makes no decisions. Content scripts are bundled and awkward
