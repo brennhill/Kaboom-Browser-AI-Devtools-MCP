@@ -38,11 +38,11 @@ import (
 	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/activecodebase"
 	annotationruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation/runtime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
@@ -61,13 +61,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
-
-type stateRecoveryDiagnostics interface {
-	statediag.Reporter
-	statediag.Resolver
-	Snapshot() []statediag.Diagnostic
-	Stats() statediag.CollectorStats
-}
 
 // Server holds the server state.
 type Server struct {
@@ -107,7 +100,7 @@ type Server struct {
 
 	// Token savings tracker for output compression hooks.
 	tokenTracker  *tracking.TokenTracker
-	stateRecovery stateRecoveryDiagnostics
+	stateRecovery toolruntime.StateDiagnostics
 	incidents     *incident.Store
 
 	// Push drain authentication token. When non-empty, /push/drain requires
@@ -140,7 +133,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	if pathErr != nil {
 		return nil, fmt.Errorf("resolve session project path: %w", pathErr)
 	}
-	var stateRecovery stateRecoveryDiagnostics = statediag.NewCollector()
+	var stateRecovery toolruntime.StateDiagnostics = statediag.NewCollector()
 	timelinePath, timelinePathErr := state.InRoot("doctor", "incident-timeline.json")
 	if timelinePathErr == nil {
 		persistent, loadErr := statediag.NewPersistentCollector(timelinePath)
@@ -204,6 +197,28 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	return s, nil
 }
 
+// toolRuntimeState projects the daemon stores the five-tool runtime reads. It is
+// the only place the daemon hands its internals to the MCP runtime, so the
+// runtime never depends on the whole Server and can be composed elsewhere.
+func (s *Server) toolRuntimeState() toolruntime.ServerState {
+	return toolruntime.ServerState{
+		Version:            version,
+		Runtime:            s.runtime,
+		SessionProjectPath: s.sessionProjectPath,
+		Logs:               s.logs,
+		Warnings:           s.warnings,
+		Incidents:          s.incidents,
+		PushInbox:          s.pushInbox,
+		ActiveCodebase:     s.activeCodebase,
+		AnnotationRuntime:  s.annotationRuntime,
+		ListenPort:         s.listenPort,
+		UploadSecurity:     s.uploadSecurity,
+		TerminalStatus:     s.terminalStatus,
+		IntentStore:        s.intentStore,
+		StateRecovery:      s.stateRecovery,
+	}
+}
+
 // Close gracefully shuts down the server, draining the async log writer.
 func (s *Server) Close() {
 	s.logs.Shutdown(asyncLoggerDrainTimeout)
@@ -213,7 +228,7 @@ func (s *Server) Close() {
 //go:embed openapi.json
 var openapiJSON []byte
 
-func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *ToolHandler) {
+func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *toolruntime.ToolHandler) {
 	server.mediaHTTP = mediaapi.New(captured, server.annotationRuntime.Store(), server.pushRouter)
 	mux := http.NewServeMux()
 	if captured != nil {
@@ -258,12 +273,8 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	mux.HandleFunc("/recordings/reveal", httpguard.CORS(httpguard.ExtensionOnly(screenrec.HandleReveal)))
 	mux.HandleFunc("/telemetry", httpguard.CORS(telemetryapi.Handler(server.logs, captured)))
 	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Snapshot(server.logs, captured))))
-	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, newRuntimeResetter(captured)))))
+	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, toolruntime.NewRuntimeResetter(captured)))))
 	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(ciapi.TestBoundary(captured))))
-}
-
-func newRuntimeResetter(captured *capture.Capture) *resetter.Resetter {
-	return resetter.New(resetter.Dependencies{Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs()})
 }
 
 func newSyncHandler(captured *capture.Capture) *syncruntime.Handler {
@@ -302,10 +313,10 @@ func registerUploadRoutes(mux *http.ServeMux, server *Server) {
 	mux.HandleFunc("/api/os-automation/dismiss", httpguard.CORS(httpguard.ExtensionOnly(handlers.HandleOSAutomationDismiss)))
 }
 
-func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) *ToolHandler {
+func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) *toolruntime.ToolHandler {
 	mux.HandleFunc("/openapi.json", httpguard.CORS(httpapi.OpenAPI(openapiJSON)))
 
-	mcpHandler := NewToolHandler(server, captured)
+	mcpHandler := toolruntime.NewToolHandler(server.toolRuntimeState(), captured)
 	mux.HandleFunc("/mcp", httpguard.CORS(newMCPHTTPHandler(mcpHandler).ServeHTTP))
 	operations := operationalapi.New(operationalapi.Options{
 		Logs:      server.logs,
@@ -329,7 +340,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 			}
 			return health.BuildUpgradeInfo(server.runtime.Upgrade())
 		},
-		UsageTracker:    func() *telemetry.UsageTracker { return mcpHandler.usageTracker },
+		UsageTracker:    mcpHandler.UsageTracker,
 		MaxPostBodySize: maxPostBodySize,
 	})
 
@@ -346,12 +357,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 			return port, server.ptyManager.Count(), server.ptyManager.List()
 		},
 		ListenPort: server.listenPort.Get,
-		Audit: func() any {
-			if mcpHandler.healthMetrics == nil {
-				return nil
-			}
-			return mcpHandler.healthMetrics.BuildAuditInfo()
-		},
+		Audit:      mcpHandler.AuditInfo,
 	})))
 	mux.HandleFunc("/health", httpguard.CORS(operations.ServeHealth))
 
@@ -359,7 +365,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	mux.HandleFunc("/insecure-proxy", httpguard.CORS(proxyHandler.ServeHTTP))
 	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, _ *http.Request) {
 		var extraChecks []health.DoctorCheck
-		extraChecks = doctorsupport.Checks(mcpHandler.stateRecovery, server.incidents)
+		extraChecks = doctorsupport.Checks(mcpHandler.StateRecovery(), server.incidents)
 		health.HandleDoctorHTTP(w, captured, version, extraChecks...)
 	}))
 	mux.HandleFunc("/api/token-savings", httpguard.CORS(tracking.HandleRecordTokenSavings(server.tokenTracker)))
@@ -409,13 +415,11 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	return mcpHandler
 }
 
-func newMCPHTTPHandler(handler *ToolHandler) *mcphttp.Handler {
+func newMCPHTTPHandler(handler *toolruntime.ToolHandler) *mcphttp.Handler {
 	return mcphttp.New(mcphttp.Config{
 		Version:       version,
 		MaxBodySize:   maxPostBodySize,
 		HandleRequest: handler.HandleRequest,
-		Capture: func() *capture.Capture {
-			return handler.capture
-		},
+		Capture:       handler.Capture,
 	})
 }

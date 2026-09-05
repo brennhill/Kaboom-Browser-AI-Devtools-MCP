@@ -11,6 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fastpathtelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/fingerprint"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/censuscmd"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/connectmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
@@ -94,10 +95,10 @@ func handleEarlyExitModes(flags *runtimeflags.Values) {
 		os.Exit(0)
 	}
 	if flags.CensusMode {
-		os.Exit(runCensus())
+		os.Exit(censuscmd.Census())
 	}
 	if flags.ReapMode {
-		os.Exit(runReap(flags.ReapDryRun))
+		os.Exit(censuscmd.Reap(flags.ReapDryRun))
 	}
 	if flags.DoctorMode {
 		ok := runSetupCheckWithOptions(flags.Port, setupCheckOptions{

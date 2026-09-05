@@ -1,11 +1,12 @@
-// census_command.go — The `--instances` and `--reap` operator surface.
+// census.go — The `--instances` and `--reap` operator surface.
 // Why: `--force` was the only machine-wide tool and it was a blunt
 // `pkill -f "kaboom.*--daemon"` that killed healthy daemons along with leaked ones,
 // invoked only during install. These two commands let an operator SEE the machine
 // before changing it, and reclaim only what is provably reclaimable.
 // Docs: docs/core/reliability/zombie-prevention.md
 
-package main
+// Package censuscmd owns the operator-facing instance census and reaper.
+package censuscmd
 
 import (
 	"fmt"
@@ -25,9 +26,9 @@ import (
 // survive. A day is long enough that an overnight suite is never swept mid-run.
 const staleParallelDirMaxAge = 24 * time.Hour
 
-// runCensus prints every registered instance. It prunes dead entries first so the
+// Census prints every registered instance. It prunes dead entries first so the
 // listing reflects the machine as it is now, not as it was when something crashed.
-func runCensus() int {
+func Census() int {
 	if _, err := instancereg.Prune(time.Now(), instancegov.DefaultHeartbeatTTL); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not prune stale entries: %v\n", err)
 	}
@@ -40,10 +41,10 @@ func runCensus() int {
 	return 0
 }
 
-// runReap reclaims dead entries, wedged processes, over-cap instances, and
+// Reap reclaims dead entries, wedged processes, over-cap instances, and
 // abandoned parallel state directories. It never terminates a healthy in-cap
 // daemon; see reaper.Plan.
-func runReap(dryRun bool) int {
+func Reap(dryRun bool) int {
 	now := time.Now()
 	all, err := instancereg.List()
 	if err != nil {

@@ -4,11 +4,11 @@ feature_id: feature-state-time-travel
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
-  - cmd/browser-agent/tools_core.go
-  - cmd/browser-agent/tools_interact_dispatch.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
   - internal/recording/actionlog/recorder.go
   - internal/schema/interact/actions.go
   - internal/statediag/collector.go

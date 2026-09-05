@@ -4,7 +4,7 @@ feature_id: feature-instance-governance
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-30
+last_reviewed: 2026-09-05
 code_paths:
   - internal/proclock/proclock.go
   - internal/proclock/proclock_unix.go
@@ -27,8 +27,8 @@ code_paths:
   - internal/semver/semver.go
   - internal/state/paths.go
   - cmd/browser-agent/daemon_governance.go
-  - cmd/browser-agent/retention_policy.go
-  - cmd/browser-agent/census_command.go
+  - cmd/browser-agent/internal/retentionsweep/retention.go
+  - cmd/browser-agent/internal/censuscmd/census.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/internal/bridge/bridge_governance.go
@@ -50,7 +50,7 @@ test_paths:
   - internal/reaper/staledirs_test.go
   - internal/semver/semver_test.go
   - cmd/browser-agent/daemon_governance_test.go
-  - cmd/browser-agent/retention_policy_test.go
+  - cmd/browser-agent/internal/retentionsweep/retention_test.go
   - cmd/browser-agent/internal/bridge/bridge_governance_test.go
   - cmd/browser-agent/internal/integrationtest/instance_cap_test.go
 ---
@@ -123,6 +123,13 @@ The version-upgrade takeover and the equal-version install-epoch tiebreaker were
 migrated into `instancegov.shouldRequestHandoff`, so an upgrade still supersedes an
 incumbent — by asking it to stand down and then taking the freed lock, never by
 racing it.
+
+The operator surfaces are packages, not files in `main`. `--instances`/`--reap`
+live in `cmd/browser-agent/internal/censuscmd` (`Census`, `Reap`) and the hourly
+capture-budget sweep in `cmd/browser-agent/internal/retentionsweep` (`Start`,
+`Sweep`, `Budgets`). The sweeper takes a `LogLifecycle` function rather than the
+whole `*Server`, so it depends on the one thing it uses instead of the composition
+root, and `retention_test.go` moved with it.
 
 ## Operating it
 

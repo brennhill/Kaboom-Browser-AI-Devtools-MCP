@@ -4,15 +4,15 @@ feature_id: feature-batch-sequences
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/replay/contract.go
   - cmd/browser-agent/internal/sequencehandler/handler.go
   - cmd/browser-agent/internal/sequencehandler/replay.go
   - cmd/browser-agent/internal/sequencehandler/contract.go
   - cmd/browser-agent/internal/toolinteract/interactbatch/batch.go
-  - cmd/browser-agent/tools_interact_dispatch.go
-  - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go

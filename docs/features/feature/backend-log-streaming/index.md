@@ -4,10 +4,10 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/openapi.json
-  - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/state.go

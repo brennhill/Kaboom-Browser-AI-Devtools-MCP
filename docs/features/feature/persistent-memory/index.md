@@ -4,10 +4,10 @@ feature_id: feature-persistent-memory
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/server.go
-  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
   - cmd/browser-agent/internal/toolconfigure/session.go
   - internal/persistence/persistence_context.go
   - internal/persistence/persistence_crud.go

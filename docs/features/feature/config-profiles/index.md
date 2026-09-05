@@ -4,10 +4,10 @@ feature_id: feature-config-profiles
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-09-05
 code_paths:
-  - cmd/browser-agent/tools_core.go
-  - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolcatalog/catalog.go
   - cmd/browser-agent/internal/toolconfigure/deps.go

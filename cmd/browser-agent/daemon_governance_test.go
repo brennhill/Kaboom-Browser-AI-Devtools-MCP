@@ -9,8 +9,8 @@ import (
 
 func TestBusyProbeReportsBusyForEachKindOfWork(t *testing.T) {
 	cases := []struct {
-		name    string
-		inputs  busyInputs
+		name     string
+		inputs   busyInputs
 		wantBusy bool
 	}{
 		{
@@ -71,11 +71,11 @@ func TestBusyProbeReportsBusyForEachKindOfWork(t *testing.T) {
 // tell". Treating an unknown as idle would let a daemon shut down mid-recording.
 func TestBusyProbeTreatsMissingSignalsAsBusy(t *testing.T) {
 	cases := map[string]busyInputs{
-		"no client probe":     {ExtensionConnected: func() bool { return false }, ActiveRecording: func() bool { return false }, TerminalSessions: func() int { return 0 }},
-		"no extension probe":  {Clients: func() int { return 0 }, ActiveRecording: func() bool { return false }, TerminalSessions: func() int { return 0 }},
-		"no recording probe":  {Clients: func() int { return 0 }, ExtensionConnected: func() bool { return false }, TerminalSessions: func() int { return 0 }},
-		"no terminal probe":   {Clients: func() int { return 0 }, ExtensionConnected: func() bool { return false }, ActiveRecording: func() bool { return false }},
-		"no probes at all":    {},
+		"no client probe":    {ExtensionConnected: func() bool { return false }, ActiveRecording: func() bool { return false }, TerminalSessions: func() int { return 0 }},
+		"no extension probe": {Clients: func() int { return 0 }, ActiveRecording: func() bool { return false }, TerminalSessions: func() int { return 0 }},
+		"no recording probe": {Clients: func() int { return 0 }, ExtensionConnected: func() bool { return false }, TerminalSessions: func() int { return 0 }},
+		"no terminal probe":  {Clients: func() int { return 0 }, ExtensionConnected: func() bool { return false }, ActiveRecording: func() bool { return false }},
+		"no probes at all":   {},
 	}
 	for name, inputs := range cases {
 		t.Run(name, func(t *testing.T) {

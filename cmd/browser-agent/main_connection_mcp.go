@@ -24,6 +24,7 @@ import (
 	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/settingscache"
@@ -139,7 +140,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	server.logLifecycle("mcp_transport_ready", port, nil)
 
 	// Start periodic usage beacon loop (structured tool stats every 5 minutes).
-	if tracker := mcpHandler.usageTracker; tracker != nil {
+	if tracker := mcpHandler.UsageTracker(); tracker != nil {
 		telemetry.StartUsageBeaconLoop(ctx, tracker)
 	}
 
@@ -340,7 +341,7 @@ const (
 
 // awaitShutdownSignal blocks until a termination signal is received or the
 // HTTP listener dies unexpectedly, then performs graceful cleanup.
-func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-chan struct{}, termSrv *http.Server, mcpHandler *ToolHandler) {
+func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-chan struct{}, termSrv *http.Server, mcpHandler *toolruntime.ToolHandler) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 
@@ -405,18 +406,18 @@ func shutdownTerminalServer(server *Server, termSrv *http.Server, port int) {
 	}
 }
 
-func closeToolHandler(handler *ToolHandler) {
+func closeToolHandler(handler *toolruntime.ToolHandler) {
 	if handler == nil {
 		return
 	}
 	handler.Close()
 }
 
-func closeCaptureStore(handler *ToolHandler) {
-	if handler == nil || handler.capture == nil {
+func closeCaptureStore(handler *toolruntime.ToolHandler) {
+	if handler == nil || handler.Capture() == nil {
 		return
 	}
-	handler.capture.Close()
+	handler.Capture().Close()
 }
 
 func closeTerminalResources(server *Server) {

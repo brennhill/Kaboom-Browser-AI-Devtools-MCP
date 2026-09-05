@@ -15,6 +15,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/retentionsweep"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/idlewatch"
@@ -100,14 +101,14 @@ func admitDaemon(server *Server, port, terminalPort int, opts daemonlife.LaunchO
 		ports = append(ports, terminalPort)
 	}
 	return instancegov.Admit(instancegov.Config{
-		Role:     instancereg.RoleDaemon,
-		Ports:    ports,
-		StateDir: stateDir,
+		Role:         instancereg.RoleDaemon,
+		Ports:        ports,
+		StateDir:     stateDir,
 		Version:      version,
 		InstallEpoch: daemonlife.InstallEpoch(server.stateRecovery),
 		Parallel:     opts.Parallel,
-		LockPath: lockPath,
-		Policy:   instancegov.DefaultPolicy(),
+		LockPath:     lockPath,
+		Policy:       instancegov.DefaultPolicy(),
 		// An upgrade asks the incumbent to stand down over HTTP and waits for the
 		// kernel lock to be released, rather than racing it for the port.
 		RequestShutdown: func(rec instancereg.Record) error {
@@ -135,13 +136,13 @@ func admitDaemon(server *Server, port, terminalPort int, opts daemonlife.LaunchO
 // and always will: a caller that can pass five of them and forget the sixth is a
 // caller that can start a heartbeat with no idle bound.
 type governanceLoops struct {
-	Server    *Server
-	Admission *instancegov.Result
-	Port      int
-	Inputs    busyInputs
-	Parallel  bool
+	Server          *Server
+	Admission       *instancegov.Result
+	Port            int
+	Inputs          busyInputs
+	Parallel        bool
 	ReapIdleClients func() int
-	Shutdown  func(reason string)
+	Shutdown        func(reason string)
 }
 
 // startGovernanceLoops keeps the registry entry fresh, reaps idle MCP clients, and
@@ -276,7 +277,7 @@ func startDaemonGovernance(ctx context.Context, gov daemonGovernance) {
 			server.logLifecycle("instance_ports_publish_failed", port, map[string]any{"error": err.Error()})
 		}
 	}
-	startRetentionSweeper(ctx, server, port)
+	retentionsweep.Start(ctx, server.logLifecycle, port)
 	startGovernanceLoops(ctx, governanceLoops{
 		Server: server, Admission: admission, Port: port,
 		Inputs: daemonBusyInputs(server, cap), Parallel: gov.Options.Parallel,

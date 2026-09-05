@@ -53,13 +53,20 @@ func expectations(t *testing.T) map[string]string {
 	return table
 }
 
-// covers reports whether the shape declares path, or anything nested under it.
+// covers reports whether the shape declares a field named name, at ANY depth.
+//
+// Depth-insensitivity is not laxity — it is what the expectation being compared
+// actually asserts. Each expectation is a grep run over the whole response body
+// by scripts/tests/browser/cat-33-connected-action-coverage.sh, so `"pilot"` and
+// `"extension_connected"` match wherever the key appears. A prefix-only matcher
+// read configure/health's declared `pilot.extension_connected` as ABSENT and
+// reported a contradiction between two statements that agree.
 func covers(shape Shape, name string) bool {
 	for _, field := range shape.Fields {
-		if field.Path == name ||
-			strings.HasPrefix(field.Path, name+".") ||
-			strings.HasPrefix(field.Path, name+"[") {
-			return true
+		for _, segment := range strings.Split(field.Path, ".") {
+			if strings.TrimSuffix(segment, "[]") == name {
+				return true
+			}
 		}
 	}
 	return false
@@ -97,6 +104,32 @@ func TestSweepExpectationsNameFieldsTheContractDeclares(t *testing.T) {
 			len(disagreements), len(compared), strings.Join(disagreements, "\n  "))
 	}
 	t.Logf("%d mode(s) have both a sweep expectation and a declared shape, and they agree", len(compared))
+}
+
+// TestCoversStillRejectsAbsentFields is the control on the matcher above.
+// covers() matches a path segment at any depth; a matcher that grew one step
+// laxer and accepted a substring, or accepted everything, would make
+// TestSweepExpectationsNameFieldsTheContractDeclares pass no matter what the
+// handlers returned, and nothing else would notice.
+func TestCoversStillRejectsAbsentFields(t *testing.T) {
+	t.Parallel()
+	shape := Shape{Fields: []Field{
+		{Path: "pilot.extension_connected", Type: "boolean"},
+		{Path: "completed[].query_id", Type: "string"},
+	}}
+
+	for _, name := range []string{"extension_connected", "pilot", "query_id", "completed"} {
+		if !covers(shape, name) {
+			t.Errorf("covers rejected %q, which the shape declares", name)
+		}
+	}
+	// "connected" is a substring of "extension_connected" and "query" of
+	// "query_id"; neither is a field, and a substring matcher would claim both.
+	for _, name := range []string{"connected", "query", "extension", "absent_field"} {
+		if covers(shape, name) {
+			t.Errorf("covers accepted %q, which the shape does not declare — the matcher is too lax to prove anything", name)
+		}
+	}
 }
 
 // anyCovered reports whether the shape declares any of the named fields. The

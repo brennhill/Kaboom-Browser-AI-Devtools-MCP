@@ -1,5 +1,6 @@
 // tools_core.go — Defines shared five-tool dispatch state and runtime composition.
-package main
+// Docs: docs/features/feature/mcp-persistent-server/index.md
+package toolruntime
 
 import (
 	"context"
@@ -78,7 +79,7 @@ import (
 // ToolHandler owns the composite five-tool runtime and its MCP endpoint.
 type ToolHandler struct {
 	*mcpendpoint.Handler
-	server  *Server
+	state   ServerState
 	capture *capture.Capture
 
 	// shutdownCtx lets readiness gates abort promptly when the handler closes,
@@ -163,7 +164,7 @@ type ToolHandler struct {
 
 	// Session-level response-mode preference.
 	summaryPrefs  *summarypref.Cache
-	stateRecovery stateRecoveryDiagnostics
+	stateRecovery StateDiagnostics
 
 	// noiseFirstConnectFn overrides the noise auto-detect function for first-connection.
 	// When nil, the canonical noiseautorun detector is used.
@@ -259,16 +260,16 @@ func sessionStoreGuard(store *persistence.SessionStore, req mcp.JSONRPCRequest) 
 }
 
 // NewToolHandler constructs the composite five-tool backend and its MCP adapter.
-func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler {
+func NewToolHandler(state ServerState, captureStore *capture.Capture) *ToolHandler {
 	endpointConfig := mcpendpoint.Config{
-		Version: version, Runtime: server.runtime,
-		ErrorTotal: server.logs.ErrorTotalAdded, TelemetryMode: server.logs.TelemetryMode,
-		AddWarning: server.warnings.Add, DrainWarnings: server.warnings.Drain,
+		Version: state.Version, Runtime: state.Runtime,
+		ErrorTotal: state.Logs.ErrorTotalAdded, TelemetryMode: state.Logs.TelemetryMode,
+		AddWarning: state.Warnings.Add, DrainWarnings: state.Warnings.Drain,
 		PendingAudit: func() bool {
-			return server.intentStore != nil && server.intentStore.NudgeAndClean()
+			return state.IntentStore != nil && state.IntentStore.NudgeAndClean()
 		},
 	}
-	handler := initToolHandlerCore(server, captureStore)
+	handler := initToolHandlerCore(state, captureStore)
 	initAsyncCommandRuntime(handler)
 	initAnnotationAnalysis(handler)
 	initNoiseAutoDetection(handler)
@@ -283,10 +284,10 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *ToolHandler 
 
 // initToolHandlerCore builds the ToolHandler shell plus its stateful core:
 // guards, recording, usage tracking, session/noise preferences, and redaction.
-func initToolHandlerCore(server *Server, captureStore *capture.Capture) *ToolHandler {
+func initToolHandlerCore(state ServerState, captureStore *capture.Capture) *ToolHandler {
 	shutdownContext, shutdownCancel := context.WithCancel(context.Background())
 	handler := &ToolHandler{
-		server:           server,
+		state:            state,
 		capture:          captureStore,
 		shutdownCtx:      shutdownContext,
 		shutdownCancel:   shutdownCancel,
@@ -300,7 +301,7 @@ func initToolHandlerCore(server *Server, captureStore *capture.Capture) *ToolHan
 		recordingStore = captureStore.Recordings()
 	}
 	handler.recordingHandler = toolrecording.NewHandler(recordingStore, func(entry types.LogEntry) {
-		handler.server.logs.AddEntries([]types.LogEntry{entry})
+		handler.state.Logs.AddEntries([]types.LogEntry{entry})
 	})
 	handler.usageTracker = telemetry.NewUsageTracker()
 	if captureStore != nil {
@@ -310,12 +311,12 @@ func initToolHandlerCore(server *Server, captureStore *capture.Capture) *ToolHan
 	handler.healthMetrics = health.NewMetrics()
 	handler.toolCallLimiter = toolresp.NewToolCallLimiter(500, time.Minute)
 	handler.alertBuffer = alertbuf.NewAlertBuffer()
-	handler.stateRecovery = server.stateRecovery
+	handler.stateRecovery = state.StateRecovery
 	if captureStore != nil {
 		captureStore.Recordings().SetDiagnostics(handler.stateRecovery)
 	}
 
-	if store, storeErr := persistence.NewSessionStore(server.sessionProjectPath, handler.stateRecovery); storeErr == nil {
+	if store, storeErr := persistence.NewSessionStore(state.SessionProjectPath, handler.stateRecovery); storeErr == nil {
 		handler.sessionStoreImpl = store
 	}
 	handler.summaryPrefs = summarypref.New(func() ([]byte, error) {
@@ -358,12 +359,12 @@ func initAsyncCommandRuntime(handler *ToolHandler) {
 
 // initAnnotationAnalysis wires the draw-mode annotation store and analyzers.
 func initAnnotationAnalysis(handler *ToolHandler) {
-	handler.annotationStore = handler.server.annotationRuntime.Store()
+	handler.annotationStore = handler.state.AnnotationRuntime.Store()
 	handler.annotationAnalysis = annotationanalysis.New(
 		handler.annotationStore,
 		handler.capture,
 		handler.asyncCommands.FormatCommandResult,
-		handler.server.logs.Entries,
+		handler.state.Logs.Entries,
 	)
 	if handler.capture != nil {
 		handler.annotationStore.SetCommandCompleter(func(correlationID string, result json.RawMessage) {
@@ -376,7 +377,7 @@ func initAnnotationAnalysis(handler *ToolHandler) {
 // extension connection.
 func initNoiseAutoDetection(handler *ToolHandler) {
 	detectNoise := func() {
-		noiseautorun.Detect(handler.noiseConfig, handler.capture, handler.server.logs.Entries())
+		noiseautorun.Detect(handler.noiseConfig, handler.capture, handler.state.Logs.Entries())
 	}
 	if handler.capture != nil {
 		noiseautorun.WireNavigation(handler.capture, detectNoise)
@@ -406,7 +407,7 @@ func initSessionAndAuditState(handler *ToolHandler) {
 	handler.sessionManager = session.NewSessionManager(
 		10,
 		session.NewRuntimeStateReader(
-			handler.server.logs.Entries,
+			handler.state.Logs.Entries,
 			performanceEntries,
 			captureReader,
 		),
@@ -418,7 +419,7 @@ func initSessionAndAuditState(handler *ToolHandler) {
 	})
 	handler.auditRecorder = audit.NewRecorder(handler.auditTrail)
 
-	handler.uploadSecurity = handler.server.uploadSecurity
+	handler.uploadSecurity = handler.state.UploadSecurity
 	handler.recordingInteractHandler = screenrec.NewInteractHandler(buildScreenrecDeps(handler))
 }
 
@@ -432,7 +433,7 @@ func initAnalyzeAndGenerateDispatchers(handler *ToolHandler) observecore.Deps {
 		Inspect: buildInspectDeps(handler),
 		Observe: observeDeps,
 		Audit:   combinedaudit.Deps{Analyze: analyzeDeps, Observe: observeDeps},
-		Version: version, AnnotationStore: handler.annotationStore, Visual: visualAnalyzeDeps{h: handler},
+		Version: handler.state.Version, AnnotationStore: handler.annotationStore, Visual: visualAnalyzeDeps{h: handler},
 		DesignDrift: designdrift.Deps{
 			ProbeStyles: handler.asyncCommands.ExecuteStyleProbe,
 			TrackingStatus: func() (bool, string) {
@@ -551,7 +552,7 @@ func initSessionConfigHandlers(handler *ToolHandler) {
 			return sessionStoreGuard(handler.sessionStoreImpl, req)
 		},
 		InvalidateSummary: handler.summaryPrefs.Invalidate,
-		SetActiveCodebase: handler.server.activeCodebase.SetActiveCodebase,
+		SetActiveCodebase: handler.state.ActiveCodebase.SetActiveCodebase,
 	},
 		handler.sessionStoreImpl,
 		handler.sessionManager,
@@ -599,7 +600,7 @@ func buildGenerateDeps(h *ToolHandler) toolgenerate.Deps {
 	return toolgenerate.Deps{
 		Capture:          h.capture,
 		AnnotationStore:  h.annotationStore,
-		Version:          version,
+		Version:          h.state.Version,
 		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
 		IsExtensionConnected: func() bool {
 			return h.capture.Extension().IsExtensionConnected()
@@ -610,7 +611,7 @@ func buildGenerateDeps(h *ToolHandler) toolgenerate.Deps {
 func buildTestGenerationDeps(h *ToolHandler) testgenhandler.Deps {
 	return testgenhandler.Deps{
 		LogEntries: func() []types.LogEntry {
-			entries, _ := h.server.logs.EntriesWithAddedAt()
+			entries, _ := h.state.Logs.EntriesWithAddedAt()
 			return entries
 		},
 		EnhancedActions: func() []types.EnhancedAction {
@@ -651,7 +652,7 @@ func buildAnalyzeDeps(h *ToolHandler) toolanalyze.Deps {
 			return h.capture.Telemetry().NetworkWaterfall().Entries()
 		},
 		ConsoleSecurityEntries: func() []types.LogEntry {
-			snapshot := h.server.logs.Entries()
+			snapshot := h.state.Logs.Entries()
 			entries := make([]types.LogEntry, len(snapshot))
 			for index, entry := range snapshot {
 				entries[index] = types.LogEntry(entry)
@@ -665,7 +666,7 @@ func buildAnalyzeDeps(h *ToolHandler) toolanalyze.Deps {
 			return h.securityScannerImpl
 		},
 		LogEntries: func() []types.LogEntry {
-			entries, _ := h.server.logs.EntriesWithAddedAt()
+			entries, _ := h.state.Logs.EntriesWithAddedAt()
 			return entries
 		},
 		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
@@ -681,7 +682,7 @@ func buildInspectDeps(h *ToolHandler) inspect.Deps {
 
 func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
 	return toolobserve.Deps{
-		Inbox:               h.server.pushInbox,
+		Inbox:               h.state.PushInbox,
 		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
 		MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
 	}
@@ -691,9 +692,9 @@ func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
 	return observecore.Deps{
 		Capture: h.capture,
 		LogEntries: func() ([]types.LogEntry, []time.Time) {
-			return h.server.logs.EntriesWithAddedAt()
+			return h.state.Logs.EntriesWithAddedAt()
 		},
-		LogTotalAdded:    h.server.logs.TotalAdded,
+		LogTotalAdded:    h.state.Logs.TotalAdded,
 		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
 		IsConsoleNoise: func(entry types.LogEntry) bool {
 			if h.noiseConfig == nil {
@@ -747,8 +748,8 @@ func initializeInteractActionOwners(h *ToolHandler) {
 		RequireTabTracking: h.Guards.RequireTabTracking, Capture: captureStore,
 		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
 		GetListenPort: func() int {
-			if h.server != nil {
-				return h.server.listenPort.Get()
+			if h.state.ListenPort != nil {
+				return h.state.ListenPort.Get()
 			}
 			return serverdefaults.Port
 		},

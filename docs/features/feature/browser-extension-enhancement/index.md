@@ -4,13 +4,13 @@ feature_id: feature-browser-extension-enhancement
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-25
+last_reviewed: 2026-09-05
 code_paths:
   - src/lib/diagnostics/page-capture.ts
   - src/types/runtime/telemetry-messages.ts
   - src/content/message-forwarding.ts
   - src/background/message-routing/telemetry-handler.ts
-  - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - scripts/contracts/check-silent-catches.cjs
   - src/background/
   - src/content/

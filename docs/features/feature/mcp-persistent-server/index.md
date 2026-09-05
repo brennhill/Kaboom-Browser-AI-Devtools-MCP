@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-03
+last_reviewed: 2026-09-05
 code_paths:
   - internal/listenport/store.go
   - cmd/browser-agent/internal/runtimeflags/flags.go
@@ -30,7 +30,11 @@ code_paths:
   - cmd/browser-agent/internal/startupconfig/paths.go
   - cmd/browser-agent/internal/startupconfig/runtime.go
   - cmd/browser-agent/internal/runtimeconfig/parallel.go
-  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - cmd/browser-agent/internal/toolruntime/server_state.go
+  - cmd/browser-agent/internal/toolruntime/modes.go
   - cmd/browser-agent/internal/toolusage/key.go
   - cmd/browser-agent/internal/toolpostprocess/postprocess.go
   - internal/session/snapshot-manager.go
@@ -100,6 +104,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/internal/toolruntime/composition_test.go
   - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
   - cmd/browser-agent/internal/daemonrecovery/primitives_test.go
   - cmd/browser-agent/internal/daemonrecovery/reclaimer_test.go
@@ -377,6 +382,21 @@ does not maintain parallel lazy registries.
 > connection-probing path and its dedicated tests. No production caller invoked
 > it. Two unrelated stop-mode tests in the same file were also obsolete because
 > they asserted human diagnostics on protocol stdout.
+
+## Where the tool runtime lives
+
+The five-tool dispatcher is `cmd/browser-agent/internal/toolruntime`, not package
+`main`. It receives its dependencies as a `ServerState` value — logs, warnings,
+incidents, push inbox, active codebase, annotation runtime, listen port, upload
+security, terminal status, intent store, and state recovery — which `*Server`
+fills in via `toolRuntimeState()`. There is no interface between them and no
+forwarding shim in `main`: the move was atomic, and `NewToolHandler` is the only
+constructor.
+
+The consequence is testability. While `ToolHandler` lived in `main`, nothing
+outside `cmd/browser-agent` could construct it, so the response-contract sweep
+could only reach `observe`. It now drives all five dispatchers through the same
+`HandleToolCall` an MCP client reaches, with no daemon and no browser.
 
 ## TL;DR
 - Status: shipped

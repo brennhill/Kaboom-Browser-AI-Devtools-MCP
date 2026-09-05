@@ -4,9 +4,9 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-26
+last_reviewed: 2026-09-05
 code_paths:
-  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolruntime/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
   - cmd/browser-agent/internal/playbooks/resources/guides.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go

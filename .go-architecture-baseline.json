@@ -101,6 +101,10 @@
       "mutable_globals": 4,
       "exports": 4
     },
+    "cmd/browser-agent/internal/censuscmd/census.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
     "cmd/browser-agent/internal/ciapi/handlers.go": {
       "mutable_globals": 0,
       "exports": 6
@@ -392,6 +396,10 @@
     "cmd/browser-agent/internal/replay/contract.go": {
       "mutable_globals": 0,
       "exports": 6
+    },
+    "cmd/browser-agent/internal/retentionsweep/retention.go": {
+      "mutable_globals": 0,
+      "exports": 5
     },
     "cmd/browser-agent/internal/runtimeconfig/parallel.go": {
       "mutable_globals": 0,
@@ -873,6 +881,22 @@
       "mutable_globals": 0,
       "exports": 4
     },
+    "cmd/browser-agent/internal/toolruntime/modes.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "cmd/browser-agent/internal/toolruntime/server_state.go": {
+      "mutable_globals": 0,
+      "exports": 7
+    },
+    "cmd/browser-agent/internal/toolruntime/tools_configure.go": {
+      "mutable_globals": 0,
+      "exports": 2
+    },
+    "cmd/browser-agent/internal/toolruntime/tools_core.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
     "cmd/browser-agent/internal/toolusage/key.go": {
       "mutable_globals": 0,
       "exports": 1
@@ -892,14 +916,6 @@
     "cmd/browser-agent/server.go": {
       "mutable_globals": 1,
       "exports": 3
-    },
-    "cmd/browser-agent/tools_configure.go": {
-      "mutable_globals": 0,
-      "exports": 2
-    },
-    "cmd/browser-agent/tools_core.go": {
-      "mutable_globals": 0,
-      "exports": 8
     },
     "cmd/hooks/main.go": {
       "mutable_globals": 2,
