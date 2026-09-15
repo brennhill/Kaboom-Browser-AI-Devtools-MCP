@@ -3,6 +3,8 @@ dist/
 /browser-agent
 /gasoline-mcp*
 /verify-bin
+/dev-console
+/hooks
 *.test
 *.zip
 *.crx
