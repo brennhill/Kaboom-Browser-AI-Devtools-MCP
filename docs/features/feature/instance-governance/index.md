@@ -37,6 +37,7 @@ code_paths:
   - cmd/browser-agent/internal/runtimeflags/flags.go
   - cmd/browser-agent/internal/startupconfig/help.go
 test_paths:
+  - cmd/browser-agent/internal/censuscmd/census_test.go
   - internal/proclock/proclock_test.go
   - internal/procidentity/procidentity_test.go
   - internal/instancereg/registry_test.go

@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - internal/screenshotframe/wire_screenshot.go
   - src/lib/screenshot/coordinate-frame.ts
@@ -70,6 +70,7 @@ code_paths:
   - src/background/push-handler.ts
   - src/lib/tabs/tab-focus.ts
 test_paths:
+  - internal/queries/dispatcher_cleanup_test.go
   - internal/screenshotframe/wire_screenshot_test.go
   - cmd/browser-agent/internal/mediaapi/screenshot_frame_test.go
   - tests/extension/capture/screenshot-coordinate-frame.test.js
