@@ -4,7 +4,7 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-11-21
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -16,6 +16,10 @@ code_paths:
   - internal/queries/dispatcher_results.go
   - internal/queries/dispatcher_trace.go
   - internal/queries/types.go
+  - internal/browsercommand/owner.go
+  - internal/browsercommand/result.go
+  - internal/browsercommand/exchange.go
+  - scripts/contracts/layering/main.go
   - internal/capture/capture.go
   - internal/capture/syncruntime/handler.go
   - cmd/browser-agent/internal/asynccommand/handler.go
@@ -43,6 +47,10 @@ test_paths:
   - internal/queries/commands_test.go
   - internal/queries/command_trace_test.go
   - internal/queries/expire_signal_test.go
+  - internal/browsercommand/owner_test.go
+  - internal/capture/syncruntime/sync_command_lifecycle_test.go
+  - internal/capture/syncruntime/sync_test.go
+  - scripts/contracts/layering/main_test.go
   - cmd/browser-agent/composition_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
   - internal/capture/syncruntime/extension_state_unit_test.go
@@ -114,6 +122,23 @@ accepted unresolved command to make room for disposable history.
   - `internal/mcp/response.go` — marshal helpers plus the canonical `Succeed`/`SucceedText`/`Fail`/`ParseArgs` vocabulary
   - `internal/mcp/response_content.go` — image and warning content blocks
   - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
+- Browser-command lifecycle owner (`internal/browsercommand`, kaboom-jdm5.2):
+  `Owner` wraps `QueryDispatcher` state and is the only path the transports use
+  for queueing (`Enqueue`), long-poll delivery (`AwaitPending`), results
+  (`SubmitResult` / `ApplySyncExchange`), expiry (`ExpireAll`), MCP disconnect
+  (`FailDisconnected`) and missing-progress reconciliation. `/sync`
+  (`syncruntime.Handler`), `/query-result` (`httpingest.HandleQueryResult`) and
+  MCP waits (`asynccommand.Handler`) are adapters over it. Each `ResultSource`
+  has one validation policy: `sync` results are accepted only inside
+  `ApplySyncExchange` while the connection owner's `GenerationGate` confirms the
+  exchange generation is current (results, ack, disconnect expiry and progress
+  reconciliation all run inside the gate, so superseded polls cannot mutate
+  current-generation commands); `query_result` is validated by identity and
+  client scope (its wire contract carries no generation); `daemon` failures need
+  a correlation ID and an error. Connection identity, liveness and generation
+  stay with `syncruntime.Runtime`. `scripts/contracts/layering` forbids the
+  command module (`internal/browsercommand`, `internal/queries`) from importing
+  `net/http`, `internal/mcp` or `internal/capture/**`.
 - Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
 - Synchronous result consumers may bind waits to a caller context; cancellation
   and deadlines wake the canonical query condition through event-driven

@@ -19,9 +19,10 @@ func TestHandleSync_LongPolling(t *testing.T) {
 	waiting := make(chan struct{})
 	releaseWait := make(chan struct{})
 	handler := newTestHandler(cap)
-	handler.waitForPendingQueries = func(time.Duration) {
+	handler.awaitPending = func(time.Duration) []queries.PendingQueryResponse {
 		close(waiting)
 		<-releaseWait
+		return cap.commands.Pending()
 	}
 
 	reqBody, _ := json.Marshal(SyncRequest{ExtSessionID: "test"})
@@ -60,7 +61,10 @@ func TestHandleSync_TimeoutIfNoCommand(t *testing.T) {
 	timeout := syncLongPollTimeout()
 	var receivedTimeout time.Duration
 	handler := newTestHandler(cap)
-	handler.waitForPendingQueries = func(got time.Duration) { receivedTimeout = got }
+	handler.awaitPending = func(got time.Duration) []queries.PendingQueryResponse {
+		receivedTimeout = got
+		return nil
+	}
 
 	reqBody, _ := json.Marshal(SyncRequest{ExtSessionID: "test"})
 	req := httptest.NewRequest("POST", "/sync", bytes.NewReader(reqBody))

@@ -8,6 +8,10 @@
 //	internal/types      ↛ internal/**       (payload contracts are the innermost leaf)
 //	internal/mcp        ↛ internal/tools/**, internal/capture/** (protocol ignorant of domain and ports)
 //	internal/schema/**  ↮ internal/tools/** (contract layer and tool layer are siblings)
+//	command module      ↛ net/http/**, internal/mcp, internal/capture/**
+//	                     (internal/browsercommand and internal/queries own the
+//	                     browser-command lifecycle independent of the HTTP and
+//	                     MCP transports that adapt it)
 //	capture.NewCapture   only from cmd/browser-agent (ports are wired by the
 //	                     composition root; detection resolves import ALIASES
 //	                     and package-level var initializers, not the literal
@@ -378,6 +382,10 @@ func evaluateMatrix(scan *treeScan) []string {
 	for file, imports := range scan.imports {
 		srcPkg := scan.pkgOf[file]
 		for imp := range imports {
+			if commandModule(srcPkg) && commandModuleForbidden(imp) {
+				violations = append(violations, fmt.Sprintf("command->transport: %s imports %s", file, imp))
+				continue
+			}
 			internal, ok := strings.CutPrefix(imp, modulePrefix)
 			if !ok {
 				continue
@@ -403,6 +411,20 @@ func evaluateMatrix(scan *treeScan) []string {
 	}
 	sort.Strings(violations)
 	return violations
+}
+
+// commandModule reports whether pkg is part of the transport-independent
+// browser-command lifecycle module.
+func commandModule(pkg string) bool {
+	return isPkgOrSub(pkg, modulePrefix+"internal/browsercommand") || isPkgOrSub(pkg, modulePrefix+"internal/queries")
+}
+
+// commandModuleForbidden reports whether imp is a transport (HTTP or MCP) or
+// transport-adapter package the command module must not depend on.
+func commandModuleForbidden(imp string) bool {
+	return isPkgOrSub(imp, "net/http") ||
+		isPkgOrSub(imp, modulePrefix+"internal/mcp") ||
+		isPkgOrSub(imp, modulePrefix+"internal/capture")
 }
 
 // leafImportViolations reports internal/types files importing internal

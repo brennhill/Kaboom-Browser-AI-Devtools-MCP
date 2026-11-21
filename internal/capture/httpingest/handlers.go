@@ -11,11 +11,11 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -26,7 +26,7 @@ const maxExtensionPostBody = 5 << 20
 // Dependencies are the canonical state owners used by HTTP ingestion.
 type Dependencies struct {
 	Telemetry   *telemetrystore.Store
-	Queries     *queries.QueryDispatcher
+	Commands    *browsercommand.Owner
 	Recordings  *recording.RecordingManager
 	Performance *perfstore.Store
 	Circuit     *circuit.CircuitBreaker
@@ -98,15 +98,14 @@ func (h *Handlers) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	if body.ID != "" {
-		if body.CorrelationID != "" {
-			h.deps.Queries.SetQueryResultWithClientNoCommandComplete(body.ID, body.Result, body.ClientID)
-		} else {
-			h.deps.Queries.SetQueryResultWithClient(body.ID, body.Result, body.ClientID)
-		}
-	}
-	if body.CorrelationID != "" {
-		h.deps.Queries.ApplyCommandResult(body.CorrelationID, body.Status, body.Result, body.Error)
+	outcome := h.deps.Commands.SubmitResult(browsercommand.Result{
+		Source: browsercommand.SourceQueryResult, QueryID: body.ID, CorrelationID: body.CorrelationID,
+		Status: body.Status, Payload: body.Result, Error: body.Error, ClientID: body.ClientID,
+	})
+	if outcome != browsercommand.OutcomeApplied {
+		// The wire contract has always acknowledged an identity-less result with
+		// 200; keep that, but do not let the dropped result pass silently.
+		fmt.Fprintf(os.Stderr, "[Kaboom] HandleQueryResult: result without id or correlation_id dropped (%s)\n", outcome)
 	}
 	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok"})
 }

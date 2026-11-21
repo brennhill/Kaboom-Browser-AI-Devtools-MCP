@@ -27,23 +27,23 @@ func TestDependencyMatrixRules(t *testing.T) {
 		"internal/pagination/pagination.go": "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp\"\n",
 		// Clean: internal tool importing another internal package, and tools
 		// importing schema is the INTENDED direction (schema sits below tools).
-		"internal/tools/observe/handler.go": "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
+		"internal/tools/observe/handler.go":     "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
 		"internal/tools/observe/uses_schema.go": "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact\"\n",
 		// D1: internal importing cmd.
-		"internal/bridge/bridge.go":         "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
+		"internal/bridge/bridge.go": "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
 		// D2: types must stay a leaf.
-		"internal/types/types.go":           "package types\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
+		"internal/types/types.go": "package types\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
 		// D3: protocol package must not know the domain or the capture port.
-		"internal/mcp/protocol.go":          "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
-		"internal/mcp/protocol2.go":         "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n",
+		"internal/mcp/protocol.go":  "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
+		"internal/mcp/protocol2.go": "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n",
 		// D4: schema sits below tools; only schema importing tools is a breach.
-		"internal/schema/configure/s.go":    "package configure\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
+		"internal/schema/configure/s.go": "package configure\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
 		// D5: NewCapture outside the composition root.
-		"internal/tools/interact/setup.go":  "package interact\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc boot() { _ = capture.NewCapture() }\n",
+		"internal/tools/interact/setup.go": "package interact\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc boot() { _ = capture.NewCapture() }\n",
 		// Clean: composition root constructing the capture port.
-		"cmd/browser-agent/main.go":         "package main\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc main() { _ = capture.NewCapture() }\n",
+		"cmd/browser-agent/main.go": "package main\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc main() { _ = capture.NewCapture() }\n",
 		// Test files are exempt from every matrix rule.
-		"internal/bridge/bridge_test.go":    "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
+		"internal/bridge/bridge_test.go": "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
 	})
 
 	scan, err := scanTree(root)
@@ -76,11 +76,11 @@ func contains(haystack, needle string) bool {
 func TestMatrixFiresUnderDefaultRoots(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{
-		"go.mod": "module example.invalid/probe\n",
-		"internal/bridge/bridge.go": "package bridge\n\nimport _ \"" + modulePrefix + "cmd/browser-agent/internal/bridge\"\n",
-		"internal/types/types.go":   "package types\n\nimport _ \"" + modulePrefix + "internal/pagination\"\n",
-		"internal/pagination/p.go":  "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp\"\n",
-		"internal/mcp/m.go":         "package mcp\n",
+		"go.mod":                                 "module example.invalid/probe\n",
+		"internal/bridge/bridge.go":              "package bridge\n\nimport _ \"" + modulePrefix + "cmd/browser-agent/internal/bridge\"\n",
+		"internal/types/types.go":                "package types\n\nimport _ \"" + modulePrefix + "internal/pagination\"\n",
+		"internal/pagination/p.go":               "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp\"\n",
+		"internal/mcp/m.go":                      "package mcp\n",
 		"cmd/browser-agent/internal/bridge/b.go": "package bridge\n",
 		"cmd/browser-agent/main.go":              "package main\n",
 	})
@@ -237,8 +237,8 @@ func (Impl) Fetch() int { return 2 }
 		// Dead contract: no production implementation anywhere.
 		"internal/dead/d.go": "package dead\n\ntype Ghost interface {\n\tHaunt() string\n}\n",
 		// Same-package TEST fake does not count as a production impl.
-		"internal/seam/s.go":         "package seam\n\ntype Seam interface {\n\tRun() error\n}\n\nfunc Use(s Seam) {}\n",
-		"internal/seam/s_test.go":    "package seam\n\ntype fake struct{}\n\nfunc (fake) Run() error { return nil }\n",
+		"internal/seam/s.go":      "package seam\n\ntype Seam interface {\n\tRun() error\n}\n\nfunc Use(s Seam) {}\n",
+		"internal/seam/s_test.go": "package seam\n\ntype fake struct{}\n\nfunc (fake) Run() error { return nil }\n",
 	})
 
 	scan, err := scanTree(root)
@@ -272,5 +272,37 @@ func TestInterfaceKeyIsStableAcrossImplMoves(t *testing.T) {
 	i := ifaceInfo{repo: "r", pkg: "internal/owned", file: "o.go", name: "Port"}
 	if got := i.key(); got != "internal/owned/o.go:Port" {
 		t.Fatalf("key = %q", got)
+	}
+}
+
+// TestCommandModuleHasNoTransportDependencies pins kaboom-jdm5.2: the
+// browser-command lifecycle owner must not import HTTP, MCP or the capture
+// transport adapters; transports depend on it, never the reverse.
+func TestCommandModuleHasNoTransportDependencies(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{
+		"internal/browsercommand/http.go": "package browsercommand\n\nimport _ \"net/http\"\n",
+		"internal/browsercommand/mcp.go":  "package browsercommand\n\nimport _ \"" + modulePrefix + "internal/mcp\"\n",
+		"internal/queries/sync.go":        "package queries\n\nimport _ \"" + modulePrefix + "internal/capture/syncruntime\"\n",
+		"internal/queries/httptest.go":    "package queries\n\nimport _ \"net/http/httptest\"\n",
+		// Clean: the command module may use its own store and plain stdlib.
+		"internal/browsercommand/owner.go": "package browsercommand\n\nimport (\n\t_ \"time\"\n\t_ \"" + modulePrefix + "internal/queries\"\n)\n",
+		// Clean: transport adapters depending on the command module.
+		"internal/capture/httpingest/h.go": "package httpingest\n\nimport (\n\t_ \"net/http\"\n\t_ \"" + modulePrefix + "internal/browsercommand\"\n)\n",
+		// Test files are exempt.
+		"internal/browsercommand/x_test.go": "package browsercommand\n\nimport _ \"net/http\"\n",
+	})
+	scan, err := scanTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	violations := evaluateMatrix(scan)
+	if len(violations) != 4 {
+		t.Fatalf("violations = %v\nwant 4 command->transport breaches", violations)
+	}
+	for _, v := range violations {
+		if !contains(v, "command->transport") {
+			t.Errorf("unexpected violation kind: %s", v)
+		}
 	}
 }

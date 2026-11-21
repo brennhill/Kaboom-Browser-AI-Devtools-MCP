@@ -74,7 +74,7 @@ func New(deps Deps) *Handler {
 		return nil, false
 	}
 	if deps.Capture != nil {
-		waitForCommand = deps.Capture.Queries().WaitForCommand
+		waitForCommand = deps.Capture.Commands().WaitCommand
 	}
 	return &Handler{
 		deps: deps,
@@ -103,7 +103,7 @@ func (h *Handler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.Pend
 			h.deps.DiagnosticHint,
 		), true
 	}
-	_, err := h.deps.Capture.Queries().CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
+	_, err := h.deps.Capture.Commands().Enqueue(query, timeout, req.ClientID)
 	if err == nil {
 		return mcp.JSONRPCResponse{}, false
 	}
@@ -144,13 +144,13 @@ func BuildA11yQueryParams(scope string, tags []string, frame any, forceRefresh b
 
 func (h *Handler) ExecuteA11yQuery(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error) {
 	paramsJSON, _ := json.Marshal(BuildA11yQueryParams(scope, tags, frame, forceRefresh))
-	queryID, err := h.deps.Capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, err := h.deps.Capture.Commands().Enqueue(queries.PendingQuery{
 		Type: "a11y", Params: paramsJSON,
 	}, a11yQueryTimeout, "")
 	if err != nil {
 		return nil, err
 	}
-	return h.deps.Capture.Queries().WaitForResult(queryID, a11yQueryTimeout)
+	return h.deps.Capture.Commands().WaitQueryResult(context.Background(), queryID, a11yQueryTimeout)
 }
 
 // ExecuteStyleProbe runs one computed-style query and returns the raw payload.
@@ -171,13 +171,13 @@ func (h *Handler) ExecuteStyleProbe(selector string, maxElements int, includeCus
 	if err != nil {
 		return nil, err
 	}
-	queryID, err := h.deps.Capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, err := h.deps.Capture.Commands().Enqueue(queries.PendingQuery{
 		Type: "computed_styles", Params: paramsJSON,
 	}, a11yQueryTimeout, "")
 	if err != nil {
 		return nil, err
 	}
-	return h.deps.Capture.Queries().WaitForResult(queryID, a11yQueryTimeout)
+	return h.deps.Capture.Commands().WaitQueryResult(context.Background(), queryID, a11yQueryTimeout)
 }
 
 // finalizeResponseEnrichment attaches evidence, transient elements, and retry context
@@ -381,7 +381,7 @@ func (h *Handler) waitForCommandWithConnectivity(correlationID string, timeout t
 	for {
 		remaining := deadline.Sub(h.Wait.Now())
 		if remaining <= 0 {
-			cmd, found := h.deps.Capture.Queries().GetCommandResult(correlationID)
+			cmd, found := h.deps.Capture.Commands().Command(correlationID)
 			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.deps.Capture.Extension().IsExtensionConnected()
 			return cmd, found, disconnected, waited
 		}
@@ -405,8 +405,7 @@ func (h *Handler) waitForCommandWithConnectivity(correlationID string, timeout t
 }
 
 func (h *Handler) finalizePendingDisconnect(req mcp.JSONRPCRequest, correlationID string) mcp.JSONRPCResponse {
-	h.deps.Capture.Queries().ApplyCommandResult(correlationID, "error", nil, "extension_disconnected")
-	if cmd, found := h.deps.Capture.Queries().GetCommandResult(correlationID); found && cmd != nil {
+	if cmd, found := h.deps.Capture.Commands().FailDisconnected(correlationID); found && cmd != nil {
 		return h.FormatCommandResult(req, *cmd, correlationID)
 	}
 	return mcp.Fail(req, mcp.ErrNoData,
@@ -471,7 +470,7 @@ func (h *Handler) stillProcessingResponse(req mcp.JSONRPCRequest, cmd *queries.C
 		"status": "still_processing", "lifecycle_status": "running",
 		"correlation_id": correlationID, "trace_id": correlationID,
 		"queued": false, "final": false, "elapsed_ms": cmd.ElapsedMs(),
-		"queue_depth": h.deps.Capture.Queries().QueueDepth(),
+		"queue_depth": h.deps.Capture.Commands().QueueDepth(),
 		"retry_context": map[string]any{
 			"attempts": attempts, "total_wait_ms": totalWaitMs,
 			"extension_connected": h.deps.Capture.Extension().IsExtensionConnected(),
@@ -479,7 +478,7 @@ func (h *Handler) stillProcessingResponse(req mcp.JSONRPCRequest, cmd *queries.C
 		"suggested_retry_ms": 2000,
 		"message":            "Action is taking longer than expected. Polling is now required. Use observe({what:'command_result', correlation_id:'" + correlationID + "'}) to check the result.",
 	}
-	if pos := h.deps.Capture.Queries().QueuePosition(correlationID); pos >= 0 {
+	if pos := h.deps.Capture.Commands().QueuePosition(correlationID); pos >= 0 {
 		stillProcessing["queue_position"] = pos
 	}
 	return mcp.Succeed(req, "Action still processing", stillProcessing)

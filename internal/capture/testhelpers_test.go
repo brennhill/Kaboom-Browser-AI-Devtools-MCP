@@ -25,7 +25,7 @@ import (
 
 func newSyncHandlerForTest(capture *Capture) *syncruntime.Handler {
 	return syncruntime.NewHandler(syncruntime.Dependencies{
-		Runtime: capture.Extension(), Queries: capture.Queries(), Lifecycle: capture.Lifecycle(),
+		Runtime: capture.Extension(), Commands: capture.Commands(), Lifecycle: capture.Lifecycle(),
 		FeatureUsage: capture.FeatureUsage(), ExtensionLogs: capture.ExtensionLogs(), DiagnosticLogs: capture.DiagnosticLogs(),
 	})
 }
@@ -98,7 +98,7 @@ func replaceTelemetryForTest(capture *Capture, deps telemetrystore.Dependencies)
 }
 
 func httpIngestForTest(capture *Capture) *httpingest.Handlers {
-	return httpingest.New(httpingest.Dependencies{Telemetry: capture.Telemetry(), Queries: capture.Queries(), Recordings: capture.Recordings(), Performance: capture.Performance(), Circuit: capture.Circuit()})
+	return httpingest.New(httpingest.Dependencies{Telemetry: capture.Telemetry(), Commands: capture.Commands(), Recordings: capture.Recordings(), Performance: capture.Performance(), Circuit: capture.Circuit()})
 }
 
 func resetterForTest(capture *Capture) *resetter.Resetter {

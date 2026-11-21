@@ -8,6 +8,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
@@ -54,6 +55,7 @@ type Capture struct {
 	// ============================================
 
 	queryDispatcher *queries.QueryDispatcher // Pending queries, results, async command tracking. Has own sync.Mutex + sync.RWMutex.
+	commands        *browsercommand.Owner    // Browser-command lifecycle owner over queryDispatcher.
 
 	// ============================================
 	// Rate Limiting & Circuit Breaker (Own Lock)
@@ -114,6 +116,7 @@ func NewCapture() *Capture {
 		clients:          clientstore.New(),
 	}
 	c.queryDispatcher = queries.NewQueryDispatcher()
+	c.commands = browsercommand.NewOwner(c.queryDispatcher)
 	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)
 	c.telemetry = telemetrystore.New(telemetrystore.Dependencies{ActiveTestIDs: c.extension.GetActiveTestIDs})
 
@@ -123,6 +126,11 @@ func NewCapture() *Capture {
 // Queries returns the canonical independently synchronized query dispatcher.
 func (c *Capture) Queries() *queries.QueryDispatcher {
 	return c.queryDispatcher
+}
+
+// Commands returns the browser-command lifecycle owner shared by every transport.
+func (c *Capture) Commands() *browsercommand.Owner {
+	return c.commands
 }
 
 // Recordings returns the canonical independently synchronized recording manager.

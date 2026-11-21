@@ -10,8 +10,11 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/httpingest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
@@ -27,6 +30,8 @@ import (
 type testState struct {
 	runtime        *Runtime
 	queries        *queries.QueryDispatcher
+	commands       *browsercommand.Owner
+	clock          func() time.Time // nil uses time.Now
 	lifecycle      *lifecycle.Observer
 	featureUsage   *featureusage.Observer
 	extensionLogs  *logstore.Extension
@@ -41,8 +46,9 @@ func newTestState() *testState {
 	runtime := New()
 	lifecycleObserver := lifecycle.NewObserver()
 	redactor := redaction.NewRedactionEngine("")
+	dispatcher := queries.NewQueryDispatcher()
 	return &testState{
-		runtime: runtime, queries: queries.NewQueryDispatcher(), lifecycle: lifecycleObserver,
+		runtime: runtime, queries: dispatcher, commands: browsercommand.NewOwner(dispatcher), lifecycle: lifecycleObserver,
 		featureUsage: featureusage.New(), extensionLogs: logstore.NewExtension(redactor.Redact),
 		diagnosticLogs: logstore.NewDiagnostic(redactor.Redact),
 		telemetry:      telemetrystore.New(telemetrystore.Dependencies{ActiveTestIDs: runtime.GetActiveTestIDs}),
@@ -58,12 +64,12 @@ func (s *testState) ExtensionLogs() *logstore.Extension { return s.extensionLogs
 func (s *testState) Telemetry() *telemetrystore.Store   { return s.telemetry }
 
 func newTestHandler(s *testState) *Handler {
-	return NewHandler(Dependencies{Runtime: s.runtime, Queries: s.queries, Lifecycle: s.lifecycle,
-		FeatureUsage: s.featureUsage, ExtensionLogs: s.extensionLogs, DiagnosticLogs: s.diagnosticLogs})
+	return NewHandler(Dependencies{Runtime: s.runtime, Commands: s.commands, Lifecycle: s.lifecycle,
+		FeatureUsage: s.featureUsage, ExtensionLogs: s.extensionLogs, DiagnosticLogs: s.diagnosticLogs, Clock: s.clock})
 }
 
 func httpIngestForTest(s *testState) *httpingest.Handlers {
-	return httpingest.New(httpingest.Dependencies{Telemetry: s.telemetry, Queries: s.queries,
+	return httpingest.New(httpingest.Dependencies{Telemetry: s.telemetry, Commands: s.commands,
 		Recordings: s.recordings, Performance: s.performance, Circuit: s.circuit})
 }
 
@@ -171,4 +177,24 @@ func runSyncRequestAsClient(t *testing.T, cap *testState, clientID string, paylo
 	w := httptest.NewRecorder()
 	newTestHandler(cap).HandleSync(w, req)
 	return w
+}
+
+// manualClock is a controlled clock for deterministic reconciliation tests.
+type manualClock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func newManualClock(start time.Time) *manualClock { return &manualClock{now: start} }
+
+func (c *manualClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+func (c *manualClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.now = c.now.Add(d)
 }

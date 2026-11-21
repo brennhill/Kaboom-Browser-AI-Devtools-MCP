@@ -14,7 +14,7 @@ import (
 
 func newSyncHandlerForTest(state *capture.Capture) *syncruntime.Handler {
 	return syncruntime.NewHandler(syncruntime.Dependencies{
-		Runtime: state.Extension(), Queries: state.Queries(), Lifecycle: state.Lifecycle(),
+		Runtime: state.Extension(), Commands: state.Commands(), Lifecycle: state.Lifecycle(),
 		FeatureUsage: state.FeatureUsage(), ExtensionLogs: state.ExtensionLogs(), DiagnosticLogs: state.DiagnosticLogs(),
 	})
 }
