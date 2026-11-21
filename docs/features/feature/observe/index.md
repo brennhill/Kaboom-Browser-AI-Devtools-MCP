@@ -45,13 +45,16 @@ code_paths:
   - internal/tools/observe/page/page_screenshot.go
   - internal/app/screenshot/screenshot.go
   - internal/app/pageinfo/pageinfo.go
+  - internal/app/pagestorage/storage.go
+  - internal/app/pagestorage/sections.go
+  - internal/app/a11yaudit/a11yaudit.go
   - internal/capture/waterfallstore/store.go
-  - cmd/browser-agent/internal/toolruntime/screenshot_wiring.go
+  - cmd/browser-agent/internal/toolruntime/usecase_wiring.go
   - cmd/browser-agent/internal/mcphttp/handler.go
   - cmd/browser-agent/internal/telemetryapi/handler.go
   - internal/tools/observe/hints/hints.go
-  - internal/tools/observe/idbquery/execute.go
-  - internal/tools/observe/idbquery/scripts.go
+  - internal/app/pagestorage/execute.go
+  - internal/app/pagestorage/scripts.go
   - src/background.ts
   - src/background/commands/observe.ts
   - src/background/commands/helpers.ts
@@ -85,7 +88,7 @@ test_paths:
   - internal/tools/observe/network/network_test.go
   - internal/tools/observe/timeline/correlation_test.go
   - internal/tools/observe/logs/logs_edge_test.go
-  - internal/tools/observe/idbquery/execute_test.go
+  - internal/app/pagestorage/execute_test.go
   - internal/capture/healthreader/reader_test.go
   - tests/extension/dom/command-element-results.test.js
   - tests/extension/dom/page-query-targeting.test.js
@@ -93,7 +96,7 @@ test_paths:
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - internal/tools/observe/page/page_readiness_test.go
   - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
-  - internal/tools/observe/idbquery/execute_test.go
+  - internal/app/pagestorage/execute_test.go
   - extension/background/commands/observe.fullpage.test.js
   - internal/a11ysummary/summary_test.go
   - internal/capture/websockettest/websocket_test.go
@@ -116,6 +119,9 @@ test_paths:
   - internal/app/screenshot/screenshot_test.go
   - internal/app/screenshot/save_test.go
   - internal/app/pageinfo/pageinfo_test.go
+  - internal/app/pagestorage/storage_test.go
+  - internal/app/pagestorage/sections_test.go
+  - internal/app/a11yaudit/a11yaudit_test.go
   - internal/capture/waterfallstore/store_test.go
   - scripts/contracts/layering/main_test.go
   - internal/capture/waterfallstore/store_test.go
@@ -237,7 +243,7 @@ arguments, maps failure kinds to canonical `mcp.Fail` codes
 (`ScreenshotFailure`) and assembles the text + inline image blocks
 (`ScreenshotSuccess`). interact `include_screenshot` and analyze
 `visual_baseline`/`visual_diff` call the same use case (composed in
-`cmd/browser-agent/internal/toolruntime/screenshot_wiring.go`). The
+`cmd/browser-agent/internal/toolruntime/usecase_wiring.go`). The
 `scripts/contracts/layering` rule `app->transport` forbids `internal/app/**`
 from importing `net/http`, `internal/mcp`, `internal/capture/**` or
 `internal/tools/**`.
@@ -248,9 +254,16 @@ CSP, tab status, command readiness, tab focus) over a seven-method
 `observe(what="page")` (`page.GetPageInfo`) only assembles the MCP payload,
 metadata and CSP blocked actions; interact page-context enrichment consumes the
 typed `Info` (`PageDeps.PageInfo`) instead of re-parsing the observe MCP
-response. Storage, IndexedDB and waterfall-refresh queries go through
-`observecore.Deps.Commands` (the browser-command owner) rather than the
-dispatcher.
+response. Storage and IndexedDB reads are the `internal/app/pagestorage` use
+case (tracking gate + `queries.QueryRunner`; section filtering/summaries and the
+generated IndexedDB scripts live there, typed `*pagestorage.Failure` kinds), and
+the accessibility audit is `internal/app/a11yaudit` (tracking gate + audit port,
+partial results on extension failure, summary projection). `page.GetStorage`,
+`page.GetIndexedDB` and `page.RunA11yAudit` only parse arguments, map failure
+kinds to the unchanged MCP errors and add metadata; services are composed in
+`toolruntime/usecase_wiring.go`. The combined audit
+(`toolanalyze/combinedaudit`) takes composed `Performance`/`Accessibility`
+mode handlers instead of `observecore.Deps`.
 Live-page storage, IndexedDB, screenshot, and accessibility failures use the
 canonical `mcp.Fail` response boundary; queue saturation guidance is built once
 with the canonical `pending_commands` recovery call.

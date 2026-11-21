@@ -2,7 +2,7 @@
 // Why: Separates script templates from dispatch and reply handling in execute.go.
 // Docs: docs/features/feature/observe/index.md
 
-package idbquery
+package pagestorage
 
 import (
 	"encoding/json"

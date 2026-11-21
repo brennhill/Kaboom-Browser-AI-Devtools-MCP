@@ -30,7 +30,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolruntime/interact_wiring.go
-  - internal/tools/observe/idbquery/execute.go
+  - internal/app/pagestorage/execute.go
   - internal/capture/capture.go
   - internal/capture/syncruntime/handler.go
   - cmd/browser-agent/internal/asynccommand/handler.go

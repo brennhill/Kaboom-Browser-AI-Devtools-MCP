@@ -1,6 +1,6 @@
 // execute_test.go — Tests IndexedDB query dispatch and result normalization.
 
-package idbquery
+package pagestorage
 
 import (
 	"encoding/json"
@@ -39,7 +39,7 @@ func TestListingSortsAndSuppliesDefaults(t *testing.T) {
 		"result":{"databases":[{"name":"zeta"},{"name":"alpha"}]}
 	}`))
 
-	result, err := Listing(cap.Commands())
+	result, err := listing(cap.Commands())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func TestEntriesNormalizesSuccessAndPageErrors(t *testing.T) {
 			"success":true,
 			"result":{"entries":[{"key":1}]}
 		}`))
-		result, err := Entries(cap.Commands(), "app", "users", 5)
+		result, err := entries(cap.Commands(), "app", "users", 5)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -76,7 +76,7 @@ func TestEntriesNormalizesSuccessAndPageErrors(t *testing.T) {
 			"success":true,
 			"result":{"ok":false,"message":"store missing"}
 		}`))
-		if _, err := Entries(cap.Commands(), "app", "missing", 5); err == nil || err.Error() != "store missing" {
+		if _, err := entries(cap.Commands(), "app", "missing", 5); err == nil || err.Error() != "store missing" {
 			t.Fatalf("error = %v", err)
 		}
 	})
@@ -91,7 +91,7 @@ func TestListingDefaultsMissingAndNonArrayDatabasePayloads(t *testing.T) {
 			cap := capture.NewCapture()
 			t.Cleanup(cap.Close)
 			respondToNextQuery(t, cap, json.RawMessage(payload))
-			result, err := Listing(cap.Commands())
+			result, err := listing(cap.Commands())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -112,7 +112,7 @@ func TestEntriesNormalizesNonArrayAndExistingMetadata(t *testing.T) {
 		"success":true,
 		"result":{"entries":"opaque","database":"returned-db","store":"returned-store"}
 	}`))
-	result, err := Entries(cap.Commands(), "requested-db", "requested-store", 5)
+	result, err := entries(cap.Commands(), "requested-db", "requested-store", 5)
 	if err != nil {
 		t.Fatal(err)
 	}

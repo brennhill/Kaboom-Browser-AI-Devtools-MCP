@@ -68,6 +68,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry/usagecallback"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
+	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
+	observesession "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
@@ -445,7 +447,15 @@ func initAnalyzeAndGenerateDispatchers(handler *ToolHandler) observecore.Deps {
 		Analyze: analyzeDeps,
 		Inspect: buildInspectDeps(handler),
 		Observe: observeDeps,
-		Audit:   combinedaudit.Deps{Analyze: analyzeDeps, Observe: observeDeps},
+		Audit: combinedaudit.Deps{
+			Analyze: analyzeDeps,
+			Performance: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+				return observesession.CheckPerformance(observeDeps, req, args)
+			},
+			Accessibility: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+				return observepage.RunA11yAudit(observeDeps, req, args)
+			},
+		},
 		Version: handler.state.Version, AnnotationStore: handler.annotationStore, Visual: visualAnalyzeDeps{h: handler},
 		DesignDrift: designdrift.Deps{
 			ProbeStyles: handler.asyncCommands.ExecuteStyleProbe,
@@ -698,17 +708,13 @@ func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
 }
 
 func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
-	var commands queries.QueryRunner
-	if h.capture != nil {
-		commands = h.capture.Commands()
-	}
 	return observecore.Deps{
-		Capture: h.capture, Commands: commands, Screenshots: newScreenshotService(h), PageInfo: newPageInfoService(h),
+		Capture: h.capture, Commands: queryRunner(h), Screenshots: newScreenshotService(h), PageInfo: newPageInfoService(h),
+		Storage: newStorageService(h), A11y: newA11yService(h),
 		LogEntries: func() ([]types.LogEntry, []time.Time) {
 			return h.state.Logs.EntriesWithAddedAt()
 		},
-		LogTotalAdded:    h.state.Logs.TotalAdded,
-		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
+		LogTotalAdded: h.state.Logs.TotalAdded,
 		IsConsoleNoise: func(entry types.LogEntry) bool {
 			if h.noiseConfig == nil {
 				return false

@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/a11yaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pagestorage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -26,10 +28,11 @@ func Deps(captured *capture.Capture) core.Deps {
 		Commands:             commandsOf(captured),
 		Screenshots:          newScreenshots(captured),
 		PageInfo:             NewPageInfo(captured, nil),
+		Storage:              newStorage(captured),
+		A11y:                 a11yaudit.New(a11yaudit.Deps{TrackingEnabled: trackingOf(captured), Execute: func(string, []string, any, bool) (json.RawMessage, error) { return nil, nil }}),
 		LogEntries:           func() ([]types.LogEntry, []time.Time) { return nil, nil },
 		LogTotalAdded:        func() int64 { return 0 },
 		IsConsoleNoise:       func(types.LogEntry) bool { return false },
-		ExecuteA11yQuery:     func(string, []string, any, bool) (json.RawMessage, error) { return nil, nil },
 		DiagnosticHintString: func() string { return "doctor hint" },
 	}
 }
@@ -93,4 +96,20 @@ func NewPageInfo(captured *capture.Capture, logEntries func() ([]types.LogEntry,
 		LastWaterfallPageURL: captured.Telemetry().NetworkWaterfall().LastPageURL,
 		LogEntries:           logEntries,
 	})
+}
+
+// trackingOf reports a capture's tracked-tab gate (false for a nil capture).
+func trackingOf(captured *capture.Capture) func() bool {
+	return func() bool {
+		if captured == nil {
+			return false
+		}
+		enabled, _, _ := captured.Extension().GetTrackingStatus()
+		return enabled
+	}
+}
+
+// newStorage wires the storage use case to a capture's command owner.
+func newStorage(captured *capture.Capture) *pagestorage.Service {
+	return pagestorage.New(pagestorage.Deps{Commands: commandsOf(captured), TrackingEnabled: trackingOf(captured)})
 }

@@ -6,10 +6,11 @@
 package core
 
 import (
-	"encoding/json"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/a11yaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pagestorage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -24,11 +25,14 @@ type Deps struct {
 	Commands queries.QueryRunner
 	// Screenshots runs the transport-independent screenshot use case.
 	Screenshots *screenshot.Service
+	// Storage runs the live-page storage/IndexedDB use case.
+	Storage *pagestorage.Service
+	// A11y runs the accessibility audit use case.
+	A11y *a11yaudit.Service
 	// PageInfo runs the transport-independent tracked-page projection.
 	PageInfo             *pageinfo.Service
 	LogEntries           func() ([]types.LogEntry, []time.Time)
 	LogTotalAdded        func() int64
-	ExecuteA11yQuery     func(string, []string, any, bool) (json.RawMessage, error)
 	IsConsoleNoise       func(types.LogEntry) bool
 	DiagnosticHintString func() string
 	// WaterfallRefreshTimeout bounds the on-demand extension query. Zero uses

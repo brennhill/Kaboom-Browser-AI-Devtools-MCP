@@ -56,7 +56,7 @@ func ScreenshotFailure(req mcp.JSONRPCRequest, err error, hint string) mcp.JSONR
 	case screenshot.KindInvalidQuality:
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid quality: "+failure.Detail+" (must be 1-100)", "Use a value between 1 and 100", mcp.WithParam("quality"))
 	case screenshot.KindQueueFull:
-		return queueFullResponse(req, errors.New(failure.Detail))
+		return queueFullResponse(req, failure.Detail)
 	case screenshot.KindTimeout:
 		return mcp.Fail(req, mcp.ErrExtTimeout, "Screenshot capture timeout: "+failure.Detail, "Ensure the extension is connected and the page has loaded. Try refreshing the page, then retry.", mcp.WithHint(hint))
 	case screenshot.KindMalformedResult:
@@ -64,4 +64,10 @@ func ScreenshotFailure(req mcp.JSONRPCRequest, err error, hint string) mcp.JSONR
 	default:
 		return mcp.Fail(req, mcp.ErrExtError, "Screenshot capture failed: "+failure.Detail, "Check that the tab is visible and accessible. The extension reported an error.", mcp.WithHint(hint))
 	}
+}
+
+// queueFullResponse is the canonical command-queue-full failure for live-page modes.
+func queueFullResponse(req mcp.JSONRPCRequest, detail string) mcp.JSONRPCResponse {
+	return mcp.Fail(req, mcp.ErrQueueFull, "Command queue full: "+detail,
+		"Wait for in-flight commands to complete, then retry.")
 }

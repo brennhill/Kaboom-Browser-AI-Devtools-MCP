@@ -2,7 +2,7 @@
 // Why: Separates query dispatch and reply normalization from the script templates in scripts.go.
 // Docs: docs/features/feature/observe/index.md
 
-package idbquery
+package pagestorage
 
 import (
 	"context"
@@ -18,9 +18,9 @@ import (
 // queryTimeout bounds a single IndexedDB round-trip through the extension.
 const queryTimeout = 10 * time.Second
 
-// Listing enumerates IndexedDB databases in the tracked tab, each with its object stores,
+// listing enumerates IndexedDB databases in the tracked tab, each with its object stores,
 // sorted by database name. A page without IndexedDB reports supported=false rather than erroring.
-func Listing(commands queries.QueryRunner) (map[string]any, error) {
+func listing(commands queries.QueryRunner) (map[string]any, error) {
 	data, err := executeScript(commands, listingScript, "observe_storage_indexeddb", queryTimeout)
 	if err != nil {
 		return nil, err
@@ -47,9 +47,9 @@ func Listing(commands queries.QueryRunner) (map[string]any, error) {
 	return data, nil
 }
 
-// Entries reads up to limit rows from one object store. It returns an error when the page
+// entries reads up to limit rows from one object store. It returns an error when the page
 // reports failure (missing database, missing store, or a serialization fault).
-func Entries(commands queries.QueryRunner, database, store string, limit int) (map[string]any, error) {
+func entries(commands queries.QueryRunner, database, store string, limit int) (map[string]any, error) {
 	script := buildEntriesScript(database, store, limit)
 	data, err := executeScript(commands, script, "observe_indexeddb_entries", queryTimeout)
 	if err != nil {
