@@ -276,10 +276,8 @@ func TestUsageBeaconLoop_FiresOnActivity(t *testing.T) {
 	counter.RecordToolCall("observe:errors", 0, false)
 	counter.RecordToolCall("interact:click", 0, false)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go startUsageBeaconLoopWithInterval(ctx, counter, 50*time.Millisecond)
+	stopLoop := runJoinedUsageBeaconLoop(t, counter, 50*time.Millisecond)
+	defer stopLoop()
 
 	// Drain received until we find the usage_summary event.
 	// Other events (e.g. first_tool_call) may arrive first.
@@ -366,10 +364,8 @@ func TestUsageBeaconLoop_SkipsWhenIdle(t *testing.T) {
 	counter := NewUsageTracker()
 	// Don't increment — should skip.
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go startUsageBeaconLoopWithInterval(ctx, counter, 10*time.Millisecond)
+	stopLoop := runJoinedUsageBeaconLoop(t, counter, 10*time.Millisecond)
+	defer stopLoop()
 
 	// Wait for 3 tick cycles to complete.
 	for i := 0; i < 3; i++ {
@@ -380,7 +376,7 @@ func TestUsageBeaconLoop_SkipsWhenIdle(t *testing.T) {
 		}
 	}
 
-	cancel()
+	stopLoop()
 
 	mu.Lock()
 	count := callCount
@@ -422,10 +418,8 @@ func TestUsageBeaconLoop_RespectsOptOut(t *testing.T) {
 	counter.RecordToolCall("observe:errors", 0, false)
 	counter.RecordToolCall("interact:click", 0, false)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go startUsageBeaconLoopWithInterval(ctx, counter, 10*time.Millisecond)
+	stopLoop := runJoinedUsageBeaconLoop(t, counter, 10*time.Millisecond)
+	defer stopLoop()
 
 	// Wait for 3 tick cycles to complete.
 	for i := 0; i < 3; i++ {
@@ -436,7 +430,7 @@ func TestUsageBeaconLoop_RespectsOptOut(t *testing.T) {
 		}
 	}
 
-	cancel()
+	stopLoop()
 
 	mu.Lock()
 	count := callCount
@@ -473,5 +467,63 @@ func TestUsageBeaconLoop_StopsOnContextCancel(t *testing.T) {
 		// Good — goroutine exited.
 	case <-time.After(2 * time.Second):
 		t.Fatal("beacon loop did not stop after context cancel")
+	}
+}
+
+// runJoinedUsageBeaconLoop starts the beacon loop and returns an idempotent
+// stop that cancels it and waits for it to exit (also registered as cleanup).
+// The loop's shutdown path (EmitSessionEnd) builds a beacon envelope that calls
+// GetInstallID; a loop left running past its test races the next test's
+// resetInstallIDState and can consume the fresh installIDOnce before Warm
+// attaches its diagnostics store. Callers defer stop so the loop exits before
+// their kaboomDir/endpoint overrides are restored.
+func runJoinedUsageBeaconLoop(t *testing.T, counter *UsageTracker, interval time.Duration) func() {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		startUsageBeaconLoopWithInterval(ctx, counter, interval)
+	}()
+	stop := func() {
+		cancel()
+		<-done
+	}
+	t.Cleanup(stop)
+	return stop
+}
+
+// TestUsageBeaconLoopJoinedStopDrainsShutdownBeacon is the regression guard for
+// the leaked-loop race: when stop returns, the loop's shutdown session_end
+// beacon (which calls GetInstallID) must already have run, so nothing from
+// this test can touch install-identity globals after it returns.
+func TestUsageBeaconLoopJoinedStopDrainsShutdownBeacon(t *testing.T) {
+	t.Setenv("KABOOM_TELEMETRY", "off")
+	overrideKaboomDir(t.TempDir())
+	defer resetKaboomDir()
+	resetInstallIDState()
+
+	var mu sync.Mutex
+	fired := 0
+	setOnFireBeacon(func(bool) {
+		mu.Lock()
+		fired++
+		mu.Unlock()
+	})
+	defer setOnFireBeacon(nil)
+
+	counter := NewUsageTracker()
+	counter.RecordToolCall("observe:errors", 0, false)
+	mu.Lock()
+	fired = 0 // ignore synchronous first-call beacons; count only shutdown
+	mu.Unlock()
+	stopLoop := runJoinedUsageBeaconLoop(t, counter, time.Hour)
+	stopLoop()
+
+	mu.Lock()
+	got := fired
+	mu.Unlock()
+	if got != 1 {
+		t.Fatalf("shutdown beacons observed when stop returned = %d, want 1", got)
 	}
 }
