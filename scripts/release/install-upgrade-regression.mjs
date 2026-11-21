@@ -613,6 +613,48 @@ async function stageUninstallCleanup(ctx) {
   ctx.evidence.scenarios.push({ name: 'uninstall_cleanup', status: 'passed' })
 }
 
+// prepareHostState creates the isolated HOME/state/bin tree under tmpRoot, points
+// the daemon-diagnostics globals at it, and seeds the user state whose survival
+// across the packaged lifecycle is asserted at the end.
+function prepareHostState(tmpRoot) {
+  const homeDir = path.join(tmpRoot, 'home')
+  const stateDir = path.join(tmpRoot, 'state')
+  const binDir = path.join(tmpRoot, 'bin')
+  fs.mkdirSync(homeDir, { recursive: true })
+  fs.mkdirSync(stateDir, { recursive: true })
+  fs.mkdirSync(binDir, { recursive: true })
+  daemonLogDir = path.join(tmpRoot, 'daemon-logs')
+  fs.mkdirSync(daemonLogDir, { recursive: true })
+  daemonStateDir = stateDir
+  const identityPath = path.join(homeDir, '.kaboom', 'install_id')
+  const preferencesPath = path.join(homeDir, '.kaboom', 'preferences.json')
+  fs.mkdirSync(path.dirname(identityPath), { recursive: true })
+  fs.writeFileSync(identityPath, 'a1b2c3d4e5f6')
+  fs.writeFileSync(preferencesPath, '{"capture_mode":"summary"}\n')
+  const continuityBefore = {
+    identity: fs.readFileSync(identityPath, 'utf8'),
+    preferences: fs.readFileSync(preferencesPath, 'utf8')
+  }
+  return { homeDir, stateDir, binDir, identityPath, preferencesPath, continuityBefore }
+}
+
+// buildBinaries compiles the "previous" daemon (current source stamped with the
+// supported previous version), the candidate daemon, and the hooks binary.
+function buildBinaries(tmpRoot, version, envBase) {
+  const oldBinary = path.join(tmpRoot, `kaboom-old${exeSuffix}`)
+  const newBinary = path.join(tmpRoot, `kaboom-new${exeSuffix}`)
+  const hooksBinary = path.join(tmpRoot, `kaboom-hooks${exeSuffix}`)
+  const cmdPkg = process.env.KABOOM_CMD_PKG || './cmd/browser-agent'
+  currentStage = 'build_artifacts'
+  info('building old/new binaries')
+  run('go', ['build', '-ldflags', `-X main.version=${supportedPreviousVersion}`, '-o', oldBinary, cmdPkg], {
+    env: envBase
+  })
+  run('go', ['build', '-ldflags', `-X main.version=${version}`, '-o', newBinary, cmdPkg], { env: envBase })
+  run('go', ['build', '-ldflags', `-X main.version=${version}`, '-o', hooksBinary, './cmd/hooks'], { env: envBase })
+  return { oldBinary, newBinary, hooksBinary }
+}
+
 async function main() {
   const version = readVersionFile()
   lifecycleEvidence = {
@@ -634,28 +676,7 @@ async function main() {
   // the test HOME would differ from what Go's EvalSymlinks reports for it.
   const tmpRoot = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-')))
   cleanupHost = () => fs.rmSync(tmpRoot, { recursive: true, force: true })
-  const homeDir = path.join(tmpRoot, 'home')
-  const stateDir = path.join(tmpRoot, 'state')
-  const binDir = path.join(tmpRoot, 'bin')
-  fs.mkdirSync(homeDir, { recursive: true })
-  fs.mkdirSync(stateDir, { recursive: true })
-  fs.mkdirSync(binDir, { recursive: true })
-  daemonLogDir = path.join(tmpRoot, 'daemon-logs')
-  fs.mkdirSync(daemonLogDir, { recursive: true })
-  daemonStateDir = stateDir
-  const identityPath = path.join(homeDir, '.kaboom', 'install_id')
-  const preferencesPath = path.join(homeDir, '.kaboom', 'preferences.json')
-  fs.mkdirSync(path.dirname(identityPath), { recursive: true })
-  fs.writeFileSync(identityPath, 'a1b2c3d4e5f6')
-  fs.writeFileSync(preferencesPath, '{"capture_mode":"summary"}\n')
-  const continuityBefore = {
-    identity: fs.readFileSync(identityPath, 'utf8'),
-    preferences: fs.readFileSync(preferencesPath, 'utf8')
-  }
-
-  const oldBinary = path.join(tmpRoot, `kaboom-old${exeSuffix}`)
-  const newBinary = path.join(tmpRoot, `kaboom-new${exeSuffix}`)
-  const hooksBinary = path.join(tmpRoot, `kaboom-hooks${exeSuffix}`)
+  const { homeDir, stateDir, binDir, identityPath, preferencesPath, continuityBefore } = prepareHostState(tmpRoot)
 
   const envBase = {
     ...process.env,
@@ -666,16 +687,7 @@ async function main() {
     KABOOM_RELEASES_URL: 'http://127.0.0.1:1/releases/latest'
   }
 
-  const cmdPkg = process.env.KABOOM_CMD_PKG || './cmd/browser-agent'
-  currentStage = 'build_artifacts'
-  info('building old/new binaries')
-  run('go', ['build', '-ldflags', `-X main.version=${supportedPreviousVersion}`, '-o', oldBinary, cmdPkg], {
-    env: envBase
-  })
-  run('go', ['build', '-ldflags', `-X main.version=${version}`, '-o', newBinary, cmdPkg], {
-    env: envBase
-  })
-  run('go', ['build', '-ldflags', `-X main.version=${version}`, '-o', hooksBinary, './cmd/hooks'], { env: envBase })
+  const { oldBinary, newBinary, hooksBinary } = buildBinaries(tmpRoot, version, envBase)
 
   info('packing and installing the npm artifact under test')
   const packed = buildPackedArtifact(tmpRoot, version, newBinary, hooksBinary, envBase)

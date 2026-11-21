@@ -20,8 +20,11 @@ func answerFirstQuery(t *testing.T, captured *capture.Capture, queryType string,
 	t.Helper()
 	sent := make(chan json.RawMessage, 1)
 	go func() {
+		// Block on the dispatcher's own enqueue signal (the same one the /sync
+		// long-poll uses) instead of polling the queue on a wall-clock sleep.
 		deadline := time.Now().Add(5 * time.Second)
 		for time.Now().Before(deadline) {
+			captured.Queries().WaitForPendingQueries(time.Until(deadline))
 			for _, pending := range captured.Queries().GetPendingQueries() {
 				if pending.Type == queryType {
 					sent <- pending.Params
@@ -29,7 +32,6 @@ func answerFirstQuery(t *testing.T, captured *capture.Capture, queryType string,
 					return
 				}
 			}
-			time.Sleep(time.Millisecond)
 		}
 		close(sent)
 	}()
