@@ -70,7 +70,7 @@ test_paths:
   - tests/extension/ui-controls/tracked-hover-launcher.test.js
   - tests/extension/state-recovery/state-recovery-contract.test.js
   - tests/extension/state-recovery/validated-storage.test.js
-  - tests/extension/contracts/recording-ownership-contract.test.js
+  - tests/extension/contracts/background-boundaries.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

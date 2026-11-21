@@ -23,14 +23,14 @@ func answerFirstQuery(t *testing.T, captured *capture.Capture, queryType string,
 	go func() {
 		deadline := time.Now().Add(5 * time.Second)
 		for time.Now().Before(deadline) {
-			for _, pending := range captured.Commands().Pending() {
+			// AwaitPending blocks on the queue's arrival signal instead of sleeping.
+			for _, pending := range captured.Commands().AwaitPending(time.Until(deadline)) {
 				if pending.Type == queryType {
 					sent <- pending.Params
 					commandtest.Deliver(captured.Commands(), pending.ID, result)
 					return
 				}
 			}
-			time.Sleep(time.Millisecond)
 		}
 		close(sent)
 	}()

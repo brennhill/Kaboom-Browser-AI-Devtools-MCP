@@ -1,4 +1,4 @@
-// sync_command_lifecycle_test.go — Tests sync polling, command-result lifecycle and old-poll-after-reconnect interleaving.
+// sync_command_lifecycle_test.go — Tests sync polling (incl. long-poll), command-result lifecycle and old-poll-after-reconnect interleaving.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package syncruntime
@@ -483,5 +483,76 @@ func TestHandleSync_OldPollResumingFromLongPollAfterReconnectIsRejected(t *testi
 	}
 	if cap.commands.QueueDepth() != 1 {
 		t.Fatalf("queue depth = %d, want 1: current work stays queued for the current generation", cap.commands.QueueDepth())
+	}
+}
+
+// Long-poll /sync behavior.
+
+func TestHandleSync_LongPolling(t *testing.T) {
+	cap := newTestState()
+	t.Cleanup(cap.Close)
+	waiting := make(chan struct{})
+	releaseWait := make(chan struct{})
+	handler := newTestHandler(cap)
+	handler.awaitPending = func(time.Duration) []queries.PendingQueryResponse {
+		close(waiting)
+		<-releaseWait
+		return cap.commands.Pending()
+	}
+
+	reqBody, _ := json.Marshal(SyncRequest{ExtSessionID: "test"})
+	req := httptest.NewRequest("POST", "/sync", bytes.NewReader(reqBody))
+	w := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		handler.HandleSync(w, req)
+	}()
+	<-waiting
+	if _, err := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
+		Type:   "test_cmd",
+		Params: json.RawMessage(`{"foo":"bar"}`),
+	}); err != nil {
+		t.Fatalf("CreatePendingQuery() error = %v", err)
+	}
+	close(releaseWait)
+	<-done
+
+	var resp SyncResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if len(resp.Commands) != 1 {
+		t.Errorf("Expected 1 command, got %d", len(resp.Commands))
+	}
+}
+
+func TestHandleSync_TimeoutIfNoCommand(t *testing.T) {
+	cap := newTestState()
+	t.Cleanup(cap.Close)
+
+	timeout := syncLongPollTimeout()
+	var receivedTimeout time.Duration
+	handler := newTestHandler(cap)
+	handler.awaitPending = func(got time.Duration) []queries.PendingQueryResponse {
+		receivedTimeout = got
+		return nil
+	}
+
+	reqBody, _ := json.Marshal(SyncRequest{ExtSessionID: "test"})
+	req := httptest.NewRequest("POST", "/sync", bytes.NewReader(reqBody))
+	w := httptest.NewRecorder()
+
+	handler.HandleSync(w, req)
+	if receivedTimeout != timeout {
+		t.Fatalf("wait timeout = %v, want %v", receivedTimeout, timeout)
+	}
+
+	var resp SyncResponse
+	_ = json.NewDecoder(w.Body).Decode(&resp)
+	if len(resp.Commands) != 0 {
+		t.Errorf("Expected 0 commands, got %d", len(resp.Commands))
 	}
 }

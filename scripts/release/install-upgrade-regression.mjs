@@ -669,12 +669,8 @@ async function main() {
   const cmdPkg = process.env.KABOOM_CMD_PKG || './cmd/browser-agent'
   currentStage = 'build_artifacts'
   info('building old/new binaries')
-  run('go', ['build', '-ldflags', `-X main.version=${supportedPreviousVersion}`, '-o', oldBinary, cmdPkg], {
-    env: envBase
-  })
-  run('go', ['build', '-ldflags', `-X main.version=${version}`, '-o', newBinary, cmdPkg], {
-    env: envBase
-  })
+  run('go', ['build', '-ldflags', `-X main.version=${supportedPreviousVersion}`, '-o', oldBinary, cmdPkg], { env: envBase })
+  run('go', ['build', '-ldflags', `-X main.version=${version}`, '-o', newBinary, cmdPkg], { env: envBase })
   run('go', ['build', '-ldflags', `-X main.version=${version}`, '-o', hooksBinary, './cmd/hooks'], { env: envBase })
 
   info('packing and installing the npm artifact under test')

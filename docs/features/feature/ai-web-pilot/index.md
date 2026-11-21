@@ -28,7 +28,7 @@ code_paths:
   - src/content/ui/tracked-hover-launcher.ts
   - internal/capture/syncruntime/tracking_projection.go
 test_paths:
-  - internal/capture/syncruntime/tracking_projection_test.go
+  - internal/capture/syncruntime/extension_state_unit_test.go
   - cmd/browser-agent/internal/asynccommand/execute_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go

@@ -1,12 +1,17 @@
 // @ts-nocheck
 /**
  * @fileoverview background-boundaries.test.js — Architectural contracts for
- * feature-owned background routing and mutable state.
+ * feature-owned background routing and mutable state, including the single
+ * authoritative writer of live screen recording storage keys (CLAUDE.md rule 18,
+ * docs/features/feature/tab-recording/index.md "Recording Ownership").
  */
 
-import { test } from 'node:test'
+import { test, describe } from 'node:test'
 import assert from 'node:assert'
 import fs from 'node:fs'
+import ts from 'typescript'
+import { relative } from 'node:path'
+import { listTsFiles, parseSource, SRC_ROOT } from './source-contract-utils.js'
 
 test('background routing is composed from feature-owned handler modules', () => {
   const router = fs.readFileSync('src/background/message-handlers.ts', 'utf8')
@@ -47,4 +52,38 @@ test('extension diagnostics hydrate before startup logging and install a suspens
   assert.ok(hydrateAt < restartCheckAt, 'diagnostics must hydrate before restart events are recorded')
   assert.match(init, /installDiagnosticSuspendListener/)
   assert.match(listeners, /chrome\.runtime\.onSuspend\.addListener/)
+})
+
+// Live screen recording storage ownership: src/background/recording/ owns
+// kaboom_recording and kaboom_pending_recording; other contexts may only read them.
+const OWNED_KEYS = ['RECORDING', 'PENDING_RECORDING']
+const OWNER_DIR = 'background/recording/'
+const WRITERS = new Set(['setLocal', 'setLocals', 'removeLocal', 'removeLocals'])
+
+function findForeignWrites(file) {
+  const sf = parseSource(file)
+  const hits = []
+  const visit = (node) => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && WRITERS.has(node.expression.text)) {
+      const text = node.arguments.map((a) => a.getText(sf)).join(',')
+      for (const key of OWNED_KEYS) {
+        if (new RegExp(`StorageKey\\.${key}\\b`).test(text)) hits.push(`${node.expression.text}(StorageKey.${key})`)
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return hits
+}
+
+describe('live screen recording storage ownership', () => {
+  test('only src/background/recording/ writes kaboom_recording / kaboom_pending_recording', () => {
+    const violations = []
+    for (const file of listTsFiles(['background', 'popup', 'content', 'offscreen', 'lib'])) {
+      const rel = relative(SRC_ROOT, file)
+      if (rel.startsWith(OWNER_DIR)) continue
+      for (const hit of findForeignWrites(file)) violations.push(`${rel}: ${hit}`)
+    }
+    assert.deepStrictEqual(violations, [], 'Route writes through the background recording owner')
+  })
 })

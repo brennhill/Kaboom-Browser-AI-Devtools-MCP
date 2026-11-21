@@ -78,7 +78,7 @@ test_paths:
   - tests/extension/recording-lifecycle/recording-rehydration.test.js
   - tests/extension/recording-lifecycle/recording-fixture.js
   - tests/extension/recording-lifecycle/recording.test.js
-  - tests/extension/contracts/recording-ownership-contract.test.js
+  - tests/extension/contracts/background-boundaries.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -114,7 +114,7 @@ Extension storage keys and their writers (CLAUDE.md rule 18):
 | `kaboom_pending_mic_recording` | popup `recording-io.ts` sets it; popup `recording.ts` consumes it | background `listeners.ts` |
 | `kaboom_action_recording` (event-recording mirror) | popup `action-recording.ts` | popup `action-recording.ts`, which reconciles it against the daemon when the popup opens |
 
-`tests/extension/contracts/recording-ownership-contract.test.js` fails if
+`tests/extension/contracts/background-boundaries.test.js` fails if
 anything outside `src/background/recording/` writes `kaboom_recording` or
 `kaboom_pending_recording`. The popup still trusts the `kaboom_recording`
 mirror without asking the live owner; that is tracked as kaboom-jdm5.7.

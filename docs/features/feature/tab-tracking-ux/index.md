@@ -61,7 +61,7 @@ code_paths:
   - internal/capture/syncruntime/handler.go
   - cmd/browser-agent/internal/toolinteract/interact_browser.go
 test_paths:
-  - internal/capture/syncruntime/tracking_projection_test.go
+  - internal/capture/syncruntime/extension_state_unit_test.go
   - tests/extension/tab-state/tab-state.test.js
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/tab-state/tab-state.test.js
