@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testowner"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
@@ -89,31 +90,47 @@ const (
 	ReservedPortEnd  = 7998
 )
 
-// freePortInBand returns a bindable port in [base, end], or 0 if none is free.
+// portStride is how many consecutive ports one daemon occupies: its HTTP port
+// and its terminal server at port+terminal.PortOffset.
+const portStride = terminal.PortOffset + 1
+
+// freePortInBand returns a stride-aligned port in [base, end] whose whole
+// daemon footprint (HTTP port and terminal port) is bindable, or 0 if none is.
 //
 // Safety comes from binding, not from bookkeeping: a port is only returned
-// after this process has successfully bound it, so two packages running in
-// parallel cannot both be handed the same one however their scans overlap.
-// The starting offset is derived from the pid so parallel test processes begin
+// after this process has successfully bound it and its terminal neighbour.
+// Alignment matters because a daemon whose terminal port is busy reclaims it by
+// killing the holder: unaligned picks let one package's daemon land on another
+// package's terminal port and the two kill each other ("server did not start").
+// The starting slot is derived from the pid so parallel test processes begin
 // at different points and do not all contend for the bottom of the band.
 func freePortInBand(base, end int) int {
-	span := end - base + 1
-	if span <= 0 {
+	slots := (end - base + 1) / portStride
+	if slots <= 0 {
 		return 0
 	}
-	offset := os.Getpid() % span
-	for i := 0; i < span; i++ {
-		port := base + (offset+i)%span
-		listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-		if err != nil {
-			continue
+	offset := os.Getpid() % slots
+	for i := 0; i < slots; i++ {
+		port := base + ((offset+i)%slots)*portStride
+		if footprintFree(port) {
+			return port
 		}
-		if closeErr := listener.Close(); closeErr != nil {
-			continue
-		}
-		return port
 	}
 	return 0
+}
+
+// footprintFree reports whether every port a daemon on port would bind is free.
+func footprintFree(port int) bool {
+	for p := port; p < port+portStride; p++ {
+		listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", p))
+		if err != nil {
+			return false
+		}
+		if closeErr := listener.Close(); closeErr != nil {
+			return false
+		}
+	}
+	return true
 }
 
 // FreePort returns a currently unbound loopback TCP port, preferring the
@@ -124,16 +141,23 @@ func FreePort(t *testing.T) int {
 		return port
 	}
 	// Band exhausted — a heavily parallel run, or leftovers holding it. Fall
-	// back to an ephemeral port rather than failing tests over port supply.
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("find free port: %v", err)
+	// back to an ephemeral port rather than failing tests over port supply,
+	// still requiring the terminal neighbour to be free.
+	for attempt := 0; attempt < 32; attempt++ {
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("find free port: %v", err)
+		}
+		port := listener.Addr().(*net.TCPAddr).Port
+		if err := listener.Close(); err != nil {
+			t.Fatalf("release free-port probe: %v", err)
+		}
+		if port+portStride <= 65536 && footprintFree(port) {
+			return port
+		}
 	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	if err := listener.Close(); err != nil {
-		t.Fatalf("release free-port probe: %v", err)
-	}
-	return port
+	t.Fatal("find free port: no ephemeral port with a free terminal neighbour after 32 attempts")
+	return 0
 }
 
 // BuildBinary builds the browser-agent once per integration test process.

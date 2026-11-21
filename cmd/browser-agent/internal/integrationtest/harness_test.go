@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 )
 
 func TestBuildArgsCoverAllProductionPackagesOnlyWhenRequested(t *testing.T) {
@@ -117,5 +119,29 @@ func TestFreePortFallsBackWhenTheBandIsExhausted(t *testing.T) {
 	}
 	if got := FreePort(t); got <= 0 {
 		t.Fatalf("FreePort must always return a usable port, got %d", got)
+	}
+}
+
+// A daemon binds its terminal server on port+terminal.PortOffset and reclaims
+// (kills the holder of) that port when it is busy. A base port whose terminal
+// neighbour is held, or that is itself another daemon's terminal port, lets
+// parallel integration packages kill each other's daemons; CI saw "server did
+// not start on port 7995". freePortInBand must hand out only stride-aligned
+// pairs that are both free.
+func TestFreePortInBandReservesTheTerminalPort(t *testing.T) {
+	base := freePortInBand(ReservedPortBase, ReservedPortEnd)
+	if base == 0 {
+		t.Skip("reserved band exhausted on this machine")
+	}
+	if (base-ReservedPortBase)%portStride != 0 {
+		t.Fatalf("port %d is not aligned to the %d-port daemon stride", base, portStride)
+	}
+	blocker, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", base+terminal.PortOffset))
+	if err != nil {
+		t.Skipf("terminal neighbour %d already taken: %v", base+terminal.PortOffset, err)
+	}
+	defer func() { _ = blocker.Close() }()
+	if got := freePortInBand(base, base+portStride-1); got != 0 {
+		t.Fatalf("returned %d although its terminal port %d is held", got, base+terminal.PortOffset)
 	}
 }
